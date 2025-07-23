@@ -102,13 +102,16 @@ export default function ListaOrcamentos() {
     });
   };
   const atualizarStatus = (id: string, novoStatus: string) => {
+    const orcamento = orcamentos.find(o => o.id === id);
+    const statusAnterior = orcamento?.status;
+    
     atualizarOrcamento(id, {
       status: novoStatus as any
     });
 
-    // Se status for "fechado", integrar com workflow e agenda
-    if (novoStatus === 'fechado') {
-      const orcamento = orcamentos.find(o => o.id === id);
+    // Lógica contextual para as notificações baseada na transição de status
+    if (novoStatus === 'fechado' && statusAnterior !== 'fechado') {
+      // Transição para "Fechado" - Orçamento é adicionado ao Workflow
       if (orcamento) {
         console.log('Orçamento fechado - criando agendamento automático:', orcamento);
         
@@ -131,14 +134,27 @@ export default function ListaOrcamentos() {
         console.log('Dados do agendamento a ser criado:', agendamentoData);
         
         toast({
-          title: "Orçamento Fechado",
-          description: "Agendamento criado automaticamente e enviado para o workflow"
+          title: "Sucesso",
+          description: "Orçamento aprovado e adicionado ao Workflow."
         });
       }
+    } else if (statusAnterior === 'fechado' && novoStatus !== 'fechado' && novoStatus !== 'cancelado') {
+      // Reversão de "Fechado" - Item é removido do Workflow
+      toast({
+        title: "Status Revertido",
+        description: "Status revertido. O projeto foi removido do Workflow."
+      });
+    } else if (novoStatus === 'cancelado') {
+      // Cancelamento - Orçamento é removido da Agenda
+      toast({
+        title: "Orçamento Cancelado",
+        description: "Orçamento cancelado e removido da Agenda."
+      });
     } else {
+      // Outras transições de status
       toast({
         title: "Status Atualizado",
-        description: "Status do orçamento foi alterado"
+        description: "Status do orçamento foi alterado."
       });
     }
   };
