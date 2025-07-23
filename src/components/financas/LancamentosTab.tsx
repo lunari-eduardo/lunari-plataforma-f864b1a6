@@ -125,20 +125,20 @@ export default function LancamentosTab({
         {!isMobile && <div className="flex items-center justify-between">
             {/* Grupo da Esquerda: Sub-abas */}
             <Tabs value={activeSubTab} onValueChange={value => setActiveSubTab(value as GrupoPrincipal)}>
-              <TabsList className="flex h-10 p-1 bg-white border border-gray-200 rounded-lg">
-                <TabsTrigger value="Despesa Fixa" className="flex items-center gap-2 text-sm py-2 px-4 data-[state=active]:bg-gray-50 data-[state=active]:text-red-600">
+              <TabsList className="flex h-10 p-1 bg-white border border-gray-200 rounded-lg py-0 px-0">
+                <TabsTrigger value="Despesa Fixa" className="flex items-center gap-2 px-4 data-[state=active]:bg-gray-50 data-[state=active]:text-red-600 py-[7px] text-xs">
                   <Receipt className="h-4 w-4" />
                   Fixas
                 </TabsTrigger>
-                <TabsTrigger value="Despesa Variável" className="flex items-center gap-2 text-sm py-2 px-4 data-[state=active]:bg-gray-50 data-[state=active]:text-orange-600">
+                <TabsTrigger value="Despesa Variável" className="flex items-center gap-2 px-4 data-[state=active]:bg-gray-50 data-[state=active]:text-orange-600 py-[5px] text-xs">
                   <CreditCard className="h-4 w-4" />
                   Variáveis
                 </TabsTrigger>
-                <TabsTrigger value="Investimento" className="flex items-center gap-2 text-sm py-2 px-4 data-[state=active]:bg-gray-50 data-[state=active]:text-purple-600">
+                <TabsTrigger value="Investimento" className="flex items-center gap-2 px-4 data-[state=active]:bg-gray-50 data-[state=active]:text-purple-600 py-[5px] text-xs">
                   <TrendingUp className="h-4 w-4" />
                   Investimentos
                 </TabsTrigger>
-                <TabsTrigger value="Receita Não Operacional" className="flex items-center gap-2 text-sm py-2 px-4 data-[state=active]:bg-gray-50 data-[state=active]:text-green-600">
+                <TabsTrigger value="Receita Não Operacional" className="flex items-center gap-2 px-4 data-[state=active]:bg-gray-50 data-[state=active]:text-green-600 py-[5px] text-xs">
                   <PiggyBank className="h-4 w-4" />
                   Receitas
                 </TabsTrigger>
@@ -187,7 +187,7 @@ export default function LancamentosTab({
             </div>
 
             {/* Grupo da Direita: Botão Novo Lançamento */}
-            <Button onClick={() => setModalNovoLancamentoAberto(true)} className="bg-blue-600 hover:bg-blue-700 text-white">
+            <Button onClick={() => setModalNovoLancamentoAberto(true)} className="bg-blue-600 hover:bg-blue-700 text-white text-xs py-0">
               <Plus className="h-4 w-4 mr-2" />
               Novo Lançamento
             </Button>
