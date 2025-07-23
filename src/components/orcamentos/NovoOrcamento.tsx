@@ -156,10 +156,10 @@ export default function NovoOrcamento() {
   };
 
   const salvarOrcamento = (status: 'rascunho' | 'enviado') => {
-    if (!clienteSelecionado || !data || !hora || !categoria) {
+    if (!clienteSelecionado || !data || !hora) {
       toast({
         title: "Erro",
-        description: "Preencha todos os campos obrigatórios (Cliente, Data, Hora e Categoria)",
+        description: "Preencha todos os campos obrigatórios (Cliente, Data e Hora)",
         variant: "destructive"
       });
       return;
