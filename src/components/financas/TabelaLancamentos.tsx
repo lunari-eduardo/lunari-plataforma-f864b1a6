@@ -13,6 +13,7 @@ interface TabelaLancamentosProps {
   grupoAtivo: GrupoPrincipal;
   obterItensPorGrupo: (grupo: GrupoPrincipal) => ItemFinanceiro[];
   onAdicionarTransacao: (transacao: Omit<NovaTransacaoFinanceira, 'id' | 'userId' | 'criadoEm'>) => void;
+  createTransactionEngine?: (input: any) => void; // Opcional para usar o motor centralizado
 }
 export default function TabelaLancamentos({
   transacoes,
@@ -20,7 +21,8 @@ export default function TabelaLancamentos({
   onRemoverTransacao,
   grupoAtivo,
   obterItensPorGrupo,
-  onAdicionarTransacao
+  onAdicionarTransacao,
+  createTransactionEngine
 }: TabelaLancamentosProps) {
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [valoresEditando, setValoresEditando] = useState<{
@@ -100,49 +102,50 @@ export default function TabelaLancamentos({
     if (!novaTransacao.item_id || !novaTransacao.valor) return;
     const valor = parseFloat(novaTransacao.valor);
     if (isNaN(valor) || valor <= 0) return;
-    const baseTransacao = {
-      item_id: novaTransacao.item_id,
-      valor,
-      data_vencimento: novaTransacao.data_vencimento,
-      status: determinarStatus(novaTransacao.data_vencimento),
-      observacoes: novaTransacao.observacoes || null,
-      parcelas: novaTransacao.parcelado ? novaTransacao.parcelas : null
-    };
-    if (novaTransacao.parcelado) {
-      // Criar múltiplas transações para parcelas
-      const valorDaParcela = valor / novaTransacao.parcelas.total;
-      for (let i = 1; i <= novaTransacao.parcelas.total; i++) {
-        const dataVencimento = new Date(novaTransacao.data_vencimento);
-        dataVencimento.setMonth(dataVencimento.getMonth() + (i - 1));
-        onAdicionarTransacao({
-          ...baseTransacao,
-          valor: valorDaParcela,
-          data_vencimento: dataVencimento.toISOString().split('T')[0],
-          status: determinarStatus(dataVencimento.toISOString().split('T')[0]),
-          parcelas: {
-            atual: i,
-            total: novaTransacao.parcelas.total
-          }
-        });
-      }
-    } else if (novaTransacao.despesaRecorrente) {
-      // Usar o motor centralizado para criar recorrências
-      const dataInicial = new Date(novaTransacao.data_vencimento);
-      const anoAtual = dataInicial.getFullYear();
 
-      // Criar transações recorrentes para todos os meses restantes do ano
-      for (let mes = dataInicial.getMonth(); mes < 12; mes++) {
-        const dataVencimento = new Date(anoAtual, mes, dataInicial.getDate());
-        onAdicionarTransacao({
-          ...baseTransacao,
-          data_vencimento: dataVencimento.toISOString().split('T')[0],
-          status: determinarStatus(dataVencimento.toISOString().split('T')[0]),
-          observacoes: `${baseTransacao.observacoes || ''} (Recorrente)`.trim()
-        });
-      }
+    // Se despesa recorrente e motor disponível, usar o motor centralizado
+    if (novaTransacao.despesaRecorrente && createTransactionEngine) {
+      createTransactionEngine({
+        valorTotal: valor,
+        dataPrimeiraOcorrencia: novaTransacao.data_vencimento,
+        itemId: novaTransacao.item_id,
+        observacoes: novaTransacao.observacoes || '',
+        isRecorrente: true,
+        isParcelado: false,
+        isValorFixo: true // Default para valor fixo na tabela
+      });
     } else {
-      // Transação única
-      onAdicionarTransacao(baseTransacao);
+      // Lógica legada para compatibilidade
+      const baseTransacao = {
+        item_id: novaTransacao.item_id,
+        valor,
+        data_vencimento: novaTransacao.data_vencimento,
+        status: determinarStatus(novaTransacao.data_vencimento),
+        observacoes: novaTransacao.observacoes || null,
+        parcelas: novaTransacao.parcelado ? novaTransacao.parcelas : null
+      };
+
+      if (novaTransacao.parcelado) {
+        // Criar múltiplas transações para parcelas
+        const valorDaParcela = valor / novaTransacao.parcelas.total;
+        for (let i = 1; i <= novaTransacao.parcelas.total; i++) {
+          const dataVencimento = new Date(novaTransacao.data_vencimento);
+          dataVencimento.setMonth(dataVencimento.getMonth() + (i - 1));
+          onAdicionarTransacao({
+            ...baseTransacao,
+            valor: valorDaParcela,
+            data_vencimento: dataVencimento.toISOString().split('T')[0],
+            status: determinarStatus(dataVencimento.toISOString().split('T')[0]),
+            parcelas: {
+              atual: i,
+              total: novaTransacao.parcelas.total
+            }
+          });
+        }
+      } else {
+        // Transação única
+        onAdicionarTransacao(baseTransacao);
+      }
     }
 
     // Limpar formulário

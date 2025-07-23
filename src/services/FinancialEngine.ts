@@ -31,6 +31,7 @@ export interface RecurringTemplate {
   diaVencimento: number; // Dia do mês (1-31)
   dataInicio: string; // Formato YYYY-MM-DD
   dataFim: string; // Formato YYYY-MM-DD
+  isValorFixo: boolean; // Distingue entre valor fixo (ex: Aluguel) e variável (ex: Energia)
 }
 
 export interface CreateTransactionInput {
@@ -41,6 +42,7 @@ export interface CreateTransactionInput {
   isParcelado: boolean;
   numeroDeParcelas?: number;
   observacoes?: string;
+  isValorFixo?: boolean; // Para despesas recorrentes: true = valor fixo, false = valor variável
 }
 
 // ============= CHAVES DE LOCALSTORAGE =============
@@ -62,7 +64,7 @@ export class FinancialEngine {
     transactions: FinancialTransaction[];
     recurringTemplate?: RecurringTemplate;
   } {
-    const { valorTotal, dataPrimeiraOcorrencia, itemId, isRecorrente, isParcelado, numeroDeParcelas, observacoes } = input;
+    const { valorTotal, dataPrimeiraOcorrencia, itemId, isRecorrente, isParcelado, numeroDeParcelas, observacoes, isValorFixo } = input;
 
     // Validações básicas
     if (!itemId || valorTotal <= 0) {
@@ -89,7 +91,8 @@ export class FinancialEngine {
         valorTotal,
         dataPrimeiraOcorrencia: dataFormatada,
         itemId,
-        observacoes
+        observacoes,
+        isValorFixo: isValorFixo ?? true // Default para valor fixo se não especificado
       });
     }
 
@@ -151,9 +154,10 @@ export class FinancialEngine {
     dataPrimeiraOcorrencia: string;
     itemId: string;
     observacoes?: string;
+    isValorFixo: boolean;
   }): { transactions: FinancialTransaction[]; recurringTemplate: RecurringTemplate } {
     
-    const { valorTotal, dataPrimeiraOcorrencia, itemId, observacoes } = params;
+    const { valorTotal, dataPrimeiraOcorrencia, itemId, observacoes, isValorFixo } = params;
     
     const [ano, , dia] = dataPrimeiraOcorrencia.split('-').map(Number);
     const dataFim = `${ano}-12-31`; // Último dia do ano corrente
@@ -162,21 +166,24 @@ export class FinancialEngine {
     const recurringTemplate: RecurringTemplate = {
       id: `recurring_${Date.now()}`,
       itemId,
-      valor: valorTotal,
+      valor: isValorFixo ? valorTotal : 0, // Se valor variável, salvar 0 no template
       diaVencimento: dia,
       dataInicio: dataPrimeiraOcorrencia,
-      dataFim
+      dataFim,
+      isValorFixo
     };
 
     // Gerar apenas a primeira transação para o mês atual
     const firstTransaction: FinancialTransaction = {
       id: `${recurringTemplate.id}_primeira`,
       itemId,
-      valor: valorTotal,
+      valor: isValorFixo ? valorTotal : 0, // Se valor variável, criar transação com valor 0
       dataVencimento: dataPrimeiraOcorrencia,
       status: this.determineStatus(dataPrimeiraOcorrencia),
       recurringTemplateId: recurringTemplate.id,
-      observacoes: observacoes ? `${observacoes} (Recorrente)` : 'Recorrente'
+      observacoes: isValorFixo 
+        ? (observacoes ? `${observacoes} (Recorrente - Valor Fixo)` : 'Recorrente - Valor Fixo')
+        : (observacoes ? `${observacoes} (Recorrente - Editar Valor)` : 'Recorrente - Editar Valor')
     };
 
     return { 
@@ -237,11 +244,13 @@ export class FinancialEngine {
         const newTransaction: FinancialTransaction = {
           id: `${template.id}_${targetYear}_${targetMonth}`,
           itemId: template.itemId,
-          valor: template.valor,
+          valor: template.isValorFixo ? template.valor : 0, // Se valor variável, criar com valor 0
           dataVencimento: expectedDate,
           status: this.determineStatus(expectedDate),
           recurringTemplateId: template.id,
-          observacoes: 'Recorrente'
+          observacoes: template.isValorFixo 
+            ? 'Recorrente - Valor Fixo'
+            : 'Recorrente - Editar Valor'
         };
 
         newTransactions.push(newTransaction);

@@ -338,6 +338,7 @@ export default function LancamentosTab({
                   grupoAtivo={grupo}
                   obterItensPorGrupo={obterItensPorGrupo}
                   onAdicionarTransacao={adicionarTransacao}
+                  createTransactionEngine={createTransactionEngine}
                 />
               )}
             </div>

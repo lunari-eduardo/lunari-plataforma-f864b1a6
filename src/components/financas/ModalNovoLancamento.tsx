@@ -33,7 +33,8 @@ export default function ModalNovoLancamento({
     observacoes: '',
     parcelado: false,
     parcelas: { atual: 1, total: 1 },
-    despesaRecorrente: false
+    despesaRecorrente: false,
+    valorFixo: true // Novo estado para controlar se o valor é fixo ou variável
   });
 
   // Função para determinar status automático baseado na data
@@ -50,7 +51,8 @@ export default function ModalNovoLancamento({
       observacoes: '',
       parcelado: false,
       parcelas: { atual: 1, total: 1 },
-      despesaRecorrente: false
+      despesaRecorrente: false,
+      valorFixo: true
     });
   };
 
@@ -69,7 +71,8 @@ export default function ModalNovoLancamento({
         observacoes: formData.observacoes || '',
         isRecorrente: formData.despesaRecorrente,
         isParcelado: formData.parcelado,
-        numeroDeParcelas: formData.parcelado ? formData.parcelas.total : undefined
+        numeroDeParcelas: formData.parcelado ? formData.parcelas.total : undefined,
+        isValorFixo: formData.valorFixo // Integração com o novo campo
       });
     } else {
       // Implementação legada para compatibilidade
@@ -216,6 +219,23 @@ export default function ModalNovoLancamento({
                     Despesa Recorrente
                   </Label>
                 </div>
+
+                {/* Checkbox para valor fixo - só aparece quando despesa recorrente está marcada */}
+                {formData.despesaRecorrente && (
+                  <div className="flex items-center space-x-2 ml-6">
+                    <Checkbox
+                      id="valorFixo"
+                      checked={formData.valorFixo}
+                      onCheckedChange={(checked) => setFormData({ 
+                        ...formData, 
+                        valorFixo: checked as boolean
+                      })}
+                    />
+                    <Label htmlFor="valorFixo" className="text-sm text-blue-700">
+                      Manter valor fixo mensalmente?
+                    </Label>
+                  </div>
+                )}
                 
                 <div className="flex items-center space-x-2">
                   <Checkbox
@@ -265,6 +285,15 @@ export default function ModalNovoLancamento({
                 <strong>Despesa Recorrente:</strong> Será criada automaticamente para todos os meses 
                 restantes do ano {new Date().getFullYear()}.
               </p>
+              {formData.valorFixo ? (
+                <p className="text-xs text-green-700 mt-1">
+                  ✓ <strong>Valor Fixo:</strong> O valor R$ {formData.valor || '0,00'} será mantido em todos os meses.
+                </p>
+              ) : (
+                <p className="text-xs text-orange-700 mt-1">
+                  ⚠ <strong>Valor Variável:</strong> Será criado com valor R$ 0,00 para edição manual a cada mês.
+                </p>
+              )}
             </div>
           )}
 
