@@ -1,15 +1,47 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Eye, EyeOff, TrendingUp, Send, CheckCircle, XCircle, Clock, Target } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MetricasOrcamento as MetricasType } from '@/types/orcamentos';
+import { useOrcamentos } from '@/hooks/useOrcamentos';
+
 interface MetricasOrcamentoProps {
-  metricas: MetricasType;
+  selectedMonth: Date;
 }
 export default function MetricasOrcamento({
-  metricas
+  selectedMonth
 }: MetricasOrcamentoProps) {
   const [mostrarMetricas, setMostrarMetricas] = useState(true);
+  const { orcamentos } = useOrcamentos();
+  
+  // Calcular métricas dinamicamente com base no mês selecionado
+  const metricas = useMemo(() => {
+    const mesSelected = selectedMonth.getMonth() + 1; // getMonth() retorna 0-11
+    const anoSelected = selectedMonth.getFullYear();
+
+    // Filtrar orçamentos do mês selecionado
+    const orcamentosMes = orcamentos.filter(orc => {
+      const [anoOrc, mesOrc] = orc.criadoEm.split('-').map(Number);
+      return mesOrc === mesSelected && anoOrc === anoSelected;
+    });
+
+    const enviados = orcamentosMes.filter(o => o.status === 'enviado').length;
+    const fechados = orcamentosMes.filter(o => o.status === 'fechado').length;
+    const cancelados = orcamentosMes.filter(o => o.status === 'cancelado').length;
+    const pendentes = orcamentosMes.filter(o => o.status === 'pendente').length;
+    
+    // Calcular taxa de conversão correta: fechados / (fechados + cancelados)
+    const totalDecididos = fechados + cancelados;
+    const taxaConversao = totalDecididos > 0 ? (fechados / totalDecididos) * 100 : 0;
+
+    return {
+      totalMes: orcamentosMes.length,
+      enviados,
+      fechados,
+      cancelados,
+      pendentes,
+      taxaConversao
+    };
+  }, [orcamentos, selectedMonth]);
   if (!mostrarMetricas) {
     return <div className="mb-4">
         <Button variant="ghost" size="sm" onClick={() => setMostrarMetricas(true)} className="flex items-center gap-2">

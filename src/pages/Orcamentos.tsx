@@ -35,7 +35,7 @@ export default function Orcamentos() {
         </p>
       </div>
 
-      <MetricasOrcamento metricas={metricas} />
+      <MetricasOrcamento selectedMonth={selectedMonth} />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-3 py-1 my-1">
