@@ -7,6 +7,7 @@ import {
   FinancialTransaction, 
   RecurringTemplate, 
   CreateTransactionInput,
+  CreditCard,
   FINANCIAL_STORAGE_KEYS 
 } from '@/services/FinancialEngine';
 
@@ -41,6 +42,7 @@ interface TransacaoCompativel {
 const STORAGE_KEYS = {
   TRANSACTIONS: FINANCIAL_STORAGE_KEYS.TRANSACTIONS,
   RECURRING_TEMPLATES: FINANCIAL_STORAGE_KEYS.RECURRING_TEMPLATES,
+  CREDIT_CARDS: FINANCIAL_STORAGE_KEYS.CREDIT_CARDS,
   ITEMS: 'lunari_fin_items'
 };
 
@@ -82,6 +84,10 @@ export function useNovoFinancas() {
     return FinancialEngine.loadRecurringTemplates();
   });
 
+  const [cartoes, setCartoes] = useState<CreditCard[]>(() => {
+    return FinancialEngine.loadCreditCards();
+  });
+
   const [filtroMesAno, setFiltroMesAno] = useState(() => {
     const hoje = getCurrentDateString();
     const [ano, mes] = hoje.split('-').map(Number);
@@ -103,6 +109,10 @@ export function useNovoFinancas() {
     // A persistência é gerenciada pelo FinancialEngine
     localStorage.setItem(STORAGE_KEYS.RECURRING_TEMPLATES, JSON.stringify(modelosRecorrentes));
   }, [modelosRecorrentes]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.CREDIT_CARDS, JSON.stringify(cartoes));
+  }, [cartoes]);
 
   // ============= MOTOR DE CRIAÇÃO DE TRANSAÇÕES CENTRALIZADO =============
   
@@ -316,12 +326,31 @@ export function useNovoFinancas() {
     atualizarTransacao(id, dados);
   };
 
+  // Funções para gerenciar cartões de crédito
+  const adicionarCartao = (cartao: Omit<CreditCard, 'id'>) => {
+    const novoCartao: CreditCard = {
+      ...cartao,
+      id: Date.now().toString()
+    };
+    setCartoes(prev => [...prev, novoCartao]);
+  };
+
+  const atualizarCartao = (id: string, dadosAtualizados: Partial<CreditCard>) => {
+    setCartoes(prev => 
+      prev.map(cartao => cartao.id === id ? { ...cartao, ...dadosAtualizados } : cartao)
+    );
+  };
+
+  const removerCartao = (id: string) => {
+    setCartoes(prev => prev.filter(cartao => cartao.id !== id));
+  };
+
   // Função para limpeza completa (emergência)
   const limparTodosDados = () => {
     FinancialEngine.clearAllData();
     setTransacoes([]);
     setModelosRecorrentes([]);
-    setModelosRecorrentes([]);
+    setCartoes([]);
     console.log('Todos os dados financeiros foram limpos');
   };
 
@@ -350,6 +379,12 @@ export function useNovoFinancas() {
     atualizarTransacao,
     atualizarTransacaoCompativel,
     removerTransacao,
+    
+    // Funções de cartões
+    cartoes,
+    adicionarCartao,
+    atualizarCartao,
+    removerCartao,
     
     // Funções utilitárias
     calcularMetricasPorGrupo,

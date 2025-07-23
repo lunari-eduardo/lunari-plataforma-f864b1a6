@@ -23,7 +23,11 @@ export default function NovaFinancas() {
     atualizarTransacaoCompativel,
     removerTransacao,
     createTransactionEngine,
-    itensFinanceiros
+    itensFinanceiros,
+    cartoes,
+    adicionarCartao,
+    atualizarCartao,
+    removerCartao
   } = useNovoFinancas();
   const [activeTab, setActiveTab] = useState('lancamentos');
   return <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white bg-lunar-bg">
@@ -55,7 +59,19 @@ export default function NovaFinancas() {
           </TabsContent>
 
           <TabsContent value="configuracoes" className="mt-6">
-            <ConfiguracoesFinanceirasTab itensFinanceiros={itensFinanceiros} adicionarItemFinanceiro={adicionarItemFinanceiro} removerItemFinanceiro={removerItemFinanceiro} atualizarItemFinanceiro={atualizarItemFinanceiro} />
+            <ConfiguracoesFinanceirasTab 
+              itensFinanceiros={itensFinanceiros} 
+              adicionarItemFinanceiro={adicionarItemFinanceiro} 
+              removerItemFinanceiro={removerItemFinanceiro} 
+              atualizarItemFinanceiro={atualizarItemFinanceiro}
+              cartoes={cartoes}
+              onCartoesChange={(novoCartoes) => {
+                // The ConfiguracaoCartoes component manages its own state
+                // This callback is used for direct updates from the component
+                const cartoesAtuais = [...cartoes];
+                cartoesAtuais.splice(0, cartoesAtuais.length, ...novoCartoes);
+              }}
+            />
           </TabsContent>
         </Tabs>
       </div>
