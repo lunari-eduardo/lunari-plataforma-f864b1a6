@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -36,7 +35,6 @@ export default function EditOrcamentoModal({
   } = useOrcamentos();
   const { toast } = useToast();
 
-  // Estrutura simplificada para o novo formato
   interface ProdutoSelecionado {
     id: string;
     nome: string;
@@ -45,7 +43,6 @@ export default function EditOrcamentoModal({
     inclusoNoPacote?: boolean;
   }
 
-  // Estado inicial do formulário
   const initialFormState = {
     cliente: null as Cliente | null,
     data: '',
@@ -54,21 +51,17 @@ export default function EditOrcamentoModal({
     descricao: '',
     detalhes: '',
     origem: '',
-    // Nova estrutura: pacote principal + produtos adicionais
     pacotePrincipal: null as any,
     produtosAdicionais: [] as ProdutoSelecionado[],
     valorManual: undefined as number | undefined,
     isOrcamentoFechado: false
   };
 
-  // Estado único centralizado para o formulário
   const [formData, setFormData] = useState(initialFormState);
 
-  // Função para resolver categoria por ID
   const getCategoriaById = (categoriaId: string | number): string => {
     if (!categoriaId) return '';
     
-    // Se categorias é array de strings, usar index
     if (typeof categorias[0] === 'string') {
       const index = parseInt(String(categoriaId)) - 1;
       if (index >= 0 && index < categorias.length) {
@@ -76,12 +69,10 @@ export default function EditOrcamentoModal({
       }
     }
     
-    // Se categorias é array de objetos
     const categoria = categorias.find((cat: any) => 
       cat.id === categoriaId || cat.id === String(categoriaId)
     );
     
-    // Verificar se categoria é um objeto com propriedade nome
     if (categoria && typeof categoria === 'object') {
       const catObj = categoria as any;
       if (catObj.nome) {
@@ -92,13 +83,10 @@ export default function EditOrcamentoModal({
     return String(categoriaId);
   };
 
-  // Inicialização via useEffect com dependência de [isOpen, orcamento]
   useEffect(() => {
     if (isOpen && orcamento) {
-      // Converte dados antigos para nova estrutura
       const [year, month, day] = orcamento.data.split('-');
       
-      // Separa pacote principal (primeiro) dos produtos adicionais
       const pacotes = orcamento.pacotes || [];
       const pacotePrincipal = pacotes.length > 0 ? pacotes[0] : null;
       const produtosAdicionais = pacotes.slice(1).map(item => ({
@@ -122,15 +110,12 @@ export default function EditOrcamentoModal({
         isOrcamentoFechado: orcamento.status === 'fechado'
       });
     } else if (!isOpen) {
-      // Reseta o estado quando o modal é fechado
       setFormData(initialFormState);
     }
   }, [isOpen, orcamento]);
 
-  // Nova lógica para pacote principal com processamento de produtos inclusos
   const handleMainPackageSelect = (pacote: any) => {
     if (!pacote) {
-      // Limpar pacote principal e produtos inclusos
       setFormData(prev => ({ 
         ...prev, 
         pacotePrincipal: null,
@@ -139,7 +124,6 @@ export default function EditOrcamentoModal({
       return;
     }
 
-    // Resolver categoria do pacote selecionado
     let categoriaResolvida = '';
     if (pacote.categoria) {
       categoriaResolvida = pacote.categoria;
@@ -147,7 +131,6 @@ export default function EditOrcamentoModal({
       categoriaResolvida = getCategoriaById(pacote.categoria_id);
     }
 
-    // Processar produtos inclusos
     let novosInclusos: ProdutoSelecionado[] = [];
     if (pacote.produtosIncluidos && pacote.produtosIncluidos.length > 0) {
       novosInclusos = pacote.produtosIncluidos.map((produtoIncluso: any) => {
@@ -168,9 +151,7 @@ export default function EditOrcamentoModal({
     setFormData(prev => ({
       ...prev,
       pacotePrincipal: pacote,
-      // Atualizar categoria baseado no pacote selecionado
       categoria: categoriaResolvida,
-      // Remover produtos inclusos antigos e adicionar os novos
       produtosAdicionais: [
         ...prev.produtosAdicionais.filter(p => !(p as any).inclusoNoPacote),
         ...novosInclusos
@@ -182,16 +163,13 @@ export default function EditOrcamentoModal({
     setFormData(prev => ({ 
       ...prev, 
       pacotePrincipal: null,
-      // Remover apenas produtos inclusos no pacote
       produtosAdicionais: prev.produtosAdicionais.filter(p => !(p as any).inclusoNoPacote)
     }));
   };
 
-  // Nova lógica para produtos adicionais
   const handleAddProduct = (produto: any) => {
     if (!produto) return;
     
-    // Verificar se o produto já existe na lista
     const existeProduto = formData.produtosAdicionais.some(p => p.id === produto.id);
     if (existeProduto) {
       toast({
@@ -217,7 +195,6 @@ export default function EditOrcamentoModal({
   const handleRemoveProduct = (index: number) => {
     const produto = formData.produtosAdicionais[index];
     
-    // Verificar se é produto incluso no pacote (não pode ser removido individualmente)
     if ((produto as any).inclusoNoPacote) {
       toast({
         title: "Aviso",
@@ -250,13 +227,11 @@ export default function EditOrcamentoModal({
   const handleSave = () => {
     if (!orcamento) return;
 
-    // Calcular valor total com nova estrutura
     const valorPacotePrincipal = formData.pacotePrincipal ? 
       (formData.pacotePrincipal.valorVenda || formData.pacotePrincipal.valor_base || formData.pacotePrincipal.valor || 0) : 0;
     const valorProdutos = formData.produtosAdicionais.reduce((total, p) => total + (p.preco * p.quantidade), 0);
     const valorTotal = valorPacotePrincipal + valorProdutos;
 
-    // Converter nova estrutura para formato antigo
     const pacotesParaSalvar: PacoteProduto[] = [];
     
     if (formData.pacotePrincipal) {
@@ -272,12 +247,10 @@ export default function EditOrcamentoModal({
 
     const updates: Partial<Orcamento> = {
       detalhes: formData.detalhes,
-      // Data e hora sempre editáveis (mesmo para orçamentos fechados)
       data: formatDateForStorage(formData.data),
       hora: formData.hora
     };
 
-    // Only update other fields if the budget is not closed
     if (!formData.isOrcamentoFechado) {
       if (formData.cliente) {
         updates.cliente = formData.cliente;
@@ -302,7 +275,6 @@ export default function EditOrcamentoModal({
 
   if (!orcamento) return null;
 
-  // Calculate values with new structure
   const valorPacotePrincipal = formData.pacotePrincipal ? 
     (formData.pacotePrincipal.valorVenda || formData.pacotePrincipal.valor_base || formData.pacotePrincipal.valor || 0) : 0;
   const valorProdutos = formData.produtosAdicionais.reduce((total, p) => total + (p.preco * p.quantidade), 0);
@@ -314,7 +286,6 @@ export default function EditOrcamentoModal({
       <DialogContent 
         className="max-w-4xl max-h-[90vh] overflow-y-auto"
         onInteractOutside={(event) => {
-          // Prevent modal from closing when clicking on select dropdowns
           const target = event.target as Element;
           if (target?.closest('[data-radix-select-content]') || 
               target?.closest('[data-radix-popper-content-wrapper]')) {
@@ -331,7 +302,6 @@ export default function EditOrcamentoModal({
 
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Cliente */}
             <div>
               <label className="text-sm font-medium mb-1 block">Cliente</label>
               <ClientSearchInput
@@ -343,7 +313,6 @@ export default function EditOrcamentoModal({
               />
             </div>
 
-            {/* Data e Hora - SEMPRE EDITÁVEIS */}
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="text-sm font-medium mb-1 block">Data</label>
@@ -373,7 +342,6 @@ export default function EditOrcamentoModal({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Categoria com botão de limpar */}
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="text-sm font-medium">Categoria (Opcional)</label>
@@ -399,7 +367,6 @@ export default function EditOrcamentoModal({
               />
             </div>
 
-            {/* Origem */}
             <div>
               <label className="text-sm font-medium mb-1 block">Origem</label>
               <Select 
@@ -410,7 +377,7 @@ export default function EditOrcamentoModal({
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent onInteractOutside={(event) => event.preventDefault()}>
                   {origens.map(origem => (
                     <SelectItem key={origem.id} value={origem.id}>
                       {origem.nome}
@@ -421,7 +388,6 @@ export default function EditOrcamentoModal({
             </div>
           </div>
 
-          {/* Descrição */}
           <div>
             <label className="text-sm font-medium mb-1 block">Descrição</label>
             <Input
@@ -432,7 +398,6 @@ export default function EditOrcamentoModal({
             />
           </div>
 
-          {/* Detalhes */}
           <div>
             <label className="text-sm font-medium mb-1 block">Detalhes</label>
             <Textarea
@@ -444,10 +409,8 @@ export default function EditOrcamentoModal({
             />
           </div>
 
-          {/* Nova estrutura: Pacote Principal + Produtos Adicionais */}
           {!formData.isOrcamentoFechado && (
             <div className="space-y-6">
-              {/* Pacote Principal (Opcional) */}
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-sm font-medium">Pacote Principal (Opcional)</label>
@@ -487,7 +450,6 @@ export default function EditOrcamentoModal({
                 )}
               </div>
 
-              {/* Produtos Adicionais */}
               <div>
                 <label className="text-sm font-medium mb-2 block">Produtos Adicionais</label>
                 <ProductSearchCombobox
@@ -496,7 +458,6 @@ export default function EditOrcamentoModal({
                   placeholder="Buscar e adicionar produto..."
                 />
                 
-                {/* Lista de Produtos Adicionais */}
                 <div className="mt-3 space-y-2">
                   {formData.produtosAdicionais.length === 0 ? (
                     <p className="text-xs text-muted-foreground p-3 bg-muted/30 rounded-lg text-center">
@@ -566,7 +527,6 @@ export default function EditOrcamentoModal({
             </div>
           )}
 
-          {/* Resumo dos itens selecionados (sempre visível) */}
           {(formData.pacotePrincipal || formData.produtosAdicionais.length > 0) && (
             <div className="border-t pt-4">
               <h4 className="text-sm font-medium mb-3">Resumo do Orçamento</h4>
@@ -587,7 +547,6 @@ export default function EditOrcamentoModal({
             </div>
           )}
 
-          {/* Valor Final */}
           <div className="mt-4">
             <div className="flex justify-between items-center font-medium mb-2">
               <span className="text-sm">Total Calculado:</span>
