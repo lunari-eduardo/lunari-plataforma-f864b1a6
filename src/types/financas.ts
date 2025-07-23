@@ -10,7 +10,7 @@ export type TipoCategoria = 'despesa_fixa' | 'despesa_variavel' | 'receita_nao_o
 // Novos tipos para a arquitetura reestruturada
 export type GrupoPrincipal = 'Despesa Fixa' | 'Despesa Variável' | 'Investimento' | 'Receita Não Operacional';
 
-export type StatusTransacao = 'Agendado' | 'Pago';
+export type StatusTransacao = 'Agendado' | 'Faturado' | 'Pago';
 
 // Nova estrutura: Item Financeiro (Lista Mestre)
 export interface ItemFinanceiro {
@@ -127,4 +127,15 @@ export interface ConfiguracaoParcelamento {
   tipo: 'unico' | 'parcelado';
   dataInicio: string;
   quantidadeParcelas: number;
+}
+
+// Nova interface para cartões de crédito
+export interface CartaoCredito {
+  id: string;
+  nome: string;
+  diaVencimento: number; // Dia do mês (1-31)
+  diaFechamento: number; // Dia do mês (1-31)
+  userId: string;
+  ativo: boolean;
+  criadoEm: string;
 }

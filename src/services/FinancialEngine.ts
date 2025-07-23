@@ -17,11 +17,12 @@ export interface FinancialTransaction {
   itemId: string;
   valor: number;
   dataVencimento: string; // Formato YYYY-MM-DD OBRIGATÓRIO
-  status: 'Pago' | 'Agendado';
+  status: 'Agendado' | 'Faturado' | 'Pago'; // Sistema de 3 níveis
   observacoes?: string;
   parcelaInfo?: { atual: number; total: number } | null;
   recurringTemplateId?: string; // ID do modelo que gerou esta transação
   parentId?: string; // Para compatibilidade com sistema existente
+  cartaoCreditoId?: string; // ID do cartão de crédito, se aplicável
 }
 
 export interface RecurringTemplate {
@@ -43,13 +44,26 @@ export interface CreateTransactionInput {
   numeroDeParcelas?: number;
   observacoes?: string;
   isValorFixo?: boolean; // Para despesas recorrentes: true = valor fixo, false = valor variável
+  cartaoCreditoId?: string; // ID do cartão de crédito, se aplicável
+}
+
+// Nova interface para cartões de crédito
+export interface CreditCard {
+  id: string;
+  nome: string;
+  diaVencimento: number; // Dia do mês (1-31)
+  diaFechamento: number; // Dia do mês (1-31)
+  userId: string;
+  ativo: boolean;
+  criadoEm: string;
 }
 
 // ============= CHAVES DE LOCALSTORAGE =============
 
 export const FINANCIAL_STORAGE_KEYS = {
   TRANSACTIONS: 'lunari_fin_transactions',
-  RECURRING_TEMPLATES: 'lunari_fin_recurring_templates'
+  RECURRING_TEMPLATES: 'lunari_fin_recurring_templates',
+  CREDIT_CARDS: 'lunari_fin_credit_cards'
 } as const;
 
 // ============= MOTOR PRINCIPAL =============
@@ -64,7 +78,7 @@ export class FinancialEngine {
     transactions: FinancialTransaction[];
     recurringTemplate?: RecurringTemplate;
   } {
-    const { valorTotal, dataPrimeiraOcorrencia, itemId, isRecorrente, isParcelado, numeroDeParcelas, observacoes, isValorFixo } = input;
+    const { valorTotal, dataPrimeiraOcorrencia, itemId, isRecorrente, isParcelado, numeroDeParcelas, observacoes, isValorFixo, cartaoCreditoId } = input;
 
     // Validações básicas
     if (!itemId || valorTotal <= 0) {
@@ -73,6 +87,18 @@ export class FinancialEngine {
 
     // Garantir formato correto da data (REGRA D)
     const dataFormatada = formatDateForStorage(dataPrimeiraOcorrencia);
+
+    // NOVA: Lógica de Cartão de Crédito (prioridade máxima)
+    if (cartaoCreditoId) {
+      return this.createCreditCardTransactions({
+        valorTotal,
+        dataPrimeiraOcorrencia: dataFormatada,
+        itemId,
+        cartaoCreditoId,
+        numeroDeParcelas,
+        observacoes
+      });
+    }
 
     // REGRA A: Lógica de Parcelamento Precisa (prioridade sobre recorrente)
     if (isParcelado && numeroDeParcelas && numeroDeParcelas > 1) {
@@ -173,11 +199,11 @@ export class FinancialEngine {
       isValorFixo
     };
 
-    // Gerar apenas a primeira transação para o mês atual
+    // CORREÇÃO CRÍTICA: Gerar primeira transação com valor digitado pelo usuário
     const firstTransaction: FinancialTransaction = {
       id: `${recurringTemplate.id}_primeira`,
       itemId,
-      valor: isValorFixo ? valorTotal : 0, // Se valor variável, criar transação com valor 0
+      valor: valorTotal, // SEMPRE usar o valor digitado pelo usuário na primeira transação
       dataVencimento: dataPrimeiraOcorrencia,
       status: this.determineStatus(dataPrimeiraOcorrencia),
       recurringTemplateId: recurringTemplate.id,
@@ -281,11 +307,96 @@ export class FinancialEngine {
   }
 
   /**
-   * Determinar status automático baseado na data
+   * NOVA: Criar transações de cartão de crédito
    */
-  private static determineStatus(dataVencimento: string): 'Pago' | 'Agendado' {
+  private static createCreditCardTransactions(params: {
+    valorTotal: number;
+    dataPrimeiraOcorrencia: string;
+    itemId: string;
+    cartaoCreditoId: string;
+    numeroDeParcelas?: number;
+    observacoes?: string;
+  }): { transactions: FinancialTransaction[] } {
+    
+    const { valorTotal, dataPrimeiraOcorrencia, itemId, cartaoCreditoId, numeroDeParcelas, observacoes } = params;
+    
+    // Carregar dados do cartão
+    const cartao = this.loadCreditCards().find(c => c.id === cartaoCreditoId);
+    if (!cartao) {
+      throw new Error('Cartão de crédito não encontrado');
+    }
+
+    const transactions: FinancialTransaction[] = [];
+    const parcelas = numeroDeParcelas || 1;
+    const valorDaParcela = valorTotal / parcelas;
+    const parentId = `cartao_${Date.now()}`;
+
+    for (let i = 0; i < parcelas; i++) {
+      const dataVencimento = this.calculateCreditCardDueDate(dataPrimeiraOcorrencia, cartao, i);
+      
+      const transaction: FinancialTransaction = {
+        id: `${parentId}_${i + 1}`,
+        itemId,
+        valor: valorDaParcela,
+        dataVencimento,
+        status: this.determineStatus(dataVencimento),
+        cartaoCreditoId,
+        parcelaInfo: parcelas > 1 ? { atual: i + 1, total: parcelas } : null,
+        observacoes: observacoes ? `${observacoes} (Cartão: ${cartao.nome})` : `Cartão: ${cartao.nome}`
+      };
+      
+      transactions.push(transaction);
+    }
+
+    return { transactions };
+  }
+
+  /**
+   * Calcular data de vencimento para cartão de crédito
+   */
+  private static calculateCreditCardDueDate(dataCompra: string, cartao: CreditCard, parcelaIndex: number): string {
+    const [ano, mes, dia] = dataCompra.split('-').map(Number);
+    const dataCompraObj = new Date(Date.UTC(ano, mes - 1, dia));
+    
+    // Calcular o mês da fatura baseado na data de fechamento
+    let mesParaCalculo = mes + parcelaIndex;
+    let anoParaCalculo = ano;
+    
+    // Ajustar ano se mês ultrapassar 12
+    while (mesParaCalculo > 12) {
+      mesParaCalculo -= 12;
+      anoParaCalculo++;
+    }
+    
+    // Se a compra foi após o fechamento, a fatura será do próximo mês
+    if (dia > cartao.diaFechamento) {
+      mesParaCalculo++;
+      if (mesParaCalculo > 12) {
+        mesParaCalculo = 1;
+        anoParaCalculo++;
+      }
+    }
+    
+    // Calcular último dia do mês para ajustar se necessário
+    const ultimoDiaMes = new Date(Date.UTC(anoParaCalculo, mesParaCalculo, 0)).getUTCDate();
+    const diaVencimento = Math.min(cartao.diaVencimento, ultimoDiaMes);
+    
+    return `${anoParaCalculo}-${mesParaCalculo.toString().padStart(2, '0')}-${diaVencimento.toString().padStart(2, '0')}`;
+  }
+
+  /**
+   * SISTEMA DE 3 NÍVEIS: Determinar status automático baseado na data
+   */
+  private static determineStatus(dataVencimento: string): 'Agendado' | 'Faturado' | 'Pago' {
     const hoje = getCurrentDateString();
-    return dataVencimento <= hoje ? 'Pago' : 'Agendado';
+    
+    if (dataVencimento > hoje) {
+      return 'Agendado';
+    } else if (dataVencimento === hoje) {
+      return 'Faturado'; // Vence hoje - automático
+    } else {
+      return 'Faturado'; // Venceu - precisa ser marcado como pago manualmente
+    }
   }
 
   /**
@@ -388,10 +499,92 @@ export class FinancialEngine {
   }
 
   /**
+   * NOVA: Salvar cartões de crédito no localStorage
+   */
+  static saveCreditCards(cards: CreditCard[]): void {
+    const existing = this.loadCreditCards();
+    const combined = [...existing, ...cards];
+    localStorage.setItem(FINANCIAL_STORAGE_KEYS.CREDIT_CARDS, JSON.stringify(combined));
+  }
+
+  /**
+   * NOVA: Carregar cartões de crédito do localStorage
+   */
+  static loadCreditCards(): CreditCard[] {
+    try {
+      const data = localStorage.getItem(FINANCIAL_STORAGE_KEYS.CREDIT_CARDS);
+      return data ? JSON.parse(data) : [];
+    } catch (error) {
+      console.error('Erro ao carregar cartões de crédito:', error);
+      return [];
+    }
+  }
+
+  /**
+   * NOVA: Adicionar um novo cartão de crédito
+   */
+  static addCreditCard(card: Omit<CreditCard, 'id' | 'criadoEm'>): CreditCard {
+    const newCard: CreditCard = {
+      ...card,
+      id: `card_${Date.now()}`,
+      criadoEm: getCurrentDateString()
+    };
+    
+    const existing = this.loadCreditCards();
+    const updated = [...existing, newCard];
+    localStorage.setItem(FINANCIAL_STORAGE_KEYS.CREDIT_CARDS, JSON.stringify(updated));
+    
+    return newCard;
+  }
+
+  /**
+   * NOVA: Remover cartão de crédito
+   */
+  static removeCreditCard(id: string): void {
+    const cards = this.loadCreditCards();
+    const filtered = cards.filter(c => c.id !== id);
+    localStorage.setItem(FINANCIAL_STORAGE_KEYS.CREDIT_CARDS, JSON.stringify(filtered));
+  }
+
+  /**
+   * NOVA: Marcar transação como paga (transição manual)
+   */
+  static markAsPaid(transactionId: string): void {
+    const transactions = this.loadTransactions();
+    const index = transactions.findIndex(t => t.id === transactionId);
+    
+    if (index !== -1 && transactions[index].status === 'Faturado') {
+      transactions[index].status = 'Pago';
+      localStorage.setItem(FINANCIAL_STORAGE_KEYS.TRANSACTIONS, JSON.stringify(transactions));
+    }
+  }
+
+  /**
+   * NOVA: Atualizar status automático para todas as transações
+   */
+  static updateAllStatuses(): void {
+    const transactions = this.loadTransactions();
+    let hasChanges = false;
+    
+    transactions.forEach(transaction => {
+      const newStatus = this.determineStatus(transaction.dataVencimento);
+      if (transaction.status !== 'Pago' && transaction.status !== newStatus) {
+        transaction.status = newStatus;
+        hasChanges = true;
+      }
+    });
+    
+    if (hasChanges) {
+      localStorage.setItem(FINANCIAL_STORAGE_KEYS.TRANSACTIONS, JSON.stringify(transactions));
+    }
+  }
+
+  /**
    * Limpar todos os dados (função de emergência)
    */
   static clearAllData(): void {
     localStorage.removeItem(FINANCIAL_STORAGE_KEYS.TRANSACTIONS);
     localStorage.removeItem(FINANCIAL_STORAGE_KEYS.RECURRING_TEMPLATES);
+    localStorage.setItem(FINANCIAL_STORAGE_KEYS.CREDIT_CARDS, JSON.stringify([]));
   }
 }

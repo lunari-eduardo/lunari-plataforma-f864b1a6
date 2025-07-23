@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { GrupoPrincipal, ItemFinanceiro, NovaTransacaoFinanceira, StatusTransacao } from '@/types/financas';
-import { CreateTransactionInput } from '@/services/FinancialEngine';
+import { CreateTransactionInput, FinancialEngine, CreditCard } from '@/services/FinancialEngine';
 
 interface ModalNovoLancamentoProps {
   aberto: boolean;
@@ -16,6 +16,7 @@ interface ModalNovoLancamentoProps {
   createTransactionEngine?: (input: CreateTransactionInput) => void;
   obterItensPorGrupo: (grupo: GrupoPrincipal) => ItemFinanceiro[];
   grupoAtivo: GrupoPrincipal;
+  cartoes?: CreditCard[]; // Lista de cartões disponíveis
 }
 
 export default function ModalNovoLancamento({
@@ -24,7 +25,8 @@ export default function ModalNovoLancamento({
   onAdicionarTransacao,
   createTransactionEngine,
   obterItensPorGrupo,
-  grupoAtivo
+  grupoAtivo,
+  cartoes = []
 }: ModalNovoLancamentoProps) {
   const [formData, setFormData] = useState({
     item_id: '',
@@ -34,7 +36,9 @@ export default function ModalNovoLancamento({
     parcelado: false,
     parcelas: { atual: 1, total: 1 },
     despesaRecorrente: false,
-    valorFixo: true // Novo estado para controlar se o valor é fixo ou variável
+    valorFixo: true, // Novo estado para controlar se o valor é fixo ou variável
+    cartaoCredito: false, // Novo estado para cartão de crédito
+    cartaoCreditoId: '' // ID do cartão selecionado
   });
 
   // Função para determinar status automático baseado na data
@@ -52,7 +56,9 @@ export default function ModalNovoLancamento({
       parcelado: false,
       parcelas: { atual: 1, total: 1 },
       despesaRecorrente: false,
-      valorFixo: true
+      valorFixo: true,
+      cartaoCredito: false,
+      cartaoCreditoId: ''
     });
   };
 
@@ -72,7 +78,8 @@ export default function ModalNovoLancamento({
         isRecorrente: formData.despesaRecorrente,
         isParcelado: formData.parcelado,
         numeroDeParcelas: formData.parcelado ? formData.parcelas.total : undefined,
-        isValorFixo: formData.valorFixo // Integração com o novo campo
+        isValorFixo: formData.valorFixo,
+        cartaoCreditoId: formData.cartaoCredito ? formData.cartaoCreditoId : undefined
       });
     } else {
       // Implementação legada para compatibilidade
@@ -237,23 +244,66 @@ export default function ModalNovoLancamento({
                   </div>
                 )}
                 
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="parcelado"
-                    checked={formData.parcelado}
-                    onCheckedChange={(checked) => setFormData({ 
-                      ...formData, 
-                      parcelado: checked as boolean,
-                      despesaRecorrente: checked ? false : formData.despesaRecorrente 
-                    })}
-                  />
-                  <Label htmlFor="parcelado" className="text-sm">
-                    Lançamento Parcelado
-                  </Label>
-                </div>
+                 <div className="flex items-center space-x-2">
+                   <Checkbox
+                     id="cartaoCredito"
+                     checked={formData.cartaoCredito}
+                     onCheckedChange={(checked) => setFormData({ 
+                       ...formData, 
+                       cartaoCredito: checked as boolean,
+                       despesaRecorrente: checked ? false : formData.despesaRecorrente,
+                       parcelado: checked ? false : formData.parcelado
+                     })}
+                   />
+                   <Label htmlFor="cartaoCredito" className="text-sm">
+                     Cartão de Crédito
+                   </Label>
+                 </div>
+                 
+                 <div className="flex items-center space-x-2">
+                   <Checkbox
+                     id="parcelado"
+                     checked={formData.parcelado}
+                     onCheckedChange={(checked) => setFormData({ 
+                       ...formData, 
+                       parcelado: checked as boolean,
+                       despesaRecorrente: checked ? false : formData.despesaRecorrente,
+                       cartaoCredito: checked ? false : formData.cartaoCredito
+                     })}
+                   />
+                   <Label htmlFor="parcelado" className="text-sm">
+                     Lançamento Parcelado
+                   </Label>
+                 </div>
               </div>
             </div>
           </div>
+
+          {formData.cartaoCredito && (
+            <div>
+              <Label htmlFor="cartaoSelect">Selecionar Cartão</Label>
+              <Select 
+                value={formData.cartaoCreditoId} 
+                onValueChange={(value) => setFormData({ ...formData, cartaoCreditoId: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um cartão..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {cartoes.filter(c => c.ativo).map(cartao => (
+                    <SelectItem key={cartao.id} value={cartao.id}>
+                      {cartao.nome} (Venc: {cartao.diaVencimento})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {cartoes.filter(c => c.ativo).length === 0 && (
+                <p className="text-xs text-red-600 mt-1">
+                  Nenhum cartão configurado. Vá em Configurações para adicionar.
+                </p>
+              )}
+            </div>
+          )}
 
           {formData.parcelado && (
             <div>
@@ -276,6 +326,22 @@ export default function ModalNovoLancamento({
               <p className="text-xs text-gray-500 mt-1">
                 Será criado {formData.parcelas.total} lançamento(s) automático(s)
               </p>
+            </div>
+          )}
+
+          {formData.cartaoCredito && (
+            <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+              <p className="text-sm text-purple-700">
+                <strong>Cartão de Crédito:</strong> {formData.cartaoCreditoId ? 
+                  `Lançamento será calculado baseado no cartão selecionado` : 
+                  'Selecione um cartão para continuar'
+                }
+              </p>
+              {formData.parcelado && (
+                <p className="text-xs text-purple-600 mt-1">
+                  ✓ <strong>Parcelado:</strong> Cada parcela será lançada no vencimento da fatura correspondente.
+                </p>
+              )}
             </div>
           )}
 
@@ -312,7 +378,7 @@ export default function ModalNovoLancamento({
             <Button variant="outline" onClick={onFechar}>
               Cancelar
             </Button>
-            <Button onClick={handleSubmit} disabled={!formData.item_id || !formData.valor}>
+            <Button onClick={handleSubmit} disabled={!formData.item_id || !formData.valor || (formData.cartaoCredito && !formData.cartaoCreditoId)}>
               Adicionar
             </Button>
           </div>
