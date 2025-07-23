@@ -29,7 +29,7 @@ export function CategorySelector({
         <SelectTrigger>
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
-        <SelectContent onInteractOutside={(event) => event.preventDefault()}>
+        <SelectContent>
           {categorias.map(categoria => (
             <SelectItem key={categoria} value={categoria}>
               {categoria}

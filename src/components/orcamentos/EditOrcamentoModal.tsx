@@ -377,7 +377,7 @@ export default function EditOrcamentoModal({
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
-                <SelectContent onInteractOutside={(event) => event.preventDefault()}>
+                <SelectContent>
                   {origens.map(origem => (
                     <SelectItem key={origem.id} value={origem.id}>
                       {origem.nome}
