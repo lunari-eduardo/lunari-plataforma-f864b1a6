@@ -7,11 +7,13 @@ import MetricasOrcamento from '@/components/orcamentos/MetricasOrcamento';
 import NovoOrcamento from '@/components/orcamentos/NovoOrcamento';
 import ListaOrcamentos from '@/components/orcamentos/ListaOrcamentos';
 import GerenciarOrigens from '@/components/orcamentos/GerenciarOrigens';
+import MonthYearSelector from '@/components/orcamentos/MonthYearSelector';
 
 export default function Orcamentos() {
   const { metricas } = useOrcamentos();
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState('novo');
+  const [activeTab, setActiveTab] = useState('lista');
+  const [selectedMonth, setSelectedMonth] = useState(new Date());
 
   // Check for URL parameters when coming from agenda
   useEffect(() => {
@@ -37,17 +39,21 @@ export default function Orcamentos() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-3 py-1 my-1">
-          <TabsTrigger value="novo">Novo Orçamento</TabsTrigger>
           <TabsTrigger value="lista">Orçamentos</TabsTrigger>
+          <TabsTrigger value="novo">Novo Orçamento</TabsTrigger>
           <TabsTrigger value="origens">Origens</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="novo" className="mt-4">
-          <NovoOrcamento />
+        <TabsContent value="lista" className="mt-4">
+          <MonthYearSelector 
+            selectedMonth={selectedMonth} 
+            onMonthChange={setSelectedMonth} 
+          />
+          <ListaOrcamentos selectedMonth={selectedMonth} />
         </TabsContent>
 
-        <TabsContent value="lista" className="mt-4">
-          <ListaOrcamentos />
+        <TabsContent value="novo" className="mt-4">
+          <NovoOrcamento />
         </TabsContent>
 
         <TabsContent value="origens" className="mt-4">

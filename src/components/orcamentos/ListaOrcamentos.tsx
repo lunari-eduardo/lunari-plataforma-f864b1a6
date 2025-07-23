@@ -15,7 +15,12 @@ import OrcamentoDetailsModal from './OrcamentoDetailsModal';
 import EditOrcamentoModal from './EditOrcamentoModal';
 
 import { formatDateForDisplay, isSameMonthYear, parseDateFromStorage } from '@/utils/dateUtils';
-export default function ListaOrcamentos() {
+
+interface ListaOrcamentosProps {
+  selectedMonth: Date;
+}
+
+export default function ListaOrcamentos({ selectedMonth }: ListaOrcamentosProps) {
   const {
     orcamentos,
     categorias,
@@ -30,7 +35,6 @@ export default function ListaOrcamentos() {
     busca: '',
     categoria: '',
     status: '',
-    mes: '',
     origem: ''
   });
   const [selectedOrcamento, setSelectedOrcamento] = useState<Orcamento | null>(null);
@@ -52,10 +56,10 @@ export default function ListaOrcamentos() {
     const categoriaMatch = !filtros.categoria || orc.categoria === filtros.categoria;
     const statusMatch = !filtros.status || orc.status === filtros.status;
     const origemMatch = !filtros.origem || orc.origemCliente === filtros.origem;
-    let mesMatch = true;
-    if (filtros.mes) {
-      mesMatch = isSameMonthYear(orc.data, filtros.mes);
-    }
+    
+    // Aplicar filtro de mês automaticamente baseado no selectedMonth
+    const mesMatch = isSameMonthYear(orc.data, selectedMonth.toISOString().split('T')[0]);
+    
     return nomeMatch && categoriaMatch && statusMatch && mesMatch && origemMatch;
   });
 
@@ -103,15 +107,13 @@ export default function ListaOrcamentos() {
   };
   const atualizarStatus = (id: string, novoStatus: string) => {
     const orcamento = orcamentos.find(o => o.id === id);
-    const statusAnterior = orcamento?.status;
     
     atualizarOrcamento(id, {
       status: novoStatus as any
     });
 
-    // Lógica contextual para as notificações baseada na transição de status
-    if (novoStatus === 'fechado' && statusAnterior !== 'fechado') {
-      // Transição para "Fechado" - Orçamento é adicionado ao Workflow
+    // Lógica de negócio para integrações (sem notificações)
+    if (novoStatus === 'fechado') {
       if (orcamento) {
         console.log('Orçamento fechado - criando agendamento automático:', orcamento);
         
@@ -132,30 +134,7 @@ export default function ListaOrcamentos() {
         };
 
         console.log('Dados do agendamento a ser criado:', agendamentoData);
-        
-        toast({
-          title: "Sucesso",
-          description: "Orçamento aprovado e adicionado ao Workflow."
-        });
       }
-    } else if (statusAnterior === 'fechado' && novoStatus !== 'fechado' && novoStatus !== 'cancelado') {
-      // Reversão de "Fechado" - Item é removido do Workflow
-      toast({
-        title: "Status Revertido",
-        description: "Status revertido. O projeto foi removido do Workflow."
-      });
-    } else if (novoStatus === 'cancelado') {
-      // Cancelamento - Orçamento é removido da Agenda
-      toast({
-        title: "Orçamento Cancelado",
-        description: "Orçamento cancelado e removido da Agenda."
-      });
-    } else {
-      // Outras transições de status
-      toast({
-        title: "Status Atualizado",
-        description: "Status do orçamento foi alterado."
-      });
     }
   };
   const limparFiltros = () => {
@@ -163,7 +142,6 @@ export default function ListaOrcamentos() {
       busca: '',
       categoria: '',
       status: '',
-      mes: '',
       origem: ''
     });
   };
