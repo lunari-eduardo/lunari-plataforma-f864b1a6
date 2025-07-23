@@ -34,7 +34,7 @@ export default function NovaFinancas() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3 h-12 p-1 text-sm bg-white border border-gray-200">
+          <TabsList className="grid w-full grid-cols-3 h-10 p-1 text-sm bg-white border border-gray-200 py-0">
             <TabsTrigger value="lancamentos" className="text-sm py-2 data-[state=active]:bg-blue-50 text-stone-700">
               Lançamentos
             </TabsTrigger>
