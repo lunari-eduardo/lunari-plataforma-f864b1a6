@@ -1,0 +1,210 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: #FAF8F5;
+    --foreground: #3A3A3A;
+
+    --card: #F3F1ED;
+    --card-foreground: #3A3A3A;
+
+    --popover: #FAF8F5;
+    --popover-foreground: #3A3A3A;
+
+    --primary: #CBA977;
+    --primary-foreground: #3A3A3A;
+
+    --secondary: #F3F1ED;
+    --secondary-foreground: #3A3A3A;
+
+    --muted: #F3F1ED;
+    --muted-foreground: #7C7C7C;
+
+    --accent: #CBA977;
+    --accent-foreground: #3A3A3A;
+
+    --destructive: #E17055;
+    --destructive-foreground: #FAF8F5;
+
+    --border: #E1DFDA;
+    --input: #F3F1ED;
+    --ring: #CBA977;
+
+    --radius: 8px;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-lunar-bg text-lunar-text font-sans antialiased text-sm;
+    font-family: 'Inter', sans-serif;
+    font-weight: 400;
+    background: linear-gradient(180deg, #FAF8F5 0%, #F8F6F2 100%);
+    min-height: 100vh;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-medium text-lunar-text;
+  }
+  
+  h1 { @apply text-base font-semibold; }
+  h2 { @apply text-sm font-medium; }
+  h3 { @apply text-sm font-medium; }
+  h4 { @apply text-xs font-medium; }
+  h5 { @apply text-xs; }
+  h6 { @apply text-2xs; }
+
+  /* Mobile zoom for workflow table */
+  @media (max-width: 768px) {
+    .mobile-zoom {
+      transform: scale(0.75);
+      transform-origin: top left;
+      width: 133.33%; /* Compensate for 0.75 scale */
+      height: 133.33%;
+    }
+  }
+}
+
+@layer components {
+  /* Lunar Card */
+  .card-lunar {
+    @apply bg-lunar-surface rounded-md p-3 shadow-lunar-sm border border-lunar-border/50;
+    background: linear-gradient(135deg, #F3F1ED 0%, #F5F3EF 100%);
+    transition: all 0.15s ease-out;
+  }
+
+  .card-lunar:hover {
+    @apply shadow-lunar-md transform scale-[1.01];
+  }
+
+  /* Lunar Button */
+  .btn-lunar {
+    @apply bg-lunar-accent text-lunar-text rounded-md px-3 py-1.5 text-xs font-medium transition-all duration-150 ease-out;
+    box-shadow: 0 1px 3px rgba(203, 169, 119, 0.2);
+  }
+
+  .btn-lunar:hover {
+    @apply bg-lunar-accentHover shadow-lunar-hover transform translate-y-[-1px];
+  }
+
+  .btn-lunar:active {
+    @apply transform translate-y-0;
+  }
+
+  /* Lunar Input */
+  .input-lunar {
+    @apply bg-lunar-surface text-lunar-text rounded-md px-3 py-1.5 text-xs w-full transition-all duration-150;
+    border: 1px solid transparent;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+  }
+
+  .input-lunar:focus {
+    @apply ring-1 ring-lunar-accent border-lunar-accent;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(203, 169, 119, 0.1);
+  }
+
+  .input-lunar::placeholder {
+    @apply text-lunar-textSecondary opacity-50;
+  }
+
+  /* Lunar Navigation */
+  .nav-item-lunar {
+    @apply flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-all duration-150 text-lunar-text;
+    background: transparent;
+  }
+
+  .nav-item-lunar:hover {
+    @apply bg-lunar-surface/50 transform translate-y-[-1px];
+    box-shadow: 0 2px 4px rgba(203, 169, 119, 0.1);
+  }
+
+  .nav-item-lunar.active {
+    @apply text-lunar-accent bg-lunar-surface;
+    box-shadow: inset 0 1px 2px rgba(203, 169, 119, 0.1);
+  }
+
+  /* Lunar Table */
+  .table-lunar {
+    @apply bg-lunar-surface rounded-md overflow-hidden shadow-lunar-sm border border-lunar-border/50;
+  }
+
+  .table-lunar th {
+    @apply bg-lunar-bg text-lunar-text font-medium py-2 px-3 text-xs;
+    background: linear-gradient(180deg, #FAF8F5 0%, #F8F6F2 100%);
+    border-bottom: 1px solid rgba(225, 223, 218, 0.5);
+  }
+
+  .table-lunar td {
+    @apply py-2 px-3 text-xs text-lunar-text;
+  }
+
+  .table-lunar tr:hover td {
+    @apply bg-lunar-bg/30;
+  }
+
+  /* Utilidades de espaçamento compacto */
+  .space-compact > * + * {
+    margin-top: 0.5rem;
+  }
+
+  .gap-compact {
+    gap: 0.5rem;
+  }
+
+  .p-compact {
+    padding: 0.75rem;
+  }
+
+  .px-compact {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  .py-compact {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+
+  /* Scrollbar personalizada */
+  .scrollbar-lunar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(203, 169, 119, 0.3) transparent;
+  }
+
+  .scrollbar-lunar::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  .scrollbar-lunar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-lunar::-webkit-scrollbar-thumb {
+    background-color: rgba(203, 169, 119, 0.3);
+    border-radius: 2px;
+  }
+
+  .scrollbar-lunar::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(203, 169, 119, 0.5);
+  }
+
+  /* Animações suaves */
+  .animate-lunar {
+    animation: fade-in 0.2s ease-out, scale-in 0.15s ease-out;
+  }
+
+  /* Toast lunar */
+  .toast-lunar {
+    @apply bg-lunar-surface border-lunar-border text-lunar-text shadow-lunar-md;
+  }
+}

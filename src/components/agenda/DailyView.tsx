@@ -1,0 +1,161 @@
+
+import { format, isSameDay } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { TimeInput } from "@/components/ui/time-input";
+import { useState, useEffect } from 'react';
+import { UnifiedEvent } from '@/hooks/useUnifiedCalendar';
+import UnifiedEventCard from './UnifiedEventCard';
+
+interface DailyViewProps {
+  date: Date;
+  unifiedEvents: UnifiedEvent[];
+  onCreateSlot: (slot: { date: Date; time: string }) => void;
+  onEventClick: (event: UnifiedEvent) => void;
+}
+
+const DEFAULT_TIME_SLOTS = ["08:00", "09:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"];
+
+export default function DailyView({
+  date,
+  unifiedEvents,
+  onCreateSlot,
+  onEventClick
+}: DailyViewProps) {
+  const [customTimeSlots, setCustomTimeSlots] = useState<{
+    [key: string]: string[];
+  }>({});
+  const [editingTimeSlot, setEditingTimeSlot] = useState<number | null>(null);
+  const dateKey = format(date, 'yyyy-MM-dd');
+
+  // Load custom time slots from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('customTimeSlots');
+    if (saved) {
+      try {
+        setCustomTimeSlots(JSON.parse(saved));
+      } catch (error) {
+        console.error('Error loading custom time slots:', error);
+      }
+    }
+  }, []);
+
+  // Save custom time slots to localStorage
+  useEffect(() => {
+    localStorage.setItem('customTimeSlots', JSON.stringify(customTimeSlots));
+  }, [customTimeSlots]);
+
+  // Get time slots for the current date
+  const getCurrentTimeSlots = () => {
+    const daySlots = customTimeSlots[dateKey] || DEFAULT_TIME_SLOTS;
+    const eventTimes = unifiedEvents
+      .filter(event => isSameDay(event.date, date))
+      .map(event => event.time);
+    const missingTimes = eventTimes.filter(time => !daySlots.includes(time));
+
+    if (missingTimes.length > 0) {
+      const updatedSlots = [...daySlots, ...missingTimes].sort();
+      setCustomTimeSlots(prev => ({
+        ...prev,
+        [dateKey]: updatedSlots
+      }));
+      return updatedSlots;
+    }
+    return daySlots;
+  };
+
+  const timeSlots = getCurrentTimeSlots();
+  const dayEvents = unifiedEvents.filter(event => isSameDay(event.date, date));
+
+  const getEventForSlot = (time: string) => {
+    return dayEvents.find(event => event.time === time);
+  };
+
+  const handleEditTimeSlot = (index: number, currentTime: string) => {
+    if (getEventForSlot(currentTime)) return;
+    setEditingTimeSlot(index);
+  };
+
+  const handleSaveTimeSlot = (index: number, newTime: string) => {
+    if (!newTime || !newTime.match(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/)) {
+      setEditingTimeSlot(null);
+      return;
+    }
+
+    const currentSlots = customTimeSlots[dateKey] || DEFAULT_TIME_SLOTS;
+    if (currentSlots.includes(newTime) && currentSlots[index] !== newTime) {
+      alert('Este horário já existe');
+      setEditingTimeSlot(null);
+      return;
+    }
+
+    const updatedSlots = [...currentSlots];
+    updatedSlots[index] = newTime;
+    updatedSlots.sort();
+    setCustomTimeSlots(prev => ({
+      ...prev,
+      [dateKey]: updatedSlots
+    }));
+    setEditingTimeSlot(null);
+  };
+
+  return (
+    <div className="bg-lunar-bg pb-16 md:pb-4">
+      <div className="hidden md:flex justify-center mb-4">
+        <h3 className="font-medium text-sm">
+          {format(date, "EEEE, d 'de' MMMM", { locale: ptBR })}
+        </h3>
+      </div>
+      
+      <div className="space-y-1">
+        {timeSlots.map((time, index) => {
+          const event = getEventForSlot(time);
+          const isEditing = editingTimeSlot === index;
+          
+          return (
+            <div 
+              key={`${time}-${index}`} 
+              className="flex border border-gray-200 rounded-md overflow-hidden py-0 my-[2px] mx-0 px-0"
+            >
+              <div className="p-3 w-16 flex-shrink-0 text-right text-sm text-gray-500 relative bg-lunar-border">
+                {isEditing ? (
+                  <TimeInput 
+                    value={time} 
+                    onChange={(newTime) => handleSaveTimeSlot(index, newTime)} 
+                    onBlur={() => setEditingTimeSlot(null)} 
+                  />
+                ) : (
+                  <span 
+                    onClick={() => !event && handleEditTimeSlot(index, time)} 
+                    className={`block text-xs ${!event ? 'cursor-pointer hover:bg-blue-50 rounded px-1 py-0.5' : ''}`} 
+                    title={!event ? 'Clique para editar' : ''}
+                  >
+                    {time}
+                  </span>
+                )}
+              </div>
+              
+              <div 
+                onClick={() => !event && onCreateSlot({ date, time })} 
+                className="flex-1 p-2 min-h-[50px] cursor-pointer bg-lunar-surface"
+              >
+                {event ? (
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <UnifiedEventCard 
+                      event={event} 
+                      onClick={onEventClick}
+                      compact={false}
+                    />
+                  </div>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-xs text-gray-400">
+                    Disponível
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

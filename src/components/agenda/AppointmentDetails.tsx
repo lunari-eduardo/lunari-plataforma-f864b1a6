@@ -1,0 +1,256 @@
+import { useState } from 'react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { formatDateForInput, safeParseInputDate, formatDateForStorage } from '@/utils/dateUtils';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { StatusBadge } from "@/components/workflow/StatusBadge";
+import { toast } from 'sonner';
+
+type Appointment = {
+  id: string;
+  title: string;
+  date: Date;
+  time: string;
+  type: string;
+  status: 'confirmado' | 'a confirmar';
+  description?: string;
+  packageId?: string;
+  paidAmount?: number;
+};
+
+interface AppointmentDetailsProps {
+  appointment: Appointment;
+  onSave: (appointmentData: any) => void;
+  onCancel: () => void;
+  onDelete: (id: string) => void;
+}
+
+// Tipos de pacotes disponíveis
+const availablePackages = [{
+  id: '1',
+  name: 'Sessão Gestante',
+  price: 450
+}, {
+  id: '2',
+  name: 'Sessão Família',
+  price: 350
+}, {
+  id: '3',
+  name: 'Ensaio Corporativo',
+  price: 550
+}, {
+  id: '4',
+  name: 'Gest 10 fotos Estúdio',
+  price: 100
+}];
+
+// Lista de status disponíveis
+const availableStatus = [{
+  value: 'a confirmar',
+  label: 'A Confirmar'
+}, {
+  value: 'confirmado',
+  label: 'Confirmado'
+}];
+
+export default function AppointmentDetails({
+  appointment,
+  onSave,
+  onCancel,
+  onDelete
+}: AppointmentDetailsProps) {
+  const [formData, setFormData] = useState({
+    date: appointment.date,
+    time: appointment.time,
+    title: appointment.title,
+    type: appointment.type,
+    status: appointment.status,
+    description: appointment.description || '',
+    packageId: appointment.packageId || '',
+    paidAmount: appointment.paidAmount || 0
+  });
+
+  // Estado local para o input de data bruto
+  const [dateInputValue, setDateInputValue] = useState(
+    formatDateForInput(appointment.date)
+  );
+
+  // Determinar se os campos podem ser editados
+  const isEditable = formData.status === 'a confirmar';
+
+  // Manipular mudanças nos campos
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const {
+      name,
+      value
+    } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: name === 'paidAmount' ? parseFloat(value) || 0 : value
+    }));
+  };
+
+  // Manipular seleção de pacote
+  const handlePackageSelect = (packageId: string) => {
+    if (!isEditable) return;
+    const selectedPackage = availablePackages.find(p => p.id === packageId);
+    setFormData(prev => ({
+      ...prev,
+      packageId,
+      type: selectedPackage?.name || prev.type
+    }));
+  };
+
+  // Manipular seleção de status
+  const handleStatusSelect = (status: 'confirmado' | 'a confirmar') => {
+    setFormData(prev => ({
+      ...prev,
+      status
+    }));
+  };
+
+  // Manipular input de data (somente atualiza o texto)
+  const handleDateInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setDateInputValue(e.target.value);
+  };
+
+  // Validar e converter data quando o usuário sai do campo
+  const handleDateInputBlur = () => {
+    const parsedDate = safeParseInputDate(dateInputValue);
+    if (parsedDate) {
+      setFormData(prev => ({ ...prev, date: parsedDate }));
+    } else {
+      // Se inválida, volta ao valor anterior
+      setDateInputValue(formatDateForInput(formData.date));
+    }
+  };
+
+  // Sincronizar o input quando o campo recebe foco
+  const handleDateInputFocus = () => {
+    setDateInputValue(formatDateForInput(formData.date));
+  };
+
+  // Salvar alterações
+  const handleSave = () => {
+    const selectedPackage = availablePackages.find(p => p.id === formData.packageId);
+    const appointmentData = {
+      id: appointment.id,
+      date: formData.date, // Mandar como Date, a função updateAppointment irá converter
+      time: formData.time,
+      title: formData.title,
+      client: formData.title,
+      type: selectedPackage?.name || formData.type,
+      status: formData.status as 'confirmado' | 'a confirmar',
+      description: formData.description,
+      packageId: formData.packageId,
+      paidAmount: formData.paidAmount
+    };
+    onSave(appointmentData);
+    toast.success('Agendamento atualizado com sucesso');
+  };
+
+  const selectedPackage = availablePackages.find(p => p.id === formData.packageId);
+  return <div className="space-y-4">
+      <div className="text-center mb-4">
+        <h2 className="text-lg font-medium text-lunar-text">Detalhes do Agendamento</h2>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <Label htmlFor="title" className="text-xs font-medium text-lunar-text">Cliente</Label>
+          <Input id="title" name="title" value={formData.title} className="mt-1 bg-gray-100" placeholder="Nome do cliente" disabled readOnly />
+          
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="date" className="text-xs font-medium text-lunar-text">Data e Hora de Início</Label>
+            <div className="mt-1 flex space-x-2">
+              <Input 
+                id="date" 
+                name="date" 
+                type="date" 
+                value={dateInputValue} 
+                onChange={handleDateInputChange}
+                onBlur={handleDateInputBlur}
+                onFocus={handleDateInputFocus}
+                className="flex-1" 
+              />
+              <Input id="time" name="time" type="time" value={formData.time} onChange={handleChange} className="flex-1" />
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="package" className="text-xs font-medium text-lunar-text">Pacote</Label>
+            <Select value={formData.packageId} onValueChange={handlePackageSelect} disabled={!isEditable}>
+              <SelectTrigger className={`mt-1 ${!isEditable ? 'bg-gray-100 cursor-not-allowed' : ''}`}>
+                <SelectValue placeholder="Selecionar pacote" />
+              </SelectTrigger>
+              <SelectContent>
+                {availablePackages.map(pkg => <SelectItem key={pkg.id} value={pkg.id}>
+                    {pkg.name} - R$ {pkg.price.toFixed(2)}
+                  </SelectItem>)}
+              </SelectContent>
+            </Select>
+            {!isEditable}
+          </div>
+          
+          <div>
+            <Label htmlFor="status" className="text-xs font-medium text-lunar-text">Status</Label>
+            <div className="mt-1">
+              <Select value={formData.status} onValueChange={handleStatusSelect}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableStatus.map(status => <SelectItem key={status.value} value={status.value}>
+                      <div className="flex items-center gap-2">
+                        <StatusBadge status={status.label} />
+                      </div>
+                    </SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="totalValue" className="text-xs font-medium text-lunar-text">Valor Total</Label>
+            <Input id="totalValue" type="number" value={selectedPackage?.price || 0} className="mt-1 bg-lunar-surface/50" disabled />
+          </div>
+          
+          <div>
+            <Label htmlFor="paidAmount" className="text-xs font-medium text-lunar-text">Valor Pago</Label>
+            <Input id="paidAmount" name="paidAmount" type="number" min="0" step="0.01" value={formData.paidAmount} onChange={handleChange} className={`mt-1 ${!isEditable ? 'bg-gray-100 cursor-not-allowed' : ''}`} placeholder="0" disabled={!isEditable} />
+            {!isEditable}
+          </div>
+        </div>
+        
+        <div>
+          <Label htmlFor="description" className="text-xs font-medium text-lunar-text">Observações</Label>
+          <Textarea id="description" name="description" value={formData.description} onChange={handleChange} placeholder="Detalhes da sessão..." className="mt-1 min-h-[80px]" />
+        </div>
+      </div>
+      
+      <div className="flex justify-between pt-4">
+        <Button variant="destructive" onClick={() => onDelete(appointment.id)} className="text-xs">
+          Excluir
+        </Button>
+        <div className="space-x-2">
+          <Button variant="outline" onClick={onCancel} className="text-xs">
+            Cancelar
+          </Button>
+          <Button onClick={handleSave} className="text-xs">
+            Salvar
+          </Button>
+        </div>
+      </div>
+    </div>;
+}

@@ -1,0 +1,59 @@
+
+import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useOrcamentos } from '@/hooks/useOrcamentos';
+import MetricasOrcamento from '@/components/orcamentos/MetricasOrcamento';
+import NovoOrcamento from '@/components/orcamentos/NovoOrcamento';
+import ListaOrcamentos from '@/components/orcamentos/ListaOrcamentos';
+import GerenciarOrigens from '@/components/orcamentos/GerenciarOrigens';
+
+export default function Orcamentos() {
+  const { metricas } = useOrcamentos();
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState('novo');
+
+  // Check for URL parameters when coming from agenda
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const presetDate = searchParams.get('data');
+    const presetTime = searchParams.get('hora');
+    
+    // If we have preset data from agenda, always go to novo tab
+    if (presetDate && presetTime) {
+      setActiveTab('novo');
+    }
+  }, [location.search]);
+
+  return (
+    <div className="p-2 sm:p-4 space-y-4 bg-lunar-bg min-h-screen">
+      <div className="px-2">
+        <p className="text-neumorphic-textLight text-xs">
+          Gerencie orçamentos, templates e acompanhe métricas
+        </p>
+      </div>
+
+      <MetricasOrcamento metricas={metricas} />
+
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-3 py-1 my-1">
+          <TabsTrigger value="novo">Novo Orçamento</TabsTrigger>
+          <TabsTrigger value="lista">Orçamentos</TabsTrigger>
+          <TabsTrigger value="origens">Origens</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="novo" className="mt-4">
+          <NovoOrcamento />
+        </TabsContent>
+
+        <TabsContent value="lista" className="mt-4">
+          <ListaOrcamentos />
+        </TabsContent>
+
+        <TabsContent value="origens" className="mt-4">
+          <GerenciarOrigens />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}

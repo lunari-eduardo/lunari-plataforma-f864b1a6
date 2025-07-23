@@ -1,0 +1,150 @@
+
+import { format } from 'date-fns';
+
+/**
+ * Utilitários para manipulação de datas sem problemas de fuso horário
+ * REGRA DE OURO: Todas as datas são armazenadas como strings YYYY-MM-DD
+ */
+
+/**
+ * Converte uma data selecionada pelo usuário para string YYYY-MM-DD
+ * preservando o dia local, ignorando conversões de fuso horário
+ */
+export function formatDateForStorage(date: Date | string): string {
+  let dateObj: Date;
+  
+  if (typeof date === 'string') {
+    // Se já é uma string de data, retorna como está
+    if (date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      return date;
+    }
+    dateObj = new Date(date);
+  } else {
+    dateObj = date;
+  }
+
+  const ano = dateObj.getFullYear();
+  const mes = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const dia = String(dateObj.getDate()).padStart(2, '0');
+
+  return `${ano}-${mes}-${dia}`;
+}
+
+/**
+ * Converte uma string de data salva (YYYY-MM-DD) para um objeto Date
+ * que pode ser formatado corretamente para exibição, evitando conversões de fuso horário
+ */
+export function parseDateFromStorage(dateString: string): Date {
+  // Cria a data diretamente sem conversões de timezone usando os componentes da data
+  const [year, month, day] = dateString.split('-').map(Number);
+  return new Date(year, month - 1, day); // month é 0-indexed no constructor Date
+}
+
+/**
+ * Formata uma data para exibição no padrão brasileiro (dd/mm/yyyy)
+ * usando manipulação de string para evitar conversões de timezone
+ */
+export function formatDateForDisplay(dateString: string): string {
+  if (!dateString || !dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    return '';
+  }
+  
+  const [ano, mes, dia] = dateString.split('-');
+  return `${dia}/${mes}/${ano}`;
+}
+
+/**
+ * Converte uma data do formato dd/mm/yyyy para yyyy-mm-dd
+ * usando manipulação de string
+ */
+export function convertBRDateToISO(brDate: string): string {
+  if (!brDate || !brDate.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/)) {
+    return '';
+  }
+  
+  const [dia, mes, ano] = brDate.split('/');
+  return `${ano}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
+}
+
+/**
+ * Converte uma data do formato yyyy-mm-dd para dd/mm/yyyy
+ * usando manipulação de string
+ */
+export function convertISODateToBR(isoDate: string): string {
+  if (!isoDate || !isoDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    return '';
+  }
+  
+  const [ano, mes, dia] = isoDate.split('-');
+  return `${dia}/${mes}/${ano}`;
+}
+
+/**
+ * Verifica se duas datas (no formato string) são do mesmo mês/ano
+ */
+export function isSameMonthYear(dateString1: string, monthYearFilter: string): boolean {
+  if (!dateString1 || !monthYearFilter) return false;
+  
+  const [ano1, mes1] = dateString1.split('-');
+  const [ano2, mes2] = monthYearFilter.split('-');
+  
+  return ano1 === ano2 && mes1 === mes2;
+}
+
+/**
+ * Obtém a data atual no formato YYYY-MM-DD
+ */
+export function getCurrentDateString(): string {
+  const hoje = new Date();
+  return formatDateForStorage(hoje);
+}
+
+/**
+ * Valida se uma string está no formato de data válido
+ */
+export function isValidDateString(dateString: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(dateString);
+}
+
+/**
+ * Converte uma string de input de data para Date de forma segura
+ * Retorna null se a string não for válida
+ */
+export function safeParseInputDate(inputValue: string): Date | null {
+  if (!inputValue) return null;
+  
+  // Cria a data usando os componentes da data para evitar problemas de timezone
+  const [year, month, day] = inputValue.split('-').map(Number);
+  if (!year || !month || !day) return null;
+  
+  const date = new Date(year, month - 1, day); // month é 0-indexed no constructor Date
+  
+  // Verifica se é uma data válida
+  if (isNaN(date.getTime())) return null;
+  
+  return date;
+}
+
+/**
+ * Formata uma data para o formato de input HTML (yyyy-MM-dd)
+ */
+export function formatDateForInput(date: Date | string): string {
+  if (!date) return '';
+  
+  // Se é uma string de data no formato YYYY-MM-DD, retorna como está
+  if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    return date;
+  }
+  
+  // Se é uma string, tenta converter para Date
+  if (typeof date === 'string') {
+    const parsedDate = safeParseInputDate(date);
+    if (!parsedDate) return '';
+    date = parsedDate;
+  }
+  
+  // Se é um objeto Date, verifica se é válido
+  if (!(date instanceof Date) || isNaN(date.getTime())) return '';
+  
+  return format(date, 'yyyy-MM-dd');
+}

@@ -1,0 +1,136 @@
+
+import { useState, useEffect, useRef } from 'react';
+import { Input } from '@/components/ui/input';
+import { Check, ChevronDown, User } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useContext } from 'react';
+import { AppContext } from '@/contexts/AppContext';
+
+interface Client {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+}
+
+interface ClientSearchComboboxProps {
+  value?: string;
+  onSelect: (clientId: string) => void;
+  placeholder?: string;
+}
+
+// Integrado com hook real de clientes
+
+export default function ClientSearchCombobox({
+  value,
+  onSelect,
+  placeholder = "Buscar cliente..."
+}: ClientSearchComboboxProps) {
+  const { clientes } = useContext(AppContext);
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredClients, setFilteredClients] = useState<Client[]>([]);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Convert clientes from CRM to Client format
+  const clientsFromCRM: Client[] = clientes.map(cliente => ({
+    id: cliente.id,
+    name: cliente.nome,
+    phone: cliente.telefone,
+    email: cliente.email
+  }));
+
+  const selectedClient = clientsFromCRM.find(client => client.id === value);
+
+  useEffect(() => {
+    if (searchTerm) {
+      const filtered = clientsFromCRM.filter(client =>
+        client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        client.phone.includes(searchTerm) ||
+        client.email.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredClients(filtered);
+    } else {
+      setFilteredClients(clientsFromCRM);
+    }
+  }, [searchTerm, clientes]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSelect = (clientId: string) => {
+    onSelect(clientId);
+    setIsOpen(false);
+    setSearchTerm('');
+    inputRef.current?.blur();
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+    setIsOpen(true);
+  };
+
+  const handleInputFocus = () => {
+    setIsOpen(true);
+  };
+
+  const displayValue = selectedClient ? selectedClient.name : searchTerm;
+
+  return (
+    <div ref={containerRef} className="relative w-full">
+      <div className="relative">
+        <Input
+          ref={inputRef}
+          value={displayValue}
+          onChange={handleInputChange}
+          onFocus={handleInputFocus}
+          placeholder={placeholder}
+          className="pr-8 text-xs"
+        />
+        <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+      </div>
+
+      {isOpen && (
+        <div className="absolute z-[9999] w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+          {filteredClients.length > 0 ? (
+            filteredClients.map((client) => (
+              <div
+                key={client.id}
+                onClick={() => handleSelect(client.id)}
+                className="px-3 py-2 hover:bg-gray-50 cursor-pointer text-xs border-b border-gray-100 last:border-b-0"
+              >
+                <div className="flex items-center">
+                  <User className="h-3 w-3 mr-2 text-gray-400" />
+                  <div className="flex-1">
+                    <div className="flex items-center">
+                      <span className="font-medium">{client.name}</span>
+                      {value === client.id && (
+                        <Check className="ml-2 h-3 w-3 text-green-600" />
+                      )}
+                    </div>
+                    <div className="text-[11px] text-gray-500">
+                      {client.phone} • {client.email}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="px-3 py-2 text-xs text-gray-500">
+              Nenhum cliente encontrado
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
