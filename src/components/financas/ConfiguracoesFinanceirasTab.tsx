@@ -161,18 +161,18 @@ export default function ConfiguracoesFinanceirasTab({
       </Card>
 
       {/* Lista de Itens por Grupo */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {grupos.map(grupo => <Card key={grupo}>
-            <CardHeader>
-              <CardTitle className="text-lg">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 my-0 py-0">
+        {grupos.map(grupo => <Card key={grupo} className="my-0 py-0">
+            <CardHeader className="my-0 py-[6px]">
+              <CardTitle className="text-lg py-0 my-[4px]">
                 <Badge className={getCorGrupo(grupo)}>
                   {grupo}
                 </Badge>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {itensPorGrupo[grupo].length === 0 ? <p className="text-gray-500 text-sm italic">Nenhum item cadastrado neste grupo.</p> : <div className="space-y-2">
-                  {itensPorGrupo[grupo].map(item => <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 border rounded-lg">
+              {itensPorGrupo[grupo].length === 0 ? <p className="text-gray-500 text-sm italic py-0 my-0">Nenhum item cadastrado neste grupo.</p> : <div className="space-y-2">
+                  {itensPorGrupo[grupo].map(item => <div key={item.id} className="flex items-center justify-between p-1 bg-gray-50 border rounded-md my-0 py-[2px]">
                       {itemEditando === item.id ? <div className="flex items-center gap-2 flex-1">
                           <Input value={nomeEditando} onChange={e => setNomeEditando(e.target.value)} className="flex-1" onKeyPress={e => e.key === 'Enter' && handleSalvarEdicao(item.id)} />
                           <Button size="sm" onClick={() => handleSalvarEdicao(item.id)}>
