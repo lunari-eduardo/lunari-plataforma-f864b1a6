@@ -58,6 +58,10 @@ export default function EditOrcamentoModal({
   };
 
   const [formData, setFormData] = useState(initialFormState);
+  
+  // Estados para controlar a visibilidade dos menus suspensos
+  const [categoriaMenuAberto, setCategoriaMenuAberto] = useState(false);
+  const [origemMenuAberto, setOrigemMenuAberto] = useState(false);
 
   const getCategoriaById = (categoriaId: string | number): string => {
     if (!categoriaId) return '';
@@ -286,10 +290,14 @@ export default function EditOrcamentoModal({
       <DialogContent 
         className="max-w-4xl max-h-[90vh] overflow-y-auto"
         onInteractOutside={(event) => {
-          const target = event.target as Element;
-          if (target?.closest('[data-radix-select-content]') || 
-              target?.closest('[data-radix-popper-content-wrapper]')) {
+          // Verifica se algum dos menus está aberto
+          if (categoriaMenuAberto || origemMenuAberto) {
+            // Impede que o clique feche o Dialog
             event.preventDefault();
+            
+            // Fecha os menus que estiverem abertos
+            setCategoriaMenuAberto(false);
+            setOrigemMenuAberto(false);
           }
         }}
       >
@@ -358,18 +366,31 @@ export default function EditOrcamentoModal({
                   </Button>
                 )}
               </div>
-              <CategorySelector
-                categorias={categorias}
-                value={formData.categoria}
-                onValueChange={(categoria) => setFormData(prev => ({ ...prev, categoria }))}
-                placeholder="Selecione uma categoria"
+              <Select 
+                open={categoriaMenuAberto}
+                onOpenChange={setCategoriaMenuAberto}
+                value={formData.categoria} 
+                onValueChange={(categoria) => setFormData(prev => ({ ...prev, categoria }))} 
                 disabled={formData.isOrcamentoFechado}
-              />
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione uma categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categorias.map(categoria => (
+                    <SelectItem key={categoria} value={categoria}>
+                      {categoria}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
               <label className="text-sm font-medium mb-1 block">Origem</label>
               <Select 
+                open={origemMenuAberto}
+                onOpenChange={setOrigemMenuAberto}
                 value={formData.origem} 
                 onValueChange={(origem) => setFormData(prev => ({ ...prev, origem }))} 
                 disabled={formData.isOrcamentoFechado}
