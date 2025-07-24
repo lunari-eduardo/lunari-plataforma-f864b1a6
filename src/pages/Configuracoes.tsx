@@ -16,12 +16,10 @@ interface Categoria {
   nome: string;
   cor: string;
 }
-
 interface ProdutoIncluido {
   produtoId: string;
   quantidade: number;
 }
-
 interface Pacote {
   id: string;
   nome: string;
@@ -30,21 +28,18 @@ interface Pacote {
   valor_foto_extra: number;
   produtosIncluidos: ProdutoIncluido[];
 }
-
 interface Produto {
   id: string;
   nome: string;
   preco_custo: number;
   preco_venda: number;
 }
-
 interface EtapaTrabalho {
   id: string;
   nome: string;
   cor: string;
   ordem: number;
 }
-
 export default function Configuracoes() {
   // Estados para categorias
   const [categorias, setCategorias] = useState<Categoria[]>(() => {
@@ -134,31 +129,26 @@ export default function Configuracoes() {
       ordem: 3
     }]);
   });
-
   const [tabAtiva, setTabAtiva] = useState('categorias');
 
   // Efeitos para salvar automaticamente no localStorage
   useEffect(() => {
     storage.save('configuracoes_categorias', categorias);
   }, [categorias]);
-
   useEffect(() => {
     storage.save('configuracoes_pacotes', pacotes);
   }, [pacotes]);
-
   useEffect(() => {
     storage.save('configuracoes_produtos', produtos);
   }, [produtos]);
-
-  return (
-    <div className="space-y-6">
+  return <div className="space-y-6">
       <Card>
         <CardHeader className="pb-3 bg-stone-50">
           <CardDescription>
             Configure os parâmetros principais de funcionamento do seu sistema.
           </CardDescription>
         </CardHeader>
-        <CardContent className="bg-stone-50">
+        <CardContent className="py-[10px] my-[8px] bg-lunar-surface">
           <Tabs value={tabAtiva} onValueChange={setTabAtiva} className="w-full">
             <TabsList className="grid grid-cols-4 mb-2">
               <TabsTrigger value="categorias" className="flex items-center gap-1.5">
@@ -180,38 +170,22 @@ export default function Configuracoes() {
             </TabsList>
             
             <TabsContent value="categorias">
-              <Categorias 
-                categorias={categorias} 
-                setCategorias={setCategorias} 
-                pacotes={pacotes} 
-              />
+              <Categorias categorias={categorias} setCategorias={setCategorias} pacotes={pacotes} />
             </TabsContent>
             
             <TabsContent value="pacotes">
-              <Pacotes 
-                pacotes={pacotes} 
-                setPacotes={setPacotes} 
-                categorias={categorias} 
-                produtos={produtos}
-              />
+              <Pacotes pacotes={pacotes} setPacotes={setPacotes} categorias={categorias} produtos={produtos} />
             </TabsContent>
             
             <TabsContent value="produtos">
-              <Produtos 
-                produtos={produtos} 
-                setProdutos={setProdutos} 
-              />
+              <Produtos produtos={produtos} setProdutos={setProdutos} />
             </TabsContent>
             
             <TabsContent value="fluxo">
-              <FluxoTrabalho 
-                etapas={etapas} 
-                setEtapas={setEtapas} 
-              />
+              <FluxoTrabalho etapas={etapas} setEtapas={setEtapas} />
             </TabsContent>
           </Tabs>
         </CardContent>
       </Card>
-    </div>
-  );
+    </div>;
 }
