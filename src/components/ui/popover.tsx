@@ -23,15 +23,19 @@ const PopoverContent = React.forwardRef<
       )}
       onPointerDownOutside={(event) => {
         const target = event.target as Element;
-        // Apenas prevenir o fechamento se o clique for em outro popover ou trigger
-        // Permite cliques em qualquer lugar dentro do modal
+        // Prevenir fechamento se o clique for dentro do próprio popover ou seus elementos
         if (
           target.closest('[data-radix-popper-content-wrapper]') ||
-          target.closest('[data-radix-popover-trigger]')
+          target.closest('[data-radix-popover-trigger]') ||
+          target.closest('[cmdk-item]') ||
+          target.closest('[data-radix-popover-content]') ||
+          target.getAttribute('cmdk-item') !== null ||
+          target.closest('[role="option"]')
         ) {
           event.preventDefault();
+          return;
         }
-        // Para outros cliques (incluindo dentro do modal), permite o comportamento padrão
+        // Para cliques genuinamente fora do popover, permite o comportamento padrão
       }}
       {...props}
     />

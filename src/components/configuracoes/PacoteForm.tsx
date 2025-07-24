@@ -188,13 +188,25 @@ export default function PacoteForm({
                 Adicionar Produto
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-80 p-0">
+            <PopoverContent className="w-80 p-0 z-[10000] bg-background border shadow-lg">
               <Command>
                 <CommandInput placeholder="Buscar produto..." />
                 <CommandList>
                   <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
                   <CommandGroup>
-                    {produtos.filter(produto => !formData.produtosIncluidos.some(p => p.produtoId === produto.id)).map(produto => <CommandItem key={produto.id} onSelect={() => adicionarProdutoIncluido(produto.id)} className="cursor-pointer">
+                    {produtos.filter(produto => !formData.produtosIncluidos.some(p => p.produtoId === produto.id)).map(produto => <CommandItem 
+                        key={produto.id} 
+                        onSelect={(value) => {
+                          console.log('Produto selecionado:', produto.nome);
+                          adicionarProdutoIncluido(produto.id);
+                        }} 
+                        className="cursor-pointer hover:bg-accent"
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          adicionarProdutoIncluido(produto.id);
+                        }}
+                      >
                         <div className="flex flex-col">
                           <span className="font-medium">{produto.nome}</span>
                           <span className="text-sm text-gray-500">
