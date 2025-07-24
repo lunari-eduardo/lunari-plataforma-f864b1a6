@@ -13,28 +13,27 @@ import ClientSearchInput from './ClientSearchInput';
 import { PackageSearchCombobox } from './PackageSearchCombobox';
 import { ProductSearchCombobox } from './ProductSearchCombobox';
 import { formatDateForStorage } from '@/utils/dateUtils';
-
 interface EditOrcamentoModalProps {
   isOpen: boolean;
   onClose: () => void;
   orcamento: Orcamento | null;
 }
-
-export default function EditOrcamentoModal({ 
-  isOpen, 
-  onClose, 
-  orcamento 
+export default function EditOrcamentoModal({
+  isOpen,
+  onClose,
+  orcamento
 }: EditOrcamentoModalProps) {
-  const { 
-    atualizarOrcamento, 
-    clientes, 
-    origens, 
-    categorias, 
-    pacotes, 
-    produtos 
+  const {
+    atualizarOrcamento,
+    clientes,
+    origens,
+    categorias,
+    pacotes,
+    produtos
   } = useOrcamentos();
-  const { toast } = useToast();
-
+  const {
+    toast
+  } = useToast();
   interface ProdutoSelecionado {
     id: string;
     nome: string;
@@ -42,7 +41,6 @@ export default function EditOrcamentoModal({
     quantidade: number;
     inclusoNoPacote?: boolean;
   }
-
   const initialFormState = {
     cliente: null as Cliente | null,
     data: '',
@@ -56,41 +54,31 @@ export default function EditOrcamentoModal({
     valorManual: undefined as number | undefined,
     isOrcamentoFechado: false
   };
-
   const [formData, setFormData] = useState(initialFormState);
-  
+
   // Estados para controlar a visibilidade dos menus suspensos
   const [categoriaMenuAberto, setCategoriaMenuAberto] = useState(false);
   const [origemMenuAberto, setOrigemMenuAberto] = useState(false);
-
   const getCategoriaById = (categoriaId: string | number): string => {
     if (!categoriaId) return '';
-    
     if (typeof categorias[0] === 'string') {
       const index = parseInt(String(categoriaId)) - 1;
       if (index >= 0 && index < categorias.length) {
         return categorias[index] as string;
       }
     }
-    
-    const categoria = categorias.find((cat: any) => 
-      cat.id === categoriaId || cat.id === String(categoriaId)
-    );
-    
+    const categoria = categorias.find((cat: any) => cat.id === categoriaId || cat.id === String(categoriaId));
     if (categoria && typeof categoria === 'object') {
       const catObj = categoria as any;
       if (catObj.nome) {
         return String(catObj.nome);
       }
     }
-    
     return String(categoriaId);
   };
-
   useEffect(() => {
     if (isOpen && orcamento) {
       const [year, month, day] = orcamento.data.split('-');
-      
       const pacotes = orcamento.pacotes || [];
       const pacotePrincipal = pacotes.length > 0 ? pacotes[0] : null;
       const produtosAdicionais = pacotes.slice(1).map(item => ({
@@ -99,7 +87,6 @@ export default function EditOrcamentoModal({
         preco: item.preco,
         quantidade: item.quantidade
       }));
-
       setFormData({
         cliente: orcamento.cliente,
         data: `${year}-${month}-${day}`,
@@ -117,24 +104,21 @@ export default function EditOrcamentoModal({
       setFormData(initialFormState);
     }
   }, [isOpen, orcamento]);
-
   const handleMainPackageSelect = (pacote: any) => {
     if (!pacote) {
-      setFormData(prev => ({ 
-        ...prev, 
+      setFormData(prev => ({
+        ...prev,
         pacotePrincipal: null,
         produtosAdicionais: prev.produtosAdicionais.filter(p => !(p as any).inclusoNoPacote)
       }));
       return;
     }
-
     let categoriaResolvida = '';
     if (pacote.categoria) {
       categoriaResolvida = pacote.categoria;
     } else if (pacote.categoria_id) {
       categoriaResolvida = getCategoriaById(pacote.categoria_id);
     }
-
     let novosInclusos: ProdutoSelecionado[] = [];
     if (pacote.produtosIncluidos && pacote.produtosIncluidos.length > 0) {
       novosInclusos = pacote.produtosIncluidos.map((produtoIncluso: any) => {
@@ -146,34 +130,29 @@ export default function EditOrcamentoModal({
             preco: produtoCompleto.valorVenda || produtoCompleto.preco_venda || 0,
             quantidade: produtoIncluso.quantidade || 1,
             inclusoNoPacote: true
-          } as ProdutoSelecionado & { inclusoNoPacote: boolean };
+          } as ProdutoSelecionado & {
+            inclusoNoPacote: boolean;
+          };
         }
         return null;
       }).filter(Boolean);
     }
-
     setFormData(prev => ({
       ...prev,
       pacotePrincipal: pacote,
       categoria: categoriaResolvida,
-      produtosAdicionais: [
-        ...prev.produtosAdicionais.filter(p => !(p as any).inclusoNoPacote),
-        ...novosInclusos
-      ]
+      produtosAdicionais: [...prev.produtosAdicionais.filter(p => !(p as any).inclusoNoPacote), ...novosInclusos]
     }));
   };
-
   const handleClearMainPackage = () => {
-    setFormData(prev => ({ 
-      ...prev, 
+    setFormData(prev => ({
+      ...prev,
       pacotePrincipal: null,
       produtosAdicionais: prev.produtosAdicionais.filter(p => !(p as any).inclusoNoPacote)
     }));
   };
-
   const handleAddProduct = (produto: any) => {
     if (!produto) return;
-    
     const existeProduto = formData.produtosAdicionais.some(p => p.id === produto.id);
     if (existeProduto) {
       toast({
@@ -182,23 +161,19 @@ export default function EditOrcamentoModal({
       });
       return;
     }
-    
     const newProduto: ProdutoSelecionado = {
       id: produto.id,
       nome: produto.nome,
       preco: produto.valorVenda || produto.preco_venda || produto.valor || 0,
       quantidade: 1
     };
-
     setFormData(prev => ({
       ...prev,
       produtosAdicionais: [...prev.produtosAdicionais, newProduto]
     }));
   };
-
   const handleRemoveProduct = (index: number) => {
     const produto = formData.produtosAdicionais[index];
-    
     if ((produto as any).inclusoNoPacote) {
       toast({
         title: "Aviso",
@@ -206,38 +181,33 @@ export default function EditOrcamentoModal({
       });
       return;
     }
-
     setFormData(prev => ({
       ...prev,
       produtosAdicionais: prev.produtosAdicionais.filter((_, i) => i !== index)
     }));
   };
-
   const handleUpdateProductQuantity = (index: number, quantidade: number) => {
     if (quantidade <= 0) return;
-    
     setFormData(prev => ({
       ...prev,
-      produtosAdicionais: prev.produtosAdicionais.map((produto, i) => 
-        i === index ? { ...produto, quantidade } : produto
-      )
+      produtosAdicionais: prev.produtosAdicionais.map((produto, i) => i === index ? {
+        ...produto,
+        quantidade
+      } : produto)
     }));
   };
-
   const handleClearCategory = () => {
-    setFormData(prev => ({ ...prev, categoria: '' }));
+    setFormData(prev => ({
+      ...prev,
+      categoria: ''
+    }));
   };
-
   const handleSave = () => {
     if (!orcamento) return;
-
-    const valorPacotePrincipal = formData.pacotePrincipal ? 
-      (formData.pacotePrincipal.valorVenda || formData.pacotePrincipal.valor_base || formData.pacotePrincipal.valor || 0) : 0;
-    const valorProdutos = formData.produtosAdicionais.reduce((total, p) => total + (p.preco * p.quantidade), 0);
+    const valorPacotePrincipal = formData.pacotePrincipal ? formData.pacotePrincipal.valorVenda || formData.pacotePrincipal.valor_base || formData.pacotePrincipal.valor || 0 : 0;
+    const valorProdutos = formData.produtosAdicionais.reduce((total, p) => total + p.preco * p.quantidade, 0);
     const valorTotal = valorPacotePrincipal + valorProdutos;
-
     const pacotesParaSalvar: PacoteProduto[] = [];
-    
     if (formData.pacotePrincipal) {
       pacotesParaSalvar.push({
         id: formData.pacotePrincipal.id,
@@ -246,15 +216,12 @@ export default function EditOrcamentoModal({
         quantidade: 1
       });
     }
-    
     pacotesParaSalvar.push(...formData.produtosAdicionais);
-
     const updates: Partial<Orcamento> = {
       detalhes: formData.detalhes,
       data: formatDateForStorage(formData.data),
       hora: formData.hora
     };
-
     if (!formData.isOrcamentoFechado) {
       if (formData.cliente) {
         updates.cliente = formData.cliente;
@@ -266,41 +233,30 @@ export default function EditOrcamentoModal({
       updates.valorTotal = valorTotal;
       updates.valorManual = formData.valorManual;
     }
-
     atualizarOrcamento(orcamento.id, updates);
-    
     toast({
       title: "Sucesso",
       description: "Orçamento atualizado com sucesso!"
     });
-    
     onClose();
   };
-
   if (!orcamento) return null;
-
-  const valorPacotePrincipal = formData.pacotePrincipal ? 
-    (formData.pacotePrincipal.valorVenda || formData.pacotePrincipal.valor_base || formData.pacotePrincipal.valor || 0) : 0;
-  const valorProdutos = formData.produtosAdicionais.reduce((total, p) => total + (p.preco * p.quantidade), 0);
+  const valorPacotePrincipal = formData.pacotePrincipal ? formData.pacotePrincipal.valorVenda || formData.pacotePrincipal.valor_base || formData.pacotePrincipal.valor || 0 : 0;
+  const valorProdutos = formData.produtosAdicionais.reduce((total, p) => total + p.preco * p.quantidade, 0);
   const valorTotal = valorPacotePrincipal + valorProdutos;
   const valorFinal = formData.valorManual !== undefined ? formData.valorManual : valorTotal;
+  return <Dialog open={isOpen} onOpenChange={onClose} modal={false}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" onInteractOutside={event => {
+      // Verifica se algum dos menus está aberto
+      if (categoriaMenuAberto || origemMenuAberto) {
+        // Impede que o clique feche o Dialog
+        event.preventDefault();
 
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose} modal={false}>
-      <DialogContent 
-        className="max-w-4xl max-h-[90vh] overflow-y-auto"
-        onInteractOutside={(event) => {
-          // Verifica se algum dos menus está aberto
-          if (categoriaMenuAberto || origemMenuAberto) {
-            // Impede que o clique feche o Dialog
-            event.preventDefault();
-            
-            // Fecha os menus que estiverem abertos
-            setCategoriaMenuAberto(false);
-            setOrigemMenuAberto(false);
-          }
-        }}
-      >
+        // Fecha os menus que estiverem abertos
+        setCategoriaMenuAberto(false);
+        setOrigemMenuAberto(false);
+      }
+    }}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Pen className="h-5 w-5" />
@@ -312,13 +268,10 @@ export default function EditOrcamentoModal({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium mb-1 block">Cliente</label>
-              <ClientSearchInput
-                clientes={clientes}
-                selectedClient={formData.cliente}
-                onSelectClient={(cliente) => setFormData(prev => ({ ...prev, cliente }))}
-                placeholder="Selecione um cliente"
-                disabled={formData.isOrcamentoFechado}
-              />
+              <ClientSearchInput clientes={clientes} selectedClient={formData.cliente} onSelectClient={cliente => setFormData(prev => ({
+              ...prev,
+              cliente
+            }))} placeholder="Selecione um cliente" disabled={formData.isOrcamentoFechado} />
             </div>
 
             <div className="grid grid-cols-2 gap-2">
@@ -326,24 +279,20 @@ export default function EditOrcamentoModal({
                 <label className="text-sm font-medium mb-1 block">Data</label>
                 <div className="relative">
                   <Calendar className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    type="date" 
-                    value={formData.data} 
-                    onChange={e => setFormData(prev => ({ ...prev, data: e.target.value }))}
-                    className="pl-8"
-                  />
+                  <Input type="date" value={formData.data} onChange={e => setFormData(prev => ({
+                  ...prev,
+                  data: e.target.value
+                }))} className="pl-8" />
                 </div>
               </div>
               <div>
                 <label className="text-sm font-medium mb-1 block">Hora</label>
                 <div className="relative">
                   <Clock className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    type="time" 
-                    value={formData.hora} 
-                    onChange={e => setFormData(prev => ({ ...prev, hora: e.target.value }))}
-                    className="pl-8"
-                  />
+                  <Input type="time" value={formData.hora} onChange={e => setFormData(prev => ({
+                  ...prev,
+                  hora: e.target.value
+                }))} className="pl-8" />
                 </div>
               </div>
             </div>
@@ -353,57 +302,38 @@ export default function EditOrcamentoModal({
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="text-sm font-medium">Categoria (Opcional)</label>
-                {formData.categoria && (
-                  <Button 
-                    type="button"
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={handleClearCategory}
-                    className="h-6 w-6 p-0"
-                    disabled={formData.isOrcamentoFechado}
-                  >
+                {formData.categoria && <Button type="button" variant="ghost" size="sm" onClick={handleClearCategory} className="h-6 w-6 p-0" disabled={formData.isOrcamentoFechado}>
                     <X className="h-3 w-3" />
-                  </Button>
-                )}
+                  </Button>}
               </div>
-              <Select 
-                open={categoriaMenuAberto}
-                onOpenChange={setCategoriaMenuAberto}
-                value={formData.categoria} 
-                onValueChange={(categoria) => setFormData(prev => ({ ...prev, categoria }))} 
-                disabled={formData.isOrcamentoFechado}
-              >
+              <Select open={categoriaMenuAberto} onOpenChange={setCategoriaMenuAberto} value={formData.categoria} onValueChange={categoria => setFormData(prev => ({
+              ...prev,
+              categoria
+            }))} disabled={formData.isOrcamentoFechado}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione uma categoria" />
                 </SelectTrigger>
                 <SelectContent>
-                  {categorias.map(categoria => (
-                    <SelectItem key={categoria} value={categoria}>
+                  {categorias.map(categoria => <SelectItem key={categoria} value={categoria}>
                       {categoria}
-                    </SelectItem>
-                  ))}
+                    </SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
 
             <div>
               <label className="text-sm font-medium mb-1 block">Origem</label>
-              <Select 
-                open={origemMenuAberto}
-                onOpenChange={setOrigemMenuAberto}
-                value={formData.origem} 
-                onValueChange={(origem) => setFormData(prev => ({ ...prev, origem }))} 
-                disabled={formData.isOrcamentoFechado}
-              >
+              <Select open={origemMenuAberto} onOpenChange={setOrigemMenuAberto} value={formData.origem} onValueChange={origem => setFormData(prev => ({
+              ...prev,
+              origem
+            }))} disabled={formData.isOrcamentoFechado}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
-                  {origens.map(origem => (
-                    <SelectItem key={origem.id} value={origem.id}>
+                  {origens.map(origem => <SelectItem key={origem.id} value={origem.id}>
                       {origem.nome}
-                    </SelectItem>
-                  ))}
+                    </SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -411,96 +341,62 @@ export default function EditOrcamentoModal({
 
           <div>
             <label className="text-sm font-medium mb-1 block">Descrição</label>
-            <Input
-              placeholder="Descrição do serviço (será levada para Agenda e Workflow)"
-              value={formData.descricao}
-              onChange={e => setFormData(prev => ({ ...prev, descricao: e.target.value }))}
-              disabled={formData.isOrcamentoFechado}
-            />
+            <Input placeholder="Descrição do serviço (será levada para Agenda e Workflow)" value={formData.descricao} onChange={e => setFormData(prev => ({
+            ...prev,
+            descricao: e.target.value
+          }))} disabled={formData.isOrcamentoFechado} />
           </div>
 
           <div>
             <label className="text-sm font-medium mb-1 block">Detalhes</label>
-            <Textarea
-              placeholder="Anotações internas do orçamento"
-              value={formData.detalhes}
-              onChange={e => setFormData(prev => ({ ...prev, detalhes: e.target.value }))}
-              rows={5}
-              className="resize-none"
-            />
+            <Textarea placeholder="Anotações internas do orçamento" value={formData.detalhes} onChange={e => setFormData(prev => ({
+            ...prev,
+            detalhes: e.target.value
+          }))} rows={5} className="resize-none" />
           </div>
 
-          {!formData.isOrcamentoFechado && (
-            <div className="space-y-6">
+          {!formData.isOrcamentoFechado && <div className="space-y-6">
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-sm font-medium">Pacote Principal (Opcional)</label>
-                  {formData.pacotePrincipal && (
-                    <Button 
-                      type="button"
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={handleClearMainPackage}
-                      className="h-6 w-6 p-0"
-                    >
+                  {formData.pacotePrincipal && <Button type="button" variant="ghost" size="sm" onClick={handleClearMainPackage} className="h-6 w-6 p-0">
                       <X className="h-3 w-3" />
-                    </Button>
-                  )}
+                    </Button>}
                 </div>
-                <PackageSearchCombobox
-                  pacotes={pacotes}
-                  value={formData.pacotePrincipal}
-                  onSelect={handleMainPackageSelect}
-                  placeholder="Buscar pacote..."
-                  filtrarPorCategoria={formData.categoria}
-                />
-                {formData.pacotePrincipal && (
-                  <div className="mt-2 p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                <PackageSearchCombobox pacotes={pacotes} value={formData.pacotePrincipal} onSelect={handleMainPackageSelect} placeholder="Buscar pacote..." filtrarPorCategoria={formData.categoria} />
+                {formData.pacotePrincipal && <div className="mt-2 p-3 bg-primary/5 border border-primary/20 rounded-lg">
                     <div className="flex justify-between items-center">
                       <div>
-                        <p className="text-sm font-medium text-primary">{formData.pacotePrincipal.nome}</p>
+                        <p className="text-sm font-medium text-inherit">{formData.pacotePrincipal.nome}</p>
                         <p className="text-xs text-primary/70">Pacote Principal</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm font-medium text-primary">
+                        <p className="text-sm font-medium text-inherit">
                           R$ {valorPacotePrincipal.toFixed(2)}
                         </p>
                       </div>
                     </div>
-                  </div>
-                )}
+                  </div>}
               </div>
 
               <div>
                 <label className="text-sm font-medium mb-2 block">Produtos Adicionais</label>
-                <ProductSearchCombobox
-                  products={produtos}
-                  onSelect={handleAddProduct}
-                  placeholder="Buscar e adicionar produto..."
-                />
+                <ProductSearchCombobox products={produtos} onSelect={handleAddProduct} placeholder="Buscar e adicionar produto..." />
                 
                 <div className="mt-3 space-y-2">
-                  {formData.produtosAdicionais.length === 0 ? (
-                    <p className="text-xs text-muted-foreground p-3 bg-muted/30 rounded-lg text-center">
+                  {formData.produtosAdicionais.length === 0 ? <p className="text-xs text-muted-foreground p-3 bg-muted/30 rounded-lg text-center">
                       Nenhum produto adicional
-                    </p>
-                  ) : (
-                    formData.produtosAdicionais.map((produto, index) => {
-                      const isIncluded = (produto as any).inclusoNoPacote;
-                      return (
-                        <div key={index} className={`flex justify-between items-center p-3 rounded-lg ${
-                          isIncluded ? 'bg-primary/5 border border-primary/20' : 'bg-muted/50'
-                        }`}>
+                    </p> : formData.produtosAdicionais.map((produto, index) => {
+                const isIncluded = (produto as any).inclusoNoPacote;
+                return <div key={index} className={`flex justify-between items-center p-3 rounded-lg ${isIncluded ? 'bg-primary/5 border border-primary/20' : 'bg-muted/50'}`}>
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
                               <p className={`text-sm font-medium ${isIncluded ? 'text-primary' : ''}`}>
                                 {produto.nome}
                               </p>
-                              {isIncluded && (
-                                <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                              {isIncluded && <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
                                   Incluso no pacote
-                                </span>
-                              )}
+                                </span>}
                             </div>
                             <p className={`text-xs ${isIncluded ? 'text-primary/70' : 'text-muted-foreground'}`}>
                               R$ {produto.preco.toFixed(2)} cada
@@ -511,62 +407,36 @@ export default function EditOrcamentoModal({
                               <label className={`text-xs ${isIncluded ? 'text-primary/70' : 'text-muted-foreground'}`}>
                                 Qtd:
                               </label>
-                              <Input
-                                type="number"
-                                min="1"
-                                value={produto.quantidade}
-                                onChange={e => handleUpdateProductQuantity(index, parseInt(e.target.value) || 1)}
-                                className="w-16 h-7 text-xs"
-                                disabled={isIncluded && formData.isOrcamentoFechado}
-                              />
+                              <Input type="number" min="1" value={produto.quantidade} onChange={e => handleUpdateProductQuantity(index, parseInt(e.target.value) || 1)} className="w-16 h-7 text-xs" disabled={isIncluded && formData.isOrcamentoFechado} />
                             </div>
                             <div className="text-right min-w-[80px]">
                               <p className={`text-sm font-medium ${isIncluded ? 'text-primary' : ''}`}>
                                 R$ {(produto.preco * produto.quantidade).toFixed(2)}
                               </p>
                             </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleRemoveProduct(index)}
-                              className={`h-6 w-6 p-0 ${
-                                isIncluded 
-                                  ? 'text-primary/50 hover:text-primary cursor-not-allowed' 
-                                  : 'text-red-500 hover:text-red-700'
-                              }`}
-                              disabled={isIncluded}
-                            >
+                            <Button variant="ghost" size="sm" onClick={() => handleRemoveProduct(index)} className={`h-6 w-6 p-0 ${isIncluded ? 'text-primary/50 hover:text-primary cursor-not-allowed' : 'text-red-500 hover:text-red-700'}`} disabled={isIncluded}>
                               <Trash2 className="h-3 w-3" />
                             </Button>
                           </div>
-                        </div>
-                      );
-                    })
-                  )}
+                        </div>;
+              })}
                 </div>
               </div>
-            </div>
-          )}
+            </div>}
 
-          {(formData.pacotePrincipal || formData.produtosAdicionais.length > 0) && (
-            <div className="border-t pt-4">
+          {(formData.pacotePrincipal || formData.produtosAdicionais.length > 0) && <div className="border-t pt-4">
               <h4 className="text-sm font-medium mb-3">Resumo do Orçamento</h4>
               <div className="space-y-2">
-                {formData.pacotePrincipal && (
-                  <div className="flex justify-between items-center text-sm">
+                {formData.pacotePrincipal && <div className="flex justify-between items-center text-sm">
                     <span>Pacote Principal: {formData.pacotePrincipal.nome}</span>
                     <span className="font-medium">R$ {valorPacotePrincipal.toFixed(2)}</span>
-                  </div>
-                )}
-                {formData.produtosAdicionais.length > 0 && (
-                  <div className="flex justify-between items-center text-sm">
+                  </div>}
+                {formData.produtosAdicionais.length > 0 && <div className="flex justify-between items-center text-sm">
                     <span>Produtos Adicionais ({formData.produtosAdicionais.length})</span>
                     <span className="font-medium">R$ {valorProdutos.toFixed(2)}</span>
-                  </div>
-                )}
+                  </div>}
               </div>
-            </div>
-          )}
+            </div>}
 
           <div className="mt-4">
             <div className="flex justify-between items-center font-medium mb-2">
@@ -575,19 +445,10 @@ export default function EditOrcamentoModal({
             </div>
             <div className="flex items-center gap-2">
               <label className="text-sm font-medium">Valor Final:</label>
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
-                value={formData.valorManual !== undefined ? formData.valorManual : ''}
-                onChange={e => setFormData(prev => ({ 
-                  ...prev, 
-                  valorManual: e.target.value ? parseFloat(e.target.value) : undefined 
-                }))}
-                placeholder={`R$ ${valorTotal.toFixed(2)}`}
-                className="max-w-40"
-                disabled={formData.isOrcamentoFechado}
-              />
+              <Input type="number" min="0" step="0.01" value={formData.valorManual !== undefined ? formData.valorManual : ''} onChange={e => setFormData(prev => ({
+              ...prev,
+              valorManual: e.target.value ? parseFloat(e.target.value) : undefined
+            }))} placeholder={`R$ ${valorTotal.toFixed(2)}`} className="max-w-40" disabled={formData.isOrcamentoFechado} />
             </div>
           </div>
         </div>
@@ -597,6 +458,5 @@ export default function EditOrcamentoModal({
           <Button onClick={handleSave}>Salvar Alterações</Button>
         </DialogFooter>
       </DialogContent>
-    </Dialog>
-  );
+    </Dialog>;
 }
