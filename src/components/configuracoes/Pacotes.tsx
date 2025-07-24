@@ -2,12 +2,15 @@ import { useState, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Edit, Trash2, Filter } from 'lucide-react';
+import { Plus, Trash2, Filter, Check, ChevronsUpDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { cn } from '@/lib/utils';
 import { useDebounce } from '@/hooks/useDebounce';
 import PacoteForm from './PacoteForm';
-import EditPacoteModal from './EditPacoteModal';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 interface Categoria {
   id: string;
   nome: string;
@@ -47,13 +50,7 @@ export default function Pacotes({
   const [filtroCategoria, setFiltroCategoria] = useState<string>('all');
   const [filtroNome, setFiltroNome] = useState<string>('');
   const [filtroValor, setFiltroValor] = useState<string>('');
-  const [editModal, setEditModal] = useState<{
-    open: boolean;
-    pacote: Pacote | null;
-  }>({
-    open: false,
-    pacote: null
-  });
+  const [editingPackage, setEditingPackage] = useState<string | null>(null);
 
   // Debounce para filtro de nome
   const debouncedFiltroNome = useDebounce(filtroNome, 300);
@@ -90,17 +87,46 @@ export default function Pacotes({
     }]);
     toast.success('Pacote adicionado com sucesso!');
   }, [setPacotes]);
-  const iniciarEdicaoPacote = useCallback((pacote: Pacote) => {
-    setEditModal({
-      open: true,
-      pacote
-    });
-  }, []);
-  const salvarEdicaoPacote = useCallback((id: string, dados: Partial<Pacote>) => {
-    setPacotes(prev => prev.map(pacote => pacote.id === id ? {
-      ...pacote,
-      ...dados
-    } : pacote));
+  const atualizarPacote = useCallback((id: string, campo: keyof Pacote, valor: any) => {
+    setPacotes(prev => prev.map(pacote => 
+      pacote.id === id ? { ...pacote, [campo]: valor } : pacote
+    ));
+  }, [setPacotes]);
+
+  const adicionarProdutoAoPacote = useCallback((pacoteId: string, produtoId: string) => {
+    setPacotes(prev => prev.map(pacote => {
+      if (pacote.id === pacoteId) {
+        const produtoExistente = pacote.produtosIncluidos.find(p => p.produtoId === produtoId);
+        if (produtoExistente) {
+          return {
+            ...pacote,
+            produtosIncluidos: pacote.produtosIncluidos.map(p =>
+              p.produtoId === produtoId ? { ...p, quantidade: p.quantidade + 1 } : p
+            )
+          };
+        } else {
+          return {
+            ...pacote,
+            produtosIncluidos: [...pacote.produtosIncluidos, { produtoId, quantidade: 1 }]
+          };
+        }
+      }
+      return pacote;
+    }));
+    toast.success('Produto adicionado ao pacote!');
+  }, [setPacotes]);
+
+  const removerProdutoDoPacote = useCallback((pacoteId: string, produtoId: string) => {
+    setPacotes(prev => prev.map(pacote => {
+      if (pacote.id === pacoteId) {
+        return {
+          ...pacote,
+          produtosIncluidos: pacote.produtosIncluidos.filter(p => p.produtoId !== produtoId)
+        };
+      }
+      return pacote;
+    }));
+    toast.success('Produto removido do pacote!');
   }, [setPacotes]);
   const removerPacote = useCallback((id: string) => {
     setPacotes(prev => prev.filter(pacote => pacote.id !== id));
@@ -111,30 +137,80 @@ export default function Pacotes({
     setFiltroNome('');
     setFiltroValor('');
   }, []);
-  const renderProdutosList = useCallback((produtosIncluidos: ProdutoIncluido[]) => {
-    if (!produtosIncluidos || produtosIncluidos.length === 0) {
-      return <span className="text-muted-foreground">Nenhum produto</span>;
-    }
-    const nomesProdutos = produtosIncluidos.map(p => {
-      const nome = getNomeProduto(p.produtoId);
-      return p.quantidade > 1 ? `${nome} (${p.quantidade}x)` : nome;
-    });
-    const textoCompleto = nomesProdutos.join(', ');
-    const textoTruncado = textoCompleto.length > 40 ? `${textoCompleto.substring(0, 37)}...` : textoCompleto;
-    if (textoCompleto.length > 40) {
-      return <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="cursor-help">{textoTruncado}</span>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p className="max-w-xs">{textoCompleto}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>;
-    }
-    return <span>{textoCompleto}</span>;
-  }, [getNomeProduto]);
+  const ProdutoDropdown = useCallback(({ pacote }: { pacote: Pacote }) => {
+    const [open, setOpen] = useState(false);
+    const produtosDisponiveis = produtos.filter(produto => 
+      !pacote.produtosIncluidos.some(p => p.produtoId === produto.id)
+    );
+
+    return (
+      <div className="space-y-1">
+        {/* Lista de produtos incluídos */}
+        <div className="flex flex-wrap gap-1 mb-2">
+          {pacote.produtosIncluidos.map(produto => {
+            const nomeProduto = getNomeProduto(produto.produtoId);
+            return (
+              <div key={produto.produtoId} className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs">
+                <span>{nomeProduto}</span>
+                {produto.quantidade > 1 && <span className="font-medium">({produto.quantidade}x)</span>}
+                <button
+                  onClick={() => removerProdutoDoPacote(pacote.id, produto.produtoId)}
+                  className="text-blue-500 hover:text-blue-700 ml-1"
+                >
+                  ×
+                </button>
+              </div>
+            );
+          })}
+        </div>
+        
+        {/* Dropdown para adicionar produtos */}
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-6 text-xs w-full justify-between"
+              disabled={produtosDisponiveis.length === 0}
+            >
+              <Plus className="h-3 w-3 mr-1" />
+              Adicionar produto
+              <ChevronsUpDown className="h-3 w-3 ml-1" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-64 p-0 z-[10000]" align="start">
+            <Command>
+              <CommandInput placeholder="Buscar produto..." className="h-8 text-xs" />
+              <CommandList>
+                <CommandEmpty className="py-2 text-xs text-muted-foreground">
+                  Nenhum produto encontrado.
+                </CommandEmpty>
+                <CommandGroup>
+                  {produtosDisponiveis.map((produto) => (
+                    <CommandItem
+                      key={produto.id}
+                      onSelect={() => {
+                        adicionarProdutoAoPacote(pacote.id, produto.id);
+                        setOpen(false);
+                      }}
+                      className="text-xs cursor-pointer"
+                    >
+                      <div className="flex flex-col">
+                        <span className="font-medium">{produto.nome}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {formatarMoeda(produto.preco_venda)}
+                        </span>
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
+      </div>
+    );
+  }, [produtos, getNomeProduto, adicionarProdutoAoPacote, removerProdutoDoPacote, formatarMoeda]);
   return <div className="mt-4 space-y-6">
       {/* Formulário Novo Pacote */}
       <div>
@@ -195,53 +271,100 @@ export default function Pacotes({
           {filtroCategoria !== 'all' || debouncedFiltroNome || debouncedFiltroValor}
         </div>
 
-        {/* Tabela Compacta */}
-        <div className="bg-white rounded-lg border border-gray-100 overflow-hidden shadow-sm">
-          <div className="grid grid-cols-12 bg-gray-50/50 px-3 py-2 border-b border-gray-100 text-xs font-medium">
-            <div className="col-span-2 text-gray-700">Nome</div>
-            <div className="col-span-2 text-gray-700">Categoria</div>
-            <div className="col-span-2 text-gray-700">Valor Base</div>
-            <div className="col-span-2 text-gray-700">Valor Foto Extra</div>
-            <div className="col-span-3 text-gray-700">Produtos Incluídos</div>
-            <div className="col-span-1 text-right text-gray-700">Ações</div>
-          </div>
-          
-          <div className="divide-y divide-gray-50">
-            {pacotesFiltrados.map((pacote, index) => <div key={pacote.id} className={`grid grid-cols-12 px-3 py-2 text-xs ${index % 2 === 0 ? 'bg-white' : 'bg-gray-25/30'} hover:bg-gray-50/70 transition-colors`}>
-                <div className="col-span-2 font-medium">{pacote.nome}</div>
-                <div className="col-span-2 text-muted-foreground">
-                  {getNomeCategoria(pacote.categoria_id)}
-                </div>
-                <div className="col-span-2 font-medium">
-                  {formatarMoeda(pacote.valor_base)}
-                </div>
-                <div className="col-span-2 text-muted-foreground">
-                  {formatarMoeda(pacote.valor_foto_extra)}
-                </div>
-                <div className="col-span-3 text-muted-foreground">
-                  {renderProdutosList(pacote.produtosIncluidos)}
-                </div>
-                <div className="flex justify-end gap-1 col-span-1">
-                  <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => iniciarEdicaoPacote(pacote)}>
-                    <Edit className="h-3 w-3" />
-                  </Button>
-                  <Button variant="outline" size="icon" className="h-6 w-6 text-red-500 hover:text-red-600 hover:border-red-200" onClick={() => removerPacote(pacote.id)}>
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              </div>)}
-          
-            {pacotesFiltrados.length === 0 && <div className="px-4 py-8 text-center text-sm text-muted-foreground bg-white">
-                {pacotes.length === 0 ? "Nenhum pacote cadastrado. Adicione seu primeiro pacote acima." : "Nenhum pacote encontrado com os filtros aplicados."}
-              </div>}
-          </div>
+        {/* Tabela Responsiva */}
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-xs font-medium w-[120px]">Nome</TableHead>
+                <TableHead className="text-xs font-medium w-[100px]">Categoria</TableHead>
+                <TableHead className="text-xs font-medium w-[90px]">Valor Base</TableHead>
+                <TableHead className="text-xs font-medium w-[90px]">Foto Extra</TableHead>
+                <TableHead className="text-xs font-medium min-w-[200px]">Produtos Incluídos</TableHead>
+                <TableHead className="text-xs font-medium w-[60px] text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {pacotesFiltrados.map((pacote) => (
+                <TableRow key={pacote.id} className="hover:bg-gray-50/70">
+                  {/* Nome - Editável */}
+                  <TableCell className="p-2">
+                    <Input
+                      value={pacote.nome}
+                      onChange={(e) => atualizarPacote(pacote.id, 'nome', e.target.value)}
+                      className="h-7 text-xs border-0 bg-transparent hover:bg-gray-50 focus:bg-white focus:border-gray-200"
+                    />
+                  </TableCell>
+                  
+                  {/* Categoria - Seletor */}
+                  <TableCell className="p-2">
+                    <Select 
+                      value={pacote.categoria_id} 
+                      onValueChange={(value) => atualizarPacote(pacote.id, 'categoria_id', value)}
+                    >
+                      <SelectTrigger className="h-7 text-xs border-0 bg-transparent hover:bg-gray-50 focus:bg-white focus:border-gray-200">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categorias.map(categoria => (
+                          <SelectItem key={categoria.id} value={categoria.id} className="text-xs">
+                            {categoria.nome}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                  
+                  {/* Valor Base - Editável */}
+                  <TableCell className="p-2">
+                    <Input
+                      type="number"
+                      value={pacote.valor_base}
+                      onChange={(e) => atualizarPacote(pacote.id, 'valor_base', parseFloat(e.target.value) || 0)}
+                      className="h-7 text-xs border-0 bg-transparent hover:bg-gray-50 focus:bg-white focus:border-gray-200"
+                    />
+                  </TableCell>
+                  
+                  {/* Valor Foto Extra - Editável */}
+                  <TableCell className="p-2">
+                    <Input
+                      type="number"
+                      value={pacote.valor_foto_extra}
+                      onChange={(e) => atualizarPacote(pacote.id, 'valor_foto_extra', parseFloat(e.target.value) || 0)}
+                      className="h-7 text-xs border-0 bg-transparent hover:bg-gray-50 focus:bg-white focus:border-gray-200"
+                    />
+                  </TableCell>
+                  
+                  {/* Produtos Incluídos - Dropdown para edição */}
+                  <TableCell className="p-2">
+                    <ProdutoDropdown pacote={pacote} />
+                  </TableCell>
+                  
+                  {/* Ações */}
+                  <TableCell className="p-2 text-right">
+                    <Button 
+                      variant="outline" 
+                      size="icon" 
+                      className="h-6 w-6 text-red-500 hover:text-red-600 hover:border-red-200" 
+                      onClick={() => removerPacote(pacote.id)}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+              
+              {pacotesFiltrados.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                    {pacotes.length === 0 ? "Nenhum pacote cadastrado. Adicione seu primeiro pacote acima." : "Nenhum pacote encontrado com os filtros aplicados."}
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
         </div>
       </div>
 
-      {/* Modal de Edição */}
-      <EditPacoteModal open={editModal.open} onOpenChange={open => setEditModal({
-      open,
-      pacote: open ? editModal.pacote : null
-    })} pacote={editModal.pacote} categorias={categorias} produtos={produtos} onSave={salvarEdicaoPacote} />
     </div>;
 }
