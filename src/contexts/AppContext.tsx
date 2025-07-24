@@ -61,6 +61,15 @@ interface AppContextType {
   workflowFilters: WorkflowFilters;
   visibleColumns: Record<string, boolean>;
   
+  // Cartões de Crédito (NOVO)
+  cartoes: Array<{
+    id: string;
+    nome: string;
+    diaVencimento: number;
+    diaFechamento: number;
+    ativo: boolean;
+  }>;
+  
   // Orçamentos Actions
   adicionarOrcamento: (orcamento: Omit<Orcamento, 'id' | 'criadoEm'>) => Orcamento;
   atualizarOrcamento: (id: string, orcamento: Partial<Orcamento>) => void;
@@ -94,6 +103,11 @@ interface AppContextType {
   isFromBudget: (appointment: Appointment) => boolean;
   getBudgetId: (appointment: Appointment) => string | undefined;
   canEditFully: (appointment: Appointment) => boolean;
+  
+  // Cartões de Crédito Actions (NOVO)
+  adicionarCartao: (cartao: { nome: string; diaVencimento: number; diaFechamento: number }) => void;
+  atualizarCartao: (id: string, dadosAtualizados: Partial<{ nome: string; diaVencimento: number; diaFechamento: number; ativo: boolean }>) => void;
+  removerCartao: (id: string) => void;
 }
 
 export const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -210,6 +224,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   });
 
+  // Estado dos Cartões de Crédito (NOVO)
+  const [cartoes, setCartoes] = useState(() => {
+    return storage.load('lunari_fin_credit_cards', []);
+  });
+
   // Utility functions
   const isFromBudget = useCallback((appointment: Appointment) => {
     return appointment.id?.startsWith('orcamento-') || (appointment as any).origem === 'orcamento';
@@ -255,6 +274,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     storage.save(STORAGE_KEYS.WORKFLOW_COLUMNS, visibleColumns);
   }, [visibleColumns]);
+
+  // Persistir cartões (NOVO)
+  useEffect(() => {
+    storage.save('lunari_fin_credit_cards', cartoes);
+  }, [cartoes]);
 
   // Sync configuration data
   useEffect(() => {
@@ -911,6 +935,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     updateWorkflowFilters({ mes: `${newMonth}/${newYear}` });
   };
 
+  // Funções de Cartões de Crédito (NOVO)
+  const adicionarCartao = (cartao: { nome: string; diaVencimento: number; diaFechamento: number }) => {
+    const novoCartao = {
+      id: Date.now().toString(),
+      ...cartao,
+      ativo: true
+    };
+    setCartoes(prev => [...prev, novoCartao]);
+    
+    toast({
+      title: "Cartão adicionado",
+      description: `Cartão ${cartao.nome} foi configurado com sucesso.`,
+    });
+  };
+
+  const atualizarCartao = (id: string, dadosAtualizados: Partial<{ nome: string; diaVencimento: number; diaFechamento: number; ativo: boolean }>) => {
+    setCartoes(prev => prev.map(cartao => 
+      cartao.id === id ? { ...cartao, ...dadosAtualizados } : cartao
+    ));
+  };
+
+  const removerCartao = (id: string) => {
+    const cartao = cartoes.find(c => c.id === id);
+    setCartoes(prev => prev.filter(cartao => cartao.id !== id));
+    
+    if (cartao) {
+      toast({
+        title: "Cartão removido",
+        description: `Cartão ${cartao.nome} foi removido.`,
+        variant: "destructive"
+      });
+    }
+  };
+
   const contextValue: AppContextType = {
     // Data
     orcamentos,
@@ -946,6 +1004,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     workflowSummary,
     workflowFilters,
     visibleColumns,
+    cartoes,
     
     // Actions
     adicionarOrcamento,
@@ -971,6 +1030,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     toggleColumnVisibility,
     updateWorkflowFilters,
     navigateMonth,
+    adicionarCartao,
+    atualizarCartao,
+    removerCartao,
     
     // Utilities
     isFromBudget,

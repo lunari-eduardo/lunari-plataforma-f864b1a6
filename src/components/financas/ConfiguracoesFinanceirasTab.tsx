@@ -17,17 +17,13 @@ interface ConfiguracoesFinanceirasTabProps {
   adicionarItemFinanceiro: (nome: string, grupo: GrupoPrincipal) => void;
   removerItemFinanceiro: (id: string) => void;
   atualizarItemFinanceiro: (id: string, dadosAtualizados: Partial<ItemFinanceiro>) => void;
-  cartoes: CreditCard[];
-  onCartoesChange: (cartoes: CreditCard[]) => void;
 }
 
 export default function ConfiguracoesFinanceirasTab({
   itensFinanceiros,
   adicionarItemFinanceiro,
   removerItemFinanceiro,
-  atualizarItemFinanceiro,
-  cartoes,
-  onCartoesChange
+  atualizarItemFinanceiro
 }: ConfiguracoesFinanceirasTabProps) {
   const [novoItemNome, setNovoItemNome] = useState('');
   const [novoItemGrupo, setNovoItemGrupo] = useState<GrupoPrincipal>('Despesa Fixa');
@@ -263,7 +259,7 @@ export default function ConfiguracoesFinanceirasTab({
         </TabsContent>
 
         <TabsContent value="cartoes" className="mt-6">
-          <ConfiguracaoCartoes cartoes={cartoes} onCartoesChange={onCartoesChange} />
+          <ConfiguracaoCartoes />
         </TabsContent>
       </Tabs>
     </div>

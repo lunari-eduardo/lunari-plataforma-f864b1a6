@@ -4,22 +4,21 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Trash2, Plus, CreditCard } from 'lucide-react';
-import { FinancialEngine, CreditCard as CreditCardType } from '@/services/FinancialEngine';
-import { formatCurrency } from '@/utils/financialUtils';
+import { useAppContext } from '@/contexts/AppContext';
 
 interface ConfiguracaoCartoesProps {
-  cartoes: CreditCardType[];
-  onCartoesChange: (cartoes: CreditCardType[]) => void;
+  // Props removidas - agora usa AppContext diretamente
 }
 
-export default function ConfiguracaoCartoes({ cartoes, onCartoesChange }: ConfiguracaoCartoesProps) {
+export default function ConfiguracaoCartoes({}: ConfiguracaoCartoesProps) {
+  const { cartoes, adicionarCartao, removerCartao } = useAppContext();
   const [novoCartao, setNovoCartao] = useState({
     nome: '',
     diaVencimento: '',
     diaFechamento: ''
   });
 
-  const adicionarCartao = () => {
+  const adicionarNovoCartao = () => {
     if (!novoCartao.nome || !novoCartao.diaVencimento || !novoCartao.diaFechamento) return;
 
     const diaVencimento = parseInt(novoCartao.diaVencimento);
@@ -31,15 +30,11 @@ export default function ConfiguracaoCartoes({ cartoes, onCartoesChange }: Config
     }
 
     try {
-      const cartaoAdicionado = FinancialEngine.addCreditCard({
+      adicionarCartao({
         nome: novoCartao.nome,
         diaVencimento,
-        diaFechamento,
-        userId: 'user1',
-        ativo: true
+        diaFechamento
       });
-
-      onCartoesChange([...cartoes, cartaoAdicionado]);
       
       setNovoCartao({
         nome: '',
@@ -52,10 +47,9 @@ export default function ConfiguracaoCartoes({ cartoes, onCartoesChange }: Config
     }
   };
 
-  const removerCartao = (id: string) => {
+  const removerCartaoLocal = (id: string) => {
     try {
-      FinancialEngine.removeCreditCard(id);
-      onCartoesChange(cartoes.filter(c => c.id !== id));
+      removerCartao(id);
     } catch (error) {
       console.error('Erro ao remover cartão:', error);
       alert('Erro ao remover cartão');
@@ -121,7 +115,7 @@ export default function ConfiguracaoCartoes({ cartoes, onCartoesChange }: Config
           </div>
           <div className="mt-4">
             <Button 
-              onClick={adicionarCartao}
+              onClick={adicionarNovoCartao}
               disabled={!novoCartao.nome || !novoCartao.diaVencimento || !novoCartao.diaFechamento}
               className="bg-blue-600 hover:bg-blue-700"
             >
@@ -157,7 +151,7 @@ export default function ConfiguracaoCartoes({ cartoes, onCartoesChange }: Config
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => removerCartao(cartao.id)}
+                      onClick={() => removerCartaoLocal(cartao.id)}
                       className="text-red-600 hover:text-red-700 hover:bg-red-50"
                     >
                       <Trash2 className="h-4 w-4" />

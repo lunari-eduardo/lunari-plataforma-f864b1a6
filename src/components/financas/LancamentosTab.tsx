@@ -7,7 +7,7 @@ import { TransacaoComItem, GrupoPrincipal, NovaTransacaoFinanceira, ItemFinancei
 import { formatCurrency } from '@/utils/financialUtils';
 import TabelaLancamentos from './TabelaLancamentos';
 import TabelaLancamentosMobile from './TabelaLancamentosMobile';
-import ModalNovoLancamento from './ModalNovoLancamento';
+import ModalNovoLancamentoRefatorado from './ModalNovoLancamentoRefatorado';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { CreateTransactionInput } from '@/services/FinancialEngine';
 const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
@@ -289,6 +289,13 @@ export default function LancamentosTab({
         </Button>}
 
       {/* Modal de Novo Lançamento */}
-      <ModalNovoLancamento aberto={modalNovoLancamentoAberto} onFechar={() => setModalNovoLancamentoAberto(false)} onAdicionarTransacao={adicionarTransacao} createTransactionEngine={createTransactionEngine} obterItensPorGrupo={obterItensPorGrupo} grupoAtivo={activeSubTab} />
+      <ModalNovoLancamentoRefatorado 
+        aberto={modalNovoLancamentoAberto} 
+        onFechar={() => setModalNovoLancamentoAberto(false)} 
+        createTransactionEngine={createTransactionEngine} 
+        obterItensPorGrupo={obterItensPorGrupo} 
+        grupoAtivo={activeSubTab}
+        tipoLancamento={activeSubTab === 'Receita Não Operacional' ? 'receita' : 'despesa'}
+      />
     </div>;
 }

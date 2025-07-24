@@ -64,13 +64,6 @@ export default function NovaFinancas() {
               adicionarItemFinanceiro={adicionarItemFinanceiro} 
               removerItemFinanceiro={removerItemFinanceiro} 
               atualizarItemFinanceiro={atualizarItemFinanceiro}
-              cartoes={cartoes}
-              onCartoesChange={(novoCartoes) => {
-                // The ConfiguracaoCartoes component manages its own state
-                // This callback is used for direct updates from the component
-                const cartoesAtuais = [...cartoes];
-                cartoesAtuais.splice(0, cartoesAtuais.length, ...novoCartoes);
-              }}
             />
           </TabsContent>
         </Tabs>
