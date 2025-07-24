@@ -72,7 +72,7 @@ export default function Workflow() {
     getConfirmedSessionsForWorkflow
   } = useAgenda();
   const {
-    getStatusOptions
+    getAllStatuses
   } = useWorkflowStatus();
   const { clientes } = useContext(AppContext);
   
@@ -80,8 +80,8 @@ export default function Workflow() {
     return clientes.find(cliente => cliente.nome === nome);
   };
 
-  // Carregamento dos status de workflow das configurações
-  const statusOptions = getStatusOptions();
+  // Carregamento dos status de workflow das configurações - incluindo "Confirmado" + etapas personalizadas
+  const statusOptions = getAllStatuses();
 
   // Carregamento inicial dos dados do localStorage
   const [sessions, setSessions] = useState<SessionData[]>(() => {

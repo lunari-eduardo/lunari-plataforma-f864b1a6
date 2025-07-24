@@ -27,6 +27,8 @@ export default function FluxoTrabalho({ etapas, setEtapas }: FluxoTrabalhoProps)
   // Persistência das etapas de trabalho
   useEffect(() => {
     storage.save(STORAGE_KEYS.WORKFLOW_STATUS, etapas);
+    // Dispara evento personalizado para notificar outras partes da aplicação
+    window.dispatchEvent(new Event('workflowStatusUpdated'));
   }, [etapas]);
 
   const adicionarEtapa = () => {
