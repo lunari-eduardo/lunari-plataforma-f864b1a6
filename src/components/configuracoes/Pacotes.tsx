@@ -45,7 +45,7 @@ interface PacotesProps {
 
 export default function Pacotes({ pacotes, setPacotes, categorias, produtos }: PacotesProps) {
   // Estados para filtros
-  const [filtroCategoria, setFiltroCategoria] = useState<string>('');
+  const [filtroCategoria, setFiltroCategoria] = useState<string>('all');
   const [filtroNome, setFiltroNome] = useState<string>('');
   const [filtroValor, setFiltroValor] = useState<string>('');
   const [editModal, setEditModal] = useState<{ open: boolean; pacote: Pacote | null }>({
@@ -77,7 +77,7 @@ export default function Pacotes({ pacotes, setPacotes, categorias, produtos }: P
   // Lista filtrada de pacotes
   const pacotesFiltrados = useMemo(() => {
     return pacotes.filter(pacote => {
-      const matchCategoria = !filtroCategoria || pacote.categoria_id === filtroCategoria;
+      const matchCategoria = !filtroCategoria || filtroCategoria === 'all' || pacote.categoria_id === filtroCategoria;
       const matchNome = !debouncedFiltroNome || 
         pacote.nome.toLowerCase().includes(debouncedFiltroNome.toLowerCase());
       const matchValor = !debouncedFiltroValor || 
@@ -113,7 +113,7 @@ export default function Pacotes({ pacotes, setPacotes, categorias, produtos }: P
   }, [setPacotes]);
 
   const limparFiltros = useCallback(() => {
-    setFiltroCategoria('');
+    setFiltroCategoria('all');
     setFiltroNome('');
     setFiltroValor('');
   }, []);
@@ -200,7 +200,7 @@ export default function Pacotes({ pacotes, setPacotes, categorias, produtos }: P
                   <SelectValue placeholder="Todas as categorias" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas as categorias</SelectItem>
+                  <SelectItem value="all">Todas as categorias</SelectItem>
                   {categorias.map(categoria => (
                     <SelectItem key={categoria.id} value={categoria.id}>
                       {categoria.nome}
@@ -232,7 +232,7 @@ export default function Pacotes({ pacotes, setPacotes, categorias, produtos }: P
             </div>
           </div>
           
-          {(filtroCategoria || debouncedFiltroNome || debouncedFiltroValor) && (
+          {(filtroCategoria !== 'all' || debouncedFiltroNome || debouncedFiltroValor) && (
             <div className="mt-2 text-xs text-muted-foreground">
               Mostrando {pacotesFiltrados.length} de {pacotes.length} pacote(s)
             </div>

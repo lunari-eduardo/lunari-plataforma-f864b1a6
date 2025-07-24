@@ -25,7 +25,7 @@ export function WorkflowFilter({
     const [ano, mes] = hoje.split('-');
     return {
       search: "",
-      status: "",
+      status: "all",
       month: `${parseInt(mes)}/${ano}`
     };
   });
@@ -73,7 +73,7 @@ export function WorkflowFilter({
   const handleReset = () => {
     const defaultFilters = {
       search: "",
-      status: "",
+      status: "all",
       month: (() => {
         const hoje = getCurrentDateString();
         const [ano, mes] = hoje.split('-');
@@ -100,7 +100,7 @@ export function WorkflowFilter({
                 <SelectValue placeholder="Filtrar por status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos os status</SelectItem>
+                <SelectItem value="all">Todos os status</SelectItem>
                 {statuses.map(status => <SelectItem key={status} value={status}>
                     {status}
                   </SelectItem>)}
