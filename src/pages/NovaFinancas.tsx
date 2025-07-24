@@ -51,19 +51,7 @@ export default function NovaFinancas() {
           </TabsList>
 
           <TabsContent value="lancamentos" className="mt-6">
-            <LancamentosTab 
-              filtroMesAno={filtroMesAno} 
-              setFiltroMesAno={setFiltroMesAno} 
-              transacoesPorGrupo={transacoesPorGrupo} 
-              resumoFinanceiro={resumoFinanceiro} 
-              calcularMetricasPorGrupo={calcularMetricasPorGrupo} 
-              obterItensPorGrupo={obterItensPorGrupo} 
-              itensFinanceiros={itensFinanceiros}
-              adicionarTransacao={adicionarTransacao} 
-              atualizarTransacao={atualizarTransacaoCompativel} 
-              removerTransacao={removerTransacao} 
-              createTransactionEngine={createTransactionEngine} 
-            />
+            <LancamentosTab filtroMesAno={filtroMesAno} setFiltroMesAno={setFiltroMesAno} transacoesPorGrupo={transacoesPorGrupo} resumoFinanceiro={resumoFinanceiro} calcularMetricasPorGrupo={calcularMetricasPorGrupo} obterItensPorGrupo={obterItensPorGrupo} adicionarTransacao={adicionarTransacao} atualizarTransacao={atualizarTransacaoCompativel} removerTransacao={removerTransacao} createTransactionEngine={createTransactionEngine} />
           </TabsContent>
 
           <TabsContent value="dashboard" className="mt-6">

@@ -24,7 +24,6 @@ interface LancamentosTabProps {
   resumoFinanceiro: any;
   calcularMetricasPorGrupo: (grupo: GrupoPrincipal) => any;
   obterItensPorGrupo: (grupo: GrupoPrincipal) => ItemFinanceiro[];
-  itensFinanceiros: ItemFinanceiro[];
   adicionarTransacao: (transacao: Omit<NovaTransacaoFinanceira, 'id' | 'userId' | 'criadoEm'>) => void;
   atualizarTransacao: (id: string, dadosAtualizados: Partial<NovaTransacaoFinanceira>) => void;
   removerTransacao: (id: string) => void;
@@ -36,7 +35,6 @@ export default function LancamentosTab({
   transacoesPorGrupo,
   calcularMetricasPorGrupo,
   obterItensPorGrupo,
-  itensFinanceiros,
   adicionarTransacao,
   atualizarTransacao,
   removerTransacao,
@@ -291,16 +289,6 @@ export default function LancamentosTab({
         </Button>}
 
       {/* Modal de Novo Lançamento */}
-      <ModalNovoLancamento 
-        open={modalNovoLancamentoAberto} 
-        onClose={() => setModalNovoLancamentoAberto(false)} 
-        itensFinanceiros={itensFinanceiros} 
-        onTransacaoCriada={() => {
-          // Recarregar dados após criação
-          window.location.reload();
-        }}
-        grupoAtivo={activeSubTab} 
-        tipoLancamento={activeSubTab === 'Receita Não Operacional' ? 'receita' : 'despesa'}
-      />
+      <ModalNovoLancamento aberto={modalNovoLancamentoAberto} onFechar={() => setModalNovoLancamentoAberto(false)} onAdicionarTransacao={adicionarTransacao} createTransactionEngine={createTransactionEngine} obterItensPorGrupo={obterItensPorGrupo} grupoAtivo={activeSubTab} />
     </div>;
 }
