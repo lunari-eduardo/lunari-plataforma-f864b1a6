@@ -628,12 +628,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         let pacoteData = null;
         let categoriaName = orc.categoria;
         let valorFotoExtraFromPackage = 35;
+        let valorPacoteFromBudget = 0;
         
         if (orc.pacotes && orc.pacotes.length > 0) {
           const pacoteOrcamento = orc.pacotes[0];
           
-          // Buscar o pacote completo nos dados de configuração
-          pacoteData = pacotes.find(p => p.id === pacoteOrcamento.id || p.nome === pacoteOrcamento.nome);
+          // Buscar o pacote completo nos dados de configuração pelo ID primeiro
+          pacoteData = pacotes.find(p => p.id === pacoteOrcamento.id);
+          
+          // Se não encontrar por ID, tentar por nome
+          if (!pacoteData && pacoteOrcamento.nome) {
+            pacoteData = pacotes.find(p => p.nome === pacoteOrcamento.nome);
+          }
           
           if (pacoteData) {
             // Buscar categoria pelo ID do pacote
@@ -645,6 +651,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               categoriaName = pacoteData.categoria || orc.categoria;
             }
             valorFotoExtraFromPackage = pacoteData.valor_foto_extra || pacoteData.valorFotoExtra || 35;
+            // Usar valor do pacote nas configurações como congelamento
+            valorPacoteFromBudget = pacoteData.valor_base || pacoteData.valorVenda || pacoteData.valor || 0;
+          } else {
+            // Se não encontrou o pacote nas configurações, usar dados do orçamento
+            valorPacoteFromBudget = pacoteOrcamento.preco || 0;
           }
         }
 
@@ -659,9 +670,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           status: 'Fechado',
           categoria: categoriaName,
           pacote: pacoteData ? pacoteData.nome : (orc.pacotes[0]?.nome || ''),
-          valorPacote: pacoteData ? 
-            (pacoteData.valor_base || pacoteData.valorVenda || pacoteData.valor || 0) : 
-            (orc.pacotes[0]?.preco || 0),
+          valorPacote: valorPacoteFromBudget,
           desconto: 0,
           valorFotoExtra: valorFotoExtraFromPackage,
           qtdFotoExtra: 0,

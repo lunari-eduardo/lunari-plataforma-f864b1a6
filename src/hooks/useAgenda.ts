@@ -47,18 +47,19 @@ export const useAgenda = () => {
       let valorPacote = "R$ 0,00";
       let categoria = "";
       let valorFotoExtra = "R$ 35,00";
+      let pacoteData = null;
       
       if (appointment.packageId && pacotesData) {
-        const pacoteEncontrado = pacotesData.find(p => p.id === appointment.packageId);
-        if (pacoteEncontrado) {
-          pacote = pacoteEncontrado.nome;
-          valorPacote = `R$ ${pacoteEncontrado.valor.toFixed(2).replace('.', ',')}`;
-          categoria = pacoteEncontrado.categoria || "";
-          valorFotoExtra = `R$ ${pacoteEncontrado.valorFotoExtra || 35}.00`.replace('.', ',');
+        pacoteData = pacotesData.find(p => p.id === appointment.packageId);
+        if (pacoteData) {
+          pacote = pacoteData.nome;
+          valorPacote = `R$ ${(pacoteData.valor || pacoteData.valor_base || pacoteData.valorVenda || 0).toFixed(2).replace('.', ',')}`;
+          categoria = pacoteData.categoria || "";
+          valorFotoExtra = `R$ ${(pacoteData.valorFotoExtra || pacoteData.valor_foto_extra || 35).toFixed(2).replace('.', ',')}`;
         }
       }
       
-      // Se não encontrou pacote nas configurações, tentar mapear pela categoria do tipo
+      // Se não encontrou pacote nas configurações, usar fallback mínimo
       if (!pacote) {
         categoria = appointment.type.includes('Gestante') ? 'Gestante' : 
                    appointment.type.includes('Família') ? 'Família' : 
@@ -94,7 +95,20 @@ export const useAgenda = () => {
           id: 'p1',
           valor: appointment.paidAmount,
           data: getCurrentDateString() // Usar string de data
-        }] : []
+        }] : [],
+        // Adicionar produtos incluídos se existirem no pacote
+        ...(pacoteData && pacoteData.produtosIncluidos && pacoteData.produtosIncluidos.length > 0 && produtosData ? (() => {
+          const primeiroProduto = pacoteData.produtosIncluidos[0];
+          const produtoEncontrado = produtosData.find(p => p.id === primeiroProduto.produtoId);
+          if (produtoEncontrado) {
+            return {
+              produto: `${produtoEncontrado.nome} (incluso no pacote)`,
+              qtdProduto: primeiroProduto.quantidade || 1,
+              valorTotalProduto: `R$ ${((produtoEncontrado.valorVenda || produtoEncontrado.preco_venda || 0) * (primeiroProduto.quantidade || 1)).toFixed(2).replace('.', ',')}`
+            };
+          }
+          return {};
+        })() : {})
       };
     });
   };

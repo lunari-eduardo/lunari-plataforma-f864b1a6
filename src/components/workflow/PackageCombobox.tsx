@@ -49,7 +49,7 @@ export function PackageCombobox({
               if (currentValue !== value) {
                 onValueChange({
                   nome: pkg.nome,
-                  valor: `R$ ${pkg.valor.toFixed(2).replace('.', ',')}`,
+                  valor: `R$ ${(pkg.valor || 0).toFixed(2).replace('.', ',')}`,
                   valorFotoExtra: `R$ ${(pkg.valorFotoExtra || 35).toFixed(2).replace('.', ',')}`,
                   categoria: pkg.categoria
                 });
@@ -60,7 +60,7 @@ export function PackageCombobox({
                   <div className="flex flex-col">
                     <span className="font-medium">{pkg.nome}</span>
                     <span className="text-2xs text-neumorphic-textLight">
-                      R$ {pkg.valor.toFixed(2).replace('.', ',')} • Categoria: {pkg.categoria}
+                      R$ {(pkg.valor || 0).toFixed(2).replace('.', ',')} • Categoria: {pkg.categoria}
                     </span>
                   </div>
                 </CommandItem>)}
