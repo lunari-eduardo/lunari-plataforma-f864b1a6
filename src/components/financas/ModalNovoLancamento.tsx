@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,379 +6,331 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
-import { GrupoPrincipal, ItemFinanceiro, NovaTransacaoFinanceira, StatusTransacao } from '@/types/financas';
-import { CreateTransactionInput, FinancialEngine, CreditCard } from '@/services/FinancialEngine';
+import { GrupoPrincipal } from '@/types/financas';
+import { CreateTransactionInput, FinancialEngine } from '@/services/FinancialEngine';
+import { formatCurrency } from '@/utils/financialUtils';
+import { toast } from '@/hooks/use-toast';
+import { useAppContext } from '@/contexts/AppContext';
+
+type TipoLancamento = 'despesa' | 'receita';
+type FormaPagamento = 'vista' | 'parcelado' | 'cartao';
 
 interface ModalNovoLancamentoProps {
-  aberto: boolean;
-  onFechar: () => void;
-  onAdicionarTransacao: (transacao: Omit<NovaTransacaoFinanceira, 'id' | 'userId' | 'criadoEm'>) => void;
-  createTransactionEngine?: (input: CreateTransactionInput) => void;
-  obterItensPorGrupo: (grupo: GrupoPrincipal) => ItemFinanceiro[];
+  open: boolean;
+  onClose: () => void;
   grupoAtivo: GrupoPrincipal;
-  cartoes?: CreditCard[]; // Lista de cartões disponíveis
+  itensFinanceiros: Array<{
+    id: string;
+    nome: string;
+    grupo_principal: GrupoPrincipal;
+  }>;
+  onTransacaoCriada: () => void;
+  tipoLancamento?: TipoLancamento;
 }
 
 export default function ModalNovoLancamento({
-  aberto,
-  onFechar,
-  onAdicionarTransacao,
-  createTransactionEngine,
-  obterItensPorGrupo,
+  open,
+  onClose,
   grupoAtivo,
-  cartoes = []
+  itensFinanceiros,
+  onTransacaoCriada,
+  tipoLancamento = 'despesa'
 }: ModalNovoLancamentoProps) {
+  const { cartoes } = useAppContext();
+
   const [formData, setFormData] = useState({
     item_id: '',
     valor: '',
     data_vencimento: new Date().toISOString().split('T')[0],
     observacoes: '',
-    parcelado: false,
-    parcelas: { atual: 1, total: 1 },
     despesaRecorrente: false,
-    valorFixo: true, // Novo estado para controlar se o valor é fixo ou variável
-    cartaoCredito: false, // Novo estado para cartão de crédito
-    cartaoCreditoId: '' // ID do cartão selecionado
+    valorFixo: true,
+    formaPagamento: 'vista' as FormaPagamento,
+    numeroParcelas: 1,
+    cartaoCreditoId: ''
   });
 
-  // Função para determinar status automático baseado na data
-  const determinarStatus = (dataVencimento: string): StatusTransacao => {
-    const hoje = new Date().toISOString().split('T')[0];
-    return dataVencimento <= hoje ? 'Pago' : 'Agendado';
-  };
+  // Reset form when modal opens
+  useEffect(() => {
+    if (open) {
+      setFormData({
+        item_id: '',
+        valor: '',
+        data_vencimento: new Date().toISOString().split('T')[0],
+        observacoes: '',
+        despesaRecorrente: false,
+        valorFixo: true,
+        formaPagamento: 'vista' as FormaPagamento,
+        numeroParcelas: 1,
+        cartaoCreditoId: ''
+      });
+    }
+  }, [open]);
 
-  const limparFormulario = () => {
-    setFormData({
-      item_id: '',
-      valor: '',
-      data_vencimento: new Date().toISOString().split('T')[0],
-      observacoes: '',
-      parcelado: false,
-      parcelas: { atual: 1, total: 1 },
-      despesaRecorrente: false,
-      valorFixo: true,
-      cartaoCredito: false,
-      cartaoCreditoId: ''
-    });
-  };
+  const handleSubmit = async () => {
+    if (!formData.item_id || !formData.valor) {
+      toast({
+        title: "Erro",
+        description: "Por favor, preencha todos os campos obrigatórios.",
+        variant: "destructive"
+      });
+      return;
+    }
 
-  const handleSubmit = () => {
-    if (!formData.item_id || !formData.valor) return;
+    // Validar cartão de crédito se selecionado
+    if (formData.formaPagamento === 'cartao' && !formData.cartaoCreditoId) {
+      toast({
+        title: "Erro",
+        description: "Por favor, selecione um cartão de crédito.",
+        variant: "destructive"
+      });
+      return;
+    }
 
     const valor = parseFloat(formData.valor);
-    if (isNaN(valor) || valor <= 0) return;
+    if (isNaN(valor) || valor <= 0) {
+      toast({
+        title: "Erro",
+        description: "Por favor, insira um valor válido.",
+        variant: "destructive"
+      });
+      return;
+    }
 
-    // Usar o motor centralizado se disponível, senão usar implementação legada
-    if (createTransactionEngine) {
-      createTransactionEngine({
+    try {
+      const input: CreateTransactionInput = {
         valorTotal: valor,
         dataPrimeiraOcorrencia: formData.data_vencimento,
         itemId: formData.item_id,
-        observacoes: formData.observacoes || '',
+        observacoes: formData.observacoes,
         isRecorrente: formData.despesaRecorrente,
-        isParcelado: formData.parcelado,
-        numeroDeParcelas: formData.parcelado ? formData.parcelas.total : undefined,
-        isValorFixo: formData.valorFixo,
-        cartaoCreditoId: formData.cartaoCredito ? formData.cartaoCreditoId : undefined
-      });
-    } else {
-      // Implementação legada para compatibilidade
-      const baseTransacao = {
-        item_id: formData.item_id,
-        valor,
-        data_vencimento: formData.data_vencimento,
-        status: determinarStatus(formData.data_vencimento),
-        observacoes: formData.observacoes || null,
-        parcelas: formData.parcelado ? formData.parcelas : null
+        isParcelado: formData.formaPagamento === 'parcelado',
+        numeroDeParcelas: (formData.formaPagamento === 'parcelado' || formData.formaPagamento === 'cartao') ? formData.numeroParcelas : undefined,
+        isValorFixo: formData.despesaRecorrente ? formData.valorFixo : undefined,
+        cartaoCreditoId: formData.formaPagamento === 'cartao' ? formData.cartaoCreditoId : undefined
       };
 
-      if (formData.parcelado) {
-        // Criar múltiplas transações para parcelas
-        const valorDaParcela = valor / formData.parcelas.total;
-        
-        for (let i = 1; i <= formData.parcelas.total; i++) {
-          const dataVencimento = new Date(formData.data_vencimento);
-          dataVencimento.setMonth(dataVencimento.getMonth() + (i - 1));
-          
-          onAdicionarTransacao({
-            ...baseTransacao,
-            valor: valorDaParcela,
-            data_vencimento: dataVencimento.toISOString().split('T')[0],
-            status: determinarStatus(dataVencimento.toISOString().split('T')[0]),
-            parcelas: { atual: i, total: formData.parcelas.total }
-          });
-        }
-      } else if (formData.despesaRecorrente) {
-        // Criar transações recorrentes até o final do ano
-        const dataInicial = new Date(formData.data_vencimento);
-        const anoAtual = dataInicial.getFullYear();
-        
-        for (let mes = dataInicial.getMonth(); mes < 12; mes++) {
-          const dataVencimento = new Date(anoAtual, mes, dataInicial.getDate());
-          
-          onAdicionarTransacao({
-            ...baseTransacao,
-            data_vencimento: dataVencimento.toISOString().split('T')[0],
-            status: determinarStatus(dataVencimento.toISOString().split('T')[0])
-          });
-        }
-      } else {
-        // Transação única
-        onAdicionarTransacao(baseTransacao);
-      }
-    }
+      const result = FinancialEngine.createTransactions(input);
 
-    limparFormulario();
-    onFechar();
+      // Salvar transações
+      FinancialEngine.saveTransactions(result.transactions);
+
+      // Salvar template recorrente se aplicável
+      if (result.recurringTemplate) {
+        FinancialEngine.saveRecurringTemplates([result.recurringTemplate]);
+      }
+
+      toast({
+        title: "Sucesso",
+        description: `${result.transactions.length} transação(ões) criada(s) com sucesso.`,
+      });
+
+      onTransacaoCriada();
+      onClose();
+    } catch (error) {
+      console.error('Erro ao criar transação:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao criar transação. Tente novamente.",
+        variant: "destructive"
+      });
+    }
   };
 
-  // Usar preferencialmente itens do grupo ativo, mas permitir todos
-  const itensGrupoAtivo = obterItensPorGrupo(grupoAtivo);
-  const todosItens = ['Despesa Fixa', 'Despesa Variável', 'Investimento', 'Receita Não Operacional']
-    .flatMap(grupo => obterItensPorGrupo(grupo as GrupoPrincipal));
+  // Filtrar itens por grupo ativo
+  const itensDisponiveis = itensFinanceiros.filter(item => item.grupo_principal === grupoAtivo);
 
   return (
-    <Dialog open={aberto} onOpenChange={onFechar}>
+    <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Novo Lançamento</DialogTitle>
+          <DialogTitle>
+            {tipoLancamento === 'receita' ? 'Nova Receita' : 'Novo Lançamento'}
+          </DialogTitle>
         </DialogHeader>
-
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="item">Item da Despesa</Label>
+        
+        <div className="space-y-6 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="item_id">
+              {tipoLancamento === 'receita' ? 'Item da Receita' : 'Item da Despesa'} *
+            </Label>
             <Select 
               value={formData.item_id} 
-              onValueChange={(value) => setFormData({ ...formData, item_id: value })}
+              onValueChange={(value) => setFormData({...formData, item_id: value})}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione um item..." />
               </SelectTrigger>
               <SelectContent>
-                {/* Priorizar itens do grupo ativo */}
-                {itensGrupoAtivo.length > 0 && (
-                  <>
-                    <div className="px-2 py-1 text-xs font-medium text-gray-500 uppercase">
-                      {grupoAtivo} (Recomendado)
-                    </div>
-                    {itensGrupoAtivo.map(item => (
-                      <SelectItem key={item.id} value={item.id}>
-                        {item.nome}
-                      </SelectItem>
-                    ))}
-                    <div className="border-t my-1"></div>
-                  </>
-                )}
-                
-                {/* Outros itens */}
-                <div className="px-2 py-1 text-xs font-medium text-gray-500 uppercase">
-                  Todos os Itens
-                </div>
-                {todosItens.map(item => (
+                {itensDisponiveis.map(item => (
                   <SelectItem key={item.id} value={item.id}>
-                    {item.nome} <span className="text-xs text-gray-500">({item.grupo_principal})</span>
+                    {item.nome}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
-          <div>
-            <Label htmlFor="valor">Valor</Label>
+          <div className="space-y-2">
+            <Label htmlFor="valor">Valor *</Label>
             <Input
               id="valor"
               type="number"
               step="0.01"
               placeholder="0,00"
               value={formData.valor}
-              onChange={(e) => setFormData({ ...formData, valor: e.target.value })}
+              onChange={(e) => setFormData({...formData, valor: e.target.value})}
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="data">Data de Vencimento</Label>
-              <Input
-                id="data"
-                type="date"
-                value={formData.data_vencimento}
-                onChange={(e) => setFormData({ ...formData, data_vencimento: e.target.value })}
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Status será: <strong>{determinarStatus(formData.data_vencimento)}</strong>
-              </p>
-            </div>
-
-            <div>
-              <Label>Opções</Label>
-              <div className="space-y-2 mt-2">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="despesaRecorrente"
-                    checked={formData.despesaRecorrente}
-                    onCheckedChange={(checked) => setFormData({ 
-                      ...formData, 
-                      despesaRecorrente: checked as boolean,
-                      parcelado: checked ? false : formData.parcelado 
-                    })}
-                  />
-                  <Label htmlFor="despesaRecorrente" className="text-sm">
-                    Despesa Recorrente
-                  </Label>
-                </div>
-
-                {/* Checkbox para valor fixo - só aparece quando despesa recorrente está marcada */}
-                {formData.despesaRecorrente && (
-                  <div className="flex items-center space-x-2 ml-6">
-                    <Checkbox
-                      id="valorFixo"
-                      checked={formData.valorFixo}
-                      onCheckedChange={(checked) => setFormData({ 
-                        ...formData, 
-                        valorFixo: checked as boolean
-                      })}
-                    />
-                    <Label htmlFor="valorFixo" className="text-sm text-blue-700">
-                      Manter valor fixo mensalmente?
-                    </Label>
-                  </div>
-                )}
-                
-                 <div className="flex items-center space-x-2">
-                   <Checkbox
-                     id="cartaoCredito"
-                     checked={formData.cartaoCredito}
-                     onCheckedChange={(checked) => setFormData({ 
-                       ...formData, 
-                       cartaoCredito: checked as boolean,
-                       despesaRecorrente: checked ? false : formData.despesaRecorrente,
-                       parcelado: checked ? false : formData.parcelado
-                     })}
-                   />
-                   <Label htmlFor="cartaoCredito" className="text-sm">
-                     Cartão de Crédito
-                   </Label>
-                 </div>
-                 
-                 <div className="flex items-center space-x-2">
-                   <Checkbox
-                     id="parcelado"
-                     checked={formData.parcelado}
-                     onCheckedChange={(checked) => setFormData({ 
-                       ...formData, 
-                       parcelado: checked as boolean,
-                       despesaRecorrente: checked ? false : formData.despesaRecorrente,
-                       cartaoCredito: checked ? false : formData.cartaoCredito
-                     })}
-                   />
-                   <Label htmlFor="parcelado" className="text-sm">
-                     Lançamento Parcelado
-                   </Label>
-                 </div>
-              </div>
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="data_vencimento">Data de Vencimento *</Label>
+            <Input
+              id="data_vencimento"
+              type="date"
+              value={formData.data_vencimento}
+              onChange={(e) => setFormData({...formData, data_vencimento: e.target.value})}
+            />
+            <p className="text-xs text-gray-500">
+              Status será: <strong>{formData.data_vencimento <= new Date().toISOString().split('T')[0] ? 'Pago' : 'Agendado'}</strong>
+            </p>
           </div>
 
-          {formData.cartaoCredito && (
-            <div>
-              <Label htmlFor="cartaoSelect">Selecionar Cartão</Label>
-              <Select 
-                value={formData.cartaoCreditoId} 
-                onValueChange={(value) => setFormData({ ...formData, cartaoCreditoId: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um cartão..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {cartoes.filter(c => c.ativo).map(cartao => (
-                    <SelectItem key={cartao.id} value={cartao.id}>
-                      {cartao.nome} (Venc: {cartao.diaVencimento})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {cartoes.filter(c => c.ativo).length === 0 && (
-                <p className="text-xs text-red-600 mt-1">
-                  Nenhum cartão configurado. Vá em Configurações para adicionar.
-                </p>
-              )}
-            </div>
-          )}
-
-          {formData.parcelado && (
-            <div>
-              <Label htmlFor="totalParcelas">Número de Parcelas</Label>
-              <Input
-                id="totalParcelas"
-                type="number"
-                min="1"
-                max="24"
-                value={formData.parcelas.total}
-                onChange={(e) => setFormData({ 
-                  ...formData, 
-                  parcelas: { 
-                    atual: 1,
-                    total: parseInt(e.target.value) || 1 
-                  }
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="despesaRecorrente"
+                checked={formData.despesaRecorrente}
+                onCheckedChange={(checked) => setFormData({
+                  ...formData,
+                  despesaRecorrente: !!checked,
+                  formaPagamento: checked ? 'vista' : formData.formaPagamento
                 })}
-                placeholder="Ex: 12 para 12 parcelas"
               />
-              <p className="text-xs text-gray-500 mt-1">
-                Será criado {formData.parcelas.total} lançamento(s) automático(s)
-              </p>
+              <Label htmlFor="despesaRecorrente" className="text-sm font-medium">
+                {tipoLancamento === 'receita' ? 'Receita Recorrente' : 'Despesa Recorrente'}
+              </Label>
             </div>
-          )}
 
-          {formData.cartaoCredito && (
-            <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
-              <p className="text-sm text-purple-700">
-                <strong>Cartão de Crédito:</strong> {formData.cartaoCreditoId ? 
-                  `Lançamento será calculado baseado no cartão selecionado` : 
-                  'Selecione um cartão para continuar'
-                }
-              </p>
-              {formData.parcelado && (
-                <p className="text-xs text-purple-600 mt-1">
-                  ✓ <strong>Parcelado:</strong> Cada parcela será lançada no vencimento da fatura correspondente.
+            {formData.despesaRecorrente && (
+              <div className="ml-6 space-y-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="valorFixo"
+                    checked={formData.valorFixo}
+                    onCheckedChange={(checked) => setFormData({...formData, valorFixo: !!checked})}
+                  />
+                  <Label htmlFor="valorFixo" className="text-sm">
+                    Manter valor fixo mensalmente?
+                  </Label>
+                </div>
+                
+                <p className="text-xs text-blue-700">
+                  {formData.valorFixo 
+                    ? "✓ O valor será mantido fixo todos os meses (ex: Aluguel, Salário)" 
+                    : "⚠️ Apenas um lembrete será criado. Você precisará informar o valor a cada mês (ex: Conta de luz, água)"
+                  }
                 </p>
-              )}
-            </div>
-          )}
+              </div>
+            )}
 
-          {formData.despesaRecorrente && (
-            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-              <p className="text-sm text-blue-700">
-                <strong>Despesa Recorrente:</strong> Será criada automaticamente para todos os meses 
-                restantes do ano {new Date().getFullYear()}.
-              </p>
-              {formData.valorFixo ? (
-                <p className="text-xs text-green-700 mt-1">
-                  ✓ <strong>Valor Fixo:</strong> O valor R$ {formData.valor || '0,00'} será mantido em todos os meses.
-                </p>
-              ) : (
-                <p className="text-xs text-orange-700 mt-1">
-                  ⚠ <strong>Valor Variável:</strong> Será criado com valor R$ 0,00 para edição manual a cada mês.
-                </p>
-              )}
-            </div>
-          )}
+            {!formData.despesaRecorrente && (
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Forma de Pagamento</Label>
+                <Select 
+                  value={formData.formaPagamento} 
+                  onValueChange={(value: FormaPagamento) => setFormData({
+                    ...formData, 
+                    formaPagamento: value,
+                    cartaoCreditoId: value !== 'cartao' ? '' : formData.cartaoCreditoId
+                  })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="vista">À Vista</SelectItem>
+                    <SelectItem value="parcelado">Parcelado</SelectItem>
+                    {tipoLancamento === 'despesa' && (
+                      <SelectItem value="cartao">Cartão de Crédito</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
 
-          <div>
+                {formData.formaPagamento === 'cartao' && (
+                  <div className="space-y-3 p-3 bg-purple-50 rounded-lg border border-purple-200">
+                    <div className="space-y-2">
+                      <Label className="text-sm">Selecionar Cartão</Label>
+                      <Select 
+                        value={formData.cartaoCreditoId} 
+                        onValueChange={(value) => setFormData({...formData, cartaoCreditoId: value})}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione um cartão..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {cartoes.filter(c => c.ativo).map(cartao => (
+                            <SelectItem key={cartao.id} value={cartao.id}>
+                              {cartao.nome}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      
+                      {!formData.cartaoCreditoId && (
+                        <p className="text-sm text-purple-700 mt-2">
+                          <span className="font-medium">Cartão de Crédito:</span> Selecione um cartão para continuar
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {(formData.formaPagamento === 'parcelado' || formData.formaPagamento === 'cartao') && (
+                  <div className="space-y-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                    <div className="space-y-2">
+                      <Label className="text-sm">Número de Parcelas</Label>
+                      <Select 
+                        value={formData.numeroParcelas.toString()} 
+                        onValueChange={(value) => setFormData({...formData, numeroParcelas: parseInt(value)})}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.from({length: 24}, (_, i) => i + 1).map(num => (
+                            <SelectItem key={num} value={num.toString()}>
+                              {num}x de {formatCurrency(parseFloat(formData.valor || '0') / num)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="observacoes">Observações</Label>
             <Textarea
               id="observacoes"
               placeholder="Observações opcionais..."
               value={formData.observacoes}
-              onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
-              rows={2}
+              onChange={(e) => setFormData({...formData, observacoes: e.target.value})}
+              rows={3}
             />
           </div>
 
           <div className="flex justify-end space-x-2">
-            <Button variant="outline" onClick={onFechar}>
+            <Button variant="outline" onClick={onClose}>
               Cancelar
             </Button>
-            <Button onClick={handleSubmit} disabled={!formData.item_id || !formData.valor || (formData.cartaoCredito && !formData.cartaoCreditoId)}>
+            <Button 
+              onClick={handleSubmit} 
+              disabled={!formData.item_id || !formData.valor || (formData.formaPagamento === 'cartao' && !formData.cartaoCreditoId)}
+            >
               Adicionar
             </Button>
           </div>
