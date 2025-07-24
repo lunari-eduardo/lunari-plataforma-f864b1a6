@@ -92,7 +92,7 @@ export default function NovoOrcamento() {
           return {
             id: `auto-${produto.id}`,
             nome: `${produto.nome} (incluso no pacote)`,
-            preco: 0, // Preço zero pois já está incluído no valor do pacote
+            preco: produto.valorVenda, // Usar o preço real do produto
             quantidade: produtoIncluido.quantidade
           };
         }
