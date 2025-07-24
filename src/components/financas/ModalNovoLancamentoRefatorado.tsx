@@ -4,13 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { GrupoPrincipal, ItemFinanceiro } from '@/types/financas';
 import { CreateTransactionInput } from '@/services/FinancialEngine';
-import { useAppContext } from '@/contexts/AppContext';
+import OpcoesLancamento, { OpcoesLancamentoState } from './OpcoesLancamento';
 
-type FormaPagamento = 'avista' | 'parcelado' | 'cartao_credito';
 type TipoLancamento = 'despesa' | 'receita';
 
 interface ModalNovoLancamentoRefatoradoProps {
@@ -19,7 +18,7 @@ interface ModalNovoLancamentoRefatoradoProps {
   createTransactionEngine: (input: CreateTransactionInput) => void;
   obterItensPorGrupo: (grupo: GrupoPrincipal) => ItemFinanceiro[];
   grupoAtivo: GrupoPrincipal;
-  tipoLancamento?: TipoLancamento; // NOVO: contexto automático
+  tipoLancamento?: TipoLancamento;
 }
 
 export default function ModalNovoLancamentoRefatorado({
@@ -30,18 +29,19 @@ export default function ModalNovoLancamentoRefatorado({
   grupoAtivo,
   tipoLancamento = 'despesa'
 }: ModalNovoLancamentoRefatoradoProps) {
-  const { cartoes } = useAppContext();
-  
   const [formData, setFormData] = useState({
     item_id: '',
     valor: '',
     data_vencimento: new Date().toISOString().split('T')[0],
     observacoes: '',
+    valorFixo: true
+  });
+
+  const [opcoes, setOpcoes] = useState<OpcoesLancamentoState>({
     despesaRecorrente: false,
-    valorFixo: true,
-    formaPagamento: 'avista' as FormaPagamento,
-    numeroParcelas: 1,
-    cartaoCreditoId: ''
+    cartaoCredito: false,
+    cartaoCreditoId: '',
+    numeroParcelas: 1
   });
 
   const limparFormulario = () => {
@@ -50,11 +50,13 @@ export default function ModalNovoLancamentoRefatorado({
       valor: '',
       data_vencimento: new Date().toISOString().split('T')[0],
       observacoes: '',
+      valorFixo: true
+    });
+    setOpcoes({
       despesaRecorrente: false,
-      valorFixo: true,
-      formaPagamento: 'avista',
-      numeroParcelas: 1,
-      cartaoCreditoId: ''
+      cartaoCredito: false,
+      cartaoCreditoId: '',
+      numeroParcelas: 1
     });
   };
 
@@ -65,7 +67,7 @@ export default function ModalNovoLancamentoRefatorado({
     if (isNaN(valor) || valor <= 0) return;
 
     // Validação específica para cartão de crédito
-    if (formData.formaPagamento === 'cartao_credito' && !formData.cartaoCreditoId) {
+    if (opcoes.cartaoCredito && !opcoes.cartaoCreditoId) {
       return;
     }
 
@@ -74,12 +76,11 @@ export default function ModalNovoLancamentoRefatorado({
       dataPrimeiraOcorrencia: formData.data_vencimento,
       itemId: formData.item_id,
       observacoes: formData.observacoes || '',
-      isRecorrente: formData.despesaRecorrente,
-      isParcelado: formData.formaPagamento === 'parcelado',
-      numeroDeParcelas: formData.formaPagamento === 'parcelado' || formData.formaPagamento === 'cartao_credito' 
-        ? formData.numeroParcelas : undefined,
+      isRecorrente: opcoes.despesaRecorrente,
+      isParcelado: opcoes.cartaoCredito,
+      numeroDeParcelas: opcoes.cartaoCredito ? opcoes.numeroParcelas : undefined,
       isValorFixo: formData.valorFixo,
-      cartaoCreditoId: formData.formaPagamento === 'cartao_credito' ? formData.cartaoCreditoId : undefined
+      cartaoCreditoId: opcoes.cartaoCredito ? opcoes.cartaoCreditoId : undefined
     };
 
     createTransactionEngine(input);
@@ -98,20 +99,6 @@ export default function ModalNovoLancamentoRefatorado({
     item: tipoLancamento === 'receita' ? 'Item da Receita' : 'Item da Despesa',
     recorrente: tipoLancamento === 'receita' ? 'Receita Recorrente' : 'Despesa Recorrente'
   };
-
-  // Opções de forma de pagamento baseadas no tipo
-  const formasPagamento = tipoLancamento === 'receita' 
-    ? [
-        { value: 'avista', label: 'À Vista' },
-        { value: 'parcelado', label: 'Parcelado' }
-      ]
-    : [
-        { value: 'avista', label: 'À Vista' },
-        { value: 'parcelado', label: 'Parcelado' },
-        { value: 'cartao_credito', label: 'Cartão de Crédito' }
-      ];
-
-  const cartoesFiltrados = cartoes.filter(c => c.ativo);
 
   return (
     <Dialog open={aberto} onOpenChange={onFechar}>
@@ -185,23 +172,9 @@ export default function ModalNovoLancamentoRefatorado({
             <div>
               <Label>Opções</Label>
               <div className="space-y-2 mt-2">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="despesaRecorrente"
-                    checked={formData.despesaRecorrente}
-                    onCheckedChange={(checked) => setFormData({ 
-                      ...formData, 
-                      despesaRecorrente: checked as boolean
-                    })}
-                  />
-                  <Label htmlFor="despesaRecorrente" className="text-sm">
-                    {textos.recorrente}
-                  </Label>
-                </div>
-
                 {/* Checkbox para valor fixo - só aparece quando recorrente está marcada */}
-                {formData.despesaRecorrente && (
-                  <div className="flex items-center space-x-2 ml-6">
+                {opcoes.despesaRecorrente && (
+                  <div className="flex items-center space-x-2">
                     <Checkbox
                       id="valorFixo"
                       checked={formData.valorFixo}
@@ -219,110 +192,23 @@ export default function ModalNovoLancamentoRefatorado({
             </div>
           </div>
 
-          {/* NOVO: Seletor de Forma de Pagamento */}
-          <div>
-            <Label htmlFor="formaPagamento">Forma de Pagamento</Label>
-            <Select 
-              value={formData.formaPagamento} 
-              onValueChange={(value: FormaPagamento) => setFormData({ 
-                ...formData, 
-                formaPagamento: value,
-                // Reset campos relacionados quando muda forma de pagamento
-                numeroParcelas: 1,
-                cartaoCreditoId: ''
-              })}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {formasPagamento.map(forma => (
-                  <SelectItem key={forma.value} value={forma.value}>
-                    {forma.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Componente Unificado de Opções */}
+          <OpcoesLancamento 
+            opcoes={opcoes}
+            onOpcoesChange={setOpcoes}
+            tipoLancamento={tipoLancamento}
+            layout="modal"
+          />
 
-          {/* Campo de número de parcelas - aparece para parcelado e cartão */}
-          {(formData.formaPagamento === 'parcelado' || formData.formaPagamento === 'cartao_credito') && (
-            <div>
-              <Label htmlFor="numeroParcelas">Número de Parcelas</Label>
-              <Input
-                id="numeroParcelas"
-                type="number"
-                min="1"
-                max="24"
-                value={formData.numeroParcelas}
-                onChange={(e) => setFormData({ 
-                  ...formData, 
-                  numeroParcelas: parseInt(e.target.value) || 1 
-                })}
-                placeholder="Ex: 12 para 12 parcelas"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Será criado {formData.numeroParcelas} lançamento(s) automático(s)
-              </p>
-            </div>
-          )}
-
-          {/* Seletor de cartão - só aparece para cartão de crédito */}
-          {formData.formaPagamento === 'cartao_credito' && (
-            <div>
-              <Label htmlFor="cartaoSelect">Selecionar Cartão</Label>
-              <Select 
-                value={formData.cartaoCreditoId} 
-                onValueChange={(value) => setFormData({ ...formData, cartaoCreditoId: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um cartão..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {cartoesFiltrados.map(cartao => (
-                    <SelectItem key={cartao.id} value={cartao.id}>
-                      {cartao.nome} (Venc: {cartao.diaVencimento})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {cartoesFiltrados.length === 0 && (
-                <p className="text-xs text-red-600 mt-1">
-                  Nenhum cartão configurado. Vá em Configurações para adicionar.
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* Informações contextuais */}
-          {formData.formaPagamento === 'cartao_credito' && (
-            <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
-              <p className="text-sm text-purple-700">
-                <strong>Cartão de Crédito:</strong> {formData.cartaoCreditoId ? 
-                  `Lançamento será calculado baseado no cartão selecionado` : 
-                  'Selecione um cartão para continuar'
-                }
-              </p>
-              {formData.numeroParcelas > 1 && (
-                <p className="text-xs text-purple-600 mt-1">
-                  ✓ <strong>Parcelado:</strong> Cada parcela será lançada no vencimento da fatura correspondente.
-                </p>
-              )}
-            </div>
-          )}
-
-          {formData.despesaRecorrente && (
-            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-              <p className="text-sm text-blue-700">
-                <strong>{textos.recorrente}:</strong> Será criada automaticamente para todos os meses 
-                restantes do ano {new Date().getFullYear()}.
-              </p>
+          {/* Informação adicional para valor fixo/variável em recorrentes */}
+          {opcoes.despesaRecorrente && (
+            <div className="p-3 bg-green-50 rounded-lg border border-green-200">
               {formData.valorFixo ? (
-                <p className="text-xs text-green-700 mt-1">
+                <p className="text-xs text-green-700">
                   ✓ <strong>Valor Fixo:</strong> O valor R$ {formData.valor || '0,00'} será mantido em todos os meses.
                 </p>
               ) : (
-                <p className="text-xs text-orange-700 mt-1">
+                <p className="text-xs text-orange-700">
                   ⚠ <strong>Valor Variável:</strong> Será criado com valor R$ 0,00 para edição manual a cada mês.
                 </p>
               )}
@@ -349,7 +235,7 @@ export default function ModalNovoLancamentoRefatorado({
               disabled={
                 !formData.item_id || 
                 !formData.valor || 
-                (formData.formaPagamento === 'cartao_credito' && !formData.cartaoCreditoId)
+                (opcoes.cartaoCredito && !opcoes.cartaoCreditoId)
               }
             >
               Adicionar

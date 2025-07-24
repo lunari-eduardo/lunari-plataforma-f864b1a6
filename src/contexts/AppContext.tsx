@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
 import { parseDateFromStorage, formatDateForStorage, getCurrentDateString } from '@/utils/dateUtils';
 import { toast } from '@/hooks/use-toast';
+import { FinancialEngine, CreateTransactionInput } from '@/services/FinancialEngine';
 
 // Types
 import { Orcamento, Template, OrigemCliente, MetricasOrcamento, Cliente } from '@/types/orcamentos';
@@ -108,6 +109,9 @@ interface AppContextType {
   adicionarCartao: (cartao: { nome: string; diaVencimento: number; diaFechamento: number }) => void;
   atualizarCartao: (id: string, dadosAtualizados: Partial<{ nome: string; diaVencimento: number; diaFechamento: number; ativo: boolean }>) => void;
   removerCartao: (id: string) => void;
+  
+  // Motor Financeiro Centralizado (NOVO)
+  createTransactionEngine: (input: CreateTransactionInput) => void;
 }
 
 export const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -224,9 +228,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   });
 
-  // Estado dos Cartões de Crédito (NOVO)
+  // Estado dos Cartões de Crédito (NOVO) - Agora usando FinancialEngine
   const [cartoes, setCartoes] = useState(() => {
-    return storage.load('lunari_fin_credit_cards', []);
+    return FinancialEngine.loadCreditCards();
   });
 
   // Utility functions
@@ -275,10 +279,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     storage.save(STORAGE_KEYS.WORKFLOW_COLUMNS, visibleColumns);
   }, [visibleColumns]);
 
-  // Persistir cartões (NOVO)
+  // Sincronizar cartões com FinancialEngine (NOVO)
   useEffect(() => {
-    storage.save('lunari_fin_credit_cards', cartoes);
-  }, [cartoes]);
+    // Sincronizar o estado local com o FinancialEngine
+    const engineCards = FinancialEngine.loadCreditCards();
+    if (JSON.stringify(engineCards) !== JSON.stringify(cartoes)) {
+      setCartoes(engineCards);
+    }
+  }, []);
 
   // Sync configuration data
   useEffect(() => {
@@ -935,37 +943,96 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     updateWorkflowFilters({ mes: `${newMonth}/${newYear}` });
   };
 
-  // Funções de Cartões de Crédito (NOVO)
+  // Funções de Cartões de Crédito (NOVO) - Agora usando FinancialEngine
   const adicionarCartao = (cartao: { nome: string; diaVencimento: number; diaFechamento: number }) => {
-    const novoCartao = {
-      id: Date.now().toString(),
-      ...cartao,
-      ativo: true
-    };
-    setCartoes(prev => [...prev, novoCartao]);
-    
-    toast({
-      title: "Cartão adicionado",
-      description: `Cartão ${cartao.nome} foi configurado com sucesso.`,
-    });
+    try {
+      const novoCartao = FinancialEngine.addCreditCard({
+        nome: cartao.nome,
+        diaVencimento: cartao.diaVencimento,
+        diaFechamento: cartao.diaFechamento,
+        userId: 'local-user',
+        ativo: true
+      });
+      
+      setCartoes(FinancialEngine.loadCreditCards());
+      
+      toast({
+        title: "Cartão adicionado",
+        description: `Cartão ${cartao.nome} foi adicionado com sucesso.`
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível adicionar o cartão.",
+        variant: "destructive"
+      });
+    }
   };
 
   const atualizarCartao = (id: string, dadosAtualizados: Partial<{ nome: string; diaVencimento: number; diaFechamento: number; ativo: boolean }>) => {
+    // Para atualizações, vamos simular usando o estado local
+    // Em uma implementação completa, seria necessário adicionar função updateCreditCard ao FinancialEngine
     setCartoes(prev => prev.map(cartao => 
       cartao.id === id ? { ...cartao, ...dadosAtualizados } : cartao
     ));
+    
+    // Persistir manualmente
+    const updatedCards = cartoes.map(cartao => 
+      cartao.id === id ? { ...cartao, ...dadosAtualizados } : cartao
+    );
+    localStorage.setItem('lunari_fin_credit_cards', JSON.stringify(updatedCards));
   };
 
   const removerCartao = (id: string) => {
     const cartao = cartoes.find(c => c.id === id);
-    setCartoes(prev => prev.filter(cartao => cartao.id !== id));
     
-    if (cartao) {
+    try {
+      FinancialEngine.removeCreditCard(id);
+      setCartoes(FinancialEngine.loadCreditCards());
+      
+      if (cartao) {
+        toast({
+          title: "Cartão removido",
+          description: `Cartão ${cartao.nome} foi removido.`,
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
       toast({
-        title: "Cartão removido",
-        description: `Cartão ${cartao.nome} foi removido.`,
+        title: "Erro",
+        description: "Não foi possível remover o cartão.",
         variant: "destructive"
       });
+    }
+  };
+
+  // Motor Financeiro Centralizado (NOVO)
+  const createTransactionEngine = (input: CreateTransactionInput) => {
+    try {
+      const result = FinancialEngine.createTransactions(input);
+      
+      // Salvar transações criadas
+      FinancialEngine.saveTransactions(result.transactions);
+      
+      // Salvar template recorrente se criado
+      if (result.recurringTemplate) {
+        FinancialEngine.saveRecurringTemplates([result.recurringTemplate]);
+      }
+      
+      toast({
+        title: "Lançamento criado",
+        description: `${result.transactions.length} transação(ões) criada(s) com sucesso.`
+      });
+      
+      return result;
+    } catch (error) {
+      console.error('Erro no motor financeiro:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível criar o lançamento.",
+        variant: "destructive"
+      });
+      throw error;
     }
   };
 
@@ -1033,6 +1100,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     adicionarCartao,
     atualizarCartao,
     removerCartao,
+    createTransactionEngine,
     
     // Utilities
     isFromBudget,

@@ -3,9 +3,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Calendar, DollarSign, Plus } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Trash2, Calendar, DollarSign, Plus, Settings } from 'lucide-react';
 import { TransacaoComItem, GrupoPrincipal, NovaTransacaoFinanceira, ItemFinanceiro, StatusTransacao } from '@/types/financas';
 import { formatCurrency } from '@/utils/financialUtils';
+import OpcoesLancamento, { OpcoesLancamentoState } from './OpcoesLancamento';
+import { CreateTransactionInput } from '@/services/FinancialEngine';
 interface TabelaLancamentosProps {
   transacoes: TransacaoComItem[];
   onAtualizarTransacao: (id: string, dadosAtualizados: Partial<NovaTransacaoFinanceira>) => void;
@@ -40,29 +43,22 @@ export default function TabelaLancamentos({
   });
 
   // Estado para nova transação (linha em branco)
-  const [novaTransacao, setNovaTransacao] = useState<{
-    item_id: string;
-    valor: string;
-    data_vencimento: string;
-    observacoes: string;
-    despesaRecorrente: boolean;
-    parcelado: boolean;
-    parcelas: {
-      atual: number;
-      total: number;
-    };
-  }>({
+  const [novaTransacao, setNovaTransacao] = useState({
     item_id: '',
     valor: '',
     data_vencimento: new Date().toISOString().split('T')[0],
-    observacoes: '',
-    despesaRecorrente: false,
-    parcelado: false,
-    parcelas: {
-      atual: 1,
-      total: 1
-    }
+    observacoes: ''
   });
+
+  // Estado para opções da nova transação
+  const [opcoesNovaTransacao, setOpcoesNovaTransacao] = useState<OpcoesLancamentoState>({
+    despesaRecorrente: false,
+    cartaoCredito: false,
+    cartaoCreditoId: '',
+    numeroParcelas: 1
+  });
+
+  const [popoverAberto, setPopoverAberto] = useState(false);
   const iniciarEdicao = (transacao: TransacaoComItem) => {
     setEditandoId(transacao.id);
     setValoresEditando({
@@ -103,49 +99,37 @@ export default function TabelaLancamentos({
     const valor = parseFloat(novaTransacao.valor);
     if (isNaN(valor) || valor <= 0) return;
 
-    // Se despesa recorrente e motor disponível, usar o motor centralizado
-    if (novaTransacao.despesaRecorrente && createTransactionEngine) {
-      createTransactionEngine({
+    // Validação específica para cartão de crédito
+    if (opcoesNovaTransacao.cartaoCredito && !opcoesNovaTransacao.cartaoCreditoId) {
+      return;
+    }
+
+    // Usar motor centralizado quando disponível
+    if (createTransactionEngine) {
+      const input: CreateTransactionInput = {
         valorTotal: valor,
         dataPrimeiraOcorrencia: novaTransacao.data_vencimento,
         itemId: novaTransacao.item_id,
         observacoes: novaTransacao.observacoes || '',
-        isRecorrente: true,
-        isParcelado: false,
-        isValorFixo: true // Default para valor fixo na tabela
-      });
+        isRecorrente: opcoesNovaTransacao.despesaRecorrente,
+        isParcelado: opcoesNovaTransacao.cartaoCredito,
+        numeroDeParcelas: opcoesNovaTransacao.cartaoCredito ? opcoesNovaTransacao.numeroParcelas : undefined,
+        isValorFixo: true, // Default para valor fixo na tabela
+        cartaoCreditoId: opcoesNovaTransacao.cartaoCredito ? opcoesNovaTransacao.cartaoCreditoId : undefined
+      };
+      
+      createTransactionEngine(input);
     } else {
-      // Lógica legada para compatibilidade
+      // Fallback para compatibilidade legada
       const baseTransacao = {
         item_id: novaTransacao.item_id,
         valor,
         data_vencimento: novaTransacao.data_vencimento,
         status: determinarStatus(novaTransacao.data_vencimento),
-        observacoes: novaTransacao.observacoes || null,
-        parcelas: novaTransacao.parcelado ? novaTransacao.parcelas : null
+        observacoes: novaTransacao.observacoes || null
       };
-
-      if (novaTransacao.parcelado) {
-        // Criar múltiplas transações para parcelas
-        const valorDaParcela = valor / novaTransacao.parcelas.total;
-        for (let i = 1; i <= novaTransacao.parcelas.total; i++) {
-          const dataVencimento = new Date(novaTransacao.data_vencimento);
-          dataVencimento.setMonth(dataVencimento.getMonth() + (i - 1));
-          onAdicionarTransacao({
-            ...baseTransacao,
-            valor: valorDaParcela,
-            data_vencimento: dataVencimento.toISOString().split('T')[0],
-            status: determinarStatus(dataVencimento.toISOString().split('T')[0]),
-            parcelas: {
-              atual: i,
-              total: novaTransacao.parcelas.total
-            }
-          });
-        }
-      } else {
-        // Transação única
-        onAdicionarTransacao(baseTransacao);
-      }
+      
+      onAdicionarTransacao(baseTransacao);
     }
 
     // Limpar formulário
@@ -153,14 +137,17 @@ export default function TabelaLancamentos({
       item_id: '',
       valor: '',
       data_vencimento: new Date().toISOString().split('T')[0],
-      observacoes: '',
-      despesaRecorrente: false,
-      parcelado: false,
-      parcelas: {
-        atual: 1,
-        total: 1
-      }
+      observacoes: ''
     });
+    
+    setOpcoesNovaTransacao({
+      despesaRecorrente: false,
+      cartaoCredito: false,
+      cartaoCreditoId: '',
+      numeroParcelas: 1
+    });
+
+    setPopoverAberto(false);
   };
   const formatarData = (dataISO: string) => {
     const [ano, mes, dia] = dataISO.split('-');
@@ -229,9 +216,13 @@ export default function TabelaLancamentos({
               })} className="w-full h-8 text-sm" />
               </td>
               <td className="px-4 py-3">
-                {novaTransacao.parcelado ? <span className="text-xs text-blue-600">
-                    1/{novaTransacao.parcelas.total}
-                  </span> : <span className="text-xs text-gray-400">-</span>}
+                {opcoesNovaTransacao.cartaoCredito ? (
+                  <span className="text-xs text-purple-600">
+                    1/{opcoesNovaTransacao.numeroParcelas}
+                  </span>
+                ) : (
+                  <span className="text-xs text-gray-400">-</span>
+                )}
               </td>
               <td className="px-4 py-3">
                 <Input placeholder="Observações..." value={novaTransacao.observacoes} onChange={e => setNovaTransacao({
@@ -240,37 +231,38 @@ export default function TabelaLancamentos({
               })} className="w-full h-8 text-sm" />
               </td>
               <td className="px-4 py-3">
-                <div className="flex flex-col gap-1">
-                  <label className="flex items-center gap-1 text-xs">
-                    <input type="checkbox" checked={novaTransacao.despesaRecorrente} onChange={e => setNovaTransacao({
-                    ...novaTransacao,
-                    despesaRecorrente: e.target.checked,
-                    parcelado: e.target.checked ? false : novaTransacao.parcelado
-                  })} className="w-3 h-3" />
-                    Recorrente
-                  </label>
-                  <label className="flex items-center gap-1 text-xs">
-                    <input type="checkbox" checked={novaTransacao.parcelado} onChange={e => setNovaTransacao({
-                    ...novaTransacao,
-                    parcelado: e.target.checked,
-                    despesaRecorrente: e.target.checked ? false : novaTransacao.despesaRecorrente
-                  })} className="w-3 h-3" />
-                    Parcelado
-                  </label>
-                  {novaTransacao.parcelado && <div className="flex gap-1">
-                      <Input type="number" min="1" max="24" value={novaTransacao.parcelas.total} onChange={e => setNovaTransacao({
-                    ...novaTransacao,
-                    parcelas: {
-                      atual: 1,
-                      total: parseInt(e.target.value) || 1
-                    }
-                  })} className="w-12 h-6 text-xs" placeholder="12" />
-                      <span className="text-xs text-gray-500">x</span>
-                    </div>}
-                </div>
+                <Popover open={popoverAberto} onOpenChange={setPopoverAberto}>
+                  <PopoverTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-8 w-8 p-0"
+                      title="Opções avançadas"
+                    >
+                      <Settings className="h-4 w-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80" align="end">
+                    <OpcoesLancamento 
+                      opcoes={opcoesNovaTransacao}
+                      onOpcoesChange={setOpcoesNovaTransacao}
+                      tipoLancamento={grupoAtivo === 'Receita Não Operacional' ? 'receita' : 'despesa'}
+                      layout="popover"
+                    />
+                  </PopoverContent>
+                </Popover>
               </td>
               <td className="px-4 py-3">
-                <Button size="sm" onClick={adicionarNovaTransacao} disabled={!novaTransacao.item_id || !novaTransacao.valor} className="h-8 bg-blue-600 hover:bg-blue-700 text-white">
+                <Button 
+                  size="sm" 
+                  onClick={adicionarNovaTransacao} 
+                  disabled={
+                    !novaTransacao.item_id || 
+                    !novaTransacao.valor || 
+                    (opcoesNovaTransacao.cartaoCredito && !opcoesNovaTransacao.cartaoCreditoId)
+                  } 
+                  className="h-8 bg-blue-600 hover:bg-blue-700 text-white"
+                >
                   <Plus className="h-4 w-4" />
                 </Button>
               </td>
