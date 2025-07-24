@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Trash2, Filter, Check, ChevronsUpDown } from 'lucide-react';
-import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
@@ -85,7 +84,6 @@ export default function Pacotes({
       id: newId,
       ...formData
     }]);
-    toast.success('Pacote adicionado com sucesso!');
   }, [setPacotes]);
   const atualizarPacote = useCallback((id: string, campo: keyof Pacote, valor: any) => {
     setPacotes(prev => prev.map(pacote => 
@@ -113,7 +111,6 @@ export default function Pacotes({
       }
       return pacote;
     }));
-    toast.success('Produto adicionado ao pacote!');
   }, [setPacotes]);
 
   const removerProdutoDoPacote = useCallback((pacoteId: string, produtoId: string) => {
@@ -126,11 +123,9 @@ export default function Pacotes({
       }
       return pacote;
     }));
-    toast.success('Produto removido do pacote!');
   }, [setPacotes]);
   const removerPacote = useCallback((id: string) => {
     setPacotes(prev => prev.filter(pacote => pacote.id !== id));
-    toast.success('Pacote removido com sucesso!');
   }, [setPacotes]);
   const limparFiltros = useCallback(() => {
     setFiltroCategoria('all');
