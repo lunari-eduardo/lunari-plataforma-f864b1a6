@@ -12,6 +12,7 @@ interface MappedPackage {
   valor: number;
   categoria: string;
   categoriaId?: string;
+  valorFotoExtra?: number;
   produtosIncluidos?: ProdutoIncluido[];
 }
 
@@ -87,6 +88,7 @@ export function useOrcamentoData() {
         valor: pacote.valorVenda || pacote.valor_base || pacote.valor || 0,
         categoria,
         categoriaId: pacote.categoria_id,
+        valorFotoExtra: pacote.valor_foto_extra || 35,
         produtosIncluidos: pacote.produtosIncluidos || []
       };
     });

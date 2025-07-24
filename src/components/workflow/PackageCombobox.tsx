@@ -13,10 +13,12 @@ interface PackageComboboxProps {
     valorFotoExtra: string;
     categoria: string;
   }) => void;
+  disabled?: boolean;
 }
 export function PackageCombobox({
   value,
-  onValueChange
+  onValueChange,
+  disabled = false
 }: PackageComboboxProps) {
   const [open, setOpen] = useState(false);
   const { pacotes } = useOrcamentoData();
@@ -24,7 +26,13 @@ export function PackageCombobox({
   const selectedPackage = pacotes.find(pkg => pkg.nome === value);
   return <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-7 text-xs font-normal shadow-neumorphic hover:shadow-neumorphic-pressed">
+        <Button 
+          variant="outline" 
+          role="combobox" 
+          aria-expanded={open} 
+          disabled={disabled}
+          className="w-full justify-between h-7 text-xs font-normal shadow-neumorphic hover:shadow-neumorphic-pressed disabled:opacity-50 disabled:cursor-not-allowed"
+        >
           {selectedPackage ? selectedPackage.nome : "Selecionar pacote..."}
           <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
         </Button>
@@ -41,8 +49,8 @@ export function PackageCombobox({
               if (currentValue !== value) {
                 onValueChange({
                   nome: pkg.nome,
-                  valor: String(pkg.valor || 0),
-                  valorFotoExtra: String(35), // Valor padrão para foto extra
+                  valor: `R$ ${pkg.valor.toFixed(2).replace('.', ',')}`,
+                  valorFotoExtra: `R$ ${(pkg.valorFotoExtra || 35).toFixed(2).replace('.', ',')}`,
                   categoria: pkg.categoria
                 });
               }
@@ -52,7 +60,7 @@ export function PackageCombobox({
                   <div className="flex flex-col">
                     <span className="font-medium">{pkg.nome}</span>
                     <span className="text-2xs text-neumorphic-textLight">
-                      R$ {pkg.valor || 0} • Categoria: {pkg.categoria}
+                      R$ {pkg.valor.toFixed(2).replace('.', ',')} • Categoria: {pkg.categoria}
                     </span>
                   </div>
                 </CommandItem>)}

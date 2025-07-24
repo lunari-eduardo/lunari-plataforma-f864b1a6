@@ -25,7 +25,7 @@ export const useAgenda = () => {
   const context = useAppContext();
 
   // Função para converter agendamentos confirmados em sessões do workflow filtrados por mês
-  const getConfirmedSessionsForWorkflow = (month?: number, year?: number, getClienteByName?: (nome: string) => any) => {
+  const getConfirmedSessionsForWorkflow = (month?: number, year?: number, getClienteByName?: (nome: string) => any, pacotesData?: any[], produtosData?: any[]) => {
     let filteredAppointments = context.appointments.filter(appointment => appointment.status === 'confirmado');
     
     // Se mês e ano foram especificados, filtrar por eles
@@ -42,33 +42,27 @@ export const useAgenda = () => {
       // Buscar dados do cliente no CRM se a função for fornecida
       const clienteData = getClienteByName ? getClienteByName(appointment.client) : null;
       
-      // Determinar o pacote baseado no packageId do agendamento ou tipo
+      // Buscar pacote real baseado no packageId usando dados das configurações
       let pacote = "";
       let valorPacote = "R$ 0,00";
+      let categoria = "";
+      let valorFotoExtra = "R$ 35,00";
       
-      if (appointment.packageId) {
-        // Mapear packageId para nomes de pacotes
-        switch (appointment.packageId) {
-          case "1":
-            pacote = "Básico";
-            valorPacote = "R$ 650,00";
-            break;
-          case "2":
-            pacote = "Básico";
-            valorPacote = "R$ 650,00";
-            break;
-          case "3":
-            pacote = "Empresarial";
-            valorPacote = "R$ 890,00";
-            break;
-          case "4":
-            pacote = "Completo";
-            valorPacote = "R$ 980,00";
-            break;
-          default:
-            pacote = "";
-            valorPacote = "R$ 0,00";
+      if (appointment.packageId && pacotesData) {
+        const pacoteEncontrado = pacotesData.find(p => p.id === appointment.packageId);
+        if (pacoteEncontrado) {
+          pacote = pacoteEncontrado.nome;
+          valorPacote = `R$ ${pacoteEncontrado.valor.toFixed(2).replace('.', ',')}`;
+          categoria = pacoteEncontrado.categoria || "";
+          valorFotoExtra = `R$ ${pacoteEncontrado.valorFotoExtra || 35}.00`.replace('.', ',');
         }
+      }
+      
+      // Se não encontrou pacote nas configurações, tentar mapear pela categoria do tipo
+      if (!pacote) {
+        categoria = appointment.type.includes('Gestante') ? 'Gestante' : 
+                   appointment.type.includes('Família') ? 'Família' : 
+                   appointment.type.includes('Corporativo') ? 'Corporativo' : 'Outros';
       }
 
       return {
@@ -78,14 +72,12 @@ export const useAgenda = () => {
         nome: appointment.client,
         email: clienteData?.email || appointment.email || "",
         descricao: appointment.description || appointment.type,
-        status: "Confirmado",
+        status: "", // Status vazio por padrão para workflow
         whatsapp: clienteData?.telefone || appointment.whatsapp || "",
-        categoria: appointment.type.includes('Gestante') ? 'Gestante' : 
-                  appointment.type.includes('Família') ? 'Família' : 
-                  appointment.type.includes('Corporativo') ? 'Corporativo' : 'Outros',
+        categoria: categoria,
         pacote: pacote,
         valorPacote: valorPacote,
-        valorFotoExtra: "R$ 35,00",
+        valorFotoExtra: valorFotoExtra,
         qtdFotosExtra: 0,
         valorTotalFotoExtra: "R$ 0,00",
         produto: "",

@@ -8,6 +8,7 @@ import { ChevronLeft, ChevronRight, Eye, EyeOff, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useAgenda } from "@/hooks/useAgenda";
 import { useWorkflowStatus } from "@/hooks/useWorkflowStatus";
+import { useOrcamentoData } from "@/hooks/useOrcamentoData";
 import { useContext } from 'react';
 import { AppContext } from '@/contexts/AppContext';
 import { parseDateFromStorage } from "@/utils/dateUtils";
@@ -75,6 +76,7 @@ export default function Workflow() {
     getStatusOptions
   } = useWorkflowStatus();
   const { clientes } = useContext(AppContext);
+  const { pacotes, produtos, categorias } = useOrcamentoData();
   
   const getClienteByName = (nome: string) => {
     return clientes.find(cliente => cliente.nome === nome);
@@ -166,51 +168,25 @@ export default function Workflow() {
       console.error("Erro ao salvar sessões no localStorage", error);
     }
   }, [sessions]);
-  const categoryOptions: CategoryOption[] = [{
-    id: '1',
-    nome: 'Gestante'
-  }, {
-    id: '2',
-    nome: 'Família'
-  }, {
-    id: '3',
-    nome: 'Corporativo'
-  }, {
-    id: '4',
-    nome: 'Outros'
-  }];
-  const packageOptions: PackageOption[] = [{
-    id: '1',
-    nome: 'Básico',
-    valor: 'R$ 650,00',
-    valorFotoExtra: 'R$ 35,00',
-    categoria: 'Outros'
-  }, {
-    id: '2',
-    nome: 'Completo',
-    valor: 'R$ 980,00',
-    valorFotoExtra: 'R$ 35,00',
-    categoria: 'Gestante'
-  }, {
-    id: '3',
-    nome: 'Empresarial',
-    valor: 'R$ 890,00',
-    valorFotoExtra: 'R$ 40,00',
-    categoria: 'Corporativo'
-  }];
-  const productOptions: ProductOption[] = [{
-    id: '1',
-    nome: 'Álbum Premium',
-    valor: 'R$ 150,00'
-  }, {
-    id: '2',
-    nome: 'Caneca Personalizada',
-    valor: 'R$ 25,00'
-  }, {
-    id: '3',
-    nome: 'Quadro Canvas',
-    valor: 'R$ 80,00'
-  }];
+  // Mapear dados reais das configurações para formato da tabela
+  const categoryOptions: CategoryOption[] = categorias.map((categoria, index) => ({
+    id: String(index + 1),
+    nome: categoria
+  }));
+
+  const packageOptions: PackageOption[] = pacotes.map(pacote => ({
+    id: pacote.id,
+    nome: pacote.nome,
+    valor: `R$ ${pacote.valor.toFixed(2).replace('.', ',')}`,
+    valorFotoExtra: `R$ ${(pacote.valorFotoExtra || 35).toFixed(2).replace('.', ',')}`,
+    categoria: pacote.categoria
+  }));
+
+  const productOptions: ProductOption[] = produtos.map(produto => ({
+    id: produto.id,
+    nome: produto.nome,
+    valor: `R$ ${produto.valorVenda.toFixed(2).replace('.', ',')}`
+  }));
   useEffect(() => {
     if (!searchTerm.trim()) {
       setFilteredSessions(sessions);
@@ -223,7 +199,7 @@ export default function Workflow() {
 
   // Integração com dados reais da agenda - carregar sessões do mês selecionado
   useEffect(() => {
-    const confirmedSessions = getConfirmedSessionsForWorkflow(currentMonth.month, currentMonth.year, getClienteByName);
+    const confirmedSessions = getConfirmedSessionsForWorkflow(currentMonth.month, currentMonth.year, getClienteByName, pacotes, produtos);
 
     // Carregar todas as sessões salvas do localStorage
     const allSavedSessions = (() => {
@@ -251,7 +227,7 @@ export default function Workflow() {
       };
     });
     setSessions(currentMonthSessions);
-  }, [currentMonth, getConfirmedSessionsForWorkflow, getClienteByName]);
+  }, [currentMonth, getConfirmedSessionsForWorkflow, getClienteByName, pacotes, produtos]);
   const handlePreviousMonth = () => {
     let newMonth = currentMonth.month - 1;
     let newYear = currentMonth.year;

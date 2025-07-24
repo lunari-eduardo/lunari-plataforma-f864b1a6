@@ -520,7 +520,14 @@ export function WorkflowTable({
                 ))}
 
                 {renderCell('category', (
-                  <CategoryCombobox value={session.categoria} disabled={true} />
+                  <CategoryCombobox 
+                    value={session.categoria} 
+                    disabled={false}
+                    categoryOptions={categoryOptions}
+                    onValueChange={(categoria) => {
+                      handleFieldUpdateStable(session.id, 'categoria', categoria);
+                    }}
+                  />
                 ))}
 
                 {renderCell('package', (
@@ -528,9 +535,17 @@ export function WorkflowTable({
                     key={`package-${session.id}-${session.pacote}`}
                     value={session.pacote}
                      onValueChange={(packageData) => {
+                       // Atualizar dados do pacote (congelamento)
                        handleFieldUpdateStable(session.id, 'pacote', packageData.nome);
                        handleFieldUpdateStable(session.id, 'valorPacote', packageData.valor);
                        handleFieldUpdateStable(session.id, 'valorFotoExtra', packageData.valorFotoExtra);
+                       handleFieldUpdateStable(session.id, 'categoria', packageData.categoria);
+                       
+                       // Recalcular total de fotos extras se houver quantidade
+                       if (session.qtdFotosExtra > 0) {
+                         const valorUnit = parseFloat(packageData.valorFotoExtra.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+                         handleFieldUpdateStable(session.id, 'valorTotalFotoExtra', formatCurrency(session.qtdFotosExtra * valorUnit));
+                       }
                      }}
                   />
                 ))}
