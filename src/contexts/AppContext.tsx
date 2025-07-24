@@ -335,178 +335,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [orcamentos]);
 
   // ===================================================================
-  // SINCRONIZAÇÃO REFATORADA: SEPARAÇÃO CLARA DE RESPONSABILIDADES
+  // SINCRONIZAÇÃO REFATORADA: REMOVIDA PARA EVITAR LOOP INFINITO
+  // A sincronização agora é feita explicitamente dentro das funções de atualização
   // ===================================================================
-  
-  // 🔒 CRIADOR/DESTRUIDOR/ATUALIZADOR: Orçamento → Agenda
-  // Responsabilidade: Criar agendamentos quando orçamento fica 'fechado'
-  //                  Remover agendamentos quando orçamento é cancelado ou deixa de ser 'fechado'
-  //                  Atualizar datas de agendamentos quando orçamento fechado muda data/hora
-  const syncOrcamentoToAgenda = useCallback(() => {
-    let appointmentsToRemove: string[] = [];
-    let appointmentsToAdd: Appointment[] = [];
-    let appointmentsToUpdate: { id: string; date: Date; time: string }[] = [];
-
-    orcamentos.forEach(orcamento => {
-      const existingAppointment = appointments.find(app => 
-        app.id === `orcamento-${orcamento.id}` || 
-        (app as any).orcamentoId === orcamento.id
-      );
-
-      if (orcamento.status === 'fechado') {
-        if (!existingAppointment) {
-          // CRIAR agendamento se não existe
-          const appointmentDate = parseDateFromStorage(orcamento.data);
-          
-          if (isNaN(appointmentDate.getTime())) {
-            console.warn(`Data inválida no orçamento ${orcamento.id}: ${orcamento.data}`);
-            return;
-          }
-          
-          const newAppointment: Appointment = {
-            id: `orcamento-${orcamento.id}`,
-            title: orcamento.cliente.nome,
-            date: appointmentDate,
-            time: orcamento.hora,
-            type: orcamento.categoria,
-            client: orcamento.cliente.nome,
-            status: 'confirmado',
-            description: orcamento.descricao || orcamento.detalhes,
-            packageId: orcamento.pacotes[0]?.id || undefined,
-            paidAmount: 0,
-            email: orcamento.cliente.email,
-            whatsapp: orcamento.cliente.telefone,
-            orcamentoId: orcamento.id,
-            origem: 'orcamento'
-          };
-
-          appointmentsToAdd.push(newAppointment);
-        } else {
-          // ATUALIZAR agendamento existente se data/hora do orçamento mudou
-          const orcamentoDate = parseDateFromStorage(orcamento.data);
-          
-          if (!isNaN(orcamentoDate.getTime())) {
-            const needsUpdate = 
-              orcamentoDate.getTime() !== existingAppointment.date.getTime() ||
-              orcamento.hora !== existingAppointment.time;
-            
-            if (needsUpdate) {
-              appointmentsToUpdate.push({
-                id: existingAppointment.id,
-                date: orcamentoDate,
-                time: orcamento.hora
-              });
-            }
-          }
-        }
-      } else {
-        // REMOVER agendamento se orçamento não está mais 'fechado'
-        if (existingAppointment) {
-          appointmentsToRemove.push(existingAppointment.id);
-        }
-      }
-    });
-
-    // Aplicar mudanças em uma única atualização
-    if (appointmentsToAdd.length > 0 || appointmentsToRemove.length > 0 || appointmentsToUpdate.length > 0) {
-      setAppointments(prev => {
-        let newAppointments = [...prev];
-        
-        // Remover agendamentos
-        if (appointmentsToRemove.length > 0) {
-          newAppointments = newAppointments.filter(app => !appointmentsToRemove.includes(app.id));
-        }
-        
-        // Adicionar novos agendamentos
-        if (appointmentsToAdd.length > 0) {
-          newAppointments = [...newAppointments, ...appointmentsToAdd];
-        }
-        
-        // Atualizar agendamentos existentes
-        if (appointmentsToUpdate.length > 0) {
-          newAppointments = newAppointments.map(app => {
-            const updateData = appointmentsToUpdate.find(u => u.id === app.id);
-            if (updateData) {
-              return { ...app, date: updateData.date, time: updateData.time };
-            }
-            return app;
-          });
-        }
-        
-        return newAppointments;
-      });
-
-      // Toasts informativos
-      if (appointmentsToAdd.length > 0) {
-        appointmentsToAdd.forEach(app => {
-          toast({
-            title: "Agendamento criado automaticamente",
-            description: `Orçamento de ${app.client} foi confirmado e adicionado à agenda.`,
-          });
-        });
-      }
-      
-      if (appointmentsToRemove.length > 0) {
-        const removedFromCanceled = orcamentos.filter(orc => 
-          (orc.status === 'cancelado' || orc.status !== 'fechado') && 
-          appointmentsToRemove.some(id => id === `orcamento-${orc.id}`)
-        );
-        
-        removedFromCanceled.forEach(orc => {
-          toast({
-            title: "Agendamento removido",
-            description: `Orçamento de ${orc.cliente.nome} foi removido da agenda.`,
-            variant: "destructive"
-          });
-        });
-      }
-    }
-  }, [orcamentos, appointments]);
-
-  // 📅 ATUALIZADOR: Agenda → Orçamento (APENAS atualizar datas)
-  // Responsabilidade: Atualizar datas/horas no orçamento quando agendamento muda
-  //                  (Agendamento é o mestre da DATA após criação)
-  const syncAgendaToOrcamento = useCallback(() => {
-    let orcamentoUpdates: { id: string; data: string; hora: string }[] = [];
-
-    appointments.forEach(appointment => {
-      const orcamentoId = getBudgetId(appointment);
-      if (orcamentoId && isFromBudget(appointment)) {
-        // Usar setOrcamentos com callback para acessar o estado atual
-        // sem adicionar orcamentos às dependências
-        setOrcamentos(prevOrcamentos => {
-          const orcamento = prevOrcamentos.find(orc => orc.id === orcamentoId);
-          if (orcamento && orcamento.status === 'fechado') {
-            const appointmentDateString = formatDateForStorage(appointment.date);
-            
-            if (orcamento.data !== appointmentDateString || orcamento.hora !== appointment.time) {
-              // Atualizar o orçamento específico
-              return prevOrcamentos.map(o => 
-                o.id === orcamentoId 
-                  ? { ...o, data: appointmentDateString, hora: appointment.time }
-                  : o
-              );
-            }
-          }
-          return prevOrcamentos; // Retornar sem mudanças se não precisar atualizar
-        });
-      }
-    });
-  }, [appointments, getBudgetId, isFromBudget]); // Removido 'orcamentos' das dependências
 
   // ===================================================================
-  // EXECUÇÃO DOS SYNCS: SEPARADOS E SEM DEPENDÊNCIAS CRUZADAS
+  // EXECUÇÃO DOS SYNCS: REMOVIDOS PARA EVITAR LOOP INFINITO
+  // A sincronização agora é feita explicitamente dentro das funções de atualização
   // ===================================================================
-  
-  // 🔒 CRIADOR/DESTRUIDOR/ATUALIZADOR: Executa quando orçamentos ou appointments mudam
-  useEffect(() => {
-    syncOrcamentoToAgenda();
-  }, [orcamentos, appointments]); // Ambos necessários para sincronização bidirecional
-  
-  // 📅 ATUALIZADOR: Executa APENAS quando agendamentos mudam
-  useEffect(() => {
-    syncAgendaToOrcamento();
-  }, [appointments]); // APENAS appointments - sem orcamentos para evitar loop
 
   // Process confirmed appointments to workflow
   useEffect(() => {
@@ -744,7 +580,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const atualizarOrcamento = (id: string, orcamento: Partial<Orcamento>) => {
-    setOrcamentos(prev => prev.map(o => o.id === id ? { ...o, ...orcamento } : o));
+    setOrcamentos(prev => {
+      const updatedOrcamentos = prev.map(o => o.id === id ? { ...o, ...orcamento } : o);
+      
+      // SINCRONIZAÇÃO EXPLÍCITA: Orçamento → Agenda
+      // Se o orçamento atualizado tem agendamento associado, atualizar a agenda
+      const orcamentoAtualizado = updatedOrcamentos.find(o => o.id === id);
+      if (orcamentoAtualizado) {
+        setAppointments(prevAppointments => {
+          const agendamentoAssociado = prevAppointments.find(app => 
+            app.id === `orcamento-${id}` || (app as any).orcamentoId === id
+          );
+          
+          if (agendamentoAssociado && orcamentoAtualizado.status === 'fechado') {
+            // Atualizar data e hora do agendamento se mudaram no orçamento
+            if (orcamento.data || orcamento.hora) {
+              return prevAppointments.map(app => {
+                if (app.id === agendamentoAssociado.id) {
+                  const updates: Partial<Appointment> = {};
+                  if (orcamento.data) {
+                    updates.date = parseDateFromStorage(orcamento.data);
+                  }
+                  if (orcamento.hora) {
+                    updates.time = orcamento.hora;
+                  }
+                  return { ...app, ...updates };
+                }
+                return app;
+              });
+            }
+          }
+          return prevAppointments;
+        });
+      }
+      
+      return updatedOrcamentos;
+    });
   };
 
   const excluirOrcamento = (id: string) => {
@@ -835,21 +706,49 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateAppointment = (id: string, appointment: Partial<Appointment>) => {
-    setAppointments(prev => prev.map(app => {
-      if (app.id === id) {
-        const updated = { ...app, ...appointment };
-        // Garantir que a data seja sempre um objeto Date válido
-        if (appointment.date) {
-          if (typeof appointment.date === 'string') {
-            updated.date = parseDateFromStorage(appointment.date);
-          } else {
-            updated.date = appointment.date;
+    setAppointments(prev => {
+      const updatedAppointments = prev.map(app => {
+        if (app.id === id) {
+          const updated = { ...app, ...appointment };
+          // Garantir que a data seja sempre um objeto Date válido
+          if (appointment.date) {
+            if (typeof appointment.date === 'string') {
+              updated.date = parseDateFromStorage(appointment.date);
+            } else {
+              updated.date = appointment.date;
+            }
           }
+          return updated;
         }
-        return updated;
+        return app;
+      });
+      
+      // SINCRONIZAÇÃO EXPLÍCITA: Agenda → Orçamento
+      // Se o agendamento atualizado tem orçamento associado, atualizar o orçamento
+      const appointmentAtualizado = updatedAppointments.find(app => app.id === id);
+      if (appointmentAtualizado && (appointment.date || appointment.time)) {
+        const orcamentoId = getBudgetId(appointmentAtualizado);
+        if (orcamentoId && isFromBudget(appointmentAtualizado)) {
+          setOrcamentos(prevOrcamentos => {
+            return prevOrcamentos.map(orc => {
+              if (orc.id === orcamentoId && orc.status === 'fechado') {
+                const updates: Partial<Orcamento> = {};
+                if (appointment.date) {
+                  updates.data = formatDateForStorage(appointmentAtualizado.date);
+                }
+                if (appointment.time) {
+                  updates.hora = appointment.time;
+                }
+                return { ...orc, ...updates };
+              }
+              return orc;
+            });
+          });
+        }
       }
-      return app;
-    }));
+      
+      return updatedAppointments;
+    });
   };
 
   const deleteAppointment = (id: string) => {
