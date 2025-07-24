@@ -175,7 +175,7 @@ export default function Configuracoes() {
               </TabsTrigger>
               <TabsTrigger value="fluxo" className="flex items-center gap-1.5">
                 <Workflow className="h-4 w-4" />
-                <span className="hidden sm:inline">Fluxo</span>
+                <span className="hidden sm:inline">Etapas</span>
               </TabsTrigger>
             </TabsList>
             
