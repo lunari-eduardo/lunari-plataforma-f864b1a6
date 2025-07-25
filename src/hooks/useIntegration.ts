@@ -144,10 +144,50 @@ export const useIntegration = () => {
   // REMOVIDO: Esta sincronização bidirecional estava causando o loop infinito
   // Agora a sincronização é apenas Orçamento → Agendamento
 
+  // Função para limpar agendamentos órfãos
+  const cleanupOrphanedAppointments = useCallback(() => {
+    const orphanedAppointments = appointments.filter(appointment => {
+      // Se não é de orçamento, não é órfão
+      if (!isFromBudget(appointment)) return false;
+      
+      // Verificar se existe o orçamento correspondente
+      const budgetId = getBudgetId(appointment);
+      if (!budgetId) return true; // Órfão se não tem ID de orçamento
+      
+      const correspondingBudget = orcamentos.find(orc => orc.id === budgetId);
+      return !correspondingBudget; // Órfão se não encontrou o orçamento
+    });
+    
+    // Remover agendamentos órfãos
+    orphanedAppointments.forEach(appointment => {
+      deleteAppointment(appointment.id);
+      toast({
+        title: "Agendamento órfão removido",
+        description: `Agendamento de ${appointment.client} foi removido pois não tem orçamento correspondente.`,
+        variant: "destructive"
+      });
+    });
+    
+    return orphanedAppointments.length;
+  }, [appointments, orcamentos, isFromBudget, getBudgetId, deleteAppointment]);
+
+  // Executar limpeza na inicialização
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const removedCount = cleanupOrphanedAppointments();
+      if (removedCount > 0) {
+        console.log(`Limpeza executada: ${removedCount} agendamentos órfãos removidos`);
+      }
+    }, 1000); // Delay para garantir que tudo foi carregado
+
+    return () => clearTimeout(timer);
+  }, [cleanupOrphanedAppointments]);
+
   return {
     // Funções de utilidade para identificar origem dos agendamentos
     isFromBudget,
     getBudgetId,
-    canEditFully
+    canEditFully,
+    cleanupOrphanedAppointments
   };
 };
