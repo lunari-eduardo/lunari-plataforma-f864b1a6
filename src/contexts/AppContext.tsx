@@ -602,18 +602,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           
           if (mudouDeFechado && agendamentoAssociado) {
             // Orçamento mudou de "fechado" para outro status
-            if (mudouParaCancelado) {
-              // Se mudou para cancelado, remover o agendamento
-              return prevAppointments.filter(app => app.id !== agendamentoAssociado.id);
-            } else {
-              // Se mudou para outro status (não cancelado), alterar status para "a confirmar"
-              return prevAppointments.map(app => {
-                if (app.id === agendamentoAssociado.id) {
-                  return { ...app, status: 'a confirmar' as AppointmentStatus };
-                }
-                return app;
-              });
-            }
+            // REGRA UNIVERSAL DE REMOÇÃO: 
+            // Orçamento mudou de "fechado" para QUALQUER outro status → SEMPRE REMOVER agendamento
+            // Isso permite que o orçamento com novo status seja exibido pelo useUnifiedCalendar
+            return prevAppointments.filter(app => app.id !== agendamentoAssociado.id);
           } else if (agendamentoAssociado && statusAtual === 'fechado') {
             // Atualizar data e hora do agendamento se mudaram no orçamento fechado
             if (orcamento.data || orcamento.hora) {
