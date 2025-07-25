@@ -5,8 +5,16 @@ import { PackageCombobox } from "./PackageCombobox";
 import { ProductCombobox } from "./ProductCombobox";
 import { CategoryCombobox } from "./CategoryCombobox";
 import { StatusBadge } from "./StatusBadge";
-import { MessageCircle, Mail, ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from "lucide-react";
+import { MessageCircle, Mail, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Package, Plus, Minus } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+interface ProdutoWorkflow {
+  nome: string;
+  quantidade: number;
+  valorUnitario: number;
+  tipo: 'incluso' | 'manual';
+}
 
 interface SessionData { 
   id: string; 
@@ -26,6 +34,7 @@ interface SessionData {
   produto: string; 
   qtdProduto: number; 
   valorTotalProduto: string; 
+  produtosList?: ProdutoWorkflow[]; // NOVA LISTA COMPLETA DE PRODUTOS
   valorAdicional: string; 
   detalhes: string; 
   valor: string; 
@@ -167,6 +176,7 @@ export function WorkflowTable({
 }: WorkflowTableProps) {
   const [paymentInputs, setPaymentInputs] = useState<Record<string, string>>({});
   const [editingValues, setEditingValues] = useState<Record<string, string>>({});
+  const [expandedProducts, setExpandedProducts] = useState<Record<string, boolean>>({});
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [scrollPercent, setScrollPercent] = useState(0);
   const [maxScroll, setMaxScroll] = useState(0);
@@ -281,11 +291,24 @@ export function WorkflowTable({
   const calculateTotal = useCallback((session: SessionData) => {
     const valorPacote = parseFloat(session.valorPacote.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
     const valorFotoExtra = parseFloat(session.valorTotalFotoExtra.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-    const valorProduto = parseFloat(session.valorTotalProduto.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
     const valorAdicional = parseFloat(session.valorAdicional.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
     const desconto = session.desconto || 0;
     
-    return valorPacote + valorFotoExtra + valorProduto + valorAdicional - desconto;
+    // NOVA LÓGICA: Produtos inclusos não somam no total, apenas produtos manuais
+    let valorProdutosManuais = 0;
+    if (session.produtosList && session.produtosList.length > 0) {
+      // Somar apenas produtos manuais (não inclusos)
+      valorProdutosManuais = session.produtosList
+        .filter(p => p.tipo === 'manual')
+        .reduce((total, p) => total + (p.valorUnitario * p.quantidade), 0);
+    } else {
+      // Fallback para sistema antigo
+      const valorProduto = parseFloat(session.valorTotalProduto.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+      valorProdutosManuais = valorProduto;
+    }
+    
+    // Total = Valor do pacote (já inclui produtos inclusos) + fotos extra + produtos manuais + adicional - desconto
+    return valorPacote + valorFotoExtra + valorProdutosManuais + valorAdicional - desconto;
   }, []);
 
   const calculateRestante = useCallback((session: SessionData) => {
@@ -464,7 +487,8 @@ export function WorkflowTable({
           {/* NÍVEL 4: O CORPO DA TABELA */}
           <tbody className="divide-y divide-gray-50">
             {sessions.map((session) => (
-              <tr key={session.id} className="hover:bg-gray-50">
+              <>
+                <tr key={session.id} className="hover:bg-gray-50">
                 {renderCell('date', (
                   <div>
                     <div className="font-medium">{formatDateDayMonth(session.data)}</div>
@@ -584,29 +608,77 @@ export function WorkflowTable({
                 ))}
 
                 {renderCell('product', (
-                  <ProductCombobox
-                    key={`product-${session.id}-${session.produto}`}
-                    value={session.produto}
-                    onValueChange={(productData) => {
-                      if (productData) {
-                        handleFieldUpdateStable(session.id, 'produto', productData.nome);
-                        const qtd = session.qtdProduto || 1;
-                        const valorUnit = parseFloat(productData.valor.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-                        handleFieldUpdateStable(session.id, 'valorTotalProduto', formatCurrency(qtd * valorUnit));
-                      } else {
-                        // Limpar produto
-                        handleFieldUpdateStable(session.id, 'produto', '');
-                        handleFieldUpdateStable(session.id, 'qtdProduto', 0);
-                        handleFieldUpdateStable(session.id, 'valorTotalProduto', 'R$ 0,00');
-                      }
-                    }}
-                    productOptions={productOptions}
-                    onClear={() => {
-                      handleFieldUpdateStable(session.id, 'produto', '');
-                      handleFieldUpdateStable(session.id, 'qtdProduto', 0);
-                      handleFieldUpdateStable(session.id, 'valorTotalProduto', 'R$ 0,00');
-                    }}
-                  />
+                  <TooltipProvider>
+                    <div className="flex items-center gap-1">
+                      {/* Exibir produtos múltiplos se existirem */}
+                      {session.produtosList && session.produtosList.length > 0 ? (
+                        <div className="flex items-center gap-1 w-full">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center gap-1 cursor-pointer">
+                                <Package className="h-3 w-3 text-blue-600" />
+                                <span className="text-xs font-medium text-blue-700">
+                                  {session.produtosList.length} produtos
+                                </span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setExpandedProducts(prev => ({
+                                    ...prev,
+                                    [session.id]: !prev[session.id]
+                                  }))}
+                                  className="h-4 w-4 p-0"
+                                >
+                                  {expandedProducts[session.id] ? 
+                                    <Minus className="h-3 w-3" /> : 
+                                    <Plus className="h-3 w-3" />
+                                  }
+                                </Button>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <div className="space-y-1">
+                                {session.produtosList.map((produto, idx) => (
+                                  <div key={idx} className="text-xs flex justify-between gap-2">
+                                    <span>{produto.nome}</span>
+                                    <span className="font-medium">
+                                      {produto.quantidade}x
+                                      {produto.tipo === 'incluso' ? ' (Incluso)' : ` - R$ ${produto.valorUnitario.toFixed(2)}`}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
+                      ) : (
+                        /* Sistema antigo para compatibilidade */
+                        <ProductCombobox
+                          key={`product-${session.id}-${session.produto}`}
+                          value={session.produto}
+                          onValueChange={(productData) => {
+                            if (productData) {
+                              handleFieldUpdateStable(session.id, 'produto', productData.nome);
+                              const qtd = session.qtdProduto || 1;
+                              const valorUnit = parseFloat(productData.valor.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+                              handleFieldUpdateStable(session.id, 'valorTotalProduto', formatCurrency(qtd * valorUnit));
+                            } else {
+                              // Limpar produto
+                              handleFieldUpdateStable(session.id, 'produto', '');
+                              handleFieldUpdateStable(session.id, 'qtdProduto', 0);
+                              handleFieldUpdateStable(session.id, 'valorTotalProduto', 'R$ 0,00');
+                            }
+                          }}
+                          productOptions={productOptions}
+                          onClear={() => {
+                            handleFieldUpdateStable(session.id, 'produto', '');
+                            handleFieldUpdateStable(session.id, 'qtdProduto', 0);
+                            handleFieldUpdateStable(session.id, 'valorTotalProduto', 'R$ 0,00');
+                          }}
+                        />
+                      )}
+                    </div>
+                  </TooltipProvider>
                 ))}
 
                 {renderCell('productQty', (
@@ -676,7 +748,40 @@ export function WorkflowTable({
                     </Button>
                   </div>
                 ))}
-              </tr>
+                </tr>
+                
+                {/* Linha expandida para mostrar todos os produtos */}
+                {expandedProducts[session.id] && session.produtosList && session.produtosList.length > 0 && (
+                  <tr key={`${session.id}-expanded`} className="bg-blue-50">
+                    <td colSpan={Object.keys(visibleColumns).filter(key => visibleColumns[key]).length} className="p-3">
+                      <div className="space-y-2">
+                        <h4 className="text-xs font-medium text-blue-800">📦 Produtos Detalhados</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                          {session.produtosList.map((produto, idx) => (
+                            <div key={idx} className="bg-white p-2 rounded border border-blue-200">
+                              <div className="flex justify-between items-start">
+                                <div className="flex-1">
+                                  <p className="text-xs font-medium text-gray-800">{produto.nome}</p>
+                                  <p className="text-xs text-gray-600">Qtd: {produto.quantidade}</p>
+                                </div>
+                                <div className="text-right">
+                                  <span className={`text-xs px-2 py-1 rounded ${
+                                    produto.tipo === 'incluso' 
+                                      ? 'bg-green-100 text-green-800' 
+                                      : 'bg-yellow-100 text-yellow-800'
+                                  }`}>
+                                    {produto.tipo === 'incluso' ? 'Incluso' : `R$ ${produto.valorUnitario.toFixed(2)}`}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </>
             ))}
           </tbody>
         </table>

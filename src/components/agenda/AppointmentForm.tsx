@@ -11,6 +11,7 @@ import PackageSearchCombobox from './PackageSearchCombobox';
 import { useContext } from 'react';
 import { AppContext } from '@/contexts/AppContext';
 import { useIntegration } from '@/hooks/useIntegration';
+import { useOrcamentos } from '@/hooks/useOrcamentos';
 
 // Tipo de agendamento
 type Appointment = {
@@ -23,6 +24,13 @@ type Appointment = {
   status: 'confirmado' | 'a confirmar';
   description?: string;
   packageId?: string;
+  produtosIncluidos?: Array<{
+    id: string;
+    nome: string;
+    quantidade: number;
+    valorUnitario: number;
+    tipo: 'incluso' | 'manual';
+  }>;
   paidAmount?: number;
 };
 
@@ -60,6 +68,10 @@ export default function AppointmentForm({
   const {
     isFromBudget
   } = useIntegration();
+  const {
+    pacotes,
+    produtos
+  } = useOrcamentos();
 
   // Verifica se é agendamento de orçamento
   const isFromBudgetAppointment = appointment ? isFromBudget(appointment) : false;
@@ -129,6 +141,25 @@ export default function AppointmentForm({
     }));
   };
 
+  // Obter produtos incluídos no pacote selecionado
+  const getIncludedProducts = () => {
+    if (!formData.packageId) return [];
+    
+    const selectedPackage = pacotes.find(p => p.id === formData.packageId);
+    if (!selectedPackage?.produtosIncluidos) return [];
+    
+    return selectedPackage.produtosIncluidos.map(pi => {
+      const produto = produtos.find(p => p.id === pi.produtoId);
+      return {
+        id: pi.produtoId,
+        nome: produto?.nome || 'Produto não encontrado',
+        quantidade: pi.quantidade,
+        valorUnitario: produto?.valorVenda || 0,
+        tipo: 'incluso' as const
+      };
+    });
+  };
+
   // Manipular seleção de status
   const handleStatusSelect = (status: string) => {
     setFormData(prev => ({
@@ -176,6 +207,9 @@ export default function AppointmentForm({
       };
     }
 
+    // Obter produtos incluídos no pacote
+    const produtosIncluidos = getIncludedProducts();
+
     // Preparar dados do agendamento
     const appointmentData = {
       date: formData.date,
@@ -185,6 +219,7 @@ export default function AppointmentForm({
       status: formData.status as 'confirmado' | 'a confirmar',
       description: formData.description,
       packageId: formData.packageId,
+      produtosIncluidos: produtosIncluidos.length > 0 ? produtosIncluidos : undefined,
       paidAmount: formData.paidAmount,
       client: clientInfo.client,
       clientId: clientInfo.clientId,
@@ -252,6 +287,24 @@ export default function AppointmentForm({
           <div className="space-y-2">
             <Label htmlFor="package" className="text-xs font-medium">Pacote</Label>
             <PackageSearchCombobox value={formData.packageId} onSelect={handlePackageSelect} placeholder="Buscar pacote por nome ou categoria..." />
+            
+            {/* Seção de Produtos Incluídos - aparece quando pacote é selecionado */}
+            {formData.packageId && getIncludedProducts().length > 0 && (
+              <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <h4 className="text-xs font-medium text-blue-800 mb-2">📦 Produtos Incluídos neste Pacote</h4>
+                <div className="space-y-1">
+                  {getIncludedProducts().map((produto, index) => (
+                    <div key={index} className="flex justify-between items-center text-xs text-blue-700">
+                      <span>{produto.nome}</span>
+                      <span className="font-medium">Qtd: {produto.quantidade}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-blue-600 mt-2 italic">
+                  Estes produtos serão automaticamente incluídos no agendamento
+                </p>
+              </div>
+            )}
           </div>
           
           <div className="grid grid-cols-2 gap-4">

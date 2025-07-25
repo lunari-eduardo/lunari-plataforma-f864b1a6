@@ -8,6 +8,13 @@ import { FinancialEngine, CreateTransactionInput } from '@/services/FinancialEng
 import { Orcamento, Template, OrigemCliente, MetricasOrcamento, Cliente } from '@/types/orcamentos';
 import { Appointment, AppointmentStatus } from '@/hooks/useAgenda';
 
+export interface ProdutoWorkflow {
+  nome: string;
+  quantidade: number;
+  valorUnitario: number;
+  tipo: 'incluso' | 'manual';
+}
+
 export interface WorkflowItem {
   id: string;
   data: string;
@@ -24,9 +31,10 @@ export interface WorkflowItem {
   valorFotoExtra: number;
   qtdFotoExtra: number;
   valorTotalFotoExtra: number;
-  produto: string;
-  qtdProduto: number;
-  valorTotalProduto: number;
+  produto: string; // Mantido para compatibilidade
+  qtdProduto: number; // Mantido para compatibilidade
+  valorTotalProduto: number; // Mantido para compatibilidade
+  produtosList?: ProdutoWorkflow[]; // NOVA LISTA COMPLETA DE PRODUTOS
   valorAdicional: number;
   detalhes: string;
   total: number;
@@ -424,32 +432,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           dataOriginal: appointment.date
         };
 
-        // CORREÇÃO: Adicionar TODOS os produtos incluídos no pacote
-        if (pacoteData && pacoteData.produtosIncluidos && pacoteData.produtosIncluidos.length > 0) {
-          // Mapear todos os produtos incluídos
-          const todosProdutos = pacoteData.produtosIncluidos.map(produtoIncluido => {
+        // CORREÇÃO: Adicionar TODOS os produtos incluídos do agendamento
+        let allProductsFromAppointment: ProdutoWorkflow[] = [];
+        
+        // Produtos incluídos salvos diretamente no agendamento
+        if (appointment.produtosIncluidos && appointment.produtosIncluidos.length > 0) {
+          allProductsFromAppointment = appointment.produtosIncluidos.map(p => ({
+            nome: p.nome,
+            quantidade: p.quantidade,
+            valorUnitario: p.valorUnitario,
+            tipo: 'incluso' as const
+          }));
+        }
+        // Fallback: buscar produtos do pacote se não estiverem salvos no agendamento
+        else if (pacoteData && pacoteData.produtosIncluidos && pacoteData.produtosIncluidos.length > 0) {
+          allProductsFromAppointment = pacoteData.produtosIncluidos.map(produtoIncluido => {
             const produtoData = produtos.find(p => p.id === produtoIncluido.produtoId);
-            if (produtoData) {
-              return {
-                nome: produtoData.nome,
-                quantidade: produtoIncluido.quantidade || 1,
-                valorUnitario: produtoData.valorVenda || produtoData.preco_venda || 0
-              };
-            }
-            return null;
-          }).filter(Boolean);
+            return {
+              nome: produtoData?.nome || 'Produto não encontrado',
+              quantidade: produtoIncluido.quantidade || 1,
+              valorUnitario: produtoData?.valorVenda || produtoData?.preco_venda || 0,
+              tipo: 'incluso' as const
+            };
+          });
+        }
 
-          if (todosProdutos.length > 0) {
-            // Para compatibilidade com a estrutura atual, usar o primeiro produto no campo principal
-            const primeiroProduto = todosProdutos[0];
-            newWorkflowItem.produto = primeiroProduto.nome;
-            newWorkflowItem.qtdProduto = primeiroProduto.quantidade;
-            newWorkflowItem.valorTotalProduto = primeiroProduto.valorUnitario * primeiroProduto.quantidade;
+        // Adicionar lista completa de produtos
+        newWorkflowItem.produtosList = allProductsFromAppointment;
 
-            // Salvar lista completa de produtos nos detalhes para referência
-            const listaCompleta = todosProdutos.map(p => `${p.nome} (${p.quantidade}x)`).join(', ');
-            newWorkflowItem.detalhes = `${appointment.description || ''}\n\nProdutos inclusos: ${listaCompleta}`.trim();
-          }
+        // Para compatibilidade com sistema atual - usar primeiro produto
+        if (allProductsFromAppointment.length > 0) {
+          const primeiroProduto = allProductsFromAppointment[0];
+          newWorkflowItem.produto = `${primeiroProduto.nome} (incluso no pacote)`;
+          newWorkflowItem.qtdProduto = primeiroProduto.quantidade;
+          newWorkflowItem.valorTotalProduto = primeiroProduto.valorUnitario * primeiroProduto.quantidade;
         }
 
         // NOVA LÓGICA: Total = Valor do pacote + fotos extra + produtos manuais (produtos inclusos não somam)
@@ -543,7 +559,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         };
 
         // CORREÇÃO: Transferir TODOS os produtos do orçamento
-        let todosProdutosDoOrcamento = [];
+        let todosProdutosDoOrcamento: ProdutoWorkflow[] = [];
         
         // 1. Produtos incluídos no pacote principal
         if (pacoteData && pacoteData.produtosIncluidos && pacoteData.produtosIncluidos.length > 0) {
@@ -554,11 +570,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 nome: produtoData.nome,
                 quantidade: produtoIncluido.quantidade || 1,
                 valorUnitario: 0, // Produtos inclusos têm valor 0 na nova lógica
-                tipo: 'incluso'
+                tipo: 'incluso' as const
               };
             }
             return null;
-          }).filter(Boolean);
+          }).filter(Boolean) as ProdutoWorkflow[];
           todosProdutosDoOrcamento.push(...produtosInclusos);
         }
 
@@ -568,10 +584,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             nome: item.nome,
             quantidade: item.quantidade || 1,
             valorUnitario: item.preco || 0,
-            tipo: 'manual'
+            tipo: 'manual' as const
           }));
           todosProdutosDoOrcamento.push(...produtosManuais);
         }
+
+        // Adicionar lista completa de produtos
+        newWorkflowItem.produtosList = todosProdutosDoOrcamento;
 
         // Para compatibilidade, usar o primeiro produto no campo principal
         if (todosProdutosDoOrcamento.length > 0) {
@@ -579,12 +598,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           newWorkflowItem.produto = primeiroProduto.nome;
           newWorkflowItem.qtdProduto = primeiroProduto.quantidade;
           newWorkflowItem.valorTotalProduto = primeiroProduto.valorUnitario * primeiroProduto.quantidade;
-
-          // Salvar lista completa nos detalhes
-          const listaCompleta = todosProdutosDoOrcamento.map(p => 
-            `${p.nome} (${p.quantidade}x)${p.tipo === 'incluso' ? ' - Incluso' : ` - R$ ${p.valorUnitario.toFixed(2)}`}`
-          ).join('\n');
-          newWorkflowItem.detalhes = `${orc.detalhes || ''}\n\nProdutos:\n${listaCompleta}`.trim();
         }
 
         // NOVA LÓGICA: Total = Valor do pacote + produtos manuais (produtos inclusos não somam)

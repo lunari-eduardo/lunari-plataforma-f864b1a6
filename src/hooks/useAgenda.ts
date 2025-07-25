@@ -4,6 +4,14 @@ import { formatDateForStorage, getCurrentDateString } from '@/utils/dateUtils';
 
 export type AppointmentStatus = 'confirmado' | 'a confirmar';
 
+export interface ProdutoIncluido {
+  id: string;
+  nome: string;
+  quantidade: number;
+  valorUnitario: number;
+  tipo: 'incluso' | 'manual';
+}
+
 export interface Appointment {
   id: string;
   title: string;
@@ -14,6 +22,7 @@ export interface Appointment {
   status: AppointmentStatus;
   description?: string;
   packageId?: string;
+  produtosIncluidos?: ProdutoIncluido[];
   paidAmount?: number;
   email?: string;
   whatsapp?: string;
@@ -96,19 +105,59 @@ export const useAgenda = () => {
           valor: appointment.paidAmount,
           data: getCurrentDateString() // Usar string de data
         }] : [],
-        // Adicionar produtos incluídos se existirem no pacote
-        ...(pacoteData && pacoteData.produtosIncluidos && pacoteData.produtosIncluidos.length > 0 && produtosData ? (() => {
-          const primeiroProduto = pacoteData.produtosIncluidos[0];
-          const produtoEncontrado = produtosData.find(p => p.id === primeiroProduto.produtoId);
-          if (produtoEncontrado) {
+        // CORREÇÃO: Transferir TODOS os produtos incluídos, não apenas o primeiro
+        produtosList: (() => {
+          const allProducts = [];
+          
+          // Produtos incluídos salvos diretamente no agendamento
+          if (appointment.produtosIncluidos && appointment.produtosIncluidos.length > 0) {
+            allProducts.push(...appointment.produtosIncluidos.map(p => ({
+              nome: p.nome,
+              quantidade: p.quantidade,
+              valorUnitario: p.valorUnitario,
+              tipo: 'incluso' as const
+            })));
+          }
+          // Fallback: buscar produtos do pacote se não estiverem salvos no agendamento
+          else if (pacoteData && pacoteData.produtosIncluidos && pacoteData.produtosIncluidos.length > 0 && produtosData) {
+            allProducts.push(...pacoteData.produtosIncluidos.map(pi => {
+              const produtoEncontrado = produtosData.find(p => p.id === pi.produtoId);
+              return {
+                nome: produtoEncontrado?.nome || 'Produto não encontrado',
+                quantidade: pi.quantidade || 1,
+                valorUnitario: produtoEncontrado?.valorVenda || produtoEncontrado?.preco_venda || 0,
+                tipo: 'incluso' as const
+              };
+            }));
+          }
+          
+          return allProducts;
+        })(),
+        // Manter compatibilidade com sistema antigo (primeiro produto apenas)
+        ...((() => {
+          // Usar produtos incluídos salvos no agendamento
+          if (appointment.produtosIncluidos && appointment.produtosIncluidos.length > 0) {
+            const primeiroProduto = appointment.produtosIncluidos[0];
             return {
-              produto: `${produtoEncontrado.nome} (incluso no pacote)`,
-              qtdProduto: primeiroProduto.quantidade || 1,
-              valorTotalProduto: `R$ ${((produtoEncontrado.valorVenda || produtoEncontrado.preco_venda || 0) * (primeiroProduto.quantidade || 1)).toFixed(2).replace('.', ',')}`
+              produto: `${primeiroProduto.nome} (incluso no pacote)`,
+              qtdProduto: primeiroProduto.quantidade,
+              valorTotalProduto: `R$ ${(primeiroProduto.valorUnitario * primeiroProduto.quantidade).toFixed(2).replace('.', ',')}`
             };
           }
+          // Fallback para produtos do pacote
+          else if (pacoteData && pacoteData.produtosIncluidos && pacoteData.produtosIncluidos.length > 0 && produtosData) {
+            const primeiroProduto = pacoteData.produtosIncluidos[0];
+            const produtoEncontrado = produtosData.find(p => p.id === primeiroProduto.produtoId);
+            if (produtoEncontrado) {
+              return {
+                produto: `${produtoEncontrado.nome} (incluso no pacote)`,
+                qtdProduto: primeiroProduto.quantidade || 1,
+                valorTotalProduto: `R$ ${((produtoEncontrado.valorVenda || produtoEncontrado.preco_venda || 0) * (primeiroProduto.quantidade || 1)).toFixed(2).replace('.', ',')}`
+              };
+            }
+          }
           return {};
-        })() : {})
+        })())
       };
     });
   };
