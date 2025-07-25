@@ -114,7 +114,7 @@ export default function EditOrcamentoModal({
     } else if (!isOpen) {
       setFormData(initialFormState);
     }
-  }, [isOpen, orcamento, pacotes]);
+  }, [isOpen, orcamento]); // Remover 'pacotes' das dependências para evitar loops
   const handleMainPackageSelect = (pacote: any) => {
     if (!pacote) {
       setFormData(prev => ({
