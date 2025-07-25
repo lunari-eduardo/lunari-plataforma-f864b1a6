@@ -79,86 +79,14 @@ export default function EditOrcamentoModal({
   useEffect(() => {
     if (isOpen && orcamento) {
       const [year, month, day] = orcamento.data.split('-');
-      const pacotesOrcamento = orcamento.pacotes || [];
-      
-      // ETAPA 1: HIDRATAR PACOTE PRINCIPAL
-      let pacotePrincipalHidratado = null;
-      let produtosAdicionaisHidratados: ProdutoSelecionado[] = [];
-      
-      if (pacotesOrcamento.length > 0) {
-        const pacoteOrcamento = pacotesOrcamento[0];
-        
-        // Buscar dados completos do pacote na lista mestre
-        const pacoteCompleto = pacotes.find(p => 
-          p.id === pacoteOrcamento.id || p.nome === pacoteOrcamento.nome
-        );
-        
-        if (pacoteCompleto) {
-          // USAR VALORES "CONGELADOS" PARA ORÇAMENTOS FECHADOS
-          const valorBase = orcamento.status === 'fechado' 
-            ? pacoteOrcamento.preco  // Valor congelado do momento do fechamento
-            : (pacoteCompleto.valorVenda || pacoteCompleto.valor_base || pacoteCompleto.valor || 0); // Valor atual
-          
-          pacotePrincipalHidratado = {
-            ...pacoteCompleto,
-            valorVenda: valorBase,
-            valor_base: valorBase,
-            valor: valorBase
-          };
-          
-          // ETAPA 2: HIDRATAR PRODUTOS INCLUSOS NO PACOTE
-          if (pacoteCompleto.produtosIncluidos && pacoteCompleto.produtosIncluidos.length > 0) {
-            const produtosInclusos = pacoteCompleto.produtosIncluidos.map((produtoIncluso: any) => {
-              const produtoCompleto = produtos.find(p => p.id === produtoIncluso.produtoId);
-              if (produtoCompleto) {
-                return {
-                  id: produtoCompleto.id,
-                  nome: produtoCompleto.nome,
-                  preco: 0, // Produtos inclusos têm preço 0 na exibição
-                  quantidade: produtoIncluso.quantidade || 1,
-                  inclusoNoPacote: true
-                } as ProdutoSelecionado & { inclusoNoPacote: boolean };
-              }
-              return null;
-            }).filter(Boolean);
-            
-            produtosAdicionaisHidratados = [...produtosInclusos];
-          }
-        } else {
-          // Fallback: usar dados do orçamento se não encontrar na lista mestre
-          pacotePrincipalHidratado = pacoteOrcamento;
-        }
-        
-        // ETAPA 3: HIDRATAR PRODUTOS MANUAIS (produtos adicionais)
-        const produtosManuais = pacotesOrcamento.slice(1).map(item => {
-          const produtoCompleto = produtos.find(p => p.id === item.id || p.nome === item.nome);
-          
-          if (produtoCompleto) {
-            // USAR VALORES "CONGELADOS" PARA ORÇAMENTOS FECHADOS
-            const precoItem = orcamento.status === 'fechado'
-              ? item.preco  // Valor congelado
-              : (produtoCompleto.valorVenda || produtoCompleto.preco_venda || produtoCompleto.valor || 0); // Valor atual
-            
-            return {
-              id: produtoCompleto.id,
-              nome: produtoCompleto.nome,
-              preco: precoItem,
-              quantidade: item.quantidade
-            };
-          }
-          
-          // Fallback: usar dados do orçamento se não encontrar na lista mestre
-          return {
-            id: item.id,
-            nome: item.nome,
-            preco: item.preco,
-            quantidade: item.quantidade
-          };
-        });
-        
-        produtosAdicionaisHidratados = [...produtosAdicionaisHidratados, ...produtosManuais];
-      }
-      
+      const pacotes = orcamento.pacotes || [];
+      const pacotePrincipal = pacotes.length > 0 ? pacotes[0] : null;
+      const produtosAdicionais = pacotes.slice(1).map(item => ({
+        id: item.id,
+        nome: item.nome,
+        preco: item.preco,
+        quantidade: item.quantidade
+      }));
       setFormData({
         cliente: orcamento.cliente,
         data: `${year}-${month}-${day}`,
@@ -167,15 +95,15 @@ export default function EditOrcamentoModal({
         descricao: orcamento.descricao || '',
         detalhes: orcamento.detalhes,
         origem: orcamento.origemCliente,
-        pacotePrincipal: pacotePrincipalHidratado,
-        produtosAdicionais: produtosAdicionaisHidratados,
+        pacotePrincipal: pacotePrincipal,
+        produtosAdicionais: produtosAdicionais,
         valorManual: orcamento.valorManual,
         isOrcamentoFechado: orcamento.status === 'fechado'
       });
     } else if (!isOpen) {
       setFormData(initialFormState);
     }
-  }, [isOpen, orcamento, pacotes, produtos]);
+  }, [isOpen, orcamento]);
   const handleMainPackageSelect = (pacote: any) => {
     if (!pacote) {
       setFormData(prev => ({
