@@ -676,6 +676,47 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             // Orçamento mudou de "fechado" para QUALQUER outro status → SEMPRE REMOVER agendamento
             // Isso permite que o orçamento com novo status seja exibido pelo useUnifiedCalendar
             return prevAppointments.filter(app => app.id !== agendamentoAssociado.id);
+          } else if (mudouParaFechado && !agendamentoAssociado) {
+            // CORREÇÃO: CRIAR AGENDAMENTO quando orçamento mudou para "fechado"
+            // Buscar dados do pacote para incluir produtos
+            let produtosIncluidos: any[] = [];
+            
+            if (orcamentoAtualizado.pacotes && orcamentoAtualizado.pacotes.length > 0) {
+              const pacoteOrcamento = orcamentoAtualizado.pacotes[0];
+              const pacoteData = pacotes.find(p => p.id === pacoteOrcamento.id || p.nome === pacoteOrcamento.nome);
+              
+              if (pacoteData && pacoteData.produtosIncluidos) {
+                produtosIncluidos = pacoteData.produtosIncluidos.map(produtoIncluido => {
+                  const produtoData = produtos.find(p => p.id === produtoIncluido.produtoId);
+                  return {
+                    id: produtoIncluido.produtoId,
+                    nome: produtoData?.nome || 'Produto não encontrado',
+                    quantidade: produtoIncluido.quantidade || 1,
+                    valorUnitario: produtoData?.valorVenda || produtoData?.preco_venda || 0,
+                    tipo: 'incluso'
+                  };
+                }).filter(Boolean);
+              }
+            }
+            
+            const novoAgendamento: Appointment = {
+              id: `orcamento-${id}`,
+              title: `${orcamentoAtualizado.categoria || 'Sessão'} - ${orcamentoAtualizado.cliente.nome}`,
+              date: parseDateFromStorage(orcamentoAtualizado.data),
+              time: orcamentoAtualizado.hora,
+              type: orcamentoAtualizado.categoria || 'Sessão',
+              client: orcamentoAtualizado.cliente.nome,
+              status: 'confirmado' as AppointmentStatus,
+              description: orcamentoAtualizado.detalhes,
+              packageId: orcamentoAtualizado.pacotes?.[0]?.id,
+              produtosIncluidos: produtosIncluidos,
+              email: orcamentoAtualizado.cliente.email,
+              whatsapp: orcamentoAtualizado.cliente.telefone,
+              orcamentoId: id,
+              origem: 'orcamento'
+            };
+            
+            return [...prevAppointments, novoAgendamento];
           } else if (agendamentoAssociado && statusAtual === 'fechado') {
             // Atualizar data e hora do agendamento se mudaram no orçamento fechado
             if (orcamento.data || orcamento.hora) {
