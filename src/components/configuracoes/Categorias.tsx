@@ -95,8 +95,8 @@ export default function Categorias({
       
       <div>
         <div className="space-y-2 mb-4">
-          <h3 className="text-base font-medium">Categorias Cadastradas</h3>
-          <p className="text-sm text-muted-foreground">
+          <h3 className="font-medium text-sm">Categorias Cadastradas</h3>
+          <p className="text-muted-foreground text-xs">
             Lista de todas as categorias de sessão fotográfica.
           </p>
         </div>
