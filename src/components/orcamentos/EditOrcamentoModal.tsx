@@ -240,14 +240,14 @@ export default function EditOrcamentoModal({
     const updates: Partial<Orcamento> = {
       detalhes: formData.detalhes,
       data: formatDateForStorage(formData.data),
-      hora: formData.hora
+      hora: formData.hora,
+      descricao: formData.descricao // Permitir editar descrição mesmo em orçamentos fechados
     };
     if (!formData.isOrcamentoFechado) {
       if (formData.cliente) {
         updates.cliente = formData.cliente;
       }
       updates.categoria = formData.categoria;
-      updates.descricao = formData.descricao;
       updates.origemCliente = formData.origem;
       updates.pacotes = pacotesParaSalvar;
       updates.valorTotal = valorTotal;
@@ -373,7 +373,7 @@ export default function EditOrcamentoModal({
             <Input placeholder="Descrição do serviço (será levada para Agenda e Workflow)" value={formData.descricao} onChange={e => setFormData(prev => ({
             ...prev,
             descricao: e.target.value
-          }))} disabled={formData.isOrcamentoFechado} />
+          }))} />
           </div>
 
           <div>
