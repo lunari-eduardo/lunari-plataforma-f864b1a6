@@ -81,14 +81,34 @@ export default function EditOrcamentoModal({
       const [year, month, day] = orcamento.data.split('-');
       const pacotesDoOrcamento = orcamento.pacotes || [];
       
-      // CORREÇÃO: Buscar pacote principal completo na lista mestra
+      // CORREÇÃO DEFINITIVA: Buscar pacote principal completo na lista mestra
       let pacotePrincipalCompleto = null;
       if (pacotesDoOrcamento.length > 0) {
         const pacoteOrcamento = pacotesDoOrcamento[0];
-        // Buscar primeiro por ID, depois por nome
-        pacotePrincipalCompleto = pacotes.find(p => p.id === pacoteOrcamento.id) || 
-                                  pacotes.find(p => p.nome === pacoteOrcamento.nome) ||
-                                  pacoteOrcamento; // fallback para o próprio objeto do orçamento
+        
+        // 1. Buscar por ID exato primeiro
+        pacotePrincipalCompleto = pacotes.find(p => p.id === pacoteOrcamento.id);
+        
+        // 2. Fallback: remover prefixos e buscar por ID limpo
+        if (!pacotePrincipalCompleto && pacoteOrcamento.id) {
+          const idLimpo = pacoteOrcamento.id.replace(/^pacote-/, '');
+          pacotePrincipalCompleto = pacotes.find(p => p.id === idLimpo);
+        }
+        
+        // 3. Fallback: buscar por nome
+        if (!pacotePrincipalCompleto && pacoteOrcamento.nome) {
+          pacotePrincipalCompleto = pacotes.find(p => p.nome === pacoteOrcamento.nome);
+        }
+        
+        // 4. Se encontrou o pacote mestre, usar seus dados atualizados
+        if (pacotePrincipalCompleto) {
+          // Manter o objeto do pacote mestre com valores atualizados
+          console.log('Pacote encontrado na lista mestra:', pacotePrincipalCompleto);
+        } else {
+          // 5. Fallback: usar dados salvos no orçamento (mantém compatibilidade)
+          pacotePrincipalCompleto = pacoteOrcamento;
+          console.log('Usando dados do orçamento como fallback:', pacoteOrcamento);
+        }
       }
       
       const produtosAdicionais = pacotesDoOrcamento.slice(1).map(item => ({
@@ -114,7 +134,7 @@ export default function EditOrcamentoModal({
     } else if (!isOpen) {
       setFormData(initialFormState);
     }
-  }, [isOpen, orcamento]); // Remover 'pacotes' das dependências para evitar loops
+  }, [isOpen, orcamento, pacotes]); // Incluir 'pacotes' para reagir a mudanças nas configurações
   const handleMainPackageSelect = (pacote: any) => {
     if (!pacote) {
       setFormData(prev => ({

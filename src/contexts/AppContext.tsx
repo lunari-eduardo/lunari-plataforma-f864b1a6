@@ -398,7 +398,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           nome: appointment.client,
           whatsapp: (appointment as any).clientPhone || appointment.whatsapp || "+55 (11) 99999-9999",
           email: (appointment as any).clientEmail || appointment.email || "",
-          descricao: appointment.type,
+          descricao: appointment.description || '',
           status: "",
           categoria: categoriaName,
           pacote: pacoteData ? pacoteData.nome : (
@@ -508,19 +508,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (orc.pacotes && orc.pacotes.length > 0) {
         const pacoteOrcamento = orc.pacotes[0];
         
-        // CORREÇÃO: Melhorar busca do pacote - remover prefixo se existir
+        // CORREÇÃO DEFINITIVA: Busca inteligente do pacote com múltiplos fallbacks
         let pacoteId = pacoteOrcamento.id;
-        if (pacoteId.startsWith('pacote-')) {
-          pacoteId = pacoteId.replace('pacote-', '');
-        }
         
-        // Buscar o pacote completo nos dados de configuração pelo ID primeiro
+        // 1. Buscar por ID exato primeiro
         pacoteData = pacotes.find(p => p.id === pacoteId);
         
-        // Se não encontrar por ID, tentar por nome
+        // 2. Fallback: remover prefixos e buscar por ID limpo
+        if (!pacoteData && pacoteId) {
+          const idLimpo = pacoteId.replace(/^pacote-/, '');
+          pacoteData = pacotes.find(p => p.id === idLimpo);
+        }
+        
+        // 3. Fallback: buscar por nome
         if (!pacoteData && pacoteOrcamento.nome) {
           pacoteData = pacotes.find(p => p.nome === pacoteOrcamento.nome);
         }
+        
+        console.log('Busca de pacote para workflow:', { pacoteId, encontrado: !!pacoteData, pacoteData });
         
         if (pacoteData) {
           // Buscar categoria pelo ID do pacote
