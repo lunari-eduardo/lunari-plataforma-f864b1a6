@@ -2,6 +2,7 @@
 import { Calendar, DollarSign, Clock, CheckCircle } from 'lucide-react';
 import { UnifiedEvent } from '@/hooks/useUnifiedCalendar';
 import { Badge } from '@/components/ui/badge';
+import { getBudgetStatusConfig } from '@/utils/statusConfig';
 
 interface UnifiedEventCardProps {
   event: UnifiedEvent;
@@ -23,18 +24,10 @@ export default function UnifiedEventCard({ event, onClick, compact = false }: Un
         return 'bg-orange-100 text-orange-800 border-l-4 border-orange-500 hover:bg-orange-200';
       }
     } else {
-      // Semi-transparent background with dashed border for budgets
+      // Semi-transparent background with dashed border for budgets using centralized config
+      const config = getBudgetStatusConfig(event.status);
       const baseStyle = 'border-2 border-dashed hover:bg-opacity-80';
-      switch (event.status) {
-        case 'pendente':
-          return `bg-blue-50 text-blue-800 border-blue-300 hover:bg-blue-100 ${baseStyle}`;
-        case 'enviado':
-          return `bg-purple-50 text-purple-800 border-purple-300 hover:bg-purple-100 ${baseStyle}`;
-        case 'follow-up':
-          return `bg-yellow-50 text-yellow-800 border-yellow-300 hover:bg-yellow-100 ${baseStyle}`;
-        default:
-          return `bg-gray-50 text-gray-800 border-gray-300 hover:bg-gray-100 ${baseStyle}`;
-      }
+      return `${config.bgColor.replace('100', '50')} ${config.textColor} ${config.borderColor.replace('border-', 'border-').replace('500', '300')} hover:${config.bgColor} ${baseStyle}`;
     }
   };
 
@@ -52,13 +45,8 @@ export default function UnifiedEventCard({ event, onClick, compact = false }: Un
     if (isAppointment) {
       return event.status === 'confirmado' ? 'Confirmado' : 'A Confirmar';
     } else {
-      switch (event.status) {
-        case 'pendente': return 'Pendente';
-        case 'enviado': return 'Enviado';
-        case 'follow-up': return 'Follow-up';
-        case 'rascunho': return 'Rascunho';
-        default: return event.status;
-      }
+      const config = getBudgetStatusConfig(event.status);
+      return config.label;
     }
   };
 
