@@ -581,37 +581,90 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const atualizarOrcamento = (id: string, orcamento: Partial<Orcamento>) => {
     setOrcamentos(prev => {
+      const orcamentoAnterior = prev.find(o => o.id === id);
       const updatedOrcamentos = prev.map(o => o.id === id ? { ...o, ...orcamento } : o);
       
       // SINCRONIZAÇÃO EXPLÍCITA: Orçamento → Agenda
-      // Se o orçamento atualizado tem agendamento associado, atualizar a agenda
       const orcamentoAtualizado = updatedOrcamentos.find(o => o.id === id);
-      if (orcamentoAtualizado) {
+      if (orcamentoAtualizado && orcamentoAnterior) {
         setAppointments(prevAppointments => {
           const agendamentoAssociado = prevAppointments.find(app => 
             app.id === `orcamento-${id}` || (app as any).orcamentoId === id
           );
           
-          if (agendamentoAssociado && orcamentoAtualizado.status === 'fechado') {
-            // Atualizar data e hora do agendamento se mudaram no orçamento
-            if (orcamento.data || orcamento.hora) {
+          if (agendamentoAssociado) {
+            // Se orçamento mudou de 'fechado' para outro status (exceto cancelado)
+            if (orcamentoAnterior.status === 'fechado' && 
+                orcamento.status && 
+                orcamento.status !== 'fechado' && 
+                orcamento.status !== 'cancelado') {
+              
+              // Alterar status do agendamento para 'a confirmar'
               return prevAppointments.map(app => {
                 if (app.id === agendamentoAssociado.id) {
-                  const updates: Partial<Appointment> = {};
-                  if (orcamento.data) {
-                    updates.date = parseDateFromStorage(orcamento.data);
-                  }
-                  if (orcamento.hora) {
-                    updates.time = orcamento.hora;
-                  }
-                  return { ...app, ...updates };
+                  return { ...app, status: 'a confirmar' as AppointmentStatus };
                 }
                 return app;
               });
             }
+            
+            // Se orçamento mudou para 'cancelado', remover agendamento
+            if (orcamento.status === 'cancelado') {
+              toast({
+                title: "Agendamento removido",
+                description: `Orçamento de ${orcamentoAtualizado.cliente.nome} foi cancelado e removido da agenda.`,
+                variant: "destructive"
+              });
+              
+              return prevAppointments.filter(app => app.id !== agendamentoAssociado.id);
+            }
+            
+            // Se orçamento está 'fechado', sincronizar data e hora
+            if (orcamentoAtualizado.status === 'fechado') {
+              if (orcamento.data || orcamento.hora) {
+                return prevAppointments.map(app => {
+                  if (app.id === agendamentoAssociado.id) {
+                    const updates: Partial<Appointment> = {};
+                    if (orcamento.data) {
+                      updates.date = parseDateFromStorage(orcamento.data);
+                    }
+                    if (orcamento.hora) {
+                      updates.time = orcamento.hora;
+                    }
+                    return { ...app, ...updates };
+                  }
+                  return app;
+                });
+              }
+            }
           }
+          
           return prevAppointments;
         });
+        
+        // Atualizar workflow - remover item se orçamento não está mais fechado
+        if (orcamentoAnterior.status === 'fechado' && 
+            orcamento.status && 
+            orcamento.status !== 'fechado') {
+          
+          setWorkflowItems(prevItems => {
+            const itemRemovido = prevItems.find(item => 
+              item.id === `orcamento-${id}` && item.fonte === 'orcamento'
+            );
+            
+            if (itemRemovido) {
+              toast({
+                title: "Item removido do workflow",
+                description: `${orcamentoAtualizado.cliente.nome} foi removido do workflow.`,
+                variant: "default"
+              });
+              
+              return prevItems.filter(item => item.id !== `orcamento-${id}`);
+            }
+            
+            return prevItems;
+          });
+        }
       }
       
       return updatedOrcamentos;
