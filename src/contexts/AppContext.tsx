@@ -581,19 +581,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const atualizarOrcamento = (id: string, orcamento: Partial<Orcamento>) => {
     setOrcamentos(prev => {
+      const orcamentoAnterior = prev.find(o => o.id === id);
       const updatedOrcamentos = prev.map(o => o.id === id ? { ...o, ...orcamento } : o);
       
       // SINCRONIZAÇÃO EXPLÍCITA: Orçamento → Agenda
-      // Se o orçamento atualizado tem agendamento associado, atualizar a agenda
       const orcamentoAtualizado = updatedOrcamentos.find(o => o.id === id);
-      if (orcamentoAtualizado) {
+      if (orcamentoAtualizado && orcamentoAnterior) {
+        const statusAnterior = orcamentoAnterior.status;
+        const statusAtual = orcamentoAtualizado.status;
+        
+        // Detectar mudanças de status que afetam agendamentos
+        const mudouDeFechado = statusAnterior === 'fechado' && statusAtual !== 'fechado';
+        const mudouParaFechado = statusAnterior !== 'fechado' && statusAtual === 'fechado';
+        const mudouParaCancelado = statusAtual === 'cancelado';
+        
         setAppointments(prevAppointments => {
           const agendamentoAssociado = prevAppointments.find(app => 
             app.id === `orcamento-${id}` || (app as any).orcamentoId === id
           );
           
-          if (agendamentoAssociado && orcamentoAtualizado.status === 'fechado') {
-            // Atualizar data e hora do agendamento se mudaram no orçamento
+          if (mudouDeFechado && agendamentoAssociado) {
+            // Orçamento mudou de "fechado" para outro status
+            if (mudouParaCancelado) {
+              // Se mudou para cancelado, remover o agendamento
+              return prevAppointments.filter(app => app.id !== agendamentoAssociado.id);
+            } else {
+              // Se mudou para outro status (não cancelado), alterar status para "a confirmar"
+              return prevAppointments.map(app => {
+                if (app.id === agendamentoAssociado.id) {
+                  return { ...app, status: 'a confirmar' as AppointmentStatus };
+                }
+                return app;
+              });
+            }
+          } else if (agendamentoAssociado && statusAtual === 'fechado') {
+            // Atualizar data e hora do agendamento se mudaram no orçamento fechado
             if (orcamento.data || orcamento.hora) {
               return prevAppointments.map(app => {
                 if (app.id === agendamentoAssociado.id) {
@@ -612,6 +634,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }
           return prevAppointments;
         });
+        
+        // Remover item do workflow quando orçamento não está mais fechado
+        if (mudouDeFechado) {
+          setWorkflowItems(prevWorkflow => {
+            return prevWorkflow.filter(item => item.id !== `orcamento-${id}`);
+          });
+        }
       }
       
       return updatedOrcamentos;

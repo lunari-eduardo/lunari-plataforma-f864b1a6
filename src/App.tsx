@@ -15,9 +15,16 @@ import Configuracoes from "./pages/Configuracoes";
 import Workflow from "./pages/Workflow";
 import NotFound from "./pages/NotFound";
 import { AppProvider } from "./contexts/AppContext";
+import { useIntegration } from "./hooks/useIntegration";
 
 // Create a new QueryClient instance outside of the component
 const queryClient = new QueryClient();
+
+// Component to initialize integration hooks
+function AppIntegration() {
+  useIntegration();
+  return null;
+}
 
 // Define App as a proper function component to ensure React hooks work correctly
 function App() {
@@ -27,6 +34,7 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <AppProvider>
           <TooltipProvider>
+            <AppIntegration />
             <Toaster />
             <Sonner />
             <Routes>

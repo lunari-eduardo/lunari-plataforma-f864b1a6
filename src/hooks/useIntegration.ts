@@ -107,7 +107,7 @@ export const useIntegration = () => {
     });
   }, [orcamentos, appointments, addAppointment, updateAppointment, shouldSync]);
 
-  // Monitor agendamentos removidos de orçamentos cancelados
+  // Monitor agendamentos removidos de orçamentos cancelados ou não fechados
   useEffect(() => {
     if (syncInProgressRef.current) return;
 
@@ -139,6 +139,38 @@ export const useIntegration = () => {
       }
     });
   }, [orcamentos, appointments, deleteAppointment, shouldSync]);
+
+  // Monitor agendamentos "confirmado" cujos orçamentos não estão mais "fechado"
+  useEffect(() => {
+    if (syncInProgressRef.current) return;
+
+    const agendamentosOrfaos = appointments.filter(appointment => {
+      // Só verificar agendamentos de orçamento que estão confirmados
+      if (!isFromBudget(appointment) || appointment.status !== 'confirmado') {
+        return false;
+      }
+
+      const budgetId = getBudgetId(appointment);
+      if (!budgetId) return true;
+
+      const correspondingBudget = orcamentos.find(orc => orc.id === budgetId);
+      return correspondingBudget && correspondingBudget.status !== 'fechado';
+    });
+
+    agendamentosOrfaos.forEach(appointment => {
+      const currentTime = Date.now();
+      if (!shouldSync(`fix-${appointment.id}`, currentTime)) return;
+
+      syncInProgressRef.current = true;
+      
+      updateAppointment(appointment.id, { status: 'a confirmar' });
+      
+      // Reset flag após um pequeno delay
+      setTimeout(() => {
+        syncInProgressRef.current = false;
+      }, 50);
+    });
+  }, [orcamentos, appointments, isFromBudget, getBudgetId, updateAppointment, shouldSync]);
 
   // Monitor mudanças de data em agendamentos para sincronizar com orçamentos
   // REMOVIDO: Esta sincronização bidirecional estava causando o loop infinito

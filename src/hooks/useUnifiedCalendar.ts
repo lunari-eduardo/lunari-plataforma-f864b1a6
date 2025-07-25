@@ -39,7 +39,19 @@ export const useUnifiedCalendar = () => {
   // Memoizar eventos de orçamentos separadamente
   const budgetEvents = useMemo(() => {
     return orcamentos
-      .filter(orc => orc.status !== 'fechado' && orc.status !== 'cancelado')
+      .filter(orc => {
+        // Excluir orçamentos fechados e cancelados
+        if (orc.status === 'fechado' || orc.status === 'cancelado') {
+          return false;
+        }
+        
+        // Excluir orçamentos que já têm agendamento correspondente
+        const hasCorrespondingAppointment = appointments.some(app => 
+          app.id === `orcamento-${orc.id}` || (app as any).orcamentoId === orc.id
+        );
+        
+        return !hasCorrespondingAppointment;
+      })
       .map(orcamento => {
         const eventDate = parseDateFromStorage(orcamento.data);
         if (isNaN(eventDate.getTime())) {
@@ -59,7 +71,7 @@ export const useUnifiedCalendar = () => {
         };
       })
       .filter((event): event is NonNullable<typeof event> => event !== null);
-  }, [orcamentos]);
+  }, [orcamentos, appointments]);
 
   // Combinar eventos com memoização otimizada
   const unifiedEvents = useMemo(() => {
