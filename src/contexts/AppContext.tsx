@@ -493,130 +493,134 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         item.id === `orcamento-${orc.id}` && item.fonte === 'orcamento'
       );
       
-      if (!existingItem) {
-        // Buscar dados do pacote do orçamento
-        let pacoteData = null;
-        let categoriaName = orc.categoria;
-        let valorFotoExtraFromPackage = 35;
-        let valorPacoteFromBudget = 0;
-        
-        if (orc.pacotes && orc.pacotes.length > 0) {
-          const pacoteOrcamento = orc.pacotes[0];
-          
-          // CORREÇÃO: Melhorar busca do pacote - remover prefixo se existir
-          let pacoteId = pacoteOrcamento.id;
-          if (pacoteId.startsWith('pacote-')) {
-            pacoteId = pacoteId.replace('pacote-', '');
-          }
-          
-          // Buscar o pacote completo nos dados de configuração pelo ID primeiro
-          pacoteData = pacotes.find(p => p.id === pacoteId);
-          
-          // Se não encontrar por ID, tentar por nome
-          if (!pacoteData && pacoteOrcamento.nome) {
-            pacoteData = pacotes.find(p => p.nome === pacoteOrcamento.nome);
-          }
-          
-          if (pacoteData) {
-            // Buscar categoria pelo ID do pacote
-            if (pacoteData.categoria_id) {
-              const configCategorias = storage.load('configuracoes_categorias', []);
-              const categoria = configCategorias.find((cat: any) => cat.id === pacoteData.categoria_id);
-              categoriaName = categoria ? categoria.nome : String(pacoteData.categoria_id);
-            } else {
-              categoriaName = pacoteData.categoria || orc.categoria;
-            }
-            valorFotoExtraFromPackage = pacoteData.valor_foto_extra || pacoteData.valorFotoExtra || 35;
-            // Usar valor do pacote nas configurações como congelamento
-            valorPacoteFromBudget = pacoteData.valor_base || pacoteData.valorVenda || pacoteData.valor || 0;
-          } else {
-            // Se não encontrou o pacote nas configurações, usar dados do orçamento
-            valorPacoteFromBudget = pacoteOrcamento.preco || 0;
-          }
-        }
-
-        const newWorkflowItem: WorkflowItem = {
-          id: `orcamento-${orc.id}`,
-          data: orc.data,
-          hora: orc.hora,
-          nome: orc.cliente.nome,
-          whatsapp: orc.cliente.telefone,
-          email: orc.cliente.email,
-          descricao: orc.descricao || '',
-          status: 'Fechado',
-          categoria: categoriaName,
-          pacote: pacoteData ? pacoteData.nome : (orc.pacotes[0]?.nome || ''),
-          valorPacote: valorPacoteFromBudget,
-          desconto: 0,
-          valorFotoExtra: valorFotoExtraFromPackage,
-          qtdFotoExtra: 0,
-          valorTotalFotoExtra: 0,
-          produto: '',
-          qtdProduto: 0,
-          valorTotalProduto: 0,
-          valorAdicional: 0,
-          detalhes: orc.detalhes,
-          total: 0,
-          valorPago: 0,
-          restante: 0,
-          pagamentos: [],
-          fonte: 'orcamento',
-          dataOriginal: parseDateFromStorage(orc.data)
-        };
-
-        // CORREÇÃO: Transferir TODOS os produtos do orçamento
-        let todosProdutosDoOrcamento: ProdutoWorkflow[] = [];
-        
-        // 1. Produtos incluídos no pacote principal
-        if (pacoteData && pacoteData.produtosIncluidos && pacoteData.produtosIncluidos.length > 0) {
-          const produtosInclusos = pacoteData.produtosIncluidos.map(produtoIncluido => {
-            const produtoData = produtos.find(p => p.id === produtoIncluido.produtoId);
-            if (produtoData) {
-              return {
-                nome: produtoData.nome,
-                quantidade: produtoIncluido.quantidade || 1,
-                valorUnitario: 0, // Produtos inclusos têm valor 0 na nova lógica
-                tipo: 'incluso' as const
-              };
-            }
-            return null;
-          }).filter(Boolean) as ProdutoWorkflow[];
-          todosProdutosDoOrcamento.push(...produtosInclusos);
-        }
-
-        // 2. Produtos adicionais manuais do orçamento (não inclusos no pacote)
-        if (orc.pacotes && orc.pacotes.length > 1) {
-          const produtosManuais = orc.pacotes.slice(1).map(item => ({
-            nome: item.nome,
-            quantidade: item.quantidade || 1,
-            valorUnitario: item.preco || 0,
-            tipo: 'manual' as const
-          }));
-          todosProdutosDoOrcamento.push(...produtosManuais);
-        }
-
-        // Adicionar lista completa de produtos
-        newWorkflowItem.produtosList = todosProdutosDoOrcamento;
-
-        // Para compatibilidade, usar o primeiro produto no campo principal
-        if (todosProdutosDoOrcamento.length > 0) {
-          const primeiroProduto = todosProdutosDoOrcamento[0];
-          newWorkflowItem.produto = primeiroProduto.nome;
-          newWorkflowItem.qtdProduto = primeiroProduto.quantidade;
-          newWorkflowItem.valorTotalProduto = primeiroProduto.valorUnitario * primeiroProduto.quantidade;
-        }
-
-        // NOVA LÓGICA: Total = Valor do pacote + produtos manuais (produtos inclusos não somam)
-        const valorProdutosManuaisOrc = todosProdutosDoOrcamento
-          ?.filter(p => p.tipo === 'manual')
-          ?.reduce((total, p) => total + (p.valorUnitario * p.quantidade), 0) || 0;
-        
-        newWorkflowItem.total = newWorkflowItem.valorPacote + newWorkflowItem.valorTotalFotoExtra + 
-                               valorProdutosManuaisOrc + newWorkflowItem.valorAdicional - newWorkflowItem.desconto;
-        newWorkflowItem.restante = newWorkflowItem.total - newWorkflowItem.valorPago;
-
-        newItems.push(newWorkflowItem);
+      // CORREÇÃO: Sempre atualizar a descrição, mesmo para items existentes
+      if (existingItem) {
+        existingItem.descricao = orc.descricao || '';
+        return; // Item já existe, apenas atualizamos a descrição
       }
+      
+      // Buscar dados do pacote do orçamento
+      let pacoteData = null;
+      let categoriaName = orc.categoria;
+      let valorFotoExtraFromPackage = 35;
+      let valorPacoteFromBudget = 0;
+      
+      if (orc.pacotes && orc.pacotes.length > 0) {
+        const pacoteOrcamento = orc.pacotes[0];
+        
+        // CORREÇÃO: Melhorar busca do pacote - remover prefixo se existir
+        let pacoteId = pacoteOrcamento.id;
+        if (pacoteId.startsWith('pacote-')) {
+          pacoteId = pacoteId.replace('pacote-', '');
+        }
+        
+        // Buscar o pacote completo nos dados de configuração pelo ID primeiro
+        pacoteData = pacotes.find(p => p.id === pacoteId);
+        
+        // Se não encontrar por ID, tentar por nome
+        if (!pacoteData && pacoteOrcamento.nome) {
+          pacoteData = pacotes.find(p => p.nome === pacoteOrcamento.nome);
+        }
+        
+        if (pacoteData) {
+          // Buscar categoria pelo ID do pacote
+          if (pacoteData.categoria_id) {
+            const configCategorias = storage.load('configuracoes_categorias', []);
+            const categoria = configCategorias.find((cat: any) => cat.id === pacoteData.categoria_id);
+            categoriaName = categoria ? categoria.nome : String(pacoteData.categoria_id);
+          } else {
+            categoriaName = pacoteData.categoria || orc.categoria;
+          }
+          valorFotoExtraFromPackage = pacoteData.valor_foto_extra || pacoteData.valorFotoExtra || 35;
+          // Usar valor do pacote nas configurações como congelamento
+          valorPacoteFromBudget = pacoteData.valor_base || pacoteData.valorVenda || pacoteData.valor || 0;
+        } else {
+          // Se não encontrou o pacote nas configurações, usar dados do orçamento
+          valorPacoteFromBudget = pacoteOrcamento.preco || 0;
+        }
+      }
+
+      const newWorkflowItem: WorkflowItem = {
+        id: `orcamento-${orc.id}`,
+        data: orc.data,
+        hora: orc.hora,
+        nome: orc.cliente.nome,
+        whatsapp: orc.cliente.telefone,
+        email: orc.cliente.email,
+        descricao: orc.descricao || '',
+        status: 'Fechado',
+        categoria: categoriaName,
+        pacote: pacoteData ? pacoteData.nome : (orc.pacotes[0]?.nome || ''),
+        valorPacote: valorPacoteFromBudget,
+        desconto: 0,
+        valorFotoExtra: valorFotoExtraFromPackage,
+        qtdFotoExtra: 0,
+        valorTotalFotoExtra: 0,
+        produto: '',
+        qtdProduto: 0,
+        valorTotalProduto: 0,
+        valorAdicional: 0,
+        detalhes: orc.detalhes,
+        total: 0,
+        valorPago: 0,
+        restante: 0,
+        pagamentos: [],
+        fonte: 'orcamento',
+        dataOriginal: parseDateFromStorage(orc.data)
+      };
+
+      // CORREÇÃO: Transferir TODOS os produtos do orçamento
+      let todosProdutosDoOrcamento: ProdutoWorkflow[] = [];
+      
+      // 1. Produtos incluídos no pacote principal
+      if (pacoteData && pacoteData.produtosIncluidos && pacoteData.produtosIncluidos.length > 0) {
+        const produtosInclusos = pacoteData.produtosIncluidos.map(produtoIncluido => {
+          const produtoData = produtos.find(p => p.id === produtoIncluido.produtoId);
+          if (produtoData) {
+            return {
+              nome: produtoData.nome,
+              quantidade: produtoIncluido.quantidade || 1,
+              valorUnitario: 0, // Produtos inclusos têm valor 0 na nova lógica
+              tipo: 'incluso' as const
+            };
+          }
+          return null;
+        }).filter(Boolean) as ProdutoWorkflow[];
+        todosProdutosDoOrcamento.push(...produtosInclusos);
+      }
+
+      // 2. Produtos adicionais manuais do orçamento (não inclusos no pacote)
+      if (orc.pacotes && orc.pacotes.length > 1) {
+        const produtosManuais = orc.pacotes.slice(1).map(item => ({
+          nome: item.nome,
+          quantidade: item.quantidade || 1,
+          valorUnitario: item.preco || 0,
+          tipo: 'manual' as const
+        }));
+        todosProdutosDoOrcamento.push(...produtosManuais);
+      }
+
+      // Adicionar lista completa de produtos
+      newWorkflowItem.produtosList = todosProdutosDoOrcamento;
+
+      // Para compatibilidade, usar o primeiro produto no campo principal
+      if (todosProdutosDoOrcamento.length > 0) {
+        const primeiroProduto = todosProdutosDoOrcamento[0];
+        newWorkflowItem.produto = primeiroProduto.nome;
+        newWorkflowItem.qtdProduto = primeiroProduto.quantidade;
+        newWorkflowItem.valorTotalProduto = primeiroProduto.valorUnitario * primeiroProduto.quantidade;
+      }
+
+      // NOVA LÓGICA: Total = Valor do pacote + produtos manuais (produtos inclusos não somam)
+      const valorProdutosManuaisOrc = todosProdutosDoOrcamento
+        ?.filter(p => p.tipo === 'manual')
+        ?.reduce((total, p) => total + (p.valorUnitario * p.quantidade), 0) || 0;
+      
+      newWorkflowItem.total = newWorkflowItem.valorPacote + newWorkflowItem.valorTotalFotoExtra + 
+                             valorProdutosManuaisOrc + newWorkflowItem.valorAdicional - newWorkflowItem.desconto;
+      newWorkflowItem.restante = newWorkflowItem.total - newWorkflowItem.valorPago;
+
+      newItems.push(newWorkflowItem);
     });
 
     if (newItems.length > 0) {

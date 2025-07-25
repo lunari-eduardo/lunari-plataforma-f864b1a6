@@ -139,6 +139,20 @@ export default function OrcamentoDetailsModal({
 
         <Separator />
 
+        {/* Descrição do Serviço */}
+        {orcamento.descricao && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">Descrição do Serviço</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                {orcamento.descricao}
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Detalhes do Projeto */}
         <Card>
           <CardHeader>
