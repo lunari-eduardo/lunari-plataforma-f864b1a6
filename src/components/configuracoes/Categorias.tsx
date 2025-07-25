@@ -62,8 +62,8 @@ export default function Categorias({
   return <div className="space-y-6 mt-4">
       <div>
         <div className="space-y-2">
-          <h3 className="text-base font-medium">Nova Categoria de Sessão</h3>
-          <p className="text-sm text-muted-foreground">
+          <h3 className="font-medium text-sm">Nova Categoria de Sessão</h3>
+          <p className="text-muted-foreground text-xs">
             Defina as categorias para seus tipos de sessão fotográfica.
           </p>
         </div>

@@ -86,10 +86,8 @@ export default function FluxoTrabalho({
   };
   return <div className="mt-4 space-y-6">
       <div>
-        <h3 className="text-base font-medium">Nova Etapa de Fluxo</h3>
-        <p className="text-sm text-muted-foreground mt-1 mb-3">
-          Configure as etapas personalizadas para o fluxo de trabalho dos seus projetos fotográficos.
-        </p>
+        <h3 className="font-medium text-sm">Nova Etapa de Fluxo</h3>
+        <p className="text-muted-foreground mt-1 mb-3 text-xs">Configure as etapas personalizadas para o fluxo de trabalho dos seus projetos.</p>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
@@ -126,10 +124,8 @@ export default function FluxoTrabalho({
       
       <div>
         <div className="space-y-2 mb-4">
-          <h3 className="text-base font-medium">Etapas do Fluxo de Trabalho</h3>
-          <p className="text-sm text-muted-foreground">
-            Lista de todas as etapas do fluxo de trabalho em ordem de execução. O status padrão será sempre "Confirmado".
-          </p>
+          <h3 className="font-medium text-sm">Etapas do Fluxo de Trabalho</h3>
+          <p className="text-muted-foreground text-xs">Lista de todas as etapas do fluxo de trabalho em ordem de execução. </p>
         </div>
         
         <div className="bg-white rounded-lg border border-gray-100 overflow-hidden shadow-sm">

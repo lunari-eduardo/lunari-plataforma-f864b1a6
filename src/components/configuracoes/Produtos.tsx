@@ -78,8 +78,8 @@ export default function Produtos({
   };
   return <div className="mt-4 space-y-6">
       <div>
-        <h3 className="text-base font-medium">Novo Produto</h3>
-        <p className="text-sm text-muted-foreground mt-1 mb-3">
+        <h3 className="font-medium text-sm">Novo Produto</h3>
+        <p className="text-muted-foreground mt-1 mb-3 text-xs">
           Configure os produtos adicionais disponíveis para venda.
         </p>
         
@@ -125,8 +125,8 @@ export default function Produtos({
       
       <div>
         <div className="space-y-2 mb-4">
-          <h3 className="text-base font-medium">Produtos Cadastrados</h3>
-          <p className="text-sm text-muted-foreground">
+          <h3 className="font-medium text-sm">Produtos Cadastrados</h3>
+          <p className="text-muted-foreground text-xs">
             Lista de todos os produtos adicionais disponíveis para venda.
           </p>
         </div>
