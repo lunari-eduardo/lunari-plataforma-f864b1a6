@@ -58,13 +58,35 @@ export const useAgenda = () => {
       let valorFotoExtra = "R$ 35,00";
       let pacoteData = null;
       
+      console.log('=== DEBUG BUSCA PACOTE ===');
+      console.log('packageId:', appointment.packageId);
+      console.log('pacotesData disponíveis:', pacotesData?.map(p => ({ id: p.id, nome: p.nome })));
+      
       if (appointment.packageId && pacotesData) {
+        // Busca 1: ID exato
         pacoteData = pacotesData.find(p => p.id === appointment.packageId);
+        
+        // Busca 2: Remover prefixos se não encontrou
+        if (!pacoteData) {
+          const cleanId = appointment.packageId.replace(/^(orcamento-|pacote-|agenda-)/, '');
+          pacoteData = pacotesData.find(p => p.id === cleanId || p.id.replace(/^(orcamento-|pacote-|agenda-)/, '') === cleanId);
+          console.log('Tentativa com ID limpo:', cleanId, 'encontrou:', !!pacoteData);
+        }
+        
+        // Busca 3: Por nome se ainda não encontrou e temos type no appointment
+        if (!pacoteData && appointment.type) {
+          pacoteData = pacotesData.find(p => p.nome === appointment.type || appointment.type.includes(p.nome));
+          console.log('Tentativa por nome/tipo:', appointment.type, 'encontrou:', !!pacoteData);
+        }
+        
         if (pacoteData) {
           pacote = pacoteData.nome;
           valorPacote = `R$ ${(pacoteData.valor || pacoteData.valor_base || pacoteData.valorVenda || 0).toFixed(2).replace('.', ',')}`;
           categoria = pacoteData.categoria || "";
           valorFotoExtra = `R$ ${(pacoteData.valorFotoExtra || pacoteData.valor_foto_extra || 35).toFixed(2).replace('.', ',')}`;
+          console.log('Pacote encontrado:', { nome: pacote, valor: valorPacote, valorFotoExtra });
+        } else {
+          console.log('PACOTE NÃO ENCONTRADO para packageId:', appointment.packageId);
         }
       }
       

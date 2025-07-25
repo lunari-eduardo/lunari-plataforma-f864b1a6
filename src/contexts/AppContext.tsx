@@ -257,6 +257,80 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return !(appointment.id?.startsWith('orcamento-') || (appointment as any).origem === 'orcamento');
   }, []);
 
+  // Função de sincronização direta com workflow
+  const sincronizarComWorkflow = useCallback((orcamento: Orcamento) => {
+    if (!orcamento || orcamento.status !== 'fechado') return;
+
+    console.log('=== SINCRONIZANDO COM WORKFLOW ===');
+    console.log('Orçamento:', orcamento);
+
+    const pacotePrincipal = orcamento.pacotes?.[0];
+    const produtosAdicionais = orcamento.pacotes?.slice(1) || [];
+
+    // Buscar dados do pacote nas configurações
+    let pacoteData = null;
+    let valorFotoExtraFromPackage = 35; // padrão
+    
+    if (pacotePrincipal) {
+      // Busca inteligente do pacote
+      pacoteData = pacotes.find(p => p.id === pacotePrincipal.id) ||
+                   pacotes.find(p => p.nome === pacotePrincipal.nome);
+      
+      if (pacoteData) {
+        valorFotoExtraFromPackage = pacoteData.valor_foto_extra || pacoteData.valorFotoExtra || 35;
+      }
+    }
+
+    const valorPacote = pacotePrincipal?.preco || 0;
+    const valorProdutos = produtosAdicionais.reduce((acc, p) => acc + (p.preco * p.quantidade), 0);
+    const valorTotal = valorPacote + valorProdutos;
+
+    const sessaoWorkflow = {
+      id: `orcamento-${orcamento.id}`,
+      data: orcamento.data,
+      hora: orcamento.hora,
+      nome: orcamento.cliente?.nome || '',
+      email: orcamento.cliente?.email || '',
+      whatsapp: orcamento.cliente?.telefone || '',
+      descricao: orcamento.descricao || '',
+      detalhes: orcamento.detalhes || '',
+      categoria: orcamento.categoria || '',
+      pacote: pacotePrincipal?.nome || '',
+      valorPacote: valorPacote,
+      valorFotoExtra: valorFotoExtraFromPackage,
+      qtdFotosExtra: 0,
+      valorTotalFotoExtra: 0,
+      produto: produtosAdicionais.map(p => p.nome).join(', '),
+      qtdProduto: produtosAdicionais.reduce((acc, p) => acc + p.quantidade, 0),
+      valorTotalProduto: valorProdutos,
+      valorAdicional: 0,
+      desconto: 0,
+      valor: valorTotal,
+      total: valorTotal,
+      valorPago: 0,
+      restante: valorTotal,
+      status: 'Fechado',
+      pagamentos: [],
+      fonte: 'orcamento',
+      dataOriginal: parseDateFromStorage(orcamento.data)
+    };
+
+    console.log('Sessão workflow criada:', sessaoWorkflow);
+
+    // Salvar no localStorage do workflow
+    const saved = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
+    const existingIndex = saved.findIndex((s: any) => s.id === sessaoWorkflow.id);
+    
+    if (existingIndex >= 0) {
+      saved[existingIndex] = sessaoWorkflow;
+    } else {
+      saved.push(sessaoWorkflow);
+    }
+    
+    localStorage.setItem('workflow_sessions', JSON.stringify(saved));
+    console.log('Workflow sincronizado com sucesso');
+  }, [pacotes, produtos]);
+
   // Save effects
   useEffect(() => {
     storage.save(STORAGE_KEYS.BUDGETS, orcamentos);
@@ -772,6 +846,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             };
 
             console.log('DEBUG: Agendamento criado:', novoAgendamento);
+            
+            // NOVA: Sincronizar diretamente com workflow usando dados do orçamento
+            sincronizarComWorkflow(orcamentoAtualizado);
             
             return [...prevAppointments, novoAgendamento];
           } else if (agendamentoAssociado && statusAtual === 'fechado') {
