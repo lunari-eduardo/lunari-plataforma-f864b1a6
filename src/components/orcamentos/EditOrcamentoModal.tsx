@@ -1,556 +1,414 @@
-import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Clock, Pen, X, Package, Plus, Trash2 } from 'lucide-react';
-import { Orcamento, Cliente, PacoteProduto } from '@/types/orcamentos';
+import { X, Package, Plus, Trash2 } from 'lucide-react';
 import { useOrcamentos } from '@/hooks/useOrcamentos';
+
+import { Cliente, Orcamento, PacoteProduto } from '@/types/orcamentos';
 import { useToast } from '@/hooks/use-toast';
-import { CategorySelector } from './CategorySelector';
 import ClientSearchInput from './ClientSearchInput';
-import { PackageSearchCombobox } from './PackageSearchCombobox';
 import { ProductSearchCombobox } from './ProductSearchCombobox';
-import { formatDateForStorage } from '@/utils/dateUtils';
+import { CategorySelector } from './CategorySelector';
+import { PackageSearchCombobox } from './PackageSearchCombobox';
+import { useOrcamentoData } from '@/hooks/useOrcamentoData';
+import { formatDateForStorage, parseDateFromStorage } from '@/utils/dateUtils';
+
+// Definimos um estado inicial limpo para o formulário
+const initialFormData = {
+  cliente: null,
+  data: '',
+  hora: '12:00',
+  categoria: '',
+  origem: '',
+  descricao: '',
+  detalhes: '',
+  pacotePrincipal: null,
+  produtosAdicionais: [],
+  valorFinal: 0,
+};
+
+// Interface para o nosso estado de formulário
+interface FormData {
+  cliente: Cliente | null;
+  data: string; // Sempre no formato YYYY-MM-DD
+  hora: string;
+  categoria: string;
+  origem: string;
+  descricao: string;
+  detalhes: string;
+  pacotePrincipal: any | null;
+  produtosAdicionais: PacoteProduto[];
+  valorFinal: number;
+}
+
 interface EditOrcamentoModalProps {
   isOpen: boolean;
   onClose: () => void;
   orcamento: Orcamento | null;
 }
-export default function EditOrcamentoModal({
-  isOpen,
-  onClose,
-  orcamento
-}: EditOrcamentoModalProps) {
-  const {
-    atualizarOrcamento,
-    clientes,
-    origens,
-    categorias,
-    pacotes,
-    produtos
-  } = useOrcamentos();
-  const {
-    toast
-  } = useToast();
-  interface ProdutoSelecionado {
-    id: string;
-    nome: string;
-    preco: number;
-    quantidade: number;
-    inclusoNoPacote?: boolean;
-  }
-  const initialFormState = {
-    cliente: null as Cliente | null,
-    data: '',
-    hora: '',
-    categoria: '',
-    descricao: '',
-    detalhes: '',
-    origem: '',
-    pacotePrincipal: null as any,
-    produtosAdicionais: [] as ProdutoSelecionado[],
-    valorManual: undefined as number | undefined,
-    isOrcamentoFechado: false
-  };
-  const [formData, setFormData] = useState(initialFormState);
 
-  // Estados para controlar a visibilidade dos menus suspensos
-  const [categoriaMenuAberto, setCategoriaMenuAberto] = useState(false);
-  const [origemMenuAberto, setOrigemMenuAberto] = useState(false);
-  const getCategoriaById = (categoriaId: string | number): string => {
-    if (!categoriaId) return '';
-    if (typeof categorias[0] === 'string') {
-      const index = parseInt(String(categoriaId)) - 1;
-      if (index >= 0 && index < categorias.length) {
-        return categorias[index] as string;
-      }
-    }
-    const categoria = categorias.find((cat: any) => cat.id === categoriaId || cat.id === String(categoriaId));
-    if (categoria && typeof categoria === 'object') {
-      const catObj = categoria as any;
-      if (catObj.nome) {
-        return String(catObj.nome);
-      }
-    }
-    return String(categoriaId);
-  };
+export default function EditOrcamentoModal({ isOpen, onClose, orcamento }: EditOrcamentoModalProps) {
+  const { clientes, origens, atualizarOrcamento } = useOrcamentos();
+  const { pacotes, produtos, categorias } = useOrcamentoData();
+  const { toast } = useToast();
+  
+
+  // 1. ESTADO ÚNICO E CENTRALIZADO PARA O FORMULÁRIO
+  const [formData, setFormData] = useState<FormData>(initialFormData);
+
+  // 2. useEffect INTELIGENTE: Roda UMA VEZ ao abrir para carregar os dados.
+  // Ele não será acionado novamente enquanto você edita, resolvendo o bug de "apagar ao digitar".
   useEffect(() => {
     if (isOpen && orcamento) {
-      const [year, month, day] = orcamento.data.split('-');
-      const pacotesOrcamento = orcamento.pacotes || [];
-      
-      // ETAPA 1: HIDRATAR PACOTE PRINCIPAL
-      let pacotePrincipalHidratado = null;
-      let produtosAdicionaisHidratados: ProdutoSelecionado[] = [];
-      
-      if (pacotesOrcamento.length > 0) {
-        const pacoteOrcamento = pacotesOrcamento[0];
-        
-        // Buscar dados completos do pacote na lista mestre
-        const pacoteCompleto = pacotes.find(p => 
-          p.id === pacoteOrcamento.id || p.nome === pacoteOrcamento.nome
-        );
-        
-        if (pacoteCompleto) {
-          // USAR VALORES "CONGELADOS" PARA ORÇAMENTOS FECHADOS
-          const valorBase = orcamento.status === 'fechado' 
-            ? pacoteOrcamento.preco  // Valor congelado do momento do fechamento
-            : (pacoteCompleto.valorVenda || pacoteCompleto.valor_base || pacoteCompleto.valor || 0); // Valor atual
-          
-          pacotePrincipalHidratado = {
-            ...pacoteCompleto,
-            valorVenda: valorBase,
-            valor_base: valorBase,
-            valor: valorBase
-          };
-          
-          // ETAPA 2: HIDRATAR PRODUTOS INCLUSOS NO PACOTE
-          if (pacoteCompleto.produtosIncluidos && pacoteCompleto.produtosIncluidos.length > 0) {
-            const produtosInclusos = pacoteCompleto.produtosIncluidos.map((produtoIncluso: any) => {
-              const produtoCompleto = produtos.find(p => p.id === produtoIncluso.produtoId);
-              if (produtoCompleto) {
-                return {
-                  id: produtoCompleto.id,
-                  nome: produtoCompleto.nome,
-                  preco: 0, // Produtos inclusos têm preço 0 na exibição
-                  quantidade: produtoIncluso.quantidade || 1,
-                  inclusoNoPacote: true
-                } as ProdutoSelecionado & { inclusoNoPacote: boolean };
-              }
-              return null;
-            }).filter(Boolean);
-            
-            produtosAdicionaisHidratados = [...produtosInclusos];
-          }
-        } else {
-          // Fallback: usar dados do orçamento se não encontrar na lista mestre
-          pacotePrincipalHidratado = pacoteOrcamento;
+      // Lógica de "hidratação" que busca os dados completos
+      const pacoteDoOrcamento = orcamento.pacotes.find(p => p.id.startsWith('pacote-'));
+      let pacotePrincipalCompleto = null;
+      if (pacoteDoOrcamento) {
+        const pacoteId = pacoteDoOrcamento.id.replace('pacote-', '');
+        // Busca o pacote completo na lista mestra para obter o VALOR correto
+        pacotePrincipalCompleto = pacotes.find(p => p.id === pacoteId) || null;
+        if (pacotePrincipalCompleto) {
+          // Usar valores congelados para orçamentos fechados, valores atuais para rascunhos
+          const valor = orcamento.status === 'fechado' 
+            ? pacoteDoOrcamento.preco 
+            : (pacotePrincipalCompleto.valor || pacotePrincipalCompleto.valor_base || 0);
+          pacotePrincipalCompleto = { ...pacotePrincipalCompleto, valor };
         }
-        
-        // ETAPA 3: HIDRATAR PRODUTOS MANUAIS (produtos adicionais)
-        const produtosManuais = pacotesOrcamento.slice(1).map(item => {
-          const produtoCompleto = produtos.find(p => p.id === item.id || p.nome === item.nome);
-          
-          if (produtoCompleto) {
-            // USAR VALORES "CONGELADOS" PARA ORÇAMENTOS FECHADOS
-            const precoItem = orcamento.status === 'fechado'
-              ? item.preco  // Valor congelado
-              : (produtoCompleto.valorVenda || produtoCompleto.preco_venda || produtoCompleto.valor || 0); // Valor atual
-            
-            return {
-              id: produtoCompleto.id,
-              nome: produtoCompleto.nome,
-              preco: precoItem,
-              quantidade: item.quantidade
-            };
-          }
-          
-          // Fallback: usar dados do orçamento se não encontrar na lista mestre
-          return {
-            id: item.id,
-            nome: item.nome,
-            preco: item.preco,
-            quantidade: item.quantidade
-          };
-        });
-        
-        produtosAdicionaisHidratados = [...produtosAdicionaisHidratados, ...produtosManuais];
       }
-      
+
+      // Separa os produtos manuais dos produtos do pacote
+      const produtosManuais = orcamento.pacotes.filter(p => !p.id.startsWith('pacote-'));
+
       setFormData({
         cliente: orcamento.cliente,
-        data: `${year}-${month}-${day}`,
+        data: orcamento.data, // Assumindo que já está em YYYY-MM-DD
         hora: orcamento.hora,
-        categoria: orcamento.categoria || '',
+        categoria: orcamento.categoria,
+        origem: orcamento.origemCliente || '',
         descricao: orcamento.descricao || '',
-        detalhes: orcamento.detalhes,
-        origem: orcamento.origemCliente,
-        pacotePrincipal: pacotePrincipalHidratado,
-        produtosAdicionais: produtosAdicionaisHidratados,
-        valorManual: orcamento.valorManual,
-        isOrcamentoFechado: orcamento.status === 'fechado'
+        detalhes: orcamento.detalhes || '',
+        pacotePrincipal: pacotePrincipalCompleto,
+        produtosAdicionais: produtosManuais,
+        valorFinal: orcamento.valorTotal || 0,
       });
-    } else if (!isOpen) {
-      setFormData(initialFormState);
+    } else {
+      // Limpa o formulário quando o modal é fechado ou não há orçamento
+      setFormData(initialFormData);
     }
-  }, [isOpen, orcamento, pacotes, produtos]);
-  const handleMainPackageSelect = (pacote: any) => {
-    if (!pacote) {
-      setFormData(prev => ({
-        ...prev,
-        pacotePrincipal: null,
-        produtosAdicionais: prev.produtosAdicionais.filter(p => !(p as any).inclusoNoPacote)
-      }));
-      return;
-    }
-    let categoriaResolvida = '';
-    if (pacote.categoria) {
-      categoriaResolvida = pacote.categoria;
-    } else if (pacote.categoria_id) {
-      categoriaResolvida = getCategoriaById(pacote.categoria_id);
-    }
-    let novosInclusos: ProdutoSelecionado[] = [];
-    if (pacote.produtosIncluidos && pacote.produtosIncluidos.length > 0) {
-      novosInclusos = pacote.produtosIncluidos.map((produtoIncluso: any) => {
-        const produtoCompleto = produtos.find(p => p.id === produtoIncluso.produtoId);
-        if (produtoCompleto) {
-          return {
-            id: produtoCompleto.id,
-            nome: produtoCompleto.nome,
-            preco: 0, // NOVA LÓGICA: Produtos inclusos têm preço 0 na exibição
-            quantidade: produtoIncluso.quantidade || 1,
-            inclusoNoPacote: true
-          } as ProdutoSelecionado & {
-            inclusoNoPacote: boolean;
-          };
-        }
-        return null;
-      }).filter(Boolean);
-    }
+  }, [isOpen, orcamento, pacotes]);
+  
+  // 3. Lógica de Cálculo Reativa
+  const totalCalculado = useMemo(() => {
+    const valorPacote = formData.pacotePrincipal?.valor || 0;
+    const valorProdutos = formData.produtosAdicionais.reduce((total, p) => total + (p.preco * p.quantidade), 0);
+    return valorPacote + valorProdutos;
+  }, [formData.pacotePrincipal, formData.produtosAdicionais]);
+
+  // 4. FUNÇÕES DE CALLBACK: O modal controla as alterações de estado.
+  const handleFormChange = (field: keyof FormData, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handlePackageSelect = (pacote: any | null) => {
     setFormData(prev => ({
       ...prev,
       pacotePrincipal: pacote,
-      categoria: categoriaResolvida,
-      produtosAdicionais: [...prev.produtosAdicionais.filter(p => !(p as any).inclusoNoPacote), ...novosInclusos]
+      // A categoria é automaticamente definida pelo pacote
+      categoria: pacote ? pacote.categoria : prev.categoria,
     }));
   };
-  const handleClearMainPackage = () => {
-    setFormData(prev => ({
-      ...prev,
-      pacotePrincipal: null,
-      produtosAdicionais: prev.produtosAdicionais.filter(p => !(p as any).inclusoNoPacote)
-    }));
-  };
+
   const handleAddProduct = (produto: any) => {
     if (!produto) return;
+    
     const existeProduto = formData.produtosAdicionais.some(p => p.id === produto.id);
     if (existeProduto) {
-      toast({
-        title: "Aviso",
-        description: "Este produto já foi adicionado!"
-      });
+      toast({ title: "Aviso", description: "Este produto já foi adicionado!" });
       return;
     }
-    const newProduto: ProdutoSelecionado = {
+
+    const novoProduto: PacoteProduto = {
       id: produto.id,
       nome: produto.nome,
       preco: produto.valorVenda || produto.preco_venda || produto.valor || 0,
-      quantidade: 1
+      quantidade: 1,
     };
     setFormData(prev => ({
       ...prev,
-      produtosAdicionais: [...prev.produtosAdicionais, newProduto]
+      produtosAdicionais: [...prev.produtosAdicionais, novoProduto],
     }));
   };
-  const handleRemoveProduct = (index: number) => {
-    const produto = formData.produtosAdicionais[index];
-    if ((produto as any).inclusoNoPacote) {
-      toast({
-        title: "Aviso",
-        description: "Este produto está incluso no pacote e não pode ser removido individualmente. Remova o pacote principal para removê-lo."
-      });
+  
+  const handleRemoveProduct = (productId: string) => {
+    setFormData(prev => ({
+        ...prev,
+        produtosAdicionais: prev.produtosAdicionais.filter(p => p.id !== productId)
+    }));
+  };
+  
+  const handleUpdateProduct = (productId: string, field: keyof PacoteProduto, value: any) => {
+     setFormData(prev => ({
+        ...prev,
+        produtosAdicionais: prev.produtosAdicionais.map(p => 
+            p.id === productId ? { ...p, [field]: value } : p
+        )
+    }));
+  };
+
+  // 5. LÓGICA DE SALVAMENTO CORRETA
+  const handleSave = () => {
+    if (!formData.cliente || !formData.data) {
+      toast({ title: "Erro", description: "Cliente e Data são obrigatórios.", variant: "destructive" });
       return;
     }
-    setFormData(prev => ({
-      ...prev,
-      produtosAdicionais: prev.produtosAdicionais.filter((_, i) => i !== index)
-    }));
-  };
-  const handleUpdateProductQuantity = (index: number, quantidade: number) => {
-    if (quantidade <= 0) return;
-    setFormData(prev => ({
-      ...prev,
-      produtosAdicionais: prev.produtosAdicionais.map((produto, i) => i === index ? {
-        ...produto,
-        quantidade
-      } : produto)
-    }));
-  };
-  const handleClearCategory = () => {
-    setFormData(prev => ({
-      ...prev,
-      categoria: ''
-    }));
-  };
-  const handleSave = () => {
-    if (!orcamento) return;
-    // NOVA LÓGICA DE PACOTE FECHADO: O valor base do pacote é o preço final
-    const valorPacotePrincipal = formData.pacotePrincipal ? formData.pacotePrincipal.valorVenda || formData.pacotePrincipal.valor_base || formData.pacotePrincipal.valor || 0 : 0;
-    
-    // Separar produtos inclusos no pacote dos produtos manuais
-    const produtosInclusos = formData.produtosAdicionais.filter(p => (p as any).inclusoNoPacote);
-    const produtosManuais = formData.produtosAdicionais.filter(p => !(p as any).inclusoNoPacote);
-    
-    // Apenas somar produtos adicionados manualmente (não inclusos no pacote)
-    const valorProdutosManuais = produtosManuais.reduce((total, p) => total + p.preco * p.quantidade, 0);
-    
-    // Total = Valor base do pacote + produtos manuais (produtos inclusos não somam)
-    const valorTotal = valorPacotePrincipal + valorProdutosManuais;
-    const pacotesParaSalvar: PacoteProduto[] = [];
-    if (formData.pacotePrincipal) {
-      pacotesParaSalvar.push({
-        id: formData.pacotePrincipal.id,
-        nome: formData.pacotePrincipal.nome,
-        preco: valorPacotePrincipal,
-        quantidade: 1
-      });
-    }
-    pacotesParaSalvar.push(...formData.produtosAdicionais);
-    const updates: Partial<Orcamento> = {
+
+    const orcamentoAtualizado: Orcamento = {
+      ...(orcamento as Orcamento),
+      cliente: formData.cliente,
+      data: formData.data, // Já está no formato correto
+      hora: formData.hora,
+      categoria: formData.categoria,
+      origemCliente: formData.origem,
+      descricao: formData.descricao,
       detalhes: formData.detalhes,
-      data: formatDateForStorage(formData.data),
-      hora: formData.hora
+      pacotes: [
+        ...(formData.pacotePrincipal ? [{ 
+          id: `pacote-${formData.pacotePrincipal.id}`, 
+          nome: formData.pacotePrincipal.nome, 
+          preco: formData.pacotePrincipal.valor, 
+          quantidade: 1 
+        }] : []),
+        ...formData.produtosAdicionais,
+      ],
+      valorTotal: formData.valorFinal || totalCalculado,
+      valorManual: formData.valorFinal !== totalCalculado ? formData.valorFinal : undefined,
     };
-    if (!formData.isOrcamentoFechado) {
-      if (formData.cliente) {
-        updates.cliente = formData.cliente;
-      }
-      updates.categoria = formData.categoria;
-      updates.descricao = formData.descricao;
-      updates.origemCliente = formData.origem;
-      updates.pacotes = pacotesParaSalvar;
-      updates.valorTotal = valorTotal;
-      updates.valorManual = formData.valorManual;
-    }
-    atualizarOrcamento(orcamento.id, updates);
-    toast({
-      title: "Sucesso",
-      description: "Orçamento atualizado com sucesso!"
-    });
+    
+    atualizarOrcamento(orcamento!.id, orcamentoAtualizado);
+
+    toast({ title: "Sucesso", description: "Orçamento atualizado com sucesso!" });
     onClose();
   };
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+  };
+
   if (!orcamento) return null;
-  // NOVA LÓGICA DE PACOTE FECHADO: O valor base do pacote é o preço final
-  const valorPacotePrincipal = formData.pacotePrincipal ? formData.pacotePrincipal.valorVenda || formData.pacotePrincipal.valor_base || formData.pacotePrincipal.valor || 0 : 0;
-  
-  // Separar produtos inclusos no pacote dos produtos manuais
-  const produtosInclusos = formData.produtosAdicionais.filter(p => (p as any).inclusoNoPacote);
-  const produtosManuais = formData.produtosAdicionais.filter(p => !(p as any).inclusoNoPacote);
-  
-  // Apenas somar produtos adicionados manualmente (não inclusos no pacote)
-  const valorProdutosManuais = produtosManuais.reduce((total, p) => total + p.preco * p.quantidade, 0);
-  
-  // Total = Valor base do pacote + produtos manuais (produtos inclusos não somam)
-  const valorTotal = valorPacotePrincipal + valorProdutosManuais;
-  const valorFinal = formData.valorManual !== undefined ? formData.valorManual : valorTotal;
-  return <Dialog open={isOpen} onOpenChange={onClose} modal={false}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" onInteractOutside={event => {
-      // Verifica se algum dos menus está aberto
-      if (categoriaMenuAberto || origemMenuAberto) {
-        // Impede que o clique feche o Dialog
-        event.preventDefault();
 
-        // Fecha os menus que estiverem abertos
-        setCategoriaMenuAberto(false);
-        setOrigemMenuAberto(false);
-      }
-    }}>
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Pen className="h-5 w-5" />
-            Editar Orçamento
-          </DialogTitle>
+          <DialogTitle>Editar Orçamento</DialogTitle>
         </DialogHeader>
+        
+        {/* Formulário com estado controlado */}
+        <div className="space-y-4 p-1">
+          {/* Cliente */}
+          <div>
+            <label className="text-sm font-medium mb-1 block">Cliente</label>
+            <ClientSearchInput
+              clientes={clientes}
+              selectedClient={formData.cliente}
+              onSelectClient={(client) => handleFormChange('cliente', client)}
+              placeholder="Selecione um cliente"
+              disabled={orcamento.status === 'fechado'}
+            />
+          </div>
 
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Data e Hora */}
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium mb-1 block">Cliente</label>
-              <ClientSearchInput clientes={clientes} selectedClient={formData.cliente} onSelectClient={cliente => setFormData(prev => ({
-              ...prev,
-              cliente
-            }))} placeholder="Selecione um cliente" disabled={formData.isOrcamentoFechado} />
+              <label className="text-sm font-medium mb-1 block">Data</label>
+              <Input
+                type="date"
+                value={formData.data}
+                onChange={(e) => handleFormChange('data', e.target.value)}
+              />
             </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="text-sm font-medium mb-1 block">Data</label>
-                <div className="relative">
-                  <Calendar className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input type="date" value={formData.data} onChange={e => setFormData(prev => ({
-                  ...prev,
-                  data: e.target.value
-                }))} className="pl-8" />
-                </div>
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-1 block">Hora</label>
-                <div className="relative">
-                  <Clock className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input type="time" value={formData.hora} onChange={e => setFormData(prev => ({
-                  ...prev,
-                  hora: e.target.value
-                }))} className="pl-8" />
-                </div>
-              </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Hora</label>
+              <Input
+                type="time"
+                value={formData.hora}
+                onChange={(e) => handleFormChange('hora', e.target.value)}
+              />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Categoria e Origem */}
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-sm font-medium">Categoria (Opcional)</label>
-                {formData.categoria && <Button type="button" variant="ghost" size="sm" onClick={handleClearCategory} className="h-6 w-6 p-0" disabled={formData.isOrcamentoFechado}>
-                    <X className="h-3 w-3" />
-                  </Button>}
-              </div>
-              <Select open={categoriaMenuAberto} onOpenChange={setCategoriaMenuAberto} value={formData.categoria} onValueChange={categoria => setFormData(prev => ({
-              ...prev,
-              categoria
-            }))} disabled={formData.isOrcamentoFechado}>
+              <label className="text-sm font-medium mb-1 block">Categoria</label>
+              <Select
+                value={formData.categoria}
+                onValueChange={(value) => handleFormChange('categoria', value)}
+                disabled={orcamento.status === 'fechado'}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione uma categoria" />
                 </SelectTrigger>
                 <SelectContent>
-                  {categorias.map(categoria => <SelectItem key={categoria} value={categoria}>
+                  {categorias.map(categoria => (
+                    <SelectItem key={categoria} value={categoria}>
                       {categoria}
-                    </SelectItem>)}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
-
             <div>
               <label className="text-sm font-medium mb-1 block">Origem</label>
-              <Select open={origemMenuAberto} onOpenChange={setOrigemMenuAberto} value={formData.origem} onValueChange={origem => setFormData(prev => ({
-              ...prev,
-              origem
-            }))} disabled={formData.isOrcamentoFechado}>
+              <Select
+                value={formData.origem}
+                onValueChange={(value) => handleFormChange('origem', value)}
+                disabled={orcamento.status === 'fechado'}
+              >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione" />
+                  <SelectValue placeholder="Selecione uma origem" />
                 </SelectTrigger>
                 <SelectContent>
-                  {origens.map(origem => <SelectItem key={origem.id} value={origem.id}>
+                  {origens.map(origem => (
+                    <SelectItem key={origem.id} value={origem.id}>
                       {origem.nome}
-                    </SelectItem>)}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
           </div>
 
+          {/* Descrição */}
           <div>
             <label className="text-sm font-medium mb-1 block">Descrição</label>
-            <Input placeholder="Descrição do serviço (será levada para Agenda e Workflow)" value={formData.descricao} onChange={e => setFormData(prev => ({
-            ...prev,
-            descricao: e.target.value
-          }))} disabled={formData.isOrcamentoFechado} />
+            <Input
+              placeholder="Descrição do serviço"
+              value={formData.descricao}
+              onChange={(e) => handleFormChange('descricao', e.target.value)}
+              disabled={orcamento.status === 'fechado'}
+            />
           </div>
 
+          {/* Pacote Principal */}
+          <div>
+            <label className="text-sm font-medium mb-1 block">Pacote Principal (Opcional)</label>
+            {orcamento.status === 'fechado' ? (
+              <div className="p-2 border rounded bg-muted text-muted-foreground">
+                Pacote não pode ser alterado em orçamento fechado
+              </div>
+            ) : (
+              <PackageSearchCombobox
+                pacotes={pacotes}
+                value={formData.pacotePrincipal}
+                onSelect={handlePackageSelect}
+                filtrarPorCategoria={formData.categoria}
+                placeholder="Selecionar pacote..."
+              />
+            )}
+            {formData.pacotePrincipal && (
+              <div className="mt-2 p-3 bg-muted rounded-lg border">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">{formData.pacotePrincipal.nome}</span>
+                  <span className="font-bold text-primary">{formatCurrency(formData.pacotePrincipal.valor)}</span>
+                </div>
+                {formData.pacotePrincipal.categoria && (
+                  <span className="text-sm text-muted-foreground">{formData.pacotePrincipal.categoria}</span>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Produtos Adicionais */}
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <label className="text-sm font-medium">Produtos Adicionais</label>
+              {orcamento.status !== 'fechado' && (
+                <ProductSearchCombobox
+                  products={produtos}
+                  onSelect={handleAddProduct}
+                  placeholder="Adicionar produto..."
+                />
+              )}
+            </div>
+            
+            {formData.produtosAdicionais.length > 0 && (
+              <div className="space-y-2 max-h-40 overflow-y-auto">
+                {formData.produtosAdicionais.map((produto, index) => (
+                  <div key={produto.id} className="flex items-center gap-2 p-2 bg-muted rounded border">
+                    <div className="flex-1">
+                      <span className="text-sm font-medium">{produto.nome}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        min="1"
+                        value={produto.quantidade}
+                        onChange={(e) => handleUpdateProduct(produto.id, 'quantidade', parseInt(e.target.value) || 1)}
+                        className="w-16 h-8 text-xs"
+                        disabled={orcamento.status === 'fechado'}
+                      />
+                      <span className="text-sm font-medium min-w-[80px]">
+                        {formatCurrency(produto.preco * produto.quantidade)}
+                      </span>
+                      {orcamento.status !== 'fechado' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveProduct(produto.id)}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Valor Total */}
+          <div className="border-t pt-4">
+            <div className="flex justify-between items-center">
+              <span className="text-lg font-medium">Total Calculado:</span>
+              <span className="text-lg font-bold text-primary">{formatCurrency(totalCalculado)}</span>
+            </div>
+            
+            {orcamento.status !== 'fechado' && (
+              <div className="mt-2">
+                <label className="text-sm font-medium mb-1 block">Valor Final (opcional - sobrescreve cálculo)</label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder={`Deixe vazio para usar ${formatCurrency(totalCalculado)}`}
+                  value={formData.valorFinal || ''}
+                  onChange={(e) => handleFormChange('valorFinal', parseFloat(e.target.value) || 0)}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Detalhes */}
           <div>
             <label className="text-sm font-medium mb-1 block">Detalhes</label>
-            <Textarea placeholder="Anotações internas do orçamento" value={formData.detalhes} onChange={e => setFormData(prev => ({
-            ...prev,
-            detalhes: e.target.value
-          }))} rows={5} className="resize-none" />
-          </div>
-
-          {!formData.isOrcamentoFechado && <div className="space-y-6">
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm font-medium">Pacote Principal (Opcional)</label>
-                  {formData.pacotePrincipal && <Button type="button" variant="ghost" size="sm" onClick={handleClearMainPackage} className="h-6 w-6 p-0">
-                      <X className="h-3 w-3" />
-                    </Button>}
-                </div>
-                <PackageSearchCombobox pacotes={pacotes} value={formData.pacotePrincipal} onSelect={handleMainPackageSelect} placeholder="Buscar pacote..." filtrarPorCategoria={formData.categoria} />
-                {formData.pacotePrincipal && <div className="mt-2 p-3 bg-primary/5 border border-primary/20 rounded-lg">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="text-sm font-medium text-inherit">{formData.pacotePrincipal.nome}</p>
-                        <p className="text-xs text-primary/70">Pacote Principal</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-medium text-inherit">
-                          R$ {valorPacotePrincipal.toFixed(2)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>}
-              </div>
-
-              <div>
-                <label className="text-sm font-medium mb-2 block">Produtos Adicionais</label>
-                <ProductSearchCombobox products={produtos} onSelect={handleAddProduct} placeholder="Buscar e adicionar produto..." />
-                
-                <div className="mt-3 space-y-2">
-                  {formData.produtosAdicionais.length === 0 ? <p className="text-xs text-muted-foreground p-3 bg-muted/30 rounded-lg text-center">
-                      Nenhum produto adicional
-                    </p> : formData.produtosAdicionais.map((produto, index) => {
-                const isIncluded = (produto as any).inclusoNoPacote;
-                return <div key={index} className={`flex justify-between items-center p-3 rounded-lg ${isIncluded ? 'bg-primary/5 border border-primary/20' : 'bg-muted/50'}`}>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <p className={`text-sm font-medium ${isIncluded ? 'text-primary' : ''}`}>
-                                {produto.nome}
-                              </p>
-                              {isIncluded && <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                                  Incluso no pacote
-                                </span>}
-                            </div>
-                            <p className={`text-xs ${isIncluded ? 'text-primary/70' : 'text-muted-foreground'}`}>
-                              R$ {produto.preco.toFixed(2)} cada
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <div className="flex items-center gap-2">
-                              <label className={`text-xs ${isIncluded ? 'text-primary/70' : 'text-muted-foreground'}`}>
-                                Qtd:
-                              </label>
-                              <Input type="number" min="1" value={produto.quantidade} onChange={e => handleUpdateProductQuantity(index, parseInt(e.target.value) || 1)} className="w-16 h-7 text-xs" disabled={isIncluded && formData.isOrcamentoFechado} />
-                            </div>
-                            <div className="text-right min-w-[80px]">
-                              <p className={`text-sm font-medium ${isIncluded ? 'text-primary' : ''}`}>
-                                R$ {(produto.preco * produto.quantidade).toFixed(2)}
-                              </p>
-                            </div>
-                            <Button variant="ghost" size="sm" onClick={() => handleRemoveProduct(index)} className={`h-6 w-6 p-0 ${isIncluded ? 'text-primary/50 hover:text-primary cursor-not-allowed' : 'text-red-500 hover:text-red-700'}`} disabled={isIncluded}>
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </div>;
-              })}
-                </div>
-              </div>
-            </div>}
-
-          {(formData.pacotePrincipal || formData.produtosAdicionais.length > 0) && <div className="border-t pt-4">
-              <h4 className="text-sm font-medium mb-3">Resumo do Orçamento</h4>
-              <div className="space-y-2">
-                {formData.pacotePrincipal && <div className="flex justify-between items-center text-sm">
-                    <span>Pacote Principal: {formData.pacotePrincipal.nome}</span>
-                    <span className="font-medium">R$ {valorPacotePrincipal.toFixed(2)}</span>
-                  </div>}
-                {produtosManuais.length > 0 && <div className="flex justify-between items-center text-sm">
-                    <span>Produtos Manuais ({produtosManuais.length})</span>
-                    <span className="font-medium">R$ {valorProdutosManuais.toFixed(2)}</span>
-                  </div>}
-                {produtosInclusos.length > 0 && <div className="flex justify-between items-center text-sm text-green-600">
-                    <span>Produtos Inclusos ({produtosInclusos.length})</span>
-                    <span className="font-medium">Incluso no pacote</span>
-                  </div>}
-              </div>
-            </div>}
-
-          <div className="mt-4">
-            <div className="flex justify-between items-center font-medium mb-2">
-              <span className="text-sm">Total Calculado:</span>
-              <span className="text-sm">R$ {valorTotal.toFixed(2)}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium">Valor Final:</label>
-              <Input type="number" min="0" step="0.01" value={formData.valorManual !== undefined ? formData.valorManual : ''} onChange={e => setFormData(prev => ({
-              ...prev,
-              valorManual: e.target.value ? parseFloat(e.target.value) : undefined
-            }))} placeholder={`R$ ${valorTotal.toFixed(2)}`} className="max-w-40" disabled={formData.isOrcamentoFechado} />
-            </div>
+            <Textarea
+              placeholder="Observações internas sobre o orçamento..."
+              value={formData.detalhes}
+              onChange={(e) => handleFormChange('detalhes', e.target.value)}
+              rows={3}
+            />
           </div>
         </div>
 
-        <DialogFooter className="flex justify-between mt-4">
+        <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
           <Button onClick={handleSave}>Salvar Alterações</Button>
         </DialogFooter>
       </DialogContent>
-    </Dialog>;
+    </Dialog>
+  );
 }
