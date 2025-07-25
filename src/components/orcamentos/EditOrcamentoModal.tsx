@@ -127,7 +127,7 @@ export default function EditOrcamentoModal({
           return {
             id: produtoCompleto.id,
             nome: produtoCompleto.nome,
-            preco: produtoCompleto.valorVenda || produtoCompleto.preco_venda || 0,
+            preco: 0, // NOVA LÓGICA: Produtos inclusos têm preço 0 na exibição
             quantidade: produtoIncluso.quantidade || 1,
             inclusoNoPacote: true
           } as ProdutoSelecionado & {
@@ -204,9 +204,18 @@ export default function EditOrcamentoModal({
   };
   const handleSave = () => {
     if (!orcamento) return;
+    // NOVA LÓGICA DE PACOTE FECHADO: O valor base do pacote é o preço final
     const valorPacotePrincipal = formData.pacotePrincipal ? formData.pacotePrincipal.valorVenda || formData.pacotePrincipal.valor_base || formData.pacotePrincipal.valor || 0 : 0;
-    const valorProdutos = formData.produtosAdicionais.reduce((total, p) => total + p.preco * p.quantidade, 0);
-    const valorTotal = valorPacotePrincipal + valorProdutos;
+    
+    // Separar produtos inclusos no pacote dos produtos manuais
+    const produtosInclusos = formData.produtosAdicionais.filter(p => (p as any).inclusoNoPacote);
+    const produtosManuais = formData.produtosAdicionais.filter(p => !(p as any).inclusoNoPacote);
+    
+    // Apenas somar produtos adicionados manualmente (não inclusos no pacote)
+    const valorProdutosManuais = produtosManuais.reduce((total, p) => total + p.preco * p.quantidade, 0);
+    
+    // Total = Valor base do pacote + produtos manuais (produtos inclusos não somam)
+    const valorTotal = valorPacotePrincipal + valorProdutosManuais;
     const pacotesParaSalvar: PacoteProduto[] = [];
     if (formData.pacotePrincipal) {
       pacotesParaSalvar.push({
@@ -241,9 +250,18 @@ export default function EditOrcamentoModal({
     onClose();
   };
   if (!orcamento) return null;
+  // NOVA LÓGICA DE PACOTE FECHADO: O valor base do pacote é o preço final
   const valorPacotePrincipal = formData.pacotePrincipal ? formData.pacotePrincipal.valorVenda || formData.pacotePrincipal.valor_base || formData.pacotePrincipal.valor || 0 : 0;
-  const valorProdutos = formData.produtosAdicionais.reduce((total, p) => total + p.preco * p.quantidade, 0);
-  const valorTotal = valorPacotePrincipal + valorProdutos;
+  
+  // Separar produtos inclusos no pacote dos produtos manuais
+  const produtosInclusos = formData.produtosAdicionais.filter(p => (p as any).inclusoNoPacote);
+  const produtosManuais = formData.produtosAdicionais.filter(p => !(p as any).inclusoNoPacote);
+  
+  // Apenas somar produtos adicionados manualmente (não inclusos no pacote)
+  const valorProdutosManuais = produtosManuais.reduce((total, p) => total + p.preco * p.quantidade, 0);
+  
+  // Total = Valor base do pacote + produtos manuais (produtos inclusos não somam)
+  const valorTotal = valorPacotePrincipal + valorProdutosManuais;
   const valorFinal = formData.valorManual !== undefined ? formData.valorManual : valorTotal;
   return <Dialog open={isOpen} onOpenChange={onClose} modal={false}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" onInteractOutside={event => {
@@ -431,9 +449,13 @@ export default function EditOrcamentoModal({
                     <span>Pacote Principal: {formData.pacotePrincipal.nome}</span>
                     <span className="font-medium">R$ {valorPacotePrincipal.toFixed(2)}</span>
                   </div>}
-                {formData.produtosAdicionais.length > 0 && <div className="flex justify-between items-center text-sm">
-                    <span>Produtos Adicionais ({formData.produtosAdicionais.length})</span>
-                    <span className="font-medium">R$ {valorProdutos.toFixed(2)}</span>
+                {produtosManuais.length > 0 && <div className="flex justify-between items-center text-sm">
+                    <span>Produtos Manuais ({produtosManuais.length})</span>
+                    <span className="font-medium">R$ {valorProdutosManuais.toFixed(2)}</span>
+                  </div>}
+                {produtosInclusos.length > 0 && <div className="flex justify-between items-center text-sm text-green-600">
+                    <span>Produtos Inclusos ({produtosInclusos.length})</span>
+                    <span className="font-medium">Incluso no pacote</span>
                   </div>}
               </div>
             </div>}

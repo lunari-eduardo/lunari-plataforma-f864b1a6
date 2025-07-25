@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { ProductSelector } from './ProductSelector';
+import { SalvarPacoteModal } from './SalvarPacoteModal';
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
 interface ProdutoAdicional {
   id: string;
@@ -27,6 +28,7 @@ export function CalculadoraServicos({
   custosFixosTotal
 }: CalculadoraServicosProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [salvarPacoteModalOpen, setSalvarPacoteModalOpen] = useState(false);
   
   // Base de cálculo - Horas (persistente)
   const [horasDisponiveis, setHorasDisponiveis] = useState(8);
@@ -360,20 +362,41 @@ export function CalculadoraServicos({
                               <span>R$ {lucroLiquido.toFixed(2)}</span>
                             </div>
                             
-                            <div className="flex justify-between text-sm text-green-600">
-                              <span>Lucratividade (%):</span>
-                              <span>{lucratividade.toFixed(1)}%</span>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  </div>
-                </div>
-            </CollapsibleContent>
-          </Collapsible>
-        </div>
-      </div>
-    </div>
+                             <div className="flex justify-between text-sm text-green-600">
+                               <span>Lucratividade (%):</span>
+                               <span>{lucratividade.toFixed(1)}%</span>
+                             </div>
+                             
+                             {/* BOTÃO PARA SALVAR COMO PACOTE */}
+                             <div className="border-t border-lunar-border/30 pt-4 mt-4">
+                               <Button 
+                                 onClick={() => setSalvarPacoteModalOpen(true)}
+                                 className="w-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-800 hover:bg-emerald-500/30"
+                                 disabled={precoFinal <= 0}
+                               >
+                                 📦 [+] Salvar como Pacote
+                               </Button>
+                             </div>
+                           </div>
+                         </CardContent>
+                       </Card>
+                     </div>
+                   </div>
+                 </div>
+             </CollapsibleContent>
+           </Collapsible>
+         </div>
+         
+         {/* Modal para Salvar Pacote */}
+         <SalvarPacoteModal
+           isOpen={salvarPacoteModalOpen}
+           onClose={() => setSalvarPacoteModalOpen(false)}
+           precoFinal={precoFinal}
+           produtos={produtos}
+           horasEstimadas={horasEstimadas}
+           markup={markup}
+         />
+       </div>
+     </div>
   );
 }

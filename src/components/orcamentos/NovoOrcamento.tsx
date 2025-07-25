@@ -64,9 +64,18 @@ export default function NovoOrcamento() {
     }
   }, [location.search]);
 
+  // NOVA LÓGICA DE PACOTE FECHADO: O valor base do pacote é o preço final
   const valorPacote = pacoteSelecionado?.valor || 0;
-  const valorProdutos = produtosAdicionais.reduce((total, p) => total + p.preco * p.quantidade, 0);
-  const valorTotal = valorPacote + valorProdutos;
+  
+  // Separar produtos inclusos no pacote dos produtos manuais
+  const produtosInclusos = produtosAdicionais.filter(p => p.id.startsWith('auto-'));
+  const produtosManuais = produtosAdicionais.filter(p => !p.id.startsWith('auto-'));
+  
+  // Apenas somar produtos adicionados manualmente (não inclusos no pacote)
+  const valorProdutosManuais = produtosManuais.reduce((total, p) => total + p.preco * p.quantidade, 0);
+  
+  // Total = Valor base do pacote + produtos manuais (produtos inclusos não somam)
+  const valorTotal = valorPacote + valorProdutosManuais;
   const valorFinal = valorManual !== undefined ? valorManual : valorTotal;
 
   // Lógica de preenchimento automático - A Regra de Ouro
@@ -86,13 +95,13 @@ export default function NovoOrcamento() {
     
     // Se o pacote tem produtos incluídos, adiciona automaticamente
     if (pacote?.produtosIncluidos && pacote.produtosIncluidos.length > 0) {
-      const produtosDosPacotes = pacote.produtosIncluidos.map(produtoIncluido => {
+        const produtosDosPacotes = pacote.produtosIncluidos.map(produtoIncluido => {
         const produto = produtos.find(p => p.id === produtoIncluido.produtoId);
         if (produto) {
           return {
             id: `auto-${produto.id}`,
             nome: `${produto.nome} (incluso no pacote)`,
-            preco: produto.valorVenda, // Usar o preço real do produto
+            preco: 0, // NOVA LÓGICA: Produtos inclusos têm preço 0 na exibição
             quantidade: produtoIncluido.quantidade
           };
         }
@@ -403,7 +412,9 @@ export default function NovoOrcamento() {
                     <Input 
                       placeholder="Nome do produto" 
                       value={produto.nome} 
-                      onChange={e => atualizarProduto(produto.id, 'nome', e.target.value)} 
+                      onChange={e => atualizarProduto(produto.id, 'nome', e.target.value)}
+                      disabled={produto.id.startsWith('auto-')} // Produtos inclusos não podem ser editados
+                      className={produto.id.startsWith('auto-') ? 'bg-green-50 text-green-700' : ''}
                     />
                   </div>
                   <div>
@@ -412,20 +423,27 @@ export default function NovoOrcamento() {
                       type="number" 
                       min="1" 
                       value={produto.quantidade} 
-                      onChange={e => atualizarProduto(produto.id, 'quantidade', parseInt(e.target.value) || 1)} 
+                      onChange={e => atualizarProduto(produto.id, 'quantidade', parseInt(e.target.value) || 1)}
+                      disabled={produto.id.startsWith('auto-')} // Produtos inclusos não podem ter quantidade alterada
+                      className={produto.id.startsWith('auto-') ? 'bg-green-50 text-green-700' : ''}
                     />
                   </div>
                   <div>
                     <label className="text-xs font-medium mb-1 block">Preço</label>
                     <Input 
-                      type="number" 
-                      min="0" 
-                      step="0.01" 
-                      value={produto.preco} 
-                      onChange={e => atualizarProduto(produto.id, 'preco', parseFloat(e.target.value) || 0)} 
+                      type="text" 
+                      value={produto.id.startsWith('auto-') ? 'Incluso' : produto.preco.toFixed(2)}
+                      onChange={e => !produto.id.startsWith('auto-') && atualizarProduto(produto.id, 'preco', parseFloat(e.target.value) || 0)}
+                      disabled={produto.id.startsWith('auto-')} // Produtos inclusos mostram "Incluso"
+                      className={produto.id.startsWith('auto-') ? 'bg-green-50 text-green-700 text-center font-medium' : ''}
                     />
                   </div>
-                  <Button onClick={() => removerProduto(produto.id)} variant="outline" size="sm">
+                  <Button 
+                    onClick={() => removerProduto(produto.id)} 
+                    variant="outline" 
+                    size="sm"
+                    disabled={produto.id.startsWith('auto-')} // Produtos inclusos não podem ser removidos individualmente
+                  >
                     <Trash2 className="h-3 w-3" />
                   </Button>
                 </div>
@@ -446,10 +464,16 @@ export default function NovoOrcamento() {
                     <span>R$ {valorPacote.toFixed(2)}</span>
                   </div>
                 )}
-                {produtosAdicionais.length > 0 && (
+                {produtosManuais.length > 0 && (
                   <div className="flex justify-between text-sm">
-                    <span>Produtos:</span>
-                    <span>R$ {valorProdutos.toFixed(2)}</span>
+                    <span>Produtos Manuais:</span>
+                    <span>R$ {valorProdutosManuais.toFixed(2)}</span>
+                  </div>
+                )}
+                {produtosInclusos.length > 0 && (
+                  <div className="flex justify-between text-sm text-green-600">
+                    <span>Produtos Inclusos:</span>
+                    <span>Incluso no pacote</span>
                   </div>
                 )}
                 <div className="border-t pt-2">

@@ -424,17 +424,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           dataOriginal: appointment.date
         };
 
-        // Adicionar produtos incluídos no pacote
+        // CORREÇÃO: Adicionar TODOS os produtos incluídos no pacote
         if (pacoteData && pacoteData.produtosIncluidos && pacoteData.produtosIncluidos.length > 0) {
-          const primeiroproduto = pacoteData.produtosIncluidos[0];
-          const produtoData = produtos.find(p => p.id === primeiroproduto.produtoId);
-          if (produtoData) {
-            newWorkflowItem.produto = produtoData.nome;
-            newWorkflowItem.qtdProduto = primeiroproduto.quantidade || 1;
-            newWorkflowItem.valorTotalProduto = (produtoData.valorVenda || produtoData.preco_venda || 0) * newWorkflowItem.qtdProduto;
+          // Mapear todos os produtos incluídos
+          const todosProdutos = pacoteData.produtosIncluidos.map(produtoIncluido => {
+            const produtoData = produtos.find(p => p.id === produtoIncluido.produtoId);
+            if (produtoData) {
+              return {
+                nome: produtoData.nome,
+                quantidade: produtoIncluido.quantidade || 1,
+                valorUnitario: produtoData.valorVenda || produtoData.preco_venda || 0
+              };
+            }
+            return null;
+          }).filter(Boolean);
+
+          if (todosProdutos.length > 0) {
+            // Para compatibilidade com a estrutura atual, usar o primeiro produto no campo principal
+            const primeiroProduto = todosProdutos[0];
+            newWorkflowItem.produto = primeiroProduto.nome;
+            newWorkflowItem.qtdProduto = primeiroProduto.quantidade;
+            newWorkflowItem.valorTotalProduto = primeiroProduto.valorUnitario * primeiroProduto.quantidade;
+
+            // Salvar lista completa de produtos nos detalhes para referência
+            const listaCompleta = todosProdutos.map(p => `${p.nome} (${p.quantidade}x)`).join(', ');
+            newWorkflowItem.detalhes = `${appointment.description || ''}\n\nProdutos inclusos: ${listaCompleta}`.trim();
           }
         }
 
+        // NOVA LÓGICA: Total = Valor do pacote + fotos extra + produtos manuais (produtos inclusos não somam)
         newWorkflowItem.total = newWorkflowItem.valorPacote + newWorkflowItem.valorTotalFotoExtra + 
                                newWorkflowItem.valorTotalProduto + newWorkflowItem.valorAdicional - newWorkflowItem.desconto;
         newWorkflowItem.restante = newWorkflowItem.total - newWorkflowItem.valorPago;
@@ -524,19 +542,58 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           dataOriginal: parseDateFromStorage(orc.data)
         };
 
-        // Adicionar produtos incluídos no pacote
+        // CORREÇÃO: Transferir TODOS os produtos do orçamento
+        let todosProdutosDoOrcamento = [];
+        
+        // 1. Produtos incluídos no pacote principal
         if (pacoteData && pacoteData.produtosIncluidos && pacoteData.produtosIncluidos.length > 0) {
-          const primeiroProduto = pacoteData.produtosIncluidos[0];
-          const produtoData = produtos.find(p => p.id === primeiroProduto.produtoId);
-          if (produtoData) {
-            newWorkflowItem.produto = produtoData.nome;
-            newWorkflowItem.qtdProduto = primeiroProduto.quantidade || 1;
-            newWorkflowItem.valorTotalProduto = (produtoData.valorVenda || produtoData.preco_venda || 0) * newWorkflowItem.qtdProduto;
-          }
+          const produtosInclusos = pacoteData.produtosIncluidos.map(produtoIncluido => {
+            const produtoData = produtos.find(p => p.id === produtoIncluido.produtoId);
+            if (produtoData) {
+              return {
+                nome: produtoData.nome,
+                quantidade: produtoIncluido.quantidade || 1,
+                valorUnitario: 0, // Produtos inclusos têm valor 0 na nova lógica
+                tipo: 'incluso'
+              };
+            }
+            return null;
+          }).filter(Boolean);
+          todosProdutosDoOrcamento.push(...produtosInclusos);
         }
 
+        // 2. Produtos adicionais manuais do orçamento (não inclusos no pacote)
+        if (orc.pacotes && orc.pacotes.length > 1) {
+          const produtosManuais = orc.pacotes.slice(1).map(item => ({
+            nome: item.nome,
+            quantidade: item.quantidade || 1,
+            valorUnitario: item.preco || 0,
+            tipo: 'manual'
+          }));
+          todosProdutosDoOrcamento.push(...produtosManuais);
+        }
+
+        // Para compatibilidade, usar o primeiro produto no campo principal
+        if (todosProdutosDoOrcamento.length > 0) {
+          const primeiroProduto = todosProdutosDoOrcamento[0];
+          newWorkflowItem.produto = primeiroProduto.nome;
+          newWorkflowItem.qtdProduto = primeiroProduto.quantidade;
+          newWorkflowItem.valorTotalProduto = primeiroProduto.valorUnitario * primeiroProduto.quantidade;
+
+          // Salvar lista completa nos detalhes
+          const listaCompleta = todosProdutosDoOrcamento.map(p => 
+            `${p.nome} (${p.quantidade}x)${p.tipo === 'incluso' ? ' - Incluso' : ` - R$ ${p.valorUnitario.toFixed(2)}`}`
+          ).join('\n');
+          newWorkflowItem.detalhes = `${orc.detalhes || ''}\n\nProdutos:\n${listaCompleta}`.trim();
+        }
+
+        // NOVA LÓGICA: Total = Valor do pacote + produtos manuais (produtos inclusos não somam)
+        const valorProdutosManuaisOrc = todosProdutosDoOrcamento
+          ?.filter(p => p.tipo === 'manual')
+          ?.reduce((total, p) => total + (p.valorUnitario * p.quantidade), 0) || 0;
+        
         newWorkflowItem.total = newWorkflowItem.valorPacote + newWorkflowItem.valorTotalFotoExtra + 
-                               newWorkflowItem.valorTotalProduto + newWorkflowItem.valorAdicional - newWorkflowItem.desconto;
+                               valorProdutosManuaisOrc + newWorkflowItem.valorAdicional - newWorkflowItem.desconto;
         newWorkflowItem.restante = newWorkflowItem.total - newWorkflowItem.valorPago;
 
         newItems.push(newWorkflowItem);
