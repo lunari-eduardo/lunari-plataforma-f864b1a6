@@ -79,14 +79,25 @@ export default function EditOrcamentoModal({
   useEffect(() => {
     if (isOpen && orcamento) {
       const [year, month, day] = orcamento.data.split('-');
-      const pacotes = orcamento.pacotes || [];
-      const pacotePrincipal = pacotes.length > 0 ? pacotes[0] : null;
-      const produtosAdicionais = pacotes.slice(1).map(item => ({
+      const pacotesDoOrcamento = orcamento.pacotes || [];
+      
+      // CORREÇÃO: Buscar pacote principal completo na lista mestra
+      let pacotePrincipalCompleto = null;
+      if (pacotesDoOrcamento.length > 0) {
+        const pacoteOrcamento = pacotesDoOrcamento[0];
+        // Buscar primeiro por ID, depois por nome
+        pacotePrincipalCompleto = pacotes.find(p => p.id === pacoteOrcamento.id) || 
+                                  pacotes.find(p => p.nome === pacoteOrcamento.nome) ||
+                                  pacoteOrcamento; // fallback para o próprio objeto do orçamento
+      }
+      
+      const produtosAdicionais = pacotesDoOrcamento.slice(1).map(item => ({
         id: item.id,
         nome: item.nome,
         preco: item.preco,
         quantidade: item.quantidade
       }));
+      
       setFormData({
         cliente: orcamento.cliente,
         data: `${year}-${month}-${day}`,
@@ -95,7 +106,7 @@ export default function EditOrcamentoModal({
         descricao: orcamento.descricao || '',
         detalhes: orcamento.detalhes,
         origem: orcamento.origemCliente,
-        pacotePrincipal: pacotePrincipal,
+        pacotePrincipal: pacotePrincipalCompleto,
         produtosAdicionais: produtosAdicionais,
         valorManual: orcamento.valorManual,
         isOrcamentoFechado: orcamento.status === 'fechado'
@@ -103,7 +114,7 @@ export default function EditOrcamentoModal({
     } else if (!isOpen) {
       setFormData(initialFormState);
     }
-  }, [isOpen, orcamento]);
+  }, [isOpen, orcamento, pacotes]);
   const handleMainPackageSelect = (pacote: any) => {
     if (!pacote) {
       setFormData(prev => ({

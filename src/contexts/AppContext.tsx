@@ -503,8 +503,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (orc.pacotes && orc.pacotes.length > 0) {
           const pacoteOrcamento = orc.pacotes[0];
           
+          // CORREÇÃO: Melhorar busca do pacote - remover prefixo se existir
+          let pacoteId = pacoteOrcamento.id;
+          if (pacoteId.startsWith('pacote-')) {
+            pacoteId = pacoteId.replace('pacote-', '');
+          }
+          
           // Buscar o pacote completo nos dados de configuração pelo ID primeiro
-          pacoteData = pacotes.find(p => p.id === pacoteOrcamento.id);
+          pacoteData = pacotes.find(p => p.id === pacoteId);
           
           // Se não encontrar por ID, tentar por nome
           if (!pacoteData && pacoteOrcamento.nome) {
@@ -536,7 +542,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           nome: orc.cliente.nome,
           whatsapp: orc.cliente.telefone,
           email: orc.cliente.email,
-          descricao: orc.descricao || orc.detalhes,
+          descricao: orc.descricao || '',
           status: 'Fechado',
           categoria: categoriaName,
           pacote: pacoteData ? pacoteData.nome : (orc.pacotes[0]?.nome || ''),
