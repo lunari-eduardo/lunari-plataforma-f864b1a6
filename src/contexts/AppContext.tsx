@@ -716,6 +716,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           } else if (mudouParaFechado && !agendamentoAssociado) {
             // CORREÇÃO: CRIAR AGENDAMENTO quando orçamento mudou para "fechado"
             // Buscar dados do pacote para incluir produtos
+            console.log('=== CRIANDO AGENDAMENTO DE ORÇAMENTO FECHADO ===');
+            console.log('DEBUG: Dados do orçamento para agendamento:', {
+              orcamento: orcamentoAtualizado,
+              pacotes: orcamentoAtualizado.pacotes,
+              pacoteId: orcamentoAtualizado.pacotes?.[0]?.id,
+              descricao: orcamentoAtualizado.descricao,
+              detalhes: orcamentoAtualizado.detalhes
+            });
+
             let produtosIncluidos: any[] = [];
             
             if (orcamentoAtualizado.pacotes && orcamentoAtualizado.pacotes.length > 0) {
@@ -735,6 +744,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 }).filter(Boolean);
               }
             }
+
+            // CORREÇÃO: Garantir packageId válido com fallback
+            let packageId = orcamentoAtualizado.pacotes?.[0]?.id;
+            if (!packageId && orcamentoAtualizado.pacotes?.[0]?.nome) {
+              // Fallback: buscar pacote por nome nas configurações
+              const pacoteEncontrado = pacotes.find(p => p.nome === orcamentoAtualizado.pacotes[0].nome);
+              packageId = pacoteEncontrado?.id;
+              console.log('DEBUG: Fallback packageId por nome:', { nome: orcamentoAtualizado.pacotes[0].nome, encontrado: packageId });
+            }
             
             const novoAgendamento: Appointment = {
               id: `orcamento-${id}`,
@@ -744,14 +762,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               type: orcamentoAtualizado.categoria || 'Sessão',
               client: orcamentoAtualizado.cliente.nome,
               status: 'confirmado' as AppointmentStatus,
-              description: orcamentoAtualizado.detalhes,
-              packageId: orcamentoAtualizado.pacotes?.[0]?.id,
+              description: orcamentoAtualizado.descricao, // CORREÇÃO: usar descricao em vez de detalhes
+              packageId: packageId,
               produtosIncluidos: produtosIncluidos,
               email: orcamentoAtualizado.cliente.email,
               whatsapp: orcamentoAtualizado.cliente.telefone,
               orcamentoId: id,
               origem: 'orcamento'
             };
+
+            console.log('DEBUG: Agendamento criado:', novoAgendamento);
             
             return [...prevAppointments, novoAgendamento];
           } else if (agendamentoAssociado && statusAtual === 'fechado') {
