@@ -107,48 +107,6 @@ export const useIntegration = () => {
     });
   }, [orcamentos, appointments, addAppointment, updateAppointment, shouldSync]);
 
-  // Monitor orçamentos que saíram do status fechado para reverter agendamentos
-  useEffect(() => {
-    if (syncInProgressRef.current) return;
-
-    // Encontrar agendamentos de orçamentos que não estão mais 'fechados'
-    const appointmentsFromBudgets = appointments.filter(app => 
-      (app.id?.startsWith('orcamento-') || (app as any).origem === 'orcamento') &&
-      (app as any).orcamentoId
-    );
-
-    appointmentsFromBudgets.forEach(appointment => {
-      const budgetId = getBudgetId(appointment);
-      const relatedBudget = orcamentos.find(orc => orc.id === budgetId);
-      
-      if (relatedBudget) {
-        const currentTime = Date.now();
-        if (!shouldSync(`revert-${budgetId}`, currentTime)) return;
-
-        // Se orçamento não está mais fechado, reverter agendamento
-        if (relatedBudget.status !== 'fechado' && relatedBudget.status !== 'cancelado') {
-          if (appointment.status === 'confirmado') {
-            syncInProgressRef.current = true;
-            
-            updateAppointment(appointment.id, {
-              status: 'a confirmar'
-            });
-
-            toast({
-              title: "Status do agendamento atualizado",
-              description: `Agendamento de ${appointment.client} foi alterado para "a confirmar".`,
-              variant: "default"
-            });
-            
-            setTimeout(() => {
-              syncInProgressRef.current = false;
-            }, 50);
-          }
-        }
-      }
-    });
-  }, [orcamentos, appointments, updateAppointment, getBudgetId, shouldSync]);
-
   // Monitor agendamentos removidos de orçamentos cancelados
   useEffect(() => {
     if (syncInProgressRef.current) return;
