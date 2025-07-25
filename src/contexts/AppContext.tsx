@@ -508,6 +508,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (orc.pacotes && orc.pacotes.length > 0) {
         const pacoteOrcamento = orc.pacotes[0];
         
+        console.log('DEBUG: Buscando pacote para workflow', {
+          pacoteOrcamento,
+          pacotesDisponiveis: pacotes,
+          orcamentoCompleto: orc
+        });
+        
         // CORREÇÃO DEFINITIVA: Busca inteligente do pacote com múltiplos fallbacks
         let pacoteId = pacoteOrcamento.id;
         
@@ -525,7 +531,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           pacoteData = pacotes.find(p => p.nome === pacoteOrcamento.nome);
         }
         
-        console.log('Busca de pacote para workflow:', { pacoteId, encontrado: !!pacoteData, pacoteData });
+        // 4. Fallback: usar valores do orçamento se não encontrar na configuração
+        if (!pacoteData) {
+          console.log('DEBUG: Pacote não encontrado na configuração, usando dados do orçamento');
+          pacoteData = {
+            id: pacoteOrcamento.id,
+            nome: pacoteOrcamento.nome,
+            valor: pacoteOrcamento.preco || 0,
+            valor_base: pacoteOrcamento.preco || 0,
+            valorVenda: pacoteOrcamento.preco || 0
+          };
+        }
+        
+        console.log('DEBUG: Resultado da busca de pacote:', { 
+          encontrado: !!pacoteData, 
+          pacoteData,
+          valorPacote: pacoteData?.valor || pacoteOrcamento.preco || 0
+        });
         
         if (pacoteData) {
           // Buscar categoria pelo ID do pacote
