@@ -232,37 +232,52 @@ export default function Agenda() {
       setIsBudgetModalOpen(true);
     }
   };
-  return <div className="space-y-4 pb-20 md:pb-4">
-      <Card className="p-4 bg-lunar-bg my-[4px] mx-0 px-[15px] py-[13px]">
-        <div className="flex flex-col items-center justify-center mb-4 gap-3">
+  return <div className="space-y-2 md:space-y-4 pb-20 md:pb-4 px-2 md:px-0">
+      <Card className="p-2 md:p-4 bg-lunar-bg mx-0">
+        <div className="flex flex-col items-center justify-center mb-2 md:mb-4 gap-2 md:gap-3">
           {/* Navigation and Date Display */}
-          <div className="flex items-center gap-1 px-0 mx-0">
-            <Button variant="outline" onClick={navigateToday} className="h-8 px-3 text-sm bg-lunar-surface hover:bg-lunar-border border-lunar-border">
+          <div className="flex items-center justify-between w-full md:w-auto gap-1">
+            <Button variant="outline" onClick={navigateToday} className="h-8 px-2 md:px-3 text-xs md:text-sm bg-lunar-surface hover:bg-lunar-border border-lunar-border">
               Hoje
             </Button>
             
-            <Button variant="outline" size="icon" onClick={navigatePrevious} aria-label="Período anterior" className="bg-lunar-surface hover:bg-lunar-border border-lunar-border h-8 w-8">
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            
-            <div className="text-base font-medium capitalize min-w-[200px] text-center">
-              {formatDateTitle()}
+            <div className="flex items-center gap-1">
+              <Button variant="outline" size="icon" onClick={navigatePrevious} aria-label="Período anterior" className="bg-lunar-surface hover:bg-lunar-border border-lunar-border h-8 w-8">
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              
+              <div className="text-sm md:text-base font-medium capitalize min-w-[150px] md:min-w-[200px] text-center px-2">
+                {formatDateTitle()}
+              </div>
+              
+              <Button variant="outline" size="icon" onClick={navigateNext} aria-label="Próximo período" className="bg-lunar-surface hover:bg-lunar-border border-lunar-border h-8 w-8">
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
-            
-            <Button variant="outline" size="icon" onClick={navigateNext} aria-label="Próximo período" className="bg-lunar-surface hover:bg-lunar-border border-lunar-border h-8 w-8">
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+
+            {/* View Toggle Buttons - Hidden on mobile, shown on desktop */}
+            <div className="hidden md:flex items-center bg-lunar-surface border border-lunar-border rounded-lg p-1">
+              <Button variant={view === 'day' ? "default" : "ghost"} size="sm" onClick={() => setView('day')} className={view === 'day' ? "bg-lunar-accent text-lunar-text hover:bg-lunar-accentHover" : "text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-bg/50"}>
+                Dia
+              </Button>
+              <Button variant={view === 'week' ? "default" : "ghost"} size="sm" onClick={() => setView('week')} className={view === 'week' ? "bg-lunar-accent text-lunar-text hover:bg-lunar-accentHover" : "text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-bg/50"}>
+                Semana
+              </Button>
+              <Button variant={view === 'month' ? "default" : "ghost"} size="sm" onClick={() => setView('month')} className={view === 'month' ? "bg-lunar-accent text-lunar-text hover:bg-lunar-accentHover" : "text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-bg/50"}>
+                Mês
+              </Button>
+            </div>
           </div>
           
-          {/* View Toggle Buttons */}
-          <div className="flex items-center bg-lunar-surface border border-lunar-border rounded-lg p-1">
-            <Button variant={view === 'day' ? "default" : "ghost"} size="sm" onClick={() => setView('day')} className={view === 'day' ? "bg-lunar-accent text-lunar-text hover:bg-lunar-accentHover" : "text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-bg/50"}>
+          {/* Mobile View Toggle Buttons */}
+          <div className="flex md:hidden items-center bg-lunar-surface border border-lunar-border rounded-lg p-1 w-full">
+            <Button variant={view === 'day' ? "default" : "ghost"} size="sm" onClick={() => setView('day')} className={`flex-1 ${view === 'day' ? "bg-lunar-accent text-lunar-text hover:bg-lunar-accentHover" : "text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-bg/50"}`}>
               Dia
             </Button>
-            <Button variant={view === 'week' ? "default" : "ghost"} size="sm" onClick={() => setView('week')} className={view === 'week' ? "bg-lunar-accent text-lunar-text hover:bg-lunar-accentHover" : "text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-bg/50"}>
+            <Button variant={view === 'week' ? "default" : "ghost"} size="sm" onClick={() => setView('week')} className={`flex-1 ${view === 'week' ? "bg-lunar-accent text-lunar-text hover:bg-lunar-accentHover" : "text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-bg/50"}`}>
               Semana
             </Button>
-            <Button variant={view === 'month' ? "default" : "ghost"} size="sm" onClick={() => setView('month')} className={view === 'month' ? "bg-lunar-accent text-lunar-text hover:bg-lunar-accentHover" : "text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-bg/50"}>
+            <Button variant={view === 'month' ? "default" : "ghost"} size="sm" onClick={() => setView('month')} className={`flex-1 ${view === 'month' ? "bg-lunar-accent text-lunar-text hover:bg-lunar-accentHover" : "text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-bg/50"}`}>
               Mês
             </Button>
           </div>

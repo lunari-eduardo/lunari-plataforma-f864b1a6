@@ -43,37 +43,37 @@ export default function MonthlyView({
     });
   };
   return <div className="w-full overflow-auto">
-      <div className="grid grid-cols-7 gap-1 rounded-lg p-1 bg-neutral-50">
+      <div className="grid grid-cols-7 gap-px md:gap-1 rounded-lg p-px md:p-1 bg-neutral-50">
         {/* Weekday headers */}
-        {weekDays.map((day, index) => <div key={day} className="h-10 p-2 text-center text-xs font-medium text-gray-600 rounded bg-lunar-border">
+        {weekDays.map((day, index) => <div key={day} className="h-8 md:h-10 p-1 md:p-2 text-center text-xs font-medium text-gray-600 rounded bg-lunar-border">
             {day}
           </div>)}
         
         {/* Empty cells before first day */}
-        {emptyDaysBefore.map((_, index) => <div key={`empty-${index}`} className="min-h-[120px] rounded bg-lunar-bg"></div>)}
+        {emptyDaysBefore.map((_, index) => <div key={`empty-${index}`} className="min-h-[80px] md:min-h-[120px] rounded bg-lunar-bg"></div>)}
         
         {/* Days of the month */}
         {daysInMonth.map(day => {
         const dayEvents = getEventsForDay(day);
-        const maxDisplayEvents = 2;
+        const maxDisplayEvents = window.innerWidth < 768 ? 1 : 2;
         const hasMoreEvents = dayEvents.length > maxDisplayEvents;
         const displayEvents = dayEvents.slice(0, maxDisplayEvents);
-        return <div key={day.toString()} onClick={() => onDayClick(day)} className="min-h-[120px] rounded p-2 cursor-pointer transition-colors bg-lunar-surface hover:bg-lunar-bg">
-              <div className="flex justify-between items-center mb-2">
+        return <div key={day.toString()} onClick={() => onDayClick(day)} className="min-h-[80px] md:min-h-[120px] rounded p-1 md:p-2 cursor-pointer transition-colors bg-lunar-surface hover:bg-lunar-bg">
+              <div className="flex justify-between items-center mb-1 md:mb-2">
                 <span className={`
-                  text-sm font-medium h-6 w-6 flex items-center justify-center rounded-full
+                  text-xs md:text-sm font-medium h-5 w-5 md:h-6 md:w-6 flex items-center justify-center rounded-full
                   ${isToday(day) ? 'bg-blue-500 text-white' : 'text-gray-700'}
                 `}>
                   {format(day, 'd')}
                 </span>
               </div>
               
-              <div className="space-y-1">
+              <div className="space-y-px md:space-y-1">
                 {displayEvents.map(event => <div key={event.id} onClick={e => e.stopPropagation()}>
                     <UnifiedEventCard event={event} onClick={onEventClick} compact={true} />
                   </div>)}
                 
-                {hasMoreEvents && <div className="text-xs p-1 text-gray-500 font-medium">
+                {hasMoreEvents && <div className="text-xs p-0.5 md:p-1 text-gray-500 font-medium">
                     +{dayEvents.length - maxDisplayEvents} mais
                   </div>}
                 
