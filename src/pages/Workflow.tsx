@@ -75,9 +75,14 @@ export default function Workflow() {
   const {
     getStatusOptions
   } = useWorkflowStatus();
-  const { clientes } = useContext(AppContext);
-  const { pacotes, produtos, categorias } = useOrcamentoData();
-  
+  const {
+    clientes
+  } = useContext(AppContext);
+  const {
+    pacotes,
+    produtos,
+    categorias
+  } = useOrcamentoData();
   const getClienteByName = (nome: string) => {
     return clientes.find(cliente => cliente.nome === nome);
   };
@@ -173,7 +178,6 @@ export default function Workflow() {
     id: String(index + 1),
     nome: categoria
   }));
-
   const packageOptions: PackageOption[] = pacotes.map(pacote => ({
     id: pacote.id,
     nome: pacote.nome,
@@ -181,7 +185,6 @@ export default function Workflow() {
     valorFotoExtra: `R$ ${(pacote.valorFotoExtra || 35).toFixed(2).replace('.', ',')}`,
     categoria: pacote.categoria
   }));
-
   const productOptions: ProductOption[] = produtos.map(produto => ({
     id: produto.id,
     nome: produto.nome,
@@ -449,13 +452,13 @@ export default function Workflow() {
             </div>
           </div>}
 
-        <div className="flex items-center justify-between gap-4 px-4 pb-3 pt-2">
+        <div className="flex items-center justify-between gap-4 px-4 pb-3 pt-2 bg-lunar-surface">
           <div className="flex items-center space-x-2 flex-1">
             <div className="relative max-w-xs flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input placeholder="Buscar por cliente (sem acentos)..." className="pl-10 h-9" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+              <Input placeholder="Buscar por cliente (sem acentos)..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 h-9 bg-neutral-50" />
             </div>
-            <Button variant="outline" size="sm" onClick={handleResetFilters}>Limpar</Button>
+            <Button variant="outline" size="sm" onClick={handleResetFilters} className="text-zinc-700 bg-neutral-50">Limpar</Button>
           </div>
           <div className="flex items-center space-x-2">
             <span className="text-sm text-gray-500 hidden md:inline">
