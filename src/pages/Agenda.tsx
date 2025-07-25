@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { format, addMonths, addWeeks, addDays, subMonths, subWeeks, subDays } from "date-fns";
 import { ptBR } from 'date-fns/locale';
@@ -20,24 +19,26 @@ import { useAgenda, Appointment } from "@/hooks/useAgenda";
 import { useIntegration } from "@/hooks/useIntegration";
 import { useOrcamentos } from "@/hooks/useOrcamentos";
 import { Orcamento } from "@/types/orcamentos";
-
 type ViewType = 'month' | 'week' | 'day';
-
 export default function Agenda() {
   const {
     unifiedEvents,
     getEventForSlot,
     appointments
   } = useUnifiedCalendar();
-  
   const {
     addAppointment,
     updateAppointment,
     deleteAppointment
   } = useAgenda();
-  
-  const { isFromBudget, getBudgetId, canEditFully } = useIntegration();
-  const { orcamentos } = useOrcamentos();
+  const {
+    isFromBudget,
+    getBudgetId,
+    canEditFully
+  } = useIntegration();
+  const {
+    orcamentos
+  } = useOrcamentos();
 
   // View and navigation state
   const [view, setView] = useState<ViewType>(() => {
@@ -75,12 +76,20 @@ export default function Agenda() {
   const formatDateTitle = () => {
     switch (view) {
       case 'month':
-        return format(date, "MMMM yyyy", { locale: ptBR });
+        return format(date, "MMMM yyyy", {
+          locale: ptBR
+        });
       case 'week':
         const endOfWeek = addDays(date, 6);
-        return `${format(date, "d", { locale: ptBR })} a ${format(endOfWeek, "d 'de' MMMM, yyyy", { locale: ptBR })}`;
+        return `${format(date, "d", {
+          locale: ptBR
+        })} a ${format(endOfWeek, "d 'de' MMMM, yyyy", {
+          locale: ptBR
+        })}`;
       case 'day':
-        return format(date, "d 'de' MMMM, EEEE", { locale: ptBR });
+        return format(date, "d 'de' MMMM, EEEE", {
+          locale: ptBR
+        });
       default:
         return '';
     }
@@ -89,20 +98,30 @@ export default function Agenda() {
   // Navigation functions
   const navigatePrevious = () => {
     switch (view) {
-      case 'month': setDate(subMonths(date, 1)); break;
-      case 'week': setDate(subWeeks(date, 1)); break;
-      case 'day': setDate(subDays(date, 1)); break;
+      case 'month':
+        setDate(subMonths(date, 1));
+        break;
+      case 'week':
+        setDate(subWeeks(date, 1));
+        break;
+      case 'day':
+        setDate(subDays(date, 1));
+        break;
     }
   };
-
   const navigateNext = () => {
     switch (view) {
-      case 'month': setDate(addMonths(date, 1)); break;
-      case 'week': setDate(addWeeks(date, 1)); break;
-      case 'day': setDate(addDays(date, 1)); break;
+      case 'month':
+        setDate(addMonths(date, 1));
+        break;
+      case 'week':
+        setDate(addWeeks(date, 1));
+        break;
+      case 'day':
+        setDate(addDays(date, 1));
+        break;
     }
   };
-
   const navigateToday = () => {
     setDate(new Date());
   };
@@ -114,7 +133,10 @@ export default function Agenda() {
   };
 
   // Handle slot click (empty time slot)
-  const handleCreateSlot = (slot: { date: Date; time?: string }) => {
+  const handleCreateSlot = (slot: {
+    date: Date;
+    time?: string;
+  }) => {
     setSelectedSlot(slot);
     setIsChoiceModalOpen(true);
   };
@@ -127,10 +149,12 @@ export default function Agenda() {
         // Buscar o orçamento original
         const budgetId = getBudgetId(appointment);
         const originalBudget = orcamentos.find(orc => orc.id === budgetId);
-        
-        setSelectedBudgetAppointment({ appointment, budget: originalBudget || null });
+        setSelectedBudgetAppointment({
+          appointment,
+          budget: originalBudget || null
+        });
         setIsBudgetAppointmentModalOpen(true);
-        
+
         // Limpar outros estados
         setEditingAppointment(null);
         setViewingAppointment(null);
@@ -185,7 +209,11 @@ export default function Agenda() {
   };
 
   // Handle budget appointment save (reschedule)
-  const handleSaveBudgetAppointment = (data: { date: Date; time: string; description?: string }) => {
+  const handleSaveBudgetAppointment = (data: {
+    date: Date;
+    time: string;
+    description?: string;
+  }) => {
     if (selectedBudgetAppointment) {
       updateAppointment(selectedBudgetAppointment.appointment.id, {
         date: data.date,
@@ -204,13 +232,11 @@ export default function Agenda() {
       setIsBudgetModalOpen(true);
     }
   };
-
-  return (
-    <div className="space-y-4 pb-20 md:pb-4">
+  return <div className="space-y-4 pb-20 md:pb-4">
       <Card className="p-4 bg-lunar-bg my-[4px] mx-0 px-[15px] py-[13px]">
         <div className="flex flex-col items-center justify-center mb-4 gap-3">
           {/* Navigation and Date Display */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 px-0 mx-0">
             <Button variant="outline" onClick={navigateToday} className="h-8 px-3 text-sm bg-lunar-surface hover:bg-lunar-border border-lunar-border">
               Hoje
             </Button>
@@ -243,42 +269,14 @@ export default function Agenda() {
         </div>
           
         <div className="mt-4">
-          {view === 'month' && (
-            <MonthlyView 
-              date={date} 
-              unifiedEvents={unifiedEvents}
-              onCreateSlot={handleCreateSlot} 
-              onEventClick={handleEventClick} 
-              onDayClick={handleDayClick} 
-            />
-          )}
-          {view === 'week' && (
-            <WeeklyView 
-              date={date} 
-              unifiedEvents={unifiedEvents}
-              onCreateSlot={handleCreateSlot} 
-              onEventClick={handleEventClick} 
-            />
-          )}
-          {view === 'day' && (
-            <DailyView 
-              date={date} 
-              unifiedEvents={unifiedEvents}
-              onCreateSlot={handleCreateSlot} 
-              onEventClick={handleEventClick} 
-            />
-          )}
+          {view === 'month' && <MonthlyView date={date} unifiedEvents={unifiedEvents} onCreateSlot={handleCreateSlot} onEventClick={handleEventClick} onDayClick={handleDayClick} />}
+          {view === 'week' && <WeeklyView date={date} unifiedEvents={unifiedEvents} onCreateSlot={handleCreateSlot} onEventClick={handleEventClick} />}
+          {view === 'day' && <DailyView date={date} unifiedEvents={unifiedEvents} onCreateSlot={handleCreateSlot} onEventClick={handleEventClick} />}
         </div>
       </Card>
 
       {/* Action Choice Modal */}
-      <ActionChoiceModal
-        isOpen={isChoiceModalOpen}
-        onClose={() => setIsChoiceModalOpen(false)}
-        date={selectedSlot?.date || new Date()}
-        time={selectedSlot?.time || ''}
-        onCreateAppointment={handleCreateAppointment}
-      />
+      <ActionChoiceModal isOpen={isChoiceModalOpen} onClose={() => setIsChoiceModalOpen(false)} date={selectedSlot?.date || new Date()} time={selectedSlot?.time || ''} onCreateAppointment={handleCreateAppointment} />
 
       {/* Appointment Form Modal */}
       <Dialog open={isAppointmentDialogOpen} onOpenChange={setIsAppointmentDialogOpen}>
@@ -292,52 +290,25 @@ export default function Agenda() {
             </DialogDescription>
           </DialogHeader>
 
-          <AppointmentForm 
-            initialDate={selectedSlot?.date || editingAppointment?.date} 
-            initialTime={selectedSlot?.time || editingAppointment?.time} 
-            appointment={editingAppointment} 
-            onSave={handleSaveAppointment} 
-            onCancel={() => setIsAppointmentDialogOpen(false)} 
-          />
+          <AppointmentForm initialDate={selectedSlot?.date || editingAppointment?.date} initialTime={selectedSlot?.time || editingAppointment?.time} appointment={editingAppointment} onSave={handleSaveAppointment} onCancel={() => setIsAppointmentDialogOpen(false)} />
         </DialogContent>
       </Dialog>
 
       {/* Appointment Details Modal */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
         <DialogContent className="sm:max-w-[500px] border-0 shadow-lg bg-stone-50">
-          {viewingAppointment && (
-            <AppointmentDetails 
-              appointment={viewingAppointment} 
-              onSave={handleSaveAppointment} 
-              onCancel={() => setIsDetailsOpen(false)} 
-              onDelete={handleDeleteAppointment} 
-            />
-          )}
+          {viewingAppointment && <AppointmentDetails appointment={viewingAppointment} onSave={handleSaveAppointment} onCancel={() => setIsDetailsOpen(false)} onDelete={handleDeleteAppointment} />}
         </DialogContent>
       </Dialog>
 
       {/* Budget Appointment Details Modal */}
       <Dialog open={isBudgetAppointmentModalOpen} onOpenChange={setIsBudgetAppointmentModalOpen}>
         <DialogContent className="sm:max-w-[600px] border-0 shadow-lg bg-neutral-50">
-          {selectedBudgetAppointment && (
-            <BudgetAppointmentDetails 
-              appointment={selectedBudgetAppointment.appointment}
-              budget={selectedBudgetAppointment.budget}
-              onSave={handleSaveBudgetAppointment}
-              onCancel={() => setIsBudgetAppointmentModalOpen(false)}
-              onViewFullBudget={handleViewFullBudget}
-              onDelete={handleDeleteAppointment}
-            />
-          )}
+          {selectedBudgetAppointment && <BudgetAppointmentDetails appointment={selectedBudgetAppointment.appointment} budget={selectedBudgetAppointment.budget} onSave={handleSaveBudgetAppointment} onCancel={() => setIsBudgetAppointmentModalOpen(false)} onViewFullBudget={handleViewFullBudget} onDelete={handleDeleteAppointment} />}
         </DialogContent>
       </Dialog>
 
       {/* Budget Edit Modal */}
-      <EditOrcamentoModal
-        isOpen={isBudgetModalOpen}
-        onClose={() => setIsBudgetModalOpen(false)}
-        orcamento={selectedBudget}
-      />
-    </div>
-  );
+      <EditOrcamentoModal isOpen={isBudgetModalOpen} onClose={() => setIsBudgetModalOpen(false)} orcamento={selectedBudget} />
+    </div>;
 }
