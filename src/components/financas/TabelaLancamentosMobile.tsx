@@ -61,8 +61,18 @@ export default function TabelaLancamentosMobile({
                   size="sm"
                   variant="ghost"
                   onClick={() => {
-                    // TODO: Implementar edição inline para mobile
-                    console.log('Editar:', transacao.id);
+                    // Criar modal simples para edição em mobile
+                    const novoValor = prompt('Novo valor:', transacao.valor.toString());
+                    const novaData = prompt('Nova data (YYYY-MM-DD):', transacao.data_vencimento);
+                    const novasObservacoes = prompt('Observações:', transacao.observacoes || '');
+                    
+                    if (novoValor && novaData) {
+                      onAtualizarTransacao(transacao.id, {
+                        valor: parseFloat(novoValor),
+                        data_vencimento: novaData,
+                        observacoes: novasObservacoes || null
+                      });
+                    }
                   }}
                 >
                   <Edit className="h-4 w-4" />
