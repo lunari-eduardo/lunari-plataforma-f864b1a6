@@ -438,8 +438,10 @@ export function WorkflowTable({
     const width = currentColumnWidths[key] || responsiveColumnWidths[key];
     return <td className={`
           p-2 border-r border-gray-100 min-h-[40px] text-xs transition-colors duration-150 ease-in-out
-          group-hover:bg-lunar-surface/50 group-focus-within:bg-lunar-accent/10
-          ${isFixed ? 'sticky z-10 bg-white shadow-sm' : ''}
+          ${isFixed 
+            ? 'sticky z-10 bg-white shadow-sm group-hover:bg-gray-50 group-focus-within:bg-blue-50' 
+            : 'group-hover:bg-lunar-surface/50 group-focus-within:bg-lunar-accent/10'
+          }
         `} style={{
       width: `${width}px`,
       minWidth: `${width}px`,
