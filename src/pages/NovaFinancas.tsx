@@ -3,6 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Receipt, CreditCard, PiggyBank, TrendingUp } from 'lucide-react';
 import { useNovoFinancas } from '@/hooks/useNovoFinancas';
 import { formatCurrency } from '@/utils/financialUtils';
+import { ScrollArea } from "@/components/ui/scroll-area";
 import LancamentosTab from '@/components/financas/LancamentosTab';
 import ConfiguracoesFinanceirasTab from '@/components/financas/ConfiguracoesFinanceirasTab';
 import DashboardFinanceiro from '@/components/financas/DashboardFinanceiro';
@@ -30,8 +31,10 @@ export default function NovaFinancas() {
     removerCartao
   } = useNovoFinancas();
   const [activeTab, setActiveTab] = useState('lancamentos');
-  return <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white bg-lunar-bg">
-      <div className="p-2 sm:p-4 lg:p-6 space-y-4 sm:space-y-6 bg-lunar-bg">
+  return (
+    <ScrollArea className="h-[calc(100vh-120px)]">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white bg-lunar-bg pr-4">
+        <div className="p-2 sm:p-4 lg:p-6 space-y-4 sm:space-y-6 bg-lunar-bg">
         {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-900">Finanças</h1>
@@ -67,6 +70,8 @@ export default function NovaFinancas() {
             />
           </TabsContent>
         </Tabs>
+        </div>
       </div>
-    </div>;
+    </ScrollArea>
+  );
 }

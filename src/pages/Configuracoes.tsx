@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
 import { Package, Box, Workflow, Shapes } from 'lucide-react';
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
 
 // Importação dos componentes de configuração
@@ -141,7 +142,9 @@ export default function Configuracoes() {
   useEffect(() => {
     storage.save('configuracoes_produtos', produtos);
   }, [produtos]);
-  return <div className="space-y-6">
+  return (
+    <ScrollArea className="h-[calc(100vh-120px)]">
+      <div className="space-y-6 pr-4">
       <Card>
         <CardHeader className="pb-3 bg-stone-50">
           <CardDescription>
@@ -187,5 +190,7 @@ export default function Configuracoes() {
           </Tabs>
         </CardContent>
       </Card>
-    </div>;
+      </div>
+    </ScrollArea>
+  );
 }

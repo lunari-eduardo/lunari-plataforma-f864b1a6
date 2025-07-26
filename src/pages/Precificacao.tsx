@@ -7,13 +7,16 @@ import { CalculadoraServicos } from '@/components/precificacao/CalculadoraServic
 import { EstruturaCustosFixos } from '@/components/precificacao/EstruturaCustosFixos';
 import { MetasIndicadores } from '@/components/precificacao/MetasIndicadores';
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
+import { ScrollArea } from "@/components/ui/scroll-area";
 export default function Precificacao() {
   const [calculadoraAberta, setCalculadoraAberta] = useState(false);
   const [custosFixosTotal, setCustosFixosTotal] = useState(0);
   const handleCustosFixosChange = (total: number) => {
     setCustosFixosTotal(total);
   };
-  return <div className="p-4 md:p-6 space-y-6 bg-lunar-bg min-h-screen px-[2px] py-[5px]">
+  return (
+    <ScrollArea className="h-[calc(100vh-120px)]">
+      <div className="p-4 md:p-6 space-y-6 bg-lunar-bg min-h-screen px-[2px] py-[5px] pr-4">
       {/* Header da Página */}
       <div>
         <h1 className="text-xl font-bold text-lunar-text mb-2 md:text-xl px-0">Precificação e Metas</h1>
@@ -28,5 +31,7 @@ export default function Precificacao() {
 
       {/* 3. Metas e Indicadores de Lucro */}
       <MetasIndicadores custosFixosTotal={custosFixosTotal} />
-    </div>;
+      </div>
+    </ScrollArea>
+  );
 }

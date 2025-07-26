@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Search, UserPlus, User, Phone, Mail, Edit, Trash2 } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from 'sonner';
 
 export default function Clientes() {
@@ -66,7 +67,8 @@ export default function Clientes() {
   };
 
   return (
-    <div className="space-y-6">
+    <ScrollArea className="h-[calc(100vh-120px)]">
+      <div className="space-y-6 pr-4">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-muted-foreground text-xs">
@@ -225,6 +227,7 @@ export default function Clientes() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </ScrollArea>
   );
 }

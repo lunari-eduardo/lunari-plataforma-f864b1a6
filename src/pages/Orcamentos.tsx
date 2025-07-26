@@ -7,6 +7,7 @@ import NovoOrcamento from '@/components/orcamentos/NovoOrcamento';
 import ListaOrcamentos from '@/components/orcamentos/ListaOrcamentos';
 import GerenciarOrigens from '@/components/orcamentos/GerenciarOrigens';
 import MonthYearSelector from '@/components/orcamentos/MonthYearSelector';
+import { ScrollArea } from "@/components/ui/scroll-area";
 export default function Orcamentos() {
   const {
     metricas
@@ -26,7 +27,9 @@ export default function Orcamentos() {
       setActiveTab('novo');
     }
   }, [location.search]);
-  return <div className="p-2 sm:p-4 space-y-4 bg-lunar-bg min-h-screen my-0 py-[33px]">
+  return (
+    <ScrollArea className="h-[calc(100vh-120px)]">
+      <div className="p-2 sm:p-4 space-y-4 bg-lunar-bg min-h-screen my-0 py-[33px] pr-4">
       <div className="px-2">
         
       </div>
@@ -53,5 +56,7 @@ export default function Orcamentos() {
           <GerenciarOrigens />
         </TabsContent>
       </Tabs>
-    </div>;
+      </div>
+    </ScrollArea>
+  );
 }
