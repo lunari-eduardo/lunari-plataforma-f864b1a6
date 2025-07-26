@@ -415,8 +415,8 @@ export default function Workflow() {
       setSortDirection('asc');
     }
   }, [sortField]);
-  return <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
-      <div className="bg-white border-b shadow-sm flex-none z-50">
+  return <div className="h-full flex flex-col bg-gray-50">
+      <div className="bg-white border-b shadow-sm sticky top-0 z-50">
         <div className="flex items-center justify-between px-4 pt-3 bg-lunar-bg">
           <div className="flex items-center space-x-3">
             <Button variant="outline" size="icon" onClick={handlePreviousMonth} className="h-8 w-8">
@@ -460,16 +460,16 @@ export default function Workflow() {
             </div>
           </div>}
 
-        <div className="flex items-center justify-between gap-4 px-4 pb-3 pt-2 bg-lunar-surface py-[5px]">
-          <div className="flex items-center space-x-2 flex-1">
+        <div className="flex items-center justify-between gap-4 px-4 pb-3 pt-2 bg-lunar-surface">
+          <div className="flex items-center space-x-2 flex-1 bg-lunar-bg">
             <div className="relative max-w-xs flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input placeholder="Buscar por cliente (sem acentos)..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 h-7 bg-neutral-50" />
+              <Input placeholder="Buscar por cliente (sem acentos)..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 h-9 bg-neutral-50" />
             </div>
             <Button variant="outline" size="sm" onClick={handleResetFilters} className="text-zinc-700 bg-neutral-50">Limpar</Button>
           </div>
           <div className="flex items-center space-x-2">
-            <span className="text-gray-500 hidden md:inline text-xs">
+            <span className="text-sm text-gray-500 hidden md:inline">
               Mostrando {filteredSessions.length} sessões
             </span>
             <ColumnSettings visibleColumns={visibleColumns} onColumnVisibilityChange={handleColumnVisibilityChange} availableColumns={{
@@ -499,7 +499,7 @@ export default function Workflow() {
         </div>
       </div>
       
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 overflow-hidden">
         <WorkflowTable sessions={sortedSessions} statusOptions={statusOptions} categoryOptions={categoryOptions} packageOptions={packageOptions} productOptions={productOptions} onStatusChange={handleStatusChange} onEditSession={handleEditSession} onAddPayment={handleAddPayment} onFieldUpdate={handleFieldUpdate} visibleColumns={visibleColumns} columnWidths={columnWidths} onScrollChange={setScrollLeft} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
       </div>
     </div>;
