@@ -403,8 +403,14 @@ export default function Workflow() {
 
       // Handle different data types
       if (sortField === 'data') {
-        aValue = new Date(aValue.split('/').reverse().join('-')).getTime();
-        bValue = new Date(bValue.split('/').reverse().join('-')).getTime();
+        // Criar objeto Date completo usando data + hora para ordenação cronológica correta
+        const [dayA, monthA, yearA] = a.data.split('/');
+        const [dayB, monthB, yearB] = b.data.split('/');
+        const [hoursA, minutesA] = a.hora.split(':').map(Number);
+        const [hoursB, minutesB] = b.hora.split(':').map(Number);
+        
+        aValue = new Date(Number(yearA), Number(monthA) - 1, Number(dayA), hoursA, minutesA).getTime();
+        bValue = new Date(Number(yearB), Number(monthB) - 1, Number(dayB), hoursB, minutesB).getTime();
       } else if (['valorPacote', 'valorPago', 'desconto', 'total', 'restante'].includes(sortField)) {
         aValue = parseFloat(String(aValue).replace(/[^\d,]/g, '').replace(',', '.')) || 0;
         bValue = parseFloat(String(bValue).replace(/[^\d,]/g, '').replace(',', '.')) || 0;

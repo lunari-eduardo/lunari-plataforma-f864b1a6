@@ -223,7 +223,7 @@ export function WorkflowTable({
   const formatDateDayMonth = (dateString: string) => {
     const parts = dateString.split('/');
     if (parts.length === 3) {
-      return `${parts[0]}/${parts[1]}`;
+      return `${parts[0]}/${parts[1]}`; // Exibe apenas DD/MM
     }
     return dateString;
   };
@@ -462,7 +462,7 @@ export function WorkflowTable({
           {/* NÍVEL 3: O CABEÇALHO STICKY */}
           <thead className="sticky top-0 z-30 bg-white border-b-2 border-gray-200">
             <tr>
-              {renderHeaderCell('date', 'Data/Hora', true, true)}
+              {renderHeaderCell('date', 'Data', true, true)}
               {renderHeaderCell('client', 'Nome', true, true)}
               {renderHeaderCell('description', 'Descrição')}
               {renderHeaderCell('email', 'E-mail')}
