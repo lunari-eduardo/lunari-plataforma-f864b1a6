@@ -490,10 +490,7 @@ export function WorkflowTable({
           <tbody className="divide-y divide-gray-50">
             {sessions.map(session => <>
                 <tr key={session.id} className="hover:bg-gray-50">
-                {renderCell('date', <div>
-                    <div className="font-medium">{formatDateDayMonth(session.data)}</div>
-                    <div className="text-gray-500">{session.hora}</div>
-                  </div>, true)}
+                {renderCell('date', <div className="font-medium">{formatDateDayMonth(session.data)}</div>, true)}
                 
                 {renderCell('client', <div className="flex items-center gap-2">
                     <span className="font-medium">{session.nome}</span>
