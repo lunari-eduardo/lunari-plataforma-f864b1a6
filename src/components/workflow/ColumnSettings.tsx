@@ -53,7 +53,7 @@ export function ColumnSettings({
   };
   return <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="h-8 px-2 bg-neutral-50">
+        <Button variant="outline" size="sm" className="h-7 px-2 bg-neutral-50 text-sm">
           <SlidersHorizontal className="h-3.5 w-3.5 mr-1" />
           <span className="text-xs">Colunas</span>
         </Button>
