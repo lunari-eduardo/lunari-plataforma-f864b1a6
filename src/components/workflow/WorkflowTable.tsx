@@ -199,7 +199,8 @@ export function WorkflowTable({
       // Atualizar o valor pago diretamente
       const session = sessions.find(s => s.id === sessionId);
       if (session) {
-        const currentPaid = parseFloat(session.valorPago.replace(/[^\d,-]/g, '').replace(',', '.')) || 0;
+        const valorPagoStr = typeof session.valorPago === 'string' ? session.valorPago : String(session.valorPago || '0');
+        const currentPaid = parseFloat(valorPagoStr.replace(/[^\d,-]/g, '').replace(',', '.')) || 0;
         const newPaidValue = currentPaid + paymentValue;
         
         // Formatar o novo valor pago
@@ -289,9 +290,15 @@ export function WorkflowTable({
   }, [stopContinuousScroll]);
 
   const calculateTotal = useCallback((session: SessionData) => {
-    const valorPacote = parseFloat(session.valorPacote.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-    const valorFotoExtra = parseFloat(session.valorTotalFotoExtra.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-    const valorAdicional = parseFloat(session.valorAdicional.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+    const valorPacoteStr = typeof session.valorPacote === 'string' ? session.valorPacote : String(session.valorPacote || '0');
+    const valorPacote = parseFloat(valorPacoteStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+    
+    const valorFotoExtraStr = typeof session.valorTotalFotoExtra === 'string' ? session.valorTotalFotoExtra : String(session.valorTotalFotoExtra || '0');
+    const valorFotoExtra = parseFloat(valorFotoExtraStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+    
+    const valorAdicionalStr = typeof session.valorAdicional === 'string' ? session.valorAdicional : String(session.valorAdicional || '0');
+    const valorAdicional = parseFloat(valorAdicionalStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+    
     const desconto = session.desconto || 0;
     
     // NOVA LÓGICA: Produtos inclusos não somam no total, apenas produtos manuais
@@ -303,7 +310,8 @@ export function WorkflowTable({
         .reduce((total, p) => total + (p.valorUnitario * p.quantidade), 0);
     } else {
       // Fallback para sistema antigo
-      const valorProduto = parseFloat(session.valorTotalProduto.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+      const valorProdutoStr = typeof session.valorTotalProduto === 'string' ? session.valorTotalProduto : String(session.valorTotalProduto || '0');
+      const valorProduto = parseFloat(valorProdutoStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
       valorProdutosManuais = valorProduto;
     }
     
@@ -313,7 +321,8 @@ export function WorkflowTable({
 
   const calculateRestante = useCallback((session: SessionData) => {
     const total = calculateTotal(session);
-    const valorPago = parseFloat(session.valorPago.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+    const valorPagoStr = typeof session.valorPago === 'string' ? session.valorPago : String(session.valorPago || '0');
+    const valorPago = parseFloat(valorPagoStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
     return total - valorPago;
   }, [calculateTotal]);
 
