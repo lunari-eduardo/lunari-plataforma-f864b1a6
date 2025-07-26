@@ -437,8 +437,9 @@ export function WorkflowTable({
     if (!visibleColumns[key]) return null;
     const width = currentColumnWidths[key] || responsiveColumnWidths[key];
     return <td className={`
-          p-2 border-r border-gray-100 min-h-[40px] text-xs
-          ${isFixed ? 'sticky z-10 bg-white shadow-sm' : 'bg-white'}
+          p-2 border-r border-gray-100 min-h-[40px] text-xs transition-colors duration-150 ease-in-out
+          group-hover:bg-lunar-surface/50 group-focus-within:bg-lunar-accent/10
+          ${isFixed ? 'sticky z-10 bg-white shadow-sm' : ''}
         `} style={{
       width: `${width}px`,
       minWidth: `${width}px`,
@@ -490,11 +491,7 @@ export function WorkflowTable({
           <tbody className="divide-y divide-gray-50">
             {sessions.map(session => {
               return <>
-                <tr key={session.id} className="
-                  transition-colors duration-150 ease-in-out
-                  hover:bg-lunar-surface/50
-                  focus-within:bg-lunar-accent/10
-                ">
+                <tr key={session.id} className="group transition-colors duration-150 ease-in-out">
                 {renderCell('date', <div className="font-medium">{formatToDayMonth(session.data)}</div>, true)}
                 
                 {renderCell('client', <div className="flex items-center gap-2">
@@ -645,13 +642,8 @@ export function WorkflowTable({
                 </tr>
                 
                 {/* Linha expandida para mostrar todos os produtos */}
-                {expandedProducts[session.id] && session.produtosList && session.produtosList.length > 0 && <tr key={`${session.id}-expanded`} className="
-                  bg-lunar-accent/5 
-                  transition-colors duration-150 ease-in-out
-                  hover:bg-lunar-surface/50
-                  focus-within:bg-lunar-accent/10
-                ">
-                    <td colSpan={Object.keys(visibleColumns).filter(key => visibleColumns[key]).length} className="p-3">
+                {expandedProducts[session.id] && session.produtosList && session.produtosList.length > 0 && <tr key={`${session.id}-expanded`} className="group bg-lunar-accent/5 transition-colors duration-150 ease-in-out">
+                    <td colSpan={Object.keys(visibleColumns).filter(key => visibleColumns[key]).length} className="p-3 group-hover:bg-lunar-surface/50 group-focus-within:bg-lunar-accent/10 transition-colors duration-150 ease-in-out">
                       <div className="space-y-2">
                         <h4 className="text-xs font-medium text-blue-800">📦 Produtos Detalhados</h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
