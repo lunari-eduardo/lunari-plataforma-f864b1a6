@@ -169,7 +169,6 @@ export function WorkflowTable({
   const [paymentInputs, setPaymentInputs] = useState<Record<string, string>>({});
   const [editingValues, setEditingValues] = useState<Record<string, string>>({});
   const [expandedProducts, setExpandedProducts] = useState<Record<string, boolean>>({});
-  const [focusedRows, setFocusedRows] = useState<Record<string, boolean>>({});
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [scrollPercent, setScrollPercent] = useState(0);
   const [maxScroll, setMaxScroll] = useState(0);
@@ -346,25 +345,23 @@ export function WorkflowTable({
       (e.target as HTMLInputElement).blur();
     }
   };
-  const handleRowFocus = useCallback((sessionId: string, isFocused: boolean) => {
-    setFocusedRows(prev => ({
-      ...prev,
-      [sessionId]: isFocused
-    }));
-  }, []);
 
   const renderEditableInput = useCallback((session: SessionData, field: string, value: string, type: string = 'text', placeholder: string = '') => {
     const key = getEditingKey(session.id, field);
     const editingValue = editingValues[key];
     const displayValue = editingValue !== undefined ? editingValue : value || '';
-    return <Input type={type} value={displayValue} onFocus={() => {
-        handleEditStart(session.id, field, value || '');
-        handleRowFocus(session.id, true);
-      }} onChange={e => handleEditChange(session.id, field, e.target.value)} onBlur={() => {
-        handleEditFinish(session.id, field);
-        handleRowFocus(session.id, false);
-      }} onKeyPress={e => handleKeyPress(e, session.id, field)} className="h-6 text-xs p-1 w-full border-none bg-transparent focus:bg-lunar-accent/10 transition-colors duration-200" placeholder={placeholder} autoComplete="off" />;
-  }, [editingValues, handleFieldUpdateStable, handleRowFocus]);
+    return <Input 
+      type={type} 
+      value={displayValue} 
+      onFocus={() => handleEditStart(session.id, field, value || '')}
+      onChange={e => handleEditChange(session.id, field, e.target.value)} 
+      onBlur={() => handleEditFinish(session.id, field)}
+      onKeyPress={e => handleKeyPress(e, session.id, field)} 
+      className="h-6 text-xs p-1 w-full border-none bg-transparent focus:bg-lunar-accent/10 transition-colors duration-150" 
+      placeholder={placeholder} 
+      autoComplete="off" 
+    />;
+  }, [editingValues, handleFieldUpdateStable]);
   const handleStatusChangeStable = useCallback((sessionId: string, newStatus: string) => {
     onStatusChange(sessionId, newStatus);
   }, [onStatusChange]);
@@ -496,14 +493,12 @@ export function WorkflowTable({
           
           {/* NÍVEL 4: O CORPO DA TABELA */}
           <tbody className="divide-y divide-gray-50">
-            {sessions.map(session => {
-              const isRowFocused = focusedRows[session.id];
-              return <>
-                <tr key={session.id} className={`
-                  transition-colors duration-200 ease-in-out
+            {sessions.map(session => <>
+                <tr key={session.id} className="
+                  transition-colors duration-150 ease-in-out
                   hover:bg-lunar-accent/5 hover:shadow-sm
-                  ${isRowFocused ? 'bg-lunar-accent/10 shadow-md ring-1 ring-lunar-accent/20' : ''}
-                `}>
+                  focus-within:bg-lunar-accent/10 focus-within:shadow-md focus-within:ring-1 focus-within:ring-lunar-accent/20
+                ">
                 {renderCell('date', <div className="font-medium">{formatToDayMonth(session.data)}</div>, true)}
                 
                 {renderCell('client', <div className="flex items-center gap-2">
@@ -654,7 +649,12 @@ export function WorkflowTable({
                 </tr>
                 
                 {/* Linha expandida para mostrar todos os produtos */}
-                {expandedProducts[session.id] && session.produtosList && session.produtosList.length > 0 && <tr key={`${session.id}-expanded`} className="bg-blue-50">
+                {expandedProducts[session.id] && session.produtosList && session.produtosList.length > 0 && <tr key={`${session.id}-expanded`} className="
+                  transition-colors duration-150 ease-in-out
+                  hover:bg-lunar-accent/5 hover:shadow-sm
+                  focus-within:bg-lunar-accent/10 focus-within:shadow-md focus-within:ring-1 focus-within:ring-lunar-accent/20
+                  bg-blue-50
+                ">
                     <td colSpan={Object.keys(visibleColumns).filter(key => visibleColumns[key]).length} className="p-3">
                       <div className="space-y-2">
                         <h4 className="text-xs font-medium text-blue-800">📦 Produtos Detalhados</h4>
@@ -676,8 +676,7 @@ export function WorkflowTable({
                       </div>
                     </td>
                   </tr>}
-               </>;
-              })}
+               </>))}
           </tbody>
         </table>
       </div>
