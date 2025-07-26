@@ -270,15 +270,18 @@ export default function Workflow() {
   const financials = useMemo(() => {
     const currentMonthSessions = filteredSessions;
     const totalRevenue = currentMonthSessions.reduce((sum, session) => {
-      const paid = parseFloat(session.valorPago?.replace(/[^\d,]/g, '').replace(',', '.') || '0');
+      const paidStr = typeof session.valorPago === 'string' ? session.valorPago : String(session.valorPago || '0');
+      const paid = parseFloat(paidStr.replace(/[^\d,]/g, '').replace(',', '.') || '0');
       return sum + paid;
     }, 0);
     const totalForecasted = currentMonthSessions.reduce((sum, session) => {
-      const total = parseFloat(session.total?.replace(/[^\d,]/g, '').replace(',', '.') || '0');
+      const totalStr = typeof session.total === 'string' ? session.total : String(session.total || '0');
+      const total = parseFloat(totalStr.replace(/[^\d,]/g, '').replace(',', '.') || '0');
       return sum + total;
     }, 0);
     const totalOutstanding = currentMonthSessions.reduce((sum, session) => {
-      const remaining = parseFloat(session.restante?.replace(/[^\d,]/g, '').replace(',', '.') || '0');
+      const remainingStr = typeof session.restante === 'string' ? session.restante : String(session.restante || '0');
+      const remaining = parseFloat(remainingStr.replace(/[^\d,]/g, '').replace(',', '.') || '0');
       return sum + remaining;
     }, 0);
     return {
@@ -306,15 +309,18 @@ export default function Workflow() {
       return sessionDate.getUTCMonth() + 1 === prevMonth && sessionDate.getUTCFullYear() === prevYear;
     });
     const prevRevenue = prevMonthSessions.reduce((sum: number, session: SessionData) => {
-      const paid = parseFloat(session.valorPago?.replace(/[^\d,]/g, '').replace(',', '.') || '0');
+      const paidStr = typeof session.valorPago === 'string' ? session.valorPago : String(session.valorPago || '0');
+      const paid = parseFloat(paidStr.replace(/[^\d,]/g, '').replace(',', '.') || '0');
       return sum + paid;
     }, 0);
     const prevForecasted = prevMonthSessions.reduce((sum: number, session: SessionData) => {
-      const total = parseFloat(session.total?.replace(/[^\d,]/g, '').replace(',', '.') || '0');
+      const totalStr = typeof session.total === 'string' ? session.total : String(session.total || '0');
+      const total = parseFloat(totalStr.replace(/[^\d,]/g, '').replace(',', '.') || '0');
       return sum + total;
     }, 0);
     const prevOutstanding = prevMonthSessions.reduce((sum: number, session: SessionData) => {
-      const remaining = parseFloat(session.restante?.replace(/[^\d,]/g, '').replace(',', '.') || '0');
+      const remainingStr = typeof session.restante === 'string' ? session.restante : String(session.restante || '0');
+      const remaining = parseFloat(remainingStr.replace(/[^\d,]/g, '').replace(',', '.') || '0');
       return sum + remaining;
     }, 0);
     return {
