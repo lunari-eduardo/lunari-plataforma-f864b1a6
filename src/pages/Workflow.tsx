@@ -415,8 +415,8 @@ export default function Workflow() {
       setSortDirection('asc');
     }
   }, [sortField]);
-  return <div className="h-full flex flex-col bg-gray-50">
-      <div className="bg-white border-b shadow-sm sticky top-0 z-50">
+  return <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
+      <div className="bg-white border-b shadow-sm flex-none z-50">
         <div className="flex items-center justify-between px-4 pt-3 bg-lunar-bg">
           <div className="flex items-center space-x-3">
             <Button variant="outline" size="icon" onClick={handlePreviousMonth} className="h-8 w-8">
@@ -499,7 +499,7 @@ export default function Workflow() {
         </div>
       </div>
       
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 min-h-0">
         <WorkflowTable sessions={sortedSessions} statusOptions={statusOptions} categoryOptions={categoryOptions} packageOptions={packageOptions} productOptions={productOptions} onStatusChange={handleStatusChange} onEditSession={handleEditSession} onAddPayment={handleAddPayment} onFieldUpdate={handleFieldUpdate} visibleColumns={visibleColumns} columnWidths={columnWidths} onScrollChange={setScrollLeft} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
       </div>
     </div>;
