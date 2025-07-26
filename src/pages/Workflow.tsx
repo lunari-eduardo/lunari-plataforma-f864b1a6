@@ -437,39 +437,39 @@ export default function Workflow() {
 
         {showMetrics && <div className="px-4 pt-2 pb-3 bg-lunar-bg">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-green-50 p-3 rounded-lg border border-green-200">
-                <div className="text-xs text-green-700 font-medium">Receita</div>
+              <div className="bg-transparent rounded-none py-px my-0 px-[7px]">
+                <div className="text-xs text-green-700 font-medium my-[9px] py-[4px]">Receita</div>
                 <div className="text-lg font-bold text-green-800">{formatCurrency(financials.revenue)}</div>
                 {renderChange(financials.revenue, prevMonthFinancials.revenue)}
               </div>
               <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                <div className="text-xs text-blue-700 font-medium">Previsto</div>
+                <div className="text-xs text-blue-700 font-medium my-[9px] py-[4px]">Previsto</div>
                 <div className="text-lg font-bold text-blue-800">{formatCurrency(financials.forecasted)}</div>
                 {renderChange(financials.forecasted, prevMonthFinancials.forecasted)}
               </div>
               <div className="bg-orange-50 p-3 rounded-lg border border-orange-200">
-                <div className="text-xs text-orange-700 font-medium">A Receber</div>
+                <div className="text-xs text-orange-700 font-medium my-[9px] py-[4px]">A Receber</div>
                 <div className="text-lg font-bold text-orange-800">{formatCurrency(financials.outstanding)}</div>
                 {renderChange(financials.outstanding, prevMonthFinancials.outstanding)}
               </div>
               <div className="bg-purple-50 p-3 rounded-lg border border-purple-200">
-                <div className="text-xs text-purple-700 font-medium">Sessões</div>
+                <div className="text-xs text-purple-700 font-medium my-[9px] py-[4px]">Sessões</div>
                 <div className="text-lg font-bold text-purple-800">{financials.sessionCount}</div>
                 {renderChange(financials.sessionCount, prevMonthFinancials.sessionCount)}
               </div>
             </div>
           </div>}
 
-        <div className="flex items-center justify-between gap-4 px-4 pb-3 pt-2 bg-lunar-surface py-[5px]">
+        <div className="flex items-center justify-between gap-4 px-4 pb-3 pt-2 bg-lunar-surface">
           <div className="flex items-center space-x-2 flex-1">
             <div className="relative max-w-xs flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input placeholder="Buscar por cliente (sem acentos)..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 h-7 bg-neutral-50" />
+              <Input placeholder="Buscar por cliente (sem acentos)..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 h-9 bg-neutral-50" />
             </div>
             <Button variant="outline" size="sm" onClick={handleResetFilters} className="text-zinc-700 bg-neutral-50">Limpar</Button>
           </div>
           <div className="flex items-center space-x-2">
-            <span className="text-gray-500 hidden md:inline text-xs">
+            <span className="text-sm text-gray-500 hidden md:inline">
               Mostrando {filteredSessions.length} sessões
             </span>
             <ColumnSettings visibleColumns={visibleColumns} onColumnVisibilityChange={handleColumnVisibilityChange} availableColumns={{
