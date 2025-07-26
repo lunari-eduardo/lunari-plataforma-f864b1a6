@@ -262,28 +262,70 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!orcamento || orcamento.status !== 'fechado') return;
 
     console.log('=== SINCRONIZANDO COM WORKFLOW ===');
-    console.log('Orçamento:', orcamento);
+    console.log('Orçamento completo:', orcamento);
 
     const pacotePrincipal = orcamento.pacotes?.[0];
     const produtosAdicionais = orcamento.pacotes?.slice(1) || [];
 
-    // Buscar dados do pacote nas configurações
+    // SOLUÇÃO 1: Busca inteligente de pacotes com IDs limpos
     let pacoteData = null;
-    let valorFotoExtraFromPackage = 35; // padrão
+    let valorFotoExtraFromPackage = orcamento.valorFotoExtra || 35;
+    let produtosInclusosCompletos: any[] = [];
     
     if (pacotePrincipal) {
-      // Busca inteligente do pacote
+      console.log('Buscando pacote:', pacotePrincipal);
+      
+      // Extrair ID limpo removendo prefixos
+      const cleanPackageId = pacotePrincipal.id?.replace(/^(pacote-|orcamento-)/, '') || '';
+      const packageName = pacotePrincipal.nome?.replace(/^Pacote:\s*/, '') || '';
+      
+      // Busca em múltiplas estratégias
       pacoteData = pacotes.find(p => p.id === pacotePrincipal.id) ||
+                   pacotes.find(p => p.id === cleanPackageId) ||
+                   pacotes.find(p => p.nome === packageName) ||
                    pacotes.find(p => p.nome === pacotePrincipal.nome);
+      
+      console.log('Pacote encontrado:', pacoteData);
       
       if (pacoteData) {
         valorFotoExtraFromPackage = pacoteData.valor_foto_extra || pacoteData.valorFotoExtra || 35;
+        
+        // SOLUÇÃO 2: Buscar produtos inclusos do pacote
+        if (pacoteData.produtosIncluidos && pacoteData.produtosIncluidos.length > 0) {
+          produtosInclusosCompletos = pacoteData.produtosIncluidos.map((produtoIncluido: any) => {
+            const produto = produtos.find(p => p.id === produtoIncluido.produtoId);
+            return produto ? {
+              id: produto.id,
+              nome: produto.nome,
+              valorUnitario: produto.preco_venda || produto.valorVenda || 0,
+              quantidade: produtoIncluido.quantidade,
+              incluso: true // Marca como produto incluso
+            } : null;
+          }).filter(Boolean);
+        }
       }
     }
 
-    const valorPacote = pacotePrincipal?.preco || 0;
-    const valorProdutos = produtosAdicionais.reduce((acc, p) => acc + (p.preco * p.quantidade), 0);
-    const valorTotal = valorPacote + valorProdutos;
+    // SOLUÇÃO 3: Separar produtos inclusos dos produtos manuais
+    const produtosManuais = produtosAdicionais.filter(p => !p.id?.startsWith('auto-'));
+    const valorProdutosManuais = produtosManuais.reduce((acc, p) => acc + (p.preco * p.quantidade), 0);
+
+    const valorPacote = orcamento.valorManual || pacotePrincipal?.preco || pacoteData?.valor_base || 0;
+    
+    // NOVA LÓGICA: Total = Pacote + Produtos Manuais (inclusos não somam)
+    const valorTotal = valorPacote + valorProdutosManuais;
+
+    // SOLUÇÃO 4: Criar lista completa de produtos (inclusos + manuais)
+    const produtosList = [
+      ...produtosInclusosCompletos,
+      ...produtosManuais.map(p => ({
+        id: p.id,
+        nome: p.nome,
+        valorUnitario: p.preco,
+        quantidade: p.quantidade,
+        incluso: false
+      }))
+    ];
 
     const sessaoWorkflow = {
       id: `orcamento-${orcamento.id}`,
@@ -295,14 +337,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       descricao: orcamento.descricao || '',
       detalhes: orcamento.detalhes || '',
       categoria: orcamento.categoria || '',
-      pacote: pacotePrincipal?.nome || '',
+      pacote: (pacotePrincipal?.nome?.replace(/^Pacote:\s*/, '') || pacotePrincipal?.nome || ''),
       valorPacote: valorPacote,
       valorFotoExtra: valorFotoExtraFromPackage,
       qtdFotosExtra: 0,
       valorTotalFotoExtra: 0,
-      produto: produtosAdicionais.map(p => p.nome).join(', '),
-      qtdProduto: produtosAdicionais.reduce((acc, p) => acc + p.quantidade, 0),
-      valorTotalProduto: valorProdutos,
+      produto: produtosList.map(p => p.nome).join(', '),
+      qtdProduto: produtosList.reduce((acc, p) => acc + p.quantidade, 0),
+      valorTotalProduto: valorProdutosManuais, // Apenas produtos manuais somam
       valorAdicional: 0,
       desconto: 0,
       valor: valorTotal,
@@ -312,10 +354,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       status: 'Fechado',
       pagamentos: [],
       fonte: 'orcamento',
-      dataOriginal: parseDateFromStorage(orcamento.data)
+      dataOriginal: parseDateFromStorage(orcamento.data),
+      // NOVO: Adicionar lista completa de produtos para o novo sistema
+      produtosList: produtosList
     };
 
-    console.log('Sessão workflow criada:', sessaoWorkflow);
+    console.log('=== DADOS FINAIS ===');
+    console.log('Pacote encontrado:', pacoteData?.nome);
+    console.log('Produtos inclusos:', produtosInclusosCompletos.length);
+    console.log('Produtos manuais:', produtosManuais.length);
+    console.log('Valor total:', valorTotal);
+    console.log('Sessão workflow:', sessaoWorkflow);
 
     // Salvar no localStorage do workflow
     const saved = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
@@ -328,7 +377,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     
     localStorage.setItem('workflow_sessions', JSON.stringify(saved));
-    console.log('Workflow sincronizado com sucesso');
+    console.log('✅ Workflow sincronizado com sucesso');
   }, [pacotes, produtos]);
 
   // Save effects

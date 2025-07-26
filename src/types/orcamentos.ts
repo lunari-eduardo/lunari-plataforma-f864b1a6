@@ -55,6 +55,10 @@ export interface Orcamento {
   status: 'rascunho' | 'enviado' | 'fechado' | 'cancelado' | 'pendente' | 'follow-up';
   origemCliente: string;
   criadoEm: string;
+  // Novos campos para melhor sincronização com workflow
+  packageId?: string;
+  produtosIncluidos?: ProdutoIncluido[];
+  valorFotoExtra?: number;
 }
 
 export interface MetricasOrcamento {

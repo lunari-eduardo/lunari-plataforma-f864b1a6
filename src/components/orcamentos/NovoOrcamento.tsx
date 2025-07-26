@@ -29,6 +29,7 @@ interface MappedPackage {
   categoria: string;
   categoriaId?: string;
   produtosIncluidos?: ProdutoIncluido[];
+  valorFotoExtra?: number;
 }
 
 export default function NovoOrcamento() {
@@ -195,7 +196,11 @@ export default function NovoOrcamento() {
       valorTotal: valorFinal,
       valorManual,
       status,
-      origemCliente: origemSelecionada
+      origemCliente: origemSelecionada,
+      // Novos campos para melhor sincronização
+      packageId: pacoteSelecionado?.id,
+      produtosIncluidos: pacoteSelecionado?.produtosIncluidos || [],
+      valorFotoExtra: pacoteSelecionado?.valorFotoExtra || 35
     });
 
     toast({
