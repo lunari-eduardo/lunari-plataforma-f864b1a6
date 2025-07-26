@@ -12,6 +12,7 @@ import { useOrcamentoData } from "@/hooks/useOrcamentoData";
 import { useContext } from 'react';
 import { AppContext } from '@/contexts/AppContext';
 import { parseDateFromStorage } from "@/utils/dateUtils";
+import { initializeDummyData } from "@/utils/initializeDummyData";
 interface SessionPayment {
   id: string;
   valor: number;
@@ -443,10 +444,20 @@ export default function Workflow() {
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
-          <Button variant="ghost" size="sm" onClick={toggleMetrics} className="flex items-center space-x-2 text-gray-600">
-            {showMetrics ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            <span className="hidden sm:inline">{showMetrics ? "Ocultar" : "Métricas"}</span>
-          </Button>
+          <div className="flex items-center space-x-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => initializeDummyData()}
+              className="text-xs bg-blue-50 hover:bg-blue-100 border-blue-200"
+            >
+              Criar Dados Teste
+            </Button>
+            <Button variant="ghost" size="sm" onClick={toggleMetrics} className="flex items-center space-x-2 text-gray-600">
+              {showMetrics ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              <span className="hidden sm:inline">{showMetrics ? "Ocultar" : "Métricas"}</span>
+            </Button>
+          </div>
         </div>
 
         {showMetrics && <div className="px-4 pt-2 pb-3 bg-lunar-bg">
