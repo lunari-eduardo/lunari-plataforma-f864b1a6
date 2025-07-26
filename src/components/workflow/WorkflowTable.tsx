@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PackageCombobox } from "./PackageCombobox";
+import { WorkflowPackageCombobox } from "./WorkflowPackageCombobox";
 import { ProductCombobox } from "./ProductCombobox";
 import { CategoryCombobox } from "./CategoryCombobox";
 import { StatusBadge } from "./StatusBadge";
@@ -564,7 +564,7 @@ export function WorkflowTable({
                 ))}
 
                 {renderCell('package', (
-                  <PackageCombobox
+                  <WorkflowPackageCombobox
                     key={`package-${session.id}-${session.pacote}`}
                     value={session.pacote}
                      onValueChange={(packageData) => {
