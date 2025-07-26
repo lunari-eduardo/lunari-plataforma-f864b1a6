@@ -220,19 +220,20 @@ export default function LancamentosTab({
               </TabsList>
             </Tabs>
 
-            {/* Seletor de Mês/Ano Centralizado para Mobile */}
-            <div className="flex justify-center">
+            {/* Seletor de Mês/Ano e Botão de Novo Lançamento para Mobile */}
+            <div className="flex items-center justify-between gap-3">
+              {/* Seletor de Mês/Ano */}
               <div className="flex items-center bg-white rounded-lg border border-gray-200 p-2 shadow-sm py-[2px] px-px">
                 <Button variant="ghost" size="sm" onClick={() => navegarMes('anterior')} className="h-8 w-8 p-0">
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
                 
-                <div className="flex items-center gap-2 px-4">
+                <div className="flex items-center gap-2 px-3">
                   <Select value={filtroMesAno.mes.toString()} onValueChange={value => setFiltroMesAno({
                 ...filtroMesAno,
                 mes: parseInt(value)
               })}>
-                    <SelectTrigger className="w-20 h-8 text-sm border-0">
+                    <SelectTrigger className="w-16 h-8 text-sm border-0">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -246,7 +247,7 @@ export default function LancamentosTab({
                 ...filtroMesAno,
                 ano: parseInt(value)
               })}>
-                    <SelectTrigger className="w-20 h-8 text-sm border-0">
+                    <SelectTrigger className="w-16 h-8 text-sm border-0">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -261,6 +262,11 @@ export default function LancamentosTab({
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
+
+              {/* Botão de Novo Lançamento Compacto */}
+              <Button onClick={() => setModalNovoLancamentoAberto(true)} className="bg-blue-600 hover:bg-blue-700 text-white h-8 px-3" size="sm">
+                <Plus className="h-4 w-4" />
+              </Button>
             </div>
           </div>}
       </div>
@@ -283,10 +289,6 @@ export default function LancamentosTab({
           </TabsContent>)}
       </Tabs>
 
-      {/* Floating Action Button para Mobile */}
-      {isMobile && <Button onClick={() => setModalNovoLancamentoAberto(true)} className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg z-50" size="icon">
-          <Plus className="h-6 w-6" />
-        </Button>}
 
       {/* Modal de Novo Lançamento */}
       <ModalNovoLancamentoRefatorado 
