@@ -110,7 +110,15 @@ export default function Workflow() {
   const [sortField, setSortField] = useState('data');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [scrollLeft, setScrollLeft] = useState(0);
-  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
+    try {
+      const saved = window.localStorage.getItem('workflow_column_widths');
+      return saved ? JSON.parse(saved) : {};
+    } catch (error) {
+      console.error("Erro ao carregar larguras das colunas", error);
+      return {};
+    }
+  });
   const [visibleColumns, setVisibleColumns] = useState(() => {
     try {
       const saved = window.localStorage.getItem('workflow_visible_columns');
@@ -361,6 +369,12 @@ export default function Workflow() {
   };
   const handleColumnWidthChange = (widths: Record<string, number>) => {
     setColumnWidths(widths);
+    // Persistir larguras das colunas
+    try {
+      window.localStorage.setItem('workflow_column_widths', JSON.stringify(widths));
+    } catch (error) {
+      console.error("Erro ao salvar larguras das colunas", error);
+    }
   };
   const handleStatusChange = (id: string, status: string) => {
     setSessions(prev => prev.map(s => s.id === id ? {
@@ -500,7 +514,7 @@ export default function Workflow() {
       </div>
       
       <div className="flex-1 overflow-hidden">
-        <WorkflowTable sessions={sortedSessions} statusOptions={statusOptions} categoryOptions={categoryOptions} packageOptions={packageOptions} productOptions={productOptions} onStatusChange={handleStatusChange} onEditSession={handleEditSession} onAddPayment={handleAddPayment} onFieldUpdate={handleFieldUpdate} visibleColumns={visibleColumns} columnWidths={columnWidths} onScrollChange={setScrollLeft} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+        <WorkflowTable sessions={sortedSessions} statusOptions={statusOptions} categoryOptions={categoryOptions} packageOptions={packageOptions} productOptions={productOptions} onStatusChange={handleStatusChange} onEditSession={handleEditSession} onAddPayment={handleAddPayment} onFieldUpdate={handleFieldUpdate} visibleColumns={visibleColumns} columnWidths={columnWidths} onColumnWidthChange={handleColumnWidthChange} onScrollChange={setScrollLeft} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
       </div>
     </div>;
 }

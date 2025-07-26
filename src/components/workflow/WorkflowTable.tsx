@@ -54,6 +54,7 @@ interface WorkflowTableProps {
   visibleColumns: Record<string, boolean>;
   columnWidths: Record<string, number>;
   onScrollChange: (scrollLeft: number) => void;
+  onColumnWidthChange?: (widths: Record<string, number>) => void;
   sortField: string;
   sortDirection: 'asc' | 'desc';
   onSort: (field: string) => void;
@@ -158,6 +159,7 @@ export function WorkflowTable({
   onFieldUpdate,
   visibleColumns,
   columnWidths = desktopColumnWidths,
+  onColumnWidthChange,
   onScrollChange,
   sortField,
   sortDirection,
@@ -173,6 +175,17 @@ export function WorkflowTable({
   const scrollSpeedRef = useRef(1);
   const accelerationRef = useRef(0);
   const responsiveColumnWidths = useResponsiveColumnWidths();
+  
+  // Estados para redimensionamento de colunas
+  const [resizing, setResizing] = useState<string | null>(null);
+  const [initialMouseX, setInitialMouseX] = useState(0);
+  const [initialWidth, setInitialWidth] = useState(0);
+  const [currentColumnWidths, setCurrentColumnWidths] = useState<Record<string, number>>({});
+  
+  // Atualizar larguras quando columnWidths prop mudar
+  useEffect(() => {
+    setCurrentColumnWidths({ ...responsiveColumnWidths, ...columnWidths });
+  }, [columnWidths, responsiveColumnWidths]);
   const handleFieldUpdateStable = useCallback((sessionId: string, field: string, value: any) => {
     console.log('Updating field:', field, 'for session:', sessionId, 'with value:', value);
     onFieldUpdate(sessionId, field, value);
@@ -351,27 +364,78 @@ export function WorkflowTable({
     if (sortField !== field) return null;
     return sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />;
   };
+  // Handlers para redimensionamento
+  const handleMouseDown = useCallback((e: React.MouseEvent, columnKey: string) => {
+    e.preventDefault();
+    setResizing(columnKey);
+    setInitialMouseX(e.clientX);
+    setInitialWidth(currentColumnWidths[columnKey] || responsiveColumnWidths[columnKey]);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  }, [currentColumnWidths, responsiveColumnWidths]);
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!resizing) return;
+    
+    const diff = e.clientX - initialMouseX;
+    const newWidth = Math.max(60, initialWidth + diff); // Largura mínima de 60px
+    
+    setCurrentColumnWidths(prev => ({
+      ...prev,
+      [resizing]: newWidth
+    }));
+  }, [resizing, initialMouseX, initialWidth]);
+
+  const handleMouseUp = useCallback(() => {
+    if (resizing && onColumnWidthChange) {
+      onColumnWidthChange(currentColumnWidths);
+    }
+    setResizing(null);
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  }, [resizing, currentColumnWidths, onColumnWidthChange]);
+
+  useEffect(() => {
+    if (resizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [resizing, handleMouseMove, handleMouseUp]);
+
   const renderHeaderCell = (key: string, label: string, sortable: boolean = false, isFixed: boolean = false) => {
     if (!visibleColumns[key]) return null;
-    const width = responsiveColumnWidths[key];
+    const width = currentColumnWidths[key] || responsiveColumnWidths[key];
     return <th key={key} className={`
-          relative bg-white border-r border-gray-200 p-2 text-left text-xs font-medium text-gray-700
+          relative bg-lunar-surface border-r border-gray-200 p-2 text-left text-xs font-medium text-gray-700
           ${isFixed ? 'sticky z-20 shadow-sm' : ''}
         `} style={{
       width: `${width}px`,
       minWidth: `${width}px`,
       maxWidth: `${width}px`,
-      left: isFixed ? key === 'date' ? '0px' : `${responsiveColumnWidths.date}px` : undefined
+      left: isFixed ? key === 'date' ? '0px' : `${currentColumnWidths.date || responsiveColumnWidths.date}px` : undefined
     }}>
         {sortable ? <div onClick={() => onSort(key)} className="flex items-center justify-between cursor-pointer hover:text-blue-600">
             <span>{label}</span>
             {getSortIcon(key)}
           </div> : <span>{label}</span>}
+        
+        {/* Divisor para redimensionamento */}
+        <div 
+          className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-blue-400 hover:opacity-50 transition-all"
+          onMouseDown={(e) => handleMouseDown(e, key)}
+          style={{
+            background: resizing === key ? 'rgba(59, 130, 246, 0.5)' : 'transparent'
+          }}
+        />
       </th>;
   };
   const renderCell = useCallback((key: string, content: React.ReactNode, isFixed = false) => {
     if (!visibleColumns[key]) return null;
-    const width = responsiveColumnWidths[key];
+    const width = currentColumnWidths[key] || responsiveColumnWidths[key];
     return <td className={`
           p-2 border-r border-gray-100 min-h-[40px] text-xs
           ${isFixed ? 'sticky z-10 bg-white shadow-sm' : 'bg-white'}
@@ -379,11 +443,11 @@ export function WorkflowTable({
       width: `${width}px`,
       minWidth: `${width}px`,
       maxWidth: `${width}px`,
-      left: isFixed ? key === 'date' ? '0px' : `${responsiveColumnWidths.date}px` : undefined
+      left: isFixed ? key === 'date' ? '0px' : `${currentColumnWidths.date || responsiveColumnWidths.date}px` : undefined
     }}>
         {content}
       </td>;
-  }, [visibleColumns, responsiveColumnWidths]);
+  }, [visibleColumns, currentColumnWidths, responsiveColumnWidths]);
   return <div className="relative flex flex-col h-full bg-white">
       {/* NÍVEL 1: O "BOX DE ROLAGEM" */}
       <div ref={scrollContainerRef} className="h-full w-full overflow-auto" style={{
