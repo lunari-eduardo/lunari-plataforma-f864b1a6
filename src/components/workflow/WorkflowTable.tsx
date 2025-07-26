@@ -553,14 +553,7 @@ export function WorkflowTable({
                 ))}
 
                 {renderCell('category', (
-                  <CategoryCombobox 
-                    value={session.categoria} 
-                    disabled={false}
-                    categoryOptions={categoryOptions}
-                    onValueChange={(categoria) => {
-                      handleFieldUpdateStable(session.id, 'categoria', categoria);
-                    }}
-                  />
+                  <span className="text-xs font-medium">{session.categoria || 'N/A'}</span>
                 ))}
 
                 {renderCell('package', (
