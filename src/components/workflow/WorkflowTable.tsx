@@ -467,7 +467,7 @@ export function WorkflowTable({
           }}
         >
           {/* NÍVEL 3: O CABEÇALHO STICKY */}
-          <thead className="sticky top-0 z-30 bg-white border-b-4 border-gray-400 shadow-sm">
+          <thead className="sticky top-0 z-30 bg-white border-b-2 border-gray-200">
             <tr>
               {renderHeaderCell('date', 'Data/Hora', true, true)}
               {renderHeaderCell('client', 'Nome', true, true)}
