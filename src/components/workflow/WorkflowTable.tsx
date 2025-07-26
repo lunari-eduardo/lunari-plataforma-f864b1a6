@@ -440,8 +440,8 @@ export function WorkflowTable({
 
                 {renderCell('description', renderEditableInput(session, 'descricao', session.descricao || '', 'text', 'Descrição...'))}
                 
-                {renderCell('email', <div className="flex items-center gap-1">
-                    <span className="text-xs select-all cursor-text">{session.email || 'N/A'}</span>
+                {renderCell('email', <div className="flex items-center gap-1 max-w-full">
+                    <span className="text-xs select-all cursor-text truncate">{session.email || 'N/A'}</span>
                     {session.email && <a href={`mailto:${session.email}`}>
                         
                       </a>}
