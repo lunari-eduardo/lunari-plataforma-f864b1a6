@@ -226,7 +226,8 @@ export default function Workflow() {
       const existingSession = existingSessionsForCurrentMonth.find((s: SessionData) => s.id === agendamento.id);
       return existingSession || {
         ...agendamento,
-        status: '' // Status vazio por padrão para novos agendamentos
+        status: '', // Status vazio por padrão para novos agendamentos
+        detalhes: '' // Campo detalhes vazio para entrada manual
       };
     });
     setSessions(currentMonthSessions);
@@ -487,7 +488,7 @@ export default function Workflow() {
             productQty: "Qtd Produto",
             productTotal: "Total Produto",
             additionalValue: "Adicional",
-            details: "Detalhes",
+            details: "Obs",
             total: "Total",
             paid: "Pago",
             remaining: "Restante",
