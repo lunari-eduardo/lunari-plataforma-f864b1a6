@@ -8,6 +8,7 @@ import { StatusBadge } from "./StatusBadge";
 import { MessageCircle, Mail, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Package, Plus, Minus } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { formatToDayMonth } from "@/utils/dateUtils";
 interface ProdutoWorkflow {
   nome: string;
   quantidade: number;
@@ -220,13 +221,6 @@ export function WorkflowTable({
       handlePaymentAdd(sessionId);
     }
   }, [handlePaymentAdd]);
-  const formatDateDayMonth = (dateString: string) => {
-    const parts = dateString.split('/');
-    if (parts.length === 3) {
-      return `${parts[0]}/${parts[1]}`; // Exibe apenas DD/MM
-    }
-    return dateString;
-  };
   const handleScroll = useCallback(() => {
     if (scrollContainerRef.current) {
       const scrollLeft = scrollContainerRef.current.scrollLeft;
@@ -490,7 +484,7 @@ export function WorkflowTable({
           <tbody className="divide-y divide-gray-50">
             {sessions.map(session => <>
                 <tr key={session.id} className="hover:bg-gray-50">
-                {renderCell('date', <div className="font-medium">{formatDateDayMonth(session.data)}</div>, true)}
+                {renderCell('date', <div className="font-medium">{formatToDayMonth(session.data)}</div>, true)}
                 
                 {renderCell('client', <div className="flex items-center gap-2">
                     <span className="font-medium">{session.nome}</span>

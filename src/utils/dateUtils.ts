@@ -126,6 +126,18 @@ export function safeParseInputDate(inputValue: string): Date | null {
 }
 
 /**
+ * Converte uma data no formato YYYY-MM-DD para DD/MM (apenas dia e mês)
+ */
+export function formatToDayMonth(dateString: string): string {
+  if (!dateString || !dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    return '';
+  }
+  
+  const [ano, mes, dia] = dateString.split('-');
+  return `${dia}/${mes}`;
+}
+
+/**
  * Formata uma data para o formato de input HTML (yyyy-MM-dd)
  */
 export function formatDateForInput(date: Date | string): string {
