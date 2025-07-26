@@ -67,9 +67,9 @@ export const useAgenda = () => {
         pacoteData = pacotesData.find(p => p.id === appointment.packageId);
         
         // Busca 2: Remover prefixos se não encontrou
-        if (!pacoteData) {
+        if (!pacoteData && typeof appointment.packageId === 'string') {
           const cleanId = appointment.packageId.replace(/^(orcamento-|pacote-|agenda-)/, '');
-          pacoteData = pacotesData.find(p => p.id === cleanId || p.id.replace(/^(orcamento-|pacote-|agenda-)/, '') === cleanId);
+          pacoteData = pacotesData.find(p => p.id === cleanId || (typeof p.id === 'string' && p.id.replace(/^(orcamento-|pacote-|agenda-)/, '') === cleanId));
           console.log('Tentativa com ID limpo:', cleanId, 'encontrou:', !!pacoteData);
         }
         
