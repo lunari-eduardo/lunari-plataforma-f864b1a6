@@ -2,7 +2,8 @@ import { useState, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, Filter, Check, ChevronsUpDown } from 'lucide-react';
+import { Plus, Trash2, Filter, Check, ChevronsUpDown, ChevronDown, ChevronUp } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
@@ -50,6 +51,7 @@ export default function Pacotes({
   const [filtroNome, setFiltroNome] = useState<string>('');
   const [filtroValor, setFiltroValor] = useState<string>('');
   const [editingPackage, setEditingPackage] = useState<string | null>(null);
+  const [novoPacoteAberto, setNovoPacoteAberto] = useState(false);
 
   // Debounce para filtro de nome
   const debouncedFiltroNome = useDebounce(filtroNome, 300);
@@ -208,13 +210,41 @@ export default function Pacotes({
   }, [produtos, getNomeProduto, adicionarProdutoAoPacote, removerProdutoDoPacote, formatarMoeda]);
   return <div className="mt-4 space-y-6">
       {/* Formulário Novo Pacote */}
-      <div>
-        <h3 className="font-medium text-sm">Novo Pacote Fotográfico</h3>
-        <p className="text-muted-foreground mt-1 mb-3 text-xs">
-          Configure os pacotes fotográficos disponíveis para venda.
-        </p>
-        
-        <PacoteForm categorias={categorias} produtos={produtos} onSubmit={adicionarPacote} submitLabel="Adicionar Pacote" />
+      <div className="bg-lunar-surface rounded-lg border border-lunar-border/50">
+        <div className="p-4">
+          <div className="flex justify-center">
+            <Collapsible open={novoPacoteAberto} onOpenChange={setNovoPacoteAberto}>
+              <CollapsibleTrigger asChild>
+                <Button className="bg-blue-500/20 border border-blue-500/30 text-blue-800 hover:bg-blue-500/30 flex items-center justify-center gap-2 px-4 py-2 rounded-lg">
+                  <span className="text-sm">📦</span>
+                  {novoPacoteAberto ? (
+                    <>
+                      Fechar Formulário
+                      <ChevronUp className="h-4 w-4" />
+                    </>
+                  ) : (
+                    <>
+                      [+] Novo Pacote Fotográfico
+                      <ChevronDown className="h-4 w-4" />
+                    </>
+                  )}
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="mt-6 border-t border-lunar-border/30 pt-6">
+                  <div className="mb-4">
+                    <h3 className="font-medium text-sm">Novo Pacote Fotográfico</h3>
+                    <p className="text-muted-foreground mt-1 text-xs">
+                      Configure os pacotes fotográficos disponíveis para venda.
+                    </p>
+                  </div>
+                  
+                  <PacoteForm categorias={categorias} produtos={produtos} onSubmit={adicionarPacote} submitLabel="Adicionar Pacote" />
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          </div>
+        </div>
       </div>
       
       {/* Seção Pacotes Cadastrados */}
