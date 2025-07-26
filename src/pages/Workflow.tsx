@@ -12,6 +12,14 @@ import { useOrcamentoData } from "@/hooks/useOrcamentoData";
 import { useContext } from 'react';
 import { AppContext } from '@/contexts/AppContext';
 import { parseDateFromStorage } from "@/utils/dateUtils";
+
+interface ProdutoWorkflow {
+  nome: string;
+  quantidade: number;
+  valorUnitario: number;
+  tipo: 'incluso' | 'manual';
+}
+
 interface SessionPayment {
   id: string;
   valor: number;
@@ -45,6 +53,7 @@ interface SessionData {
   restante: string;
   desconto: number;
   pagamentos?: SessionPayment[];
+  produtosList?: ProdutoWorkflow[];
 }
 interface CategoryOption {
   id: string;
@@ -136,7 +145,6 @@ export default function Workflow() {
         extraPhotoQty: true,
         extraPhotoTotal: true,
         product: true,
-        productQty: true,
         productTotal: true,
         additionalValue: true,
         details: true,
@@ -161,7 +169,6 @@ export default function Workflow() {
         extraPhotoQty: true,
         extraPhotoTotal: true,
         product: true,
-        productQty: true,
         productTotal: true,
         additionalValue: true,
         details: true,
@@ -506,7 +513,6 @@ export default function Workflow() {
             extraPhotoQty: "Qtd Foto",
             extraPhotoTotal: "Total Foto",
             product: "Produto",
-            productQty: "Qtd Produto",
             productTotal: "Total Produto",
             additionalValue: "Adicional",
             details: "Obs",

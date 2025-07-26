@@ -2,12 +2,10 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { WorkflowPackageCombobox } from "./WorkflowPackageCombobox";
-import { ProductCombobox } from "./ProductCombobox";
-import { CategoryCombobox } from "./CategoryCombobox";
 import { StatusBadge } from "./StatusBadge";
-import { MessageCircle, Mail, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Package, Plus, Minus } from "lucide-react";
+import { GerenciarProdutosModal } from "./GerenciarProdutosModal";
+import { MessageCircle, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Package, Plus } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatToDayMonth } from "@/utils/dateUtils";
 interface ProdutoWorkflow {
   nome: string;
@@ -33,7 +31,7 @@ interface SessionData {
   produto: string;
   qtdProduto: number;
   valorTotalProduto: string;
-  produtosList?: ProdutoWorkflow[]; // NOVA LISTA COMPLETA DE PRODUTOS
+  produtosList?: ProdutoWorkflow[]; // LISTA COMPLETA DE PRODUTOS
   valorAdicional: string;
   detalhes: string;
   valor: string;
@@ -168,7 +166,8 @@ export function WorkflowTable({
 }: WorkflowTableProps) {
   const [paymentInputs, setPaymentInputs] = useState<Record<string, string>>({});
   const [editingValues, setEditingValues] = useState<Record<string, string>>({});
-  const [expandedProducts, setExpandedProducts] = useState<Record<string, boolean>>({});
+  const [modalAberto, setModalAberto] = useState(false);
+  const [sessionSelecionada, setSessionSelecionada] = useState<SessionData | null>(null);
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [scrollPercent, setScrollPercent] = useState(0);
@@ -478,7 +477,6 @@ export function WorkflowTable({
               {renderHeaderCell('extraPhotoQty', 'Qtd Foto')}
               {renderHeaderCell('extraPhotoTotal', 'Total Foto')}
               {renderHeaderCell('product', 'Produto')}
-              {renderHeaderCell('productQty', 'Qtd Prod')}
               {renderHeaderCell('productTotal', 'Total Prod')}
               {renderHeaderCell('additionalValue', 'Adicional')}
               {renderHeaderCell('details', 'Detalhes')}
@@ -556,69 +554,32 @@ export function WorkflowTable({
 
                 {renderCell('extraPhotoTotal', <span className="text-xs font-medium text-green-600">{session.valorTotalFotoExtra || 'R$ 0,00'}</span>)}
 
-                {renderCell('product', <TooltipProvider>
-                    <div className="flex items-center gap-1">
-                      {/* Exibir produtos múltiplos se existirem */}
-                      {session.produtosList && session.produtosList.length > 0 ? <div className="flex items-center gap-1 w-full">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="flex items-center gap-1 cursor-pointer">
-                                <Package className="h-3 w-3 text-blue-600" />
-                                <span className="text-xs font-medium text-blue-700">
-                                  {session.produtosList.length} produtos
-                                </span>
-                                <Button variant="ghost" size="sm" onClick={() => setExpandedProducts(prev => ({
-                            ...prev,
-                            [session.id]: !prev[session.id]
-                          }))} className="h-4 w-4 p-0">
-                                  {expandedProducts[session.id] ? <Minus className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
-                                </Button>
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <div className="space-y-1">
-                                {session.produtosList.map((produto, idx) => <div key={idx} className="text-xs flex justify-between gap-2">
-                                    <span>{produto.nome}</span>
-                                    <span className="font-medium">
-                                      {produto.quantidade}x
-                                      {produto.tipo === 'incluso' ? ' (Incluso)' : ` - R$ ${produto.valorUnitario.toFixed(2)}`}
-                                    </span>
-                                  </div>)}
-                              </div>
-                            </TooltipContent>
-                          </Tooltip>
-                        </div> : (/* Sistema antigo para compatibilidade */
-                  <ProductCombobox key={`product-${session.id}-${session.produto}`} value={session.produto} onValueChange={productData => {
-                    if (productData) {
-                      handleFieldUpdateStable(session.id, 'produto', productData.nome);
-                      const qtd = session.qtdProduto || 1;
-                      const valorUnit = parseFloat(productData.valor.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-                      handleFieldUpdateStable(session.id, 'valorTotalProduto', formatCurrency(qtd * valorUnit));
-                    } else {
-                      // Limpar produto
-                      handleFieldUpdateStable(session.id, 'produto', '');
-                      handleFieldUpdateStable(session.id, 'qtdProduto', 0);
-                      handleFieldUpdateStable(session.id, 'valorTotalProduto', 'R$ 0,00');
-                    }
-                  }} productOptions={productOptions} onClear={() => {
-                    handleFieldUpdateStable(session.id, 'produto', '');
-                    handleFieldUpdateStable(session.id, 'qtdProduto', 0);
-                    handleFieldUpdateStable(session.id, 'valorTotalProduto', 'R$ 0,00');
-                  }} />)}
-                    </div>
-                  </TooltipProvider>)}
+                {renderCell('product', 
+                  <Button
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => {
+                      setSessionSelecionada(session);
+                      setModalAberto(true);
+                    }}
+                    className="h-6 p-2 text-xs justify-start hover:bg-blue-50 w-full"
+                  >
+                    {session.produtosList && session.produtosList.length > 0 ? (
+                      <div className="flex items-center gap-1">
+                        <Package className="h-3 w-3 text-blue-600" />
+                        <span className="text-blue-700 font-medium">
+                          {session.produtosList.length} produtos
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1 text-muted-foreground">
+                        <Plus className="h-3 w-3" />
+                        <span>Adicionar produto</span>
+                      </div>
+                    )}
+                  </Button>
+                )}
 
-                {renderCell('productQty', <Input key={`productQty-${session.id}-${session.qtdProduto}`} type="number" value={session.qtdProduto || 0} onChange={e => {
-                const qtd = parseInt(e.target.value) || 0;
-                handleFieldUpdateStable(session.id, 'qtdProduto', qtd);
-                if (session.produto) {
-                  const productData = productOptions.find(p => p.nome === session.produto);
-                  if (productData) {
-                    const valorUnit = parseFloat(productData.valor.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-                    handleFieldUpdateStable(session.id, 'valorTotalProduto', formatCurrency(qtd * valorUnit));
-                  }
-                }
-              }} className="h-6 text-xs p-1 w-full border-none bg-transparent focus:bg-lunar-accent/10 transition-colors duration-150" placeholder="0" autoComplete="off" />)}
 
                 {renderCell('productTotal', renderEditableInput(session, 'valorTotalProduto', session.valorTotalProduto || '', 'text', 'R$ 0,00'))}
 
@@ -642,30 +603,6 @@ export function WorkflowTable({
                     </Button>
                   </div>)}
                 </tr>
-                
-                {/* Linha expandida para mostrar todos os produtos */}
-                {expandedProducts[session.id] && session.produtosList && session.produtosList.length > 0 && <tr key={`${session.id}-expanded`} className="group bg-lunar-accent/5 transition-colors duration-150 ease-in-out">
-                    <td colSpan={Object.keys(visibleColumns).filter(key => visibleColumns[key]).length} className="p-3 group-hover:bg-lunar-surface/50 group-focus-within:bg-lunar-accent/10 transition-colors duration-150 ease-in-out">
-                      <div className="space-y-2">
-                        <h4 className="text-xs font-medium text-blue-800">📦 Produtos Detalhados</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                          {session.produtosList.map((produto, idx) => <div key={idx} className="bg-white p-2 rounded border border-blue-200">
-                              <div className="flex justify-between items-start">
-                                <div className="flex-1">
-                                  <p className="text-xs font-medium text-gray-800">{produto.nome}</p>
-                                  <p className="text-xs text-gray-600">Qtd: {produto.quantidade}</p>
-                                </div>
-                                <div className="text-right">
-                                  <span className={`text-xs px-2 py-1 rounded ${produto.tipo === 'incluso' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                                    {produto.tipo === 'incluso' ? 'Incluso' : `R$ ${produto.valorUnitario.toFixed(2)}`}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>)}
-                        </div>
-                      </div>
-                    </td>
-                  </tr>}
                </>;
               })}
           </tbody>
@@ -682,5 +619,37 @@ export function WorkflowTable({
             <ChevronRight className="h-5 w-5" />
           </Button>
         </div>}
+        
+        {/* Modal de Gerenciamento de Produtos */}
+        {sessionSelecionada && (
+          <GerenciarProdutosModal
+            open={modalAberto}
+            onOpenChange={setModalAberto}
+            sessionId={sessionSelecionada.id}
+            clienteName={sessionSelecionada.nome}
+            produtos={sessionSelecionada.produtosList || []}
+            productOptions={productOptions}
+            onSave={(novosProdutos) => {
+              // Atualizar a lista de produtos e recalcular totais
+              handleFieldUpdateStable(sessionSelecionada.id, 'produtosList', novosProdutos);
+              
+              // Atualizar campos de compatibilidade
+              const produtosManuais = novosProdutos.filter(p => p.tipo === 'manual');
+              const valorTotalManuais = produtosManuais.reduce((total, p) => total + (p.valorUnitario * p.quantidade), 0);
+              
+              if (produtosManuais.length > 0) {
+                handleFieldUpdateStable(sessionSelecionada.id, 'produto', produtosManuais.map(p => p.nome).join(', '));
+                handleFieldUpdateStable(sessionSelecionada.id, 'qtdProduto', produtosManuais.reduce((total, p) => total + p.quantidade, 0));
+              } else {
+                handleFieldUpdateStable(sessionSelecionada.id, 'produto', '');
+                handleFieldUpdateStable(sessionSelecionada.id, 'qtdProduto', 0);
+              }
+              
+              handleFieldUpdateStable(sessionSelecionada.id, 'valorTotalProduto', formatCurrency(valorTotalManuais));
+              
+              setSessionSelecionada(null);
+            }}
+          />
+        )}
     </div>;
 }
