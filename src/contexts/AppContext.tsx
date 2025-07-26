@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
 import { parseDateFromStorage, formatDateForStorage, getCurrentDateString } from '@/utils/dateUtils';
+import { formatCurrency } from '@/utils/financialUtils';
 import { toast } from '@/hooks/use-toast';
 import { FinancialEngine, CreateTransactionInput } from '@/services/FinancialEngine';
 
@@ -338,20 +339,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       detalhes: orcamento.detalhes || '',
       categoria: orcamento.categoria || '',
       pacote: (pacotePrincipal?.nome?.replace(/^Pacote:\s*/, '') || pacotePrincipal?.nome || ''),
-      valorPacote: valorPacote,
-      valorFotoExtra: valorFotoExtraFromPackage,
+      valorPacote: formatCurrency(valorPacote),
+      valorFotoExtra: formatCurrency(valorFotoExtraFromPackage),
       qtdFotosExtra: 0,
-      valorTotalFotoExtra: 0,
+      valorTotalFotoExtra: formatCurrency(0),
       produto: produtosList.map(p => p.nome).join(', '),
       qtdProduto: produtosList.reduce((acc, p) => acc + p.quantidade, 0),
-      valorTotalProduto: valorProdutosManuais, // Apenas produtos manuais somam
-      valorAdicional: 0,
+      valorTotalProduto: formatCurrency(valorProdutosManuais), // Apenas produtos manuais somam
+      valorAdicional: formatCurrency(0),
       desconto: 0,
-      valor: valorTotal,
-      total: valorTotal,
-      valorPago: 0,
-      restante: valorTotal,
-      status: 'Fechado',
+      valor: formatCurrency(valorTotal),
+      total: formatCurrency(valorTotal),
+      valorPago: formatCurrency(0),
+      restante: formatCurrency(valorTotal),
+      status: '', // Removido status padrão 'Fechado'
       pagamentos: [],
       fonte: 'orcamento',
       dataOriginal: parseDateFromStorage(orcamento.data),
