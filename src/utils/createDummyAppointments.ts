@@ -1,9 +1,9 @@
 import { Appointment } from '@/hooks/useAgenda';
 
 export const createDummyAppointments = (): Appointment[] => {
-  const currentDate = new Date();
-  const currentMonth = currentDate.getMonth();
-  const currentYear = currentDate.getFullYear();
+  // Definir especificamente julho de 2025
+  const targetMonth = 6; // Julho (0-indexado)
+  const targetYear = 2025;
 
   const nomes = [
     'Ana Silva', 'Bruno Costa', 'Carla Santos', 'Diego Oliveira', 'Elena Ferreira',
@@ -53,12 +53,12 @@ export const createDummyAppointments = (): Appointment[] => {
   ];
 
   return nomes.map((nome, index) => {
-    // Distribuir as datas ao longo do mês atual
-    const day = Math.floor((index / 15) * 28) + 1; // Distribuir entre dias 1-28
+    // Distribuir as datas ao longo de julho de 2025
+    const day = Math.floor((index / 15) * 30) + 1; // Distribuir entre dias 1-30
     const hour = 9 + (index % 8); // Horários entre 9h e 16h
     const minute = (index % 2) * 30; // 00 ou 30 minutos
     
-    const appointmentDate = new Date(currentYear, currentMonth, day);
+    const appointmentDate = new Date(targetYear, targetMonth, day);
     const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
 
     // Valores aleatórios para os pagamentos
@@ -111,14 +111,33 @@ export const addDummyAppointmentsToStorage = () => {
       // Salvar no localStorage
       localStorage.setItem('agenda_appointments', JSON.stringify(allAppointments));
       
-      console.log('✅ 15 agendamentos fantasmas criados com sucesso!');
-      return true;
+      console.log('✅ 15 agendamentos fantasmas criados para julho de 2025!');
+      return { success: true, message: '15 agendamentos criados para julho de 2025!' };
     } else {
       console.log('⚠️ Agendamentos fantasmas já existem no storage');
-      return false;
+      return { success: false, message: 'Agendamentos fantasmas já existem' };
     }
   } catch (error) {
     console.error('❌ Erro ao criar agendamentos fantasmas:', error);
-    return false;
+    return { success: false, message: 'Erro ao criar agendamentos' };
+  }
+};
+
+export const removeDummyAppointmentsFromStorage = () => {
+  try {
+    // Buscar agendamentos existentes
+    const existingAppointments = JSON.parse(localStorage.getItem('agenda_appointments') || '[]');
+    
+    // Filtrar removendo agendamentos fantasmas
+    const realAppointments = existingAppointments.filter((apt: any) => !apt.id?.startsWith('dummy-'));
+    
+    // Salvar no localStorage
+    localStorage.setItem('agenda_appointments', JSON.stringify(realAppointments));
+    
+    console.log('✅ Agendamentos fantasmas removidos!');
+    return { success: true, message: 'Agendamentos fantasmas removidos!' };
+  } catch (error) {
+    console.error('❌ Erro ao remover agendamentos fantasmas:', error);
+    return { success: false, message: 'Erro ao remover agendamentos' };
   }
 };

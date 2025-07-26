@@ -1,14 +1,25 @@
-import { addDummyAppointmentsToStorage } from './createDummyAppointments';
+import { addDummyAppointmentsToStorage, removeDummyAppointmentsFromStorage } from './createDummyAppointments';
 
-// Função para inicializar dados fantasmas
-export const initializeDummyData = () => {
-  // Adicionar agendamentos fantasmas
-  const appointmentsAdded = addDummyAppointmentsToStorage();
+// Função para criar dados fantasmas
+export const createDummyData = () => {
+  const result = addDummyAppointmentsToStorage();
   
-  if (appointmentsAdded) {
+  if (result.success) {
     // Recarregar a página para que os dados sejam carregados
-    window.location.reload();
+    setTimeout(() => window.location.reload(), 500);
   }
   
-  return appointmentsAdded;
+  return result;
+};
+
+// Função para remover dados fantasmas
+export const removeDummyData = () => {
+  const result = removeDummyAppointmentsFromStorage();
+  
+  if (result.success) {
+    // Recarregar a página para que os dados sejam removidos
+    setTimeout(() => window.location.reload(), 500);
+  }
+  
+  return result;
 };
