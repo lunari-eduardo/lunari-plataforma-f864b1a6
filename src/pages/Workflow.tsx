@@ -12,7 +12,6 @@ import { useOrcamentoData } from "@/hooks/useOrcamentoData";
 import { useContext } from 'react';
 import { AppContext } from '@/contexts/AppContext';
 import { parseDateFromStorage } from "@/utils/dateUtils";
-import { createDummyData, removeDummyData } from "@/utils/initializeDummyData";
 interface SessionPayment {
   id: string;
   valor: number;
@@ -444,42 +443,10 @@ export default function Workflow() {
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
-          <div className="flex items-center space-x-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => {
-                const result = createDummyData();
-                toast({
-                  title: result.success ? "Sucesso" : "Aviso",
-                  description: result.message,
-                  variant: result.success ? "default" : "destructive"
-                });
-              }}
-              className="text-xs bg-blue-50 hover:bg-blue-100 border-blue-200"
-            >
-              + 15 Agendamentos Jul/2025
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => {
-                const result = removeDummyData();
-                toast({
-                  title: result.success ? "Sucesso" : "Erro",
-                  description: result.message,
-                  variant: result.success ? "default" : "destructive"
-                });
-              }}
-              className="text-xs bg-red-50 hover:bg-red-100 border-red-200 text-red-700"
-            >
-              Remover Fantasmas
-            </Button>
-            <Button variant="ghost" size="sm" onClick={toggleMetrics} className="flex items-center space-x-2 text-gray-600">
-              {showMetrics ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              <span className="hidden sm:inline">{showMetrics ? "Ocultar" : "Métricas"}</span>
-            </Button>
-          </div>
+          <Button variant="ghost" size="sm" onClick={toggleMetrics} className="flex items-center space-x-2 text-gray-600">
+            {showMetrics ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            <span className="hidden sm:inline">{showMetrics ? "Ocultar" : "Métricas"}</span>
+          </Button>
         </div>
 
         {showMetrics && <div className="px-4 pt-2 pb-3 bg-lunar-bg">
