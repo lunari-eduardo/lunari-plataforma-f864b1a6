@@ -223,12 +223,12 @@ export default function LancamentosTab({
             {/* Seletor de Mês/Ano e Botão de Novo Lançamento para Mobile */}
             <div className="flex items-center justify-between gap-3">
               {/* Seletor de Mês/Ano */}
-              <div className="flex items-center bg-white rounded-lg border border-gray-200 p-2 shadow-sm py-[2px] px-px">
+              <div className="flex items-center bg-white rounded-lg border border-gray-200 p-2 shadow-sm py-[2px] px-[24px] mx-0">
                 <Button variant="ghost" size="sm" onClick={() => navegarMes('anterior')} className="h-8 w-8 p-0">
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
                 
-                <div className="flex items-center gap-2 px-3">
+                <div className="flex items-center gap-1 px-1">
                   <Select value={filtroMesAno.mes.toString()} onValueChange={value => setFiltroMesAno({
                 ...filtroMesAno,
                 mes: parseInt(value)
@@ -291,13 +291,6 @@ export default function LancamentosTab({
 
 
       {/* Modal de Novo Lançamento */}
-      <ModalNovoLancamentoRefatorado 
-        aberto={modalNovoLancamentoAberto} 
-        onFechar={() => setModalNovoLancamentoAberto(false)} 
-        createTransactionEngine={createTransactionEngine} 
-        obterItensPorGrupo={obterItensPorGrupo} 
-        grupoAtivo={activeSubTab}
-        tipoLancamento={activeSubTab === 'Receita Não Operacional' ? 'receita' : 'despesa'}
-      />
+      <ModalNovoLancamentoRefatorado aberto={modalNovoLancamentoAberto} onFechar={() => setModalNovoLancamentoAberto(false)} createTransactionEngine={createTransactionEngine} obterItensPorGrupo={obterItensPorGrupo} grupoAtivo={activeSubTab} tipoLancamento={activeSubTab === 'Receita Não Operacional' ? 'receita' : 'despesa'} />
     </div>;
 }
