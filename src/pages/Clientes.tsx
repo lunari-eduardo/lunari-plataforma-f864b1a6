@@ -10,8 +10,9 @@ import { Label } from "@/components/ui/label";
 import { Search, UserPlus, User, Phone, Mail, Edit, Trash2, ArrowUpDown, ArrowUp, ArrowDown, DollarSign, Calendar, Activity } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from 'sonner';
-import { useClienteMetrics, ClienteMetricas } from '@/utils/clienteUtils';
+import { useClienteRegistry, prepareClientesWithMetricas } from '@/utils/clienteRegistryUtils';
 import { formatCurrency } from '@/utils/financialUtils';
+import { ClienteMetricas } from '@/types/cliente';
 
 type SortConfig = {
   key: keyof ClienteMetricas | 'nome' | 'email' | 'telefone';
@@ -23,9 +24,7 @@ export default function Clientes() {
     clientes,
     adicionarCliente,
     atualizarCliente,
-    removerCliente,
-    workflowItems,
-    appointments
+    removerCliente
   } = useContext(AppContext);
   
   const [filtro, setFiltro] = useState('');
@@ -34,16 +33,21 @@ export default function Clientes() {
   const [formData, setFormData] = useState({ nome: '', email: '', telefone: '' });
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'nome', direction: null });
 
-  // Calcular métricas para todos os clientes
-  const clienteMetricas = useClienteMetrics(clientes || [], workflowItems || [], appointments || []);
+  // Usar novo sistema de Cliente Registry
+  const { registry, loading, getClienteMetricas } = useClienteRegistry();
+  
+  // Preparar clientes com métricas do registry
+  const clientesComMetricas = useMemo(() => {
+    return prepareClientesWithMetricas(clientes || [], registry);
+  }, [clientes, registry]);
 
   // Filtrar e ordenar clientes
   const clientesFiltradosEOrdenados = useMemo(() => {
-    let clientesFiltrados = filtro ? (clientes || []).filter(cliente => 
+    let clientesFiltrados = filtro ? clientesComMetricas.filter(cliente => 
       cliente.nome.toLowerCase().includes(filtro.toLowerCase()) || 
       cliente.email.toLowerCase().includes(filtro.toLowerCase()) || 
       cliente.telefone.includes(filtro)
-    ) : (clientes || []);
+    ) : clientesComMetricas;
 
     // Aplicar ordenação
     if (sortConfig.direction) {
@@ -54,15 +58,13 @@ export default function Clientes() {
           valorA = a[sortConfig.key].toLowerCase();
           valorB = b[sortConfig.key].toLowerCase();
         } else {
-          const metricasA = clienteMetricas.get(a.id);
-          const metricasB = clienteMetricas.get(b.id);
-          valorA = metricasA?.[sortConfig.key] || 0;
-          valorB = metricasB?.[sortConfig.key] || 0;
+          valorA = a.metricas[sortConfig.key] || 0;
+          valorB = b.metricas[sortConfig.key] || 0;
           
           // Para última sessão, usar Date para comparação
           if (sortConfig.key === 'ultimaSessao') {
-            valorA = metricasA?.ultimaSessao ? new Date(metricasA.ultimaSessao.split('/').reverse().join('-')).getTime() : 0;
-            valorB = metricasB?.ultimaSessao ? new Date(metricasB.ultimaSessao.split('/').reverse().join('-')).getTime() : 0;
+            valorA = a.metricas.ultimaSessao ? new Date(a.metricas.ultimaSessao.split('/').reverse().join('-')).getTime() : 0;
+            valorB = b.metricas.ultimaSessao ? new Date(b.metricas.ultimaSessao.split('/').reverse().join('-')).getTime() : 0;
           }
         }
 
@@ -73,7 +75,7 @@ export default function Clientes() {
     }
 
     return clientesFiltrados;
-  }, [clientes, filtro, sortConfig, clienteMetricas]);
+  }, [clientesComMetricas, filtro, sortConfig]);
 
   // Função para lidar com ordenação
   const handleSort = (key: SortConfig['key']) => {
@@ -191,12 +193,12 @@ export default function Clientes() {
                 </TableHead>
                 <TableHead 
                   className="font-medium cursor-pointer hover:bg-stone-300 transition-colors text-center"
-                  onClick={() => handleSort('sessoes')}
+                  onClick={() => handleSort('totalSessoes')}
                 >
                   <div className="flex items-center justify-center">
                     <Activity className="h-4 w-4 mr-1" />
                     SESSÕES
-                    {renderSortIcon('sessoes')}
+                    {renderSortIcon('totalSessoes')}
                   </div>
                 </TableHead>
                 <TableHead 
@@ -244,26 +246,25 @@ export default function Clientes() {
             </TableHeader>
             <TableBody>
               {clientesFiltradosEOrdenados.map(cliente => {
-                const metricas = clienteMetricas.get(cliente.id);
                 return (
                   <TableRow key={cliente.id} className="hover:bg-stone-50">
                     <TableCell className="font-medium">{cliente.nome}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{cliente.email}</TableCell>
                     <TableCell className="text-sm">{cliente.telefone}</TableCell>
                     <TableCell className="text-center font-medium">
-                      {metricas?.sessoes || 0}
+                      {cliente.metricas?.totalSessoes || 0}
                     </TableCell>
                     <TableCell className="text-right font-medium text-primary">
-                      {formatCurrency(metricas?.totalGasto || 0)}
+                      {formatCurrency(cliente.metricas?.totalGasto || 0)}
                     </TableCell>
                     <TableCell className="text-right font-medium text-emerald-600">
-                      {formatCurrency(metricas?.totalPago || 0)}
+                      {formatCurrency(cliente.metricas?.totalPago || 0)}
                     </TableCell>
                     <TableCell className="text-right font-medium text-amber-600">
-                      {formatCurrency(metricas?.aReceber || 0)}
+                      {formatCurrency(cliente.metricas?.aReceber || 0)}
                     </TableCell>
                     <TableCell className="text-center text-sm text-muted-foreground">
-                      {metricas?.ultimaSessao || 'Nunca'}
+                      {cliente.metricas?.ultimaSessao || 'Nunca'}
                     </TableCell>
                     <TableCell className="text-center">
                       <div className="flex items-center justify-center gap-2">
@@ -286,7 +287,6 @@ export default function Clientes() {
       {/* Visualização Mobile - Cards */}
       <div className="md:hidden grid grid-cols-1 gap-4">
         {clientesFiltradosEOrdenados.map(cliente => {
-          const metricas = clienteMetricas.get(cliente.id);
           return (
             <Card key={cliente.id} className="overflow-hidden bg-neumorphic-light bg-lunar-surface">
               <div className="p-4 flex items-center justify-between border-b bg-neumorphic-light bg-lunar-border">
@@ -295,11 +295,11 @@ export default function Clientes() {
                   <div className="flex items-center gap-4 mt-1">
                     <div className="flex items-center gap-1">
                       <Activity className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground">{metricas?.sessoes || 0} sessões</span>
+                      <span className="text-xs text-muted-foreground">{cliente.metricas?.totalSessoes || 0} sessões</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <Calendar className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground">{metricas?.ultimaSessao || 'Nunca'}</span>
+                      <span className="text-xs text-muted-foreground">{cliente.metricas?.ultimaSessao || 'Nunca'}</span>
                     </div>
                   </div>
                 </div>
@@ -328,15 +328,15 @@ export default function Clientes() {
                 <div className="grid grid-cols-2 gap-3 pt-2 border-t">
                   <div className="text-center">
                     <div className="text-xs text-muted-foreground">Total Gasto</div>
-                    <div className="font-medium text-primary text-sm">{formatCurrency(metricas?.totalGasto || 0)}</div>
+                    <div className="font-medium text-primary text-sm">{formatCurrency(cliente.metricas?.totalGasto || 0)}</div>
                   </div>
                   <div className="text-center">
                     <div className="text-xs text-muted-foreground">Total Pago</div>
-                    <div className="font-medium text-emerald-600 text-sm">{formatCurrency(metricas?.totalPago || 0)}</div>
+                    <div className="font-medium text-emerald-600 text-sm">{formatCurrency(cliente.metricas?.totalPago || 0)}</div>
                   </div>
                   <div className="text-center col-span-2">
                     <div className="text-xs text-muted-foreground">A Receber</div>
-                    <div className="font-medium text-amber-600">{formatCurrency(metricas?.aReceber || 0)}</div>
+                    <div className="font-medium text-amber-600">{formatCurrency(cliente.metricas?.aReceber || 0)}</div>
                   </div>
                 </div>
               </div>

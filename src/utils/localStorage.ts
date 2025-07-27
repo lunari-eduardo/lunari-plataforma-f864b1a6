@@ -13,7 +13,8 @@ export const STORAGE_KEYS = {
   PRICING_SETTINGS: 'lunari_pricing_settings',
   WORKFLOW_ITEMS: 'lunari_workflow_items',
   WORKFLOW_COLUMNS: 'lunari_workflow_columns',
-  WORKFLOW_STATUS: 'lunari_workflow_status'
+  WORKFLOW_STATUS: 'lunari_workflow_status',
+  CLIENTE_REGISTRY: 'lunari_cliente_registry'
 } as const;
 
 export const storage = {

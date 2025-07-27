@@ -6,6 +6,7 @@ import { toast } from '@/hooks/use-toast';
 import { FinancialEngine, CreateTransactionInput } from '@/services/FinancialEngine';
 import { calculateTotals, calculateTotalsNew } from '@/services/FinancialCalculationEngine';
 import { autoMigrateIfNeeded } from '@/utils/dataMoveMigration';
+import { ClienteRelationshipManager } from '@/services/ClienteRelationshipManager';
 
 // Types
 import { Orcamento, Template, OrigemCliente, MetricasOrcamento, Cliente } from '@/types/orcamentos';
@@ -668,6 +669,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                                newWorkflowItem.valorTotalProduto + newWorkflowItem.valorAdicional - newWorkflowItem.desconto;
         newWorkflowItem.restante = newWorkflowItem.total - newWorkflowItem.valorPago;
 
+        // Adicionar ao Cliente Registry se clienteId foi encontrado
+        if (newWorkflowItem.clienteId) {
+          ClienteRelationshipManager.addWorkflowItemToCliente(newWorkflowItem.clienteId, newWorkflowItem);
+        }
+
         newItems.push(newWorkflowItem);
       }
     });
@@ -842,6 +848,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       newWorkflowItem.total = newWorkflowItem.valorPacote + newWorkflowItem.valorTotalFotoExtra + 
                              valorProdutosManuaisOrc + newWorkflowItem.valorAdicional - newWorkflowItem.desconto;
       newWorkflowItem.restante = newWorkflowItem.total - newWorkflowItem.valorPago;
+
+      // Adicionar ao Cliente Registry se clienteId foi encontrado
+      if (newWorkflowItem.clienteId) {
+        ClienteRelationshipManager.addWorkflowItemToCliente(newWorkflowItem.clienteId, newWorkflowItem);
+      }
 
       newItems.push(newWorkflowItem);
     });
