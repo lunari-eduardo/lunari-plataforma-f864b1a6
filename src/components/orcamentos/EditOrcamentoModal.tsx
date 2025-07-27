@@ -76,10 +76,14 @@ export default function EditOrcamentoModal({
     }
     return String(categoriaId);
   };
+  // State para controlar carregamento único e evitar reversões
+  const [loadedBudgetId, setLoadedBudgetId] = useState<string | null>(null);
+
   useEffect(() => {
-    if (isOpen && orcamento) {
-      // Reset para evitar problemas de sincronização
-      setFormData(initialFormState);
+    // TRAVA: só carregar dados UMA VEZ quando o modal abrir
+    if (isOpen && orcamento && orcamento.id !== loadedBudgetId) {
+      setLoadedBudgetId(orcamento.id);
+      
       const [year, month, day] = orcamento.data.split('-');
       const pacotesDoOrcamento = orcamento.pacotes || [];
       
@@ -133,10 +137,13 @@ export default function EditOrcamentoModal({
         valorManual: orcamento.valorManual,
         isOrcamentoFechado: orcamento.status === 'fechado'
       });
-    } else if (!isOpen) {
-      setFormData(initialFormState);
     }
-  }, [isOpen, orcamento, pacotes]); // Incluir 'pacotes' para reagir a mudanças nas configurações
+    
+    // Resetar trava quando modal fechar
+    if (!isOpen) {
+      setLoadedBudgetId(null);
+    }
+  }, [isOpen, orcamento, loadedBudgetId]);
   const handleMainPackageSelect = (pacote: any) => {
     if (!pacote) {
       setFormData(prev => ({
@@ -283,18 +290,24 @@ export default function EditOrcamentoModal({
     onClose();
   };
   if (!orcamento) return null;
-  // NOVA LÓGICA DE PACOTE FECHADO: O valor base do pacote é o preço final
-  const valorPacotePrincipal = formData.pacotePrincipal ? formData.pacotePrincipal.valorVenda || formData.pacotePrincipal.valor_base || formData.pacotePrincipal.valor || 0 : 0;
+  // Usar Motor de Cálculo Centralizado para exibição
+  const { calculateTotals } = require('@/services/FinancialCalculationEngine');
+  const totalsCalculados = calculateTotals({
+    pacotePrincipal: formData.pacotePrincipal,
+    produtos: formData.produtosAdicionais.map(p => ({
+      id: p.id,
+      nome: p.nome,
+      valorUnitario: p.preco,
+      quantidade: p.quantidade,
+      tipo: (p as any).inclusoNoPacote ? 'incluso' : 'manual'
+    }))
+  });
   
-  // Separar produtos inclusos no pacote dos produtos manuais
+  const valorPacotePrincipal = totalsCalculados.valorPacote;
   const produtosInclusos = formData.produtosAdicionais.filter(p => (p as any).inclusoNoPacote);
   const produtosManuais = formData.produtosAdicionais.filter(p => !(p as any).inclusoNoPacote);
-  
-  // Apenas somar produtos adicionados manualmente (não inclusos no pacote)
-  const valorProdutosManuais = produtosManuais.reduce((total, p) => total + p.preco * p.quantidade, 0);
-  
-  // Total = Valor base do pacote + produtos manuais (produtos inclusos não somam)
-  const valorTotal = valorPacotePrincipal + valorProdutosManuais;
+  const valorProdutosManuais = totalsCalculados.valorProdutosAdicionais;
+  const valorTotal = totalsCalculados.totalGeral;
   const valorFinal = formData.valorManual !== undefined ? formData.valorManual : valorTotal;
   return <Dialog open={isOpen} onOpenChange={onClose} modal={false}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" onInteractOutside={event => {

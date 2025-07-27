@@ -345,7 +345,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       valorTotalFotoExtra: formatCurrency(0),
       produto: produtosList.map(p => p.nome).join(', '),
       qtdProduto: produtosList.reduce((acc, p) => acc + p.quantidade, 0),
-      valorTotalProduto: formatCurrency(valorProdutosManuais), // Apenas produtos manuais somam
+      valorTotalProduto: formatCurrency((() => {
+        // Usar Motor de Cálculo Centralizado
+        const { calculateTotals } = require('@/services/FinancialCalculationEngine');
+        const totals = calculateTotals({
+          pacotePrincipal: pacotePrincipal ? { id: pacotePrincipal.id, nome: pacotePrincipal.nome, valorBase: valorPacote } : null,
+          produtos: produtosList,
+          valorFotosExtra: orcamento.valorFotoExtra || 0,
+          adicional: 0,
+          desconto: 0
+        });
+        return totals.valorProdutosAdicionais;
+      })()), // Apenas produtos manuais usando motor centralizado
       valorAdicional: formatCurrency(0),
       desconto: 0,
       valor: formatCurrency(valorTotal),

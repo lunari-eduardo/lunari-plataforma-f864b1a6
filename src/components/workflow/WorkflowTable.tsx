@@ -277,28 +277,49 @@ export function WorkflowTable({
     };
   }, [stopContinuousScroll]);
   const calculateTotal = useCallback((session: SessionData) => {
-    const valorPacoteStr = typeof session.valorPacote === 'string' ? session.valorPacote : String(session.valorPacote || '0');
-    const valorPacote = parseFloat(valorPacoteStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-    const valorFotoExtraStr = typeof session.valorTotalFotoExtra === 'string' ? session.valorTotalFotoExtra : String(session.valorTotalFotoExtra || '0');
-    const valorFotoExtra = parseFloat(valorFotoExtraStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-    const valorAdicionalStr = typeof session.valorAdicional === 'string' ? session.valorAdicional : String(session.valorAdicional || '0');
-    const valorAdicional = parseFloat(valorAdicionalStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-    const desconto = session.desconto || 0;
+    // Usar Motor de Cálculo Centralizado
+    const { calculateTotals } = require('@/services/FinancialCalculationEngine');
+    
+    try {
+      // Preparar dados para o motor centralizado
+      const sessionForCalculation = {
+        pacotePrincipal: session.pacote ? { 
+          id: session.pacote, 
+          nome: session.pacote, 
+          valorBase: parseFloat(String(session.valorPacote || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0 
+        } : null,
+        produtosList: session.produtosList,
+        valorFotosExtra: parseFloat(String(session.valorTotalFotoExtra || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0,
+        adicional: parseFloat(String(session.valorAdicional || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0,
+        desconto: session.desconto || 0
+      };
+      
+      const totals = calculateTotals(sessionForCalculation);
+      return totals.totalGeral;
+    } catch (error) {
+      console.error('Erro no motor de cálculo, usando fallback:', error);
+      
+      // Fallback para compatibilidade com dados antigos
+      const valorPacoteStr = typeof session.valorPacote === 'string' ? session.valorPacote : String(session.valorPacote || '0');
+      const valorPacote = parseFloat(valorPacoteStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+      const valorFotoExtraStr = typeof session.valorTotalFotoExtra === 'string' ? session.valorTotalFotoExtra : String(session.valorTotalFotoExtra || '0');
+      const valorFotoExtra = parseFloat(valorFotoExtraStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+      const valorAdicionalStr = typeof session.valorAdicional === 'string' ? session.valorAdicional : String(session.valorAdicional || '0');
+      const valorAdicional = parseFloat(valorAdicionalStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+      const desconto = session.desconto || 0;
 
-    // NOVA LÓGICA: Produtos inclusos não somam no total, apenas produtos manuais
-    let valorProdutosManuais = 0;
-    if (session.produtosList && session.produtosList.length > 0) {
-      // Somar apenas produtos manuais (não inclusos)
-      valorProdutosManuais = session.produtosList.filter(p => p.tipo === 'manual').reduce((total, p) => total + p.valorUnitario * p.quantidade, 0);
-    } else {
-      // Fallback para sistema antigo
-      const valorProdutoStr = typeof session.valorTotalProduto === 'string' ? session.valorTotalProduto : String(session.valorTotalProduto || '0');
-      const valorProduto = parseFloat(valorProdutoStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-      valorProdutosManuais = valorProduto;
+      let valorProdutosManuais = 0;
+      if (session.produtosList && session.produtosList.length > 0) {
+        const produtosManuais = session.produtosList.filter(p => p.tipo === 'manual');
+        valorProdutosManuais = produtosManuais.reduce((total, p) => total + (p.valorUnitario * p.quantidade), 0);
+      } else if (session.valorTotalProduto) {
+        const valorProdutoStr = typeof session.valorTotalProduto === 'string' ? session.valorTotalProduto : String(session.valorTotalProduto || '0');
+        const valorProduto = parseFloat(valorProdutoStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+        valorProdutosManuais = valorProduto;
+      }
+
+      return valorPacote + valorFotoExtra + valorProdutosManuais + valorAdicional - desconto;
     }
-
-    // Total = Valor do pacote (já inclui produtos inclusos) + fotos extra + produtos manuais + adicional - desconto
-    return valorPacote + valorFotoExtra + valorProdutosManuais + valorAdicional - desconto;
   }, []);
   const calculateRestante = useCallback((session: SessionData) => {
     const total = calculateTotal(session);

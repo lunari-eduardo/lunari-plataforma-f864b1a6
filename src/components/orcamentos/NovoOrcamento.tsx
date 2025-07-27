@@ -68,15 +68,30 @@ export default function NovoOrcamento() {
   // NOVA LÓGICA DE PACOTE FECHADO: O valor base do pacote é o preço final
   const valorPacote = pacoteSelecionado?.valor || 0;
   
-  // Separar produtos inclusos no pacote dos produtos manuais
+  // Usar Motor de Cálculo Centralizado
+  const { calculateTotals } = require('@/services/FinancialCalculationEngine');
+  
+  const produtosParaCalculo = produtosAdicionais.map(p => ({
+    id: p.id,
+    nome: p.nome,
+    valorUnitario: p.preco,
+    quantidade: p.quantidade,
+    tipo: p.id.startsWith('auto-') ? 'incluso' : 'manual'
+  }));
+  
+  const totalsCalculados = calculateTotals({
+    pacotePrincipal: pacoteSelecionado,
+    produtos: produtosParaCalculo,
+    valorFotosExtra: 0,
+    adicional: 0,
+    desconto: 0
+  });
+  
+  // Dados compatíveis com o sistema existente
   const produtosInclusos = produtosAdicionais.filter(p => p.id.startsWith('auto-'));
   const produtosManuais = produtosAdicionais.filter(p => !p.id.startsWith('auto-'));
-  
-  // Apenas somar produtos adicionados manualmente (não inclusos no pacote)
-  const valorProdutosManuais = produtosManuais.reduce((total, p) => total + p.preco * p.quantidade, 0);
-  
-  // Total = Valor base do pacote + produtos manuais (produtos inclusos não somam)
-  const valorTotal = valorPacote + valorProdutosManuais;
+  const valorProdutosManuais = totalsCalculados.valorProdutosAdicionais;
+  const valorTotal = totalsCalculados.totalGeral;
   const valorFinal = valorManual !== undefined ? valorManual : valorTotal;
 
   // Lógica de preenchimento automático - A Regra de Ouro
