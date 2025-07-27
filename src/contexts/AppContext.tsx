@@ -272,150 +272,97 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     console.log('=== SINCRONIZANDO COM WORKFLOW (NOVA ARQUITETURA) ===');
     console.log('Orçamento completo:', orcamento);
 
-    // NOVA LÓGICA: Usar dados da nova estrutura se disponível
-    if (orcamento.pacotePrincipal || orcamento.produtosAdicionais) {
-      console.log('✅ Usando nova estrutura de dados');
-      
-      const valorPacote = orcamento.pacotePrincipal?.valorCongelado || 0;
-      
-      // Montar lista de produtos (inclusos + manuais)
+    // FUNÇÃO AUXILIAR: Extrair produtos padronizados do orçamento
+    const extrairProdutosDoOrcamento = (orcamento: any): { produtosList: any[], valorPacote: number, valorProdutosManuais: number } => {
       const produtosList: any[] = [];
-      
-      // Produtos inclusos no pacote
-      if (orcamento.pacotePrincipal?.produtosIncluidos) {
-        produtosList.push(...orcamento.pacotePrincipal.produtosIncluidos.map(p => ({
-          nome: p.nome,
-          quantidade: p.quantidade,
-          valorUnitario: 0, // Produtos inclusos não somam
-          tipo: 'incluso'
-        })));
-      }
-      
-      // Produtos manuais
-      if (orcamento.produtosAdicionais) {
-        produtosList.push(...orcamento.produtosAdicionais.map(p => ({
-          nome: p.nome,
-          quantidade: p.quantidade,
-          valorUnitario: p.valorUnitarioCongelado,
-          tipo: 'manual'
-        })));
-      }
+      let valorPacote = 0;
+      let valorProdutosManuais = 0;
 
-      const valorProdutosManuais = orcamento.produtosAdicionais?.reduce((total, p) => 
-        total + (p.valorUnitarioCongelado * p.quantidade), 0) || 0;
-
-      const sessaoWorkflow = {
-        id: `orcamento-${orcamento.id}`,
-        data: orcamento.data,
-        hora: orcamento.hora,
-        nome: orcamento.cliente?.nome || '',
-        email: orcamento.cliente?.email || '',
-        whatsapp: orcamento.cliente?.telefone || '',
-        descricao: orcamento.descricao || '',
-        detalhes: orcamento.detalhes || '',
-        categoria: orcamento.categoria || '',
-        pacote: orcamento.pacotePrincipal?.nome || '',
-        valorPacote: formatCurrency(valorPacote),
-        valorFotoExtra: formatCurrency(35),
-        qtdFotosExtra: 0,
-        valorTotalFotoExtra: formatCurrency(0),
-        produto: produtosList.map(p => p.nome).join(', '),
-        qtdProduto: produtosList.reduce((acc, p) => acc + p.quantidade, 0),
-        valorTotalProduto: formatCurrency(valorProdutosManuais),
-        valorAdicional: formatCurrency(0),
-        desconto: 0,
-        valor: formatCurrency(orcamento.valorFinal),
-        total: formatCurrency(orcamento.valorFinal),
-        valorPago: formatCurrency(0),
-        restante: formatCurrency(orcamento.valorFinal),
-        status: '',
-        pagamentos: [],
-        fonte: 'orcamento',
-        dataOriginal: parseDateFromStorage(orcamento.data),
-        produtosList: produtosList
-      };
-
-      console.log('✅ Dados sincronizados (nova estrutura):', sessaoWorkflow);
-      
-      // Salvar no localStorage
-      const saved = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
-      const existingIndex = saved.findIndex((s: any) => s.id === sessaoWorkflow.id);
-      
-      if (existingIndex >= 0) {
-        saved[existingIndex] = sessaoWorkflow;
-      } else {
-        saved.push(sessaoWorkflow);
-      }
-      
-      localStorage.setItem('workflow_sessions', JSON.stringify(saved));
-      console.log('✅ Workflow sincronizado com nova estrutura');
-      return;
-    }
-
-    console.log('⚠️ Usando estrutura antiga como fallback');
-
-    const pacotePrincipal = orcamento.pacotes?.[0];
-    const produtosAdicionais = orcamento.pacotes?.slice(1) || [];
-
-    // SOLUÇÃO 1: Busca inteligente de pacotes com IDs limpos
-    let pacoteData = null;
-    let valorFotoExtraFromPackage = orcamento.valorFotoExtra || 35;
-    let produtosInclusosCompletos: any[] = [];
-    
-    if (pacotePrincipal) {
-      console.log('Buscando pacote:', pacotePrincipal);
-      
-      // Extrair ID limpo removendo prefixos
-      const cleanPackageId = pacotePrincipal.id?.replace(/^(pacote-|orcamento-)/, '') || '';
-      const packageName = pacotePrincipal.nome?.replace(/^Pacote:\s*/, '') || '';
-      
-      // Busca em múltiplas estratégias
-      pacoteData = pacotes.find(p => p.id === pacotePrincipal.id) ||
-                   pacotes.find(p => p.id === cleanPackageId) ||
-                   pacotes.find(p => p.nome === packageName) ||
-                   pacotes.find(p => p.nome === pacotePrincipal.nome);
-      
-      console.log('Pacote encontrado:', pacoteData);
-      
-      if (pacoteData) {
-        valorFotoExtraFromPackage = pacoteData.valor_foto_extra || pacoteData.valorFotoExtra || 35;
+      // PRIMEIRA PRIORIDADE: Nova estrutura (pacotePrincipal + produtosAdicionais)
+      if (orcamento.pacotePrincipal || orcamento.produtosAdicionais) {
+        console.log('✅ Usando nova estrutura de dados');
         
-        // SOLUÇÃO 2: Buscar produtos inclusos do pacote
-        if (pacoteData.produtosIncluidos && pacoteData.produtosIncluidos.length > 0) {
-          produtosInclusosCompletos = pacoteData.produtosIncluidos.map((produtoIncluido: any) => {
+        valorPacote = orcamento.pacotePrincipal?.valorCongelado || 0;
+        
+        // Produtos inclusos do pacote principal
+        if (orcamento.pacotePrincipal?.produtosIncluidos) {
+          produtosList.push(...orcamento.pacotePrincipal.produtosIncluidos.map((p: any) => ({
+            nome: p.nome,
+            quantidade: p.quantidade,
+            valorUnitario: 0, // Produtos inclusos não somam
+            tipo: 'incluso'
+          })));
+        }
+        
+        // Produtos manuais adicionais
+        if (orcamento.produtosAdicionais) {
+          const produtosManuais = orcamento.produtosAdicionais.map((p: any) => ({
+            nome: p.nome,
+            quantidade: p.quantidade,
+            valorUnitario: p.valorUnitarioCongelado,
+            tipo: 'manual'
+          }));
+          
+          produtosList.push(...produtosManuais);
+          valorProdutosManuais = orcamento.produtosAdicionais.reduce((total: number, p: any) => 
+            total + (p.valorUnitarioCongelado * p.quantidade), 0);
+        }
+        
+        return { produtosList, valorPacote, valorProdutosManuais };
+      }
+
+      // SEGUNDA PRIORIDADE: Migração automática da estrutura antiga
+      console.log('⚠️ Migrando estrutura antiga para nova estrutura');
+      
+      const pacotePrincipal = orcamento.pacotes?.[0];
+      const produtosAdicionais = orcamento.pacotes?.slice(1) || [];
+      
+      // Buscar dados do pacote para produtos inclusos
+      let pacoteData = null;
+      if (pacotePrincipal) {
+        const cleanPackageId = pacotePrincipal.id?.replace(/^(pacote-|orcamento-)/, '') || '';
+        const packageName = pacotePrincipal.nome?.replace(/^Pacote:\s*/, '') || '';
+        
+        pacoteData = pacotes.find(p => p.id === pacotePrincipal.id) ||
+                    pacotes.find(p => p.id === cleanPackageId) ||
+                    pacotes.find(p => p.nome === packageName) ||
+                    pacotes.find(p => p.nome === pacotePrincipal.nome);
+        
+        if (pacoteData?.produtosIncluidos) {
+          produtosList.push(...pacoteData.produtosIncluidos.map((produtoIncluido: any) => {
             const produto = produtos.find(p => p.id === produtoIncluido.produtoId);
             return produto ? {
-              id: produto.id,
               nome: produto.nome,
-              valorUnitario: 0, // Produtos inclusos não somam
               quantidade: produtoIncluido.quantidade,
-              tipo: 'incluso' // Padronizar estrutura
+              valorUnitario: 0, // Produtos inclusos não somam
+              tipo: 'incluso'
             } : null;
-          }).filter(Boolean);
+          }).filter(Boolean));
         }
       }
-    }
-
-    // SOLUÇÃO 3: Separar produtos inclusos dos produtos manuais
-    const produtosManuais = produtosAdicionais.filter(p => !p.id?.startsWith('auto-'));
-    const valorProdutosManuais = produtosManuais.reduce((acc, p) => acc + (p.preco * p.quantidade), 0);
-
-    const valorPacote = orcamento.valorManual || pacotePrincipal?.preco || pacoteData?.valor_base || 0;
-    
-    // NOVA LÓGICA: Total = Pacote + Produtos Manuais (inclusos não somam)
-    const valorTotal = valorPacote + valorProdutosManuais;
-
-    // SOLUÇÃO 4: Criar lista completa de produtos (inclusos + manuais)
-    const produtosList = [
-      ...produtosInclusosCompletos,
-      ...produtosManuais.map(p => ({
-        id: p.id,
+      
+      // Produtos manuais da estrutura antiga
+      const produtosManuais = produtosAdicionais.filter(p => !p.id?.startsWith('auto-'));
+      produtosList.push(...produtosManuais.map(p => ({
         nome: p.nome,
-        valorUnitario: p.preco,
         quantidade: p.quantidade,
-        tipo: 'manual' // Padronizar estrutura
-      }))
-    ];
+        valorUnitario: p.preco,
+        tipo: 'manual'
+      })));
+      
+      valorPacote = orcamento.valorManual || pacotePrincipal?.preco || pacoteData?.valor_base || 0;
+      valorProdutosManuais = produtosManuais.reduce((acc, p) => acc + (p.preco * p.quantidade), 0);
+      
+      return { produtosList, valorPacote, valorProdutosManuais };
+    };
+
+    // LÓGICA UNIFICADA: Sempre usar a função auxiliar
+    const { produtosList, valorPacote, valorProdutosManuais } = extrairProdutosDoOrcamento(orcamento);
+    
+    const valorTotal = orcamento.valorFinal || valorPacote + valorProdutosManuais;
+    const nomePacote = orcamento.pacotePrincipal?.nome || 
+                      orcamento.pacotes?.[0]?.nome?.replace(/^Pacote:\s*/, '') || 
+                      '';
 
     const sessaoWorkflow = {
       id: `orcamento-${orcamento.id}`,
@@ -427,44 +374,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       descricao: orcamento.descricao || '',
       detalhes: orcamento.detalhes || '',
       categoria: orcamento.categoria || '',
-      pacote: (pacotePrincipal?.nome?.replace(/^Pacote:\s*/, '') || pacotePrincipal?.nome || ''),
+      pacote: nomePacote,
       valorPacote: formatCurrency(valorPacote),
-      valorFotoExtra: formatCurrency(valorFotoExtraFromPackage),
+      valorFotoExtra: formatCurrency(35),
       qtdFotosExtra: 0,
       valorTotalFotoExtra: formatCurrency(0),
       produto: produtosList.map(p => p.nome).join(', '),
       qtdProduto: produtosList.reduce((acc, p) => acc + p.quantidade, 0),
-      valorTotalProduto: formatCurrency((() => {
-        // Usar Motor de Cálculo Centralizado
-        const totals = calculateTotals({
-          pacotePrincipal: pacotePrincipal ? { id: pacotePrincipal.id, nome: pacotePrincipal.nome, valorBase: valorPacote } : null,
-          produtos: produtosList,
-          valorFotosExtra: orcamento.valorFotoExtra || 0,
-          adicional: 0,
-          desconto: 0
-        });
-        return totals.valorProdutosAdicionais;
-      })()), // Apenas produtos manuais usando motor centralizado
+      valorTotalProduto: formatCurrency(valorProdutosManuais),
       valorAdicional: formatCurrency(0),
       desconto: 0,
       valor: formatCurrency(valorTotal),
       total: formatCurrency(valorTotal),
       valorPago: formatCurrency(0),
       restante: formatCurrency(valorTotal),
-      status: '', // Removido status padrão 'Fechado'
+      status: '',
       pagamentos: [],
       fonte: 'orcamento',
       dataOriginal: parseDateFromStorage(orcamento.data),
-      // NOVO: Adicionar lista completa de produtos para o novo sistema
       produtosList: produtosList
     };
 
-    console.log('=== DADOS FINAIS ===');
-    console.log('Pacote encontrado:', pacoteData?.nome);
-    console.log('Produtos inclusos:', produtosInclusosCompletos.length);
-    console.log('Produtos manuais:', produtosManuais.length);
-    console.log('Valor total:', valorTotal);
-    console.log('Sessão workflow:', sessaoWorkflow);
+    console.log('✅ Dados sincronizados com estrutura unificada:', sessaoWorkflow);
 
     // Salvar no localStorage do workflow
     const saved = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
