@@ -272,14 +272,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     console.log('=== SINCRONIZANDO COM WORKFLOW (NOVA ARQUITETURA) ===');
     console.log('Orçamento completo:', orcamento);
 
-    // FUNÇÃO AUXILIAR: Deduplicar produtos baseado no nome
+    // FUNÇÃO AUXILIAR: Normalizar nome do produto removendo sufixos
+    const normalizarNomeProduto = (nome: string): string => {
+      return nome
+        .toLowerCase()
+        .trim()
+        .replace(/\s*\(incluso no pacote\)\s*$/i, '')
+        .replace(/\s*\(incluído no pacote\)\s*$/i, '')
+        .replace(/\s*\(incluso\)\s*$/i, '')
+        .replace(/\s*\(incluído\)\s*$/i, '')
+        .trim();
+    };
+
+    // FUNÇÃO AUXILIAR: Deduplicar produtos baseado no nome normalizado
     const deduplikarProdutosPorNome = (produtos: any[]) => {
       const produtosUnicos = new Map();
       
       produtos.forEach(produto => {
-        const chave = produto.nome.toLowerCase().trim();
-        if (!produtosUnicos.has(chave)) {
-          produtosUnicos.set(chave, produto);
+        const chaveNormalizada = normalizarNomeProduto(produto.nome);
+        
+        if (!produtosUnicos.has(chaveNormalizada)) {
+          // Priorizar produto com nome mais limpo (sem sufixos)
+          produtosUnicos.set(chaveNormalizada, produto);
+        } else {
+          // Se já existe, manter o que tem nome mais limpo
+          const produtoExistente = produtosUnicos.get(chaveNormalizada);
+          const nomeAtualLimpo = !produto.nome.includes('(incluso');
+          const nomeExistenteLimpo = !produtoExistente.nome.includes('(incluso');
+          
+          if (nomeAtualLimpo && !nomeExistenteLimpo) {
+            produtosUnicos.set(chaveNormalizada, produto);
+          }
         }
       });
       
@@ -287,6 +310,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       
       if (resultado.length < produtos.length) {
         console.log(`🔄 Deduplicação: ${produtos.length} → ${resultado.length} produtos`);
+        console.log('🔍 Produtos normalizados:', produtos.map(p => ({ original: p.nome, normalizado: normalizarNomeProduto(p.nome) })));
       }
       
       return resultado;
