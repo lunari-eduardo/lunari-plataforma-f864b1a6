@@ -34,11 +34,24 @@ export default function Clientes() {
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'nome', direction: null });
 
   // Usar novo sistema de Cliente Registry
-  const { registry, loading, getClienteMetricas } = useClienteRegistry();
+  const { registry, loading, getClienteMetricas, refreshRegistry } = useClienteRegistry();
+  
+  // Debug: mostrar informações do registry
+  console.log('🏠 Clientes.tsx - Registry status:', { 
+    registryKeys: Object.keys(registry), 
+    clientesLength: clientes?.length || 0,
+    loading 
+  });
   
   // Preparar clientes com métricas do registry
   const clientesComMetricas = useMemo(() => {
-    return prepareClientesWithMetricas(clientes || [], registry);
+    const resultado = prepareClientesWithMetricas(clientes || [], registry);
+    console.log('📊 Clientes com métricas:', resultado.map(c => ({
+      nome: c.nome,
+      totalSessoes: c.metricas?.totalSessoes,
+      totalGasto: c.metricas?.totalGasto
+    })));
+    return resultado;
   }, [clientes, registry]);
 
   // Filtrar e ordenar clientes
@@ -140,10 +153,20 @@ export default function Clientes() {
           </p>
         </div>
         
-        <Button onClick={handleAddClient} className="bg-neumorphic-dark text-slate-50 bg-lunar-accent py-0 my-[8px]">
-          <UserPlus className="h-4 w-4 mr-1" />
-          Novo Cliente
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={refreshRegistry} 
+            variant="outline" 
+            size="sm"
+            className="text-xs"
+          >
+            🔄 Sincronizar
+          </Button>
+          <Button onClick={handleAddClient} className="bg-neumorphic-dark text-slate-50 bg-lunar-accent py-0 my-[8px]">
+            <UserPlus className="h-4 w-4 mr-1" />
+            Novo Cliente
+          </Button>
+        </div>
       </div>
       
       <div className="flex gap-2 max-w-lg">

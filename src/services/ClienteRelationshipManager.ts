@@ -63,15 +63,36 @@ export class ClienteRelationshipManager {
 
     console.log('🔄 Migrando dados existentes para Cliente Registry...');
     console.log(`Clientes: ${clientes.length}, Workflow: ${workflowItems.length}, Agenda: ${appointments.length}, Orçamentos: ${orcamentos.length}`);
+    
+    // Debug detalhado dos dados
+    console.log('📊 Clientes encontrados:', clientes.map(c => ({ id: c.id, nome: c.nome })));
+    console.log('📊 WorkflowItems encontrados:', workflowItems.map(w => ({ 
+      id: w.id, 
+      nome: w.nome, 
+      clienteId: w.clienteId, 
+      email: w.email, 
+      whatsapp: w.whatsapp 
+    })));
 
     clientes.forEach(cliente => {
       if (!this.registry[cliente.id]) {
         const clienteBase = this.convertToClienteBase(cliente);
+        const relatedWorkflow = this.findRelatedWorkflowItems(clienteBase, workflowItems);
+        const relatedAppointments = this.findRelatedAppointments(clienteBase, appointments);
+        const relatedOrcamentos = this.findRelatedOrcamentos(clienteBase, orcamentos);
+        
+        console.log(`🔗 Cliente ${cliente.nome}:`, {
+          workflow: relatedWorkflow.length,
+          appointments: relatedAppointments.length,
+          orcamentos: relatedOrcamentos.length,
+          workflowDetails: relatedWorkflow.map(w => ({ id: w.id, nome: w.nome, total: w.total }))
+        });
+
         const migrationData: ClienteMigrationData = {
           cliente: clienteBase,
-          workflowItems: this.findRelatedWorkflowItems(clienteBase, workflowItems),
-          appointments: this.findRelatedAppointments(clienteBase, appointments),
-          orcamentos: this.findRelatedOrcamentos(clienteBase, orcamentos)
+          workflowItems: relatedWorkflow,
+          appointments: relatedAppointments,
+          orcamentos: relatedOrcamentos
         };
 
         this.registry[cliente.id] = this.createRegistryEntry(migrationData);
@@ -100,19 +121,32 @@ export class ClienteRelationshipManager {
    * Encontra WorkflowItems relacionados a um cliente
    */
   private static findRelatedWorkflowItems(cliente: ClienteBase, workflowItems: WorkflowItem[]): WorkflowItem[] {
-    return workflowItems.filter(item => {
+    const relacionados = workflowItems.filter(item => {
       // Priorizar clienteId se existir
       if (item.clienteId) {
-        return item.clienteId === cliente.id;
+        const match = item.clienteId === cliente.id;
+        if (match) console.log(`✅ Match por clienteId: ${item.nome} -> ${cliente.nome}`);
+        return match;
       }
       
-      // Fallback: busca por nome, email ou telefone
-      const nomeMatch = item.nome?.toLowerCase().trim() === cliente.nome.toLowerCase().trim();
-      const emailMatch = item.email?.toLowerCase().trim() === cliente.email.toLowerCase().trim();
-      const telefoneMatch = item.whatsapp === cliente.telefone;
+      // Fallback: busca por nome, email ou telefone (normalizado)
+      const normalizeName = (name: string) => name?.toLowerCase().trim().replace(/\s+/g, ' ') || '';
+      const normalizeEmail = (email: string) => email?.toLowerCase().trim() || '';
+      const normalizePhone = (phone: string) => phone?.replace(/\D/g, '') || '';
+      
+      const nomeMatch = normalizeName(item.nome) === normalizeName(cliente.nome);
+      const emailMatch = item.email && cliente.email && normalizeEmail(item.email) === normalizeEmail(cliente.email);
+      const telefoneMatch = item.whatsapp && normalizePhone(item.whatsapp) === normalizePhone(cliente.telefone);
+      
+      if (nomeMatch || emailMatch || telefoneMatch) {
+        console.log(`✅ Match por dados: ${item.nome} -> ${cliente.nome} (nome: ${nomeMatch}, email: ${emailMatch}, tel: ${telefoneMatch})`);
+      }
       
       return nomeMatch || emailMatch || telefoneMatch;
     });
+    
+    console.log(`🔍 Busca para ${cliente.nome}: encontrados ${relacionados.length} workflow items`);
+    return relacionados;
   }
 
   /**

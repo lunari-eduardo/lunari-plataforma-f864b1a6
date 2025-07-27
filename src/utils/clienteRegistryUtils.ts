@@ -37,9 +37,11 @@ export function useClienteRegistry() {
   };
 
   const refreshRegistry = () => {
+    console.log('🔄 Forçando refresh do registry...');
     ClienteRelationshipManager.recalculateAllMetrics();
     const updatedRegistries = ClienteRelationshipManager.getAllClientesRegistry();
     setRegistry(updatedRegistries);
+    console.log('✅ Registry atualizado:', Object.keys(updatedRegistries).length, 'clientes');
   };
 
   return {
