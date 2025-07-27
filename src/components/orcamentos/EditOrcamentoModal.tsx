@@ -13,6 +13,7 @@ import ClientSearchInput from './ClientSearchInput';
 import { PackageSearchCombobox } from './PackageSearchCombobox';
 import { ProductSearchCombobox } from './ProductSearchCombobox';
 import { formatDateForStorage } from '@/utils/dateUtils';
+import { calculateTotals } from '@/services/FinancialCalculationEngine';
 interface EditOrcamentoModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -291,7 +292,6 @@ export default function EditOrcamentoModal({
   };
   if (!orcamento) return null;
   // Usar Motor de Cálculo Centralizado para exibição
-  const { calculateTotals } = require('@/services/FinancialCalculationEngine');
   const totalsCalculados = calculateTotals({
     pacotePrincipal: formData.pacotePrincipal,
     produtos: formData.produtosAdicionais.map(p => ({

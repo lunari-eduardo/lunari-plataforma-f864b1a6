@@ -7,6 +7,7 @@ import { GerenciarProdutosModal } from "./GerenciarProdutosModal";
 import { MessageCircle, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Package, Plus } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatToDayMonth } from "@/utils/dateUtils";
+import { calculateTotals } from '@/services/FinancialCalculationEngine';
 interface ProdutoWorkflow {
   nome: string;
   quantidade: number;
@@ -278,7 +279,6 @@ export function WorkflowTable({
   }, [stopContinuousScroll]);
   const calculateTotal = useCallback((session: SessionData) => {
     // Usar Motor de Cálculo Centralizado
-    const { calculateTotals } = require('@/services/FinancialCalculationEngine');
     
     try {
       // Preparar dados para o motor centralizado
@@ -288,7 +288,13 @@ export function WorkflowTable({
           nome: session.pacote, 
           valorBase: parseFloat(String(session.valorPacote || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0 
         } : null,
-        produtosList: session.produtosList,
+        produtos: session.produtosList?.map(p => ({
+          id: p.nome, // Use nome as id since ProdutoWorkflow doesn't have id
+          nome: p.nome,
+          valorUnitario: p.valorUnitario,
+          quantidade: p.quantidade,
+          tipo: p.tipo
+        })) || [],
         valorFotosExtra: parseFloat(String(session.valorTotalFotoExtra || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0,
         adicional: parseFloat(String(session.valorAdicional || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0,
         desconto: session.desconto || 0
