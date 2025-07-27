@@ -249,7 +249,6 @@ export default function NovoOrcamento() {
       
       // Campos de compatibilidade
       packageId: pacoteSelecionado?.id,
-      produtosIncluidos: pacoteSelecionado?.produtosIncluidos || [],
       valorFotoExtra: pacoteSelecionado?.valorFotoExtra || 35
     });
 

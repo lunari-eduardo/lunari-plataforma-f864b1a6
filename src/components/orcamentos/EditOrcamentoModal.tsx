@@ -282,6 +282,32 @@ export default function EditOrcamentoModal({
       updates.pacotes = pacotesParaSalvar;
       updates.valorTotal = valorTotal;
       updates.valorManual = formData.valorManual;
+      
+      // NOVA ESTRUTURA: Evitar duplicação de dados
+      if (formData.pacotePrincipal) {
+        updates.pacotePrincipal = {
+          pacoteId: formData.pacotePrincipal.id,
+          nome: formData.pacotePrincipal.nome,
+          valorCongelado: valorPacotePrincipal,
+          produtosIncluidos: (formData.pacotePrincipal.produtosIncluidos || []).map((produtoIncluso: any) => ({
+            produtoId: produtoIncluso.produtoId,
+            nome: produtoIncluso.nome || 'Produto não encontrado',
+            quantidade: produtoIncluso.quantidade || 1,
+            valorUnitarioCongelado: 0,
+            tipo: 'incluso' as const
+          }))
+        };
+      }
+      
+      updates.produtosAdicionais = produtosManuais.map(p => ({
+        produtoId: p.id,
+        nome: p.nome,
+        quantidade: p.quantidade,
+        valorUnitarioCongelado: p.preco,
+        tipo: 'manual' as const
+      }));
+      
+      updates.valorFinal = formData.valorManual || valorTotal;
     }
     atualizarOrcamento(orcamento.id, updates);
     toast({

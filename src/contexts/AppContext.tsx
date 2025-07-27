@@ -292,88 +292,74 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return resultado;
     };
 
-    // FUNÇÃO AUXILIAR: Extrair produtos padronizados do orçamento
+    // FUNÇÃO AUXILIAR: Extrair produtos padronizados do orçamento (SIMPLIFICADA)
     const extrairProdutosDoOrcamento = (orcamento: any): { produtosList: any[], valorPacote: number, valorProdutosManuais: number } => {
       const produtosList: any[] = [];
       let valorPacote = 0;
       let valorProdutosManuais = 0;
 
-      // PRIMEIRA PRIORIDADE: Nova estrutura (pacotePrincipal + produtosAdicionais)
-      if (orcamento.pacotePrincipal || orcamento.produtosAdicionais) {
-        console.log('✅ Usando nova estrutura de dados');
-        
-        valorPacote = orcamento.pacotePrincipal?.valorCongelado || 0;
-        
-        // Produtos inclusos do pacote principal
-        if (orcamento.pacotePrincipal?.produtosIncluidos) {
-          produtosList.push(...orcamento.pacotePrincipal.produtosIncluidos.map((p: any) => ({
-            nome: p.nome,
-            quantidade: p.quantidade,
-            valorUnitario: 0, // Produtos inclusos não somam
-            tipo: 'incluso'
-          })));
-        }
-        
-        // Produtos manuais adicionais
-        if (orcamento.produtosAdicionais) {
-          const produtosManuais = orcamento.produtosAdicionais.map((p: any) => ({
-            nome: p.nome,
-            quantidade: p.quantidade,
-            valorUnitario: p.valorUnitarioCongelado,
-            tipo: 'manual'
-          }));
-          
-          produtosList.push(...produtosManuais);
-          valorProdutosManuais = orcamento.produtosAdicionais.reduce((total: number, p: any) => 
-            total + (p.valorUnitarioCongelado * p.quantidade), 0);
-        }
-        
-        return { produtosList, valorPacote, valorProdutosManuais };
-      }
+      console.log('📊 Extraindo produtos do orçamento (nova estrutura apenas)...');
 
-      // SEGUNDA PRIORIDADE: Migração automática da estrutura antiga
-      console.log('⚠️ Migrando estrutura antiga para nova estrutura');
-      
-      const pacotePrincipal = orcamento.pacotes?.[0];
-      const produtosAdicionais = orcamento.pacotes?.slice(1) || [];
-      
-      // Buscar dados do pacote para produtos inclusos
-      let pacoteData = null;
+      // NOVA ESTRUTURA: Pacote Principal
+      const pacotePrincipal = orcamento.pacotePrincipal;
       if (pacotePrincipal) {
-        const cleanPackageId = pacotePrincipal.id?.replace(/^(pacote-|orcamento-)/, '') || '';
-        const packageName = pacotePrincipal.nome?.replace(/^Pacote:\s*/, '') || '';
+        console.log('✅ Usando Pacote Principal');
         
-        pacoteData = pacotes.find(p => p.id === pacotePrincipal.id) ||
-                    pacotes.find(p => p.id === cleanPackageId) ||
-                    pacotes.find(p => p.nome === packageName) ||
-                    pacotes.find(p => p.nome === pacotePrincipal.nome);
-        
-        if (pacoteData?.produtosIncluidos) {
-          produtosList.push(...pacoteData.produtosIncluidos.map((produtoIncluido: any) => {
-            const produto = produtos.find(p => p.id === produtoIncluido.produtoId);
-            return produto ? {
+        // Adicionar produtos inclusos do pacote principal
+        if (pacotePrincipal.produtosIncluidos && pacotePrincipal.produtosIncluidos.length > 0) {
+          console.log(`📦 Adicionando ${pacotePrincipal.produtosIncluidos.length} produtos inclusos`);
+          pacotePrincipal.produtosIncluidos.forEach((produto: any) => {
+            produtosList.push({
               nome: produto.nome,
-              quantidade: produtoIncluido.quantidade,
+              quantidade: produto.quantidade,
               valorUnitario: 0, // Produtos inclusos não somam
               tipo: 'incluso'
-            } : null;
-          }).filter(Boolean));
+            });
+          });
         }
+        
+        valorPacote = pacotePrincipal.valorCongelado || 0;
       }
+
+      // NOVA ESTRUTURA: Produtos Adicionais
+      if (orcamento.produtosAdicionais && orcamento.produtosAdicionais.length > 0) {
+        console.log(`📦 Adicionando ${orcamento.produtosAdicionais.length} produtos adicionais`);
+        orcamento.produtosAdicionais.forEach((produto: any) => {
+          produtosList.push({
+            nome: produto.nome,
+            quantidade: produto.quantidade,
+            valorUnitario: produto.valorUnitarioCongelado || 0,
+            tipo: produto.tipo || 'manual'
+          });
+          
+          // Somar valor dos produtos manuais
+          if (produto.tipo === 'manual' || !produto.tipo) {
+            valorProdutosManuais += (produto.valorUnitarioCongelado || 0) * produto.quantidade;
+          }
+        });
+      }
+
+      // FALLBACK: Estrutura antiga (apenas se nova estrutura não existir)
+      if (!pacotePrincipal && !orcamento.produtosAdicionais && orcamento.pacotes) {
+        console.log('🔄 Fallback para estrutura antiga');
+        orcamento.pacotes.forEach((pacote: any) => {
+          if (pacote.id && !pacote.id.startsWith('pacote-')) {
+            produtosList.push({
+              nome: pacote.nome,
+              quantidade: pacote.quantidade || 1,
+              valorUnitario: pacote.preco || 0,
+              tipo: 'manual'
+            });
+            valorProdutosManuais += (pacote.preco || 0) * (pacote.quantidade || 1);
+          }
+        });
+        
+        valorPacote = orcamento.valorManual || orcamento.valorTotal || 0;
+      }
+
+      console.log(`📊 Produtos extraídos: ${produtosList.length} itens`);
       
-      // Produtos manuais da estrutura antiga
-      const produtosManuais = produtosAdicionais.filter(p => !p.id?.startsWith('auto-'));
-      produtosList.push(...produtosManuais.map(p => ({
-        nome: p.nome,
-        quantidade: p.quantidade,
-        valorUnitario: p.preco,
-        tipo: 'manual'
-      })));
-      
-      valorPacote = orcamento.valorManual || pacotePrincipal?.preco || pacoteData?.valor_base || 0;
-      valorProdutosManuais = produtosManuais.reduce((acc, p) => acc + (p.preco * p.quantidade), 0);
-      
-      // DEDUPLICAÇÃO FINAL: Sempre aplicada antes do retorno
+      // DEDUPLICAÇÃO FINAL: Aplicada como segurança
       const produtosDeduplikados = deduplikarProdutosPorNome(produtosList);
       
       return { produtosList: produtosDeduplikados, valorPacote, valorProdutosManuais };
