@@ -16,6 +16,7 @@ import { CategorySelector } from './CategorySelector';
 import { PackageSearchCombobox } from './PackageSearchCombobox';
 import { useOrcamentoData } from '@/hooks/useOrcamentoData';
 import { formatDateForStorage } from '@/utils/dateUtils';
+import { calculateTotals } from '@/services/FinancialCalculationEngine';
 
 interface ProdutoIncluido {
   produtoId: string;
@@ -68,19 +69,19 @@ export default function NovoOrcamento() {
   // NOVA LÓGICA DE PACOTE FECHADO: O valor base do pacote é o preço final
   const valorPacote = pacoteSelecionado?.valor || 0;
   
-  // Usar Motor de Cálculo Centralizado
-  const { calculateTotals } = require('@/services/FinancialCalculationEngine');
-  
   const produtosParaCalculo = produtosAdicionais.map(p => ({
     id: p.id,
     nome: p.nome,
     valorUnitario: p.preco,
     quantidade: p.quantidade,
-    tipo: p.id.startsWith('auto-') ? 'incluso' : 'manual'
+    tipo: p.id.startsWith('auto-') ? 'incluso' as const : 'manual' as const
   }));
   
   const totalsCalculados = calculateTotals({
-    pacotePrincipal: pacoteSelecionado,
+    pacotePrincipal: pacoteSelecionado ? {
+      ...pacoteSelecionado,
+      valorBase: pacoteSelecionado.valor
+    } : null,
     produtos: produtosParaCalculo,
     valorFotosExtra: 0,
     adicional: 0,
