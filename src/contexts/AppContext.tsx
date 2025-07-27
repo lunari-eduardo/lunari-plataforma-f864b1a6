@@ -4,7 +4,8 @@ import { parseDateFromStorage, formatDateForStorage, getCurrentDateString } from
 import { formatCurrency } from '@/utils/financialUtils';
 import { toast } from '@/hooks/use-toast';
 import { FinancialEngine, CreateTransactionInput } from '@/services/FinancialEngine';
-import { calculateTotals } from '@/services/FinancialCalculationEngine';
+import { calculateTotals, calculateTotalsNew } from '@/services/FinancialCalculationEngine';
+import { autoMigrateIfNeeded } from '@/utils/dataMoveMigration';
 
 // Types
 import { Orcamento, Template, OrigemCliente, MetricasOrcamento, Cliente } from '@/types/orcamentos';
@@ -151,9 +152,14 @@ const deserializeAppointments = (serializedAppointments: any[]): Appointment[] =
 };
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Orçamentos State
+  // Orçamentos State com migração automática
   const [orcamentos, setOrcamentos] = useState<Orcamento[]>(() => {
-    return storage.load(STORAGE_KEYS.BUDGETS, []);
+    const orcamentosRaw = storage.load(STORAGE_KEYS.BUDGETS, []);
+    const pacotesConfig = storage.load('configuracoes_pacotes', []);
+    const produtosConfig = storage.load('configuracoes_produtos', []);
+    
+    // Executar migração automática se necessário
+    return autoMigrateIfNeeded(orcamentosRaw, pacotesConfig, produtosConfig);
   });
   
   const [templates, setTemplates] = useState<Template[]>(() => {
@@ -259,12 +265,94 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return !(appointment.id?.startsWith('orcamento-') || (appointment as any).origem === 'orcamento');
   }, []);
 
-  // Função de sincronização direta com workflow
+  // Função de sincronização direta com workflow (NOVA ARQUITETURA)
   const sincronizarComWorkflow = useCallback((orcamento: Orcamento) => {
     if (!orcamento || orcamento.status !== 'fechado') return;
 
-    console.log('=== SINCRONIZANDO COM WORKFLOW ===');
+    console.log('=== SINCRONIZANDO COM WORKFLOW (NOVA ARQUITETURA) ===');
     console.log('Orçamento completo:', orcamento);
+
+    // NOVA LÓGICA: Usar dados da nova estrutura se disponível
+    if (orcamento.pacotePrincipal || orcamento.produtosAdicionais) {
+      console.log('✅ Usando nova estrutura de dados');
+      
+      const valorPacote = orcamento.pacotePrincipal?.valorCongelado || 0;
+      
+      // Montar lista de produtos (inclusos + manuais)
+      const produtosList: any[] = [];
+      
+      // Produtos inclusos no pacote
+      if (orcamento.pacotePrincipal?.produtosIncluidos) {
+        produtosList.push(...orcamento.pacotePrincipal.produtosIncluidos.map(p => ({
+          nome: p.nome,
+          quantidade: p.quantidade,
+          valorUnitario: 0, // Produtos inclusos não somam
+          tipo: 'incluso'
+        })));
+      }
+      
+      // Produtos manuais
+      if (orcamento.produtosAdicionais) {
+        produtosList.push(...orcamento.produtosAdicionais.map(p => ({
+          nome: p.nome,
+          quantidade: p.quantidade,
+          valorUnitario: p.valorUnitarioCongelado,
+          tipo: 'manual'
+        })));
+      }
+
+      const valorProdutosManuais = orcamento.produtosAdicionais?.reduce((total, p) => 
+        total + (p.valorUnitarioCongelado * p.quantidade), 0) || 0;
+
+      const sessaoWorkflow = {
+        id: `orcamento-${orcamento.id}`,
+        data: orcamento.data,
+        hora: orcamento.hora,
+        nome: orcamento.cliente?.nome || '',
+        email: orcamento.cliente?.email || '',
+        whatsapp: orcamento.cliente?.telefone || '',
+        descricao: orcamento.descricao || '',
+        detalhes: orcamento.detalhes || '',
+        categoria: orcamento.categoria || '',
+        pacote: orcamento.pacotePrincipal?.nome || '',
+        valorPacote: formatCurrency(valorPacote),
+        valorFotoExtra: formatCurrency(35),
+        qtdFotosExtra: 0,
+        valorTotalFotoExtra: formatCurrency(0),
+        produto: produtosList.map(p => p.nome).join(', '),
+        qtdProduto: produtosList.reduce((acc, p) => acc + p.quantidade, 0),
+        valorTotalProduto: formatCurrency(valorProdutosManuais),
+        valorAdicional: formatCurrency(0),
+        desconto: 0,
+        valor: formatCurrency(orcamento.valorFinal),
+        total: formatCurrency(orcamento.valorFinal),
+        valorPago: formatCurrency(0),
+        restante: formatCurrency(orcamento.valorFinal),
+        status: '',
+        pagamentos: [],
+        fonte: 'orcamento',
+        dataOriginal: parseDateFromStorage(orcamento.data),
+        produtosList: produtosList
+      };
+
+      console.log('✅ Dados sincronizados (nova estrutura):', sessaoWorkflow);
+      
+      // Salvar no localStorage
+      const saved = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
+      const existingIndex = saved.findIndex((s: any) => s.id === sessaoWorkflow.id);
+      
+      if (existingIndex >= 0) {
+        saved[existingIndex] = sessaoWorkflow;
+      } else {
+        saved.push(sessaoWorkflow);
+      }
+      
+      localStorage.setItem('workflow_sessions', JSON.stringify(saved));
+      console.log('✅ Workflow sincronizado com nova estrutura');
+      return;
+    }
+
+    console.log('⚠️ Usando estrutura antiga como fallback');
 
     const pacotePrincipal = orcamento.pacotes?.[0];
     const produtosAdicionais = orcamento.pacotes?.slice(1) || [];

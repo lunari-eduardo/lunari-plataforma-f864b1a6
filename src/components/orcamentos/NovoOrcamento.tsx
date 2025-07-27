@@ -201,6 +201,31 @@ export default function NovoOrcamento() {
       ...produtosAdicionais
     ];
 
+    // Converter para nova estrutura de dados
+    const pacotePrincipal = pacoteSelecionado ? {
+      pacoteId: pacoteSelecionado.id,
+      nome: pacoteSelecionado.nome,
+      valorCongelado: pacoteSelecionado.valor,
+      produtosIncluidos: (pacoteSelecionado.produtosIncluidos || []).map((produtoIncluso: any) => {
+        const produtoCompleto = produtos.find(p => p.id === produtoIncluso.produtoId);
+        return {
+          produtoId: produtoIncluso.produtoId,
+          nome: produtoCompleto?.nome || 'Produto não encontrado',
+          quantidade: produtoIncluso.quantidade || 1,
+          valorUnitarioCongelado: produtoCompleto?.valorVenda || 0,
+          tipo: 'incluso' as const
+        };
+      })
+    } : undefined;
+
+    const produtosAdicionaisNovo = produtosAdicionais.map(p => ({
+      produtoId: p.id,
+      nome: p.nome,
+      quantidade: p.quantidade,
+      valorUnitarioCongelado: p.preco,
+      tipo: 'manual' as const
+    }));
+
     adicionarOrcamento({
       cliente: clienteSelecionado,
       data: formatDateForStorage(data), // Garantir que a data seja salva no formato correto
@@ -208,12 +233,21 @@ export default function NovoOrcamento() {
       categoria,
       descricao,
       detalhes,
+      
+      // NOVA ARQUITETURA DE DADOS
+      pacotePrincipal,
+      produtosAdicionais: produtosAdicionaisNovo,
+      valorFinal: valorManual || valorFinal,
+      
+      // Compatibilidade com sistema antigo
       pacotes: todosItens,
       valorTotal: valorFinal,
       valorManual,
+      
       status,
       origemCliente: origemSelecionada,
-      // Novos campos para melhor sincronização
+      
+      // Campos de compatibilidade
       packageId: pacoteSelecionado?.id,
       produtosIncluidos: pacoteSelecionado?.produtosIncluidos || [],
       valorFotoExtra: pacoteSelecionado?.valorFotoExtra || 35

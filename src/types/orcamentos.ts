@@ -41,6 +41,29 @@ export interface Template {
   isPadrao: boolean;
 }
 
+// Nova estrutura de pacote principal com valores congelados
+export interface PacotePrincipal {
+  pacoteId: string;
+  nome: string;
+  valorCongelado: number; // Preço "congelado" no momento da seleção
+  produtosIncluidos: {
+    produtoId: string;
+    nome: string;
+    quantidade: number;
+    valorUnitarioCongelado: number; // Preço "congelado" do produto
+    tipo: 'incluso';
+  }[];
+}
+
+// Nova estrutura de produto adicional com valores congelados
+export interface ProdutoAdicional {
+  produtoId: string;
+  nome: string;
+  quantidade: number;
+  valorUnitarioCongelado: number; // Preço "congelado" do produto
+  tipo: 'manual';
+}
+
 export interface Orcamento {
   id: string;
   cliente: Cliente;
@@ -49,13 +72,24 @@ export interface Orcamento {
   categoria: string;
   descricao?: string;  // New field for service description (to be shared with Agenda/Workflow)
   detalhes: string;    // Internal notes field (renamed from the old description)
-  pacotes: PacoteProduto[];
-  valorTotal: number;
+  
+  // NOVA ARQUITETURA DE DADOS
+  pacotePrincipal?: PacotePrincipal;
+  produtosAdicionais: ProdutoAdicional[];
+  
+  // Campos financeiros
+  valorFinal: number; // O valor total final (pode ser manual)
+  
+  // Compatibilidade com sistema antigo
+  pacotes?: PacoteProduto[]; // Manter para compatibilidade
+  valorTotal?: number;
   valorManual?: number;
+  
   status: 'rascunho' | 'enviado' | 'fechado' | 'cancelado' | 'pendente' | 'follow-up';
   origemCliente: string;
   criadoEm: string;
-  // Novos campos para melhor sincronização com workflow
+  
+  // Campos de compatibilidade
   packageId?: string;
   produtosIncluidos?: ProdutoIncluido[];
   valorFotoExtra?: number;

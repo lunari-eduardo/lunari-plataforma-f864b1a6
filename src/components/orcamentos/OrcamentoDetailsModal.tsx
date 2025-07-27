@@ -175,22 +175,81 @@ export default function OrcamentoDetailsModal({
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {orcamento.pacotes.map((pacote, index) => (
-                <div key={index} className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
-                  <div>
-                    <p className="text-sm font-medium">{pacote.nome}</p>
-                    <p className="text-xs text-muted-foreground">Quantidade: {pacote.quantidade}</p>
+              {/* Pacote Principal */}
+              {orcamento.pacotePrincipal && (
+                <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="text-sm font-medium">{orcamento.pacotePrincipal.nome}</p>
+                      <p className="text-xs text-primary/70">Pacote Principal</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-medium">
+                        R$ {orcamento.pacotePrincipal.valorCongelado.toFixed(2)}
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium">
-                      R$ {(pacote.preco * pacote.quantidade).toFixed(2)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      R$ {pacote.preco.toFixed(2)} cada
-                    </p>
-                  </div>
+                  
+                  {/* Produtos inclusos no pacote */}
+                  {orcamento.pacotePrincipal.produtosIncluidos.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-primary/10">
+                      <p className="text-xs font-medium text-primary/70 mb-2">Produtos inclusos:</p>
+                      {orcamento.pacotePrincipal.produtosIncluidos.map((produto, idx) => (
+                        <div key={idx} className="flex justify-between items-center text-xs text-muted-foreground">
+                          <span>{produto.nome} (x{produto.quantidade})</span>
+                          <span>R$ {produto.valorUnitarioCongelado.toFixed(2)} (Incluso)</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              ))}
+              )}
+
+              {/* Produtos Adicionais */}
+              {orcamento.produtosAdicionais && orcamento.produtosAdicionais.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground">Produtos adicionais:</p>
+                  {orcamento.produtosAdicionais.map((produto, index) => (
+                    <div key={index} className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                      <div>
+                        <p className="text-sm font-medium">{produto.nome}</p>
+                        <p className="text-xs text-muted-foreground">Quantidade: {produto.quantidade}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium">
+                          R$ {(produto.valorUnitarioCongelado * produto.quantidade).toFixed(2)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          R$ {produto.valorUnitarioCongelado.toFixed(2)} cada
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Fallback para compatibilidade com dados antigos */}
+              {!orcamento.pacotePrincipal && !orcamento.produtosAdicionais && orcamento.pacotes && (
+                <div className="space-y-2">
+                  {orcamento.pacotes.map((pacote, index) => (
+                    <div key={index} className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                      <div>
+                        <p className="text-sm font-medium">{pacote.nome}</p>
+                        <p className="text-xs text-muted-foreground">Quantidade: {pacote.quantidade}</p>
+                        {index === 0 && <p className="text-xs text-primary/70">Pacote Principal</p>}
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium">
+                          R$ {(pacote.preco * pacote.quantidade).toFixed(2)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          R$ {pacote.preco.toFixed(2)} cada
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -205,10 +264,32 @@ export default function OrcamentoDetailsModal({
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Subtotal:</span>
-                <span className="text-sm">R$ {orcamento.valorTotal.toFixed(2)}</span>
-              </div>
+              {/* Nova estrutura de cálculo */}
+              {orcamento.pacotePrincipal && (
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Pacote principal:</span>
+                  <span className="text-sm">R$ {orcamento.pacotePrincipal.valorCongelado.toFixed(2)}</span>
+                </div>
+              )}
+              
+              {orcamento.produtosAdicionais && orcamento.produtosAdicionais.length > 0 && (
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Produtos adicionais:</span>
+                  <span className="text-sm">
+                    R$ {orcamento.produtosAdicionais.reduce((total, p) => 
+                      total + (p.valorUnitarioCongelado * p.quantidade), 0
+                    ).toFixed(2)}
+                  </span>
+                </div>
+              )}
+              
+              {/* Fallback para compatibilidade */}
+              {!orcamento.pacotePrincipal && orcamento.valorTotal && (
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Subtotal:</span>
+                  <span className="text-sm">R$ {orcamento.valorTotal.toFixed(2)}</span>
+                </div>
+              )}
               
               {orcamento.valorManual && (
                 <div className="flex justify-between items-center">
@@ -221,7 +302,9 @@ export default function OrcamentoDetailsModal({
               
               <div className="flex justify-between items-center font-medium">
                 <span className="text-sm">Total:</span>
-                <span className="text-lg">R$ {valorFinal.toFixed(2)}</span>
+                <span className="text-lg">
+                  R$ {(orcamento.valorFinal || orcamento.valorManual || orcamento.valorTotal || 0).toFixed(2)}
+                </span>
               </div>
             </div>
           </CardContent>

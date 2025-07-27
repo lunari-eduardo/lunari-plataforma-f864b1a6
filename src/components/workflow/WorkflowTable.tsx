@@ -278,53 +278,54 @@ export function WorkflowTable({
     };
   }, [stopContinuousScroll]);
   const calculateTotal = useCallback((session: SessionData) => {
-    // Usar Motor de Cálculo Centralizado
+    // Usar Motor de Cálculo Centralizado com nova lógica
     
     try {
-      // Preparar dados para o motor centralizado
-      const sessionForCalculation = {
-        pacotePrincipal: session.pacote ? { 
-          id: session.pacote, 
-          nome: session.pacote, 
-          valorBase: parseFloat(String(session.valorPacote || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0 
-        } : null,
-        produtos: session.produtosList?.map(p => ({
-          id: p.nome, // Use nome as id since ProdutoWorkflow doesn't have id
-          nome: p.nome,
-          valorUnitario: p.valorUnitario,
-          quantidade: p.quantidade,
-          tipo: p.tipo
-        })) || [],
-        valorFotosExtra: parseFloat(String(session.valorTotalFotoExtra || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0,
-        adicional: parseFloat(String(session.valorAdicional || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0,
-        desconto: session.desconto || 0
-      };
-      
-      const totals = calculateTotals(sessionForCalculation);
-      return totals.totalGeral;
-    } catch (error) {
-      console.error('Erro no motor de cálculo, usando fallback:', error);
-      
-      // Fallback para compatibilidade com dados antigos
+      // NOVA LÓGICA DE CÁLCULO: Produtos inclusos = R$ 0 no total
       const valorPacoteStr = typeof session.valorPacote === 'string' ? session.valorPacote : String(session.valorPacote || '0');
       const valorPacote = parseFloat(valorPacoteStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+      
       const valorFotoExtraStr = typeof session.valorTotalFotoExtra === 'string' ? session.valorTotalFotoExtra : String(session.valorTotalFotoExtra || '0');
       const valorFotoExtra = parseFloat(valorFotoExtraStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+      
       const valorAdicionalStr = typeof session.valorAdicional === 'string' ? session.valorAdicional : String(session.valorAdicional || '0');
       const valorAdicional = parseFloat(valorAdicionalStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+      
       const desconto = session.desconto || 0;
 
+      // CORREÇÃO PRINCIPAL: Apenas produtos manuais somam ao total
       let valorProdutosManuais = 0;
       if (session.produtosList && session.produtosList.length > 0) {
         const produtosManuais = session.produtosList.filter(p => p.tipo === 'manual');
         valorProdutosManuais = produtosManuais.reduce((total, p) => total + (p.valorUnitario * p.quantidade), 0);
+        
+        console.log('🔍 Cálculo de produtos:', {
+          sessionId: session.id,
+          todosProdutos: session.produtosList,
+          produtosManuais,
+          valorCalculado: valorProdutosManuais
+        });
       } else if (session.valorTotalProduto) {
+        // Fallback para dados antigos (somente se não houver produtosList)
         const valorProdutoStr = typeof session.valorTotalProduto === 'string' ? session.valorTotalProduto : String(session.valorTotalProduto || '0');
-        const valorProduto = parseFloat(valorProdutoStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-        valorProdutosManuais = valorProduto;
+        valorProdutosManuais = parseFloat(valorProdutoStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
       }
 
-      return valorPacote + valorFotoExtra + valorProdutosManuais + valorAdicional - desconto;
+      const totalCalculado = valorPacote + valorFotoExtra + valorProdutosManuais + valorAdicional - desconto;
+      
+      console.log('💰 Total calculado para', session.nome, ':', {
+        valorPacote,
+        valorFotoExtra,
+        valorProdutosManuais,
+        valorAdicional,
+        desconto,
+        totalFinal: totalCalculado
+      });
+
+      return totalCalculado;
+    } catch (error) {
+      console.error('Erro no cálculo de total:', error);
+      return 0;
     }
   }, []);
   const calculateRestante = useCallback((session: SessionData) => {
@@ -608,7 +609,14 @@ export function WorkflowTable({
                 )}
 
 
-                {renderCell('productTotal', renderEditableInput(session, 'valorTotalProduto', session.valorTotalProduto || '', 'text', 'R$ 0,00'))}
+                {renderCell('productTotal', 
+                  <span className="text-xs font-medium text-green-600">
+                    {session.produtosList && session.produtosList.length > 0 
+                      ? formatCurrency(session.produtosList.filter(p => p.tipo === 'manual').reduce((total, p) => total + (p.valorUnitario * p.quantidade), 0))
+                      : (session.valorTotalProduto || 'R$ 0,00')
+                    }
+                  </span>
+                )}
 
                 {renderCell('additionalValue', renderEditableInput(session, 'valorAdicional', session.valorAdicional || '', 'text', 'R$ 0,00'))}
 

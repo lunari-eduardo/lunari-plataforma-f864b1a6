@@ -309,6 +309,16 @@ export default function EditOrcamentoModal({
   const valorProdutosManuais = totalsCalculados.valorProdutosAdicionais || 0;
   const valorTotal = totalsCalculados.totalGeral || 0;
   const valorFinal = formData.valorManual !== undefined ? formData.valorManual : valorTotal;
+
+  // Debug para verificar se valores estão corretos
+  console.log('🔍 Debug EditOrcamentoModal:', {
+    pacotePrincipal: formData.pacotePrincipal,
+    valorPacote: valorPacotePrincipal,
+    produtosInclusos: produtosInclusos.length,
+    produtosManuais: produtosManuais.length,
+    valorProdutosManuais,
+    totalsCalculados
+  });
   return <Dialog open={isOpen} onOpenChange={onClose} modal={false}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" onInteractOutside={event => {
       // Verifica se algum dos menus está aberto
