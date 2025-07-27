@@ -387,9 +387,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             return produto ? {
               id: produto.id,
               nome: produto.nome,
-              valorUnitario: produto.preco_venda || produto.valorVenda || 0,
+              valorUnitario: 0, // Produtos inclusos não somam
               quantidade: produtoIncluido.quantidade,
-              incluso: true // Marca como produto incluso
+              tipo: 'incluso' // Padronizar estrutura
             } : null;
           }).filter(Boolean);
         }
@@ -413,7 +413,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         nome: p.nome,
         valorUnitario: p.preco,
         quantidade: p.quantidade,
-        incluso: false
+        tipo: 'manual' // Padronizar estrutura
       }))
     ];
 
