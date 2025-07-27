@@ -272,6 +272,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     console.log('=== SINCRONIZANDO COM WORKFLOW (NOVA ARQUITETURA) ===');
     console.log('Orçamento completo:', orcamento);
 
+    // FUNÇÃO AUXILIAR: Deduplicar produtos baseado no nome
+    const deduplikarProdutosPorNome = (produtos: any[]) => {
+      const produtosUnicos = new Map();
+      
+      produtos.forEach(produto => {
+        const chave = produto.nome.toLowerCase().trim();
+        if (!produtosUnicos.has(chave)) {
+          produtosUnicos.set(chave, produto);
+        }
+      });
+      
+      const resultado = Array.from(produtosUnicos.values());
+      
+      if (resultado.length < produtos.length) {
+        console.log(`🔄 Deduplicação: ${produtos.length} → ${resultado.length} produtos`);
+      }
+      
+      return resultado;
+    };
+
     // FUNÇÃO AUXILIAR: Extrair produtos padronizados do orçamento
     const extrairProdutosDoOrcamento = (orcamento: any): { produtosList: any[], valorPacote: number, valorProdutosManuais: number } => {
       const produtosList: any[] = [];
@@ -353,7 +373,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       valorPacote = orcamento.valorManual || pacotePrincipal?.preco || pacoteData?.valor_base || 0;
       valorProdutosManuais = produtosManuais.reduce((acc, p) => acc + (p.preco * p.quantidade), 0);
       
-      return { produtosList, valorPacote, valorProdutosManuais };
+      // DEDUPLICAÇÃO FINAL: Sempre aplicada antes do retorno
+      const produtosDeduplikados = deduplikarProdutosPorNome(produtosList);
+      
+      return { produtosList: produtosDeduplikados, valorPacote, valorProdutosManuais };
     };
 
     // LÓGICA UNIFICADA: Sempre usar a função auxiliar
