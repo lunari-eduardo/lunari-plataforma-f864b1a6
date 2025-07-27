@@ -564,7 +564,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           allProductsFromAppointment = appointment.produtosIncluidos.map(p => ({
             nome: p.nome,
             quantidade: p.quantidade,
-            valorUnitario: p.valorUnitario,
+            valorUnitario: 0, // Produtos inclusos têm valor 0 para cálculos
             tipo: 'incluso' as const
           }));
         }
@@ -575,7 +575,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             return {
               nome: produtoData?.nome || 'Produto não encontrado',
               quantidade: produtoIncluido.quantidade || 1,
-              valorUnitario: produtoData?.valorVenda || produtoData?.preco_venda || 0,
+              valorUnitario: 0, // Produtos inclusos têm valor 0 para cálculos
               tipo: 'incluso' as const
             };
           });
@@ -1098,9 +1098,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               const primeiroProduto = pacoteData.produtosIncluidos[0];
               const produtoData = produtos.find(p => p.id === primeiroProduto.produtoId);
               if (produtoData) {
-                updatedItem.produto = produtoData.nome;
+                updatedItem.produto = `${produtoData.nome} (incluso no pacote)`;
                 updatedItem.qtdProduto = primeiroProduto.quantidade || 1;
-                updatedItem.valorTotalProduto = (produtoData.valorVenda || produtoData.preco_venda || 0) * updatedItem.qtdProduto;
+                updatedItem.valorTotalProduto = 0; // Produtos inclusos têm valor 0
               }
             }
           }
