@@ -297,17 +297,17 @@ export default function EditOrcamentoModal({
     produtos: formData.produtosAdicionais.map(p => ({
       id: p.id,
       nome: p.nome,
-      valorUnitario: p.preco,
-      quantidade: p.quantidade,
+      valorUnitario: p.preco || 0,
+      quantidade: p.quantidade || 1,
       tipo: (p as any).inclusoNoPacote ? 'incluso' : 'manual'
     }))
   });
   
-  const valorPacotePrincipal = totalsCalculados.valorPacote;
+  const valorPacotePrincipal = totalsCalculados.valorPacote || 0;
   const produtosInclusos = formData.produtosAdicionais.filter(p => (p as any).inclusoNoPacote);
   const produtosManuais = formData.produtosAdicionais.filter(p => !(p as any).inclusoNoPacote);
-  const valorProdutosManuais = totalsCalculados.valorProdutosAdicionais;
-  const valorTotal = totalsCalculados.totalGeral;
+  const valorProdutosManuais = totalsCalculados.valorProdutosAdicionais || 0;
+  const valorTotal = totalsCalculados.totalGeral || 0;
   const valorFinal = formData.valorManual !== undefined ? formData.valorManual : valorTotal;
   return <Dialog open={isOpen} onOpenChange={onClose} modal={false}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" onInteractOutside={event => {
@@ -463,7 +463,7 @@ export default function EditOrcamentoModal({
                                 </span>}
                             </div>
                             <p className={`text-xs ${isIncluded ? 'text-primary/70' : 'text-muted-foreground'}`}>
-                              R$ {produto.preco.toFixed(2)} cada
+                              R$ {(produto.preco || 0).toFixed(2)} cada
                             </p>
                           </div>
                           <div className="flex items-center gap-3">
@@ -475,7 +475,7 @@ export default function EditOrcamentoModal({
                             </div>
                             <div className="text-right min-w-[80px]">
                               <p className={`text-sm font-medium ${isIncluded ? 'text-primary' : ''}`}>
-                                R$ {(produto.preco * produto.quantidade).toFixed(2)}
+                                R$ {((produto.preco || 0) * (produto.quantidade || 1)).toFixed(2)}
                               </p>
                             </div>
                             <Button variant="ghost" size="sm" onClick={() => handleRemoveProduct(index)} className={`h-6 w-6 p-0 ${isIncluded ? 'text-primary/50 hover:text-primary cursor-not-allowed' : 'text-red-500 hover:text-red-700'}`} disabled={isIncluded}>
