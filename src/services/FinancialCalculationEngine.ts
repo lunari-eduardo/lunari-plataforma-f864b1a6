@@ -15,7 +15,10 @@ interface Produto {
 interface Pacote {
   id: string;
   nome: string;
-  valorBase: number;
+  valorBase?: number;
+  valor_base?: number;
+  valorVenda?: number;
+  valor?: number;
 }
 
 interface ItemFinanceiro {
@@ -61,7 +64,7 @@ export interface CalculatedTotals {
 export function calculateTotals(item: ItemFinanceiro): CalculatedTotals {
   // 1. VALOR DO PACOTE
   const pacote = item.pacotePrincipal || (item.pacotes && item.pacotes[0]);
-  const valorPacote = pacote ? pacote.valorBase : 0;
+  const valorPacote = pacote ? (pacote.valorBase || pacote.valorVenda || pacote.valor_base || pacote.valor || 0) : 0;
 
   // 2. EXTRAIR LISTA DE PRODUTOS (com compatibilidade)
   const produtos = item.produtosList || item.produtos || [];
