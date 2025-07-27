@@ -45,7 +45,12 @@ export function GerenciarProdutosModal({
   // Inicializar produtos locais quando o modal abrir
   useEffect(() => {
     if (open) {
-      setLocalProdutos([...produtos]);
+      // Corrigir valorUnitario para produtos inclusos (deve ser 0)
+      const produtosCorrigidos = produtos.map(produto => ({
+        ...produto,
+        valorUnitario: produto.tipo === 'incluso' ? 0 : produto.valorUnitario
+      }));
+      setLocalProdutos(produtosCorrigidos);
     }
   }, [open, produtos]);
 
