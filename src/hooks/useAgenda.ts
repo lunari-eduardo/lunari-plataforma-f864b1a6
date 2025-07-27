@@ -19,6 +19,7 @@ export interface Appointment {
   time: string;
   type: string;
   client: string;
+  clientId?: string; // ID que vincula ao cliente da lista lunari_clients
   status: AppointmentStatus;
   description?: string;
   packageId?: string;

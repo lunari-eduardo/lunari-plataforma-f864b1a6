@@ -18,9 +18,14 @@ export function calcularMetricasCliente(
   workflowItems: WorkflowItem[],
   appointments: Appointment[]
 ): ClienteMetricas {
-  // Filtrar items do workflow por cliente
+  // Filtrar items do workflow por clienteId primeiro, depois por compatibilidade
   const itemsDoCliente = workflowItems.filter(item => {
-    // Verificar por nome (compatibilidade) ou email
+    // Priorizar clienteId se existir
+    if (item.clienteId) {
+      return item.clienteId === clienteId;
+    }
+    
+    // Fallback para compatibilidade - verificar por nome, email ou whatsapp
     const cliente = item.nome?.toLowerCase().trim() || '';
     const email = item.email?.toLowerCase().trim() || '';
     
@@ -58,13 +63,22 @@ export function getUltimaSessaoCliente(
 
   // Verificar no workflow
   workflowItems.forEach(item => {
-    const cliente = item.nome?.toLowerCase().trim() || '';
-    const email = item.email?.toLowerCase().trim() || '';
+    // Priorizar clienteId se existir
+    let pertenceAoCliente = false;
     
-    if (cliente.includes(clienteId.toLowerCase()) || 
-        email.includes(clienteId.toLowerCase()) ||
-        item.whatsapp === clienteId) {
+    if (item.clienteId) {
+      pertenceAoCliente = item.clienteId === clienteId;
+    } else {
+      // Fallback para compatibilidade
+      const cliente = item.nome?.toLowerCase().trim() || '';
+      const email = item.email?.toLowerCase().trim() || '';
       
+      pertenceAoCliente = cliente.includes(clienteId.toLowerCase()) || 
+                         email.includes(clienteId.toLowerCase()) ||
+                         item.whatsapp === clienteId;
+    }
+    
+    if (pertenceAoCliente) {
       const dataItem = item.dataOriginal || new Date(item.data);
       if (!ultimaData || dataItem > ultimaData) {
         ultimaData = dataItem;

@@ -20,6 +20,7 @@ export interface ProdutoWorkflow {
 
 export interface WorkflowItem {
   id: string;
+  clienteId?: string; // ID que associa ao cliente da lista lunari_clients
   data: string;
   hora: string;
   nome: string;
@@ -580,6 +581,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         const newWorkflowItem: WorkflowItem = {
           id: `agenda-${appointment.id}`,
+          clienteId: (appointment as any).clientId || undefined,
           data: formatDateForStorage(appointment.date),
           hora: appointment.time,
           nome: appointment.client,
@@ -756,6 +758,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       const newWorkflowItem: WorkflowItem = {
         id: `orcamento-${orc.id}`,
+        clienteId: orc.cliente?.id || undefined,
         data: orc.data,
         hora: orc.hora,
         nome: orc.cliente.nome,
