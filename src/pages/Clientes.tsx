@@ -1,4 +1,4 @@
-import { useState, useContext } from 'react';
+import { useState, useContext, useMemo } from 'react';
 import { AppContext } from '@/contexts/AppContext';
 import { Cliente } from '@/types/orcamentos';
 import { Button } from "@/components/ui/button";
@@ -7,29 +7,91 @@ import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Search, UserPlus, User, Phone, Mail, Edit, Trash2 } from "lucide-react";
+import { Search, UserPlus, User, Phone, Mail, Edit, Trash2, ArrowUpDown, ArrowUp, ArrowDown, DollarSign, Calendar, Activity } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from 'sonner';
+import { useClienteMetrics, ClienteMetricas } from '@/utils/clienteUtils';
+import { formatCurrency } from '@/utils/financialUtils';
+
+type SortConfig = {
+  key: keyof ClienteMetricas | 'nome' | 'email' | 'telefone';
+  direction: 'asc' | 'desc' | null;
+};
 
 export default function Clientes() {
   const {
     clientes,
     adicionarCliente,
     atualizarCliente,
-    removerCliente
+    removerCliente,
+    workflowItems,
+    appointments
   } = useContext(AppContext);
   
   const [filtro, setFiltro] = useState('');
   const [showClientForm, setShowClientForm] = useState(false);
   const [editingClient, setEditingClient] = useState<Cliente | null>(null);
   const [formData, setFormData] = useState({ nome: '', email: '', telefone: '' });
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'nome', direction: null });
 
-  // Filtrar clientes baseado na busca
-  const clientesFiltrados = filtro ? (clientes || []).filter(cliente => 
-    cliente.nome.toLowerCase().includes(filtro.toLowerCase()) || 
-    cliente.email.toLowerCase().includes(filtro.toLowerCase()) || 
-    cliente.telefone.includes(filtro)
-  ) : (clientes || []);
+  // Calcular métricas para todos os clientes
+  const clienteMetricas = useClienteMetrics(clientes || [], workflowItems || [], appointments || []);
+
+  // Filtrar e ordenar clientes
+  const clientesFiltradosEOrdenados = useMemo(() => {
+    let clientesFiltrados = filtro ? (clientes || []).filter(cliente => 
+      cliente.nome.toLowerCase().includes(filtro.toLowerCase()) || 
+      cliente.email.toLowerCase().includes(filtro.toLowerCase()) || 
+      cliente.telefone.includes(filtro)
+    ) : (clientes || []);
+
+    // Aplicar ordenação
+    if (sortConfig.direction) {
+      clientesFiltrados.sort((a, b) => {
+        let valorA: any, valorB: any;
+
+        if (sortConfig.key === 'nome' || sortConfig.key === 'email' || sortConfig.key === 'telefone') {
+          valorA = a[sortConfig.key].toLowerCase();
+          valorB = b[sortConfig.key].toLowerCase();
+        } else {
+          const metricasA = clienteMetricas.get(a.id);
+          const metricasB = clienteMetricas.get(b.id);
+          valorA = metricasA?.[sortConfig.key] || 0;
+          valorB = metricasB?.[sortConfig.key] || 0;
+          
+          // Para última sessão, usar Date para comparação
+          if (sortConfig.key === 'ultimaSessao') {
+            valorA = metricasA?.ultimaSessao ? new Date(metricasA.ultimaSessao.split('/').reverse().join('-')).getTime() : 0;
+            valorB = metricasB?.ultimaSessao ? new Date(metricasB.ultimaSessao.split('/').reverse().join('-')).getTime() : 0;
+          }
+        }
+
+        if (valorA < valorB) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (valorA > valorB) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return clientesFiltrados;
+  }, [clientes, filtro, sortConfig, clienteMetricas]);
+
+  // Função para lidar com ordenação
+  const handleSort = (key: SortConfig['key']) => {
+    setSortConfig(prev => ({
+      key,
+      direction: prev.key === key 
+        ? (prev.direction === 'asc' ? 'desc' : prev.direction === 'desc' ? null : 'asc')
+        : 'asc'
+    }));
+  };
+
+  // Função para renderizar ícone de ordenação
+  const renderSortIcon = (key: SortConfig['key']) => {
+    if (sortConfig.key !== key) return <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />;
+    if (sortConfig.direction === 'asc') return <ArrowUp className="h-3 w-3 ml-1" />;
+    if (sortConfig.direction === 'desc') return <ArrowDown className="h-3 w-3 ml-1" />;
+    return <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />;
+  };
 
   const handleAddClient = () => {
     setEditingClient(null);
@@ -100,30 +162,122 @@ export default function Clientes() {
           <Table className="bg-lunar-surface">
             <TableHeader>
               <TableRow className="bg-stone-200">
-                <TableHead className="font-medium">NOME</TableHead>
-                <TableHead className="font-medium">E-MAIL</TableHead>
-                <TableHead className="font-medium">TELEFONE</TableHead>
+                <TableHead 
+                  className="font-medium cursor-pointer hover:bg-stone-300 transition-colors"
+                  onClick={() => handleSort('nome')}
+                >
+                  <div className="flex items-center">
+                    NOME
+                    {renderSortIcon('nome')}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="font-medium cursor-pointer hover:bg-stone-300 transition-colors"
+                  onClick={() => handleSort('email')}
+                >
+                  <div className="flex items-center">
+                    E-MAIL
+                    {renderSortIcon('email')}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="font-medium cursor-pointer hover:bg-stone-300 transition-colors"
+                  onClick={() => handleSort('telefone')}
+                >
+                  <div className="flex items-center">
+                    TELEFONE
+                    {renderSortIcon('telefone')}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="font-medium cursor-pointer hover:bg-stone-300 transition-colors text-center"
+                  onClick={() => handleSort('sessoes')}
+                >
+                  <div className="flex items-center justify-center">
+                    <Activity className="h-4 w-4 mr-1" />
+                    SESSÕES
+                    {renderSortIcon('sessoes')}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="font-medium cursor-pointer hover:bg-stone-300 transition-colors text-right"
+                  onClick={() => handleSort('totalGasto')}
+                >
+                  <div className="flex items-center justify-end">
+                    <DollarSign className="h-4 w-4 mr-1" />
+                    TOTAL GASTO
+                    {renderSortIcon('totalGasto')}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="font-medium cursor-pointer hover:bg-stone-300 transition-colors text-right"
+                  onClick={() => handleSort('totalPago')}
+                >
+                  <div className="flex items-center justify-end">
+                    <DollarSign className="h-4 w-4 mr-1" />
+                    TOTAL PAGO
+                    {renderSortIcon('totalPago')}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="font-medium cursor-pointer hover:bg-stone-300 transition-colors text-right"
+                  onClick={() => handleSort('aReceber')}
+                >
+                  <div className="flex items-center justify-end">
+                    <DollarSign className="h-4 w-4 mr-1" />
+                    A RECEBER
+                    {renderSortIcon('aReceber')}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="font-medium cursor-pointer hover:bg-stone-300 transition-colors text-center"
+                  onClick={() => handleSort('ultimaSessao')}
+                >
+                  <div className="flex items-center justify-center">
+                    <Calendar className="h-4 w-4 mr-1" />
+                    ÚLTIMA SESSÃO
+                    {renderSortIcon('ultimaSessao')}
+                  </div>
+                </TableHead>
                 <TableHead className="font-medium text-center">AÇÕES</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {clientesFiltrados.map(cliente => (
-                <TableRow key={cliente.id} className="hover:bg-stone-50">
-                  <TableCell className="font-medium">{cliente.nome}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{cliente.email}</TableCell>
-                  <TableCell className="text-sm">{cliente.telefone}</TableCell>
-                  <TableCell className="text-center">
-                    <div className="flex items-center justify-center gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => handleEditClient(cliente)} className="h-8 w-8 p-0">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDeleteClient(cliente.id)} className="h-8 w-8 p-0 text-red-600 hover:text-red-700">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {clientesFiltradosEOrdenados.map(cliente => {
+                const metricas = clienteMetricas.get(cliente.id);
+                return (
+                  <TableRow key={cliente.id} className="hover:bg-stone-50">
+                    <TableCell className="font-medium">{cliente.nome}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{cliente.email}</TableCell>
+                    <TableCell className="text-sm">{cliente.telefone}</TableCell>
+                    <TableCell className="text-center font-medium">
+                      {metricas?.sessoes || 0}
+                    </TableCell>
+                    <TableCell className="text-right font-medium text-primary">
+                      {formatCurrency(metricas?.totalGasto || 0)}
+                    </TableCell>
+                    <TableCell className="text-right font-medium text-emerald-600">
+                      {formatCurrency(metricas?.totalPago || 0)}
+                    </TableCell>
+                    <TableCell className="text-right font-medium text-amber-600">
+                      {formatCurrency(metricas?.aReceber || 0)}
+                    </TableCell>
+                    <TableCell className="text-center text-sm text-muted-foreground">
+                      {metricas?.ultimaSessao || 'Nunca'}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => handleEditClient(cliente)} className="h-8 w-8 p-0">
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleDeleteClient(cliente.id)} className="h-8 w-8 p-0 text-red-600 hover:text-red-700">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>
@@ -131,38 +285,67 @@ export default function Clientes() {
 
       {/* Visualização Mobile - Cards */}
       <div className="md:hidden grid grid-cols-1 gap-4">
-        {clientesFiltrados.map(cliente => (
-          <Card key={cliente.id} className="overflow-hidden bg-neumorphic-light bg-lunar-surface">
-            <div className="p-4 flex items-center justify-between border-b bg-neumorphic-light bg-lunar-border">
-              <div>
-                <h3 className="font-medium">{cliente.nome}</h3>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="ghost" size="sm" onClick={() => handleEditClient(cliente)} className="h-8 w-8 p-0">
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => handleDeleteClient(cliente.id)} className="h-8 w-8 p-0 text-red-600 hover:text-red-700">
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-            
-            <div className="p-4 space-y-3 bg-neumorphic-light bg-lunar-surface">
-              <div className="flex items-start">
-                <Phone className="h-4 w-4 text-muted-foreground mt-0.5 mr-2" />
-                <span className="text-sm">{cliente.telefone}</span>
+        {clientesFiltradosEOrdenados.map(cliente => {
+          const metricas = clienteMetricas.get(cliente.id);
+          return (
+            <Card key={cliente.id} className="overflow-hidden bg-neumorphic-light bg-lunar-surface">
+              <div className="p-4 flex items-center justify-between border-b bg-neumorphic-light bg-lunar-border">
+                <div>
+                  <h3 className="font-medium">{cliente.nome}</h3>
+                  <div className="flex items-center gap-4 mt-1">
+                    <div className="flex items-center gap-1">
+                      <Activity className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">{metricas?.sessoes || 0} sessões</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">{metricas?.ultimaSessao || 'Nunca'}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => handleEditClient(cliente)} className="h-8 w-8 p-0">
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => handleDeleteClient(cliente.id)} className="h-8 w-8 p-0 text-red-600 hover:text-red-700">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
               
-              <div className="flex items-start">
-                <Mail className="h-4 w-4 text-muted-foreground mt-0.5 mr-2" />
-                <span className="text-sm">{cliente.email}</span>
+              <div className="p-4 space-y-3 bg-neumorphic-light bg-lunar-surface">
+                <div className="flex items-start">
+                  <Phone className="h-4 w-4 text-muted-foreground mt-0.5 mr-2" />
+                  <span className="text-sm">{cliente.telefone}</span>
+                </div>
+                
+                <div className="flex items-start">
+                  <Mail className="h-4 w-4 text-muted-foreground mt-0.5 mr-2" />
+                  <span className="text-sm">{cliente.email}</span>
+                </div>
+
+                {/* Métricas Financeiras Mobile */}
+                <div className="grid grid-cols-2 gap-3 pt-2 border-t">
+                  <div className="text-center">
+                    <div className="text-xs text-muted-foreground">Total Gasto</div>
+                    <div className="font-medium text-primary text-sm">{formatCurrency(metricas?.totalGasto || 0)}</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-xs text-muted-foreground">Total Pago</div>
+                    <div className="font-medium text-emerald-600 text-sm">{formatCurrency(metricas?.totalPago || 0)}</div>
+                  </div>
+                  <div className="text-center col-span-2">
+                    <div className="text-xs text-muted-foreground">A Receber</div>
+                    <div className="font-medium text-amber-600">{formatCurrency(metricas?.aReceber || 0)}</div>
+                  </div>
+                </div>
               </div>
-            </div>
-          </Card>
-        ))}
+            </Card>
+          );
+        })}
       </div>
       
-      {clientesFiltrados.length === 0 && (
+      {clientesFiltradosEOrdenados.length === 0 && (
         <div className="flex flex-col items-center justify-center p-8 border rounded-md">
           <User className="h-12 w-12 text-muted-foreground mb-2" />
           <h3 className="text-lg font-medium">Nenhum cliente encontrado</h3>
