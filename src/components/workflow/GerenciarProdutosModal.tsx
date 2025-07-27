@@ -100,7 +100,17 @@ export function GerenciarProdutosModal({
     onOpenChange(false);
   };
   return <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col py-[17px]">
+      <DialogContent 
+        className="max-w-2xl max-h-[90vh] flex flex-col py-[17px]" 
+        style={{ overflow: 'visible' }}
+        onPointerDownOutside={(e) => {
+          // Prevenir fechamento do modal quando clicar no popover
+          const target = e.target as Element;
+          if (target.closest('[data-radix-popover-content]') || target.closest('[cmdk-item]')) {
+            e.preventDefault();
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-sm">
             <Package className="h-5 w-5 text-blue-600" />
@@ -159,21 +169,39 @@ export function GerenciarProdutosModal({
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0 z-[10000]" align="start">
+                  <PopoverContent 
+                    className="w-[--radix-popover-trigger-width] p-0" 
+                    align="start"
+                    style={{ 
+                      zIndex: 99999,
+                      position: 'fixed',
+                      pointerEvents: 'auto'
+                    }}
+                    onOpenAutoFocus={(e) => e.preventDefault()}
+                  >
                     <Command>
                       <CommandInput placeholder="Buscar produto..." className="h-9" />
                       <CommandList>
                         <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
                         <CommandGroup>
-                          {productOptions.map(product => <CommandItem key={product.id} value={product.nome} onSelect={currentValue => {
-                          setSelectedProduct(currentValue === selectedProduct ? "" : currentValue);
-                        }}>
+                          {productOptions.map(product => (
+                            <CommandItem 
+                              key={product.id} 
+                              value={product.nome} 
+                              onSelect={(currentValue) => {
+                                setSelectedProduct(currentValue === selectedProduct ? "" : currentValue);
+                                setNovoProductOpen(false);
+                              }}
+                              className="cursor-pointer hover:bg-accent"
+                              style={{ pointerEvents: 'auto' }}
+                            >
                               <Check className={cn("mr-2 h-4 w-4", selectedProduct === product.nome ? "opacity-100" : "opacity-0")} />
                               <div className="flex flex-col">
                                 <span className="font-medium">{product.nome}</span>
                                 <span className="text-xs text-muted-foreground">{product.valor}</span>
                               </div>
-                            </CommandItem>)}
+                            </CommandItem>
+                          ))}
                         </CommandGroup>
                       </CommandList>
                     </Command>
