@@ -633,13 +633,28 @@ export function WorkflowTable({
               // Atualizar a lista de produtos e recalcular totais
               handleFieldUpdateStable(sessionSelecionada.id, 'produtosList', novosProdutos);
               
+              // Garantir que produtos inclusos sempre tenham valor 0
+              const produtosCorrigidos = novosProdutos.map(p => ({
+                ...p,
+                valorUnitario: p.tipo === 'incluso' ? 0 : p.valorUnitario
+              }));
+              
               // Atualizar campos de compatibilidade
-              const produtosManuais = novosProdutos.filter(p => p.tipo === 'manual');
+              const produtosManuais = produtosCorrigidos.filter(p => p.tipo === 'manual');
               const valorTotalManuais = produtosManuais.reduce((total, p) => total + (p.valorUnitario * p.quantidade), 0);
               
               if (produtosManuais.length > 0) {
-                handleFieldUpdateStable(sessionSelecionada.id, 'produto', produtosManuais.map(p => p.nome).join(', '));
+                const nomesProdutos = produtosManuais.map(p => p.nome).join(', ');
+                const nomesInclusos = produtosCorrigidos.filter(p => p.tipo === 'incluso').map(p => p.nome);
+                const nomeCompleto = nomesInclusos.length > 0 ? 
+                  `${nomesProdutos} + ${nomesInclusos.length} incluso(s)` : nomesProdutos;
+                
+                handleFieldUpdateStable(sessionSelecionada.id, 'produto', nomeCompleto);
                 handleFieldUpdateStable(sessionSelecionada.id, 'qtdProduto', produtosManuais.reduce((total, p) => total + p.quantidade, 0));
+              } else if (produtosCorrigidos.filter(p => p.tipo === 'incluso').length > 0) {
+                const produtosInclusos = produtosCorrigidos.filter(p => p.tipo === 'incluso');
+                handleFieldUpdateStable(sessionSelecionada.id, 'produto', `${produtosInclusos.length} produto(s) incluso(s)`);
+                handleFieldUpdateStable(sessionSelecionada.id, 'qtdProduto', 0);
               } else {
                 handleFieldUpdateStable(sessionSelecionada.id, 'produto', '');
                 handleFieldUpdateStable(sessionSelecionada.id, 'qtdProduto', 0);

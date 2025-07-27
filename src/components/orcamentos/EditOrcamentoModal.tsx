@@ -78,6 +78,8 @@ export default function EditOrcamentoModal({
   };
   useEffect(() => {
     if (isOpen && orcamento) {
+      // Reset para evitar problemas de sincronização
+      setFormData(initialFormState);
       const [year, month, day] = orcamento.data.split('-');
       const pacotesDoOrcamento = orcamento.pacotes || [];
       

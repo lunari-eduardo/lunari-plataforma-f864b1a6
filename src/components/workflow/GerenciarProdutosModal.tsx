@@ -45,7 +45,7 @@ export function GerenciarProdutosModal({
   // Inicializar produtos locais quando o modal abrir
   useEffect(() => {
     if (open) {
-      // Corrigir valorUnitario para produtos inclusos (deve ser 0)
+      // FORÇAR valorUnitario = 0 para produtos inclusos sempre
       const produtosCorrigidos = produtos.map(produto => ({
         ...produto,
         valorUnitario: produto.tipo === 'incluso' ? 0 : produto.valorUnitario
@@ -150,8 +150,8 @@ export function GerenciarProdutosModal({
                           </Badge>}
                       </div>
                       <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                        <span>Preço unit.: {produto.tipo === 'incluso' ? 'R$ 0,00' : formatCurrency(produto.valorUnitario)}</span>
-                        <span>Subtotal: {formatCurrency(produto.valorUnitario * produto.quantidade)}</span>
+                        <span>Preço unit.: {produto.tipo === 'incluso' ? 'R$ 0,00 (incluso)' : formatCurrency(produto.valorUnitario)}</span>
+                        <span>Subtotal: {produto.tipo === 'incluso' ? 'R$ 0,00 (incluso)' : formatCurrency(produto.valorUnitario * produto.quantidade)}</span>
                       </div>
                     </div>
                     
