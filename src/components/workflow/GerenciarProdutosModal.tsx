@@ -49,9 +49,19 @@ export function GerenciarProdutosModal({
     }
   }, [open, produtos]);
 
-  // Calcular total dos produtos manuais
-  const totalProdutosManuais = useMemo(() => {
-    return localProdutos.filter(p => p.tipo === 'manual').reduce((total, p) => total + p.valorUnitario * p.quantidade, 0);
+  // Calcular totais dos produtos
+  const totais = useMemo(() => {
+    const produtosManuais = localProdutos.filter(p => p.tipo === 'manual');
+    const produtosInclusos = localProdutos.filter(p => p.tipo === 'incluso');
+    
+    const totalManuais = produtosManuais.reduce((total, p) => total + p.valorUnitario * p.quantidade, 0);
+    const totalInclusos = produtosInclusos.reduce((total, p) => total + p.valorUnitario * p.quantidade, 0);
+    
+    return {
+      manuais: totalManuais,
+      inclusos: totalInclusos,
+      geral: totalManuais + totalInclusos
+    };
   }, [localProdutos]);
   const formatCurrency = (value: number) => {
     return `R$ ${value.toFixed(2).replace('.', ',')}`;
@@ -217,16 +227,50 @@ export function GerenciarProdutosModal({
           </div>
         </div>
 
-        {/* Resumo Financeiro */}
-        {totalProdutosManuais > 0 && <div className="border-t pt-4">
-            <div className="flex justify-between items-center">
-              <Label className="text-sm font-medium">Valor Total dos Produtos Adicionais:</Label>
-              <span className="text-lg font-bold text-green-600">
-                {formatCurrency(totalProdutosManuais)}
-              </span>
+        {/* Resumo Financeiro - Sempre mostrado quando há produtos */}
+        {localProdutos.length > 0 && <div className="border-t pt-4 space-y-3">
+            <Label className="text-sm font-medium">Resumo Financeiro</Label>
+            
+            {/* Detalhamento por tipo */}
+            <div className="space-y-2 text-sm">
+              {totais.inclusos > 0 && (
+                <div className="flex justify-between items-center text-muted-foreground">
+                  <span>Produtos inclusos no pacote:</span>
+                  <span>{formatCurrency(totais.inclusos)}</span>
+                </div>
+              )}
+              
+              {totais.manuais > 0 && (
+                <div className="flex justify-between items-center">
+                  <span>Produtos adicionais:</span>
+                  <span className="font-medium text-green-600">{formatCurrency(totais.manuais)}</span>
+                </div>
+              )}
+              
+              {totais.inclusos > 0 && totais.manuais > 0 && (
+                <div className="flex justify-between items-center pt-2 border-t">
+                  <span className="font-medium">Total geral dos produtos:</span>
+                  <span className="text-lg font-bold text-green-600">{formatCurrency(totais.geral)}</span>
+                </div>
+              )}
+              
+              {totais.manuais === 0 && totais.inclusos > 0 && (
+                <div className="flex justify-between items-center">
+                  <span>Valor adicional a pagar:</span>
+                  <span className="text-lg font-bold text-green-600">R$ 0,00</span>
+                </div>
+              )}
+              
+              {totais.manuais > 0 && totais.inclusos === 0 && (
+                <div className="flex justify-between items-center pt-2 border-t">
+                  <span className="font-medium">Total a pagar:</span>
+                  <span className="text-lg font-bold text-green-600">{formatCurrency(totais.manuais)}</span>
+                </div>
+              )}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              *Produtos inclusos no pacote não são somados no total
+            
+            <p className="text-xs text-muted-foreground">
+              *Produtos inclusos no pacote já estão pagos
             </p>
           </div>}
 
