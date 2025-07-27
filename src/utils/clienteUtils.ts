@@ -29,9 +29,14 @@ export function calcularMetricasCliente(
     const cliente = item.nome?.toLowerCase().trim() || '';
     const email = item.email?.toLowerCase().trim() || '';
     
-    return cliente.includes(clienteId.toLowerCase()) || 
-           email.includes(clienteId.toLowerCase()) ||
-           item.whatsapp === clienteId;
+    // Busca mais inteligente por nome (busca parcial e exata)
+    const nomeMatch = cliente.includes(clienteId.toLowerCase()) || 
+                     clienteId.toLowerCase().includes(cliente);
+    const emailMatch = email.includes(clienteId.toLowerCase()) || 
+                      clienteId.toLowerCase().includes(email);
+    const whatsappMatch = item.whatsapp === clienteId;
+    
+    return nomeMatch || emailMatch || whatsappMatch;
   });
 
   // Calcular métricas financeiras

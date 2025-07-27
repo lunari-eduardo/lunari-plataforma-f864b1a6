@@ -579,9 +579,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                         appointment.type.includes('Corporativo') ? 'Corporativo' : 'Outros';
         }
 
+        // Buscar cliente pelo nome nos agendamentos para obter o ID correto
+        const clienteEncontrado = clientes?.find(c => 
+          c.nome.toLowerCase().trim() === appointment.client.toLowerCase().trim() ||
+          c.telefone === appointment.whatsapp
+        );
+
         const newWorkflowItem: WorkflowItem = {
           id: `agenda-${appointment.id}`,
-          clienteId: (appointment as any).clientId || undefined,
+          clienteId: clienteEncontrado?.id || undefined,
           data: formatDateForStorage(appointment.date),
           hora: appointment.time,
           nome: appointment.client,
