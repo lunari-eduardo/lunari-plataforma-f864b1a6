@@ -4,6 +4,7 @@ import { parseDateFromStorage, formatDateForStorage, getCurrentDateString } from
 import { formatCurrency } from '@/utils/financialUtils';
 import { toast } from '@/hooks/use-toast';
 import { FinancialEngine, CreateTransactionInput } from '@/services/FinancialEngine';
+import { calculateTotals } from '@/services/FinancialCalculationEngine';
 
 // Types
 import { Orcamento, Template, OrigemCliente, MetricasOrcamento, Cliente } from '@/types/orcamentos';
@@ -347,7 +348,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       qtdProduto: produtosList.reduce((acc, p) => acc + p.quantidade, 0),
       valorTotalProduto: formatCurrency((() => {
         // Usar Motor de Cálculo Centralizado
-        const { calculateTotals } = require('@/services/FinancialCalculationEngine');
         const totals = calculateTotals({
           pacotePrincipal: pacotePrincipal ? { id: pacotePrincipal.id, nome: pacotePrincipal.nome, valorBase: valorPacote } : null,
           produtos: produtosList,
