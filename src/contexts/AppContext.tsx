@@ -275,6 +275,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return !(appointment.id?.startsWith('orcamento-') || (appointment as any).origem === 'orcamento');
   }, []);
 
+  // Helper function to safely get a valid date
+  const getSafeDate = (item: WorkflowItem): Date => {
+    // Try dataOriginal first
+    if (item.dataOriginal && item.dataOriginal instanceof Date && !isNaN(item.dataOriginal.getTime())) {
+      return item.dataOriginal;
+    }
+    
+    // Try parsing from data string
+    try {
+      const parsedDate = parseDateFromStorage(item.data);
+      if (parsedDate instanceof Date && !isNaN(parsedDate.getTime())) {
+        return parsedDate;
+      }
+    } catch (error) {
+      console.warn('Failed to parse date for item:', item.id, error);
+    }
+    
+    // Fallback to current date
+    return new Date();
+  };
+
   // Função de sincronização direta com workflow (NOVA ARQUITETURA)
   const sincronizarComWorkflow = useCallback((orcamento: Orcamento) => {
     if (!orcamento || orcamento.status !== 'fechado') return;
@@ -1461,8 +1482,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       return monthMatches && searchMatches;
     }).sort((a, b) => {
-      const dateA = a.dataOriginal || parseDateFromStorage(a.data);
-      const dateB = b.dataOriginal || parseDateFromStorage(b.data);
+      const dateA = getSafeDate(a);
+      const dateB = getSafeDate(b);
       
       if (dateA.getTime() !== dateB.getTime()) {
         return dateA.getTime() - dateB.getTime();
@@ -1474,8 +1495,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }),
     // allWorkflowItems: COMPLETOS (para uso no CRM)
     allWorkflowItems: workflowItems.sort((a, b) => {
-      const dateA = a.dataOriginal || parseDateFromStorage(a.data);
-      const dateB = b.dataOriginal || parseDateFromStorage(b.data);
+      const dateA = getSafeDate(a);
+      const dateB = getSafeDate(b);
       return dateB.getTime() - dateA.getTime(); // Mais recentes primeiro
     }),
     workflowSummary,
