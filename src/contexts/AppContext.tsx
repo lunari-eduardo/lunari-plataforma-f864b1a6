@@ -296,6 +296,81 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return new Date();
   };
 
+  // SINCRONIZAÇÃO: Agendamento -> Workflow (NOVA ARQUITETURA SIMPLIFICADA)
+  const sincronizarAgendamentoParaWorkflow = useCallback((appointment: Appointment) => {
+    if (appointment.status !== 'confirmado') return;
+
+    console.log('🔄 Sincronizando agendamento confirmado para workflow:', appointment);
+
+    const workflowItem: WorkflowItem = {
+      id: `agenda-${appointment.id}`,
+      clienteId: appointment.clientId, // CRUCIAL: Usar clienteId direto do agendamento
+      data: formatDateForStorage(appointment.date),
+      hora: appointment.time,
+      nome: appointment.client,
+      whatsapp: appointment.whatsapp || '',
+      email: appointment.email || '',
+      descricao: appointment.description || appointment.type,
+      status: '',
+      categoria: appointment.type || '',
+      pacote: '', // Será preenchido com base no packageId se necessário
+      valorPacote: 0, // Será calculado com base no packageId
+      desconto: 0,
+      valorFotoExtra: 0,
+      qtdFotoExtra: 0,
+      valorTotalFotoExtra: 0,
+      produto: '',
+      qtdProduto: 0,
+      valorTotalProduto: 0,
+      produtosList: appointment.produtosIncluidos || [],
+      valorAdicional: 0,
+      detalhes: appointment.description || '',
+      total: 0, // Será calculado depois
+      valorPago: appointment.paidAmount || 0,
+      restante: 0, // Será calculado depois
+      pagamentos: appointment.paidAmount ? [{
+        id: Date.now().toString(),
+        valor: appointment.paidAmount,
+        data: getCurrentDateString()
+      }] : [],
+      fonte: 'agenda',
+      dataOriginal: appointment.date instanceof Date ? appointment.date : new Date(appointment.date)
+    };
+
+    // Calcular valores baseado no pacote se disponível
+    // Isso pode ser melhorado futuramente com lookup de pacotes
+    workflowItem.total = workflowItem.valorPacote + workflowItem.valorTotalFotoExtra + workflowItem.valorTotalProduto + workflowItem.valorAdicional - workflowItem.desconto;
+    workflowItem.restante = workflowItem.total - workflowItem.valorPago;
+
+    // Atualizar ou adicionar ao workflow de forma imediata
+    setWorkflowItems(prev => {
+      const existingIndex = prev.findIndex(item => item.id === workflowItem.id);
+      let updated;
+      if (existingIndex >= 0) {
+        updated = [...prev];
+        updated[existingIndex] = workflowItem;
+      } else {
+        updated = [...prev, workflowItem];
+      }
+      
+      // Salvar imediatamente no localStorage
+      storage.save(STORAGE_KEYS.WORKFLOW_ITEMS, updated);
+      console.log('✅ Workflow item salvo:', workflowItem.id);
+      return updated;
+    });
+  }, []);
+
+  // SINCRONIZAÇÃO: Remover do workflow quando agendamento for cancelado/removido
+  const removerAgendamentoDoWorkflow = useCallback((appointmentId: string) => {
+    const workflowId = `agenda-${appointmentId}`;
+    setWorkflowItems(prev => {
+      const updated = prev.filter(item => item.id !== workflowId);
+      storage.save(STORAGE_KEYS.WORKFLOW_ITEMS, updated);
+      console.log('🗑️ Workflow item removido:', workflowId);
+      return updated;
+    });
+  }, []);
+
   // Função de sincronização direta com workflow (NOVA ARQUITETURA)
   const sincronizarComWorkflow = useCallback((orcamento: Orcamento) => {
     if (!orcamento || orcamento.status !== 'fechado') return;
@@ -1218,6 +1293,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: Date.now().toString(),
     };
     setAppointments(prev => [...prev, newAppointment]);
+    
+    // NOVA SINCRONIZAÇÃO: Se confirmado, sincronizar com workflow imediatamente
+    if (newAppointment.status === 'confirmado') {
+      sincronizarAgendamentoParaWorkflow(newAppointment);
+    }
+    
     return newAppointment;
   };
 
@@ -1239,9 +1320,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return app;
       });
       
-      // SINCRONIZAÇÃO EXPLÍCITA: Agenda → Orçamento
-      // Se o agendamento atualizado tem orçamento associado, atualizar o orçamento
+      // NOVA SINCRONIZAÇÃO: Agenda → Workflow
       const appointmentAtualizado = updatedAppointments.find(app => app.id === id);
+      if (appointmentAtualizado) {
+        // Se foi confirmado, sincronizar com workflow
+        if (appointmentAtualizado.status === 'confirmado') {
+          sincronizarAgendamentoParaWorkflow(appointmentAtualizado);
+        }
+        // Se mudou de confirmado para outro status, remover do workflow
+        else if (appointment.status && appointment.status !== 'confirmado') {
+          removerAgendamentoDoWorkflow(id);
+        }
+      }
+      
+      // SINCRONIZAÇÃO EXPLÍCITA: Agenda → Orçamento (mantido para compatibilidade)
       if (appointmentAtualizado && (appointment.date || appointment.time)) {
         const orcamentoId = getBudgetId(appointmentAtualizado);
         if (orcamentoId && isFromBudget(appointmentAtualizado)) {
@@ -1268,53 +1360,64 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteAppointment = (id: string) => {
+    // NOVA SINCRONIZAÇÃO: Remover do workflow se existir
+    removerAgendamentoDoWorkflow(id);
+    
     setAppointments(prev => prev.filter(app => app.id !== id));
   };
 
   const updateWorkflowItem = (id: string, updates: Partial<WorkflowItem>) => {
-    setWorkflowItems(prev => prev.map(item => {
-      if (item.id === id) {
-        const updatedItem = { ...item, ...updates };
-        
-        // Se o pacote foi alterado, atualizar categoria e valor de foto extra automaticamente
-        if (updates.pacote && updates.pacote !== item.pacote) {
-          const pacoteData = pacotes.find(p => p.nome === updates.pacote);
-          if (pacoteData) {
-            // Atualizar categoria baseado no pacote
-            if (pacoteData.categoria_id) {
-              const configCategorias = storage.load('configuracoes_categorias', []);
-              const categoria = configCategorias.find((cat: any) => cat.id === pacoteData.categoria_id);
-              updatedItem.categoria = categoria ? categoria.nome : String(pacoteData.categoria_id);
-            } else {
-              updatedItem.categoria = pacoteData.categoria || item.categoria;
-            }
-            
-            // Atualizar valor do pacote e valor de foto extra
-            updatedItem.valorPacote = pacoteData.valor_base || pacoteData.valorVenda || pacoteData.valor || updatedItem.valorPacote;
-            updatedItem.valorFotoExtra = pacoteData.valor_foto_extra || pacoteData.valorFotoExtra || updatedItem.valorFotoExtra;
-            
-            // Se o pacote tem produtos incluídos, adicionar o primeiro produto
-            if (pacoteData.produtosIncluidos && pacoteData.produtosIncluidos.length > 0) {
-              const primeiroProduto = pacoteData.produtosIncluidos[0];
-              const produtoData = produtos.find(p => p.id === primeiroProduto.produtoId);
-              if (produtoData) {
-                updatedItem.produto = `${produtoData.nome} (incluso no pacote)`;
-                updatedItem.qtdProduto = primeiroProduto.quantidade || 1;
-                updatedItem.valorTotalProduto = 0; // Produtos inclusos têm valor 0
+    setWorkflowItems(prev => {
+      const updated = prev.map(item => {
+        if (item.id === id) {
+          const updatedItem = { ...item, ...updates };
+          
+          // Se o pacote foi alterado, atualizar categoria e valor de foto extra automaticamente
+          if (updates.pacote && updates.pacote !== item.pacote) {
+            const pacoteData = pacotes.find(p => p.nome === updates.pacote);
+            if (pacoteData) {
+              // Atualizar categoria baseado no pacote
+              if (pacoteData.categoria_id) {
+                const configCategorias = storage.load('configuracoes_categorias', []);
+                const categoria = configCategorias.find((cat: any) => cat.id === pacoteData.categoria_id);
+                updatedItem.categoria = categoria ? categoria.nome : String(pacoteData.categoria_id);
+              } else {
+                updatedItem.categoria = pacoteData.categoria || item.categoria;
+              }
+              
+              // Atualizar valor do pacote e valor de foto extra
+              updatedItem.valorPacote = pacoteData.valor_base || pacoteData.valorVenda || pacoteData.valor || updatedItem.valorPacote;
+              updatedItem.valorFotoExtra = pacoteData.valor_foto_extra || pacoteData.valorFotoExtra || updatedItem.valorFotoExtra;
+              
+              // Se o pacote tem produtos incluídos, adicionar o primeiro produto
+              if (pacoteData.produtosIncluidos && pacoteData.produtosIncluidos.length > 0) {
+                const primeiroProduto = pacoteData.produtosIncluidos[0];
+                const produtoData = produtos.find(p => p.id === primeiroProduto.produtoId);
+                if (produtoData) {
+                  updatedItem.produto = `${produtoData.nome} (incluso no pacote)`;
+                  updatedItem.qtdProduto = primeiroProduto.quantidade || 1;
+                  updatedItem.valorTotalProduto = 0; // Produtos inclusos têm valor 0
+                }
               }
             }
           }
+          
+          updatedItem.valorTotalFotoExtra = updatedItem.qtdFotoExtra * updatedItem.valorFotoExtra;
+          updatedItem.total = updatedItem.valorPacote + updatedItem.valorTotalFotoExtra + 
+                             updatedItem.valorTotalProduto + updatedItem.valorAdicional - updatedItem.desconto;
+          updatedItem.restante = updatedItem.total - updatedItem.valorPago;
+          
+          return updatedItem;
         }
-        
-        updatedItem.valorTotalFotoExtra = updatedItem.qtdFotoExtra * updatedItem.valorFotoExtra;
-        updatedItem.total = updatedItem.valorPacote + updatedItem.valorTotalFotoExtra + 
-                           updatedItem.valorTotalProduto + updatedItem.valorAdicional - updatedItem.desconto;
-        updatedItem.restante = updatedItem.total - updatedItem.valorPago;
-        
-        return updatedItem;
-      }
-      return item;
-    }));
+        return item;
+      });
+      
+      // CRITICAL: Salvar mudanças imediatamente no localStorage
+      storage.save(STORAGE_KEYS.WORKFLOW_ITEMS, updated);
+      console.log('💾 Workflow atualizado e salvo:', id);
+      
+      return updated;
+    });
   };
 
   const addPayment = (id: string, valor: number) => {
@@ -1324,20 +1427,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       data: getCurrentDateString()
     };
 
-    setWorkflowItems(prev => prev.map(item => {
-      if (item.id === id) {
-        const updatedPagamentos = [...item.pagamentos, pagamento];
-        const novoValorPago = updatedPagamentos.reduce((sum, p) => sum + p.valor, 0);
-        
-        return {
-          ...item,
-          pagamentos: updatedPagamentos,
-          valorPago: novoValorPago,
-          restante: item.total - novoValorPago
-        };
-      }
-      return item;
-    }));
+    setWorkflowItems(prev => {
+      const updated = prev.map(item => {
+        if (item.id === id) {
+          const updatedPagamentos = [...item.pagamentos, pagamento];
+          const novoValorPago = updatedPagamentos.reduce((sum, p) => sum + p.valor, 0);
+          
+          return {
+            ...item,
+            pagamentos: updatedPagamentos,
+            valorPago: novoValorPago,
+            restante: item.total - novoValorPago
+          };
+        }
+        return item;
+      });
+      
+      // CRITICAL: Salvar mudanças imediatamente no localStorage
+      storage.save(STORAGE_KEYS.WORKFLOW_ITEMS, updated);
+      console.log('💾 Pagamento adicionado e salvo:', id, valor);
+      
+      return updated;
+    });
   };
 
   const toggleColumnVisibility = (column: string) => {

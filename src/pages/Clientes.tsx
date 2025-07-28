@@ -59,87 +59,34 @@ function ClientesContent() {
 
   const { clientes, allWorkflowItems, adicionarCliente, atualizarCliente, removerCliente } = context;
   
-  // NÚCLEO: Agregação de dados com useMemo conforme especificação
+  // SOLUÇÃO CORRIGIDA: CRM usa APENAS dados do workflow
   const clientesComMetricas: ClienteComMetricas[] = useMemo(() => {
-    console.log('🔄 IMPLEMENTAÇÃO FORÇADA - CRM CLIENTES:', {
+    console.log('🔄 CRM CORRIGIDO - Usando APENAS workflow:', {
       totalClientes: clientes?.length || 0,
-      totalAllWorkflowItems: allWorkflowItems?.length || 0,
-      primeiroWorkflowItem: allWorkflowItems?.[0] ? { 
-        id: allWorkflowItems[0].id, 
-        clienteId: allWorkflowItems[0].clienteId, 
-        nome: allWorkflowItems[0].nome 
-      } : null
+      totalAllWorkflowItems: allWorkflowItems?.length || 0
     });
 
-    if (!clientes || clientes.length === 0) {
-      console.log('⚠️ CRITICAL: Sem clientes para processar');
-      return [];
-    }
-
-    if (!allWorkflowItems || allWorkflowItems.length === 0) {
-      console.log('⚠️ CRITICAL: Sem workflowItems para processar - todas as métricas serão 0');
-      return clientes.map(cliente => ({
-        ...cliente,
-        metricas: { sessoes: 0, totalFaturado: 0, totalPago: 0, aReceber: 0, ultimaSessao: null }
-      }));
-    }
+    if (!clientes?.length) return [];
 
     return clientes.map(cliente => {
-      console.log(`🔍 PROCESSANDO CLIENTE: ${cliente.nome} (ID: ${cliente.id})`);
-      
-      // IMPLEMENTAÇÃO FORÇADA: Filtrar workflowItems por clienteId
-      const workflowDoCliente = allWorkflowItems.filter(item => {
-        // PRIORIDADE 1: Match direto por clienteId
-        if (item.clienteId === cliente.id) {
-          console.log(`✅ Match por clienteId: ${cliente.nome} -> ${item.nome}`);
-          return true;
-        }
-        
-        // FALLBACK 1: Nome exato (case insensitive)
-        if (item.nome && cliente.nome) {
-          const nomeMatch = item.nome.toLowerCase().trim() === cliente.nome.toLowerCase().trim();
-          if (nomeMatch) {
-            console.log(`🔗 Match por nome: "${cliente.nome}" -> "${item.nome}"`);
-            return true;
-          }
-        }
-        
-        // FALLBACK 2: Telefone (apenas números)
-        if (item.whatsapp && cliente.telefone) {
-          const telefoneItem = item.whatsapp.replace(/\D/g, '');
-          const telefoneCliente = cliente.telefone.replace(/\D/g, '');
-          if (telefoneItem === telefoneCliente && telefoneItem.length >= 10) {
-            console.log(`📞 Match por telefone: "${cliente.telefone}" -> "${item.whatsapp}"`);
-            return true;
-          }
-        }
-        
-        return false;
-      });
+      // BUSCA DIRETA: workflow items por clienteId e nome
+      const workflowDoCliente = allWorkflowItems?.filter(item => {
+        return item.clienteId === cliente.id || 
+               item.nome?.toLowerCase() === cliente.nome?.toLowerCase();
+      }) || [];
 
-      console.log(`📊 Cliente "${cliente.nome}": ${workflowDoCliente.length} workflow items encontrados`);
-
-      // IMPLEMENTAÇÃO FORÇADA: Calcular métricas com base nos workflowItems filtrados
+      // CÁLCULOS DIRETOS do workflow
       const sessoes = workflowDoCliente.length;
-      const totalFaturado = workflowDoCliente.reduce((soma, item) => soma + (Number(item.total) || 0), 0);
-      const totalPago = workflowDoCliente.reduce((soma, item) => soma + (Number(item.valorPago) || 0), 0);
-      const aReceber = workflowDoCliente.reduce((soma, item) => soma + (Number(item.restante) || 0), 0);
+      const totalFaturado = workflowDoCliente.reduce((sum, item) => sum + (item.total || 0), 0);
+      const totalPago = workflowDoCliente.reduce((sum, item) => sum + (item.valorPago || 0), 0);
+      const aReceber = workflowDoCliente.reduce((sum, item) => sum + (item.restante || 0), 0);
       
-      let ultimaSessao: string | null = null;
-      if (workflowDoCliente.length > 0) {
-        const datasValidas = workflowDoCliente
-          .map(item => item.dataOriginal instanceof Date ? item.dataOriginal : new Date(item.data))
-          .filter(date => !isNaN(date.getTime()))
-          .sort((a, b) => b.getTime() - a.getTime());
-        
-        if (datasValidas.length > 0) {
-          ultimaSessao = datasValidas[0].toLocaleDateString('pt-BR');
-        }
-      }
-
-      console.log(`💰 MÉTRICAS CALCULADAS para "${cliente.nome}":`, {
-        sessoes, totalFaturado, totalPago, aReceber, ultimaSessao
-      });
+      const ultimaSessao = workflowDoCliente.length > 0 
+        ? workflowDoCliente
+            .map(item => item.dataOriginal || new Date(item.data))
+            .sort((a, b) => b.getTime() - a.getTime())[0]
+            ?.toLocaleDateString('pt-BR') || null
+        : null;
 
       return {
         ...cliente,
