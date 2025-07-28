@@ -59,9 +59,9 @@ function ClientesContent() {
 
   const { clientes, allWorkflowItems, adicionarCliente, atualizarCliente, removerCliente } = context;
   
-  // LÓGICA SIMPLIFICADA: CRM busca dados APENAS do workflow
+  // NOVA ARQUITETURA: CRM busca dados EXCLUSIVAMENTE do workflow
   const clientesComMetricas: ClienteComMetricas[] = useMemo(() => {
-    console.log('🔄 CRM - DADOS APENAS DO WORKFLOW:', {
+    console.log('🔄 NOVA ARQUITETURA CRM - Dados exclusivos do workflow:', {
       totalClientes: clientes?.length || 0,
       totalWorkflowItems: allWorkflowItems?.length || 0
     });
@@ -90,6 +90,11 @@ function ClientesContent() {
         
         return false;
       }) || [];
+
+      console.log(`📊 Cliente ${cliente.nome}:`, {
+        itemsEncontrados: workflowDoCliente.length,
+        items: workflowDoCliente.map(i => ({ id: i.id, total: i.total, valorPago: i.valorPago, restante: i.restante }))
+      });
 
       // Calcular métricas diretamente do workflow
       const sessoes = workflowDoCliente.length;
