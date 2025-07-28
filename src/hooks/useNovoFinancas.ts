@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { ItemFinanceiro, GrupoPrincipal, StatusTransacao } from '@/types/financas';
 import { storage } from '@/utils/localStorage';
 import { getCurrentDateString } from '@/utils/dateUtils';
+import { useAppContext } from '@/contexts/AppContext';
 import { 
   RecurringBlueprintEngine, 
   RecurringBlueprint, 
@@ -67,6 +68,9 @@ const ITENS_INICIAIS: ItemFinanceiroCompativel[] = [
 ];
 
 export function useNovoFinancas() {
+  // ============= INTEGRAÇÃO COM CARTÕES =============
+  const { cartoes, adicionarCartao, atualizarCartao, removerCartao } = useAppContext();
+  
   // ============= ESTADOS PRINCIPAIS =============
   
   const [itensFinanceiros, setItensFinanceiros] = useState<ItemFinanceiroCompativel[]>(() => {
@@ -154,37 +158,42 @@ export function useNovoFinancas() {
           });
         }
         
-        // 2. TRANSAÇÕES PARCELADAS
+        // 2. TRANSAÇÕES PARCELADAS (CARTÃO DE CRÉDITO)
         if (isParcelado && numeroDeParcelas && numeroDeParcelas > 1) {
-          console.log(`Criando ${numeroDeParcelas} parcelas`);
-          
-          const transacoesParcelas: NovaTransacao[] = [];
-          const valorParcela = valorTotal / numeroDeParcelas;
-          const [ano, mes, dia] = dataPrimeiraOcorrencia.split('-').map(Number);
-          
-          for (let i = 0; i < numeroDeParcelas; i++) {
-            // Calcular data da parcela (próximos meses)
-            const dataParcelaObj = new Date(ano, mes - 1 + i, dia);
-            const dataParcela = `${dataParcelaObj.getFullYear()}-${(dataParcelaObj.getMonth() + 1).toString().padStart(2, '0')}-${dia.toString().padStart(2, '0')}`;
-            
-            const transacaoParcela: NovaTransacao = {
-              id: `parcela_${Date.now()}_${i + 1}`,
-              itemId,
-              valor: valorParcela,
-              dataVencimento: dataParcela,
-              status: dataParcela <= getCurrentDateString() ? 'Faturado' : 'Agendado',
-              observacoes: `${observacoes || ''} (Parcela ${i + 1}/${numeroDeParcelas})`.trim(),
-              parcelaInfo: { atual: i + 1, total: numeroDeParcelas },
-              userId: 'user1',
-              criadoEm: getCurrentDateString()
-            };
-            
-            transacoesParcelas.push(transacaoParcela);
+          const cartaoId = input.cartaoCreditoId;
+          if (cartaoId) {
+            const cartao = cartoes.find(c => c.id === cartaoId);
+            if (cartao) {
+              console.log(`Criando ${numeroDeParcelas} parcelas no cartão ${cartao.nome}`);
+              const transacoesParcelas: NovaTransacao[] = [];
+              const valorParcela = valorTotal / numeroDeParcelas;
+              
+              for (let i = 0; i < numeroDeParcelas; i++) {
+                const dataCompra = new Date(dataPrimeiraOcorrencia);
+                const dataVencimento = new Date(dataCompra);
+                dataVencimento.setMonth(dataVencimento.getMonth() + i);
+                dataVencimento.setDate(cartao.diaVencimento);
+                
+                const transacaoParcela: NovaTransacao = {
+                  id: `credit_${Date.now()}_${i + 1}`,
+                  itemId,
+                  valor: valorParcela,
+                  dataVencimento: dataVencimento.toISOString().split('T')[0],
+                  status: dataVencimento.toISOString().split('T')[0] <= getCurrentDateString() ? 'Faturado' : 'Agendado',
+                  observacoes: `${observacoes || ''} ${cartao.nome} ${i + 1}/${numeroDeParcelas}`.trim(),
+                  parcelaInfo: { atual: i + 1, total: numeroDeParcelas },
+                  userId: 'user1',
+                  criadoEm: getCurrentDateString()
+                };
+                
+                transacoesParcelas.push(transacaoParcela);
+              }
+              
+              setTransacoes(prev => [...prev, ...transacoesParcelas]);
+              console.log(`${numeroDeParcelas} parcelas criadas no cartão ${cartao.nome}`);
+              return;
+            }
           }
-          
-          setTransacoes(prev => [...prev, ...transacoesParcelas]);
-          console.log(`${numeroDeParcelas} parcelas criadas com sucesso`);
-          return;
         }
         
         // 3. TRANSAÇÃO ÚNICA
@@ -242,7 +251,19 @@ export function useNovoFinancas() {
     if (novasTransacoes.length > 0) {
       setTransacoes(prev => [...prev, ...novasTransacoes]);
     }
+    
+    // Atualizar status automaticamente quando filtro muda
+    setTimeout(() => atualizarStatusAutomatico(), 100); // Pequeno delay para garantir que as transações foram carregadas
   }, [filtroMesAno]);
+  
+  // Verificar status automaticamente a cada minuto
+  useEffect(() => {
+    const interval = setInterval(() => {
+      atualizarStatusAutomatico();
+    }, 60000); // 1 minuto
+    
+    return () => clearInterval(interval);
+  }, []);
   
   // ============= MIGRAÇÃO E LIMPEZA DE DADOS (EXECUTADO UMA VEZ) =============
   
@@ -333,16 +354,35 @@ export function useNovoFinancas() {
     return grupos;
   }, [transacoesFiltradas]);
 
-  // Calcular métricas por grupo
+  // Função para atualizar status automaticamente
+  const atualizarStatusAutomatico = () => {
+    const hoje = getCurrentDateString();
+    const transacoesParaAtualizar = transacoes.filter(transacao => 
+      transacao.status === 'Agendado' && transacao.dataVencimento <= hoje
+    );
+    
+    if (transacoesParaAtualizar.length > 0) {
+      console.log(`Atualizando ${transacoesParaAtualizar.length} transações para Faturado`);
+      transacoesParaAtualizar.forEach(transacao => {
+        RecurringBlueprintEngine.updateTransaction(transacao.id, { status: 'Faturado' });
+      });
+      // Recarregar do localStorage para manter sincronização
+      setTransacoes(RecurringBlueprintEngine.loadTransactions());
+    }
+  };
+
+  // Calcular métricas por grupo (agora inclui "Faturado")
   const calcularMetricasPorGrupo = (grupo: GrupoPrincipal) => {
     const transacoesGrupo = transacoesPorGrupo[grupo];
     const total = transacoesGrupo.reduce((sum, t) => sum + t.valor, 0);
     const pago = transacoesGrupo.filter(t => t.status === 'Pago').reduce((sum, t) => sum + t.valor, 0);
+    const faturado = transacoesGrupo.filter(t => t.status === 'Faturado').reduce((sum, t) => sum + t.valor, 0);
     const agendado = transacoesGrupo.filter(t => t.status === 'Agendado').reduce((sum, t) => sum + t.valor, 0);
     
     return {
       total,
       pago,
+      faturado,
       agendado,
       quantidade: transacoesGrupo.length
     };
@@ -356,6 +396,7 @@ export function useNovoFinancas() {
     const receitasExtras = calcularMetricasPorGrupo('Receita Não Operacional');
 
     const totalDespesas = despesasFixas.pago + despesasVariaveis.pago + investimentos.pago;
+    const totalDespesasFaturadas = despesasFixas.faturado + despesasVariaveis.faturado + investimentos.faturado;
     const totalReceitasExtras = receitasExtras.pago;
     const receitaOperacional = 8500; // Virá do Workflow futuramente
 
@@ -367,6 +408,7 @@ export function useNovoFinancas() {
       investimentos,
       receitasExtras,
       totalDespesas,
+      totalDespesasFaturadas,
       totalReceitasExtras,
       receitaOperacional,
       resultadoMensal,
@@ -450,6 +492,11 @@ export function useNovoFinancas() {
     atualizarTransacao(id, dados);
   };
 
+  // Marcar transação como paga
+  const marcarComoPago = (id: string) => {
+    atualizarTransacao(id, { status: 'Pago' });
+  };
+
   // Funções para gerenciar blueprints
   const removerBlueprint = (id: string) => {
     RecurringBlueprintEngine.removeBlueprint(id);
@@ -494,15 +541,16 @@ export function useNovoFinancas() {
     atualizarTransacao,
     atualizarTransacaoCompativel,
     removerTransacao,
+    marcarComoPago,
     
     // Funções de blueprints
     removerBlueprint,
     
-    // Placeholders para compatibilidade (cartões não implementados na nova arquitetura)
-    cartoes: [] as any[],
-    adicionarCartao: () => console.warn('Cartões não implementados na nova arquitetura'),
-    atualizarCartao: () => console.warn('Cartões não implementados na nova arquitetura'),
-    removerCartao: () => console.warn('Cartões não implementados na nova arquitetura'),
+    // Gestão de cartões (integração com AppContext)
+    cartoes,
+    adicionarCartao,
+    atualizarCartao,
+    removerCartao,
     
     // Funções utilitárias
     calcularMetricasPorGrupo,

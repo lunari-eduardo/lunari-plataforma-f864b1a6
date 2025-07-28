@@ -13,6 +13,7 @@ interface TabelaLancamentosProps {
   transacoes: TransacaoComItem[];
   onAtualizarTransacao: (id: string, dadosAtualizados: Partial<NovaTransacaoFinanceira>) => void;
   onRemoverTransacao: (id: string) => void;
+  onMarcarComoPago: (id: string) => void;
   grupoAtivo: GrupoPrincipal;
   obterItensPorGrupo: (grupo: GrupoPrincipal) => ItemFinanceiro[];
   onAdicionarTransacao: (transacao: Omit<NovaTransacaoFinanceira, 'id' | 'userId' | 'criadoEm'>) => void;
@@ -22,6 +23,7 @@ export default function TabelaLancamentos({
   transacoes,
   onAtualizarTransacao,
   onRemoverTransacao,
+  onMarcarComoPago,
   grupoAtivo,
   obterItensPorGrupo,
   onAdicionarTransacao,
@@ -90,7 +92,7 @@ export default function TabelaLancamentos({
   // Função para determinar status automático baseado na data
   const determinarStatus = (dataVencimento: string): StatusTransacao => {
     const hoje = new Date().toISOString().split('T')[0];
-    return dataVencimento <= hoje ? 'Pago' : 'Agendado';
+    return dataVencimento <= hoje ? 'Faturado' : 'Agendado';
   };
 
   // Função para adicionar nova transação
@@ -153,8 +155,29 @@ export default function TabelaLancamentos({
     const [ano, mes, dia] = dataISO.split('-');
     return `${dia}/${mes}/${ano}`;
   };
-  const getStatusBadge = (status: StatusTransacao) => {
-    return status === 'Pago' ? <Badge className="bg-green-100 text-green-800 border-green-200">Pago</Badge> : <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Agendado</Badge>;
+  const getStatusBadge = (status: StatusTransacao, onMarcarPago?: () => void) => {
+    switch (status) {
+      case 'Agendado':
+        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Agendado</Badge>;
+      case 'Faturado':
+        return (
+          <div className="flex items-center gap-2">
+            <Badge className="bg-red-100 text-red-800 border-red-200">Faturado</Badge>
+            {onMarcarPago && (
+              <input 
+                type="checkbox" 
+                onChange={onMarcarPago}
+                className="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500"
+                title="Marcar como pago"
+              />
+            )}
+          </div>
+        );
+      case 'Pago':
+        return <Badge className="bg-green-100 text-green-800 border-green-200">Pago</Badge>;
+      default:
+        return <Badge className="bg-gray-100 text-gray-800 border-gray-200">-</Badge>;
+    }
   };
   const itensDisponiveis = obterItensPorGrupo(grupoAtivo);
   return <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
@@ -347,7 +370,7 @@ export default function TabelaLancamentos({
                             {formatCurrency(transacao.valor)}
                           </span>
                           <div className="mt-1">
-                            {getStatusBadge(transacao.status)}
+                            {getStatusBadge(transacao.status, transacao.status === 'Faturado' ? () => onMarcarComoPago(transacao.id) : undefined)}
                           </div>
                         </div>
                       </td>

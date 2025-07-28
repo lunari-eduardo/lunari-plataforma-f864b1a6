@@ -27,6 +27,7 @@ interface LancamentosTabProps {
   adicionarTransacao: (transacao: Omit<NovaTransacaoFinanceira, 'id' | 'userId' | 'criadoEm'>) => void;
   atualizarTransacao: (id: string, dadosAtualizados: Partial<NovaTransacaoFinanceira>) => void;
   removerTransacao: (id: string) => void;
+  marcarComoPago: (id: string) => void;
   createTransactionEngine?: (input: CreateTransactionInput) => void;
 }
 export default function LancamentosTab({
@@ -38,6 +39,7 @@ export default function LancamentosTab({
   adicionarTransacao,
   atualizarTransacao,
   removerTransacao,
+  marcarComoPago,
   createTransactionEngine
 }: LancamentosTabProps) {
   const [activeSubTab, setActiveSubTab] = useState<GrupoPrincipal>('Despesa Fixa');
@@ -110,6 +112,11 @@ export default function LancamentosTab({
             <div className="w-2 h-2 bg-green-500 rounded-full"></div>
             <span className="text-gray-600">Pago:</span>
             <span className="font-semibold text-green-600">{formatCurrency(metricas.pago)}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+            <span className="text-gray-600">Faturado:</span>
+            <span className="font-semibold text-red-600">{formatCurrency(metricas.faturado)}</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
@@ -284,7 +291,7 @@ export default function LancamentosTab({
                 </div>
               </div>
 
-              {isMobile ? <TabelaLancamentosMobile transacoes={transacoesPorGrupo[grupo]} onAtualizarTransacao={atualizarTransacao} onRemoverTransacao={removerTransacao} grupoAtivo={grupo} obterItensPorGrupo={obterItensPorGrupo} /> : <TabelaLancamentos transacoes={transacoesPorGrupo[grupo]} onAtualizarTransacao={atualizarTransacao} onRemoverTransacao={removerTransacao} grupoAtivo={grupo} obterItensPorGrupo={obterItensPorGrupo} onAdicionarTransacao={adicionarTransacao} createTransactionEngine={createTransactionEngine} />}
+              {isMobile ? <TabelaLancamentosMobile transacoes={transacoesPorGrupo[grupo]} onAtualizarTransacao={atualizarTransacao} onRemoverTransacao={removerTransacao} onMarcarComoPago={marcarComoPago} grupoAtivo={grupo} obterItensPorGrupo={obterItensPorGrupo} /> : <TabelaLancamentos transacoes={transacoesPorGrupo[grupo]} onAtualizarTransacao={atualizarTransacao} onRemoverTransacao={removerTransacao} onMarcarComoPago={marcarComoPago} grupoAtivo={grupo} obterItensPorGrupo={obterItensPorGrupo} onAdicionarTransacao={adicionarTransacao} createTransactionEngine={createTransactionEngine} />}
             </div>
           </TabsContent>)}
       </Tabs>
