@@ -14,9 +14,60 @@ export interface ClienteWithMetricas extends Cliente {
 
 export const useClienteMetrics = (clientes: Cliente[], workflowItems: WorkflowItem[]): ClienteWithMetricas[] => {
   return useMemo(() => {
+    // Debug: mostrar dados recebidos
+    console.log('🔍 useClienteMetrics - Debug completo:', {
+      totalClientes: clientes?.length || 0,
+      totalWorkflowItems: workflowItems?.length || 0,
+      clientes: clientes?.map(c => ({ id: c.id, nome: c.nome })),
+      workflowSample: workflowItems?.slice(0, 3).map(w => ({ 
+        id: w.id, 
+        clienteId: w.clienteId, 
+        nome: w.nome,
+        total: w.total,
+        valorPago: w.valorPago 
+      }))
+    });
+
     return clientes.map(cliente => {
       // Filtrar todos os workflowItems deste cliente específico
-      const clienteWorkflowItems = workflowItems.filter(item => item.clienteId === cliente.id);
+      // LÓGICA ROBUSTA: Primeiro tenta por clienteId, depois por nome/telefone como fallback
+      const clienteWorkflowItems = workflowItems.filter(item => {
+        // Prioridade 1: Match direto por clienteId
+        if (item.clienteId === cliente.id) {
+          return true;
+        }
+        
+        // Prioridade 2: Fallback por nome exato (case insensitive)
+        if (item.nome && cliente.nome) {
+          const nomeItemNormalizado = item.nome.toLowerCase().trim();
+          const nomeClienteNormalizado = cliente.nome.toLowerCase().trim();
+          if (nomeItemNormalizado === nomeClienteNormalizado) {
+            return true;
+          }
+        }
+        
+        // Prioridade 3: Fallback por telefone (apenas números)
+        if (item.whatsapp && cliente.telefone) {
+          const telefoneItem = item.whatsapp.replace(/\D/g, '');
+          const telefoneCliente = cliente.telefone.replace(/\D/g, '');
+          if (telefoneItem === telefoneCliente && telefoneItem.length >= 10) {
+            return true;
+          }
+        }
+        
+        return false;
+      });
+      
+      // Debug: mostrar associações
+      console.log(`🔗 Cliente "${cliente.nome}" (ID: ${cliente.id}):`, {
+        workflowItemsEncontrados: clienteWorkflowItems.length,
+        workflowItems: clienteWorkflowItems.map(w => ({ 
+          id: w.id, 
+          clienteId: w.clienteId, 
+          total: w.total,
+          valorPago: w.valorPago
+        }))
+      });
       
       // Calcular métricas baseadas exclusivamente nos workflowItems
       const totalSessoes = clienteWorkflowItems.length;

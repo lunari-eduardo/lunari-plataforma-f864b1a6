@@ -586,6 +586,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           c.telefone === appointment.whatsapp
         );
 
+        // Debug: mostrar processo de busca de cliente
+        console.log('🔍 Associação Cliente-Workflow:', {
+          appointmentClient: appointment.client,
+          appointmentWhatsapp: appointment.whatsapp,
+          clienteEncontrado: clienteEncontrado ? { id: clienteEncontrado.id, nome: clienteEncontrado.nome } : null,
+          clientesDisponiveis: clientes?.map(c => ({ id: c.id, nome: c.nome, telefone: c.telefone }))
+        });
+
         const newWorkflowItem: WorkflowItem = {
           id: `agenda-${appointment.id}`,
           clienteId: clienteEncontrado?.id || undefined,
