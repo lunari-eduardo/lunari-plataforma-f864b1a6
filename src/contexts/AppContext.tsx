@@ -768,7 +768,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
 
     if (newItems.length > 0) {
-      setWorkflowItems(prev => [...prev, ...newItems]);
+      setWorkflowItems(prev => {
+        const updated = [...prev, ...newItems];
+        // CORREÇÃO CRÍTICA: Persistir novos itens imediatamente no localStorage
+        storage.save(STORAGE_KEYS.WORKFLOW_ITEMS, updated);
+        return updated;
+      });
     }
   }, [appointments, workflowItems, pacotes, categorias, produtos]);
 
@@ -975,7 +980,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
 
     if (newItems.length > 0) {
-      setWorkflowItems(prev => [...prev, ...newItems]);
+      setWorkflowItems(prev => {
+        const updated = [...prev, ...newItems];
+        // CORREÇÃO CRÍTICA: Persistir novos itens imediatamente no localStorage  
+        storage.save(STORAGE_KEYS.WORKFLOW_ITEMS, updated);
+        return updated;
+      });
     }
   }, [orcamentos, workflowItems, pacotes, produtos]);
 
@@ -1269,52 +1279,66 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteAppointment = (id: string) => {
     setAppointments(prev => prev.filter(app => app.id !== id));
+    
+    // CORREÇÃO CRÍTICA: Remover também do workflow quando agendamento é excluído
+    setWorkflowItems(prev => {
+      const updated = prev.filter(item => item.id !== `agenda-${id}`);
+      // Persistir imediatamente no localStorage
+      storage.save(STORAGE_KEYS.WORKFLOW_ITEMS, updated);
+      return updated;
+    });
   };
 
   const updateWorkflowItem = (id: string, updates: Partial<WorkflowItem>) => {
-    setWorkflowItems(prev => prev.map(item => {
-      if (item.id === id) {
-        const updatedItem = { ...item, ...updates };
-        
-        // Se o pacote foi alterado, atualizar categoria e valor de foto extra automaticamente
-        if (updates.pacote && updates.pacote !== item.pacote) {
-          const pacoteData = pacotes.find(p => p.nome === updates.pacote);
-          if (pacoteData) {
-            // Atualizar categoria baseado no pacote
-            if (pacoteData.categoria_id) {
-              const configCategorias = storage.load('configuracoes_categorias', []);
-              const categoria = configCategorias.find((cat: any) => cat.id === pacoteData.categoria_id);
-              updatedItem.categoria = categoria ? categoria.nome : String(pacoteData.categoria_id);
-            } else {
-              updatedItem.categoria = pacoteData.categoria || item.categoria;
-            }
-            
-            // Atualizar valor do pacote e valor de foto extra
-            updatedItem.valorPacote = pacoteData.valor_base || pacoteData.valorVenda || pacoteData.valor || updatedItem.valorPacote;
-            updatedItem.valorFotoExtra = pacoteData.valor_foto_extra || pacoteData.valorFotoExtra || updatedItem.valorFotoExtra;
-            
-            // Se o pacote tem produtos incluídos, adicionar o primeiro produto
-            if (pacoteData.produtosIncluidos && pacoteData.produtosIncluidos.length > 0) {
-              const primeiroProduto = pacoteData.produtosIncluidos[0];
-              const produtoData = produtos.find(p => p.id === primeiroProduto.produtoId);
-              if (produtoData) {
-                updatedItem.produto = `${produtoData.nome} (incluso no pacote)`;
-                updatedItem.qtdProduto = primeiroProduto.quantidade || 1;
-                updatedItem.valorTotalProduto = 0; // Produtos inclusos têm valor 0
+    setWorkflowItems(prev => {
+      const updatedItems = prev.map(item => {
+        if (item.id === id) {
+          const updatedItem = { ...item, ...updates };
+          
+          // Se o pacote foi alterado, atualizar categoria e valor de foto extra automaticamente
+          if (updates.pacote && updates.pacote !== item.pacote) {
+            const pacoteData = pacotes.find(p => p.nome === updates.pacote);
+            if (pacoteData) {
+              // Atualizar categoria baseado no pacote
+              if (pacoteData.categoria_id) {
+                const configCategorias = storage.load('configuracoes_categorias', []);
+                const categoria = configCategorias.find((cat: any) => cat.id === pacoteData.categoria_id);
+                updatedItem.categoria = categoria ? categoria.nome : String(pacoteData.categoria_id);
+              } else {
+                updatedItem.categoria = pacoteData.categoria || item.categoria;
+              }
+              
+              // Atualizar valor do pacote e valor de foto extra
+              updatedItem.valorPacote = pacoteData.valor_base || pacoteData.valorVenda || pacoteData.valor || updatedItem.valorPacote;
+              updatedItem.valorFotoExtra = pacoteData.valor_foto_extra || pacoteData.valorFotoExtra || updatedItem.valorFotoExtra;
+              
+              // Se o pacote tem produtos incluídos, adicionar o primeiro produto
+              if (pacoteData.produtosIncluidos && pacoteData.produtosIncluidos.length > 0) {
+                const primeiroProduto = pacoteData.produtosIncluidos[0];
+                const produtoData = produtos.find(p => p.id === primeiroProduto.produtoId);
+                if (produtoData) {
+                  updatedItem.produto = `${produtoData.nome} (incluso no pacote)`;
+                  updatedItem.qtdProduto = primeiroProduto.quantidade || 1;
+                  updatedItem.valorTotalProduto = 0; // Produtos inclusos têm valor 0
+                }
               }
             }
           }
+          
+          updatedItem.valorTotalFotoExtra = updatedItem.qtdFotoExtra * updatedItem.valorFotoExtra;
+          updatedItem.total = updatedItem.valorPacote + updatedItem.valorTotalFotoExtra + 
+                             updatedItem.valorTotalProduto + updatedItem.valorAdicional - updatedItem.desconto;
+          updatedItem.restante = updatedItem.total - updatedItem.valorPago;
+          
+          return updatedItem;
         }
-        
-        updatedItem.valorTotalFotoExtra = updatedItem.qtdFotoExtra * updatedItem.valorFotoExtra;
-        updatedItem.total = updatedItem.valorPacote + updatedItem.valorTotalFotoExtra + 
-                           updatedItem.valorTotalProduto + updatedItem.valorAdicional - updatedItem.desconto;
-        updatedItem.restante = updatedItem.total - updatedItem.valorPago;
-        
-        return updatedItem;
-      }
-      return item;
-    }));
+        return item;
+      });
+      
+      // CORREÇÃO CRÍTICA: Persistir mudanças imediatamente no localStorage
+      storage.save(STORAGE_KEYS.WORKFLOW_ITEMS, updatedItems);
+      return updatedItems;
+    });
   };
 
   const addPayment = (id: string, valor: number) => {
@@ -1324,20 +1348,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       data: getCurrentDateString()
     };
 
-    setWorkflowItems(prev => prev.map(item => {
-      if (item.id === id) {
-        const updatedPagamentos = [...item.pagamentos, pagamento];
-        const novoValorPago = updatedPagamentos.reduce((sum, p) => sum + p.valor, 0);
-        
-        return {
-          ...item,
-          pagamentos: updatedPagamentos,
-          valorPago: novoValorPago,
-          restante: item.total - novoValorPago
-        };
-      }
-      return item;
-    }));
+    setWorkflowItems(prev => {
+      const updatedItems = prev.map(item => {
+        if (item.id === id) {
+          const updatedPagamentos = [...item.pagamentos, pagamento];
+          const novoValorPago = updatedPagamentos.reduce((sum, p) => sum + p.valor, 0);
+          
+          return {
+            ...item,
+            pagamentos: updatedPagamentos,
+            valorPago: novoValorPago,
+            restante: item.total - novoValorPago
+          };
+        }
+        return item;
+      });
+      
+      // CORREÇÃO CRÍTICA: Persistir mudanças imediatamente no localStorage
+      storage.save(STORAGE_KEYS.WORKFLOW_ITEMS, updatedItems);
+      return updatedItems;
+    });
   };
 
   const toggleColumnVisibility = (column: string) => {
