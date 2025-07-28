@@ -14,9 +14,8 @@ import Precificacao from "./pages/Precificacao";
 import Configuracoes from "./pages/Configuracoes";
 import Workflow from "./pages/Workflow";
 import NotFound from "./pages/NotFound";
-import { AppProvider, AppContext } from "./contexts/AppContext";
+import { AppProvider, useAppContext } from "./contexts/AppContext";
 import { useIntegration } from "./hooks/useIntegration";
-import { useContext } from "react";
 
 // Create a new QueryClient instance outside of the component
 const queryClient = new QueryClient();
@@ -35,17 +34,6 @@ function AppIntegration() {
   }
   
   return null;
-}
-
-// Hook export for accessing context
-function useAppContext() {
-  try {
-    const context = useContext(AppContext);
-    return context;
-  } catch (error) {
-    console.warn('AppContext not available yet:', error);
-    return null;
-  }
 }
 
 // Define App as a proper function component to ensure React hooks work correctly
