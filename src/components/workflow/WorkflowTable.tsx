@@ -35,6 +35,7 @@ interface SessionData {
   produtosList?: ProdutoWorkflow[]; // LISTA COMPLETA DE PRODUTOS
   valorAdicional: string;
   detalhes: string;
+  observacoes: string;
   valor: string;
   total: string;
   valorPago: string;
@@ -620,7 +621,7 @@ export function WorkflowTable({
 
                 {renderCell('additionalValue', renderEditableInput(session, 'valorAdicional', session.valorAdicional || '', 'text', 'R$ 0,00'))}
 
-                {renderCell('details', renderEditableInput(session, 'detalhes', session.detalhes || '', 'text', 'Observações...'))}
+                {renderCell('details', renderEditableInput(session, 'observacoes', session.observacoes || '', 'text', 'Observações...'))}
 
                 {renderCell('total', <span className="font-bold text-blue-700 text-xs">{formatCurrency(calculateTotal(session))}</span>)}
 

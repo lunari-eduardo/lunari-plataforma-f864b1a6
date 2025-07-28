@@ -47,6 +47,7 @@ interface SessionData {
   valorTotalProduto: string;
   valorAdicional: string;
   detalhes: string;
+  observacoes: string;
   valor: string;
   total: string;
   valorPago: string;

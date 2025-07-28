@@ -204,7 +204,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Workflow State
   const [workflowItems, setWorkflowItems] = useState<WorkflowItem[]>(() => {
-    return storage.load(STORAGE_KEYS.WORKFLOW_ITEMS, []);
+    const items = storage.load(STORAGE_KEYS.WORKFLOW_ITEMS, []);
+    // Migração: garantir que todos os itens tenham o campo observacoes
+    return items.map((item: any) => ({
+      ...item,
+      observacoes: item.observacoes || ''
+    }));
   });
   
   const [workflowFilters, setWorkflowFilters] = useState<WorkflowFilters>(() => {
@@ -406,6 +411,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       whatsapp: orcamento.cliente?.telefone || '',
       descricao: orcamento.descricao || '',
       detalhes: orcamento.detalhes || '',
+      observacoes: '',
       categoria: orcamento.categoria || '',
       pacote: nomePacote,
       valorPacote: formatCurrency(valorPacote),
