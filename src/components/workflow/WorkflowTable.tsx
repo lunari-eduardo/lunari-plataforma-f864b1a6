@@ -358,6 +358,17 @@ export function WorkflowTable({
     const newValue = editingValues[key];
     if (newValue !== undefined) {
       handleFieldUpdateStable(sessionId, field, newValue);
+      
+      // Recalcular valor total das fotos extras quando o valor unitário for alterado
+      if (field === 'valorFotoExtra') {
+        const session = sessions.find(s => s.id === sessionId);
+        if (session) {
+          const valorUnit = parseFloat(newValue.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+          const qtd = session.qtdFotosExtra || 0;
+          handleFieldUpdateStable(sessionId, 'valorTotalFotoExtra', formatCurrency(qtd * valorUnit));
+        }
+      }
+      
       setEditingValues(prev => {
         const updated = {
           ...prev
