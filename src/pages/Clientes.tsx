@@ -12,17 +12,32 @@ import { Search, UserPlus, User, Phone, Mail, Edit, Trash2, ArrowUpDown, ArrowUp
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from 'sonner';
 import { formatCurrency } from '@/utils/financialUtils';
-import { useClienteMetrics, ClienteWithMetricas } from '@/hooks/useClienteMetrics';
+
+// Interface para cliente enriquecido com métricas calculadas
+interface ClienteComMetricas extends Cliente {
+  metricas: {
+    sessoes: number;
+    totalFaturado: number;
+    totalPago: number;
+    aReceber: number;
+    ultimaSessao: string | null;
+  };
+}
 
 type SortConfig = {
-  key: keyof ClienteWithMetricas['metricas'] | 'nome' | 'email' | 'telefone';
+  key: keyof ClienteComMetricas['metricas'] | 'nome' | 'email' | 'telefone';
   direction: 'asc' | 'desc' | null;
 };
 
 function ClientesContent() {
   const context = useAppContext();
   
-  // Verificar se o contexto está disponível
+  const [filtro, setFiltro] = useState('');
+  const [showClientForm, setShowClientForm] = useState(false);
+  const [editingClient, setEditingClient] = useState<Cliente | null>(null);
+  const [formData, setFormData] = useState({ nome: '', email: '', telefone: '' });
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'nome', direction: null });
+
   if (!context) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -41,43 +56,74 @@ function ClientesContent() {
     );
   }
 
-  const {
-    clientes,
-    workflowItems,
-    adicionarCliente,
-    atualizarCliente,
-    removerCliente
-  } = context;
+  const { clientes, workflowItems, adicionarCliente, atualizarCliente, removerCliente } = context;
   
-  const [filtro, setFiltro] = useState('');
-  const [showClientForm, setShowClientForm] = useState(false);
-  const [editingClient, setEditingClient] = useState<Cliente | null>(null);
-  const [formData, setFormData] = useState({ nome: '', email: '', telefone: '' });
-  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'nome', direction: null });
+  // NÚCLEO: Agregação de dados com useMemo conforme especificação
+  const clientesComMetricas: ClienteComMetricas[] = useMemo(() => {
+    console.log('🔄 AGREGANDO DADOS - Nova Página Clientes:', {
+      totalClientes: clientes?.length || 0,
+      totalWorkflowItems: workflowItems?.length || 0
+    });
 
-  // NOVA ARQUITETURA: Calcular métricas diretamente do workflow
-  const clientesComMetricas = useClienteMetrics(clientes || [], workflowItems || []);
-  
-  // Debug: mostrar informações das métricas calculadas
-  console.log('🏠 Clientes.tsx - Métricas calculadas:', clientesComMetricas.map(c => ({
-    nome: c.nome,
-    totalSessoes: c.metricas.totalSessoes,
-    totalFaturado: c.metricas.totalFaturado,
-    totalPago: c.metricas.totalPago,
-    aReceber: c.metricas.aReceber
-  })));
+    if (!clientes || clientes.length === 0) {
+      return [];
+    }
 
-  // Filtrar e ordenar clientes
+    return clientes.map(cliente => {
+      // PASSO A: Filtrar histórico do cliente específico
+      const workflowDoCliente = workflowItems?.filter(item => {
+        if (item.clienteId === cliente.id) return true;
+        
+        if (item.nome && cliente.nome) {
+          const nomeMatch = item.nome.toLowerCase().trim() === cliente.nome.toLowerCase().trim();
+          if (nomeMatch) return true;
+        }
+        
+        if (item.whatsapp && cliente.telefone) {
+          const telefoneItem = item.whatsapp.replace(/\D/g, '');
+          const telefoneCliente = cliente.telefone.replace(/\D/g, '');
+          if (telefoneItem === telefoneCliente && telefoneItem.length >= 10) return true;
+        }
+        
+        return false;
+      }) || [];
+
+      // PASSO B: Calcular métricas do histórico filtrado
+      const sessoes = workflowDoCliente.length;
+      const totalFaturado = workflowDoCliente.reduce((soma, item) => soma + (Number(item.total) || 0), 0);
+      const totalPago = workflowDoCliente.reduce((soma, item) => soma + (Number(item.valorPago) || 0), 0);
+      const aReceber = workflowDoCliente.reduce((soma, item) => soma + (Number(item.restante) || 0), 0);
+      
+      let ultimaSessao: string | null = null;
+      if (workflowDoCliente.length > 0) {
+        const datasValidas = workflowDoCliente
+          .map(item => item.dataOriginal instanceof Date ? item.dataOriginal : new Date(item.data))
+          .filter(date => !isNaN(date.getTime()))
+          .sort((a, b) => b.getTime() - a.getTime());
+        
+        if (datasValidas.length > 0) {
+          ultimaSessao = datasValidas[0].toLocaleDateString('pt-BR');
+        }
+      }
+
+      return {
+        ...cliente,
+        metricas: { sessoes, totalFaturado, totalPago, aReceber, ultimaSessao }
+      };
+    });
+  }, [clientes, workflowItems]);
+
   const clientesFiltradosEOrdenados = useMemo(() => {
-    let clientesFiltrados = filtro ? clientesComMetricas.filter(cliente => 
-      cliente.nome.toLowerCase().includes(filtro.toLowerCase()) || 
-      cliente.email.toLowerCase().includes(filtro.toLowerCase()) || 
-      cliente.telefone.includes(filtro)
-    ) : clientesComMetricas;
+    let resultado = filtro 
+      ? clientesComMetricas.filter(cliente => 
+          cliente.nome.toLowerCase().includes(filtro.toLowerCase()) || 
+          cliente.email.toLowerCase().includes(filtro.toLowerCase()) || 
+          cliente.telefone.includes(filtro)
+        ) 
+      : clientesComMetricas;
 
-    // Aplicar ordenação
     if (sortConfig.direction) {
-      clientesFiltrados.sort((a, b) => {
+      resultado.sort((a, b) => {
         let valorA: any, valorB: any;
 
         if (sortConfig.key === 'nome' || sortConfig.key === 'email' || sortConfig.key === 'telefone') {
@@ -87,7 +133,6 @@ function ClientesContent() {
           valorA = a.metricas[sortConfig.key] || 0;
           valorB = b.metricas[sortConfig.key] || 0;
           
-          // Para última sessão, usar Date para comparação
           if (sortConfig.key === 'ultimaSessao') {
             valorA = a.metricas.ultimaSessao ? new Date(a.metricas.ultimaSessao.split('/').reverse().join('-')).getTime() : 0;
             valorB = b.metricas.ultimaSessao ? new Date(b.metricas.ultimaSessao.split('/').reverse().join('-')).getTime() : 0;
@@ -100,10 +145,9 @@ function ClientesContent() {
       });
     }
 
-    return clientesFiltrados;
+    return resultado;
   }, [clientesComMetricas, filtro, sortConfig]);
 
-  // Função para lidar com ordenação
   const handleSort = (key: SortConfig['key']) => {
     setSortConfig(prev => ({
       key,
@@ -113,7 +157,6 @@ function ClientesContent() {
     }));
   };
 
-  // Função para renderizar ícone de ordenação
   const renderSortIcon = (key: SortConfig['key']) => {
     if (sortConfig.key !== key) return <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />;
     if (sortConfig.direction === 'asc') return <ArrowUp className="h-3 w-3 ml-1" />;
@@ -159,285 +202,150 @@ function ClientesContent() {
   return (
     <ScrollArea className="h-[calc(100vh-120px)]">
       <div className="space-y-6 pr-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-muted-foreground text-xs">
-            Gerencie todos os seus clientes e acompanhe informações de contato.
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Clientes</h1>
+            <p className="text-muted-foreground text-sm">
+              Dashboard de CRM com métricas financeiras e operacionais em tempo real
+            </p>
+          </div>
+          
+          <Button onClick={handleAddClient} className="bg-primary">
+            <UserPlus className="h-4 w-4 mr-2" />
+            Novo Cliente
+          </Button>
         </div>
         
-         <div className="flex gap-2">
-           <Button onClick={handleAddClient} className="bg-neumorphic-dark text-slate-50 bg-lunar-accent py-0 my-[8px]">
-             <UserPlus className="h-4 w-4 mr-1" />
-             Novo Cliente
-           </Button>
-         </div>
-      </div>
-      
-      <div className="flex gap-2 max-w-lg">
-        <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input 
-            placeholder="Buscar clientes" 
-            className="pl-8" 
-            value={filtro} 
-            onChange={e => setFiltro(e.target.value)} 
-          />
+        <div className="flex gap-2 max-w-lg">
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input 
+              placeholder="Buscar clientes" 
+              className="pl-8" 
+              value={filtro} 
+              onChange={e => setFiltro(e.target.value)} 
+            />
+          </div>
         </div>
-      </div>
 
-      {/* Visualização Desktop - Tabela */}
-      <div className="hidden md:block">
-        <div className="rounded-lg border bg-neumorphic-light overflow-hidden">
-          <Table className="bg-lunar-surface">
-            <TableHeader>
-              <TableRow className="bg-stone-200">
-                <TableHead 
-                  className="font-medium cursor-pointer hover:bg-stone-300 transition-colors"
-                  onClick={() => handleSort('nome')}
-                >
-                  <div className="flex items-center">
-                    NOME
-                    {renderSortIcon('nome')}
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="font-medium cursor-pointer hover:bg-stone-300 transition-colors"
-                  onClick={() => handleSort('email')}
-                >
-                  <div className="flex items-center">
-                    E-MAIL
-                    {renderSortIcon('email')}
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="font-medium cursor-pointer hover:bg-stone-300 transition-colors"
-                  onClick={() => handleSort('telefone')}
-                >
-                  <div className="flex items-center">
-                    TELEFONE
-                    {renderSortIcon('telefone')}
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="font-medium cursor-pointer hover:bg-stone-300 transition-colors text-center"
-                  onClick={() => handleSort('totalSessoes')}
-                >
-                  <div className="flex items-center justify-center">
-                    <Activity className="h-4 w-4 mr-1" />
-                    SESSÕES
-                    {renderSortIcon('totalSessoes')}
-                  </div>
-                </TableHead>
-                 <TableHead 
-                   className="font-medium cursor-pointer hover:bg-stone-300 transition-colors text-right"
-                   onClick={() => handleSort('totalFaturado')}
-                 >
-                   <div className="flex items-center justify-end">
-                     <DollarSign className="h-4 w-4 mr-1" />
-                     TOTAL FATURADO
-                     {renderSortIcon('totalFaturado')}
-                   </div>
-                 </TableHead>
-                <TableHead 
-                  className="font-medium cursor-pointer hover:bg-stone-300 transition-colors text-right"
-                  onClick={() => handleSort('totalPago')}
-                >
-                  <div className="flex items-center justify-end">
-                    <DollarSign className="h-4 w-4 mr-1" />
-                    TOTAL PAGO
-                    {renderSortIcon('totalPago')}
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="font-medium cursor-pointer hover:bg-stone-300 transition-colors text-right"
-                  onClick={() => handleSort('aReceber')}
-                >
-                  <div className="flex items-center justify-end">
-                    <DollarSign className="h-4 w-4 mr-1" />
-                    A RECEBER
-                    {renderSortIcon('aReceber')}
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="font-medium cursor-pointer hover:bg-stone-300 transition-colors text-center"
-                  onClick={() => handleSort('ultimaSessao')}
-                >
-                  <div className="flex items-center justify-center">
-                    <Calendar className="h-4 w-4 mr-1" />
-                    ÚLTIMA SESSÃO
-                    {renderSortIcon('ultimaSessao')}
-                  </div>
-                </TableHead>
-                <TableHead className="font-medium text-center">AÇÕES</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {clientesFiltradosEOrdenados.map(cliente => {
-                return (
-                  <TableRow key={cliente.id} className="hover:bg-stone-50">
+        <div className="hidden md:block">
+          <div className="rounded-lg border overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  <TableHead className="font-semibold cursor-pointer hover:bg-muted transition-colors" onClick={() => handleSort('nome')}>
+                    <div className="flex items-center">NOME {renderSortIcon('nome')}</div>
+                  </TableHead>
+                  <TableHead className="font-semibold cursor-pointer hover:bg-muted transition-colors" onClick={() => handleSort('email')}>
+                    <div className="flex items-center">E-MAIL {renderSortIcon('email')}</div>
+                  </TableHead>
+                  <TableHead className="font-semibold cursor-pointer hover:bg-muted transition-colors" onClick={() => handleSort('telefone')}>
+                    <div className="flex items-center">TELEFONE {renderSortIcon('telefone')}</div>
+                  </TableHead>
+                  <TableHead className="font-semibold cursor-pointer hover:bg-muted transition-colors text-center" onClick={() => handleSort('sessoes')}>
+                    <div className="flex items-center justify-center"><Activity className="h-4 w-4 mr-1" />SESSÕES {renderSortIcon('sessoes')}</div>
+                  </TableHead>
+                  <TableHead className="font-semibold cursor-pointer hover:bg-muted transition-colors text-right" onClick={() => handleSort('totalFaturado')}>
+                    <div className="flex items-center justify-end"><DollarSign className="h-4 w-4 mr-1" />TOTAL FATURADO {renderSortIcon('totalFaturado')}</div>
+                  </TableHead>
+                  <TableHead className="font-semibold cursor-pointer hover:bg-muted transition-colors text-right" onClick={() => handleSort('totalPago')}>
+                    <div className="flex items-center justify-end"><DollarSign className="h-4 w-4 mr-1" />TOTAL PAGO {renderSortIcon('totalPago')}</div>
+                  </TableHead>
+                  <TableHead className="font-semibold cursor-pointer hover:bg-muted transition-colors text-right" onClick={() => handleSort('aReceber')}>
+                    <div className="flex items-center justify-end"><DollarSign className="h-4 w-4 mr-1" />A RECEBER {renderSortIcon('aReceber')}</div>
+                  </TableHead>
+                  <TableHead className="font-semibold cursor-pointer hover:bg-muted transition-colors text-center" onClick={() => handleSort('ultimaSessao')}>
+                    <div className="flex items-center justify-center"><Calendar className="h-4 w-4 mr-1" />ÚLTIMA SESSÃO {renderSortIcon('ultimaSessao')}</div>
+                  </TableHead>
+                  <TableHead className="font-semibold text-center">AÇÕES</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {clientesFiltradosEOrdenados.map(cliente => (
+                  <TableRow key={cliente.id} className="hover:bg-muted/30">
                     <TableCell className="font-medium">{cliente.nome}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{cliente.email}</TableCell>
-                    <TableCell className="text-sm">{cliente.telefone}</TableCell>
-                    <TableCell className="text-center font-medium">
-                      {cliente.metricas?.totalSessoes || 0}
-                    </TableCell>
-                     <TableCell className="text-right font-medium text-primary">
-                       {formatCurrency(cliente.metricas?.totalFaturado || 0)}
-                     </TableCell>
-                    <TableCell className="text-right font-medium text-emerald-600">
-                      {formatCurrency(cliente.metricas?.totalPago || 0)}
-                    </TableCell>
-                    <TableCell className="text-right font-medium text-amber-600">
-                      {formatCurrency(cliente.metricas?.aReceber || 0)}
-                    </TableCell>
-                    <TableCell className="text-center text-sm text-muted-foreground">
-                      {cliente.metricas?.ultimaSessao || 'Nunca'}
-                    </TableCell>
+                    <TableCell className="text-muted-foreground">{cliente.email}</TableCell>
+                    <TableCell>{cliente.telefone}</TableCell>
+                    <TableCell className="text-center font-semibold">{cliente.metricas.sessoes}</TableCell>
+                    <TableCell className="text-right font-semibold text-primary">{formatCurrency(cliente.metricas.totalFaturado)}</TableCell>
+                    <TableCell className="text-right font-semibold text-emerald-600">{formatCurrency(cliente.metricas.totalPago)}</TableCell>
+                    <TableCell className="text-right font-semibold text-amber-600">{formatCurrency(cliente.metricas.aReceber)}</TableCell>
+                    <TableCell className="text-center text-muted-foreground">{cliente.metricas.ultimaSessao || 'Nunca'}</TableCell>
                     <TableCell className="text-center">
-                      <div className="flex items-center justify-center gap-2">
+                      <div className="flex items-center justify-center gap-1">
                         <Button variant="ghost" size="sm" onClick={() => handleEditClient(cliente)} className="h-8 w-8 p-0">
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDeleteClient(cliente.id)} className="h-8 w-8 p-0 text-red-600 hover:text-red-700">
+                        <Button variant="ghost" size="sm" onClick={() => handleDeleteClient(cliente.id)} className="h-8 w-8 p-0 text-destructive">
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </TableCell>
                   </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </div>
-      </div>
 
-      {/* Visualização Mobile - Cards */}
-      <div className="md:hidden grid grid-cols-1 gap-4">
-        {clientesFiltradosEOrdenados.map(cliente => {
-          return (
-            <Card key={cliente.id} className="overflow-hidden bg-neumorphic-light bg-lunar-surface">
-              <div className="p-4 flex items-center justify-between border-b bg-neumorphic-light bg-lunar-border">
-                <div>
-                  <h3 className="font-medium">{cliente.nome}</h3>
-                  <div className="flex items-center gap-4 mt-1">
-                    <div className="flex items-center gap-1">
-                      <Activity className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground">{cliente.metricas?.totalSessoes || 0} sessões</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground">{cliente.metricas?.ultimaSessao || 'Nunca'}</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => handleEditClient(cliente)} className="h-8 w-8 p-0">
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleDeleteClient(cliente.id)} className="h-8 w-8 p-0 text-red-600 hover:text-red-700">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+        {clientesFiltradosEOrdenados.length === 0 && (
+          <div className="flex flex-col items-center justify-center p-12 border rounded-lg">
+            <User className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Nenhum cliente encontrado</h3>
+            <p className="text-muted-foreground text-center mb-4">
+              {filtro ? 'Não encontramos clientes com os critérios de busca.' : 'Comece adicionando seu primeiro cliente.'}
+            </p>
+            <Button onClick={filtro ? () => setFiltro('') : handleAddClient} variant="outline">
+              {filtro ? 'Limpar filtro' : 'Adicionar Cliente'}
+            </Button>
+          </div>
+        )}
+
+        <Dialog open={showClientForm} onOpenChange={setShowClientForm}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>{editingClient ? 'Editar Cliente' : 'Novo Cliente'}</DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="nome">Nome *</Label>
+                <Input 
+                  id="nome"
+                  value={formData.nome}
+                  onChange={(e) => setFormData(prev => ({ ...prev, nome: e.target.value }))}
+                  placeholder="Nome completo"
+                />
               </div>
               
-              <div className="p-4 space-y-3 bg-neumorphic-light bg-lunar-surface">
-                <div className="flex items-start">
-                  <Phone className="h-4 w-4 text-muted-foreground mt-0.5 mr-2" />
-                  <span className="text-sm">{cliente.telefone}</span>
-                </div>
-                
-                <div className="flex items-start">
-                  <Mail className="h-4 w-4 text-muted-foreground mt-0.5 mr-2" />
-                  <span className="text-sm">{cliente.email}</span>
-                </div>
-
-                {/* Métricas Financeiras Mobile */}
-                <div className="grid grid-cols-2 gap-3 pt-2 border-t">
-                   <div className="text-center">
-                     <div className="text-xs text-muted-foreground">Total Faturado</div>
-                     <div className="font-medium text-primary text-sm">{formatCurrency(cliente.metricas?.totalFaturado || 0)}</div>
-                   </div>
-                  <div className="text-center">
-                    <div className="text-xs text-muted-foreground">Total Pago</div>
-                    <div className="font-medium text-emerald-600 text-sm">{formatCurrency(cliente.metricas?.totalPago || 0)}</div>
-                  </div>
-                  <div className="text-center col-span-2">
-                    <div className="text-xs text-muted-foreground">A Receber</div>
-                    <div className="font-medium text-amber-600">{formatCurrency(cliente.metricas?.aReceber || 0)}</div>
-                  </div>
-                </div>
+              <div>
+                <Label htmlFor="email">E-mail</Label>
+                <Input 
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  placeholder="email@exemplo.com"
+                />
               </div>
-            </Card>
-          );
-        })}
-      </div>
-      
-      {clientesFiltradosEOrdenados.length === 0 && (
-        <div className="flex flex-col items-center justify-center p-8 border rounded-md">
-          <User className="h-12 w-12 text-muted-foreground mb-2" />
-          <h3 className="text-lg font-medium">Nenhum cliente encontrado</h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            Não encontramos clientes com os critérios de busca informados.
-          </p>
-          <Button onClick={() => setFiltro('')} variant="outline">
-            Limpar filtro
-          </Button>
-        </div>
-      )}
-
-      {/* Modal do Formulário de Cliente */}
-      <Dialog open={showClientForm} onOpenChange={setShowClientForm}>
-        <DialogContent className="sm:max-w-[500px] bg-neumorphic-light bg-lunar-bg">
-          <DialogHeader>
-            <DialogTitle>
-              {editingClient ? 'Editar Cliente' : 'Novo Cliente'}
-            </DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="nome">Nome *</Label>
-              <Input 
-                id="nome"
-                value={formData.nome}
-                onChange={(e) => setFormData(prev => ({ ...prev, nome: e.target.value }))}
-                placeholder="Nome completo"
-              />
+              
+              <div>
+                <Label htmlFor="telefone">Telefone *</Label>
+                <Input 
+                  id="telefone"
+                  value={formData.telefone}
+                  onChange={(e) => setFormData(prev => ({ ...prev, telefone: e.target.value }))}
+                  placeholder="+55 (DDD) 00000-0000"
+                />
+              </div>
+              
+              <div className="flex justify-end gap-2 pt-4">
+                <Button variant="outline" onClick={() => setShowClientForm(false)}>Cancelar</Button>
+                <Button onClick={handleSaveClient}>{editingClient ? 'Atualizar' : 'Adicionar'}</Button>
+              </div>
             </div>
-            
-            <div>
-              <Label htmlFor="email">E-mail</Label>
-              <Input 
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                placeholder="email@exemplo.com"
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="telefone">Telefone *</Label>
-              <Input 
-                id="telefone"
-                value={formData.telefone}
-                onChange={(e) => setFormData(prev => ({ ...prev, telefone: e.target.value }))}
-                placeholder="+55 (DDD) 00000-0000"
-              />
-            </div>
-            
-            <div className="flex justify-end gap-2 pt-4">
-              <Button variant="outline" onClick={() => setShowClientForm(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={handleSaveClient}>
-                {editingClient ? 'Atualizar' : 'Adicionar'}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
       </div>
     </ScrollArea>
   );
