@@ -13,7 +13,11 @@ export const STORAGE_KEYS = {
   PRICING_SETTINGS: 'lunari_pricing_settings',
   WORKFLOW_ITEMS: 'lunari_workflow_items',
   WORKFLOW_COLUMNS: 'lunari_workflow_columns',
-  WORKFLOW_STATUS: 'lunari_workflow_status'
+  WORKFLOW_STATUS: 'lunari_workflow_status',
+  // Nova arquitetura de Blueprints
+  FIN_TRANSACTIONS: 'lunari_fin_transactions',
+  FIN_BLUEPRINTS: 'lunari_fin_recurring_blueprints',
+  FIN_ITEMS: 'lunari_fin_items'
 } as const;
 
 export const storage = {
@@ -60,6 +64,10 @@ export const storage = {
       localStorage.removeItem('configuracoes_categorias');
       localStorage.removeItem('configuracoes_produtos');
       localStorage.removeItem('configuracoes_pacotes');
+      // Remove old financial keys that may cause conflicts
+      localStorage.removeItem('lunari_fin_recurring_templates');
+      localStorage.removeItem('lunari_fin_credit_cards');
+      localStorage.removeItem('blueprint_migration_completed');
       console.log('All app data cleared from localStorage');
     } catch (error) {
       console.error('Error clearing app data from localStorage:', error);

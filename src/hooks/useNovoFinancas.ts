@@ -3,19 +3,18 @@ import { ItemFinanceiro, GrupoPrincipal, StatusTransacao } from '@/types/financa
 import { storage } from '@/utils/localStorage';
 import { getCurrentDateString } from '@/utils/dateUtils';
 import { 
-  FinancialEngine, 
-  FinancialTransaction, 
-  RecurringTemplate, 
-  CreateTransactionInput,
-  CreditCard,
-  FINANCIAL_STORAGE_KEYS 
-} from '@/services/FinancialEngine';
+  RecurringBlueprintEngine, 
+  RecurringBlueprint, 
+  BlueprintTransaction,
+  CreateBlueprintInput,
+  BLUEPRINT_STORAGE_KEYS 
+} from '@/services/RecurringBlueprintEngine';
 
-// ============= NOVA ARQUITETURA DE DADOS =============
+// ============= NOVA ARQUITETURA DE BLUEPRINTS =============
 
-// Usar tipos do Motor Centralizado
-type NovaTransacao = FinancialTransaction;
-type ModeloRecorrencia = RecurringTemplate;
+// Usar tipos do Motor de Blueprints
+type NovaTransacao = BlueprintTransaction;
+type ModeloRecorrencia = RecurringBlueprint;
 
 // Interface compatível com tipos existentes
 interface ItemFinanceiroCompativel extends ItemFinanceiro {
@@ -38,11 +37,10 @@ interface TransacaoCompativel {
   item: ItemFinanceiroCompativel;
 }
 
-// Novas chaves de localStorage conforme especificação
+// Novas chaves de localStorage conforme nova arquitetura
 const STORAGE_KEYS = {
-  TRANSACTIONS: FINANCIAL_STORAGE_KEYS.TRANSACTIONS,
-  RECURRING_TEMPLATES: FINANCIAL_STORAGE_KEYS.RECURRING_TEMPLATES,
-  CREDIT_CARDS: FINANCIAL_STORAGE_KEYS.CREDIT_CARDS,
+  TRANSACTIONS: BLUEPRINT_STORAGE_KEYS.TRANSACTIONS,
+  BLUEPRINTS: BLUEPRINT_STORAGE_KEYS.BLUEPRINTS,
   ITEMS: 'lunari_fin_items'
 };
 
@@ -77,15 +75,11 @@ export function useNovoFinancas() {
   });
   
   const [transacoes, setTransacoes] = useState<NovaTransacao[]>(() => {
-    return FinancialEngine.loadTransactions();
+    return RecurringBlueprintEngine.loadTransactions();
   });
 
-  const [modelosRecorrentes, setModelosRecorrentes] = useState<ModeloRecorrencia[]>(() => {
-    return FinancialEngine.loadRecurringTemplates();
-  });
-
-  const [cartoes, setCartoes] = useState<CreditCard[]>(() => {
-    return FinancialEngine.loadCreditCards();
+  const [blueprintsRecorrentes, setBlueprintsRecorrentes] = useState<ModeloRecorrencia[]>(() => {
+    return RecurringBlueprintEngine.loadBlueprints();
   });
 
   const [filtroMesAno, setFiltroMesAno] = useState(() => {
@@ -101,60 +95,88 @@ export function useNovoFinancas() {
   }, [itensFinanceiros]);
 
   useEffect(() => {
-    // A persistência é gerenciada pelo FinancialEngine
+    // A persistência é gerenciada pelo RecurringBlueprintEngine
     localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(transacoes));
   }, [transacoes]);
 
   useEffect(() => {
-    // A persistência é gerenciada pelo FinancialEngine
-    localStorage.setItem(STORAGE_KEYS.RECURRING_TEMPLATES, JSON.stringify(modelosRecorrentes));
-  }, [modelosRecorrentes]);
+    // A persistência é gerenciada pelo RecurringBlueprintEngine
+    localStorage.setItem(STORAGE_KEYS.BLUEPRINTS, JSON.stringify(blueprintsRecorrentes));
+  }, [blueprintsRecorrentes]);
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.CREDIT_CARDS, JSON.stringify(cartoes));
-  }, [cartoes]);
-
-  // ============= MOTOR DE CRIAÇÃO DE TRANSAÇÕES CENTRALIZADO =============
+  // ============= MOTOR DE CRIAÇÃO DE BLUEPRINTS =============
   
-  const createTransactionEngine = (input: CreateTransactionInput) => {
+  const createBlueprintEngine = (input: CreateBlueprintInput) => {
     try {
-      const result = FinancialEngine.createTransactions(input);
+      const result = RecurringBlueprintEngine.createBlueprint(input);
       
-      // Atualizar estado local com as novas transações
-      setTransacoes(prev => [...prev, ...result.transactions]);
-      
-      // Se houver template recorrente, adicionar também
-      if (result.recurringTemplate) {
-        setModelosRecorrentes(prev => [...prev, result.recurringTemplate!]);
-      }
+      // Atualizar estado local com o novo blueprint e primeira transação
+      setBlueprintsRecorrentes(prev => [...prev, result.blueprint]);
+      setTransacoes(prev => [...prev, result.firstTransaction]);
       
     } catch (error) {
-      console.error('Erro ao criar transação:', error);
+      console.error('Erro ao criar blueprint:', error);
       throw error;
     }
+  };
+  
+  const createTransactionEngine = (dados: any) => {
+    // Para transações únicas (não recorrentes)
+    const novaTransacao: NovaTransacao = {
+      id: `single_${Date.now()}`,
+      itemId: dados.item_id,
+      valor: dados.valor,
+      dataVencimento: dados.data_vencimento,
+      status: dados.data_vencimento <= getCurrentDateString() ? 'Faturado' : 'Agendado',
+      observacoes: dados.observacoes,
+      userId: 'user1',
+      criadoEm: getCurrentDateString()
+    };
+    
+    setTransacoes(prev => [...prev, novaTransacao]);
   };
 
   // ============= FUNÇÕES AUXILIARES =============
   
   // Removidas - agora são parte do FinancialEngine
 
-  // ============= GERAÇÃO JUST-IN-TIME PARA RECORRÊNCIAS =============
+  // ============= GERAÇÃO JUST-IN-TIME PARA BLUEPRINTS =============
   
   useEffect(() => {
     const { mes, ano } = filtroMesAno;
     
-    // Usar o motor centralizado para gerar transações recorrentes
-    const novasTransacoes = FinancialEngine.generateRecurringTransactionsForMonth(
-      modelosRecorrentes,
-      transacoes,
-      ano,
-      mes
-    );
+    // NOVA ARQUITETURA: Usar o motor de blueprints para geração just-in-time
+    const novasTransacoes = RecurringBlueprintEngine.generateTransactionsForMonth(ano, mes);
     
     if (novasTransacoes.length > 0) {
       setTransacoes(prev => [...prev, ...novasTransacoes]);
     }
-  }, [filtroMesAno, modelosRecorrentes]);
+  }, [filtroMesAno]);
+  
+  // ============= MIGRAÇÃO E LIMPEZA DE DADOS (EXECUTADO UMA VEZ) =============
+  
+  useEffect(() => {
+    const migracaoExecutada = localStorage.getItem('blueprint_migration_completed');
+    
+    if (!migracaoExecutada) {
+      console.log('Executando migração e limpeza de dados...');
+      
+      // 1. Migrar dados antigos para blueprints
+      RecurringBlueprintEngine.migrateOldRecurringTransactions();
+      
+      // 2. Limpar duplicações existentes
+      RecurringBlueprintEngine.cleanDuplicatedTransactions();
+      
+      // 3. Marcar migração como concluída
+      localStorage.setItem('blueprint_migration_completed', 'true');
+      
+      // 4. Recarregar dados após migração
+      setBlueprintsRecorrentes(RecurringBlueprintEngine.loadBlueprints());
+      setTransacoes(RecurringBlueprintEngine.loadTransactions());
+      
+      console.log('Migração concluída com sucesso');
+    }
+  }, []);
 
   // ============= PROCESSAMENTO DE DADOS PARA EXIBIÇÃO =============
   
@@ -181,9 +203,9 @@ export function useNovoFinancas() {
         dataVencimento: transacao.dataVencimento,
         status: transacao.status as StatusTransacao,
         observacoes: transacao.observacoes,
-        userId: 'user1',
-        criadoEm: getCurrentDateString(),
-        parentId: transacao.parentId,
+        userId: transacao.userId,
+        criadoEm: transacao.criadoEm,
+        parentId: transacao.blueprintId, // blueprintId mapeado para parentId para compatibilidade
         item: itemCompativel
       };
     });
@@ -273,9 +295,9 @@ export function useNovoFinancas() {
 
   const removerItemFinanceiro = (id: string) => {
     setItensFinanceiros(prev => prev.filter(item => item.id !== id));
-    // Remove também transações e modelos relacionados
+    // Remove também transações e blueprints relacionados
     setTransacoes(prev => prev.filter(t => t.itemId !== id));
-    setModelosRecorrentes(prev => prev.filter(m => m.itemId !== id));
+    setBlueprintsRecorrentes(prev => prev.filter(b => b.itemId !== id));
   };
 
   const atualizarItemFinanceiro = (id: string, dadosAtualizados: Partial<ItemFinanceiroCompativel>) => {
@@ -286,15 +308,15 @@ export function useNovoFinancas() {
 
   // Funções para gerenciar transações individuais
   const atualizarTransacao = (id: string, dadosAtualizados: Partial<NovaTransacao>) => {
-    FinancialEngine.updateTransaction(id, dadosAtualizados);
+    RecurringBlueprintEngine.updateTransaction(id, dadosAtualizados);
     // Recarregar do localStorage para manter sincronização
-    setTransacoes(FinancialEngine.loadTransactions());
+    setTransacoes(RecurringBlueprintEngine.loadTransactions());
   };
 
   const removerTransacao = (id: string) => {
-    FinancialEngine.removeTransaction(id);
+    RecurringBlueprintEngine.removeTransaction(id);
     // Recarregar do localStorage para manter sincronização
-    setTransacoes(FinancialEngine.loadTransactions());
+    setTransacoes(RecurringBlueprintEngine.loadTransactions());
   };
 
   // Filtrar itens por grupo para dropdowns
@@ -304,14 +326,19 @@ export function useNovoFinancas() {
 
   // Função para compatibilidade com a API antiga
   const adicionarTransacao = (dados: any) => {
-    createTransactionEngine({
-      valorTotal: dados.valor,
-      dataPrimeiraOcorrencia: dados.data_vencimento,
-      itemId: dados.item_id,
-      observacoes: dados.observacoes,
-      isRecorrente: false,
-      isParcelado: false
-    });
+    if (dados.isRecorrente) {
+      // Criar blueprint
+      createBlueprintEngine({
+        itemId: dados.item_id,
+        valor: dados.valor,
+        isValorFixo: dados.isValorFixo ?? true,
+        dataPrimeiraOcorrencia: dados.data_vencimento,
+        observacoes: dados.observacoes
+      });
+    } else {
+      // Criar transação única
+      createTransactionEngine(dados);
+    }
   };
 
   // Função para atualizar transação compatível com API antiga
@@ -326,31 +353,18 @@ export function useNovoFinancas() {
     atualizarTransacao(id, dados);
   };
 
-  // Funções para gerenciar cartões de crédito
-  const adicionarCartao = (cartao: Omit<CreditCard, 'id'>) => {
-    const novoCartao: CreditCard = {
-      ...cartao,
-      id: Date.now().toString()
-    };
-    setCartoes(prev => [...prev, novoCartao]);
-  };
-
-  const atualizarCartao = (id: string, dadosAtualizados: Partial<CreditCard>) => {
-    setCartoes(prev => 
-      prev.map(cartao => cartao.id === id ? { ...cartao, ...dadosAtualizados } : cartao)
-    );
-  };
-
-  const removerCartao = (id: string) => {
-    setCartoes(prev => prev.filter(cartao => cartao.id !== id));
+  // Funções para gerenciar blueprints
+  const removerBlueprint = (id: string) => {
+    RecurringBlueprintEngine.removeBlueprint(id);
+    setBlueprintsRecorrentes(RecurringBlueprintEngine.loadBlueprints());
+    setTransacoes(RecurringBlueprintEngine.loadTransactions());
   };
 
   // Função para limpeza completa (emergência)
   const limparTodosDados = () => {
-    FinancialEngine.clearAllData();
+    RecurringBlueprintEngine.clearAllData();
     setTransacoes([]);
-    setModelosRecorrentes([]);
-    setCartoes([]);
+    setBlueprintsRecorrentes([]);
     console.log('Todos os dados financeiros foram limpos');
   };
 
@@ -367,6 +381,10 @@ export function useNovoFinancas() {
     
     // Motor de criação centralizado
     createTransactionEngine,
+    createBlueprintEngine,
+    
+    // Dados de blueprints
+    blueprintsRecorrentes,
     
     // Funções de itens
     adicionarItemFinanceiro,
@@ -380,11 +398,14 @@ export function useNovoFinancas() {
     atualizarTransacaoCompativel,
     removerTransacao,
     
-    // Funções de cartões
-    cartoes,
-    adicionarCartao,
-    atualizarCartao,
-    removerCartao,
+    // Funções de blueprints
+    removerBlueprint,
+    
+    // Placeholders para compatibilidade (cartões não implementados na nova arquitetura)
+    cartoes: [] as any[],
+    adicionarCartao: () => console.warn('Cartões não implementados na nova arquitetura'),
+    atualizarCartao: () => console.warn('Cartões não implementados na nova arquitetura'),
+    removerCartao: () => console.warn('Cartões não implementados na nova arquitetura'),
     
     // Funções utilitárias
     calcularMetricasPorGrupo,
