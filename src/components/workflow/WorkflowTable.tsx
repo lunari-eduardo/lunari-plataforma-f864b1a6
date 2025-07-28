@@ -507,7 +507,7 @@ export function WorkflowTable({
               {renderHeaderCell('product', 'Produto')}
               {renderHeaderCell('productTotal', 'Total Prod')}
               {renderHeaderCell('additionalValue', 'Adicional')}
-              {renderHeaderCell('details', 'Detalhes')}
+              {renderHeaderCell('details', 'Obs')}
               {renderHeaderCell('total', 'TOTAL', true)}
               {renderHeaderCell('paid', 'PAGO', true)}
               {renderHeaderCell('remaining', 'RESTANTE', true)}
