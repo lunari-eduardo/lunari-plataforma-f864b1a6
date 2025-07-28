@@ -214,6 +214,12 @@ export function useNovoFinancas() {
   // Filtrar transações por mês/ano
   const transacoesFiltradas = useMemo(() => {
     return transacoesComItens.filter(transacao => {
+      // Verificação de segurança para dataVencimento
+      if (!transacao.dataVencimento || typeof transacao.dataVencimento !== 'string') {
+        console.warn('Transação com dataVencimento inválida:', transacao);
+        return false;
+      }
+      
       const [ano, mes] = transacao.dataVencimento.split('-').map(Number);
       return mes === filtroMesAno.mes && ano === filtroMesAno.ano;
     });
