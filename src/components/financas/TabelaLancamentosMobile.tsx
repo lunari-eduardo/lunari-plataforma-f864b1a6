@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { TransacaoComItem, GrupoPrincipal, NovaTransacaoFinanceira, ItemFinanceiro } from '@/types/financas';
 import { formatCurrency } from '@/utils/financialUtils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Calendar, DollarSign, Trash2, Edit } from 'lucide-react';
+import EditTransactionModal from './EditTransactionModal';
 
 interface TabelaLancamentosMobileProps {
   transacoes: TransacaoComItem[];
@@ -22,6 +24,7 @@ export default function TabelaLancamentosMobile({
   grupoAtivo,
   obterItensPorGrupo
 }: TabelaLancamentosMobileProps) {
+  const [editingTransaction, setEditingTransaction] = useState<TransacaoComItem | null>(null);
   
   const formatarData = (dataISO: string) => {
     const [ano, mes, dia] = dataISO.split('-');
@@ -79,20 +82,7 @@ export default function TabelaLancamentosMobile({
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={() => {
-                    // Criar modal simples para edição em mobile
-                    const novoValor = prompt('Novo valor:', transacao.valor.toString());
-                    const novaData = prompt('Nova data (YYYY-MM-DD):', transacao.data_vencimento);
-                    const novasObservacoes = prompt('Observações:', transacao.observacoes || '');
-                    
-                    if (novoValor && novaData) {
-                      onAtualizarTransacao(transacao.id, {
-                        valor: parseFloat(novoValor),
-                        data_vencimento: novaData,
-                        observacoes: novasObservacoes || null
-                      });
-                    }
-                  }}
+                  onClick={() => setEditingTransaction(transacao)}
                 >
                   <Edit className="h-4 w-4" />
                 </Button>
@@ -133,6 +123,22 @@ export default function TabelaLancamentosMobile({
           </CardContent>
         </Card>
       ))}
+      
+      {editingTransaction && (
+        <EditTransactionModal
+          isOpen={!!editingTransaction}
+          onClose={() => setEditingTransaction(null)}
+          onSave={(dados) => {
+            onAtualizarTransacao(editingTransaction.id, dados);
+            setEditingTransaction(null);
+          }}
+          initialData={{
+            valor: editingTransaction.valor,
+            data_vencimento: editingTransaction.data_vencimento,
+            observacoes: editingTransaction.observacoes
+          }}
+        />
+      )}
     </div>
   );
 }

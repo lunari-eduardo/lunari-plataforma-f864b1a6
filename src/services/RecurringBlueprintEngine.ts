@@ -53,7 +53,8 @@ export interface CreateBlueprintInput {
 
 export const BLUEPRINT_STORAGE_KEYS = {
   BLUEPRINTS: 'lunari_fin_recurring_blueprints',
-  TRANSACTIONS: 'lunari_fin_transactions'
+  TRANSACTIONS: 'lunari_fin_transactions',
+  EXCLUDED_TRANSACTIONS: 'lunari_fin_excluded_transactions'
 } as const;
 
 // ============= MOTOR PRINCIPAL =============
@@ -138,8 +139,11 @@ export class RecurringBlueprintEngine {
         t.blueprintId === blueprint.id && t.dataVencimento === expectedDate
       );
       
-      // 4. Se NÃO existe, criar nova instância
-      if (!existingTransaction) {
+      // 4. VERIFICAÇÃO DE EXCLUSÃO INTENCIONAL
+      const isIntentionallyExcluded = this.isTransactionExcluded(blueprint.id, expectedDate);
+      
+      // 5. Se NÃO existe E NÃO foi excluída intencionalmente, criar nova instância
+      if (!existingTransaction && !isIntentionallyExcluded) {
         const newTransaction: BlueprintTransaction = {
           id: `${blueprint.id}_${year}_${month}`,
           itemId: blueprint.itemId,
@@ -156,8 +160,10 @@ export class RecurringBlueprintEngine {
         
         newTransactions.push(newTransaction);
         console.log(`Nova transação criada: ${blueprint.itemId} para ${expectedDate}`);
-      } else {
+      } else if (existingTransaction) {
         console.log(`Transação já existe: ${blueprint.itemId} para ${expectedDate}`);
+      } else if (isIntentionallyExcluded) {
+        console.log(`Transação excluída intencionalmente: ${blueprint.itemId} para ${expectedDate}`);
       }
     });
     
@@ -357,6 +363,14 @@ export class RecurringBlueprintEngine {
   
   static removeTransaction(id: string): void {
     const transactions = this.loadTransactions();
+    const transaction = transactions.find(t => t.id === id);
+    
+    // Se é uma transação de blueprint, registrar como exclusão intencional
+    if (transaction?.blueprintId) {
+      this.addExcludedTransaction(transaction.blueprintId, transaction.dataVencimento);
+      console.log(`Transação excluída intencionalmente: ${transaction.blueprintId} em ${transaction.dataVencimento}`);
+    }
+    
     const filtered = transactions.filter(t => t.id !== id);
     localStorage.setItem(BLUEPRINT_STORAGE_KEYS.TRANSACTIONS, JSON.stringify(filtered));
   }
@@ -372,12 +386,48 @@ export class RecurringBlueprintEngine {
     localStorage.setItem(BLUEPRINT_STORAGE_KEYS.TRANSACTIONS, JSON.stringify(filteredTransactions));
   }
   
+  // ============= SISTEMA DE EXCLUSÕES INTENCIONAIS =============
+  
+  static addExcludedTransaction(blueprintId: string, dataVencimento: string): void {
+    const excluded = this.loadExcludedTransactions();
+    const key = `${blueprintId}_${dataVencimento}`;
+    
+    if (!excluded.includes(key)) {
+      excluded.push(key);
+      localStorage.setItem(BLUEPRINT_STORAGE_KEYS.EXCLUDED_TRANSACTIONS, JSON.stringify(excluded));
+    }
+  }
+  
+  static isTransactionExcluded(blueprintId: string, dataVencimento: string): boolean {
+    const excluded = this.loadExcludedTransactions();
+    const key = `${blueprintId}_${dataVencimento}`;
+    return excluded.includes(key);
+  }
+  
+  static loadExcludedTransactions(): string[] {
+    try {
+      const data = localStorage.getItem(BLUEPRINT_STORAGE_KEYS.EXCLUDED_TRANSACTIONS);
+      return data ? JSON.parse(data) : [];
+    } catch (error) {
+      console.error('Erro ao carregar exclusões:', error);
+      return [];
+    }
+  }
+  
+  static removeExcludedTransaction(blueprintId: string, dataVencimento: string): void {
+    const excluded = this.loadExcludedTransactions();
+    const key = `${blueprintId}_${dataVencimento}`;
+    const filtered = excluded.filter(item => item !== key);
+    localStorage.setItem(BLUEPRINT_STORAGE_KEYS.EXCLUDED_TRANSACTIONS, JSON.stringify(filtered));
+  }
+
   /**
    * FUNÇÃO DE EMERGÊNCIA - Limpar todos os dados
    */
   static clearAllData(): void {
     localStorage.removeItem(BLUEPRINT_STORAGE_KEYS.BLUEPRINTS);
     localStorage.removeItem(BLUEPRINT_STORAGE_KEYS.TRANSACTIONS);
+    localStorage.removeItem(BLUEPRINT_STORAGE_KEYS.EXCLUDED_TRANSACTIONS);
     console.log('Todos os dados de blueprints foram limpos');
   }
 }
