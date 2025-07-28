@@ -120,20 +120,111 @@ export function useNovoFinancas() {
     }
   };
   
-  const createTransactionEngine = (dados: any) => {
-    // Para transações únicas (não recorrentes)
-    const novaTransacao: NovaTransacao = {
-      id: `single_${Date.now()}`,
-      itemId: dados.item_id,
-      valor: dados.valor,
-      dataVencimento: dados.data_vencimento,
-      status: dados.data_vencimento <= getCurrentDateString() ? 'Faturado' : 'Agendado',
-      observacoes: dados.observacoes,
-      userId: 'user1',
-      criadoEm: getCurrentDateString()
-    };
+  const createTransactionEngine = (input: any) => {
+    console.log('createTransactionEngine chamado com dados:', input);
     
-    setTransacoes(prev => [...prev, novaTransacao]);
+    try {
+      // Verificar se input é do tipo CreateTransactionInput
+      const isCreateTransactionInput = input.valorTotal !== undefined && input.dataPrimeiraOcorrencia !== undefined;
+      
+      if (isCreateTransactionInput) {
+        // Processar CreateTransactionInput
+        const { valorTotal, dataPrimeiraOcorrencia, itemId, isRecorrente, isParcelado, numeroDeParcelas, observacoes, isValorFixo } = input;
+        
+        console.log('Processando CreateTransactionInput:', {
+          valorTotal,
+          dataPrimeiraOcorrencia,
+          itemId,
+          isRecorrente,
+          isParcelado,
+          numeroDeParcelas,
+          observacoes,
+          isValorFixo
+        });
+        
+        // 1. TRANSAÇÕES RECORRENTES
+        if (isRecorrente) {
+          console.log('Criando transação recorrente');
+          return createBlueprintEngine({
+            itemId,
+            valor: valorTotal,
+            isValorFixo: isValorFixo ?? true,
+            dataPrimeiraOcorrencia,
+            observacoes
+          });
+        }
+        
+        // 2. TRANSAÇÕES PARCELADAS
+        if (isParcelado && numeroDeParcelas && numeroDeParcelas > 1) {
+          console.log(`Criando ${numeroDeParcelas} parcelas`);
+          
+          const transacoesParcelas: NovaTransacao[] = [];
+          const valorParcela = valorTotal / numeroDeParcelas;
+          const [ano, mes, dia] = dataPrimeiraOcorrencia.split('-').map(Number);
+          
+          for (let i = 0; i < numeroDeParcelas; i++) {
+            // Calcular data da parcela (próximos meses)
+            const dataParcelaObj = new Date(ano, mes - 1 + i, dia);
+            const dataParcela = `${dataParcelaObj.getFullYear()}-${(dataParcelaObj.getMonth() + 1).toString().padStart(2, '0')}-${dia.toString().padStart(2, '0')}`;
+            
+            const transacaoParcela: NovaTransacao = {
+              id: `parcela_${Date.now()}_${i + 1}`,
+              itemId,
+              valor: valorParcela,
+              dataVencimento: dataParcela,
+              status: dataParcela <= getCurrentDateString() ? 'Faturado' : 'Agendado',
+              observacoes: `${observacoes || ''} (Parcela ${i + 1}/${numeroDeParcelas})`.trim(),
+              parcelaInfo: { atual: i + 1, total: numeroDeParcelas },
+              userId: 'user1',
+              criadoEm: getCurrentDateString()
+            };
+            
+            transacoesParcelas.push(transacaoParcela);
+          }
+          
+          setTransacoes(prev => [...prev, ...transacoesParcelas]);
+          console.log(`${numeroDeParcelas} parcelas criadas com sucesso`);
+          return;
+        }
+        
+        // 3. TRANSAÇÃO ÚNICA
+        console.log('Criando transação única');
+        const novaTransacao: NovaTransacao = {
+          id: `single_${Date.now()}`,
+          itemId,
+          valor: valorTotal,
+          dataVencimento: dataPrimeiraOcorrencia,
+          status: dataPrimeiraOcorrencia <= getCurrentDateString() ? 'Faturado' : 'Agendado',
+          observacoes,
+          userId: 'user1',
+          criadoEm: getCurrentDateString()
+        };
+        
+        setTransacoes(prev => [...prev, novaTransacao]);
+        console.log('Transação única criada com sucesso:', novaTransacao);
+        return;
+      }
+      
+      // Fallback para formato antigo (compatibilidade)
+      console.log('Processando formato antigo de dados');
+      const novaTransacao: NovaTransacao = {
+        id: `single_${Date.now()}`,
+        itemId: input.item_id || input.itemId,
+        valor: input.valor || input.valorTotal,
+        dataVencimento: input.data_vencimento || input.dataPrimeiraOcorrencia,
+        status: (input.data_vencimento || input.dataPrimeiraOcorrencia) <= getCurrentDateString() ? 'Faturado' : 'Agendado',
+        observacoes: input.observacoes,
+        userId: 'user1',
+        criadoEm: getCurrentDateString()
+      };
+      
+      setTransacoes(prev => [...prev, novaTransacao]);
+      console.log('Transação (formato antigo) criada com sucesso:', novaTransacao);
+      
+    } catch (error) {
+      console.error('Erro ao criar transação:', error);
+      throw error;
+    }
   };
 
   // ============= FUNÇÕES AUXILIARES =============
