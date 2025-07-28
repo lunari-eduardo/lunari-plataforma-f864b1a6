@@ -14,6 +14,19 @@ export interface ClienteWithMetricas extends Cliente {
 
 export const useClienteMetrics = (clientes: Cliente[], workflowItems: WorkflowItem[]): ClienteWithMetricas[] => {
   return useMemo(() => {
+    // DIAGNÓSTICO DETALHADO: Verificar dados no localStorage
+    const localStorageClients = localStorage.getItem('lunari_clients');
+    const localStorageWorkflow = localStorage.getItem('lunari_workflow_items');
+    
+    console.log('🚨 DIAGNÓSTICO CRÍTICO - localStorage vs props:', {
+      'localStorage lunari_clients': localStorageClients ? JSON.parse(localStorageClients) : null,
+      'localStorage lunari_workflow_items': localStorageWorkflow ? JSON.parse(localStorageWorkflow) : null,
+      'props clientes': clientes,
+      'props workflowItems': workflowItems,
+      'clientes length': clientes?.length || 0,
+      'workflowItems length': workflowItems?.length || 0
+    });
+
     // Debug: mostrar dados recebidos
     console.log('🔍 useClienteMetrics - Debug completo:', {
       totalClientes: clientes?.length || 0,
