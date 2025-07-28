@@ -27,8 +27,7 @@ export default function Orcamentos() {
       setActiveTab('novo');
     }
   }, [location.search]);
-  return (
-    <ScrollArea className="h-[calc(100vh-120px)]">
+  return <ScrollArea className="h-[calc(100vh-120px)]">
       <div className="p-2 sm:p-4 space-y-4 bg-lunar-bg min-h-screen my-0 py-[33px] pr-4">
       <div className="px-2">
         
@@ -37,7 +36,7 @@ export default function Orcamentos() {
       <MetricasOrcamento selectedMonth={selectedMonth} />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3 py-1 my-1">
+        <TabsList className="grid w-full grid-cols-3 py-1 my-1 bg-lunar-accent">
           <TabsTrigger value="lista">Orçamentos</TabsTrigger>
           <TabsTrigger value="novo">Novo Orçamento</TabsTrigger>
           <TabsTrigger value="origens">Origens</TabsTrigger>
@@ -57,6 +56,5 @@ export default function Orcamentos() {
         </TabsContent>
       </Tabs>
       </div>
-    </ScrollArea>
-  );
+    </ScrollArea>;
 }
