@@ -44,7 +44,6 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <AppProvider>
           <TooltipProvider>
-            <AppIntegration />
             <Toaster />
             <Sonner />
             <Routes>
@@ -60,6 +59,7 @@ function App() {
                 <Route path="*" element={<NotFound />} />
               </Route>
             </Routes>
+            <AppIntegration />
           </TooltipProvider>
         </AppProvider>
       </QueryClientProvider>
