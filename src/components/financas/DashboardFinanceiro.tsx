@@ -1,221 +1,29 @@
-import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatCurrency } from '@/utils/financialUtils';
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import { useDashboardFinanceiro } from '@/hooks/useDashboardFinanceiro';
 
-// Mock data
-const kpisData = {
-  totalReceita: 1779840,
-  totalDespesas: 529307.5,
-  totalLucro: 366252.5,
-  saldoTotal: 946252.5
-};
-const metasData = {
-  metaReceita: 2000000,
-  metaLucro: 500000,
-  receitaAtual: 1779840,
-  lucroAtual: 366252.5
-};
-const receitaLucroMensal = [{
-  mes: 'JAN',
-  receita: 63482.25,
-  lucro: 10000
-}, {
-  mes: 'FEV',
-  receita: 66740.50,
-  lucro: -5000
-}, {
-  mes: 'MAR',
-  receita: 54709.46,
-  lucro: 15000
-}, {
-  mes: 'ABR',
-  receita: 76481.55,
-  lucro: 21772.02
-}, {
-  mes: 'MAI',
-  receita: 91008.04,
-  lucro: 14926.57
-}, {
-  mes: 'JUN',
-  receita: 94625.25,
-  lucro: 3617.12
-}, {
-  mes: 'JUL',
-  receita: 94625.25,
-  lucro: 0
-}, {
-  mes: 'AGO',
-  receita: 94625.25,
-  lucro: 0
-}, {
-  mes: 'SET',
-  receita: 94625.25,
-  lucro: 0
-}, {
-  mes: 'OUT',
-  receita: 94625.25,
-  lucro: 0
-}, {
-  mes: 'NOV',
-  receita: 94625.25,
-  lucro: 0
-}, {
-  mes: 'DEZ',
-  receita: 94625.25,
-  lucro: 0
-}];
-const custosFixos = [{
-  categoria: 'Funcionários',
-  valor: 102500
-}, {
-  categoria: 'Aluguel',
-  valor: 91548
-}, {
-  categoria: 'Luz',
-  valor: 6890
-}, {
-  categoria: 'Internet',
-  valor: 6360
-}, {
-  categoria: 'MEI',
-  valor: 660
-}, {
-  categoria: 'Água',
-  valor: 3647
-}, {
-  categoria: 'Adobe',
-  valor: 2820
-}, {
-  categoria: 'Canva',
-  valor: 1440
-}, {
-  categoria: '15º',
-  valor: 0
-}, {
-  categoria: 'Limpeza',
-  valor: 0
-}, {
-  categoria: 'Pró-Labore',
-  valor: 0
-}];
-const custosVariaveis = [{
-  categoria: 'SCHLOSSER',
-  valor: 91030
-}, {
-  categoria: 'Embalagens',
-  valor: 8003
-}, {
-  categoria: 'Outras despesas',
-  valor: 6344
-}, {
-  categoria: 'SYSTEM',
-  valor: 2784
-}, {
-  categoria: 'BÔNUS',
-  valor: 0
-}, {
-  categoria: 'Combustível',
-  valor: 0
-}, {
-  categoria: 'Impostos',
-  valor: 0
-}];
-const investimentos = [{
-  categoria: 'Cursos e Treinamentos',
-  valor: 0
-}, {
-  categoria: 'Equipamentos',
-  valor: 19880
-}, {
-  categoria: 'Acervo/Cenário',
-  valor: 7805
-}, {
-  categoria: 'Marketing',
-  valor: 4800
-}];
-const categoriasDisponiveis = ['Funcionários', 'Aluguel', 'SCHLOSSER', 'Equipamentos', 'Marketing', 'Luz', 'Internet'];
-const evolucaoCategoria = {
-  'Funcionários': [{
-    mes: 'JAN',
-    valor: 159.50
-  }, {
-    mes: 'FEV',
-    valor: 143.88
-  }, {
-    mes: 'MAR',
-    valor: 131.75
-  }, {
-    mes: 'ABR',
-    valor: 131.75
-  }, {
-    mes: 'MAI',
-    valor: 67.91
-  }, {
-    mes: 'JUN',
-    valor: 0
-  }, {
-    mes: 'JUL',
-    valor: 0
-  }, {
-    mes: 'AGO',
-    valor: 0
-  }, {
-    mes: 'SET',
-    valor: 0
-  }, {
-    mes: 'OUT',
-    valor: 0
-  }, {
-    mes: 'NOV',
-    valor: 0
-  }, {
-    mes: 'DEZ',
-    valor: 0
-  }],
-  'Luz': [{
-    mes: 'JAN',
-    valor: 150
-  }, {
-    mes: 'FEV',
-    valor: 140
-  }, {
-    mes: 'MAR',
-    valor: 160
-  }, {
-    mes: 'ABR',
-    valor: 155
-  }, {
-    mes: 'MAI',
-    valor: 145
-  }, {
-    mes: 'JUN',
-    valor: 170
-  }, {
-    mes: 'JUL',
-    valor: 165
-  }, {
-    mes: 'AGO',
-    valor: 175
-  }, {
-    mes: 'SET',
-    valor: 160
-  }, {
-    mes: 'OUT',
-    valor: 150
-  }, {
-    mes: 'NOV',
-    valor: 155
-  }, {
-    mes: 'DEZ',
-    valor: 180
-  }]
-};
+// Cores do design system
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--muted))'];
+
 export default function DashboardFinanceiro() {
-  const [anoSelecionado, setAnoSelecionado] = useState('2024');
-  const [categoriaSelecionada, setCategoriaSelecionada] = useState('Funcionários');
+  // Usar hook com dados reais
+  const {
+    anoSelecionado,
+    setAnoSelecionado,
+    anosDisponiveis,
+    categoriaSelecionada,
+    setCategoriaSelecionada,
+    categoriasDisponiveis,
+    kpisData,
+    metasData,
+    dadosMensais,
+    custosFixos,
+    custosVariaveis,
+    investimentos,
+    evolucaoCategoria
+  } = useDashboardFinanceiro();
   const lucratividade = metasData.lucroAtual / metasData.receitaAtual * 100;
   const percentMetaReceita = metasData.receitaAtual / metasData.metaReceita * 100;
   const percentMetaLucro = metasData.lucroAtual / metasData.metaLucro * 100;
@@ -248,9 +56,11 @@ export default function DashboardFinanceiro() {
             <SelectValue placeholder="Ano" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="2024">2024</SelectItem>
-            <SelectItem value="2023">2023</SelectItem>
-            <SelectItem value="2022">2022</SelectItem>
+            {anosDisponiveis.map(ano => (
+              <SelectItem key={ano} value={ano.toString()}>
+                {ano}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -361,8 +171,8 @@ export default function DashboardFinanceiro() {
           <CardTitle>FLUXO DE CAIXA</CardTitle>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={receitaLucroMensal}>
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={dadosMensais}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="mes" />
               <YAxis />
@@ -453,8 +263,8 @@ export default function DashboardFinanceiro() {
           </div>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={evolucaoCategoria[categoriaSelecionada] || evolucaoCategoria['Funcionários']}>
+        <ResponsiveContainer width="100%" height={300}>
+          <AreaChart data={evolucaoCategoria[categoriaSelecionada] || []}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="mes" />
               <YAxis />

@@ -110,9 +110,7 @@ export default function Financas() {
           </TabsList>
 
           <TabsContent value="resumo" className="mt-6">
-            <div className="text-center text-gray-500 py-8">
-              Dashboard financeiro será implementado na nova arquitetura
-            </div>
+            <DashboardFinanceiro />
           </TabsContent>
 
           <TabsContent value="despesas-receitas" className="mt-6">
