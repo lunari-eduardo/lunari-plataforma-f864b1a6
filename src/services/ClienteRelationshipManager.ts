@@ -31,11 +31,18 @@ export class ClienteRelationshipManager {
   static initialize(): void {
     if (this.initialized) return;
     
-    this.loadRegistryFromStorage();
-    this.migrateExistingData();
-    this.initialized = true;
+    console.log('🚀 ClienteRelationshipManager: Inicializando sistema...');
     
-    console.log('🔗 Cliente Relationship Manager inicializado');
+    try {
+      this.loadRegistryFromStorage();
+      this.migrateExistingData();
+      this.initialized = true;
+      
+      console.log('✅ ClienteRelationshipManager: Sistema inicializado com sucesso');
+    } catch (error) {
+      console.error('❌ ClienteRelationshipManager: Erro na inicialização:', error);
+      throw error;
+    }
   }
 
   /**

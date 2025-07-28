@@ -1,5 +1,6 @@
 import { useState, useContext, useMemo } from 'react';
-import { AppContext } from '@/contexts/AppContext';
+import { AppContext, useAppContext } from '@/contexts/AppContext';
+import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { Cliente } from '@/types/orcamentos';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,13 +20,34 @@ type SortConfig = {
   direction: 'asc' | 'desc' | null;
 };
 
-export default function Clientes() {
+function ClientesContent() {
+  const context = useAppContext();
+  
+  // Verificar se o contexto está disponível
+  if (!context) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Card className="w-full max-w-md">
+          <div className="p-6 text-center">
+            <User className="mx-auto w-12 h-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-medium mb-2">Carregando dados...</h3>
+            <div className="space-y-3">
+              <div className="h-2 bg-muted rounded animate-pulse" />
+              <div className="h-2 bg-muted rounded animate-pulse w-3/4" />
+              <div className="h-2 bg-muted rounded animate-pulse w-1/2" />
+            </div>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
   const {
     clientes,
     adicionarCliente,
     atualizarCliente,
     removerCliente
-  } = useContext(AppContext);
+  } = context;
   
   const [filtro, setFiltro] = useState('');
   const [showClientForm, setShowClientForm] = useState(false);
@@ -435,5 +457,13 @@ export default function Clientes() {
       </Dialog>
       </div>
     </ScrollArea>
+  );
+}
+
+export default function Clientes() {
+  return (
+    <ErrorBoundary>
+      <ClientesContent />
+    </ErrorBoundary>
   );
 }

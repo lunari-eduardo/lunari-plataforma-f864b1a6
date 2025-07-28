@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { ClienteRelationshipManager } from '@/services/ClienteRelationshipManager';
 import { ClienteRegistryMap, ClienteRegistry } from '@/types/cliente';
 import { Cliente } from '@/types/orcamentos';
+import { useAppContext } from '@/contexts/AppContext';
 
 /**
  * Hook para usar dados do Cliente Registry
@@ -14,14 +15,36 @@ import { Cliente } from '@/types/orcamentos';
 export function useClienteRegistry() {
   const [registry, setRegistry] = useState<ClienteRegistryMap>({});
   const [loading, setLoading] = useState(true);
+  const context = useAppContext();
 
   useEffect(() => {
-    // Inicializar o sistema e carregar dados
-    ClienteRelationshipManager.initialize();
-    const allRegistries = ClienteRelationshipManager.getAllClientesRegistry();
-    setRegistry(allRegistries);
-    setLoading(false);
-  }, []);
+    console.log('🔧 useClienteRegistry: Verificando disponibilidade do contexto...');
+    
+    // Só inicializar se o contexto estiver disponível e os dados carregados
+    if (!context) {
+      console.log('⚠️ useClienteRegistry: Contexto não disponível ainda');
+      return;
+    }
+
+    if (context.orcamentos === undefined || context.appointments === undefined || context.workflowItems === undefined) {
+      console.log('⚠️ useClienteRegistry: Dados do contexto ainda não carregados');
+      return;
+    }
+
+    console.log('✅ useClienteRegistry: Contexto disponível, inicializando ClienteRelationshipManager');
+    
+    try {
+      // Inicializar o sistema e carregar dados
+      ClienteRelationshipManager.initialize();
+      const allRegistries = ClienteRelationshipManager.getAllClientesRegistry();
+      setRegistry(allRegistries);
+      setLoading(false);
+      console.log('✅ useClienteRegistry: Registry carregado com sucesso');
+    } catch (error) {
+      console.error('❌ useClienteRegistry: Erro ao inicializar:', error);
+      setLoading(false);
+    }
+  }, [context]);
 
   const getClienteMetricas = (clienteId: string) => {
     const clienteRegistry = registry[clienteId];
