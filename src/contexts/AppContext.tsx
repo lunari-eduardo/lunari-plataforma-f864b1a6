@@ -7,6 +7,7 @@ import { FinancialEngine, CreateTransactionInput } from '@/services/FinancialEng
 import { calculateTotals, calculateTotalsNew } from '@/services/FinancialCalculationEngine';
 import { autoMigrateIfNeeded } from '@/utils/dataMoveMigration';
 import { ClienteRelationshipManager } from '@/services/ClienteRelationshipManager';
+import { clienteRegistry } from '@/services/ClienteRegistry';
 
 // Types
 import { Orcamento, Template, OrigemCliente, MetricasOrcamento, Cliente } from '@/types/orcamentos';
@@ -459,6 +460,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (newAppointment.status === 'confirmado') {
       const workflowItem = transformAppointmentToWorkflow(newAppointment);
       setAllWorkflowItems(prev => [...prev, workflowItem]);
+      clienteRegistry.onDataChange(); // Sincronizar registry
       console.log('✅ Agendamento confirmado sincronizado com workflow:', workflowItem.id);
     }
 
@@ -484,10 +486,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 return [...prevWorkflow, workflowItem];
               }
             });
+            clienteRegistry.onDataChange(); // Sincronizar registry
             console.log('✅ Agendamento atualizado sincronizado com workflow:', id);
           } else if (app.status === 'confirmado' && updatedApp.status === 'a confirmar') {
             // Remove do workflow se não está mais confirmado
             setAllWorkflowItems(prevWorkflow => prevWorkflow.filter(item => item.id !== id));
+            clienteRegistry.onDataChange(); // Sincronizar registry
             console.log('✅ Agendamento removido do workflow:', id);
           }
           
@@ -511,6 +515,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.log('✅ WorkflowItem removido junto com agendamento:', id);
       return updated;
     });
+    clienteRegistry.onDataChange(); // Sincronizar registry
   }, []);
 
   // Workflow functions - NOVA ARQUITETURA: Persistência imediata
@@ -525,6 +530,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.log('✅ Novo WorkflowItem adicionado:', newItem.id);
       return updated;
     });
+    clienteRegistry.onDataChange(); // Sincronizar registry
   }, []);
 
   const updateWorkflowItem = useCallback((id: string, updates: Partial<WorkflowItem>) => {
@@ -533,6 +539,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.log('✅ WorkflowItem atualizado:', id, 'updates:', Object.keys(updates));
       return updated;
     });
+    clienteRegistry.onDataChange(); // Sincronizar registry
   }, []);
 
   const addPayment = useCallback((id: string, valor: number) => {
@@ -562,6 +569,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
       return updated;
     });
+    clienteRegistry.onDataChange(); // Sincronizar registry
   }, []);
 
   // Other workflow functions
@@ -662,6 +670,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     
     setClientes(prev => [...prev, novoCliente]);
+    clienteRegistry.onDataChange(); // Sincronizar registry
     return novoCliente;
   }, []);
 
@@ -669,10 +678,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setClientes(prev => prev.map(cliente => 
       cliente.id === id ? { ...cliente, ...dadosAtualizados } : cliente
     ));
+    clienteRegistry.onDataChange(); // Sincronizar registry
   }, []);
 
   const removerCliente = useCallback((id: string) => {
     setClientes(prev => prev.filter(cliente => cliente.id !== id));
+    clienteRegistry.onDataChange(); // Sincronizar registry
   }, []);
 
   // Category functions
