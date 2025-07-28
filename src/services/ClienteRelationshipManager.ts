@@ -221,7 +221,9 @@ export class ClienteRelationshipManager {
     // Encontrar última sessão
     let ultimaData: Date | null = null;
     workflowItems.forEach(item => {
-      const dataItem = item.dataOriginal || new Date(item.data);
+      const dataItem = item.dataOriginal instanceof Date 
+        ? item.dataOriginal 
+        : new Date(item.dataOriginal || item.data);
       if (!ultimaData || dataItem > ultimaData) {
         ultimaData = dataItem;
       }
@@ -237,7 +239,9 @@ export class ClienteRelationshipManager {
     // Encontrar primeiro contato
     let primeiraData: Date | null = null;
     workflowItems.forEach(item => {
-      const dataItem = item.dataOriginal || new Date(item.data);
+      const dataItem = item.dataOriginal instanceof Date 
+        ? item.dataOriginal 
+        : new Date(item.dataOriginal || item.data);
       if (!primeiraData || dataItem < primeiraData) {
         primeiraData = dataItem;
       }
