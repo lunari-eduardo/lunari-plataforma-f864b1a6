@@ -176,7 +176,10 @@ export function useDashboardFinanceiro() {
       .filter(t => t.status === 'Pago' && t.itemId && t.itemId.includes('Fixa'))
       .forEach(transacao => {
         const categoria = transacao.itemId.replace(/\d+/, '').trim();
-        custosPorCategoria[categoria] = (custosPorCategoria[categoria] || 0) + transacao.valor;
+        // Só adicionar se a categoria não estiver vazia
+        if (categoria && categoria.length > 0) {
+          custosPorCategoria[categoria] = (custosPorCategoria[categoria] || 0) + transacao.valor;
+        }
       });
 
     return Object.entries(custosPorCategoria).map(([categoria, valor]) => ({
@@ -192,7 +195,10 @@ export function useDashboardFinanceiro() {
       .filter(t => t.status === 'Pago' && t.itemId && t.itemId.includes('Variável'))
       .forEach(transacao => {
         const categoria = transacao.itemId.replace(/\d+/, '').trim();
-        custosPorCategoria[categoria] = (custosPorCategoria[categoria] || 0) + transacao.valor;
+        // Só adicionar se a categoria não estiver vazia
+        if (categoria && categoria.length > 0) {
+          custosPorCategoria[categoria] = (custosPorCategoria[categoria] || 0) + transacao.valor;
+        }
       });
 
     return Object.entries(custosPorCategoria).map(([categoria, valor]) => ({
@@ -208,7 +214,10 @@ export function useDashboardFinanceiro() {
       .filter(t => t.status === 'Pago' && t.itemId && t.itemId.includes('Investimento'))
       .forEach(transacao => {
         const categoria = transacao.itemId.replace(/\d+/, '').trim();
-        custosPorCategoria[categoria] = (custosPorCategoria[categoria] || 0) + transacao.valor;
+        // Só adicionar se a categoria não estiver vazia
+        if (categoria && categoria.length > 0) {
+          custosPorCategoria[categoria] = (custosPorCategoria[categoria] || 0) + transacao.valor;
+        }
       });
 
     return Object.entries(custosPorCategoria).map(([categoria, valor]) => ({
@@ -225,11 +234,16 @@ export function useDashboardFinanceiro() {
     transacoesFiltradas.forEach(transacao => {
       if (transacao.itemId) {
         const categoria = transacao.itemId.replace(/\d+/, '').trim();
-        categorias.add(categoria);
+        // Só adicionar categorias não vazias
+        if (categoria && categoria.length > 0) {
+          categorias.add(categoria);
+        }
       }
     });
 
-    return Array.from(categorias);
+    const categoriasArray = Array.from(categorias);
+    // Se não há categorias, retornar pelo menos uma categoria padrão para evitar erro
+    return categoriasArray.length > 0 ? categoriasArray : ['Aluguel'];
   }, [transacoesFiltradas]);
 
   const [categoriaSelecionada, setCategoriaSelecionada] = useState(() => 
@@ -253,7 +267,9 @@ export function useDashboardFinanceiro() {
         .filter(t => t.status === 'Pago' && t.itemId && t.itemId.includes(categoria))
         .forEach(transacao => {
           const mes = parseInt(transacao.dataVencimento.split('-')[1]);
-          dadosPorMes[mes] += transacao.valor;
+          if (!isNaN(mes) && mes >= 1 && mes <= 12) {
+            dadosPorMes[mes] += transacao.valor;
+          }
         });
 
       evolucoes[categoria] = meses.map((nome, index) => ({
