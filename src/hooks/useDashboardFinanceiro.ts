@@ -59,6 +59,9 @@ export function useDashboardFinanceiro() {
     
     // Extrair anos das transações financeiras
     transacoesFinanceiras.forEach(transacao => {
+      if (!transacao.dataVencimento || typeof transacao.dataVencimento !== 'string') {
+        return;
+      }
       const ano = parseInt(transacao.dataVencimento.split('-')[0]);
       if (!isNaN(ano)) {
         anos.add(ano);
@@ -93,6 +96,9 @@ export function useDashboardFinanceiro() {
   const transacoesFiltradas = useMemo(() => {
     const ano = parseInt(anoSelecionado);
     return transacoesFinanceiras.filter(transacao => {
+      if (!transacao.dataVencimento || typeof transacao.dataVencimento !== 'string') {
+        return false;
+      }
       const anoTransacao = parseInt(transacao.dataVencimento.split('-')[0]);
       return anoTransacao === ano;
     });
@@ -148,6 +154,9 @@ export function useDashboardFinanceiro() {
 
     // Agregar transações por mês
     transacoesFiltradas.filter(t => t.status === 'Pago').forEach(transacao => {
+      if (!transacao.dataVencimento || typeof transacao.dataVencimento !== 'string') {
+        return;
+      }
       const mes = parseInt(transacao.dataVencimento.split('-')[1]);
       
       if (transacao.itemId && transacao.itemId.includes('Receita')) {
@@ -266,6 +275,9 @@ export function useDashboardFinanceiro() {
       transacoesFiltradas
         .filter(t => t.status === 'Pago' && t.itemId && t.itemId.includes(categoria))
         .forEach(transacao => {
+          if (!transacao.dataVencimento || typeof transacao.dataVencimento !== 'string') {
+            return;
+          }
           const mes = parseInt(transacao.dataVencimento.split('-')[1]);
           if (!isNaN(mes) && mes >= 1 && mes <= 12) {
             dadosPorMes[mes] += transacao.valor;
