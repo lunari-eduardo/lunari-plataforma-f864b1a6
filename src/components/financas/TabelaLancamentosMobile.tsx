@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { TransacaoComItem, GrupoPrincipal, NovaTransacaoFinanceira, ItemFinanceiro } from '@/types/financas';
+import { TransacaoComItem, GrupoPrincipal, NovaTransacaoFinanceira, ItemFinanceiro, StatusTransacao } from '@/types/financas';
 import { formatCurrency } from '@/utils/financialUtils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -129,7 +129,16 @@ export default function TabelaLancamentosMobile({
           isOpen={!!editingTransaction}
           onClose={() => setEditingTransaction(null)}
           onSave={(dados) => {
-            onAtualizarTransacao(editingTransaction.id, dados);
+            console.log('Mobile - Salvando transação:', editingTransaction.id, dados);
+            
+            // Incluir o status no mobile, igual ao desktop
+            const dadosCompletos: Partial<NovaTransacaoFinanceira> = {
+              ...dados,
+              status: (dados.data_vencimento && dados.data_vencimento <= new Date().toISOString().split('T')[0]) ? 'Faturado' as StatusTransacao : 'Agendado' as StatusTransacao
+            };
+            
+            console.log('Mobile - Dados completos:', dadosCompletos);
+            onAtualizarTransacao(editingTransaction.id, dadosCompletos);
             setEditingTransaction(null);
           }}
           initialData={{
