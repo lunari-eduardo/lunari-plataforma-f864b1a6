@@ -256,7 +256,7 @@ export class ClienteRelationshipManager {
 
     return {
       totalSessoes,
-      totalGasto,
+      totalFaturado: totalGasto, // Renomeando para nova nomenclatura
       totalPago,
       aReceber,
       ultimaSessao: ultimaData ? ultimaData.toLocaleDateString('pt-BR') : null,
@@ -386,7 +386,7 @@ export class ClienteRelationshipManager {
     const clientes = Object.values(this.registry);
     const totalClientes = clientes.length;
     const totalSessoes = clientes.reduce((total, registry) => total + registry.metricas.totalSessoes, 0);
-    const totalFaturamento = clientes.reduce((total, registry) => total + registry.metricas.totalGasto, 0);
+    const totalFaturamento = clientes.reduce((total, registry) => total + registry.metricas.totalFaturado, 0);
     
     let ultimaAtualizacao = '';
     clientes.forEach(registry => {

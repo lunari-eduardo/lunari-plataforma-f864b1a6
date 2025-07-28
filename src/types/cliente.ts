@@ -18,7 +18,7 @@ export interface ClienteBase {
 
 export interface ClienteMetricas {
   totalSessoes: number;
-  totalGasto: number;
+  totalFaturado: number; // Renomeado de totalGasto
   totalPago: number;
   aReceber: number;
   ultimaSessao: string | null;

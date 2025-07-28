@@ -1,5 +1,5 @@
-import { useState, useContext, useMemo } from 'react';
-import { AppContext, useAppContext } from '@/contexts/AppContext';
+import { useState, useMemo } from 'react';
+import { useAppContext } from '@/contexts/AppContext';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { Cliente } from '@/types/orcamentos';
 import { Button } from "@/components/ui/button";
@@ -11,12 +11,11 @@ import { Label } from "@/components/ui/label";
 import { Search, UserPlus, User, Phone, Mail, Edit, Trash2, ArrowUpDown, ArrowUp, ArrowDown, DollarSign, Calendar, Activity } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from 'sonner';
-import { useClienteRegistry, prepareClientesWithMetricas } from '@/utils/clienteRegistryUtils';
 import { formatCurrency } from '@/utils/financialUtils';
-import { ClienteMetricas } from '@/types/cliente';
+import { useClienteMetrics, ClienteWithMetricas } from '@/hooks/useClienteMetrics';
 
 type SortConfig = {
-  key: keyof ClienteMetricas | 'nome' | 'email' | 'telefone';
+  key: keyof ClienteWithMetricas['metricas'] | 'nome' | 'email' | 'telefone';
   direction: 'asc' | 'desc' | null;
 };
 
@@ -44,6 +43,7 @@ function ClientesContent() {
 
   const {
     clientes,
+    workflowItems,
     adicionarCliente,
     atualizarCliente,
     removerCliente
@@ -55,26 +55,17 @@ function ClientesContent() {
   const [formData, setFormData] = useState({ nome: '', email: '', telefone: '' });
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'nome', direction: null });
 
-  // Usar novo sistema de Cliente Registry
-  const { registry, loading, getClienteMetricas, refreshRegistry } = useClienteRegistry();
+  // NOVA ARQUITETURA: Calcular métricas diretamente do workflow
+  const clientesComMetricas = useClienteMetrics(clientes || [], workflowItems || []);
   
-  // Debug: mostrar informações do registry
-  console.log('🏠 Clientes.tsx - Registry status:', { 
-    registryKeys: Object.keys(registry), 
-    clientesLength: clientes?.length || 0,
-    loading 
-  });
-  
-  // Preparar clientes com métricas do registry
-  const clientesComMetricas = useMemo(() => {
-    const resultado = prepareClientesWithMetricas(clientes || [], registry);
-    console.log('📊 Clientes com métricas:', resultado.map(c => ({
-      nome: c.nome,
-      totalSessoes: c.metricas?.totalSessoes,
-      totalGasto: c.metricas?.totalGasto
-    })));
-    return resultado;
-  }, [clientes, registry]);
+  // Debug: mostrar informações das métricas calculadas
+  console.log('🏠 Clientes.tsx - Métricas calculadas:', clientesComMetricas.map(c => ({
+    nome: c.nome,
+    totalSessoes: c.metricas.totalSessoes,
+    totalFaturado: c.metricas.totalFaturado,
+    totalPago: c.metricas.totalPago,
+    aReceber: c.metricas.aReceber
+  })));
 
   // Filtrar e ordenar clientes
   const clientesFiltradosEOrdenados = useMemo(() => {
@@ -175,20 +166,12 @@ function ClientesContent() {
           </p>
         </div>
         
-        <div className="flex gap-2">
-          <Button 
-            onClick={refreshRegistry} 
-            variant="outline" 
-            size="sm"
-            className="text-xs"
-          >
-            🔄 Sincronizar
-          </Button>
-          <Button onClick={handleAddClient} className="bg-neumorphic-dark text-slate-50 bg-lunar-accent py-0 my-[8px]">
-            <UserPlus className="h-4 w-4 mr-1" />
-            Novo Cliente
-          </Button>
-        </div>
+         <div className="flex gap-2">
+           <Button onClick={handleAddClient} className="bg-neumorphic-dark text-slate-50 bg-lunar-accent py-0 my-[8px]">
+             <UserPlus className="h-4 w-4 mr-1" />
+             Novo Cliente
+           </Button>
+         </div>
       </div>
       
       <div className="flex gap-2 max-w-lg">
@@ -246,16 +229,16 @@ function ClientesContent() {
                     {renderSortIcon('totalSessoes')}
                   </div>
                 </TableHead>
-                <TableHead 
-                  className="font-medium cursor-pointer hover:bg-stone-300 transition-colors text-right"
-                  onClick={() => handleSort('totalGasto')}
-                >
-                  <div className="flex items-center justify-end">
-                    <DollarSign className="h-4 w-4 mr-1" />
-                    TOTAL GASTO
-                    {renderSortIcon('totalGasto')}
-                  </div>
-                </TableHead>
+                 <TableHead 
+                   className="font-medium cursor-pointer hover:bg-stone-300 transition-colors text-right"
+                   onClick={() => handleSort('totalFaturado')}
+                 >
+                   <div className="flex items-center justify-end">
+                     <DollarSign className="h-4 w-4 mr-1" />
+                     TOTAL FATURADO
+                     {renderSortIcon('totalFaturado')}
+                   </div>
+                 </TableHead>
                 <TableHead 
                   className="font-medium cursor-pointer hover:bg-stone-300 transition-colors text-right"
                   onClick={() => handleSort('totalPago')}
@@ -299,9 +282,9 @@ function ClientesContent() {
                     <TableCell className="text-center font-medium">
                       {cliente.metricas?.totalSessoes || 0}
                     </TableCell>
-                    <TableCell className="text-right font-medium text-primary">
-                      {formatCurrency(cliente.metricas?.totalGasto || 0)}
-                    </TableCell>
+                     <TableCell className="text-right font-medium text-primary">
+                       {formatCurrency(cliente.metricas?.totalFaturado || 0)}
+                     </TableCell>
                     <TableCell className="text-right font-medium text-emerald-600">
                       {formatCurrency(cliente.metricas?.totalPago || 0)}
                     </TableCell>
@@ -371,10 +354,10 @@ function ClientesContent() {
 
                 {/* Métricas Financeiras Mobile */}
                 <div className="grid grid-cols-2 gap-3 pt-2 border-t">
-                  <div className="text-center">
-                    <div className="text-xs text-muted-foreground">Total Gasto</div>
-                    <div className="font-medium text-primary text-sm">{formatCurrency(cliente.metricas?.totalGasto || 0)}</div>
-                  </div>
+                   <div className="text-center">
+                     <div className="text-xs text-muted-foreground">Total Faturado</div>
+                     <div className="font-medium text-primary text-sm">{formatCurrency(cliente.metricas?.totalFaturado || 0)}</div>
+                   </div>
                   <div className="text-center">
                     <div className="text-xs text-muted-foreground">Total Pago</div>
                     <div className="font-medium text-emerald-600 text-sm">{formatCurrency(cliente.metricas?.totalPago || 0)}</div>
