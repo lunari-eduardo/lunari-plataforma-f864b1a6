@@ -13,20 +13,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from 'sonner';
 import { formatCurrency } from '@/utils/financialUtils';
 import { createTestClient, createTestWorkflowItem } from '@/utils/testData';
-
-// Interface para cliente enriquecido com métricas calculadas
-interface ClienteComMetricas extends Cliente {
-  metricas: {
-    sessoes: number;
-    totalFaturado: number;
-    totalPago: number;
-    aReceber: number;
-    ultimaSessao: string | null;
-  };
-}
+import { useClienteMetrics } from '@/hooks/useClienteMetrics';
 
 type SortConfig = {
-  key: keyof ClienteComMetricas['metricas'] | 'nome' | 'email' | 'telefone';
+  key: keyof Cliente | 'totalSessoes' | 'totalFaturado' | 'totalPago' | 'aReceber' | 'ultimaSessao';
   direction: 'asc' | 'desc' | null;
 };
 
@@ -59,72 +49,8 @@ function ClientesContent() {
 
   const { clientes, allWorkflowItems, adicionarCliente, atualizarCliente, removerCliente } = context;
   
-  // NOVA ARQUITETURA: CRM busca dados EXCLUSIVAMENTE do workflow
-  const clientesComMetricas: ClienteComMetricas[] = useMemo(() => {
-    console.log('🔄 NOVA ARQUITETURA CRM - Dados exclusivos do workflow:', {
-      totalClientes: clientes?.length || 0,
-      totalWorkflowItems: allWorkflowItems?.length || 0
-    });
-
-    if (!clientes || clientes.length === 0) {
-      return [];
-    }
-
-    return clientes.map(cliente => {
-      // Filtrar itens do workflow para este cliente
-      const workflowDoCliente = allWorkflowItems?.filter(item => {
-        // Match por clienteId (prioridade)
-        if (item.clienteId === cliente.id) return true;
-        
-        // Fallback por nome
-        if (item.nome && cliente.nome) {
-          return item.nome.toLowerCase().trim() === cliente.nome.toLowerCase().trim();
-        }
-        
-        // Fallback por telefone
-        if (item.whatsapp && cliente.telefone) {
-          const telefoneItem = item.whatsapp.replace(/\D/g, '');
-          const telefoneCliente = cliente.telefone.replace(/\D/g, '');
-          return telefoneItem === telefoneCliente && telefoneItem.length >= 10;
-        }
-        
-        return false;
-      }) || [];
-
-      console.log(`📊 Cliente ${cliente.nome}:`, {
-        itemsEncontrados: workflowDoCliente.length,
-        items: workflowDoCliente.map(i => ({ id: i.id, total: i.total, valorPago: i.valorPago, restante: i.restante }))
-      });
-
-      // Calcular métricas diretamente do workflow
-      const sessoes = workflowDoCliente.length;
-      const totalFaturado = workflowDoCliente.reduce((soma, item) => soma + (item.total || 0), 0);
-      const totalPago = workflowDoCliente.reduce((soma, item) => soma + (item.valorPago || 0), 0);
-      const aReceber = workflowDoCliente.reduce((soma, item) => soma + (item.restante || 0), 0);
-      
-      // Última sessão
-      let ultimaSessao: string | null = null;
-      if (workflowDoCliente.length > 0) {
-        const datasValidas = workflowDoCliente
-          .map(item => {
-            if (item.dataOriginal instanceof Date) return item.dataOriginal;
-            const [day, month, year] = item.data.split('/');
-            return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-          })
-          .filter(date => !isNaN(date.getTime()))
-          .sort((a, b) => b.getTime() - a.getTime());
-        
-        if (datasValidas.length > 0) {
-          ultimaSessao = datasValidas[0].toLocaleDateString('pt-BR');
-        }
-      }
-
-      return {
-        ...cliente,
-        metricas: { sessoes, totalFaturado, totalPago, aReceber, ultimaSessao }
-      };
-    });
-  }, [clientes, allWorkflowItems]);
+  // NOVA ARQUITETURA: CRM usa EXCLUSIVAMENTE allWorkflowItems como fonte de verdade
+  const clientesComMetricas = useClienteMetrics(clientes, allWorkflowItems);
 
   const clientesFiltradosEOrdenados = useMemo(() => {
     let resultado = filtro 
@@ -143,11 +69,20 @@ function ClientesContent() {
           valorA = a[sortConfig.key].toLowerCase();
           valorB = b[sortConfig.key].toLowerCase();
         } else {
-          valorA = a.metricas[sortConfig.key] || 0;
-          valorB = b.metricas[sortConfig.key] || 0;
-          
-          if (sortConfig.key === 'ultimaSessao') {
+          // Métricas do workflow
+          if (sortConfig.key === 'totalSessoes') valorA = a.metricas.totalSessoes;
+          else if (sortConfig.key === 'totalFaturado') valorA = a.metricas.totalFaturado;
+          else if (sortConfig.key === 'totalPago') valorA = a.metricas.totalPago;
+          else if (sortConfig.key === 'aReceber') valorA = a.metricas.aReceber;
+          else if (sortConfig.key === 'ultimaSessao') {
             valorA = a.metricas.ultimaSessao ? new Date(a.metricas.ultimaSessao.split('/').reverse().join('-')).getTime() : 0;
+          }
+
+          if (sortConfig.key === 'totalSessoes') valorB = b.metricas.totalSessoes;
+          else if (sortConfig.key === 'totalFaturado') valorB = b.metricas.totalFaturado;
+          else if (sortConfig.key === 'totalPago') valorB = b.metricas.totalPago;
+          else if (sortConfig.key === 'aReceber') valorB = b.metricas.aReceber;
+          else if (sortConfig.key === 'ultimaSessao') {
             valorB = b.metricas.ultimaSessao ? new Date(b.metricas.ultimaSessao.split('/').reverse().join('-')).getTime() : 0;
           }
         }
@@ -276,8 +211,8 @@ function ClientesContent() {
                   <TableHead className="font-semibold cursor-pointer hover:bg-muted transition-colors" onClick={() => handleSort('telefone')}>
                     <div className="flex items-center">TELEFONE {renderSortIcon('telefone')}</div>
                   </TableHead>
-                  <TableHead className="font-semibold cursor-pointer hover:bg-muted transition-colors text-center" onClick={() => handleSort('sessoes')}>
-                    <div className="flex items-center justify-center"><Activity className="h-4 w-4 mr-1" />SESSÕES {renderSortIcon('sessoes')}</div>
+                  <TableHead className="font-semibold cursor-pointer hover:bg-muted transition-colors text-center" onClick={() => handleSort('totalSessoes')}>
+                    <div className="flex items-center justify-center"><Activity className="h-4 w-4 mr-1" />SESSÕES {renderSortIcon('totalSessoes')}</div>
                   </TableHead>
                   <TableHead className="font-semibold cursor-pointer hover:bg-muted transition-colors text-right" onClick={() => handleSort('totalFaturado')}>
                     <div className="flex items-center justify-end"><DollarSign className="h-4 w-4 mr-1" />TOTAL FATURADO {renderSortIcon('totalFaturado')}</div>
@@ -300,7 +235,7 @@ function ClientesContent() {
                     <TableCell className="font-medium">{cliente.nome}</TableCell>
                     <TableCell className="text-muted-foreground">{cliente.email}</TableCell>
                     <TableCell>{cliente.telefone}</TableCell>
-                    <TableCell className="text-center font-semibold">{cliente.metricas.sessoes}</TableCell>
+                    <TableCell className="text-center font-semibold">{cliente.metricas.totalSessoes}</TableCell>
                     <TableCell className="text-right font-semibold text-primary">{formatCurrency(cliente.metricas.totalFaturado)}</TableCell>
                     <TableCell className="text-right font-semibold text-emerald-600">{formatCurrency(cliente.metricas.totalPago)}</TableCell>
                     <TableCell className="text-right font-semibold text-amber-600">{formatCurrency(cliente.metricas.aReceber)}</TableCell>

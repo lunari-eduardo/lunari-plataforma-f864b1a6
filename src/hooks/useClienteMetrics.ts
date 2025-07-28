@@ -5,7 +5,7 @@ import { WorkflowItem } from '@/contexts/AppContext';
 export interface ClienteWithMetricas extends Cliente {
   metricas: {
     totalSessoes: number;
-    totalFaturado: number; // Renomeado de totalGasto
+    totalFaturado: number;
     totalPago: number;
     aReceber: number;
     ultimaSessao: string | null;
@@ -14,15 +14,9 @@ export interface ClienteWithMetricas extends Cliente {
 
 export const useClienteMetrics = (clientes: Cliente[], workflowItems: WorkflowItem[]): ClienteWithMetricas[] => {
   return useMemo(() => {
-    console.log('🔄 CALCULANDO MÉTRICAS - useClienteMetrics:', {
+    console.log('🔄 NOVA ARQUITETURA CRM - Calculando métricas exclusivamente do workflow:', {
       clientesLength: clientes?.length || 0,
-      workflowItemsLength: workflowItems?.length || 0,
-      primeiroCliente: clientes?.[0] ? { id: clientes[0].id, nome: clientes[0].nome } : null,
-      primeiroWorkflow: workflowItems?.[0] ? { 
-        id: workflowItems[0].id, 
-        clienteId: workflowItems[0].clienteId, 
-        nome: workflowItems[0].nome 
-      } : null
+      workflowItemsLength: workflowItems?.length || 0
     });
 
     // Se não há dados, retornar lista vazia
@@ -32,7 +26,7 @@ export const useClienteMetrics = (clientes: Cliente[], workflowItems: WorkflowIt
     }
 
     return clientes.map(cliente => {
-      // LÓGICA DIRETA: Filtrar workflowItems por clienteId
+      // FONTE ÚNICA DE VERDADE: Filtrar workflowItems por clienteId
       const clienteWorkflowItems = workflowItems?.filter(item => {
         // Match direto por clienteId (PRIORIDADE)
         if (item.clienteId === cliente.id) {
@@ -61,11 +55,11 @@ export const useClienteMetrics = (clientes: Cliente[], workflowItems: WorkflowIt
         return false;
       }) || [];
       
-      // Calcular métricas DIRETAMENTE dos workflowItems
+      // CÁLCULO EM TEMPO REAL: Métricas EXCLUSIVAMENTE dos workflowItems
       const totalSessoes = clienteWorkflowItems.length;
-      const totalFaturado = clienteWorkflowItems.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
-      const totalPago = clienteWorkflowItems.reduce((sum, item) => sum + (Number(item.valorPago) || 0), 0);
-      const aReceber = clienteWorkflowItems.reduce((sum, item) => sum + (Number(item.restante) || 0), 0);
+      const totalFaturado = clienteWorkflowItems.reduce((sum, item) => sum + (item.total || 0), 0);
+      const totalPago = clienteWorkflowItems.reduce((sum, item) => sum + (item.valorPago || 0), 0);
+      const aReceber = clienteWorkflowItems.reduce((sum, item) => sum + (item.restante || 0), 0);
       
       // Última sessão
       let ultimaSessao: string | null = null;
@@ -80,7 +74,7 @@ export const useClienteMetrics = (clientes: Cliente[], workflowItems: WorkflowIt
         }
       }
       
-      console.log(`💰 Cliente "${cliente.nome}":`, {
+      console.log(`💰 Cliente "${cliente.nome}" - MÉTRICAS EM TEMPO REAL:`, {
         totalSessoes,
         totalFaturado,
         totalPago,

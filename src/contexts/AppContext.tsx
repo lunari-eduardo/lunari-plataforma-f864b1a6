@@ -399,6 +399,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     storage.save(STORAGE_KEYS.APPOINTMENTS, serializeAppointments(appointments));
   }, [appointments]);
 
+  // NOVA ARQUITETURA: Persistir allWorkflowItems
+  useEffect(() => {
+    localStorage.setItem('lunari_workflow_items', JSON.stringify(allWorkflowItems));
+  }, [allWorkflowItems]);
+
   useEffect(() => {
     console.log('💾 Salvando allWorkflowItems:', allWorkflowItems.length, 'itens');
     storage.save(STORAGE_KEYS.WORKFLOW_ITEMS, allWorkflowItems);

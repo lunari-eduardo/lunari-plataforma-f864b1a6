@@ -190,6 +190,6 @@ export const useAgenda = () => {
     addAppointment: context.addAppointment,
     updateAppointment: context.updateAppointment,
     deleteAppointment: context.deleteAppointment,
-    getConfirmedSessionsForWorkflow,
+    getConfirmedSessionsForWorkflow, // Mantido para compatibilidade (mas descontinuado)
   };
 };
