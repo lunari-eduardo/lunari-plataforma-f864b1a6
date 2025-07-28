@@ -1,199 +1,233 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useClienteRegistry } from '@/hooks/useClienteRegistry';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Users, TrendingUp, DollarSign, Clock } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import ClientForm from '@/components/crm/ClientForm';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useState, useContext } from 'react';
+import { AppContext } from '@/contexts/AppContext';
+import { Cliente } from '@/types/orcamentos';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Search, UserPlus, User, Phone, Mail, Edit, Trash2 } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from 'sonner';
 
 export default function Clientes() {
-  const { clientes, loading, syncData, getStats } = useClienteRegistry();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isNewClientDialogOpen, setIsNewClientDialogOpen] = useState(false);
+  const {
+    clientes,
+    adicionarCliente,
+    atualizarCliente,
+    removerCliente
+  } = useContext(AppContext);
+  
+  const [filtro, setFiltro] = useState('');
+  const [showClientForm, setShowClientForm] = useState(false);
+  const [editingClient, setEditingClient] = useState<Cliente | null>(null);
+  const [formData, setFormData] = useState({ nome: '', email: '', telefone: '' });
 
-  // Filtrar clientes por termo de busca
-  const filteredClientes = clientes.filter(clienteData => {
-    if (!searchTerm.trim()) return true;
+  // Filtrar clientes baseado na busca
+  const clientesFiltrados = filtro ? (clientes || []).filter(cliente => 
+    cliente.nome.toLowerCase().includes(filtro.toLowerCase()) || 
+    cliente.email.toLowerCase().includes(filtro.toLowerCase()) || 
+    cliente.telefone.includes(filtro)
+  ) : (clientes || []);
+
+  const handleAddClient = () => {
+    setEditingClient(null);
+    setFormData({ nome: '', email: '', telefone: '' });
+    setShowClientForm(true);
+  };
+  
+  const handleEditClient = (client: Cliente) => {
+    setEditingClient(client);
+    setFormData({ nome: client.nome, email: client.email, telefone: client.telefone });
+    setShowClientForm(true);
+  };
+
+  const handleDeleteClient = (clientId: string) => {
+    if (confirm('Tem certeza que deseja excluir este cliente?')) {
+      removerCliente(clientId);
+      toast.success('Cliente excluído com sucesso');
+    }
+  };
+  
+  const handleSaveClient = () => {
+    if (!formData.nome || !formData.telefone) {
+      toast.error('Nome e telefone são obrigatórios');
+      return;
+    }
     
-    const term = searchTerm.toLowerCase();
-    const cliente = clienteData.cliente;
-    return cliente.nome.toLowerCase().includes(term) ||
-           cliente.email.toLowerCase().includes(term) ||
-           cliente.telefone.includes(term);
-  });
-
-  // Estatísticas gerais do registry
-  const stats = getStats();
-
-  const handleClientCreated = () => {
-    setIsNewClientDialogOpen(false);
-    syncData(); // Sincronizar dados após criação
-    toast.success('Cliente criado com sucesso!');
+    if (editingClient) {
+      atualizarCliente(editingClient.id, formData);
+      toast.success('Cliente atualizado com sucesso');
+    } else {
+      adicionarCliente(formData);
+      toast.success('Cliente adicionado com sucesso');
+    }
+    setShowClientForm(false);
   };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value);
-  };
-
-  if (loading) {
-    return <div>Carregando...</div>;
-  }
 
   return (
-    <div className="space-y-6">
+    <ScrollArea className="h-[calc(100vh-120px)]">
+      <div className="space-y-6 pr-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">CRM - Clientes</h1>
-          <p className="text-muted-foreground">
-            Dashboard com métricas em tempo real do workflow
+          <p className="text-muted-foreground text-xs">
+            Gerencie todos os seus clientes e acompanhe informações de contato.
           </p>
         </div>
-        <Dialog open={isNewClientDialogOpen} onOpenChange={setIsNewClientDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Users className="h-4 w-4 mr-2" />
-              Novo Cliente
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Novo Cliente</DialogTitle>
-            </DialogHeader>
-            <ClientForm 
-              onSave={(clientData) => {
-                // Usar AppContext para adicionar cliente
-                // Para simplificar, vou usar localStorage direto
-                const clientes = JSON.parse(localStorage.getItem('lunari_clients') || '[]');
-                const novoCliente = {
-                  ...clientData,
-                  id: `cliente-${Date.now()}`
-                };
-                clientes.push(novoCliente);
-                localStorage.setItem('lunari_clients', JSON.stringify(clientes));
-                handleClientCreated();
-              }}
-            />
-          </DialogContent>
-        </Dialog>
+        
+        <Button onClick={handleAddClient} className="bg-neumorphic-dark text-slate-50 bg-lunar-accent py-0 my-[8px]">
+          <UserPlus className="h-4 w-4 mr-1" />
+          Novo Cliente
+        </Button>
+      </div>
+      
+      <div className="flex gap-2 max-w-lg">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input 
+            placeholder="Buscar clientes" 
+            className="pl-8" 
+            value={filtro} 
+            onChange={e => setFiltro(e.target.value)} 
+          />
+        </div>
       </div>
 
-      {/* Estatísticas */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Clientes</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalClientes}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Faturado</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(stats.totalFaturamento)}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Pago</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(stats.totalPago)}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">A Receber</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(stats.totalAReceber)}</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Busca */}
-      <div className="max-w-sm">
-        <Input
-          placeholder="Buscar clientes..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </div>
-
-      {/* Tabela de Clientes */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Lista de Clientes</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Telefone</TableHead>
-                  <TableHead className="text-center">Sessões</TableHead>
-                  <TableHead className="text-right">Total Faturado</TableHead>
-                  <TableHead className="text-right">Total Pago</TableHead>
-                  <TableHead className="text-right">A Receber</TableHead>
-                  <TableHead className="text-center">Última Sessão</TableHead>
+      {/* Visualização Desktop - Tabela */}
+      <div className="hidden md:block">
+        <div className="rounded-lg border bg-neumorphic-light overflow-hidden">
+          <Table className="bg-lunar-surface">
+            <TableHeader>
+              <TableRow className="bg-stone-200">
+                <TableHead className="font-medium">NOME</TableHead>
+                <TableHead className="font-medium">E-MAIL</TableHead>
+                <TableHead className="font-medium">TELEFONE</TableHead>
+                <TableHead className="font-medium text-center">AÇÕES</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {clientesFiltrados.map(cliente => (
+                <TableRow key={cliente.id} className="hover:bg-stone-50">
+                  <TableCell className="font-medium">{cliente.nome}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{cliente.email}</TableCell>
+                  <TableCell className="text-sm">{cliente.telefone}</TableCell>
+                  <TableCell className="text-center">
+                    <div className="flex items-center justify-center gap-2">
+                      <Button variant="ghost" size="sm" onClick={() => handleEditClient(cliente)} className="h-8 w-8 p-0">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleDeleteClient(cliente.id)} className="h-8 w-8 p-0 text-red-600 hover:text-red-700">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredClientes.map((clienteData) => (
-                  <TableRow key={clienteData.cliente.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback>
-                            {clienteData.cliente.nome.substring(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-medium">{clienteData.cliente.nome}</div>
-                          <div className="text-sm text-muted-foreground">{clienteData.cliente.email}</div>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{clienteData.cliente.telefone}</TableCell>
-                    <TableCell className="text-center">{clienteData.metricas.totalSessoes}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(clienteData.metricas.totalFaturado)}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(clienteData.metricas.totalPago)}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(clienteData.metricas.aReceber)}</TableCell>
-                    <TableCell className="text-center">{clienteData.metricas.ultimaSessao || 'Nunca'}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-          
-          {filteredClientes.length === 0 && (
-            <div className="text-center py-8">
-              <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Nenhum cliente encontrado</h3>
-              <p className="text-muted-foreground">
-                {searchTerm ? 'Tente ajustar os filtros de busca' : 'Comece adicionando seu primeiro cliente'}
-              </p>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+
+      {/* Visualização Mobile - Cards */}
+      <div className="md:hidden grid grid-cols-1 gap-4">
+        {clientesFiltrados.map(cliente => (
+          <Card key={cliente.id} className="overflow-hidden bg-neumorphic-light bg-lunar-surface">
+            <div className="p-4 flex items-center justify-between border-b bg-neumorphic-light bg-lunar-border">
+              <div>
+                <h3 className="font-medium">{cliente.nome}</h3>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="ghost" size="sm" onClick={() => handleEditClient(cliente)} className="h-8 w-8 p-0">
+                  <Edit className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => handleDeleteClient(cliente.id)} className="h-8 w-8 p-0 text-red-600 hover:text-red-700">
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+            
+            <div className="p-4 space-y-3 bg-neumorphic-light bg-lunar-surface">
+              <div className="flex items-start">
+                <Phone className="h-4 w-4 text-muted-foreground mt-0.5 mr-2" />
+                <span className="text-sm">{cliente.telefone}</span>
+              </div>
+              
+              <div className="flex items-start">
+                <Mail className="h-4 w-4 text-muted-foreground mt-0.5 mr-2" />
+                <span className="text-sm">{cliente.email}</span>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+      
+      {clientesFiltrados.length === 0 && (
+        <div className="flex flex-col items-center justify-center p-8 border rounded-md">
+          <User className="h-12 w-12 text-muted-foreground mb-2" />
+          <h3 className="text-lg font-medium">Nenhum cliente encontrado</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            Não encontramos clientes com os critérios de busca informados.
+          </p>
+          <Button onClick={() => setFiltro('')} variant="outline">
+            Limpar filtro
+          </Button>
+        </div>
+      )}
+
+      {/* Modal do Formulário de Cliente */}
+      <Dialog open={showClientForm} onOpenChange={setShowClientForm}>
+        <DialogContent className="sm:max-w-[500px] bg-neumorphic-light bg-lunar-bg">
+          <DialogHeader>
+            <DialogTitle>
+              {editingClient ? 'Editar Cliente' : 'Novo Cliente'}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="nome">Nome *</Label>
+              <Input 
+                id="nome"
+                value={formData.nome}
+                onChange={(e) => setFormData(prev => ({ ...prev, nome: e.target.value }))}
+                placeholder="Nome completo"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="email">E-mail</Label>
+              <Input 
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                placeholder="email@exemplo.com"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="telefone">Telefone *</Label>
+              <Input 
+                id="telefone"
+                value={formData.telefone}
+                onChange={(e) => setFormData(prev => ({ ...prev, telefone: e.target.value }))}
+                placeholder="+55 (DDD) 00000-0000"
+              />
+            </div>
+            
+            <div className="flex justify-end gap-2 pt-4">
+              <Button variant="outline" onClick={() => setShowClientForm(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleSaveClient}>
+                {editingClient ? 'Atualizar' : 'Adicionar'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      </div>
+    </ScrollArea>
   );
 }

@@ -6,22 +6,8 @@ import { toast } from '@/hooks/use-toast';
 import { parseDateFromStorage, formatDateForStorage } from '@/utils/dateUtils';
 
 export const useIntegration = () => {
-  const orcamentosHook = useOrcamentos();
-  const agendaHook = useAgenda();
-  
-  // Verificar se os hooks estão disponíveis
-  if (!orcamentosHook || !agendaHook) {
-    console.warn('useIntegration: Hooks não disponíveis ainda');
-    return {
-      isFromBudget: () => false,
-      getBudgetId: () => null,
-      canEditFully: () => true,
-      cleanupOrphanedAppointments: () => 0
-    };
-  }
-  
-  const { orcamentos, atualizarOrcamento } = orcamentosHook;
-  const { appointments, addAppointment, updateAppointment, deleteAppointment } = agendaHook;
+  const { orcamentos, atualizarOrcamento } = useOrcamentos();
+  const { appointments, addAppointment, updateAppointment, deleteAppointment } = useAgenda();
   
   // Controle de sincronização para evitar loops infinitos
   const syncInProgressRef = useRef(false);

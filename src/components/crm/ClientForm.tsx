@@ -23,12 +23,11 @@ interface Cliente {
 
 interface ClientFormProps {
   client?: Cliente | null;
-  onSave?: (clientData: any) => void;
-  onCancel?: () => void;
-  onClientCreated?: () => void;
+  onSave: (clientData: any) => void;
+  onCancel: () => void;
 }
 
-export default function ClientForm({ client, onSave, onCancel, onClientCreated }: ClientFormProps) {
+export default function ClientForm({ client, onSave, onCancel }: ClientFormProps) {
   const [formData, setFormData] = useState({
     nome: '',
     telefone: '',
@@ -91,13 +90,7 @@ export default function ClientForm({ client, onSave, onCancel, onClientCreated }
       return;
     }
 
-    if (onSave) {
-      onSave(formData);
-    }
-    
-    if (onClientCreated) {
-      onClientCreated();
-    }
+    onSave(formData);
   };
 
   return (
@@ -165,11 +158,9 @@ export default function ClientForm({ client, onSave, onCancel, onClientCreated }
       </div>
 
       <div className="flex justify-end pt-4 space-x-2 border-t">
-        {onCancel && (
-          <Button type="button" variant="outline" onClick={onCancel}>
-            Cancelar
-          </Button>
-        )}
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancelar
+        </Button>
         <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white">
           {client ? 'Atualizar' : 'Salvar'}
         </Button>

@@ -79,15 +79,14 @@ export default function Workflow() {
     toast
   } = useToast();
   const {
+    getConfirmedSessionsForWorkflow
+  } = useAgenda();
+  const {
     getStatusOptions
   } = useWorkflowStatus();
-  const context = useContext(AppContext);
-  
-  if (!context) {
-    throw new Error('Workflow deve ser usado dentro do AppProvider');
-  }
-  
-  const { clientes, allWorkflowItems } = context;
+  const {
+    clientes
+  } = useContext(AppContext);
   const {
     pacotes,
     produtos,
@@ -100,8 +99,16 @@ export default function Workflow() {
   // Carregamento dos status de workflow das configurações - apenas etapas personalizadas
   const statusOptions = getStatusOptions();
 
-  // NOVA ARQUITETURA: Dados vêm exclusivamente do allWorkflowItems
-  const [sessions, setSessions] = useState<SessionData[]>([]);
+  // Carregamento inicial dos dados do localStorage
+  const [sessions, setSessions] = useState<SessionData[]>(() => {
+    try {
+      const savedSessions = window.localStorage.getItem('workflow_sessions');
+      return savedSessions ? JSON.parse(savedSessions) : [];
+    } catch (error) {
+      console.error("Erro ao carregar sessões do localStorage", error);
+      return [];
+    }
+  });
   const [filteredSessions, setFilteredSessions] = useState<SessionData[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showMetrics, setShowMetrics] = useState(true);
@@ -173,8 +180,14 @@ export default function Workflow() {
     }
   });
 
-  // REMOVIDO: Persistência automática não é mais necessária
-  // Os dados são persistidos diretamente no allWorkflowItems pelo AppContext
+  // Persistência automática das alterações
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('workflow_sessions', JSON.stringify(sessions));
+    } catch (error) {
+      console.error("Erro ao salvar sessões no localStorage", error);
+    }
+  }, [sessions]);
   // Mapear dados reais das configurações para formato da tabela
   const categoryOptions: CategoryOption[] = categorias.map((categoria, index) => ({
     id: String(index + 1),
@@ -202,73 +215,39 @@ export default function Workflow() {
     }
   }, [sessions, searchTerm]);
 
-  // NOVA ARQUITETURA: Carregar dados exclusivamente do allWorkflowItems
+  // Integração com dados reais da agenda - carregar sessões do mês selecionado
   useEffect(() => {
-    console.log('🔄 NOVA ARQUITETURA WORKFLOW - Filtrando dados do mês:', {
-      mesAno: `${currentMonth.month}/${currentMonth.year}`,
-      totalWorkflowItems: allWorkflowItems?.length || 0
+    const confirmedSessions = getConfirmedSessionsForWorkflow(currentMonth.month, currentMonth.year, getClienteByName, pacotes, produtos);
+
+    // Carregar todas as sessões salvas do localStorage
+    const allSavedSessions = (() => {
+      try {
+        const saved = window.localStorage.getItem('workflow_sessions');
+        return saved ? JSON.parse(saved) : [];
+      } catch (error) {
+        console.error("Erro ao carregar sessões salvas", error);
+        return [];
+      }
+    })();
+
+    // Filtrar sessões salvas que pertencem ao mês atual (preservar TODAS as edições)
+    const existingSessionsForCurrentMonth = allSavedSessions.filter((session: SessionData) => {
+      const sessionDate = parseDateFromStorage(session.data);
+      return sessionDate.getUTCMonth() + 1 === currentMonth.month && sessionDate.getUTCFullYear() === currentMonth.year;
     });
 
-    if (!allWorkflowItems) {
-      setSessions([]);
-      return;
-    }
-
-    // Filtrar itens do workflow para o mês selecionado
-    const currentMonthSessions = allWorkflowItems
-      .filter(item => {
-        if (!item.dataOriginal) return false;
-        
-        const itemDate = item.dataOriginal instanceof Date 
-          ? item.dataOriginal 
-          : new Date(item.dataOriginal);
-        
-        return (
-          itemDate.getMonth() + 1 === currentMonth.month &&
-          itemDate.getFullYear() === currentMonth.year
-        );
-      })
-      .map(item => ({
-        id: item.id,
-        data: item.data,
-        hora: '09:00', // Hora padrão
-        nome: item.nome,
-        email: item.email || '',
-        descricao: item.categoria || '',
-        status: item.status || '',
-        whatsapp: item.whatsapp || '',
-        categoria: item.categoria || '',
-        pacote: item.pacote || '',
-        valorPacote: typeof item.valorPacote === 'number' ? item.valorPacote.toFixed(2).replace('.', ',') : '0,00',
-        valorFotoExtra: '35,00', // Valor padrão
-        qtdFotosExtra: 0,
-        valorTotalFotoExtra: '0,00',
-        produto: item.produto || '',
-        qtdProduto: 0,
-        valorTotalProduto: '0,00',
-        valorAdicional: '0,00',
-        detalhes: '',
-        valor: typeof item.total === 'number' ? item.total.toFixed(2).replace('.', ',') : '0,00',
-        total: typeof item.total === 'number' ? item.total.toFixed(2).replace('.', ',') : '0,00',
-        valorPago: typeof item.valorPago === 'number' ? item.valorPago.toFixed(2).replace('.', ',') : '0,00',
-        restante: typeof item.restante === 'number' ? item.restante.toFixed(2).replace('.', ',') : '0,00',
-        desconto: 0,
-        pagamentos: item.pagamentos || []
-      }));
-
-    console.log('📊 Sessões do mês atual:', {
-      sessoes: currentMonthSessions.length,
-      detalhes: currentMonthSessions.map(s => ({ 
-        id: s.id, 
-        nome: s.nome, 
-        total: s.total,
-        valorPago: s.valorPago,
-        restante: s.restante
-      }))
+    // Mapear agendamentos confirmados, preservando dados editados ou criando novos
+    const currentMonthSessions: SessionData[] = confirmedSessions.map(agendamento => {
+      const existingSession = existingSessionsForCurrentMonth.find((s: SessionData) => s.id === agendamento.id);
+      return existingSession || {
+        ...agendamento,
+        status: '',
+        // Status vazio por padrão para novos agendamentos
+        detalhes: '' // Campo detalhes vazio para entrada manual
+      };
     });
-
     setSessions(currentMonthSessions);
-  }, [currentMonth, allWorkflowItems]);
+  }, [currentMonth, getConfirmedSessionsForWorkflow, getClienteByName, pacotes, produtos]);
   const handlePreviousMonth = () => {
     let newMonth = currentMonth.month - 1;
     let newYear = currentMonth.year;

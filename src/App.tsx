@@ -14,7 +14,7 @@ import Precificacao from "./pages/Precificacao";
 import Configuracoes from "./pages/Configuracoes";
 import Workflow from "./pages/Workflow";
 import NotFound from "./pages/NotFound";
-import { AppProvider, useAppContext } from "./contexts/AppContext";
+import { AppProvider } from "./contexts/AppContext";
 import { useIntegration } from "./hooks/useIntegration";
 
 // Create a new QueryClient instance outside of the component
@@ -22,17 +22,7 @@ const queryClient = new QueryClient();
 
 // Component to initialize integration hooks
 function AppIntegration() {
-  const context = useAppContext();
-  
-  // Only initialize integration if context is ready and has data
-  const isReady = context && 
-    context.orcamentos !== undefined && 
-    context.appointments !== undefined;
-  
-  if (isReady) {
-    useIntegration();
-  }
-  
+  useIntegration();
   return null;
 }
 
@@ -44,6 +34,7 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <AppProvider>
           <TooltipProvider>
+            <AppIntegration />
             <Toaster />
             <Sonner />
             <Routes>
@@ -59,7 +50,6 @@ function App() {
                 <Route path="*" element={<NotFound />} />
               </Route>
             </Routes>
-            <AppIntegration />
           </TooltipProvider>
         </AppProvider>
       </QueryClientProvider>
