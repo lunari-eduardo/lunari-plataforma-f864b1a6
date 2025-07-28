@@ -206,7 +206,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Workflow State
   const [workflowItems, setWorkflowItems] = useState<WorkflowItem[]>(() => {
-    return storage.load(STORAGE_KEYS.WORKFLOW_ITEMS, []);
+    const items = storage.load(STORAGE_KEYS.WORKFLOW_ITEMS, []);
+    console.log('🚨 CRITICAL DEBUG - AppContext workflowItems carregados:', {
+      'STORAGE_KEY': STORAGE_KEYS.WORKFLOW_ITEMS,
+      'itens carregados': items.length,
+      'primeiro item': items[0] || 'nenhum',
+      'todos os items': items
+    });
+    return items;
   });
   
   const [workflowFilters, setWorkflowFilters] = useState<WorkflowFilters>(() => {
@@ -580,23 +587,75 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                         appointment.type.includes('Corporativo') ? 'Corporativo' : 'Outros';
         }
 
-        // Buscar cliente pelo nome nos agendamentos para obter o ID correto
-        const clienteEncontrado = clientes?.find(c => 
-          c.nome.toLowerCase().trim() === appointment.client.toLowerCase().trim() ||
-          c.telefone === appointment.whatsapp
-        );
+        // ASSOCIAÇÃO ROBUSTA Cliente-Workflow: múltiplos critérios de busca
+        let clienteEncontrado = null;
+        
+        if (appointment.client && clientes?.length > 0) {
+          // Prioridade 1: Busca por nome exato (case insensitive)
+          clienteEncontrado = clientes.find(c => 
+            c.nome.toLowerCase().trim() === appointment.client.toLowerCase().trim()
+          );
+          
+          // Prioridade 2: Busca por telefone/whatsapp
+          if (!clienteEncontrado && appointment.whatsapp) {
+            const appointmentPhone = appointment.whatsapp.replace(/\D/g, '');
+            clienteEncontrado = clientes.find(c => {
+              const clientPhone = c.telefone.replace(/\D/g, '');
+              return clientPhone === appointmentPhone && appointmentPhone.length >= 10;
+            });
+          }
+          
+          // Prioridade 3: Busca por email (se disponível)
+          if (!clienteEncontrado && appointment.email) {
+            clienteEncontrado = clientes.find(c => 
+              c.email.toLowerCase().trim() === appointment.email.toLowerCase().trim()
+            );
+          }
+        }
 
         // Debug: mostrar processo de busca de cliente
-        console.log('🔍 Associação Cliente-Workflow:', {
+        console.log('🔍 ASSOCIAÇÃO CRÍTICA Cliente-Workflow:', {
           appointmentClient: appointment.client,
           appointmentWhatsapp: appointment.whatsapp,
-          clienteEncontrado: clienteEncontrado ? { id: clienteEncontrado.id, nome: clienteEncontrado.nome } : null,
-          clientesDisponiveis: clientes?.map(c => ({ id: c.id, nome: c.nome, telefone: c.telefone }))
+          appointmentEmail: appointment.email,
+          clienteEncontrado: clienteEncontrado ? { 
+            id: clienteEncontrado.id, 
+            nome: clienteEncontrado.nome,
+            telefone: clienteEncontrado.telefone 
+          } : null,
+          totalClientesDisponiveis: clientes?.length || 0,
+          primeiroCliente: clientes?.[0] ? { id: clientes[0].id, nome: clientes[0].nome } : null
         });
+
+        // GARANTIA DE clienteId: Se cliente não existe, criar automaticamente
+        let clienteIdDefinitivo = clienteEncontrado?.id;
+        
+        if (!clienteEncontrado && appointment.client) {
+          console.log('⚠️ Cliente não encontrado, criando automaticamente:', appointment.client);
+          
+          const novoCliente: Cliente = {
+            id: Date.now().toString(),
+            nome: appointment.client,
+            email: appointment.email || '',
+            telefone: appointment.whatsapp || ''
+          };
+          
+          // Adicionar cliente à lista e salvar
+          const novosClientes = [...clientes, novoCliente];
+          setClientes(novosClientes);
+          storage.save(STORAGE_KEYS.CLIENTS, novosClientes);
+          
+          clienteIdDefinitivo = novoCliente.id;
+          
+          console.log('✅ Cliente criado automaticamente:', {
+            id: novoCliente.id,
+            nome: novoCliente.nome
+          });
+        }
 
         const newWorkflowItem: WorkflowItem = {
           id: `agenda-${appointment.id}`,
-          clienteId: clienteEncontrado?.id || undefined,
+          clienteId: clienteIdDefinitivo, // SEMPRE haverá um clienteId válido
           data: formatDateForStorage(appointment.date),
           hora: appointment.time,
           nome: appointment.client,
