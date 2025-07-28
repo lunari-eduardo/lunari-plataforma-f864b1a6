@@ -71,6 +71,7 @@ interface AppContextType {
   
   // Workflow
   workflowItems: WorkflowItem[];
+  allWorkflowItems: WorkflowItem[]; // NOVO: Lista completa sem filtros para CRM
   workflowSummary: { receita: number; aReceber: number; previsto: number };
   workflowFilters: WorkflowFilters;
   visibleColumns: Record<string, boolean>;
@@ -835,9 +836,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       }
 
+      // CORREÇÃO CRÍTICA: Garantir clienteId válido ou criar cliente automaticamente
+      let clienteIdValido = orc.cliente?.id;
+      if (!clienteIdValido && orc.cliente?.nome) {
+        // Buscar cliente existente por nome exato
+        const clienteExistente = clientes.find(c => 
+          c.nome.toLowerCase().trim() === orc.cliente.nome.toLowerCase().trim()
+        );
+        
+        if (clienteExistente) {
+          clienteIdValido = clienteExistente.id;
+          console.log(`🔗 Cliente encontrado para orçamento: ${orc.cliente.nome} -> ${clienteIdValido}`);
+        } else {
+          // CRIAR CLIENTE AUTOMATICAMENTE se não existir
+          const novoCliente = {
+            id: `auto-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            nome: orc.cliente.nome,
+            email: orc.cliente.email || '',
+            telefone: orc.cliente.telefone || ''
+          };
+          
+          // Adicionar ao estado de clientes
+          setClientes(prev => [...prev, novoCliente]);
+          clienteIdValido = novoCliente.id;
+          
+          console.log(`✅ Cliente criado automaticamente: ${novoCliente.nome} -> ${clienteIdValido}`);
+        }
+      }
+
       const newWorkflowItem: WorkflowItem = {
         id: `orcamento-${orc.id}`,
-        clienteId: orc.cliente?.id || undefined,
+        clienteId: clienteIdValido, // GARANTIDO que sempre terá um clienteId válido
         data: orc.data,
         hora: orc.hora,
         nome: orc.cliente.nome,
@@ -1421,6 +1450,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     pacotes,
     metricas,
     appointments,
+    // workflowItems: FILTRADOS (para uso no Workflow)
     workflowItems: workflowItems.filter(item => {
       const [itemDay, itemMonth, itemYear] = item.data.split('/');
       const [filterMonth, filterYear] = workflowFilters.mes.split('/');
@@ -1441,6 +1471,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const timeA = a.hora.split(':').map(Number);
       const timeB = b.hora.split(':').map(Number);
       return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
+    }),
+    // allWorkflowItems: COMPLETOS (para uso no CRM)
+    allWorkflowItems: workflowItems.sort((a, b) => {
+      const dateA = a.dataOriginal || parseDateFromStorage(a.data);
+      const dateB = b.dataOriginal || parseDateFromStorage(b.data);
+      return dateB.getTime() - dateA.getTime(); // Mais recentes primeiro
     }),
     workflowSummary,
     workflowFilters,

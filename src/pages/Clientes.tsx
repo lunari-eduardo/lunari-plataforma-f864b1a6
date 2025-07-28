@@ -12,6 +12,7 @@ import { Search, UserPlus, User, Phone, Mail, Edit, Trash2, ArrowUpDown, ArrowUp
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from 'sonner';
 import { formatCurrency } from '@/utils/financialUtils';
+import { createTestClient, createTestWorkflowItem } from '@/utils/testData';
 
 // Interface para cliente enriquecido com métricas calculadas
 interface ClienteComMetricas extends Cliente {
@@ -56,39 +57,69 @@ function ClientesContent() {
     );
   }
 
-  const { clientes, workflowItems, adicionarCliente, atualizarCliente, removerCliente } = context;
+  const { clientes, allWorkflowItems, adicionarCliente, atualizarCliente, removerCliente } = context;
   
   // NÚCLEO: Agregação de dados com useMemo conforme especificação
   const clientesComMetricas: ClienteComMetricas[] = useMemo(() => {
-    console.log('🔄 AGREGANDO DADOS - Nova Página Clientes:', {
+    console.log('🔄 IMPLEMENTAÇÃO FORÇADA - CRM CLIENTES:', {
       totalClientes: clientes?.length || 0,
-      totalWorkflowItems: workflowItems?.length || 0
+      totalAllWorkflowItems: allWorkflowItems?.length || 0,
+      primeiroWorkflowItem: allWorkflowItems?.[0] ? { 
+        id: allWorkflowItems[0].id, 
+        clienteId: allWorkflowItems[0].clienteId, 
+        nome: allWorkflowItems[0].nome 
+      } : null
     });
 
     if (!clientes || clientes.length === 0) {
+      console.log('⚠️ CRITICAL: Sem clientes para processar');
       return [];
     }
 
+    if (!allWorkflowItems || allWorkflowItems.length === 0) {
+      console.log('⚠️ CRITICAL: Sem workflowItems para processar - todas as métricas serão 0');
+      return clientes.map(cliente => ({
+        ...cliente,
+        metricas: { sessoes: 0, totalFaturado: 0, totalPago: 0, aReceber: 0, ultimaSessao: null }
+      }));
+    }
+
     return clientes.map(cliente => {
-      // PASSO A: Filtrar histórico do cliente específico
-      const workflowDoCliente = workflowItems?.filter(item => {
-        if (item.clienteId === cliente.id) return true;
-        
-        if (item.nome && cliente.nome) {
-          const nomeMatch = item.nome.toLowerCase().trim() === cliente.nome.toLowerCase().trim();
-          if (nomeMatch) return true;
+      console.log(`🔍 PROCESSANDO CLIENTE: ${cliente.nome} (ID: ${cliente.id})`);
+      
+      // IMPLEMENTAÇÃO FORÇADA: Filtrar workflowItems por clienteId
+      const workflowDoCliente = allWorkflowItems.filter(item => {
+        // PRIORIDADE 1: Match direto por clienteId
+        if (item.clienteId === cliente.id) {
+          console.log(`✅ Match por clienteId: ${cliente.nome} -> ${item.nome}`);
+          return true;
         }
         
+        // FALLBACK 1: Nome exato (case insensitive)
+        if (item.nome && cliente.nome) {
+          const nomeMatch = item.nome.toLowerCase().trim() === cliente.nome.toLowerCase().trim();
+          if (nomeMatch) {
+            console.log(`🔗 Match por nome: "${cliente.nome}" -> "${item.nome}"`);
+            return true;
+          }
+        }
+        
+        // FALLBACK 2: Telefone (apenas números)
         if (item.whatsapp && cliente.telefone) {
           const telefoneItem = item.whatsapp.replace(/\D/g, '');
           const telefoneCliente = cliente.telefone.replace(/\D/g, '');
-          if (telefoneItem === telefoneCliente && telefoneItem.length >= 10) return true;
+          if (telefoneItem === telefoneCliente && telefoneItem.length >= 10) {
+            console.log(`📞 Match por telefone: "${cliente.telefone}" -> "${item.whatsapp}"`);
+            return true;
+          }
         }
         
         return false;
-      }) || [];
+      });
 
-      // PASSO B: Calcular métricas do histórico filtrado
+      console.log(`📊 Cliente "${cliente.nome}": ${workflowDoCliente.length} workflow items encontrados`);
+
+      // IMPLEMENTAÇÃO FORÇADA: Calcular métricas com base nos workflowItems filtrados
       const sessoes = workflowDoCliente.length;
       const totalFaturado = workflowDoCliente.reduce((soma, item) => soma + (Number(item.total) || 0), 0);
       const totalPago = workflowDoCliente.reduce((soma, item) => soma + (Number(item.valorPago) || 0), 0);
@@ -106,12 +137,16 @@ function ClientesContent() {
         }
       }
 
+      console.log(`💰 MÉTRICAS CALCULADAS para "${cliente.nome}":`, {
+        sessoes, totalFaturado, totalPago, aReceber, ultimaSessao
+      });
+
       return {
         ...cliente,
         metricas: { sessoes, totalFaturado, totalPago, aReceber, ultimaSessao }
       };
     });
-  }, [clientes, workflowItems]);
+  }, [clientes, allWorkflowItems]);
 
   const clientesFiltradosEOrdenados = useMemo(() => {
     let resultado = filtro 
@@ -169,6 +204,22 @@ function ClientesContent() {
     setFormData({ nome: '', email: '', telefone: '' });
     setShowClientForm(true);
   };
+
+  // TESTE: Criar dados de exemplo para testar a integração
+  const handleCreateTestData = () => {
+    const testClient = createTestClient();
+    const testWorkflow = createTestWorkflowItem(testClient.id);
+    
+    // Adicionar cliente
+    adicionarCliente(testClient);
+    
+    // Simular adição direta ao workflow (para teste)
+    const currentWorkflow = JSON.parse(localStorage.getItem('lunari_workflow_items') || '[]');
+    const updatedWorkflow = [...currentWorkflow, testWorkflow];
+    localStorage.setItem('lunari_workflow_items', JSON.stringify(updatedWorkflow));
+    
+    toast.success('Dados de teste criados! Recarregue a página para ver as métricas.');
+  };
   
   const handleEditClient = (client: Cliente) => {
     setEditingClient(client);
@@ -210,10 +261,15 @@ function ClientesContent() {
             </p>
           </div>
           
-          <Button onClick={handleAddClient} className="bg-primary">
-            <UserPlus className="h-4 w-4 mr-2" />
-            Novo Cliente
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={handleCreateTestData} variant="outline" size="sm">
+              Criar Dados de Teste
+            </Button>
+            <Button onClick={handleAddClient} className="bg-primary">
+              <UserPlus className="h-4 w-4 mr-2" />
+              Novo Cliente
+            </Button>
+          </div>
         </div>
         
         <div className="flex gap-2 max-w-lg">
