@@ -486,9 +486,11 @@ export function useNovoFinancas() {
       itemId: dadosAtualizados.item_id,
       valor: dadosAtualizados.valor,
       dataVencimento: dadosAtualizados.data_vencimento,
-      observacoes: dadosAtualizados.observacoes
+      observacoes: dadosAtualizados.observacoes,
+      status: dadosAtualizados.status // CORRIGIDO: incluir status na atualização
     };
 
+    console.log('Atualizando transação:', id, dados);
     atualizarTransacao(id, dados);
   };
 
