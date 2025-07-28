@@ -62,13 +62,65 @@ export const BLUEPRINT_STORAGE_KEYS = {
 export class RecurringBlueprintEngine {
   
   /**
-   * CRIAR NOVO BLUEPRINT E PRIMEIRA INSTÂNCIA
-   * Esta é a função principal para criar uma despesa recorrente
+   * CRIAR TRANSAÇÕES RECORRENTES ANUAIS (NOVA ABORDAGEM)
+   * Em vez de blueprint + geração dinâmica, cria 12 transações únicas para o ano
+   * Cada transação é independente e pode ser editada/excluída sem afetar outras
+   */
+  static createYearlyRecurringTransactions(input: CreateBlueprintInput): BlueprintTransaction[] {
+    const { itemId, valor, isValorFixo, dataPrimeiraOcorrencia, observacoes } = input;
+    
+    // Validações
+    if (!itemId || valor <= 0) {
+      throw new Error('ItemId e valor são obrigatórios');
+    }
+    
+    const [ano, mes, dia] = dataPrimeiraOcorrencia.split('-').map(Number);
+    const transacoes: BlueprintTransaction[] = [];
+    
+    console.log(`Criando transações recorrentes para ${itemId} a partir de ${mes}/${ano}`);
+    
+    // Gerar transação para cada mês do ano, começando do mês especificado
+    for (let mesAtual = mes; mesAtual <= 12; mesAtual++) {
+      // Calcular último dia do mês para ajustar se necessário
+      const ultimoDiaMes = new Date(Date.UTC(ano, mesAtual, 0)).getUTCDate();
+      const diaVencimento = Math.min(dia, ultimoDiaMes);
+      
+      const dataVencimento = `${ano}-${mesAtual.toString().padStart(2, '0')}-${diaVencimento.toString().padStart(2, '0')}`;
+      
+      const transacao: BlueprintTransaction = {
+        id: `recurring_${Date.now()}_${mesAtual}_${Math.random().toString(36).substr(2, 9)}`,
+        itemId,
+        valor: isValorFixo ? valor : valor, // Para valor variável, usar valor inicial digitado
+        dataVencimento,
+        status: this.determineStatus(dataVencimento),
+        observacoes: isValorFixo 
+          ? (observacoes ? `${observacoes} (Valor Fixo)` : 'Valor Fixo')
+          : (observacoes ? `${observacoes} (Valor Variável)` : 'Valor Variável'),
+        userId: 'user1',
+        criadoEm: getCurrentDateString()
+        // SEM blueprintId - cada transação é independente
+      };
+      
+      transacoes.push(transacao);
+    }
+    
+    // Salvar todas as transações no localStorage
+    transacoes.forEach(transacao => this.saveTransaction(transacao));
+    
+    console.log(`${transacoes.length} transações criadas para o ano ${ano}`);
+    return transacoes;
+  }
+
+  /**
+   * CRIAR NOVO BLUEPRINT E PRIMEIRA INSTÂNCIA (MANTIDO PARA COMPATIBILIDADE)
+   * DEPRECATED: Use createYearlyRecurringTransactions() para novas implementações
    */
   static createBlueprint(input: CreateBlueprintInput): {
     blueprint: RecurringBlueprint;
     firstTransaction: BlueprintTransaction;
   } {
+    console.warn('createBlueprint() está depreciado. Use createYearlyRecurringTransactions()');
+    
     const { itemId, valor, isValorFixo, dataPrimeiraOcorrencia, observacoes } = input;
     
     // Validações
