@@ -4,8 +4,9 @@ import { formatCurrency } from '@/utils/financialUtils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Calendar, DollarSign, Trash2, Edit } from 'lucide-react';
-import EditTransactionModal from './EditTransactionModal';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Calendar, DollarSign, Trash2, Edit, Check, X } from 'lucide-react';
 
 interface TabelaLancamentosMobileProps {
   transacoes: TransacaoComItem[];
@@ -24,7 +25,12 @@ export default function TabelaLancamentosMobile({
   grupoAtivo,
   obterItensPorGrupo
 }: TabelaLancamentosMobileProps) {
-  const [editingTransaction, setEditingTransaction] = useState<TransacaoComItem | null>(null);
+  const [editingTransaction, setEditingTransaction] = useState<string | null>(null);
+  const [editValues, setEditValues] = useState<{
+    valor: string;
+    data_vencimento: string;
+    observacoes: string;
+  }>({ valor: '', data_vencimento: '', observacoes: '' });
   
   const formatarData = (dataISO: string) => {
     const [ano, mes, dia] = dataISO.split('-');
@@ -56,6 +62,43 @@ export default function TabelaLancamentosMobile({
     }
   };
 
+  const startEdit = (transacao: TransacaoComItem) => {
+    setEditingTransaction(transacao.id);
+    setEditValues({
+      valor: transacao.valor.toString(),
+      data_vencimento: transacao.data_vencimento,
+      observacoes: transacao.observacoes || ''
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingTransaction(null);
+    setEditValues({ valor: '', data_vencimento: '', observacoes: '' });
+  };
+
+  const saveEdit = (transacaoId: string) => {
+    const valorNumerico = parseFloat(editValues.valor);
+    if (isNaN(valorNumerico) || valorNumerico <= 0) {
+      alert('Por favor, insira um valor válido maior que zero');
+      return;
+    }
+
+    if (!editValues.data_vencimento) {
+      alert('Por favor, insira uma data válida');
+      return;
+    }
+
+    const dadosCompletos: Partial<NovaTransacaoFinanceira> = {
+      valor: valorNumerico,
+      data_vencimento: editValues.data_vencimento,
+      observacoes: editValues.observacoes.trim() || null,
+      status: (editValues.data_vencimento <= new Date().toISOString().split('T')[0]) ? 'Faturado' as StatusTransacao : 'Agendado' as StatusTransacao
+    };
+
+    onAtualizarTransacao(transacaoId, dadosCompletos);
+    cancelEdit();
+  };
+
   if (transacoes.length === 0) {
     return (
       <div className="text-center py-8">
@@ -79,75 +122,108 @@ export default function TabelaLancamentosMobile({
                 {getStatusBadge(transacao.status, transacao.status === 'Faturado' && onMarcarComoPago ? () => onMarcarComoPago(transacao.id) : undefined)}
               </div>
               <div className="flex items-center gap-1">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setEditingTransaction(transacao)}
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => onRemoverTransacao(transacao.id)}
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                {editingTransaction === transacao.id ? (
+                  <>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => saveEdit(transacao.id)}
+                      className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                    >
+                      <Check className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={cancelEdit}
+                      className="text-gray-600 hover:text-gray-700 hover:bg-gray-50"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => startEdit(transacao)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => onRemoverTransacao(transacao.id)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
             
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div className="flex items-center gap-2">
-                <DollarSign className="h-4 w-4 text-gray-400" />
-                <span className="font-medium">{formatCurrency(transacao.valor)}</span>
+            {editingTransaction === transacao.id ? (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={editValues.valor}
+                      onChange={(e) => setEditValues({ ...editValues, valor: e.target.value })}
+                      placeholder="Valor"
+                      className="text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Input
+                      type="date"
+                      value={editValues.data_vencimento}
+                      onChange={(e) => setEditValues({ ...editValues, data_vencimento: e.target.value })}
+                      className="text-sm"
+                    />
+                  </div>
+                </div>
+                <Textarea
+                  value={editValues.observacoes}
+                  onChange={(e) => setEditValues({ ...editValues, observacoes: e.target.value })}
+                  placeholder="Observações (opcional)"
+                  rows={2}
+                  className="text-sm"
+                />
               </div>
-              
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-gray-400" />
-                <span>{formatarData(transacao.data_vencimento)}</span>
-              </div>
-            </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="h-4 w-4 text-gray-400" />
+                    <span className="font-medium">{formatCurrency(transacao.valor)}</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-gray-400" />
+                    <span>{formatarData(transacao.data_vencimento)}</span>
+                  </div>
+                </div>
 
-            {(transacao.parcelas || transacao.parcelaInfo) && (
-              <div className="mt-2 text-sm text-gray-500">
-                Parcela {(transacao.parcelas?.atual || transacao.parcelaInfo?.atual || 1)} de {(transacao.parcelas?.total || transacao.parcelaInfo?.total || 1)}
-              </div>
-            )}
+                {(transacao.parcelas || transacao.parcelaInfo) && (
+                  <div className="mt-2 text-sm text-gray-500">
+                    Parcela {(transacao.parcelas?.atual || transacao.parcelaInfo?.atual || 1)} de {(transacao.parcelas?.total || transacao.parcelaInfo?.total || 1)}
+                  </div>
+                )}
 
-            {transacao.observacoes && (
-              <div className="mt-2 text-sm text-gray-600 bg-gray-50 p-2 rounded">
-                {transacao.observacoes}
-              </div>
+                {transacao.observacoes && (
+                  <div className="mt-2 text-sm text-gray-600 bg-gray-50 p-2 rounded">
+                    {transacao.observacoes}
+                  </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>
       ))}
-      
-      {editingTransaction && (
-        <EditTransactionModal
-          isOpen={!!editingTransaction}
-          onClose={() => setEditingTransaction(null)}
-          onSave={(dados) => {
-            console.log('Mobile - Salvando transação:', editingTransaction.id, dados);
-            
-            // Incluir o status no mobile, igual ao desktop
-            const dadosCompletos: Partial<NovaTransacaoFinanceira> = {
-              ...dados,
-              status: (dados.data_vencimento && dados.data_vencimento <= new Date().toISOString().split('T')[0]) ? 'Faturado' as StatusTransacao : 'Agendado' as StatusTransacao
-            };
-            
-            console.log('Mobile - Dados completos:', dadosCompletos);
-            onAtualizarTransacao(editingTransaction.id, dadosCompletos);
-            setEditingTransaction(null);
-          }}
-          initialData={{
-            valor: editingTransaction.valor,
-            data_vencimento: editingTransaction.data_vencimento,
-            observacoes: editingTransaction.observacoes
-          }}
-        />
-      )}
     </div>
   );
 }
