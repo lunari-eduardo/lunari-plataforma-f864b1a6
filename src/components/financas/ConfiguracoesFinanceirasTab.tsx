@@ -172,36 +172,41 @@ export default function ConfiguracoesFinanceirasTab({
             </Card>
 
             {/* Lista de Itens por Grupo */}
-            <div className="grid grid-cols-3 lg:grid-cols-2 gap-2">
-              {grupos.map(grupo => <Card key={grupo}>
-                  <CardHeader>
-                    <CardTitle className="text-lg">
-                      <Badge className={getCorGrupo(grupo)}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+              {grupos.map(grupo => <Card key={grupo} className="h-fit">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-base md:text-lg">
+                      <Badge className={`${getCorGrupo(grupo)} text-xs md:text-sm font-medium`}>
                         {grupo}
                       </Badge>
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    {itensPorGrupo[grupo].length === 0 ? <p className="text-gray-500 text-sm italic">
+                  <CardContent className="pt-0">
+                    {itensPorGrupo[grupo].length === 0 ? <p className="text-lunar-textSecondary text-sm italic text-center py-4">
                         Nenhum item cadastrado neste grupo.
-                      </p> : <div className="space-y-2">
-                        {itensPorGrupo[grupo].map(item => <div key={item.id} className="flex items-center justify-between p-2 bg-gray-50 border rounded-md">
+                      </p> : <div className="space-y-3">
+                        {itensPorGrupo[grupo].map(item => <div key={item.id} className="flex items-center justify-between p-3 bg-lunar-surface/50 border border-lunar-border/30 rounded-lg hover:bg-lunar-surface/80 transition-colors">
                             {itemEditando === item.id ? <div className="flex items-center gap-2 flex-1">
-                                <Input value={nomeEditando} onChange={e => setNomeEditando(e.target.value)} className="flex-1" onKeyPress={e => e.key === 'Enter' && handleSalvarEdicao(item.id)} />
-                                <Button size="sm" onClick={() => handleSalvarEdicao(item.id)}>
-                                  <Save className="h-4 w-4" />
+                                <Input 
+                                  value={nomeEditando} 
+                                  onChange={e => setNomeEditando(e.target.value)} 
+                                  className="flex-1 text-sm" 
+                                  onKeyPress={e => e.key === 'Enter' && handleSalvarEdicao(item.id)} 
+                                />
+                                <Button size="sm" onClick={() => handleSalvarEdicao(item.id)} className="h-8 w-8 p-0">
+                                  <Save className="h-3.5 w-3.5" />
                                 </Button>
-                                <Button size="sm" variant="outline" onClick={handleCancelarEdicao}>
-                                  <X className="h-4 w-4" />
+                                <Button size="sm" variant="outline" onClick={handleCancelarEdicao} className="h-8 w-8 p-0">
+                                  <X className="h-3.5 w-3.5" />
                                 </Button>
                               </div> : <>
-                                <span className="text-gray-900 text-sm font-normal">{item.nome}</span>
-                                <div className="flex items-center gap-1">
-                                  <Button size="sm" variant="ghost" onClick={() => handleEditarItem(item)}>
-                                    <Edit2 className="h-4 w-4" />
+                                <span className="text-lunar-text text-sm md:text-base font-medium flex-1 min-w-0 truncate pr-2">{item.nome}</span>
+                                <div className="flex items-center gap-1 flex-shrink-0">
+                                  <Button size="sm" variant="ghost" onClick={() => handleEditarItem(item)} className="h-8 w-8 p-0 hover:bg-lunar-accent/20">
+                                    <Edit2 className="h-3.5 w-3.5" />
                                   </Button>
-                                  <Button size="sm" variant="ghost" onClick={() => handleRemoverItem(item.id, item.nome)} className="text-red-600 hover:text-red-700 hover:bg-red-50">
-                                    <Trash2 className="h-4 w-4" />
+                                  <Button size="sm" variant="ghost" onClick={() => handleRemoverItem(item.id, item.nome)} className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-50">
+                                    <Trash2 className="h-3.5 w-3.5" />
                                   </Button>
                                 </div>
                               </>}
