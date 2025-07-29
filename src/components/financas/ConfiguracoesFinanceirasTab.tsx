@@ -125,7 +125,7 @@ export default function ConfiguracoesFinanceirasTab({
   }, {} as Record<GrupoPrincipal, ItemFinanceiro[]>);
   return <div className="space-y-6">
       <Tabs defaultValue="itens" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 bg-lunar-accent">
+        <TabsList className="grid w-1/2 grid-cols-2 bg-lunar-accent">
           <TabsTrigger value="itens">Itens Financeiros</TabsTrigger>
           <TabsTrigger value="cartoes">Cartões de Crédito</TabsTrigger>
         </TabsList>
