@@ -101,8 +101,14 @@ export default function ModalNovoLancamentoRefatorado({
   };
 
   return (
-    <Dialog open={aberto} onOpenChange={onFechar}>
-      <DialogContent className="sm:max-w-md">
+    <Dialog open={aberto} onOpenChange={(open) => !open && onFechar()}>
+      <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => {
+        // Permitir cliques em elementos do Select sem fechar o modal
+        const target = e.target as Element;
+        if (target.closest('[data-radix-select-content]') || target.closest('[data-radix-popper-content-wrapper]')) {
+          e.preventDefault();
+        }
+      }}>
         <DialogHeader>
           <DialogTitle>{textos.titulo}</DialogTitle>
         </DialogHeader>

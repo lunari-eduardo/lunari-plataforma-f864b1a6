@@ -82,21 +82,23 @@ export default function OpcoesLancamento({
           {/* Seletor de cartão */}
           <div className="space-y-2">
             <Label className={labelClassName}>Selecionar Cartão</Label>
-            <Select 
-              value={opcoes.cartaoCreditoId} 
-              onValueChange={(value) => handleOpcoesChange({ cartaoCreditoId: value })}
-            >
-              <SelectTrigger className={inputClassName}>
-                <SelectValue placeholder="Selecione um cartão..." />
-              </SelectTrigger>
-              <SelectContent>
-                {cartoesFiltrados.map(cartao => (
-                  <SelectItem key={cartao.id} value={cartao.id}>
-                    {cartao.nome} (Venc: {cartao.diaVencimento})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div onClick={(e) => e.stopPropagation()}>
+              <Select 
+                value={opcoes.cartaoCreditoId} 
+                onValueChange={(value) => handleOpcoesChange({ cartaoCreditoId: value })}
+              >
+                <SelectTrigger className={inputClassName}>
+                  <SelectValue placeholder="Selecione um cartão..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {cartoesFiltrados.map(cartao => (
+                    <SelectItem key={cartao.id} value={cartao.id}>
+                      {cartao.nome} (Venc: {cartao.diaVencimento})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             {cartoesFiltrados.length === 0 && (
               <p className="text-xs text-red-600">
                 Nenhum cartão configurado. Vá em Configurações para adicionar.
