@@ -831,13 +831,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         newWorkflowItem.valorTotalProduto = primeiroProduto.valorUnitario * primeiroProduto.quantidade;
       }
 
-      // NOVA LÓGICA: Total = Valor do pacote + produtos manuais (produtos inclusos não somam)
+      // NOVA LÓGICA: Priorizar valorFinal ajustado manualmente, senão calcular
       const valorProdutosManuaisOrc = todosProdutosDoOrcamento
         ?.filter(p => p.tipo === 'manual')
         ?.reduce((total, p) => total + (p.valorUnitario * p.quantidade), 0) || 0;
       
-      newWorkflowItem.total = newWorkflowItem.valorPacote + newWorkflowItem.valorTotalFotoExtra + 
-                             valorProdutosManuaisOrc + newWorkflowItem.valorAdicional - newWorkflowItem.desconto;
+      // Usar valorFinal se foi ajustado manualmente, senão calcular
+      const valorCalculado = newWorkflowItem.valorPacote + newWorkflowItem.valorTotalFotoExtra + 
+                            valorProdutosManuaisOrc + newWorkflowItem.valorAdicional - newWorkflowItem.desconto;
+      
+      newWorkflowItem.total = orc.valorFinal || valorCalculado;
       newWorkflowItem.restante = newWorkflowItem.total - newWorkflowItem.valorPago;
 
       newItems.push(newWorkflowItem);
