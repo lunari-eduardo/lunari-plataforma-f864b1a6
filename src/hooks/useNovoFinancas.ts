@@ -10,6 +10,7 @@ import {
   CreateBlueprintInput,
   BLUEPRINT_STORAGE_KEYS 
 } from '@/services/RecurringBlueprintEngine';
+import { FinancialEngine, CreateTransactionInput } from '@/services/FinancialEngine';
 
 // ============= NOVA ARQUITETURA DE BLUEPRINTS =============
 
@@ -134,79 +135,74 @@ export function useNovoFinancas() {
     return createRecurringTransactionsEngine(input);
   };
   
-  const createTransactionEngine = (input: any) => {
+  const createTransactionEngine = (input: CreateTransactionInput) => {
     console.log('createTransactionEngine chamado com dados:', input);
     
     try {
-      // Verificar se input é do tipo CreateTransactionInput
-      const isCreateTransactionInput = input.valorTotal !== undefined && input.dataPrimeiraOcorrencia !== undefined;
+      const { valorTotal, dataPrimeiraOcorrencia, itemId, isRecorrente, isParcelado, numeroDeParcelas, observacoes, isValorFixo, cartaoCreditoId } = input;
       
-      if (isCreateTransactionInput) {
-        // Processar CreateTransactionInput
-        const { valorTotal, dataPrimeiraOcorrencia, itemId, isRecorrente, isParcelado, numeroDeParcelas, observacoes, isValorFixo } = input;
-        
-        console.log('Processando CreateTransactionInput:', {
-          valorTotal,
-          dataPrimeiraOcorrencia,
-          itemId,
-          isRecorrente,
-          isParcelado,
-          numeroDeParcelas,
-          observacoes,
-          isValorFixo
-        });
-        
-        // 1. TRANSAÇÕES RECORRENTES (NOVA ABORDAGEM)
-        if (isRecorrente) {
-          console.log('Criando transações recorrentes anuais');
-          return createRecurringTransactionsEngine({
-            itemId,
-            valor: valorTotal,
-            isValorFixo: isValorFixo ?? true,
-            dataPrimeiraOcorrencia,
-            observacoes
-          });
-        }
-        
-        // 2. TRANSAÇÕES PARCELADAS (CARTÃO DE CRÉDITO) - REMOVIDO - AGORA USA FINANCIALENGINE
-        if (isParcelado && numeroDeParcelas && numeroDeParcelas > 1) {
-          console.log('Operação de parcelamento deve usar FinancialEngine');
-          throw new Error('Use FinancialEngine.createTransactions para parcelamentos');
-        }
-        
-        // 3. TRANSAÇÃO ÚNICA
-        console.log('Criando transação única');
-        const novaTransacao: NovaTransacao = {
-          id: `single_${Date.now()}`,
+      console.log('Processando CreateTransactionInput:', {
+        valorTotal,
+        dataPrimeiraOcorrencia,
+        itemId,
+        isRecorrente,
+        isParcelado,
+        numeroDeParcelas,
+        observacoes,
+        isValorFixo,
+        cartaoCreditoId
+      });
+      
+      // 1. TRANSAÇÕES RECORRENTES (NOVA ABORDAGEM)
+      if (isRecorrente) {
+        console.log('Criando transações recorrentes anuais');
+        return createRecurringTransactionsEngine({
           itemId,
           valor: valorTotal,
-          dataVencimento: dataPrimeiraOcorrencia,
-          status: dataPrimeiraOcorrencia <= getCurrentDateString() ? 'Faturado' : 'Agendado',
-          observacoes,
+          isValorFixo: isValorFixo ?? true,
+          dataPrimeiraOcorrencia,
+          observacoes
+        });
+      }
+      
+      // 2. TRANSAÇÕES PARCELADAS (CARTÃO DE CRÉDITO) - USAR FINANCIALENGINE
+      if (isParcelado && numeroDeParcelas && numeroDeParcelas > 1 && cartaoCreditoId) {
+        console.log('Criando transações parceladas no cartão de crédito');
+        
+        const resultado = FinancialEngine.createTransactions(input);
+        
+        // Converter transações do FinancialEngine para formato do Blueprint
+        const transacoesConvertidas: NovaTransacao[] = resultado.transactions.map(transacao => ({
+          id: transacao.id,
+          itemId: transacao.itemId,
+          valor: transacao.valor,
+          dataVencimento: transacao.dataVencimento,
+          status: transacao.status as StatusTransacao,
+          observacoes: transacao.observacoes,
           userId: 'user1',
           criadoEm: getCurrentDateString()
-        };
+        }));
         
-        setTransacoes(prev => [...prev, novaTransacao]);
-        console.log('Transação única criada com sucesso:', novaTransacao);
+        setTransacoes(prev => [...prev, ...transacoesConvertidas]);
+        console.log(`${transacoesConvertidas.length} transações parceladas criadas com sucesso`);
         return;
       }
       
-      // Fallback para formato antigo (compatibilidade)
-      console.log('Processando formato antigo de dados');
+      // 3. TRANSAÇÃO ÚNICA
+      console.log('Criando transação única');
       const novaTransacao: NovaTransacao = {
         id: `single_${Date.now()}`,
-        itemId: input.item_id || input.itemId,
-        valor: input.valor || input.valorTotal,
-        dataVencimento: input.data_vencimento || input.dataPrimeiraOcorrencia,
-        status: (input.data_vencimento || input.dataPrimeiraOcorrencia) <= getCurrentDateString() ? 'Faturado' : 'Agendado',
-        observacoes: input.observacoes,
+        itemId,
+        valor: valorTotal,
+        dataVencimento: dataPrimeiraOcorrencia,
+        status: dataPrimeiraOcorrencia <= getCurrentDateString() ? 'Faturado' : 'Agendado',
+        observacoes,
         userId: 'user1',
         criadoEm: getCurrentDateString()
       };
       
       setTransacoes(prev => [...prev, novaTransacao]);
-      console.log('Transação (formato antigo) criada com sucesso:', novaTransacao);
+      console.log('Transação única criada com sucesso:', novaTransacao);
       
     } catch (error) {
       console.error('Erro ao criar transação:', error);
