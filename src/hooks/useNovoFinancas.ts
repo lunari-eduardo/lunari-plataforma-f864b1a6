@@ -168,42 +168,10 @@ export function useNovoFinancas() {
           });
         }
         
-        // 2. TRANSAÇÕES PARCELADAS (CARTÃO DE CRÉDITO)
+        // 2. TRANSAÇÕES PARCELADAS (CARTÃO DE CRÉDITO) - REMOVIDO - AGORA USA FINANCIALENGINE
         if (isParcelado && numeroDeParcelas && numeroDeParcelas > 1) {
-          const cartaoId = input.cartaoCreditoId;
-          if (cartaoId) {
-            const cartao = cartoes.find(c => c.id === cartaoId);
-            if (cartao) {
-              console.log(`Criando ${numeroDeParcelas} parcelas no cartão ${cartao.nome}`);
-              const transacoesParcelas: NovaTransacao[] = [];
-              const valorParcela = valorTotal / numeroDeParcelas;
-              
-              for (let i = 0; i < numeroDeParcelas; i++) {
-                const dataCompra = new Date(dataPrimeiraOcorrencia);
-                const dataVencimento = new Date(dataCompra);
-                dataVencimento.setMonth(dataVencimento.getMonth() + i);
-                dataVencimento.setDate(cartao.diaVencimento);
-                
-                const transacaoParcela: NovaTransacao = {
-                  id: `credit_${Date.now()}_${i + 1}`,
-                  itemId,
-                  valor: valorParcela,
-                  dataVencimento: dataVencimento.toISOString().split('T')[0],
-                  status: dataVencimento.toISOString().split('T')[0] <= getCurrentDateString() ? 'Faturado' : 'Agendado',
-                  observacoes: `${observacoes || ''} ${cartao.nome} ${i + 1}/${numeroDeParcelas}`.trim(),
-                  parcelaInfo: { atual: i + 1, total: numeroDeParcelas },
-                  userId: 'user1',
-                  criadoEm: getCurrentDateString()
-                };
-                
-                transacoesParcelas.push(transacaoParcela);
-              }
-              
-              setTransacoes(prev => [...prev, ...transacoesParcelas]);
-              console.log(`${numeroDeParcelas} parcelas criadas no cartão ${cartao.nome}`);
-              return;
-            }
-          }
+          console.log('Operação de parcelamento deve usar FinancialEngine');
+          throw new Error('Use FinancialEngine.createTransactions para parcelamentos');
         }
         
         // 3. TRANSAÇÃO ÚNICA

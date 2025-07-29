@@ -353,35 +353,39 @@ export class FinancialEngine {
 
   /**
    * Calcular data de vencimento para cartão de crédito
+   * Implementação corrigida para cálculo preciso de parcelas
    */
   private static calculateCreditCardDueDate(dataCompra: string, cartao: CreditCard, parcelaIndex: number): string {
     const [ano, mes, dia] = dataCompra.split('-').map(Number);
-    const dataCompraObj = new Date(Date.UTC(ano, mes - 1, dia));
     
-    // Calcular o mês da fatura baseado na data de fechamento
-    let mesParaCalculo = mes + parcelaIndex;
-    let anoParaCalculo = ano;
+    // 1. Determinar em qual fatura a compra entra
+    let mesPrimeiraFatura = mes;
+    let anoPrimeiraFatura = ano;
     
-    // Ajustar ano se mês ultrapassar 12
-    while (mesParaCalculo > 12) {
-      mesParaCalculo -= 12;
-      anoParaCalculo++;
-    }
-    
-    // Se a compra foi após o fechamento, a fatura será do próximo mês
+    // Se compra após fechamento, vai para próxima fatura
     if (dia > cartao.diaFechamento) {
-      mesParaCalculo++;
-      if (mesParaCalculo > 12) {
-        mesParaCalculo = 1;
-        anoParaCalculo++;
+      mesPrimeiraFatura++;
+      if (mesPrimeiraFatura > 12) {
+        mesPrimeiraFatura = 1;
+        anoPrimeiraFatura++;
       }
     }
     
-    // Calcular último dia do mês para ajustar se necessário
-    const ultimoDiaMes = new Date(Date.UTC(anoParaCalculo, mesParaCalculo, 0)).getUTCDate();
+    // 2. Calcular mês da parcela atual (primeira parcela é índice 0)
+    let mesVencimento = mesPrimeiraFatura + parcelaIndex;
+    let anoVencimento = anoPrimeiraFatura;
+    
+    // Ajustar ano se necessário
+    while (mesVencimento > 12) {
+      mesVencimento -= 12;
+      anoVencimento++;
+    }
+    
+    // 3. Garantir dia correto sem usar UTC (que causa problemas de fuso)
+    const ultimoDiaMes = new Date(anoVencimento, mesVencimento, 0).getDate();
     const diaVencimento = Math.min(cartao.diaVencimento, ultimoDiaMes);
     
-    return `${anoParaCalculo}-${mesParaCalculo.toString().padStart(2, '0')}-${diaVencimento.toString().padStart(2, '0')}`;
+    return `${anoVencimento}-${mesVencimento.toString().padStart(2, '0')}-${diaVencimento.toString().padStart(2, '0')}`;
   }
 
   /**
