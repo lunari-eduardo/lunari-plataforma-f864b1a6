@@ -31,12 +31,9 @@ function AppIntegration() {
     return () => clearTimeout(timer);
   }, []);
   
-  return isReady ? <IntegrationRunner /> : null;
-}
-
-// Separate component to run the integration hook
-function IntegrationRunner() {
-  useIntegration();
+  // Always call the hook, but conditionally execute its logic
+  useIntegration(isReady);
+  
   return null;
 }
 
