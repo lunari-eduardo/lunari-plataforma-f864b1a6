@@ -237,12 +237,12 @@ export default function NovoOrcamento() {
       // NOVA ARQUITETURA DE DADOS
       pacotePrincipal,
       produtosAdicionais: produtosAdicionaisNovo,
-      valorFinal: valorManual || valorFinal,
+      valorFinal: valorManual !== undefined ? valorManual : valorTotal, // Garantir que valorFinal seja sempre definido
       
       // Compatibilidade com sistema antigo
       pacotes: todosItens,
-      valorTotal: valorFinal,
-      valorManual,
+      valorTotal,
+      valorManual, // Valor manual pode ser undefined
       
       status,
       origemCliente: origemSelecionada,

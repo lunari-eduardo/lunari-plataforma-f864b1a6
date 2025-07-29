@@ -163,7 +163,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const produtosConfig = storage.load('configuracoes_produtos', []);
     
     // Executar migração automática se necessário
-    return autoMigrateIfNeeded(orcamentosRaw, pacotesConfig, produtosConfig);
+    let orcamentosMigrados = autoMigrateIfNeeded(orcamentosRaw, pacotesConfig, produtosConfig);
+    
+    // MIGRAÇÃO: Garantir que todos os orçamentos tenham valorFinal definido
+    orcamentosMigrados = orcamentosMigrados.map(orc => {
+      if (typeof orc.valorFinal !== 'number' || orc.valorFinal <= 0) {
+        // Priorizar valorManual, depois valorTotal
+        const valorFinalMigrado = (typeof orc.valorManual === 'number' && orc.valorManual > 0) ? orc.valorManual :
+                                 (typeof orc.valorTotal === 'number' && orc.valorTotal > 0) ? orc.valorTotal :
+                                 1000; // Valor padrão se nada estiver disponível
+        
+        console.log('🔧 Migrando valorFinal para orçamento:', {
+          id: orc.id,
+          valorManual: orc.valorManual,
+          valorTotal: orc.valorTotal,
+          valorFinalNovo: valorFinalMigrado
+        });
+        
+        return { ...orc, valorFinal: valorFinalMigrado };
+      }
+      return orc;
+    });
+    
+    return orcamentosMigrados;
   });
   
   const [templates, setTemplates] = useState<Template[]>(() => {
@@ -401,7 +423,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // LÓGICA UNIFICADA: Sempre usar a função auxiliar
     const { produtosList, valorPacote, valorProdutosManuais } = extrairProdutosDoOrcamento(orcamento);
     
-    const valorTotal = orcamento.valorFinal || valorPacote + valorProdutosManuais;
+    // Calcular valor base dos componentes
+    const valorCalculadoComponentes = valorPacote + valorProdutosManuais;
+    
+    // Priorizar valorFinal, depois valorManual, depois valorTotal, depois calculado
+    const valorFinalValido = typeof orcamento.valorFinal === 'number' && orcamento.valorFinal > 0;
+    const valorManualValido = typeof orcamento.valorManual === 'number' && orcamento.valorManual > 0;
+    const valorTotalValido = typeof orcamento.valorTotal === 'number' && orcamento.valorTotal > 0;
+    
+    const valorTotal = valorFinalValido ? orcamento.valorFinal : 
+                      valorManualValido ? orcamento.valorManual :
+                      valorTotalValido ? orcamento.valorTotal :
+                      valorCalculadoComponentes;
+    
+    // Calcular se valor foi ajustado manualmente
+    let valorFinalAjustado = false;
+    let percentualAjusteOrcamento = 1;
+    let valorOriginalOrcamento = valorCalculadoComponentes;
+    
+    if ((valorFinalValido || valorManualValido) && valorCalculadoComponentes > 0) {
+      percentualAjusteOrcamento = valorTotal / valorCalculadoComponentes;
+      valorFinalAjustado = Math.abs(percentualAjusteOrcamento - 1) > 0.01; // Tolerância de 1%
+      
+      if (valorFinalAjustado) {
+        console.log('💰 Valor ajustado detectado no orçamento:', {
+          orcamentoId: orcamento.id,
+          valorCalculado: valorCalculadoComponentes,
+          valorFinal: valorTotal,
+          percentualAjuste: percentualAjusteOrcamento
+        });
+      }
+    }
     const nomePacote = orcamento.pacotePrincipal?.nome || 
                       orcamento.pacotes?.[0]?.nome?.replace(/^Pacote:\s*/, '') || 
                       '';
@@ -435,7 +487,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       pagamentos: [],
       fonte: 'orcamento',
       dataOriginal: parseDateFromStorage(orcamento.data),
-      produtosList: produtosList
+      produtosList: produtosList,
+      // Campos de ajuste de valor
+      valorFinalAjustado,
+      valorOriginalOrcamento,
+      percentualAjusteOrcamento
     };
 
     console.log('✅ Dados sincronizados com estrutura unificada:', sessaoWorkflow);
@@ -835,45 +891,54 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         newWorkflowItem.valorTotalProduto = primeiroProduto.valorUnitario * primeiroProduto.quantidade;
       }
 
-      // NOVA LÓGICA: Priorizar valorFinal ajustado manualmente, senão calcular
-      const valorProdutosManuaisOrc = todosProdutosDoOrcamento
-        ?.filter(p => p.tipo === 'manual')
-        ?.reduce((total, p) => total + (p.valorUnitario * p.quantidade), 0) || 0;
-      
-      // Calcular valor baseado nos componentes
-      const valorCalculado = newWorkflowItem.valorPacote + newWorkflowItem.valorTotalFotoExtra + 
-                            valorProdutosManuaisOrc + newWorkflowItem.valorAdicional - newWorkflowItem.desconto;
-      
-      // Verificar se o valor foi ajustado manualmente no orçamento
-      const valorFinalValido = typeof orc.valorFinal === 'number' && orc.valorFinal > 0;
-      
-      if (valorFinalValido && valorCalculado > 0) {
-        // Calcular percentual de ajuste se houve alteração manual
-        const percentualAjuste = orc.valorFinal / valorCalculado;
-        const foiAjustado = Math.abs(percentualAjuste - 1) > 0.01; // Tolerância de 1%
+        // NOVA LÓGICA: Priorizar valorFinal ajustado manualmente, senão calcular
+        const valorProdutosManuaisOrc = todosProdutosDoOrcamento
+          ?.filter(p => p.tipo === 'manual')
+          ?.reduce((total, p) => total + (p.valorUnitario * p.quantidade), 0) || 0;
         
-        if (foiAjustado) {
-          // Marcar como valor ajustado e armazenar informações do ajuste
-          newWorkflowItem.valorFinalAjustado = true;
-          newWorkflowItem.valorOriginalOrcamento = valorCalculado;
-          newWorkflowItem.percentualAjusteOrcamento = percentualAjuste;
-          newWorkflowItem.total = orc.valorFinal;
+        // Calcular valor baseado nos componentes
+        const valorCalculado = newWorkflowItem.valorPacote + newWorkflowItem.valorTotalFotoExtra + 
+                              valorProdutosManuaisOrc + newWorkflowItem.valorAdicional - newWorkflowItem.desconto;
+        
+        // Verificar se o valor foi ajustado manualmente no orçamento
+        const valorFinalValido = typeof orc.valorFinal === 'number' && orc.valorFinal > 0;
+        const valorManualValido = typeof orc.valorManual === 'number' && orc.valorManual > 0;
+        
+        // Priorizar valorFinal, depois valorManual, depois valorTotal
+        let valorFinalOrcamento = valorFinalValido ? orc.valorFinal : 
+                                 valorManualValido ? orc.valorManual :
+                                 (typeof orc.valorTotal === 'number' && orc.valorTotal > 0) ? orc.valorTotal :
+                                 valorCalculado;
+        
+        if ((valorFinalValido || valorManualValido) && valorCalculado > 0) {
+          // Calcular percentual de ajuste se houve alteração manual
+          const percentualAjuste = valorFinalOrcamento / valorCalculado;
+          const foiAjustado = Math.abs(percentualAjuste - 1) > 0.01; // Tolerância de 1%
           
-          console.log('🔧 Orçamento com valor ajustado:', {
-            orcamentoId: orc.id,
-            valorCalculado,
-            valorFinal: orc.valorFinal,
-            percentualAjuste,
-            valorUsado: newWorkflowItem.total
-          });
+          if (foiAjustado) {
+            // Marcar como valor ajustado e armazenar informações do ajuste
+            newWorkflowItem.valorFinalAjustado = true;
+            newWorkflowItem.valorOriginalOrcamento = valorCalculado;
+            newWorkflowItem.percentualAjusteOrcamento = percentualAjuste;
+            newWorkflowItem.total = valorFinalOrcamento;
+            
+            console.log('🔧 Orçamento com valor ajustado:', {
+              orcamentoId: orc.id,
+              valorCalculado,
+              valorFinal: orc.valorFinal,
+              valorManual: orc.valorManual,
+              valorUsado: valorFinalOrcamento,
+              percentualAjuste,
+              foiAjustado
+            });
+          } else {
+            // Valor não foi ajustado significativamente
+            newWorkflowItem.total = valorFinalOrcamento;
+          }
         } else {
-          // Valor não foi ajustado significativamente
-          newWorkflowItem.total = valorCalculado;
+          // Usar valor final do orçamento ou calculado se não há valor final válido
+          newWorkflowItem.total = valorFinalOrcamento;
         }
-      } else {
-        // Usar valor calculado se não há valor final válido
-        newWorkflowItem.total = valorCalculado;
-      }
       newWorkflowItem.restante = newWorkflowItem.total - newWorkflowItem.valorPago;
 
       newItems.push(newWorkflowItem);
@@ -912,6 +977,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       criadoEm: getCurrentDateString(),
     };
     setOrcamentos(prev => [...prev, novoOrcamento]);
+    
+    // SINCRONIZAÇÃO AUTOMÁTICA: Se orçamento é criado como fechado, sincronizar imediatamente
+    if (novoOrcamento.status === 'fechado') {
+      setTimeout(() => {
+        sincronizarComWorkflow(novoOrcamento);
+      }, 100);
+    }
+    
     return novoOrcamento;
   };
 
@@ -1003,7 +1076,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             console.log('DEBUG: Agendamento criado:', novoAgendamento);
             
             // NOVA: Sincronizar diretamente com workflow usando dados do orçamento
-            sincronizarComWorkflow(orcamentoAtualizado);
+            setTimeout(() => {
+              sincronizarComWorkflow(orcamentoAtualizado);
+            }, 100);
             
             return [...prevAppointments, novoAgendamento];
           } else if (agendamentoAssociado && statusAtual === 'fechado') {

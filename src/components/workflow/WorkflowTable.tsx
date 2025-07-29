@@ -170,6 +170,20 @@ export function WorkflowTable({
   sortDirection,
   onSort
 }: WorkflowTableProps) {
+  
+  // Debug: Verificar se dados de ajuste estão chegando
+  useEffect(() => {
+    const sessionsWithAdjustment = sessions.filter(s => s.valorFinalAjustado);
+    if (sessionsWithAdjustment.length > 0) {
+      console.log('📊 Sessions com valor ajustado:', sessionsWithAdjustment.map(s => ({
+        id: s.id,
+        nome: s.nome,
+        valorFinalAjustado: s.valorFinalAjustado,
+        valorOriginalOrcamento: s.valorOriginalOrcamento,
+        percentualAjusteOrcamento: s.percentualAjusteOrcamento
+      })));
+    }
+  }, [sessions]);
   const [paymentInputs, setPaymentInputs] = useState<Record<string, string>>({});
   const [editingValues, setEditingValues] = useState<Record<string, string>>({});
   const [modalAberto, setModalAberto] = useState(false);
@@ -285,7 +299,7 @@ export function WorkflowTable({
   const calculateTotal = useCallback((session: SessionData) => {
     try {
       // NOVA LÓGICA: Se o valor foi ajustado no orçamento, aplicar o percentual de ajuste
-      if (session.valorFinalAjustado && session.percentualAjusteOrcamento) {
+      if (session.valorFinalAjustado && session.percentualAjusteOrcamento && session.percentualAjusteOrcamento !== 1) {
         // Recalcular valor baseado nos componentes atuais
         const valorPacoteStr = typeof session.valorPacote === 'string' ? session.valorPacote : String(session.valorPacote || '0');
         const valorPacote = parseFloat(valorPacoteStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
@@ -313,7 +327,7 @@ export function WorkflowTable({
         // Aplicar o percentual de ajuste do orçamento original
         const totalAjustado = totalComponentes * session.percentualAjusteOrcamento;
         
-        console.log('💰 Total ajustado para', session.nome, ':', {
+        console.log('💰 Total ajustado aplicado para', session.nome, ':', {
           valorPacote,
           valorFotoExtra,
           valorProdutosManuais,
@@ -321,7 +335,8 @@ export function WorkflowTable({
           desconto,
           totalComponentes,
           percentualAjuste: session.percentualAjusteOrcamento,
-          totalFinal: totalAjustado
+          totalFinal: totalAjustado,
+          valorOriginal: session.valorOriginalOrcamento
         });
 
         return totalAjustado;
@@ -351,7 +366,7 @@ export function WorkflowTable({
 
       const totalCalculado = valorPacote + valorFotoExtra + valorProdutosManuais + valorAdicional - desconto;
       
-      console.log('💰 Total calculado para', session.nome, ':', {
+      console.log('💰 Total padrão calculado para', session.nome, ':', {
         valorPacote,
         valorFotoExtra,
         valorProdutosManuais,

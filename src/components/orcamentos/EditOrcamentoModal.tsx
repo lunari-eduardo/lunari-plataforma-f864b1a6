@@ -307,7 +307,7 @@ export default function EditOrcamentoModal({
         tipo: 'manual' as const
       }));
       
-      updates.valorFinal = formData.valorManual || valorTotal;
+      updates.valorFinal = formData.valorManual !== undefined ? formData.valorManual : valorTotal;
     }
     atualizarOrcamento(orcamento.id, updates);
     toast({
