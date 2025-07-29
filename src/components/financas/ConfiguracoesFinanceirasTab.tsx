@@ -162,7 +162,7 @@ export default function ConfiguracoesFinanceirasTab({
                   </div>
                   
                   <div className="flex items-end">
-                    <Button onClick={handleAdicionarItem} className="w-full">
+                    <Button onClick={handleAdicionarItem} className="w-1/2">
                       <Plus className="h-4 w-4 mr-2" />
                       Adicionar
                     </Button>
