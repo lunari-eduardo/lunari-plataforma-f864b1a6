@@ -49,10 +49,10 @@ export function testCreditCardCalculation() {
       console.log(`   Parcela ${index + 1}: ${transacao.dataVencimento} - R$ ${transacao.valor.toFixed(2)}`);
     });
     
-    // Verificações específicas
+    // Verificações específicas para compra 29/07 (após fechamento 28/07)
     const primeiraParcela = resultado.transactions[0];
     console.log(`🔍 Primeira parcela: ${primeiraParcela.dataVencimento}`);
-    console.log(`   Esperado: 2025-09-05 (setembro)`);
+    console.log(`   Esperado: 2025-09-05 (setembro - fatura de agosto)`);
     console.log(`   Correto: ${primeiraParcela.dataVencimento === '2025-09-05' ? '✅' : '❌'}`);
     
     const segundaParcela = resultado.transactions[1];

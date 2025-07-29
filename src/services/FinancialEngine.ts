@@ -358,30 +358,38 @@ export class FinancialEngine {
   private static calculateCreditCardDueDate(dataCompra: string, cartao: CreditCard, parcelaIndex: number): string {
     const [ano, mes, dia] = dataCompra.split('-').map(Number);
     
-    // 1. Determinar em qual fatura a compra entra
-    let mesPrimeiraFatura = mes;
-    let anoPrimeiraFatura = ano;
+    // 1. Determinar o período da fatura (qual fatura a compra pertence)
+    let mesPeriodoFatura = mes;
+    let anoPeriodoFatura = ano;
     
-    // Se compra após fechamento, vai para próxima fatura
+    // Se compra após fechamento, vai para período da próxima fatura
     if (dia > cartao.diaFechamento) {
-      mesPrimeiraFatura++;
-      if (mesPrimeiraFatura > 12) {
-        mesPrimeiraFatura = 1;
-        anoPrimeiraFatura++;
+      mesPeriodoFatura++;
+      if (mesPeriodoFatura > 12) {
+        mesPeriodoFatura = 1;
+        anoPeriodoFatura++;
       }
     }
     
-    // 2. Calcular mês da parcela atual (primeira parcela é índice 0)
-    let mesVencimento = mesPrimeiraFatura + parcelaIndex;
-    let anoVencimento = anoPrimeiraFatura;
+    // 2. CORREÇÃO: Fatura sempre vence NO MÊS SEGUINTE ao período
+    let mesVencimentoPrimeiraFatura = mesPeriodoFatura + 1;
+    let anoVencimentoPrimeiraFatura = anoPeriodoFatura;
     
-    // Ajustar ano se necessário
+    if (mesVencimentoPrimeiraFatura > 12) {
+      mesVencimentoPrimeiraFatura = 1;
+      anoVencimentoPrimeiraFatura++;
+    }
+    
+    // 3. Calcular vencimento da parcela atual
+    let mesVencimento = mesVencimentoPrimeiraFatura + parcelaIndex;
+    let anoVencimento = anoVencimentoPrimeiraFatura;
+    
     while (mesVencimento > 12) {
       mesVencimento -= 12;
       anoVencimento++;
     }
     
-    // 3. Garantir dia correto sem usar UTC (que causa problemas de fuso)
+    // 4. Dia de vencimento
     const ultimoDiaMes = new Date(anoVencimento, mesVencimento, 0).getDate();
     const diaVencimento = Math.min(cartao.diaVencimento, ultimoDiaMes);
     
