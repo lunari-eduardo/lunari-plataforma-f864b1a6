@@ -27,7 +27,15 @@ export default function OpcoesLancamento({
   const { cartoes } = useAppContext();
 
   const handleOpcoesChange = (novasOpcoes: Partial<OpcoesLancamentoState>) => {
-    onOpcoesChange({ ...opcoes, ...novasOpcoes });
+    // Implementar exclusão mútua: cartão de crédito desabilita despesa recorrente
+    const opcoesAtualizadas = { ...opcoes, ...novasOpcoes };
+    
+    // Se cartão de crédito for marcado, desmarcar despesa recorrente
+    if (novasOpcoes.cartaoCredito === true) {
+      opcoesAtualizadas.despesaRecorrente = false;
+    }
+    
+    onOpcoesChange(opcoesAtualizadas);
   };
 
   const cartoesFiltrados = cartoes.filter(c => c.ativo);
@@ -48,11 +56,15 @@ export default function OpcoesLancamento({
         <Checkbox
           id="despesaRecorrente"
           checked={opcoes.despesaRecorrente}
+          disabled={opcoes.cartaoCredito}
           onCheckedChange={(checked) => handleOpcoesChange({ 
             despesaRecorrente: checked as boolean
           })}
         />
-        <Label htmlFor="despesaRecorrente" className={labelClassName}>
+        <Label 
+          htmlFor="despesaRecorrente" 
+          className={`${labelClassName} ${opcoes.cartaoCredito ? 'text-gray-400 cursor-not-allowed' : ''}`}
+        >
           {textos.recorrente}
         </Label>
       </div>
@@ -82,15 +94,15 @@ export default function OpcoesLancamento({
           {/* Seletor de cartão */}
           <div className="space-y-2">
             <Label className={labelClassName}>Selecionar Cartão</Label>
-            <div onClick={(e) => e.stopPropagation()}>
+            <div onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
               <Select 
                 value={opcoes.cartaoCreditoId} 
                 onValueChange={(value) => handleOpcoesChange({ cartaoCreditoId: value })}
               >
-                <SelectTrigger className={inputClassName}>
+                <SelectTrigger className={inputClassName} onClick={(e) => e.stopPropagation()}>
                   <SelectValue placeholder="Selecione um cartão..." />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent onClick={(e) => e.stopPropagation()}>
                   {cartoesFiltrados.map(cartao => (
                     <SelectItem key={cartao.id} value={cartao.id}>
                       {cartao.nome} (Venc: {cartao.diaVencimento})

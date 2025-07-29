@@ -30,7 +30,10 @@ const PopoverContent = React.forwardRef<
           target.closest('[cmdk-item]') ||
           target.closest('[data-radix-popover-content]') ||
           target.getAttribute('cmdk-item') !== null ||
-          target.closest('[role="option"]')
+          target.closest('[role="option"]') ||
+          target.closest('[data-radix-select-content]') ||
+          target.closest('[data-radix-select-trigger]') ||
+          target.closest('[data-radix-select-item]')
         ) {
           event.preventDefault();
           return;
