@@ -55,6 +55,10 @@ interface SessionData {
   desconto: number;
   pagamentos?: SessionPayment[];
   produtosList?: ProdutoWorkflow[];
+  // Novos campos para orçamentos ajustados
+  valorFinalAjustado?: boolean;
+  valorOriginalOrcamento?: number;
+  percentualAjusteOrcamento?: number;
 }
 interface CategoryOption {
   id: string;

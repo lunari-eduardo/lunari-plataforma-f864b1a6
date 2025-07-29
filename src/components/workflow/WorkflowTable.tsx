@@ -41,6 +41,10 @@ interface SessionData {
   valorPago: string;
   restante: string;
   desconto: number;
+  // Novos campos para orçamentos ajustados
+  valorFinalAjustado?: boolean;
+  valorOriginalOrcamento?: number;
+  percentualAjusteOrcamento?: number;
 }
 interface WorkflowTableProps {
   sessions: SessionData[];
@@ -279,10 +283,51 @@ export function WorkflowTable({
     };
   }, [stopContinuousScroll]);
   const calculateTotal = useCallback((session: SessionData) => {
-    // Usar Motor de Cálculo Centralizado com nova lógica
-    
     try {
-      // NOVA LÓGICA DE CÁLCULO: Produtos inclusos = R$ 0 no total
+      // NOVA LÓGICA: Se o valor foi ajustado no orçamento, aplicar o percentual de ajuste
+      if (session.valorFinalAjustado && session.percentualAjusteOrcamento) {
+        // Recalcular valor baseado nos componentes atuais
+        const valorPacoteStr = typeof session.valorPacote === 'string' ? session.valorPacote : String(session.valorPacote || '0');
+        const valorPacote = parseFloat(valorPacoteStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+        
+        const valorFotoExtraStr = typeof session.valorTotalFotoExtra === 'string' ? session.valorTotalFotoExtra : String(session.valorTotalFotoExtra || '0');
+        const valorFotoExtra = parseFloat(valorFotoExtraStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+        
+        const valorAdicionalStr = typeof session.valorAdicional === 'string' ? session.valorAdicional : String(session.valorAdicional || '0');
+        const valorAdicional = parseFloat(valorAdicionalStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+        
+        const desconto = session.desconto || 0;
+
+        let valorProdutosManuais = 0;
+        if (session.produtosList && session.produtosList.length > 0) {
+          const produtosManuais = session.produtosList.filter(p => p.tipo === 'manual');
+          valorProdutosManuais = produtosManuais.reduce((total, p) => total + (p.valorUnitario * p.quantidade), 0);
+        } else if (session.valorTotalProduto) {
+          const valorProdutoStr = typeof session.valorTotalProduto === 'string' ? session.valorTotalProduto : String(session.valorTotalProduto || '0');
+          valorProdutosManuais = parseFloat(valorProdutoStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+        }
+
+        // Calcular total atual baseado nos componentes
+        const totalComponentes = valorPacote + valorFotoExtra + valorProdutosManuais + valorAdicional - desconto;
+        
+        // Aplicar o percentual de ajuste do orçamento original
+        const totalAjustado = totalComponentes * session.percentualAjusteOrcamento;
+        
+        console.log('💰 Total ajustado para', session.nome, ':', {
+          valorPacote,
+          valorFotoExtra,
+          valorProdutosManuais,
+          valorAdicional,
+          desconto,
+          totalComponentes,
+          percentualAjuste: session.percentualAjusteOrcamento,
+          totalFinal: totalAjustado
+        });
+
+        return totalAjustado;
+      }
+
+      // LÓGICA PADRÃO: Calcular baseado nos componentes
       const valorPacoteStr = typeof session.valorPacote === 'string' ? session.valorPacote : String(session.valorPacote || '0');
       const valorPacote = parseFloat(valorPacoteStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
       
@@ -294,20 +339,12 @@ export function WorkflowTable({
       
       const desconto = session.desconto || 0;
 
-      // CORREÇÃO PRINCIPAL: Apenas produtos manuais somam ao total
+      // Apenas produtos manuais somam ao total
       let valorProdutosManuais = 0;
       if (session.produtosList && session.produtosList.length > 0) {
         const produtosManuais = session.produtosList.filter(p => p.tipo === 'manual');
         valorProdutosManuais = produtosManuais.reduce((total, p) => total + (p.valorUnitario * p.quantidade), 0);
-        
-        console.log('🔍 Cálculo de produtos:', {
-          sessionId: session.id,
-          todosProdutos: session.produtosList,
-          produtosManuais,
-          valorCalculado: valorProdutosManuais
-        });
       } else if (session.valorTotalProduto) {
-        // Fallback para dados antigos (somente se não houver produtosList)
         const valorProdutoStr = typeof session.valorTotalProduto === 'string' ? session.valorTotalProduto : String(session.valorTotalProduto || '0');
         valorProdutosManuais = parseFloat(valorProdutoStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
       }

@@ -46,6 +46,10 @@ export interface WorkflowItem {
   pagamentos: Array<{id: string; valor: number; data: string}>;
   fonte: 'agenda' | 'orcamento';
   dataOriginal: Date;
+  // Novos campos para orçamentos ajustados
+  valorFinalAjustado?: boolean;
+  valorOriginalOrcamento?: number;
+  percentualAjusteOrcamento?: number;
 }
 
 interface WorkflowFilters {
@@ -840,20 +844,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const valorCalculado = newWorkflowItem.valorPacote + newWorkflowItem.valorTotalFotoExtra + 
                             valorProdutosManuaisOrc + newWorkflowItem.valorAdicional - newWorkflowItem.desconto;
       
-      // Debug logging para investigar o problema
-      console.log('🔍 Debug Workflow Value:', {
-        orcamentoId: orc.id,
-        valorFinal: orc.valorFinal,
-        tipoValorFinal: typeof orc.valorFinal,
-        valorCalculado,
-        valorFinalValido: typeof orc.valorFinal === 'number' && orc.valorFinal > 0
-      });
-      
-      // Usar valorFinal se foi ajustado manualmente e é válido, senão calcular
+      // Verificar se o valor foi ajustado manualmente no orçamento
       const valorFinalValido = typeof orc.valorFinal === 'number' && orc.valorFinal > 0;
-      newWorkflowItem.total = valorFinalValido ? orc.valorFinal : valorCalculado;
       
-      console.log('✅ Valor usado no workflow:', newWorkflowItem.total);
+      if (valorFinalValido && valorCalculado > 0) {
+        // Calcular percentual de ajuste se houve alteração manual
+        const percentualAjuste = orc.valorFinal / valorCalculado;
+        const foiAjustado = Math.abs(percentualAjuste - 1) > 0.01; // Tolerância de 1%
+        
+        if (foiAjustado) {
+          // Marcar como valor ajustado e armazenar informações do ajuste
+          newWorkflowItem.valorFinalAjustado = true;
+          newWorkflowItem.valorOriginalOrcamento = valorCalculado;
+          newWorkflowItem.percentualAjusteOrcamento = percentualAjuste;
+          newWorkflowItem.total = orc.valorFinal;
+          
+          console.log('🔧 Orçamento com valor ajustado:', {
+            orcamentoId: orc.id,
+            valorCalculado,
+            valorFinal: orc.valorFinal,
+            percentualAjuste,
+            valorUsado: newWorkflowItem.total
+          });
+        } else {
+          // Valor não foi ajustado significativamente
+          newWorkflowItem.total = valorCalculado;
+        }
+      } else {
+        // Usar valor calculado se não há valor final válido
+        newWorkflowItem.total = valorCalculado;
+      }
       newWorkflowItem.restante = newWorkflowItem.total - newWorkflowItem.valorPago;
 
       newItems.push(newWorkflowItem);
