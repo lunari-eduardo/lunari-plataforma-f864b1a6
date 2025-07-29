@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { FinancialEngine } from '@/services/FinancialEngine';
 import { getCurrentDateString } from '@/utils/dateUtils';
@@ -306,6 +306,28 @@ export function useDashboardFinanceiro() {
       lucroAtual: kpisData.totalLucro
     };
   }, [kpisData]);
+
+  // ============= DEBUG TEMPORÁRIO =============
+  
+  useEffect(() => {
+    console.log('🔍 Dashboard Debug:', {
+      workflowItems: workflowItems.length,
+      transacoesFinanceiras: transacoesFinanceiras.length,
+      anoSelecionado,
+      anosDisponiveis,
+      workflowItemsFiltrados: workflowItemsFiltrados.length,
+      transacoesFiltradas: transacoesFiltradas.length,
+      kpisData
+    });
+    
+    if (workflowItems.length > 0) {
+      console.log('📊 Exemplo workflowItem:', workflowItems[0]);
+    }
+    
+    if (transacoesFinanceiras.length > 0) {
+      console.log('💰 Exemplo transação:', transacoesFinanceiras[0]);
+    }
+  }, [workflowItems, transacoesFinanceiras, anoSelecionado, anosDisponiveis, workflowItemsFiltrados, transacoesFiltradas, kpisData]);
 
   // ============= RETORNO DO HOOK =============
   

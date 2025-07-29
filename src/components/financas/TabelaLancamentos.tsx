@@ -180,6 +180,23 @@ export default function TabelaLancamentos({
     }
   };
   const itensDisponiveis = obterItensPorGrupo(grupoAtivo);
+
+  // Função para obter cor dinâmica baseada no grupo
+  const getCorPorGrupo = (grupo: GrupoPrincipal) => {
+    switch (grupo) {
+      case 'Despesa Fixa':
+        return 'bg-red-50 border-red-200';
+      case 'Despesa Variável':
+        return 'bg-orange-50 border-orange-200';
+      case 'Investimento':
+        return 'bg-purple-50 border-purple-200';
+      case 'Receita Não Operacional':
+        return 'bg-green-50 border-green-200';
+      default:
+        return 'bg-blue-50 border-blue-200';
+    }
+  };
+
   return <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
       <div className="overflow-x-auto">
         <table className="w-full">
@@ -210,7 +227,7 @@ export default function TabelaLancamentos({
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {/* Linha para nova transação */}
-            <tr className="bg-blue-50 border-b border-blue-200">
+            <tr className={`${getCorPorGrupo(grupoAtivo)} border-b`}>
               <td className="px-4 py-3">
                 <Input type="date" value={novaTransacao.data_vencimento} onChange={e => setNovaTransacao({
                 ...novaTransacao,
