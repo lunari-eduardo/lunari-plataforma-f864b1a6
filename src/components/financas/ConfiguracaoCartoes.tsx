@@ -54,13 +54,13 @@ export default function ConfiguracaoCartoes({}: ConfiguracaoCartoesProps) {
   return <div className="space-y-6">
       <div className="flex items-center gap-2">
         <CreditCard className="h-5 w-5 text-green-600 " />
-        <h2 className="text-xl font-semibold text-gray-900">Cartões de Crédito</h2>
+        <h2 className="font-semibold text-gray-900 text-base">Cartões de Crédito</h2>
       </div>
 
       {/* Formulário para adicionar novo cartão */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Adicionar Novo Cartão</CardTitle>
+          <CardTitle className="text-sm">Adicionar Novo Cartão</CardTitle>
           <CardDescription>
             Configure os dados do cartão para cálculo automático de vencimentos
           </CardDescription>
@@ -72,14 +72,14 @@ export default function ConfiguracaoCartoes({}: ConfiguracaoCartoesProps) {
               <Input id="nomeCartao" placeholder="Ex: Nubank, Itaú, etc." value={novoCartao.nome} onChange={e => setNovoCartao({
               ...novoCartao,
               nome: e.target.value
-            })} />
+            })} className="bg-neutral-50" />
             </div>
             <div>
               <Label htmlFor="diaVencimento">Dia de Vencimento</Label>
               <Input id="diaVencimento" type="number" min="1" max="31" placeholder="Ex: 15" value={novoCartao.diaVencimento} onChange={e => setNovoCartao({
               ...novoCartao,
               diaVencimento: e.target.value
-            })} />
+            })} className="bg-neutral-50" />
               <p className="text-xs text-gray-500 mt-1">
                 Dia do mês que a fatura vence
               </p>
@@ -89,7 +89,7 @@ export default function ConfiguracaoCartoes({}: ConfiguracaoCartoesProps) {
               <Input id="diaFechamento" type="number" min="1" max="31" placeholder="Ex: 10" value={novoCartao.diaFechamento} onChange={e => setNovoCartao({
               ...novoCartao,
               diaFechamento: e.target.value
-            })} />
+            })} className="bg-neutral-50" />
               <p className="text-xs text-gray-500 mt-1">
                 Dia do mês que a fatura fecha
               </p>
@@ -106,7 +106,7 @@ export default function ConfiguracaoCartoes({}: ConfiguracaoCartoesProps) {
 
       {/* Lista de cartões existentes */}
       <div className="space-y-4">
-        <h3 className="text-lg font-medium text-gray-900">Cartões Configurados</h3>
+        <h3 className="font-medium text-gray-900 text-base">Cartões Configurados</h3>
         
         {cartoes.length === 0 ? <Card>
             <CardContent className="py-8 text-center">
