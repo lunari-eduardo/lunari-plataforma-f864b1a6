@@ -125,7 +125,7 @@ export default function ConfiguracoesFinanceirasTab({
   }, {} as Record<GrupoPrincipal, ItemFinanceiro[]>);
   return <div className="space-y-6">
       <Tabs defaultValue="itens" className="w-full">
-        <TabsList className="grid w-1/2 grid-cols-2 bg-lunar-accent">
+        <TabsList className="grid w-full grid-cols-2 bg-lunar-accent">
           <TabsTrigger value="itens" className="text-xs text-stone-900 font-bold">Itens Financeiros</TabsTrigger>
           <TabsTrigger value="cartoes" className="text-xs font-bold text-neutral-900">Cartões de Crédito</TabsTrigger>
         </TabsList>
@@ -187,12 +187,7 @@ export default function ConfiguracoesFinanceirasTab({
                       </p> : <div className="space-y-3">
                         {itensPorGrupo[grupo].map(item => <div key={item.id} className="flex items-center justify-between p-3 bg-lunar-surface/50 border border-lunar-border/30 rounded-lg hover:bg-lunar-surface/80 transition-colors">
                             {itemEditando === item.id ? <div className="flex items-center gap-2 flex-1">
-                                <Input 
-                                  value={nomeEditando} 
-                                  onChange={e => setNomeEditando(e.target.value)} 
-                                  className="flex-1 text-sm" 
-                                  onKeyPress={e => e.key === 'Enter' && handleSalvarEdicao(item.id)} 
-                                />
+                                <Input value={nomeEditando} onChange={e => setNomeEditando(e.target.value)} className="flex-1 text-sm" onKeyPress={e => e.key === 'Enter' && handleSalvarEdicao(item.id)} />
                                 <Button size="sm" onClick={() => handleSalvarEdicao(item.id)} className="h-8 w-8 p-0">
                                   <Save className="h-3.5 w-3.5" />
                                 </Button>
