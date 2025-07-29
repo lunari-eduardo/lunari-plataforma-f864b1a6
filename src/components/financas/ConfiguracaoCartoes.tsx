@@ -53,7 +53,7 @@ export default function ConfiguracaoCartoes({}: ConfiguracaoCartoesProps) {
   };
   return <div className="space-y-6">
       <div className="flex items-center gap-2">
-        <CreditCard className="h-5 w-5 text-blue-600" />
+        <CreditCard className="h-5 w-5 text-green-600 " />
         <h2 className="text-xl font-semibold text-gray-900">Cartões de Crédito</h2>
       </div>
 
@@ -119,7 +119,7 @@ export default function ConfiguracaoCartoes({}: ConfiguracaoCartoesProps) {
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <CreditCard className="h-5 w-5 text-blue-600" />
+                      <CreditCard className="h-5 w-5 text-green-600" />
                       <CardTitle className="text-lg">{cartao.nome}</CardTitle>
                     </div>
                     <Button variant="ghost" size="sm" onClick={() => removerCartaoLocal(cartao.id)} className="text-red-600 hover:text-red-700 hover:bg-red-50">

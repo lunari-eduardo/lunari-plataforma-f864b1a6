@@ -126,8 +126,8 @@ export default function ConfiguracoesFinanceirasTab({
   return <div className="space-y-6">
       <Tabs defaultValue="itens" className="w-full">
         <TabsList className="grid w-1/2 grid-cols-2 bg-lunar-accent">
-          <TabsTrigger value="itens">Itens Financeiros</TabsTrigger>
-          <TabsTrigger value="cartoes">Cartões de Crédito</TabsTrigger>
+          <TabsTrigger value="itens" className="text-xs text-stone-900 font-bold">Itens Financeiros</TabsTrigger>
+          <TabsTrigger value="cartoes" className="text-xs font-bold text-neutral-900">Cartões de Crédito</TabsTrigger>
         </TabsList>
         
         <TabsContent value="itens" className="mt-6">
