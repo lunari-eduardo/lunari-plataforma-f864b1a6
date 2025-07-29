@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { useState, useEffect } from "react";
 import Layout from "./components/layout/Layout";
 import Index from "./pages/Index";
 import Agenda from "./pages/Agenda";
@@ -20,8 +21,21 @@ import { useIntegration } from "./hooks/useIntegration";
 // Create a new QueryClient instance outside of the component
 const queryClient = new QueryClient();
 
-// Component to initialize integration hooks
+// Component to safely initialize integration hooks
 function AppIntegration() {
+  const [isReady, setIsReady] = useState(false);
+  
+  useEffect(() => {
+    // Delay to ensure AppProvider is fully initialized
+    const timer = setTimeout(() => setIsReady(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
+  
+  return isReady ? <IntegrationRunner /> : null;
+}
+
+// Separate component to run the integration hook
+function IntegrationRunner() {
   useIntegration();
   return null;
 }
