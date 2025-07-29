@@ -526,15 +526,33 @@ export function useNovoFinancas() {
 
   // Função para atualizar transação compatível com API antiga
   const atualizarTransacaoCompativel = (id: string, dadosAtualizados: any) => {
+    // Buscar transação existente para preservar campos não editados
+    const transacaoExistente = transacoes.find(t => t.id === id);
+    if (!transacaoExistente) {
+      console.error('ERRO: Transação não encontrada para ID:', id);
+      return;
+    }
+
+    // Converter formato antigo para novo formato preservando campos críticos
     const dados: Partial<NovaTransacao> = {
-      itemId: dadosAtualizados.item_id,
+      itemId: dadosAtualizados.item_id || transacaoExistente.itemId, // ✅ PRESERVAR se não fornecido
       valor: dadosAtualizados.valor,
       dataVencimento: dadosAtualizados.data_vencimento,
       observacoes: dadosAtualizados.observacoes,
-      status: dadosAtualizados.status // CORRIGIDO: incluir status na atualização
+      status: dadosAtualizados.status || 'Agendado'
     };
 
-    console.log('Atualizando transação:', id, dados);
+    // Validação de integridade crítica
+    if (!dados.itemId) {
+      console.error('ERRO CRÍTICO: Tentativa de atualizar transação sem itemId', { 
+        id, 
+        dadosAtualizados, 
+        transacaoExistente: transacaoExistente 
+      });
+      return;
+    }
+
+    console.log('Atualizando transação:', { id, dados });
     atualizarTransacao(id, dados);
   };
 

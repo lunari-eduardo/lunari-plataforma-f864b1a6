@@ -88,7 +88,15 @@ export default function TabelaLancamentosMobile({
       return;
     }
 
+    // Encontrar a transação original para preservar campos críticos
+    const transacaoOriginal = transacoes.find(t => t.id === transacaoId);
+    if (!transacaoOriginal) {
+      alert('Transação não encontrada');
+      return;
+    }
+
     const dadosCompletos: Partial<NovaTransacaoFinanceira> = {
+      item_id: transacaoOriginal.item_id, // ✅ PRESERVAR item_id crítico
       valor: valorNumerico,
       data_vencimento: editValues.data_vencimento,
       observacoes: editValues.observacoes.trim() || null,
