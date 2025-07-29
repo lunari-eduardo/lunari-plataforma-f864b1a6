@@ -5,37 +5,34 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Trash2, Plus, CreditCard } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
-
 interface ConfiguracaoCartoesProps {
   // Props removidas - agora usa AppContext diretamente
 }
-
 export default function ConfiguracaoCartoes({}: ConfiguracaoCartoesProps) {
-  const { cartoes, adicionarCartao, removerCartao } = useAppContext();
+  const {
+    cartoes,
+    adicionarCartao,
+    removerCartao
+  } = useAppContext();
   const [novoCartao, setNovoCartao] = useState({
     nome: '',
     diaVencimento: '',
     diaFechamento: ''
   });
-
   const adicionarNovoCartao = () => {
     if (!novoCartao.nome || !novoCartao.diaVencimento || !novoCartao.diaFechamento) return;
-
     const diaVencimento = parseInt(novoCartao.diaVencimento);
     const diaFechamento = parseInt(novoCartao.diaFechamento);
-
     if (diaVencimento < 1 || diaVencimento > 31 || diaFechamento < 1 || diaFechamento > 31) {
       alert('Dias devem estar entre 1 e 31');
       return;
     }
-
     try {
       adicionarCartao({
         nome: novoCartao.nome,
         diaVencimento,
         diaFechamento
       });
-      
       setNovoCartao({
         nome: '',
         diaVencimento: '',
@@ -46,7 +43,6 @@ export default function ConfiguracaoCartoes({}: ConfiguracaoCartoesProps) {
       alert('Erro ao adicionar cartão');
     }
   };
-
   const removerCartaoLocal = (id: string) => {
     try {
       removerCartao(id);
@@ -55,9 +51,7 @@ export default function ConfiguracaoCartoes({}: ConfiguracaoCartoesProps) {
       alert('Erro ao remover cartão');
     }
   };
-
-  return (
-    <div className="space-y-6">
+  return <div className="space-y-6">
       <div className="flex items-center gap-2">
         <CreditCard className="h-5 w-5 text-blue-600" />
         <h2 className="text-xl font-semibold text-gray-900">Cartões de Crédito</h2>
@@ -75,50 +69,34 @@ export default function ConfiguracaoCartoes({}: ConfiguracaoCartoesProps) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <Label htmlFor="nomeCartao">Nome do Cartão</Label>
-              <Input
-                id="nomeCartao"
-                placeholder="Ex: Nubank, Itaú, etc."
-                value={novoCartao.nome}
-                onChange={(e) => setNovoCartao({ ...novoCartao, nome: e.target.value })}
-              />
+              <Input id="nomeCartao" placeholder="Ex: Nubank, Itaú, etc." value={novoCartao.nome} onChange={e => setNovoCartao({
+              ...novoCartao,
+              nome: e.target.value
+            })} />
             </div>
             <div>
               <Label htmlFor="diaVencimento">Dia de Vencimento</Label>
-              <Input
-                id="diaVencimento"
-                type="number"
-                min="1"
-                max="31"
-                placeholder="Ex: 15"
-                value={novoCartao.diaVencimento}
-                onChange={(e) => setNovoCartao({ ...novoCartao, diaVencimento: e.target.value })}
-              />
+              <Input id="diaVencimento" type="number" min="1" max="31" placeholder="Ex: 15" value={novoCartao.diaVencimento} onChange={e => setNovoCartao({
+              ...novoCartao,
+              diaVencimento: e.target.value
+            })} />
               <p className="text-xs text-gray-500 mt-1">
                 Dia do mês que a fatura vence
               </p>
             </div>
             <div>
               <Label htmlFor="diaFechamento">Dia de Fechamento</Label>
-              <Input
-                id="diaFechamento"
-                type="number"
-                min="1"
-                max="31"
-                placeholder="Ex: 10"
-                value={novoCartao.diaFechamento}
-                onChange={(e) => setNovoCartao({ ...novoCartao, diaFechamento: e.target.value })}
-              />
+              <Input id="diaFechamento" type="number" min="1" max="31" placeholder="Ex: 10" value={novoCartao.diaFechamento} onChange={e => setNovoCartao({
+              ...novoCartao,
+              diaFechamento: e.target.value
+            })} />
               <p className="text-xs text-gray-500 mt-1">
                 Dia do mês que a fatura fecha
               </p>
             </div>
           </div>
           <div className="mt-4">
-            <Button 
-              onClick={adicionarNovoCartao}
-              disabled={!novoCartao.nome || !novoCartao.diaVencimento || !novoCartao.diaFechamento}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
+            <Button onClick={adicionarNovoCartao} disabled={!novoCartao.nome || !novoCartao.diaVencimento || !novoCartao.diaFechamento} className="bg-lunar-accent">
               <Plus className="h-4 w-4 mr-2" />
               Adicionar Cartão
             </Button>
@@ -130,30 +108,21 @@ export default function ConfiguracaoCartoes({}: ConfiguracaoCartoesProps) {
       <div className="space-y-4">
         <h3 className="text-lg font-medium text-gray-900">Cartões Configurados</h3>
         
-        {cartoes.length === 0 ? (
-          <Card>
+        {cartoes.length === 0 ? <Card>
             <CardContent className="py-8 text-center">
               <CreditCard className="h-12 w-12 mx-auto text-gray-400 mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum cartão configurado</h3>
               <p className="text-gray-500">Adicione um cartão para começar a usar lançamentos via cartão de crédito.</p>
             </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {cartoes.map((cartao) => (
-              <Card key={cartao.id}>
+          </Card> : <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {cartoes.map(cartao => <Card key={cartao.id}>
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <CreditCard className="h-5 w-5 text-blue-600" />
                       <CardTitle className="text-lg">{cartao.nome}</CardTitle>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removerCartaoLocal(cartao.id)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => removerCartaoLocal(cartao.id)} className="text-red-600 hover:text-red-700 hover:bg-red-50">
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -176,10 +145,8 @@ export default function ConfiguracaoCartoes({}: ConfiguracaoCartoesProps) {
                     </div>
                   </div>
                 </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+              </Card>)}
+          </div>}
       </div>
 
       {/* Informações sobre o funcionamento */}
@@ -196,6 +163,5 @@ export default function ConfiguracaoCartoes({}: ConfiguracaoCartoesProps) {
           </ul>
         </CardContent>
       </Card>
-    </div>
-  );
+    </div>;
 }
