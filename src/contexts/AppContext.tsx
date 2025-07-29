@@ -836,11 +836,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         ?.filter(p => p.tipo === 'manual')
         ?.reduce((total, p) => total + (p.valorUnitario * p.quantidade), 0) || 0;
       
-      // Usar valorFinal se foi ajustado manualmente, senão calcular
+      // Calcular valor baseado nos componentes
       const valorCalculado = newWorkflowItem.valorPacote + newWorkflowItem.valorTotalFotoExtra + 
                             valorProdutosManuaisOrc + newWorkflowItem.valorAdicional - newWorkflowItem.desconto;
       
-      newWorkflowItem.total = orc.valorFinal || valorCalculado;
+      // Debug logging para investigar o problema
+      console.log('🔍 Debug Workflow Value:', {
+        orcamentoId: orc.id,
+        valorFinal: orc.valorFinal,
+        tipoValorFinal: typeof orc.valorFinal,
+        valorCalculado,
+        valorFinalValido: typeof orc.valorFinal === 'number' && orc.valorFinal > 0
+      });
+      
+      // Usar valorFinal se foi ajustado manualmente e é válido, senão calcular
+      const valorFinalValido = typeof orc.valorFinal === 'number' && orc.valorFinal > 0;
+      newWorkflowItem.total = valorFinalValido ? orc.valorFinal : valorCalculado;
+      
+      console.log('✅ Valor usado no workflow:', newWorkflowItem.total);
       newWorkflowItem.restante = newWorkflowItem.total - newWorkflowItem.valorPago;
 
       newItems.push(newWorkflowItem);
