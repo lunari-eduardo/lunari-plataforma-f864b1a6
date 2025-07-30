@@ -22,17 +22,59 @@ export default function UnifiedEventCard({ event, onClick, compact = false, vari
   const getPackageInfo = () => {
     if (isAppointment) {
       const appointment = event.originalData as any;
+      
+      // Para agendamentos, precisamos separar categoria do nome do pacote
+      // O 'type' geralmente contém o nome do pacote/serviço
+      // Vamos buscar a categoria real baseada no packageId se disponível
+      let category = '';
+      let packageName = appointment.type || '';
+      
+      // Se tem packageId, tentar buscar dados do pacote
+      if (appointment.packageId) {
+        // O packageName deve ser o type, e a categoria deve vir dos dados do pacote
+        // Por enquanto, vamos usar uma lógica simples para extrair categoria do type
+        if (packageName.toLowerCase().includes('gestante')) {
+          category = 'Gestante';
+        } else if (packageName.toLowerCase().includes('família')) {
+          category = 'Família';
+        } else if (packageName.toLowerCase().includes('corporativo')) {
+          category = 'Corporativo';
+        } else if (packageName.toLowerCase().includes('sessão')) {
+          category = 'Sessão';
+          // Se é só "Sessão", pode ser que precise de mais info
+          if (packageName === 'Sessão') {
+            packageName = 'Sessão Individual';
+          }
+        } else {
+          category = 'Outros';
+        }
+      }
+      
       return {
-        packageName: appointment.type || '',
-        category: appointment.type || '',
+        packageName: packageName,
+        category: category,
         description: appointment.description || ''
       };
     } else {
       const budget = event.originalData as any;
+      
+      // Para orçamentos, separar categoria do pacote se estão juntos
+      let category = budget.categoria || '';
+      let packageName = '';
+      
+      // Se tem campo separado para pacote, usar ele
+      if (budget.pacote && budget.pacote !== budget.categoria) {
+        packageName = budget.pacote;
+      } else if (budget.categoria) {
+        // Se só tem categoria, usar ela como base
+        category = budget.categoria;
+        packageName = budget.categoria; // Temporário até ter dados melhores
+      }
+      
       return {
-        packageName: budget.categoria || '',
-        category: budget.categoria || '',
-        description: budget.descricao || budget.categoria || ''
+        packageName: packageName,
+        category: category,
+        description: budget.descricao || ''
       };
     }
   };
@@ -71,10 +113,10 @@ export default function UnifiedEventCard({ event, onClick, compact = false, vari
           <div className="text-xs opacity-80 truncate">
             {description}
           </div>
-          {/* Line 3: Category - Package Name */}
-          <div className="text-xs opacity-70 truncate">
-            {category && packageName ? `${category} - ${packageName}` : packageName || category}
-          </div>
+           {/* Line 3: Category - Package Name */}
+           <div className="text-xs opacity-70 truncate">
+             {category && packageName && category !== packageName ? `${category} - ${packageName}` : packageName || category}
+           </div>
         </div>
       );
     } else if (variant === 'weekly') {
@@ -139,9 +181,9 @@ export default function UnifiedEventCard({ event, onClick, compact = false, vari
         <div className="text-xs opacity-80 truncate">
           {description}
         </div>
-        <div className="text-xs opacity-70 truncate">
-          {category && packageName ? `${category} - ${packageName}` : packageName || category}
-        </div>
+         <div className="text-xs opacity-70 truncate">
+           {category && packageName && category !== packageName ? `${category} - ${packageName}` : packageName || category}
+         </div>
       </div>
     );
   };
