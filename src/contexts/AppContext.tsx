@@ -462,7 +462,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       qtdProduto: produtosList.reduce((acc, p) => acc + p.quantidade, 0),
       valorTotalProduto: formatCurrency(valorProdutosManuais),
       valorAdicional: formatCurrency(0),
-      desconto: 0,
+          desconto: descontoOrcamento,
       valor: formatCurrency(valorTotal),
       total: formatCurrency(valorTotal),
       valorPago: formatCurrency(0),
