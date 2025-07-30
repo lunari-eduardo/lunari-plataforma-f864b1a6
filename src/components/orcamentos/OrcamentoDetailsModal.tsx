@@ -23,7 +23,7 @@ export default function OrcamentoDetailsModal({
   if (!orcamento) return null;
 
   const origem = origens.find(o => o.id === orcamento.origemCliente);
-  const valorFinal = orcamento.valorManual || orcamento.valorTotal;
+  const valorFinal = orcamento.valorFinal || orcamento.valorTotal;
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -291,10 +291,10 @@ export default function OrcamentoDetailsModal({
                 </div>
               )}
               
-              {orcamento.valorManual && (
+              {orcamento.desconto > 0 && (
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Valor ajustado:</span>
-                  <span className="text-sm">R$ {orcamento.valorManual.toFixed(2)}</span>
+                  <span className="text-sm text-muted-foreground">Desconto:</span>
+                  <span className="text-sm text-red-600">-R$ {orcamento.desconto.toFixed(2)}</span>
                 </div>
               )}
               
@@ -303,7 +303,7 @@ export default function OrcamentoDetailsModal({
               <div className="flex justify-between items-center font-medium">
                 <span className="text-sm">Total:</span>
                 <span className="text-lg">
-                  R$ {(orcamento.valorFinal || orcamento.valorManual || orcamento.valorTotal || 0).toFixed(2)}
+                  R$ {(orcamento.valorFinal || orcamento.valorTotal || 0).toFixed(2)}
                 </span>
               </div>
             </div>

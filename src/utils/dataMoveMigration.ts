@@ -21,7 +21,7 @@ interface OrcamentoAntigo {
     quantidade: number;
   }[];
   valorTotal: number;
-  valorManual?: number;
+  desconto?: number;
   status: string;
   origemCliente: string;
   criadoEm: string;
@@ -82,11 +82,12 @@ export function migrateOrcamentoToNewStructure(
     ...orcamentoAntigo,
     pacotePrincipal,
     produtosAdicionais,
-    valorFinal: orcamentoAntigo.valorManual || orcamentoAntigo.valorTotal || 0,
+    valorFinal: orcamentoAntigo.valorTotal || 0,
+    desconto: 0,
     
     // Manter campos antigos para compatibilidade
     valorTotal: orcamentoAntigo.valorTotal,
-    valorManual: orcamentoAntigo.valorManual,
+    
     
     status: orcamentoAntigo.status as any
   };

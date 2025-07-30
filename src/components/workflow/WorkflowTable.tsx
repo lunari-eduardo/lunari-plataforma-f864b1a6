@@ -41,10 +41,6 @@ interface SessionData {
   valorPago: string;
   restante: string;
   desconto: number;
-  // Novos campos para orçamentos ajustados
-  valorFinalAjustado?: boolean;
-  valorOriginalOrcamento?: number;
-  percentualAjusteOrcamento?: number;
 }
 interface WorkflowTableProps {
   sessions: SessionData[];
@@ -171,19 +167,6 @@ export function WorkflowTable({
   onSort
 }: WorkflowTableProps) {
   
-  // Debug: Verificar se dados de ajuste estão chegando
-  useEffect(() => {
-    const sessionsWithAdjustment = sessions.filter(s => s.valorFinalAjustado);
-    if (sessionsWithAdjustment.length > 0) {
-      console.log('📊 Sessions com valor ajustado:', sessionsWithAdjustment.map(s => ({
-        id: s.id,
-        nome: s.nome,
-        valorFinalAjustado: s.valorFinalAjustado,
-        valorOriginalOrcamento: s.valorOriginalOrcamento,
-        percentualAjusteOrcamento: s.percentualAjusteOrcamento
-      })));
-    }
-  }, [sessions]);
   const [paymentInputs, setPaymentInputs] = useState<Record<string, string>>({});
   const [editingValues, setEditingValues] = useState<Record<string, string>>({});
   const [modalAberto, setModalAberto] = useState(false);
@@ -298,51 +281,7 @@ export function WorkflowTable({
   }, [stopContinuousScroll]);
   const calculateTotal = useCallback((session: SessionData) => {
     try {
-      // NOVA LÓGICA: Se o valor foi ajustado no orçamento, aplicar o percentual de ajuste
-      if (session.valorFinalAjustado && session.percentualAjusteOrcamento && session.percentualAjusteOrcamento !== 1) {
-        // Recalcular valor baseado nos componentes atuais
-        const valorPacoteStr = typeof session.valorPacote === 'string' ? session.valorPacote : String(session.valorPacote || '0');
-        const valorPacote = parseFloat(valorPacoteStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-        
-        const valorFotoExtraStr = typeof session.valorTotalFotoExtra === 'string' ? session.valorTotalFotoExtra : String(session.valorTotalFotoExtra || '0');
-        const valorFotoExtra = parseFloat(valorFotoExtraStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-        
-        const valorAdicionalStr = typeof session.valorAdicional === 'string' ? session.valorAdicional : String(session.valorAdicional || '0');
-        const valorAdicional = parseFloat(valorAdicionalStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-        
-        const desconto = session.desconto || 0;
-
-        let valorProdutosManuais = 0;
-        if (session.produtosList && session.produtosList.length > 0) {
-          const produtosManuais = session.produtosList.filter(p => p.tipo === 'manual');
-          valorProdutosManuais = produtosManuais.reduce((total, p) => total + (p.valorUnitario * p.quantidade), 0);
-        } else if (session.valorTotalProduto) {
-          const valorProdutoStr = typeof session.valorTotalProduto === 'string' ? session.valorTotalProduto : String(session.valorTotalProduto || '0');
-          valorProdutosManuais = parseFloat(valorProdutoStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-        }
-
-        // Calcular total atual baseado nos componentes
-        const totalComponentes = valorPacote + valorFotoExtra + valorProdutosManuais + valorAdicional - desconto;
-        
-        // Aplicar o percentual de ajuste do orçamento original
-        const totalAjustado = totalComponentes * session.percentualAjusteOrcamento;
-        
-        console.log('💰 Total ajustado aplicado para', session.nome, ':', {
-          valorPacote,
-          valorFotoExtra,
-          valorProdutosManuais,
-          valorAdicional,
-          desconto,
-          totalComponentes,
-          percentualAjuste: session.percentualAjusteOrcamento,
-          totalFinal: totalAjustado,
-          valorOriginal: session.valorOriginalOrcamento
-        });
-
-        return totalAjustado;
-      }
-
-      // LÓGICA PADRÃO: Calcular baseado nos componentes
+      // LÓGICA SIMPLIFICADA: Calcular baseado nos componentes - desconto
       const valorPacoteStr = typeof session.valorPacote === 'string' ? session.valorPacote : String(session.valorPacote || '0');
       const valorPacote = parseFloat(valorPacoteStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
       
@@ -351,7 +290,6 @@ export function WorkflowTable({
       
       const valorAdicionalStr = typeof session.valorAdicional === 'string' ? session.valorAdicional : String(session.valorAdicional || '0');
       const valorAdicional = parseFloat(valorAdicionalStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-      
       const desconto = session.desconto || 0;
 
       // Apenas produtos manuais somam ao total
@@ -366,7 +304,7 @@ export function WorkflowTable({
 
       const totalCalculado = valorPacote + valorFotoExtra + valorProdutosManuais + valorAdicional - desconto;
       
-      console.log('💰 Total padrão calculado para', session.nome, ':', {
+      console.log('💰 Total calculado para', session.nome, ':', {
         valorPacote,
         valorFotoExtra,
         valorProdutosManuais,

@@ -78,12 +78,12 @@ export interface Orcamento {
   produtosAdicionais: ProdutoAdicional[];
   
   // Campos financeiros
-  valorFinal: number; // O valor total final (pode ser manual)
+  valorFinal: number; // O valor total final calculado
+  desconto: number;   // Valor de desconto em R$
   
   // Compatibilidade com sistema antigo
   pacotes?: PacoteProduto[]; // Manter para compatibilidade
   valorTotal?: number;
-  valorManual?: number;
   
   status: 'rascunho' | 'enviado' | 'fechado' | 'cancelado' | 'pendente' | 'follow-up';
   origemCliente: string;

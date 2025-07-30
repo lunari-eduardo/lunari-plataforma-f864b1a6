@@ -3,7 +3,7 @@ import { Orcamento } from '@/types/orcamentos';
 import { formatDateForDisplay } from './dateUtils';
 
 export const gerarLinkWhatsApp = (orcamento: Orcamento, pdfUrl?: string): string => {
-  const valorFinal = orcamento.valorManual || orcamento.valorTotal;
+  const valorFinal = orcamento.valorFinal || orcamento.valorTotal;
   const telefone = orcamento.cliente.telefone.replace(/\D/g, '');
   
   let mensagem = `Olá ${orcamento.cliente.nome}! 😊\n\n`;

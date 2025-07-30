@@ -231,7 +231,7 @@ export default function ListaOrcamentos({ selectedMonth }: ListaOrcamentosProps)
             <TableBody>
               {orcamentosOrdenados.map(orcamento => {
               const origem = origens.find(o => o.id === orcamento.origemCliente);
-              const valorFinal = orcamento.valorManual || orcamento.valorTotal;
+              const valorFinal = orcamento.valorFinal || orcamento.valorTotal;
               const atrasado = isAtrasado(orcamento);
               return <TableRow key={orcamento.id} className={atrasado ? 'bg-red-50' : ''}>
                     {colunasVisiveis.cliente && <TableCell className="font-medium">

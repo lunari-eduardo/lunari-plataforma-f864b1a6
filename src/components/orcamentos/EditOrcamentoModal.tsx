@@ -52,7 +52,7 @@ export default function EditOrcamentoModal({
     origem: '',
     pacotePrincipal: null as any,
     produtosAdicionais: [] as ProdutoSelecionado[],
-    valorManual: undefined as number | undefined,
+    desconto: 0,
     isOrcamentoFechado: false
   };
   const [formData, setFormData] = useState(initialFormState);
@@ -135,7 +135,7 @@ export default function EditOrcamentoModal({
         origem: orcamento.origemCliente,
         pacotePrincipal: pacotePrincipalCompleto,
         produtosAdicionais: produtosAdicionais,
-        valorManual: orcamento.valorManual,
+        desconto: orcamento.desconto || 0,
         isOrcamentoFechado: orcamento.status === 'fechado'
       });
     }
@@ -281,7 +281,7 @@ export default function EditOrcamentoModal({
       updates.origemCliente = formData.origem;
       updates.pacotes = pacotesParaSalvar;
       updates.valorTotal = valorTotal;
-      updates.valorManual = formData.valorManual;
+      updates.desconto = formData.desconto;
       
       // NOVA ESTRUTURA: Evitar duplicação de dados
       if (formData.pacotePrincipal) {
@@ -307,7 +307,7 @@ export default function EditOrcamentoModal({
         tipo: 'manual' as const
       }));
       
-      updates.valorFinal = formData.valorManual !== undefined ? formData.valorManual : valorTotal;
+      updates.valorFinal = valorTotal - formData.desconto;
     }
     atualizarOrcamento(orcamento.id, updates);
     toast({
@@ -334,7 +334,7 @@ export default function EditOrcamentoModal({
   const produtosManuais = formData.produtosAdicionais.filter(p => !(p as any).inclusoNoPacote);
   const valorProdutosManuais = totalsCalculados.valorProdutosAdicionais || 0;
   const valorTotal = totalsCalculados.totalGeral || 0;
-  const valorFinal = formData.valorManual !== undefined ? formData.valorManual : valorTotal;
+  const valorFinal = valorTotal - formData.desconto;
 
   // Debug para verificar se valores estão corretos
   console.log('🔍 Debug EditOrcamentoModal:', {
@@ -544,15 +544,34 @@ export default function EditOrcamentoModal({
 
           <div className="mt-4">
             <div className="flex justify-between items-center font-medium mb-2">
-              <span className="text-sm">Total Calculado:</span>
+              <span className="text-sm">Subtotal:</span>
               <span className="text-sm">R$ {valorTotal.toFixed(2)}</span>
             </div>
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium">Valor Final:</label>
-              <Input type="number" min="0" step="0.01" value={formData.valorManual !== undefined ? formData.valorManual : ''} onChange={e => setFormData(prev => ({
-              ...prev,
-              valorManual: e.target.value ? parseFloat(e.target.value) : undefined
-            }))} placeholder={`R$ ${valorTotal.toFixed(2)}`} className="max-w-40" disabled={formData.isOrcamentoFechado} />
+            <div className="flex items-center gap-2 mb-2">
+              <label className="text-sm font-medium">Desconto (R$):</label>
+              <Input 
+                type="number" 
+                min="0" 
+                step="0.01" 
+                value={formData.desconto || ''} 
+                onChange={e => setFormData(prev => ({
+                  ...prev,
+                  desconto: parseFloat(e.target.value) || 0
+                }))} 
+                placeholder="0,00" 
+                className="max-w-40" 
+                disabled={formData.isOrcamentoFechado} 
+              />
+            </div>
+            {formData.desconto > 0 && (
+              <div className="flex justify-between items-center text-sm text-red-600 mb-2">
+                <span>Desconto:</span>
+                <span>-R$ {formData.desconto.toFixed(2)}</span>
+              </div>
+            )}
+            <div className="flex justify-between items-center font-bold text-lg border-t pt-2">
+              <span>Total Final:</span>
+              <span>R$ {valorFinal.toFixed(2)}</span>
             </div>
           </div>
         </div>

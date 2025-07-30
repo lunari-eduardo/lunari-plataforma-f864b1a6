@@ -49,7 +49,7 @@ export default function NovoOrcamento() {
   const [origemSelecionada, setOrigemSelecionada] = useState('');
   const [pacoteSelecionado, setPacoteSelecionado] = useState<MappedPackage | null>(null);
   const [produtosAdicionais, setProdutosAdicionais] = useState<PacoteProduto[]>([]);
-  const [valorManual, setValorManual] = useState<number | undefined>();
+  const [desconto, setDesconto] = useState<number>(0);
 
   // FIX: Add useEffect to read URL parameters and pre-fill date/time
   useEffect(() => {
@@ -93,7 +93,7 @@ export default function NovoOrcamento() {
   const produtosManuais = produtosAdicionais.filter(p => !p.id.startsWith('auto-'));
   const valorProdutosManuais = totalsCalculados.valorProdutosAdicionais;
   const valorTotal = totalsCalculados.totalGeral;
-  const valorFinal = valorManual !== undefined ? valorManual : valorTotal;
+  const valorFinal = valorTotal - desconto;
 
   // Lógica de preenchimento automático - A Regra de Ouro
   useEffect(() => {
@@ -237,12 +237,12 @@ export default function NovoOrcamento() {
       // NOVA ARQUITETURA DE DADOS
       pacotePrincipal,
       produtosAdicionais: produtosAdicionaisNovo,
-      valorFinal: valorManual !== undefined ? valorManual : valorTotal, // Garantir que valorFinal seja sempre definido
+      valorFinal: valorTotal - desconto,
+      desconto,
       
       // Compatibilidade com sistema antigo
       pacotes: todosItens,
       valorTotal,
-      valorManual, // Valor manual pode ser undefined
       
       status,
       origemCliente: origemSelecionada,
@@ -267,7 +267,7 @@ export default function NovoOrcamento() {
     setOrigemSelecionada('');
     setPacoteSelecionado(null);
     setProdutosAdicionais([]);
-    setValorManual(undefined);
+    setDesconto(0);
   };
 
   return (
@@ -505,10 +505,10 @@ export default function NovoOrcamento() {
             </CardContent>
           </Card>
 
-          {/* Valor Final */}
+          {/* Resumo Financeiro */}
           <Card className="bg-neutral-50">
             <CardHeader className="rounded-lg bg-lunar-border pb-3">
-              <CardTitle className="text-sm">Valor Proposto</CardTitle>
+              <CardTitle className="text-sm">Resumo Financeiro</CardTitle>
             </CardHeader>
             <CardContent className="rounded-lg bg-neutral-50 pt-3">
               <div className="space-y-2">
@@ -532,23 +532,29 @@ export default function NovoOrcamento() {
                 )}
                 <div className="border-t pt-2">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium">Total Calculado:</span>
+                    <span className="text-sm font-medium">Subtotal:</span>
                     <span className="text-sm">R$ {valorTotal.toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <label className="text-sm font-medium">Valor Final:</label>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="text-sm font-medium">Desconto (R$):</label>
                     <Input 
                       type="number" 
                       min="0" 
                       step="0.01" 
-                      placeholder={valorTotal.toFixed(2)} 
-                      value={valorManual || ''} 
-                      onChange={e => setValorManual(parseFloat(e.target.value) || undefined)} 
+                      placeholder="0,00" 
+                      value={desconto || ''} 
+                      onChange={e => setDesconto(parseFloat(e.target.value) || 0)} 
                       className="w-32" 
                     />
                   </div>
-                  <div className="text-lg font-bold text-right mt-2">
-                    R$ {valorFinal.toFixed(2)}
+                  {desconto > 0 && (
+                    <div className="flex justify-between text-sm text-red-600 mb-2">
+                      <span>Desconto:</span>
+                      <span>-R$ {desconto.toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="text-lg font-bold text-right border-t pt-2">
+                    Total: R$ {valorFinal.toFixed(2)}
                   </div>
                 </div>
               </div>

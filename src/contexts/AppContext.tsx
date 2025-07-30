@@ -168,14 +168,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // MIGRAÇÃO: Garantir que todos os orçamentos tenham valorFinal definido
     orcamentosMigrados = orcamentosMigrados.map(orc => {
       if (typeof orc.valorFinal !== 'number' || orc.valorFinal <= 0) {
-        // Priorizar valorManual, depois valorTotal
-        const valorFinalMigrado = (typeof orc.valorManual === 'number' && orc.valorManual > 0) ? orc.valorManual :
-                                 (typeof orc.valorTotal === 'number' && orc.valorTotal > 0) ? orc.valorTotal :
-                                 1000; // Valor padrão se nada estiver disponível
+        // Usar valorTotal como base, assumindo desconto zero se não tiver
+        const valorFinalMigrado = (typeof orc.valorTotal === 'number' && orc.valorTotal > 0) ? orc.valorTotal : 1000;
         
         console.log('🔧 Migrando valorFinal para orçamento:', {
           id: orc.id,
-          valorManual: orc.valorManual,
           valorTotal: orc.valorTotal,
           valorFinalNovo: valorFinalMigrado
         });
@@ -426,13 +423,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Calcular valor base dos componentes
     const valorCalculadoComponentes = valorPacote + valorProdutosManuais;
     
-    // Priorizar valorFinal, depois valorManual, depois valorTotal, depois calculado
+    // Usar valorFinal se disponível, senão usar valorTotal, senão calculado
     const valorFinalValido = typeof orcamento.valorFinal === 'number' && orcamento.valorFinal > 0;
-    const valorManualValido = typeof orcamento.valorManual === 'number' && orcamento.valorManual > 0;
     const valorTotalValido = typeof orcamento.valorTotal === 'number' && orcamento.valorTotal > 0;
     
     const valorTotal = valorFinalValido ? orcamento.valorFinal : 
-                      valorManualValido ? orcamento.valorManual :
                       valorTotalValido ? orcamento.valorTotal :
                       valorCalculadoComponentes;
     
@@ -441,19 +436,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let percentualAjusteOrcamento = 1;
     let valorOriginalOrcamento = valorCalculadoComponentes;
     
-    if ((valorFinalValido || valorManualValido) && valorCalculadoComponentes > 0) {
-      percentualAjusteOrcamento = valorTotal / valorCalculadoComponentes;
-      valorFinalAjustado = Math.abs(percentualAjusteOrcamento - 1) > 0.01; // Tolerância de 1%
-      
-      if (valorFinalAjustado) {
-        console.log('💰 Valor ajustado detectado no orçamento:', {
-          orcamentoId: orcamento.id,
-          valorCalculado: valorCalculadoComponentes,
-          valorFinal: valorTotal,
-          percentualAjuste: percentualAjusteOrcamento
-        });
-      }
-    }
+    // Transferir desconto do orçamento
+    const descontoOrcamento = orcamento.desconto || 0;
     const nomePacote = orcamento.pacotePrincipal?.nome || 
                       orcamento.pacotes?.[0]?.nome?.replace(/^Pacote:\s*/, '') || 
                       '';
@@ -900,46 +884,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const valorCalculado = newWorkflowItem.valorPacote + newWorkflowItem.valorTotalFotoExtra + 
                               valorProdutosManuaisOrc + newWorkflowItem.valorAdicional - newWorkflowItem.desconto;
         
-        // Verificar se o valor foi ajustado manualmente no orçamento
-        const valorFinalValido = typeof orc.valorFinal === 'number' && orc.valorFinal > 0;
-        const valorManualValido = typeof orc.valorManual === 'number' && orc.valorManual > 0;
-        
-        // Priorizar valorFinal, depois valorManual, depois valorTotal
-        let valorFinalOrcamento = valorFinalValido ? orc.valorFinal : 
-                                 valorManualValido ? orc.valorManual :
-                                 (typeof orc.valorTotal === 'number' && orc.valorTotal > 0) ? orc.valorTotal :
-                                 valorCalculado;
-        
-        if ((valorFinalValido || valorManualValido) && valorCalculado > 0) {
-          // Calcular percentual de ajuste se houve alteração manual
-          const percentualAjuste = valorFinalOrcamento / valorCalculado;
-          const foiAjustado = Math.abs(percentualAjuste - 1) > 0.01; // Tolerância de 1%
-          
-          if (foiAjustado) {
-            // Marcar como valor ajustado e armazenar informações do ajuste
-            newWorkflowItem.valorFinalAjustado = true;
-            newWorkflowItem.valorOriginalOrcamento = valorCalculado;
-            newWorkflowItem.percentualAjusteOrcamento = percentualAjuste;
-            newWorkflowItem.total = valorFinalOrcamento;
-            
-            console.log('🔧 Orçamento com valor ajustado:', {
-              orcamentoId: orc.id,
-              valorCalculado,
-              valorFinal: orc.valorFinal,
-              valorManual: orc.valorManual,
-              valorUsado: valorFinalOrcamento,
-              percentualAjuste,
-              foiAjustado
-            });
-          } else {
-            // Valor não foi ajustado significativamente
-            newWorkflowItem.total = valorFinalOrcamento;
-          }
-        } else {
-          // Usar valor final do orçamento ou calculado se não há valor final válido
-          newWorkflowItem.total = valorFinalOrcamento;
+        // Transferir desconto do orçamento se existir
+        if (orc.desconto && orc.desconto > 0) {
+          newWorkflowItem.desconto = orc.desconto;
+          console.log('🔧 Transferindo desconto do orçamento:', {
+            orcamentoId: orc.id,
+            desconto: orc.desconto,
+            valorCalculado,
+            valorFinalOrcamento: orc.valorFinal
+          });
         }
-      newWorkflowItem.restante = newWorkflowItem.total - newWorkflowItem.valorPago;
+        
+        // Calcular total final com desconto
+        newWorkflowItem.total = valorCalculado - (newWorkflowItem.desconto || 0);
+        newWorkflowItem.restante = newWorkflowItem.total - newWorkflowItem.valorPago;
 
       newItems.push(newWorkflowItem);
     });

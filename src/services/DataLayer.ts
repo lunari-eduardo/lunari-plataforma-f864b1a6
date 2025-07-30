@@ -45,7 +45,7 @@ export interface OrcamentoData extends CommonEntity {
   detalhes: string;
   pacotes: Array<{ id: string; nome: string; preco: number; quantidade: number; }>;
   valorTotal: number;
-  valorManual?: number;
+  desconto?: number;
   status: 'rascunho' | 'enviado' | 'fechado' | 'cancelado' | 'pendente' | 'follow-up';
   origemCliente: string;
 }

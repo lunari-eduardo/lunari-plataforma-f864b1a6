@@ -12,7 +12,7 @@ export const gerarPDFOrcamento = async (orcamento: Orcamento): Promise<string> =
 };
 
 export const gerarHTMLOrcamento = (orcamento: Orcamento): string => {
-  const valorFinal = orcamento.valorManual || orcamento.valorTotal;
+  const valorFinal = orcamento.valorFinal || orcamento.valorTotal;
   
   return `
     <!DOCTYPE html>
