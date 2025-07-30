@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Calendar, Users, Settings, Calculator, DollarSign, Menu, X, User, BarChart3, Workflow } from 'lucide-react';
+import { Calendar, Users, Settings, FileText, DollarSign, Menu, X, User, TrendingUp, Workflow, ChevronRight, ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -22,15 +22,20 @@ const NavItem = ({
   const isMobile = useIsMobile();
   return <NavLink to={to} className={({
     isActive
-  }) => cn("nav-item-lunar mb-1 flex items-center justify-center", iconOnly ? "w-12 h-12 rounded-lg" : "gap-3 px-3 py-2", isActive && "active bg-lunar-surface text-lunar-accent")} title={iconOnly ? label : undefined}>
-      <span className="text-sm">{icon}</span>
-      {!iconOnly && !isMobile && <span className="text-xs font-medium">{label}</span>}
+  }) => cn("nav-item-lunar mb-1 flex items-center transition-all duration-200", 
+    iconOnly ? "w-12 h-12 rounded-lg justify-center" : "gap-3 px-3 py-2 justify-start", 
+    isActive && "active bg-lunar-surface text-lunar-accent")} 
+    title={iconOnly ? label : undefined}>
+      <span className="text-sm flex-shrink-0">{icon}</span>
+      {!iconOnly && <span className="text-xs font-medium whitespace-nowrap">{label}</span>}
     </NavLink>;
 };
 
 export default function Sidebar() {
   const isMobile = useIsMobile();
   const [isOpen, setIsOpen] = useState(false);
+  const [isDesktopExpanded, setIsDesktopExpanded] = useState(false);
+  
   const navItems = [{
     to: "/agenda",
     icon: <Calendar size={14} />,
@@ -41,7 +46,7 @@ export default function Sidebar() {
     label: "Clientes"
   }, {
     to: "/orcamentos",
-    icon: <Calculator size={14} />,
+    icon: <FileText size={14} />,
     label: "Orçamentos"
   }, {
     to: "/financas",
@@ -49,7 +54,7 @@ export default function Sidebar() {
     label: "Finanças"
   }, {
     to: "/precificacao",
-    icon: <BarChart3 size={14} />,
+    icon: <TrendingUp size={14} />,
     label: "Precificação"
   }, {
     to: "/workflow",
@@ -60,6 +65,10 @@ export default function Sidebar() {
     icon: <Settings size={14} />,
     label: "Configurações"
   }];
+
+  const toggleDesktopSidebar = () => {
+    setIsDesktopExpanded(!isDesktopExpanded);
+  };
 
   const toggleSidebar = () => {
     setIsOpen(!isOpen);
@@ -112,12 +121,26 @@ export default function Sidebar() {
       </>;
   }
 
-  // Desktop sidebar - apenas ícones
-  return <div className="flex flex-col w-16 h-screen p-2 bg-lunar-bg border-r border-lunar-border/50">
+  // Desktop sidebar - colapsável
+  return <div className={cn("flex flex-col h-screen p-2 bg-lunar-bg border-r border-lunar-border/50 transition-all duration-300", 
+    isDesktopExpanded ? "w-48" : "w-16")}>
       <div className="flex-1">
         <div className="space-y-2 my-8 py-4">
-          {navItems.map(item => <NavItem key={item.to} {...item} iconOnly={true} />)}
+          {navItems.map(item => <NavItem key={item.to} {...item} iconOnly={!isDesktopExpanded} />)}
         </div>
+      </div>
+      
+      {/* Toggle button at bottom */}
+      <div className="flex justify-center pb-2">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={toggleDesktopSidebar}
+          className="h-8 w-8 text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-surface/50"
+          title={isDesktopExpanded ? "Recolher menu" : "Expandir menu"}
+        >
+          {isDesktopExpanded ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
+        </Button>
       </div>
     </div>;
 }
