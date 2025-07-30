@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatusBadge } from "@/components/workflow/StatusBadge";
 import { toast } from 'sonner';
+import { useOrcamentos } from '@/hooks/useOrcamentos';
 
 type Appointment = {
   id: string;
@@ -29,24 +30,6 @@ interface AppointmentDetailsProps {
   onDelete: (id: string) => void;
 }
 
-// Tipos de pacotes disponíveis
-const availablePackages = [{
-  id: '1',
-  name: 'Sessão Gestante',
-  price: 450
-}, {
-  id: '2',
-  name: 'Sessão Família',
-  price: 350
-}, {
-  id: '3',
-  name: 'Ensaio Corporativo',
-  price: 550
-}, {
-  id: '4',
-  name: 'Gest 10 fotos Estúdio',
-  price: 100
-}];
 
 // Lista de status disponíveis
 const availableStatus = [{
@@ -63,6 +46,7 @@ export default function AppointmentDetails({
   onCancel,
   onDelete
 }: AppointmentDetailsProps) {
+  const { pacotes } = useOrcamentos();
   const [formData, setFormData] = useState({
     date: appointment.date,
     time: appointment.time,
@@ -97,11 +81,11 @@ export default function AppointmentDetails({
   // Manipular seleção de pacote
   const handlePackageSelect = (packageId: string) => {
     if (!isEditable) return;
-    const selectedPackage = availablePackages.find(p => p.id === packageId);
+    const selectedPackage = pacotes.find(p => p.id === packageId);
     setFormData(prev => ({
       ...prev,
       packageId,
-      type: selectedPackage?.name || prev.type
+      type: selectedPackage?.nome || prev.type
     }));
   };
 
@@ -136,14 +120,14 @@ export default function AppointmentDetails({
 
   // Salvar alterações
   const handleSave = () => {
-    const selectedPackage = availablePackages.find(p => p.id === formData.packageId);
+    const selectedPackage = pacotes.find(p => p.id === formData.packageId);
     const appointmentData = {
       id: appointment.id,
       date: formData.date, // Mandar como Date, a função updateAppointment irá converter
       time: formData.time,
       title: formData.title,
       client: formData.title,
-      type: selectedPackage?.name || formData.type,
+      type: selectedPackage?.nome || formData.type,
       status: formData.status as 'confirmado' | 'a confirmar',
       description: formData.description,
       packageId: formData.packageId,
@@ -153,7 +137,7 @@ export default function AppointmentDetails({
     toast.success('Agendamento atualizado com sucesso');
   };
 
-  const selectedPackage = availablePackages.find(p => p.id === formData.packageId);
+  const selectedPackage = pacotes.find(p => p.id === formData.packageId);
   return <div className="space-y-4">
       <div className="text-center mb-4">
         <h2 className="text-lg font-medium text-lunar-text">Detalhes do Agendamento</h2>
@@ -193,8 +177,8 @@ export default function AppointmentDetails({
                 <SelectValue placeholder="Selecionar pacote" />
               </SelectTrigger>
               <SelectContent>
-                {availablePackages.map(pkg => <SelectItem key={pkg.id} value={pkg.id}>
-                    {pkg.name} - R$ {pkg.price.toFixed(2)}
+                {pacotes.map(pkg => <SelectItem key={pkg.id} value={pkg.id}>
+                    {pkg.nome} - R$ {(pkg.valor || pkg.valor_base || pkg.valorVenda || 0).toFixed(2)}
                   </SelectItem>)}
               </SelectContent>
             </Select>
@@ -223,7 +207,7 @@ export default function AppointmentDetails({
         <div className="grid grid-cols-2 gap-4">
           <div>
             <Label htmlFor="totalValue" className="text-xs font-medium text-lunar-text">Valor Total</Label>
-            <Input id="totalValue" type="number" value={selectedPackage?.price || 0} className="mt-1 bg-lunar-surface/50" disabled />
+            <Input id="totalValue" type="number" value={selectedPackage?.valor || selectedPackage?.valor_base || selectedPackage?.valorVenda || 0} className="mt-1 bg-lunar-surface/50" disabled />
           </div>
           
           <div>
