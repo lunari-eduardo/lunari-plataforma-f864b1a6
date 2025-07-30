@@ -1,53 +1,149 @@
 
-import { Calendar, DollarSign, Clock, CheckCircle } from 'lucide-react';
 import { UnifiedEvent } from '@/hooks/useUnifiedCalendar';
-import { Badge } from '@/components/ui/badge';
 import { getBudgetStatusConfig } from '@/utils/statusConfig';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface UnifiedEventCardProps {
   event: UnifiedEvent;
   onClick: (event: UnifiedEvent) => void;
   compact?: boolean;
+  variant?: 'daily' | 'weekly' | 'monthly';
 }
 
-export default function UnifiedEventCard({ event, onClick, compact = false }: UnifiedEventCardProps) {
+export default function UnifiedEventCard({ event, onClick, compact = false, variant = 'daily' }: UnifiedEventCardProps) {
   const isAppointment = event.type === 'appointment';
   const isBudget = event.type === 'budget';
+  const isMobile = useIsMobile();
 
-  // Define visual styles based on type and status
+  // Check if appointment is from a closed budget (origem: orcamento)
+  const isFromClosedBudget = isAppointment && (event.originalData as any).origem === 'orcamento';
+
+  // Get package info for the event
+  const getPackageInfo = () => {
+    if (isAppointment) {
+      const appointment = event.originalData as any;
+      return {
+        packageName: appointment.type || '',
+        category: appointment.type || '',
+        description: appointment.description || ''
+      };
+    } else {
+      const budget = event.originalData as any;
+      return {
+        packageName: budget.categoria || '',
+        category: budget.categoria || '',
+        description: budget.descricao || budget.categoria || ''
+      };
+    }
+  };
+
+  const { packageName, category, description } = getPackageInfo();
+
+  // New color system based on specifications
   const getEventStyles = () => {
     if (isAppointment) {
-      // Solid background for appointments
-      if (event.status === 'confirmado') {
+      if (isFromClosedBudget) {
+        // Orçamentos Fechados (que viraram agendamentos): Verde sólido
         return 'bg-green-100 text-green-800 border-l-4 border-green-500 hover:bg-green-200';
       } else {
-        return 'bg-orange-100 text-orange-800 border-l-4 border-orange-500 hover:bg-orange-200';
+        // Agendamentos Diretos: Azul claro sólido
+        return 'bg-blue-100 text-blue-800 border-l-4 border-blue-500 hover:bg-blue-200';
       }
     } else {
-      // Semi-transparent background with dashed border for budgets using centralized config
+      // Outros Orçamentos: Manter borda tracejada e fundo semi-transparente
       const config = getBudgetStatusConfig(event.status);
       const baseStyle = 'border-2 border-dashed hover:bg-opacity-80';
       return `${config.bgColor.replace('100', '50')} ${config.textColor} ${config.borderColor.replace('border-', 'border-').replace('500', '300')} hover:${config.bgColor} ${baseStyle}`;
     }
   };
 
-  const getStatusIcon = () => {
-    if (isAppointment) {
-      return event.status === 'confirmado' ? 
-        <CheckCircle className="h-3 w-3" /> : 
-        <Clock className="h-3 w-3" />;
-    } else {
-      return <DollarSign className="h-3 w-3" />;
+  // Render content based on variant and screen size
+  const renderCardContent = () => {
+    if (variant === 'daily') {
+      // Daily view: 3 lines of detailed info
+      return (
+        <div className="space-y-1">
+          {/* Line 1: Client Name (bold) */}
+          <div className="font-semibold text-sm truncate">
+            {event.client}
+          </div>
+          {/* Line 2: Service Description */}
+          <div className="text-xs opacity-80 truncate">
+            {description}
+          </div>
+          {/* Line 3: Category - Package Name */}
+          <div className="text-xs opacity-70 truncate">
+            {category && packageName ? `${category} - ${packageName}` : packageName || category}
+          </div>
+        </div>
+      );
+    } else if (variant === 'weekly') {
+      // Weekly view: Compact with essential info
+      return (
+        <div className="space-y-0.5">
+          <div className="font-medium text-xs truncate">
+            {event.client}
+          </div>
+          <div className="text-xs opacity-70">
+            {event.time}
+          </div>
+        </div>
+      );
+    } else if (variant === 'monthly') {
+      // Monthly view: Responsive based on screen size
+      if (isMobile) {
+        // Mobile: Only client name
+        return (
+          <div className="text-xs font-medium truncate">
+            {event.client}
+          </div>
+        );
+      } else {
+        // Desktop: Multiple lines with small font
+        return (
+          <div className="space-y-0.5">
+            <div className="font-medium text-xs truncate">
+              {event.client}
+            </div>
+            <div className="text-xs opacity-80 truncate">
+              {description}
+            </div>
+            <div className="text-xs opacity-70 truncate">
+              {category}
+            </div>
+          </div>
+        );
+      }
     }
-  };
+    
+    // Fallback for compact prop (backward compatibility)
+    if (compact) {
+      return (
+        <div className="space-y-0.5">
+          <div className="font-medium text-xs truncate">
+            {event.client}
+          </div>
+          <div className="text-xs opacity-70">
+            {event.time}
+          </div>
+        </div>
+      );
+    }
 
-  const getStatusText = () => {
-    if (isAppointment) {
-      return event.status === 'confirmado' ? 'Confirmado' : 'A Confirmar';
-    } else {
-      const config = getBudgetStatusConfig(event.status);
-      return config.label;
-    }
+    // Default: Full info
+    return (
+      <div className="space-y-1">
+        <div className="font-semibold text-sm truncate">
+          {event.client}
+        </div>
+        <div className="text-xs opacity-80 truncate">
+          {description}
+        </div>
+        <div className="text-xs opacity-70 truncate">
+          {category && packageName ? `${category} - ${packageName}` : packageName || category}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -56,30 +152,9 @@ export default function UnifiedEventCard({ event, onClick, compact = false }: Un
       className={`
         p-2 rounded cursor-pointer transition-all duration-200
         ${getEventStyles()}
-        ${compact ? 'text-xs' : 'text-sm'}
       `}
     >
-      <div className="flex items-center gap-1 mb-1">
-        {getStatusIcon()}
-        <span className="font-medium truncate flex-1">{event.title}</span>
-        {!compact && (
-          <Badge variant="secondary" className="text-xs">
-            {getStatusText()}
-          </Badge>
-        )}
-      </div>
-      
-      {!compact && event.description && (
-        <div className="text-xs truncate opacity-80">
-          {event.description}
-        </div>
-      )}
-      
-      {compact && (
-        <div className="text-xs opacity-70">
-          {event.time}
-        </div>
-      )}
+      {renderCardContent()}
     </div>
   );
 }

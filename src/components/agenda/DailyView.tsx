@@ -143,7 +143,7 @@ export default function DailyView({
                     <UnifiedEventCard 
                       event={event} 
                       onClick={onEventClick}
-                      compact={false}
+                      variant="daily"
                     />
                   </div>
                 ) : (

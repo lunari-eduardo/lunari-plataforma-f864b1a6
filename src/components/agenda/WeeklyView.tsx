@@ -69,7 +69,7 @@ export default function WeeklyView({
                         <UnifiedEventCard 
                           event={event} 
                           onClick={onEventClick}
-                          compact={true}
+                          variant="weekly"
                         />
                       </div>
                     ) : null}

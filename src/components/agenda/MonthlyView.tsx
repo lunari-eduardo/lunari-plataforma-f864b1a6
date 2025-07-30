@@ -70,7 +70,7 @@ export default function MonthlyView({
               
               <div className="space-y-px md:space-y-1">
                 {displayEvents.map(event => <div key={event.id} onClick={e => e.stopPropagation()}>
-                    <UnifiedEventCard event={event} onClick={onEventClick} compact={true} />
+                    <UnifiedEventCard event={event} onClick={onEventClick} variant="monthly" />
                   </div>)}
                 
                 {hasMoreEvents && <div className="text-xs p-0.5 md:p-1 text-gray-500 font-medium">
