@@ -2,6 +2,7 @@
 import { UnifiedEvent } from '@/hooks/useUnifiedCalendar';
 import { getBudgetStatusConfig } from '@/utils/statusConfig';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useOrcamentoData } from '@/hooks/useOrcamentoData';
 
 interface UnifiedEventCardProps {
   event: UnifiedEvent;
@@ -14,6 +15,7 @@ export default function UnifiedEventCard({ event, onClick, compact = false, vari
   const isAppointment = event.type === 'appointment';
   const isBudget = event.type === 'budget';
   const isMobile = useIsMobile();
+  const { pacotes, getCategoriaNameById } = useOrcamentoData();
 
   // Check if appointment is from a closed budget (origem: orcamento)
   const isFromClosedBudget = isAppointment && (event.originalData as any).origem === 'orcamento';
@@ -23,30 +25,24 @@ export default function UnifiedEventCard({ event, onClick, compact = false, vari
     if (isAppointment) {
       const appointment = event.originalData as any;
       
-      // Para agendamentos, precisamos separar categoria do nome do pacote
-      // O 'type' geralmente contém o nome do pacote/serviço
-      // Vamos buscar a categoria real baseada no packageId se disponível
-      let category = '';
+      // Para agendamentos, buscar dados reais do pacote se packageId existe
+      let category = appointment.category || '';
       let packageName = appointment.type || '';
       
-      // Se tem packageId, tentar buscar dados do pacote
-      if (appointment.packageId) {
-        // O packageName deve ser o type, e a categoria deve vir dos dados do pacote
-        // Por enquanto, vamos usar uma lógica simples para extrair categoria do type
-        if (packageName.toLowerCase().includes('gestante')) {
-          category = 'Gestante';
-        } else if (packageName.toLowerCase().includes('família')) {
-          category = 'Família';
-        } else if (packageName.toLowerCase().includes('corporativo')) {
-          category = 'Corporativo';
-        } else if (packageName.toLowerCase().includes('sessão')) {
-          category = 'Sessão';
-          // Se é só "Sessão", pode ser que precise de mais info
-          if (packageName === 'Sessão') {
-            packageName = 'Sessão Individual';
-          }
-        } else {
-          category = 'Outros';
+      // Tentar buscar dados do pacote via packageId se disponível
+      if (appointment.packageId && pacotes.length > 0) {
+        const packageData = pacotes.find(p => p.id === appointment.packageId);
+        if (packageData) {
+          packageName = packageData.nome;
+          category = packageData.categoria;
+        }
+      }
+      
+      // Fallback: se não tem categoria mas tem packageId, tentar buscar por categoria_id
+      if (!category && appointment.packageId) {
+        const packageData = pacotes.find(p => p.id === appointment.packageId);
+        if (packageData && packageData.categoriaId) {
+          category = getCategoriaNameById(packageData.categoriaId);
         }
       }
       
@@ -58,17 +54,22 @@ export default function UnifiedEventCard({ event, onClick, compact = false, vari
     } else {
       const budget = event.originalData as any;
       
-      // Para orçamentos, separar categoria do pacote se estão juntos
+      // Para orçamentos fechados, buscar dados do pacote se disponível
       let category = budget.categoria || '';
-      let packageName = '';
+      let packageName = budget.pacote || '';
       
-      // Se tem campo separado para pacote, usar ele
-      if (budget.pacote && budget.pacote !== budget.categoria) {
-        packageName = budget.pacote;
-      } else if (budget.categoria) {
-        // Se só tem categoria, usar ela como base
-        category = budget.categoria;
-        packageName = budget.categoria; // Temporário até ter dados melhores
+      // Se tem packageId nos dados do orçamento, buscar dados reais do pacote
+      if (budget.packageId && pacotes.length > 0) {
+        const packageData = pacotes.find(p => p.id === budget.packageId);
+        if (packageData) {
+          packageName = packageData.nome;
+          category = packageData.categoria;
+        }
+      }
+      
+      // Se não tem pacote separado mas tem categoria, usar categoria como base
+      if (!packageName && category) {
+        packageName = category;
       }
       
       return {

@@ -210,12 +210,34 @@ export default function AppointmentForm({
     // Obter produtos incluídos no pacote
     const produtosIncluidos = getIncludedProducts();
 
+    // Obter dados do pacote selecionado para salvar nome e categoria corretos
+    const selectedPackage = formData.packageId ? pacotes.find(p => p.id === formData.packageId) : null;
+    let packageType = 'Sessão'; // Fallback padrão
+    let packageCategory = '';
+    
+    if (selectedPackage) {
+      packageType = selectedPackage.nome;
+      // Buscar nome da categoria baseado no categoria_id
+      if (selectedPackage.categoria_id) {
+        try {
+          const configCategorias = JSON.parse(localStorage.getItem('configuracoes_categorias') || '[]');
+          const categoria = configCategorias.find((cat: any) => 
+            cat.id === selectedPackage.categoria_id || cat.id === String(selectedPackage.categoria_id)
+          );
+          packageCategory = categoria?.nome || '';
+        } catch (error) {
+          console.error('Erro ao buscar categoria:', error);
+        }
+      }
+    }
+
     // Preparar dados do agendamento
     const appointmentData = {
       date: formData.date,
       time: formData.time,
       title: clientInfo.client,
-      type: 'Sessão',
+      type: packageType, // Nome real do pacote
+      category: packageCategory, // Categoria do pacote
       status: formData.status as 'confirmado' | 'a confirmar',
       description: formData.description,
       packageId: formData.packageId,
