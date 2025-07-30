@@ -42,7 +42,7 @@ export default function MonthlyView({
       return timeA.localeCompare(timeB);
     });
   };
-  return <div className="w-full overflow-auto">
+  return <div className="w-full h-full overflow-auto">
       <div className="grid grid-cols-7 gap-px md:gap-1 rounded-lg p-px md:p-1 bg-neutral-50">
         {/* Weekday headers */}
         {weekDays.map((day, index) => <div key={day} className="h-8 md:h-10 p-1 md:p-2 text-center text-xs font-medium text-gray-600 rounded bg-lunar-border">
@@ -55,7 +55,7 @@ export default function MonthlyView({
         {/* Days of the month */}
         {daysInMonth.map(day => {
         const dayEvents = getEventsForDay(day);
-        const maxDisplayEvents = window.innerWidth < 768 ? 1 : 2;
+        const maxDisplayEvents = 1; // Sempre mostrar apenas 1 evento para evitar esticamento
         const hasMoreEvents = dayEvents.length > maxDisplayEvents;
         const displayEvents = dayEvents.slice(0, maxDisplayEvents);
         return <div key={day.toString()} onClick={() => onDayClick(day)} className="min-h-[80px] md:min-h-[120px] rounded p-1 md:p-2 cursor-pointer transition-colors bg-lunar-surface hover:bg-lunar-bg">

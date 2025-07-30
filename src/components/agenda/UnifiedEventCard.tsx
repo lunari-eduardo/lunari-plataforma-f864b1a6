@@ -89,8 +89,15 @@ export default function UnifiedEventCard({ event, onClick, compact = false, vari
         // Orçamentos Fechados (que viraram agendamentos): Verde sólido
         return 'bg-green-100 text-green-800 border-l-4 border-green-500 hover:bg-green-200';
       } else {
-        // Agendamentos Diretos: Azul claro sólido
-        return 'bg-blue-100 text-blue-800 border-l-4 border-blue-500 hover:bg-blue-200';
+        // Agendamentos Diretos: verificar status
+        const appointmentStatus = event.status;
+        if (appointmentStatus === 'a confirmar') {
+          // Status 'a confirmar': Laranja
+          return 'bg-orange-100 text-orange-800 border-l-4 border-orange-500 hover:bg-orange-200';
+        } else {
+          // Outros status: Azul claro sólido
+          return 'bg-blue-100 text-blue-800 border-l-4 border-blue-500 hover:bg-blue-200';
+        }
       }
     } else {
       // Outros Orçamentos: Manter borda tracejada e fundo semi-transparente
