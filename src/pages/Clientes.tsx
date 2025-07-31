@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Search, UserPlus, User, Phone, Mail, Edit, Trash2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from 'sonner';
+import { useGoogleAuth } from '@/hooks/useGoogleAuth';
 
 export default function Clientes() {
   const {
@@ -18,6 +19,8 @@ export default function Clientes() {
     atualizarCliente,
     removerCliente
   } = useContext(AppContext);
+  
+  const { isAuthenticated, userInfo, authenticate, disconnect } = useGoogleAuth();
   
   const [filtro, setFiltro] = useState('');
   const [showClientForm, setShowClientForm] = useState(false);
@@ -76,10 +79,39 @@ export default function Clientes() {
           </p>
         </div>
         
-        <Button onClick={handleAddClient} className="bg-neumorphic-dark text-slate-50 bg-lunar-accent py-0 my-[8px]">
-          <UserPlus className="h-4 w-4 mr-1" />
-          Novo Cliente
-        </Button>
+        <div className="flex gap-2">
+          {!isAuthenticated ? (
+            <Button 
+              onClick={authenticate} 
+              variant="secondary" 
+              className="py-0 my-[8px]"
+            >
+              [G] Importar dos Contactos Google
+            </Button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Button variant="secondary" className="py-0 my-[8px] cursor-default">
+                [✓] Conectado ao Google
+                {userInfo?.name && (
+                  <span className="ml-1 text-xs opacity-70">({userInfo.name})</span>
+                )}
+              </Button>
+              <Button 
+                onClick={disconnect} 
+                variant="outline" 
+                size="sm"
+                className="py-0 my-[8px]"
+              >
+                Desconectar
+              </Button>
+            </div>
+          )}
+          
+          <Button onClick={handleAddClient} className="bg-neumorphic-dark text-slate-50 bg-lunar-accent py-0 my-[8px]">
+            <UserPlus className="h-4 w-4 mr-1" />
+            Novo Cliente
+          </Button>
+        </div>
       </div>
       
       <div className="flex gap-2 max-w-lg">
