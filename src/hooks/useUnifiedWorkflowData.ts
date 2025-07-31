@@ -62,15 +62,25 @@ export function useUnifiedWorkflowData() {
 
     loadWorkflowSessions();
     
-    // Escutar mudanças no localStorage (para sincronização)
+    // Escutar mudanças no localStorage (para sincronização entre abas)
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'workflow_sessions') {
         loadWorkflowSessions();
       }
     };
     
+    // Escutar mudanças diretas no workflow_sessions (via MutationObserver)
+    const checkForChanges = () => {
+      loadWorkflowSessions();
+    };
+    
+    const intervalId = setInterval(checkForChanges, 1000); // Verificar a cada segundo
+    
     window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(intervalId);
+    };
   }, []);
 
   // Função para converter valores monetários formatados para números
@@ -198,12 +208,26 @@ export function useUnifiedWorkflowData() {
     return Array.from(years).sort((a, b) => b - a);
   };
 
+  // Função para sincronizar mudanças do workflow_sessions de volta para o AppContext
+  const syncWorkflowSessionsToContext = () => {
+    try {
+      const sessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
+      if (sessions.length > 0) {
+        // Disparar evento customizado para o AppContext sincronizar
+        window.dispatchEvent(new CustomEvent('workflowSessionsUpdated', { detail: sessions }));
+      }
+    } catch (error) {
+      console.error('❌ Erro ao sincronizar workflow_sessions para contexto:', error);
+    }
+  };
+
   return {
     unifiedWorkflowData,
     workflowItems, // Para compatibilidade
     workflowSessions,
     filterByYear,
     getAvailableYears,
-    parseMonetaryValue
+    parseMonetaryValue,
+    syncWorkflowSessionsToContext
   };
 }

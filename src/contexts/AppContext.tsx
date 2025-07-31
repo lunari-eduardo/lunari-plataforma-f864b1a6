@@ -1249,6 +1249,50 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                            updatedItem.valorTotalProduto + updatedItem.valorAdicional - updatedItem.desconto;
         updatedItem.restante = updatedItem.total - updatedItem.valorPago;
         
+        // ===== SINCRONIZAÇÃO BIDIRECIONAL =====
+        // Também salvar em workflow_sessions para garantir persistência
+        try {
+          const workflowSessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
+          const sessionIndex = workflowSessions.findIndex((s: any) => s.id === id);
+          
+          if (sessionIndex >= 0) {
+            // Atualizar sessão existente
+            const sessionUpdate = {
+              ...workflowSessions[sessionIndex],
+              // Manter campos específicos de workflow_sessions e atualizar com novos dados
+              nome: updatedItem.nome,
+              whatsapp: updatedItem.whatsapp,
+              email: updatedItem.email,
+              descricao: updatedItem.descricao,
+              status: updatedItem.status,
+              categoria: updatedItem.categoria,
+              pacote: updatedItem.pacote,
+              valorPacote: formatCurrency(updatedItem.valorPacote),
+              desconto: updatedItem.desconto,
+              valorFotoExtra: formatCurrency(updatedItem.valorFotoExtra),
+              qtdFotosExtra: updatedItem.qtdFotoExtra,
+              valorTotalFotoExtra: formatCurrency(updatedItem.valorTotalFotoExtra),
+              produto: updatedItem.produto,
+              qtdProduto: updatedItem.qtdProduto,
+              valorTotalProduto: formatCurrency(updatedItem.valorTotalProduto),
+              valorAdicional: formatCurrency(updatedItem.valorAdicional),
+              detalhes: updatedItem.detalhes,
+              valor: formatCurrency(updatedItem.total),
+              total: formatCurrency(updatedItem.total),
+              valorPago: formatCurrency(updatedItem.valorPago),
+              restante: formatCurrency(updatedItem.restante),
+              pagamentos: updatedItem.pagamentos
+            };
+            
+            workflowSessions[sessionIndex] = sessionUpdate;
+            localStorage.setItem('workflow_sessions', JSON.stringify(workflowSessions));
+            
+            console.log('✅ Sincronizado updateWorkflowItem:', { id, updates: Object.keys(updates) });
+          }
+        } catch (error) {
+          console.error('❌ Erro ao sincronizar updateWorkflowItem:', error);
+        }
+        
         return updatedItem;
       }
       return item;
@@ -1267,12 +1311,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const updatedPagamentos = [...item.pagamentos, pagamento];
         const novoValorPago = updatedPagamentos.reduce((sum, p) => sum + p.valor, 0);
         
-        return {
+        const updatedItem = {
           ...item,
           pagamentos: updatedPagamentos,
           valorPago: novoValorPago,
           restante: item.total - novoValorPago
         };
+        
+        // ===== SINCRONIZAÇÃO BIDIRECIONAL =====
+        // Também salvar em workflow_sessions para garantir persistência
+        try {
+          const workflowSessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
+          const sessionIndex = workflowSessions.findIndex((s: any) => s.id === id);
+          
+          if (sessionIndex >= 0) {
+            workflowSessions[sessionIndex] = {
+              ...workflowSessions[sessionIndex],
+              valorPago: formatCurrency(updatedItem.valorPago),
+              restante: formatCurrency(updatedItem.restante),
+              pagamentos: updatedItem.pagamentos
+            };
+            
+            localStorage.setItem('workflow_sessions', JSON.stringify(workflowSessions));
+            console.log('✅ Sincronizado addPayment:', { id, valor, novoValorPago });
+          }
+        } catch (error) {
+          console.error('❌ Erro ao sincronizar addPayment:', error);
+        }
+        
+        return updatedItem;
       }
       return item;
     }));
