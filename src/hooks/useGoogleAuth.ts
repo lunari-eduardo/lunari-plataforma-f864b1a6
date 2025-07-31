@@ -55,11 +55,25 @@ export function useGoogleAuth() {
         action: {
           label: 'Configurar',
           onClick: () => {
-            const clientId = prompt('Cole seu Google Client ID aqui:\n\nPara obter: https://console.cloud.google.com/apis/credentials');
+            const clientId = prompt('Cole seu Google Client ID aqui:\n\nPara obter: https://console.cloud.google.com/apis/credentials\n\nCertifique-se de:\n1. Criar um projeto no Google Cloud Console\n2. Ativar a Google People API\n3. Configurar o OAuth consent screen\n4. Adicionar o domínio atual nas origens autorizadas');
             if (clientId) {
               localStorage.setItem('google_client_id', clientId.trim());
               toast.success('Client ID configurado! Tente conectar novamente.');
             }
+          }
+        }
+      });
+      return;
+    }
+
+    // Validate Client ID format
+    if (!GOOGLE_CLIENT_ID.endsWith('.googleusercontent.com')) {
+      toast.error('Google Client ID inválido. Deve terminar com .googleusercontent.com', {
+        action: {
+          label: 'Reconfigurar',
+          onClick: () => {
+            localStorage.removeItem('google_client_id');
+            toast.info('Client ID removido. Clique novamente para configurar.');
           }
         }
       });
