@@ -32,14 +32,11 @@ export default function NovaFinancas() {
     removerCartao
   } = useNovoFinancas();
   const [activeTab, setActiveTab] = useState('lancamentos');
-  return (
-    <ScrollArea className="h-[calc(100vh-120px)]">
+  return <ScrollArea className="h-[calc(100vh-120px)]">
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white bg-lunar-bg pr-4">
-        <div className="p-2 sm:p-4 lg:p-6 space-y-4 sm:space-y-6 bg-lunar-bg">
+        <div className="p-2 sm:p-4 lg:p-6 space-y-4 sm:space-y-6 bg-lunar-bg py-0">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">Finanças</h1>
-        </div>
+        
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-3 h-10 p-1 text-sm bg-white border border-gray-200 py-0">
@@ -63,16 +60,10 @@ export default function NovaFinancas() {
           </TabsContent>
 
           <TabsContent value="configuracoes" className="mt-6">
-            <ConfiguracoesFinanceirasTab 
-              itensFinanceiros={itensFinanceiros} 
-              adicionarItemFinanceiro={adicionarItemFinanceiro} 
-              removerItemFinanceiro={removerItemFinanceiro} 
-              atualizarItemFinanceiro={atualizarItemFinanceiro}
-            />
+            <ConfiguracoesFinanceirasTab itensFinanceiros={itensFinanceiros} adicionarItemFinanceiro={adicionarItemFinanceiro} removerItemFinanceiro={removerItemFinanceiro} atualizarItemFinanceiro={atualizarItemFinanceiro} />
           </TabsContent>
         </Tabs>
         </div>
       </div>
-    </ScrollArea>
-  );
+    </ScrollArea>;
 }
