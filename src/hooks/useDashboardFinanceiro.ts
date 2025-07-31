@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { FinancialEngine } from '@/services/FinancialEngine';
 import { useNovoFinancas } from '@/hooks/useNovoFinancas';
+import { useUnifiedWorkflowData } from '@/hooks/useUnifiedWorkflowData';
 import { getCurrentDateString } from '@/utils/dateUtils';
 
 // Interfaces específicas para o Dashboard
@@ -38,7 +39,7 @@ interface EvolucaoCategoria {
 export function useDashboardFinanceiro() {
   // ============= OBTER DADOS DAS FONTES PRIMÁRIAS =============
   
-  const { workflowItems } = useAppContext();
+  const { unifiedWorkflowData, getAvailableYears, filterByYear } = useUnifiedWorkflowData();
   const { itensFinanceiros } = useNovoFinancas();
   
   // Carregar transações financeiras diretamente do FinancialEngine
@@ -62,13 +63,9 @@ export function useDashboardFinanceiro() {
   const anosDisponiveis = useMemo(() => {
     const anos = new Set<number>();
     
-    // Extrair anos dos workflowItems
-    workflowItems.forEach(item => {
-      const ano = new Date(item.data).getFullYear();
-      if (!isNaN(ano)) {
-        anos.add(ano);
-      }
-    });
+    // Extrair anos dos dados unificados do workflow
+    const anosWorkflow = getAvailableYears();
+    anosWorkflow.forEach(ano => anos.add(ano));
     
     // Extrair anos das transações financeiras
     transacoesFinanceiras.forEach(transacao => {
@@ -89,7 +86,7 @@ export function useDashboardFinanceiro() {
     
     // Converter para array e ordenar (mais recente primeiro)
     return Array.from(anos).sort((a, b) => b - a);
-  }, [workflowItems, transacoesFinanceiras]);
+  }, [unifiedWorkflowData, transacoesFinanceiras, getAvailableYears]);
 
   // Estado do ano selecionado (padrão: mais recente)
   const [anoSelecionado, setAnoSelecionado] = useState(() => {
@@ -100,11 +97,8 @@ export function useDashboardFinanceiro() {
   
   const workflowItemsFiltrados = useMemo(() => {
     const ano = parseInt(anoSelecionado);
-    return workflowItems.filter(item => {
-      const anoItem = new Date(item.data).getFullYear();
-      return anoItem === ano;
-    });
-  }, [workflowItems, anoSelecionado]);
+    return filterByYear(ano);
+  }, [filterByYear, anoSelecionado]);
 
   const transacoesFiltradas = useMemo(() => {
     const ano = parseInt(anoSelecionado);
@@ -307,11 +301,11 @@ export function useDashboardFinanceiro() {
     };
   }, [kpisData]);
 
-  // ============= DEBUG TEMPORÁRIO =============
+  // ============= DEBUG DETALHADO =============
   
   useEffect(() => {
-    console.log('🔍 Dashboard Debug:', {
-      workflowItems: workflowItems.length,
+    console.log('🔍 Dashboard Debug (UNIFICADO):', {
+      unifiedWorkflowData: unifiedWorkflowData.length,
       transacoesFinanceiras: transacoesFinanceiras.length,
       anoSelecionado,
       anosDisponiveis,
@@ -320,14 +314,31 @@ export function useDashboardFinanceiro() {
       kpisData
     });
     
-    if (workflowItems.length > 0) {
-      console.log('📊 Exemplo workflowItem:', workflowItems[0]);
+    if (unifiedWorkflowData.length > 0) {
+      console.log('📊 Exemplo unifiedWorkflowData:', unifiedWorkflowData[0]);
+      console.log('💰 Receitas operacionais filtradas:', workflowItemsFiltrados.map(i => ({ 
+        nome: i.nome, 
+        valorPago: i.valorPago, 
+        fonte: i.fonte,
+        data: i.data 
+      })));
     }
     
     if (transacoesFinanceiras.length > 0) {
       console.log('💰 Exemplo transação:', transacoesFinanceiras[0]);
     }
-  }, [workflowItems, transacoesFinanceiras, anoSelecionado, anosDisponiveis, workflowItemsFiltrados, transacoesFiltradas, kpisData]);
+    
+    // Debug específico para receitas operacionais
+    const receitaOperacional = workflowItemsFiltrados.reduce((sum, item) => sum + item.valorPago, 0);
+    console.log('💎 Receita Operacional Calculada:', {
+      total: receitaOperacional,
+      breakdown: workflowItemsFiltrados.map(i => ({
+        nome: i.nome,
+        valorPago: i.valorPago,
+        data: i.data
+      }))
+    });
+  }, [unifiedWorkflowData, transacoesFinanceiras, anoSelecionado, anosDisponiveis, workflowItemsFiltrados, transacoesFiltradas, kpisData]);
 
   // ============= RETORNO DO HOOK =============
   
