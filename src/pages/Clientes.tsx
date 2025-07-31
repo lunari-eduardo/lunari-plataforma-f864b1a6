@@ -20,7 +20,7 @@ export default function Clientes() {
     removerCliente
   } = useContext(AppContext);
   
-  const { isAuthenticated, userInfo, authenticate, disconnect } = useGoogleAuth();
+  const { isAuthenticated, userInfo, authenticate, disconnect, isLoading } = useGoogleAuth();
   
   const [filtro, setFiltro] = useState('');
   const [showClientForm, setShowClientForm] = useState(false);
@@ -85,8 +85,9 @@ export default function Clientes() {
               onClick={authenticate} 
               variant="secondary" 
               className="py-0 my-[8px]"
+              disabled={isLoading}
             >
-              [G] Importar dos Contactos Google
+              {isLoading ? '[...] Conectando ao Google...' : '[G] Importar dos Contactos Google'}
             </Button>
           ) : (
             <div className="flex items-center gap-2">

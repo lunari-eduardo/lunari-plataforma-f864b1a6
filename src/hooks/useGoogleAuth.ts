@@ -8,6 +8,7 @@ interface GoogleAuthState {
     email?: string;
     name?: string;
   } | null;
+  isLoading: boolean;
 }
 
 export function useGoogleAuth() {
@@ -15,9 +16,12 @@ export function useGoogleAuth() {
     isAuthenticated: false,
     accessToken: null,
     userInfo: null,
+    isLoading: false,
   });
 
-  const GOOGLE_CLIENT_ID = ''; // This would need to be set by the user
+  // User should replace this with their Google Client ID from Google Cloud Console
+  // Instructions: https://console.cloud.google.com/apis/credentials
+  const GOOGLE_CLIENT_ID = localStorage.getItem('google_client_id') || '';
   const SCOPE = 'https://www.googleapis.com/auth/contacts.readonly';
 
   useEffect(() => {
@@ -30,6 +34,7 @@ export function useGoogleAuth() {
         isAuthenticated: true,
         accessToken: storedToken,
         userInfo: JSON.parse(storedUserInfo),
+        isLoading: false,
       });
     }
 
@@ -46,9 +51,22 @@ export function useGoogleAuth() {
 
   const authenticate = async () => {
     if (!GOOGLE_CLIENT_ID) {
-      toast.error('Google Client ID não configurado. Configure nas variáveis de ambiente.');
+      toast.error('Google Client ID não configurado. Clique aqui para configurar:', {
+        action: {
+          label: 'Configurar',
+          onClick: () => {
+            const clientId = prompt('Cole seu Google Client ID aqui:\n\nPara obter: https://console.cloud.google.com/apis/credentials');
+            if (clientId) {
+              localStorage.setItem('google_client_id', clientId.trim());
+              toast.success('Client ID configurado! Tente conectar novamente.');
+            }
+          }
+        }
+      });
       return;
     }
+
+    setAuthState(prev => ({ ...prev, isLoading: true }));
 
     try {
       // Initialize Google OAuth
@@ -70,6 +88,7 @@ export function useGoogleAuth() {
                     isAuthenticated: true,
                     accessToken: response.access_token,
                     userInfo,
+                    isLoading: false,
                   });
                   
                   toast.success('Conectado ao Google com sucesso!');
@@ -77,22 +96,26 @@ export function useGoogleAuth() {
                 .catch(error => {
                   console.error('Error fetching user info:', error);
                   toast.error('Erro ao obter informações do usuário');
+                  setAuthState(prev => ({ ...prev, isLoading: false }));
                 });
             }
           },
           error_callback: (error: any) => {
             console.error('OAuth error:', error);
             toast.error('Erro na autenticação com Google');
+            setAuthState(prev => ({ ...prev, isLoading: false }));
           },
         });
 
         client.requestAccessToken();
       } else {
         toast.error('Google Identity Services não carregado');
+        setAuthState(prev => ({ ...prev, isLoading: false }));
       }
     } catch (error) {
       console.error('Authentication error:', error);
       toast.error('Erro ao conectar com Google');
+      setAuthState(prev => ({ ...prev, isLoading: false }));
     }
   };
 
@@ -118,6 +141,7 @@ export function useGoogleAuth() {
       isAuthenticated: false,
       accessToken: null,
       userInfo: null,
+      isLoading: false,
     });
 
     toast.success('Desconectado do Google');
