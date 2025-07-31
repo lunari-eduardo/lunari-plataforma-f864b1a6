@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { FinancialEngine } from '@/services/FinancialEngine';
+import { useNovoFinancas } from '@/hooks/useNovoFinancas';
 import { getCurrentDateString } from '@/utils/dateUtils';
 
 // Interfaces específicas para o Dashboard
@@ -38,11 +39,23 @@ export function useDashboardFinanceiro() {
   // ============= OBTER DADOS DAS FONTES PRIMÁRIAS =============
   
   const { workflowItems } = useAppContext();
+  const { itensFinanceiros } = useNovoFinancas();
   
   // Carregar transações financeiras diretamente do FinancialEngine
   const transacoesFinanceiras = useMemo(() => {
     return FinancialEngine.loadTransactions();
   }, []);
+
+  // Criar mapeamento de transações com dados dos itens financeiros
+  const transacoesComItens = useMemo(() => {
+    return transacoesFinanceiras.map(transacao => {
+      const item = itensFinanceiros.find(item => item.id === transacao.itemId);
+      return {
+        ...transacao,
+        item: item || null
+      };
+    });
+  }, [transacoesFinanceiras, itensFinanceiros]);
 
   // ============= SELETOR DE ANO DINÂMICO =============
   
@@ -95,14 +108,14 @@ export function useDashboardFinanceiro() {
 
   const transacoesFiltradas = useMemo(() => {
     const ano = parseInt(anoSelecionado);
-    return transacoesFinanceiras.filter(transacao => {
+    return transacoesComItens.filter(transacao => {
       if (!transacao.dataVencimento || typeof transacao.dataVencimento !== 'string') {
         return false;
       }
       const anoTransacao = parseInt(transacao.dataVencimento.split('-')[0]);
       return anoTransacao === ano;
     });
-  }, [transacoesFinanceiras, anoSelecionado]);
+  }, [transacoesComItens, anoSelecionado]);
 
   // ============= CÁLCULOS DE MÉTRICAS ANUAIS =============
   
@@ -111,14 +124,14 @@ export function useDashboardFinanceiro() {
     const receitaOperacional = workflowItemsFiltrados.reduce((sum, item) => sum + item.valorPago, 0);
     
     const receitasExtras = transacoesFiltradas
-      .filter(t => t.status === 'Pago' && t.itemId && t.itemId.includes('Receita'))
+      .filter(t => t.status === 'Pago' && t.item?.grupo_principal === 'Receita Não Operacional')
       .reduce((sum, t) => sum + t.valor, 0);
 
     const totalReceita = receitaOperacional + receitasExtras;
 
     // TOTAL DESPESAS = Todas as despesas pagas (Fixas + Variáveis + Investimentos)
     const totalDespesas = transacoesFiltradas
-      .filter(t => t.status === 'Pago' && t.itemId && !t.itemId.includes('Receita'))
+      .filter(t => t.status === 'Pago' && t.item && t.item.grupo_principal !== 'Receita Não Operacional')
       .reduce((sum, t) => sum + t.valor, 0);
 
     // TOTAL LUCRO = Receita - Despesas
@@ -159,9 +172,9 @@ export function useDashboardFinanceiro() {
       }
       const mes = parseInt(transacao.dataVencimento.split('-')[1]);
       
-      if (transacao.itemId && transacao.itemId.includes('Receita')) {
+      if (transacao.item?.grupo_principal === 'Receita Não Operacional') {
         dadosPorMes[mes].receita += transacao.valor;
-      } else {
+      } else if (transacao.item && ['Despesa Fixa', 'Despesa Variável', 'Investimento'].includes(transacao.item.grupo_principal)) {
         dadosPorMes[mes].despesas += transacao.valor;
       }
     });
@@ -182,13 +195,10 @@ export function useDashboardFinanceiro() {
     const custosPorCategoria: Record<string, number> = {};
     
     transacoesFiltradas
-      .filter(t => t.status === 'Pago' && t.itemId && t.itemId.includes('Fixa'))
+      .filter(t => t.status === 'Pago' && t.item?.grupo_principal === 'Despesa Fixa')
       .forEach(transacao => {
-        const categoria = transacao.itemId.replace(/\d+/, '').trim();
-        // Só adicionar se a categoria não estiver vazia
-        if (categoria && categoria.length > 0) {
-          custosPorCategoria[categoria] = (custosPorCategoria[categoria] || 0) + transacao.valor;
-        }
+        const categoria = transacao.item?.nome || 'Categoria Não Identificada';
+        custosPorCategoria[categoria] = (custosPorCategoria[categoria] || 0) + transacao.valor;
       });
 
     return Object.entries(custosPorCategoria).map(([categoria, valor]) => ({
@@ -201,13 +211,10 @@ export function useDashboardFinanceiro() {
     const custosPorCategoria: Record<string, number> = {};
     
     transacoesFiltradas
-      .filter(t => t.status === 'Pago' && t.itemId && t.itemId.includes('Variável'))
+      .filter(t => t.status === 'Pago' && t.item?.grupo_principal === 'Despesa Variável')
       .forEach(transacao => {
-        const categoria = transacao.itemId.replace(/\d+/, '').trim();
-        // Só adicionar se a categoria não estiver vazia
-        if (categoria && categoria.length > 0) {
-          custosPorCategoria[categoria] = (custosPorCategoria[categoria] || 0) + transacao.valor;
-        }
+        const categoria = transacao.item?.nome || 'Categoria Não Identificada';
+        custosPorCategoria[categoria] = (custosPorCategoria[categoria] || 0) + transacao.valor;
       });
 
     return Object.entries(custosPorCategoria).map(([categoria, valor]) => ({
@@ -220,13 +227,10 @@ export function useDashboardFinanceiro() {
     const custosPorCategoria: Record<string, number> = {};
     
     transacoesFiltradas
-      .filter(t => t.status === 'Pago' && t.itemId && t.itemId.includes('Investimento'))
+      .filter(t => t.status === 'Pago' && t.item?.grupo_principal === 'Investimento')
       .forEach(transacao => {
-        const categoria = transacao.itemId.replace(/\d+/, '').trim();
-        // Só adicionar se a categoria não estiver vazia
-        if (categoria && categoria.length > 0) {
-          custosPorCategoria[categoria] = (custosPorCategoria[categoria] || 0) + transacao.valor;
-        }
+        const categoria = transacao.item?.nome || 'Categoria Não Identificada';
+        custosPorCategoria[categoria] = (custosPorCategoria[categoria] || 0) + transacao.valor;
       });
 
     return Object.entries(custosPorCategoria).map(([categoria, valor]) => ({
@@ -241,12 +245,8 @@ export function useDashboardFinanceiro() {
     const categorias = new Set<string>();
     
     transacoesFiltradas.forEach(transacao => {
-      if (transacao.itemId) {
-        const categoria = transacao.itemId.replace(/\d+/, '').trim();
-        // Só adicionar categorias não vazias
-        if (categoria && categoria.length > 0) {
-          categorias.add(categoria);
-        }
+      if (transacao.item?.nome) {
+        categorias.add(transacao.item.nome);
       }
     });
 
@@ -273,7 +273,7 @@ export function useDashboardFinanceiro() {
 
       // Agregar dados por mês para esta categoria
       transacoesFiltradas
-        .filter(t => t.status === 'Pago' && t.itemId && t.itemId.includes(categoria))
+        .filter(t => t.status === 'Pago' && t.item?.nome === categoria)
         .forEach(transacao => {
           if (!transacao.dataVencimento || typeof transacao.dataVencimento !== 'string') {
             return;
