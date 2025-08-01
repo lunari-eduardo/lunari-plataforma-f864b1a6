@@ -1290,41 +1290,84 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }
         }
         
-        // CÁLCULO COM REGRAS CONGELADAS - IMPLEMENTAÇÃO DO SISTEMA DE CONGELAMENTO
-        if (updates.qtdFotoExtra !== undefined || updates.valorFotoExtra !== undefined) {
-          console.log('🧮 Recalculando foto extra com sistema de congelamento para item:', id);
-          
+        // SISTEMA DE CONGELAMENTO CORRIGIDO - CÁLCULO COM REGRAS CONGELADAS
+        if (updates.qtdFotoExtra !== undefined) {
+          console.log('🧮 [WORKFLOW UPDATE] Recalculando foto extra para item:', id);
+          console.log('📋 [WORKFLOW UPDATE] Dados atuais do item:', {
+            qtdFotoExtra: updatedItem.qtdFotoExtra,
+            valorFotoExtra: updatedItem.valorFotoExtra,
+            temRegrasCongeladas: !!updatedItem.regrasDePrecoFotoExtraCongeladas
+          });
+
           // Verificar se o item tem regras congeladas
           if (updatedItem.regrasDePrecoFotoExtraCongeladas) {
-            // Usar regras congeladas específicas do item
+            // USAR REGRAS CONGELADAS - NUNCA MUDAR
+            console.log('🧊 [WORKFLOW UPDATE] Usando regras congeladas específicas do item');
+            
+            // Validar regras antes de usar
+            const { validarRegrasCongeladas } = require('@/utils/precificacaoUtils');
+            if (!validarRegrasCongeladas(updatedItem.regrasDePrecoFotoExtraCongeladas)) {
+              console.error('❌ [WORKFLOW UPDATE] Regras congeladas inválidas, forçando migração');
+              updatedItem.regrasDePrecoFotoExtraCongeladas = migrarRegrasParaItemAntigo(
+                updatedItem.valorFotoExtra,
+                pacotes.find(p => p.nome === updatedItem.pacote)?.categoria_id
+              );
+            }
+
             updatedItem.valorTotalFotoExtra = calcularComRegrasProprias(
               updatedItem.qtdFotoExtra,
               updatedItem.regrasDePrecoFotoExtraCongeladas
             );
-            console.log('✅ Usando regras congeladas:', {
+            
+            console.log('✅ [WORKFLOW UPDATE] Cálculo com regras congeladas concluído:', {
               quantidade: updatedItem.qtdFotoExtra,
               modelo: updatedItem.regrasDePrecoFotoExtraCongeladas.modelo,
               totalCalculado: updatedItem.valorTotalFotoExtra
             });
+            
           } else {
             // MIGRAÇÃO AUTOMÁTICA: Item antigo sem regras congeladas
-            console.log('🔄 Item antigo detectado, aplicando migração automática');
+            console.log('🔄 [WORKFLOW UPDATE] Item antigo detectado, aplicando migração');
+            
+            // PRESERVAR o valor original que estava no item
+            const valorOriginalPreservado = updatedItem.valorFotoExtra;
+            
             updatedItem.regrasDePrecoFotoExtraCongeladas = migrarRegrasParaItemAntigo(
-              updatedItem.valorFotoExtra,
+              valorOriginalPreservado,
               pacotes.find(p => p.nome === updatedItem.pacote)?.categoria_id
             );
             
-            // Usar cálculo tradicional para itens migrados (valor fixo)
-            updatedItem.valorTotalFotoExtra = updatedItem.qtdFotoExtra * updatedItem.valorFotoExtra;
-            console.log('✅ Migração aplicada, usando valor fixo:', {
+            // Usar o valor preservado para o cálculo
+            updatedItem.valorTotalFotoExtra = updatedItem.qtdFotoExtra * valorOriginalPreservado;
+            
+            console.log('✅ [WORKFLOW UPDATE] Migração concluída:', {
               quantidade: updatedItem.qtdFotoExtra,
-              valorFixo: updatedItem.valorFotoExtra,
-              total: updatedItem.valorTotalFotoExtra
+              valorPreservado: valorOriginalPreservado,
+              totalCalculado: updatedItem.valorTotalFotoExtra,
+              regrasGeradas: updatedItem.regrasDePrecoFotoExtraCongeladas
             });
           }
+        } else if (updates.valorFotoExtra !== undefined) {
+          // ATUALIZAÇÃO MANUAL DO VALOR FOTO EXTRA
+          // Esta situação NÃO deve sobrescrever regras congeladas
+          console.log('⚠️ [WORKFLOW UPDATE] Tentativa de alterar valorFotoExtra manualmente');
+          console.log('📋 [WORKFLOW UPDATE] Mantendo regras congeladas e recalculando apenas o total');
+          
+          if (updatedItem.regrasDePrecoFotoExtraCongeladas) {
+            // Manter regras congeladas, apenas recalcular
+            updatedItem.valorTotalFotoExtra = calcularComRegrasProprias(
+              updatedItem.qtdFotoExtra,
+              updatedItem.regrasDePrecoFotoExtraCongeladas
+            );
+          } else {
+            // Item sem regras, usar valor tradicional
+            updatedItem.valorTotalFotoExtra = updatedItem.qtdFotoExtra * updatedItem.valorFotoExtra;
+          }
         } else {
-          // Se não foi alteração em foto extra, manter cálculo atual
-          updatedItem.valorTotalFotoExtra = updatedItem.qtdFotoExtra * updatedItem.valorFotoExtra;
+          // OUTROS CAMPOS: Manter cálculo atual se já existe
+          if (updatedItem.valorTotalFotoExtra === undefined || updatedItem.valorTotalFotoExtra === null) {
+            updatedItem.valorTotalFotoExtra = updatedItem.qtdFotoExtra * (updatedItem.valorFotoExtra || 0);
+          }
         }
         
         updatedItem.total = updatedItem.valorPacote + updatedItem.valorTotalFotoExtra + 

@@ -416,6 +416,9 @@ export default function PrecificacaoFotos({ categorias }: PrecificacaoFotosProps
           </ul>
         </CardContent>
       </Card>
+
+      {/* Informações sobre Congelamento de Regras */}
+      <CongelamentoRegrasInfo />
     </div>
   );
 }

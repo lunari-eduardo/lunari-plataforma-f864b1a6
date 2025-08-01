@@ -371,7 +371,7 @@ export function congelarRegrasPrecoFotoExtra(
 }
 
 /**
- * FUNÇÃO DE CÁLCULO COM REGRAS CONGELADAS
+ * FUNÇÃO DE CÁLCULO COM REGRAS CONGELADAS - VERSÃO CORRIGIDA
  * 
  * Esta função calcula o total usando as regras específicas armazenadas
  * no item, em vez das configurações globais atuais.
@@ -380,54 +380,149 @@ export function calcularComRegrasProprias(
   quantidade: number,
   regrasCongeladas: RegrasPrecoFotoExtraCongeladas
 ): number {
+  console.log('🧮 [INICIO] Calculando com regras próprias:', { 
+    quantidade, 
+    modelo: regrasCongeladas.modelo,
+    timestamp: regrasCongeladas.timestampCongelamento 
+  });
+
+  // VALIDAÇÃO INICIAL
   if (quantidade <= 0) {
+    console.log('✅ Quantidade zero, retornando 0');
     return 0;
   }
 
-  console.log('🧮 Calculando com regras próprias:', { quantidade, regrasCongeladas });
+  if (!regrasCongeladas) {
+    console.error('❌ Regras congeladas não fornecidas');
+    return 0;
+  }
 
-  switch (regrasCongeladas.modelo) {
-    case 'fixo':
-      const valorFixo = regrasCongeladas.valorFixo || 0;
-      return quantidade * valorFixo;
+  let resultado = 0;
 
-    case 'global':
-      if (!regrasCongeladas.tabelaGlobal) {
-        console.warn('⚠️ Tabela global não encontrada nas regras congeladas');
+  try {
+    switch (regrasCongeladas.modelo) {
+      case 'fixo':
+        const valorFixo = regrasCongeladas.valorFixo || 0;
+        resultado = quantidade * valorFixo;
+        console.log('💰 [FIXO] Calculado:', { quantidade, valorFixo, resultado });
+        break;
+
+      case 'global':
+        if (!regrasCongeladas.tabelaGlobal) {
+          console.error('❌ [GLOBAL] Tabela global não encontrada nas regras congeladas');
+          return 0;
+        }
+        
+        console.log('📊 [GLOBAL] Usando tabela:', regrasCongeladas.tabelaGlobal);
+        const valorPorFotoGlobal = calcularValorPorFoto(quantidade, regrasCongeladas.tabelaGlobal);
+        resultado = quantidade * valorPorFotoGlobal;
+        console.log('💰 [GLOBAL] Calculado:', { quantidade, valorPorFoto: valorPorFotoGlobal, resultado });
+        break;
+
+      case 'categoria':
+        if (!regrasCongeladas.tabelaCategoria) {
+          console.error('❌ [CATEGORIA] Tabela de categoria não encontrada nas regras congeladas');
+          return 0;
+        }
+        
+        console.log('📊 [CATEGORIA] Usando tabela:', regrasCongeladas.tabelaCategoria);
+        const valorPorFotoCategoria = calcularValorPorFoto(quantidade, regrasCongeladas.tabelaCategoria);
+        resultado = quantidade * valorPorFotoCategoria;
+        console.log('💰 [CATEGORIA] Calculado:', { quantidade, valorPorFoto: valorPorFotoCategoria, resultado });
+        break;
+
+      default:
+        console.error('❌ Modelo de regras congeladas desconhecido:', regrasCongeladas.modelo);
         return 0;
-      }
-      const valorPorFotoGlobal = calcularValorPorFoto(quantidade, regrasCongeladas.tabelaGlobal);
-      return quantidade * valorPorFotoGlobal;
+    }
 
-    case 'categoria':
-      if (!regrasCongeladas.tabelaCategoria) {
-        console.warn('⚠️ Tabela de categoria não encontrada nas regras congeladas');
-        return 0;
-      }
-      const valorPorFotoCategoria = calcularValorPorFoto(quantidade, regrasCongeladas.tabelaCategoria);
-      return quantidade * valorPorFotoCategoria;
+    console.log('✅ [FINAL] Cálculo concluído:', resultado);
+    return resultado;
 
-    default:
-      console.error('❌ Modelo de regras congeladas desconhecido:', regrasCongeladas.modelo);
-      return 0;
+  } catch (error) {
+    console.error('❌ [ERRO] Falha no cálculo com regras próprias:', error);
+    return 0;
   }
 }
 
 /**
- * FUNÇÃO DE MIGRAÇÃO
+ * FUNÇÃO DE MIGRAÇÃO - VERSÃO CORRIGIDA
  * 
  * Para itens antigos que não possuem regras congeladas,
  * aplica regras padrão baseadas nos dados existentes.
+ * 
+ * IMPORTANTE: Esta função deve preservar o valor original que estava
+ * no item quando foi criado, não o valor atual das configurações.
  */
 export function migrarRegrasParaItemAntigo(
-  valorFotoExtraAtual?: number,
+  valorFotoExtraOriginal?: number,
   categoriaId?: string
 ): RegrasPrecoFotoExtraCongeladas {
-  console.log('🔄 Migrando item antigo para sistema de regras congeladas');
+  console.log('🔄 [MIGRAÇÃO] Iniciando migração para item antigo:', {
+    valorOriginal: valorFotoExtraOriginal,
+    categoriaId
+  });
   
-  return {
-    modelo: 'fixo',
-    valorFixo: valorFotoExtraAtual || 35,
+  // Usar o valor que estava no item quando foi criado
+  // Se não tiver valor, usar padrão histórico (35)
+  const valorFixoPreservado = valorFotoExtraOriginal && valorFotoExtraOriginal > 0 
+    ? valorFotoExtraOriginal 
+    : 35;
+
+  const regrasCongeladas = {
+    modelo: 'fixo' as const,
+    valorFixo: valorFixoPreservado,
     timestampCongelamento: new Date().toISOString()
   };
+
+  console.log('✅ [MIGRAÇÃO] Regras criadas:', regrasCongeladas);
+  
+  return regrasCongeladas;
+}
+
+/**
+ * FUNÇÃO DE DEBUG - Para inspecionar dados no localStorage
+ */
+export function debugWorkflowItems(): void {
+  try {
+    const items = localStorage.getItem('lunari_workflow_items');
+    if (items) {
+      const parsedItems = JSON.parse(items);
+      console.log('🔍 [DEBUG] Workflow Items:', parsedItems);
+      
+      parsedItems.forEach((item: any, index: number) => {
+        console.log(`📋 [DEBUG] Item ${index + 1}:`, {
+          id: item.id,
+          pacote: item.pacote,
+          valorFotoExtra: item.valorFotoExtra,
+          qtdFotoExtra: item.qtdFotoExtra,
+          valorTotalFotoExtra: item.valorTotalFotoExtra,
+          temRegrasCongeladas: !!item.regrasDePrecoFotoExtraCongeladas,
+          regrasCongeladas: item.regrasDePrecoFotoExtraCongeladas
+        });
+      });
+    }
+  } catch (error) {
+    console.error('❌ [DEBUG] Erro ao inspecionar items:', error);
+  }
+}
+
+/**
+ * FUNÇÃO DE VALIDAÇÃO - Verifica integridade das regras congeladas
+ */
+export function validarRegrasCongeladas(regras: RegrasPrecoFotoExtraCongeladas): boolean {
+  if (!regras) return false;
+  
+  if (!regras.modelo || !regras.timestampCongelamento) return false;
+  
+  switch (regras.modelo) {
+    case 'fixo':
+      return typeof regras.valorFixo === 'number' && regras.valorFixo >= 0;
+    case 'global':
+      return !!regras.tabelaGlobal && Array.isArray(regras.tabelaGlobal.faixas);
+    case 'categoria':
+      return !!regras.tabelaCategoria && Array.isArray(regras.tabelaCategoria.faixas);
+    default:
+      return false;
+  }
 }

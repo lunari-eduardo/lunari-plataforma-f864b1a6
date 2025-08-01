@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Snowflake, Calculator, TrendingUp, Tag } from "lucide-react";
-import { RegrasPrecoFotoExtraCongeladas } from "@/contexts/AppContext";
+import { Snowflake, Calculator, TrendingUp, Tag, AlertTriangle, Clock } from "lucide-react";
+import { RegrasPrecoFotoExtraCongeladas, validarRegrasCongeladas } from "@/utils/precificacaoUtils";
 
 interface RegrasCongeladasIndicatorProps {
   regras?: RegrasPrecoFotoExtraCongeladas;
@@ -14,18 +14,20 @@ export function RegrasCongeladasIndicator({ regras, compact = false }: RegrasCon
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Badge variant="outline" className="text-xs gap-1">
+            <Badge variant="outline" className="text-xs gap-1 border-orange-200 text-orange-700">
               <Calculator className="h-3 w-3" />
-              {!compact && "Atual"}
+              {!compact && "Migração"}
             </Badge>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Usando configuração atual (sem regras congeladas)</p>
+            <p>⚠️ Item sem regras congeladas - será migrado automaticamente</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
     );
   }
+
+  const regraValida = validarRegrasCongeladas(regras);
 
   const getIcon = () => {
     switch (regras.modelo) {
@@ -74,19 +76,41 @@ export function RegrasCongeladasIndicator({ regras, compact = false }: RegrasCon
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Badge variant="secondary" className="text-xs gap-1 bg-blue-50 text-blue-700 border-blue-200">
+          <Badge 
+            variant={regraValida ? "secondary" : "destructive"} 
+            className={`text-xs gap-1 ${
+              regraValida 
+                ? 'bg-blue-50 text-blue-700 border-blue-200' 
+                : 'bg-red-50 text-red-700 border-red-200'
+            }`}
+          >
             <Snowflake className="h-3 w-3" />
-            {getIcon()}
-            {getLabel()}
+            {regraValida ? getIcon() : <AlertTriangle className="h-3 w-3" />}
+            {regraValida ? getLabel() : (compact ? "!" : "Erro")}
           </Badge>
         </TooltipTrigger>
         <TooltipContent>
-          <div className="max-w-xs">
-            <p className="font-medium">Regras Congeladas</p>
-            <p className="text-sm text-muted-foreground">{getDescription()}</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Mudanças na configuração não afetam este item
+          <div className="max-w-sm space-y-2">
+            <p className="font-medium flex items-center gap-1">
+              <Snowflake className="h-3 w-3" />
+              Regras Congeladas {!regraValida && '(Inválidas)'}
             </p>
+            <p className="text-sm text-muted-foreground">{getDescription()}</p>
+            
+            {regraValida ? (
+              <p className="text-xs text-green-600 bg-green-50 p-2 rounded">
+                ✅ Mudanças na configuração não afetam este item
+              </p>
+            ) : (
+              <p className="text-xs text-red-600 bg-red-50 p-2 rounded">
+                ❌ Regras inválidas - migração necessária
+              </p>
+            )}
+            
+            <div className="text-xs text-muted-foreground flex items-center gap-1 border-t pt-1">
+              <Clock className="h-3 w-3" />
+              Congelado: {new Date(regras.timestampCongelamento).toLocaleString('pt-BR')}
+            </div>
           </div>
         </TooltipContent>
       </Tooltip>
