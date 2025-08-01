@@ -6,6 +6,7 @@ import { toast } from '@/hooks/use-toast';
 import { FinancialEngine, CreateTransactionInput } from '@/services/FinancialEngine';
 import { calculateTotals, calculateTotalsNew } from '@/services/FinancialCalculationEngine';
 import { autoMigrateIfNeeded } from '@/utils/dataMoveMigration';
+import { congelarRegrasPrecoFotoExtra, calcularComRegrasProprias, migrarRegrasParaItemAntigo } from '@/utils/precificacaoUtils';
 
 // Types
 import { Orcamento, Template, OrigemCliente, MetricasOrcamento, Cliente } from '@/types/orcamentos';
@@ -656,7 +657,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
 
         // CONGELAR REGRAS DE PREÇO NO MOMENTO DA CRIAÇÃO
-        const { congelarRegrasPrecoFotoExtra } = require('@/utils/precificacaoUtils');
         const regrasCongeladas = congelarRegrasPrecoFotoExtra({
           valorFotoExtra: valorFotoExtraFromPackage,
           categoria: categoriaName,
@@ -842,7 +842,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       // CONGELAR REGRAS DE PREÇO NO MOMENTO DA CRIAÇÃO
-      const { congelarRegrasPrecoFotoExtra } = require('@/utils/precificacaoUtils');
       const regrasCongeladas = congelarRegrasPrecoFotoExtra({
         valorFotoExtra: valorFotoExtraFromPackage,
         categoria: categoriaName,
@@ -1298,7 +1297,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           // Verificar se o item tem regras congeladas
           if (updatedItem.regrasDePrecoFotoExtraCongeladas) {
             // Usar regras congeladas específicas do item
-            const { calcularComRegrasProprias } = require('@/utils/precificacaoUtils');
             updatedItem.valorTotalFotoExtra = calcularComRegrasProprias(
               updatedItem.qtdFotoExtra,
               updatedItem.regrasDePrecoFotoExtraCongeladas
@@ -1311,7 +1309,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           } else {
             // MIGRAÇÃO AUTOMÁTICA: Item antigo sem regras congeladas
             console.log('🔄 Item antigo detectado, aplicando migração automática');
-            const { migrarRegrasParaItemAntigo } = require('@/utils/precificacaoUtils');
             updatedItem.regrasDePrecoFotoExtraCongeladas = migrarRegrasParaItemAntigo(
               updatedItem.valorFotoExtra,
               pacotes.find(p => p.nome === updatedItem.pacote)?.categoria_id
