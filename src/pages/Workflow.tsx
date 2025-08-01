@@ -565,6 +565,43 @@ export default function Workflow() {
       </div>
       
       <div className="flex-1 overflow-hidden">
+        {/* Legenda do Sistema de Congelamento */}
+        <div className="bg-blue-50 border-b border-blue-200 px-4 py-2">
+          <div className="flex flex-wrap items-center gap-4 text-xs">
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-blue-800">Proteção de Regras:</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="inline-flex items-center gap-1 px-2 py-1 rounded-md border bg-green-50 text-green-700 border-green-200">
+                <div className="w-2 h-2 bg-green-400 rounded-full" />
+                Fixo
+              </div>
+              <span className="text-gray-600">Valor fixo protegido</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="inline-flex items-center gap-1 px-2 py-1 rounded-md border bg-purple-50 text-purple-700 border-purple-200">
+                <div className="w-2 h-2 bg-purple-400 rounded-full" />
+                Global
+              </div>
+              <span className="text-gray-600">Tabela global congelada</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="inline-flex items-center gap-1 px-2 py-1 rounded-md border bg-orange-50 text-orange-700 border-orange-200">
+                <div className="w-2 h-2 bg-orange-400 rounded-full" />
+                Categoria
+              </div>
+              <span className="text-gray-600">Tabela de categoria congelada</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="inline-flex items-center gap-1 px-2 py-1 rounded-md border bg-orange-50 text-orange-700 border-orange-200">
+                <div className="w-2 h-2 bg-orange-400 rounded-full" />
+                Migração
+              </div>
+              <span className="text-gray-600">Pode ser afetado por mudanças globais</span>
+            </div>
+          </div>
+        </div>
+        
         <WorkflowTable sessions={sortedSessions} statusOptions={statusOptions} categoryOptions={categoryOptions} packageOptions={packageOptions} productOptions={productOptions} onStatusChange={handleStatusChange} onEditSession={handleEditSession} onAddPayment={handleAddPayment} onFieldUpdate={handleFieldUpdate} visibleColumns={visibleColumns} columnWidths={columnWidths} onColumnWidthChange={handleColumnWidthChange} onScrollChange={setScrollLeft} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
       </div>
     </div>;
