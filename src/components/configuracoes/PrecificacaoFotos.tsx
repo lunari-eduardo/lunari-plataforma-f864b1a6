@@ -23,6 +23,7 @@ import {
   obterTabelaCategoria
 } from '@/utils/precificacaoUtils';
 import TabelaPrecosModal from './TabelaPrecosModal';
+import { CongelamentoRegrasInfo } from "./CongelamentoRegrasInfo";
 
 interface PrecificacaoFotosProps {
   categorias: Array<{

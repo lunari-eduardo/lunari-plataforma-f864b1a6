@@ -18,6 +18,31 @@ export interface ProdutoWorkflow {
   tipo: 'incluso' | 'manual';
 }
 
+export interface RegrasPrecoFotoExtraCongeladas {
+  modelo: 'fixo' | 'global' | 'categoria';
+  valorFixo?: number; // Para modelo fixo
+  tabelaGlobal?: {
+    id: string;
+    nome: string;
+    faixas: Array<{
+      min: number;
+      max: number | null;
+      valor: number;
+    }>;
+  }; // Para modelo global
+  tabelaCategoria?: {
+    id: string;
+    nome: string;
+    faixas: Array<{
+      min: number;
+      max: number | null;
+      valor: number;
+    }>;
+  }; // Para modelo categoria
+  categoriaId?: string; // ID da categoria (para modelo categoria)
+  timestampCongelamento: string; // Para auditoria
+}
+
 export interface WorkflowItem {
   id: string;
   data: string;
@@ -50,6 +75,8 @@ export interface WorkflowItem {
   valorFinalAjustado?: boolean;
   valorOriginalOrcamento?: number;
   percentualAjusteOrcamento?: number;
+  // NOVO: Campo para congelamento de regras de preço
+  regrasDePrecoFotoExtraCongeladas?: RegrasPrecoFotoExtraCongeladas;
 }
 
 interface WorkflowFilters {
@@ -628,6 +655,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                         appointment.type.includes('Corporativo') ? 'Corporativo' : 'Outros';
         }
 
+        // CONGELAR REGRAS DE PREÇO NO MOMENTO DA CRIAÇÃO
+        const { congelarRegrasPrecoFotoExtra } = require('@/utils/precificacaoUtils');
+        const regrasCongeladas = congelarRegrasPrecoFotoExtra({
+          valorFotoExtra: valorFotoExtraFromPackage,
+          categoria: categoriaName,
+          categoriaId: pacoteData?.categoria_id
+        });
+
         const newWorkflowItem: WorkflowItem = {
           id: `agenda-${appointment.id}`,
           data: formatDateForStorage(appointment.date),
@@ -666,7 +701,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             data: getCurrentDateString()
           }] : [],
           fonte: 'agenda',
-          dataOriginal: appointment.date
+          dataOriginal: appointment.date,
+          // NOVO: Adicionar regras congeladas
+          regrasDePrecoFotoExtraCongeladas: regrasCongeladas
         };
 
         // CORREÇÃO: Adicionar TODOS os produtos incluídos do agendamento
@@ -804,6 +841,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       }
 
+      // CONGELAR REGRAS DE PREÇO NO MOMENTO DA CRIAÇÃO
+      const { congelarRegrasPrecoFotoExtra } = require('@/utils/precificacaoUtils');
+      const regrasCongeladas = congelarRegrasPrecoFotoExtra({
+        valorFotoExtra: valorFotoExtraFromPackage,
+        categoria: categoriaName,
+        categoriaId: pacoteData?.categoria_id
+      });
+
       const newWorkflowItem: WorkflowItem = {
         id: `orcamento-${orc.id}`,
         data: orc.data,
@@ -830,7 +875,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         restante: 0,
         pagamentos: [],
         fonte: 'orcamento',
-        dataOriginal: parseDateFromStorage(orc.data)
+        dataOriginal: parseDateFromStorage(orc.data),
+        // NOVO: Adicionar regras congeladas
+        regrasDePrecoFotoExtraCongeladas: regrasCongeladas
       };
 
       // CORREÇÃO: Transferir TODOS os produtos do orçamento
@@ -1244,7 +1291,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }
         }
         
-        updatedItem.valorTotalFotoExtra = updatedItem.qtdFotoExtra * updatedItem.valorFotoExtra;
+        // CÁLCULO COM REGRAS CONGELADAS - IMPLEMENTAÇÃO DO SISTEMA DE CONGELAMENTO
+        if (updates.qtdFotoExtra !== undefined || updates.valorFotoExtra !== undefined) {
+          console.log('🧮 Recalculando foto extra com sistema de congelamento para item:', id);
+          
+          // Verificar se o item tem regras congeladas
+          if (updatedItem.regrasDePrecoFotoExtraCongeladas) {
+            // Usar regras congeladas específicas do item
+            const { calcularComRegrasProprias } = require('@/utils/precificacaoUtils');
+            updatedItem.valorTotalFotoExtra = calcularComRegrasProprias(
+              updatedItem.qtdFotoExtra,
+              updatedItem.regrasDePrecoFotoExtraCongeladas
+            );
+            console.log('✅ Usando regras congeladas:', {
+              quantidade: updatedItem.qtdFotoExtra,
+              modelo: updatedItem.regrasDePrecoFotoExtraCongeladas.modelo,
+              totalCalculado: updatedItem.valorTotalFotoExtra
+            });
+          } else {
+            // MIGRAÇÃO AUTOMÁTICA: Item antigo sem regras congeladas
+            console.log('🔄 Item antigo detectado, aplicando migração automática');
+            const { migrarRegrasParaItemAntigo } = require('@/utils/precificacaoUtils');
+            updatedItem.regrasDePrecoFotoExtraCongeladas = migrarRegrasParaItemAntigo(
+              updatedItem.valorFotoExtra,
+              pacotes.find(p => p.nome === updatedItem.pacote)?.categoria_id
+            );
+            
+            // Usar cálculo tradicional para itens migrados (valor fixo)
+            updatedItem.valorTotalFotoExtra = updatedItem.qtdFotoExtra * updatedItem.valorFotoExtra;
+            console.log('✅ Migração aplicada, usando valor fixo:', {
+              quantidade: updatedItem.qtdFotoExtra,
+              valorFixo: updatedItem.valorFotoExtra,
+              total: updatedItem.valorTotalFotoExtra
+            });
+          }
+        } else {
+          // Se não foi alteração em foto extra, manter cálculo atual
+          updatedItem.valorTotalFotoExtra = updatedItem.qtdFotoExtra * updatedItem.valorFotoExtra;
+        }
+        
         updatedItem.total = updatedItem.valorPacote + updatedItem.valorTotalFotoExtra + 
                            updatedItem.valorTotalProduto + updatedItem.valorAdicional - updatedItem.desconto;
         updatedItem.restante = updatedItem.total - updatedItem.valorPago;

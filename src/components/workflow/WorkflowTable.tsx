@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { formatToDayMonth } from "@/utils/dateUtils";
 import { calculateTotals } from '@/services/FinancialCalculationEngine';
 import { calcularTotalFotosExtras, obterConfiguracaoPrecificacao, obterTabelaGlobal, obterTabelaCategoria, calcularValorPorFoto, formatarMoeda } from '@/utils/precificacaoUtils';
+import { RegrasCongeladasIndicator } from './RegrasCongeladasIndicator';
+import { RegrasPrecoFotoExtraCongeladas } from '@/contexts/AppContext';
 interface ProdutoWorkflow {
   nome: string;
   quantidade: number;
@@ -42,6 +44,8 @@ interface SessionData {
   valorPago: string;
   restante: string;
   desconto: number;
+  // NOVO: Campo para regras congeladas
+  regrasDePrecoFotoExtraCongeladas?: RegrasPrecoFotoExtraCongeladas;
 }
 interface WorkflowTableProps {
   sessions: SessionData[];
@@ -373,6 +377,23 @@ export function WorkflowTable({
           handleFieldUpdateStable(sessionId, 'valorTotalFotoExtra', formatCurrency(qtd * valorUnit));
         }
       }
+
+      // SISTEMA DE CONGELAMENTO: Recalcular quando quantidade de fotos extras for alterada
+      if (field === 'qtdFotosExtra') {
+        const session = sessions.find(s => s.id === sessionId);
+        if (session) {
+          const novaQuantidade = parseInt(newValue) || 0;
+          
+          // Buscar o item correspondente no contexto para verificar regras congeladas
+          console.log('🧮 Recalculando fotos extras para sessão:', sessionId, 'quantidade:', novaQuantidade);
+          
+          // Como não temos acesso direto às regras congeladas aqui, 
+          // vamos disparar o recálculo através do contexto
+          setTimeout(() => {
+            handleFieldUpdateStable(sessionId, 'qtdFotoExtra', novaQuantidade);
+          }, 0);
+        }
+      }
       setEditingValues(prev => {
         const updated = {
           ...prev
@@ -575,22 +596,27 @@ export function WorkflowTable({
                 {renderCell('discount', renderEditableInput(session, 'desconto', String(session.desconto || 0), 'number', '0'))}
 
                 {renderCell('extraPhotoValue', (() => {
-                  const config = obterConfiguracaoPrecificacao();
-                  if (config.modelo === 'fixo') {
-                    // Modelo fixo: mostrar valor editável do pacote
-                    return renderEditableInput(session, 'valorFotoExtra', session.valorFotoExtra || '', 'text', 'R$ 0,00');
-                  } else {
-                    // Modelos progressivos: calcular e mostrar valor atual (somente leitura)
-                    const qtd = session.qtdFotosExtra || 1; // Usar 1 para mostrar valor base
-                    const categorias = JSON.parse(localStorage.getItem('configuracoes_categorias') || '[]');
-                    const categoriaObj = categorias.find((cat: any) => cat.nome === session.categoria);
-                    const categoriaId = categoriaObj?.id || session.categoria;
-                    const valorPorFoto = calcularValorPorFoto(qtd, config.modelo === 'global' ? obterTabelaGlobal() : obterTabelaCategoria(categoriaId));
-                    const valorFormatado = formatarMoeda(valorPorFoto);
-                    return <div className="flex items-center gap-1 h-6">
-                        <span className="text-xs font-medium text-gray-600">{valorFormatado}</span>
-                      </div>;
-                  }
+                  // SISTEMA DE CONGELAMENTO: Mostrar indicador das regras e valor correspondente
+                  const hasRegrasCongeladas = Boolean(session.regrasDePrecoFotoExtraCongeladas);
+                  
+                  return <div className="flex flex-col gap-1 h-auto min-h-[24px]">
+                      {/* Indicador de regras congeladas */}
+                      <RegrasCongeladasIndicator 
+                        regras={session.regrasDePrecoFotoExtraCongeladas} 
+                        compact={true} 
+                      />
+                      
+                      {/* Valor da foto */}
+                      {hasRegrasCongeladas ? (
+                        // Item com regras congeladas: mostrar valor calculado (somente leitura)
+                        <span className="text-xs font-medium text-blue-600">
+                          {session.valorFotoExtra || 'R$ 0,00'}
+                        </span>
+                      ) : (
+                        // Item sem regras congeladas: permitir edição
+                        renderEditableInput(session, 'valorFotoExtra', session.valorFotoExtra || '', 'text', 'R$ 0,00')
+                      )}
+                    </div>;
                 })())}
 
                 {renderCell('extraPhotoQty', <Input key={`photoQty-${session.id}-${session.qtdFotosExtra}`} type="number" value={session.qtdFotosExtra || 0} onChange={e => {

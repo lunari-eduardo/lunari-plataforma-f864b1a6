@@ -277,3 +277,157 @@ export function criarTabelaExemplo(): TabelaPrecos {
     ]
   };
 }
+
+// ============= SISTEMA DE CONGELAMENTO DE REGRAS =============
+
+export interface RegrasPrecoFotoExtraCongeladas {
+  modelo: 'fixo' | 'global' | 'categoria';
+  valorFixo?: number;
+  tabelaGlobal?: TabelaPrecos;
+  tabelaCategoria?: TabelaPrecos;
+  categoriaId?: string;
+  timestampCongelamento: string;
+}
+
+/**
+ * FUNÇÃO PRINCIPAL - Congelar regras de preço ativas no momento da criação
+ * 
+ * Esta função captura um "snapshot" das regras de precificação ativas
+ * e as armazena para uso futuro, garantindo que mudanças nas configurações
+ * não afetem cálculos já realizados.
+ */
+export function congelarRegrasPrecoFotoExtra(
+  pacoteInfo?: {
+    valorFotoExtra?: number;
+    categoria?: string;
+    categoriaId?: string;
+  }
+): RegrasPrecoFotoExtraCongeladas {
+  const config = obterConfiguracaoPrecificacao();
+  const timestamp = new Date().toISOString();
+
+  console.log('🧊 Congelando regras de preço:', { config, pacoteInfo });
+
+  switch (config.modelo) {
+    case 'fixo':
+      return {
+        modelo: 'fixo',
+        valorFixo: pacoteInfo?.valorFotoExtra || 35, // Valor padrão
+        timestampCongelamento: timestamp
+      };
+
+    case 'global':
+      const tabelaGlobal = obterTabelaGlobal();
+      if (!tabelaGlobal) {
+        console.warn('⚠️ Tabela global não configurada, usando modelo fixo como fallback');
+        return {
+          modelo: 'fixo',
+          valorFixo: 35,
+          timestampCongelamento: timestamp
+        };
+      }
+      return {
+        modelo: 'global',
+        tabelaGlobal: JSON.parse(JSON.stringify(tabelaGlobal)), // Deep copy
+        timestampCongelamento: timestamp
+      };
+
+    case 'categoria':
+      const categoriaId = pacoteInfo?.categoriaId;
+      if (!categoriaId) {
+        console.warn('⚠️ ID da categoria não fornecido, usando modelo fixo como fallback');
+        return {
+          modelo: 'fixo',
+          valorFixo: pacoteInfo?.valorFotoExtra || 35,
+          timestampCongelamento: timestamp
+        };
+      }
+
+      const tabelaCategoria = obterTabelaCategoria(categoriaId);
+      if (!tabelaCategoria) {
+        console.warn(`⚠️ Tabela não configurada para categoria ${categoriaId}, usando modelo fixo como fallback`);
+        return {
+          modelo: 'fixo',
+          valorFixo: pacoteInfo?.valorFotoExtra || 35,
+          timestampCongelamento: timestamp
+        };
+      }
+
+      return {
+        modelo: 'categoria',
+        tabelaCategoria: JSON.parse(JSON.stringify(tabelaCategoria)), // Deep copy
+        categoriaId,
+        timestampCongelamento: timestamp
+      };
+
+    default:
+      console.error('❌ Modelo de precificação desconhecido:', config.modelo);
+      return {
+        modelo: 'fixo',
+        valorFixo: 35,
+        timestampCongelamento: timestamp
+      };
+  }
+}
+
+/**
+ * FUNÇÃO DE CÁLCULO COM REGRAS CONGELADAS
+ * 
+ * Esta função calcula o total usando as regras específicas armazenadas
+ * no item, em vez das configurações globais atuais.
+ */
+export function calcularComRegrasProprias(
+  quantidade: number,
+  regrasCongeladas: RegrasPrecoFotoExtraCongeladas
+): number {
+  if (quantidade <= 0) {
+    return 0;
+  }
+
+  console.log('🧮 Calculando com regras próprias:', { quantidade, regrasCongeladas });
+
+  switch (regrasCongeladas.modelo) {
+    case 'fixo':
+      const valorFixo = regrasCongeladas.valorFixo || 0;
+      return quantidade * valorFixo;
+
+    case 'global':
+      if (!regrasCongeladas.tabelaGlobal) {
+        console.warn('⚠️ Tabela global não encontrada nas regras congeladas');
+        return 0;
+      }
+      const valorPorFotoGlobal = calcularValorPorFoto(quantidade, regrasCongeladas.tabelaGlobal);
+      return quantidade * valorPorFotoGlobal;
+
+    case 'categoria':
+      if (!regrasCongeladas.tabelaCategoria) {
+        console.warn('⚠️ Tabela de categoria não encontrada nas regras congeladas');
+        return 0;
+      }
+      const valorPorFotoCategoria = calcularValorPorFoto(quantidade, regrasCongeladas.tabelaCategoria);
+      return quantidade * valorPorFotoCategoria;
+
+    default:
+      console.error('❌ Modelo de regras congeladas desconhecido:', regrasCongeladas.modelo);
+      return 0;
+  }
+}
+
+/**
+ * FUNÇÃO DE MIGRAÇÃO
+ * 
+ * Para itens antigos que não possuem regras congeladas,
+ * aplica regras padrão baseadas nos dados existentes.
+ */
+export function migrarRegrasParaItemAntigo(
+  valorFotoExtraAtual?: number,
+  categoriaId?: string
+): RegrasPrecoFotoExtraCongeladas {
+  console.log('🔄 Migrando item antigo para sistema de regras congeladas');
+  
+  return {
+    modelo: 'fixo',
+    valorFixo: valorFotoExtraAtual || 35,
+    timestampCongelamento: new Date().toISOString()
+  };
+}
