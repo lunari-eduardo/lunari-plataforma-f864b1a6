@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { useDebounce } from '@/hooks/useDebounce';
 import PacoteForm from './PacoteForm';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { obterConfiguracaoPrecificacao } from '@/utils/precificacaoUtils';
 interface Categoria {
   id: string;
   nome: string;
@@ -52,6 +53,10 @@ export default function Pacotes({
   const [filtroValor, setFiltroValor] = useState<string>('');
   const [editingPackage, setEditingPackage] = useState<string | null>(null);
   const [novoPacoteAberto, setNovoPacoteAberto] = useState(false);
+  
+  // Verificar modelo de precificação atual
+  const configPrecificacao = obterConfiguracaoPrecificacao();
+  const isFixedPricing = configPrecificacao.modelo === 'fixo';
 
   // Debounce para filtro de nome
   const debouncedFiltroNome = useDebounce(filtroNome, 300);
@@ -350,14 +355,23 @@ export default function Pacotes({
                     />
                   </TableCell>
                   
-                  {/* Valor Foto Extra - Editável */}
+                  {/* Valor Foto Extra - Editável apenas no modelo fixo */}
                   <TableCell className="p-2">
-                    <Input
-                      type="number"
-                      value={pacote.valor_foto_extra}
-                      onChange={(e) => atualizarPacote(pacote.id, 'valor_foto_extra', parseFloat(e.target.value) || 0)}
-                      className="h-7 text-xs border-0 bg-transparent hover:bg-gray-50 focus:bg-white focus:border-gray-200"
-                    />
+                    {isFixedPricing ? (
+                      <Input
+                        type="number"
+                        value={pacote.valor_foto_extra}
+                        onChange={(e) => atualizarPacote(pacote.id, 'valor_foto_extra', parseFloat(e.target.value) || 0)}
+                        className="h-7 text-xs border-0 bg-transparent hover:bg-gray-50 focus:bg-white focus:border-gray-200"
+                      />
+                    ) : (
+                      <div className="h-7 flex items-center text-xs text-muted-foreground px-2">
+                        {configPrecificacao.modelo === 'global' 
+                          ? 'Tabela Global' 
+                          : 'Por Categoria'
+                        }
+                      </div>
+                    )}
                   </TableCell>
                   
                   {/* Produtos Incluídos - Dropdown para edição */}

@@ -8,6 +8,7 @@ import { MessageCircle, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Packa
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatToDayMonth } from "@/utils/dateUtils";
 import { calculateTotals } from '@/services/FinancialCalculationEngine';
+import { calcularTotalFotosExtras } from '@/utils/precificacaoUtils';
 interface ProdutoWorkflow {
   nome: string;
   quantidade: number;
@@ -577,9 +578,23 @@ export function WorkflowTable({
 
                 {renderCell('extraPhotoQty', <Input key={`photoQty-${session.id}-${session.qtdFotosExtra}`} type="number" value={session.qtdFotosExtra || 0} onChange={e => {
                 const qtd = parseInt(e.target.value) || 0;
-                const valorUnit = parseFloat((session.valorFotoExtra || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0;
                 handleFieldUpdateStable(session.id, 'qtdFotosExtra', qtd);
-                handleFieldUpdateStable(session.id, 'valorTotalFotoExtra', formatCurrency(qtd * valorUnit));
+                
+                // Usar o novo motor de cálculo inteligente
+                const valorFotoExtra = parseFloat((session.valorFotoExtra || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+                
+                // Buscar ID da categoria pelo nome
+                const categorias = JSON.parse(localStorage.getItem('configuracoes_categorias') || '[]');
+                const categoriaObj = categorias.find((cat: any) => cat.nome === session.categoria);
+                const categoriaId = categoriaObj?.id || session.categoria;
+                
+                const total = calcularTotalFotosExtras(qtd, {
+                  valorFotoExtra,
+                  categoria: session.categoria,
+                  categoriaId
+                });
+                
+                handleFieldUpdateStable(session.id, 'valorTotalFotoExtra', formatCurrency(total));
               }} className="h-6 text-xs p-1 w-full border-none bg-transparent focus:bg-lunar-accent/10 transition-colors duration-150" placeholder="0" autoComplete="off" />)}
 
                 {renderCell('extraPhotoTotal', <span className="text-xs font-medium text-green-600">{session.valorTotalFotoExtra || 'R$ 0,00'}</span>)}

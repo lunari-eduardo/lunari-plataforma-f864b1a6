@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
-import { Package, Box, Workflow, Shapes } from 'lucide-react';
+import { Package, Box, Workflow, Shapes, DollarSign } from 'lucide-react';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
 
@@ -10,6 +10,7 @@ import Categorias from '@/components/configuracoes/Categorias';
 import Pacotes from '@/components/configuracoes/Pacotes';
 import Produtos from '@/components/configuracoes/Produtos';
 import FluxoTrabalho from '@/components/configuracoes/FluxoTrabalho';
+import PrecificacaoFotos from '@/components/configuracoes/PrecificacaoFotos';
 
 // Types
 interface Categoria {
@@ -153,7 +154,7 @@ export default function Configuracoes() {
         </CardHeader>
         <CardContent className="py-[10px] my-[8px] bg-lunar-surface">
           <Tabs value={tabAtiva} onValueChange={setTabAtiva} className="w-full">
-            <TabsList className="grid grid-cols-4 mb-2">
+            <TabsList className="grid grid-cols-5 mb-2">
               <TabsTrigger value="categorias" className="flex items-center gap-1.5">
                 <Shapes className="h-4 w-4" />
                 <span className="hidden sm:inline">Categorias</span>
@@ -165,6 +166,10 @@ export default function Configuracoes() {
               <TabsTrigger value="produtos" className="flex items-center gap-1.5">
                 <Box className="h-4 w-4" />
                 <span className="hidden sm:inline">Produtos</span>
+              </TabsTrigger>
+              <TabsTrigger value="precificacao" className="flex items-center gap-1.5">
+                <DollarSign className="h-4 w-4" />
+                <span className="hidden sm:inline">Preços</span>
               </TabsTrigger>
               <TabsTrigger value="fluxo" className="flex items-center gap-1.5">
                 <Workflow className="h-4 w-4" />
@@ -182,6 +187,10 @@ export default function Configuracoes() {
             
             <TabsContent value="produtos">
               <Produtos produtos={produtos} setProdutos={setProdutos} />
+            </TabsContent>
+            
+            <TabsContent value="precificacao">
+              <PrecificacaoFotos categorias={categorias} />
             </TabsContent>
             
             <TabsContent value="fluxo">
