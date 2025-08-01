@@ -8,7 +8,7 @@ import { MessageCircle, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Packa
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatToDayMonth } from "@/utils/dateUtils";
 import { calculateTotals } from '@/services/FinancialCalculationEngine';
-import { calcularTotalFotosExtras } from '@/utils/precificacaoUtils';
+import { calcularTotalFotosExtras, obterConfiguracaoPrecificacao, obterTabelaGlobal, obterTabelaCategoria, calcularValorPorFoto, formatarMoeda } from '@/utils/precificacaoUtils';
 interface ProdutoWorkflow {
   nome: string;
   quantidade: number;
@@ -186,11 +186,32 @@ export function WorkflowTable({
   const [initialMouseX, setInitialMouseX] = useState(0);
   const [initialWidth, setInitialWidth] = useState(0);
   const [currentColumnWidths, setCurrentColumnWidths] = useState<Record<string, number>>({});
+  const [modeloPrecificacao, setModeloPrecificacao] = useState('fixo');
   
   // Atualizar larguras quando columnWidths prop mudar
   useEffect(() => {
     setCurrentColumnWidths({ ...responsiveColumnWidths, ...columnWidths });
   }, [columnWidths, responsiveColumnWidths]);
+
+  // Escutar mudanças no modelo de precificação
+  useEffect(() => {
+    const config = obterConfiguracaoPrecificacao();
+    setModeloPrecificacao(config.modelo);
+
+    const handleModeloChange = (event: CustomEvent) => {
+      const novoModelo = event.detail.novoModelo;
+      setModeloPrecificacao(novoModelo);
+      
+      // Força re-render suave para atualizar campos "Vlr Foto"
+      // Isso irá atualizar os valores dinamicamente
+    };
+
+    window.addEventListener('precificacao-modelo-changed', handleModeloChange as EventListener);
+    
+    return () => {
+      window.removeEventListener('precificacao-modelo-changed', handleModeloChange as EventListener);
+    };
+  }, []);
   const handleFieldUpdateStable = useCallback((sessionId: string, field: string, value: any) => {
     console.log('Updating field:', field, 'for session:', sessionId, 'with value:', value);
     onFieldUpdate(sessionId, field, value);
@@ -574,7 +595,34 @@ export function WorkflowTable({
 
                 {renderCell('discount', renderEditableInput(session, 'desconto', String(session.desconto || 0), 'number', '0'))}
 
-                {renderCell('extraPhotoValue', renderEditableInput(session, 'valorFotoExtra', session.valorFotoExtra || '', 'text', 'R$ 0,00'))}
+                {renderCell('extraPhotoValue', (() => {
+                  const config = obterConfiguracaoPrecificacao();
+                  
+                  if (config.modelo === 'fixo') {
+                    // Modelo fixo: mostrar valor editável do pacote
+                    return renderEditableInput(session, 'valorFotoExtra', session.valorFotoExtra || '', 'text', 'R$ 0,00');
+                  } else {
+                    // Modelos progressivos: calcular e mostrar valor atual (somente leitura)
+                    const qtd = session.qtdFotosExtra || 1; // Usar 1 para mostrar valor base
+                    const categorias = JSON.parse(localStorage.getItem('configuracoes_categorias') || '[]');
+                    const categoriaObj = categorias.find((cat: any) => cat.nome === session.categoria);
+                    const categoriaId = categoriaObj?.id || session.categoria;
+                    
+                    const valorPorFoto = calcularValorPorFoto(qtd, config.modelo === 'global' 
+                      ? obterTabelaGlobal() 
+                      : obterTabelaCategoria(categoriaId)
+                    );
+                    
+                    const valorFormatado = formatarMoeda(valorPorFoto);
+                    
+                    return (
+                      <div className="flex items-center gap-1 h-6">
+                        <span className="text-xs font-medium text-gray-600">{valorFormatado}</span>
+                        <span className="text-xs text-gray-400">({config.modelo === 'global' ? 'Global' : 'Categoria'})</span>
+                      </div>
+                    );
+                  }
+                })())}
 
                 {renderCell('extraPhotoQty', <Input key={`photoQty-${session.id}-${session.qtdFotosExtra}`} type="number" value={session.qtdFotosExtra || 0} onChange={e => {
                 const qtd = parseInt(e.target.value) || 0;

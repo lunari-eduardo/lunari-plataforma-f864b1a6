@@ -41,6 +41,12 @@ export default function PrecificacaoFotos({ categorias }: PrecificacaoFotosProps
   // Salvar configuração automaticamente
   useEffect(() => {
     salvarConfiguracaoPrecificacao(config);
+    
+    // Notificar outras partes do sistema sobre mudança de modelo
+    const evento = new CustomEvent('precificacao-modelo-changed', { 
+      detail: { novoModelo: config.modelo } 
+    });
+    window.dispatchEvent(evento);
   }, [config]);
 
   // Salvar tabela global automaticamente
