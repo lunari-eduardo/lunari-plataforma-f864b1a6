@@ -306,12 +306,35 @@ export function WorkflowTable({
   // Função para calcular valor real por foto baseado nas regras congeladas
   const calcularValorRealPorFoto = useCallback((session: SessionData) => {
     if (session.regrasDePrecoFotoExtraCongeladas) {
-      // Item com regras congeladas - calcular valor unitário baseado na quantidade atual
-      const quantidade = session.qtdFotosExtra || 1; // Use 1 se não tiver quantidade para evitar divisão por zero
-      if (quantidade === 0) return 0;
+      const regras = session.regrasDePrecoFotoExtraCongeladas;
       
-      const valorTotal = calcularComRegrasProprias(quantidade, session.regrasDePrecoFotoExtraCongeladas);
-      return valorTotal / quantidade;
+      switch (regras.modelo) {
+        case 'fixo':
+          return regras.valorFixo || 0;
+        
+        case 'global':
+        case 'categoria':
+          const tabela = regras.modelo === 'global' ? regras.tabelaGlobal : regras.tabelaCategoria;
+          if (!tabela || !tabela.faixas || tabela.faixas.length === 0) {
+            return 0;
+          }
+          
+          // Para tabelas progressivas, mostrar o valor da faixa atual baseado na quantidade
+          const quantidade = session.qtdFotosExtra || 1;
+          const faixasOrdenadas = [...tabela.faixas].sort((a, b) => a.min - b.min);
+          
+          for (const faixa of faixasOrdenadas) {
+            if (quantidade >= faixa.min && (faixa.max === null || quantidade <= faixa.max)) {
+              return faixa.valor;
+            }
+          }
+          
+          // Se não encontrou faixa, usar a última faixa
+          return faixasOrdenadas[faixasOrdenadas.length - 1]?.valor || 0;
+        
+        default:
+          return 0;
+      }
     } else {
       // Item sem regras congeladas - usar valor fixo
       const valorStr = typeof session.valorFotoExtra === 'string' ? session.valorFotoExtra : String(session.valorFotoExtra || '0');
@@ -604,27 +627,60 @@ export function WorkflowTable({
                 {renderCell('discount', renderEditableInput(session, 'desconto', String(session.desconto || 0), 'number', '0'))}
 
                 {renderCell('extraPhotoValue', (() => {
-                  // SISTEMA DE CONGELAMENTO: Mostrar indicador das regras e valor correspondente
-                  const hasRegrasCongeladas = Boolean(session.regrasDePrecoFotoExtraCongeladas);
-                  
-                  return <div className="flex flex-col gap-1 h-auto min-h-[24px]">
-                      {/* Indicador de regras congeladas */}
-                      <RegrasCongeladasIndicator 
-                        regras={session.regrasDePrecoFotoExtraCongeladas} 
-                        compact={true} 
-                      />
-                      
-                      {/* Valor da foto */}
-                      {hasRegrasCongeladas ? (
-                        // Item com regras congeladas: mostrar valor real calculado baseado nas regras
+                  if (session.regrasDePrecoFotoExtraCongeladas) {
+                    // Item com regras congeladas: mostrar valor e modelo aplicado
+                    const regras = session.regrasDePrecoFotoExtraCongeladas;
+                    const valorExibido = calcularValorRealPorFoto(session);
+                    
+                    let labelModelo = '';
+                    let tooltipInfo = '';
+                    
+                    switch (regras.modelo) {
+                      case 'fixo':
+                        labelModelo = 'Fixo';
+                        tooltipInfo = `Valor fixo: R$ ${regras.valorFixo?.toFixed(2) || '0,00'}`;
+                        break;
+                      case 'global':
+                        labelModelo = 'Global';
+                        tooltipInfo = `Tabela global: ${regras.tabelaGlobal?.nome || 'N/A'}`;
+                        break;
+                      case 'categoria':
+                        labelModelo = 'Categoria';
+                        tooltipInfo = `Tabela da categoria: ${regras.tabelaCategoria?.nome || 'N/A'}`;
+                        break;
+                      default:
+                        labelModelo = 'Congelado';
+                        tooltipInfo = 'Regras congeladas';
+                    }
+                    
+                    return (
+                      <div className="flex flex-col gap-1" title={tooltipInfo}>
+                        <div className="flex items-center gap-1">
+                          <RegrasCongeladasIndicator 
+                            regras={session.regrasDePrecoFotoExtraCongeladas} 
+                            compact={true}
+                          />
+                          <span className="text-xs text-muted-foreground">
+                            ({labelModelo})
+                          </span>
+                        </div>
                         <span className="text-xs font-medium text-blue-600">
-                          {formatCurrency(calcularValorRealPorFoto(session))}
+                          {formatCurrency(valorExibido)}
                         </span>
-                      ) : (
-                        // Item sem regras congeladas: permitir edição
-                        renderEditableInput(session, 'valorFotoExtra', session.valorFotoExtra || '', 'text', 'R$ 0,00')
-                      )}
-                    </div>;
+                      </div>
+                    );
+                  } else {
+                    // Item sem regras congeladas: permitir edição com aviso
+                    return (
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-1">
+                          <div className="w-2 h-2 bg-orange-400 rounded-full" title="Migração necessária" />
+                          <span className="text-xs text-orange-600">Migração</span>
+                        </div>
+                        {renderEditableInput(session, 'valorFotoExtra', session.valorFotoExtra || '', 'text', 'R$ 0,00')}
+                      </div>
+                    );
+                  }
                 })())}
 
                 {renderCell('extraPhotoQty', <Input key={`photoQty-${session.id}-${session.qtdFotosExtra}`} type="number" value={session.qtdFotosExtra || 0} onChange={e => {
