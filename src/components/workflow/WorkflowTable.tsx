@@ -415,14 +415,19 @@ export function WorkflowTable({
         if (session) {
           const novaQuantidade = parseInt(newValue) || 0;
           
-          // Buscar o item correspondente no contexto para verificar regras congeladas
+          // CORREÇÃO: Usar diretamente as regras congeladas se existirem
           console.log('🧮 Recalculando fotos extras para sessão:', sessionId, 'quantidade:', novaQuantidade);
           
-          // Como não temos acesso direto às regras congeladas aqui, 
-          // vamos disparar o recálculo através do contexto
-          setTimeout(() => {
+          if (session.regrasDePrecoFotoExtraCongeladas) {
+            // Item tem regras congeladas - calcular diretamente
+            console.log('🧊 Usando regras congeladas específicas do item:', session.regrasDePrecoFotoExtraCongeladas.modelo);
+            const totalCalculado = calcularComRegrasProprias(novaQuantidade, session.regrasDePrecoFotoExtraCongeladas);
+            handleFieldUpdateStable(sessionId, 'valorTotalFotoExtra', formatCurrency(totalCalculado));
+          } else {
+            // Item sem regras congeladas - delegar para o contexto que vai criar as regras
+            console.log('🔄 Item sem regras congeladas, delegando para contexto criar migração');
             handleFieldUpdateStable(sessionId, 'qtdFotoExtra', novaQuantidade);
-          }, 0);
+          }
         }
       }
       setEditingValues(prev => {
