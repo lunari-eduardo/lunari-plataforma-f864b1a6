@@ -8,7 +8,7 @@ import { MessageCircle, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Packa
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatToDayMonth } from "@/utils/dateUtils";
 import { calculateTotals } from '@/services/FinancialCalculationEngine';
-import { calcularTotalFotosExtras, obterConfiguracaoPrecificacao, obterTabelaGlobal, obterTabelaCategoria, calcularValorPorFoto, formatarMoeda } from '@/utils/precificacaoUtils';
+import { calcularTotalFotosExtras, obterConfiguracaoPrecificacao, obterTabelaGlobal, obterTabelaCategoria, calcularValorPorFoto, formatarMoeda, calcularComRegrasProprias, migrarRegrasParaItemAntigo } from '@/utils/precificacaoUtils';
 import { RegrasCongeladasIndicator } from './RegrasCongeladasIndicator';
 import { RegrasPrecoFotoExtraCongeladas } from '@/contexts/AppContext';
 interface ProdutoWorkflow {
@@ -303,6 +303,22 @@ export function WorkflowTable({
       stopContinuousScroll();
     };
   }, [stopContinuousScroll]);
+  // Função para calcular valor real por foto baseado nas regras congeladas
+  const calcularValorRealPorFoto = useCallback((session: SessionData) => {
+    if (session.regrasDePrecoFotoExtraCongeladas) {
+      // Item com regras congeladas - calcular valor unitário baseado na quantidade atual
+      const quantidade = session.qtdFotosExtra || 1; // Use 1 se não tiver quantidade para evitar divisão por zero
+      if (quantidade === 0) return 0;
+      
+      const valorTotal = calcularComRegrasProprias(quantidade, session.regrasDePrecoFotoExtraCongeladas);
+      return valorTotal / quantidade;
+    } else {
+      // Item sem regras congeladas - usar valor fixo
+      const valorStr = typeof session.valorFotoExtra === 'string' ? session.valorFotoExtra : String(session.valorFotoExtra || '0');
+      return parseFloat(valorStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+    }
+  }, []);
+
   const calculateTotal = useCallback((session: SessionData) => {
     try {
       // LÓGICA SIMPLIFICADA: Calcular baseado nos componentes - desconto
@@ -324,14 +340,6 @@ export function WorkflowTable({
         valorProdutosManuais = parseFloat(valorProdutoStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
       }
       const totalCalculado = valorPacote + valorFotoExtra + valorProdutosManuais + valorAdicional - desconto;
-      console.log('💰 Total calculado para', session.nome, ':', {
-        valorPacote,
-        valorFotoExtra,
-        valorProdutosManuais,
-        valorAdicional,
-        desconto,
-        totalFinal: totalCalculado
-      });
       return totalCalculado;
     } catch (error) {
       console.error('Erro no cálculo de total:', error);
@@ -608,9 +616,9 @@ export function WorkflowTable({
                       
                       {/* Valor da foto */}
                       {hasRegrasCongeladas ? (
-                        // Item com regras congeladas: mostrar valor calculado (somente leitura)
+                        // Item com regras congeladas: mostrar valor real calculado baseado nas regras
                         <span className="text-xs font-medium text-blue-600">
-                          {session.valorFotoExtra || 'R$ 0,00'}
+                          {formatCurrency(calcularValorRealPorFoto(session))}
                         </span>
                       ) : (
                         // Item sem regras congeladas: permitir edição
@@ -623,18 +631,30 @@ export function WorkflowTable({
                   const qtd = parseInt(e.target.value) || 0;
                   handleFieldUpdateStable(session.id, 'qtdFotosExtra', qtd);
 
-                  // Usar o novo motor de cálculo inteligente
-                  const valorFotoExtra = parseFloat((session.valorFotoExtra || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-
-                  // Buscar ID da categoria pelo nome
-                  const categorias = JSON.parse(localStorage.getItem('configuracoes_categorias') || '[]');
-                  const categoriaObj = categorias.find((cat: any) => cat.nome === session.categoria);
-                  const categoriaId = categoriaObj?.id || session.categoria;
-                  const total = calcularTotalFotosExtras(qtd, {
-                    valorFotoExtra,
-                    categoria: session.categoria,
-                    categoriaId
-                  });
+                  // CORREÇÃO: Usar regras congeladas quando disponíveis
+                  let total = 0;
+                  
+                  if (session.regrasDePrecoFotoExtraCongeladas) {
+                    // Item com regras congeladas - usar motor de cálculo específico
+                    console.log('🧮 [WORKFLOW] Calculando com regras congeladas para:', session.id);
+                    total = calcularComRegrasProprias(qtd, session.regrasDePrecoFotoExtraCongeladas);
+                  } else {
+                    // Item sem regras congeladas - usar motor global (para compatibilidade)
+                    console.log('🧮 [WORKFLOW] Calculando com motor global para:', session.id);
+                    const valorFotoExtra = parseFloat((session.valorFotoExtra || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+                    
+                    // Buscar ID da categoria pelo nome
+                    const categorias = JSON.parse(localStorage.getItem('configuracoes_categorias') || '[]');
+                    const categoriaObj = categorias.find((cat: any) => cat.nome === session.categoria);
+                    const categoriaId = categoriaObj?.id || session.categoria;
+                    
+                    total = calcularTotalFotosExtras(qtd, {
+                      valorFotoExtra,
+                      categoria: session.categoria,
+                      categoriaId
+                    });
+                  }
+                  
                   handleFieldUpdateStable(session.id, 'valorTotalFotoExtra', formatCurrency(total));
                 }} className="h-6 text-xs p-1 w-full border-none bg-transparent focus:bg-lunar-accent/10 transition-colors duration-150" placeholder="0" autoComplete="off" />)}
 

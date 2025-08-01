@@ -12,6 +12,7 @@ import { useOrcamentoData } from "@/hooks/useOrcamentoData";
 import { useContext } from 'react';
 import { AppContext } from '@/contexts/AppContext';
 import { parseDateFromStorage } from "@/utils/dateUtils";
+import { FixPricingRulesButton } from '@/components/workflow/FixPricingRulesButton';
 
 interface ProdutoWorkflow {
   nome: string;
