@@ -480,6 +480,104 @@ export function migrarRegrasParaItemAntigo(
   return regrasCongeladas;
 }
 
+// ============= SISTEMA DE MODO DE COMPATIBILIDADE =============
+
+/**
+ * FUNÇÃO PRINCIPAL - Detectar se um item é legado (criado antes do sistema de congelamento)
+ * 
+ * Critérios para item legado:
+ * 1. Não possui regras de preço congeladas
+ * 2. Foi criado antes de uma data específica (data de implementação do sistema)
+ * 3. Possui valor de foto extra fixo definido
+ */
+export function isItemLegado(item: any): boolean {
+  // Critério 1: Não tem regras congeladas
+  if (!item.regrasDePrecoFotoExtraCongeladas) {
+    // Critério 2: Tem valor de foto extra definido (indica que é item antigo)
+    if (item.valorFotoExtra && item.valorFotoExtra > 0) {
+      console.log('🏛️ Item detectado como LEGADO:', {
+        id: item.id,
+        nome: item.nome,
+        valorFotoExtra: item.valorFotoExtra,
+        temRegrasCongeladas: false
+      });
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+/**
+ * FUNÇÃO DE CÁLCULO PARA ITEMS LEGADOS
+ * 
+ * Items legados sempre usam cálculo simples: valorFotoExtra * quantidade
+ * Nunca aplicam regras progressivas ou tabelas dinâmicas
+ */
+export function calcularFotosExtrasItemLegado(quantidade: number, valorFotoExtra: number): number {
+  console.log('🏛️ [LEGADO] Calculando fotos extras:', { quantidade, valorFotoExtra });
+  
+  if (quantidade <= 0 || valorFotoExtra <= 0) {
+    return 0;
+  }
+  
+  const resultado = quantidade * valorFotoExtra;
+  console.log('🏛️ [LEGADO] Resultado:', resultado);
+  
+  return resultado;
+}
+
+/**
+ * FUNÇÃO PARA MARCAR ITEM COMO MODO COMPATIBILIDADE
+ * 
+ * Adiciona os campos necessários para o modo de compatibilidade
+ */
+export function marcarComoModoCompatibilidade(item: any): any {
+  return {
+    ...item,
+    modoCompatibilidade: true,
+    motivoCompatibilidade: 'Item criado antes do sistema de regras congeladas',
+    timestampModoCompatibilidade: new Date().toISOString()
+  };
+}
+
+/**
+ * FUNÇÃO DE MIGRAÇÃO CONTROLADA
+ * 
+ * Permite converter um item legado para usar as regras atuais
+ */
+export function migrarItemLegadoParaRegrasAtuais(
+  item: any,
+  categoriaId?: string
+): any {
+  console.log('🔄 [MIGRAÇÃO] Convertendo item legado para regras atuais:', item.id);
+  
+  // Congelar regras atuais para este item
+  const regrasCongeladas = congelarRegrasPrecoFotoExtra({
+    valorFotoExtra: item.valorFotoExtra,
+    categoriaId: categoriaId || item.categoriaId
+  });
+  
+  // Remover modo de compatibilidade e adicionar regras congeladas
+  const itemMigrado = {
+    ...item,
+    regrasDePrecoFotoExtraCongeladas: regrasCongeladas,
+    modoCompatibilidade: false,
+    historico: [
+      ...(item.historico || []),
+      {
+        acao: 'migracao_para_regras_atuais',
+        timestamp: new Date().toISOString(),
+        valorFotoExtraAnterior: item.valorFotoExtra,
+        regrasAplicadas: regrasCongeladas.modelo
+      }
+    ]
+  };
+  
+  console.log('✅ [MIGRAÇÃO] Item migrado com sucesso');
+  return itemMigrado;
+}
+
 /**
  * FUNÇÃO DE DEBUG - Para inspecionar dados no localStorage
  */
