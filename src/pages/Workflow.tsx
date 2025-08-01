@@ -222,6 +222,36 @@ export default function Workflow() {
 
   // Integração com dados reais da agenda - carregar sessões do mês selecionado
   useEffect(() => {
+    // Salvar alterações atuais antes de mudar de mês
+    const saveCurrentChanges = () => {
+      if (sessions.length > 0) {
+        try {
+          const allSavedSessions = JSON.parse(window.localStorage.getItem('workflow_sessions') || '[]');
+          
+          // Merge das alterações atuais com os dados salvos
+          const updatedSessions = [...allSavedSessions];
+          
+          sessions.forEach(currentSession => {
+            const existingIndex = updatedSessions.findIndex(s => s.id === currentSession.id);
+            if (existingIndex >= 0) {
+              // Atualizar dados existentes
+              updatedSessions[existingIndex] = currentSession;
+            } else {
+              // Adicionar nova sessão
+              updatedSessions.push(currentSession);
+            }
+          });
+          
+          window.localStorage.setItem('workflow_sessions', JSON.stringify(updatedSessions));
+        } catch (error) {
+          console.error("Erro ao salvar alterações antes da mudança de mês", error);
+        }
+      }
+    };
+
+    // Salvar antes de carregar novo mês
+    saveCurrentChanges();
+
     const confirmedSessions = getConfirmedSessionsForWorkflow(currentMonth.month, currentMonth.year, getClienteByName, pacotes, produtos);
 
     // Carregar todas as sessões salvas do localStorage

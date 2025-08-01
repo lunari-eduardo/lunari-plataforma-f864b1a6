@@ -589,7 +589,6 @@ export function WorkflowTable({
                     const valorFormatado = formatarMoeda(valorPorFoto);
                     return <div className="flex items-center gap-1 h-6">
                         <span className="text-xs font-medium text-gray-600">{valorFormatado}</span>
-                        <span className="text-xs text-gray-400">({config.modelo === 'global' ? 'Global' : 'Categoria'})</span>
                       </div>;
                   }
                 })())}
