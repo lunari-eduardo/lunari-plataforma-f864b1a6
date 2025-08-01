@@ -185,12 +185,32 @@ export default function Workflow() {
     }
   });
 
-  // Persistência automática das alterações
+  // Persistência automática das alterações - salvar sempre que sessions mudar
   useEffect(() => {
-    try {
-      window.localStorage.setItem('workflow_sessions', JSON.stringify(sessions));
-    } catch (error) {
-      console.error("Erro ao salvar sessões no localStorage", error);
+    if (sessions.length > 0) {
+      try {
+        // Sempre fazer merge com dados existentes para não perder outras alterações
+        const allSavedSessions = JSON.parse(window.localStorage.getItem('workflow_sessions') || '[]');
+        
+        // Criar um novo array com merge inteligente
+        const mergedSessions = [...allSavedSessions];
+        
+        sessions.forEach(currentSession => {
+          const existingIndex = mergedSessions.findIndex(s => s.id === currentSession.id);
+          if (existingIndex >= 0) {
+            // Atualizar dados existentes
+            mergedSessions[existingIndex] = currentSession;
+          } else {
+            // Adicionar nova sessão
+            mergedSessions.push(currentSession);
+          }
+        });
+        
+        window.localStorage.setItem('workflow_sessions', JSON.stringify(mergedSessions));
+        console.log('Workflow sessions saved to localStorage:', sessions.length, 'sessions');
+      } catch (error) {
+        console.error("Erro ao salvar sessões no localStorage", error);
+      }
     }
   }, [sessions]);
   // Mapear dados reais das configurações para formato da tabela
@@ -222,43 +242,17 @@ export default function Workflow() {
 
   // Integração com dados reais da agenda - carregar sessões do mês selecionado
   useEffect(() => {
-    // Salvar alterações atuais antes de mudar de mês
-    const saveCurrentChanges = () => {
-      if (sessions.length > 0) {
-        try {
-          const allSavedSessions = JSON.parse(window.localStorage.getItem('workflow_sessions') || '[]');
-          
-          // Merge das alterações atuais com os dados salvos
-          const updatedSessions = [...allSavedSessions];
-          
-          sessions.forEach(currentSession => {
-            const existingIndex = updatedSessions.findIndex(s => s.id === currentSession.id);
-            if (existingIndex >= 0) {
-              // Atualizar dados existentes
-              updatedSessions[existingIndex] = currentSession;
-            } else {
-              // Adicionar nova sessão
-              updatedSessions.push(currentSession);
-            }
-          });
-          
-          window.localStorage.setItem('workflow_sessions', JSON.stringify(updatedSessions));
-        } catch (error) {
-          console.error("Erro ao salvar alterações antes da mudança de mês", error);
-        }
-      }
-    };
-
-    // Salvar antes de carregar novo mês
-    saveCurrentChanges();
-
+    console.log('Loading workflow data for month:', currentMonth);
+    
     const confirmedSessions = getConfirmedSessionsForWorkflow(currentMonth.month, currentMonth.year, getClienteByName, pacotes, produtos);
 
     // Carregar todas as sessões salvas do localStorage
     const allSavedSessions = (() => {
       try {
         const saved = window.localStorage.getItem('workflow_sessions');
-        return saved ? JSON.parse(saved) : [];
+        const result = saved ? JSON.parse(saved) : [];
+        console.log('Loaded saved sessions from localStorage:', result.length, 'total sessions');
+        return result;
       } catch (error) {
         console.error("Erro ao carregar sessões salvas", error);
         return [];
@@ -271,16 +265,25 @@ export default function Workflow() {
       return sessionDate.getUTCMonth() + 1 === currentMonth.month && sessionDate.getUTCFullYear() === currentMonth.year;
     });
 
+    console.log('Found existing sessions for current month:', existingSessionsForCurrentMonth.length);
+
     // Mapear agendamentos confirmados, preservando dados editados ou criando novos
     const currentMonthSessions: SessionData[] = confirmedSessions.map(agendamento => {
       const existingSession = existingSessionsForCurrentMonth.find((s: SessionData) => s.id === agendamento.id);
-      return existingSession || {
-        ...agendamento,
-        status: '',
-        // Status vazio por padrão para novos agendamentos
-        detalhes: '' // Campo detalhes vazio para entrada manual
-      };
+      if (existingSession) {
+        console.log('Using existing session data for:', agendamento.id);
+        return existingSession;
+      } else {
+        console.log('Creating new session data for:', agendamento.id);
+        return {
+          ...agendamento,
+          status: '',
+          detalhes: ''
+        };
+      }
     });
+    
+    console.log('Setting sessions for current month:', currentMonthSessions.length, 'sessions');
     setSessions(currentMonthSessions);
   }, [currentMonth, getConfirmedSessionsForWorkflow, getClienteByName, pacotes, produtos]);
   const handlePreviousMonth = () => {
