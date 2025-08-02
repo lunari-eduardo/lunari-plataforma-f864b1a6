@@ -184,17 +184,17 @@ export default function Produtos({
                         </Button>
                       </div>
                     </> : <>
-                      <div className="col-span-4 sm:col-span-5">{produto.nome}</div>
+                      <div className="col-span-3 text-xs sm:col-span-5">{produto.nome}</div>
                       <div className="col-span-2 hidden sm:block">
                         {formatarMoeda(produto.preco_custo)}
                       </div>
-                      <div className="col-span-4 sm:col-span-2">
+                      <div className="col-span-4  text-xs sm:col-span-2">
                         {formatarMoeda(produto.preco_venda)}
                       </div>
                       <div className={`col-span-2 hidden sm:block ${margem.classe}`}>
                         {formatarMoeda(margem.valor)} ({margem.porcentagem})
                       </div>
-                      <div className="flex justify-end gap-2 col-span-4 sm:col-span-1">
+                      <div className="flex justify-end gap-1 col-span-4 sm:col-span-1">
                         <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => iniciarEdicaoProduto(produto.id)}>
                           <Edit className="h-3.5 w-3.5" />
                         </Button>
