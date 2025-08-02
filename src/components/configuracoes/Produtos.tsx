@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Edit, Trash2 } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Plus, Edit, Trash2, Save, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { useIsMobile } from '@/hooks/use-mobile';
 interface Produto {
   id: string;
   nome: string;
@@ -76,7 +78,10 @@ export default function Produtos({
     setProdutos(produtos.filter(produto => produto.id !== id));
     toast.success('Produto removido com sucesso!');
   };
-  return <div className="mt-4 space-y-6">
+  const isMobile = useIsMobile();
+
+  return (
+    <div className="mt-4 space-y-6">
       <div>
         <h3 className="font-medium text-sm">Novo Produto</h3>
         <p className="text-muted-foreground mt-1 mb-3 text-xs">
@@ -88,35 +93,55 @@ export default function Produtos({
             <label htmlFor="produto-nome" className="block text-sm font-medium mb-1">
               Nome<span className="text-red-500">*</span>
             </label>
-            <Input id="produto-nome" placeholder="Nome do produto" value={novoProduto.nome} onChange={e => setNovoProduto({
-            ...novoProduto,
-            nome: e.target.value
-          })} className="bg-neutral-50" />
+            <Input 
+              id="produto-nome" 
+              placeholder="Nome do produto" 
+              value={novoProduto.nome} 
+              onChange={e => setNovoProduto({
+                ...novoProduto,
+                nome: e.target.value
+              })} 
+              className="bg-neutral-50" 
+            />
           </div>
           
           <div>
             <label htmlFor="produto-custo" className="block text-sm font-medium mb-1">
               Preço de Custo (R$)
             </label>
-            <Input id="produto-custo" type="number" placeholder="0,00" value={novoProduto.preco_custo || ''} onChange={e => setNovoProduto({
-            ...novoProduto,
-            preco_custo: Number(e.target.value)
-          })} className="bg-neutral-50" />
+            <Input 
+              id="produto-custo" 
+              type="number" 
+              placeholder="0,00" 
+              value={novoProduto.preco_custo || ''} 
+              onChange={e => setNovoProduto({
+                ...novoProduto,
+                preco_custo: Number(e.target.value)
+              })} 
+              className="bg-neutral-50" 
+            />
           </div>
           
           <div>
             <label htmlFor="produto-venda" className="block text-sm font-medium mb-1">
               Preço de Venda (R$)<span className="text-red-500">*</span>
             </label>
-            <Input id="produto-venda" type="number" placeholder="0,00" value={novoProduto.preco_venda || ''} onChange={e => setNovoProduto({
-            ...novoProduto,
-            preco_venda: Number(e.target.value)
-          })} className="bg-neutral-50" />
+            <Input 
+              id="produto-venda" 
+              type="number" 
+              placeholder="0,00" 
+              value={novoProduto.preco_venda || ''} 
+              onChange={e => setNovoProduto({
+                ...novoProduto,
+                preco_venda: Number(e.target.value)
+              })} 
+              className="bg-neutral-50" 
+            />
           </div>
         </div>
         
         <div className="mt-3">
-          <Button onClick={adicionarProduto} className="flex items-center gap-1 bg-lunar-accent">
+          <Button onClick={adicionarProduto} className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
             <span>Adicionar Produto</span>
           </Button>
@@ -124,93 +149,267 @@ export default function Produtos({
       </div>
       
       <div>
-        <div className="space-y-2 mb-4">
+        <div className="space-y-1 mb-4">
           <h3 className="font-medium text-sm">Produtos Cadastrados</h3>
           <p className="text-muted-foreground text-xs">
             Lista de todos os produtos adicionais disponíveis para venda.
           </p>
         </div>
         
-        <div className="bg-white rounded-lg border border-gray-100 overflow-hidden shadow-sm">
-          <div className="grid grid-cols-12 bg-gray-50/50 px-4 py-3 border-b border-gray-100 text-sm font-medium">
-            <div className="col-span-4 sm:col-span-5 text-gray-700">Produto</div>
-            <div className="col-span-2 hidden sm:block text-gray-700">Custo</div>
-            <div className="col-span-4 sm:col-span-2 text-gray-700">Venda</div>
-            <div className="col-span-2 hidden sm:block text-gray-700">Margem</div>
-            <div className="col-span-4 sm:col-span-1 text-right text-gray-700">Ações</div>
-          </div>
-          
-          <div className="divide-y divide-gray-50">
-            {produtos.map((produto, index) => {
-            const margem = calcularMargemLucro(produto.preco_custo, produto.preco_venda);
-            return <div key={produto.id} className={`grid grid-cols-12 px-4 py-3 text-sm ${index % 2 === 0 ? 'bg-white' : 'bg-gray-25/30'} hover:bg-gray-50/70 transition-colors`}>
-                  {editandoProduto === produto.id ? <>
-                      <div className="col-span-4 sm:col-span-5 pr-2">
-                        <Input defaultValue={produto.nome} onChange={e => {
-                    const novoNome = e.target.value;
-                    setProdutos(prev => prev.map(p => p.id === produto.id ? {
-                      ...p,
-                      nome: novoNome
-                    } : p));
-                  }} className="h-8 text-sm" />
-                      </div>
-                      <div className="col-span-2 hidden sm:block pr-2">
-                        <Input type="number" defaultValue={produto.preco_custo} onChange={e => {
-                    const novoPrecoCusto = Number(e.target.value);
-                    setProdutos(prev => prev.map(p => p.id === produto.id ? {
-                      ...p,
-                      preco_custo: novoPrecoCusto
-                    } : p));
-                  }} className="h-8 text-sm" />
-                      </div>
-                      <div className="col-span-4 sm:col-span-2 pr-2">
-                        <Input type="number" defaultValue={produto.preco_venda} onChange={e => {
-                    const novoPrecoVenda = Number(e.target.value);
-                    setProdutos(prev => prev.map(p => p.id === produto.id ? {
-                      ...p,
-                      preco_venda: novoPrecoVenda
-                    } : p));
-                  }} className="h-8 text-sm" />
-                      </div>
-                      <div className="col-span-2 hidden sm:block">
-                        {formatarMoeda((produtos.find(p => p.id === produto.id)?.preco_venda || 0) - (produtos.find(p => p.id === produto.id)?.preco_custo || 0))}
-                      </div>
-                      <div className="flex justify-end items-center gap-2 col-span-4 sm:col-span-1">
-                        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => salvarEdicaoProduto(produto.id, produtos.find(p => p.id === produto.id) || {})}>
-                          <Edit className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setEditandoProduto(null)}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </> : <>
-                      <div className="col-span-4 sm:col-span-5">{produto.nome}</div>
-                      <div className="col-span-2 hidden sm:block">
-                        {formatarMoeda(produto.preco_custo)}
-                      </div>
-                      <div className="col-span-4 sm:col-span-2">
-                        {formatarMoeda(produto.preco_venda)}
-                      </div>
-                      <div className={`col-span-2 hidden sm:block ${margem.classe}`}>
-                        {formatarMoeda(margem.valor)} ({margem.porcentagem})
-                      </div>
-                      <div className="flex justify-end gap-2 col-span-4 sm:col-span-1">
-                        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => iniciarEdicaoProduto(produto.id)}>
-                          <Edit className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="outline" size="icon" className="h-7 w-7 text-red-500 hover:text-red-600 hover:border-red-200" onClick={() => removerProduto(produto.id)}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </>}
-                </div>;
-          })}
-            
-            {produtos.length === 0 && <div className="px-4 py-8 text-center text-sm text-muted-foreground bg-white">
+        {produtos.length === 0 ? (
+          <Card className="border-dashed border-2">
+            <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+              <div className="rounded-full bg-muted p-3 mb-3">
+                <Plus className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <p className="text-sm text-muted-foreground">
                 Nenhum produto cadastrado. Adicione seu primeiro produto acima.
-              </div>}
+              </p>
+            </CardContent>
+          </Card>
+        ) : isMobile ? (
+          // Layout em cards para mobile
+          <div className="space-y-3">
+            {produtos.map((produto) => {
+              const margem = calcularMargemLucro(produto.preco_custo, produto.preco_venda);
+              return (
+                <Card key={produto.id} className="overflow-hidden">
+                  <CardContent className="p-4">
+                    {editandoProduto === produto.id ? (
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium mb-1">Nome</label>
+                          <Input 
+                            defaultValue={produto.nome}
+                            onChange={(e) => {
+                              const novoNome = e.target.value;
+                              setProdutos(prev => prev.map(p => 
+                                p.id === produto.id ? { ...p, nome: novoNome } : p
+                              ));
+                            }}
+                            className="text-sm"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-sm font-medium mb-1">Custo (R$)</label>
+                            <Input 
+                              type="number"
+                              defaultValue={produto.preco_custo}
+                              onChange={(e) => {
+                                const novoPrecoCusto = Number(e.target.value);
+                                setProdutos(prev => prev.map(p => 
+                                  p.id === produto.id ? { ...p, preco_custo: novoPrecoCusto } : p
+                                ));
+                              }}
+                              className="text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium mb-1">Venda (R$)</label>
+                            <Input 
+                              type="number"
+                              defaultValue={produto.preco_venda}
+                              onChange={(e) => {
+                                const novoPrecoVenda = Number(e.target.value);
+                                setProdutos(prev => prev.map(p => 
+                                  p.id === produto.id ? { ...p, preco_venda: novoPrecoVenda } : p
+                                ));
+                              }}
+                              className="text-sm"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex gap-2 justify-end">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => salvarEdicaoProduto(produto.id, produtos.find(p => p.id === produto.id) || {})}
+                          >
+                            <Save className="h-4 w-4 mr-1" />
+                            Salvar
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => setEditandoProduto(null)}
+                          >
+                            <X className="h-4 w-4 mr-1" />
+                            Cancelar
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-medium text-base">{produto.nome}</h4>
+                          <div className="flex gap-1">
+                            <Button 
+                              variant="outline" 
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => iniciarEdicaoProduto(produto.id)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="icon"
+                              className="h-8 w-8 text-red-500 hover:text-red-600 hover:border-red-200"
+                              onClick={() => removerProduto(produto.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="text-muted-foreground block">Custo</span>
+                            <span className="font-medium">{formatarMoeda(produto.preco_custo)}</span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground block">Venda</span>
+                            <span className="font-medium">{formatarMoeda(produto.preco_venda)}</span>
+                          </div>
+                        </div>
+                        
+                        <div className="pt-2 border-t">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Margem de Lucro</span>
+                            <span className={`font-medium ${margem.classe}`}>
+                              {formatarMoeda(margem.valor)} ({margem.porcentagem})
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
-        </div>
+        ) : (
+          // Layout em tabela para desktop
+          <div className="bg-white rounded-lg border border-border overflow-hidden shadow-sm">
+            <div className="grid grid-cols-12 bg-muted/50 px-4 py-3 border-b text-sm font-medium">
+              <div className="col-span-5 text-foreground">Produto</div>
+              <div className="col-span-2 text-foreground">Custo</div>
+              <div className="col-span-2 text-foreground">Venda</div>
+              <div className="col-span-2 text-foreground">Margem</div>
+              <div className="col-span-1 text-right text-foreground">Ações</div>
+            </div>
+            
+            <div className="divide-y divide-border">
+              {produtos.map((produto, index) => {
+                const margem = calcularMargemLucro(produto.preco_custo, produto.preco_venda);
+                return (
+                  <div 
+                    key={produto.id} 
+                    className={`grid grid-cols-12 px-4 py-3 text-sm ${
+                      index % 2 === 0 ? 'bg-background' : 'bg-muted/20'
+                    } hover:bg-muted/40 transition-colors`}
+                  >
+                    {editandoProduto === produto.id ? (
+                      <>
+                        <div className="col-span-5 pr-2">
+                          <Input 
+                            defaultValue={produto.nome}
+                            onChange={(e) => {
+                              const novoNome = e.target.value;
+                              setProdutos(prev => prev.map(p => 
+                                p.id === produto.id ? { ...p, nome: novoNome } : p
+                              ));
+                            }}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div className="col-span-2 pr-2">
+                          <Input 
+                            type="number"
+                            defaultValue={produto.preco_custo}
+                            onChange={(e) => {
+                              const novoPrecoCusto = Number(e.target.value);
+                              setProdutos(prev => prev.map(p => 
+                                p.id === produto.id ? { ...p, preco_custo: novoPrecoCusto } : p
+                              ));
+                            }}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div className="col-span-2 pr-2">
+                          <Input 
+                            type="number"
+                            defaultValue={produto.preco_venda}
+                            onChange={(e) => {
+                              const novoPrecoVenda = Number(e.target.value);
+                              setProdutos(prev => prev.map(p => 
+                                p.id === produto.id ? { ...p, preco_venda: novoPrecoVenda } : p
+                              ));
+                            }}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div className="col-span-2 flex items-center">
+                          {formatarMoeda(
+                            (produtos.find(p => p.id === produto.id)?.preco_venda || 0) - 
+                            (produtos.find(p => p.id === produto.id)?.preco_custo || 0)
+                          )}
+                        </div>
+                        <div className="flex justify-end items-center gap-1 col-span-1">
+                          <Button 
+                            variant="outline" 
+                            size="icon" 
+                            className="h-7 w-7"
+                            onClick={() => salvarEdicaoProduto(produto.id, produtos.find(p => p.id === produto.id) || {})}
+                          >
+                            <Save className="h-3 w-3" />
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="icon" 
+                            className="h-7 w-7"
+                            onClick={() => setEditandoProduto(null)}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="col-span-5 font-medium">{produto.nome}</div>
+                        <div className="col-span-2">{formatarMoeda(produto.preco_custo)}</div>
+                        <div className="col-span-2">{formatarMoeda(produto.preco_venda)}</div>
+                        <div className={`col-span-2 ${margem.classe} font-medium`}>
+                          {formatarMoeda(margem.valor)} ({margem.porcentagem})
+                        </div>
+                        <div className="flex justify-end gap-1 col-span-1">
+                          <Button 
+                            variant="outline" 
+                            size="icon" 
+                            className="h-7 w-7"
+                            onClick={() => iniciarEdicaoProduto(produto.id)}
+                          >
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="icon" 
+                            className="h-7 w-7 text-red-500 hover:text-red-600 hover:border-red-200"
+                            onClick={() => removerProduto(produto.id)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
-    </div>;
+    </div>
+  );
 }
