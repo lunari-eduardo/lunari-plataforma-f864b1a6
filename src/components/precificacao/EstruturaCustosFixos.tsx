@@ -299,7 +299,7 @@ export function EstruturaCustosFixos({
               
               {/* Mobile - Cards */}
               <div className="md:hidden space-y-4">
-                {equipamentos.map(equipamento => <Card key={equipamento.id} className="p-4">
+                {equipamentos.map(equipamento => <Card key={equipamento.id} className="p-4 px-[10px] py-[7px]">
                     <div className="space-y-3">
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
