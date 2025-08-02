@@ -151,7 +151,7 @@ export default function Configuracoes() {
             Configure os parâmetros principais de funcionamento do seu sistema.
           </CardDescription>
         </CardHeader>
-        <CardContent className="py-[10px] my-[8px] bg-lunar-surface">
+        <CardContent className="my-[8px] bg-lunar-surface py-[6px]">
           <Tabs value={tabAtiva} onValueChange={setTabAtiva} className="w-full">
             <TabsList className="grid grid-cols-5 mb-2">
               <TabsTrigger value="categorias" className="flex items-center gap-1.5">
