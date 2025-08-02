@@ -4,6 +4,7 @@ import { FinancialEngine } from '@/services/FinancialEngine';
 import { useNovoFinancas } from '@/hooks/useNovoFinancas';
 import { useUnifiedWorkflowData } from '@/hooks/useUnifiedWorkflowData';
 import { getCurrentDateString } from '@/utils/dateUtils';
+import { storage } from '@/utils/localStorage';
 
 // Interfaces específicas para o Dashboard
 interface KPIsData {
@@ -287,15 +288,33 @@ export function useDashboardFinanceiro() {
     return evolucoes;
   }, [transacoesFiltradas, categoriasDisponiveis]);
 
-  // ============= METAS (MOCK INICIAL) =============
+  // ============= METAS BASEADAS EM PRECIFICAÇÃO =============
   
   const metasData = useMemo((): MetasData => {
-    const metaReceita = 2000000;
-    const metaLucro = 500000;
+    // Carregar dados das metas de precificação
+    const metasPrecificacao = storage.load('precificacao_metas', {
+      margemLucroDesejada: 30
+    });
+    
+    // Carregar custos fixos totais da estrutura de custos
+    const custosFixosData = storage.load('custosFixos', {
+      custosEstudio: [],
+      gastosPessoais: []
+    });
+    
+    // Calcular custos fixos totais mensais
+    const custosEstudioTotal = custosFixosData.custosEstudio.reduce((sum: number, item: any) => sum + (item.valor || 0), 0);
+    const gastosPessoaisTotal = custosFixosData.gastosPessoais.reduce((sum: number, item: any) => sum + (item.valor || 0), 0);
+    const custosFixosMensais = custosEstudioTotal + gastosPessoaisTotal;
+    
+    // Cálculos baseados na fórmula de precificação
+    const faturamentoMinimoAnual = custosFixosMensais * 12;
+    const metaFaturamentoAnual = faturamentoMinimoAnual / (1 - metasPrecificacao.margemLucroDesejada / 100);
+    const metaLucroAnual = metaFaturamentoAnual - faturamentoMinimoAnual;
     
     return {
-      metaReceita,
-      metaLucro,
+      metaReceita: metaFaturamentoAnual,
+      metaLucro: metaLucroAnual,
       receitaAtual: kpisData.totalReceita,
       lucroAtual: kpisData.totalLucro
     };
