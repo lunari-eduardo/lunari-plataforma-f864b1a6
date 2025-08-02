@@ -175,7 +175,7 @@ export function EstruturaCustosFixos({
               <table className="w-full min-w-[500px] border-collapse">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left text-xs font-medium text-gray-600 pb-2 pr-4">Descrição</th>
+                    <th className="text-left text-xs font-medium text-gray-600 pb-2 pr-4 w-40">Descrição</th>
                     <th className="text-left text-xs font-medium text-gray-600 pb-2 pr-4 w-32">Valor</th>
                     <th className="text-left text-xs font-medium text-gray-600 pb-2 w-12">Ações</th>
                   </tr>
@@ -242,7 +242,7 @@ export function EstruturaCustosFixos({
               <table className="w-full min-w-[500px] border-collapse">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left text-xs font-medium text-gray-600 pb-2 pr-4">Descrição</th>
+                    <th className="text-left text-xs font-medium text-gray-600 pb-2 pr-4 w-40">Descrição</th>
                     <th className="text-left text-xs font-medium text-gray-600 pb-2 pr-4 w-32">Valor</th>
                     <th className="text-left text-xs font-medium text-gray-600 pb-2 w-12">Ações</th>
                   </tr>
