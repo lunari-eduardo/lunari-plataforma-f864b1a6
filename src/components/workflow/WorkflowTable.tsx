@@ -673,50 +673,36 @@ export function WorkflowTable({
                     );
                   } else {
                     // Item sem regras congeladas: calcular valor unitário atual baseado no modelo global
-                    const configuracoes = JSON.parse(localStorage.getItem('pricing_configurations') || '{}');
-                    const modeloAtual = configuracoes.modeloPrecificacao || 'progressiva';
+                    const config = obterConfiguracaoPrecificacao();
                     
                     let valorUnitario = 0;
                     
-                    if (modeloAtual === 'fixo') {
+                    if (config.modelo === 'fixo') {
                       // Modelo fixo por pacote - buscar valor do pacote
                       const pacotes = JSON.parse(localStorage.getItem('configuracoes_pacotes') || '[]');
                       const pacote = pacotes.find((p: any) => p.nome === session.pacote);
                       valorUnitario = pacote?.valorFotoExtra || 0;
-                    } else if (modeloAtual === 'progressiva') {
-                      // Modelo progressiva global - calcular valor médio baseado na quantidade
-                      if (session.qtdFotosExtra && session.qtdFotosExtra > 0) {
-                        const categorias = JSON.parse(localStorage.getItem('configuracoes_categorias') || '[]');
-                        const categoriaObj = categorias.find((cat: any) => cat.nome === session.categoria);
-                        const categoriaId = categoriaObj?.id || session.categoria;
-                        
-                        const totalCalculado = calcularTotalFotosExtras(session.qtdFotosExtra, {
-                          valorFotoExtra: 0, // Não usado na progressiva
-                          categoria: session.categoria,
-                          categoriaId
-                        });
-                        valorUnitario = totalCalculado / session.qtdFotosExtra;
-                      } else {
-                        const tabelaProgressiva = configuracoes.tabelaProgressiva || [];
-                        valorUnitario = tabelaProgressiva[0]?.preco || 0;
+                    } else if (config.modelo === 'global') {
+                      // Modelo tabela global - calcular valor baseado na quantidade
+                      const tabelaGlobal = obterTabelaGlobal();
+                      if (tabelaGlobal && session.qtdFotosExtra && session.qtdFotosExtra > 0) {
+                        valorUnitario = calcularValorPorFoto(session.qtdFotosExtra, tabelaGlobal);
+                      } else if (tabelaGlobal && tabelaGlobal.faixas.length > 0) {
+                        valorUnitario = tabelaGlobal.faixas[0].valor;
                       }
-                    } else if (modeloAtual === 'categoria') {
-                      // Modelo por categoria - calcular valor médio
-                      if (session.qtdFotosExtra && session.qtdFotosExtra > 0) {
-                        const categorias = JSON.parse(localStorage.getItem('configuracoes_categorias') || '[]');
-                        const categoriaObj = categorias.find((cat: any) => cat.nome === session.categoria);
-                        const categoriaId = categoriaObj?.id || session.categoria;
-                        
-                        const totalCalculado = calcularTotalFotosExtras(session.qtdFotosExtra, {
-                          valorFotoExtra: 0, // Não usado na categoria
-                          categoria: session.categoria,
-                          categoriaId
-                        });
-                        valorUnitario = totalCalculado / session.qtdFotosExtra;
-                      } else {
-                        const tabelasCategoria = configuracoes.tabelasCategoria || {};
-                        const tabelaCategoria = tabelasCategoria[session.categoria];
-                        valorUnitario = tabelaCategoria?.faixas?.[0]?.preco || 0;
+                    } else if (config.modelo === 'categoria') {
+                      // Modelo por categoria - calcular valor baseado na categoria
+                      const categorias = JSON.parse(localStorage.getItem('configuracoes_categorias') || '[]');
+                      const categoriaObj = categorias.find((cat: any) => cat.nome === session.categoria);
+                      const categoriaId = categoriaObj?.id || session.categoria;
+                      
+                      if (categoriaId) {
+                        const tabelaCategoria = obterTabelaCategoria(categoriaId);
+                        if (tabelaCategoria && session.qtdFotosExtra && session.qtdFotosExtra > 0) {
+                          valorUnitario = calcularValorPorFoto(session.qtdFotosExtra, tabelaCategoria);
+                        } else if (tabelaCategoria && tabelaCategoria.faixas.length > 0) {
+                          valorUnitario = tabelaCategoria.faixas[0].valor;
+                        }
                       }
                     }
                     
