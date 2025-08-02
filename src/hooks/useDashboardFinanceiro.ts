@@ -309,8 +309,22 @@ export function useDashboardFinanceiro() {
     
     // Cálculos baseados na fórmula de precificação
     const faturamentoMinimoAnual = custosFixosMensais * 12;
-    const metaFaturamentoAnual = faturamentoMinimoAnual / (1 - metasPrecificacao.margemLucroDesejada / 100);
+    const metaFaturamentoAnual = custosFixosMensais > 0 
+      ? faturamentoMinimoAnual / (1 - metasPrecificacao.margemLucroDesejada / 100)
+      : 100000; // Meta padrão se não há custos configurados
     const metaLucroAnual = metaFaturamentoAnual - faturamentoMinimoAnual;
+    
+    // Debug das metas calculadas
+    console.log('🎯 Metas calculadas:', {
+      metasPrecificacao,
+      custosFixosData,
+      custosEstudioTotal,
+      gastosPessoaisTotal,
+      custosFixosMensais,
+      faturamentoMinimoAnual,
+      metaFaturamentoAnual,
+      metaLucroAnual
+    });
     
     return {
       metaReceita: metaFaturamentoAnual,
