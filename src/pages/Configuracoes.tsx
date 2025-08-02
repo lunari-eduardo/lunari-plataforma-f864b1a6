@@ -143,8 +143,7 @@ export default function Configuracoes() {
   useEffect(() => {
     storage.save('configuracoes_produtos', produtos);
   }, [produtos]);
-  return (
-    <ScrollArea className="h-[calc(100vh-120px)]">
+  return <ScrollArea className="h-[calc(100vh-120px)]">
       <div className="space-y-6 pr-4">
       <Card>
         <CardHeader className="pb-3 bg-stone-50">
@@ -169,7 +168,7 @@ export default function Configuracoes() {
               </TabsTrigger>
               <TabsTrigger value="precificacao" className="flex items-center gap-1.5">
                 <DollarSign className="h-4 w-4" />
-                <span className="hidden sm:inline">Preços</span>
+                <span className="hidden sm:inline">Modelos de preço</span>
               </TabsTrigger>
               <TabsTrigger value="fluxo" className="flex items-center gap-1.5">
                 <Workflow className="h-4 w-4" />
@@ -200,6 +199,5 @@ export default function Configuracoes() {
         </CardContent>
       </Card>
       </div>
-    </ScrollArea>
-  );
+    </ScrollArea>;
 }
