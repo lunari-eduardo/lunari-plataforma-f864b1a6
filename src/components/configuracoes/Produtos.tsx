@@ -232,7 +232,7 @@ export default function Produtos({
           </div> :
       // Layout em tabela para desktop
       <div className="bg-white rounded-lg border border-border overflow-hidden shadow-sm">
-            <div className="grid grid-cols-12 px-4 py-3 border-b text-sm font-medium bg-lunar-surface">
+            <div className="grid grid-cols-12 px-4 py-3 border-b text-xs font-medium bg-lunar-surface">
               <div className="col-span-5 text-foreground">Produto</div>
               <div className="col-span-2 text-foreground">Custo</div>
               <div className="col-span-2 text-foreground">Venda</div>
@@ -243,7 +243,7 @@ export default function Produtos({
             <div className="divide-y divide-border">
               {produtos.map((produto, index) => {
             const margem = calcularMargemLucro(produto.preco_custo, produto.preco_venda);
-            return <div key={produto.id} className={`grid grid-cols-12 px-4 py-3 text-sm ${index % 2 === 0 ? 'bg-background' : 'bg-muted/20'} hover:bg-muted/40 transition-colors`}>
+            return <div key={produto.id} className={`grid grid-cols-12 px-4 py-3 text-xs ${index % 2 === 0 ? 'bg-background' : 'bg-muted/20'} hover:bg-muted/40 transition-colors`}>
                     {editandoProduto === produto.id ? <>
                         <div className="col-span-5 pr-2">
                           <Input defaultValue={produto.nome} onChange={e => {
