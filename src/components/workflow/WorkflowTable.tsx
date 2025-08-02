@@ -441,15 +441,62 @@ export function WorkflowTable({
       (e.target as HTMLInputElement).blur();
     }
   };
-  const renderEditableInput = useCallback((session: SessionData, field: string, value: string, type: string = 'text', placeholder: string = '') => {
+  const renderEditableInput = useCallback((session: SessionData, field: string, value: string, type: string = 'text', placeholder: string = '', readonly: boolean = false) => {
     const key = getEditingKey(session.id, field);
     const editingValue = editingValues[key];
     const displayValue = editingValue !== undefined ? editingValue : value || '';
-    return <Input type={type} value={displayValue} onFocus={() => {
-      handleEditStart(session.id, field, value || '');
-    }} onChange={e => handleEditChange(session.id, field, e.target.value)} onBlur={() => {
-      handleEditFinish(session.id, field);
-    }} onKeyPress={e => handleKeyPress(e, session.id, field)} className="h-6 text-xs p-1 w-full border-none bg-transparent focus:bg-lunar-accent/10 transition-colors duration-150" placeholder={placeholder} autoComplete="off" />;
+    
+    // Campos que precisam de formatação monetária
+    const isMoneyField = ['desconto', 'valorTotalFotoExtra', 'valorAdicional'].includes(field);
+    
+    return <Input 
+      type={type} 
+      value={displayValue} 
+      readOnly={readonly}
+      onFocus={(e) => {
+        if (!readonly) {
+          if (isMoneyField) {
+            // Selecionar todo o texto para facilitar edição
+            e.target.select();
+          }
+          handleEditStart(session.id, field, value || '');
+        }
+      }} 
+      onChange={e => {
+        if (!readonly) {
+          let newValue = e.target.value;
+          
+          // Para campos monetários, formatar automaticamente
+          if (isMoneyField) {
+            // Remover formatação e manter apenas números e vírgula
+            const cleanValue = newValue.replace(/[^\d,]/g, '');
+            if (cleanValue) {
+              const numericValue = parseFloat(cleanValue.replace(',', '.')) || 0;
+              newValue = `R$ ${numericValue.toFixed(2).replace('.', ',')}`;
+            } else {
+              newValue = '';
+            }
+          }
+          
+          handleEditChange(session.id, field, newValue);
+        }
+      }} 
+      onBlur={() => {
+        if (!readonly) {
+          handleEditFinish(session.id, field);
+        }
+      }} 
+      onKeyPress={e => {
+        if (!readonly) {
+          handleKeyPress(e, session.id, field);
+        }
+      }} 
+      className={`h-6 text-xs p-1 w-full border-none bg-transparent transition-colors duration-150 ${
+        readonly ? 'cursor-default' : 'focus:bg-lunar-accent/10'
+      }`} 
+      placeholder={placeholder} 
+      autoComplete="off" 
+    />;
   }, [editingValues, handleFieldUpdateStable]);
   const handleStatusChangeStable = useCallback((sessionId: string, newStatus: string) => {
     onStatusChange(sessionId, newStatus);
@@ -624,9 +671,9 @@ export function WorkflowTable({
                   }
                 }} />)}
 
-                {renderCell('packageValue', renderEditableInput(session, 'valorPacote', session.valorPacote || '', 'text', 'R$ 0,00'))}
+                {renderCell('packageValue', renderEditableInput(session, 'valorPacote', session.valorPacote || '', 'text', 'R$ 0,00', true))}
 
-                {renderCell('discount', renderEditableInput(session, 'desconto', String(session.desconto || 0), 'number', '0'))}
+                {renderCell('discount', renderEditableInput(session, 'desconto', session.desconto ? `R$ ${session.desconto.toFixed(2).replace('.', ',')}` : 'R$ 0,00', 'text', 'R$ 0,00'))}
 
                 {renderCell('extraPhotoValue', (() => {
                   if (session.regrasDePrecoFotoExtraCongeladas) {
@@ -799,13 +846,13 @@ export function WorkflowTable({
                     {session.produtosList && session.produtosList.length > 0 ? formatCurrency(session.produtosList.filter(p => p.tipo === 'manual').reduce((total, p) => total + p.valorUnitario * p.quantidade, 0)) : session.valorTotalProduto || 'R$ 0,00'}
                   </span>)}
 
-                {renderCell('additionalValue', renderEditableInput(session, 'valorAdicional', session.valorAdicional || '', 'text', 'R$ 0,00'))}
+                {renderCell('additionalValue', renderEditableInput(session, 'valorAdicional', session.valorAdicional || 'R$ 0,00', 'text', 'R$ 0,00'))}
 
                 {renderCell('details', renderEditableInput(session, 'observacoes', session.observacoes || '', 'text', 'Observações...'))}
 
                 {renderCell('total', <span className="font-bold text-blue-700 text-xs">{formatCurrency(calculateTotal(session))}</span>)}
 
-                {renderCell('paid', renderEditableInput(session, 'valorPago', session.valorPago || '', 'text', 'R$ 0,00'))}
+                {renderCell('paid', renderEditableInput(session, 'valorPago', session.valorPago || '', 'text', 'R$ 0,00', true))}
 
                 {renderCell('remaining', <span className="font-bold text-orange-600 text-xs">{formatCurrency(calculateRestante(session))}</span>)}
 

@@ -103,7 +103,7 @@ export const useAgenda = () => {
         hora: appointment.time,
         nome: appointment.client,
         email: clienteData?.email || appointment.email || "",
-        descricao: appointment.description || appointment.type,
+        descricao: appointment.description || "",
         status: "", // Status vazio por padrão para workflow
         whatsapp: clienteData?.telefone || appointment.whatsapp || "",
         categoria: categoria,
