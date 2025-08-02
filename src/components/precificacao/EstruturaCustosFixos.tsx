@@ -253,12 +253,12 @@ export function EstruturaCustosFixos({
           {/* Equipamentos */}
           <TabsContent value="equipamentos" className="space-y-4">
             <div className="flex justify-between items-center">
-              <h3 className="font-medium">Equipamentos</h3>
+              <h3 className="font-medium text-sm">Equipamentos</h3>
               <div className="flex items-center gap-4">
-                <span className="text-sm text-green-600 font-medium">
+                <span className="text-green-600 font-medium text-xs">
                   Depreciação Mensal: R$ {totalDepreciacaoMensal.toFixed(2)}
                 </span>
-                <Button onClick={adicionarEquipamento} size="sm">
+                <Button onClick={adicionarEquipamento} size="sm" className="text-xs">
                   <Plus className="h-4 w-4 mr-1" />
                   Adicionar Equipamento
                 </Button>
@@ -268,8 +268,7 @@ export function EstruturaCustosFixos({
             <div className="space-y-3">
               {/* Desktop - Tabela */}
               <div className="hidden md:block">
-                {equipamentos.map(equipamento => (
-                  <div key={equipamento.id} className="grid grid-cols-6 gap-3 items-end">
+                {equipamentos.map(equipamento => <div key={equipamento.id} className="grid grid-cols-6 gap-3 items-end">
                     <div>
                       <Label className="text-xs">Nome</Label>
                       <Input placeholder="Ex: Câmera Canon..." value={equipamento.nome} onChange={e => atualizarEquipamento(equipamento.id, 'nome', e.target.value)} />
@@ -295,14 +294,12 @@ export function EstruturaCustosFixos({
                     <Button onClick={() => removerEquipamento(equipamento.id)} variant="outline" size="sm">
                       <Trash2 className="h-4 w-4" />
                     </Button>
-                  </div>
-                ))}
+                  </div>)}
               </div>
               
               {/* Mobile - Cards */}
               <div className="md:hidden space-y-4">
-                {equipamentos.map(equipamento => (
-                  <Card key={equipamento.id} className="p-4">
+                {equipamentos.map(equipamento => <Card key={equipamento.id} className="p-4">
                     <div className="space-y-3">
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
@@ -339,8 +336,7 @@ export function EstruturaCustosFixos({
                         </div>
                       </div>
                     </div>
-                  </Card>
-                ))}
+                  </Card>)}
               </div>
             </div>
           </TabsContent>

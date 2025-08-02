@@ -33,7 +33,7 @@ export function MetasIndicadores({
   const metaLucroAnual = metaFaturamentoAnual - faturamentoMinimoAnual;
   return <Card>
       <CardHeader className="bg-gray-50">
-        <CardTitle className="text-lg">Metas e Indicadores de Lucro</CardTitle>
+        <CardTitle className="text-lg text-lunar-success">Metas e Indicadores de Lucro</CardTitle>
         <p className="text-sm text-lunar-textSecondary">
           Defina suas metas financeiras e acompanhe os indicadores de lucro.
         </p>
