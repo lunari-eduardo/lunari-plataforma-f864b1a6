@@ -444,19 +444,19 @@ export default function Workflow() {
   }, []);
 
   const sortedSessions = useMemo(() => {
+    // Função auxiliar para criar timestamp a partir de data + hora
+    const createTimestamp = (data: string, hora: string) => {
+      const [day, month, year] = data.split('/').map(Number);
+      const [hours, minutes] = hora.split(':').map(Number);
+      return new Date(year, month - 1, day, hours, minutes).getTime();
+    };
+
     // Sempre ordena por data crescente como padrão, APENAS quando não há sortField definido
     if (!sortField) {
       return [...filteredSessions].sort((a, b) => {
-        // Ordenação padrão por data + hora (cronológica crescente)
-        const [dayA, monthA, yearA] = a.data.split('/');
-        const [dayB, monthB, yearB] = b.data.split('/');
-        const [hoursA, minutesA] = a.hora.split(':').map(Number);
-        const [hoursB, minutesB] = b.hora.split(':').map(Number);
-        
-        const dateA = new Date(Number(yearA), Number(monthA) - 1, Number(dayA), hoursA, minutesA).getTime();
-        const dateB = new Date(Number(yearB), Number(monthB) - 1, Number(dayB), hoursB, minutesB).getTime();
-        
-        return dateA - dateB; // Sempre crescente por padrão
+        const timestampA = createTimestamp(a.data, a.hora);
+        const timestampB = createTimestamp(b.data, b.hora);
+        return timestampA - timestampB; // Sempre crescente por padrão
       });
     }
 
@@ -481,29 +481,28 @@ export default function Workflow() {
         'remaining': 'restante'
       };
 
-      const actualField = fieldMapping[sortField] || sortField as keyof SessionData;
-      let aValue: any = a[actualField];
-      let bValue: any = b[actualField];
+      let aValue: any, bValue: any;
 
       // Handle different data types
       if (sortField === 'date') {
-        // Criar objeto Date completo usando data + hora para ordenação cronológica correta
-        const [dayA, monthA, yearA] = a.data.split('/');
-        const [dayB, monthB, yearB] = b.data.split('/');
-        const [hoursA, minutesA] = a.hora.split(':').map(Number);
-        const [hoursB, minutesB] = b.hora.split(':').map(Number);
-        
-        aValue = new Date(Number(yearA), Number(monthA) - 1, Number(dayA), hoursA, minutesA).getTime();
-        bValue = new Date(Number(yearB), Number(monthB) - 1, Number(dayB), hoursB, minutesB).getTime();
-      } else if (['packageValue', 'discount', 'extraPhotoTotal', 'productTotal', 'additionalValue', 'total', 'paid', 'remaining'].includes(sortField)) {
-        aValue = parseFloat(String(aValue).replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-        bValue = parseFloat(String(bValue).replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-      } else if (sortField === 'extraPhotoQty') {
-        aValue = Number(aValue) || 0;
-        bValue = Number(bValue) || 0;
-      } else if (typeof aValue === 'string' && typeof bValue === 'string') {
-        aValue = aValue.toLowerCase();
-        bValue = bValue.toLowerCase();
+        // Para ordenação manual de data, usar a mesma lógica da ordenação padrão
+        aValue = createTimestamp(a.data, a.hora);
+        bValue = createTimestamp(b.data, b.hora);
+      } else {
+        const actualField = fieldMapping[sortField] || sortField as keyof SessionData;
+        aValue = a[actualField];
+        bValue = b[actualField];
+
+        if (['packageValue', 'discount', 'extraPhotoTotal', 'productTotal', 'additionalValue', 'total', 'paid', 'remaining'].includes(sortField)) {
+          aValue = parseFloat(String(aValue).replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+          bValue = parseFloat(String(bValue).replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+        } else if (sortField === 'extraPhotoQty') {
+          aValue = Number(aValue) || 0;
+          bValue = Number(bValue) || 0;
+        } else if (typeof aValue === 'string' && typeof bValue === 'string') {
+          aValue = aValue.toLowerCase();
+          bValue = bValue.toLowerCase();
+        }
       }
       
       if (sortDirection === 'asc') {
