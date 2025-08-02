@@ -177,9 +177,7 @@ export function WorkflowTable({
   sortDirection,
   onSort
 }: WorkflowTableProps) {
-  const {
-    updateWorkflowItem
-  } = useWorkflow();
+  const { updateWorkflowItem } = useWorkflow();
   const [paymentInputs, setPaymentInputs] = useState<Record<string, string>>({});
   const [editingValues, setEditingValues] = useState<Record<string, string>>({});
   const [modalAberto, setModalAberto] = useState(false);
@@ -316,27 +314,31 @@ export function WorkflowTable({
   const calcularValorRealPorFoto = useCallback((session: SessionData) => {
     if (session.regrasDePrecoFotoExtraCongeladas) {
       const regras = session.regrasDePrecoFotoExtraCongeladas;
+      
       switch (regras.modelo) {
         case 'fixo':
           return regras.valorFixo || 0;
+        
         case 'global':
         case 'categoria':
           const tabela = regras.modelo === 'global' ? regras.tabelaGlobal : regras.tabelaCategoria;
           if (!tabela || !tabela.faixas || tabela.faixas.length === 0) {
             return 0;
           }
-
+          
           // Para tabelas progressivas, mostrar o valor da faixa atual baseado na quantidade
           const quantidade = session.qtdFotosExtra || 1;
           const faixasOrdenadas = [...tabela.faixas].sort((a, b) => a.min - b.min);
+          
           for (const faixa of faixasOrdenadas) {
             if (quantidade >= faixa.min && (faixa.max === null || quantidade <= faixa.max)) {
               return faixa.valor;
             }
           }
-
+          
           // Se não encontrou faixa, usar a última faixa
           return faixasOrdenadas[faixasOrdenadas.length - 1]?.valor || 0;
+        
         default:
           return 0;
       }
@@ -346,6 +348,7 @@ export function WorkflowTable({
       return parseFloat(valorStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
     }
   }, []);
+
   const calculateTotal = useCallback((session: SessionData) => {
     try {
       // LÓGICA SIMPLIFICADA: Calcular baseado nos componentes - desconto
@@ -418,9 +421,10 @@ export function WorkflowTable({
         const session = sessions.find(s => s.id === sessionId);
         if (session) {
           const novaQuantidade = parseInt(newValue) || 0;
-
+          
           // MODO DE COMPATIBILIDADE: Verificar se é item legado
           console.log('🧮 Recalculando fotos extras para sessão:', sessionId, 'quantidade:', novaQuantidade);
+          
           if (isItemLegado(session)) {
             // ITEM LEGADO: Usar sempre cálculo fixo (compatibilidade)
             console.log('🏛️ Item LEGADO detectado - usando cálculo fixo de compatibilidade');
@@ -428,7 +432,7 @@ export function WorkflowTable({
             const valorFixo = parseFloat(valorFixoStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
             const totalCalculado = calcularFotosExtrasItemLegado(novaQuantidade, valorFixo);
             handleFieldUpdateStable(sessionId, 'valorTotalFotoExtra', formatCurrency(totalCalculado));
-
+            
             // Marcar como modo compatibilidade se ainda não estiver marcado
             if (!session.modoCompatibilidade) {
               const sessionAtualizada = marcarComoModoCompatibilidade(session);
@@ -467,7 +471,11 @@ export function WorkflowTable({
     const key = getEditingKey(session.id, field);
     const editingValue = editingValues[key];
     const displayValue = editingValue !== undefined ? editingValue : value || '';
-    return;
+    return <Input type={type} value={displayValue} onFocus={() => {
+      handleEditStart(session.id, field, value || '');
+    }} onChange={e => handleEditChange(session.id, field, e.target.value)} onBlur={() => {
+      handleEditFinish(session.id, field);
+    }} onKeyPress={e => handleKeyPress(e, session.id, field)} className="h-6 text-xs p-1 w-full border-none bg-transparent focus:bg-lunar-accent/10 transition-colors duration-150" placeholder={placeholder} autoComplete="off" />;
   }, [editingValues, handleFieldUpdateStable]);
   const handleStatusChangeStable = useCallback((sessionId: string, newStatus: string) => {
     onStatusChange(sessionId, newStatus);
@@ -647,7 +655,8 @@ export function WorkflowTable({
                 {renderCell('extraPhotoValue', (() => {
                   // MODO DE COMPATIBILIDADE: Verificar primeiro se é item legado
                   if (isItemLegado(session)) {
-                    return <div className="flex flex-col gap-2">
+                    return (
+                      <div className="flex flex-col gap-2">
                         <div className="flex items-center gap-2">
                           <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-700 border-amber-200">
                             LEGADO
@@ -662,24 +671,32 @@ export function WorkflowTable({
                         <span className="text-xs font-medium">
                           {session.valorFotoExtra || 'R$ 0,00'} (fixo)
                         </span>
-                        <Button size="sm" variant="outline" className="text-xs h-6 px-2" onClick={() => {
-                        const itemMigrado = migrarItemLegadoParaRegrasAtuais(session, session.categoria);
-                        updateWorkflowItem(session.id, itemMigrado);
-                        toast({
-                          title: "Item migrado",
-                          description: "Item convertido para usar regras atuais de precificação"
-                        });
-                      }}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-xs h-6 px-2"
+                          onClick={() => {
+                            const itemMigrado = migrarItemLegadoParaRegrasAtuais(session, session.categoria);
+                            updateWorkflowItem(session.id, itemMigrado);
+                            toast({
+                              title: "Item migrado",
+                              description: "Item convertido para usar regras atuais de precificação"
+                            });
+                          }}
+                        >
                           <RefreshCw className="h-3 w-3 mr-1" />
                           Converter
                         </Button>
-                      </div>;
+                      </div>
+                    );
                   } else if (session.regrasDePrecoFotoExtraCongeladas) {
                     // Item com regras congeladas: mostrar valor e modelo aplicado
                     const regras = session.regrasDePrecoFotoExtraCongeladas;
                     const valorExibido = calcularValorRealPorFoto(session);
+                    
                     let labelModelo = '';
                     let tooltipInfo = '';
+                    
                     switch (regras.modelo) {
                       case 'fixo':
                         labelModelo = 'Fixo';
@@ -697,9 +714,14 @@ export function WorkflowTable({
                         labelModelo = 'Congelado';
                         tooltipInfo = 'Regras congeladas';
                     }
-                    return <div className="flex flex-col gap-1" title={tooltipInfo}>
+                    
+                    return (
+                      <div className="flex flex-col gap-1" title={tooltipInfo}>
                         <div className="flex items-center gap-1">
-                          <RegrasCongeladasIndicator regras={session.regrasDePrecoFotoExtraCongeladas} compact={true} />
+                          <RegrasCongeladasIndicator 
+                            regras={session.regrasDePrecoFotoExtraCongeladas} 
+                            compact={true}
+                          />
                           <span className="text-xs text-muted-foreground">
                             ({labelModelo})
                           </span>
@@ -707,16 +729,19 @@ export function WorkflowTable({
                         <span className="text-xs font-medium text-blue-600">
                           {formatCurrency(valorExibido)}
                         </span>
-                      </div>;
+                      </div>
+                    );
                   } else {
                     // Item sem regras congeladas: permitir edição com aviso
-                    return <div className="flex flex-col gap-1">
+                    return (
+                      <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-1">
                           <div className="w-2 h-2 bg-orange-400 rounded-full" title="Migração necessária" />
                           <span className="text-xs text-orange-600">Migração</span>
                         </div>
                         {renderEditableInput(session, 'valorFotoExtra', session.valorFotoExtra || '', 'text', 'R$ 0,00')}
-                      </div>;
+                      </div>
+                    );
                   }
                 })())}
 
@@ -726,6 +751,7 @@ export function WorkflowTable({
 
                   // MODO DE COMPATIBILIDADE: Verificar tipo de item
                   let total = 0;
+                  
                   if (isItemLegado(session)) {
                     // ITEM LEGADO: Usar sempre cálculo fixo (compatibilidade)
                     console.log('🏛️ [WORKFLOW] Item LEGADO - usando cálculo fixo para:', session.id);
@@ -739,17 +765,19 @@ export function WorkflowTable({
                     // ITEM SEM REGRAS: Usar motor global (para compatibilidade)
                     console.log('🧮 [WORKFLOW] Calculando com motor global para:', session.id);
                     const valorFotoExtra = parseFloat((session.valorFotoExtra || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-
+                    
                     // Buscar ID da categoria pelo nome
                     const categorias = JSON.parse(localStorage.getItem('configuracoes_categorias') || '[]');
                     const categoriaObj = categorias.find((cat: any) => cat.nome === session.categoria);
                     const categoriaId = categoriaObj?.id || session.categoria;
+                    
                     total = calcularTotalFotosExtras(qtd, {
                       valorFotoExtra,
                       categoria: session.categoria,
                       categoriaId
                     });
                   }
+                  
                   handleFieldUpdateStable(session.id, 'valorTotalFotoExtra', formatCurrency(total));
                 }} className="h-6 text-xs p-1 w-full border-none bg-transparent focus:bg-lunar-accent/10 transition-colors duration-150" placeholder="0" autoComplete="off" />)}
 
