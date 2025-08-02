@@ -1201,8 +1201,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...appointment,
       id: Date.now().toString(),
     };
-    setAppointments(prev => [...prev, newAppointment]);
+    
+    // Inserir appointment em ordem cronológica crescente
+    setAppointments(prev => {
+      const updatedAppointments = [...prev, newAppointment];
+      
+      // Ordenar por data + hora cronologicamente (mais antigo primeiro)
+      updatedAppointments.sort((a, b) => {
+        const dateA = a.date instanceof Date ? a.date : new Date(a.date);
+        const dateB = b.date instanceof Date ? b.date : new Date(b.date);
+        
+        // Combinar data + hora para comparação cronológica completa
+        const timeA = dateA.getTime() + (a.time ? parseTimeToMinutes(a.time) * 60000 : 0);
+        const timeB = dateB.getTime() + (b.time ? parseTimeToMinutes(b.time) * 60000 : 0);
+        
+        return timeA - timeB;
+      });
+      
+      return updatedAppointments;
+    });
+    
     return newAppointment;
+  };
+
+  // Função auxiliar para converter hora HH:MM em minutos
+  const parseTimeToMinutes = (time: string): number => {
+    const [hours, minutes] = time.split(':').map(Number);
+    return (hours || 0) * 60 + (minutes || 0);
   };
 
   const updateAppointment = (id: string, appointment: Partial<Appointment>) => {

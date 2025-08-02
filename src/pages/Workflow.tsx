@@ -451,12 +451,12 @@ export default function Workflow() {
       return new Date(year, month - 1, day, hours, minutes).getTime();
     };
 
-    // Sempre ordena por data crescente como padrão, APENAS quando não há sortField definido
+    // SEMPRE aplicar ordenação cronológica crescente por padrão (quando não há sortField)
     if (!sortField) {
       return [...filteredSessions].sort((a, b) => {
         const timestampA = createTimestamp(a.data, a.hora);
         const timestampB = createTimestamp(b.data, b.hora);
-        return timestampA - timestampB; // Sempre crescente por padrão
+        return timestampA - timestampB; // Sempre cronológico crescente por padrão
       });
     }
 
