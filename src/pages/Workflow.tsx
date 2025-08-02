@@ -13,8 +13,6 @@ import { useContext } from 'react';
 import { AppContext } from '@/contexts/AppContext';
 import { parseDateFromStorage } from "@/utils/dateUtils";
 import { FixPricingRulesButton } from '@/components/workflow/FixPricingRulesButton';
-import { Info } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 
 interface ProdutoWorkflow {
   nome: string;
