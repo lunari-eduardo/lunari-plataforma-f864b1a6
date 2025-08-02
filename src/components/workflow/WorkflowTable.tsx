@@ -4,8 +4,7 @@ import { Input } from "@/components/ui/input";
 import { WorkflowPackageCombobox } from "./WorkflowPackageCombobox";
 import { StatusBadge } from "./StatusBadge";
 import { GerenciarProdutosModal } from "./GerenciarProdutosModal";
-import { MessageCircle, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Package, Plus, Lock, Info } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { MessageCircle, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Package, Plus } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatToDayMonth } from "@/utils/dateUtils";
 import { calculateTotals } from '@/services/FinancialCalculationEngine';
@@ -635,56 +634,39 @@ export function WorkflowTable({
                     
                     let labelModelo = '';
                     let tooltipInfo = '';
-                    let badgeColor = 'bg-blue-50 text-blue-700 border-blue-200';
                     
                     switch (regras.modelo) {
                       case 'fixo':
                         labelModelo = 'Fixo';
-                        tooltipInfo = `🔒 Valor fixo protegido: R$ ${regras.valorFixo?.toFixed(2) || '0,00'}. Este item manterá sempre este valor, mesmo com mudanças nas configurações globais.`;
-                        badgeColor = 'bg-green-50 text-green-700 border-green-200';
+                        tooltipInfo = `Valor fixo: R$ ${regras.valorFixo?.toFixed(2) || '0,00'}`;
                         break;
                       case 'global':
                         labelModelo = 'Global';
-                        tooltipInfo = `🔒 Tabela global protegida: "${regras.tabelaGlobal?.nome || 'N/A'}". Este item usa a versão congelada da tabela do momento da criação.`;
-                        badgeColor = 'bg-purple-50 text-purple-700 border-purple-200';
+                        tooltipInfo = `Tabela global: ${regras.tabelaGlobal?.nome || 'N/A'}`;
                         break;
                       case 'categoria':
                         labelModelo = 'Categoria';
-                        tooltipInfo = `🔒 Tabela de categoria protegida: "${regras.tabelaCategoria?.nome || 'N/A'}". Este item usa a versão congelada da tabela do momento da criação.`;
-                        badgeColor = 'bg-orange-50 text-orange-700 border-orange-200';
+                        tooltipInfo = `Tabela da categoria: ${regras.tabelaCategoria?.nome || 'N/A'}`;
                         break;
                       default:
                         labelModelo = 'Congelado';
-                        tooltipInfo = '🔒 Regras congeladas no momento da criação';
-                        badgeColor = 'bg-blue-50 text-blue-700 border-blue-200';
+                        tooltipInfo = 'Regras congeladas';
                     }
                     
                     return (
-                      <div className="flex flex-col gap-1">
+                      <div className="flex flex-col gap-1" title={tooltipInfo}>
                         <div className="flex items-center gap-1">
-                          <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium border ${badgeColor}`}>
-                            <Lock className="h-3 w-3" />
-                            {labelModelo}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <span className="text-xs font-medium text-green-600">
-                            {formatCurrency(valorExibido)}
+                          <RegrasCongeladasIndicator 
+                            regras={session.regrasDePrecoFotoExtraCongeladas} 
+                            compact={true}
+                          />
+                          <span className="text-xs text-muted-foreground">
+                            ({labelModelo})
                           </span>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Info className="h-3 w-3 text-gray-400 cursor-help" />
-                              </TooltipTrigger>
-                              <TooltipContent className="max-w-xs">
-                                <p className="text-sm">{tooltipInfo}</p>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  Congelado em: {new Date(regras.timestampCongelamento).toLocaleString('pt-BR')}
-                                </p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
                         </div>
+                        <span className="text-xs font-medium text-blue-600">
+                          {formatCurrency(valorExibido)}
+                        </span>
                       </div>
                     );
                   } else {
@@ -692,27 +674,10 @@ export function WorkflowTable({
                     return (
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-1">
-                          <div className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium border bg-orange-50 text-orange-700 border-orange-200">
-                            <div className="w-2 h-2 bg-orange-400 rounded-full" />
-                            Migração
-                          </div>
+                          <div className="w-2 h-2 bg-orange-400 rounded-full" title="Migração necessária" />
+                          <span className="text-xs text-orange-600">Migração</span>
                         </div>
-                        <div className="flex items-center gap-1">
-                          {renderEditableInput(session, 'valorFotoExtra', session.valorFotoExtra || '', 'text', 'R$ 0,00')}
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Info className="h-3 w-3 text-gray-400 cursor-help" />
-                              </TooltipTrigger>
-                              <TooltipContent className="max-w-xs">
-                                <p className="text-sm">⚠️ Item sem regras congeladas</p>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  Este item será afetado por mudanças nas configurações globais. Considere migrar para preservar o valor original.
-                                </p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </div>
+                        {renderEditableInput(session, 'valorFotoExtra', session.valorFotoExtra || '', 'text', 'R$ 0,00')}
                       </div>
                     );
                   }
