@@ -558,7 +558,7 @@ export function WorkflowTable({
               {renderHeaderCell('discount', 'Desconto')}
               {renderHeaderCell('extraPhotoValue', 'Vlr Foto')}
               {renderHeaderCell('extraPhotoQty', 'Qtd Foto')}
-              {renderHeaderCell('extraPhotoTotal', 'Total Foto')}
+              {renderHeaderCell('extraPhotoTotal', 'Total de foto extra')}
               {renderHeaderCell('product', 'Produto')}
               {renderHeaderCell('productTotal', 'Total Prod')}
               {renderHeaderCell('additionalValue', 'Adicional')}
@@ -716,7 +716,41 @@ export function WorkflowTable({
                   handleFieldUpdateStable(session.id, 'valorTotalFotoExtra', formatCurrency(total));
                 }} className="h-6 text-xs p-1 w-full border-none bg-transparent focus:bg-lunar-accent/10 transition-colors duration-150" placeholder="0" autoComplete="off" />)}
 
-                {renderCell('extraPhotoTotal', <span className="text-xs font-medium text-green-600">{session.valorTotalFotoExtra || 'R$ 0,00'}</span>)}
+                {renderCell('extraPhotoTotal', (() => {
+                  // Calcular o valor real baseado nas regras
+                  let valorCalculado = 0;
+                  
+                  if (session.regrasDePrecoFotoExtraCongeladas) {
+                    // Item com regras congeladas - usar motor de cálculo específico
+                    valorCalculado = calcularComRegrasProprias(session.qtdFotosExtra || 0, session.regrasDePrecoFotoExtraCongeladas);
+                  } else {
+                    // Item sem regras congeladas - usar motor global
+                    const valorFotoExtra = parseFloat((session.valorFotoExtra || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+                    
+                    // Buscar ID da categoria pelo nome
+                    const categorias = JSON.parse(localStorage.getItem('configuracoes_categorias') || '[]');
+                    const categoriaObj = categorias.find((cat: any) => cat.nome === session.categoria);
+                    const categoriaId = categoriaObj?.id || session.categoria;
+                    
+                    valorCalculado = calcularTotalFotosExtras(session.qtdFotosExtra || 0, {
+                      valorFotoExtra,
+                      categoria: session.categoria,
+                      categoriaId
+                    });
+                  }
+                  
+                  // Mostrar como campo editável com o valor calculado como fallback
+                  const valorAtual = session.valorTotalFotoExtra || formatCurrency(valorCalculado);
+                  
+                  return (
+                    <div className="flex flex-col gap-1">
+                      <div className="text-xs text-muted-foreground">
+                        Calc: {formatCurrency(valorCalculado)}
+                      </div>
+                      {renderEditableInput(session, 'valorTotalFotoExtra', valorAtual, 'text', 'R$ 0,00')}
+                    </div>
+                  );
+                })())}
 
                 {renderCell('product', <Button variant="ghost" size="sm" onClick={() => {
                   setSessionSelecionada(session);
