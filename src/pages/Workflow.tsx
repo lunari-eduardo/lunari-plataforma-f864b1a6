@@ -13,7 +13,7 @@ import { useContext } from 'react';
 import { AppContext } from '@/contexts/AppContext';
 import { parseDateFromStorage } from "@/utils/dateUtils";
 import { FixPricingRulesButton } from '@/components/workflow/FixPricingRulesButton';
-import { applyFakeAppointments } from '@/utils/createFakeAppointments';
+
 
 interface ProdutoWorkflow {
   nome: string;
@@ -101,31 +101,6 @@ export default function Workflow() {
     categorias
   } = useOrcamentoData();
   
-  // Função para criar agendamentos fictícios
-  const handleCreateFakeAppointments = () => {
-    console.log('🎯 Botão clicado! Iniciando criação de agendamentos fictícios...');
-    console.log('addAppointment function:', addAppointment);
-    
-    // Teste básico primeiro
-    alert('Botão foi clicado!');
-    
-    try {
-      const createdAppointments = applyFakeAppointments(addAppointment);
-      console.log('✅ Agendamentos criados:', createdAppointments);
-      
-      toast({
-        title: "Agendamentos Criados",
-        description: `${createdAppointments.length} agendamentos fictícios foram criados para junho, julho e agosto de 2024.`,
-      });
-    } catch (error) {
-      console.error('❌ Erro ao criar agendamentos:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao criar agendamentos fictícios. Verifique o console.",
-        variant: "destructive"
-      });
-    }
-  };
   
   const getClienteByName = (nome: string) => {
     return clientes.find(cliente => cliente.nome === nome);
@@ -572,14 +547,6 @@ export default function Workflow() {
             </Button>
           </div>
           <div className="flex items-center space-x-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleCreateFakeAppointments}
-              className="text-green-700 border-green-600 hover:bg-green-50"
-            >
-              📅 Criar Agendamentos Fictícios
-            </Button>
             <Button variant="ghost" size="sm" onClick={toggleMetrics} className="flex items-center space-x-2 text-gray-600">
               {showMetrics ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               <span className="hidden sm:inline">{showMetrics ? "Ocultar" : "Métricas"}</span>
