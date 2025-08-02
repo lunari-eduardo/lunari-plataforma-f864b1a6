@@ -103,11 +103,28 @@ export default function Workflow() {
   
   // Função para criar agendamentos fictícios
   const handleCreateFakeAppointments = () => {
-    const createdAppointments = applyFakeAppointments(addAppointment);
-    toast({
-      title: "Agendamentos Criados",
-      description: `${createdAppointments.length} agendamentos fictícios foram criados para junho, julho e agosto de 2024.`,
-    });
+    console.log('🎯 Botão clicado! Iniciando criação de agendamentos fictícios...');
+    console.log('addAppointment function:', addAppointment);
+    
+    // Teste básico primeiro
+    alert('Botão foi clicado!');
+    
+    try {
+      const createdAppointments = applyFakeAppointments(addAppointment);
+      console.log('✅ Agendamentos criados:', createdAppointments);
+      
+      toast({
+        title: "Agendamentos Criados",
+        description: `${createdAppointments.length} agendamentos fictícios foram criados para junho, julho e agosto de 2024.`,
+      });
+    } catch (error) {
+      console.error('❌ Erro ao criar agendamentos:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao criar agendamentos fictícios. Verifique o console.",
+        variant: "destructive"
+      });
+    }
   };
   
   const getClienteByName = (nome: string) => {
