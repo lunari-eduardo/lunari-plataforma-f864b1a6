@@ -166,28 +166,50 @@ export function EstruturaCustosFixos({
                   Total: R$ {totalGastosPessoais.toFixed(2)}
                 </span>
                 <Button onClick={adicionarGastoPessoal} size="sm">
-                  <Plus className="h-4 w-4 mr-1" />
-                  Adicionar Gasto
+                  <Plus className="h-4 w-4" />
                 </Button>
               </div>
             </div>
             
-            <div className="space-y-3">
-              {gastosPessoais.map(gasto => <div key={gasto.id} className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
-                  <div className="md:col-span-2">
-                    <Label className="text-xs">Descrição</Label>
-                    <Input placeholder="Ex: Alimentação, Transporte..." value={gasto.descricao} onChange={e => atualizarGastoPessoal(gasto.id, 'descricao', e.target.value)} />
-                  </div>
-                  <div className="flex gap-2">
-                    <div className="flex-1">
-                      <Label className="text-xs">Valor</Label>
-                      <Input type="number" min="0" step="0.01" value={gasto.valor} onChange={e => atualizarGastoPessoal(gasto.id, 'valor', parseFloat(e.target.value) || 0)} />
-                    </div>
-                    <Button onClick={() => removerGastoPessoal(gasto.id)} variant="outline" size="sm" className="mt-5">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>)}
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[500px] border-collapse">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left text-xs font-medium text-gray-600 pb-2 pr-4">Descrição</th>
+                    <th className="text-left text-xs font-medium text-gray-600 pb-2 pr-4 w-32">Valor</th>
+                    <th className="text-left text-xs font-medium text-gray-600 pb-2 w-12">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {gastosPessoais.map(gasto => 
+                    <tr key={gasto.id} className="border-b border-gray-100">
+                      <td className="py-3 pr-4">
+                        <Input 
+                          placeholder="Ex: Alimentação, Transporte..." 
+                          value={gasto.descricao} 
+                          onChange={e => atualizarGastoPessoal(gasto.id, 'descricao', e.target.value)}
+                          className="border-0 shadow-none focus-visible:ring-1 focus-visible:ring-offset-0"
+                        />
+                      </td>
+                      <td className="py-3 pr-4">
+                        <Input 
+                          type="number" 
+                          min="0" 
+                          step="0.01" 
+                          value={gasto.valor} 
+                          onChange={e => atualizarGastoPessoal(gasto.id, 'valor', parseFloat(e.target.value) || 0)}
+                          className="border-0 shadow-none focus-visible:ring-1 focus-visible:ring-offset-0"
+                        />
+                      </td>
+                      <td className="py-3">
+                        <Button onClick={() => removerGastoPessoal(gasto.id)} variant="outline" size="sm">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </TabsContent>
 
@@ -225,28 +247,50 @@ export function EstruturaCustosFixos({
                   Total: R$ {totalCustosEstudio.toFixed(2)}
                 </span>
                 <Button onClick={adicionarCustoEstudio} size="sm">
-                  <Plus className="h-4 w-4 mr-1" />
-                  Adicionar Custo
+                  <Plus className="h-4 w-4" />
                 </Button>
               </div>
             </div>
             
-            <div className="space-y-3">
-              {custosEstudio.map(custo => <div key={custo.id} className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
-                  <div className="md:col-span-2">
-                    <Label className="text-xs">Descrição</Label>
-                    <Input placeholder="Ex: Aluguel, Energia, Internet..." value={custo.descricao} onChange={e => atualizarCustoEstudio(custo.id, 'descricao', e.target.value)} />
-                  </div>
-                  <div className="flex gap-2">
-                    <div className="flex-1">
-                      <Label className="text-xs">Valor</Label>
-                      <Input type="number" min="0" step="0.01" value={custo.valor} onChange={e => atualizarCustoEstudio(custo.id, 'valor', parseFloat(e.target.value) || 0)} />
-                    </div>
-                    <Button onClick={() => removerCustoEstudio(custo.id)} variant="outline" size="sm" className="mt-5">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>)}
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[500px] border-collapse">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left text-xs font-medium text-gray-600 pb-2 pr-4">Descrição</th>
+                    <th className="text-left text-xs font-medium text-gray-600 pb-2 pr-4 w-32">Valor</th>
+                    <th className="text-left text-xs font-medium text-gray-600 pb-2 w-12">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {custosEstudio.map(custo => 
+                    <tr key={custo.id} className="border-b border-gray-100">
+                      <td className="py-3 pr-4">
+                        <Input 
+                          placeholder="Ex: Aluguel, Energia, Internet..." 
+                          value={custo.descricao} 
+                          onChange={e => atualizarCustoEstudio(custo.id, 'descricao', e.target.value)}
+                          className="border-0 shadow-none focus-visible:ring-1 focus-visible:ring-offset-0"
+                        />
+                      </td>
+                      <td className="py-3 pr-4">
+                        <Input 
+                          type="number" 
+                          min="0" 
+                          step="0.01" 
+                          value={custo.valor} 
+                          onChange={e => atualizarCustoEstudio(custo.id, 'valor', parseFloat(e.target.value) || 0)}
+                          className="border-0 shadow-none focus-visible:ring-1 focus-visible:ring-offset-0"
+                        />
+                      </td>
+                      <td className="py-3">
+                        <Button onClick={() => removerCustoEstudio(custo.id)} variant="outline" size="sm">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </TabsContent>
 
@@ -259,8 +303,7 @@ export function EstruturaCustosFixos({
                   Depreciação Mensal: R$ {totalDepreciacaoMensal.toFixed(2)}
                 </span>
                 <Button onClick={adicionarEquipamento} size="sm" className="text-xs">
-                  <Plus className="h-4 w-4 mr-1" />
-                  Adicionar Equipamento
+                  <Plus className="h-4 w-4" />
                 </Button>
               </div>
             </div>
