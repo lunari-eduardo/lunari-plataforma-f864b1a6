@@ -6,7 +6,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Trash2, Info, DollarSign } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Plus, Trash2, Info, DollarSign, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   ConfiguracaoPrecificacao,
@@ -38,6 +39,11 @@ export default function PrecificacaoFotos({ categorias }: PrecificacaoFotosProps
   const [tabelaGlobal, setTabelaGlobal] = useState<TabelaPrecos | null>(obterTabelaGlobal());
   const [editandoTabela, setEditandoTabela] = useState(false);
   const [previewQuantidade, setPreviewQuantidade] = useState(10);
+  
+  // Estados para controle do modal de confirmação
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [novoModelo, setNovoModelo] = useState<'fixo' | 'global' | 'categoria' | null>(null);
+  const [modeloAnterior, setModeloAnterior] = useState<'fixo' | 'global' | 'categoria'>(config.modelo);
 
   // Salvar configuração automaticamente
   useEffect(() => {
@@ -58,13 +64,34 @@ export default function PrecificacaoFotos({ categorias }: PrecificacaoFotosProps
   }, [tabelaGlobal]);
 
   const handleModeloChange = (modelo: 'fixo' | 'global' | 'categoria') => {
-    setConfig(prev => ({ ...prev, modelo }));
+    // Se for o mesmo modelo atual, não fazer nada
+    if (modelo === config.modelo) return;
     
-    if (modelo === 'global' && !tabelaGlobal) {
+    // Armazenar modelo anterior e novo modelo
+    setModeloAnterior(config.modelo);
+    setNovoModelo(modelo);
+    setShowConfirmModal(true);
+  };
+
+  const confirmarMudanca = () => {
+    if (!novoModelo) return;
+    
+    setConfig(prev => ({ ...prev, modelo: novoModelo }));
+    
+    if (novoModelo === 'global' && !tabelaGlobal) {
       // Criar tabela exemplo se não existir
       const novaTabela = criarTabelaExemplo();
       setTabelaGlobal(novaTabela);
     }
+    
+    setShowConfirmModal(false);
+    setNovoModelo(null);
+    toast.success('Modelo de precificação alterado com sucesso!');
+  };
+
+  const cancelarMudanca = () => {
+    setShowConfirmModal(false);
+    setNovoModelo(null);
   };
 
   const adicionarFaixa = () => {
@@ -419,6 +446,43 @@ export default function PrecificacaoFotos({ categorias }: PrecificacaoFotosProps
 
       {/* Informações sobre Congelamento de Regras */}
       <CongelamentoRegrasInfo />
+
+      {/* Modal de Confirmação */}
+      <AlertDialog open={showConfirmModal} onOpenChange={setShowConfirmModal}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-amber-600">
+              <AlertTriangle className="h-5 w-5" />
+              Atenção: Mudança no Modelo de Precificação
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                Você está prestes a alterar o seu modelo de cálculo para o valor de fotos extras.
+              </p>
+              <p>
+                Isto significa que, ao editar a quantidade de fotos extras em qualquer projeto que já esteja na tabela do Workflow, o valor será recalculado usando as <strong>NOVAS</strong> regras.
+              </p>
+              <p>
+                Para projetos que já estejam em workflow e que precisam de alteração em quantidade de foto extra, recomendamos que ajuste manualmente o campo 'Valor total de foto' do cliente correspondente para corrigir cálculos.
+              </p>
+              <p className="font-medium text-foreground">
+                Deseja continuar?
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelarMudanca}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmarMudanca}
+              className="bg-amber-600 hover:bg-amber-700"
+            >
+              Sim, Entendi e Quero Continuar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
