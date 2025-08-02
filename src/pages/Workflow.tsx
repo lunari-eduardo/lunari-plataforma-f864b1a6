@@ -442,7 +442,15 @@ export default function Workflow() {
       [field]: value
     } : session));
   }, []);
+  // Estado para controlar se deve aplicar ordenação
+  const [applySorting, setApplySorting] = useState(false);
+
   const sortedSessions = useMemo(() => {
+    // Se não deve aplicar ordenação, retorna dados filtrados sem ordenar
+    if (!applySorting || !sortField) {
+      return filteredSessions;
+    }
+
     return [...filteredSessions].sort((a, b) => {
       // Mapeamento de campos da interface para campos do SessionData
       const fieldMapping: Record<string, keyof SessionData> = {
@@ -493,7 +501,7 @@ export default function Workflow() {
         return aValue < bValue ? 1 : -1;
       }
     });
-  }, [filteredSessions, sortField, sortDirection]);
+  }, [filteredSessions, sortField, sortDirection, applySorting]);
   const handleSort = useCallback((field: string) => {
     if (sortField === field) {
       // If clicking the same field, toggle direction
@@ -503,6 +511,8 @@ export default function Workflow() {
       setSortField(field);
       setSortDirection('asc');
     }
+    // Ativar ordenação quando usuário clicar
+    setApplySorting(true);
   }, [sortField]);
   return <div className="h-full flex flex-col bg-gray-50">
       <div className="bg-white border-b shadow-sm sticky top-0 z-50">
