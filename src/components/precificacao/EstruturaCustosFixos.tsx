@@ -140,7 +140,7 @@ export function EstruturaCustosFixos({
           </div>
         </div>
       </CardHeader>
-      <CardContent className="bg-gray-50">
+      <CardContent className="bg-gray-50 px-[9px]">
         <Tabs defaultValue="gastos-pessoais" className="w-full">
           <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 gap-1 h-auto p-1">
             <TabsTrigger value="gastos-pessoais" className="text-xs md:text-sm px-2 py-2">
@@ -181,33 +181,19 @@ export function EstruturaCustosFixos({
                   </tr>
                 </thead>
                 <tbody>
-                  {gastosPessoais.map(gasto => 
-                    <tr key={gasto.id} className="border-b border-gray-100">
+                  {gastosPessoais.map(gasto => <tr key={gasto.id} className="border-b border-gray-100">
                       <td className="py-3 pr-4">
-                        <Input 
-                          placeholder="Ex: Alimentação, Transporte..." 
-                          value={gasto.descricao} 
-                          onChange={e => atualizarGastoPessoal(gasto.id, 'descricao', e.target.value)}
-                          className="border-0 shadow-none focus-visible:ring-1 focus-visible:ring-offset-0"
-                        />
+                        <Input placeholder="Ex: Alimentação, Transporte..." value={gasto.descricao} onChange={e => atualizarGastoPessoal(gasto.id, 'descricao', e.target.value)} className="border-0 shadow-none focus-visible:ring-1 focus-visible:ring-offset-0" />
                       </td>
                       <td className="py-3 pr-4">
-                        <Input 
-                          type="number" 
-                          min="0" 
-                          step="0.01" 
-                          value={gasto.valor} 
-                          onChange={e => atualizarGastoPessoal(gasto.id, 'valor', parseFloat(e.target.value) || 0)}
-                          className="border-0 shadow-none focus-visible:ring-1 focus-visible:ring-offset-0"
-                        />
+                        <Input type="number" min="0" step="0.01" value={gasto.valor} onChange={e => atualizarGastoPessoal(gasto.id, 'valor', parseFloat(e.target.value) || 0)} className="border-0 shadow-none focus-visible:ring-1 focus-visible:ring-offset-0" />
                       </td>
                       <td className="py-3">
                         <Button onClick={() => removerGastoPessoal(gasto.id)} variant="outline" size="sm">
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </td>
-                    </tr>
-                  )}
+                    </tr>)}
                 </tbody>
               </table>
             </div>
@@ -262,33 +248,19 @@ export function EstruturaCustosFixos({
                   </tr>
                 </thead>
                 <tbody>
-                  {custosEstudio.map(custo => 
-                    <tr key={custo.id} className="border-b border-gray-100">
-                      <td className="py-3 pr-4">
-                        <Input 
-                          placeholder="Ex: Aluguel, Energia, Internet..." 
-                          value={custo.descricao} 
-                          onChange={e => atualizarCustoEstudio(custo.id, 'descricao', e.target.value)}
-                          className="border-0 shadow-none focus-visible:ring-1 focus-visible:ring-offset-0"
-                        />
+                  {custosEstudio.map(custo => <tr key={custo.id} className="border-b border-gray-100">
+                      <td className="pr-4 py-0">
+                        <Input placeholder="Ex: Aluguel, Energia, Internet..." value={custo.descricao} onChange={e => atualizarCustoEstudio(custo.id, 'descricao', e.target.value)} className="border-0 shadow-none focus-visible:ring-1 focus-visible:ring-offset-0" />
                       </td>
-                      <td className="py-3 pr-4">
-                        <Input 
-                          type="number" 
-                          min="0" 
-                          step="0.01" 
-                          value={custo.valor} 
-                          onChange={e => atualizarCustoEstudio(custo.id, 'valor', parseFloat(e.target.value) || 0)}
-                          className="border-0 shadow-none focus-visible:ring-1 focus-visible:ring-offset-0"
-                        />
+                      <td className="pr-4 py-1">
+                        <Input type="number" min="0" step="0.01" value={custo.valor} onChange={e => atualizarCustoEstudio(custo.id, 'valor', parseFloat(e.target.value) || 0)} className="border-0 shadow-none focus-visible:ring-1 focus-visible:ring-offset-0" />
                       </td>
                       <td className="py-3">
                         <Button onClick={() => removerCustoEstudio(custo.id)} variant="outline" size="sm">
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </td>
-                    </tr>
-                  )}
+                    </tr>)}
                 </tbody>
               </table>
             </div>
