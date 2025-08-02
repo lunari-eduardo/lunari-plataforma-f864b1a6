@@ -69,12 +69,27 @@ export default function TabelaPrecosModal({ categoriaId, categoriaNome, categori
     }
   };
 
+  // Recalcula os valores "min" de todas as faixas baseado na sequência
+  const recalcularFaixas = (faixas: FaixaPreco[]) => {
+    return faixas.map((faixa, index) => {
+      if (index === 0) {
+        return { ...faixa, min: 1 }; // Primeira faixa sempre começa em 1
+      } else {
+        const faixaAnterior = faixas[index - 1];
+        const novoMin = (faixaAnterior.max || faixaAnterior.min) + 1;
+        return { ...faixa, min: novoMin };
+      }
+    });
+  };
+
   const adicionarFaixa = () => {
     if (!tabela) return;
     
     const ultimaFaixa = tabela.faixas[tabela.faixas.length - 1];
+    const novoMin = ultimaFaixa ? (ultimaFaixa.max || ultimaFaixa.min) + 1 : 1;
+    
     const novaFaixa: FaixaPreco = {
-      min: ultimaFaixa ? (ultimaFaixa.max || ultimaFaixa.min) + 1 : 1,
+      min: novoMin,
       max: null,
       valor: 20
     };
@@ -88,21 +103,40 @@ export default function TabelaPrecosModal({ categoriaId, categoriaNome, categori
   const removerFaixa = (index: number) => {
     if (!tabela) return;
     
+    const novasFaixas = tabela.faixas.filter((_, i) => i !== index);
+    const faixasRecalculadas = recalcularFaixas(novasFaixas);
+    
     setTabela(prev => prev ? {
       ...prev,
-      faixas: prev.faixas.filter((_, i) => i !== index)
+      faixas: faixasRecalculadas
     } : null);
   };
 
   const atualizarFaixa = (index: number, campo: keyof FaixaPreco, valor: any) => {
     if (!tabela) return;
     
-    setTabela(prev => prev ? {
-      ...prev,
-      faixas: prev.faixas.map((faixa, i) => 
-        i === index ? { ...faixa, [campo]: valor } : faixa
-      )
-    } : null);
+    // Prevenir edição do campo "min" exceto para a primeira faixa
+    if (campo === 'min' && index !== 0) {
+      return;
+    }
+    
+    const novasFaixas = tabela.faixas.map((faixa, i) => 
+      i === index ? { ...faixa, [campo]: valor } : faixa
+    );
+    
+    // Se alterou o campo "max", recalcular as faixas subsequentes
+    if (campo === 'max') {
+      const faixasRecalculadas = recalcularFaixas(novasFaixas);
+      setTabela(prev => prev ? {
+        ...prev,
+        faixas: faixasRecalculadas
+      } : null);
+    } else {
+      setTabela(prev => prev ? {
+        ...prev,
+        faixas: novasFaixas
+      } : null);
+    }
   };
 
   const atualizarNomeTabela = (nome: string) => {
@@ -192,15 +226,17 @@ export default function TabelaPrecosModal({ categoriaId, categoriaNome, categori
                   <TableBody>
                     {tabela.faixas.map((faixa, index) => (
                       <TableRow key={index}>
-                        <TableCell>
-                          <Input
-                            type="number"
-                            value={faixa.min}
-                            onChange={(e) => atualizarFaixa(index, 'min', parseInt(e.target.value) || 0)}
-                            className="w-20"
-                            min="1"
-                          />
-                        </TableCell>
+                         <TableCell>
+                           <Input
+                             type="number"
+                             value={faixa.min}
+                             onChange={(e) => atualizarFaixa(index, 'min', parseInt(e.target.value) || 0)}
+                             className="w-20"
+                             min="1"
+                             disabled={index !== 0}
+                             readOnly={index !== 0}
+                           />
+                         </TableCell>
                         <TableCell>
                           <Input
                             type="number"
