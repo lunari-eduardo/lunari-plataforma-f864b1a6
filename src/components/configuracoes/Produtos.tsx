@@ -94,7 +94,7 @@ export default function Produtos({
             <Input id="produto-nome" placeholder="Nome do produto" value={novoProduto.nome} onChange={e => setNovoProduto({
             ...novoProduto,
             nome: e.target.value
-          })} className="bg-neutral-50" />
+          })} className="bg-lunar-surface" />
           </div>
           
           <div>
@@ -104,7 +104,7 @@ export default function Produtos({
             <Input id="produto-custo" type="number" placeholder="0,00" value={novoProduto.preco_custo || ''} onChange={e => setNovoProduto({
             ...novoProduto,
             preco_custo: Number(e.target.value)
-          })} className="bg-neutral-50" />
+          })} className="bg-lunar-surface" />
           </div>
           
           <div>
@@ -114,7 +114,7 @@ export default function Produtos({
             <Input id="produto-venda" type="number" placeholder="0,00" value={novoProduto.preco_venda || ''} onChange={e => setNovoProduto({
             ...novoProduto,
             preco_venda: Number(e.target.value)
-          })} className="bg-neutral-50" />
+          })} className="bg-lunar-surface" />
           </div>
         </div>
         
@@ -232,7 +232,7 @@ export default function Produtos({
           </div> :
       // Layout em tabela para desktop
       <div className="bg-white rounded-lg border border-border overflow-hidden shadow-sm">
-            <div className="grid grid-cols-12 bg-muted/50 px-4 py-3 border-b text-sm font-medium">
+            <div className="grid grid-cols-12 px-4 py-3 border-b text-sm font-medium bg-lunar-surface">
               <div className="col-span-5 text-foreground">Produto</div>
               <div className="col-span-2 text-foreground">Custo</div>
               <div className="col-span-2 text-foreground">Venda</div>

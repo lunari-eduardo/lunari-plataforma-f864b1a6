@@ -97,7 +97,7 @@ export default function FluxoTrabalho({
             <Input id="etapa-nome" placeholder="Nome da etapa" value={novaEtapa.nome} onChange={e => setNovaEtapa({
             ...novaEtapa,
             nome: e.target.value
-          })} className="bg-neutral-50" />
+          })} className="bg-lunar-surface" />
           </div>
           
           <div>
