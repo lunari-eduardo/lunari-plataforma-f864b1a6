@@ -53,7 +53,7 @@ export default function Pacotes({
   const [filtroValor, setFiltroValor] = useState<string>('');
   const [editingPackage, setEditingPackage] = useState<string | null>(null);
   const [novoPacoteAberto, setNovoPacoteAberto] = useState(false);
-  
+
   // Verificar modelo de precificação atual
   const configPrecificacao = obterConfiguracaoPrecificacao();
   const isFixedPricing = configPrecificacao.modelo === 'fixo';
@@ -93,11 +93,11 @@ export default function Pacotes({
     }]);
   }, [setPacotes]);
   const atualizarPacote = useCallback((id: string, campo: keyof Pacote, valor: any) => {
-    setPacotes(prev => prev.map(pacote => 
-      pacote.id === id ? { ...pacote, [campo]: valor } : pacote
-    ));
+    setPacotes(prev => prev.map(pacote => pacote.id === id ? {
+      ...pacote,
+      [campo]: valor
+    } : pacote));
   }, [setPacotes]);
-
   const adicionarProdutoAoPacote = useCallback((pacoteId: string, produtoId: string) => {
     setPacotes(prev => prev.map(pacote => {
       if (pacote.id === pacoteId) {
@@ -105,21 +105,24 @@ export default function Pacotes({
         if (produtoExistente) {
           return {
             ...pacote,
-            produtosIncluidos: pacote.produtosIncluidos.map(p =>
-              p.produtoId === produtoId ? { ...p, quantidade: p.quantidade + 1 } : p
-            )
+            produtosIncluidos: pacote.produtosIncluidos.map(p => p.produtoId === produtoId ? {
+              ...p,
+              quantidade: p.quantidade + 1
+            } : p)
           };
         } else {
           return {
             ...pacote,
-            produtosIncluidos: [...pacote.produtosIncluidos, { produtoId, quantidade: 1 }]
+            produtosIncluidos: [...pacote.produtosIncluidos, {
+              produtoId,
+              quantidade: 1
+            }]
           };
         }
       }
       return pacote;
     }));
   }, [setPacotes]);
-
   const removerProdutoDoPacote = useCallback((pacoteId: string, produtoId: string) => {
     setPacotes(prev => prev.map(pacote => {
       if (pacote.id === pacoteId) {
@@ -139,42 +142,32 @@ export default function Pacotes({
     setFiltroNome('');
     setFiltroValor('');
   }, []);
-  const ProdutoDropdown = useCallback(({ pacote }: { pacote: Pacote }) => {
+  const ProdutoDropdown = useCallback(({
+    pacote
+  }: {
+    pacote: Pacote;
+  }) => {
     const [open, setOpen] = useState(false);
-    const produtosDisponiveis = produtos.filter(produto => 
-      !pacote.produtosIncluidos.some(p => p.produtoId === produto.id)
-    );
-
-    return (
-      <div className="space-y-1">
+    const produtosDisponiveis = produtos.filter(produto => !pacote.produtosIncluidos.some(p => p.produtoId === produto.id));
+    return <div className="space-y-1">
         {/* Lista de produtos incluídos */}
         <div className="flex flex-wrap gap-1 mb-2">
           {pacote.produtosIncluidos.map(produto => {
-            const nomeProduto = getNomeProduto(produto.produtoId);
-            return (
-              <div key={produto.produtoId} className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs">
+          const nomeProduto = getNomeProduto(produto.produtoId);
+          return <div key={produto.produtoId} className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs">
                 <span>{nomeProduto}</span>
                 {produto.quantidade > 1 && <span className="font-medium">({produto.quantidade}x)</span>}
-                <button
-                  onClick={() => removerProdutoDoPacote(pacote.id, produto.produtoId)}
-                  className="text-blue-500 hover:text-blue-700 ml-1"
-                >
+                <button onClick={() => removerProdutoDoPacote(pacote.id, produto.produtoId)} className="text-blue-500 hover:text-blue-700 ml-1">
                   ×
                 </button>
-              </div>
-            );
-          })}
+              </div>;
+        })}
         </div>
         
         {/* Dropdown para adicionar produtos */}
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-6 text-xs w-full justify-between"
-              disabled={produtosDisponiveis.length === 0}
-            >
+            <Button variant="outline" size="sm" className="h-6 text-xs w-full justify-between" disabled={produtosDisponiveis.length === 0}>
               <Plus className="h-3 w-3 mr-1" />
               Adicionar produto
               <ChevronsUpDown className="h-3 w-3 ml-1" />
@@ -188,30 +181,23 @@ export default function Pacotes({
                   Nenhum produto encontrado.
                 </CommandEmpty>
                 <CommandGroup>
-                  {produtosDisponiveis.map((produto) => (
-                    <CommandItem
-                      key={produto.id}
-                      onSelect={() => {
-                        adicionarProdutoAoPacote(pacote.id, produto.id);
-                        setOpen(false);
-                      }}
-                      className="text-xs cursor-pointer"
-                    >
+                  {produtosDisponiveis.map(produto => <CommandItem key={produto.id} onSelect={() => {
+                  adicionarProdutoAoPacote(pacote.id, produto.id);
+                  setOpen(false);
+                }} className="text-xs cursor-pointer">
                       <div className="flex flex-col">
                         <span className="font-medium">{produto.nome}</span>
                         <span className="text-xs text-muted-foreground">
                           {formatarMoeda(produto.preco_venda)}
                         </span>
                       </div>
-                    </CommandItem>
-                  ))}
+                    </CommandItem>)}
                 </CommandGroup>
               </CommandList>
             </Command>
           </PopoverContent>
         </Popover>
-      </div>
-    );
+      </div>;
   }, [produtos, getNomeProduto, adicionarProdutoAoPacote, removerProdutoDoPacote, formatarMoeda]);
   return <div className="mt-4 space-y-6">
       {/* Formulário Novo Pacote */}
@@ -222,17 +208,13 @@ export default function Pacotes({
               <CollapsibleTrigger asChild>
                 <Button className="bg-blue-500/20 border border-blue-500/30 text-blue-800 hover:bg-blue-500/30 flex items-center justify-center gap-2 px-4 py-2 rounded-lg">
                   <span className="text-sm">📦</span>
-                  {novoPacoteAberto ? (
-                    <>
+                  {novoPacoteAberto ? <>
                       Fechar Formulário
                       <ChevronUp className="h-4 w-4" />
-                    </>
-                  ) : (
-                    <>
+                    </> : <>
                       [+] Novo Pacote Fotográfico
                       <ChevronDown className="h-4 w-4" />
-                    </>
-                  )}
+                    </>}
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent>
@@ -254,11 +236,9 @@ export default function Pacotes({
       
       {/* Seção Pacotes Cadastrados */}
       <div>
-        <div className="space-y-2 mb-4 bg-lunar-surface">
+        <div className="space-y-2 mb-4 rounded-lg px-[15px] bg-neutral-50">
           <h3 className="font-medium text-sm text-inherit">Pacotes Cadastrados</h3>
-          <p className="text-muted-foreground text-xs">
-            Lista de todos os pacotes fotográficos disponíveis.
-          </p>
+          <p className="text-muted-foreground text-xs">Lista de todos os pacotes disponíveis.</p>
         </div>
         
         {/* Barra de Filtros */}
@@ -315,63 +295,36 @@ export default function Pacotes({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {pacotesFiltrados.map((pacote) => (
-                <TableRow key={pacote.id} className="hover:bg-gray-50/70">
+              {pacotesFiltrados.map(pacote => <TableRow key={pacote.id} className="hover:bg-gray-50/70">
                   {/* Nome - Editável */}
                   <TableCell className="p-2">
-                    <Input
-                      value={pacote.nome}
-                      onChange={(e) => atualizarPacote(pacote.id, 'nome', e.target.value)}
-                      className="h-7 text-xs border-0 bg-transparent hover:bg-gray-50 focus:bg-white focus:border-gray-200"
-                    />
+                    <Input value={pacote.nome} onChange={e => atualizarPacote(pacote.id, 'nome', e.target.value)} className="h-7 text-xs border-0 bg-transparent hover:bg-gray-50 focus:bg-white focus:border-gray-200" />
                   </TableCell>
                   
                   {/* Categoria - Seletor */}
                   <TableCell className="p-2">
-                    <Select 
-                      value={pacote.categoria_id} 
-                      onValueChange={(value) => atualizarPacote(pacote.id, 'categoria_id', value)}
-                    >
+                    <Select value={pacote.categoria_id} onValueChange={value => atualizarPacote(pacote.id, 'categoria_id', value)}>
                       <SelectTrigger className="h-7 text-xs border-0 bg-transparent hover:bg-gray-50 focus:bg-white focus:border-gray-200">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {categorias.map(categoria => (
-                          <SelectItem key={categoria.id} value={categoria.id} className="text-xs">
+                        {categorias.map(categoria => <SelectItem key={categoria.id} value={categoria.id} className="text-xs">
                             {categoria.nome}
-                          </SelectItem>
-                        ))}
+                          </SelectItem>)}
                       </SelectContent>
                     </Select>
                   </TableCell>
                   
                   {/* Valor Base - Editável */}
                   <TableCell className="p-2">
-                    <Input
-                      type="number"
-                      value={pacote.valor_base}
-                      onChange={(e) => atualizarPacote(pacote.id, 'valor_base', parseFloat(e.target.value) || 0)}
-                      className="h-7 text-xs border-0 bg-transparent hover:bg-gray-50 focus:bg-white focus:border-gray-200"
-                    />
+                    <Input type="number" value={pacote.valor_base} onChange={e => atualizarPacote(pacote.id, 'valor_base', parseFloat(e.target.value) || 0)} className="h-7 text-xs border-0 bg-transparent hover:bg-gray-50 focus:bg-white focus:border-gray-200" />
                   </TableCell>
                   
                   {/* Valor Foto Extra - Editável apenas no modelo fixo */}
                   <TableCell className="p-2">
-                    {isFixedPricing ? (
-                      <Input
-                        type="number"
-                        value={pacote.valor_foto_extra}
-                        onChange={(e) => atualizarPacote(pacote.id, 'valor_foto_extra', parseFloat(e.target.value) || 0)}
-                        className="h-7 text-xs border-0 bg-transparent hover:bg-gray-50 focus:bg-white focus:border-gray-200"
-                      />
-                    ) : (
-                      <div className="h-7 flex items-center text-xs text-muted-foreground px-2">
-                        {configPrecificacao.modelo === 'global' 
-                          ? 'Tabela Global' 
-                          : 'Por Categoria'
-                        }
-                      </div>
-                    )}
+                    {isFixedPricing ? <Input type="number" value={pacote.valor_foto_extra} onChange={e => atualizarPacote(pacote.id, 'valor_foto_extra', parseFloat(e.target.value) || 0)} className="h-7 text-xs border-0 bg-transparent hover:bg-gray-50 focus:bg-white focus:border-gray-200" /> : <div className="h-7 flex items-center text-xs text-muted-foreground px-2">
+                        {configPrecificacao.modelo === 'global' ? 'Tabela Global' : 'Por Categoria'}
+                      </div>}
                   </TableCell>
                   
                   {/* Produtos Incluídos - Dropdown para edição */}
@@ -381,25 +334,17 @@ export default function Pacotes({
                   
                   {/* Ações */}
                   <TableCell className="p-2 text-right">
-                    <Button 
-                      variant="outline" 
-                      size="icon" 
-                      className="h-6 w-6 text-red-500 hover:text-red-600 hover:border-red-200" 
-                      onClick={() => removerPacote(pacote.id)}
-                    >
+                    <Button variant="outline" size="icon" className="h-6 w-6 text-red-500 hover:text-red-600 hover:border-red-200" onClick={() => removerPacote(pacote.id)}>
                       <Trash2 className="h-3 w-3" />
                     </Button>
                   </TableCell>
-                </TableRow>
-              ))}
+                </TableRow>)}
               
-              {pacotesFiltrados.length === 0 && (
-                <TableRow>
+              {pacotesFiltrados.length === 0 && <TableRow>
                   <TableCell colSpan={6} className="px-4 py-8 text-center text-sm text-muted-foreground">
                     {pacotes.length === 0 ? "Nenhum pacote cadastrado. Adicione seu primeiro pacote acima." : "Nenhum pacote encontrado com os filtros aplicados."}
                   </TableCell>
-                </TableRow>
-              )}
+                </TableRow>}
             </TableBody>
           </Table>
         </div>

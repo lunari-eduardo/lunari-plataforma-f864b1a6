@@ -73,7 +73,7 @@ export default function Categorias({
             <label htmlFor="nome" className="block text-sm font-medium mb-1">
               Nome<span className="text-red-500">*</span>
             </label>
-            <Input id="nome" placeholder="Nome da categoria" value={novaCategoria} onChange={e => setNovaCategoria(e.target.value)} className="w-full bg-neutral-50" />
+            <Input id="nome" placeholder="Nome da categoria" value={novaCategoria} onChange={e => setNovaCategoria(e.target.value)} className="w-full bg-lunar-surface" />
           </div>
           <div className="w-full sm:w-40">
             <label htmlFor="cor" className="block text-sm font-medium mb-1">
@@ -102,7 +102,7 @@ export default function Categorias({
         </div>
         
         <div className="bg-white rounded-lg border border-gray-100 overflow-hidden shadow-sm">
-          <div className="grid grid-cols-6 bg-gray-50/50 px-4 border-b border-gray-100 py-[10px]">
+          <div className="grid grid-cols-6 px-4 border-b border-gray-100 py-[10px] bg-lunar-surface">
             <div className="font-medium text-sm col-span-3 sm:col-span-2 text-gray-700">Nome</div>
             <div className="font-medium text-sm hidden sm:block text-gray-700">Cor</div>
             <div className="font-medium text-sm col-span-3 text-gray-700">Ações</div>
