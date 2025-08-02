@@ -1,11 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/utils/financialUtils';
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { useDashboardFinanceiro } from '@/hooks/useDashboardFinanceiro';
+import { X } from 'lucide-react';
 
 // Cores do design system
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--muted))'];
+const EXPENSE_COLORS = ['hsl(var(--primary))', 'hsl(var(--secondary))', 'hsl(var(--accent))'];
 
 export default function DashboardFinanceiro() {
   // Usar hook com dados reais
@@ -16,13 +19,15 @@ export default function DashboardFinanceiro() {
     categoriaSelecionada,
     setCategoriaSelecionada,
     categoriasDisponiveis,
+    mesSelecionado,
     kpisData,
     metasData,
     dadosMensais,
-    custosFixos,
-    custosVariaveis,
-    investimentos,
-    evolucaoCategoria
+    composicaoDespesas,
+    evolucaoCategoria,
+    handleBarClick,
+    clearMonthFilter,
+    getNomeMes
   } = useDashboardFinanceiro();
   const lucratividade = metasData.lucroAtual / metasData.receitaAtual * 100;
   const percentMetaReceita = metasData.receitaAtual / metasData.metaReceita * 100;
@@ -49,8 +54,25 @@ export default function DashboardFinanceiro() {
     value: 100 - lucratividade
   }];
   return <div className="space-y-6">
-      {/* Filtro de Ano */}
-      <div className="flex justify-end">
+      {/* Filtros */}
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-4">
+          {mesSelecionado && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-muted rounded-lg">
+              <span className="text-sm font-medium">
+                Filtrando por: {getNomeMes(mesSelecionado)} {anoSelecionado}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearMonthFilter}
+                className="h-6 w-6 p-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+        </div>
         <Select value={anoSelecionado} onValueChange={setAnoSelecionado}>
           <SelectTrigger className="w-32">
             <SelectValue placeholder="Ano" />
@@ -165,14 +187,19 @@ export default function DashboardFinanceiro() {
         </Card>
       </div>
 
-      {/* Widget 3: Análise Mensal - Receita vs. Lucro */}
+      {/* Widget 3: Análise Mensal - Receita vs. Lucro (Interativo) */}
       <Card>
         <CardHeader>
           <CardTitle>FLUXO DE CAIXA</CardTitle>
+          <p className="text-sm text-muted-foreground">Clique nas barras para filtrar por mês</p>
         </CardHeader>
         <CardContent>
         <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={dadosMensais}>
+          <BarChart 
+            data={dadosMensais} 
+            onClick={handleBarClick}
+            className="cursor-pointer"
+          >
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="mes" />
               <YAxis />
@@ -184,66 +211,73 @@ export default function DashboardFinanceiro() {
               borderRadius: '6px'
             }} />
               <Legend />
-              <Bar dataKey="lucro" fill="hsl(var(--primary))" name="Lucro" />
-              <Bar dataKey="receita" fill="hsl(var(--muted))" name="Receita" />
+              <Bar 
+                dataKey="lucro" 
+                fill={mesSelecionado ? 'hsl(var(--muted))' : 'hsl(var(--primary))'} 
+                name="Lucro"
+                className="cursor-pointer" 
+              />
+              <Bar 
+                dataKey="receita" 
+                fill={mesSelecionado ? 'hsl(var(--muted-foreground))' : 'hsl(var(--muted))'} 
+                name="Receita"
+                className="cursor-pointer" 
+              />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
       </Card>
 
-      {/* Widget 4: Detalhamento Anual de Custos */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>CUSTO FIXO ANUAL</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart layout="horizontal" data={custosFixos}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
-                <YAxis dataKey="categoria" type="category" width={80} />
-                <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                <Bar dataKey="valor" fill="hsl(var(--primary))" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>CUSTO VARIÁVEL ANUAL</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart layout="horizontal" data={custosVariaveis}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
-                <YAxis dataKey="categoria" type="category" width={80} />
-                <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                <Bar dataKey="valor" fill="hsl(var(--primary))" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>INVESTIMENTOS ANUAL</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart layout="horizontal" data={investimentos}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
-                <YAxis dataKey="categoria" type="category" width={80} />
-                <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                <Bar dataKey="valor" fill="hsl(var(--primary))" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Widget 4: Composição das Despesas */}
+      <Card>
+        <CardHeader>
+          <CardTitle>COMPOSIÇÃO DAS DESPESAS</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            {mesSelecionado ? `Período: ${getNomeMes(mesSelecionado)} ${anoSelecionado}` : `Período: ${anoSelecionado}`}
+          </p>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={400}>
+            <PieChart>
+              <Pie 
+                data={composicaoDespesas} 
+                cx="50%" 
+                cy="50%" 
+                innerRadius={80} 
+                outerRadius={150} 
+                dataKey="valor"
+              >
+                {composicaoDespesas.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={EXPENSE_COLORS[index % EXPENSE_COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip 
+                formatter={(value: number, name: string, props: any) => [
+                  formatCurrency(value), 
+                  `${props.payload.grupo} (${props.payload.percentual.toFixed(1)}%)`
+                ]}
+                labelStyle={{
+                  color: 'hsl(var(--foreground))'
+                }} 
+                contentStyle={{
+                  backgroundColor: 'hsl(var(--background))',
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '6px'
+                }} 
+              />
+              <Legend 
+                verticalAlign="bottom" 
+                height={36}
+                formatter={(value, entry) => (
+                  <span style={{ color: entry.color }}>
+                    {value} ({composicaoDespesas.find(item => item.grupo === value)?.percentual.toFixed(1)}%)
+                  </span>
+                )}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
 
       {/* Widget 5: Análise de Categoria Específica */}
       <Card>

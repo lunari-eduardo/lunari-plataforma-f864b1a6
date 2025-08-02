@@ -37,11 +37,21 @@ interface EvolucaoCategoria {
   valor: number;
 }
 
+interface ComposicaoDespesas {
+  grupo: string;
+  valor: number;
+  percentual: number;
+}
+
 export function useDashboardFinanceiro() {
   // ============= OBTER DADOS DAS FONTES PRIMÁRIAS =============
   
   const { unifiedWorkflowData, getAvailableYears, filterByYear } = useUnifiedWorkflowData();
   const { itensFinanceiros } = useNovoFinancas();
+
+  // ============= ESTADO DO FILTRO DE MÊS =============
+  
+  const [mesSelecionado, setMesSelecionado] = useState<number | null>(null);
   
   // Carregar transações financeiras diretamente do FinancialEngine
   const transacoesFinanceiras = useMemo(() => {
@@ -98,19 +108,42 @@ export function useDashboardFinanceiro() {
   
   const workflowItemsFiltrados = useMemo(() => {
     const ano = parseInt(anoSelecionado);
-    return filterByYear(ano);
-  }, [filterByYear, anoSelecionado]);
+    let filtrados = filterByYear(ano);
+
+    // Aplicar filtro de mês se selecionado
+    if (mesSelecionado !== null) {
+      filtrados = filtrados.filter(item => {
+        const mesItem = new Date(item.data).getMonth() + 1;
+        return mesItem === mesSelecionado;
+      });
+    }
+
+    return filtrados;
+  }, [filterByYear, anoSelecionado, mesSelecionado]);
 
   const transacoesFiltradas = useMemo(() => {
     const ano = parseInt(anoSelecionado);
-    return transacoesComItens.filter(transacao => {
+    let filtradas = transacoesComItens.filter(transacao => {
       if (!transacao.dataVencimento || typeof transacao.dataVencimento !== 'string') {
         return false;
       }
       const anoTransacao = parseInt(transacao.dataVencimento.split('-')[0]);
       return anoTransacao === ano;
     });
-  }, [transacoesComItens, anoSelecionado]);
+
+    // Aplicar filtro de mês se selecionado
+    if (mesSelecionado !== null) {
+      filtradas = filtradas.filter(transacao => {
+        if (!transacao.dataVencimento || typeof transacao.dataVencimento !== 'string') {
+          return false;
+        }
+        const mesTransacao = parseInt(transacao.dataVencimento.split('-')[1]);
+        return mesTransacao === mesSelecionado;
+      });
+    }
+
+    return filtradas;
+  }, [transacoesComItens, anoSelecionado, mesSelecionado]);
 
   // ============= CÁLCULOS DE MÉTRICAS ANUAIS =============
   
@@ -233,6 +266,55 @@ export function useDashboardFinanceiro() {
       valor
     }));
   }, [transacoesFiltradas]);
+
+  // ============= COMPOSIÇÃO DE DESPESAS =============
+  
+  const composicaoDespesas = useMemo((): ComposicaoDespesas[] => {
+    const grupos: Record<string, number> = {
+      'Despesas Fixas': 0,
+      'Despesas Variáveis': 0,
+      'Investimentos': 0
+    };
+
+    transacoesFiltradas
+      .filter(t => t.status === 'Pago' && t.item)
+      .forEach(transacao => {
+        if (transacao.item?.grupo_principal === 'Despesa Fixa') {
+          grupos['Despesas Fixas'] += transacao.valor;
+        } else if (transacao.item?.grupo_principal === 'Despesa Variável') {
+          grupos['Despesas Variáveis'] += transacao.valor;
+        } else if (transacao.item?.grupo_principal === 'Investimento') {
+          grupos['Investimentos'] += transacao.valor;
+        }
+      });
+
+    const totalDespesas = Object.values(grupos).reduce((sum, valor) => sum + valor, 0);
+
+    return Object.entries(grupos)
+      .filter(([_, valor]) => valor > 0)
+      .map(([grupo, valor]) => ({
+        grupo,
+        valor,
+        percentual: totalDespesas > 0 ? (valor / totalDespesas) * 100 : 0
+      }))
+      .sort((a, b) => b.valor - a.valor);
+  }, [transacoesFiltradas]);
+
+  // ============= FUNÇÕES DE CONTROLE DO FILTRO DE MÊS =============
+  
+  const handleBarClick = (data: any, index: number) => {
+    const mesIndex = index + 1;
+    setMesSelecionado(mesSelecionado === mesIndex ? null : mesIndex);
+  };
+
+  const clearMonthFilter = () => {
+    setMesSelecionado(null);
+  };
+
+  const getNomeMes = (numeroMes: number) => {
+    const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    return meses[numeroMes - 1] || '';
+  };
 
   // ============= EVOLUÇÃO DE CATEGORIA ESPECÍFICA =============
   
@@ -394,6 +476,7 @@ export function useDashboardFinanceiro() {
     categoriaSelecionada,
     setCategoriaSelecionada,
     categoriasDisponiveis,
+    mesSelecionado,
     
     // Dados calculados
     kpisData,
@@ -403,6 +486,12 @@ export function useDashboardFinanceiro() {
     custosVariaveis,
     investimentos,
     evolucaoCategoria,
+    composicaoDespesas,
+    
+    // Funções de controle
+    handleBarClick,
+    clearMonthFilter,
+    getNomeMes,
     
     // Dados filtrados
     workflowItemsFiltrados,
