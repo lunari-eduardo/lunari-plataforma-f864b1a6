@@ -7,7 +7,6 @@ import { FinancialEngine, CreateTransactionInput } from '@/services/FinancialEng
 import { calculateTotals, calculateTotalsNew } from '@/services/FinancialCalculationEngine';
 import { autoMigrateIfNeeded } from '@/utils/dataMoveMigration';
 import { congelarRegrasPrecoFotoExtra, calcularComRegrasProprias, migrarRegrasParaItemAntigo } from '@/utils/precificacaoUtils';
-import { migrarParaSnapshotSistema, fazerSnapshotValores } from '@/services/SnapshotValoresService';
 
 // Types
 import { Orcamento, Template, OrigemCliente, MetricasOrcamento, Cliente } from '@/types/orcamentos';
@@ -79,13 +78,6 @@ export interface WorkflowItem {
   percentualAjusteOrcamento?: number;
   // NOVO: Campo para congelamento de regras de preço
   regrasDePrecoFotoExtraCongeladas?: RegrasPrecoFotoExtraCongeladas;
-  // SISTEMA DE SNAPSHOT ABSOLUTO
-  valorFotoExtraFixo?: number;
-  isValorFixado?: boolean;
-  timestampFixacao?: string;
-  modeloOriginal?: 'fixo' | 'global' | 'categoria';
-  observacaoFixacao?: string;
-  qtdFotoExtraOriginal?: number;
 }
 
 interface WorkflowFilters {
@@ -150,10 +142,6 @@ interface AppContextType {
   toggleColumnVisibility: (column: string) => void;
   updateWorkflowFilters: (newFilters: Partial<WorkflowFilters>) => void;
   navigateMonth: (direction: number) => void;
-  
-  // SISTEMA DE SNAPSHOT ABSOLUTO
-  fazerSnapshotValores: () => void;
-  descongelarItem: (itemId: string) => void;
   
   // Integration utility functions
   isFromBudget: (appointment: Appointment) => boolean;
@@ -269,17 +257,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [workflowItems, setWorkflowItems] = useState<WorkflowItem[]>(() => {
     const items = storage.load(STORAGE_KEYS.WORKFLOW_ITEMS, []);
     // Migração: garantir que todos os itens tenham o campo observacoes
-    const itemsMigrados = items.map((item: any) => ({
+    return items.map((item: any) => ({
       ...item,
       observacoes: item.observacoes || ''
     }));
-    
-    // SISTEMA DE SNAPSHOT: Migração automática
-    setTimeout(() => {
-      migrarParaSnapshotSistema();
-    }, 100);
-    
-    return itemsMigrados;
   });
   
   const [workflowFilters, setWorkflowFilters] = useState<WorkflowFilters>(() => {
@@ -1716,15 +1697,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     atualizarCartao,
     removerCartao,
     createTransactionEngine,
-    
-    // SISTEMA DE SNAPSHOT ABSOLUTO
-    fazerSnapshotValores: () => fazerSnapshotValores(),
-    descongelarItem: (itemId: string) => {
-      const { descongelarItem } = require('@/services/SnapshotValoresService');
-      descongelarItem(itemId);
-      const itemsAtualizados = storage.load(STORAGE_KEYS.WORKFLOW_ITEMS, []);
-      setWorkflowItems(itemsAtualizados);
-    },
     
     // Utilities
     isFromBudget,

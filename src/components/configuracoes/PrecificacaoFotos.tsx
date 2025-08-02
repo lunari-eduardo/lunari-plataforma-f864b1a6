@@ -24,8 +24,6 @@ import {
 } from '@/utils/precificacaoUtils';
 import TabelaPrecosModal from './TabelaPrecosModal';
 import { CongelamentoRegrasInfo } from "./CongelamentoRegrasInfo";
-import { SnapshotControle } from './SnapshotControle';
-import { useAppContext } from '@/contexts/AppContext';
 
 interface PrecificacaoFotosProps {
   categorias: Array<{
@@ -36,7 +34,6 @@ interface PrecificacaoFotosProps {
 }
 
 export default function PrecificacaoFotos({ categorias }: PrecificacaoFotosProps) {
-  const { fazerSnapshotValores } = useAppContext();
   const [config, setConfig] = useState<ConfiguracaoPrecificacao>(obterConfiguracaoPrecificacao());
   const [tabelaGlobal, setTabelaGlobal] = useState<TabelaPrecos | null>(obterTabelaGlobal());
   const [editandoTabela, setEditandoTabela] = useState(false);
@@ -44,15 +41,6 @@ export default function PrecificacaoFotos({ categorias }: PrecificacaoFotosProps
 
   // Salvar configuração automaticamente
   useEffect(() => {
-    const configAnterior = obterConfiguracaoPrecificacao();
-    const mudouModelo = configAnterior.modelo !== config.modelo;
-    
-    // Fazer snapshot antes de salvar nova configuração
-    if (mudouModelo) {
-      console.log('🔄 Modelo mudou, fazendo snapshot dos valores...');
-      fazerSnapshotValores();
-    }
-    
     salvarConfiguracaoPrecificacao(config);
     
     // Notificar outras partes do sistema sobre mudança de modelo
@@ -60,7 +48,7 @@ export default function PrecificacaoFotos({ categorias }: PrecificacaoFotosProps
       detail: { novoModelo: config.modelo } 
     });
     window.dispatchEvent(evento);
-  }, [config, fazerSnapshotValores]);
+  }, [config]);
 
   // Salvar tabela global automaticamente
   useEffect(() => {
@@ -142,9 +130,6 @@ export default function PrecificacaoFotos({ categorias }: PrecificacaoFotosProps
 
   return (
     <div className="space-y-6">
-      {/* Sistema de Snapshot */}
-      <SnapshotControle />
-      
       {/* Header */}
       <div>
         <h3 className="text-lg font-semibold">Precificação de Fotos Extras</h3>
