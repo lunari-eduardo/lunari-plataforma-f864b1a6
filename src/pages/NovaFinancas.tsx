@@ -34,7 +34,7 @@ export default function NovaFinancas() {
   const [activeTab, setActiveTab] = useState('lancamentos');
   return <ScrollArea className="h-[calc(100vh-120px)]">
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white bg-lunar-bg pr-4">
-        <div className="p-2 sm:p-4 lg:p-6 space-y-4 sm:space-y-6 bg-lunar-bg py-0">
+        <div className="p-2 sm:p-4 lg:p-6 space-y-2 sm:space-y-6 bg-lunar-bg py-0">
         {/* Header */}
         
 
