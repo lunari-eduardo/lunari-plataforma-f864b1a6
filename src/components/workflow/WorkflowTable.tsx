@@ -456,25 +456,34 @@ export function WorkflowTable({
       onFocus={(e) => {
         if (!readonly) {
           if (isMoneyField) {
+            // Para campos monetários, mostrar apenas o número para edição
+            const numericValue = displayValue.replace(/[^\d,]/g, '');
+            handleEditStart(session.id, field, numericValue || '0');
             // Selecionar todo o texto para facilitar edição
-            e.target.select();
+            setTimeout(() => e.target.select(), 0);
+          } else {
+            handleEditStart(session.id, field, value || '');
           }
-          handleEditStart(session.id, field, value || '');
         }
       }} 
       onChange={e => {
         if (!readonly) {
           let newValue = e.target.value;
           
-          // Para campos monetários, formatar automaticamente
+          // Para campos monetários, permitir apenas números e vírgula durante a digitação
           if (isMoneyField) {
-            // Remover formatação e manter apenas números e vírgula
-            const cleanValue = newValue.replace(/[^\d,]/g, '');
-            if (cleanValue) {
-              const numericValue = parseFloat(cleanValue.replace(',', '.')) || 0;
-              newValue = `R$ ${numericValue.toFixed(2).replace('.', ',')}`;
-            } else {
-              newValue = '';
+            // Permitir apenas números, vírgula e ponto
+            newValue = newValue.replace(/[^\d,\.]/g, '');
+            // Substituir ponto por vírgula para padronização brasileira
+            newValue = newValue.replace('.', ',');
+            // Permitir apenas uma vírgula
+            const parts = newValue.split(',');
+            if (parts.length > 2) {
+              newValue = parts[0] + ',' + parts.slice(1).join('');
+            }
+            // Limitar casas decimais a 2
+            if (parts[1] && parts[1].length > 2) {
+              newValue = parts[0] + ',' + parts[1].substring(0, 2);
             }
           }
           
@@ -483,6 +492,17 @@ export function WorkflowTable({
       }} 
       onBlur={() => {
         if (!readonly) {
+          // Na saída do campo (blur), aplicar formatação final para campos monetários
+          if (isMoneyField) {
+            const currentValue = editingValues[key] || '';
+            if (currentValue) {
+              const numericValue = parseFloat(currentValue.replace(',', '.')) || 0;
+              const formattedValue = `R$ ${numericValue.toFixed(2).replace('.', ',')}`;
+              handleEditChange(session.id, field, formattedValue);
+            } else {
+              handleEditChange(session.id, field, 'R$ 0,00');
+            }
+          }
           handleEditFinish(session.id, field);
         }
       }} 
