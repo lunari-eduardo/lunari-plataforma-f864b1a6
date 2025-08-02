@@ -557,7 +557,7 @@ export function WorkflowTable({
               {renderHeaderCell('package', 'Pacote')}
               {renderHeaderCell('packageValue', 'Vlr Pacote', true)}
               {renderHeaderCell('discount', 'Desconto')}
-              
+              {renderHeaderCell('extraPhotoValue', 'Vlr Foto')}
               {renderHeaderCell('extraPhotoQty', 'Qtd Foto')}
               {renderHeaderCell('extraPhotoTotal', 'Total Foto')}
               {renderHeaderCell('product', 'Produto')}
@@ -627,7 +627,7 @@ export function WorkflowTable({
 
                 {renderCell('discount', renderEditableInput(session, 'desconto', String(session.desconto || 0), 'number', '0'))}
 
-                
+                {renderCell('extraPhotoValue', null)}
 
                 {renderCell('extraPhotoQty', <Input key={`photoQty-${session.id}-${session.qtdFotosExtra}`} type="number" value={session.qtdFotosExtra || 0} onChange={e => {
                   const qtd = parseInt(e.target.value) || 0;
@@ -640,21 +640,7 @@ export function WorkflowTable({
                   handleFieldUpdateStable(session.id, 'valorTotalFotoExtra', formatCurrency(total));
                 }} className="h-6 text-xs p-1 w-full border-none bg-transparent focus:bg-lunar-accent/10 transition-colors duration-150" placeholder="0" autoComplete="off" />)}
 
-                {renderCell('extraPhotoTotal', <div className="flex items-center gap-1">
-                  {renderEditableInput(session, 'valorTotalFotoExtra', session.valorTotalFotoExtra || '', 'text', 'R$ 0,00')}
-                  <div className="flex items-center justify-center gap-1">
-                    <span className="text-xs text-slate-500">
-                      {session.regrasDePrecoFotoExtraCongeladas 
-                        ? session.regrasDePrecoFotoExtraCongeladas.modelo === 'fixo' 
-                          ? 'Fixo'
-                          : session.regrasDePrecoFotoExtraCongeladas.modelo === 'global'
-                          ? 'Global'
-                          : 'Categoria'
-                        : 'Fixo'
-                      }
-                    </span>
-                  </div>
-                </div>)}
+                {renderCell('extraPhotoTotal', renderEditableInput(session, 'valorTotalFotoExtra', session.valorTotalFotoExtra || '', 'text', 'R$ 0,00'))}
 
                 {renderCell('product', <Button variant="ghost" size="sm" onClick={() => {
                   setSessionSelecionada(session);
