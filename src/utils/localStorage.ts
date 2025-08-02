@@ -17,7 +17,9 @@ export const STORAGE_KEYS = {
   // Nova arquitetura de Blueprints
   FIN_TRANSACTIONS: 'lunari_fin_transactions',
   FIN_BLUEPRINTS: 'lunari_fin_recurring_blueprints',
-  FIN_ITEMS: 'lunari_fin_items'
+  FIN_ITEMS: 'lunari_fin_items',
+  // Metas históricas
+  HISTORICAL_GOALS: 'lunari_historical_metas'
 } as const;
 
 export const storage = {

@@ -2,9 +2,17 @@ import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { storage } from '@/utils/localStorage';
+import { storage, STORAGE_KEYS } from '@/utils/localStorage';
 interface MetasIndicadoresProps {
   custosFixosTotal: number;
+}
+
+interface HistoricalGoal {
+  ano: number;
+  metaFaturamento: number;
+  metaLucro: number;
+  dataCriacao: string;
+  margemLucroDesejada: number;
 }
 export function MetasIndicadores({
   custosFixosTotal
@@ -24,7 +32,42 @@ export function MetasIndicadores({
     storage.save('precificacao_metas', {
       margemLucroDesejada
     });
-  }, [margemLucroDesejada]);
+    
+    // Salvar/atualizar metas históricas
+    saveHistoricalGoals();
+  }, [margemLucroDesejada, custosFixosTotal]);
+
+  const saveHistoricalGoals = () => {
+    const currentYear = new Date().getFullYear();
+    const faturamentoMinimoAnual = custosFixosTotal * 12;
+    const metaFaturamentoAnual = faturamentoMinimoAnual / (1 - margemLucroDesejada / 100);
+    const metaLucroAnual = metaFaturamentoAnual - faturamentoMinimoAnual;
+    
+    // Carregar metas históricas existentes
+    const historicalGoals: HistoricalGoal[] = storage.load(STORAGE_KEYS.HISTORICAL_GOALS, []);
+    
+    // Verificar se já existe uma entrada para o ano atual
+    const existingGoalIndex = historicalGoals.findIndex(goal => goal.ano === currentYear);
+    
+    const newGoal: HistoricalGoal = {
+      ano: currentYear,
+      metaFaturamento: metaFaturamentoAnual,
+      metaLucro: metaLucroAnual,
+      dataCriacao: new Date().toISOString().split('T')[0],
+      margemLucroDesejada
+    };
+    
+    if (existingGoalIndex !== -1) {
+      // Atualizar entrada existente
+      historicalGoals[existingGoalIndex] = newGoal;
+    } else {
+      // Adicionar nova entrada
+      historicalGoals.push(newGoal);
+    }
+    
+    // Salvar de volta
+    storage.save(STORAGE_KEYS.HISTORICAL_GOALS, historicalGoals);
+  };
 
   // Cálculos dos indicadores
   const faturamentoMinimoAnual = custosFixosTotal * 12;

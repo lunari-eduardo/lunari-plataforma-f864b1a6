@@ -1,91 +1,132 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/utils/financialUtils';
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { useDashboardFinanceiro } from '@/hooks/useDashboardFinanceiro';
-import { X } from 'lucide-react';
 
 // Cores do design system
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--muted))'];
 const EXPENSE_COLORS = ['hsl(var(--primary))', 'hsl(var(--secondary))', 'hsl(var(--accent))'];
 
 export default function DashboardFinanceiro() {
-  // Usar hook com dados reais
   const {
     anoSelecionado,
     setAnoSelecionado,
+    mesSelecionado,
+    setMesSelecionado,
     anosDisponiveis,
     categoriaSelecionada,
     setCategoriaSelecionada,
     categoriasDisponiveis,
-    mesSelecionado,
     kpisData,
     metasData,
     dadosMensais,
     composicaoDespesas,
     evolucaoCategoria,
-    handleBarClick,
-    clearMonthFilter,
     getNomeMes
   } = useDashboardFinanceiro();
-  const lucratividade = metasData.lucroAtual / metasData.receitaAtual * 100;
-  const percentMetaReceita = metasData.receitaAtual / metasData.metaReceita * 100;
-  const percentMetaLucro = metasData.lucroAtual / metasData.metaLucro * 100;
+
+  // Cálculos para gráficos de metas
+  const lucratividade = metasData.receitaAtual > 0 ? (metasData.lucroAtual / metasData.receitaAtual * 100) : 0;
+  const percentMetaReceita = metasData.metaReceita > 0 ? (metasData.receitaAtual / metasData.metaReceita * 100) : 0;
+  const percentMetaLucro = metasData.metaLucro > 0 ? (metasData.lucroAtual / metasData.metaLucro * 100) : 0;
+
   const dadosGraficoReceita = [{
     name: 'Atingido',
-    value: metasData.receitaAtual
+    value: Math.max(0, metasData.receitaAtual)
   }, {
     name: 'Restante',
-    value: metasData.metaReceita - metasData.receitaAtual
+    value: Math.max(0, metasData.metaReceita - metasData.receitaAtual)
   }];
+
   const dadosGraficoLucro = [{
     name: 'Atingido',
-    value: metasData.lucroAtual
+    value: Math.max(0, metasData.lucroAtual)
   }, {
     name: 'Restante',
-    value: metasData.metaLucro - metasData.lucroAtual
+    value: Math.max(0, metasData.metaLucro - metasData.lucroAtual)
   }];
+
   const dadosGraficoLucratividade = [{
     name: 'Lucratividade',
-    value: lucratividade
+    value: Math.max(0, Math.min(100, lucratividade))
   }, {
     name: 'Restante',
-    value: 100 - lucratividade
+    value: Math.max(0, 100 - lucratividade)
   }];
-  return <div className="space-y-6">
-      {/* Filtros */}
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-4">
-          {mesSelecionado && (
-            <div className="flex items-center gap-2 px-3 py-2 bg-muted rounded-lg">
-              <span className="text-sm font-medium">
-                Filtrando por: {getNomeMes(mesSelecionado)} {anoSelecionado}
-              </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={clearMonthFilter}
-                className="h-6 w-6 p-0"
-              >
-                <X className="h-4 w-4" />
-              </Button>
+
+  // Opções para o seletor de mês
+  const opcoesmes = [
+    { value: '', label: 'Ano Completo' },
+    { value: '1', label: 'Janeiro' },
+    { value: '2', label: 'Fevereiro' },
+    { value: '3', label: 'Março' },
+    { value: '4', label: 'Abril' },
+    { value: '5', label: 'Maio' },
+    { value: '6', label: 'Junho' },
+    { value: '7', label: 'Julho' },
+    { value: '8', label: 'Agosto' },
+    { value: '9', label: 'Setembro' },
+    { value: '10', label: 'Outubro' },
+    { value: '11', label: 'Novembro' },
+    { value: '12', label: 'Dezembro' }
+  ];
+
+  return (
+    <div className="space-y-6">
+      {/* Nova Barra de Filtros de Período */}
+      <Card>
+        <CardHeader className="pb-4">
+          <CardTitle className="text-lg">Filtros de Período</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <label className="text-sm font-medium text-muted-foreground block mb-2">
+                Ano
+              </label>
+              <Select value={anoSelecionado} onValueChange={setAnoSelecionado}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecione o ano" />
+                </SelectTrigger>
+                <SelectContent>
+                  {anosDisponiveis.map(ano => (
+                    <SelectItem key={ano} value={ano.toString()}>
+                      {ano}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          )}
-        </div>
-        <Select value={anoSelecionado} onValueChange={setAnoSelecionado}>
-          <SelectTrigger className="w-32">
-            <SelectValue placeholder="Ano" />
-          </SelectTrigger>
-          <SelectContent>
-            {anosDisponiveis.map(ano => (
-              <SelectItem key={ano} value={ano.toString()}>
-                {ano}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+
+            <div className="flex-1">
+              <label className="text-sm font-medium text-muted-foreground block mb-2">
+                Período
+              </label>
+              <Select value={mesSelecionado} onValueChange={setMesSelecionado}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecione o período" />
+                </SelectTrigger>
+                <SelectContent>
+                  {opcoesmes.map(opcao => (
+                    <SelectItem key={opcao.value} value={opcao.value}>
+                      {opcao.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {mesSelecionado && mesSelecionado !== '' && (
+              <div className="flex items-end">
+                <div className="px-3 py-2 bg-primary/10 rounded-lg text-sm font-medium">
+                  Período: {getNomeMes(mesSelecionado)} {anoSelecionado}
+                </div>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Widget 1: KPIs de Alto Nível */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -126,7 +167,7 @@ export default function DashboardFinanceiro() {
         </Card>
       </div>
 
-      {/* Widget 2: Acompanhamento de Metas Anuais */}
+      {/* Widget 2: Acompanhamento de Metas */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card>
           <CardHeader>
@@ -136,8 +177,19 @@ export default function DashboardFinanceiro() {
           <CardContent>
             <ResponsiveContainer width="100%" height={200}>
               <PieChart>
-                <Pie data={dadosGraficoReceita} cx="50%" cy="50%" innerRadius={60} outerRadius={80} startAngle={90} endAngle={450} dataKey="value">
-                  {dadosGraficoReceita.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
+                <Pie 
+                  data={dadosGraficoReceita} 
+                  cx="50%" 
+                  cy="50%" 
+                  innerRadius={60} 
+                  outerRadius={80} 
+                  startAngle={90} 
+                  endAngle={450} 
+                  dataKey="value"
+                >
+                  {dadosGraficoReceita.map((entry, index) => 
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  )}
                 </Pie>
                 <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="fill-foreground">
                   <tspan x="50%" dy="-0.5em" className="text-lg font-bold">{formatCurrency(metasData.receitaAtual)}</tspan>
@@ -156,8 +208,19 @@ export default function DashboardFinanceiro() {
           <CardContent>
             <ResponsiveContainer width="100%" height={200}>
               <PieChart>
-                <Pie data={dadosGraficoLucro} cx="50%" cy="50%" innerRadius={60} outerRadius={80} startAngle={90} endAngle={450} dataKey="value">
-                  {dadosGraficoLucro.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
+                <Pie 
+                  data={dadosGraficoLucro} 
+                  cx="50%" 
+                  cy="50%" 
+                  innerRadius={60} 
+                  outerRadius={80} 
+                  startAngle={90} 
+                  endAngle={450} 
+                  dataKey="value"
+                >
+                  {dadosGraficoLucro.map((entry, index) => 
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  )}
                 </Pie>
                 <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="fill-foreground">
                   <tspan x="50%" dy="-0.5em" className="text-lg font-bold">{formatCurrency(metasData.lucroAtual)}</tspan>
@@ -175,8 +238,19 @@ export default function DashboardFinanceiro() {
           <CardContent>
             <ResponsiveContainer width="100%" height={200}>
               <PieChart>
-                <Pie data={dadosGraficoLucratividade} cx="50%" cy="50%" innerRadius={60} outerRadius={80} startAngle={90} endAngle={450} dataKey="value">
-                  {dadosGraficoLucratividade.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
+                <Pie 
+                  data={dadosGraficoLucratividade} 
+                  cx="50%" 
+                  cy="50%" 
+                  innerRadius={60} 
+                  outerRadius={80} 
+                  startAngle={90} 
+                  endAngle={450} 
+                  dataKey="value"
+                >
+                  {dadosGraficoLucratividade.map((entry, index) => 
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  )}
                 </Pie>
                 <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="fill-foreground">
                   <tspan x="50%" className="text-2xl font-bold">{lucratividade.toFixed(1)}%</tspan>
@@ -187,41 +261,39 @@ export default function DashboardFinanceiro() {
         </Card>
       </div>
 
-      {/* Widget 3: Análise Mensal - Receita vs. Lucro (Interativo) */}
+      {/* Widget 3: Fluxo de Caixa (Não Interativo) */}
       <Card>
         <CardHeader>
           <CardTitle>FLUXO DE CAIXA</CardTitle>
-          <p className="text-sm text-muted-foreground">Clique nas barras para filtrar por mês</p>
+          <p className="text-sm text-muted-foreground">Análise mensal do ano selecionado</p>
         </CardHeader>
         <CardContent>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart 
-            data={dadosMensais} 
-            onClick={handleBarClick}
-            className="cursor-pointer"
-          >
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={dadosMensais}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="mes" />
               <YAxis />
-              <Tooltip formatter={(value: number) => formatCurrency(value)} labelStyle={{
-              color: 'hsl(var(--foreground))'
-            }} contentStyle={{
-              backgroundColor: 'hsl(var(--background))',
-              border: '1px solid hsl(var(--border))',
-              borderRadius: '6px'
-            }} />
+              <Tooltip 
+                formatter={(value: number) => formatCurrency(value)} 
+                labelStyle={{
+                  color: 'hsl(var(--foreground))'
+                }} 
+                contentStyle={{
+                  backgroundColor: 'hsl(var(--background))',
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '6px'
+                }} 
+              />
               <Legend />
               <Bar 
                 dataKey="lucro" 
-                fill={mesSelecionado ? 'hsl(var(--muted))' : 'hsl(var(--primary))'} 
+                fill="hsl(var(--primary))" 
                 name="Lucro"
-                className="cursor-pointer" 
               />
               <Bar 
                 dataKey="receita" 
-                fill={mesSelecionado ? 'hsl(var(--muted-foreground))' : 'hsl(var(--muted))'} 
+                fill="hsl(var(--muted))" 
                 name="Receita"
-                className="cursor-pointer" 
               />
             </BarChart>
           </ResponsiveContainer>
@@ -233,7 +305,9 @@ export default function DashboardFinanceiro() {
         <CardHeader>
           <CardTitle>COMPOSIÇÃO DAS DESPESAS</CardTitle>
           <p className="text-sm text-muted-foreground">
-            {mesSelecionado ? `Período: ${getNomeMes(mesSelecionado)} ${anoSelecionado}` : `Período: ${anoSelecionado}`}
+            {mesSelecionado && mesSelecionado !== '' 
+              ? `Período: ${getNomeMes(mesSelecionado)} ${anoSelecionado}` 
+              : `Período: ${anoSelecionado}`}
           </p>
         </CardHeader>
         <CardContent>
@@ -279,7 +353,7 @@ export default function DashboardFinanceiro() {
         </CardContent>
       </Card>
 
-      {/* Widget 5: Análise de Categoria Específica */}
+      {/* Widget 5: Evolução de Categoria */}
       <Card>
         <CardHeader className="space-y-4">
           <div className="flex items-center justify-between">
@@ -289,30 +363,43 @@ export default function DashboardFinanceiro() {
                 <SelectValue placeholder="Gastos por Categoria" />
               </SelectTrigger>
               <SelectContent>
-                {categoriasDisponiveis.map(categoria => <SelectItem key={categoria} value={categoria}>
+                {categoriasDisponiveis.map(categoria => 
+                  <SelectItem key={categoria} value={categoria}>
                     {categoria}
-                  </SelectItem>)}
+                  </SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>
         </CardHeader>
         <CardContent>
-        <ResponsiveContainer width="100%" height={300}>
-          <AreaChart data={evolucaoCategoria[categoriaSelecionada] || []}>
+          <ResponsiveContainer width="100%" height={300}>
+            <AreaChart data={evolucaoCategoria[categoriaSelecionada] || []}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="mes" />
               <YAxis />
-              <Tooltip formatter={(value: number) => formatCurrency(value)} labelStyle={{
-              color: 'hsl(var(--foreground))'
-            }} contentStyle={{
-              backgroundColor: 'hsl(var(--background))',
-              border: '1px solid hsl(var(--border))',
-              borderRadius: '6px'
-            }} />
-              <Area type="monotone" dataKey="valor" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.2} />
+              <Tooltip 
+                formatter={(value: number) => formatCurrency(value)} 
+                labelStyle={{
+                  color: 'hsl(var(--foreground))'
+                }} 
+                contentStyle={{
+                  backgroundColor: 'hsl(var(--background))',
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '6px'
+                }} 
+              />
+              <Area 
+                type="monotone" 
+                dataKey="valor" 
+                stroke="hsl(var(--primary))" 
+                fill="hsl(var(--primary))" 
+                fillOpacity={0.2} 
+              />
             </AreaChart>
           </ResponsiveContainer>
         </CardContent>
       </Card>
-    </div>;
+    </div>
+  );
 }
