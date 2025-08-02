@@ -182,10 +182,10 @@ export function EstruturaCustosFixos({
                 </thead>
                 <tbody>
                   {gastosPessoais.map(gasto => <tr key={gasto.id} className="border-b border-gray-100">
-                      <td className="py-3 pr-4">
+                      <td className="pr-4 py-0">
                         <Input placeholder="Ex: Alimentação, Transporte..." value={gasto.descricao} onChange={e => atualizarGastoPessoal(gasto.id, 'descricao', e.target.value)} className="border-0 shadow-none focus-visible:ring-1 focus-visible:ring-offset-0" />
                       </td>
-                      <td className="py-3 pr-4">
+                      <td className="pr-4 py-0">
                         <Input type="number" min="0" step="0.01" value={gasto.valor} onChange={e => atualizarGastoPessoal(gasto.id, 'valor', parseFloat(e.target.value) || 0)} className="border-0 shadow-none focus-visible:ring-1 focus-visible:ring-offset-0" />
                       </td>
                       <td className="py-3">
