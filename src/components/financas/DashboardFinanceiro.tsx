@@ -57,7 +57,7 @@ export default function DashboardFinanceiro() {
 
   // Opções para o seletor de mês
   const opcoesmes = [
-    { value: '', label: 'Ano Completo' },
+    { value: 'ano-completo', label: 'Ano Completo' },
     { value: '1', label: 'Janeiro' },
     { value: '2', label: 'Fevereiro' },
     { value: '3', label: 'Março' },
@@ -117,7 +117,7 @@ export default function DashboardFinanceiro() {
               </Select>
             </div>
 
-            {mesSelecionado && mesSelecionado !== '' && (
+            {mesSelecionado && mesSelecionado !== 'ano-completo' && (
               <div className="flex items-end">
                 <div className="px-3 py-2 bg-primary/10 rounded-lg text-sm font-medium">
                   Período: {getNomeMes(mesSelecionado)} {anoSelecionado}
@@ -305,7 +305,7 @@ export default function DashboardFinanceiro() {
         <CardHeader>
           <CardTitle>COMPOSIÇÃO DAS DESPESAS</CardTitle>
           <p className="text-sm text-muted-foreground">
-            {mesSelecionado && mesSelecionado !== '' 
+            {mesSelecionado && mesSelecionado !== 'ano-completo' 
               ? `Período: ${getNomeMes(mesSelecionado)} ${anoSelecionado}` 
               : `Período: ${anoSelecionado}`}
           </p>

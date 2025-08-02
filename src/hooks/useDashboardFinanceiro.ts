@@ -109,7 +109,7 @@ export function useDashboardFinanceiro() {
     return anosDisponiveis[0]?.toString() || new Date().getFullYear().toString();
   });
 
-  const [mesSelecionado, setMesSelecionado] = useState<string>(''); // '' = Ano Completo
+  const [mesSelecionado, setMesSelecionado] = useState<string>('ano-completo'); // 'ano-completo' = Ano Completo
 
   // ============= FILTROS POR PERÍODO =============
   
@@ -118,7 +118,7 @@ export function useDashboardFinanceiro() {
     let filtrados = filterByYear(ano);
 
     // Aplicar filtro de mês se selecionado
-    if (mesSelecionado && mesSelecionado !== '') {
+    if (mesSelecionado && mesSelecionado !== 'ano-completo') {
       const mesNumero = parseInt(mesSelecionado);
       filtrados = filtrados.filter(item => {
         const mesItem = new Date(item.data).getMonth() + 1;
@@ -140,7 +140,7 @@ export function useDashboardFinanceiro() {
     });
 
     // Aplicar filtro de mês se selecionado
-    if (mesSelecionado && mesSelecionado !== '') {
+    if (mesSelecionado && mesSelecionado !== 'ano-completo') {
       const mesNumero = parseInt(mesSelecionado);
       filtradas = filtradas.filter(transacao => {
         if (!transacao.dataVencimento || typeof transacao.dataVencimento !== 'string') {
@@ -234,7 +234,7 @@ export function useDashboardFinanceiro() {
     }
     
     // Ajustar metas se filtro de mês específico estiver ativo
-    if (mesSelecionado && mesSelecionado !== '') {
+    if (mesSelecionado && mesSelecionado !== 'ano-completo') {
       metaReceita = metaReceita / 12; // Meta proporcional do mês
       metaLucro = metaLucro / 12; // Meta proporcional do mês
     }
