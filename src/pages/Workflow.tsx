@@ -13,6 +13,7 @@ import { useContext } from 'react';
 import { AppContext } from '@/contexts/AppContext';
 import { parseDateFromStorage } from "@/utils/dateUtils";
 import { FixPricingRulesButton } from '@/components/workflow/FixPricingRulesButton';
+import { applyFakeAppointments } from '@/utils/createFakeAppointments';
 
 interface ProdutoWorkflow {
   nome: string;
@@ -91,13 +92,24 @@ export default function Workflow() {
     getStatusOptions
   } = useWorkflowStatus();
   const {
-    clientes
+    clientes,
+    addAppointment
   } = useContext(AppContext);
   const {
     pacotes,
     produtos,
     categorias
   } = useOrcamentoData();
+  
+  // Função para criar agendamentos fictícios
+  const handleCreateFakeAppointments = () => {
+    const createdAppointments = applyFakeAppointments(addAppointment);
+    toast({
+      title: "Agendamentos Criados",
+      description: `${createdAppointments.length} agendamentos fictícios foram criados para junho, julho e agosto de 2024.`,
+    });
+  };
+  
   const getClienteByName = (nome: string) => {
     return clientes.find(cliente => cliente.nome === nome);
   };
@@ -542,10 +554,20 @@ export default function Workflow() {
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
-          <Button variant="ghost" size="sm" onClick={toggleMetrics} className="flex items-center space-x-2 text-gray-600">
-            {showMetrics ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            <span className="hidden sm:inline">{showMetrics ? "Ocultar" : "Métricas"}</span>
-          </Button>
+          <div className="flex items-center space-x-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleCreateFakeAppointments}
+              className="text-green-700 border-green-600 hover:bg-green-50"
+            >
+              📅 Criar Agendamentos Fictícios
+            </Button>
+            <Button variant="ghost" size="sm" onClick={toggleMetrics} className="flex items-center space-x-2 text-gray-600">
+              {showMetrics ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              <span className="hidden sm:inline">{showMetrics ? "Ocultar" : "Métricas"}</span>
+            </Button>
+          </div>
         </div>
 
         {showMetrics && <div className="px-4 pt-2 pb-3 bg-lunar-bg">
