@@ -36,7 +36,7 @@ export default function Orcamentos() {
       <MetricasOrcamento selectedMonth={selectedMonth} />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3 py-1 my-1 bg-lunar-accent">
+        <TabsList className="grid w-full grid-cols-3 py-0 my-1 bg-lunar-accent ">
           <TabsTrigger value="lista">Orçamentos</TabsTrigger>
           <TabsTrigger value="novo">Novo Orçamento</TabsTrigger>
           <TabsTrigger value="origens">Origens</TabsTrigger>
