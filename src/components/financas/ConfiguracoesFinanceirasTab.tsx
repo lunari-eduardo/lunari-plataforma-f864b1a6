@@ -185,7 +185,7 @@ export default function ConfiguracoesFinanceirasTab({
                     {itensPorGrupo[grupo].length === 0 ? <p className="text-lunar-textSecondary text-xs italic text-center py-2">
                         Nenhum item cadastrado neste grupo.
                       </p> : <div className="space-y-1">
-                        {itensPorGrupo[grupo].map(item => <div key={item.id} className="flex items-center justify-between p-2 bg-lunar-surface/50 border border-lunar-border/30 rounded-lg hover:bg-lunar-surface/80 transition-colors">
+                        {itensPorGrupo[grupo].map(item => <div key={item.id} className="flex items-center justify-between p-2 bg-lunar-surface/50 border border-lunar-border/30 rounded-lg hover:bg-lunar-surface/80 transition-colors py-0">
                             {itemEditando === item.id ? <div className="flex items-center gap-2 flex-1">
                                 <Input value={nomeEditando} onChange={e => setNomeEditando(e.target.value)} className="flex-1 text-sm" onKeyPress={e => e.key === 'Enter' && handleSalvarEdicao(item.id)} />
                                 <Button size="sm" onClick={() => handleSalvarEdicao(item.id)} className="h-8 w-8 p-0">
