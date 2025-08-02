@@ -122,7 +122,7 @@ export default function Workflow() {
     month: new Date().getMonth() + 1,
     year: new Date().getFullYear()
   });
-  const [sortField, setSortField] = useState('date');
+  const [sortField, setSortField] = useState<string>(''); // Vazio para usar ordenação padrão
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [scrollLeft, setScrollLeft] = useState(0);
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
@@ -444,10 +444,23 @@ export default function Workflow() {
   }, []);
 
   const sortedSessions = useMemo(() => {
-    // Se não há campo de ordenação definido, define ordenação padrão por data
-    const actualSortField = sortField || 'date';
-    const actualSortDirection = sortDirection || 'asc';
+    // Sempre ordena por data crescente como padrão, APENAS quando não há sortField definido
+    if (!sortField) {
+      return [...filteredSessions].sort((a, b) => {
+        // Ordenação padrão por data + hora (cronológica crescente)
+        const [dayA, monthA, yearA] = a.data.split('/');
+        const [dayB, monthB, yearB] = b.data.split('/');
+        const [hoursA, minutesA] = a.hora.split(':').map(Number);
+        const [hoursB, minutesB] = b.hora.split(':').map(Number);
+        
+        const dateA = new Date(Number(yearA), Number(monthA) - 1, Number(dayA), hoursA, minutesA).getTime();
+        const dateB = new Date(Number(yearB), Number(monthB) - 1, Number(dayB), hoursB, minutesB).getTime();
+        
+        return dateA - dateB; // Sempre crescente por padrão
+      });
+    }
 
+    // Quando há sortField, aplica ordenação solicitada
     return [...filteredSessions].sort((a, b) => {
       // Mapeamento de campos da interface para campos do SessionData
       const fieldMapping: Record<string, keyof SessionData> = {
@@ -455,6 +468,7 @@ export default function Workflow() {
         'client': 'nome',
         'status': 'status',
         'category': 'categoria',
+        'package': 'pacote',
         'packageValue': 'valorPacote',
         'discount': 'desconto',
         'extraPhotoQty': 'qtdFotosExtra',
@@ -467,12 +481,12 @@ export default function Workflow() {
         'remaining': 'restante'
       };
 
-      const actualField = fieldMapping[actualSortField] || actualSortField as keyof SessionData;
+      const actualField = fieldMapping[sortField] || sortField as keyof SessionData;
       let aValue: any = a[actualField];
       let bValue: any = b[actualField];
 
       // Handle different data types
-      if (actualSortField === 'date') {
+      if (sortField === 'date') {
         // Criar objeto Date completo usando data + hora para ordenação cronológica correta
         const [dayA, monthA, yearA] = a.data.split('/');
         const [dayB, monthB, yearB] = b.data.split('/');
@@ -481,10 +495,10 @@ export default function Workflow() {
         
         aValue = new Date(Number(yearA), Number(monthA) - 1, Number(dayA), hoursA, minutesA).getTime();
         bValue = new Date(Number(yearB), Number(monthB) - 1, Number(dayB), hoursB, minutesB).getTime();
-      } else if (['packageValue', 'discount', 'extraPhotoTotal', 'productTotal', 'additionalValue', 'total', 'paid', 'remaining'].includes(actualSortField)) {
+      } else if (['packageValue', 'discount', 'extraPhotoTotal', 'productTotal', 'additionalValue', 'total', 'paid', 'remaining'].includes(sortField)) {
         aValue = parseFloat(String(aValue).replace(/[^\d,]/g, '').replace(',', '.')) || 0;
         bValue = parseFloat(String(bValue).replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-      } else if (actualSortField === 'extraPhotoQty') {
+      } else if (sortField === 'extraPhotoQty') {
         aValue = Number(aValue) || 0;
         bValue = Number(bValue) || 0;
       } else if (typeof aValue === 'string' && typeof bValue === 'string') {
@@ -492,7 +506,7 @@ export default function Workflow() {
         bValue = bValue.toLowerCase();
       }
       
-      if (actualSortDirection === 'asc') {
+      if (sortDirection === 'asc') {
         return aValue > bValue ? 1 : -1;
       } else {
         return aValue < bValue ? 1 : -1;
@@ -501,14 +515,20 @@ export default function Workflow() {
   }, [filteredSessions, sortField, sortDirection]);
   const handleSort = useCallback((field: string) => {
     if (sortField === field) {
-      // If clicking the same field, toggle direction
-      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+      // Se clicando no mesmo campo, alterna direção ou remove ordenação
+      if (sortDirection === 'asc') {
+        setSortDirection('desc');
+      } else {
+        // Remove ordenação para voltar à ordenação padrão
+        setSortField('');
+        setSortDirection('asc');
+      }
     } else {
-      // If clicking a different field, set it as new sort field with ascending direction
+      // Se clicando em campo diferente, define o campo e começa em crescente
       setSortField(field);
       setSortDirection('asc');
     }
-  }, [sortField]);
+  }, [sortField, sortDirection]);
   return <div className="h-full flex flex-col bg-gray-50">
       <div className="bg-white border-b shadow-sm sticky top-0 z-50">
         <div className="flex items-center justify-between px-4 pt-3 bg-lunar-bg">
