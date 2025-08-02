@@ -16,11 +16,10 @@ export default function Precificacao() {
   };
   return (
     <ScrollArea className="h-[calc(100vh-120px)]">
-      <div className="p-4 md:p-6 space-y-6 bg-lunar-bg min-h-screen px-[2px] py-[5px] pr-4">
+      <div className="p-3 md:p-6 space-y-4 md:space-y-6 bg-lunar-bg min-h-screen">
       {/* Header da Página */}
-      <div>
-        <h1 className="text-xl font-bold text-lunar-text mb-2 md:text-xl px-0">Precificação e Metas</h1>
-        
+      <div className="px-1">
+        <h1 className="text-lg md:text-xl font-bold text-lunar-text mb-2">Precificação e Metas</h1>
       </div>
 
       {/* 1. Calculadora de Serviços */}
