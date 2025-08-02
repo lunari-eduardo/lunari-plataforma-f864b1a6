@@ -876,7 +876,7 @@ export function WorkflowTable({
 
                 {renderCell('total', <span className="font-bold text-blue-700 text-xs">{formatCurrency(calculateTotal(session))}</span>)}
 
-                {renderCell('paid', renderEditableInput(session, 'valorPago', session.valorPago || '', 'text', 'R$ 0,00', true))}
+                {renderCell('paid', <span className="font-bold text-green-600 text-xs">{session.valorPago || 'R$ 0,00'}</span>)}
 
                 {renderCell('remaining', <span className="font-bold text-orange-600 text-xs">{formatCurrency(calculateRestante(session))}</span>)}
 
