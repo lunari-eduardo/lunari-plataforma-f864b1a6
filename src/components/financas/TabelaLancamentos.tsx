@@ -59,7 +59,6 @@ export default function TabelaLancamentos({
     cartaoCreditoId: '',
     numeroParcelas: 1
   });
-
   const [popoverAberto, setPopoverAberto] = useState(false);
   const iniciarEdicao = (transacao: TransacaoComItem) => {
     setEditandoId(transacao.id);
@@ -116,10 +115,10 @@ export default function TabelaLancamentos({
         isRecorrente: opcoesNovaTransacao.despesaRecorrente,
         isParcelado: opcoesNovaTransacao.cartaoCredito,
         numeroDeParcelas: opcoesNovaTransacao.cartaoCredito ? opcoesNovaTransacao.numeroParcelas : undefined,
-        isValorFixo: true, // Default para valor fixo na tabela
+        isValorFixo: true,
+        // Default para valor fixo na tabela
         cartaoCreditoId: opcoesNovaTransacao.cartaoCredito ? opcoesNovaTransacao.cartaoCreditoId : undefined
       };
-      
       createTransactionEngine(input);
     } else {
       // Fallback para compatibilidade legada
@@ -130,7 +129,6 @@ export default function TabelaLancamentos({
         status: determinarStatus(novaTransacao.data_vencimento),
         observacoes: novaTransacao.observacoes || null
       };
-      
       onAdicionarTransacao(baseTransacao);
     }
 
@@ -141,14 +139,12 @@ export default function TabelaLancamentos({
       data_vencimento: new Date().toISOString().split('T')[0],
       observacoes: ''
     });
-    
     setOpcoesNovaTransacao({
       despesaRecorrente: false,
       cartaoCredito: false,
       cartaoCreditoId: '',
       numeroParcelas: 1
     });
-
     setPopoverAberto(false);
   };
   const formatarData = (dataISO: string) => {
@@ -158,23 +154,14 @@ export default function TabelaLancamentos({
   const getStatusBadge = (status: StatusTransacao, onMarcarPago?: () => void) => {
     switch (status) {
       case 'Agendado':
-        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Agendado</Badge>;
+        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200 my-[2px] py-0">Agendado</Badge>;
       case 'Faturado':
-        return (
-          <div className="flex items-center gap-2">
+        return <div className="flex items-center gap-2">
             <Badge className="bg-red-100 text-red-800 border-red-200">Faturado</Badge>
-            {onMarcarPago && (
-              <input 
-                type="checkbox" 
-                onChange={onMarcarPago}
-                className="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500"
-                title="Marcar como pago"
-              />
-            )}
-          </div>
-        );
+            {onMarcarPago && <input type="checkbox" onChange={onMarcarPago} className="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500" title="Marcar como pago" />}
+          </div>;
       case 'Pago':
-        return <Badge className="bg-green-100 text-green-800 border-green-200">Pago</Badge>;
+        return <Badge className="bg-green-100 text-green-800 border-green-200 py-0 my-[2px]">Pago</Badge>;
       default:
         return <Badge className="bg-gray-100 text-gray-800 border-gray-200">-</Badge>;
     }
@@ -196,7 +183,6 @@ export default function TabelaLancamentos({
         return 'bg-blue-50 border-blue-200';
     }
   };
-
   return <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
       <div className="overflow-x-auto">
         <table className="w-full">
@@ -256,13 +242,9 @@ export default function TabelaLancamentos({
               })} className="w-full h-8 text-sm" />
               </td>
               <td className="px-4 py-3">
-                {opcoesNovaTransacao.cartaoCredito ? (
-                  <span className="text-xs text-purple-600">
+                {opcoesNovaTransacao.cartaoCredito ? <span className="text-xs text-purple-600">
                     1/{opcoesNovaTransacao.numeroParcelas}
-                  </span>
-                ) : (
-                  <span className="text-xs text-gray-400">-</span>
-                )}
+                  </span> : <span className="text-xs text-gray-400">-</span>}
               </td>
               <td className="px-4 py-3">
                 <Input placeholder="Observações..." value={novaTransacao.observacoes} onChange={e => setNovaTransacao({
@@ -273,36 +255,17 @@ export default function TabelaLancamentos({
               <td className="px-4 py-3">
                 <Popover open={popoverAberto} onOpenChange={setPopoverAberto}>
                   <PopoverTrigger asChild>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-8 w-8 p-0"
-                      title="Opções avançadas"
-                    >
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Opções avançadas">
                       <Settings className="h-4 w-4" />
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-80" align="end">
-                    <OpcoesLancamento 
-                      opcoes={opcoesNovaTransacao}
-                      onOpcoesChange={setOpcoesNovaTransacao}
-                      tipoLancamento={grupoAtivo === 'Receita Não Operacional' ? 'receita' : 'despesa'}
-                      layout="popover"
-                    />
+                    <OpcoesLancamento opcoes={opcoesNovaTransacao} onOpcoesChange={setOpcoesNovaTransacao} tipoLancamento={grupoAtivo === 'Receita Não Operacional' ? 'receita' : 'despesa'} layout="popover" />
                   </PopoverContent>
                 </Popover>
               </td>
               <td className="px-4 py-3">
-                <Button 
-                  size="sm" 
-                  onClick={adicionarNovaTransacao} 
-                  disabled={
-                    !novaTransacao.item_id || 
-                    !novaTransacao.valor || 
-                    (opcoesNovaTransacao.cartaoCredito && !opcoesNovaTransacao.cartaoCreditoId)
-                  } 
-                  className="h-8 bg-blue-600 hover:bg-blue-700 text-white"
-                >
+                <Button size="sm" onClick={adicionarNovaTransacao} disabled={!novaTransacao.item_id || !novaTransacao.valor || opcoesNovaTransacao.cartaoCredito && !opcoesNovaTransacao.cartaoCreditoId} className="h-8 bg-blue-600 hover:bg-blue-700 text-white">
                   <Plus className="h-4 w-4" />
                 </Button>
               </td>
@@ -375,13 +338,13 @@ export default function TabelaLancamentos({
                     </> :
             // Modo de visualização
             <>
-                      <td className="px-4 py-3 text-sm text-gray-900">
+                      <td className="px-4 text-sm text-gray-900 py-[2px]">
                         {formatarData(transacao.data_vencimento)}
                       </td>
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                      <td className="px-4 text-sm font-medium text-gray-900 py-[2px]">
                         {transacao.item.nome}
                       </td>
-                     <td className="px-4 py-3">
+                     <td className="px-4 py-[2px]">
                         <div className="flex flex-col">
                           <span className="text-sm font-medium text-gray-900">
                             {formatCurrency(transacao.valor)}
@@ -391,18 +354,18 @@ export default function TabelaLancamentos({
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-500">
+                      <td className="px-4 text-sm text-gray-500 py-[2px]">
                         {transacao.parcelas || transacao.parcelaInfo ? <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
                             {transacao.parcelas?.atual || transacao.parcelaInfo?.atual || 1}/{transacao.parcelas?.total || transacao.parcelaInfo?.total || 1}
                           </span> : '-'}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-500">
+                      <td className="px-4 text-sm text-gray-500 py-[2px]">
                         {transacao.observacoes || '-'}
                       </td>
-                     <td className="px-4 py-3 text-xs text-gray-500">
+                     <td className="px-4 text-xs text-gray-500 py-[2px]">
                        Status atualizado automaticamente
                      </td>
-                     <td className="px-4 py-3">
+                     <td className="px-4 py-[2px]">
                        <div className="flex items-center gap-2">
                          <Button size="sm" variant="outline" onClick={() => iniciarEdicao(transacao)} className="h-8">
                            Editar
