@@ -672,14 +672,63 @@ export function WorkflowTable({
                       </div>
                     );
                   } else {
-                    // Item sem regras congeladas: permitir edição com aviso
+                    // Item sem regras congeladas: calcular valor unitário atual baseado no modelo global
+                    const configuracoes = JSON.parse(localStorage.getItem('pricing_configurations') || '{}');
+                    const modeloAtual = configuracoes.modeloPrecificacao || 'progressiva';
+                    
+                    let valorUnitario = 0;
+                    
+                    if (modeloAtual === 'fixo') {
+                      // Modelo fixo por pacote - buscar valor do pacote
+                      const pacotes = JSON.parse(localStorage.getItem('configuracoes_pacotes') || '[]');
+                      const pacote = pacotes.find((p: any) => p.nome === session.pacote);
+                      valorUnitario = pacote?.valorFotoExtra || 0;
+                    } else if (modeloAtual === 'progressiva') {
+                      // Modelo progressiva global - calcular valor médio baseado na quantidade
+                      if (session.qtdFotosExtra && session.qtdFotosExtra > 0) {
+                        const categorias = JSON.parse(localStorage.getItem('configuracoes_categorias') || '[]');
+                        const categoriaObj = categorias.find((cat: any) => cat.nome === session.categoria);
+                        const categoriaId = categoriaObj?.id || session.categoria;
+                        
+                        const totalCalculado = calcularTotalFotosExtras(session.qtdFotosExtra, {
+                          valorFotoExtra: 0, // Não usado na progressiva
+                          categoria: session.categoria,
+                          categoriaId
+                        });
+                        valorUnitario = totalCalculado / session.qtdFotosExtra;
+                      } else {
+                        const tabelaProgressiva = configuracoes.tabelaProgressiva || [];
+                        valorUnitario = tabelaProgressiva[0]?.preco || 0;
+                      }
+                    } else if (modeloAtual === 'categoria') {
+                      // Modelo por categoria - calcular valor médio
+                      if (session.qtdFotosExtra && session.qtdFotosExtra > 0) {
+                        const categorias = JSON.parse(localStorage.getItem('configuracoes_categorias') || '[]');
+                        const categoriaObj = categorias.find((cat: any) => cat.nome === session.categoria);
+                        const categoriaId = categoriaObj?.id || session.categoria;
+                        
+                        const totalCalculado = calcularTotalFotosExtras(session.qtdFotosExtra, {
+                          valorFotoExtra: 0, // Não usado na categoria
+                          categoria: session.categoria,
+                          categoriaId
+                        });
+                        valorUnitario = totalCalculado / session.qtdFotosExtra;
+                      } else {
+                        const tabelasCategoria = configuracoes.tabelasCategoria || {};
+                        const tabelaCategoria = tabelasCategoria[session.categoria];
+                        valorUnitario = tabelaCategoria?.faixas?.[0]?.preco || 0;
+                      }
+                    }
+                    
                     return (
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-1">
                           <div className="w-2 h-2 bg-orange-400 rounded-full" title="Migração necessária" />
                           <span className="text-xs text-orange-600">Migração</span>
                         </div>
-                        {renderEditableInput(session, 'valorFotoExtra', session.valorFotoExtra || '', 'text', 'R$ 0,00')}
+                        <span className="text-xs font-medium text-blue-600">
+                          {formatCurrency(valorUnitario)}
+                        </span>
                       </div>
                     );
                   }
@@ -742,14 +791,7 @@ export function WorkflowTable({
                   // Mostrar como campo editável com o valor calculado como fallback
                   const valorAtual = session.valorTotalFotoExtra || formatCurrency(valorCalculado);
                   
-                  return (
-                    <div className="flex flex-col gap-1">
-                      <div className="text-xs text-muted-foreground">
-                        Calc: {formatCurrency(valorCalculado)}
-                      </div>
-                      {renderEditableInput(session, 'valorTotalFotoExtra', valorAtual, 'text', 'R$ 0,00')}
-                    </div>
-                  );
+                  return renderEditableInput(session, 'valorTotalFotoExtra', valorAtual, 'text', 'R$ 0,00');
                 })())}
 
                 {renderCell('product', <Button variant="ghost" size="sm" onClick={() => {
