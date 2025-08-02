@@ -142,11 +142,19 @@ export function EstruturaCustosFixos({
       </CardHeader>
       <CardContent className="bg-gray-50">
         <Tabs defaultValue="gastos-pessoais" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="gastos-pessoais">Gastos Pessoais</TabsTrigger>
-            <TabsTrigger value="pro-labore">Pró-labore</TabsTrigger>
-            <TabsTrigger value="custos-estudio">Custos do Estúdio</TabsTrigger>
-            <TabsTrigger value="equipamentos">Equipamentos</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 gap-1 h-auto p-1">
+            <TabsTrigger value="gastos-pessoais" className="text-xs md:text-sm px-2 py-2">
+              Gastos Pessoais
+            </TabsTrigger>
+            <TabsTrigger value="pro-labore" className="text-xs md:text-sm px-2 py-2">
+              Pró-labore
+            </TabsTrigger>
+            <TabsTrigger value="custos-estudio" className="text-xs md:text-sm px-2 py-2">
+              Custos do Estúdio
+            </TabsTrigger>
+            <TabsTrigger value="equipamentos" className="text-xs md:text-sm px-2 py-2">
+              Equipamentos
+            </TabsTrigger>
           </TabsList>
 
           {/* Gastos Pessoais */}
