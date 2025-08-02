@@ -52,6 +52,13 @@ interface SessionData {
   regrasDePrecoFotoExtraCongeladas?: RegrasPrecoFotoExtraCongeladas;
   // NOVO: Modo de compatibilidade
   modoCompatibilidade?: boolean;
+  // SISTEMA DE SNAPSHOT ABSOLUTO
+  valorFotoExtraFixo?: number;
+  isValorFixado?: boolean;
+  timestampFixacao?: string;
+  modeloOriginal?: 'fixo' | 'global' | 'categoria';
+  observacaoFixacao?: string;
+  qtdFotoExtraOriginal?: number;
 }
 interface WorkflowTableProps {
   sessions: SessionData[];
@@ -643,16 +650,36 @@ export function WorkflowTable({
                 {renderCell('extraPhotoTotal', <div className="flex items-center gap-1">
                   {renderEditableInput(session, 'valorTotalFotoExtra', session.valorTotalFotoExtra || '', 'text', 'R$ 0,00')}
                   <div className="flex items-center justify-center gap-1">
-                    <span className="text-xs text-slate-500">
-                      {session.regrasDePrecoFotoExtraCongeladas 
-                        ? session.regrasDePrecoFotoExtraCongeladas.modelo === 'fixo' 
-                          ? 'Fixo'
-                          : session.regrasDePrecoFotoExtraCongeladas.modelo === 'global'
-                          ? 'Global'
-                          : 'Categoria'
-                        : 'Fixo'
-                      }
-                    </span>
+                    {session.isValorFixado ? (
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs px-1 py-0.5 bg-amber-100 text-amber-700 rounded border">FIXO</span>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-4 w-4 p-0 text-xs"
+                          onClick={() => {
+                            if (confirm('Descongelar valor? O item passará a usar as regras atuais de precificação.')) {
+                              // Implementar descongelamento via AppContext
+                              console.log('🔓 Descongelando item:', session.id);
+                            }
+                          }}
+                          title="Descongelar valor"
+                        >
+                          🔓
+                        </Button>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-slate-500">
+                        {session.regrasDePrecoFotoExtraCongeladas 
+                          ? session.regrasDePrecoFotoExtraCongeladas.modelo === 'fixo' 
+                            ? 'Fixo'
+                            : session.regrasDePrecoFotoExtraCongeladas.modelo === 'global'
+                            ? 'Global'
+                            : 'Categoria'
+                          : 'Dinâmico'
+                        }
+                      </span>
+                    )}
                   </div>
                 </div>)}
 
