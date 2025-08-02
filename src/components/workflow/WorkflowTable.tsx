@@ -416,14 +416,39 @@ export function WorkflowTable({
         }
       }
 
-      // CÁLCULO FIXO: Recalcular quando quantidade de fotos extras for alterada
+      // SISTEMA DE CONGELAMENTO: Recalcular quando quantidade de fotos extras for alterada
       if (field === 'qtdFotosExtra') {
         const session = sessions.find(s => s.id === sessionId);
         if (session) {
           const novaQuantidade = parseInt(newValue) || 0;
-          const valorFotoExtra = parseFloat((session.valorFotoExtra || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-          const totalCalculado = valorFotoExtra * novaQuantidade;
-          handleFieldUpdateStable(sessionId, 'valorTotalFotoExtra', formatCurrency(totalCalculado));
+          
+          // MODO DE COMPATIBILIDADE: Verificar se é item legado
+          console.log('🧮 Recalculando fotos extras para sessão:', sessionId, 'quantidade:', novaQuantidade);
+          
+          if (isItemLegado(session)) {
+            // ITEM LEGADO: Usar sempre cálculo fixo (compatibilidade)
+            console.log('🏛️ Item LEGADO detectado - usando cálculo fixo de compatibilidade');
+            const valorFixoStr = typeof session.valorFotoExtra === 'string' ? session.valorFotoExtra : String(session.valorFotoExtra || '0');
+            const valorFixo = parseFloat(valorFixoStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+            const totalCalculado = calcularFotosExtrasItemLegado(novaQuantidade, valorFixo);
+            handleFieldUpdateStable(sessionId, 'valorTotalFotoExtra', formatCurrency(totalCalculado));
+            
+            // Marcar como modo compatibilidade se ainda não estiver marcado
+            if (!session.modoCompatibilidade) {
+              const sessionAtualizada = marcarComoModoCompatibilidade(session);
+              // Atualizar no contexto através do updateWorkflowItem
+              updateWorkflowItem(sessionId, sessionAtualizada);
+            }
+          } else if (session.regrasDePrecoFotoExtraCongeladas) {
+            // ITEM NOVO: Usar regras congeladas específicas
+            console.log('🧊 Usando regras congeladas específicas do item:', session.regrasDePrecoFotoExtraCongeladas.modelo);
+            const totalCalculado = calcularComRegrasProprias(novaQuantidade, session.regrasDePrecoFotoExtraCongeladas);
+            handleFieldUpdateStable(sessionId, 'valorTotalFotoExtra', formatCurrency(totalCalculado));
+          } else {
+            // ITEM SEM REGRAS: Delegar para o contexto criar migração
+            console.log('🔄 Item sem regras congeladas, delegando para contexto criar migração');
+            handleFieldUpdateStable(sessionId, 'qtdFotoExtra', novaQuantidade);
+          }
         }
       }
       setEditingValues(prev => {
@@ -627,20 +652,136 @@ export function WorkflowTable({
 
                 {renderCell('discount', renderEditableInput(session, 'desconto', String(session.desconto || 0), 'number', '0'))}
 
-                {renderCell('extraPhotoValue', null)}
+                {renderCell('extraPhotoValue', (() => {
+                  // MODO DE COMPATIBILIDADE: Verificar primeiro se é item legado
+                  if (isItemLegado(session)) {
+                    return (
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-700 border-amber-200">
+                            LEGADO
+                          </Badge>
+                          <div className="group relative">
+                            <Info className="h-3 w-3 text-amber-600 cursor-help" />
+                            <div className="invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-black text-white text-xs rounded whitespace-nowrap z-50">
+                              Modo Compatibilidade: R$ {(parseFloat(session.valorFotoExtra?.toString().replace(/[^\d,]/g, '').replace(',', '.')) || 0).toFixed(2)} × quantidade
+                            </div>
+                          </div>
+                        </div>
+                        <span className="text-xs font-medium">
+                          {session.valorFotoExtra || 'R$ 0,00'} (fixo)
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-xs h-6 px-2"
+                          onClick={() => {
+                            const itemMigrado = migrarItemLegadoParaRegrasAtuais(session, session.categoria);
+                            updateWorkflowItem(session.id, itemMigrado);
+                            toast({
+                              title: "Item migrado",
+                              description: "Item convertido para usar regras atuais de precificação"
+                            });
+                          }}
+                        >
+                          <RefreshCw className="h-3 w-3 mr-1" />
+                          Converter
+                        </Button>
+                      </div>
+                    );
+                  } else if (session.regrasDePrecoFotoExtraCongeladas) {
+                    // Item com regras congeladas: mostrar valor e modelo aplicado
+                    const regras = session.regrasDePrecoFotoExtraCongeladas;
+                    const valorExibido = calcularValorRealPorFoto(session);
+                    
+                    let labelModelo = '';
+                    let tooltipInfo = '';
+                    
+                    switch (regras.modelo) {
+                      case 'fixo':
+                        labelModelo = 'Fixo';
+                        tooltipInfo = `Valor fixo: R$ ${regras.valorFixo?.toFixed(2) || '0,00'}`;
+                        break;
+                      case 'global':
+                        labelModelo = 'Global';
+                        tooltipInfo = `Tabela global: ${regras.tabelaGlobal?.nome || 'N/A'}`;
+                        break;
+                      case 'categoria':
+                        labelModelo = 'Categoria';
+                        tooltipInfo = `Tabela da categoria: ${regras.tabelaCategoria?.nome || 'N/A'}`;
+                        break;
+                      default:
+                        labelModelo = 'Congelado';
+                        tooltipInfo = 'Regras congeladas';
+                    }
+                    
+                    return (
+                      <div className="flex flex-col gap-1" title={tooltipInfo}>
+                        <div className="flex items-center gap-1">
+                          <RegrasCongeladasIndicator 
+                            regras={session.regrasDePrecoFotoExtraCongeladas} 
+                            compact={true}
+                          />
+                          <span className="text-xs text-muted-foreground">
+                            ({labelModelo})
+                          </span>
+                        </div>
+                        <span className="text-xs font-medium text-blue-600">
+                          {formatCurrency(valorExibido)}
+                        </span>
+                      </div>
+                    );
+                  } else {
+                    // Item sem regras congeladas: permitir edição com aviso
+                    return (
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-1">
+                          <div className="w-2 h-2 bg-orange-400 rounded-full" title="Migração necessária" />
+                          <span className="text-xs text-orange-600">Migração</span>
+                        </div>
+                        {renderEditableInput(session, 'valorFotoExtra', session.valorFotoExtra || '', 'text', 'R$ 0,00')}
+                      </div>
+                    );
+                  }
+                })())}
 
                 {renderCell('extraPhotoQty', <Input key={`photoQty-${session.id}-${session.qtdFotosExtra}`} type="number" value={session.qtdFotosExtra || 0} onChange={e => {
                   const qtd = parseInt(e.target.value) || 0;
                   handleFieldUpdateStable(session.id, 'qtdFotosExtra', qtd);
 
-                  // CÁLCULO FIXO PERMANENTE: Sempre usar valorFotoExtra × quantidade
-                  const valorFotoExtra = parseFloat((session.valorFotoExtra || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-                  const total = valorFotoExtra * qtd;
+                  // MODO DE COMPATIBILIDADE: Verificar tipo de item
+                  let total = 0;
+                  
+                  if (isItemLegado(session)) {
+                    // ITEM LEGADO: Usar sempre cálculo fixo (compatibilidade)
+                    console.log('🏛️ [WORKFLOW] Item LEGADO - usando cálculo fixo para:', session.id);
+                    const valorFixo = parseFloat((session.valorFotoExtra || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+                    total = calcularFotosExtrasItemLegado(qtd, valorFixo);
+                  } else if (session.regrasDePrecoFotoExtraCongeladas) {
+                    // ITEM NOVO: Usar regras congeladas específicas
+                    console.log('🧮 [WORKFLOW] Calculando com regras congeladas para:', session.id);
+                    total = calcularComRegrasProprias(qtd, session.regrasDePrecoFotoExtraCongeladas);
+                  } else {
+                    // ITEM SEM REGRAS: Usar motor global (para compatibilidade)
+                    console.log('🧮 [WORKFLOW] Calculando com motor global para:', session.id);
+                    const valorFotoExtra = parseFloat((session.valorFotoExtra || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+                    
+                    // Buscar ID da categoria pelo nome
+                    const categorias = JSON.parse(localStorage.getItem('configuracoes_categorias') || '[]');
+                    const categoriaObj = categorias.find((cat: any) => cat.nome === session.categoria);
+                    const categoriaId = categoriaObj?.id || session.categoria;
+                    
+                    total = calcularTotalFotosExtras(qtd, {
+                      valorFotoExtra,
+                      categoria: session.categoria,
+                      categoriaId
+                    });
+                  }
                   
                   handleFieldUpdateStable(session.id, 'valorTotalFotoExtra', formatCurrency(total));
                 }} className="h-6 text-xs p-1 w-full border-none bg-transparent focus:bg-lunar-accent/10 transition-colors duration-150" placeholder="0" autoComplete="off" />)}
 
-                {renderCell('extraPhotoTotal', renderEditableInput(session, 'valorTotalFotoExtra', session.valorTotalFotoExtra || '', 'text', 'R$ 0,00'))}
+                {renderCell('extraPhotoTotal', <span className="text-xs font-medium text-green-600">{session.valorTotalFotoExtra || 'R$ 0,00'}</span>)}
 
                 {renderCell('product', <Button variant="ghost" size="sm" onClick={() => {
                   setSessionSelecionada(session);
