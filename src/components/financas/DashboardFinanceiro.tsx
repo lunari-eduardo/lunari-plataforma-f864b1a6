@@ -7,7 +7,6 @@ import { useDashboardFinanceiro } from '@/hooks/useDashboardFinanceiro';
 // Cores do design system
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--muted))'];
 const EXPENSE_COLORS = ['hsl(var(--primary))', 'hsl(var(--secondary))', 'hsl(var(--accent))'];
-
 export default function DashboardFinanceiro() {
   const {
     anoSelecionado,
@@ -27,10 +26,9 @@ export default function DashboardFinanceiro() {
   } = useDashboardFinanceiro();
 
   // Cálculos para gráficos de metas
-  const lucratividade = metasData.receitaAtual > 0 ? (metasData.lucroAtual / metasData.receitaAtual * 100) : 0;
-  const percentMetaReceita = metasData.metaReceita > 0 ? (metasData.receitaAtual / metasData.metaReceita * 100) : 0;
-  const percentMetaLucro = metasData.metaLucro > 0 ? (metasData.lucroAtual / metasData.metaLucro * 100) : 0;
-
+  const lucratividade = metasData.receitaAtual > 0 ? metasData.lucroAtual / metasData.receitaAtual * 100 : 0;
+  const percentMetaReceita = metasData.metaReceita > 0 ? metasData.receitaAtual / metasData.metaReceita * 100 : 0;
+  const percentMetaLucro = metasData.metaLucro > 0 ? metasData.lucroAtual / metasData.metaLucro * 100 : 0;
   const dadosGraficoReceita = [{
     name: 'Atingido',
     value: Math.max(0, metasData.receitaAtual)
@@ -38,7 +36,6 @@ export default function DashboardFinanceiro() {
     name: 'Restante',
     value: Math.max(0, metasData.metaReceita - metasData.receitaAtual)
   }];
-
   const dadosGraficoLucro = [{
     name: 'Atingido',
     value: Math.max(0, metasData.lucroAtual)
@@ -46,7 +43,6 @@ export default function DashboardFinanceiro() {
     name: 'Restante',
     value: Math.max(0, metasData.metaLucro - metasData.lucroAtual)
   }];
-
   const dadosGraficoLucratividade = [{
     name: 'Lucratividade',
     value: Math.max(0, Math.min(100, lucratividade))
@@ -56,30 +52,53 @@ export default function DashboardFinanceiro() {
   }];
 
   // Opções para o seletor de mês
-  const opcoesmes = [
-    { value: 'ano-completo', label: 'Ano Completo' },
-    { value: '1', label: 'Janeiro' },
-    { value: '2', label: 'Fevereiro' },
-    { value: '3', label: 'Março' },
-    { value: '4', label: 'Abril' },
-    { value: '5', label: 'Maio' },
-    { value: '6', label: 'Junho' },
-    { value: '7', label: 'Julho' },
-    { value: '8', label: 'Agosto' },
-    { value: '9', label: 'Setembro' },
-    { value: '10', label: 'Outubro' },
-    { value: '11', label: 'Novembro' },
-    { value: '12', label: 'Dezembro' }
-  ];
-
-  return (
-    <div className="space-y-6">
+  const opcoesmes = [{
+    value: 'ano-completo',
+    label: 'Ano Completo'
+  }, {
+    value: '1',
+    label: 'Janeiro'
+  }, {
+    value: '2',
+    label: 'Fevereiro'
+  }, {
+    value: '3',
+    label: 'Março'
+  }, {
+    value: '4',
+    label: 'Abril'
+  }, {
+    value: '5',
+    label: 'Maio'
+  }, {
+    value: '6',
+    label: 'Junho'
+  }, {
+    value: '7',
+    label: 'Julho'
+  }, {
+    value: '8',
+    label: 'Agosto'
+  }, {
+    value: '9',
+    label: 'Setembro'
+  }, {
+    value: '10',
+    label: 'Outubro'
+  }, {
+    value: '11',
+    label: 'Novembro'
+  }, {
+    value: '12',
+    label: 'Dezembro'
+  }];
+  return <div className="space-y-6">
       {/* Nova Barra de Filtros de Período */}
       <Card>
-        <CardHeader className="pb-4">
+        <CardHeader className="pb-4 bg-neutral-50">
           <CardTitle className="text-lg">Filtros de Período</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="bg-neutral-50">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
               <label className="text-sm font-medium text-muted-foreground block mb-2">
@@ -90,11 +109,9 @@ export default function DashboardFinanceiro() {
                   <SelectValue placeholder="Selecione o ano" />
                 </SelectTrigger>
                 <SelectContent>
-                  {anosDisponiveis.map(ano => (
-                    <SelectItem key={ano} value={ano.toString()}>
+                  {anosDisponiveis.map(ano => <SelectItem key={ano} value={ano.toString()}>
                       {ano}
-                    </SelectItem>
-                  ))}
+                    </SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -108,22 +125,18 @@ export default function DashboardFinanceiro() {
                   <SelectValue placeholder="Selecione o período" />
                 </SelectTrigger>
                 <SelectContent>
-                  {opcoesmes.map(opcao => (
-                    <SelectItem key={opcao.value} value={opcao.value}>
+                  {opcoesmes.map(opcao => <SelectItem key={opcao.value} value={opcao.value}>
                       {opcao.label}
-                    </SelectItem>
-                  ))}
+                    </SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
 
-            {mesSelecionado && mesSelecionado !== 'ano-completo' && (
-              <div className="flex items-end">
+            {mesSelecionado && mesSelecionado !== 'ano-completo' && <div className="flex items-end">
                 <div className="px-3 py-2 bg-primary/10 rounded-lg text-sm font-medium">
                   Período: {getNomeMes(mesSelecionado)} {anoSelecionado}
                 </div>
-              </div>
-            )}
+              </div>}
           </div>
         </CardContent>
       </Card>
@@ -177,19 +190,8 @@ export default function DashboardFinanceiro() {
           <CardContent>
             <ResponsiveContainer width="100%" height={200}>
               <PieChart>
-                <Pie 
-                  data={dadosGraficoReceita} 
-                  cx="50%" 
-                  cy="50%" 
-                  innerRadius={60} 
-                  outerRadius={80} 
-                  startAngle={90} 
-                  endAngle={450} 
-                  dataKey="value"
-                >
-                  {dadosGraficoReceita.map((entry, index) => 
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  )}
+                <Pie data={dadosGraficoReceita} cx="50%" cy="50%" innerRadius={60} outerRadius={80} startAngle={90} endAngle={450} dataKey="value">
+                  {dadosGraficoReceita.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
                 </Pie>
                 <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="fill-foreground">
                   <tspan x="50%" dy="-0.5em" className="text-lg font-bold">{formatCurrency(metasData.receitaAtual)}</tspan>
@@ -208,19 +210,8 @@ export default function DashboardFinanceiro() {
           <CardContent>
             <ResponsiveContainer width="100%" height={200}>
               <PieChart>
-                <Pie 
-                  data={dadosGraficoLucro} 
-                  cx="50%" 
-                  cy="50%" 
-                  innerRadius={60} 
-                  outerRadius={80} 
-                  startAngle={90} 
-                  endAngle={450} 
-                  dataKey="value"
-                >
-                  {dadosGraficoLucro.map((entry, index) => 
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  )}
+                <Pie data={dadosGraficoLucro} cx="50%" cy="50%" innerRadius={60} outerRadius={80} startAngle={90} endAngle={450} dataKey="value">
+                  {dadosGraficoLucro.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
                 </Pie>
                 <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="fill-foreground">
                   <tspan x="50%" dy="-0.5em" className="text-lg font-bold">{formatCurrency(metasData.lucroAtual)}</tspan>
@@ -238,19 +229,8 @@ export default function DashboardFinanceiro() {
           <CardContent>
             <ResponsiveContainer width="100%" height={200}>
               <PieChart>
-                <Pie 
-                  data={dadosGraficoLucratividade} 
-                  cx="50%" 
-                  cy="50%" 
-                  innerRadius={60} 
-                  outerRadius={80} 
-                  startAngle={90} 
-                  endAngle={450} 
-                  dataKey="value"
-                >
-                  {dadosGraficoLucratividade.map((entry, index) => 
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  )}
+                <Pie data={dadosGraficoLucratividade} cx="50%" cy="50%" innerRadius={60} outerRadius={80} startAngle={90} endAngle={450} dataKey="value">
+                  {dadosGraficoLucratividade.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
                 </Pie>
                 <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="fill-foreground">
                   <tspan x="50%" className="text-2xl font-bold">{lucratividade.toFixed(1)}%</tspan>
@@ -273,28 +253,16 @@ export default function DashboardFinanceiro() {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="mes" />
               <YAxis />
-              <Tooltip 
-                formatter={(value: number) => formatCurrency(value)} 
-                labelStyle={{
-                  color: 'hsl(var(--foreground))'
-                }} 
-                contentStyle={{
-                  backgroundColor: 'hsl(var(--background))',
-                  border: '1px solid hsl(var(--border))',
-                  borderRadius: '6px'
-                }} 
-              />
+              <Tooltip formatter={(value: number) => formatCurrency(value)} labelStyle={{
+              color: 'hsl(var(--foreground))'
+            }} contentStyle={{
+              backgroundColor: 'hsl(var(--background))',
+              border: '1px solid hsl(var(--border))',
+              borderRadius: '6px'
+            }} />
               <Legend />
-              <Bar 
-                dataKey="lucro" 
-                fill="hsl(var(--primary))" 
-                name="Lucro"
-              />
-              <Bar 
-                dataKey="receita" 
-                fill="hsl(var(--muted))" 
-                name="Receita"
-              />
+              <Bar dataKey="lucro" fill="hsl(var(--primary))" name="Lucro" />
+              <Bar dataKey="receita" fill="hsl(var(--muted))" name="Receita" />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
@@ -305,49 +273,27 @@ export default function DashboardFinanceiro() {
         <CardHeader>
           <CardTitle>COMPOSIÇÃO DAS DESPESAS</CardTitle>
           <p className="text-sm text-muted-foreground">
-            {mesSelecionado && mesSelecionado !== 'ano-completo' 
-              ? `Período: ${getNomeMes(mesSelecionado)} ${anoSelecionado}` 
-              : `Período: ${anoSelecionado}`}
+            {mesSelecionado && mesSelecionado !== 'ano-completo' ? `Período: ${getNomeMes(mesSelecionado)} ${anoSelecionado}` : `Período: ${anoSelecionado}`}
           </p>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={400}>
             <PieChart>
-              <Pie 
-                data={composicaoDespesas} 
-                cx="50%" 
-                cy="50%" 
-                innerRadius={80} 
-                outerRadius={150} 
-                dataKey="valor"
-              >
-                {composicaoDespesas.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={EXPENSE_COLORS[index % EXPENSE_COLORS.length]} />
-                ))}
+              <Pie data={composicaoDespesas} cx="50%" cy="50%" innerRadius={80} outerRadius={150} dataKey="valor">
+                {composicaoDespesas.map((entry, index) => <Cell key={`cell-${index}`} fill={EXPENSE_COLORS[index % EXPENSE_COLORS.length]} />)}
               </Pie>
-              <Tooltip 
-                formatter={(value: number, name: string, props: any) => [
-                  formatCurrency(value), 
-                  `${props.payload.grupo} (${props.payload.percentual.toFixed(1)}%)`
-                ]}
-                labelStyle={{
-                  color: 'hsl(var(--foreground))'
-                }} 
-                contentStyle={{
-                  backgroundColor: 'hsl(var(--background))',
-                  border: '1px solid hsl(var(--border))',
-                  borderRadius: '6px'
-                }} 
-              />
-              <Legend 
-                verticalAlign="bottom" 
-                height={36}
-                formatter={(value, entry) => (
-                  <span style={{ color: entry.color }}>
+              <Tooltip formatter={(value: number, name: string, props: any) => [formatCurrency(value), `${props.payload.grupo} (${props.payload.percentual.toFixed(1)}%)`]} labelStyle={{
+              color: 'hsl(var(--foreground))'
+            }} contentStyle={{
+              backgroundColor: 'hsl(var(--background))',
+              border: '1px solid hsl(var(--border))',
+              borderRadius: '6px'
+            }} />
+              <Legend verticalAlign="bottom" height={36} formatter={(value, entry) => <span style={{
+              color: entry.color
+            }}>
                     {value} ({composicaoDespesas.find(item => item.grupo === value)?.percentual.toFixed(1)}%)
-                  </span>
-                )}
-              />
+                  </span>} />
             </PieChart>
           </ResponsiveContainer>
         </CardContent>
@@ -363,11 +309,9 @@ export default function DashboardFinanceiro() {
                 <SelectValue placeholder="Gastos por Categoria" />
               </SelectTrigger>
               <SelectContent>
-                {categoriasDisponiveis.map(categoria => 
-                  <SelectItem key={categoria} value={categoria}>
+                {categoriasDisponiveis.map(categoria => <SelectItem key={categoria} value={categoria}>
                     {categoria}
-                  </SelectItem>
-                )}
+                  </SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -378,28 +322,17 @@ export default function DashboardFinanceiro() {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="mes" />
               <YAxis />
-              <Tooltip 
-                formatter={(value: number) => formatCurrency(value)} 
-                labelStyle={{
-                  color: 'hsl(var(--foreground))'
-                }} 
-                contentStyle={{
-                  backgroundColor: 'hsl(var(--background))',
-                  border: '1px solid hsl(var(--border))',
-                  borderRadius: '6px'
-                }} 
-              />
-              <Area 
-                type="monotone" 
-                dataKey="valor" 
-                stroke="hsl(var(--primary))" 
-                fill="hsl(var(--primary))" 
-                fillOpacity={0.2} 
-              />
+              <Tooltip formatter={(value: number) => formatCurrency(value)} labelStyle={{
+              color: 'hsl(var(--foreground))'
+            }} contentStyle={{
+              backgroundColor: 'hsl(var(--background))',
+              border: '1px solid hsl(var(--border))',
+              borderRadius: '6px'
+            }} />
+              <Area type="monotone" dataKey="valor" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.2} />
             </AreaChart>
           </ResponsiveContainer>
         </CardContent>
       </Card>
-    </div>
-  );
+    </div>;
 }
