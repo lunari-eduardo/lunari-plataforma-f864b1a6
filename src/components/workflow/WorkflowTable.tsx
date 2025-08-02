@@ -678,10 +678,9 @@ export function WorkflowTable({
                     let valorUnitario = 0;
                     
                     if (config.modelo === 'fixo') {
-                      // Modelo fixo por pacote - buscar valor do pacote
-                      const pacotes = JSON.parse(localStorage.getItem('configuracoes_pacotes') || '[]');
-                      const pacote = pacotes.find((p: any) => p.nome === session.pacote);
-                      valorUnitario = pacote?.valorFotoExtra || 0;
+                      // Modelo fixo por pacote - usar valor já armazenado na sessão
+                      const valorStr = typeof session.valorFotoExtra === 'string' ? session.valorFotoExtra : String(session.valorFotoExtra || '0');
+                      valorUnitario = parseFloat(valorStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
                     } else if (config.modelo === 'global') {
                       // Modelo tabela global - calcular valor baseado na quantidade
                       const tabelaGlobal = obterTabelaGlobal();
