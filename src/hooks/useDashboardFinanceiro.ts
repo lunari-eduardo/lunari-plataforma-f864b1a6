@@ -296,16 +296,25 @@ export function useDashboardFinanceiro() {
       margemLucroDesejada: 30
     });
     
-    // Carregar custos fixos totais da estrutura de custos
-    const custosFixosData = storage.load('custosFixos', {
+    // Carregar custos fixos totais da estrutura de custos (chave correta)
+    const custosFixosData = storage.load('precificacao_custos_fixos', {
+      gastosPessoais: [],
+      percentualProLabore: 30,
       custosEstudio: [],
-      gastosPessoais: []
+      equipamentos: []
     });
     
     // Calcular custos fixos totais mensais
-    const custosEstudioTotal = custosFixosData.custosEstudio.reduce((sum: number, item: any) => sum + (item.valor || 0), 0);
-    const gastosPessoaisTotal = custosFixosData.gastosPessoais.reduce((sum: number, item: any) => sum + (item.valor || 0), 0);
-    const custosFixosMensais = custosEstudioTotal + gastosPessoaisTotal;
+    const totalGastosPessoais = custosFixosData.gastosPessoais.reduce((sum: number, item: any) => sum + (item.valor || 0), 0);
+    const proLaboreCalculado = totalGastosPessoais * (1 + custosFixosData.percentualProLabore / 100);
+    const totalCustosEstudio = custosFixosData.custosEstudio.reduce((sum: number, item: any) => sum + (item.valor || 0), 0);
+    const totalDepreciacaoMensal = custosFixosData.equipamentos.reduce((sum: number, eq: any) => {
+      const depreciacaoMensal = eq.valorPago / (eq.vidaUtil * 12);
+      return sum + depreciacaoMensal;
+    }, 0);
+    
+    // Total mensal (mesmo cálculo do componente de precificação)
+    const custosFixosMensais = proLaboreCalculado + totalCustosEstudio + totalDepreciacaoMensal;
     
     // Cálculos baseados na fórmula de precificação
     const faturamentoMinimoAnual = custosFixosMensais * 12;
@@ -318,8 +327,10 @@ export function useDashboardFinanceiro() {
     console.log('🎯 Metas calculadas:', {
       metasPrecificacao,
       custosFixosData,
-      custosEstudioTotal,
-      gastosPessoaisTotal,
+      totalGastosPessoais,
+      proLaboreCalculado,
+      totalCustosEstudio,
+      totalDepreciacaoMensal,
       custosFixosMensais,
       faturamentoMinimoAnual,
       metaFaturamentoAnual,
