@@ -444,11 +444,30 @@ export default function Workflow() {
   }, []);
   const sortedSessions = useMemo(() => {
     return [...filteredSessions].sort((a, b) => {
-      let aValue: any = a[sortField as keyof SessionData];
-      let bValue: any = b[sortField as keyof SessionData];
+      // Mapeamento de campos da interface para campos do SessionData
+      const fieldMapping: Record<string, keyof SessionData> = {
+        'date': 'data',
+        'client': 'nome',
+        'status': 'status',
+        'category': 'categoria',
+        'packageValue': 'valorPacote',
+        'discount': 'desconto',
+        'extraPhotoQty': 'qtdFotosExtra',
+        'extraPhotoTotal': 'valorTotalFotoExtra',
+        'product': 'produto',
+        'productTotal': 'valorTotalProduto',
+        'additionalValue': 'valorAdicional',
+        'total': 'total',
+        'paid': 'valorPago',
+        'remaining': 'restante'
+      };
+
+      const actualField = fieldMapping[sortField] || sortField as keyof SessionData;
+      let aValue: any = a[actualField];
+      let bValue: any = b[actualField];
 
       // Handle different data types
-      if (sortField === 'data') {
+      if (sortField === 'date') {
         // Criar objeto Date completo usando data + hora para ordenação cronológica correta
         const [dayA, monthA, yearA] = a.data.split('/');
         const [dayB, monthB, yearB] = b.data.split('/');
@@ -457,13 +476,17 @@ export default function Workflow() {
         
         aValue = new Date(Number(yearA), Number(monthA) - 1, Number(dayA), hoursA, minutesA).getTime();
         bValue = new Date(Number(yearB), Number(monthB) - 1, Number(dayB), hoursB, minutesB).getTime();
-      } else if (['valorPacote', 'valorPago', 'desconto', 'total', 'restante'].includes(sortField)) {
+      } else if (['packageValue', 'discount', 'extraPhotoTotal', 'productTotal', 'additionalValue', 'total', 'paid', 'remaining'].includes(sortField)) {
         aValue = parseFloat(String(aValue).replace(/[^\d,]/g, '').replace(',', '.')) || 0;
         bValue = parseFloat(String(bValue).replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+      } else if (sortField === 'extraPhotoQty') {
+        aValue = Number(aValue) || 0;
+        bValue = Number(bValue) || 0;
       } else if (typeof aValue === 'string' && typeof bValue === 'string') {
         aValue = aValue.toLowerCase();
         bValue = bValue.toLowerCase();
       }
+      
       if (sortDirection === 'asc') {
         return aValue > bValue ? 1 : -1;
       } else {

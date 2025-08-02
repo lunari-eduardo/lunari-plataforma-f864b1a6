@@ -619,16 +619,16 @@ export function WorkflowTable({
               {renderHeaderCell('description', 'Descrição')}
               {renderHeaderCell('email', 'E-mail')}
               {renderHeaderCell('status', 'Status', true)}
-              {renderHeaderCell('category', 'Categoria')}
-              {renderHeaderCell('package', 'Pacote')}
+              {renderHeaderCell('category', 'Categoria', true)}
+              {renderHeaderCell('package', 'Pacote', true)}
               {renderHeaderCell('packageValue', 'Vlr Pacote', true)}
-              {renderHeaderCell('discount', 'Desconto')}
+              {renderHeaderCell('discount', 'Desconto', true)}
               {renderHeaderCell('extraPhotoValue', 'Vlr Foto')}
-              {renderHeaderCell('extraPhotoQty', 'Qtd Foto')}
-              {renderHeaderCell('extraPhotoTotal', 'Total de foto extra')}
-              {renderHeaderCell('product', 'Produto')}
-              {renderHeaderCell('productTotal', 'Total Prod')}
-              {renderHeaderCell('additionalValue', 'Adicional')}
+              {renderHeaderCell('extraPhotoQty', 'Qtd Foto', true)}
+              {renderHeaderCell('extraPhotoTotal', 'Total de foto extra', true)}
+              {renderHeaderCell('product', 'Produto', true)}
+              {renderHeaderCell('productTotal', 'Total Prod', true)}
+              {renderHeaderCell('additionalValue', 'Adicional', true)}
               {renderHeaderCell('details', 'Obs')}
               {renderHeaderCell('total', 'TOTAL', true)}
               {renderHeaderCell('paid', 'PAGO', true)}
