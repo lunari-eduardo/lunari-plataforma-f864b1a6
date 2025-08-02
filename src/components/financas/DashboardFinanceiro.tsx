@@ -95,8 +95,8 @@ export default function DashboardFinanceiro() {
   return <div className="space-y-6">
       {/* Nova Barra de Filtros de Período */}
       <Card>
-        <CardHeader className="pb-4 bg-neutral-50">
-          <CardTitle className="text-lg">Filtros de Período</CardTitle>
+        <CardHeader className="pb-1 bg-neutral-50">
+          <CardTitle className="text-base">Filtros de Período</CardTitle>
         </CardHeader>
         <CardContent className="bg-neutral-50">
           <div className="flex flex-col sm:flex-row gap-4">
