@@ -673,7 +673,11 @@ export function WorkflowTable({
 
                 {renderCell('packageValue', renderEditableInput(session, 'valorPacote', session.valorPacote || '', 'text', 'R$ 0,00', true))}
 
-                {renderCell('discount', renderEditableInput(session, 'desconto', session.desconto ? `R$ ${session.desconto.toFixed(2).replace('.', ',')}` : 'R$ 0,00', 'text', 'R$ 0,00'))}
+                {renderCell('discount', renderEditableInput(session, 'desconto', 
+                  session.desconto ? 
+                    `R$ ${(typeof session.desconto === 'number' ? session.desconto : parseFloat(String(session.desconto).replace(/[^\d,.-]/g, '').replace(',', '.')) || 0).toFixed(2).replace('.', ',')}` : 
+                    'R$ 0,00', 
+                  'text', 'R$ 0,00'))}
 
                 {renderCell('extraPhotoValue', (() => {
                   if (session.regrasDePrecoFotoExtraCongeladas) {
