@@ -53,21 +53,7 @@ export default function ClienteDetalhe() {
         const matchByClienteId = item.clienteId === cliente.id;
         const matchByName = item.nome?.toLowerCase().trim() === cliente.nome?.toLowerCase().trim();
         return matchByClienteId || matchByName;
-      })
-      .map(item => ({
-        id: item.id,
-        tipo: 'workflow' as const,
-        data: item.data,
-        descricao: item.descricao || item.pacote,
-        valor: item.total,
-        status: item.status,
-        detalhes: {
-          pacote: item.pacote,
-          categoria: item.categoria,
-          valorPago: item.valorPago,
-          restante: item.restante
-        }
-      }));
+      });
 
     // Orçamentos relacionados ao cliente
     const orcamentosDoCliente = orcamentos
@@ -75,24 +61,99 @@ export default function ClienteDetalhe() {
         // Comparar com nome do cliente se não houver clienteId direto
         const nomeOrcamento = typeof orc.cliente === 'string' ? orc.cliente : orc.cliente?.nome;
         return nomeOrcamento?.toLowerCase().trim() === cliente.nome?.toLowerCase().trim();
-      })
-      .map(orc => ({
-        id: orc.id,
-        tipo: 'orcamento' as const,
-        data: orc.data,
-        descricao: `Orçamento - ${orc.categoria}`,
-        valor: orc.valorTotal || orc.valorFinal || 0,
-        status: orc.status,
-        detalhes: {
-          categoria: orc.categoria,
-          origem: orc.origemCliente,
-          observacoes: orc.detalhes
+      });
+
+    // LÓGICA DE UNIFICAÇÃO: Merge de orçamentos com workflow items relacionados
+    const projetosUnificados = new Map();
+    const workflowProcessados = new Set<string>();
+
+    // 1. Processar workflow items que têm origem em orçamentos
+    workflowDoCliente.forEach(workflowItem => {
+      // Detectar se o workflow item tem origem em orçamento (ID padrão: orcamento-{orcamentoId})
+      const isFromOrcamento = workflowItem.id.startsWith('orcamento-');
+      
+      if (isFromOrcamento) {
+        const orcamentoId = workflowItem.id.replace('orcamento-', '');
+        const orcamentoOriginal = orcamentosDoCliente.find(orc => orc.id === orcamentoId);
+        
+        if (orcamentoOriginal) {
+          // PROJETO UNIFICADO: Priorizar dados do workflow + metadados do orçamento
+          projetosUnificados.set(workflowItem.id, {
+            id: workflowItem.id,
+            tipo: 'projeto' as const, // Tipo especial para projetos unificados
+            data: workflowItem.data, // Data do trabalho (mais recente)
+            descricao: workflowItem.descricao || workflowItem.pacote,
+            valor: workflowItem.total, // Valor atual do trabalho
+            status: workflowItem.status, // Status atual do trabalho
+            detalhes: {
+              pacote: workflowItem.pacote,
+              categoria: workflowItem.categoria,
+              valorPago: workflowItem.valorPago,
+              restante: workflowItem.restante,
+              // Metadados do orçamento original
+              dataOrcamento: orcamentoOriginal.data,
+              origemCliente: orcamentoOriginal.origemCliente,
+              observacoesOrcamento: orcamentoOriginal.detalhes
+            }
+          });
+          
+          workflowProcessados.add(workflowItem.id);
+          console.log('🔗 Projeto unificado criado:', workflowItem.id, '← orçamento:', orcamentoId);
         }
-      }));
+      }
+    });
+
+    // 2. Adicionar workflow items que NÃO têm origem em orçamentos
+    workflowDoCliente.forEach(workflowItem => {
+      if (!workflowProcessados.has(workflowItem.id)) {
+        projetosUnificados.set(workflowItem.id, {
+          id: workflowItem.id,
+          tipo: 'workflow' as const,
+          data: workflowItem.data,
+          descricao: workflowItem.descricao || workflowItem.pacote,
+          valor: workflowItem.total,
+          status: workflowItem.status,
+          detalhes: {
+            pacote: workflowItem.pacote,
+            categoria: workflowItem.categoria,
+            valorPago: workflowItem.valorPago,
+            restante: workflowItem.restante
+          }
+        });
+      }
+    });
+
+    // 3. Adicionar orçamentos que NÃO se tornaram trabalhos
+    orcamentosDoCliente.forEach(orcamento => {
+      const jaVirouWorkflowItem = workflowDoCliente.some(w => w.id === `orcamento-${orcamento.id}`);
+      
+      if (!jaVirouWorkflowItem) {
+        projetosUnificados.set(`orc-${orcamento.id}`, {
+          id: orcamento.id,
+          tipo: 'orcamento' as const,
+          data: orcamento.data,
+          descricao: `Orçamento - ${orcamento.categoria}`,
+          valor: orcamento.valorTotal || orcamento.valorFinal || 0,
+          status: orcamento.status,
+          detalhes: {
+            categoria: orcamento.categoria,
+            origem: orcamento.origemCliente,
+            observacoes: orcamento.detalhes
+          }
+        });
+      }
+    });
 
     // Combinar e ordenar por data (mais recente primeiro)
-    const historicoCombinado = [...workflowDoCliente, ...orcamentosDoCliente]
+    const historicoCombinado = Array.from(projetosUnificados.values())
       .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+
+    console.log('✅ Histórico unificado:', {
+      total: historicoCombinado.length,
+      projetos: historicoCombinado.filter(h => h.tipo === 'projeto').length,
+      workflows: historicoCombinado.filter(h => h.tipo === 'workflow').length,
+      orcamentos: historicoCombinado.filter(h => h.tipo === 'orcamento').length
+    });
 
     return historicoCombinado;
   }, [cliente, unifiedWorkflowData, orcamentos]);
@@ -359,11 +420,12 @@ export default function ClienteDetalhe() {
                             <TableCell className="font-medium">
                               {formatDate(item.data)}
                             </TableCell>
-                            <TableCell>
-                              <Badge variant="outline">
-                                {item.tipo === 'workflow' ? 'Trabalho' : 'Orçamento'}
-                              </Badge>
-                            </TableCell>
+                             <TableCell>
+                               <Badge variant="outline">
+                                 {item.tipo === 'projeto' ? 'Projeto' : 
+                                  item.tipo === 'workflow' ? 'Trabalho' : 'Orçamento'}
+                               </Badge>
+                             </TableCell>
                             <TableCell>
                               <div>
                                 <div className="font-medium">{item.descricao}</div>
