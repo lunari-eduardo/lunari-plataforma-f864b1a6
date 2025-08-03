@@ -26,10 +26,10 @@ export default function Clientes() {
   } = useContext(AppContext);
 
   const [filtro, setFiltro] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [faturadoFilter, setFaturadoFilter] = useState('');
-  const [pagoFilter, setPagoFilter] = useState('');
-  const [receberFilter, setReceberFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('todos');
+  const [faturadoFilter, setFaturadoFilter] = useState('todos');
+  const [pagoFilter, setPagoFilter] = useState('todos');
+  const [receberFilter, setReceberFilter] = useState('todos');
   const [showClientForm, setShowClientForm] = useState(false);
   const [editingClient, setEditingClient] = useState<Cliente | null>(null);
   const [formData, setFormData] = useState({
@@ -119,10 +119,10 @@ export default function Clientes() {
 
   const limparFiltros = () => {
     setFiltro('');
-    setStatusFilter('');
-    setFaturadoFilter('');
-    setPagoFilter('');
-    setReceberFilter('');
+    setStatusFilter('todos');
+    setFaturadoFilter('todos');
+    setPagoFilter('todos');
+    setReceberFilter('todos');
   };
 
   return (
@@ -297,11 +297,19 @@ export default function Clientes() {
             <User className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium mb-2">Nenhum cliente encontrado</h3>
             <p className="text-sm text-muted-foreground mb-4 text-center">
-              {filtro || statusFilter || faturadoFilter || pagoFilter || receberFilter 
+              {(filtro || 
+                (statusFilter && statusFilter !== 'todos') || 
+                (faturadoFilter && faturadoFilter !== 'todos') || 
+                (pagoFilter && pagoFilter !== 'todos') || 
+                (receberFilter && receberFilter !== 'todos')) 
                 ? 'Não encontramos clientes com os critérios de busca informados.' 
                 : 'Adicione seus primeiros clientes para começar.'}
             </p>
-            {filtro || statusFilter || faturadoFilter || pagoFilter || receberFilter ? (
+            {(filtro || 
+              (statusFilter && statusFilter !== 'todos') || 
+              (faturadoFilter && faturadoFilter !== 'todos') || 
+              (pagoFilter && pagoFilter !== 'todos') || 
+              (receberFilter && receberFilter !== 'todos')) ? (
               <Button onClick={limparFiltros} variant="outline">
                 Limpar filtros
               </Button>
