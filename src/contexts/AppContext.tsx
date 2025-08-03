@@ -671,10 +671,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           categoriaId: pacoteData?.categoria_id
         });
 
-        // CORREÇÃO: Encontrar clienteId pelo nome
-        const clienteId = clientes.find(c => 
+        // VALIDAÇÃO CRÍTICA: garantir que clienteId sempre seja definido
+        let clienteId = clientes.find(c => 
           c.nome.toLowerCase().trim() === appointment.client.toLowerCase().trim()
         )?.id;
+
+        // Se cliente não existe, criar automaticamente
+        if (!clienteId) {
+          console.warn(`⚠️ AGENDA→WORKFLOW: Cliente não encontrado para "${appointment.client}". Criando automaticamente...`);
+          
+          const novoCliente: Cliente = {
+            id: crypto.randomUUID(),
+            nome: appointment.client,
+            email: (appointment as any).clientEmail || appointment.email || '',
+            telefone: (appointment as any).clientPhone || appointment.whatsapp || '',
+            endereco: '',
+            observacoes: `Cliente criado automaticamente da agenda em ${new Date().toLocaleDateString()}`
+          };
+          
+          const novosClientes = [...clientes, novoCliente];
+          setClientes(novosClientes);
+          storage.save(STORAGE_KEYS.CLIENTS, novosClientes);
+          
+          clienteId = novoCliente.id;
+          console.log('✅ CLIENTE CRIADO AUTOMATICAMENTE:', novoCliente);
+        }
 
         const newWorkflowItem: WorkflowItem = {
           id: `agenda-${appointment.id}`,
@@ -686,7 +707,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           descricao: appointment.description || '',
           status: "",
           categoria: categoriaName,
-          clienteId: clienteId, // CORREÇÃO: Atribuir clienteId
+          clienteId: clienteId!, // GARANTIR que SEMPRE tenha clienteId
           pacote: pacoteData ? pacoteData.nome : (
             appointment.type.includes('Gestante') ? 'Completo' : 
             appointment.type.includes('Família') ? 'Básico' : 
@@ -872,7 +893,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         descricao: orc.descricao || '',
         status: 'Fechado',
         categoria: categoriaName,
-        clienteId: orc.cliente.id, // CORREÇÃO: Usar clienteId do orçamento
+        clienteId: orc.cliente.id, // GARANTIR que SEMPRE tenha clienteId
         pacote: pacoteData ? pacoteData.nome : (orc.pacotes[0]?.nome || ''),
         valorPacote: valorPacoteFromBudget,
         desconto: 0,
@@ -959,6 +980,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         // Calcular total final com desconto
         newWorkflowItem.total = valorCalculado - (newWorkflowItem.desconto || 0);
         newWorkflowItem.restante = newWorkflowItem.total - newWorkflowItem.valorPago;
+
+        // VALIDAÇÃO FINAL OBRIGATÓRIA
+        if (!newWorkflowItem.clienteId) {
+          console.error('❌ ERRO CRÍTICO: WorkflowItem de orçamento criado SEM clienteId!', {
+            orcamentoId: orc.id,
+            orcamentoCliente: orc.cliente,
+            workflowItem: newWorkflowItem
+          });
+          throw new Error(`Não foi possível associar cliente do orçamento "${orc.id}" ao workflow`);
+        }
+
+        console.log('✅ ORÇAMENTO→WORKFLOW: Item criado com clienteId:', {
+          workflowId: newWorkflowItem.id,
+          clienteNome: newWorkflowItem.nome,
+          clienteId: newWorkflowItem.clienteId,
+          valor: newWorkflowItem.total
+        });
 
       newItems.push(newWorkflowItem);
     });
