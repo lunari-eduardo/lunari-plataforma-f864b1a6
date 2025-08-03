@@ -38,7 +38,7 @@ export default function Clientes() {
   });
 
   // Obter métricas dos clientes
-  const clientMetrics = useClientMetrics(clientes, workflowItems);
+  const clientMetrics = useClientMetrics(clientes);
 
   // Filtrar e ordenar clientes
   const clientesFiltradosEOrdenados = useMemo(() => {

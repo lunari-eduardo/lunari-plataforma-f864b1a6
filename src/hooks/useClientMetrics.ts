@@ -2,6 +2,8 @@ import { useMemo } from 'react';
 import { Cliente } from '@/types/orcamentos';
 import { WorkflowItem } from '@/contexts/AppContext';
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
+import { useUnifiedWorkflowData } from './useUnifiedWorkflowData';
+import { validateClientMetrics } from '@/utils/validateClientMetrics';
 
 export interface ClientMetrics {
   id: string;
@@ -15,19 +17,26 @@ export interface ClientMetrics {
   ultimaSessao: Date | null;
 }
 
-export function useClientMetrics(clientes: Cliente[], workflowItems: WorkflowItem[]) {
+export function useClientMetrics(clientes: Cliente[]) {
+  const { unifiedWorkflowData, workflowItems } = useUnifiedWorkflowData();
+  
   const clientMetrics = useMemo(() => {
     console.log('📊 Calculando métricas CRM:', {
       totalClientes: clientes.length,
-      totalWorkflowItems: workflowItems.length
+      totalUnifiedWorkflowData: unifiedWorkflowData.length
     });
+
+    // Executar validação completa
+    validateClientMetrics(clientes, workflowItems, unifiedWorkflowData);
 
     // Criar métricas para cada cliente
     const metrics: ClientMetrics[] = clientes.map(cliente => {
-      // AÇÃO OBRIGATÓRIA: Filtrar workflow_items usando a condição exata: workflowItem.clienteId === cliente.id
-      const sessoesCliente = workflowItems.filter(item => 
-        item.clienteId === cliente.id
-      );
+      // FILTRO PRINCIPAL: Por clienteId, com fallback por nome normalizado
+      const sessoesCliente = unifiedWorkflowData.filter(item => {
+        const matchByClienteId = item.clienteId === cliente.id;
+        const matchByName = item.nome?.toLowerCase().trim() === cliente.nome.toLowerCase().trim();
+        return matchByClienteId || matchByName;
+      });
 
       // Calcular métricas baseadas na lista filtrada de "trabalhos do cliente"
       const sessoes = sessoesCliente.length;
@@ -68,7 +77,7 @@ export function useClientMetrics(clientes: Cliente[], workflowItems: WorkflowIte
     });
 
     return metrics;
-  }, [clientes, workflowItems]); // Dependências exatas conforme especificado
+  }, [clientes, unifiedWorkflowData]); // Usar dados unificados como dependência
 
   return clientMetrics;
 }

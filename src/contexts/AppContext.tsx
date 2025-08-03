@@ -7,6 +7,7 @@ import { FinancialEngine, CreateTransactionInput } from '@/services/FinancialEng
 import { calculateTotals, calculateTotalsNew } from '@/services/FinancialCalculationEngine';
 import { autoMigrateIfNeeded } from '@/utils/dataMoveMigration';
 import { congelarRegrasPrecoFotoExtra, calcularComRegrasProprias, migrarRegrasParaItemAntigo } from '@/utils/precificacaoUtils';
+import { migrateWorkflowClienteId } from '@/utils/migrateWorkflowClienteId';
 
 // Types
 import { Orcamento, Template, OrigemCliente, MetricasOrcamento, Cliente } from '@/types/orcamentos';
@@ -563,6 +564,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, []);
 
+  // Executar migração de clienteId uma única vez
+  useEffect(() => {
+    migrateWorkflowClienteId();
+  }, []);
+
   // Sync configuration data
   useEffect(() => {
     const syncConfigData = () => {
@@ -665,6 +671,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           categoriaId: pacoteData?.categoria_id
         });
 
+        // CORREÇÃO: Encontrar clienteId pelo nome
+        const clienteId = clientes.find(c => 
+          c.nome.toLowerCase().trim() === appointment.client.toLowerCase().trim()
+        )?.id;
+
         const newWorkflowItem: WorkflowItem = {
           id: `agenda-${appointment.id}`,
           data: formatDateForStorage(appointment.date),
@@ -675,6 +686,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           descricao: appointment.description || '',
           status: "",
           categoria: categoriaName,
+          clienteId: clienteId, // CORREÇÃO: Atribuir clienteId
           pacote: pacoteData ? pacoteData.nome : (
             appointment.type.includes('Gestante') ? 'Completo' : 
             appointment.type.includes('Família') ? 'Básico' : 
@@ -860,6 +872,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         descricao: orc.descricao || '',
         status: 'Fechado',
         categoria: categoriaName,
+        clienteId: orc.cliente.id, // CORREÇÃO: Usar clienteId do orçamento
         pacote: pacoteData ? pacoteData.nome : (orc.pacotes[0]?.nome || ''),
         valorPacote: valorPacoteFromBudget,
         desconto: 0,
