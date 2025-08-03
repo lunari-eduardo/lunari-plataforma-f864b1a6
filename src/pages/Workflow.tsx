@@ -326,9 +326,10 @@ export default function Workflow() {
     setShowMetrics(!showMetrics);
   };
 
-  // Calcular métricas em tempo real do mês selecionado
+  // Calcular métricas em tempo real do mês selecionado (ignora filtros)
   const financials = useMemo(() => {
-    const currentMonthSessions = filteredSessions;
+    // Usar sessions ao invés de filteredSessions para ignorar filtros de busca
+    const currentMonthSessions = sessions;
     const totalRevenue = currentMonthSessions.reduce((sum, session) => {
       const paidStr = typeof session.valorPago === 'string' ? session.valorPago : String(session.valorPago || '0');
       const paid = parseFloat(paidStr.replace(/[^\d,]/g, '').replace(',', '.') || '0');
@@ -350,7 +351,7 @@ export default function Workflow() {
       outstanding: totalOutstanding,
       sessionCount: currentMonthSessions.length
     };
-  }, [filteredSessions]);
+  }, [sessions]);
 
   // Métricas do mês anterior para comparação
   const prevMonthFinancials = useMemo(() => {
