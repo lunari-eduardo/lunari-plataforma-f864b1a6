@@ -1293,6 +1293,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteAppointment = (id: string) => {
     setAppointments(prev => prev.filter(app => app.id !== id));
+    
+    // Remover também do workflow se existir
+    setWorkflowItems(prev => prev.filter(item => item.id !== id));
+    
+    // Remover do workflow_sessions no localStorage
+    try {
+      const workflowSessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
+      const updatedSessions = workflowSessions.filter((session: any) => session.id !== id);
+      localStorage.setItem('workflow_sessions', JSON.stringify(updatedSessions));
+      console.log('✅ Agendamento removido do workflow:', id);
+    } catch (error) {
+      console.error('❌ Erro ao remover do workflow_sessions:', error);
+    }
   };
 
   const updateWorkflowItem = (id: string, updates: Partial<WorkflowItem>) => {

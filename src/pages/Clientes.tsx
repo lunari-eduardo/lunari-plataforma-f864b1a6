@@ -13,6 +13,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from 'sonner';
 import { useClientMetrics, ClientMetrics } from '@/hooks/useClientMetrics';
 import { formatCurrency } from '@/utils/financialUtils';
+import { formatDateForDisplay } from '@/utils/dateUtils';
 
 type SortField = 'nome' | 'email' | 'telefone' | 'sessoes' | 'totalFaturado' | 'totalPago' | 'aReceber' | 'ultimaSessao';
 type SortDirection = 'asc' | 'desc';
@@ -131,7 +132,8 @@ export default function Clientes() {
 
   const formatDate = (date: Date | null) => {
     if (!date) return '-';
-    return date.toLocaleDateString('pt-BR');
+    // Usar formatDateForDisplay das dateUtils para evitar problemas de timezone
+    return formatDateForDisplay(date.toISOString().split('T')[0]);
   };
 
   return (
