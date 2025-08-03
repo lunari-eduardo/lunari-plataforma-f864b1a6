@@ -326,6 +326,41 @@ export default function Workflow() {
     setShowMetrics(!showMetrics);
   };
 
+  // Funções de cálculo dinâmico (mesmas usadas na tabela)
+  const calculateTotal = useCallback((session: SessionData) => {
+    try {
+      const valorPacoteStr = typeof session.valorPacote === 'string' ? session.valorPacote : String(session.valorPacote || '0');
+      const valorPacote = parseFloat(valorPacoteStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+      const valorFotoExtraStr = typeof session.valorTotalFotoExtra === 'string' ? session.valorTotalFotoExtra : String(session.valorTotalFotoExtra || '0');
+      const valorFotoExtra = parseFloat(valorFotoExtraStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+      const valorAdicionalStr = typeof session.valorAdicional === 'string' ? session.valorAdicional : String(session.valorAdicional || '0');
+      const valorAdicional = parseFloat(valorAdicionalStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+      const desconto = session.desconto || 0;
+
+      // Apenas produtos manuais somam ao total
+      let valorProdutosManuais = 0;
+      if (session.produtosList && session.produtosList.length > 0) {
+        const produtosManuais = session.produtosList.filter(p => p.tipo === 'manual');
+        valorProdutosManuais = produtosManuais.reduce((total, p) => total + p.valorUnitario * p.quantidade, 0);
+      } else if (session.valorTotalProduto) {
+        const valorProdutoStr = typeof session.valorTotalProduto === 'string' ? session.valorTotalProduto : String(session.valorTotalProduto || '0');
+        valorProdutosManuais = parseFloat(valorProdutoStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+      }
+      const totalCalculado = valorPacote + valorFotoExtra + valorProdutosManuais + valorAdicional - desconto;
+      return totalCalculado;
+    } catch (error) {
+      console.error('Erro no cálculo de total:', error);
+      return 0;
+    }
+  }, []);
+
+  const calculateRestante = useCallback((session: SessionData) => {
+    const total = calculateTotal(session);
+    const valorPagoStr = typeof session.valorPago === 'string' ? session.valorPago : String(session.valorPago || '0');
+    const valorPago = parseFloat(valorPagoStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+    return total - valorPago;
+  }, [calculateTotal]);
+
   // Calcular métricas em tempo real do mês selecionado (ignora filtros)
   const financials = useMemo(() => {
     // Usar sessions ao invés de filteredSessions para ignorar filtros de busca
@@ -335,23 +370,24 @@ export default function Workflow() {
       const paid = parseFloat(paidStr.replace(/[^\d,]/g, '').replace(',', '.') || '0');
       return sum + paid;
     }, 0);
+
+    // USAR CÁLCULO DINÂMICO para Previsto (ao invés de session.total)
     const totalForecasted = currentMonthSessions.reduce((sum, session) => {
-      const totalStr = typeof session.total === 'string' ? session.total : String(session.total || '0');
-      const total = parseFloat(totalStr.replace(/[^\d,]/g, '').replace(',', '.') || '0');
-      return sum + total;
+      return sum + calculateTotal(session);
     }, 0);
+
+    // USAR CÁLCULO DINÂMICO para A Receber (ao invés de session.restante)  
     const totalOutstanding = currentMonthSessions.reduce((sum, session) => {
-      const remainingStr = typeof session.restante === 'string' ? session.restante : String(session.restante || '0');
-      const remaining = parseFloat(remainingStr.replace(/[^\d,]/g, '').replace(',', '.') || '0');
-      return sum + remaining;
+      return sum + calculateRestante(session);
     }, 0);
+
     return {
       revenue: totalRevenue,
       forecasted: totalForecasted,
       outstanding: totalOutstanding,
       sessionCount: currentMonthSessions.length
     };
-  }, [sessions]);
+  }, [sessions, calculateTotal, calculateRestante]);
 
   // Métricas do mês anterior para comparação
   const prevMonthFinancials = useMemo(() => {
