@@ -18,14 +18,26 @@ import { ClientAnalytics } from '@/components/crm/ClientAnalytics';
 import { formatCurrency } from '@/utils/financialUtils';
 import { formatDateForDisplay } from '@/utils/dateUtils';
 import { toast } from 'sonner';
-
 export default function ClienteDetalhe() {
-  const { id } = useParams<{ id: string }>();
+  const {
+    id
+  } = useParams<{
+    id: string;
+  }>();
   const navigate = useNavigate();
-  const { clientes, orcamentos, atualizarCliente } = useContext(AppContext);
-  const { unifiedWorkflowData } = useUnifiedWorkflowData();
-  const { getFilesByClient, loadFiles } = useFileUpload();
-  
+  const {
+    clientes,
+    orcamentos,
+    atualizarCliente
+  } = useContext(AppContext);
+  const {
+    unifiedWorkflowData
+  } = useUnifiedWorkflowData();
+  const {
+    getFilesByClient,
+    loadFiles
+  } = useFileUpload();
+
   // Carregar arquivos ao montar componente
   useEffect(() => {
     loadFiles();
@@ -49,7 +61,6 @@ export default function ClienteDetalhe() {
   // Buscar histórico do cliente (workflow + orçamentos) usando dados unificados
   const clienteHistorico = useMemo(() => {
     if (!cliente) return [];
-
     console.log('🔍 Buscando histórico para cliente:', {
       clienteId: cliente.id,
       clienteNome: cliente.nome,
@@ -57,20 +68,18 @@ export default function ClienteDetalhe() {
     });
 
     // Workflow items relacionados ao cliente (MESMO FILTRO DO useClientMetrics)
-    const workflowDoCliente = unifiedWorkflowData
-      .filter(item => {
-        const matchByClienteId = item.clienteId === cliente.id;
-        const matchByName = item.nome?.toLowerCase().trim() === cliente.nome?.toLowerCase().trim();
-        return matchByClienteId || matchByName;
-      });
+    const workflowDoCliente = unifiedWorkflowData.filter(item => {
+      const matchByClienteId = item.clienteId === cliente.id;
+      const matchByName = item.nome?.toLowerCase().trim() === cliente.nome?.toLowerCase().trim();
+      return matchByClienteId || matchByName;
+    });
 
     // Orçamentos relacionados ao cliente
-    const orcamentosDoCliente = orcamentos
-      .filter(orc => {
-        // Comparar com nome do cliente se não houver clienteId direto
-        const nomeOrcamento = typeof orc.cliente === 'string' ? orc.cliente : orc.cliente?.nome;
-        return nomeOrcamento?.toLowerCase().trim() === cliente.nome?.toLowerCase().trim();
-      });
+    const orcamentosDoCliente = orcamentos.filter(orc => {
+      // Comparar com nome do cliente se não houver clienteId direto
+      const nomeOrcamento = typeof orc.cliente === 'string' ? orc.cliente : orc.cliente?.nome;
+      return nomeOrcamento?.toLowerCase().trim() === cliente.nome?.toLowerCase().trim();
+    });
 
     // LÓGICA DE UNIFICAÇÃO: Merge de orçamentos com workflow items relacionados
     const projetosUnificados = new Map();
@@ -80,20 +89,22 @@ export default function ClienteDetalhe() {
     workflowDoCliente.forEach(workflowItem => {
       // Detectar se o workflow item tem origem em orçamento (ID padrão: orcamento-{orcamentoId})
       const isFromOrcamento = workflowItem.id.startsWith('orcamento-');
-      
       if (isFromOrcamento) {
         const orcamentoId = workflowItem.id.replace('orcamento-', '');
         const orcamentoOriginal = orcamentosDoCliente.find(orc => orc.id === orcamentoId);
-        
         if (orcamentoOriginal) {
           // PROJETO UNIFICADO: Priorizar dados do workflow + metadados do orçamento
           projetosUnificados.set(workflowItem.id, {
             id: workflowItem.id,
-            tipo: 'projeto' as const, // Tipo especial para projetos unificados
-            data: workflowItem.data, // Data do trabalho (mais recente)
+            tipo: 'projeto' as const,
+            // Tipo especial para projetos unificados
+            data: workflowItem.data,
+            // Data do trabalho (mais recente)
             descricao: workflowItem.descricao || workflowItem.pacote,
-            valor: workflowItem.total, // Valor atual do trabalho
-            status: workflowItem.status, // Status atual do trabalho
+            valor: workflowItem.total,
+            // Valor atual do trabalho
+            status: workflowItem.status,
+            // Status atual do trabalho
             detalhes: {
               pacote: workflowItem.pacote,
               categoria: workflowItem.categoria,
@@ -105,7 +116,6 @@ export default function ClienteDetalhe() {
               observacoesOrcamento: orcamentoOriginal.detalhes
             }
           });
-          
           workflowProcessados.add(workflowItem.id);
           console.log('🔗 Projeto unificado criado:', workflowItem.id, '← orçamento:', orcamentoId);
         }
@@ -135,7 +145,6 @@ export default function ClienteDetalhe() {
     // 3. Adicionar orçamentos que NÃO se tornaram trabalhos
     orcamentosDoCliente.forEach(orcamento => {
       const jaVirouWorkflowItem = workflowDoCliente.some(w => w.id === `orcamento-${orcamento.id}`);
-      
       if (!jaVirouWorkflowItem) {
         projetosUnificados.set(`orc-${orcamento.id}`, {
           id: orcamento.id,
@@ -154,16 +163,13 @@ export default function ClienteDetalhe() {
     });
 
     // Combinar e ordenar por data (mais recente primeiro)
-    const historicoCombinado = Array.from(projetosUnificados.values())
-      .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
-
+    const historicoCombinado = Array.from(projetosUnificados.values()).sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
     console.log('✅ Histórico unificado:', {
       total: historicoCombinado.length,
       projetos: historicoCombinado.filter(h => h.tipo === 'projeto').length,
       workflows: historicoCombinado.filter(h => h.tipo === 'workflow').length,
       orcamentos: historicoCombinado.filter(h => h.tipo === 'orcamento').length
     });
-
     return historicoCombinado;
   }, [cliente, unifiedWorkflowData, orcamentos]);
 
@@ -174,12 +180,10 @@ export default function ClienteDetalhe() {
       const matchByName = item.nome?.toLowerCase().trim() === cliente?.nome?.toLowerCase().trim();
       return matchByClienteId || matchByName;
     });
-
     const totalSessoes = workflowDoCliente.length;
     const totalFaturado = workflowDoCliente.reduce((acc, item) => acc + (item.total || 0), 0);
     const totalPago = workflowDoCliente.reduce((acc, item) => acc + (item.valorPago || 0), 0);
     const aReceber = totalFaturado - totalPago;
-
     return {
       totalSessoes,
       totalFaturado,
@@ -187,10 +191,8 @@ export default function ClienteDetalhe() {
       aReceber
     };
   }, [cliente, unifiedWorkflowData]);
-
   if (!cliente) {
-    return (
-      <div className="flex flex-col items-center justify-center h-96">
+    return <div className="flex flex-col items-center justify-center h-96">
         <User className="h-16 w-16 text-muted-foreground mb-4" />
         <h2 className="text-xl font-semibold mb-2">Cliente não encontrado</h2>
         <p className="text-muted-foreground mb-4">O cliente solicitado não existe ou foi removido.</p>
@@ -198,21 +200,17 @@ export default function ClienteDetalhe() {
           <ArrowLeft className="h-4 w-4 mr-2" />
           Voltar para Clientes
         </Button>
-      </div>
-    );
+      </div>;
   }
-
   const handleSave = () => {
     if (!formData.nome || !formData.telefone) {
       toast.error('Nome e telefone são obrigatórios');
       return;
     }
-
     atualizarCliente(cliente.id, formData);
     setIsEditing(false);
     toast.success('Cliente atualizado com sucesso');
   };
-
   const handleCancel = () => {
     setFormData({
       nome: cliente.nome,
@@ -223,12 +221,10 @@ export default function ClienteDetalhe() {
     });
     setIsEditing(false);
   };
-
   const formatDate = (dateString: string) => {
     // Usar formatDateForDisplay das dateUtils para evitar problemas de timezone
     return formatDateForDisplay(dateString);
   };
-
   const getStatusBadge = (status: string, tipo: string) => {
     if (tipo === 'workflow') {
       const colors = {
@@ -248,9 +244,7 @@ export default function ClienteDetalhe() {
       return colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-800';
     }
   };
-
-  return (
-    <ScrollArea className="h-[calc(100vh-120px)]">
+  return <ScrollArea className="h-[calc(100vh-120px)]">
       <div className="space-y-6 pr-4">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -260,15 +254,13 @@ export default function ClienteDetalhe() {
               Voltar
             </Button>
             <div>
-              <h1 className="text-2xl font-bold">{cliente.nome}</h1>
-              <p className="text-muted-foreground text-sm">
-                Perfil completo do cliente e histórico de projetos
-              </p>
+              <h1 className="font-bold text-base">{cliente.nome}</h1>
+              <p className="text-muted-foreground text-xs">Perfil completo do cliente</p>
             </div>
           </div>
           
           {/* Métricas Rápidas */}
-          <div className="flex gap-4">
+          <div className="flex gap-2">
             <Card className="p-3">
               <div className="text-center">
                 <div className="text-lg font-bold text-primary">{metricas.totalSessoes}</div>
@@ -321,13 +313,10 @@ export default function ClienteDetalhe() {
                     Gerencie os dados básicos do cliente
                   </CardDescription>
                 </div>
-                {!isEditing ? (
-                  <Button onClick={() => setIsEditing(true)} variant="outline" size="sm">
+                {!isEditing ? <Button onClick={() => setIsEditing(true)} variant="outline" size="sm">
                     <Edit3 className="h-4 w-4 mr-2" />
                     Editar
-                  </Button>
-                ) : (
-                  <div className="flex gap-2">
+                  </Button> : <div className="flex gap-2">
                     <Button onClick={handleSave} size="sm">
                       <Save className="h-4 w-4 mr-2" />
                       Salvar
@@ -335,67 +324,49 @@ export default function ClienteDetalhe() {
                     <Button onClick={handleCancel} variant="outline" size="sm">
                       Cancelar
                     </Button>
-                  </div>
-                )}
+                  </div>}
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="nome">Nome *</Label>
-                    <Input
-                      id="nome"
-                      value={formData.nome}
-                      onChange={(e) => setFormData(prev => ({ ...prev, nome: e.target.value }))}
-                      disabled={!isEditing}
-                      placeholder="Nome completo"
-                    />
+                    <Input id="nome" value={formData.nome} onChange={e => setFormData(prev => ({
+                    ...prev,
+                    nome: e.target.value
+                  }))} disabled={!isEditing} placeholder="Nome completo" />
                   </div>
                   
                   <div>
                     <Label htmlFor="telefone">Telefone *</Label>
-                    <Input
-                      id="telefone"
-                      value={formData.telefone}
-                      onChange={(e) => setFormData(prev => ({ ...prev, telefone: e.target.value }))}
-                      disabled={!isEditing}
-                      placeholder="+55 (DDD) 00000-0000"
-                    />
+                    <Input id="telefone" value={formData.telefone} onChange={e => setFormData(prev => ({
+                    ...prev,
+                    telefone: e.target.value
+                  }))} disabled={!isEditing} placeholder="+55 (DDD) 00000-0000" />
                   </div>
 
                   <div>
                     <Label htmlFor="email">E-mail</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                      disabled={!isEditing}
-                      placeholder="email@exemplo.com"
-                    />
+                    <Input id="email" type="email" value={formData.email} onChange={e => setFormData(prev => ({
+                    ...prev,
+                    email: e.target.value
+                  }))} disabled={!isEditing} placeholder="email@exemplo.com" />
                   </div>
 
                   <div>
                     <Label htmlFor="endereco">Endereço</Label>
-                    <Input
-                      id="endereco"
-                      value={formData.endereco}
-                      onChange={(e) => setFormData(prev => ({ ...prev, endereco: e.target.value }))}
-                      disabled={!isEditing}
-                      placeholder="Endereço completo"
-                    />
+                    <Input id="endereco" value={formData.endereco} onChange={e => setFormData(prev => ({
+                    ...prev,
+                    endereco: e.target.value
+                  }))} disabled={!isEditing} placeholder="Endereço completo" />
                   </div>
                 </div>
 
                 <div>
                   <Label htmlFor="observacoes">Observações</Label>
-                  <Textarea
-                    id="observacoes"
-                    value={formData.observacoes}
-                    onChange={(e) => setFormData(prev => ({ ...prev, observacoes: e.target.value }))}
-                    disabled={!isEditing}
-                    placeholder="Observações sobre o cliente..."
-                    rows={4}
-                  />
+                  <Textarea id="observacoes" value={formData.observacoes} onChange={e => setFormData(prev => ({
+                  ...prev,
+                  observacoes: e.target.value
+                }))} disabled={!isEditing} placeholder="Observações sobre o cliente..." rows={4} />
                 </div>
               </CardContent>
             </Card>
@@ -411,16 +382,13 @@ export default function ClienteDetalhe() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {clienteHistorico.length === 0 ? (
-                  <div className="text-center py-8">
+                {clienteHistorico.length === 0 ? <div className="text-center py-8">
                     <History className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                     <h3 className="text-lg font-medium mb-2">Nenhum histórico encontrado</h3>
                     <p className="text-muted-foreground">
                       Este cliente ainda não possui orçamentos ou trabalhos registrados.
                     </p>
-                  </div>
-                ) : (
-                  <div className="rounded-lg border">
+                  </div> : <div className="rounded-lg border">
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -432,29 +400,21 @@ export default function ClienteDetalhe() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {clienteHistorico.map((item) => (
-                          <TableRow key={`${item.tipo}-${item.id}`}>
+                        {clienteHistorico.map(item => <TableRow key={`${item.tipo}-${item.id}`}>
                             <TableCell className="font-medium">
                               {formatDate(item.data)}
                             </TableCell>
                              <TableCell>
-                           <Badge variant="outline" className={
-                                  item.tipo === 'projeto' ? 'border-primary text-primary' :
-                                  item.tipo === 'workflow' ? 'border-blue-500 text-blue-600' : 
-                                  'border-orange-500 text-orange-600'
-                                }>
-                                  {item.tipo === 'projeto' ? '🔗 Projeto' : 
-                                   item.tipo === 'workflow' ? '⚡ Trabalho' : '📋 Orçamento'}
+                           <Badge variant="outline" className={item.tipo === 'projeto' ? 'border-primary text-primary' : item.tipo === 'workflow' ? 'border-blue-500 text-blue-600' : 'border-orange-500 text-orange-600'}>
+                                  {item.tipo === 'projeto' ? '🔗 Projeto' : item.tipo === 'workflow' ? '⚡ Trabalho' : '📋 Orçamento'}
                                 </Badge>
                              </TableCell>
                             <TableCell>
                               <div>
                                 <div className="font-medium">{item.descricao}</div>
-                                {item.tipo === 'workflow' && item.detalhes.categoria && (
-                                  <div className="text-sm text-muted-foreground">
+                                {item.tipo === 'workflow' && item.detalhes.categoria && <div className="text-sm text-muted-foreground">
                                     {item.detalhes.categoria}
-                                  </div>
-                                )}
+                                  </div>}
                               </div>
                             </TableCell>
                             <TableCell>
@@ -464,18 +424,14 @@ export default function ClienteDetalhe() {
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="font-medium">{formatCurrency(item.valor)}</div>
-                              {item.tipo === 'workflow' && (
-                                <div className="text-sm text-muted-foreground">
+                              {item.tipo === 'workflow' && <div className="text-sm text-muted-foreground">
                                   Pago: {formatCurrency(item.detalhes.valorPago || 0)}
-                                </div>
-                              )}
+                                </div>}
                             </TableCell>
-                          </TableRow>
-                        ))}
+                          </TableRow>)}
                       </TableBody>
                     </Table>
-                  </div>
-                )}
+                  </div>}
               </CardContent>
             </Card>
           </TabsContent>
@@ -493,37 +449,26 @@ export default function ClienteDetalhe() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <FileUploadZone
-                  clienteId={cliente?.id}
-                  description="Documento do cliente"
-                  showExisting={true}
-                />
+                <FileUploadZone clienteId={cliente?.id} description="Documento do cliente" showExisting={true} />
               </CardContent>
             </Card>
           </TabsContent>
 
           {/* Aba 4: Analytics */}
           <TabsContent value="analytics" className="space-y-6">
-            <ClientAnalytics 
-              metrics={{
-                id: cliente?.id || '',
-                nome: cliente?.nome || '',
-                email: cliente?.email || '',
-                telefone: cliente?.telefone || '',
-                sessoes: metricas.totalSessoes,
-                totalFaturado: metricas.totalFaturado,
-                totalPago: metricas.totalPago,
-                aReceber: metricas.aReceber,
-                ultimaSessao: clienteHistorico.length > 0 
-                  ? new Date(clienteHistorico[0].data) 
-                  : null
-              }}
-              files={getFilesByClient(cliente?.id || '')}
-              historico={clienteHistorico}
-            />
+            <ClientAnalytics metrics={{
+            id: cliente?.id || '',
+            nome: cliente?.nome || '',
+            email: cliente?.email || '',
+            telefone: cliente?.telefone || '',
+            sessoes: metricas.totalSessoes,
+            totalFaturado: metricas.totalFaturado,
+            totalPago: metricas.totalPago,
+            aReceber: metricas.aReceber,
+            ultimaSessao: clienteHistorico.length > 0 ? new Date(clienteHistorico[0].data) : null
+          }} files={getFilesByClient(cliente?.id || '')} historico={clienteHistorico} />
           </TabsContent>
         </Tabs>
       </div>
-    </ScrollArea>
-  );
+    </ScrollArea>;
 }
