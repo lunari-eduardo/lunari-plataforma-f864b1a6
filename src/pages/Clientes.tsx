@@ -48,17 +48,17 @@ export default function Clientes() {
                        cliente.email.toLowerCase().includes(filtro.toLowerCase()) ||
                        cliente.telefone.includes(filtro);
       
-      const faturadoMatch = !faturadoFilter || 
+      const faturadoMatch = !faturadoFilter || faturadoFilter === 'todos' ||
         (faturadoFilter === 'baixo' && cliente.totalFaturado < 1000) ||
         (faturadoFilter === 'medio' && cliente.totalFaturado >= 1000 && cliente.totalFaturado < 5000) ||
         (faturadoFilter === 'alto' && cliente.totalFaturado >= 5000);
       
-      const pagoMatch = !pagoFilter ||
+      const pagoMatch = !pagoFilter || pagoFilter === 'todos' ||
         (pagoFilter === 'baixo' && cliente.totalPago < 1000) ||
         (pagoFilter === 'medio' && cliente.totalPago >= 1000 && cliente.totalPago < 5000) ||
         (pagoFilter === 'alto' && cliente.totalPago >= 5000);
       
-      const receberMatch = !receberFilter ||
+      const receberMatch = !receberFilter || receberFilter === 'todos' ||
         (receberFilter === 'baixo' && cliente.aReceber < 1000) ||
         (receberFilter === 'medio' && cliente.aReceber >= 1000 && cliente.aReceber < 5000) ||
         (receberFilter === 'alto' && cliente.aReceber >= 5000);
@@ -154,7 +154,7 @@ export default function Clientes() {
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos</SelectItem>
+              <SelectItem value="todos">Todos</SelectItem>
               <SelectItem value="ativo">Ativo</SelectItem>
               <SelectItem value="inativo">Inativo</SelectItem>
             </SelectContent>
@@ -165,7 +165,7 @@ export default function Clientes() {
               <SelectValue placeholder="Faturado" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos</SelectItem>
+              <SelectItem value="todos">Todos</SelectItem>
               <SelectItem value="baixo">Até R$ 1.000</SelectItem>
               <SelectItem value="medio">R$ 1.000 - R$ 5.000</SelectItem>
               <SelectItem value="alto">Acima de R$ 5.000</SelectItem>
@@ -177,7 +177,7 @@ export default function Clientes() {
               <SelectValue placeholder="Pago" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos</SelectItem>
+              <SelectItem value="todos">Todos</SelectItem>
               <SelectItem value="baixo">Até R$ 1.000</SelectItem>
               <SelectItem value="medio">R$ 1.000 - R$ 5.000</SelectItem>
               <SelectItem value="alto">Acima de R$ 5.000</SelectItem>
@@ -189,7 +189,7 @@ export default function Clientes() {
               <SelectValue placeholder="A Receber" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos</SelectItem>
+              <SelectItem value="todos">Todos</SelectItem>
               <SelectItem value="baixo">Até R$ 1.000</SelectItem>
               <SelectItem value="medio">R$ 1.000 - R$ 5.000</SelectItem>
               <SelectItem value="alto">Acima de R$ 5.000</SelectItem>
