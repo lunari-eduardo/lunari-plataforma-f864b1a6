@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
+import { useUnifiedWorkflowData } from '@/hooks/useUnifiedWorkflowData';
 import { parseDateFromStorage, formatDateForStorage, getCurrentDateString } from '@/utils/dateUtils';
 import { formatCurrency } from '@/utils/financialUtils';
 import { toast } from '@/hooks/use-toast';
@@ -184,6 +185,8 @@ const deserializeAppointments = (serializedAppointments: any[]): Appointment[] =
 };
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Hook unificado para dados do workflow
+  const { unifiedWorkflowData, parseMonetaryValue } = useUnifiedWorkflowData();
   // Orçamentos State com migração automática
   const [orcamentos, setOrcamentos] = useState<Orcamento[]>(() => {
     const orcamentosRaw = storage.load(STORAGE_KEYS.BUDGETS, []);
@@ -953,9 +956,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [orcamentos, workflowItems, pacotes, produtos]);
 
-  // Calculate workflow summary
+  // Calculate workflow summary usando dados unificados
   const workflowSummary = React.useMemo(() => {
-    const filteredItems = workflowItems.filter(item => {
+    console.log('🔢 Recalculando summary do workflow (AppContext)...');
+    
+    const filteredItems = unifiedWorkflowData.filter(item => {
       const [itemDay, itemMonth, itemYear] = item.data.split('/');
       const [filterMonth, filterYear] = workflowFilters.mes.split('/');
       const monthMatches = itemMonth === filterMonth && itemYear === filterYear;
@@ -966,12 +971,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return monthMatches && searchMatches;
     });
 
+    console.log('📊 Itens filtrados (AppContext):', filteredItems.length);
+    console.log('📊 Amostra de itens:', filteredItems.slice(0, 3).map(i => ({ 
+      id: i.id, 
+      nome: i.nome, 
+      valorPago: i.valorPago, 
+      restante: i.restante 
+    })));
+
     const receita = filteredItems.reduce((sum, item) => sum + item.valorPago, 0);
     const aReceber = filteredItems.reduce((sum, item) => sum + item.restante, 0);
     const previsto = receita + aReceber;
 
+    console.log('📊 Métricas calculadas (AppContext):', { receita, aReceber, previsto });
+
     return { receita, aReceber, previsto };
-  }, [workflowItems, workflowFilters]);
+  }, [unifiedWorkflowData, workflowFilters]);
 
   // Action functions
   const adicionarOrcamento = (orcamento: Omit<Orcamento, 'id' | 'criadoEm'>) => {
@@ -1668,7 +1683,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     pacotes,
     metricas,
     appointments,
-    workflowItems: workflowItems.filter(item => {
+    workflowItems: unifiedWorkflowData.filter(item => {
       const [itemDay, itemMonth, itemYear] = item.data.split('/');
       const [filterMonth, filterYear] = workflowFilters.mes.split('/');
       const monthMatches = itemMonth === filterMonth && itemYear === filterYear;
