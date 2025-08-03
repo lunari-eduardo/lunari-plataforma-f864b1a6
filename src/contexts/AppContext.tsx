@@ -411,15 +411,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Helper function to filter unified workflow data
   const getFilteredWorkflowItems = useCallback(() => {
+    console.log('🔍 DEBUG filtro - workflowFilters.mes:', workflowFilters.mes);
+    console.log('🔍 DEBUG filtro - unifiedWorkflowData length:', unifiedWorkflowData.length);
+    console.log('🔍 DEBUG filtro - Amostra de datas:', unifiedWorkflowData.slice(0, 3).map(item => ({ data: item.data, nome: item.nome })));
+    
     return unifiedWorkflowData.filter(item => {
       const [itemDay, itemMonth, itemYear] = item.data.split('/');
       const [filterMonth, filterYear] = workflowFilters.mes.split('/');
+      
+      console.log('🔍 DEBUG item:', {
+        itemData: item.data,
+        itemMonth,
+        itemYear,
+        filterMonth,
+        filterYear,
+        nome: item.nome
+      });
+      
       const monthMatches = itemMonth === filterMonth && itemYear === filterYear;
 
       const searchMatches = !workflowFilters.busca || 
         item.nome.toLowerCase().includes(workflowFilters.busca.toLowerCase());
 
-      return monthMatches && searchMatches;
+      const matches = monthMatches && searchMatches;
+      console.log('🔍 DEBUG matches:', { monthMatches, searchMatches, finalMatch: matches });
+
+      return matches;
     }).sort((a, b) => {
       const dateA = a.dataOriginal || parseDateFromStorage(a.data);
       const dateB = b.dataOriginal || parseDateFromStorage(b.data);
