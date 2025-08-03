@@ -149,26 +149,53 @@ export function useUnifiedWorkflowData() {
 
     const allItems = new Map<string, WorkflowItem>();
 
-    // 1. Adicionar itens do AppContext (workflowItems)
-    workflowItems.forEach(item => {
-      allItems.set(item.id, item);
-    });
-
-    // 2. Adicionar/sobrescrever com dados de workflow_sessions (mais recentes)
+    // 1. PRIMEIRO: Adicionar dados de workflow_sessions (valores base)
     workflowSessions.forEach(session => {
       const normalizedItem = normalizeSessionToWorkflowItem(session);
       allItems.set(session.id, normalizedItem);
+      
+      console.log(`📝 Session ${session.id} adicionada: R$ ${normalizedItem.total} (fonte: ${normalizedItem.fonte})`);
+    });
+
+    // 2. SEGUNDO: Priorizar e sobrescrever com workflowItems (valores atualizados)
+    workflowItems.forEach(item => {
+      const existingItem = allItems.get(item.id);
+      
+      if (existingItem) {
+        console.log(`🔄 Sobrescrevendo item ${item.id}:`, {
+          valorAnterior: existingItem.total,
+          novoValor: item.total,
+          diferenca: item.total - existingItem.total
+        });
+      } else {
+        console.log(`➕ Novo item do workflow: ${item.id} - R$ ${item.total}`);
+      }
+      
+      allItems.set(item.id, item);
     });
 
     const resultado = Array.from(allItems.values());
     
-    console.log('✅ Dados unificados:', {
+    // Debug detalhado dos valores
+    const totalFaturado = resultado.reduce((acc, item) => acc + (item.total || 0), 0);
+    const totalPago = resultado.reduce((acc, item) => acc + (item.valorPago || 0), 0);
+    
+    console.log('✅ Dados unificados - ANÁLISE FINANCEIRA:', {
       total: resultado.length,
+      totalFaturado: totalFaturado,
+      totalPago: totalPago,
+      aReceber: totalFaturado - totalPago,
       porFonte: {
         agenda: resultado.filter(i => i.fonte === 'agenda').length,
         orcamento: resultado.filter(i => i.fonte === 'orcamento').length
       },
-      amostras: resultado.slice(0, 3).map(i => ({ id: i.id, nome: i.nome, valorPago: i.valorPago, fonte: i.fonte }))
+      amostrasFinanceiras: resultado.slice(0, 5).map(i => ({ 
+        id: i.id, 
+        nome: i.nome, 
+        total: i.total,
+        valorPago: i.valorPago, 
+        fonte: i.fonte 
+      }))
     });
 
     return resultado;

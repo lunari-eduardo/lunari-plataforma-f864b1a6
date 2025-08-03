@@ -38,11 +38,29 @@ export function useClientMetrics(clientes: Cliente[]) {
         return matchByClienteId || matchByName;
       });
 
+      console.log(`💰 Calculando métricas para cliente ${cliente.nome}:`, {
+        clienteId: cliente.id,
+        sessoesEncontradas: sessoesCliente.length,
+        sessoesDetalhes: sessoesCliente.map(s => ({
+          id: s.id,
+          fonte: s.fonte,
+          total: s.total,
+          valorPago: s.valorPago
+        }))
+      });
+
       // Calcular métricas baseadas na lista filtrada de "trabalhos do cliente"
       const sessoes = sessoesCliente.length;
       const totalFaturado = sessoesCliente.reduce((acc, item) => acc + (item.total || 0), 0);
       const totalPago = sessoesCliente.reduce((acc, item) => acc + (item.valorPago || 0), 0);
       const aReceber = totalFaturado - totalPago;
+
+      console.log(`✅ Métricas ${cliente.nome}:`, {
+        sessoes,
+        totalFaturado,
+        totalPago,
+        aReceber
+      });
 
       // Encontrar última sessão
       let ultimaSessao: Date | null = null;
