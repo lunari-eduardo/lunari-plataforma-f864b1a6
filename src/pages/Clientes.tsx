@@ -162,7 +162,7 @@ export default function Clientes() {
 
           <Select value={faturadoFilter} onValueChange={setFaturadoFilter}>
             <SelectTrigger>
-              <SelectValue placeholder="Faturado" />
+              <SelectValue placeholder="Total" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos</SelectItem>
@@ -254,7 +254,7 @@ export default function Clientes() {
                 {/* Métricas Financeiras */}
                 <div className="grid grid-cols-3 gap-3 text-center">
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">Faturado</p>
+                    <p className="text-xs text-muted-foreground mb-1">Total</p>
                     <p className="text-sm font-semibold text-primary">
                       {formatCurrency(cliente.totalFaturado)}
                     </p>

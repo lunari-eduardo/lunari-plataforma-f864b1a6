@@ -63,7 +63,7 @@ export function ClientAnalytics({ metrics, files, historico }: ClientAnalyticsPr
         <CardContent className="space-y-4">
           <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Total Faturado</span>
+              <span className="text-sm text-muted-foreground">Total</span>
               <span className="font-semibold text-primary">{formatCurrency(metrics.totalFaturado)}</span>
             </div>
             <div className="flex justify-between items-center">

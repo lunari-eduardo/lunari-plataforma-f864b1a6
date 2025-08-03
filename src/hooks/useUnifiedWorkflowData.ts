@@ -146,62 +146,96 @@ export function useUnifiedWorkflowData() {
     };
   };
 
-  // Dados unificados - WORKFLOW COMO FONTE ABSOLUTA (SIMPLIFICADO)
+  // Dados unificados - WORKFLOW ITEMS COMO FONTE ABSOLUTA DE VERDADE
   const unifiedWorkflowData = useMemo(() => {
-    console.log('🔥 SIMPLIFICAÇÃO - Workflow como única fonte autoritativa...');
-    console.log('📊 WorkflowItems (FONTE ÚNICA):', workflowItems.length);
-    console.log('📊 WorkflowSessions (IGNORADAS):', workflowSessions.length);
+    console.log('🎯 FORÇA TOTAL DO WORKFLOW - Priorização absoluta dos workflowItems...');
+    console.log('📊 WorkflowItems (FONTE AUTORITATIVA):', workflowItems.length);
+    console.log('📦 WorkflowSessions (BACKUP APENAS):', workflowSessions.length);
 
-    // ABORDAGEM SIMPLIFICADA: Usar APENAS workflowItems como fonte de dados
-    // Isso garante que valores sempre reflitam o estado atual do workflow
+    // ESTRATÉGIA DEFINITIVA: workflowItems sempre sobrescrevem qualquer outra fonte
     const allItems = new Map<string, WorkflowItem>();
 
-    // USAR APENAS WORKFLOW ITEMS - fonte única da verdade
+    // 1. PRIORIDADE ABSOLUTA: workflowItems (dados ATUAIS e CORRETOS)
     workflowItems.forEach(item => {
-      console.log(`💰 VALOR DIRETO DO WORKFLOW - ${item.nome || item.id}: R$ ${item.total}`, {
-        valorPago: item.valorPago,
-        aReceber: item.total - (item.valorPago || 0),
-        fonte: item.fonte || 'agenda'
+      console.log(`🎯 WORKFLOW ITEM AUTORITATIVO - ${item.nome || item.id}:`, {
+        id: item.id,
+        total: item.total,
+        valorPago: item.valorPago || 0,
+        aReceber: (item.total || 0) - (item.valorPago || 0),
+        fonte: item.fonte || 'agenda',
+        clienteId: item.clienteId
       });
+      
+      // Garantir que item.total está definido e válido
+      const totalValidado = typeof item.total === 'number' ? item.total : 0;
+      const valorPagoValidado = typeof item.valorPago === 'number' ? item.valorPago : 0;
       
       allItems.set(item.id, {
         ...item,
+        total: totalValidado, // Garantir valor numérico
+        valorPago: valorPagoValidado,
+        restante: totalValidado - valorPagoValidado,
         fonte: item.fonte || 'agenda',
         dataOriginal: item.dataOriginal || parseDateFromStorage(item.data)
       });
     });
 
-    // Adicionar sessions apenas se NÃO existir no workflow (evitar sobrescrita)
+    // 2. FALLBACK: workflowSessions APENAS para itens que NÃO existem no workflow
+    let sessionsAdicionadas = 0;
     workflowSessions.forEach(session => {
       if (!allItems.has(session.id)) {
         const normalizedItem = normalizeSessionToWorkflowItem(session);
         allItems.set(session.id, normalizedItem);
-        console.log(`📦 Adicionando session órfã: ${session.id} - R$ ${normalizedItem.total}`);
+        sessionsAdicionadas++;
+        console.log(`📦 Session órfã adicionada: ${session.id} - R$ ${normalizedItem.total}`);
+      } else {
+        console.log(`⚠️ Session ignorada (workflow tem prioridade): ${session.id}`);
       }
     });
 
     const resultado = Array.from(allItems.values());
     
-    // Debug detalhado dos valores
-    const totalFaturado = resultado.reduce((acc, item) => acc + (item.total || 0), 0);
-    const totalPago = resultado.reduce((acc, item) => acc + (item.valorPago || 0), 0);
+    // Validação específica para clientes mencionados
+    const eduardo = resultado.find(item => item.nome?.toLowerCase().includes('eduardo'));
+    const lise = resultado.find(item => item.nome?.toLowerCase().includes('lise'));
     
-    console.log('✅ Dados unificados - ANÁLISE FINANCEIRA:', {
-      total: resultado.length,
-      totalFaturado: totalFaturado,
-      totalPago: totalPago,
-      aReceber: totalFaturado - totalPago,
-      porFonte: {
+    if (eduardo) {
+      console.log('🔍 EDUARDO ENCONTRADO:', {
+        id: eduardo.id,
+        nome: eduardo.nome,
+        total: eduardo.total,
+        valorPago: eduardo.valorPago,
+        fonte: eduardo.fonte,
+        clienteId: eduardo.clienteId
+      });
+    }
+    
+    if (lise) {
+      console.log('🔍 LISE ENCONTRADA:', {
+        id: lise.id,
+        nome: lise.nome,
+        total: lise.total,
+        valorPago: lise.valorPago,
+        fonte: lise.fonte,
+        clienteId: lise.clienteId
+      });
+    }
+    
+    // Debug final
+    const totalGeral = resultado.reduce((acc, item) => acc + (item.total || 0), 0);
+    const pagoGeral = resultado.reduce((acc, item) => acc + (item.valorPago || 0), 0);
+    
+    console.log('✅ DADOS UNIFICADOS - ANÁLISE COMPLETA:', {
+      totalItens: resultado.length,
+      workflowItemsProcessados: workflowItems.length,
+      sessionsAdicionadas,
+      totalGeral,
+      pagoGeral,
+      aReceberGeral: totalGeral - pagoGeral,
+      distribuicaoPorFonte: {
         agenda: resultado.filter(i => i.fonte === 'agenda').length,
         orcamento: resultado.filter(i => i.fonte === 'orcamento').length
-      },
-      amostrasFinanceiras: resultado.slice(0, 5).map(i => ({ 
-        id: i.id, 
-        nome: i.nome, 
-        total: i.total,
-        valorPago: i.valorPago, 
-        fonte: i.fonte 
-      }))
+      }
     });
 
     return resultado;

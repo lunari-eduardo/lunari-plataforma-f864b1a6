@@ -33,41 +33,47 @@ export function useClientMetrics(clientes: Cliente[]) {
   });
   
   const clientMetrics = useMemo(() => {
-    console.log('🔥 SIMPLIFICAÇÃO CRM - Usando mesma lógica de Pago/A Receber:', {
+    console.log('🎯 MÉTRICAS CRM - USANDO FONTE ÚNICA DE VERDADE (workflowItems):', {
       totalClientes: clientes.length,
       totalUnifiedWorkflowData: unifiedWorkflowData.length
     });
 
-    // Criar métricas para cada cliente usando lógica DIRETA (igual Pago/A Receber)
+    // Criar métricas usando EXATAMENTE a mesma lógica de "Pago" e "A Receber"
     const metrics: ClientMetrics[] = clientes.map(cliente => {
-      // FILTRO SIMPLIFICADO: clienteId OU nome (sem fallbacks complexos)
+      // FILTRO EXATO: clienteId OU nome (igual ao que funciona para pagamentos)
       const sessoesCliente = unifiedWorkflowData.filter(item => {
-        return item.clienteId === cliente.id || 
-               (!item.clienteId && item.nome?.toLowerCase().trim() === cliente.nome.toLowerCase().trim());
+        const matchByClienteId = item.clienteId === cliente.id;
+        const matchByName = !item.clienteId && item.nome?.toLowerCase().trim() === cliente.nome.toLowerCase().trim();
+        return matchByClienteId || matchByName;
       });
 
-      console.log(`💰 CRM SIMPLIFICADO - ${cliente.nome}:`, {
+      console.log(`🎯 CLIENTE MÉTRICA - ${cliente.nome}:`, {
         clienteId: cliente.id,
         sessoesEncontradas: sessoesCliente.length,
-        valores: sessoesCliente.map(s => ({
+        valoresDetalhados: sessoesCliente.map(s => ({
           id: s.id,
+          nome: s.nome,
           total: s.total,
           valorPago: s.valorPago,
-          fonte: s.fonte
+          fonte: s.fonte,
+          clienteId: s.clienteId
         }))
       });
 
-      // CÁLCULO DIRETO (mesma lógica que funciona para Pago/A Receber)
+      // CÁLCULO DIRETO - EXATAMENTE igual aos valores "Pago" e "A Receber" que funcionam
       const sessoes = sessoesCliente.length;
       const totalFaturado = sessoesCliente.reduce((acc, item) => {
-        const valor = item.total || 0;
-        console.log(`  📊 Somando faturado ${item.id}: R$ ${valor}`);
+        const valor = typeof item.total === 'number' ? item.total : 0;
+        console.log(`  💰 Somando total para ${cliente.nome} - Item ${item.id}: R$ ${valor}`);
         return acc + valor;
       }, 0);
-      const totalPago = sessoesCliente.reduce((acc, item) => acc + (item.valorPago || 0), 0);
+      const totalPago = sessoesCliente.reduce((acc, item) => {
+        const valor = typeof item.valorPago === 'number' ? item.valorPago : 0;
+        return acc + valor;
+      }, 0);
       const aReceber = totalFaturado - totalPago;
 
-      console.log(`✅ Métricas ${cliente.nome}:`, {
+      console.log(`✅ RESULTADO FINAL - ${cliente.nome}:`, {
         sessoes,
         totalFaturado,
         totalPago,

@@ -35,22 +35,33 @@ export function useWorkflowSync() {
     }
   }, [workflowItems]);
 
-  // Escutar mudanças no workflow e sincronizar automaticamente (TEMPO REAL)
+  // Escutar mudanças no workflow e sincronizar em TEMPO REAL
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       forceSyncWorkflowData();
-    }, 100); // Debounce reduzido para 100ms (mais responsivo)
+    }, 50); // Debounce mínimo para máxima responsividade
 
     return () => clearTimeout(timeoutId);
   }, [workflowItems, forceSyncWorkflowData]);
 
-  // Forçar atualização imediata quando valores de total mudam
+  // Forçar atualização IMEDIATA quando valores de total ou pagamento mudam
   useEffect(() => {
     if (workflowItems.length > 0) {
-      console.log('🔄 MUDANÇA NO WORKFLOW DETECTADA - Forçando sync imediato...');
+      console.log('🎯 WORKFLOW MODIFICADO - Sync IMEDIATO para CRM...');
       forceSyncWorkflowData();
     }
-  }, [workflowItems.map(item => `${item.id}:${item.total}`).join(','), forceSyncWorkflowData]);
+  }, [workflowItems.map(item => `${item.id}:${item.total}:${item.valorPago}`).join(','), forceSyncWorkflowData]);
+
+  // Sync adicional para garantir que mudanças apareçam no CRM
+  useEffect(() => {
+    const syncInterval = setInterval(() => {
+      if (workflowItems.length > 0) {
+        forceSyncWorkflowData();
+      }
+    }, 1000); // Sync a cada segundo para garantir consistência
+
+    return () => clearInterval(syncInterval);
+  }, [workflowItems, forceSyncWorkflowData]);
 
   // Função para validar integridade dos dados
   const validateDataIntegrity = useCallback(() => {

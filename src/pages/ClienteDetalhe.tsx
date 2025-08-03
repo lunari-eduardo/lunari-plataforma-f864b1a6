@@ -270,7 +270,7 @@ export default function ClienteDetalhe() {
             <Card className="p-3">
               <div className="text-center">
                 <div className="text-lg font-bold text-green-600">{formatCurrency(metricas.totalFaturado)}</div>
-                <div className="text-xs text-muted-foreground">Faturado</div>
+                <div className="text-xs text-muted-foreground">Total</div>
               </div>
             </Card>
             <Card className="p-3">
