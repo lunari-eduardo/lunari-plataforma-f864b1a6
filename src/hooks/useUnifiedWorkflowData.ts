@@ -36,10 +36,15 @@ interface WorkflowSessionData {
 
 /**
  * Hook unificado para acessar dados do workflow de múltiplas fontes
- * - AppContext.workflowItems (via storage utility)  
- * - workflow_sessions (localStorage direto)
  * 
- * Deduplica dados e garante formato consistente para o dashboard
+ * PRIORIZAÇÃO DE DADOS (CORRIGIDA):
+ * 1. workflowItems do AppContext (FONTE AUTORITATIVA - valores mais atualizados)
+ * 2. workflow_sessions do localStorage (valores base/históricos)
+ * 
+ * GARANTIAS:
+ * - Workflow é sempre a fonte única da verdade para o CRM
+ * - Valores atualizados no workflow sobrescrevem dados antigos
+ * - Sincronização bidirecional entre todas as fontes
  */
 export function useUnifiedWorkflowData() {
   const { workflowItems } = useAppContext();
@@ -141,37 +146,44 @@ export function useUnifiedWorkflowData() {
     };
   };
 
-  // Dados unificados e deduplicados
+  // Dados unificados e deduplicados com PRIORIZAÇÃO ABSOLUTA DO WORKFLOW
   const unifiedWorkflowData = useMemo(() => {
-    console.log('🔄 Unificando dados do workflow...');
-    console.log('📊 WorkflowItems (AppContext):', workflowItems.length);
-    console.log('📊 WorkflowSessions (localStorage):', workflowSessions.length);
+    console.log('🔄 UNIFICAÇÃO CORRIGIDA - Workflow como fonte autoritativa...');
+    console.log('📊 WorkflowItems (PRIORITÁRIO):', workflowItems.length);
+    console.log('📊 WorkflowSessions (BACKUP):', workflowSessions.length);
 
     const allItems = new Map<string, WorkflowItem>();
 
-    // 1. PRIMEIRO: Adicionar dados de workflow_sessions (valores base)
+    // ETAPA 1: Carregar dados base de workflow_sessions
     workflowSessions.forEach(session => {
       const normalizedItem = normalizeSessionToWorkflowItem(session);
       allItems.set(session.id, normalizedItem);
       
-      console.log(`📝 Session ${session.id} adicionada: R$ ${normalizedItem.total} (fonte: ${normalizedItem.fonte})`);
+      console.log(`📦 Base carregada - Session ${session.id}: R$ ${normalizedItem.total}`);
     });
 
-    // 2. SEGUNDO: Priorizar e sobrescrever com workflowItems (valores atualizados)
+    // ETAPA 2: SOBRESCREVER ABSOLUTO com workflowItems (FONTE AUTORITATIVA)
     workflowItems.forEach(item => {
-      const existingItem = allItems.get(item.id);
+      const existingBase = allItems.get(item.id);
       
-      if (existingItem) {
-        console.log(`🔄 Sobrescrevendo item ${item.id}:`, {
-          valorAnterior: existingItem.total,
-          novoValor: item.total,
-          diferenca: item.total - existingItem.total
+      if (existingBase) {
+        const diferencaValor = item.total - existingBase.total;
+        console.log(`🔥 WORKFLOW SOBRESCREVE item ${item.id}:`, {
+          valorBase: existingBase.total,
+          valorWorkflow: item.total,
+          diferenca: diferencaValor,
+          status: diferencaValor !== 0 ? '⚠️ VALOR ATUALIZADO' : '✅ VALOR MANTIDO'
         });
       } else {
-        console.log(`➕ Novo item do workflow: ${item.id} - R$ ${item.total}`);
+        console.log(`➕ NOVO ITEM WORKFLOW: ${item.id} - R$ ${item.total}`);
       }
       
-      allItems.set(item.id, item);
+      // SOBRESCREVER SEMPRE - Workflow é autoritativo
+      allItems.set(item.id, {
+        ...item,
+        fonte: item.fonte || 'agenda', // Garantir fonte
+        dataOriginal: item.dataOriginal || parseDateFromStorage(item.data)
+      });
     });
 
     const resultado = Array.from(allItems.values());

@@ -20,6 +20,18 @@ export interface ClientMetrics {
 export function useClientMetrics(clientes: Cliente[]) {
   const { unifiedWorkflowData, workflowItems } = useUnifiedWorkflowData();
   
+  console.log('📊 INÍCIO CÁLCULO MÉTRICAS CRM - DADOS RECEBIDOS:', {
+    totalClientes: clientes.length,
+    totalUnifiedWorkflowData: unifiedWorkflowData.length,
+    amostraUnifiedData: unifiedWorkflowData.slice(0, 3).map(item => ({
+      id: item.id,
+      nome: item.nome,
+      total: item.total,
+      valorPago: item.valorPago,
+      fonte: item.fonte
+    }))
+  });
+  
   const clientMetrics = useMemo(() => {
     console.log('📊 Calculando métricas CRM:', {
       totalClientes: clientes.length,
@@ -31,11 +43,19 @@ export function useClientMetrics(clientes: Cliente[]) {
 
     // Criar métricas para cada cliente
     const metrics: ClientMetrics[] = clientes.map(cliente => {
-      // FILTRO PRINCIPAL: Por clienteId, com fallback por nome normalizado
+      // FILTRO RIGOROSO: Priorizar clienteId, fallback por nome normalizado
       const sessoesCliente = unifiedWorkflowData.filter(item => {
-        const matchByClienteId = item.clienteId === cliente.id;
-        const matchByName = item.nome?.toLowerCase().trim() === cliente.nome.toLowerCase().trim();
-        return matchByClienteId || matchByName;
+        // Primeira prioridade: clienteId exato
+        if (item.clienteId === cliente.id) {
+          return true;
+        }
+        
+        // Segunda prioridade: Match por nome normalizado (apenas se não houver clienteId)
+        if (!item.clienteId && item.nome?.toLowerCase().trim() === cliente.nome.toLowerCase().trim()) {
+          return true;
+        }
+        
+        return false;
       });
 
       console.log(`💰 Calculando métricas para cliente ${cliente.nome}:`, {

@@ -1,7 +1,8 @@
-import { useState, useContext, useMemo } from 'react';
+import { useState, useContext, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AppContext } from '@/contexts/AppContext';
 import { useUnifiedWorkflowData } from '@/hooks/useUnifiedWorkflowData';
+import { useFileUpload } from '@/hooks/useFileUpload';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,9 +10,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, User, History, Save, Edit3 } from "lucide-react";
+import { ArrowLeft, User, History, Save, Edit3, Upload, FileText, TrendingUp, Calendar } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { FileUploadZone } from '@/components/shared/FileUploadZone';
+import { ClientAnalytics } from '@/components/crm/ClientAnalytics';
 import { formatCurrency } from '@/utils/financialUtils';
 import { formatDateForDisplay } from '@/utils/dateUtils';
 import { toast } from 'sonner';
@@ -21,7 +24,13 @@ export default function ClienteDetalhe() {
   const navigate = useNavigate();
   const { clientes, orcamentos, atualizarCliente } = useContext(AppContext);
   const { unifiedWorkflowData } = useUnifiedWorkflowData();
+  const { getFilesByClient, loadFiles } = useFileUpload();
   
+  // Carregar arquivos ao montar componente
+  useEffect(() => {
+    loadFiles();
+  }, []);
+
   // Encontrar o cliente pelo ID
   const cliente = useMemo(() => {
     return clientes.find(c => c.id === id);
@@ -283,14 +292,22 @@ export default function ClienteDetalhe() {
 
         {/* Tabs */}
         <Tabs defaultValue="contacto" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="contacto" className="flex items-center gap-2">
               <User className="h-4 w-4" />
-              Dados de Contacto
+              Contacto
             </TabsTrigger>
             <TabsTrigger value="historico" className="flex items-center gap-2">
               <History className="h-4 w-4" />
-              Histórico & Projetos
+              Histórico
+            </TabsTrigger>
+            <TabsTrigger value="documentos" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Documentos
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
+              Analytics
             </TabsTrigger>
           </TabsList>
 
@@ -421,10 +438,14 @@ export default function ClienteDetalhe() {
                               {formatDate(item.data)}
                             </TableCell>
                              <TableCell>
-                               <Badge variant="outline">
-                                 {item.tipo === 'projeto' ? 'Projeto' : 
-                                  item.tipo === 'workflow' ? 'Trabalho' : 'Orçamento'}
-                               </Badge>
+                           <Badge variant="outline" className={
+                                  item.tipo === 'projeto' ? 'border-primary text-primary' :
+                                  item.tipo === 'workflow' ? 'border-blue-500 text-blue-600' : 
+                                  'border-orange-500 text-orange-600'
+                                }>
+                                  {item.tipo === 'projeto' ? '🔗 Projeto' : 
+                                   item.tipo === 'workflow' ? '⚡ Trabalho' : '📋 Orçamento'}
+                                </Badge>
                              </TableCell>
                             <TableCell>
                               <div>
@@ -457,6 +478,49 @@ export default function ClienteDetalhe() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Aba 3: Documentos */}
+          <TabsContent value="documentos" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Upload className="h-5 w-5" />
+                  Documentos do Cliente
+                </CardTitle>
+                <CardDescription>
+                  Gerencie todos os documentos relacionados a este cliente
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <FileUploadZone
+                  clienteId={cliente?.id}
+                  description="Documento do cliente"
+                  showExisting={true}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Aba 4: Analytics */}
+          <TabsContent value="analytics" className="space-y-6">
+            <ClientAnalytics 
+              metrics={{
+                id: cliente?.id || '',
+                nome: cliente?.nome || '',
+                email: cliente?.email || '',
+                telefone: cliente?.telefone || '',
+                sessoes: metricas.totalSessoes,
+                totalFaturado: metricas.totalFaturado,
+                totalPago: metricas.totalPago,
+                aReceber: metricas.aReceber,
+                ultimaSessao: clienteHistorico.length > 0 
+                  ? new Date(clienteHistorico[0].data) 
+                  : null
+              }}
+              files={getFilesByClient(cliente?.id || '')}
+              historico={clienteHistorico}
+            />
           </TabsContent>
         </Tabs>
       </div>
