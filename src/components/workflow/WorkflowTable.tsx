@@ -351,21 +351,39 @@ export function WorkflowTable({
       const valorFotoExtra = parseFloat(valorFotoExtraStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
       const valorAdicionalStr = typeof session.valorAdicional === 'string' ? session.valorAdicional : String(session.valorAdicional || '0');
       const valorAdicional = parseFloat(valorAdicionalStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-      const desconto = session.desconto || 0;
+      const desconto = parseFloat(String(session.desconto || 0).replace(/[^\d,]/g, '').replace(',', '.')) || 0;
 
       // Apenas produtos manuais somam ao total
       let valorProdutosManuais = 0;
       if (session.produtosList && session.produtosList.length > 0) {
         const produtosManuais = session.produtosList.filter(p => p.tipo === 'manual');
-        valorProdutosManuais = produtosManuais.reduce((total, p) => total + p.valorUnitario * p.quantidade, 0);
+        valorProdutosManuais = produtosManuais.reduce((total, p) => {
+          const valorUnit = parseFloat(String(p.valorUnitario || 0)) || 0;
+          const quantidade = parseFloat(String(p.quantidade || 0)) || 0;
+          return total + (valorUnit * quantidade);
+        }, 0);
       } else if (session.valorTotalProduto) {
         const valorProdutoStr = typeof session.valorTotalProduto === 'string' ? session.valorTotalProduto : String(session.valorTotalProduto || '0');
         valorProdutosManuais = parseFloat(valorProdutoStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
       }
+      
       const totalCalculado = valorPacote + valorFotoExtra + valorProdutosManuais + valorAdicional - desconto;
-      return totalCalculado;
+      
+      // Garantir que o resultado é um número válido
+      if (isNaN(totalCalculado) || !isFinite(totalCalculado)) {
+        console.warn('❌ Total calculado é NaN para sessão:', session.id, {
+          valorPacote,
+          valorFotoExtra,
+          valorProdutosManuais,
+          valorAdicional,
+          desconto
+        });
+        return 0;
+      }
+      
+      return Math.max(0, totalCalculado); // Garantir que não seja negativo
     } catch (error) {
-      console.error('Erro no cálculo de total:', error);
+      console.error('❌ Erro no cálculo de total para sessão:', session.id, error);
       return 0;
     }
   }, []);
@@ -373,7 +391,18 @@ export function WorkflowTable({
     const total = calculateTotal(session);
     const valorPagoStr = typeof session.valorPago === 'string' ? session.valorPago : String(session.valorPago || '0');
     const valorPago = parseFloat(valorPagoStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-    return total - valorPago;
+    const restante = total - valorPago;
+    
+    // Garantir que o resultado é um número válido
+    if (isNaN(restante) || !isFinite(restante)) {
+      console.warn('❌ Restante calculado é NaN para sessão:', session.id, {
+        total,
+        valorPago
+      });
+      return 0;
+    }
+    
+    return restante;
   }, [calculateTotal]);
   const formatCurrency = useCallback((value: number) => {
     return `R$ ${value.toFixed(2).replace('.', ',')}`;
