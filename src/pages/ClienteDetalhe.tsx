@@ -1,6 +1,7 @@
 import { useState, useContext, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AppContext } from '@/contexts/AppContext';
+import { useUnifiedWorkflowData } from '@/hooks/useUnifiedWorkflowData';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,7 +18,8 @@ import { toast } from 'sonner';
 export default function ClienteDetalhe() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { clientes, workflowItems, orcamentos, atualizarCliente } = useContext(AppContext);
+  const { clientes, orcamentos, atualizarCliente } = useContext(AppContext);
+  const { unifiedWorkflowData } = useUnifiedWorkflowData();
   
   // Encontrar o cliente pelo ID
   const cliente = useMemo(() => {
@@ -34,13 +36,23 @@ export default function ClienteDetalhe() {
     observacoes: cliente?.observacoes || ''
   });
 
-  // Buscar histórico do cliente (workflow + orçamentos)
+  // Buscar histórico do cliente (workflow + orçamentos) usando dados unificados
   const clienteHistorico = useMemo(() => {
     if (!cliente) return [];
 
-    // Workflow items relacionados ao cliente
-    const workflowDoCliente = workflowItems
-      .filter(item => item.clienteId === cliente.id || item.nome?.toLowerCase().trim() === cliente.nome?.toLowerCase().trim())
+    console.log('🔍 Buscando histórico para cliente:', {
+      clienteId: cliente.id,
+      clienteNome: cliente.nome,
+      totalUnifiedWorkflowData: unifiedWorkflowData.length
+    });
+
+    // Workflow items relacionados ao cliente (MESMO FILTRO DO useClientMetrics)
+    const workflowDoCliente = unifiedWorkflowData
+      .filter(item => {
+        const matchByClienteId = item.clienteId === cliente.id;
+        const matchByName = item.nome?.toLowerCase().trim() === cliente.nome?.toLowerCase().trim();
+        return matchByClienteId || matchByName;
+      })
       .map(item => ({
         id: item.id,
         tipo: 'workflow' as const,
@@ -82,13 +94,15 @@ export default function ClienteDetalhe() {
       .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
 
     return historicoCombinado;
-  }, [cliente, workflowItems, orcamentos]);
+  }, [cliente, unifiedWorkflowData, orcamentos]);
 
-  // Calcular métricas do cliente
+  // Calcular métricas do cliente usando dados unificados
   const metricas = useMemo(() => {
-    const workflowDoCliente = workflowItems.filter(item => 
-      item.clienteId === cliente?.id || item.nome?.toLowerCase().trim() === cliente?.nome?.toLowerCase().trim()
-    );
+    const workflowDoCliente = unifiedWorkflowData.filter(item => {
+      const matchByClienteId = item.clienteId === cliente?.id;
+      const matchByName = item.nome?.toLowerCase().trim() === cliente?.nome?.toLowerCase().trim();
+      return matchByClienteId || matchByName;
+    });
 
     const totalSessoes = workflowDoCliente.length;
     const totalFaturado = workflowDoCliente.reduce((acc, item) => acc + (item.total || 0), 0);
@@ -101,7 +115,7 @@ export default function ClienteDetalhe() {
       totalPago,
       aReceber
     };
-  }, [cliente, workflowItems]);
+  }, [cliente, unifiedWorkflowData]);
 
   if (!cliente) {
     return (
