@@ -155,6 +155,10 @@ interface AppContextType {
   
   // Motor Financeiro Centralizado (NOVO)
   createTransactionEngine: (input: CreateTransactionInput) => void;
+  
+  // Utility functions
+  refreshWorkflowData: () => void;
+  isPreviewMode: boolean;
 }
 
 export const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -308,13 +312,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Unified workflow data (implementing logic directly to avoid circular dependency)
   const [workflowSessions, setWorkflowSessions] = useState<any[]>([]);
 
-  // Load workflow sessions from localStorage
+  // Detect if running in preview iframe
+  const isPreviewMode = useMemo(() => {
+    try {
+      return window.self !== window.top;
+    } catch {
+      return true; // If we can't access parent, assume iframe
+    }
+  }, []);
+
+  // Manual refresh state
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Load workflow sessions from localStorage with fallback for preview mode
   useEffect(() => {
     const loadWorkflowSessions = () => {
       try {
         const saved = localStorage.getItem('workflow_sessions');
         const sessions = saved ? JSON.parse(saved) : [];
         setWorkflowSessions(sessions);
+        
+        // In preview mode, log data status for debugging
+        if (isPreviewMode && sessions.length === 0) {
+          console.log('⚠️ Preview mode: No workflow_sessions found in localStorage');
+        }
       } catch (error) {
         console.error('❌ Erro ao carregar workflow_sessions:', error);
         setWorkflowSessions([]);
@@ -329,14 +350,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     };
     
-    const intervalId = setInterval(loadWorkflowSessions, 1000);
+    // Reduce polling interval in preview mode to be less aggressive
+    const intervalTime = isPreviewMode ? 3000 : 1000;
+    const intervalId = setInterval(loadWorkflowSessions, intervalTime);
     
     window.addEventListener('storage', handleStorageChange);
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       clearInterval(intervalId);
     };
-  }, []);
+  }, [isPreviewMode, refreshTrigger]);
 
   // Function to parse monetary values
   const parseMonetaryValue = useCallback((value: string | number): number => {
@@ -411,32 +434,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Helper function to filter unified workflow data
   const getFilteredWorkflowItems = useCallback(() => {
-    console.log('🔍 DEBUG filtro - workflowFilters.mes:', workflowFilters.mes);
-    console.log('🔍 DEBUG filtro - unifiedWorkflowData length:', unifiedWorkflowData.length);
-    console.log('🔍 DEBUG filtro - Amostra de datas:', unifiedWorkflowData.slice(0, 3).map(item => ({ data: item.data, nome: item.nome })));
-    
     return unifiedWorkflowData.filter(item => {
       const [itemDay, itemMonth, itemYear] = item.data.split('/');
       const [filterMonth, filterYear] = workflowFilters.mes.split('/');
       
-      console.log('🔍 DEBUG item:', {
-        itemData: item.data,
-        itemMonth,
-        itemYear,
-        filterMonth,
-        filterYear,
-        nome: item.nome
-      });
+      // Normalize month to handle both "8" and "08" formats
+      const normalizedItemMonth = parseInt(itemMonth).toString();
+      const normalizedFilterMonth = parseInt(filterMonth).toString();
       
-      const monthMatches = itemMonth === filterMonth && itemYear === filterYear;
-
+      const monthMatches = normalizedItemMonth === normalizedFilterMonth && itemYear === filterYear;
       const searchMatches = !workflowFilters.busca || 
         item.nome.toLowerCase().includes(workflowFilters.busca.toLowerCase());
 
-      const matches = monthMatches && searchMatches;
-      console.log('🔍 DEBUG matches:', { monthMatches, searchMatches, finalMatch: matches });
-
-      return matches;
+      return monthMatches && searchMatches;
     }).sort((a, b) => {
       const dateA = a.dataOriginal || parseDateFromStorage(a.data);
       const dateB = b.dataOriginal || parseDateFromStorage(b.data);
@@ -1101,23 +1111,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Calculate workflow summary usando dados unificados
   const workflowSummary = useMemo(() => {
-    console.log('🔢 Recalculando summary do workflow (AppContext)...');
-    
     const filteredItems = getFilteredWorkflowItems();
-
-    console.log('📊 Itens filtrados (AppContext):', filteredItems.length);
-    console.log('📊 Amostra de itens:', filteredItems.slice(0, 3).map(i => ({ 
-      id: i.id, 
-      nome: i.nome, 
-      valorPago: i.valorPago, 
-      restante: i.restante 
-    })));
-
     const receita = filteredItems.reduce((sum, item) => sum + item.valorPago, 0);
     const aReceber = filteredItems.reduce((sum, item) => sum + item.restante, 0);
     const previsto = receita + aReceber;
-
-    console.log('📊 Métricas calculadas (AppContext):', { receita, aReceber, previsto });
 
     return { receita, aReceber, previsto };
   }, [getFilteredWorkflowItems]);
@@ -1855,7 +1852,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Utilities
     isFromBudget,
     getBudgetId,
-    canEditFully
+    canEditFully,
+    refreshWorkflowData: () => setRefreshTrigger(prev => prev + 1),
+    isPreviewMode
   };
 
   return (

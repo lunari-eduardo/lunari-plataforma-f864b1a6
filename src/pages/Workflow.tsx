@@ -13,6 +13,7 @@ import { useContext } from 'react';
 import { AppContext } from '@/contexts/AppContext';
 import { parseDateFromStorage } from "@/utils/dateUtils";
 import { FixPricingRulesButton } from '@/components/workflow/FixPricingRulesButton';
+import { WorkflowDataStatus } from '@/components/workflow/WorkflowDataStatus';
 
 
 interface ProdutoWorkflow {
@@ -582,6 +583,10 @@ export default function Workflow() {
           }} />
           </div>
         </div>
+      </div>
+      
+      <div className="p-4 border-b bg-background">
+        <WorkflowDataStatus />
       </div>
       
       <div className="flex-1 overflow-hidden">
