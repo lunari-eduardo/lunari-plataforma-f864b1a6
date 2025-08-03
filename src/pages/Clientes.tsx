@@ -1,4 +1,5 @@
 import { useState, useContext, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { AppContext } from '@/contexts/AppContext';
 import { Cliente } from '@/types/orcamentos';
 import { Button } from "@/components/ui/button";
@@ -253,7 +254,14 @@ export default function Clientes() {
               <TableBody>
                 {clientesFiltradosEOrdenados.map(cliente => (
                   <TableRow key={cliente.id} className="hover:bg-stone-50">
-                    <TableCell className="font-medium">{cliente.nome}</TableCell>
+                    <TableCell className="font-medium">
+                      <Link 
+                        to={`/clientes/${cliente.id}`}
+                        className="text-primary hover:text-primary/80 underline-offset-4 hover:underline"
+                      >
+                        {cliente.nome}
+                      </Link>
+                    </TableCell>
                     <TableCell className="text-sm text-muted-foreground">{cliente.email}</TableCell>
                     <TableCell className="text-sm">{cliente.telefone}</TableCell>
                     <TableCell className="text-center font-medium">
@@ -304,7 +312,14 @@ export default function Clientes() {
             <Card key={cliente.id} className="overflow-hidden bg-neumorphic-light bg-lunar-surface">
               <div className="p-4 flex items-center justify-between border-b bg-neumorphic-light bg-lunar-border">
                 <div>
-                  <h3 className="font-medium">{cliente.nome}</h3>
+                  <h3 className="font-medium">
+                    <Link 
+                      to={`/clientes/${cliente.id}`}
+                      className="text-primary hover:text-primary/80 underline-offset-4 hover:underline"
+                    >
+                      {cliente.nome}
+                    </Link>
+                  </h3>
                   <div className="flex gap-4 mt-1">
                     <span className="text-xs text-muted-foreground">
                       {cliente.sessoes} sessões

@@ -13,6 +13,7 @@ import Orcamentos from "./pages/Orcamentos";
 import NovaFinancas from "./pages/NovaFinancas";
 import Precificacao from "./pages/Precificacao";
 import Configuracoes from "./pages/Configuracoes";
+import ClienteDetalhe from "./pages/ClienteDetalhe";
 import Workflow from "./pages/Workflow";
 import NotFound from "./pages/NotFound";
 import { AppProvider } from "./contexts/AppContext";
@@ -53,6 +54,7 @@ function App() {
                 <Route path="/" element={<Index />} />
                 <Route path="/agenda" element={<Agenda />} />
                 <Route path="/clientes" element={<Clientes />} />
+                <Route path="/clientes/:id" element={<ClienteDetalhe />} />
                 <Route path="/orcamentos" element={<Orcamentos />} />
                 <Route path="/financas" element={<NovaFinancas />} />
                 <Route path="/precificacao" element={<Precificacao />} />
