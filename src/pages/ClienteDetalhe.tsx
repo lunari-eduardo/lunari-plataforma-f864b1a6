@@ -14,7 +14,7 @@ import { ArrowLeft, User, History, Save, Edit3, Upload, FileText, TrendingUp, Ca
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { FileUploadZone } from '@/components/shared/FileUploadZone';
-import { ClientAnalytics } from '@/components/crm/ClientAnalytics';
+import { ClientBasicInfo } from '@/components/crm/ClientBasicInfo';
 import { formatCurrency } from '@/utils/financialUtils';
 import { formatDateForDisplay } from '@/utils/dateUtils';
 import { toast } from 'sonner';
@@ -454,19 +454,14 @@ export default function ClienteDetalhe() {
             </Card>
           </TabsContent>
 
-          {/* Aba 4: Analytics */}
+          {/* Aba 4: Informações Básicas */}
           <TabsContent value="analytics" className="space-y-6">
-            <ClientAnalytics metrics={{
-            id: cliente?.id || '',
-            nome: cliente?.nome || '',
-            email: cliente?.email || '',
-            telefone: cliente?.telefone || '',
-            sessoes: metricas.totalSessoes,
-            totalFaturado: metricas.totalFaturado,
-            totalPago: metricas.totalPago,
-            aReceber: metricas.aReceber,
-            ultimaSessao: clienteHistorico.length > 0 ? new Date(clienteHistorico[0].data) : null
-          }} files={getFilesByClient(cliente?.id || '')} historico={clienteHistorico} />
+            <ClientBasicInfo client={{
+              id: cliente?.id || '',
+              nome: cliente?.nome || '',
+              email: cliente?.email || '',
+              telefone: cliente?.telefone || ''
+            }} />
           </TabsContent>
         </Tabs>
       </div>
