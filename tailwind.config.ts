@@ -50,6 +50,20 @@ export default {
 					error: '#E17055',        // Erros suaves
 					success: '#50C878',      // Verde esmeralda
 				},
+
+				// Paleta elegante para gráficos
+				chart: {
+					primary: '#CBA977',      // Dourado principal
+					secondary: '#8B9CAE',    // Azul acinzentado
+					tertiary: '#A67C6B',     // Marrom suave
+					quaternary: '#9FB5A8',   // Verde acinzentado
+					quinary: '#B0A8C1',      // Roxo suave
+					senary: '#C4A084',       // Bege rosado
+					revenue: '#70B59A',      // Verde para receitas
+					expense: '#E89B8A',      // Coral para despesas
+					profit: '#6B8DB5',       // Azul para lucro
+					neutral: '#9CA3AF',      // Cinza neutro
+				},
 				
 				border: '#E1DFDA',
 				input: '#F3F1ED',

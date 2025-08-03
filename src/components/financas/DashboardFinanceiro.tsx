@@ -4,9 +4,16 @@ import { formatCurrency } from '@/utils/financialUtils';
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { useDashboardFinanceiro } from '@/hooks/useDashboardFinanceiro';
 
-// Cores do design system
-const COLORS = ['hsl(var(--primary))', 'hsl(var(--muted))'];
-const EXPENSE_COLORS = ['hsl(var(--primary))', 'hsl(var(--secondary))', 'hsl(var(--accent))'];
+// Paleta de cores elegantes para gráficos
+const COLORS = ['hsl(var(--chart-primary))', 'hsl(var(--chart-neutral))'];
+const EXPENSE_COLORS = [
+  'hsl(var(--chart-primary))', 
+  'hsl(var(--chart-secondary))', 
+  'hsl(var(--chart-tertiary))', 
+  'hsl(var(--chart-quaternary))', 
+  'hsl(var(--chart-quinary))', 
+  'hsl(var(--chart-senary))'
+];
 export default function DashboardFinanceiro() {
   const {
     anoSelecionado,
@@ -190,8 +197,20 @@ export default function DashboardFinanceiro() {
           <CardContent>
             <ResponsiveContainer width="100%" height={200}>
               <PieChart>
-                <Pie data={dadosGraficoReceita} cx="50%" cy="50%" innerRadius={60} outerRadius={80} startAngle={90} endAngle={450} dataKey="value">
-                  {dadosGraficoReceita.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
+                <Pie 
+                  data={dadosGraficoReceita} 
+                  cx="50%" 
+                  cy="50%" 
+                  innerRadius={60} 
+                  outerRadius={80} 
+                  startAngle={90} 
+                  endAngle={450} 
+                  dataKey="value"
+                  strokeWidth={2}
+                  stroke="#FAF8F5"
+                >
+                  <Cell fill="hsl(var(--chart-revenue))" />
+                  <Cell fill="hsl(var(--chart-neutral))" opacity={0.3} />
                 </Pie>
                 <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="fill-foreground">
                   <tspan x="50%" dy="-0.5em" className="text-lg font-bold">{formatCurrency(metasData.receitaAtual)}</tspan>
@@ -210,8 +229,20 @@ export default function DashboardFinanceiro() {
           <CardContent>
             <ResponsiveContainer width="100%" height={200}>
               <PieChart>
-                <Pie data={dadosGraficoLucro} cx="50%" cy="50%" innerRadius={60} outerRadius={80} startAngle={90} endAngle={450} dataKey="value">
-                  {dadosGraficoLucro.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
+                <Pie 
+                  data={dadosGraficoLucro} 
+                  cx="50%" 
+                  cy="50%" 
+                  innerRadius={60} 
+                  outerRadius={80} 
+                  startAngle={90} 
+                  endAngle={450} 
+                  dataKey="value"
+                  strokeWidth={2}
+                  stroke="#FAF8F5"
+                >
+                  <Cell fill="hsl(var(--chart-profit))" />
+                  <Cell fill="hsl(var(--chart-neutral))" opacity={0.3} />
                 </Pie>
                 <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="fill-foreground">
                   <tspan x="50%" dy="-0.5em" className="text-lg font-bold">{formatCurrency(metasData.lucroAtual)}</tspan>
@@ -229,8 +260,20 @@ export default function DashboardFinanceiro() {
           <CardContent>
             <ResponsiveContainer width="100%" height={200}>
               <PieChart>
-                <Pie data={dadosGraficoLucratividade} cx="50%" cy="50%" innerRadius={60} outerRadius={80} startAngle={90} endAngle={450} dataKey="value">
-                  {dadosGraficoLucratividade.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
+                <Pie 
+                  data={dadosGraficoLucratividade} 
+                  cx="50%" 
+                  cy="50%" 
+                  innerRadius={60} 
+                  outerRadius={80} 
+                  startAngle={90} 
+                  endAngle={450} 
+                  dataKey="value"
+                  strokeWidth={2}
+                  stroke="#FAF8F5"
+                >
+                  <Cell fill="hsl(var(--chart-primary))" />
+                  <Cell fill="hsl(var(--chart-neutral))" opacity={0.3} />
                 </Pie>
                 <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="fill-foreground">
                   <tspan x="50%" className="text-2xl font-bold">{lucratividade.toFixed(1)}%</tspan>
@@ -250,19 +293,48 @@ export default function DashboardFinanceiro() {
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={dadosMensais}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="mes" />
-              <YAxis />
-              <Tooltip formatter={(value: number) => formatCurrency(value)} labelStyle={{
-              color: 'hsl(var(--foreground))'
-            }} contentStyle={{
-              backgroundColor: 'hsl(var(--background))',
-              border: '1px solid hsl(var(--border))',
-              borderRadius: '6px'
-            }} />
-              <Legend />
-              <Bar dataKey="lucro" fill="hsl(var(--primary))" name="Lucro" />
-              <Bar dataKey="receita" fill="hsl(var(--muted))" name="Receita" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#E1DFDA" opacity={0.6} />
+              <XAxis 
+                dataKey="mes" 
+                tick={{ fontSize: 11, fill: '#7C7C7C', fontWeight: 500 }}
+                tickLine={{ stroke: '#E1DFDA' }}
+                axisLine={{ stroke: '#E1DFDA' }}
+              />
+              <YAxis 
+                tick={{ fontSize: 11, fill: '#7C7C7C', fontWeight: 500 }}
+                tickLine={{ stroke: '#E1DFDA' }}
+                axisLine={{ stroke: '#E1DFDA' }}
+                tickFormatter={(value) => `R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
+              />
+              <Tooltip 
+                formatter={(value: number, name: string) => [
+                  formatCurrency(value), 
+                  name === 'lucro' ? 'Lucro' : 'Receita'
+                ]} 
+                labelStyle={{ color: '#3A3A3A', fontSize: '12px', fontWeight: 500 }}
+                contentStyle={{
+                  backgroundColor: '#FAF8F5',
+                  border: '1px solid #E1DFDA',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)'
+                }} 
+              />
+              <Legend wrapperStyle={{ fontSize: '12px', color: '#7C7C7C', fontWeight: 500 }} />
+              <Bar 
+                dataKey="receita" 
+                fill="hsl(var(--chart-revenue))" 
+                name="Receita"
+                radius={[4, 4, 0, 0]}
+                opacity={0.9}
+              />
+              <Bar 
+                dataKey="lucro" 
+                fill="hsl(var(--chart-profit))" 
+                name="Lucro"
+                radius={[4, 4, 0, 0]}
+                opacity={0.9}
+              />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
@@ -279,21 +351,48 @@ export default function DashboardFinanceiro() {
         <CardContent>
           <ResponsiveContainer width="100%" height={400}>
             <PieChart>
-              <Pie data={composicaoDespesas} cx="50%" cy="50%" innerRadius={80} outerRadius={150} dataKey="valor">
-                {composicaoDespesas.map((entry, index) => <Cell key={`cell-${index}`} fill={EXPENSE_COLORS[index % EXPENSE_COLORS.length]} />)}
+              <Pie 
+                data={composicaoDespesas} 
+                cx="50%" 
+                cy="50%" 
+                innerRadius={80} 
+                outerRadius={150} 
+                dataKey="valor"
+                strokeWidth={2}
+                stroke="#FAF8F5"
+              >
+                {composicaoDespesas.map((entry, index) => (
+                  <Cell 
+                    key={`cell-${index}`} 
+                    fill={EXPENSE_COLORS[index % EXPENSE_COLORS.length]} 
+                    opacity={0.9}
+                  />
+                ))}
               </Pie>
-              <Tooltip formatter={(value: number, name: string, props: any) => [formatCurrency(value), `${props.payload.grupo} (${props.payload.percentual.toFixed(1)}%)`]} labelStyle={{
-              color: 'hsl(var(--foreground))'
-            }} contentStyle={{
-              backgroundColor: 'hsl(var(--background))',
-              border: '1px solid hsl(var(--border))',
-              borderRadius: '6px'
-            }} />
-              <Legend verticalAlign="bottom" height={36} formatter={(value, entry) => <span style={{
-              color: entry.color
-            }}>
+              <Tooltip 
+                formatter={(value: number, name: string, props: any) => [
+                  formatCurrency(value), 
+                  `${props.payload.grupo} (${props.payload.percentual.toFixed(1)}%)`
+                ]} 
+                labelStyle={{ color: '#3A3A3A', fontSize: '12px', fontWeight: 500 }}
+                contentStyle={{
+                  backgroundColor: '#FAF8F5',
+                  border: '1px solid #E1DFDA',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)'
+                }} 
+              />
+              <Legend 
+                verticalAlign="bottom" 
+                height={36} 
+                wrapperStyle={{ fontSize: '12px', fontWeight: 500 }}
+                formatter={(value, entry) => (
+                  <span style={{ color: entry.color }}>
                     {value} ({composicaoDespesas.find(item => item.grupo === value)?.percentual.toFixed(1)}%)
-                  </span>} />
+                  </span>
+                )} 
+              />
             </PieChart>
           </ResponsiveContainer>
         </CardContent>
@@ -319,17 +418,38 @@ export default function DashboardFinanceiro() {
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={evolucaoCategoria[categoriaSelecionada] || []}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="mes" />
-              <YAxis />
-              <Tooltip formatter={(value: number) => formatCurrency(value)} labelStyle={{
-              color: 'hsl(var(--foreground))'
-            }} contentStyle={{
-              backgroundColor: 'hsl(var(--background))',
-              border: '1px solid hsl(var(--border))',
-              borderRadius: '6px'
-            }} />
-              <Area type="monotone" dataKey="valor" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.2} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#E1DFDA" opacity={0.6} />
+              <XAxis 
+                dataKey="mes" 
+                tick={{ fontSize: 11, fill: '#7C7C7C', fontWeight: 500 }}
+                tickLine={{ stroke: '#E1DFDA' }}
+                axisLine={{ stroke: '#E1DFDA' }}
+              />
+              <YAxis 
+                tick={{ fontSize: 11, fill: '#7C7C7C', fontWeight: 500 }}
+                tickLine={{ stroke: '#E1DFDA' }}
+                axisLine={{ stroke: '#E1DFDA' }}
+                tickFormatter={(value) => `R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
+              />
+              <Tooltip 
+                formatter={(value: number) => formatCurrency(value)} 
+                labelStyle={{ color: '#3A3A3A', fontSize: '12px', fontWeight: 500 }}
+                contentStyle={{
+                  backgroundColor: '#FAF8F5',
+                  border: '1px solid #E1DFDA',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)'
+                }} 
+              />
+              <Area 
+                type="monotone" 
+                dataKey="valor" 
+                stroke="hsl(var(--chart-secondary))" 
+                fill="hsl(var(--chart-secondary))" 
+                fillOpacity={0.3}
+                strokeWidth={2}
+              />
             </AreaChart>
           </ResponsiveContainer>
         </CardContent>
