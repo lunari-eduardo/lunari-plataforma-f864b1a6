@@ -183,9 +183,35 @@ export default function Clientes() {
                 </div>
 
                 {/* Email */}
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2 mb-3 text-sm text-muted-foreground">
                   <Mail className="h-3 w-3" />
                   <span className="truncate">{cliente.email || 'Sem email'}</span>
+                </div>
+
+                {/* Métricas Financeiras */}
+                <div className="border-t pt-3 space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Sessões:</span>
+                    <span className="font-medium">{cliente.sessoes}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Total:</span>
+                    <span className="font-medium text-primary">
+                      R$ {cliente.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Pago:</span>
+                    <span className="font-medium text-green-600">
+                      R$ {cliente.pago.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">A Receber:</span>
+                    <span className="font-medium text-orange-600">
+                      R$ {cliente.restante.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
