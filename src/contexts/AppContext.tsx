@@ -1,6 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
-import { useUnifiedWorkflowData } from '@/hooks/useUnifiedWorkflowData';
 import { parseDateFromStorage, formatDateForStorage, getCurrentDateString } from '@/utils/dateUtils';
 import { formatCurrency } from '@/utils/financialUtils';
 import { toast } from '@/hooks/use-toast';
@@ -185,8 +184,6 @@ const deserializeAppointments = (serializedAppointments: any[]): Appointment[] =
 };
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Hook unificado para dados do workflow
-  const { unifiedWorkflowData, parseMonetaryValue } = useUnifiedWorkflowData();
   // Orçamentos State com migração automática
   const [orcamentos, setOrcamentos] = useState<Orcamento[]>(() => {
     const orcamentosRaw = storage.load(STORAGE_KEYS.BUDGETS, []);
@@ -307,6 +304,110 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [cartoes, setCartoes] = useState(() => {
     return FinancialEngine.loadCreditCards();
   });
+
+  // Unified workflow data (implementing logic directly to avoid circular dependency)
+  const [workflowSessions, setWorkflowSessions] = useState<any[]>([]);
+
+  // Load workflow sessions from localStorage
+  useEffect(() => {
+    const loadWorkflowSessions = () => {
+      try {
+        const saved = localStorage.getItem('workflow_sessions');
+        const sessions = saved ? JSON.parse(saved) : [];
+        setWorkflowSessions(sessions);
+      } catch (error) {
+        console.error('❌ Erro ao carregar workflow_sessions:', error);
+        setWorkflowSessions([]);
+      }
+    };
+
+    loadWorkflowSessions();
+    
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'workflow_sessions') {
+        loadWorkflowSessions();
+      }
+    };
+    
+    const intervalId = setInterval(loadWorkflowSessions, 1000);
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(intervalId);
+    };
+  }, []);
+
+  // Function to parse monetary values
+  const parseMonetaryValue = useCallback((value: string | number): number => {
+    if (typeof value === 'number') return value;
+    if (!value || typeof value !== 'string') return 0;
+    
+    const cleanValue = value
+      .replace(/R\$\s*/g, '')
+      .replace(/\./g, '')
+      .replace(',', '.')
+      .trim();
+    
+    const parsed = parseFloat(cleanValue);
+    return isNaN(parsed) ? 0 : parsed;
+  }, []);
+
+  // Unified workflow data combining workflowItems and workflowSessions
+  const unifiedWorkflowData = useMemo(() => {
+    const allItems = new Map<string, WorkflowItem>();
+
+    // Add items from workflowItems (AppContext)
+    workflowItems.forEach(item => {
+      allItems.set(item.id, item);
+    });
+
+    // Add/overwrite with data from workflow_sessions (more recent)
+    workflowSessions.forEach(session => {
+      const valorPacote = parseMonetaryValue(session.valorPacote || session.valor);
+      const valorPago = parseMonetaryValue(session.valorPago);
+      const total = parseMonetaryValue(session.total || session.valor);
+      
+      const normalizedItem: WorkflowItem = {
+        id: session.id,
+        data: session.data,
+        hora: session.hora || '',
+        nome: session.nome || '',
+        whatsapp: session.whatsapp || '',
+        email: session.email || '',
+        descricao: session.descricao || '',
+        status: session.status || '',
+        categoria: session.categoria || '',
+        pacote: session.pacote || '',
+        valorPacote: valorPacote,
+        desconto: session.desconto || 0,
+        valorFotoExtra: parseMonetaryValue(session.valorFotoExtra),
+        qtdFotoExtra: session.qtdFotosExtra || 0,
+        valorTotalFotoExtra: parseMonetaryValue(session.valorTotalFotoExtra),
+        produto: session.produto || '',
+        qtdProduto: session.qtdProduto || 0,
+        valorTotalProduto: parseMonetaryValue(session.valorTotalProduto),
+        produtosList: (session.produtosList || []).map((p: any) => ({
+          nome: p.nome,
+          quantidade: p.quantidade,
+          valorUnitario: p.valorUnitario,
+          tipo: (p.tipo === 'incluso' || p.tipo === 'manual') ? p.tipo : 'manual' as const
+        })),
+        valorAdicional: parseMonetaryValue(session.valorAdicional),
+        detalhes: session.detalhes || '',
+        total: total,
+        valorPago: valorPago,
+        restante: total - valorPago,
+        pagamentos: session.pagamentos || [],
+        fonte: session.fonte || 'agenda',
+        dataOriginal: session.dataOriginal ? new Date(session.dataOriginal) : parseDateFromStorage(session.data)
+      };
+      
+      allItems.set(session.id, normalizedItem);
+    });
+
+    return Array.from(allItems.values());
+  }, [workflowItems, workflowSessions, parseMonetaryValue]);
 
   // Utility functions
   const isFromBudget = useCallback((appointment: Appointment) => {
