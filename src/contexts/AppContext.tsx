@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
 import { parseDateFromStorage, formatDateForStorage, getCurrentDateString } from '@/utils/dateUtils';
 import { formatCurrency } from '@/utils/financialUtils';
@@ -155,10 +155,6 @@ interface AppContextType {
   
   // Motor Financeiro Centralizado (NOVO)
   createTransactionEngine: (input: CreateTransactionInput) => void;
-  
-  // Utility functions
-  refreshWorkflowData: () => void;
-  isPreviewMode: boolean;
 }
 
 export const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -308,158 +304,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [cartoes, setCartoes] = useState(() => {
     return FinancialEngine.loadCreditCards();
   });
-
-  // Unified workflow data (implementing logic directly to avoid circular dependency)
-  const [workflowSessions, setWorkflowSessions] = useState<any[]>([]);
-
-  // Detect if running in preview iframe
-  const isPreviewMode = useMemo(() => {
-    try {
-      return window.self !== window.top;
-    } catch {
-      return true; // If we can't access parent, assume iframe
-    }
-  }, []);
-
-  // Manual refresh state
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
-
-  // Load workflow sessions from localStorage with fallback for preview mode
-  useEffect(() => {
-    const loadWorkflowSessions = () => {
-      try {
-        const saved = localStorage.getItem('workflow_sessions');
-        const sessions = saved ? JSON.parse(saved) : [];
-        setWorkflowSessions(sessions);
-        
-        // In preview mode, log data status for debugging
-        if (isPreviewMode && sessions.length === 0) {
-          console.log('⚠️ Preview mode: No workflow_sessions found in localStorage');
-        }
-      } catch (error) {
-        console.error('❌ Erro ao carregar workflow_sessions:', error);
-        setWorkflowSessions([]);
-      }
-    };
-
-    loadWorkflowSessions();
-    
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'workflow_sessions') {
-        loadWorkflowSessions();
-      }
-    };
-    
-    // Reduce polling interval in preview mode to be less aggressive
-    const intervalTime = isPreviewMode ? 3000 : 1000;
-    const intervalId = setInterval(loadWorkflowSessions, intervalTime);
-    
-    window.addEventListener('storage', handleStorageChange);
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      clearInterval(intervalId);
-    };
-  }, [isPreviewMode, refreshTrigger]);
-
-  // Function to parse monetary values
-  const parseMonetaryValue = useCallback((value: string | number): number => {
-    if (typeof value === 'number') return value;
-    if (!value || typeof value !== 'string') return 0;
-    
-    const cleanValue = value
-      .replace(/R\$\s*/g, '')
-      .replace(/\./g, '')
-      .replace(',', '.')
-      .trim();
-    
-    const parsed = parseFloat(cleanValue);
-    return isNaN(parsed) ? 0 : parsed;
-  }, []);
-
-  // Unified workflow data combining workflowItems and workflowSessions
-  const unifiedWorkflowData = useMemo(() => {
-    const allItems = new Map<string, WorkflowItem>();
-
-    // Add items from workflowItems (AppContext)
-    workflowItems.forEach(item => {
-      allItems.set(item.id, item);
-    });
-
-    // Add/overwrite with data from workflow_sessions (more recent)
-    workflowSessions.forEach(session => {
-      const valorPacote = parseMonetaryValue(session.valorPacote || session.valor);
-      const valorPago = parseMonetaryValue(session.valorPago);
-      const total = parseMonetaryValue(session.total || session.valor);
-      
-      const normalizedItem: WorkflowItem = {
-        id: session.id,
-        data: session.data,
-        hora: session.hora || '',
-        nome: session.nome || '',
-        whatsapp: session.whatsapp || '',
-        email: session.email || '',
-        descricao: session.descricao || '',
-        status: session.status || '',
-        categoria: session.categoria || '',
-        pacote: session.pacote || '',
-        valorPacote: valorPacote,
-        desconto: session.desconto || 0,
-        valorFotoExtra: parseMonetaryValue(session.valorFotoExtra),
-        qtdFotoExtra: session.qtdFotosExtra || 0,
-        valorTotalFotoExtra: parseMonetaryValue(session.valorTotalFotoExtra),
-        produto: session.produto || '',
-        qtdProduto: session.qtdProduto || 0,
-        valorTotalProduto: parseMonetaryValue(session.valorTotalProduto),
-        produtosList: (session.produtosList || []).map((p: any) => ({
-          nome: p.nome,
-          quantidade: p.quantidade,
-          valorUnitario: p.valorUnitario,
-          tipo: (p.tipo === 'incluso' || p.tipo === 'manual') ? p.tipo : 'manual' as const
-        })),
-        valorAdicional: parseMonetaryValue(session.valorAdicional),
-        detalhes: session.detalhes || '',
-        total: total,
-        valorPago: valorPago,
-        restante: total - valorPago,
-        pagamentos: session.pagamentos || [],
-        fonte: session.fonte || 'agenda',
-        dataOriginal: session.dataOriginal ? new Date(session.dataOriginal) : parseDateFromStorage(session.data)
-      };
-      
-      allItems.set(session.id, normalizedItem);
-    });
-
-    return Array.from(allItems.values());
-  }, [workflowItems, workflowSessions, parseMonetaryValue]);
-
-  // Helper function to filter unified workflow data
-  const getFilteredWorkflowItems = useCallback(() => {
-    return unifiedWorkflowData.filter(item => {
-      const [itemDay, itemMonth, itemYear] = item.data.split('/');
-      const [filterMonth, filterYear] = workflowFilters.mes.split('/');
-      
-      // Normalize month to handle both "8" and "08" formats
-      const normalizedItemMonth = parseInt(itemMonth).toString();
-      const normalizedFilterMonth = parseInt(filterMonth).toString();
-      
-      const monthMatches = normalizedItemMonth === normalizedFilterMonth && itemYear === filterYear;
-      const searchMatches = !workflowFilters.busca || 
-        item.nome.toLowerCase().includes(workflowFilters.busca.toLowerCase());
-
-      return monthMatches && searchMatches;
-    }).sort((a, b) => {
-      const dateA = a.dataOriginal || parseDateFromStorage(a.data);
-      const dateB = b.dataOriginal || parseDateFromStorage(b.data);
-      
-      if (dateA.getTime() !== dateB.getTime()) {
-        return dateA.getTime() - dateB.getTime();
-      }
-      
-      const timeA = a.hora.split(':').map(Number);
-      const timeB = b.hora.split(':').map(Number);
-      return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
-    });
-  }, [unifiedWorkflowData, workflowFilters]);
 
   // Utility functions
   const isFromBudget = useCallback((appointment: Appointment) => {
@@ -1109,15 +953,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [orcamentos, workflowItems, pacotes, produtos]);
 
-  // Calculate workflow summary usando dados unificados
-  const workflowSummary = useMemo(() => {
-    const filteredItems = getFilteredWorkflowItems();
+  // Calculate workflow summary
+  const workflowSummary = React.useMemo(() => {
+    const filteredItems = workflowItems.filter(item => {
+      const [itemDay, itemMonth, itemYear] = item.data.split('/');
+      const [filterMonth, filterYear] = workflowFilters.mes.split('/');
+      const monthMatches = itemMonth === filterMonth && itemYear === filterYear;
+
+      const searchMatches = !workflowFilters.busca || 
+        item.nome.toLowerCase().includes(workflowFilters.busca.toLowerCase());
+
+      return monthMatches && searchMatches;
+    });
+
     const receita = filteredItems.reduce((sum, item) => sum + item.valorPago, 0);
     const aReceber = filteredItems.reduce((sum, item) => sum + item.restante, 0);
-    const previsto = receita + aReceber;
+    const previsto = filteredItems.reduce((sum, item) => sum + item.total, 0);
 
     return { receita, aReceber, previsto };
-  }, [getFilteredWorkflowItems]);
+  }, [workflowItems, workflowFilters]);
 
   // Action functions
   const adicionarOrcamento = (orcamento: Omit<Orcamento, 'id' | 'criadoEm'>) => {
@@ -1814,7 +1668,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     pacotes,
     metricas,
     appointments,
-    workflowItems: getFilteredWorkflowItems(),
+    workflowItems: workflowItems.filter(item => {
+      const [itemDay, itemMonth, itemYear] = item.data.split('/');
+      const [filterMonth, filterYear] = workflowFilters.mes.split('/');
+      const monthMatches = itemMonth === filterMonth && itemYear === filterYear;
+
+      const searchMatches = !workflowFilters.busca || 
+        item.nome.toLowerCase().includes(workflowFilters.busca.toLowerCase());
+
+      return monthMatches && searchMatches;
+    }).sort((a, b) => {
+      const dateA = a.dataOriginal || parseDateFromStorage(a.data);
+      const dateB = b.dataOriginal || parseDateFromStorage(b.data);
+      
+      if (dateA.getTime() !== dateB.getTime()) {
+        return dateA.getTime() - dateB.getTime();
+      }
+      
+      const timeA = a.hora.split(':').map(Number);
+      const timeB = b.hora.split(':').map(Number);
+      return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
+    }),
     workflowSummary,
     workflowFilters,
     visibleColumns,
@@ -1852,9 +1726,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Utilities
     isFromBudget,
     getBudgetId,
-    canEditFully,
-    refreshWorkflowData: () => setRefreshTrigger(prev => prev + 1),
-    isPreviewMode
+    canEditFully
   };
 
   return (

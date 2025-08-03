@@ -13,7 +13,6 @@ import { useContext } from 'react';
 import { AppContext } from '@/contexts/AppContext';
 import { parseDateFromStorage } from "@/utils/dateUtils";
 import { FixPricingRulesButton } from '@/components/workflow/FixPricingRulesButton';
-import { WorkflowDataStatus } from '@/components/workflow/WorkflowDataStatus';
 
 
 interface ProdutoWorkflow {
@@ -94,9 +93,7 @@ export default function Workflow() {
   } = useWorkflowStatus();
   const {
     clientes,
-    addAppointment,
-    workflowSummary,
-    workflowItems
+    addAppointment
   } = useContext(AppContext);
   const {
     pacotes,
@@ -329,35 +326,70 @@ export default function Workflow() {
     setShowMetrics(!showMetrics);
   };
 
-  // Usar métricas do AppContext para garantir consistência
-  const financials = {
-    revenue: workflowSummary.receita,
-    forecasted: workflowSummary.previsto,
-    outstanding: workflowSummary.aReceber,
-    sessionCount: filteredSessions.length
-  };
+  // Calcular métricas em tempo real do mês selecionado
+  const financials = useMemo(() => {
+    const currentMonthSessions = filteredSessions;
+    const totalRevenue = currentMonthSessions.reduce((sum, session) => {
+      const paidStr = typeof session.valorPago === 'string' ? session.valorPago : String(session.valorPago || '0');
+      const paid = parseFloat(paidStr.replace(/[^\d,]/g, '').replace(',', '.') || '0');
+      return sum + paid;
+    }, 0);
+    const totalForecasted = currentMonthSessions.reduce((sum, session) => {
+      const totalStr = typeof session.total === 'string' ? session.total : String(session.total || '0');
+      const total = parseFloat(totalStr.replace(/[^\d,]/g, '').replace(',', '.') || '0');
+      return sum + total;
+    }, 0);
+    const totalOutstanding = currentMonthSessions.reduce((sum, session) => {
+      const remainingStr = typeof session.restante === 'string' ? session.restante : String(session.restante || '0');
+      const remaining = parseFloat(remainingStr.replace(/[^\d,]/g, '').replace(',', '.') || '0');
+      return sum + remaining;
+    }, 0);
+    return {
+      revenue: totalRevenue,
+      forecasted: totalForecasted,
+      outstanding: totalOutstanding,
+      sessionCount: currentMonthSessions.length
+    };
+  }, [filteredSessions]);
 
-  // Calcular métricas do mês anterior usando dados unificados
+  // Métricas do mês anterior para comparação
   const prevMonthFinancials = useMemo(() => {
     const prevMonth = currentMonth.month === 1 ? 12 : currentMonth.month - 1;
     const prevYear = currentMonth.month === 1 ? currentMonth.year - 1 : currentMonth.year;
-    
-    const prevMonthItems = workflowItems.filter(item => {
-      const [itemDay, itemMonth, itemYear] = item.data.split('/');
-      return parseInt(itemMonth) === prevMonth && parseInt(itemYear) === prevYear;
+    const allSavedSessions = (() => {
+      try {
+        const saved = window.localStorage.getItem('workflow_sessions');
+        return saved ? JSON.parse(saved) : [];
+      } catch (error) {
+        return [];
+      }
+    })();
+    const prevMonthSessions = allSavedSessions.filter((session: SessionData) => {
+      const sessionDate = parseDateFromStorage(session.data);
+      return sessionDate.getUTCMonth() + 1 === prevMonth && sessionDate.getUTCFullYear() === prevYear;
     });
-
-    const prevRevenue = prevMonthItems.reduce((sum, item) => sum + item.valorPago, 0);
-    const prevOutstanding = prevMonthItems.reduce((sum, item) => sum + item.restante, 0);
-    const prevForecasted = prevRevenue + prevOutstanding;
-    
+    const prevRevenue = prevMonthSessions.reduce((sum: number, session: SessionData) => {
+      const paidStr = typeof session.valorPago === 'string' ? session.valorPago : String(session.valorPago || '0');
+      const paid = parseFloat(paidStr.replace(/[^\d,]/g, '').replace(',', '.') || '0');
+      return sum + paid;
+    }, 0);
+    const prevForecasted = prevMonthSessions.reduce((sum: number, session: SessionData) => {
+      const totalStr = typeof session.total === 'string' ? session.total : String(session.total || '0');
+      const total = parseFloat(totalStr.replace(/[^\d,]/g, '').replace(',', '.') || '0');
+      return sum + total;
+    }, 0);
+    const prevOutstanding = prevMonthSessions.reduce((sum: number, session: SessionData) => {
+      const remainingStr = typeof session.restante === 'string' ? session.restante : String(session.restante || '0');
+      const remaining = parseFloat(remainingStr.replace(/[^\d,]/g, '').replace(',', '.') || '0');
+      return sum + remaining;
+    }, 0);
     return {
       revenue: prevRevenue,
       forecasted: prevForecasted,
       outstanding: prevOutstanding,
-      sessionCount: prevMonthItems.length
+      sessionCount: prevMonthSessions.length
     };
-  }, [workflowItems, currentMonth]);
+  }, [currentMonth]);
   const formatCurrency = (val: number) => `R$ ${val.toLocaleString('pt-BR', {
     minimumFractionDigits: 2
   })}`;
@@ -583,10 +615,6 @@ export default function Workflow() {
           }} />
           </div>
         </div>
-      </div>
-      
-      <div className="p-4 border-b bg-background">
-        <WorkflowDataStatus />
       </div>
       
       <div className="flex-1 overflow-hidden">
