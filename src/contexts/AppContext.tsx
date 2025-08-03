@@ -409,6 +409,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return Array.from(allItems.values());
   }, [workflowItems, workflowSessions, parseMonetaryValue]);
 
+  // Helper function to filter unified workflow data
+  const getFilteredWorkflowItems = useCallback(() => {
+    return unifiedWorkflowData.filter(item => {
+      const [itemDay, itemMonth, itemYear] = item.data.split('/');
+      const [filterMonth, filterYear] = workflowFilters.mes.split('/');
+      const monthMatches = itemMonth === filterMonth && itemYear === filterYear;
+
+      const searchMatches = !workflowFilters.busca || 
+        item.nome.toLowerCase().includes(workflowFilters.busca.toLowerCase());
+
+      return monthMatches && searchMatches;
+    }).sort((a, b) => {
+      const dateA = a.dataOriginal || parseDateFromStorage(a.data);
+      const dateB = b.dataOriginal || parseDateFromStorage(b.data);
+      
+      if (dateA.getTime() !== dateB.getTime()) {
+        return dateA.getTime() - dateB.getTime();
+      }
+      
+      const timeA = a.hora.split(':').map(Number);
+      const timeB = b.hora.split(':').map(Number);
+      return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
+    });
+  }, [unifiedWorkflowData, workflowFilters]);
+
   // Utility functions
   const isFromBudget = useCallback((appointment: Appointment) => {
     return appointment.id?.startsWith('orcamento-') || (appointment as any).origem === 'orcamento';
@@ -1058,19 +1083,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [orcamentos, workflowItems, pacotes, produtos]);
 
   // Calculate workflow summary usando dados unificados
-  const workflowSummary = React.useMemo(() => {
+  const workflowSummary = useMemo(() => {
     console.log('🔢 Recalculando summary do workflow (AppContext)...');
     
-    const filteredItems = unifiedWorkflowData.filter(item => {
-      const [itemDay, itemMonth, itemYear] = item.data.split('/');
-      const [filterMonth, filterYear] = workflowFilters.mes.split('/');
-      const monthMatches = itemMonth === filterMonth && itemYear === filterYear;
-
-      const searchMatches = !workflowFilters.busca || 
-        item.nome.toLowerCase().includes(workflowFilters.busca.toLowerCase());
-
-      return monthMatches && searchMatches;
-    });
+    const filteredItems = getFilteredWorkflowItems();
 
     console.log('📊 Itens filtrados (AppContext):', filteredItems.length);
     console.log('📊 Amostra de itens:', filteredItems.slice(0, 3).map(i => ({ 
@@ -1087,7 +1103,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     console.log('📊 Métricas calculadas (AppContext):', { receita, aReceber, previsto });
 
     return { receita, aReceber, previsto };
-  }, [unifiedWorkflowData, workflowFilters]);
+  }, [getFilteredWorkflowItems]);
 
   // Action functions
   const adicionarOrcamento = (orcamento: Omit<Orcamento, 'id' | 'criadoEm'>) => {
@@ -1784,27 +1800,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     pacotes,
     metricas,
     appointments,
-    workflowItems: unifiedWorkflowData.filter(item => {
-      const [itemDay, itemMonth, itemYear] = item.data.split('/');
-      const [filterMonth, filterYear] = workflowFilters.mes.split('/');
-      const monthMatches = itemMonth === filterMonth && itemYear === filterYear;
-
-      const searchMatches = !workflowFilters.busca || 
-        item.nome.toLowerCase().includes(workflowFilters.busca.toLowerCase());
-
-      return monthMatches && searchMatches;
-    }).sort((a, b) => {
-      const dateA = a.dataOriginal || parseDateFromStorage(a.data);
-      const dateB = b.dataOriginal || parseDateFromStorage(b.data);
-      
-      if (dateA.getTime() !== dateB.getTime()) {
-        return dateA.getTime() - dateB.getTime();
-      }
-      
-      const timeA = a.hora.split(':').map(Number);
-      const timeB = b.hora.split(':').map(Number);
-      return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
-    }),
+    workflowItems: getFilteredWorkflowItems(),
     workflowSummary,
     workflowFilters,
     visibleColumns,
