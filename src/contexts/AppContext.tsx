@@ -968,7 +968,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const receita = filteredItems.reduce((sum, item) => sum + item.valorPago, 0);
     const aReceber = filteredItems.reduce((sum, item) => sum + item.restante, 0);
-    const previsto = filteredItems.reduce((sum, item) => sum + item.total, 0);
+    const previsto = receita + aReceber;
 
     return { receita, aReceber, previsto };
   }, [workflowItems, workflowFilters]);

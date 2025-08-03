@@ -334,16 +334,12 @@ export default function Workflow() {
       const paid = parseFloat(paidStr.replace(/[^\d,]/g, '').replace(',', '.') || '0');
       return sum + paid;
     }, 0);
-    const totalForecasted = currentMonthSessions.reduce((sum, session) => {
-      const totalStr = typeof session.total === 'string' ? session.total : String(session.total || '0');
-      const total = parseFloat(totalStr.replace(/[^\d,]/g, '').replace(',', '.') || '0');
-      return sum + total;
-    }, 0);
     const totalOutstanding = currentMonthSessions.reduce((sum, session) => {
       const remainingStr = typeof session.restante === 'string' ? session.restante : String(session.restante || '0');
       const remaining = parseFloat(remainingStr.replace(/[^\d,]/g, '').replace(',', '.') || '0');
       return sum + remaining;
     }, 0);
+    const totalForecasted = totalRevenue + totalOutstanding;
     return {
       revenue: totalRevenue,
       forecasted: totalForecasted,
@@ -373,16 +369,12 @@ export default function Workflow() {
       const paid = parseFloat(paidStr.replace(/[^\d,]/g, '').replace(',', '.') || '0');
       return sum + paid;
     }, 0);
-    const prevForecasted = prevMonthSessions.reduce((sum: number, session: SessionData) => {
-      const totalStr = typeof session.total === 'string' ? session.total : String(session.total || '0');
-      const total = parseFloat(totalStr.replace(/[^\d,]/g, '').replace(',', '.') || '0');
-      return sum + total;
-    }, 0);
     const prevOutstanding = prevMonthSessions.reduce((sum: number, session: SessionData) => {
       const remainingStr = typeof session.restante === 'string' ? session.restante : String(session.restante || '0');
       const remaining = parseFloat(remainingStr.replace(/[^\d,]/g, '').replace(',', '.') || '0');
       return sum + remaining;
     }, 0);
+    const prevForecasted = prevRevenue + prevOutstanding;
     return {
       revenue: prevRevenue,
       forecasted: prevForecasted,
