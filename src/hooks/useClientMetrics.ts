@@ -33,45 +33,37 @@ export function useClientMetrics(clientes: Cliente[]) {
   });
   
   const clientMetrics = useMemo(() => {
-    console.log('📊 Calculando métricas CRM:', {
+    console.log('🔥 SIMPLIFICAÇÃO CRM - Usando mesma lógica de Pago/A Receber:', {
       totalClientes: clientes.length,
       totalUnifiedWorkflowData: unifiedWorkflowData.length
     });
 
-    // Executar validação completa
-    validateClientMetrics(clientes, workflowItems, unifiedWorkflowData);
-
-    // Criar métricas para cada cliente
+    // Criar métricas para cada cliente usando lógica DIRETA (igual Pago/A Receber)
     const metrics: ClientMetrics[] = clientes.map(cliente => {
-      // FILTRO RIGOROSO: Priorizar clienteId, fallback por nome normalizado
+      // FILTRO SIMPLIFICADO: clienteId OU nome (sem fallbacks complexos)
       const sessoesCliente = unifiedWorkflowData.filter(item => {
-        // Primeira prioridade: clienteId exato
-        if (item.clienteId === cliente.id) {
-          return true;
-        }
-        
-        // Segunda prioridade: Match por nome normalizado (apenas se não houver clienteId)
-        if (!item.clienteId && item.nome?.toLowerCase().trim() === cliente.nome.toLowerCase().trim()) {
-          return true;
-        }
-        
-        return false;
+        return item.clienteId === cliente.id || 
+               (!item.clienteId && item.nome?.toLowerCase().trim() === cliente.nome.toLowerCase().trim());
       });
 
-      console.log(`💰 Calculando métricas para cliente ${cliente.nome}:`, {
+      console.log(`💰 CRM SIMPLIFICADO - ${cliente.nome}:`, {
         clienteId: cliente.id,
         sessoesEncontradas: sessoesCliente.length,
-        sessoesDetalhes: sessoesCliente.map(s => ({
+        valores: sessoesCliente.map(s => ({
           id: s.id,
-          fonte: s.fonte,
           total: s.total,
-          valorPago: s.valorPago
+          valorPago: s.valorPago,
+          fonte: s.fonte
         }))
       });
 
-      // Calcular métricas baseadas na lista filtrada de "trabalhos do cliente"
+      // CÁLCULO DIRETO (mesma lógica que funciona para Pago/A Receber)
       const sessoes = sessoesCliente.length;
-      const totalFaturado = sessoesCliente.reduce((acc, item) => acc + (item.total || 0), 0);
+      const totalFaturado = sessoesCliente.reduce((acc, item) => {
+        const valor = item.total || 0;
+        console.log(`  📊 Somando faturado ${item.id}: R$ ${valor}`);
+        return acc + valor;
+      }, 0);
       const totalPago = sessoesCliente.reduce((acc, item) => acc + (item.valorPago || 0), 0);
       const aReceber = totalFaturado - totalPago;
 

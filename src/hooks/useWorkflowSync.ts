@@ -35,14 +35,22 @@ export function useWorkflowSync() {
     }
   }, [workflowItems]);
 
-  // Escutar mudanças no workflow e sincronizar automaticamente
+  // Escutar mudanças no workflow e sincronizar automaticamente (TEMPO REAL)
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       forceSyncWorkflowData();
-    }, 1000); // Debounce de 1 segundo
+    }, 100); // Debounce reduzido para 100ms (mais responsivo)
 
     return () => clearTimeout(timeoutId);
   }, [workflowItems, forceSyncWorkflowData]);
+
+  // Forçar atualização imediata quando valores de total mudam
+  useEffect(() => {
+    if (workflowItems.length > 0) {
+      console.log('🔄 MUDANÇA NO WORKFLOW DETECTADA - Forçando sync imediato...');
+      forceSyncWorkflowData();
+    }
+  }, [workflowItems.map(item => `${item.id}:${item.total}`).join(','), forceSyncWorkflowData]);
 
   // Função para validar integridade dos dados
   const validateDataIntegrity = useCallback(() => {

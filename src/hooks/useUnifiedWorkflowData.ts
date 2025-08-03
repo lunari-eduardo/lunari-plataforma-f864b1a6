@@ -146,44 +146,38 @@ export function useUnifiedWorkflowData() {
     };
   };
 
-  // Dados unificados e deduplicados com PRIORIZAÇÃO ABSOLUTA DO WORKFLOW
+  // Dados unificados - WORKFLOW COMO FONTE ABSOLUTA (SIMPLIFICADO)
   const unifiedWorkflowData = useMemo(() => {
-    console.log('🔄 UNIFICAÇÃO CORRIGIDA - Workflow como fonte autoritativa...');
-    console.log('📊 WorkflowItems (PRIORITÁRIO):', workflowItems.length);
-    console.log('📊 WorkflowSessions (BACKUP):', workflowSessions.length);
+    console.log('🔥 SIMPLIFICAÇÃO - Workflow como única fonte autoritativa...');
+    console.log('📊 WorkflowItems (FONTE ÚNICA):', workflowItems.length);
+    console.log('📊 WorkflowSessions (IGNORADAS):', workflowSessions.length);
 
+    // ABORDAGEM SIMPLIFICADA: Usar APENAS workflowItems como fonte de dados
+    // Isso garante que valores sempre reflitam o estado atual do workflow
     const allItems = new Map<string, WorkflowItem>();
 
-    // ETAPA 1: Carregar dados base de workflow_sessions
-    workflowSessions.forEach(session => {
-      const normalizedItem = normalizeSessionToWorkflowItem(session);
-      allItems.set(session.id, normalizedItem);
-      
-      console.log(`📦 Base carregada - Session ${session.id}: R$ ${normalizedItem.total}`);
-    });
-
-    // ETAPA 2: SOBRESCREVER ABSOLUTO com workflowItems (FONTE AUTORITATIVA)
+    // USAR APENAS WORKFLOW ITEMS - fonte única da verdade
     workflowItems.forEach(item => {
-      const existingBase = allItems.get(item.id);
+      console.log(`💰 VALOR DIRETO DO WORKFLOW - ${item.nome || item.id}: R$ ${item.total}`, {
+        valorPago: item.valorPago,
+        aReceber: item.total - (item.valorPago || 0),
+        fonte: item.fonte || 'agenda'
+      });
       
-      if (existingBase) {
-        const diferencaValor = item.total - existingBase.total;
-        console.log(`🔥 WORKFLOW SOBRESCREVE item ${item.id}:`, {
-          valorBase: existingBase.total,
-          valorWorkflow: item.total,
-          diferenca: diferencaValor,
-          status: diferencaValor !== 0 ? '⚠️ VALOR ATUALIZADO' : '✅ VALOR MANTIDO'
-        });
-      } else {
-        console.log(`➕ NOVO ITEM WORKFLOW: ${item.id} - R$ ${item.total}`);
-      }
-      
-      // SOBRESCREVER SEMPRE - Workflow é autoritativo
       allItems.set(item.id, {
         ...item,
-        fonte: item.fonte || 'agenda', // Garantir fonte
+        fonte: item.fonte || 'agenda',
         dataOriginal: item.dataOriginal || parseDateFromStorage(item.data)
       });
+    });
+
+    // Adicionar sessions apenas se NÃO existir no workflow (evitar sobrescrita)
+    workflowSessions.forEach(session => {
+      if (!allItems.has(session.id)) {
+        const normalizedItem = normalizeSessionToWorkflowItem(session);
+        allItems.set(session.id, normalizedItem);
+        console.log(`📦 Adicionando session órfã: ${session.id} - R$ ${normalizedItem.total}`);
+      }
     });
 
     const resultado = Array.from(allItems.values());
