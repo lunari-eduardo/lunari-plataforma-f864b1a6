@@ -13,6 +13,7 @@ import { ArrowLeft, User, History, Save, Edit3 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from '@/utils/financialUtils';
+import { formatDateForDisplay } from '@/utils/dateUtils';
 import { toast } from 'sonner';
 
 export default function ClienteDetalhe() {
@@ -154,7 +155,8 @@ export default function ClienteDetalhe() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR');
+    // Usar formatDateForDisplay das dateUtils para evitar problemas de timezone
+    return formatDateForDisplay(dateString);
   };
 
   const getStatusBadge = (status: string, tipo: string) => {
