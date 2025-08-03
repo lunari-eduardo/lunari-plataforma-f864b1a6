@@ -19,6 +19,7 @@ type SortDirection = 'asc' | 'desc';
 export default function Clientes() {
   const {
     clientes,
+    workflowItems,
     adicionarCliente,
     atualizarCliente,
     removerCliente
@@ -36,7 +37,7 @@ export default function Clientes() {
   });
 
   // Obter métricas dos clientes
-  const clientMetrics = useClientMetrics(clientes);
+  const clientMetrics = useClientMetrics(clientes, workflowItems);
 
   // Filtrar e ordenar clientes
   const clientesFiltradosEOrdenados = useMemo(() => {

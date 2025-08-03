@@ -15,11 +15,8 @@ export interface ClientMetrics {
   ultimaSessao: Date | null;
 }
 
-export function useClientMetrics(clientes: Cliente[]) {
+export function useClientMetrics(clientes: Cliente[], workflowItems: WorkflowItem[]) {
   const clientMetrics = useMemo(() => {
-    // Carregar dados do workflow do localStorage
-    const workflowItems: WorkflowItem[] = storage.load(STORAGE_KEYS.WORKFLOW_ITEMS, []);
-    
     console.log('📊 Calculando métricas CRM:', {
       totalClientes: clientes.length,
       totalWorkflowItems: workflowItems.length
@@ -27,14 +24,12 @@ export function useClientMetrics(clientes: Cliente[]) {
 
     // Criar métricas para cada cliente
     const metrics: ClientMetrics[] = clientes.map(cliente => {
-      // Filtrar sessões por cliente (comparação por nome)
-      const sessoesCliente = workflowItems.filter(item => {
-        const nomeNormalizado = item.nome?.toLowerCase().trim() || '';
-        const clienteNormalizado = cliente.nome?.toLowerCase().trim() || '';
-        return nomeNormalizado === clienteNormalizado;
-      });
+      // AÇÃO OBRIGATÓRIA: Filtrar workflow_items usando a condição exata: workflowItem.clienteId === cliente.id
+      const sessoesCliente = workflowItems.filter(item => 
+        item.clienteId === cliente.id
+      );
 
-      // Calcular métricas
+      // Calcular métricas baseadas na lista filtrada de "trabalhos do cliente"
       const sessoes = sessoesCliente.length;
       const totalFaturado = sessoesCliente.reduce((acc, item) => acc + (item.total || 0), 0);
       const totalPago = sessoesCliente.reduce((acc, item) => acc + (item.valorPago || 0), 0);
@@ -73,7 +68,7 @@ export function useClientMetrics(clientes: Cliente[]) {
     });
 
     return metrics;
-  }, [clientes]);
+  }, [clientes, workflowItems]); // Dependências exatas conforme especificado
 
   return clientMetrics;
 }

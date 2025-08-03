@@ -78,6 +78,8 @@ export interface WorkflowItem {
   percentualAjusteOrcamento?: number;
   // NOVO: Campo para congelamento de regras de preço
   regrasDePrecoFotoExtraCongeladas?: RegrasPrecoFotoExtraCongeladas;
+  // NOVO: Campo para relacionar com cliente específico (CRM)
+  clienteId?: string;
 }
 
 interface WorkflowFilters {
