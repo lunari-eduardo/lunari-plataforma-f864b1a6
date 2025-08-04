@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
 import { parseDateFromStorage, formatDateForStorage, getCurrentDateString } from '@/utils/dateUtils';
 import { formatCurrency } from '@/utils/financialUtils';
@@ -241,6 +241,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return storage.load('configuracoes_pacotes', []);
   });
 
+  // Memoizar dados para evitar re-renders desnecessários
+  const pacotesMemoizados = useMemo(() => pacotes, [pacotes]);
+  const produtosMemoizados = useMemo(() => produtos, [produtos]);
+
   const [metricas, setMetricas] = useState<MetricasOrcamento>({
     totalMes: 0,
     enviados: 0,
@@ -256,14 +260,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return stored.length > 0 ? deserializeAppointments(stored) : [];
   });
 
-  // Workflow State
+  // Workflow State - COM MIGRAÇÃO AUTOMÁTICA
   const [workflowItems, setWorkflowItems] = useState<WorkflowItem[]>(() => {
+    // Executar migração PRIMEIRO
+    console.log('🎯 Executando migração unificada antes de carregar workflowItems...');
+    migrateWorkflowClienteId();
+    
+    // Carregar da fonte única após migração
     const items = storage.load(STORAGE_KEYS.WORKFLOW_ITEMS, []);
+    
     // Migração: garantir que todos os itens tenham o campo observacoes
-    return items.map((item: any) => ({
+    const itemsMigrados = items.map((item: any) => ({
       ...item,
       observacoes: item.observacoes || ''
     }));
+    
+    console.log('🎯 WorkflowItems carregados após migração:', itemsMigrados.length);
+    return itemsMigrados;
   });
   
   const [workflowFilters, setWorkflowFilters] = useState<WorkflowFilters>(() => {
@@ -302,6 +315,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       restante: true
     });
   });
+
+  // Memorizar workflowItems após sua declaração
+  const workflowItemsMemoizados = useMemo(() => workflowItems, [workflowItems]);
 
   // Estado dos Cartões de Crédito (NOVO) - Agora usando FinancialEngine
   const [cartoes, setCartoes] = useState(() => {
@@ -671,31 +687,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           categoriaId: pacoteData?.categoria_id
         });
 
-        // VALIDAÇÃO CRÍTICA: garantir que clienteId sempre seja definido
-        let clienteId = clientes.find(c => 
+        // CORREÇÃO: Encontrar clienteId pelo nome
+        const clienteId = clientes.find(c => 
           c.nome.toLowerCase().trim() === appointment.client.toLowerCase().trim()
         )?.id;
-
-        // Se cliente não existe, criar automaticamente
-        if (!clienteId) {
-          console.warn(`⚠️ AGENDA→WORKFLOW: Cliente não encontrado para "${appointment.client}". Criando automaticamente...`);
-          
-          const novoCliente: Cliente = {
-            id: crypto.randomUUID(),
-            nome: appointment.client,
-            email: (appointment as any).clientEmail || appointment.email || '',
-            telefone: (appointment as any).clientPhone || appointment.whatsapp || '',
-            endereco: '',
-            observacoes: `Cliente criado automaticamente da agenda em ${new Date().toLocaleDateString()}`
-          };
-          
-          const novosClientes = [...clientes, novoCliente];
-          setClientes(novosClientes);
-          storage.save(STORAGE_KEYS.CLIENTS, novosClientes);
-          
-          clienteId = novoCliente.id;
-          console.log('✅ CLIENTE CRIADO AUTOMATICAMENTE:', novoCliente);
-        }
 
         const newWorkflowItem: WorkflowItem = {
           id: `agenda-${appointment.id}`,
@@ -707,7 +702,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           descricao: appointment.description || '',
           status: "",
           categoria: categoriaName,
-          clienteId: clienteId!, // GARANTIR que SEMPRE tenha clienteId
+          clienteId: clienteId, // CORREÇÃO: Atribuir clienteId
           pacote: pacoteData ? pacoteData.nome : (
             appointment.type.includes('Gestante') ? 'Completo' : 
             appointment.type.includes('Família') ? 'Básico' : 
@@ -893,7 +888,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         descricao: orc.descricao || '',
         status: 'Fechado',
         categoria: categoriaName,
-        clienteId: orc.cliente.id, // GARANTIR que SEMPRE tenha clienteId
+        clienteId: orc.cliente.id, // CORREÇÃO: Usar clienteId do orçamento
         pacote: pacoteData ? pacoteData.nome : (orc.pacotes[0]?.nome || ''),
         valorPacote: valorPacoteFromBudget,
         desconto: 0,
@@ -981,23 +976,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         newWorkflowItem.total = valorCalculado - (newWorkflowItem.desconto || 0);
         newWorkflowItem.restante = newWorkflowItem.total - newWorkflowItem.valorPago;
 
-        // VALIDAÇÃO FINAL OBRIGATÓRIA
-        if (!newWorkflowItem.clienteId) {
-          console.error('❌ ERRO CRÍTICO: WorkflowItem de orçamento criado SEM clienteId!', {
-            orcamentoId: orc.id,
-            orcamentoCliente: orc.cliente,
-            workflowItem: newWorkflowItem
-          });
-          throw new Error(`Não foi possível associar cliente do orçamento "${orc.id}" ao workflow`);
-        }
-
-        console.log('✅ ORÇAMENTO→WORKFLOW: Item criado com clienteId:', {
-          workflowId: newWorkflowItem.id,
-          clienteNome: newWorkflowItem.nome,
-          clienteId: newWorkflowItem.clienteId,
-          valor: newWorkflowItem.total
-        });
-
       newItems.push(newWorkflowItem);
     });
 
@@ -1024,7 +1002,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const previsto = filteredItems.reduce((sum, item) => sum + item.total, 0);
 
     return { receita, aReceber, previsto };
-  }, [workflowItems, workflowFilters]);
+  }, [workflowItems, workflowFilters.mes]); // Otimizado: apenas mes nas dependências
 
   // Action functions
   const adicionarOrcamento = (orcamento: Omit<Orcamento, 'id' | 'criadoEm'>) => {
@@ -1723,18 +1701,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const contextValue: AppContextType = {
-    // Data
-    orcamentos,
-    templates,
-    origens,
-    clientes,
-    categorias,
-    produtos,
-    pacotes,
-    metricas,
-    appointments,
-    workflowItems: workflowItems.filter(item => {
+  // Memoizar workflowItems filtrados para evitar recálculos desnecessários
+  const workflowItemsFiltrados = useMemo(() => {
+    return workflowItems.filter(item => {
       const [itemDay, itemMonth, itemYear] = item.data.split('/');
       const [filterMonth, filterYear] = workflowFilters.mes.split('/');
       const monthMatches = itemMonth === filterMonth && itemYear === filterYear;
@@ -1754,7 +1723,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const timeA = a.hora.split(':').map(Number);
       const timeB = b.hora.split(':').map(Number);
       return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
-    }),
+    });
+  }, [workflowItems, workflowFilters.mes, workflowFilters.busca]);
+
+  const contextValue: AppContextType = {
+    // Data
+    orcamentos,
+    templates,
+    origens,
+    clientes,
+    categorias,
+    produtos: produtosMemoizados,
+    pacotes: pacotesMemoizados,
+    metricas,
+    appointments,
+    workflowItems: workflowItemsFiltrados,
     workflowSummary,
     workflowFilters,
     visibleColumns,

@@ -4,7 +4,6 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { useState, useEffect } from "react";
 import Layout from "./components/layout/Layout";
 import Index from "./pages/Index";
 import Agenda from "./pages/Agenda";
@@ -17,26 +16,10 @@ import ClienteDetalhe from "./pages/ClienteDetalhe";
 import Workflow from "./pages/Workflow";
 import NotFound from "./pages/NotFound";
 import { AppProvider } from "./contexts/AppContext";
-import { useIntegration } from "./hooks/useIntegration";
+import { AppIntegration } from "./components/AppIntegration";
 
 // Create a new QueryClient instance outside of the component
 const queryClient = new QueryClient();
-
-// Component to safely initialize integration hooks
-function AppIntegration() {
-  const [isReady, setIsReady] = useState(false);
-  
-  useEffect(() => {
-    // Delay to ensure AppProvider is fully initialized
-    const timer = setTimeout(() => setIsReady(true), 100);
-    return () => clearTimeout(timer);
-  }, []);
-  
-  // Always call the hook, but conditionally execute its logic
-  useIntegration(isReady);
-  
-  return null;
-}
 
 // Define App as a proper function component to ensure React hooks work correctly
 function App() {

@@ -1,65 +1,62 @@
 import { useMemo } from 'react';
 import { Cliente } from '@/types/orcamentos';
-import { STORAGE_KEYS } from '@/utils/localStorage';
+import { useAppContext } from '@/contexts/AppContext';
 
 export interface ClientMetrics {
   id: string;
   nome: string;
   email: string;
   telefone: string;
-  total: number;
-  pago: number;
-  restante: number;
   sessoes: number;
+  totalFaturado: number;
+  totalPago: number;
+  aReceber: number;
+  ultimaSessao: Date | null;
 }
 
-/**
- * CRM COM CÁLCULO DIRETO DO WORKFLOW
- * Fonte única: lunari_workflow_items do localStorage
- * Cálculo simples: filtro por clienteId + reduce
- */
 export function useClientMetrics(clientes: Cliente[]) {
+  const { workflowItems } = useAppContext();
+  
   const clientMetrics = useMemo(() => {
-    // 1. CARREGAR WORKFLOW DO LOCALSTORAGE (fonte única)
-    const workflow = JSON.parse(localStorage.getItem(STORAGE_KEYS.WORKFLOW_ITEMS) || '[]');
-    
-    console.log('📊 CRM CALCULATION - Workflow items loaded:', workflow.length);
-    
-    return clientes.map(cliente => {
-      // 2. FILTRAR POR CLIENTE
-      const sessoesCliente = workflow.filter((item: any) => item.clienteId === cliente.id);
-      
-      // 3. CALCULAR SOMATÓRIOS (como planilha)
-      const total = sessoesCliente.reduce((acc: number, item: any) => acc + (item.total || 0), 0);
-      const pago = sessoesCliente.reduce((acc: number, item: any) => acc + (item.valorPago || 0), 0);
-      const restante = total - pago;
+    // FONTE ÚNICA: workflowItems do AppContext (após migração)
+    const metrics: ClientMetrics[] = clientes.map(cliente => {
+      // Filtro por clienteId APENAS (sem fallback de nome)
+      const sessoesCliente = workflowItems.filter(item => item.clienteId === cliente.id);
+
+      // Cálculo direto das métricas
       const sessoes = sessoesCliente.length;
-      
-      console.log(`💰 Cliente ${cliente.nome}:`, {
-        sessoes,
-        total,
-        pago,
-        restante,
-        workflowItems: sessoesCliente.map((item: any) => ({
-          id: item.id,
-          data: item.data,
-          total: item.total,
-          pago: item.valorPago
-        }))
-      });
-      
+      const totalFaturado = sessoesCliente.reduce((acc, item) => acc + (item.total || 0), 0);
+      const totalPago = sessoesCliente.reduce((acc, item) => acc + (item.valorPago || 0), 0);
+      const aReceber = totalFaturado - totalPago;
+
+      // Encontrar última sessão
+      let ultimaSessao: Date | null = null;
+      if (sessoesCliente.length > 0) {
+        const datasOrdenadas = sessoesCliente
+          .map(item => new Date(item.data))
+          .filter(data => !isNaN(data.getTime()))
+          .sort((a, b) => b.getTime() - a.getTime());
+        
+        if (datasOrdenadas.length > 0) {
+          ultimaSessao = datasOrdenadas[0];
+        }
+      }
+
       return {
         id: cliente.id,
         nome: cliente.nome,
         email: cliente.email,
         telefone: cliente.telefone,
-        total,
-        pago,
-        restante,
-        sessoes
+        sessoes,
+        totalFaturado,
+        totalPago,
+        aReceber,
+        ultimaSessao
       };
     });
-  }, [clientes]);
+
+    return metrics;
+  }, [clientes, workflowItems]);
 
   return clientMetrics;
 }

@@ -3,154 +3,135 @@ import { WorkflowItem } from '@/contexts/AppContext';
 import { Cliente } from '@/types/orcamentos';
 
 /**
- * 🚀 MIGRAÇÃO MELHORADA: Associar clienteId aos workflowItems existentes
- * 
- * MELHORIAS:
- * - Execução mais robusta e à prova de falhas
- * - Criação automática de clientes se necessário
- * - Validação completa de integridade
- * - Relatório detalhado de resultados
+ * Migração MELHORADA para adicionar clienteId aos workflowItems existentes
+ * - Unifica dados de múltiplas fontes
+ * - Força execução se dados inconsistentes
+ * - Consolida para fonte única de verdade
  */
 export function migrateWorkflowClienteId() {
   try {
-    const MIGRATION_KEY = 'workflow_clienteId_migrated_v2'; // Nova versão
+    const MIGRATION_KEY = 'workflow_clienteId_migrated_v3_unified';
     
-    // Verificar se migração já foi executada
+    // Verificar se já foi executada
     if (localStorage.getItem(MIGRATION_KEY) === 'true') {
-      console.log('🔄 Migração de clienteId v2 já executada anteriormente');
-      return;
+      console.log('🎯 Migração já executada, pulando...');
+      return true;
     }
+    
+    console.log('🚀 MIGRAÇÃO DEFINITIVA - Unificando workflow_sessions → lunari_workflow_items');
 
-    console.log('🚀 INICIANDO MIGRAÇÃO MELHORADA de clienteId para workflowItems...');
-
-    // Carregar dados necessários
+    // Carregar dados de TODAS as fontes
     const workflowItems: WorkflowItem[] = storage.load(STORAGE_KEYS.WORKFLOW_ITEMS, []);
     const clientes: Cliente[] = storage.load(STORAGE_KEYS.CLIENTS, []);
+    const workflowSessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
     
-    console.log('📊 DADOS PARA MIGRAÇÃO:', {
+    console.log('📊 Estado inicial:', {
       workflowItems: workflowItems.length,
       clientes: clientes.length,
-      itemsSemClienteId: workflowItems.filter(item => !item.clienteId).length
+      workflowSessions: workflowSessions.length
     });
 
-    let itemsAtualizados = 0;
-    let clientesCriados = 0;
-    let novosClientes = [...clientes];
+    // UNIFICAÇÃO DEFINITIVA: workflow_sessions → lunari_workflow_items
+    const allWorkflowItems = new Map<string, WorkflowItem>();
     
-    // MIGRAÇÃO MELHORADA: workflowItems
-    const workflowItemsAtualizados = workflowItems.map(item => {
-      // Se já tem clienteId válido, manter como está
-      if (item.clienteId) {
-        const clienteExiste = novosClientes.find(c => c.id === item.clienteId);
-        if (clienteExiste) {
-          return item;
-        }
-        console.warn(`⚠️ clienteId ${item.clienteId} não existe mais, removendo...`);
-      }
+    // 1. Adicionar workflowItems existentes (prioridade)
+    workflowItems.forEach(item => {
+      allWorkflowItems.set(item.id, item);
+    });
+    
+    // 2. Consolidar workflow_sessions que não existem como workflowItems
+    let sessoesConsolidadas = 0;
+    workflowSessions.forEach((session: any) => {
+      if (!allWorkflowItems.has(session.id)) {
+        const parseValue = (value: string | number): number => {
+          if (typeof value === 'number') return value;
+          if (!value) return 0;
+          const cleanValue = value.toString().replace(/R\$\s*/g, '').replace(/\./g, '').replace(',', '.').trim();
+          return parseFloat(cleanValue) || 0;
+        };
 
-      // Buscar cliente por nome (normalizado e flexível)
-      let clienteEncontrado = novosClientes.find(cliente => {
-        const nomeCliente = cliente.nome.toLowerCase().trim();
-        const nomeItem = item.nome.toLowerCase().trim();
-        
-        // Correspondência exata
-        if (nomeCliente === nomeItem) return true;
-        
-        // Correspondência parcial (para casos como "João" vs "João Silva")
-        if (nomeCliente.includes(nomeItem) || nomeItem.includes(nomeCliente)) {
-          return true;
-        }
-        
-        return false;
-      });
-
-      // Se não encontrou cliente, CRIAR AUTOMATICAMENTE
-      if (!clienteEncontrado) {
-        console.log(`🆕 CRIANDO cliente para workflowItem: ${item.nome}`);
-        
-        clienteEncontrado = {
-          id: crypto.randomUUID(),
-          nome: item.nome,
-          email: item.email || '',
-          telefone: item.whatsapp || '',
-          endereco: '',
-          observacoes: `Cliente migrado automaticamente em ${new Date().toLocaleDateString()}`
+        const workflowItem: WorkflowItem = {
+          id: session.id,
+          data: session.data || '',
+          hora: session.hora || '',
+          nome: session.nome || '',
+          whatsapp: session.whatsapp || '',
+          email: session.email || '',
+          descricao: session.descricao || '',
+          status: session.status || '',
+          categoria: session.categoria || '',
+          pacote: session.pacote || '',
+          valorPacote: parseValue(session.valorPacote || session.valor),
+          desconto: session.desconto || 0,
+          valorFotoExtra: parseValue(session.valorFotoExtra),
+          qtdFotoExtra: session.qtdFotosExtra || 0,
+          valorTotalFotoExtra: parseValue(session.valorTotalFotoExtra),
+          produto: session.produto || '',
+          qtdProduto: session.qtdProduto || 0,
+          valorTotalProduto: parseValue(session.valorTotalProduto),
+          produtosList: session.produtosList || [],
+          valorAdicional: parseValue(session.valorAdicional),
+          detalhes: session.detalhes || '',
+          total: parseValue(session.total || session.valor),
+          valorPago: parseValue(session.valorPago),
+          restante: parseValue(session.restante),
+          pagamentos: session.pagamentos || [],
+          fonte: session.fonte || 'agenda',
+          dataOriginal: session.dataOriginal ? new Date(session.dataOriginal) : new Date(session.data),
+          clienteId: session.clienteId // Preservar se já existir
         };
         
-        novosClientes.push(clienteEncontrado);
-        clientesCriados++;
+        allWorkflowItems.set(session.id, workflowItem);
+        sessoesConsolidadas++;
       }
-
-      itemsAtualizados++;
-      return {
-        ...item,
-        clienteId: clienteEncontrado.id
-      };
     });
 
-    // Salvar dados atualizados
-    storage.save(STORAGE_KEYS.WORKFLOW_ITEMS, workflowItemsAtualizados);
+    // 3. APLICAR clienteId usando APENAS nome exato (sem fallbacks)
+    let itemsComClienteIdAtualizado = 0;
+    const workflowItemsFinais = Array.from(allWorkflowItems.values()).map(item => {
+      // Se já tem clienteId válido, manter
+      if (item.clienteId && clientes.find(c => c.id === item.clienteId)) {
+        return item;
+      }
+
+      // Buscar cliente por nome EXATO
+      const clienteEncontrado = clientes.find(cliente => 
+        cliente.nome.toLowerCase().trim() === item.nome.toLowerCase().trim()
+      );
+
+      if (clienteEncontrado) {
+        itemsComClienteIdAtualizado++;
+        return {
+          ...item,
+          clienteId: clienteEncontrado.id
+        };
+      }
+
+      // Sem clienteId = item fica sem associação ao CRM
+      return item;
+    });
+
+    // 4. SALVAR na fonte única: lunari_workflow_items
+    storage.save(STORAGE_KEYS.WORKFLOW_ITEMS, workflowItemsFinais);
     
-    // Salvar novos clientes criados
-    if (clientesCriados > 0) {
-      storage.save(STORAGE_KEYS.CLIENTS, novosClientes);
-      console.log('✅ NOVOS CLIENTES SALVOS:', clientesCriados);
-    }
-
-    // MIGRAÇÃO workflow_sessions (compatibilidade)
-    let sessionsAtualizadas = 0;
-    const workflowSessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
-    if (workflowSessions.length > 0) {
-      const sessionsProcessadas = workflowSessions.map((session: any) => {
-        if (session.clienteId) {
-          return session;
-        }
-
-        const clienteEncontrado = novosClientes.find(cliente => 
-          cliente.nome.toLowerCase().trim() === session.nome?.toLowerCase().trim()
-        );
-
-        if (clienteEncontrado) {
-          sessionsAtualizadas++;
-          return {
-            ...session,
-            clienteId: clienteEncontrado.id
-          };
-        }
-
-        return session;
-      });
-
-      localStorage.setItem('workflow_sessions', JSON.stringify(sessionsProcessadas));
-    }
-
-    // VALIDAÇÃO FINAL: verificar se todos os itens têm clienteId
-    const itensSemClienteId = workflowItemsAtualizados.filter(item => !item.clienteId);
+    // 5. LIMPAR workflow_sessions definitivamente
+    localStorage.removeItem('workflow_sessions');
     
-    if (itensSemClienteId.length > 0) {
-      console.error('❌ MIGRAÇÃO INCOMPLETA! Itens sem clienteId:', itensSemClienteId.map(i => ({
-        id: i.id,
-        nome: i.nome
-      })));
-    }
-
-    // Marcar migração como concluída
+    // 6. Marcar migração como concluída
     localStorage.setItem(MIGRATION_KEY, 'true');
 
-    const relatorioFinal = {
-      workflowItemsProcessados: workflowItems.length,
-      workflowItemsAtualizados: itemsAtualizados,
-      clientesCriados,
-      workflowSessionsAtualizadas: sessionsAtualizadas,
-      itensSemClienteId: itensSemClienteId.length,
-      sucesso: itensSemClienteId.length === 0
-    };
+    console.log('✅ MIGRAÇÃO DEFINITIVA CONCLUÍDA:', {
+      workflowItemsFinais: workflowItemsFinais.length,
+      sessoesConsolidadas,
+      itemsComClienteId: workflowItemsFinais.filter(i => i.clienteId).length,
+      itemsComClienteIdAtualizado,
+      itemsSemClienteId: workflowItemsFinais.filter(i => !i.clienteId).length
+    });
 
-    console.log('🎊 MIGRAÇÃO CONCLUÍDA - RELATÓRIO FINAL:', relatorioFinal);
-
-    return relatorioFinal;
+    return true;
 
   } catch (error) {
-    console.error('❌ Erro durante migração de clienteId:', error);
+    console.error('❌ Erro durante migração definitiva:', error);
+    return false;
   }
 }
