@@ -5,28 +5,25 @@ import { History, Calendar, DollarSign, Package, CreditCard } from "lucide-react
 import { formatCurrency } from '@/utils/financialUtils';
 import { formatDateForDisplay } from '@/utils/dateUtils';
 import { Cliente } from '@/types/orcamentos';
-
 interface WorkflowHistoryTableProps {
   cliente: Cliente;
 }
-
-export function WorkflowHistoryTable({ cliente }: WorkflowHistoryTableProps) {
+export function WorkflowHistoryTable({
+  cliente
+}: WorkflowHistoryTableProps) {
   const workflowData = useMemo(() => {
     if (!cliente) return [];
-    
+
     // FONTE ÚNICA: workflow_sessions com dados corrigidos E deduplicados
     const workflowSessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
-    
+
     // Filtrar sessões do cliente (by clienteId E nome como fallback)
-    const clientSessions = workflowSessions
-      .filter((session: any) => {
-        const matchByClienteId = session.clienteId === cliente.id;
-        const matchByName = !session.clienteId && 
-          session.nome?.toLowerCase().trim() === cliente.nome.toLowerCase().trim();
-        return matchByClienteId || matchByName;
-      })
-      .sort((a: any, b: any) => new Date(b.data).getTime() - new Date(a.data).getTime());
-    
+    const clientSessions = workflowSessions.filter((session: any) => {
+      const matchByClienteId = session.clienteId === cliente.id;
+      const matchByName = !session.clienteId && session.nome?.toLowerCase().trim() === cliente.nome.toLowerCase().trim();
+      return matchByClienteId || matchByName;
+    }).sort((a: any, b: any) => new Date(b.data).getTime() - new Date(a.data).getTime());
+
     // DEDUPLICAÇÃO FINAL por sessionId (caso ainda existam duplicatas)
     const sessionMap = new Map();
     clientSessions.forEach((session: any) => {
@@ -35,29 +32,25 @@ export function WorkflowHistoryTable({ cliente }: WorkflowHistoryTableProps) {
         sessionMap.set(sessionKey, session);
       }
     });
-    
-    // Corrigir cálculos de cada sessão
-    return Array.from(sessionMap.values())
-      .map((session: any) => {
-        const valorPacote = parseFloat(session.valorPacote) || 0;
-        const desconto = parseFloat(session.desconto) || 0;
-        const valorTotalFotoExtra = parseFloat(session.valorTotalFotoExtra) || 0;
-        const valorTotalProduto = parseFloat(session.valorTotalProduto) || 0;
-        const valorAdicional = parseFloat(session.valorAdicional) || 0;
-        
-        // CÁLCULO CORRETO DO TOTAL
-        const totalCalculado = valorPacote + valorTotalFotoExtra + valorTotalProduto + valorAdicional - desconto;
-        
-        return {
-          ...session,
-          total: totalCalculado,
-          valorPago: parseFloat(session.valorPago) || 0,
-          restante: totalCalculado - (parseFloat(session.valorPago) || 0)
-        };
-      })
-      .sort((a: any, b: any) => new Date(b.data).getTime() - new Date(a.data).getTime());
-  }, [cliente]);
 
+    // Corrigir cálculos de cada sessão
+    return Array.from(sessionMap.values()).map((session: any) => {
+      const valorPacote = parseFloat(session.valorPacote) || 0;
+      const desconto = parseFloat(session.desconto) || 0;
+      const valorTotalFotoExtra = parseFloat(session.valorTotalFotoExtra) || 0;
+      const valorTotalProduto = parseFloat(session.valorTotalProduto) || 0;
+      const valorAdicional = parseFloat(session.valorAdicional) || 0;
+
+      // CÁLCULO CORRETO DO TOTAL
+      const totalCalculado = valorPacote + valorTotalFotoExtra + valorTotalProduto + valorAdicional - desconto;
+      return {
+        ...session,
+        total: totalCalculado,
+        valorPago: parseFloat(session.valorPago) || 0,
+        restante: totalCalculado - (parseFloat(session.valorPago) || 0)
+      };
+    }).sort((a: any, b: any) => new Date(b.data).getTime() - new Date(a.data).getTime());
+  }, [cliente]);
   const getStatusBadge = (status: string) => {
     const colors = {
       'Agendado': 'bg-blue-100 text-blue-800',
@@ -67,24 +60,18 @@ export function WorkflowHistoryTable({ cliente }: WorkflowHistoryTableProps) {
     };
     return colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-800';
   };
-
   if (workflowData.length === 0) {
-    return (
-      <div className="text-center py-8">
+    return <div className="text-center py-8">
         <History className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
         <h3 className="text-lg font-medium mb-2">Nenhum histórico encontrado</h3>
         <p className="text-muted-foreground">
           Este cliente ainda não possui trabalhos registrados no workflow.
         </p>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="space-y-4">
+  return <div className="space-y-4">
       <Accordion type="single" collapsible className="w-full">
-        {workflowData.map((item: any) => (
-          <AccordionItem key={item.id} value={item.id} className="border rounded-lg mb-4">
+        {workflowData.map((item: any) => <AccordionItem key={item.id} value={item.id} className="border rounded-lg mb-4">
             <AccordionTrigger className="px-6 py-4 hover:no-underline">
               <div className="flex items-center justify-between w-full mr-4">
                 {/* Data */}
@@ -105,16 +92,16 @@ export function WorkflowHistoryTable({ cliente }: WorkflowHistoryTableProps) {
                 <div className="text-right">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium uppercase tracking-wide">TOTAL:</span>
-                      <span className="font-bold text-lg">{formatCurrency(item.total || 0)}</span>
+                      <span className="font-medium uppercase tracking-wide text-xs">TOTAL:</span>
+                      <span className="font-bold text-xs">{formatCurrency(item.total || 0)}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="font-medium uppercase tracking-wide">PAGO:</span>
-                      <span className="font-bold text-lg text-green-600">{formatCurrency(item.valorPago || 0)}</span>
+                      <span className="font-medium uppercase tracking-wide text-xs">PAGO:</span>
+                      <span className="font-bold text-green-600 text-xs">{formatCurrency(item.valorPago || 0)}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="font-medium uppercase tracking-wide">PENDENTE:</span>
-                      <span className="font-bold text-lg text-orange-600">{formatCurrency(item.restante || 0)}</span>
+                      <span className="font-medium uppercase tracking-wide text-xs">PENDENTE:</span>
+                      <span className="font-bold text-orange-600 text-xs">{formatCurrency(item.restante || 0)}</span>
                     </div>
                   </div>
                 </div>
@@ -132,36 +119,34 @@ export function WorkflowHistoryTable({ cliente }: WorkflowHistoryTableProps) {
                   
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
-                      <span className="font-medium uppercase tracking-wide">BASE</span>
-                      <span className="font-bold">{formatCurrency(item.valorPacote || 0)}</span>
+                      <span className="font-medium uppercase tracking-wide text-xs">BASE</span>
+                      <span className="font-bold text-xs">{formatCurrency(item.valorPacote || 0)}</span>
                     </div>
                     
                     <div className="flex justify-between items-center">
-                      <span className="font-medium uppercase tracking-wide">TOTAL FOTO EXTRA</span>
-                      <span className="font-bold">{formatCurrency(item.valorTotalFotoExtra || 0)}</span>
+                      <span className="font-medium uppercase tracking-wide text-xs">TOTAL FOTO EXTRA</span>
+                      <span className="font-bold text-xs">{formatCurrency(item.valorTotalFotoExtra || 0)}</span>
                     </div>
                     
                     <div className="flex justify-between items-center">
-                      <span className="font-medium uppercase tracking-wide">TOTAL PRODUTOS</span>
-                      <span className="font-bold">{formatCurrency(item.valorTotalProduto || 0)}</span>
+                      <span className="font-medium uppercase tracking-wide text-xs">TOTAL PRODUTOS</span>
+                      <span className="font-bold text-xs">{formatCurrency(item.valorTotalProduto || 0)}</span>
                     </div>
                     
                     <div className="flex justify-between items-center">
-                      <span className="font-medium uppercase tracking-wide">ADICIONAL</span>
-                      <span className="font-bold">{formatCurrency(item.valorAdicional || 0)}</span>
+                      <span className="font-medium uppercase tracking-wide text-xs">ADICIONAL</span>
+                      <span className="font-bold text-xs">{formatCurrency(item.valorAdicional || 0)}</span>
                     </div>
                     
-                    {item.desconto > 0 && (
-                      <div className="flex justify-between items-center">
-                        <span className="font-medium uppercase tracking-wide">DESCONTO</span>
-                        <span className="font-bold text-red-600">-{formatCurrency(item.desconto || 0)}</span>
-                      </div>
-                    )}
+                    {item.desconto > 0 && <div className="flex justify-between items-center">
+                        <span className="font-medium uppercase tracking-wide text-xs">DESCONTO</span>
+                        <span className="font-bold text-red-600 text-xs">-{formatCurrency(item.desconto || 0)}</span>
+                      </div>}
                     
                     <div className="border-t pt-3 mt-4">
                       <div className="flex justify-between items-center">
-                        <span className="font-bold text-lg uppercase tracking-wide">TOTAL:</span>
-                        <span className="font-bold text-lg">{formatCurrency(item.total || 0)}</span>
+                        <span className="font-bold uppercase tracking-wide text-sm">TOTAL:</span>
+                        <span className="font-bold text-sm">{formatCurrency(item.total || 0)}</span>
                       </div>
                     </div>
                   </div>
@@ -175,7 +160,7 @@ export function WorkflowHistoryTable({ cliente }: WorkflowHistoryTableProps) {
                   
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
-                      <span className="font-medium uppercase tracking-wide flex items-center gap-2">
+                      <span className="font-medium uppercase tracking-wide flex items-center gap-2 text-sm">
                         <span className="text-green-600">✓</span>
                         VALOR PAGO
                       </span>
@@ -183,7 +168,7 @@ export function WorkflowHistoryTable({ cliente }: WorkflowHistoryTableProps) {
                     </div>
                     
                     <div className="flex justify-between items-center">
-                      <span className="font-medium uppercase tracking-wide flex items-center gap-2">
+                      <span className="font-medium uppercase tracking-wide flex items-center gap-2 text-sm">
                         <span className="text-orange-600">−</span>
                         A RECEBER
                       </span>
@@ -194,36 +179,28 @@ export function WorkflowHistoryTable({ cliente }: WorkflowHistoryTableProps) {
               </div>
 
               {/* DESCRIÇÃO DE PRODUTOS */}
-              {item.produtosList && item.produtosList.length > 0 && (
-                <div className="mt-8 pt-6 border-t">
+              {item.produtosList && item.produtosList.length > 0 && <div className="mt-8 pt-6 border-t">
                   <div className="font-bold text-base uppercase tracking-wide mb-4">
                     DESCRIÇÃO DE PRODUTOS
                   </div>
                   <div className="space-y-2">
-                    {item.produtosList.map((p: any, index: number) => (
-                      <div key={index} className="flex justify-between items-center">
+                    {item.produtosList.map((p: any, index: number) => <div key={index} className="flex justify-between items-center">
                         <span className="font-medium">{p.nome} {p.quantidade > 1 ? `${p.quantidade}x` : ''}</span>
                         <span className="font-bold">
                           {p.tipo === 'manual' ? formatCurrency(p.valorUnitario * p.quantidade) : formatCurrency(0)}
                         </span>
-                      </div>
-                    ))}
+                      </div>)}
                   </div>
-                </div>
-              )}
+                </div>}
 
               {/* OBS */}
-              {item.detalhes && (
-                <div className="mt-8 pt-6 border-t">
+              {item.detalhes && <div className="mt-8 pt-6 border-t">
                   <div className="font-bold text-base uppercase tracking-wide mb-4">
                     OBS: {item.detalhes}
                   </div>
-                </div>
-              )}
+                </div>}
             </AccordionContent>
-          </AccordionItem>
-        ))}
+          </AccordionItem>)}
       </Accordion>
-    </div>
-  );
+    </div>;
 }
