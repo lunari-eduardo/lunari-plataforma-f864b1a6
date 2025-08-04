@@ -8,6 +8,28 @@ import { Cliente } from '@/types/orcamentos';
 interface WorkflowHistoryTableProps {
   cliente: Cliente;
 }
+// Função robusta para parsing de valores financeiros
+const parseFinancialValue = (value: any): number => {
+  if (value === null || value === undefined || value === '') return 0;
+  
+  // Se já é um número, retornar diretamente
+  if (typeof value === 'number') return isNaN(value) ? 0 : value;
+  
+  // Se é string, limpar e converter
+  if (typeof value === 'string') {
+    // Remover R$, espaços, pontos de milhares e converter vírgula para ponto
+    const cleaned = value
+      .replace(/[^\d,.-]/g, '') // Remove tudo exceto dígitos, vírgula, ponto e hífen
+      .replace(/\./g, '') // Remove pontos (milhares)
+      .replace(/,/g, '.'); // Converte vírgula para ponto
+    
+    const parsed = parseFloat(cleaned);
+    return isNaN(parsed) ? 0 : parsed;
+  }
+  
+  return 0;
+};
+
 export function WorkflowHistoryTable({
   cliente
 }: WorkflowHistoryTableProps) {
@@ -33,21 +55,45 @@ export function WorkflowHistoryTable({
       }
     });
 
-    // Corrigir cálculos de cada sessão
+    // Corrigir cálculos de cada sessão com parsing robusto
     return Array.from(sessionMap.values()).map((session: any) => {
-      const valorPacote = parseFloat(session.valorPacote) || 0;
-      const desconto = parseFloat(session.desconto) || 0;
-      const valorTotalFotoExtra = parseFloat(session.valorTotalFotoExtra) || 0;
-      const valorTotalProduto = parseFloat(session.valorTotalProduto) || 0;
-      const valorAdicional = parseFloat(session.valorAdicional) || 0;
+      const valorPacote = parseFinancialValue(session.valorPacote);
+      const desconto = parseFinancialValue(session.desconto);
+      const valorTotalFotoExtra = parseFinancialValue(session.valorTotalFotoExtra);
+      const valorTotalProduto = parseFinancialValue(session.valorTotalProduto);
+      const valorAdicional = parseFinancialValue(session.valorAdicional);
+      const valorPago = parseFinancialValue(session.valorPago);
 
-      // CÁLCULO CORRETO DO TOTAL
+      // CÁLCULO CORRETO DO TOTAL com validação
       const totalCalculado = valorPacote + valorTotalFotoExtra + valorTotalProduto + valorAdicional - desconto;
+      
+      // Validação final para garantir que não há NaN
+      const totalFinal = isNaN(totalCalculado) ? 0 : totalCalculado;
+      const restante = totalFinal - valorPago;
+
+      // Debug log para identificar problemas nos dados
+      if (isNaN(totalCalculado)) {
+        console.warn('Cálculo de total resultou em NaN:', {
+          sessionId: session.sessionId || session.id,
+          valorPacote,
+          valorTotalFotoExtra,
+          valorTotalProduto,
+          valorAdicional,
+          desconto,
+          originalSession: session
+        });
+      }
+
       return {
         ...session,
-        total: totalCalculado,
-        valorPago: parseFloat(session.valorPago) || 0,
-        restante: totalCalculado - (parseFloat(session.valorPago) || 0)
+        valorPacote,
+        valorTotalFotoExtra,
+        valorTotalProduto,
+        valorAdicional,
+        desconto,
+        valorPago,
+        total: totalFinal,
+        restante: isNaN(restante) ? 0 : restante
       };
     }).sort((a: any, b: any) => new Date(b.data).getTime() - new Date(a.data).getTime());
   }, [cliente]);
