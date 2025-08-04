@@ -1,6 +1,9 @@
 import { useMemo } from 'react';
 import { Cliente } from '@/types/orcamentos';
-import { WorkflowItem, useAppContext } from '@/contexts/AppContext';
+import { WorkflowItem } from '@/contexts/AppContext';
+import { storage, STORAGE_KEYS } from '@/utils/localStorage';
+import { useUnifiedWorkflowData } from './useUnifiedWorkflowData';
+import { validateClientMetrics } from '@/utils/validateClientMetrics';
 
 export interface ClientMetrics {
   id: string;
@@ -14,96 +17,81 @@ export interface ClientMetrics {
   ultimaSessao: Date | null;
 }
 
-/**
- * 🎯 SOLUÇÃO DEFINITIVA: CRM usando workflowItems como ÚNICA fonte de verdade
- * 
- * ARQUITETURA SIMPLIFICADA:
- * - Lê APENAS de workflowItems (AppContext)
- * - Filtra por clienteId (ligação direta)
- * - Calcula métricas diretamente (sem camadas intermediárias)
- * - ZERO dependências de useUnifiedWorkflowData ou workflow_sessions
- */
 export function useClientMetrics(clientes: Cliente[]) {
-  const { workflowItems } = useAppContext();
+  const { unifiedWorkflowData, workflowItems } = useUnifiedWorkflowData();
   
-  console.log('🚀 CRM MÉTRICAS - FONTE ÚNICA DE VERDADE (workflowItems):', {
+  console.log('📊 INÍCIO CÁLCULO MÉTRICAS CRM - DADOS RECEBIDOS:', {
     totalClientes: clientes.length,
-    totalWorkflowItems: workflowItems.length,
-    amostrawWorkflowItems: workflowItems.slice(0, 3).map(item => ({
+    totalUnifiedWorkflowData: unifiedWorkflowData.length,
+    amostraUnifiedData: unifiedWorkflowData.slice(0, 3).map(item => ({
       id: item.id,
       nome: item.nome,
       total: item.total,
       valorPago: item.valorPago,
-      clienteId: item.clienteId
+      fonte: item.fonte
     }))
   });
   
   const clientMetrics = useMemo(() => {
-    console.log('🎯 INICIANDO CÁLCULO DE MÉTRICAS CRM...');
+    console.log('🎯 MÉTRICAS CRM - USANDO FONTE ÚNICA DE VERDADE (workflowItems):', {
+      totalClientes: clientes.length,
+      totalUnifiedWorkflowData: unifiedWorkflowData.length
+    });
 
-    // LÓGICA DEFINITIVA: Para cada cliente, filtrar workflowItems por clienteId
+    // Criar métricas usando EXATAMENTE a mesma lógica de "Pago" e "A Receber"
     const metrics: ClientMetrics[] = clientes.map(cliente => {
-      console.log(`\n🔍 PROCESSANDO CLIENTE: ${cliente.nome} (ID: ${cliente.id})`);
-
-      // FILTRO DIRETO E SIMPLES: clienteId === cliente.id
-      const sessoesCliente = workflowItems.filter(item => {
+      // FILTRO EXATO: clienteId OU nome (igual ao que funciona para pagamentos)
+      const sessoesCliente = unifiedWorkflowData.filter(item => {
         const matchByClienteId = item.clienteId === cliente.id;
-        
-        // Fallback APENAS para itens antigos sem clienteId (compatibilidade)
-        const matchByName = !item.clienteId && 
-          item.nome?.toLowerCase().trim() === cliente.nome.toLowerCase().trim();
-        
-        const isMatch = matchByClienteId || matchByName;
-        
-        if (isMatch) {
-          console.log(`  ✅ SESSÃO ENCONTRADA: ${item.id} - ${item.nome} - R$ ${item.total || 0} (clienteId: ${item.clienteId || 'NOME'})`);
-        }
-        
-        return isMatch;
+        const matchByName = !item.clienteId && item.nome?.toLowerCase().trim() === cliente.nome.toLowerCase().trim();
+        return matchByClienteId || matchByName;
       });
 
-      console.log(`📊 RESULTADO FILTRO - ${cliente.nome}:`, {
-        sessõesEncontradas: sessoesCliente.length,
-        ids: sessoesCliente.map(s => s.id)
+      console.log(`🎯 CLIENTE MÉTRICA - ${cliente.nome}:`, {
+        clienteId: cliente.id,
+        sessoesEncontradas: sessoesCliente.length,
+        valoresDetalhados: sessoesCliente.map(s => ({
+          id: s.id,
+          nome: s.nome,
+          total: s.total,
+          valorPago: s.valorPago,
+          fonte: s.fonte,
+          clienteId: s.clienteId
+        }))
       });
 
-      // CÁLCULOS DIRETOS (idênticos ao que funciona na tabela Workflow)
+      // CÁLCULO DIRETO - EXATAMENTE igual aos valores "Pago" e "A Receber" que funcionam
       const sessoes = sessoesCliente.length;
-      
       const totalFaturado = sessoesCliente.reduce((acc, item) => {
-        const valor = typeof item.total === 'number' && !isNaN(item.total) ? item.total : 0;
-        console.log(`  💰 TOTAL - ${item.id}: R$ ${valor}`);
+        const valor = typeof item.total === 'number' ? item.total : 0;
+        console.log(`  💰 Somando total para ${cliente.nome} - Item ${item.id}: R$ ${valor}`);
         return acc + valor;
       }, 0);
-      
       const totalPago = sessoesCliente.reduce((acc, item) => {
-        const valor = typeof item.valorPago === 'number' && !isNaN(item.valorPago) ? item.valorPago : 0;
-        console.log(`  💵 PAGO - ${item.id}: R$ ${valor}`);
+        const valor = typeof item.valorPago === 'number' ? item.valorPago : 0;
         return acc + valor;
       }, 0);
-      
       const aReceber = totalFaturado - totalPago;
 
-      // Última sessão
+      console.log(`✅ RESULTADO FINAL - ${cliente.nome}:`, {
+        sessoes,
+        totalFaturado,
+        totalPago,
+        aReceber
+      });
+
+      // Encontrar última sessão
       let ultimaSessao: Date | null = null;
       if (sessoesCliente.length > 0) {
-        const datasValidas = sessoesCliente
+        const datasOrdenadas = sessoesCliente
           .map(item => new Date(item.data))
           .filter(data => !isNaN(data.getTime()))
           .sort((a, b) => b.getTime() - a.getTime());
         
-        if (datasValidas.length > 0) {
-          ultimaSessao = datasValidas[0];
+        if (datasOrdenadas.length > 0) {
+          ultimaSessao = datasOrdenadas[0];
         }
       }
-
-      console.log(`✅ MÉTRICAS FINAIS - ${cliente.nome}:`, {
-        sessoes,
-        totalFaturado,
-        totalPago,
-        aReceber,
-        ultimaSessao: ultimaSessao?.toLocaleDateString()
-      });
 
       return {
         id: cliente.id,
@@ -118,33 +106,14 @@ export function useClientMetrics(clientes: Cliente[]) {
       };
     });
 
-    // Relatório final
-    const totalSessoes = metrics.reduce((acc, m) => acc + m.sessoes, 0);
-    const totalFaturadoGeral = metrics.reduce((acc, m) => acc + m.totalFaturado, 0);
-    const totalPagoGeral = metrics.reduce((acc, m) => acc + m.totalPago, 0);
-
-    console.log('🎊 RELATÓRIO FINAL CRM MÉTRICAS:', {
-      clientesProcessados: metrics.length,
+    console.log('✅ Métricas CRM calculadas:', {
       clientesComSessoes: metrics.filter(m => m.sessoes > 0).length,
-      totalSessoes,
-      totalFaturadoGeral,
-      totalPagoGeral,
-      totalAReceberGeral: totalFaturadoGeral - totalPagoGeral
+      totalSessoes: metrics.reduce((acc, m) => acc + m.sessoes, 0),
+      totalFaturado: metrics.reduce((acc, m) => acc + m.totalFaturado, 0)
     });
 
-    // Debug específico para clientes mencionados
-    const eduardo = metrics.find(m => m.nome.toLowerCase().includes('eduardo'));
-    const lise = metrics.find(m => m.nome.toLowerCase().includes('lise'));
-    
-    if (eduardo) {
-      console.log('🔍 EDUARDO (DEBUG):', eduardo);
-    }
-    if (lise) {
-      console.log('🔍 LISE (DEBUG):', lise);
-    }
-
     return metrics;
-  }, [clientes, workflowItems]); // Dependência APENAS dos workflowItems
+  }, [clientes, unifiedWorkflowData]); // Usar dados unificados como dependência
 
   return clientMetrics;
 }
