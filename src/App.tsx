@@ -27,12 +27,33 @@ function AppIntegration() {
   const [isReady, setIsReady] = useState(false);
   
   useEffect(() => {
-    // Delay to ensure AppProvider is fully initialized
-    const timer = setTimeout(() => setIsReady(true), 100);
+    // Aguardar AppProvider estar completamente inicializado
+    const checkProvider = () => {
+      try {
+        // Verificar se AppProvider está funcionando
+        const appInitialized = localStorage.getItem('app_initialized');
+        
+        // Aguardar mais tempo se ainda não foi inicializado
+        const delay = appInitialized ? 100 : 1000;
+        
+        const timer = setTimeout(() => {
+          setIsReady(true);
+          console.log('🔌 AppIntegration ativado');
+        }, delay);
+        
+        return timer;
+      } catch {
+        // Fallback seguro
+        const timer = setTimeout(() => setIsReady(true), 1000);
+        return timer;
+      }
+    };
+    
+    const timer = checkProvider();
     return () => clearTimeout(timer);
   }, []);
   
-  // Always call the hook, but conditionally execute its logic
+  // Sempre chamar o hook, mas condicionalmente executar sua lógica
   useIntegration(isReady);
   
   return null;

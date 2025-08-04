@@ -1,6 +1,6 @@
-import { useState, useContext, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { AppContext } from '@/contexts/AppContext';
+import { useAppContext } from '@/contexts/AppContext';
 import { Cliente } from '@/types/orcamentos';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,7 +23,7 @@ export default function Clientes() {
     adicionarCliente,
     atualizarCliente,
     removerCliente
-  } = useContext(AppContext);
+  } = useAppContext();
 
   const [filtro, setFiltro] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');

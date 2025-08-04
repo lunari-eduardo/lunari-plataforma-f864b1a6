@@ -79,7 +79,7 @@ export function useUnifiedWorkflowData() {
       loadWorkflowSessions();
     };
     
-    const intervalId = setInterval(checkForChanges, 1000); // Verificar a cada segundo
+    const intervalId = setInterval(checkForChanges, 5000); // Verificar a cada 5 segundos (OTIMIZADO)
     
     window.addEventListener('storage', handleStorageChange);
     return () => {
@@ -148,23 +148,29 @@ export function useUnifiedWorkflowData() {
 
   // Dados unificados - WORKFLOW ITEMS COMO FONTE ABSOLUTA DE VERDADE
   const unifiedWorkflowData = useMemo(() => {
-    console.log('🎯 FORÇA TOTAL DO WORKFLOW - Priorização absoluta dos workflowItems...');
-    console.log('📊 WorkflowItems (FONTE AUTORITATIVA):', workflowItems.length);
-    console.log('📦 WorkflowSessions (BACKUP APENAS):', workflowSessions.length);
+    // LOGS OTIMIZADOS: apenas quando há mudanças significativas
+    const shouldLog = workflowItems.length > 0 || workflowSessions.length > 0;
+    if (shouldLog) {
+      console.log('🎯 WORKFLOW DATA SYNC:', {
+        workflowItems: workflowItems.length,
+        sessions: workflowSessions.length
+      });
+    }
 
     // ESTRATÉGIA DEFINITIVA: workflowItems sempre sobrescrevem qualquer outra fonte
     const allItems = new Map<string, WorkflowItem>();
 
     // 1. PRIORIDADE ABSOLUTA: workflowItems (dados ATUAIS e CORRETOS)
     workflowItems.forEach(item => {
-      console.log(`🎯 WORKFLOW ITEM AUTORITATIVO - ${item.nome || item.id}:`, {
-        id: item.id,
-        total: item.total,
-        valorPago: item.valorPago || 0,
-        aReceber: (item.total || 0) - (item.valorPago || 0),
-        fonte: item.fonte || 'agenda',
-        clienteId: item.clienteId
-      });
+      // LOG REDUZIDO: apenas para debug específico
+      if (item.nome?.toLowerCase().includes('eduardo') || item.nome?.toLowerCase().includes('lise')) {
+        console.log(`🎯 ITEM CONHECIDO - ${item.nome}:`, {
+          id: item.id,
+          total: item.total,
+          valorPago: item.valorPago || 0,
+          clienteId: item.clienteId
+        });
+      }
       
       // Garantir que item.total está definido e válido
       const totalValidado = typeof item.total === 'number' ? item.total : 0;
@@ -187,56 +193,28 @@ export function useUnifiedWorkflowData() {
         const normalizedItem = normalizeSessionToWorkflowItem(session);
         allItems.set(session.id, normalizedItem);
         sessionsAdicionadas++;
-        console.log(`📦 Session órfã adicionada: ${session.id} - R$ ${normalizedItem.total}`);
-      } else {
-        console.log(`⚠️ Session ignorada (workflow tem prioridade): ${session.id}`);
+        // LOG APENAS PARA SESSIONS IMPORTANTES
+        if (normalizedItem.nome?.toLowerCase().includes('eduardo') || normalizedItem.nome?.toLowerCase().includes('lise')) {
+          console.log(`📦 Session órfã adicionada: ${session.id} - R$ ${normalizedItem.total}`);
+        }
+        sessionsAdicionadas++;
       }
     });
 
     const resultado = Array.from(allItems.values());
     
-    // Validação específica para clientes mencionados
-    const eduardo = resultado.find(item => item.nome?.toLowerCase().includes('eduardo'));
-    const lise = resultado.find(item => item.nome?.toLowerCase().includes('lise'));
-    
-    if (eduardo) {
-      console.log('🔍 EDUARDO ENCONTRADO:', {
-        id: eduardo.id,
-        nome: eduardo.nome,
-        total: eduardo.total,
-        valorPago: eduardo.valorPago,
-        fonte: eduardo.fonte,
-        clienteId: eduardo.clienteId
+    // LOG APENAS RESUMO FINAL (OTIMIZADO)
+    if (shouldLog) {
+      const totalGeral = resultado.reduce((acc, item) => acc + (item.total || 0), 0);
+      const pagoGeral = resultado.reduce((acc, item) => acc + (item.valorPago || 0), 0);
+      
+      console.log('✅ DADOS UNIFICADOS:', {
+        total: resultado.length,
+        faturado: totalGeral,
+        pago: pagoGeral,
+        aReceber: totalGeral - pagoGeral
       });
     }
-    
-    if (lise) {
-      console.log('🔍 LISE ENCONTRADA:', {
-        id: lise.id,
-        nome: lise.nome,
-        total: lise.total,
-        valorPago: lise.valorPago,
-        fonte: lise.fonte,
-        clienteId: lise.clienteId
-      });
-    }
-    
-    // Debug final
-    const totalGeral = resultado.reduce((acc, item) => acc + (item.total || 0), 0);
-    const pagoGeral = resultado.reduce((acc, item) => acc + (item.valorPago || 0), 0);
-    
-    console.log('✅ DADOS UNIFICADOS - ANÁLISE COMPLETA:', {
-      totalItens: resultado.length,
-      workflowItemsProcessados: workflowItems.length,
-      sessionsAdicionadas,
-      totalGeral,
-      pagoGeral,
-      aReceberGeral: totalGeral - pagoGeral,
-      distribuicaoPorFonte: {
-        agenda: resultado.filter(i => i.fonte === 'agenda').length,
-        orcamento: resultado.filter(i => i.fonte === 'orcamento').length
-      }
-    });
 
     return resultado;
   }, [workflowItems, workflowSessions]);

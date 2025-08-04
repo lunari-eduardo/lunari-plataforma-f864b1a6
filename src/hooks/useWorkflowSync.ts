@@ -35,33 +35,42 @@ export function useWorkflowSync() {
     }
   }, [workflowItems]);
 
-  // Escutar mudanças no workflow e sincronizar em TEMPO REAL
+  // Sync otimizado com debounce inteligente
   useEffect(() => {
+    const performanceConfig = JSON.parse(localStorage.getItem('performance_config') || '{}');
+    const debounceMs = performanceConfig.syncDebounceMs || 500;
+    
     const timeoutId = setTimeout(() => {
-      forceSyncWorkflowData();
-    }, 50); // Debounce mínimo para máxima responsividade
+      if (workflowItems.length > 0) {
+        forceSyncWorkflowData();
+      }
+    }, debounceMs);
 
     return () => clearTimeout(timeoutId);
   }, [workflowItems, forceSyncWorkflowData]);
 
-  // Forçar atualização IMEDIATA quando valores de total ou pagamento mudam
-  useEffect(() => {
-    if (workflowItems.length > 0) {
-      console.log('🎯 WORKFLOW MODIFICADO - Sync IMEDIATO para CRM...');
-      forceSyncWorkflowData();
-    }
-  }, [workflowItems.map(item => `${item.id}:${item.total}:${item.valorPago}`).join(','), forceSyncWorkflowData]);
-
-  // Sync adicional para garantir que mudanças apareçam no CRM
+  // Sync periódico reduzido (OTIMIZADO)
   useEffect(() => {
     const syncInterval = setInterval(() => {
-      if (workflowItems.length > 0) {
-        forceSyncWorkflowData();
+      // Apenas sync se houve mudanças significativas
+      const lastSync = localStorage.getItem('workflow_sync_data');
+      if (lastSync && workflowItems.length > 0) {
+        try {
+          const syncData = JSON.parse(lastSync);
+          const timeDiff = Date.now() - new Date(syncData.lastSync).getTime();
+          
+          // Sync apenas se passou mais de 5 segundos
+          if (timeDiff > 5000) {
+            forceSyncWorkflowData();
+          }
+        } catch {
+          forceSyncWorkflowData();
+        }
       }
-    }, 1000); // Sync a cada segundo para garantir consistência
+    }, 10000); // Verificar a cada 10 segundos (OTIMIZADO)
 
     return () => clearInterval(syncInterval);
-  }, [workflowItems, forceSyncWorkflowData]);
+  }, [forceSyncWorkflowData]);
 
   // Função para validar integridade dos dados
   const validateDataIntegrity = useCallback(() => {

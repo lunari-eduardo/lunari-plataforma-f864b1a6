@@ -8,6 +8,7 @@ import { calculateTotals, calculateTotalsNew } from '@/services/FinancialCalcula
 import { autoMigrateIfNeeded } from '@/utils/dataMoveMigration';
 import { congelarRegrasPrecoFotoExtra, calcularComRegrasProprias, migrarRegrasParaItemAntigo } from '@/utils/precificacaoUtils';
 import { migrateWorkflowClienteId } from '@/utils/migrateWorkflowClienteId';
+import { initializeApp, needsInitialization } from '@/utils/initializeApp';
 
 // Types
 import { Orcamento, Template, OrigemCliente, MetricasOrcamento, Cliente } from '@/types/orcamentos';
@@ -1756,6 +1757,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     getBudgetId,
     canEditFully
   };
+
+  // Sistema de inicialização e correções automáticas
+  useEffect(() => {
+    let mounted = true;
+    
+    const runInitialization = async () => {
+      try {
+        // Verificar se precisa de inicialização
+        if (needsInitialization()) {
+          console.log('🔧 Executando inicialização automática do sistema...');
+          const result = await initializeApp();
+          
+          if (mounted && result.success) {
+            console.log('✅ Sistema inicializado com sucesso');
+          }
+        }
+      } catch (error) {
+        console.error('❌ Erro na inicialização automática:', error);
+      }
+    };
+    
+    // Executar com um pequeno delay para garantir que tudo esteja carregado
+    const timer = setTimeout(runInitialization, 500);
+    
+    return () => {
+      mounted = false;
+      clearTimeout(timer);
+    };
+  }, []); // Executar apenas uma vez na inicialização
 
   return (
     <AppContext.Provider value={contextValue}>

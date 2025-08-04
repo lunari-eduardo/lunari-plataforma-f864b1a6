@@ -20,23 +20,18 @@ export interface ClientMetrics {
 export function useClientMetrics(clientes: Cliente[]) {
   const { unifiedWorkflowData, workflowItems } = useUnifiedWorkflowData();
   
-  console.log('📊 INÍCIO CÁLCULO MÉTRICAS CRM - DADOS RECEBIDOS:', {
-    totalClientes: clientes.length,
-    totalUnifiedWorkflowData: unifiedWorkflowData.length,
-    amostraUnifiedData: unifiedWorkflowData.slice(0, 3).map(item => ({
-      id: item.id,
-      nome: item.nome,
-      total: item.total,
-      valorPago: item.valorPago,
-      fonte: item.fonte
-    }))
-  });
+  // LOG APENAS QUANDO HÁ MUDANÇAS SIGNIFICATIVAS
+  const hasData = clientes.length > 0 && unifiedWorkflowData.length > 0;
+  if (hasData) {
+    console.log('📊 CRM METRICS:', {
+      clients: clientes.length,
+      workflowData: unifiedWorkflowData.length
+    });
+  }
   
   const clientMetrics = useMemo(() => {
-    console.log('🎯 MÉTRICAS CRM - USANDO FONTE ÚNICA DE VERDADE (workflowItems):', {
-      totalClientes: clientes.length,
-      totalUnifiedWorkflowData: unifiedWorkflowData.length
-    });
+    // LOG APENAS EM DEBUG MODE OU PRIMEIRA EXECUÇÃO
+    const debugMode = process.env.NODE_ENV === 'development';
 
     // Criar métricas usando EXATAMENTE a mesma lógica de "Pago" e "A Receber"
     const metrics: ClientMetrics[] = clientes.map(cliente => {
@@ -47,24 +42,18 @@ export function useClientMetrics(clientes: Cliente[]) {
         return matchByClienteId || matchByName;
       });
 
-      console.log(`🎯 CLIENTE MÉTRICA - ${cliente.nome}:`, {
-        clienteId: cliente.id,
-        sessoesEncontradas: sessoesCliente.length,
-        valoresDetalhados: sessoesCliente.map(s => ({
-          id: s.id,
-          nome: s.nome,
-          total: s.total,
-          valorPago: s.valorPago,
-          fonte: s.fonte,
-          clienteId: s.clienteId
-        }))
-      });
+      // LOG APENAS PARA CLIENTES ESPECÍFICOS EM DEBUG
+      if (debugMode && (cliente.nome.toLowerCase().includes('eduardo') || cliente.nome.toLowerCase().includes('lise'))) {
+        console.log(`🎯 CLIENT METRIC - ${cliente.nome}:`, {
+          sessions: sessoesCliente.length,
+          total: sessoesCliente.reduce((acc, s) => acc + (s.total || 0), 0)
+        });
+      }
 
       // CÁLCULO DIRETO - EXATAMENTE igual aos valores "Pago" e "A Receber" que funcionam
       const sessoes = sessoesCliente.length;
       const totalFaturado = sessoesCliente.reduce((acc, item) => {
         const valor = typeof item.total === 'number' ? item.total : 0;
-        console.log(`  💰 Somando total para ${cliente.nome} - Item ${item.id}: R$ ${valor}`);
         return acc + valor;
       }, 0);
       const totalPago = sessoesCliente.reduce((acc, item) => {
@@ -73,12 +62,10 @@ export function useClientMetrics(clientes: Cliente[]) {
       }, 0);
       const aReceber = totalFaturado - totalPago;
 
-      console.log(`✅ RESULTADO FINAL - ${cliente.nome}:`, {
-        sessoes,
-        totalFaturado,
-        totalPago,
-        aReceber
-      });
+      // LOG APENAS RESULTADOS RELEVANTES
+      if (debugMode && totalFaturado > 0) {
+        console.log(`✅ ${cliente.nome}: R$ ${totalFaturado} (${sessoes} sessões)`);
+      }
 
       // Encontrar última sessão
       let ultimaSessao: Date | null = null;
@@ -106,11 +93,14 @@ export function useClientMetrics(clientes: Cliente[]) {
       };
     });
 
-    console.log('✅ Métricas CRM calculadas:', {
-      clientesComSessoes: metrics.filter(m => m.sessoes > 0).length,
-      totalSessoes: metrics.reduce((acc, m) => acc + m.sessoes, 0),
-      totalFaturado: metrics.reduce((acc, m) => acc + m.totalFaturado, 0)
-    });
+    // LOG APENAS RESUMO FINAL
+    if (debugMode) {
+      const totalFaturadoGeral = metrics.reduce((acc, m) => acc + m.totalFaturado, 0);
+      console.log('✅ CRM Metrics:', {
+        activeClients: metrics.filter(m => m.sessoes > 0).length,
+        totalRevenue: totalFaturadoGeral
+      });
+    }
 
     return metrics;
   }, [clientes, unifiedWorkflowData]); // Usar dados unificados como dependência
