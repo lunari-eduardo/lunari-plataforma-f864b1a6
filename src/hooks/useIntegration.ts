@@ -46,13 +46,13 @@ export const useIntegration = (isReady: boolean = true) => {
 
   // Monitor orçamentos fechados e criar agendamentos automaticamente
   useEffect(() => {
-    if (!isReady) return;
+    if (syncInProgressRef.current || !isReady) return;
 
-    if (syncInProgressRef.current) return;
-    
     const orcamentosFechados = orcamentos.filter(orc => orc.status === 'fechado');
+    
     orcamentosFechados.forEach(orcamento => {
       const currentTime = Date.now();
+      if (!shouldSync(`create-${orcamento.id}`, currentTime)) return;
 
       // Verificar se já existe um agendamento para este orçamento
       const existingAppointment = appointments.find(app => 
@@ -109,7 +109,7 @@ export const useIntegration = (isReady: boolean = true) => {
 
   // Monitor agendamentos removidos de orçamentos cancelados ou não fechados
   useEffect(() => {
-    if (!isReady || syncInProgressRef.current) return;
+    if (syncInProgressRef.current || !isReady) return;
 
     const orcamentosCancelados = orcamentos.filter(orc => orc.status === 'cancelado');
     
@@ -142,7 +142,7 @@ export const useIntegration = (isReady: boolean = true) => {
 
   // Monitor agendamentos "confirmado" cujos orçamentos não estão mais "fechado"
   useEffect(() => {
-    if (!isReady || syncInProgressRef.current) return;
+    if (syncInProgressRef.current || !isReady) return;
 
     const agendamentosOrfaos = appointments.filter(appointment => {
       // Só verificar agendamentos de orçamento que estão confirmados
