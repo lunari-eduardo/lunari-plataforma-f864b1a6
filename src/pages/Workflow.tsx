@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useDebounce } from "use-debounce";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { WorkflowFilter, FilterOptions } from "@/components/workflow/WorkflowFilter";
@@ -102,9 +103,9 @@ export default function Workflow() {
   } = useOrcamentoData();
   
   
-  const getClienteByName = (nome: string) => {
+  const getClienteByName = useCallback((nome: string) => {
     return clientes.find(cliente => cliente.nome === nome);
-  };
+  }, [clientes]);
 
   // Carregamento dos status de workflow das configurações - apenas etapas personalizadas
   const statusOptions = getStatusOptions();
@@ -212,7 +213,10 @@ export default function Workflow() {
         });
         
         window.localStorage.setItem('workflow_sessions', JSON.stringify(mergedSessions));
-        console.log('Workflow sessions saved to localStorage:', sessions.length, 'sessions');
+        // Log reduzido para evitar spam
+        if (sessions.length > 0) {
+          console.log('💾 Workflow sessions saved:', sessions.length, 'sessions');
+        }
       } catch (error) {
         console.error("Erro ao salvar sessões no localStorage", error);
       }
@@ -245,18 +249,36 @@ export default function Workflow() {
     }
   }, [sessions, searchTerm]);
 
+  // Implementar debounce e controle de loading para evitar loops
+  const [isLoading, setIsLoading] = useState(false);
+  const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Debounce do currentMonth para evitar chamadas excessivas
+  const [debouncedCurrentMonth] = useDebounce(currentMonth, 300);
+
   // Integração com dados reais da agenda - carregar sessões do mês selecionado
   useEffect(() => {
-    console.log('Loading workflow data for month:', currentMonth);
+    if (isLoading) return; // Evitar múltiplas execuções simultâneas
     
-    const confirmedSessions = getConfirmedSessionsForWorkflow(currentMonth.month, currentMonth.year, getClienteByName, pacotes, produtos);
+    setIsLoading(true);
+    console.log('📅 Loading workflow for:', `${debouncedCurrentMonth.month}/${debouncedCurrentMonth.year}`);
+    
+    // Limpar timeout anterior se existir
+    if (loadingTimeoutRef.current) {
+      clearTimeout(loadingTimeoutRef.current);
+    }
+    
+    // Executar com delay mínimo para evitar spam
+    loadingTimeoutRef.current = setTimeout(() => {
+      try {
+        const confirmedSessions = getConfirmedSessionsForWorkflow(debouncedCurrentMonth.month, debouncedCurrentMonth.year, getClienteByName);
 
     // Carregar todas as sessões salvas do localStorage
     const allSavedSessions = (() => {
       try {
         const saved = window.localStorage.getItem('workflow_sessions');
         const result = saved ? JSON.parse(saved) : [];
-        console.log('Loaded saved sessions from localStorage:', result.length, 'total sessions');
+        // Log simplificado para reduzir spam
         return result;
       } catch (error) {
         console.error("Erro ao carregar sessões salvas", error);
@@ -270,16 +292,14 @@ export default function Workflow() {
       return sessionDate.getUTCMonth() + 1 === currentMonth.month && sessionDate.getUTCFullYear() === currentMonth.year;
     });
 
-    console.log('Found existing sessions for current month:', existingSessionsForCurrentMonth.length);
+    // Debug reduzido para evitar spam no console
 
     // Mapear agendamentos confirmados, preservando dados editados ou criando novos
     const currentMonthSessions: SessionData[] = confirmedSessions.map(agendamento => {
       const existingSession = existingSessionsForCurrentMonth.find((s: SessionData) => s.id === agendamento.id);
       if (existingSession) {
-        console.log('Using existing session data for:', agendamento.id);
         return existingSession;
       } else {
-        console.log('Creating new session data for:', agendamento.id);
         return {
           ...agendamento,
           status: '',
@@ -288,9 +308,23 @@ export default function Workflow() {
       }
     });
     
-    console.log('Setting sessions for current month:', currentMonthSessions.length, 'sessions');
-    setSessions(currentMonthSessions);
-  }, [currentMonth, getConfirmedSessionsForWorkflow, getClienteByName, pacotes, produtos]);
+        setSessions(currentMonthSessions);
+        console.log('✅ Workflow data loaded:', currentMonthSessions.length, 'sessions');
+      } catch (error) {
+        console.error('Erro ao carregar dados do workflow:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }, 100); // Delay mínimo para debounce
+
+    // Cleanup
+    return () => {
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+      }
+      setIsLoading(false);
+    };
+  }, [debouncedCurrentMonth, getConfirmedSessionsForWorkflow, getClienteByName]);
   const handlePreviousMonth = () => {
     let newMonth = currentMonth.month - 1;
     let newYear = currentMonth.year;

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
 import { parseDateFromStorage, formatDateForStorage, getCurrentDateString } from '@/utils/dateUtils';
 import { formatCurrency } from '@/utils/financialUtils';
@@ -240,6 +240,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [pacotes, setPacotes] = useState(() => {
     return storage.load('configuracoes_pacotes', []);
   });
+
+  // Memoizar pacotes para evitar re-renders
+  const pacotesMemoizados = useMemo(() => pacotes, [pacotes]);
+  const produtosMemoizados = useMemo(() => produtos, [produtos]);
 
   const [metricas, setMetricas] = useState<MetricasOrcamento>({
     totalMes: 0,
@@ -986,7 +990,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const previsto = filteredItems.reduce((sum, item) => sum + item.total, 0);
 
     return { receita, aReceber, previsto };
-  }, [workflowItems, workflowFilters]);
+  }, [workflowItems, workflowFilters.mes]); // Otimizado: apenas mes nas dependências
 
   // Action functions
   const adicionarOrcamento = (orcamento: Omit<Orcamento, 'id' | 'criadoEm'>) => {
@@ -1685,18 +1689,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const contextValue: AppContextType = {
-    // Data
-    orcamentos,
-    templates,
-    origens,
-    clientes,
-    categorias,
-    produtos,
-    pacotes,
-    metricas,
-    appointments,
-    workflowItems: workflowItems.filter(item => {
+  // Memoizar workflowItems filtrados para evitar recálculos desnecessários
+  const workflowItemsFiltrados = useMemo(() => {
+    return workflowItems.filter(item => {
       const [itemDay, itemMonth, itemYear] = item.data.split('/');
       const [filterMonth, filterYear] = workflowFilters.mes.split('/');
       const monthMatches = itemMonth === filterMonth && itemYear === filterYear;
@@ -1716,7 +1711,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const timeA = a.hora.split(':').map(Number);
       const timeB = b.hora.split(':').map(Number);
       return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
-    }),
+    });
+  }, [workflowItems, workflowFilters.mes, workflowFilters.busca]);
+
+  const contextValue: AppContextType = {
+    // Data
+    orcamentos,
+    templates,
+    origens,
+    clientes,
+    categorias,
+    produtos: produtosMemoizados,
+    pacotes: pacotesMemoizados,
+    metricas,
+    appointments,
+    workflowItems: workflowItemsFiltrados,
     workflowSummary,
     workflowFilters,
     visibleColumns,

@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 
 /**
@@ -35,32 +35,27 @@ export function useWorkflowSync() {
     }
   }, [workflowItems]);
 
-  // Escutar mudanças no workflow e sincronizar em TEMPO REAL
+  // Sync inteligente com debounce APENAS quando dados realmente mudam
+  const lastWorkflowDataRef = useRef<string>('');
+  
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      forceSyncWorkflowData();
-    }, 50); // Debounce mínimo para máxima responsividade
-
-    return () => clearTimeout(timeoutId);
-  }, [workflowItems, forceSyncWorkflowData]);
-
-  // Forçar atualização IMEDIATA quando valores de total ou pagamento mudam
-  useEffect(() => {
-    if (workflowItems.length > 0) {
-      console.log('🎯 WORKFLOW MODIFICADO - Sync IMEDIATO para CRM...');
-      forceSyncWorkflowData();
-    }
-  }, [workflowItems.map(item => `${item.id}:${item.total}:${item.valorPago}`).join(','), forceSyncWorkflowData]);
-
-  // Sync adicional para garantir que mudanças apareçam no CRM
-  useEffect(() => {
-    const syncInterval = setInterval(() => {
-      if (workflowItems.length > 0) {
+    // Criar hash dos dados importantes para detectar mudanças reais
+    const workflowDataHash = workflowItems.map(item => 
+      `${item.id}:${item.total}:${item.valorPago}:${item.status}`
+    ).join('|');
+    
+    // Só sincronizar se os dados realmente mudaram
+    if (workflowDataHash !== lastWorkflowDataRef.current && workflowItems.length > 0) {
+      console.log('🔄 Dados do workflow mudaram - Sincronizando...');
+      lastWorkflowDataRef.current = workflowDataHash;
+      
+      // Debounce mais inteligente - só dispara se dados mudaram
+      const timeoutId = setTimeout(() => {
         forceSyncWorkflowData();
-      }
-    }, 1000); // Sync a cada segundo para garantir consistência
+      }, 500); // Debounce maior para reduzir spam
 
-    return () => clearInterval(syncInterval);
+      return () => clearTimeout(timeoutId);
+    }
   }, [workflowItems, forceSyncWorkflowData]);
 
   // Função para validar integridade dos dados
