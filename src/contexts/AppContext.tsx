@@ -516,13 +516,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     console.log('✅ Dados sincronizados com estrutura unificada:', sessaoWorkflow);
 
-    // Salvar no localStorage do workflow
+    // SALVAR COM PREVENÇÃO DE DUPLICAÇÃO
     const saved = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
-    const existingIndex = saved.findIndex((s: any) => s.id === sessaoWorkflow.id);
     
-    if (existingIndex >= 0) {
-      saved[existingIndex] = sessaoWorkflow;
+    // Verificar duplicação por sessionId E por id
+    const sessionId = sessaoWorkflow.sessionId;
+    const existingBySessionId = saved.findIndex((s: any) => s.sessionId === sessionId);
+    const existingById = saved.findIndex((s: any) => s.id === sessaoWorkflow.id);
+    
+    if (existingBySessionId >= 0) {
+      console.log(`🔄 Atualizando sessão existente (sessionId): ${sessionId}`);
+      saved[existingBySessionId] = { ...saved[existingBySessionId], ...sessaoWorkflow };
+    } else if (existingById >= 0) {
+      console.log(`🔄 Atualizando sessão existente (id): ${sessaoWorkflow.id}`);
+      saved[existingById] = { ...saved[existingById], ...sessaoWorkflow };
     } else {
+      console.log(`➕ Criando nova sessão: ${sessionId}`);
       saved.push(sessaoWorkflow);
     }
     

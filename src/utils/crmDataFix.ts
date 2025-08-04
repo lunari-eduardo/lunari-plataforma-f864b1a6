@@ -78,10 +78,10 @@ function findClientByName(nome: string, clientes: Cliente[]): Cliente | null {
 }
 
 /**
- * FUNÇÃO PRINCIPAL: Correção completa e simplificada
+ * FUNÇÃO PRINCIPAL: Correção completa e simplificada + DEDUPLICAÇÃO
  */
 export function fixCrmDataDefinitive(): boolean {
-  console.log('🚀 === CORREÇÃO DEFINITIVA DOS DADOS CRM ===');
+  console.log('🚀 === CORREÇÃO DEFINITIVA DOS DADOS CRM + DEDUPLICAÇÃO ===');
   
   try {
     // 1. Carregar dados
@@ -93,7 +93,42 @@ export function fixCrmDataDefinitive(): boolean {
       workflowSessions: workflowSessions.length
     });
     
-    // 2. CORRIGIR TODOS OS VALORES NaN
+    // 2. DEDUPLICAÇÃO POR sessionId (PRIORIDADE ALTA)
+    const sessionMap = new Map();
+    let duplicatesRemoved = 0;
+    
+    workflowSessions.forEach((item: any) => {
+      const sessionKey = item.sessionId || item.id;
+      
+      if (!sessionMap.has(sessionKey)) {
+        sessionMap.set(sessionKey, item);
+      } else {
+        // Conflito: escolher o mais recente ou mais completo
+        const existing = sessionMap.get(sessionKey);
+        const currentTime = new Date(item.dataOriginal || item.data || '2024-01-01').getTime();
+        const existingTime = new Date(existing.dataOriginal || existing.data || '2024-01-01').getTime();
+        
+        // Priorizar: dados mais recentes E com clienteId definido
+        const shouldReplace = currentTime > existingTime || 
+                             (item.clienteId && !existing.clienteId) ||
+                             (item.total > 0 && existing.total === 0);
+        
+        if (shouldReplace) {
+          console.log(`🔄 Substituindo duplicata: ${sessionKey} - ${existing.nome} → ${item.nome}`);
+          sessionMap.set(sessionKey, item);
+        } else {
+          console.log(`🗑️ Removendo duplicata: ${sessionKey} - ${item.nome}`);
+        }
+        duplicatesRemoved++;
+      }
+    });
+    
+    // Converter Map de volta para array
+    workflowSessions = Array.from(sessionMap.values());
+    
+    console.log(`✅ Deduplicação concluída: ${duplicatesRemoved} duplicatas removidas`);
+    
+    // 3. CORRIGIR TODOS OS VALORES NaN
     workflowSessions = workflowSessions.map((item: any) => ({
       ...item,
       total: parseMonetaryValue(item.total),
@@ -106,7 +141,7 @@ export function fixCrmDataDefinitive(): boolean {
       restante: parseMonetaryValue(item.total) - parseMonetaryValue(item.valorPago)
     }));
     
-    // 3. CORRIGIR CLIENTEID ÓRFÃOS
+    // 4. CORRIGIR CLIENTEID ÓRFÃOS
     let clientsCreated = 0;
     
     workflowSessions = workflowSessions.map((item: any) => {
@@ -138,7 +173,7 @@ export function fixCrmDataDefinitive(): boolean {
       return item;
     });
     
-    // 4. RECALCULAR TOTAIS (garantir consistência)
+    // 5. RECALCULAR TOTAIS (garantir consistência)
     workflowSessions = workflowSessions.map((item: any) => {
       const valorBase = item.valorPacote || 0;
       const fotosExtra = item.valorTotalFotoExtra || 0;
@@ -158,17 +193,18 @@ export function fixCrmDataDefinitive(): boolean {
       };
     });
     
-    // 5. SALVAR DADOS CORRIGIDOS
+    // 6. SALVAR DADOS CORRIGIDOS
     storage.save(STORAGE_KEYS.CLIENTS, clientes);
     localStorage.setItem('workflow_sessions', JSON.stringify(workflowSessions));
     
-    // 6. LIMPAR DADOS ANTIGOS PARA EVITAR CONFLITOS
+    // 7. LIMPAR DADOS ANTIGOS PARA EVITAR CONFLITOS
     storage.save(STORAGE_KEYS.WORKFLOW_ITEMS, []);
     
-    // 7. MARCAR CORREÇÃO COMO CONCLUÍDA
+    // 8. MARCAR CORREÇÃO COMO CONCLUÍDA
     localStorage.setItem('crm_fix_completed', new Date().toISOString());
     
-    console.log('✅ CORREÇÃO CONCLUÍDA:', {
+    console.log('✅ CORREÇÃO COMPLETA CONCLUÍDA:', {
+      duplicatesRemoved,
       clientsCreated,
       totalWorkflowSessions: workflowSessions.length,
       workflowsWithClientId: workflowSessions.filter((s: any) => s.clienteId).length

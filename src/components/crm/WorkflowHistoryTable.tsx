@@ -14,17 +14,29 @@ export function WorkflowHistoryTable({ cliente }: WorkflowHistoryTableProps) {
   const workflowData = useMemo(() => {
     if (!cliente) return [];
     
-    // FONTE ÚNICA: workflow_sessions com dados corrigidos
+    // FONTE ÚNICA: workflow_sessions com dados corrigidos E deduplicados
     const workflowSessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
     
     // Filtrar sessões do cliente (by clienteId E nome como fallback)
-    return workflowSessions
+    const clientSessions = workflowSessions
       .filter((session: any) => {
         const matchByClienteId = session.clienteId === cliente.id;
         const matchByName = !session.clienteId && 
           session.nome?.toLowerCase().trim() === cliente.nome.toLowerCase().trim();
         return matchByClienteId || matchByName;
       })
+      .sort((a: any, b: any) => new Date(b.data).getTime() - new Date(a.data).getTime());
+    
+    // DEDUPLICAÇÃO FINAL por sessionId (caso ainda existam duplicatas)
+    const sessionMap = new Map();
+    clientSessions.forEach((session: any) => {
+      const sessionKey = session.sessionId || session.id;
+      if (!sessionMap.has(sessionKey)) {
+        sessionMap.set(sessionKey, session);
+      }
+    });
+    
+    return Array.from(sessionMap.values())
       .sort((a: any, b: any) => new Date(b.data).getTime() - new Date(a.data).getTime());
   }, [cliente]);
 
