@@ -24,38 +24,8 @@ const queryClient = new QueryClient();
 
 // Component to safely initialize integration hooks
 function AppIntegration() {
-  const [isReady, setIsReady] = useState(false);
-  
-  useEffect(() => {
-    // Aguardar AppProvider estar completamente inicializado
-    const checkProvider = () => {
-      try {
-        // Verificar se AppProvider está funcionando
-        const appInitialized = localStorage.getItem('app_initialized');
-        
-        // Aguardar mais tempo se ainda não foi inicializado
-        const delay = appInitialized ? 100 : 1000;
-        
-        const timer = setTimeout(() => {
-          setIsReady(true);
-          console.log('🔌 AppIntegration ativado');
-        }, delay);
-        
-        return timer;
-      } catch {
-        // Fallback seguro
-        const timer = setTimeout(() => setIsReady(true), 1000);
-        return timer;
-      }
-    };
-    
-    const timer = checkProvider();
-    return () => clearTimeout(timer);
-  }, []);
-  
-  // SEMPRE chamar hooks no topo (regra do React)
-  useIntegration(isReady);
-  
+  // SIMPLIFICADO: Sem estados condicionais que podem causar hook instability
+  useIntegration();
   return null;
 }
 

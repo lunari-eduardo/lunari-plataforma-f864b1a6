@@ -5,7 +5,7 @@ import { useAgenda, Appointment } from './useAgenda';
 import { toast } from '@/hooks/use-toast';
 import { parseDateFromStorage, formatDateForStorage } from '@/utils/dateUtils';
 
-export const useIntegration = (isReady: boolean = true) => {
+export const useIntegration = () => {
   // SEMPRE chamar os hooks no mesmo lugar (regra dos hooks do React)
   const { orcamentos, atualizarOrcamento } = useOrcamentos();
   const { appointments, addAppointment, updateAppointment, deleteAppointment } = useAgenda();
@@ -47,7 +47,7 @@ export const useIntegration = (isReady: boolean = true) => {
 
   // Monitor orçamentos fechados e criar agendamentos automaticamente
   useEffect(() => {
-    if (syncInProgressRef.current || !isReady) return;
+    if (syncInProgressRef.current) return;
 
     const orcamentosFechados = orcamentos.filter(orc => orc.status === 'fechado');
     
@@ -106,11 +106,11 @@ export const useIntegration = (isReady: boolean = true) => {
         }, 50);
       }
     });
-  }, [orcamentos, appointments, addAppointment, updateAppointment, shouldSync, isReady]);
+  }, [orcamentos, appointments, addAppointment, updateAppointment, shouldSync]);
 
   // Monitor agendamentos removidos de orçamentos cancelados ou não fechados
   useEffect(() => {
-    if (syncInProgressRef.current || !isReady) return;
+    if (syncInProgressRef.current) return;
 
     const orcamentosCancelados = orcamentos.filter(orc => orc.status === 'cancelado');
     
@@ -139,11 +139,11 @@ export const useIntegration = (isReady: boolean = true) => {
         }, 50);
       }
     });
-  }, [orcamentos, appointments, deleteAppointment, shouldSync, isReady]);
+  }, [orcamentos, appointments, deleteAppointment, shouldSync]);
 
   // Monitor agendamentos "confirmado" cujos orçamentos não estão mais "fechado"
   useEffect(() => {
-    if (syncInProgressRef.current || !isReady) return;
+    if (syncInProgressRef.current) return;
 
     const agendamentosOrfaos = appointments.filter(appointment => {
       // Só verificar agendamentos de orçamento que estão confirmados
@@ -171,7 +171,7 @@ export const useIntegration = (isReady: boolean = true) => {
         syncInProgressRef.current = false;
       }, 50);
     });
-  }, [orcamentos, appointments, isFromBudget, getBudgetId, updateAppointment, shouldSync, isReady]);
+  }, [orcamentos, appointments, isFromBudget, getBudgetId, updateAppointment, shouldSync]);
 
   // Monitor mudanças de data em agendamentos para sincronizar com orçamentos
   // REMOVIDO: Esta sincronização bidirecional estava causando o loop infinito
@@ -206,7 +206,6 @@ export const useIntegration = (isReady: boolean = true) => {
 
   // Executar limpeza na inicialização
   useEffect(() => {
-    if (!isReady) return;
     const timer = setTimeout(() => {
       const removedCount = cleanupOrphanedAppointments();
       if (removedCount > 0) {
@@ -215,7 +214,7 @@ export const useIntegration = (isReady: boolean = true) => {
     }, 1000); // Delay para garantir que tudo foi carregado
 
     return () => clearTimeout(timer);
-  }, [cleanupOrphanedAppointments, isReady]);
+  }, [cleanupOrphanedAppointments]);
 
   return {
     // Funções de utilidade para identificar origem dos agendamentos
