@@ -2,6 +2,7 @@ import { useState, useContext, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AppContext } from '@/contexts/AppContext';
 import { useUnifiedWorkflowData } from '@/hooks/useUnifiedWorkflowData';
+import { useUnifiedClientHistory } from '@/hooks/useUnifiedClientHistory';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +29,7 @@ export default function ClienteDetalhe() {
   const {
     clientes,
     orcamentos,
+    appointments,
     atualizarCliente
   } = useContext(AppContext);
   const {
@@ -58,134 +60,21 @@ export default function ClienteDetalhe() {
     observacoes: cliente?.observacoes || ''
   });
 
-  // Buscar histórico do cliente (workflow + orçamentos) usando dados unificados
-  const clienteHistorico = useMemo(() => {
-    if (!cliente) return [];
-    console.log('🔍 Buscando histórico para cliente:', {
-      clienteId: cliente.id,
-      clienteNome: cliente.nome,
-      totalUnifiedWorkflowData: unifiedWorkflowData.length
-    });
+  // Usar o novo sistema de histórico unificado
+  const clienteHistorico = useUnifiedClientHistory(
+    cliente || { id: '', nome: '', email: '', telefone: '' },
+    orcamentos,
+    appointments,
+    unifiedWorkflowData
+  );
 
-    // Workflow items relacionados ao cliente (MESMO FILTRO DO useClientMetrics)
-    const workflowDoCliente = unifiedWorkflowData.filter(item => {
-      const matchByClienteId = item.clienteId === cliente.id;
-      const matchByName = item.nome?.toLowerCase().trim() === cliente.nome?.toLowerCase().trim();
-      return matchByClienteId || matchByName;
-    });
-
-    // Orçamentos relacionados ao cliente
-    const orcamentosDoCliente = orcamentos.filter(orc => {
-      // Comparar com nome do cliente se não houver clienteId direto
-      const nomeOrcamento = typeof orc.cliente === 'string' ? orc.cliente : orc.cliente?.nome;
-      return nomeOrcamento?.toLowerCase().trim() === cliente.nome?.toLowerCase().trim();
-    });
-
-    // LÓGICA DE UNIFICAÇÃO: Merge de orçamentos com workflow items relacionados
-    const projetosUnificados = new Map();
-    const workflowProcessados = new Set<string>();
-
-    // 1. Processar workflow items que têm origem em orçamentos
-    workflowDoCliente.forEach(workflowItem => {
-      // Detectar se o workflow item tem origem em orçamento (ID padrão: orcamento-{orcamentoId})
-      const isFromOrcamento = workflowItem.id.startsWith('orcamento-');
-      if (isFromOrcamento) {
-        const orcamentoId = workflowItem.id.replace('orcamento-', '');
-        const orcamentoOriginal = orcamentosDoCliente.find(orc => orc.id === orcamentoId);
-        if (orcamentoOriginal) {
-          // PROJETO UNIFICADO: Priorizar dados do workflow + metadados do orçamento
-          projetosUnificados.set(workflowItem.id, {
-            id: workflowItem.id,
-            tipo: 'projeto' as const,
-            // Tipo especial para projetos unificados
-            data: workflowItem.data,
-            // Data do trabalho (mais recente)
-            descricao: workflowItem.descricao || workflowItem.pacote,
-            valor: workflowItem.total,
-            // Valor atual do trabalho
-            status: workflowItem.status,
-            // Status atual do trabalho
-            detalhes: {
-              pacote: workflowItem.pacote,
-              categoria: workflowItem.categoria,
-              valorPago: workflowItem.valorPago,
-              restante: workflowItem.restante,
-              // Metadados do orçamento original
-              dataOrcamento: orcamentoOriginal.data,
-              origemCliente: orcamentoOriginal.origemCliente,
-              observacoesOrcamento: orcamentoOriginal.detalhes
-            }
-          });
-          workflowProcessados.add(workflowItem.id);
-          console.log('🔗 Projeto unificado criado:', workflowItem.id, '← orçamento:', orcamentoId);
-        }
-      }
-    });
-
-    // 2. Adicionar workflow items que NÃO têm origem em orçamentos
-    workflowDoCliente.forEach(workflowItem => {
-      if (!workflowProcessados.has(workflowItem.id)) {
-        projetosUnificados.set(workflowItem.id, {
-          id: workflowItem.id,
-          tipo: 'workflow' as const,
-          data: workflowItem.data,
-          descricao: workflowItem.descricao || workflowItem.pacote,
-          valor: workflowItem.total,
-          status: workflowItem.status,
-          detalhes: {
-            pacote: workflowItem.pacote,
-            categoria: workflowItem.categoria,
-            valorPago: workflowItem.valorPago,
-            restante: workflowItem.restante
-          }
-        });
-      }
-    });
-
-    // 3. Adicionar orçamentos que NÃO se tornaram trabalhos
-    orcamentosDoCliente.forEach(orcamento => {
-      const jaVirouWorkflowItem = workflowDoCliente.some(w => w.id === `orcamento-${orcamento.id}`);
-      if (!jaVirouWorkflowItem) {
-        projetosUnificados.set(`orc-${orcamento.id}`, {
-          id: orcamento.id,
-          tipo: 'orcamento' as const,
-          data: orcamento.data,
-          descricao: `Orçamento - ${orcamento.categoria}`,
-          valor: orcamento.valorTotal || orcamento.valorFinal || 0,
-          status: orcamento.status,
-          detalhes: {
-            categoria: orcamento.categoria,
-            origem: orcamento.origemCliente,
-            observacoes: orcamento.detalhes
-          }
-        });
-      }
-    });
-
-    // Combinar e ordenar por data (mais recente primeiro)
-    const historicoCombinado = Array.from(projetosUnificados.values()).sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
-    console.log('✅ Histórico unificado:', {
-      total: historicoCombinado.length,
-      projetos: historicoCombinado.filter(h => h.tipo === 'projeto').length,
-      workflows: historicoCombinado.filter(h => h.tipo === 'workflow').length,
-      orcamentos: historicoCombinado.filter(h => h.tipo === 'orcamento').length
-    });
-    return historicoCombinado;
-  }, [cliente, unifiedWorkflowData, orcamentos]);
-
-  // Calcular métricas do cliente usando dados do workflow em tempo real
+  // Calcular métricas usando o histórico unificado
   const metricas = useMemo(() => {
-    if (!cliente) return { totalSessoes: 0, totalFaturado: 0, totalPago: 0, aReceber: 0 };
+    if (!cliente || !clienteHistorico) return { totalSessoes: 0, totalFaturado: 0, totalPago: 0, aReceber: 0 };
     
-    // Carregar dados diretamente do localStorage do workflow
-    const workflowData = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
-    
-    // Filtrar por clienteId
-    const workflowDoCliente = workflowData.filter((item: any) => item.clienteId === cliente.id);
-    
-    const totalSessoes = workflowDoCliente.length;
-    const totalFaturado = workflowDoCliente.reduce((acc: number, item: any) => acc + (item.total || 0), 0);
-    const totalPago = workflowDoCliente.reduce((acc: number, item: any) => acc + (item.valorPago || 0), 0);
+    const totalSessoes = clienteHistorico.length;
+    const totalFaturado = clienteHistorico.reduce((acc, item) => acc + item.valorFinal, 0);
+    const totalPago = clienteHistorico.reduce((acc, item) => acc + item.valorPago, 0);
     const aReceber = totalFaturado - totalPago;
     
     return {
@@ -194,7 +83,7 @@ export default function ClienteDetalhe() {
       totalPago,
       aReceber
     };
-  }, [cliente]);
+  }, [cliente, clienteHistorico]);
   if (!cliente) {
     return <div className="flex flex-col items-center justify-center h-96">
         <User className="h-16 w-16 text-muted-foreground mb-4" />

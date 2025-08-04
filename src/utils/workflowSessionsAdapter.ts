@@ -28,12 +28,27 @@ export const formatMonetaryValue = (value: number): string => {
   return `R$ ${value.toFixed(2).replace('.', ',')}`;
 };
 
+// Função para gerar sessionId único baseado no ID original
+export const generateSessionId = (originalId: string): string => {
+  // Se já é um sessionId válido, retornar
+  if (originalId.startsWith('session-')) return originalId;
+  
+  // Se começa com 'orcamento-', extrair o ID real do orçamento
+  if (originalId.startsWith('orcamento-')) {
+    return `session-orc-${originalId.replace('orcamento-', '')}`;
+  }
+  
+  // Para agendamentos e outros, criar sessionId baseado no ID
+  return `session-${originalId}`;
+};
+
 /**
  * Converte de WorkflowItem para formato workflow_sessions
  */
 export function workflowItemToSession(item: WorkflowItem): any {
   return {
     id: item.id,
+    sessionId: item.sessionId || generateSessionId(item.id), // Gerar sessionId se não existir
     data: item.data,
     hora: item.hora || '',
     nome: item.nome || '',
@@ -80,6 +95,7 @@ export function sessionToWorkflowItem(session: any): WorkflowItem {
   
   return {
     id: session.id,
+    sessionId: session.sessionId || generateSessionId(session.id), // Gerar sessionId se não existir
     data: session.data,
     hora: session.hora || '',
     nome: session.nome || '',

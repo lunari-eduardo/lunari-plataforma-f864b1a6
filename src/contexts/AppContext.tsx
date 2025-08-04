@@ -49,6 +49,7 @@ export interface RegrasPrecoFotoExtraCongeladas {
 
 export interface WorkflowItem {
   id: string;
+  sessionId?: string; // ID único universal para rastrear através de orçamento → agendamento → workflow
   data: string;
   hora: string;
   nome: string;
@@ -477,7 +478,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                       '';
 
     const sessaoWorkflow = {
-      id: `orcamento-${orcamento.id}`,
+        id: `orcamento-${orcamento.id}`,
+        sessionId: orcamento.sessionId || `session-orc-${orcamento.id}`,
       data: orcamento.data,
       hora: orcamento.hora,
       nome: orcamento.cliente?.nome || '',
@@ -682,6 +684,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         const newWorkflowItem: WorkflowItem = {
           id: `agenda-${appointment.id}`,
+          sessionId: `session-agenda-${appointment.id}`,
           data: formatDateForStorage(appointment.date),
           hora: appointment.time,
           nome: appointment.client,
@@ -868,6 +871,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       const newWorkflowItem: WorkflowItem = {
         id: `orcamento-${orc.id}`,
+        sessionId: `session-orc-${orc.id}`,
         data: orc.data,
         hora: orc.hora,
         nome: orc.cliente.nome,

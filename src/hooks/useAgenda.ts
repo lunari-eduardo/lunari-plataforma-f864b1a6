@@ -14,6 +14,7 @@ export interface ProdutoIncluido {
 
 export interface Appointment {
   id: string;
+  sessionId?: string; // ID único universal para rastrear através de orçamento → agendamento → workflow
   title: string;
   date: Date;
   time: string;

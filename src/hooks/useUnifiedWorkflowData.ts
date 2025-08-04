@@ -113,6 +113,7 @@ export function useUnifiedWorkflowData() {
     
     return {
       id: session.id,
+      sessionId: (session as any).sessionId || `session-${session.id}`, // Gerar sessionId se não existir
       data: session.data,
       hora: session.hora || '',
       nome: session.nome || '',
