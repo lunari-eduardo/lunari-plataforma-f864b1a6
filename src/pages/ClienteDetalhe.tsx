@@ -14,7 +14,7 @@ import { ArrowLeft, User, History, Save, Edit3, Upload, FileText, TrendingUp, Ca
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { FileUploadZone } from '@/components/shared/FileUploadZone';
-import { ClientAnalytics } from '@/components/crm/ClientAnalytics';
+import { WorkflowHistoryTable } from '@/components/crm/WorkflowHistoryTable';
 import { formatCurrency } from '@/utils/financialUtils';
 import { formatDateForDisplay } from '@/utils/dateUtils';
 import { toast } from 'sonner';
@@ -173,24 +173,28 @@ export default function ClienteDetalhe() {
     return historicoCombinado;
   }, [cliente, unifiedWorkflowData, orcamentos]);
 
-  // Calcular métricas do cliente usando dados unificados
+  // Calcular métricas do cliente usando dados do workflow em tempo real
   const metricas = useMemo(() => {
-    const workflowDoCliente = unifiedWorkflowData.filter(item => {
-      const matchByClienteId = item.clienteId === cliente?.id;
-      const matchByName = item.nome?.toLowerCase().trim() === cliente?.nome?.toLowerCase().trim();
-      return matchByClienteId || matchByName;
-    });
+    if (!cliente) return { totalSessoes: 0, totalFaturado: 0, totalPago: 0, aReceber: 0 };
+    
+    // Carregar dados diretamente do localStorage do workflow
+    const workflowData = JSON.parse(localStorage.getItem('lunari_workflow_items') || '[]');
+    
+    // Filtrar por clienteId
+    const workflowDoCliente = workflowData.filter((item: any) => item.clienteId === cliente.id);
+    
     const totalSessoes = workflowDoCliente.length;
-    const totalFaturado = workflowDoCliente.reduce((acc, item) => acc + (item.total || 0), 0);
-    const totalPago = workflowDoCliente.reduce((acc, item) => acc + (item.valorPago || 0), 0);
+    const totalFaturado = workflowDoCliente.reduce((acc: number, item: any) => acc + (item.total || 0), 0);
+    const totalPago = workflowDoCliente.reduce((acc: number, item: any) => acc + (item.valorPago || 0), 0);
     const aReceber = totalFaturado - totalPago;
+    
     return {
       totalSessoes,
       totalFaturado,
       totalPago,
       aReceber
     };
-  }, [cliente, unifiedWorkflowData]);
+  }, [cliente]);
   if (!cliente) {
     return <div className="flex flex-col items-center justify-center h-96">
         <User className="h-16 w-16 text-muted-foreground mb-4" />
@@ -293,13 +297,13 @@ export default function ClienteDetalhe() {
               <History className="h-4 w-4" />
               Histórico
             </TabsTrigger>
+            <TabsTrigger value="financeiro" className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
+              Financeiro
+            </TabsTrigger>
             <TabsTrigger value="documentos" className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
               Documentos
-            </TabsTrigger>
-            <TabsTrigger value="analytics" className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Analytics
             </TabsTrigger>
           </TabsList>
 
@@ -382,61 +386,81 @@ export default function ClienteDetalhe() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {clienteHistorico.length === 0 ? <div className="text-center py-8">
-                    <History className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-medium mb-2">Nenhum histórico encontrado</h3>
-                    <p className="text-muted-foreground">
-                      Este cliente ainda não possui orçamentos ou trabalhos registrados.
-                    </p>
-                  </div> : <div className="rounded-lg border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Data</TableHead>
-                          <TableHead>Tipo</TableHead>
-                          <TableHead>Descrição</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead className="text-right">Valor</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {clienteHistorico.map(item => <TableRow key={`${item.tipo}-${item.id}`}>
-                            <TableCell className="font-medium">
-                              {formatDate(item.data)}
-                            </TableCell>
-                             <TableCell>
-                           <Badge variant="outline" className={item.tipo === 'projeto' ? 'border-primary text-primary' : item.tipo === 'workflow' ? 'border-blue-500 text-blue-600' : 'border-orange-500 text-orange-600'}>
-                                  {item.tipo === 'projeto' ? '🔗 Projeto' : item.tipo === 'workflow' ? '⚡ Trabalho' : '📋 Orçamento'}
-                                </Badge>
-                             </TableCell>
-                            <TableCell>
-                              <div>
-                                <div className="font-medium">{item.descricao}</div>
-                                {item.tipo === 'workflow' && item.detalhes.categoria && <div className="text-sm text-muted-foreground">
-                                    {item.detalhes.categoria}
-                                  </div>}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge className={getStatusBadge(item.status, item.tipo)}>
-                                {item.status}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="font-medium">{formatCurrency(item.valor)}</div>
-                              {item.tipo === 'workflow' && <div className="text-sm text-muted-foreground">
-                                  Pago: {formatCurrency(item.detalhes.valorPago || 0)}
-                                </div>}
-                            </TableCell>
-                          </TableRow>)}
-                      </TableBody>
-                    </Table>
-                  </div>}
+                <WorkflowHistoryTable cliente={cliente} />
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Aba 3: Documentos */}
+          {/* Aba 3: Resumo Financeiro */}
+          <TabsContent value="financeiro" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Resumo Financeiro */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <span className="text-primary">💰</span>
+                    Resumo Financeiro
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span>Total</span>
+                    <span className="font-semibold text-green-600">{formatCurrency(metricas.totalFaturado)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Total Pago</span>
+                    <span className="font-semibold text-blue-600">{formatCurrency(metricas.totalPago)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>A Receber</span>
+                    <span className="font-semibold text-orange-600">{formatCurrency(metricas.aReceber)}</span>
+                  </div>
+                  <div className="border-t pt-2">
+                    <div className="flex justify-between items-center">
+                      <span>Taxa de Pagamento</span>
+                      <span className="font-semibold text-primary">
+                        {metricas.totalFaturado > 0 ? Math.round((metricas.totalPago / metricas.totalFaturado) * 100) : 0}%
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Ticket Médio</span>
+                    <span className="font-semibold">
+                      {formatCurrency(metricas.totalSessoes > 0 ? metricas.totalFaturado / metricas.totalSessoes : 0)}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Engajamento */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <span className="text-primary">📊</span>
+                    Engajamento
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span>Total de Sessões</span>
+                    <span className="font-semibold text-blue-600">{metricas.totalSessoes}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Arquivos Enviados</span>
+                    <span className="font-semibold">0</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Última Sessão</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Em dia</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Aba 4: Documentos */}
           <TabsContent value="documentos" className="space-y-6">
             <Card>
               <CardHeader>
@@ -452,21 +476,6 @@ export default function ClienteDetalhe() {
                 <FileUploadZone clienteId={cliente?.id} description="Documento do cliente" showExisting={true} />
               </CardContent>
             </Card>
-          </TabsContent>
-
-          {/* Aba 4: Analytics */}
-          <TabsContent value="analytics" className="space-y-6">
-            <ClientAnalytics metrics={{
-            id: cliente?.id || '',
-            nome: cliente?.nome || '',
-            email: cliente?.email || '',
-            telefone: cliente?.telefone || '',
-            sessoes: metricas.totalSessoes,
-            totalFaturado: metricas.totalFaturado,
-            totalPago: metricas.totalPago,
-            aReceber: metricas.aReceber,
-            ultimaSessao: clienteHistorico.length > 0 ? new Date(clienteHistorico[0].data) : null
-          }} files={getFilesByClient(cliente?.id || '')} historico={clienteHistorico} />
           </TabsContent>
         </Tabs>
       </div>
