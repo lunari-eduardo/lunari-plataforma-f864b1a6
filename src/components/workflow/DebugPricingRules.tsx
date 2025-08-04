@@ -28,7 +28,7 @@ export function DebugPricingRules() {
       
       // Coletar informações para UI
       const configAtual = obterConfiguracaoPrecificacao();
-      const workflowItems = JSON.parse(localStorage.getItem('lunari_workflow_items') || '[]');
+      const workflowItems = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
       
       const itemsComRegras = workflowItems.filter((item: any) => item.regrasDePrecoFotoExtraCongeladas);
       const itemsSemRegras = workflowItems.filter((item: any) => !item.regrasDePrecoFotoExtraCongeladas);
@@ -65,13 +65,13 @@ export function DebugPricingRules() {
   const forcarLimpeza = () => {
     if (confirm('⚠️ Isso irá remover TODAS as regras congeladas dos items. Tem certeza?')) {
       try {
-        const items = JSON.parse(localStorage.getItem('lunari_workflow_items') || '[]');
+        const items = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
         const itemsLimpos = items.map((item: any) => {
           const { regrasDePrecoFotoExtraCongeladas, ...itemSemRegras } = item;
           return itemSemRegras;
         });
         
-        localStorage.setItem('lunari_workflow_items', JSON.stringify(itemsLimpos));
+        localStorage.setItem('workflow_sessions', JSON.stringify(itemsLimpos));
         console.log('🧹 Regras congeladas removidas de todos os items');
         executarDebug(); // Atualizar debug
       } catch (error) {

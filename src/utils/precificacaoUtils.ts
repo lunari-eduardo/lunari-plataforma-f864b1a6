@@ -485,7 +485,7 @@ export function migrarRegrasParaItemAntigo(
  */
 export function debugWorkflowItems(): void {
   try {
-    const items = localStorage.getItem('lunari_workflow_items');
+    const items = localStorage.getItem('workflow_sessions');
     if (items) {
       const parsedItems = JSON.parse(items);
       console.log('🔍 [DEBUG] Workflow Items:', parsedItems);

@@ -1,7 +1,7 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo } from 'react';
 import { Cliente } from '@/types/orcamentos';
 import { WorkflowItem } from '@/contexts/AppContext';
-import { storage, STORAGE_KEYS } from '@/utils/localStorage';
+import { useAppContext } from '@/contexts/AppContext';
 
 export interface ClientMetrics {
   id: string;
@@ -16,42 +16,8 @@ export interface ClientMetrics {
 }
 
 export function useClientMetrics(clientes: Cliente[]) {
-  const [workflowSessions, setWorkflowSessions] = useState<any[]>([]);
-
-  // ESPELHAMENTO DIRETO: Leitura direta de workflow_sessions
-  useEffect(() => {
-    const loadWorkflowSessions = () => {
-      try {
-        const saved = localStorage.getItem('workflow_sessions');
-        const sessions = saved ? JSON.parse(saved) : [];
-        setWorkflowSessions(sessions);
-        
-        console.log('🔗 ESPELHAMENTO DIRETO - Sessions carregadas:', sessions.length);
-      } catch (error) {
-        console.error('❌ Erro ao carregar workflow_sessions:', error);
-        setWorkflowSessions([]);
-      }
-    };
-
-    loadWorkflowSessions();
-    
-    // Escutar mudanças no localStorage para sincronização em tempo real
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'workflow_sessions') {
-        loadWorkflowSessions();
-      }
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-    
-    // Polling otimizado para detectar mudanças
-    const intervalId = setInterval(loadWorkflowSessions, 2000);
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      clearInterval(intervalId);
-    };
-  }, []);
+  // SIMPLIFICADO PÓS-MIGRAÇÃO: Usar AppContext como fonte única
+  const { workflowItems } = useAppContext();
 
   // Função para converter valores monetários
   const parseMonetaryValue = (value: string | number): number => {
@@ -71,25 +37,19 @@ export function useClientMetrics(clientes: Cliente[]) {
   const clientMetrics = useMemo(() => {
     const debugMode = process.env.NODE_ENV === 'development';
 
-    // CÁLCULO DIRETO DOS VALORES usando workflow_sessions
+    // SIMPLIFICADO PÓS-MIGRAÇÃO: usar workflowItems diretamente
     const metrics: ClientMetrics[] = clientes.map(cliente => {
       // FILTRO: associar por clienteId OU nome
-      const sessoesCliente = workflowSessions.filter(session => {
-        const matchByClienteId = session.clienteId === cliente.id;
-        const matchByName = !session.clienteId && session.nome?.toLowerCase().trim() === cliente.nome.toLowerCase().trim();
+      const workflowDoCliente = workflowItems.filter(item => {
+        const matchByClienteId = item.clienteId === cliente.id;
+        const matchByName = !item.clienteId && item.nome?.toLowerCase().trim() === cliente.nome.toLowerCase().trim();
         return matchByClienteId || matchByName;
       });
 
-      // CÁLCULOS usando valores diretos de workflow_sessions
-      const sessoes = sessoesCliente.length;
-      const totalFaturado = sessoesCliente.reduce((acc, session) => {
-        const valor = parseMonetaryValue(session.total || session.valor || 0);
-        return acc + valor;
-      }, 0);
-      const totalPago = sessoesCliente.reduce((acc, session) => {
-        const valor = parseMonetaryValue(session.valorPago || 0);
-        return acc + valor;
-      }, 0);
+      // CÁLCULOS usando valores diretos de workflowItems
+      const sessoes = workflowDoCliente.length;
+      const totalFaturado = workflowDoCliente.reduce((acc, item) => acc + (item.total || 0), 0);
+      const totalPago = workflowDoCliente.reduce((acc, item) => acc + (item.valorPago || 0), 0);
       const aReceber = totalFaturado - totalPago;
 
       // LOG para debug
@@ -99,9 +59,9 @@ export function useClientMetrics(clientes: Cliente[]) {
 
       // Encontrar última sessão
       let ultimaSessao: Date | null = null;
-      if (sessoesCliente.length > 0) {
-        const datasOrdenadas = sessoesCliente
-          .map(session => new Date(session.data))
+      if (workflowDoCliente.length > 0) {
+        const datasOrdenadas = workflowDoCliente
+          .map(item => new Date(item.data))
           .filter(data => !isNaN(data.getTime()))
           .sort((a, b) => b.getTime() - a.getTime());
         
@@ -124,16 +84,16 @@ export function useClientMetrics(clientes: Cliente[]) {
     });
 
     // LOG resumo final
-    if (debugMode && workflowSessions.length > 0) {
+    if (debugMode && workflowItems.length > 0) {
       const totalGeral = metrics.reduce((acc, m) => acc + m.totalFaturado, 0);
-      console.log('✅ ESPELHAMENTO DIRETO - CRM Metrics:', {
+      console.log('✅ CRM METRICS (PÓS-MIGRAÇÃO):', {
         clientesComSessoes: metrics.filter(m => m.sessoes > 0).length,
         totalFaturamento: totalGeral.toFixed(2)
       });
     }
 
     return metrics;
-  }, [clientes, workflowSessions]);
+  }, [clientes, workflowItems]);
 
   return clientMetrics;
 }

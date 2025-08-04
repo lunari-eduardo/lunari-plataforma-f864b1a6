@@ -15,7 +15,7 @@ export function WorkflowHistoryTable({ cliente }: WorkflowHistoryTableProps) {
     if (!cliente) return [];
     
     // Carregar dados diretamente do localStorage do workflow
-    const workflowItems = JSON.parse(localStorage.getItem('lunari_workflow_items') || '[]');
+    const workflowItems = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
     
     // Filtrar por clienteId
     return workflowItems.filter((item: any) => item.clienteId === cliente.id);

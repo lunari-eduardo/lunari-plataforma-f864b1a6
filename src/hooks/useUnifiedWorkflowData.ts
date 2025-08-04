@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { WorkflowItem, ProdutoWorkflow } from '@/contexts/AppContext';
 import { parseDateFromStorage } from '@/utils/dateUtils';
+import { sessionToWorkflowItem } from '@/utils/workflowSessionsAdapter';
 
 interface WorkflowSessionData {
   id: string;
@@ -148,76 +149,40 @@ export function useUnifiedWorkflowData() {
 
   // Dados unificados - WORKFLOW ITEMS COMO FONTE ABSOLUTA DE VERDADE
   const unifiedWorkflowData = useMemo(() => {
-    // LOGS OTIMIZADOS: apenas quando há mudanças significativas
-    const shouldLog = workflowItems.length > 0 || workflowSessions.length > 0;
+  // ESTRATÉGIA SIMPLIFICADA PÓS-MIGRAÇÃO: AppContext é a fonte única de verdade
+    const shouldLog = workflowItems.length > 0;
     if (shouldLog) {
-      console.log('🎯 WORKFLOW DATA SYNC:', {
+      console.log('🎯 UNIFIED WORKFLOW (PÓS-MIGRAÇÃO):', {
         workflowItems: workflowItems.length,
-        sessions: workflowSessions.length
+        fonte: 'AppContext (workflow_sessions)'
       });
     }
 
-    // ESTRATÉGIA DEFINITIVA: workflowItems sempre sobrescrevem qualquer outra fonte
-    const allItems = new Map<string, WorkflowItem>();
-
-    // 1. PRIORIDADE ABSOLUTA: workflowItems (dados ATUAIS e CORRETOS)
-    workflowItems.forEach(item => {
-      // LOG REDUZIDO: apenas para debug específico
-      if (item.nome?.toLowerCase().includes('eduardo') || item.nome?.toLowerCase().includes('lise')) {
-        console.log(`🎯 ITEM CONHECIDO - ${item.nome}:`, {
-          id: item.id,
-          total: item.total,
-          valorPago: item.valorPago || 0,
-          clienteId: item.clienteId
-        });
-      }
-      
-      // Garantir que item.total está definido e válido
-      const totalValidado = typeof item.total === 'number' ? item.total : 0;
-      const valorPagoValidado = typeof item.valorPago === 'number' ? item.valorPago : 0;
-      
-      allItems.set(item.id, {
-        ...item,
-        total: totalValidado, // Garantir valor numérico
-        valorPago: valorPagoValidado,
-        restante: totalValidado - valorPagoValidado,
-        fonte: item.fonte || 'agenda',
-        dataOriginal: item.dataOriginal || parseDateFromStorage(item.data)
-      });
-    });
-
-    // 2. FALLBACK: workflowSessions APENAS para itens que NÃO existem no workflow
-    let sessionsAdicionadas = 0;
-    workflowSessions.forEach(session => {
-      if (!allItems.has(session.id)) {
-        const normalizedItem = normalizeSessionToWorkflowItem(session);
-        allItems.set(session.id, normalizedItem);
-        sessionsAdicionadas++;
-        // LOG APENAS PARA SESSIONS IMPORTANTES
-        if (normalizedItem.nome?.toLowerCase().includes('eduardo') || normalizedItem.nome?.toLowerCase().includes('lise')) {
-          console.log(`📦 Session órfã adicionada: ${session.id} - R$ ${normalizedItem.total}`);
-        }
-        sessionsAdicionadas++;
-      }
-    });
-
-    const resultado = Array.from(allItems.values());
-    
-    // LOG APENAS RESUMO FINAL (OTIMIZADO)
+    // RESULTADO DIRETO: workflowItems do AppContext já vem de workflow_sessions
+    const resultado = workflowItems.map(item => ({
+      ...item,
+      // Garantir valores válidos
+      total: typeof item.total === 'number' ? item.total : 0,
+      valorPago: typeof item.valorPago === 'number' ? item.valorPago : 0,
+      restante: (typeof item.total === 'number' ? item.total : 0) - (typeof item.valorPago === 'number' ? item.valorPago : 0),
+      fonte: item.fonte || 'agenda',
+      dataOriginal: item.dataOriginal || parseDateFromStorage(item.data)
+    }));
+    // LOG RESUMO FINAL
     if (shouldLog) {
       const totalGeral = resultado.reduce((acc, item) => acc + (item.total || 0), 0);
       const pagoGeral = resultado.reduce((acc, item) => acc + (item.valorPago || 0), 0);
       
-      console.log('✅ DADOS UNIFICADOS:', {
+      console.log('✅ DADOS UNIFICADOS (PÓS-MIGRAÇÃO):', {
         total: resultado.length,
-        faturado: totalGeral,
-        pago: pagoGeral,
-        aReceber: totalGeral - pagoGeral
+        faturado: totalGeral.toFixed(2),
+        pago: pagoGeral.toFixed(2),
+        aReceber: (totalGeral - pagoGeral).toFixed(2)
       });
     }
 
     return resultado;
-  }, [workflowItems, workflowSessions]);
+  }, [workflowItems]); // SIMPLIFICADO: apenas workflowItems como dependência
 
   // Função para filtrar por ano
   const filterByYear = (year: number) => {

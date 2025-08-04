@@ -42,7 +42,15 @@ export async function initializeApp(): Promise<InitializationResult> {
     const migrationAlreadyRun = localStorage.getItem('workflow_clienteId_migrated') === 'true';
     if (!migrationAlreadyRun) {
       console.log('📋 Executando migração de clienteId...');
-      migrateWorkflowClienteId();
+  migrateWorkflowClienteId();
+  
+  // MIGRAÇÃO INVERTIDA: Consolidar dados para workflow_sessions
+  const { migrateToWorkflowSessions } = require('./migrateToWorkflowSessions');
+  migrateToWorkflowSessions();
+  
+  // LIMPEZA PÓS-MIGRAÇÃO: Remover dados obsoletos
+  const { cleanupAfterMigration } = require('./cleanupMigration');
+  cleanupAfterMigration();
       result.migrationsRun.push('migrateWorkflowClienteId');
     }
     

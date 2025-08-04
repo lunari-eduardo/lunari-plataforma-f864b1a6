@@ -257,14 +257,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return stored.length > 0 ? deserializeAppointments(stored) : [];
   });
 
-  // Workflow State
+  // Workflow State - MIGRADO: Agora lê diretamente de workflow_sessions
   const [workflowItems, setWorkflowItems] = useState<WorkflowItem[]>(() => {
-    const items = storage.load(STORAGE_KEYS.WORKFLOW_ITEMS, []);
-    // Migração: garantir que todos os itens tenham o campo observacoes
-    return items.map((item: any) => ({
-      ...item,
-      observacoes: item.observacoes || ''
-    }));
+    try {
+      const sessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
+      return sessions.map((session: any) => {
+        const { sessionToWorkflowItem } = require('@/utils/workflowSessionsAdapter');
+        return sessionToWorkflowItem(session);
+      });
+    } catch (error) {
+      console.error('❌ Erro ao carregar workflow_sessions:', error);
+      return [];
+    }
   });
   
   const [workflowFilters, setWorkflowFilters] = useState<WorkflowFilters>(() => {
@@ -549,7 +553,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [appointments]);
 
   useEffect(() => {
-    storage.save(STORAGE_KEYS.WORKFLOW_ITEMS, workflowItems);
+    // MIGRADO: Salvar usando adaptador para workflow_sessions
+    const { saveWorkflowItemsToSessions } = require('@/utils/workflowSessionsAdapter');
+    saveWorkflowItemsToSessions(workflowItems);
   }, [workflowItems]);
 
   useEffect(() => {

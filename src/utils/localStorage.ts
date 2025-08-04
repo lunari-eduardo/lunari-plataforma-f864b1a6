@@ -11,7 +11,7 @@ export const STORAGE_KEYS = {
   SUBCATEGORIES: 'lunari_subcategories',
   DESCRIPTIONS: 'lunari_descriptions',
   PRICING_SETTINGS: 'lunari_pricing_settings',
-  WORKFLOW_ITEMS: 'lunari_workflow_items',
+  WORKFLOW_ITEMS: 'workflow_sessions', // MIGRADO: Agora usa workflow_sessions como padrão
   WORKFLOW_COLUMNS: 'lunari_workflow_columns',
   WORKFLOW_STATUS: 'lunari_workflow_status',
   // Nova arquitetura de Blueprints

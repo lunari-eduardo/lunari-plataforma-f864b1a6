@@ -178,7 +178,7 @@ export default function ClienteDetalhe() {
     if (!cliente) return { totalSessoes: 0, totalFaturado: 0, totalPago: 0, aReceber: 0 };
     
     // Carregar dados diretamente do localStorage do workflow
-    const workflowData = JSON.parse(localStorage.getItem('lunari_workflow_items') || '[]');
+    const workflowData = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
     
     // Filtrar por clienteId
     const workflowDoCliente = workflowData.filter((item: any) => item.clienteId === cliente.id);
