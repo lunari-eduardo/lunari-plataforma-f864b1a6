@@ -17,43 +17,17 @@ export interface ClientMetrics {
 export function useClientMetrics(clientes: Cliente[]) {
   const { workflowItems } = useAppContext();
   
-  console.log('📊 FONTE ÚNICA DE VERDADE - CRM Usando workflowItems do AppContext:', {
-    totalClientes: clientes.length,
-    totalWorkflowItems: workflowItems.length
-  });
-  
   const clientMetrics = useMemo(() => {
-    console.log('🎯 MÉTRICAS CRM - CÁLCULO DIRETO COM FONTE AUTORITATIVA');
-
-    // Criar métricas usando APENAS workflowItems (fonte única de verdade)
+    // FONTE ÚNICA: workflowItems do AppContext (após migração)
     const metrics: ClientMetrics[] = clientes.map(cliente => {
-      // FILTRO SIMPLIFICADO: APENAS clienteId (sem fallback de nome)
+      // Filtro por clienteId APENAS (sem fallback de nome)
       const sessoesCliente = workflowItems.filter(item => item.clienteId === cliente.id);
 
-      console.log(`🎯 CLIENTE MÉTRICA SIMPLES - ${cliente.nome}:`, {
-        clienteId: cliente.id,
-        sessoesEncontradas: sessoesCliente.length,
-        valoresDetalhados: sessoesCliente.map(s => ({
-          id: s.id,
-          nome: s.nome,
-          total: s.total,
-          valorPago: s.valorPago,
-          clienteId: s.clienteId
-        }))
-      });
-
-      // CÁLCULO DIRETO
+      // Cálculo direto das métricas
       const sessoes = sessoesCliente.length;
       const totalFaturado = sessoesCliente.reduce((acc, item) => acc + (item.total || 0), 0);
       const totalPago = sessoesCliente.reduce((acc, item) => acc + (item.valorPago || 0), 0);
       const aReceber = totalFaturado - totalPago;
-
-      console.log(`✅ RESULTADO FINAL SIMPLIFICADO - ${cliente.nome}:`, {
-        sessoes,
-        totalFaturado,
-        totalPago,
-        aReceber
-      });
 
       // Encontrar última sessão
       let ultimaSessao: Date | null = null;
@@ -81,14 +55,8 @@ export function useClientMetrics(clientes: Cliente[]) {
       };
     });
 
-    console.log('✅ Métricas CRM SIMPLIFICADAS calculadas:', {
-      clientesComSessoes: metrics.filter(m => m.sessoes > 0).length,
-      totalSessoes: metrics.reduce((acc, m) => acc + m.sessoes, 0),
-      totalFaturado: metrics.reduce((acc, m) => acc + m.totalFaturado, 0)
-    });
-
     return metrics;
-  }, [clientes, workflowItems]); // Dependência direta dos workflowItems
+  }, [clientes, workflowItems]);
 
   return clientMetrics;
 }

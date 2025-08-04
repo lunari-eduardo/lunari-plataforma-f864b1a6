@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { FinancialEngine } from '@/services/FinancialEngine';
 import { useNovoFinancas } from '@/hooks/useNovoFinancas';
-import { useUnifiedWorkflowData } from '@/hooks/useUnifiedWorkflowData';
 import { getCurrentDateString } from '@/utils/dateUtils';
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
 
@@ -54,7 +53,24 @@ interface HistoricalGoal {
 export function useDashboardFinanceiro() {
   // ============= OBTER DADOS DAS FONTES PRIMÁRIAS =============
   
-  const { unifiedWorkflowData, getAvailableYears, filterByYear } = useUnifiedWorkflowData();
+  const { workflowItems } = useAppContext();
+  
+  // Funções auxiliares para substituir useUnifiedWorkflowData
+  const getAvailableYears = () => {
+    const years = new Set<number>();
+    workflowItems.forEach(item => {
+      const year = new Date(item.data).getFullYear();
+      if (!isNaN(year)) years.add(year);
+    });
+    return Array.from(years).sort((a, b) => b - a);
+  };
+  
+  const filterByYear = (year: number) => {
+    return workflowItems.filter(item => {
+      const itemYear = new Date(item.data).getFullYear();
+      return itemYear === year;
+    });
+  };
   const { itensFinanceiros } = useNovoFinancas();
 
   // Carregar transações financeiras diretamente do FinancialEngine
@@ -102,7 +118,7 @@ export function useDashboardFinanceiro() {
     
     // Converter para array e ordenar (mais recente primeiro)
     return Array.from(anos).sort((a, b) => b - a);
-  }, [unifiedWorkflowData, transacoesFinanceiras, getAvailableYears]);
+  }, [workflowItems, transacoesFinanceiras]);
 
   // Estados dos filtros
   const [anoSelecionado, setAnoSelecionado] = useState(() => {

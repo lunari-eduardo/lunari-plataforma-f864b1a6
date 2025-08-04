@@ -11,7 +11,7 @@ import { useAgenda } from "@/hooks/useAgenda";
 import { useWorkflowStatus } from "@/hooks/useWorkflowStatus";
 import { useOrcamentoData } from "@/hooks/useOrcamentoData";
 import { useContext } from 'react';
-import { AppContext } from '@/contexts/AppContext';
+import { AppContext, WorkflowItem } from '@/contexts/AppContext';
 import { parseDateFromStorage } from "@/utils/dateUtils";
 import { FixPricingRulesButton } from '@/components/workflow/FixPricingRulesButton';
 
@@ -110,16 +110,11 @@ export default function Workflow() {
   // Carregamento dos status de workflow das configurações - apenas etapas personalizadas
   const statusOptions = getStatusOptions();
 
-  // Carregamento inicial dos dados do localStorage
-  const [sessions, setSessions] = useState<SessionData[]>(() => {
-    try {
-      const savedSessions = window.localStorage.getItem('workflow_sessions');
-      return savedSessions ? JSON.parse(savedSessions) : [];
-    } catch (error) {
-      console.error("Erro ao carregar sessões do localStorage", error);
-      return [];
-    }
-  });
+  // NOVA ARQUITETURA: Usar workflowItems diretamente do AppContext (fonte única)
+  const { workflowItems, updateWorkflowItem } = useContext(AppContext);
+  
+  // Estado local para sessões do mês atual (filtradas do workflowItems)
+  const [sessions, setSessions] = useState<SessionData[]>([]);
   const [filteredSessions, setFilteredSessions] = useState<SessionData[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showMetrics, setShowMetrics] = useState(true);
@@ -191,37 +186,50 @@ export default function Workflow() {
     }
   });
 
-  // Persistência automática das alterações - salvar sempre que sessions mudar
-  useEffect(() => {
-    if (sessions.length > 0) {
-      try {
-        // Sempre fazer merge com dados existentes para não perder outras alterações
-        const allSavedSessions = JSON.parse(window.localStorage.getItem('workflow_sessions') || '[]');
-        
-        // Criar um novo array com merge inteligente
-        const mergedSessions = [...allSavedSessions];
-        
-        sessions.forEach(currentSession => {
-          const existingIndex = mergedSessions.findIndex(s => s.id === currentSession.id);
-          if (existingIndex >= 0) {
-            // Atualizar dados existentes
-            mergedSessions[existingIndex] = currentSession;
-          } else {
-            // Adicionar nova sessão
-            mergedSessions.push(currentSession);
-          }
-        });
-        
-        window.localStorage.setItem('workflow_sessions', JSON.stringify(mergedSessions));
-        // Log reduzido para evitar spam
-        if (sessions.length > 0) {
-          console.log('💾 Workflow sessions saved:', sessions.length, 'sessions');
-        }
-      } catch (error) {
-        console.error("Erro ao salvar sessões no localStorage", error);
-      }
+  // NOVA ARQUITETURA: Persistência através do AppContext apenas
+  const saveSessionToWorkflow = useCallback((sessionData: SessionData) => {
+    try {
+      // Converter SessionData para WorkflowItem
+      const parseValue = (value: string | number): number => {
+        if (typeof value === 'number') return value;
+        if (!value) return 0;
+        const cleanValue = value.toString().replace(/R\$\s*/g, '').replace(/\./g, '').replace(',', '.').trim();
+        return parseFloat(cleanValue) || 0;
+      };
+
+      const workflowUpdate: Partial<WorkflowItem> = {
+        data: sessionData.data,
+        hora: sessionData.hora,
+        nome: sessionData.nome,
+        whatsapp: sessionData.whatsapp,
+        email: sessionData.email,
+        descricao: sessionData.descricao,
+        status: sessionData.status,
+        categoria: sessionData.categoria,
+        pacote: sessionData.pacote,
+        valorPacote: parseValue(sessionData.valorPacote),
+        desconto: sessionData.desconto,
+        valorFotoExtra: parseValue(sessionData.valorFotoExtra),
+        qtdFotoExtra: sessionData.qtdFotosExtra,
+        valorTotalFotoExtra: parseValue(sessionData.valorTotalFotoExtra),
+        produto: sessionData.produto,
+        qtdProduto: sessionData.qtdProduto,
+        valorTotalProduto: parseValue(sessionData.valorTotalProduto),
+        produtosList: sessionData.produtosList || [],
+        valorAdicional: parseValue(sessionData.valorAdicional),
+        detalhes: sessionData.detalhes,
+        total: parseValue(sessionData.total),
+        valorPago: parseValue(sessionData.valorPago),
+        restante: parseValue(sessionData.restante),
+        pagamentos: sessionData.pagamentos || []
+      };
+
+      updateWorkflowItem(sessionData.id, workflowUpdate);
+      console.log('💾 Session synced to AppContext:', sessionData.id);
+    } catch (error) {
+      console.error('❌ Erro ao sincronizar session com AppContext:', error);
     }
-  }, [sessions]);
+  }, [updateWorkflowItem]);
   // Mapear dados reais das configurações para formato da tabela
   const categoryOptions: CategoryOption[] = categorias.map((categoria, index) => ({
     id: String(index + 1),
@@ -273,40 +281,61 @@ export default function Workflow() {
       try {
         const confirmedSessions = getConfirmedSessionsForWorkflow(debouncedCurrentMonth.month, debouncedCurrentMonth.year, getClienteByName);
 
-    // Carregar todas as sessões salvas do localStorage
-    const allSavedSessions = (() => {
-      try {
-        const saved = window.localStorage.getItem('workflow_sessions');
-        const result = saved ? JSON.parse(saved) : [];
-        // Log simplificado para reduzir spam
-        return result;
-      } catch (error) {
-        console.error("Erro ao carregar sessões salvas", error);
-        return [];
-      }
-    })();
+        // NOVA ARQUITETURA: Usar workflowItems como fonte única
+        const workflowItemsDoMes = workflowItems.filter(item => {
+          const itemDate = new Date(item.data);
+          return itemDate.getMonth() + 1 === debouncedCurrentMonth.month && 
+                 itemDate.getFullYear() === debouncedCurrentMonth.year;
+        });
 
-    // Filtrar sessões salvas que pertencem ao mês atual (preservar TODAS as edições)
-    const existingSessionsForCurrentMonth = allSavedSessions.filter((session: SessionData) => {
-      const sessionDate = parseDateFromStorage(session.data);
-      return sessionDate.getUTCMonth() + 1 === currentMonth.month && sessionDate.getUTCFullYear() === currentMonth.year;
-    });
+        console.log('📊 WorkflowItems do mês:', workflowItemsDoMes.length);
 
-    // Debug reduzido para evitar spam no console
-
-    // Mapear agendamentos confirmados, preservando dados editados ou criando novos
-    const currentMonthSessions: SessionData[] = confirmedSessions.map(agendamento => {
-      const existingSession = existingSessionsForCurrentMonth.find((s: SessionData) => s.id === agendamento.id);
-      if (existingSession) {
-        return existingSession;
-      } else {
-        return {
-          ...agendamento,
-          status: '',
-          detalhes: ''
-        };
-      }
-    });
+        // Converter WorkflowItems para SessionData e mapear agendamentos confirmados
+        const currentMonthSessions: SessionData[] = confirmedSessions.map(agendamento => {
+          // Procurar dados existentes no workflowItems
+          const existingWorkflowItem = workflowItemsDoMes.find(item => item.id === agendamento.id);
+          
+          if (existingWorkflowItem) {
+            // Converter WorkflowItem para SessionData
+            return {
+              id: existingWorkflowItem.id,
+              data: existingWorkflowItem.data,
+              hora: existingWorkflowItem.hora,
+              nome: existingWorkflowItem.nome,
+              email: existingWorkflowItem.email,
+              descricao: existingWorkflowItem.descricao,
+              status: existingWorkflowItem.status,
+              whatsapp: existingWorkflowItem.whatsapp,
+              categoria: existingWorkflowItem.categoria,
+              pacote: existingWorkflowItem.pacote,
+              valorPacote: String(existingWorkflowItem.valorPacote || 0),
+              valorFotoExtra: String(existingWorkflowItem.valorFotoExtra || 0),
+              qtdFotosExtra: existingWorkflowItem.qtdFotoExtra || 0,
+              valorTotalFotoExtra: String(existingWorkflowItem.valorTotalFotoExtra || 0),
+              produto: existingWorkflowItem.produto || '',
+              qtdProduto: existingWorkflowItem.qtdProduto || 0,
+              valorTotalProduto: String(existingWorkflowItem.valorTotalProduto || 0),
+              valorAdicional: String(existingWorkflowItem.valorAdicional || 0),
+              detalhes: existingWorkflowItem.detalhes || '',
+              observacoes: '',
+              valor: String(existingWorkflowItem.total || 0),
+              total: String(existingWorkflowItem.total || 0),
+              valorPago: String(existingWorkflowItem.valorPago || 0),
+              restante: String(existingWorkflowItem.restante || 0),
+              desconto: existingWorkflowItem.desconto || 0,
+              pagamentos: existingWorkflowItem.pagamentos || [],
+              produtosList: existingWorkflowItem.produtosList || []
+            };
+           } else {
+             // Novo agendamento sem dados do workflow
+             return {
+               ...agendamento,
+               status: '',
+               detalhes: '',
+               observacoes: ''
+             };
+           }
+        });
     
         setSessions(currentMonthSessions);
         console.log('✅ Workflow data loaded:', currentMonthSessions.length, 'sessions');
@@ -397,7 +426,7 @@ export default function Workflow() {
 
   // Calcular métricas em tempo real do mês selecionado (ignora filtros)
   const financials = useMemo(() => {
-    // Usar sessions ao invés de filteredSessions para ignorar filtros de busca
+    // Usar sessions (já filtradas do workflowItems)
     const currentMonthSessions = sessions;
     const totalRevenue = currentMonthSessions.reduce((sum, session) => {
       const paidStr = typeof session.valorPago === 'string' ? session.valorPago : String(session.valorPago || '0');
@@ -427,32 +456,19 @@ export default function Workflow() {
   const prevMonthFinancials = useMemo(() => {
     const prevMonth = currentMonth.month === 1 ? 12 : currentMonth.month - 1;
     const prevYear = currentMonth.month === 1 ? currentMonth.year - 1 : currentMonth.year;
-    const allSavedSessions = (() => {
-      try {
-        const saved = window.localStorage.getItem('workflow_sessions');
-        return saved ? JSON.parse(saved) : [];
-      } catch (error) {
-        return [];
-      }
-    })();
-    const prevMonthSessions = allSavedSessions.filter((session: SessionData) => {
-      const sessionDate = parseDateFromStorage(session.data);
-      return sessionDate.getUTCMonth() + 1 === prevMonth && sessionDate.getUTCFullYear() === prevYear;
+    // NOVA ARQUITETURA: Usar workflowItems para mês anterior
+    const prevMonthSessions = workflowItems.filter(item => {
+      const itemDate = new Date(item.data);
+      return itemDate.getMonth() + 1 === prevMonth && itemDate.getFullYear() === prevYear;
     });
-    const prevRevenue = prevMonthSessions.reduce((sum: number, session: SessionData) => {
-      const paidStr = typeof session.valorPago === 'string' ? session.valorPago : String(session.valorPago || '0');
-      const paid = parseFloat(paidStr.replace(/[^\d,]/g, '').replace(',', '.') || '0');
-      return sum + paid;
+    const prevRevenue = prevMonthSessions.reduce((sum: number, item: WorkflowItem) => {
+      return sum + (item.valorPago || 0);
     }, 0);
-    const prevForecasted = prevMonthSessions.reduce((sum: number, session: SessionData) => {
-      const totalStr = typeof session.total === 'string' ? session.total : String(session.total || '0');
-      const total = parseFloat(totalStr.replace(/[^\d,]/g, '').replace(',', '.') || '0');
-      return sum + total;
+    const prevForecasted = prevMonthSessions.reduce((sum: number, item: WorkflowItem) => {
+      return sum + (item.total || 0);
     }, 0);
-    const prevOutstanding = prevMonthSessions.reduce((sum: number, session: SessionData) => {
-      const remainingStr = typeof session.restante === 'string' ? session.restante : String(session.restante || '0');
-      const remaining = parseFloat(remainingStr.replace(/[^\d,]/g, '').replace(',', '.') || '0');
-      return sum + remaining;
+    const prevOutstanding = prevMonthSessions.reduce((sum: number, item: WorkflowItem) => {
+      return sum + (item.restante || 0);
     }, 0);
     return {
       revenue: prevRevenue,
@@ -460,7 +476,7 @@ export default function Workflow() {
       outstanding: prevOutstanding,
       sessionCount: prevMonthSessions.length
     };
-  }, [currentMonth]);
+  }, [currentMonth, workflowItems]);
   const formatCurrency = (val: number) => `R$ ${val.toLocaleString('pt-BR', {
     minimumFractionDigits: 2
   })}`;

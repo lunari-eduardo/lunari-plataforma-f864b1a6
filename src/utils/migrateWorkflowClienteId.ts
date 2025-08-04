@@ -10,33 +10,39 @@ import { Cliente } from '@/types/orcamentos';
  */
 export function migrateWorkflowClienteId() {
   try {
-    const MIGRATION_KEY = 'workflow_clienteId_migrated_v2';
+    const MIGRATION_KEY = 'workflow_clienteId_migrated_v3_unified';
     
-    console.log('🚀 Iniciando migração MELHORADA de clienteId...');
+    // Verificar se já foi executada
+    if (localStorage.getItem(MIGRATION_KEY) === 'true') {
+      console.log('🎯 Migração já executada, pulando...');
+      return true;
+    }
+    
+    console.log('🚀 MIGRAÇÃO DEFINITIVA - Unificando workflow_sessions → lunari_workflow_items');
 
     // Carregar dados de TODAS as fontes
     const workflowItems: WorkflowItem[] = storage.load(STORAGE_KEYS.WORKFLOW_ITEMS, []);
     const clientes: Cliente[] = storage.load(STORAGE_KEYS.CLIENTS, []);
     const workflowSessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
     
-    console.log('📊 Dados para migração:', {
+    console.log('📊 Estado inicial:', {
       workflowItems: workflowItems.length,
       clientes: clientes.length,
       workflowSessions: workflowSessions.length
     });
 
-    // FASE 1: Consolidar dados de workflow_sessions para workflowItems
+    // UNIFICAÇÃO DEFINITIVA: workflow_sessions → lunari_workflow_items
     const allWorkflowItems = new Map<string, WorkflowItem>();
     
-    // Primeiro, adicionar workflowItems existentes
+    // 1. Adicionar workflowItems existentes (prioridade)
     workflowItems.forEach(item => {
       allWorkflowItems.set(item.id, item);
     });
     
-    // Depois, adicionar dados de sessions que não existem como workflowItems
+    // 2. Consolidar workflow_sessions que não existem como workflowItems
+    let sessoesConsolidadas = 0;
     workflowSessions.forEach((session: any) => {
       if (!allWorkflowItems.has(session.id)) {
-        // Converter session para WorkflowItem
         const parseValue = (value: string | number): number => {
           if (typeof value === 'number') return value;
           if (!value) return 0;
@@ -72,60 +78,60 @@ export function migrateWorkflowClienteId() {
           pagamentos: session.pagamentos || [],
           fonte: session.fonte || 'agenda',
           dataOriginal: session.dataOriginal ? new Date(session.dataOriginal) : new Date(session.data),
-          clienteId: session.clienteId // Manter se já existir
+          clienteId: session.clienteId // Preservar se já existir
         };
         
         allWorkflowItems.set(session.id, workflowItem);
-        console.log(`📦 Consolidado session órfã: ${session.id}`);
+        sessoesConsolidadas++;
       }
     });
 
-    // FASE 2: Aplicar clienteId para TODOS os itens
-    let itemsAtualizados = 0;
+    // 3. APLICAR clienteId usando APENAS nome exato (sem fallbacks)
+    let itemsComClienteIdAtualizado = 0;
     const workflowItemsFinais = Array.from(allWorkflowItems.values()).map(item => {
       // Se já tem clienteId válido, manter
       if (item.clienteId && clientes.find(c => c.id === item.clienteId)) {
         return item;
       }
 
-      // Buscar cliente por nome
+      // Buscar cliente por nome EXATO
       const clienteEncontrado = clientes.find(cliente => 
         cliente.nome.toLowerCase().trim() === item.nome.toLowerCase().trim()
       );
 
       if (clienteEncontrado) {
-        itemsAtualizados++;
-        console.log(`✅ ClienteId adicionado: ${item.nome} → ${clienteEncontrado.id}`);
+        itemsComClienteIdAtualizado++;
         return {
           ...item,
           clienteId: clienteEncontrado.id
         };
       }
 
-      console.warn(`⚠️ Cliente não encontrado para: ${item.nome} (ID: ${item.id})`);
+      // Sem clienteId = item fica sem associação ao CRM
       return item;
     });
 
-    // FASE 3: Salvar dados consolidados
+    // 4. SALVAR na fonte única: lunari_workflow_items
     storage.save(STORAGE_KEYS.WORKFLOW_ITEMS, workflowItemsFinais);
     
-    // FASE 4: Limpar workflow_sessions (dados já consolidados)
+    // 5. LIMPAR workflow_sessions definitivamente
     localStorage.removeItem('workflow_sessions');
     
-    // Marcar migração como concluída
+    // 6. Marcar migração como concluída
     localStorage.setItem(MIGRATION_KEY, 'true');
 
-    console.log('✅ Migração MELHORADA concluída:', {
+    console.log('✅ MIGRAÇÃO DEFINITIVA CONCLUÍDA:', {
       workflowItemsFinais: workflowItemsFinais.length,
+      sessoesConsolidadas,
       itemsComClienteId: workflowItemsFinais.filter(i => i.clienteId).length,
-      itemsAtualizados,
-      sessionsConsolidadas: workflowSessions.length
+      itemsComClienteIdAtualizado,
+      itemsSemClienteId: workflowItemsFinais.filter(i => !i.clienteId).length
     });
 
     return true;
 
   } catch (error) {
-    console.error('❌ Erro durante migração MELHORADA:', error);
+    console.error('❌ Erro durante migração definitiva:', error);
     return false;
   }
 }
