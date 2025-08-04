@@ -17,8 +17,13 @@ export function WorkflowHistoryTable({ cliente }: WorkflowHistoryTableProps) {
     // Carregar dados diretamente do localStorage do workflow
     const workflowItems = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
     
-    // Filtrar por clienteId
-    return workflowItems.filter((item: any) => item.clienteId === cliente.id);
+    // Filtrar por clienteId E por nome (fallback para dados sem clienteId)
+    return workflowItems.filter((item: any) => {
+      const matchByClienteId = item.clienteId === cliente.id;
+      const matchByName = !item.clienteId && 
+        item.nome?.toLowerCase().trim() === cliente.nome.toLowerCase().trim();
+      return matchByClienteId || matchByName;
+    });
   }, [cliente]);
 
   const getStatusBadge = (status: string) => {
@@ -75,24 +80,60 @@ export function WorkflowHistoryTable({ cliente }: WorkflowHistoryTableProps) {
                   
                   {/* Detalhes completos do workflow */}
                   <div className="mt-2 space-y-1 text-sm text-muted-foreground">
-                    {item.desconto > 0 && (
-                      <div>Desconto: {item.desconto}%</div>
-                    )}
-                    {item.valorFotoExtra > 0 && (
-                      <div>Fotos extras: {item.qtdFotoExtra}x - {formatCurrency(item.valorFotoExtra)}</div>
-                    )}
-                    {item.produtosList && item.produtosList.length > 0 && (
-                      <div>
-                        Produtos: {item.produtosList.map((p: any) => 
-                          `${p.quantidade}x ${p.nome} (${formatCurrency(p.valorUnitario)})`
-                        ).join(', ')}
+                    {/* Valor do pacote */}
+                    <div className="font-medium">Valor base: {formatCurrency(item.valorPacote || 0)}</div>
+                    
+                    {/* Desconto */}
+                    {(item.desconto > 0) && (
+                      <div className="text-red-600">
+                        Desconto: {typeof item.desconto === 'number' ? `${item.desconto}%` : formatCurrency(parseFloat(item.desconto) || 0)}
                       </div>
                     )}
-                    {item.valorAdicional > 0 && (
-                      <div>Adicional: {formatCurrency(item.valorAdicional)}</div>
+                    
+                    {/* Fotos extras */}
+                    {(item.qtdFotoExtra > 0 || item.valorTotalFotoExtra > 0) && (
+                      <div className="text-blue-600">
+                        Fotos extras: {item.qtdFotoExtra || 0}x - {formatCurrency(item.valorFotoExtra || 0)} cada = {formatCurrency(item.valorTotalFotoExtra || 0)}
+                      </div>
                     )}
+                    
+                    {/* Produtos */}
+                    {item.produtosList && item.produtosList.length > 0 && (
+                      <div className="text-purple-600">
+                        <div className="font-medium">Produtos:</div>
+                        {item.produtosList.map((p: any, index: number) => (
+                          <div key={index} className="ml-2">
+                            • {p.quantidade}x {p.nome} 
+                            {p.tipo === 'manual' && ` - ${formatCurrency(p.valorUnitario)} cada`}
+                            {p.tipo === 'incluso' && ' (incluso)'}
+                          </div>
+                        ))}
+                        {item.valorTotalProduto > 0 && (
+                          <div className="ml-2 font-medium">Total produtos: {formatCurrency(item.valorTotalProduto)}</div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Valor adicional */}
+                    {item.valorAdicional > 0 && (
+                      <div className="text-green-600">Adicional: {formatCurrency(item.valorAdicional)}</div>
+                    )}
+                    
+                    {/* Pagamentos */}
+                    {item.pagamentos && item.pagamentos.length > 0 && (
+                      <div className="text-green-700">
+                        <div className="font-medium">Pagamentos:</div>
+                        {item.pagamentos.map((pag: any, index: number) => (
+                          <div key={index} className="ml-2">
+                            • {formatCurrency(pag.valor)} em {new Date(pag.data).toLocaleDateString('pt-BR')}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {/* Observações */}
                     {item.detalhes && (
-                      <div>Obs: {item.detalhes}</div>
+                      <div className="text-gray-600 italic">Obs: {item.detalhes}</div>
                     )}
                   </div>
                 </div>
@@ -104,9 +145,24 @@ export function WorkflowHistoryTable({ cliente }: WorkflowHistoryTableProps) {
               </TableCell>
               <TableCell className="text-right">
                 <div className="space-y-1">
-                  <div className="font-medium">Total: {formatCurrency(item.total || 0)}</div>
-                  <div className="text-sm text-green-600">Pago: {formatCurrency(item.valorPago || 0)}</div>
-                  <div className="text-sm text-orange-600">Restante: {formatCurrency((item.total || 0) - (item.valorPago || 0))}</div>
+                  <div className="font-bold text-lg">Total: {formatCurrency(item.total || 0)}</div>
+                  <div className="text-sm text-green-600 font-medium">✅ Pago: {formatCurrency(item.valorPago || 0)}</div>
+                  <div className={`text-sm font-medium ${
+                    ((item.total || 0) - (item.valorPago || 0)) > 0 
+                      ? 'text-orange-600' 
+                      : 'text-gray-500'
+                  }`}>
+                    {((item.total || 0) - (item.valorPago || 0)) > 0 ? '⏳' : '✅'} 
+                    Restante: {formatCurrency((item.total || 0) - (item.valorPago || 0))}
+                  </div>
+                  
+                  {/* Percentual pago */}
+                  <div className="text-xs text-muted-foreground">
+                    {(item.total || 0) > 0 
+                      ? `${(((item.valorPago || 0) / (item.total || 0)) * 100).toFixed(0)}% pago`
+                      : 'N/A'
+                    }
+                  </div>
                 </div>
               </TableCell>
             </TableRow>

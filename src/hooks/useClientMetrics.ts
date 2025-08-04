@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { Cliente } from '@/types/orcamentos';
 import { WorkflowItem } from '@/contexts/AppContext';
 import { useAppContext } from '@/contexts/AppContext';
+import { useEnhancedClientMetrics } from './useEnhancedClientMetrics';
 
 export interface ClientMetrics {
   id: string;
@@ -16,8 +17,14 @@ export interface ClientMetrics {
 }
 
 export function useClientMetrics(clientes: Cliente[]) {
-  // SIMPLIFICADO PÓS-MIGRAÇÃO: Usar AppContext como fonte única
-  const { workflowItems } = useAppContext();
+  // PÓS-CORREÇÃO: Usar dados unificados do workflow_sessions
+  const workflowData = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
+    } catch {
+      return [];
+    }
+  }, []);
 
   // Função para converter valores monetários
   const parseMonetaryValue = (value: string | number): number => {
@@ -37,19 +44,26 @@ export function useClientMetrics(clientes: Cliente[]) {
   const clientMetrics = useMemo(() => {
     const debugMode = process.env.NODE_ENV === 'development';
 
-    // SIMPLIFICADO PÓS-MIGRAÇÃO: usar workflowItems diretamente
+    // PÓS-CORREÇÃO: usar dados unificados do workflow_sessions
     const metrics: ClientMetrics[] = clientes.map(cliente => {
-      // FILTRO: associar por clienteId OU nome
-      const workflowDoCliente = workflowItems.filter(item => {
+      // FILTRO APRIMORADO: associar por clienteId OU nome (busca inteligente)
+      const workflowDoCliente = workflowData.filter((item: any) => {
         const matchByClienteId = item.clienteId === cliente.id;
-        const matchByName = !item.clienteId && item.nome?.toLowerCase().trim() === cliente.nome.toLowerCase().trim();
+        const matchByName = !item.clienteId && 
+          item.nome?.toLowerCase().trim() === cliente.nome.toLowerCase().trim();
         return matchByClienteId || matchByName;
       });
 
-      // CÁLCULOS usando valores diretos de workflowItems
+      // CÁLCULOS CORRIGIDOS usando valores validados
       const sessoes = workflowDoCliente.length;
-      const totalFaturado = workflowDoCliente.reduce((acc, item) => acc + (item.total || 0), 0);
-      const totalPago = workflowDoCliente.reduce((acc, item) => acc + (item.valorPago || 0), 0);
+      const totalFaturado = workflowDoCliente.reduce((acc: number, item: any) => {
+        const valor = parseFloat(item.total) || 0;
+        return acc + (isNaN(valor) ? 0 : valor);
+      }, 0);
+      const totalPago = workflowDoCliente.reduce((acc: number, item: any) => {
+        const valor = parseFloat(item.valorPago) || 0;
+        return acc + (isNaN(valor) ? 0 : valor);
+      }, 0);
       const aReceber = totalFaturado - totalPago;
 
       // LOG para debug
@@ -61,7 +75,7 @@ export function useClientMetrics(clientes: Cliente[]) {
       let ultimaSessao: Date | null = null;
       if (workflowDoCliente.length > 0) {
         const datasOrdenadas = workflowDoCliente
-          .map(item => new Date(item.data))
+          .map((item: any) => new Date(item.data))
           .filter(data => !isNaN(data.getTime()))
           .sort((a, b) => b.getTime() - a.getTime());
         
@@ -76,24 +90,25 @@ export function useClientMetrics(clientes: Cliente[]) {
         email: cliente.email,
         telefone: cliente.telefone,
         sessoes,
-        totalFaturado,
-        totalPago,
-        aReceber,
+        totalFaturado: isNaN(totalFaturado) ? 0 : totalFaturado,
+        totalPago: isNaN(totalPago) ? 0 : totalPago,
+        aReceber: isNaN(aReceber) ? 0 : aReceber,
         ultimaSessao
       };
     });
 
     // LOG resumo final
-    if (debugMode && workflowItems.length > 0) {
+    if (debugMode && workflowData.length > 0) {
       const totalGeral = metrics.reduce((acc, m) => acc + m.totalFaturado, 0);
-      console.log('✅ CRM METRICS (PÓS-MIGRAÇÃO):', {
+      console.log('✅ CRM METRICS (PÓS-CORREÇÃO):', {
         clientesComSessoes: metrics.filter(m => m.sessoes > 0).length,
-        totalFaturamento: totalGeral.toFixed(2)
+        totalFaturamento: totalGeral.toFixed(2),
+        fonteDados: 'workflow_sessions'
       });
     }
 
     return metrics;
-  }, [clientes, workflowItems]);
+  }, [clientes, workflowData]);
 
   return clientMetrics;
 }
