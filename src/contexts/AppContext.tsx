@@ -1486,17 +1486,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                            updatedItem.valorTotalProduto + updatedItem.valorAdicional - updatedItem.desconto;
         updatedItem.restante = updatedItem.total - updatedItem.valorPago;
         
-        // ===== SINCRONIZAÇÃO BIDIRECIONAL =====
-        // Também salvar em workflow_sessions para garantir persistência
+        // ===== SINCRONIZAÇÃO BIDIRECIONAL - APENAS ATUALIZAR, NUNCA CRIAR NOVO =====
         try {
           const workflowSessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
-          const sessionIndex = workflowSessions.findIndex((s: any) => s.id === id);
+          
+          // Buscar por múltiplos critérios para evitar duplicação
+          const sessionIndex = workflowSessions.findIndex((s: any) => 
+            s.id === id || 
+            s.sessionId === updatedItem.sessionId ||
+            (s.clienteId === updatedItem.clienteId && s.nome === updatedItem.nome && s.data === updatedItem.data)
+          );
           
           if (sessionIndex >= 0) {
-            // Atualizar sessão existente
+            // SEMPRE atualizar sessão existente, NUNCA criar nova
+            const existingSession = workflowSessions[sessionIndex];
             const sessionUpdate = {
-              ...workflowSessions[sessionIndex],
-              // Manter campos específicos de workflow_sessions e atualizar com novos dados
+              ...existingSession,
+              // Preservar IDs originais para evitar duplicação
+              id: existingSession.id,
+              sessionId: existingSession.sessionId || existingSession.id,
+              // Atualizar dados do workflow
               nome: updatedItem.nome,
               whatsapp: updatedItem.whatsapp,
               email: updatedItem.email,
@@ -1504,27 +1513,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               status: updatedItem.status,
               categoria: updatedItem.categoria,
               pacote: updatedItem.pacote,
-              valorPacote: formatCurrency(updatedItem.valorPacote),
+              valorPacote: updatedItem.valorPacote,
               desconto: updatedItem.desconto,
-              valorFotoExtra: formatCurrency(updatedItem.valorFotoExtra),
-              qtdFotosExtra: updatedItem.qtdFotoExtra,
-              valorTotalFotoExtra: formatCurrency(updatedItem.valorTotalFotoExtra),
+              valorFotoExtra: updatedItem.valorFotoExtra,
+              qtdFotoExtra: updatedItem.qtdFotoExtra,
+              valorTotalFotoExtra: updatedItem.valorTotalFotoExtra,
               produto: updatedItem.produto,
               qtdProduto: updatedItem.qtdProduto,
-              valorTotalProduto: formatCurrency(updatedItem.valorTotalProduto),
-              valorAdicional: formatCurrency(updatedItem.valorAdicional),
+              valorTotalProduto: updatedItem.valorTotalProduto,
+              valorAdicional: updatedItem.valorAdicional,
               detalhes: updatedItem.detalhes,
-              valor: formatCurrency(updatedItem.total),
-              total: formatCurrency(updatedItem.total),
-              valorPago: formatCurrency(updatedItem.valorPago),
-              restante: formatCurrency(updatedItem.restante),
-              pagamentos: updatedItem.pagamentos
+              total: updatedItem.total,
+              valorPago: updatedItem.valorPago,
+              restante: updatedItem.restante,
+              pagamentos: updatedItem.pagamentos || existingSession.pagamentos || [],
+              dataUltimaAtualizacao: new Date().toISOString()
             };
             
             workflowSessions[sessionIndex] = sessionUpdate;
             localStorage.setItem('workflow_sessions', JSON.stringify(workflowSessions));
             
-            console.log('✅ Sincronizado updateWorkflowItem:', { id, updates: Object.keys(updates) });
+            console.log('✅ Atualizado workflow_sessions (SEM DUPLICAÇÃO):', { id, sessionId: sessionUpdate.sessionId });
+          } else {
+            console.warn('⚠️ Sessão não encontrada para atualização:', { id, clienteId: updatedItem.clienteId, nome: updatedItem.nome });
           }
         } catch (error) {
           console.error('❌ Erro ao sincronizar updateWorkflowItem:', error);
