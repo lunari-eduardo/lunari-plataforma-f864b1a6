@@ -1,5 +1,4 @@
 
-import { useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { formatDateForStorage, getCurrentDateString } from '@/utils/dateUtils';
 
@@ -35,7 +34,7 @@ export const useAgenda = () => {
   const context = useAppContext();
 
   // Função para converter agendamentos confirmados em sessões do workflow filtrados por mês
-  const getConfirmedSessionsForWorkflow = useCallback((month?: number, year?: number, getClienteByName?: (nome: string) => any, pacotesData?: any[], produtosData?: any[]) => {
+  const getConfirmedSessionsForWorkflow = (month?: number, year?: number, getClienteByName?: (nome: string) => any, pacotesData?: any[], produtosData?: any[]) => {
     let filteredAppointments = context.appointments.filter(appointment => appointment.status === 'confirmado');
     
     // Se mês e ano foram especificados, filtrar por eles
@@ -59,7 +58,9 @@ export const useAgenda = () => {
       let valorFotoExtra = "R$ 35,00";
       let pacoteData = null;
       
-      // Debug simplificado para reduzir spam no console
+      console.log('=== DEBUG BUSCA PACOTE ===');
+      console.log('packageId:', appointment.packageId);
+      console.log('pacotesData disponíveis:', pacotesData?.map(p => ({ id: p.id, nome: p.nome })));
       
       if (appointment.packageId && pacotesData) {
         // Busca 1: ID exato
@@ -69,13 +70,13 @@ export const useAgenda = () => {
         if (!pacoteData && typeof appointment.packageId === 'string') {
           const cleanId = appointment.packageId.replace(/^(orcamento-|pacote-|agenda-)/, '');
           pacoteData = pacotesData.find(p => p.id === cleanId || (typeof p.id === 'string' && p.id.replace(/^(orcamento-|pacote-|agenda-)/, '') === cleanId));
-          // ID limpo processado
+          console.log('Tentativa com ID limpo:', cleanId, 'encontrou:', !!pacoteData);
         }
         
         // Busca 3: Por nome se ainda não encontrou e temos type no appointment
         if (!pacoteData && appointment.type) {
           pacoteData = pacotesData.find(p => p.nome === appointment.type || appointment.type.includes(p.nome));
-          // Busca por nome/tipo processada
+          console.log('Tentativa por nome/tipo:', appointment.type, 'encontrou:', !!pacoteData);
         }
         
         if (pacoteData) {
@@ -83,9 +84,9 @@ export const useAgenda = () => {
           valorPacote = `R$ ${(pacoteData.valor || pacoteData.valor_base || pacoteData.valorVenda || 0).toFixed(2).replace('.', ',')}`;
           categoria = pacoteData.categoria || "";
           valorFotoExtra = `R$ ${(pacoteData.valorFotoExtra || pacoteData.valor_foto_extra || 35).toFixed(2).replace('.', ',')}`;
-          // Pacote encontrado e processado
+          console.log('Pacote encontrado:', { nome: pacote, valor: valorPacote, valorFotoExtra });
         } else {
-          // Pacote não encontrado - usando fallback
+          console.log('PACOTE NÃO ENCONTRADO para packageId:', appointment.packageId);
         }
       }
       
@@ -181,7 +182,7 @@ export const useAgenda = () => {
         })())
       };
     });
-  }, [context.appointments]);
+  };
 
   return {
     appointments: context.appointments,
