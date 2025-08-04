@@ -9,7 +9,8 @@ import { autoMigrateIfNeeded } from '@/utils/dataMoveMigration';
 import { congelarRegrasPrecoFotoExtra, calcularComRegrasProprias, migrarRegrasParaItemAntigo } from '@/utils/precificacaoUtils';
 import { migrateWorkflowClienteId } from '@/utils/migrateWorkflowClienteId';
 import { initializeApp, needsInitialization } from '@/utils/initializeApp';
-import { sessionToWorkflowItem, saveWorkflowItemsToSessions } from '@/utils/workflowSessionsAdapter';
+import { Projeto, CriarProjetoInput } from '@/types/projeto';
+import { ProjetoService } from '@/services/ProjetoService';
 
 // Types
 import { Orcamento, Template, OrigemCliente, MetricasOrcamento, Cliente } from '@/types/orcamentos';
@@ -259,16 +260,83 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return stored.length > 0 ? deserializeAppointments(stored) : [];
   });
 
-  // Workflow State - MIGRADO: Agora lê diretamente de workflow_sessions
-  const [workflowItems, setWorkflowItems] = useState<WorkflowItem[]>(() => {
+  // NOVA ARQUITETURA: Estado baseado em Projetos
+  const [projetos, setProjetos] = useState<Projeto[]>(() => {
     try {
-      const sessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
-      return sessions.map(sessionToWorkflowItem);
+      // Executar migração na primeira inicialização
+      ProjetoService.migrarDadosExistentes();
+      ProjetoService.deduplicarProjetos();
+      return ProjetoService.carregarProjetos();
     } catch (error) {
-      console.error('❌ Erro ao carregar workflow_sessions:', error);
+      console.error('❌ Erro ao carregar projetos:', error);
       return [];
     }
   });
+
+  // COMPATIBILIDADE: WorkflowItems derivados dos Projetos
+  const workflowItems: WorkflowItem[] = projetos.map(projeto => ({
+    id: projeto.projectId,
+    sessionId: projeto.projectId,
+    data: projeto.dataAgendada.toISOString().split('T')[0],
+    hora: projeto.horaAgendada,
+    nome: projeto.nome,
+    whatsapp: projeto.whatsapp,
+    email: projeto.email,
+    descricao: projeto.descricao,
+    status: projeto.status,
+    categoria: projeto.categoria,
+    pacote: projeto.pacote,
+    valorPacote: projeto.valorPacote,
+    desconto: projeto.desconto,
+    valorFotoExtra: projeto.valorFotoExtra,
+    qtdFotoExtra: projeto.qtdFotosExtra,
+    valorTotalFotoExtra: projeto.valorTotalFotosExtra,
+    produto: projeto.produto,
+    qtdProduto: projeto.qtdProduto,
+    valorTotalProduto: projeto.valorTotalProduto,
+    produtosList: projeto.produtosList.map(p => ({
+      nome: p.nome,
+      quantidade: p.quantidade,
+      valorUnitario: p.valorUnitario,
+      tipo: p.tipo
+    })),
+    valorAdicional: projeto.valorAdicional,
+    detalhes: projeto.detalhes,
+    total: projeto.total,
+    valorPago: projeto.valorPago,
+    restante: projeto.restante,
+    pagamentos: projeto.pagamentos.map(p => ({
+      id: p.id,
+      valor: p.valor,
+      data: p.data
+    })),
+    fonte: projeto.fonte as 'agenda' | 'orcamento',
+    dataOriginal: projeto.dataOriginal || projeto.dataAgendada,
+    valorFinalAjustado: Boolean(projeto.valorFinalAjustado),
+    valorOriginalOrcamento: projeto.valorOriginalOrcamento,
+    percentualAjusteOrcamento: projeto.percentualAjusteOrcamento,
+    regrasDePrecoFotoExtraCongeladas: projeto.regrasDePrecoFotoExtraCongeladas 
+      ? { valorFotoExtra: projeto.valorFotoExtra } as any 
+      : undefined,
+    clienteId: projeto.clienteId
+  }));
+
+  // FUNÇÕES PARA GERENCIAR PROJETOS
+  const criarProjeto = (input: CriarProjetoInput): Projeto => {
+    const novoProjeto = ProjetoService.criarProjeto(input);
+    setProjetos(ProjetoService.carregarProjetos());
+    return novoProjeto;
+  };
+
+  const atualizarProjeto = (projectId: string, updates: Partial<Projeto>): void => {
+    ProjetoService.atualizarProjeto(projectId, updates);
+    setProjetos(ProjetoService.carregarProjetos());
+  };
+
+  const excluirProjeto = (projectId: string): void => {
+    ProjetoService.excluirProjeto(projectId);
+    setProjetos(ProjetoService.carregarProjetos());
+  };
   
   const [workflowFilters, setWorkflowFilters] = useState<WorkflowFilters>(() => {
     const hoje = getCurrentDateString();
@@ -562,9 +630,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [appointments]);
 
   useEffect(() => {
-    // MIGRADO: Salvar usando adaptador para workflow_sessions
-    saveWorkflowItemsToSessions(workflowItems);
-  }, [workflowItems]);
+    // NOVA ARQUITETURA: Salvar projetos diretamente
+    ProjetoService.salvarProjetos(projetos);
+  }, [projetos]);
 
   useEffect(() => {
     storage.save(STORAGE_KEYS.WORKFLOW_COLUMNS, visibleColumns);
@@ -781,9 +849,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     });
 
-    if (newItems.length > 0) {
-      setWorkflowItems(prev => [...prev, ...newItems]);
-    }
+    // NOVA ARQUITETURA: Criar projetos para novos agendamentos
+    newItems.forEach(item => {
+      criarProjeto({
+        clienteId: item.clienteId || '',
+        nome: item.nome,
+        categoria: item.categoria,
+        pacote: item.pacote,
+        descricao: item.descricao,
+        detalhes: item.detalhes,
+        whatsapp: item.whatsapp,
+        email: item.email,
+        dataAgendada: item.dataOriginal || new Date(item.data),
+        horaAgendada: item.hora,
+        valorPacote: item.valorPacote,
+        fonte: 'agenda',
+        agendamentoId: item.id
+      });
+    });
   }, [appointments, workflowItems, pacotes, categorias, produtos]);
 
   // Process closed budgets to workflow
@@ -980,9 +1063,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       newItems.push(newWorkflowItem);
     });
 
-    if (newItems.length > 0) {
-      setWorkflowItems(prev => [...prev, ...newItems]);
-    }
+    // NOVA ARQUITETURA: Criar projetos para orçamentos fechados
+    newItems.forEach(item => {
+      criarProjeto({
+        clienteId: item.clienteId || '',
+        nome: item.nome,
+        categoria: item.categoria,
+        pacote: item.pacote,
+        descricao: item.descricao,
+        detalhes: item.detalhes,
+        whatsapp: item.whatsapp,
+        email: item.email,
+        dataAgendada: item.dataOriginal || new Date(item.data),
+        horaAgendada: item.hora,
+        valorPacote: item.valorPacote,
+        fonte: 'orcamento',
+        orcamentoId: item.id
+      });
+    });
   }, [orcamentos, workflowItems, pacotes, produtos]);
 
   // Calculate workflow summary
@@ -1138,11 +1236,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           return prevAppointments;
         });
         
-        // Remover item do workflow quando orçamento não está mais fechado
+        // Remover projeto quando orçamento não está mais fechado
         if (mudouDeFechado) {
-          setWorkflowItems(prevWorkflow => {
-            return prevWorkflow.filter(item => item.id !== `orcamento-${id}`);
-          });
+          const projeto = projetos.find(p => p.orcamentoId === `orcamento-${id}`);
+          if (projeto) {
+            excluirProjeto(projeto.projectId);
+          }
         }
       }
       
@@ -1311,8 +1410,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteAppointment = (id: string) => {
     setAppointments(prev => prev.filter(app => app.id !== id));
     
-    // Remover também do workflow se existir
-    setWorkflowItems(prev => prev.filter(item => item.id !== id));
+    // Remover projeto associado se existir
+    const projeto = projetos.find(p => p.agendamentoId === id);
+    if (projeto) {
+      excluirProjeto(projeto.projectId);
+    }
     
     // Remover do workflow_sessions no localStorage
     try {
@@ -1326,12 +1428,70 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateWorkflowItem = (id: string, updates: Partial<WorkflowItem>) => {
-    setWorkflowItems(prev => prev.map(item => {
-      if (item.id === id) {
-        const updatedItem = { ...item, ...updates };
+    // NOVA ARQUITETURA: Atualizar projeto diretamente
+    const projeto = projetos.find(p => p.projectId === id);
+    if (projeto) {
+      atualizarProjeto(id, {
+        nome: updates.nome || projeto.nome,
+        whatsapp: updates.whatsapp || projeto.whatsapp,
+        email: updates.email || projeto.email,
+        descricao: updates.descricao || projeto.descricao,
+        status: (updates.status as any) || projeto.status,
+        categoria: updates.categoria || projeto.categoria,
+        pacote: updates.pacote || projeto.pacote,
+        valorPacote: updates.valorPacote ?? projeto.valorPacote,
+        desconto: updates.desconto ?? projeto.desconto,
+        valorFotoExtra: updates.valorFotoExtra ?? projeto.valorFotoExtra,
+        qtdFotosExtra: updates.qtdFotoExtra ?? projeto.qtdFotosExtra,
+        valorTotalFotosExtra: updates.valorTotalFotoExtra ?? projeto.valorTotalFotosExtra,
+        produto: updates.produto || projeto.produto,
+        qtdProduto: updates.qtdProduto ?? projeto.qtdProduto,
+        valorTotalProduto: updates.valorTotalProduto ?? projeto.valorTotalProduto,
+        valorAdicional: updates.valorAdicional ?? projeto.valorAdicional,
+        detalhes: updates.detalhes || projeto.detalhes,
+        valorPago: updates.valorPago ?? projeto.valorPago,
+        pagamentos: updates.pagamentos ? updates.pagamentos.map(p => ({
+          id: p.id,
+          data: p.data,
+          valor: p.valor,
+          metodo: '',
+          observacoes: ''
+        })) : projeto.pagamentos
+      });
+    } else {
+      // COMPATIBILIDADE: Manter código legado para casos especiais
+      const projetoLegado = projetos.find(p => p.projectId === id);
+      if (projetoLegado) {
+        const updatedItem = { 
+          id,
+          sessionId: projetoLegado.projectId,
+          data: projetoLegado.dataAgendada.toISOString().split('T')[0],
+          hora: projetoLegado.horaAgendada,
+          nome: projetoLegado.nome,
+          whatsapp: projetoLegado.whatsapp,
+          email: projetoLegado.email,
+          descricao: projetoLegado.descricao,
+          status: projetoLegado.status,
+          categoria: projetoLegado.categoria,
+          pacote: projetoLegado.pacote,
+          valorPacote: projetoLegado.valorPacote,
+          desconto: projetoLegado.desconto,
+          valorFotoExtra: projetoLegado.valorFotoExtra,
+          qtdFotoExtra: projetoLegado.qtdFotosExtra,
+          valorTotalFotoExtra: projetoLegado.valorTotalFotosExtra,
+          produto: projetoLegado.produto,
+          qtdProduto: projetoLegado.qtdProduto,
+          valorTotalProduto: projetoLegado.valorTotalProduto,
+          valorAdicional: projetoLegado.valorAdicional,
+          detalhes: projetoLegado.detalhes,
+          total: projetoLegado.total,
+          valorPago: projetoLegado.valorPago,
+          restante: projetoLegado.restante,
+          ...updates
+        } as WorkflowItem;
         
         // Se o pacote foi alterado, atualizar categoria e valor de foto extra automaticamente
-        if (updates.pacote && updates.pacote !== item.pacote) {
+        if (updates.pacote && updates.pacote !== updatedItem.pacote) {
           const pacoteData = pacotes.find(p => p.nome === updates.pacote);
           if (pacoteData) {
             // Atualizar categoria baseado no pacote
@@ -1340,7 +1500,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               const categoria = configCategorias.find((cat: any) => cat.id === pacoteData.categoria_id);
               updatedItem.categoria = categoria ? categoria.nome : String(pacoteData.categoria_id);
             } else {
-              updatedItem.categoria = pacoteData.categoria || item.categoria;
+              updatedItem.categoria = pacoteData.categoria || updatedItem.categoria;
             }
             
             // Atualizar valor do pacote e valor de foto extra
@@ -1543,8 +1703,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         
         return updatedItem;
       }
-      return item;
-    }));
+    }
   };
 
   const addPayment = (id: string, valor: number) => {
@@ -1554,8 +1713,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       data: getCurrentDateString()
     };
 
-    setWorkflowItems(prev => prev.map(item => {
-      if (item.id === id) {
+    // NOVA ARQUITETURA: Adicionar pagamento ao projeto
+    const projeto = projetos.find(p => p.projectId === id);
+    if (projeto) {
+      const novosPagamentos = [...projeto.pagamentos, pagamento];
+      const novoValorPago = novosPagamentos.reduce((sum, p) => sum + p.valor, 0);
+      
+      atualizarProjeto(id, {
+        pagamentos: novosPagamentos.map(p => ({
+          id: p.id,
+          data: p.data,
+          valor: p.valor,
+          metodo: 'dinheiro',
+          observacoes: ''
+        })),
+        valorPago: novoValorPago,
+        restante: projeto.total - novoValorPago
+      });
+    } else {
+      // COMPATIBILIDADE LEGADA
+      const item = workflowItems.find(w => w.id === id);
+      if (item) {
         const updatedPagamentos = [...item.pagamentos, pagamento];
         const novoValorPago = updatedPagamentos.reduce((sum, p) => sum + p.valor, 0);
         
@@ -1589,8 +1767,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         
         return updatedItem;
       }
-      return item;
-    }));
+    }
   };
 
   const toggleColumnVisibility = (column: string) => {
