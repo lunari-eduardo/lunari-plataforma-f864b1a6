@@ -182,6 +182,17 @@ export default function NovoOrcamento() {
   };
 
   const salvarOrcamento = (status: 'rascunho' | 'enviado') => {
+    // Se há um novo cliente preenchido mas não selecionado, criar o cliente automaticamente
+    if (!clienteSelecionado && novoCliente.nome.trim() && novoCliente.email.trim() && novoCliente.whatsapp.trim()) {
+      const cliente = adicionarCliente({
+        nome: novoCliente.nome,
+        email: novoCliente.email,
+        telefone: novoCliente.whatsapp
+      });
+      setClienteSelecionado(cliente);
+      setNovoCliente({ nome: '', email: '', whatsapp: '' });
+    }
+
     if (!clienteSelecionado || !data || !hora) {
       toast({
         title: "Erro",
