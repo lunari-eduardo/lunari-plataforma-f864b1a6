@@ -28,6 +28,10 @@ export default function Clientes() {
   } = useContext(AppContext);
 
   const [filtro, setFiltro] = useState('');
+  const [statusFilter, setStatusFilter] = useState('todos');
+  const [faturadoFilter, setFaturadoFilter] = useState('todos');
+  const [pagoFilter, setPagoFilter] = useState('todos');
+  const [receberFilter, setReceberFilter] = useState('todos');
   const [showClientForm, setShowClientForm] = useState(false);
   const [editingClient, setEditingClient] = useState<Cliente | null>(null);
   const [formData, setFormData] = useState({
@@ -36,18 +40,55 @@ export default function Clientes() {
     telefone: ''
   });
 
+  // EXECUTAR MIGRAÇÃO MELHORADA de clienteId para workflowItems
+  useEffect(() => {
+    console.log('🔧 EXECUTANDO MIGRAÇÃO MELHORADA DE CLIENTEID...');
+    try {
+      const resultado = migrateWorkflowClienteId();
+      if (resultado && !resultado.sucesso) {
+        console.error('⚠️ MIGRAÇÃO COM PROBLEMAS:', resultado);
+      }
+    } catch (error) {
+      console.error('❌ ERRO NA MIGRAÇÃO:', error);
+    }
+  }, []);
 
-  // Obter dados simples dos clientes
+  // Inicializar sincronização em tempo real
+  const { forceSyncWorkflowData } = useWorkflowSync();
+  
+  // Forçar sincronização ao carregar
+  useEffect(() => {
+    forceSyncWorkflowData();
+  }, [forceSyncWorkflowData]);
+
+  // Obter métricas dos clientes (USANDO workflowItems diretamente)
   const clientMetrics = useClientMetrics(clientes);
 
   // Filtrar clientes
   const clientesFiltrados = useMemo(() => {
     return clientMetrics.filter(cliente => {
-      return cliente.nome.toLowerCase().includes(filtro.toLowerCase()) ||
-             cliente.email.toLowerCase().includes(filtro.toLowerCase()) ||
-             cliente.telefone.includes(filtro);
+      const nomeMatch = cliente.nome.toLowerCase().includes(filtro.toLowerCase()) ||
+                       cliente.email.toLowerCase().includes(filtro.toLowerCase()) ||
+                       cliente.telefone.includes(filtro);
+      
+      const faturadoMatch = !faturadoFilter || faturadoFilter === 'todos' ||
+        (faturadoFilter === 'baixo' && cliente.totalFaturado < 1000) ||
+        (faturadoFilter === 'medio' && cliente.totalFaturado >= 1000 && cliente.totalFaturado < 5000) ||
+        (faturadoFilter === 'alto' && cliente.totalFaturado >= 5000);
+      
+      const pagoMatch = !pagoFilter || pagoFilter === 'todos' ||
+        (pagoFilter === 'baixo' && cliente.totalPago < 1000) ||
+        (pagoFilter === 'medio' && cliente.totalPago >= 1000 && cliente.totalPago < 5000) ||
+        (pagoFilter === 'alto' && cliente.totalPago >= 5000);
+      
+      const receberMatch = !receberFilter || receberFilter === 'todos' ||
+        (receberFilter === 'baixo' && cliente.aReceber < 1000) ||
+        (receberFilter === 'medio' && cliente.aReceber >= 1000 && cliente.aReceber < 5000) ||
+        (receberFilter === 'alto' && cliente.aReceber >= 5000);
+
+      return nomeMatch && faturadoMatch && pagoMatch && receberMatch;
     });
-  }, [clientMetrics, filtro]);
+  }, [clientMetrics, filtro, faturadoFilter, pagoFilter, receberFilter]);
 
   const handleAddClient = () => {
     setEditingClient(null);
@@ -101,6 +142,10 @@ export default function Clientes() {
 
   const limparFiltros = () => {
     setFiltro('');
+    setStatusFilter('todos');
+    setFaturadoFilter('todos');
+    setPagoFilter('todos');
+    setReceberFilter('todos');
   };
 
   return (
@@ -116,7 +161,7 @@ export default function Clientes() {
         </div>
         
         {/* Filtros */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input 
@@ -126,6 +171,53 @@ export default function Clientes() {
               onChange={e => setFiltro(e.target.value)} 
             />
           </div>
+
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger>
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos</SelectItem>
+              <SelectItem value="ativo">Ativo</SelectItem>
+              <SelectItem value="inativo">Inativo</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={faturadoFilter} onValueChange={setFaturadoFilter}>
+            <SelectTrigger>
+              <SelectValue placeholder="Total" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos</SelectItem>
+              <SelectItem value="baixo">Até R$ 1.000</SelectItem>
+              <SelectItem value="medio">R$ 1.000 - R$ 5.000</SelectItem>
+              <SelectItem value="alto">Acima de R$ 5.000</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={pagoFilter} onValueChange={setPagoFilter}>
+            <SelectTrigger>
+              <SelectValue placeholder="Pago" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos</SelectItem>
+              <SelectItem value="baixo">Até R$ 1.000</SelectItem>
+              <SelectItem value="medio">R$ 1.000 - R$ 5.000</SelectItem>
+              <SelectItem value="alto">Acima de R$ 5.000</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={receberFilter} onValueChange={setReceberFilter}>
+            <SelectTrigger>
+              <SelectValue placeholder="A Receber" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos</SelectItem>
+              <SelectItem value="baixo">Até R$ 1.000</SelectItem>
+              <SelectItem value="medio">R$ 1.000 - R$ 5.000</SelectItem>
+              <SelectItem value="alto">Acima de R$ 5.000</SelectItem>
+            </SelectContent>
+          </Select>
 
           <Button variant="outline" onClick={limparFiltros}>
             Limpar
@@ -182,10 +274,40 @@ export default function Clientes() {
                   <span>{cliente.telefone}</span>
                 </div>
 
-                {/* Email */}
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Mail className="h-3 w-3" />
-                  <span className="truncate">{cliente.email || 'Sem email'}</span>
+                {/* Métricas Financeiras */}
+                <div className="grid grid-cols-3 gap-3 text-center">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Total</p>
+                    <p className="text-sm font-semibold text-primary">
+                      {formatCurrency(cliente.totalFaturado)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Pago</p>
+                    <p className="text-sm font-semibold text-green-600">
+                      {formatCurrency(cliente.totalPago)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">A Receber</p>
+                    <p className="text-sm font-semibold text-orange-600">
+                      {formatCurrency(cliente.aReceber)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Status Badge */}
+                <div className="mt-3 pt-3 border-t flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">
+                    {cliente.sessoes} sessões
+                  </span>
+                  <span className={`px-2 py-1 text-xs rounded-full ${
+                    cliente.totalFaturado > 0 
+                      ? 'bg-green-100 text-green-700' 
+                      : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    {cliente.totalFaturado > 0 ? 'Ativo' : 'Novo'}
+                  </span>
                 </div>
               </CardContent>
             </Card>
@@ -198,11 +320,19 @@ export default function Clientes() {
             <User className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium mb-2">Nenhum cliente encontrado</h3>
             <p className="text-sm text-muted-foreground mb-4 text-center">
-              {filtro 
+              {(filtro || 
+                (statusFilter && statusFilter !== 'todos') || 
+                (faturadoFilter && faturadoFilter !== 'todos') || 
+                (pagoFilter && pagoFilter !== 'todos') || 
+                (receberFilter && receberFilter !== 'todos')) 
                 ? 'Não encontramos clientes com os critérios de busca informados.' 
                 : 'Adicione seus primeiros clientes para começar.'}
             </p>
-            {filtro ? (
+            {(filtro || 
+              (statusFilter && statusFilter !== 'todos') || 
+              (faturadoFilter && faturadoFilter !== 'todos') || 
+              (pagoFilter && pagoFilter !== 'todos') || 
+              (receberFilter && receberFilter !== 'todos')) ? (
               <Button onClick={limparFiltros} variant="outline">
                 Limpar filtros
               </Button>
