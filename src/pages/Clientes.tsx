@@ -1,4 +1,4 @@
-import { useState, useContext, useMemo, useEffect } from 'react';
+import { useState, useContext, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { AppContext } from '@/contexts/AppContext';
 import { Cliente } from '@/types/orcamentos';
@@ -12,8 +12,6 @@ import { Search, UserPlus, User, Phone, Mail, Edit, Trash2, MessageCircle } from
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from 'sonner';
 import { useClientMetrics, ClientMetrics } from '@/hooks/useClientMetrics';
-import { useWorkflowSync } from '@/hooks/useWorkflowSync';
-import { migrateWorkflowClienteId } from '@/utils/migrateWorkflowClienteId';
 import { formatCurrency } from '@/utils/financialUtils';
 import { formatDateForDisplay } from '@/utils/dateUtils';
 import { abrirWhatsApp } from '@/utils/whatsappUtils';
@@ -40,28 +38,7 @@ export default function Clientes() {
     telefone: ''
   });
 
-  // EXECUTAR MIGRAÇÃO MELHORADA de clienteId para workflowItems
-  useEffect(() => {
-    console.log('🔧 EXECUTANDO MIGRAÇÃO MELHORADA DE CLIENTEID...');
-    try {
-      const resultado = migrateWorkflowClienteId();
-      if (resultado && !resultado.sucesso) {
-        console.error('⚠️ MIGRAÇÃO COM PROBLEMAS:', resultado);
-      }
-    } catch (error) {
-      console.error('❌ ERRO NA MIGRAÇÃO:', error);
-    }
-  }, []);
-
-  // Inicializar sincronização em tempo real
-  const { forceSyncWorkflowData } = useWorkflowSync();
-  
-  // Forçar sincronização ao carregar
-  useEffect(() => {
-    forceSyncWorkflowData();
-  }, [forceSyncWorkflowData]);
-
-  // Obter métricas dos clientes (USANDO workflowItems diretamente)
+  // Obter métricas dos clientes
   const clientMetrics = useClientMetrics(clientes);
 
   // Filtrar clientes
