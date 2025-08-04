@@ -1,7 +1,7 @@
 import { useState, useContext, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AppContext } from '@/contexts/AppContext';
-import { useUnifiedWorkflowData } from '@/hooks/useUnifiedWorkflowData';
+import { useClientMetrics } from '@/hooks/useClientMetrics';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,7 @@ import { ArrowLeft, User, History, Save, Edit3, Upload, FileText, TrendingUp, Ca
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { FileUploadZone } from '@/components/shared/FileUploadZone';
-import { WorkflowHistoryTable } from '@/components/crm/WorkflowHistoryTable';
+import { ClientBasicInfo } from '@/components/crm/ClientBasicInfo';
 import { formatCurrency } from '@/utils/financialUtils';
 import { formatDateForDisplay } from '@/utils/dateUtils';
 import { toast } from 'sonner';
@@ -30,9 +30,9 @@ export default function ClienteDetalhe() {
     orcamentos,
     atualizarCliente
   } = useContext(AppContext);
-  const {
-    unifiedWorkflowData
-  } = useUnifiedWorkflowData();
+  
+  // Usar métricas simplificadas baseadas apenas no workflow
+  const clientMetrics = useClientMetrics(clientes);
   const {
     getFilesByClient,
     loadFiles
@@ -43,10 +43,15 @@ export default function ClienteDetalhe() {
     loadFiles();
   }, []);
 
-  // Encontrar o cliente pelo ID
+  // Encontrar o cliente pelo ID com métricas
   const cliente = useMemo(() => {
     return clientes.find(c => c.id === id);
   }, [clientes, id]);
+  
+  // Obter métricas do cliente
+  const clienteMetrics = useMemo(() => {
+    return clientMetrics.find(c => c.id === id);
+  }, [clientMetrics, id]);
 
   // Estados para edição
   const [isEditing, setIsEditing] = useState(false);
@@ -58,143 +63,8 @@ export default function ClienteDetalhe() {
     observacoes: cliente?.observacoes || ''
   });
 
-  // Buscar histórico do cliente (workflow + orçamentos) usando dados unificados
-  const clienteHistorico = useMemo(() => {
-    if (!cliente) return [];
-    console.log('🔍 Buscando histórico para cliente:', {
-      clienteId: cliente.id,
-      clienteNome: cliente.nome,
-      totalUnifiedWorkflowData: unifiedWorkflowData.length
-    });
-
-    // Workflow items relacionados ao cliente (MESMO FILTRO DO useClientMetrics)
-    const workflowDoCliente = unifiedWorkflowData.filter(item => {
-      const matchByClienteId = item.clienteId === cliente.id;
-      const matchByName = item.nome?.toLowerCase().trim() === cliente.nome?.toLowerCase().trim();
-      return matchByClienteId || matchByName;
-    });
-
-    // Orçamentos relacionados ao cliente
-    const orcamentosDoCliente = orcamentos.filter(orc => {
-      // Comparar com nome do cliente se não houver clienteId direto
-      const nomeOrcamento = typeof orc.cliente === 'string' ? orc.cliente : orc.cliente?.nome;
-      return nomeOrcamento?.toLowerCase().trim() === cliente.nome?.toLowerCase().trim();
-    });
-
-    // LÓGICA DE UNIFICAÇÃO: Merge de orçamentos com workflow items relacionados
-    const projetosUnificados = new Map();
-    const workflowProcessados = new Set<string>();
-
-    // 1. Processar workflow items que têm origem em orçamentos
-    workflowDoCliente.forEach(workflowItem => {
-      // Detectar se o workflow item tem origem em orçamento (ID padrão: orcamento-{orcamentoId})
-      const isFromOrcamento = workflowItem.id.startsWith('orcamento-');
-      if (isFromOrcamento) {
-        const orcamentoId = workflowItem.id.replace('orcamento-', '');
-        const orcamentoOriginal = orcamentosDoCliente.find(orc => orc.id === orcamentoId);
-        if (orcamentoOriginal) {
-          // PROJETO UNIFICADO: Priorizar dados do workflow + metadados do orçamento
-          projetosUnificados.set(workflowItem.id, {
-            id: workflowItem.id,
-            tipo: 'projeto' as const,
-            // Tipo especial para projetos unificados
-            data: workflowItem.data,
-            // Data do trabalho (mais recente)
-            descricao: workflowItem.descricao || workflowItem.pacote,
-            valor: workflowItem.total,
-            // Valor atual do trabalho
-            status: workflowItem.status,
-            // Status atual do trabalho
-            detalhes: {
-              pacote: workflowItem.pacote,
-              categoria: workflowItem.categoria,
-              valorPago: workflowItem.valorPago,
-              restante: workflowItem.restante,
-              // Metadados do orçamento original
-              dataOrcamento: orcamentoOriginal.data,
-              origemCliente: orcamentoOriginal.origemCliente,
-              observacoesOrcamento: orcamentoOriginal.detalhes
-            }
-          });
-          workflowProcessados.add(workflowItem.id);
-          console.log('🔗 Projeto unificado criado:', workflowItem.id, '← orçamento:', orcamentoId);
-        }
-      }
-    });
-
-    // 2. Adicionar workflow items que NÃO têm origem em orçamentos
-    workflowDoCliente.forEach(workflowItem => {
-      if (!workflowProcessados.has(workflowItem.id)) {
-        projetosUnificados.set(workflowItem.id, {
-          id: workflowItem.id,
-          tipo: 'workflow' as const,
-          data: workflowItem.data,
-          descricao: workflowItem.descricao || workflowItem.pacote,
-          valor: workflowItem.total,
-          status: workflowItem.status,
-          detalhes: {
-            pacote: workflowItem.pacote,
-            categoria: workflowItem.categoria,
-            valorPago: workflowItem.valorPago,
-            restante: workflowItem.restante
-          }
-        });
-      }
-    });
-
-    // 3. Adicionar orçamentos que NÃO se tornaram trabalhos
-    orcamentosDoCliente.forEach(orcamento => {
-      const jaVirouWorkflowItem = workflowDoCliente.some(w => w.id === `orcamento-${orcamento.id}`);
-      if (!jaVirouWorkflowItem) {
-        projetosUnificados.set(`orc-${orcamento.id}`, {
-          id: orcamento.id,
-          tipo: 'orcamento' as const,
-          data: orcamento.data,
-          descricao: `Orçamento - ${orcamento.categoria}`,
-          valor: orcamento.valorTotal || orcamento.valorFinal || 0,
-          status: orcamento.status,
-          detalhes: {
-            categoria: orcamento.categoria,
-            origem: orcamento.origemCliente,
-            observacoes: orcamento.detalhes
-          }
-        });
-      }
-    });
-
-    // Combinar e ordenar por data (mais recente primeiro)
-    const historicoCombinado = Array.from(projetosUnificados.values()).sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
-    console.log('✅ Histórico unificado:', {
-      total: historicoCombinado.length,
-      projetos: historicoCombinado.filter(h => h.tipo === 'projeto').length,
-      workflows: historicoCombinado.filter(h => h.tipo === 'workflow').length,
-      orcamentos: historicoCombinado.filter(h => h.tipo === 'orcamento').length
-    });
-    return historicoCombinado;
-  }, [cliente, unifiedWorkflowData, orcamentos]);
-
-  // Calcular métricas do cliente usando dados do workflow em tempo real
-  const metricas = useMemo(() => {
-    if (!cliente) return { totalSessoes: 0, totalFaturado: 0, totalPago: 0, aReceber: 0 };
-    
-    // Carregar dados diretamente do localStorage do workflow
-    const workflowData = JSON.parse(localStorage.getItem('lunari_workflow_items') || '[]');
-    
-    // Filtrar por clienteId
-    const workflowDoCliente = workflowData.filter((item: any) => item.clienteId === cliente.id);
-    
-    const totalSessoes = workflowDoCliente.length;
-    const totalFaturado = workflowDoCliente.reduce((acc: number, item: any) => acc + (item.total || 0), 0);
-    const totalPago = workflowDoCliente.reduce((acc: number, item: any) => acc + (item.valorPago || 0), 0);
-    const aReceber = totalFaturado - totalPago;
-    
-    return {
-      totalSessoes,
-      totalFaturado,
-      totalPago,
-      aReceber
-    };
-  }, [cliente]);
+  // Usar apenas dados básicos - sem histórico complexo
+  const clienteHistorico: any[] = [];
   if (!cliente) {
     return <div className="flex flex-col items-center justify-center h-96">
         <User className="h-16 w-16 text-muted-foreground mb-4" />
@@ -264,26 +134,28 @@ export default function ClienteDetalhe() {
           </div>
           
           {/* Métricas Rápidas */}
-          <div className="flex gap-2">
-            <Card className="p-3">
-              <div className="text-center">
-                <div className="text-lg font-bold text-primary">{metricas.totalSessoes}</div>
-                <div className="text-xs text-muted-foreground">Sessões</div>
-              </div>
-            </Card>
-            <Card className="p-3">
-              <div className="text-center">
-                <div className="text-lg font-bold text-green-600">{formatCurrency(metricas.totalFaturado)}</div>
-                <div className="text-xs text-muted-foreground">Total</div>
-              </div>
-            </Card>
-            <Card className="p-3">
-              <div className="text-center">
-                <div className="text-lg font-bold text-orange-600">{formatCurrency(metricas.aReceber)}</div>
-                <div className="text-xs text-muted-foreground">A Receber</div>
-              </div>
-            </Card>
-          </div>
+          {clienteMetrics && (
+            <div className="flex gap-2">
+              <Card className="p-3">
+                <div className="text-center">
+                  <div className="text-lg font-bold text-primary">{clienteMetrics.sessoes}</div>
+                  <div className="text-xs text-muted-foreground">Sessões</div>
+                </div>
+              </Card>
+              <Card className="p-3">
+                <div className="text-center">
+                  <div className="text-lg font-bold text-green-600">{formatCurrency(clienteMetrics.total)}</div>
+                  <div className="text-xs text-muted-foreground">Total</div>
+                </div>
+              </Card>
+              <Card className="p-3">
+                <div className="text-center">
+                  <div className="text-lg font-bold text-orange-600">{formatCurrency(clienteMetrics.restante)}</div>
+                  <div className="text-xs text-muted-foreground">A Receber</div>
+                </div>
+              </Card>
+            </div>
+          )}
         </div>
 
         {/* Tabs */}
@@ -297,13 +169,13 @@ export default function ClienteDetalhe() {
               <History className="h-4 w-4" />
               Histórico
             </TabsTrigger>
-            <TabsTrigger value="financeiro" className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Financeiro
-            </TabsTrigger>
             <TabsTrigger value="documentos" className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
               Documentos
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
+              Analytics
             </TabsTrigger>
           </TabsList>
 
@@ -386,81 +258,61 @@ export default function ClienteDetalhe() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <WorkflowHistoryTable cliente={cliente} />
+                {clienteHistorico.length === 0 ? <div className="text-center py-8">
+                    <History className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-medium mb-2">Nenhum histórico encontrado</h3>
+                    <p className="text-muted-foreground">
+                      Este cliente ainda não possui orçamentos ou trabalhos registrados.
+                    </p>
+                  </div> : <div className="rounded-lg border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Data</TableHead>
+                          <TableHead>Tipo</TableHead>
+                          <TableHead>Descrição</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Valor</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {clienteHistorico.map(item => <TableRow key={`${item.tipo}-${item.id}`}>
+                            <TableCell className="font-medium">
+                              {formatDate(item.data)}
+                            </TableCell>
+                             <TableCell>
+                           <Badge variant="outline" className={item.tipo === 'projeto' ? 'border-primary text-primary' : item.tipo === 'workflow' ? 'border-blue-500 text-blue-600' : 'border-orange-500 text-orange-600'}>
+                                  {item.tipo === 'projeto' ? '🔗 Projeto' : item.tipo === 'workflow' ? '⚡ Trabalho' : '📋 Orçamento'}
+                                </Badge>
+                             </TableCell>
+                            <TableCell>
+                              <div>
+                                <div className="font-medium">{item.descricao}</div>
+                                {item.tipo === 'workflow' && item.detalhes.categoria && <div className="text-sm text-muted-foreground">
+                                    {item.detalhes.categoria}
+                                  </div>}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={getStatusBadge(item.status, item.tipo)}>
+                                {item.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="font-medium">{formatCurrency(item.valor)}</div>
+                              {item.tipo === 'workflow' && <div className="text-sm text-muted-foreground">
+                                  Pago: {formatCurrency(item.detalhes.valorPago || 0)}
+                                </div>}
+                            </TableCell>
+                          </TableRow>)}
+                      </TableBody>
+                    </Table>
+                  </div>}
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Aba 3: Resumo Financeiro */}
-          <TabsContent value="financeiro" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Resumo Financeiro */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <span className="text-primary">💰</span>
-                    Resumo Financeiro
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span>Total</span>
-                    <span className="font-semibold text-green-600">{formatCurrency(metricas.totalFaturado)}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>Total Pago</span>
-                    <span className="font-semibold text-blue-600">{formatCurrency(metricas.totalPago)}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>A Receber</span>
-                    <span className="font-semibold text-orange-600">{formatCurrency(metricas.aReceber)}</span>
-                  </div>
-                  <div className="border-t pt-2">
-                    <div className="flex justify-between items-center">
-                      <span>Taxa de Pagamento</span>
-                      <span className="font-semibold text-primary">
-                        {metricas.totalFaturado > 0 ? Math.round((metricas.totalPago / metricas.totalFaturado) * 100) : 0}%
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>Ticket Médio</span>
-                    <span className="font-semibold">
-                      {formatCurrency(metricas.totalSessoes > 0 ? metricas.totalFaturado / metricas.totalSessoes : 0)}
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Engajamento */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <span className="text-primary">📊</span>
-                    Engajamento
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span>Total de Sessões</span>
-                    <span className="font-semibold text-blue-600">{metricas.totalSessoes}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>Arquivos Enviados</span>
-                    <span className="font-semibold">0</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>Última Sessão</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Em dia</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          {/* Aba 4: Documentos */}
+          {/* Aba 3: Documentos */}
           <TabsContent value="documentos" className="space-y-6">
             <Card>
               <CardHeader>
@@ -476,6 +328,13 @@ export default function ClienteDetalhe() {
                 <FileUploadZone clienteId={cliente?.id} description="Documento do cliente" showExisting={true} />
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Aba 4: Informações Básicas */}
+          <TabsContent value="analytics" className="space-y-6">
+            {clienteMetrics && (
+              <ClientBasicInfo client={clienteMetrics} />
+            )}
           </TabsContent>
         </Tabs>
       </div>
