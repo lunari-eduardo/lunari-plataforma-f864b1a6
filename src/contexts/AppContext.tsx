@@ -241,7 +241,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return storage.load('configuracoes_pacotes', []);
   });
 
-  // Memoizar dados para evitar re-renders desnecessários
+  // Memoizar pacotes para evitar re-renders
   const pacotesMemoizados = useMemo(() => pacotes, [pacotes]);
   const produtosMemoizados = useMemo(() => produtos, [produtos]);
 
@@ -260,23 +260,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return stored.length > 0 ? deserializeAppointments(stored) : [];
   });
 
-  // Workflow State - COM MIGRAÇÃO AUTOMÁTICA
+  // Workflow State
   const [workflowItems, setWorkflowItems] = useState<WorkflowItem[]>(() => {
-    // Executar migração PRIMEIRO
-    console.log('🎯 Executando migração unificada antes de carregar workflowItems...');
-    migrateWorkflowClienteId();
-    
-    // Carregar da fonte única após migração
     const items = storage.load(STORAGE_KEYS.WORKFLOW_ITEMS, []);
-    
     // Migração: garantir que todos os itens tenham o campo observacoes
-    const itemsMigrados = items.map((item: any) => ({
+    return items.map((item: any) => ({
       ...item,
       observacoes: item.observacoes || ''
     }));
-    
-    console.log('🎯 WorkflowItems carregados após migração:', itemsMigrados.length);
-    return itemsMigrados;
   });
   
   const [workflowFilters, setWorkflowFilters] = useState<WorkflowFilters>(() => {
@@ -315,9 +306,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       restante: true
     });
   });
-
-  // Memorizar workflowItems após sua declaração
-  const workflowItemsMemoizados = useMemo(() => workflowItems, [workflowItems]);
 
   // Estado dos Cartões de Crédito (NOVO) - Agora usando FinancialEngine
   const [cartoes, setCartoes] = useState(() => {
