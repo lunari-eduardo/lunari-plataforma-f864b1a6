@@ -9,6 +9,7 @@ import { autoMigrateIfNeeded } from '@/utils/dataMoveMigration';
 import { congelarRegrasPrecoFotoExtra, calcularComRegrasProprias, migrarRegrasParaItemAntigo } from '@/utils/precificacaoUtils';
 import { migrateWorkflowClienteId } from '@/utils/migrateWorkflowClienteId';
 import { initializeApp, needsInitialization } from '@/utils/initializeApp';
+import { sessionToWorkflowItem, saveWorkflowItemsToSessions } from '@/utils/workflowSessionsAdapter';
 
 // Types
 import { Orcamento, Template, OrigemCliente, MetricasOrcamento, Cliente } from '@/types/orcamentos';
@@ -261,10 +262,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [workflowItems, setWorkflowItems] = useState<WorkflowItem[]>(() => {
     try {
       const sessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
-      return sessions.map((session: any) => {
-        const { sessionToWorkflowItem } = require('@/utils/workflowSessionsAdapter');
-        return sessionToWorkflowItem(session);
-      });
+      return sessions.map(sessionToWorkflowItem);
     } catch (error) {
       console.error('❌ Erro ao carregar workflow_sessions:', error);
       return [];
@@ -554,7 +552,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   useEffect(() => {
     // MIGRADO: Salvar usando adaptador para workflow_sessions
-    const { saveWorkflowItemsToSessions } = require('@/utils/workflowSessionsAdapter');
     saveWorkflowItemsToSessions(workflowItems);
   }, [workflowItems]);
 

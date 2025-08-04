@@ -53,7 +53,7 @@ function AppIntegration() {
     return () => clearTimeout(timer);
   }, []);
   
-  // Sempre chamar o hook, mas condicionalmente executar sua lógica
+  // SEMPRE chamar hooks no topo (regra do React)
   useIntegration(isReady);
   
   return null;

@@ -6,6 +6,7 @@ import { toast } from '@/hooks/use-toast';
 import { parseDateFromStorage, formatDateForStorage } from '@/utils/dateUtils';
 
 export const useIntegration = (isReady: boolean = true) => {
+  // SEMPRE chamar os hooks no mesmo lugar (regra dos hooks do React)
   const { orcamentos, atualizarOrcamento } = useOrcamentos();
   const { appointments, addAppointment, updateAppointment, deleteAppointment } = useAgenda();
   

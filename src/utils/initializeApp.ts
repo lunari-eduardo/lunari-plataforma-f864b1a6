@@ -1,5 +1,7 @@
 import { fixClienteIdCorruption, detectClienteIdCorruptions } from './fixClienteIdCorruption';
 import { migrateWorkflowClienteId } from './migrateWorkflowClienteId';
+import { migrateToWorkflowSessions } from './migrateToWorkflowSessions';
+import { cleanupAfterMigration } from './cleanupMigration';
 import { toast } from 'sonner';
 
 /**
@@ -45,11 +47,9 @@ export async function initializeApp(): Promise<InitializationResult> {
   migrateWorkflowClienteId();
   
   // MIGRAÇÃO INVERTIDA: Consolidar dados para workflow_sessions
-  const { migrateToWorkflowSessions } = require('./migrateToWorkflowSessions');
   migrateToWorkflowSessions();
   
   // LIMPEZA PÓS-MIGRAÇÃO: Remover dados obsoletos
-  const { cleanupAfterMigration } = require('./cleanupMigration');
   cleanupAfterMigration();
       result.migrationsRun.push('migrateWorkflowClienteId');
     }
