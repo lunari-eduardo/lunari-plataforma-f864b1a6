@@ -1,9 +1,8 @@
 import { useState, useContext, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AppContext } from '@/contexts/AppContext';
-import { useUnifiedWorkflowData } from '@/hooks/useUnifiedWorkflowData';
-import { useUnifiedClientHistory } from '@/hooks/useUnifiedClientHistory';
 import { useFileUpload } from '@/hooks/useFileUpload';
+import { autoFixIfNeeded, getSimplifiedClientMetrics } from '@/utils/crmDataFix';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -28,20 +27,16 @@ export default function ClienteDetalhe() {
   const navigate = useNavigate();
   const {
     clientes,
-    orcamentos,
-    appointments,
     atualizarCliente
   } = useContext(AppContext);
-  const {
-    unifiedWorkflowData
-  } = useUnifiedWorkflowData();
   const {
     getFilesByClient,
     loadFiles
   } = useFileUpload();
 
-  // Carregar arquivos ao montar componente
+  // Carregar arquivos e executar correção automática
   useEffect(() => {
+    autoFixIfNeeded();
     loadFiles();
   }, []);
 
@@ -60,30 +55,22 @@ export default function ClienteDetalhe() {
     observacoes: cliente?.observacoes || ''
   });
 
-  // Usar o novo sistema de histórico unificado
-  const clienteHistorico = useUnifiedClientHistory(
-    cliente || { id: '', nome: '', email: '', telefone: '' },
-    orcamentos,
-    appointments,
-    unifiedWorkflowData
-  );
-
-  // Calcular métricas usando o histórico unificado
+  // Métricas simplificadas e precisas
   const metricas = useMemo(() => {
-    if (!cliente || !clienteHistorico) return { totalSessoes: 0, totalFaturado: 0, totalPago: 0, aReceber: 0 };
+    if (!cliente) return { totalSessoes: 0, totalFaturado: 0, totalPago: 0, aReceber: 0 };
     
-    const totalSessoes = clienteHistorico.length;
-    const totalFaturado = clienteHistorico.reduce((acc, item) => acc + item.valorFinal, 0);
-    const totalPago = clienteHistorico.reduce((acc, item) => acc + item.valorPago, 0);
-    const aReceber = totalFaturado - totalPago;
+    const clientMetrics = getSimplifiedClientMetrics([cliente]);
+    const metrics = clientMetrics[0];
+    
+    if (!metrics) return { totalSessoes: 0, totalFaturado: 0, totalPago: 0, aReceber: 0 };
     
     return {
-      totalSessoes,
-      totalFaturado,
-      totalPago,
-      aReceber
+      totalSessoes: metrics.totalSessoes,
+      totalFaturado: metrics.totalFaturado,
+      totalPago: metrics.totalPago,
+      aReceber: metrics.aReceber
     };
-  }, [cliente, clienteHistorico]);
+  }, [cliente]);
   if (!cliente) {
     return <div className="flex flex-col items-center justify-center h-96">
         <User className="h-16 w-16 text-muted-foreground mb-4" />

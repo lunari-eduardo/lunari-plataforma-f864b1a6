@@ -14,16 +14,18 @@ export function WorkflowHistoryTable({ cliente }: WorkflowHistoryTableProps) {
   const workflowData = useMemo(() => {
     if (!cliente) return [];
     
-    // Carregar dados diretamente do localStorage do workflow
-    const workflowItems = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
+    // FONTE ÚNICA: workflow_sessions com dados corrigidos
+    const workflowSessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
     
-    // Filtrar por clienteId E por nome (fallback para dados sem clienteId)
-    return workflowItems.filter((item: any) => {
-      const matchByClienteId = item.clienteId === cliente.id;
-      const matchByName = !item.clienteId && 
-        item.nome?.toLowerCase().trim() === cliente.nome.toLowerCase().trim();
-      return matchByClienteId || matchByName;
-    });
+    // Filtrar sessões do cliente (by clienteId E nome como fallback)
+    return workflowSessions
+      .filter((session: any) => {
+        const matchByClienteId = session.clienteId === cliente.id;
+        const matchByName = !session.clienteId && 
+          session.nome?.toLowerCase().trim() === cliente.nome.toLowerCase().trim();
+        return matchByClienteId || matchByName;
+      })
+      .sort((a: any, b: any) => new Date(b.data).getTime() - new Date(a.data).getTime());
   }, [cliente]);
 
   const getStatusBadge = (status: string) => {
