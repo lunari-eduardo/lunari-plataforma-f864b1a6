@@ -106,11 +106,14 @@ interface AppContextType {
   // Agenda
   appointments: Appointment[];
   
-  // Workflow
+  // Workflow (LEGADO - mantido para compatibilidade)
   workflowItems: WorkflowItem[];
   workflowSummary: { receita: number; aReceber: number; previsto: number };
   workflowFilters: WorkflowFilters;
   visibleColumns: Record<string, boolean>;
+  
+  // NOVA ARQUITETURA: Projetos
+  projetos: Projeto[];
   
   // Cartões de Crédito (NOVO)
   cartoes: Array<{
@@ -162,6 +165,11 @@ interface AppContextType {
   
   // Motor Financeiro Centralizado (NOVO)
   createTransactionEngine: (input: CreateTransactionInput) => void;
+  
+  // NOVA ARQUITETURA: Funções de Projeto
+  criarProjeto: (input: CriarProjetoInput) => Projeto;
+  atualizarProjeto: (projectId: string, updates: Partial<Projeto>) => void;
+  excluirProjeto: (projectId: string) => void;
 }
 
 export const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -396,216 +404,56 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return !(appointment.id?.startsWith('orcamento-') || (appointment as any).origem === 'orcamento');
   }, []);
 
-  // Função de sincronização direta com workflow (NOVA ARQUITETURA)
+  // NOVA FUNÇÃO: Criar projeto do orçamento (ARQUITETURA DEFINITIVA)
   const sincronizarComWorkflow = useCallback((orcamento: Orcamento) => {
     if (!orcamento || orcamento.status !== 'fechado') return;
 
-    console.log('=== SINCRONIZANDO COM WORKFLOW (NOVA ARQUITETURA) ===');
-    console.log('Orçamento completo:', orcamento);
+    console.log('🎯 CRIANDO PROJETO DO ORÇAMENTO (ARQUITETURA DEFINITIVA)');
+    console.log('Orçamento:', orcamento.id, orcamento.cliente?.nome);
 
-    // FUNÇÃO AUXILIAR: Normalizar nome do produto removendo sufixos
-    const normalizarNomeProduto = (nome: string): string => {
-      return nome
-        .toLowerCase()
-        .trim()
-        .replace(/\s*\(incluso no pacote\)\s*$/i, '')
-        .replace(/\s*\(incluído no pacote\)\s*$/i, '')
-        .replace(/\s*\(incluso\)\s*$/i, '')
-        .replace(/\s*\(incluído\)\s*$/i, '')
-        .trim();
-    };
+    try {
+      // Buscar cliente pelo ID
+      const cliente = clientes.find(c => c.id === orcamento.cliente?.id);
+      if (!cliente) {
+        console.error('❌ Cliente não encontrado:', orcamento.cliente?.id);
+        return;
+      }
 
-    // FUNÇÃO AUXILIAR: Deduplicar produtos baseado no nome normalizado
-    const deduplikarProdutosPorNome = (produtos: any[]) => {
-      const produtosUnicos = new Map();
+      // Preparar dados do projeto
+      const input: CriarProjetoInput = {
+        clienteId: cliente.id,
+        nome: cliente.nome,
+        categoria: orcamento.categoria || '',
+        pacote: orcamento.pacotePrincipal?.nome || '',
+        descricao: orcamento.descricao || '',
+        detalhes: orcamento.detalhes || '',
+        whatsapp: cliente.telefone || '',
+        email: cliente.email || '',
+        dataAgendada: orcamento.data ? new Date(orcamento.data) : new Date(),
+        horaAgendada: orcamento.hora || '09:00',
+        valorPacote: orcamento.pacotePrincipal?.valorCongelado || 0,
+        fonte: 'orcamento',
+        orcamentoId: orcamento.id
+      };
+
+      // Criar projeto via ProjetoService (à prova de duplicação)
+      const projeto = ProjetoService.criarProjeto(input);
       
-      produtos.forEach(produto => {
-        const chaveNormalizada = normalizarNomeProduto(produto.nome);
-        
-        if (!produtosUnicos.has(chaveNormalizada)) {
-          // Priorizar produto com nome mais limpo (sem sufixos)
-          produtosUnicos.set(chaveNormalizada, produto);
-        } else {
-          // Se já existe, manter o que tem nome mais limpo
-          const produtoExistente = produtosUnicos.get(chaveNormalizada);
-          const nomeAtualLimpo = !produto.nome.includes('(incluso');
-          const nomeExistenteLimpo = !produtoExistente.nome.includes('(incluso');
-          
-          if (nomeAtualLimpo && !nomeExistenteLimpo) {
-            produtosUnicos.set(chaveNormalizada, produto);
-          }
+      // Atualizar lista de projetos no contexto
+      setProjetos(prev => {
+        const exists = prev.some(p => p.projectId === projeto.projectId);
+        if (exists) {
+          return prev.map(p => p.projectId === projeto.projectId ? projeto : p);
         }
+        return [...prev, projeto];
       });
-      
-      const resultado = Array.from(produtosUnicos.values());
-      
-      if (resultado.length < produtos.length) {
-        console.log(`🔄 Deduplicação: ${produtos.length} → ${resultado.length} produtos`);
-        console.log('🔍 Produtos normalizados:', produtos.map(p => ({ original: p.nome, normalizado: normalizarNomeProduto(p.nome) })));
-      }
-      
-      return resultado;
-    };
 
-    // FUNÇÃO AUXILIAR: Extrair produtos padronizados do orçamento (SIMPLIFICADA)
-    const extrairProdutosDoOrcamento = (orcamento: any): { produtosList: any[], valorPacote: number, valorProdutosManuais: number } => {
-      const produtosList: any[] = [];
-      let valorPacote = 0;
-      let valorProdutosManuais = 0;
+      console.log('✅ Projeto criado/atualizado:', projeto.projectId);
 
-      console.log('📊 Extraindo produtos do orçamento (nova estrutura apenas)...');
-
-      // NOVA ESTRUTURA: Pacote Principal
-      const pacotePrincipal = orcamento.pacotePrincipal;
-      if (pacotePrincipal) {
-        console.log('✅ Usando Pacote Principal');
-        
-        // Adicionar produtos inclusos do pacote principal
-        if (pacotePrincipal.produtosIncluidos && pacotePrincipal.produtosIncluidos.length > 0) {
-          console.log(`📦 Adicionando ${pacotePrincipal.produtosIncluidos.length} produtos inclusos`);
-          pacotePrincipal.produtosIncluidos.forEach((produto: any) => {
-            produtosList.push({
-              nome: produto.nome,
-              quantidade: produto.quantidade,
-              valorUnitario: 0, // Produtos inclusos não somam
-              tipo: 'incluso'
-            });
-          });
-        }
-        
-        valorPacote = pacotePrincipal.valorCongelado || 0;
-      }
-
-      // NOVA ESTRUTURA: Produtos Adicionais
-      if (orcamento.produtosAdicionais && orcamento.produtosAdicionais.length > 0) {
-        console.log(`📦 Adicionando ${orcamento.produtosAdicionais.length} produtos adicionais`);
-        orcamento.produtosAdicionais.forEach((produto: any) => {
-          produtosList.push({
-            nome: produto.nome,
-            quantidade: produto.quantidade,
-            valorUnitario: produto.valorUnitarioCongelado || 0,
-            tipo: produto.tipo || 'manual'
-          });
-          
-          // Somar valor dos produtos manuais
-          if (produto.tipo === 'manual' || !produto.tipo) {
-            valorProdutosManuais += (produto.valorUnitarioCongelado || 0) * produto.quantidade;
-          }
-        });
-      }
-
-      // FALLBACK: Estrutura antiga (apenas se nova estrutura não existir)
-      if (!pacotePrincipal && !orcamento.produtosAdicionais && orcamento.pacotes) {
-        console.log('🔄 Fallback para estrutura antiga');
-        orcamento.pacotes.forEach((pacote: any) => {
-          if (pacote.id && !pacote.id.startsWith('pacote-')) {
-            produtosList.push({
-              nome: pacote.nome,
-              quantidade: pacote.quantidade || 1,
-              valorUnitario: pacote.preco || 0,
-              tipo: 'manual'
-            });
-            valorProdutosManuais += (pacote.preco || 0) * (pacote.quantidade || 1);
-          }
-        });
-        
-        valorPacote = orcamento.valorManual || orcamento.valorTotal || 0;
-      }
-
-      console.log(`📊 Produtos extraídos: ${produtosList.length} itens`);
-      
-      // DEDUPLICAÇÃO FINAL: Aplicada como segurança
-      const produtosDeduplikados = deduplikarProdutosPorNome(produtosList);
-      
-      return { produtosList: produtosDeduplikados, valorPacote, valorProdutosManuais };
-    };
-
-    // LÓGICA UNIFICADA: Sempre usar a função auxiliar
-    const { produtosList, valorPacote, valorProdutosManuais } = extrairProdutosDoOrcamento(orcamento);
-    
-    // Calcular valor base dos componentes
-    const valorCalculadoComponentes = valorPacote + valorProdutosManuais;
-    
-    // Usar valorFinal se disponível, senão usar valorTotal, senão calculado
-    const valorFinalValido = typeof orcamento.valorFinal === 'number' && orcamento.valorFinal > 0;
-    const valorTotalValido = typeof orcamento.valorTotal === 'number' && orcamento.valorTotal > 0;
-    
-    const valorTotal = valorFinalValido ? orcamento.valorFinal : 
-                      valorTotalValido ? orcamento.valorTotal :
-                      valorCalculadoComponentes;
-    
-    // Calcular se valor foi ajustado manualmente
-    let valorFinalAjustado = false;
-    let percentualAjusteOrcamento = 1;
-    let valorOriginalOrcamento = valorCalculadoComponentes;
-    
-    // Transferir desconto do orçamento
-    const descontoOrcamento = orcamento.desconto || 0;
-    const nomePacote = orcamento.pacotePrincipal?.nome || 
-                      orcamento.pacotes?.[0]?.nome?.replace(/^Pacote:\s*/, '') || 
-                      '';
-
-    const sessaoWorkflow = {
-        id: `orcamento-${orcamento.id}`,
-        sessionId: orcamento.sessionId || `session-orc-${orcamento.id}`,
-      data: orcamento.data,
-      hora: orcamento.hora,
-      nome: orcamento.cliente?.nome || '',
-      email: orcamento.cliente?.email || '',
-      whatsapp: orcamento.cliente?.telefone || '',
-      descricao: orcamento.descricao || '',
-      detalhes: orcamento.detalhes || '',
-      observacoes: '',
-      categoria: orcamento.categoria || '',
-      pacote: nomePacote,
-      valorPacote: formatCurrency(valorPacote),
-      valorFotoExtra: formatCurrency(35),
-      qtdFotosExtra: 0,
-      valorTotalFotoExtra: formatCurrency(0),
-      produto: produtosList.map(p => p.nome).join(', '),
-      qtdProduto: produtosList.reduce((acc, p) => acc + p.quantidade, 0),
-      valorTotalProduto: formatCurrency(valorProdutosManuais),
-      valorAdicional: formatCurrency(0),
-          desconto: descontoOrcamento,
-      valor: formatCurrency(valorTotal),
-      total: formatCurrency(valorTotal),
-      valorPago: formatCurrency(0),
-      restante: formatCurrency(valorTotal),
-      status: '',
-      pagamentos: [],
-      fonte: 'orcamento',
-      dataOriginal: parseDateFromStorage(orcamento.data),
-      produtosList: produtosList,
-      // Campos de ajuste de valor
-      valorFinalAjustado,
-      valorOriginalOrcamento,
-      percentualAjusteOrcamento
-    };
-
-    console.log('✅ Dados sincronizados com estrutura unificada:', sessaoWorkflow);
-
-    // SALVAR COM PREVENÇÃO DE DUPLICAÇÃO
-    const saved = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
-    
-    // Verificar duplicação por sessionId E por id
-    const sessionId = sessaoWorkflow.sessionId;
-    const existingBySessionId = saved.findIndex((s: any) => s.sessionId === sessionId);
-    const existingById = saved.findIndex((s: any) => s.id === sessaoWorkflow.id);
-    
-    if (existingBySessionId >= 0) {
-      console.log(`🔄 Atualizando sessão existente (sessionId): ${sessionId}`);
-      saved[existingBySessionId] = { ...saved[existingBySessionId], ...sessaoWorkflow };
-    } else if (existingById >= 0) {
-      console.log(`🔄 Atualizando sessão existente (id): ${sessaoWorkflow.id}`);
-      saved[existingById] = { ...saved[existingById], ...sessaoWorkflow };
-    } else {
-      console.log(`➕ Criando nova sessão: ${sessionId}`);
-      saved.push(sessaoWorkflow);
+    } catch (error) {
+      console.error('❌ Erro ao criar projeto:', error);
     }
-    
-    localStorage.setItem('workflow_sessions', JSON.stringify(saved));
-    console.log('✅ Workflow sincronizado com sucesso');
-  }, [pacotes, produtos]);
+  }, [clientes]);
 
   // Save effects
   useEffect(() => {
@@ -1926,6 +1774,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     workflowFilters,
     visibleColumns,
     cartoes,
+    projetos,
     
     // Actions
     adicionarOrcamento,
@@ -1955,6 +1804,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     atualizarCartao,
     removerCartao,
     createTransactionEngine,
+    criarProjeto,
+    atualizarProjeto,
+    excluirProjeto,
     
     // Utilities
     isFromBudget,

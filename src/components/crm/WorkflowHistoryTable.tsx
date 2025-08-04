@@ -5,43 +5,39 @@ import { History } from "lucide-react";
 import { formatCurrency } from '@/utils/financialUtils';
 import { formatDateForDisplay } from '@/utils/dateUtils';
 import { Cliente } from '@/types/orcamentos';
+import { useAppContext } from '@/contexts/AppContext';
+import { ProjetoService } from '@/services/ProjetoService';
 
 interface WorkflowHistoryTableProps {
   cliente: Cliente;
 }
 
 export function WorkflowHistoryTable({ cliente }: WorkflowHistoryTableProps) {
+  // NOVA ARQUITETURA: Usar projetos como fonte única de verdade
   const workflowData = useMemo(() => {
     if (!cliente) return [];
     
-    // FONTE ÚNICA: workflow_sessions com dados corrigidos E deduplicados
-    const workflowSessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
+    // BUSCAR PROJETOS POR CLIENTE
+    const projetos = ProjetoService.buscarPorCliente(cliente.id);
     
-    // Filtrar sessões do cliente (by clienteId E nome como fallback)
-    const clientSessions = workflowSessions
-      .filter((session: any) => {
-        const matchByClienteId = session.clienteId === cliente.id;
-        const matchByName = !session.clienteId && 
-          session.nome?.toLowerCase().trim() === cliente.nome.toLowerCase().trim();
-        return matchByClienteId || matchByName;
-      })
-      .sort((a: any, b: any) => new Date(b.data).getTime() - new Date(a.data).getTime());
-    
-    // DEDUPLICAÇÃO FINAL por sessionId (caso ainda existam duplicatas)
-    const sessionMap = new Map();
-    clientSessions.forEach((session: any) => {
-      const sessionKey = session.sessionId || session.id;
-      if (!sessionMap.has(sessionKey)) {
-        sessionMap.set(sessionKey, session);
-      }
+    console.log('📊 HISTÓRICO PROJETOS:', {
+      clienteId: cliente.id,
+      projetos: projetos.length,
+      fonte: 'ProjetoService'
     });
     
-    return Array.from(sessionMap.values())
-      .sort((a: any, b: any) => new Date(b.data).getTime() - new Date(a.data).getTime());
+    // Ordenar por data mais recente primeiro
+    return projetos
+      .sort((a, b) => new Date(b.dataAgendada).getTime() - new Date(a.dataAgendada).getTime());
   }, [cliente]);
 
   const getStatusBadge = (status: string) => {
     const colors = {
+      'agendado': 'bg-blue-100 text-blue-800',
+      'em_andamento': 'bg-yellow-100 text-yellow-800',
+      'finalizado': 'bg-green-100 text-green-800',
+      'cancelado': 'bg-red-100 text-red-800',
+      // Compatibilidade com status antigos
       'Agendado': 'bg-blue-100 text-blue-800',
       'Concluído': 'bg-green-100 text-green-800',
       'Cancelado': 'bg-red-100 text-red-800',
@@ -75,69 +71,72 @@ export function WorkflowHistoryTable({ cliente }: WorkflowHistoryTableProps) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {workflowData.map((item: any) => (
-            <TableRow key={item.id}>
+          {workflowData.map((projeto) => (
+            <TableRow key={projeto.projectId}>
               <TableCell className="font-medium">
-                {formatDateForDisplay(item.data)}
+                {formatDateForDisplay(projeto.dataAgendada.toISOString().split('T')[0])}
               </TableCell>
               <TableCell>
                 <Badge variant="outline" className="border-blue-500 text-blue-600">
-                  ⚡ Trabalho
+                  ⚡ Projeto
                 </Badge>
               </TableCell>
               <TableCell>
                 <div>
-                  <div className="font-medium">{item.pacote || item.descricao}</div>
-                  {item.categoria && (
-                    <div className="text-sm text-muted-foreground">{item.categoria}</div>
+                  <div className="font-medium">{projeto.descricao}</div>
+                  {projeto.categoria && (
+                    <div className="text-sm text-muted-foreground">{projeto.categoria}</div>
                   )}
                   
-                  {/* Detalhes completos do workflow */}
+                  {/* Detalhes completos do projeto */}
                   <div className="mt-2 space-y-1 text-sm text-muted-foreground">
+                    {/* Pacote */}
+                    <div className="font-medium">Pacote: {projeto.pacote}</div>
+                    
                     {/* Valor do pacote */}
-                    <div className="font-medium">Valor base: {formatCurrency(item.valorPacote || 0)}</div>
+                    <div className="font-medium">Valor base: {formatCurrency(projeto.valorPacote)}</div>
                     
                     {/* Desconto */}
-                    {(item.desconto > 0) && (
+                    {projeto.desconto > 0 && (
                       <div className="text-red-600">
-                        Desconto: {typeof item.desconto === 'number' ? `${item.desconto}%` : formatCurrency(parseFloat(item.desconto) || 0)}
+                        Desconto: {formatCurrency(projeto.desconto)}
                       </div>
                     )}
                     
                     {/* Fotos extras */}
-                    {(item.qtdFotoExtra > 0 || item.valorTotalFotoExtra > 0) && (
+                    {(projeto.qtdFotosExtra > 0 || projeto.valorTotalFotosExtra > 0) && (
                       <div className="text-blue-600">
-                        Fotos extras: {item.qtdFotoExtra || 0}x - {formatCurrency(item.valorFotoExtra || 0)} cada = {formatCurrency(item.valorTotalFotoExtra || 0)}
+                        Fotos extras: {projeto.qtdFotosExtra}x - {formatCurrency(projeto.valorFotoExtra)} cada = {formatCurrency(projeto.valorTotalFotosExtra)}
                       </div>
                     )}
                     
                     {/* Produtos */}
-                    {item.produtosList && item.produtosList.length > 0 && (
+                    {projeto.produtosList && projeto.produtosList.length > 0 && (
                       <div className="text-purple-600">
                         <div className="font-medium">Produtos:</div>
-                        {item.produtosList.map((p: any, index: number) => (
+                        {projeto.produtosList.map((p, index) => (
                           <div key={index} className="ml-2">
                             • {p.quantidade}x {p.nome} 
                             {p.tipo === 'manual' && ` - ${formatCurrency(p.valorUnitario)} cada`}
                             {p.tipo === 'incluso' && ' (incluso)'}
                           </div>
                         ))}
-                        {item.valorTotalProduto > 0 && (
-                          <div className="ml-2 font-medium">Total produtos: {formatCurrency(item.valorTotalProduto)}</div>
+                        {projeto.valorProdutos > 0 && (
+                          <div className="ml-2 font-medium">Total produtos: {formatCurrency(projeto.valorProdutos)}</div>
                         )}
                       </div>
                     )}
                     
                     {/* Valor adicional */}
-                    {item.valorAdicional > 0 && (
-                      <div className="text-green-600">Adicional: {formatCurrency(item.valorAdicional)}</div>
+                    {projeto.valorAdicional > 0 && (
+                      <div className="text-green-600">Adicional: {formatCurrency(projeto.valorAdicional)}</div>
                     )}
                     
                     {/* Pagamentos */}
-                    {item.pagamentos && item.pagamentos.length > 0 && (
+                    {projeto.pagamentos && projeto.pagamentos.length > 0 && (
                       <div className="text-green-700">
                         <div className="font-medium">Pagamentos:</div>
-                        {item.pagamentos.map((pag: any, index: number) => (
+                        {projeto.pagamentos.map((pag, index) => (
                           <div key={index} className="ml-2">
                             • {formatCurrency(pag.valor)} em {new Date(pag.data).toLocaleDateString('pt-BR')}
                           </div>
@@ -146,34 +145,37 @@ export function WorkflowHistoryTable({ cliente }: WorkflowHistoryTableProps) {
                     )}
                     
                     {/* Observações */}
-                    {item.detalhes && (
-                      <div className="text-gray-600 italic">Obs: {item.detalhes}</div>
+                    {projeto.detalhes && (
+                      <div className="text-gray-600 italic">Obs: {projeto.detalhes}</div>
                     )}
                   </div>
                 </div>
               </TableCell>
               <TableCell>
-                <Badge className={getStatusBadge(item.status)}>
-                  {item.status}
+                <Badge className={getStatusBadge(projeto.status)}>
+                  {projeto.status === 'agendado' ? 'Agendado' : 
+                   projeto.status === 'em_andamento' ? 'Em Andamento' :
+                   projeto.status === 'finalizado' ? 'Finalizado' : 
+                   projeto.status === 'cancelado' ? 'Cancelado' : projeto.status}
                 </Badge>
               </TableCell>
               <TableCell className="text-right">
                 <div className="space-y-1">
-                  <div className="font-bold text-lg">Total: {formatCurrency(item.total || 0)}</div>
-                  <div className="text-sm text-green-600 font-medium">✅ Pago: {formatCurrency(item.valorPago || 0)}</div>
+                  <div className="font-bold text-lg">Total: {formatCurrency(projeto.total)}</div>
+                  <div className="text-sm text-green-600 font-medium">✅ Pago: {formatCurrency(projeto.valorPago)}</div>
                   <div className={`text-sm font-medium ${
-                    ((item.total || 0) - (item.valorPago || 0)) > 0 
+                    projeto.restante > 0 
                       ? 'text-orange-600' 
                       : 'text-gray-500'
                   }`}>
-                    {((item.total || 0) - (item.valorPago || 0)) > 0 ? '⏳' : '✅'} 
-                    Restante: {formatCurrency((item.total || 0) - (item.valorPago || 0))}
+                    {projeto.restante > 0 ? '⏳' : '✅'} 
+                    Restante: {formatCurrency(projeto.restante)}
                   </div>
                   
                   {/* Percentual pago */}
                   <div className="text-xs text-muted-foreground">
-                    {(item.total || 0) > 0 
-                      ? `${(((item.valorPago || 0) / (item.total || 0)) * 100).toFixed(0)}% pago`
+                    {projeto.total > 0 
+                      ? `${((projeto.valorPago / projeto.total) * 100).toFixed(0)}% pago`
                       : 'N/A'
                     }
                   </div>
