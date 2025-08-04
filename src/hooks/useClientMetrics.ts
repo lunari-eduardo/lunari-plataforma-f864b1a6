@@ -1,6 +1,9 @@
 import { useMemo } from 'react';
 import { Cliente } from '@/types/orcamentos';
-import { useAppContext } from '@/contexts/AppContext';
+import { WorkflowItem } from '@/contexts/AppContext';
+import { storage, STORAGE_KEYS } from '@/utils/localStorage';
+import { useUnifiedWorkflowData } from './useUnifiedWorkflowData';
+import { validateClientMetrics } from '@/utils/validateClientMetrics';
 
 export interface ClientMetrics {
   id: string;
@@ -15,22 +18,36 @@ export interface ClientMetrics {
 }
 
 export function useClientMetrics(clientes: Cliente[]) {
-  const { workflowItems } = useAppContext();
+  const { unifiedWorkflowData, workflowItems } = useUnifiedWorkflowData();
   
-  console.log('📊 FONTE ÚNICA DE VERDADE - CRM Usando workflowItems do AppContext:', {
+  console.log('📊 INÍCIO CÁLCULO MÉTRICAS CRM - DADOS RECEBIDOS:', {
     totalClientes: clientes.length,
-    totalWorkflowItems: workflowItems.length
+    totalUnifiedWorkflowData: unifiedWorkflowData.length,
+    amostraUnifiedData: unifiedWorkflowData.slice(0, 3).map(item => ({
+      id: item.id,
+      nome: item.nome,
+      total: item.total,
+      valorPago: item.valorPago,
+      fonte: item.fonte
+    }))
   });
   
   const clientMetrics = useMemo(() => {
-    console.log('🎯 MÉTRICAS CRM - CÁLCULO DIRETO COM FONTE AUTORITATIVA');
+    console.log('🎯 MÉTRICAS CRM - USANDO FONTE ÚNICA DE VERDADE (workflowItems):', {
+      totalClientes: clientes.length,
+      totalUnifiedWorkflowData: unifiedWorkflowData.length
+    });
 
-    // Criar métricas usando APENAS workflowItems (fonte única de verdade)
+    // Criar métricas usando EXATAMENTE a mesma lógica de "Pago" e "A Receber"
     const metrics: ClientMetrics[] = clientes.map(cliente => {
-      // FILTRO SIMPLIFICADO: APENAS clienteId (sem fallback de nome)
-      const sessoesCliente = workflowItems.filter(item => item.clienteId === cliente.id);
+      // FILTRO EXATO: clienteId OU nome (igual ao que funciona para pagamentos)
+      const sessoesCliente = unifiedWorkflowData.filter(item => {
+        const matchByClienteId = item.clienteId === cliente.id;
+        const matchByName = !item.clienteId && item.nome?.toLowerCase().trim() === cliente.nome.toLowerCase().trim();
+        return matchByClienteId || matchByName;
+      });
 
-      console.log(`🎯 CLIENTE MÉTRICA SIMPLES - ${cliente.nome}:`, {
+      console.log(`🎯 CLIENTE MÉTRICA - ${cliente.nome}:`, {
         clienteId: cliente.id,
         sessoesEncontradas: sessoesCliente.length,
         valoresDetalhados: sessoesCliente.map(s => ({
@@ -38,17 +55,25 @@ export function useClientMetrics(clientes: Cliente[]) {
           nome: s.nome,
           total: s.total,
           valorPago: s.valorPago,
+          fonte: s.fonte,
           clienteId: s.clienteId
         }))
       });
 
-      // CÁLCULO DIRETO
+      // CÁLCULO DIRETO - EXATAMENTE igual aos valores "Pago" e "A Receber" que funcionam
       const sessoes = sessoesCliente.length;
-      const totalFaturado = sessoesCliente.reduce((acc, item) => acc + (item.total || 0), 0);
-      const totalPago = sessoesCliente.reduce((acc, item) => acc + (item.valorPago || 0), 0);
+      const totalFaturado = sessoesCliente.reduce((acc, item) => {
+        const valor = typeof item.total === 'number' ? item.total : 0;
+        console.log(`  💰 Somando total para ${cliente.nome} - Item ${item.id}: R$ ${valor}`);
+        return acc + valor;
+      }, 0);
+      const totalPago = sessoesCliente.reduce((acc, item) => {
+        const valor = typeof item.valorPago === 'number' ? item.valorPago : 0;
+        return acc + valor;
+      }, 0);
       const aReceber = totalFaturado - totalPago;
 
-      console.log(`✅ RESULTADO FINAL SIMPLIFICADO - ${cliente.nome}:`, {
+      console.log(`✅ RESULTADO FINAL - ${cliente.nome}:`, {
         sessoes,
         totalFaturado,
         totalPago,
@@ -81,14 +106,14 @@ export function useClientMetrics(clientes: Cliente[]) {
       };
     });
 
-    console.log('✅ Métricas CRM SIMPLIFICADAS calculadas:', {
+    console.log('✅ Métricas CRM calculadas:', {
       clientesComSessoes: metrics.filter(m => m.sessoes > 0).length,
       totalSessoes: metrics.reduce((acc, m) => acc + m.sessoes, 0),
       totalFaturado: metrics.reduce((acc, m) => acc + m.totalFaturado, 0)
     });
 
     return metrics;
-  }, [clientes, workflowItems]); // Dependência direta dos workflowItems
+  }, [clientes, unifiedWorkflowData]); // Usar dados unificados como dependência
 
   return clientMetrics;
 }
