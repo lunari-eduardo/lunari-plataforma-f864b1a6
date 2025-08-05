@@ -654,7 +654,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     migrateWorkflowClienteId();
   }, []);
 
-  // Sync configuration data
+  // Sync configuration data (OTIMIZADO - sem setInterval)
   useEffect(() => {
     const syncConfigData = () => {
       const configCategorias = storage.load('configuracoes_categorias', []);
@@ -663,17 +663,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       
       // Transform categorias from objects to string array
       const categoriasNomes = configCategorias.map((cat: any) => cat.nome || cat);
-      if (categoriasNomes.length > 0) {
+      
+      // ✅ OTIMIZAÇÃO: Só atualizar se realmente mudou
+      if (JSON.stringify(categoriasNomes) !== JSON.stringify(categorias)) {
         setCategorias(categoriasNomes);
       }
       
-      setProdutos(configProdutos);
-      setPacotes(configPacotes);
+      if (JSON.stringify(configProdutos) !== JSON.stringify(produtos)) {
+        setProdutos(configProdutos);
+      }
+      
+      if (JSON.stringify(configPacotes) !== JSON.stringify(pacotes)) {
+        setPacotes(configPacotes);
+      }
     };
 
-    const interval = setInterval(syncConfigData, 1000);
-    return () => clearInterval(interval);
-  }, []);
+    // ✅ Executar apenas uma vez na inicialização
+    syncConfigData();
+    
+    // ✅ Escutar eventos de mudança ao invés de polling constante
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key?.includes('configuracoes_')) {
+        syncConfigData();
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []); // ✅ Dependências vazias - executa só uma vez
 
   // Calculate metrics
   useEffect(() => {

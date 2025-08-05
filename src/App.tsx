@@ -24,7 +24,7 @@ const queryClient = new QueryClient();
 
 // Component to safely initialize integration hooks
 function AppIntegration() {
-  // SIMPLIFICADO: Sem estados condicionais que podem causar hook instability
+  // ✅ OTIMIZADO: Hook simplificado sem estados condicionais
   useIntegration();
   return null;
 }

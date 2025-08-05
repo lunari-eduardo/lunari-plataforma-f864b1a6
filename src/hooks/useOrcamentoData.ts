@@ -74,7 +74,8 @@ export function useOrcamentoData() {
 
   // Mapear pacotes para formato consistente com resolução correta de categoria
   const mappedPacotes = useMemo((): MappedPackage[] => {
-    console.log('Pacotes recebidos:', pacotes); // Debug
+    // ✅ OTIMIZADO: Remover console.log constante
+    // console.log('Pacotes recebidos:', pacotes);
     return (pacotes || []).map(pacote => {
       // Buscar categoria pelo ID usando a função utilitária
       let categoria = pacote.categoria || '';
@@ -96,7 +97,8 @@ export function useOrcamentoData() {
 
   // Mapear produtos para formato consistente
   const mappedProdutos = useMemo((): MappedProduct[] => {
-    console.log('Produtos recebidos:', produtos); // Debug
+    // ✅ OTIMIZADO: Remover console.log constante
+    // console.log('Produtos recebidos:', produtos);
     return (produtos || []).map(produto => ({
       id: produto.id,
       nome: produto.nome,
@@ -106,11 +108,12 @@ export function useOrcamentoData() {
     }));
   }, [produtos]);
 
-  console.log('Dados mapeados:', { 
-    categorias: mappedCategorias, 
-    pacotes: mappedPacotes, 
-    produtos: mappedProdutos 
-  }); // Debug
+  // ✅ OTIMIZADO: Remover console.log constante
+  // console.log('Dados mapeados:', { 
+  //   categorias: mappedCategorias, 
+  //   pacotes: mappedPacotes, 
+  //   produtos: mappedProdutos 
+  // });
 
   return {
     pacotes: mappedPacotes,
