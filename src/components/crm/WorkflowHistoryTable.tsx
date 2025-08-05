@@ -122,11 +122,9 @@ export function WorkflowHistoryTable({
                     <Calendar className="h-4 w-4 text-lunar-textSecondary" />
                     <span className="font-medium text-sm text-lunar-text">{formatDateForDisplay(item.data)}</span>
                   </div>
-                  {item.status && (
-                    <Badge className={`text-xs ${getStatusBadge(item.status)}`}>
+                  {item.status && <Badge className={`text-xs ${getStatusBadge(item.status)}`}>
                       {item.status}
-                    </Badge>
-                  )}
+                    </Badge>}
                 </div>
                 
                 {/* Informações do Pacote - Responsivo */}
@@ -219,23 +217,23 @@ export function WorkflowHistoryTable({
                   </div>
                   
                   <div className="space-y-4">
-                    <div className="bg-success/10 border border-success/20 rounded-lg p-4">
+                    <div className="bg-success/10 border border-chart-revenue rounded-lg p-4">
                       <div className="flex justify-between items-center">
                         <span className="flex items-center gap-2 text-sm text-lunar-text">
                           <span className="w-2 h-2 bg-success rounded-full"></span>
                           Valor Pago
                         </span>
-                        <span className="font-bold text-success">{formatCurrency(item.valorPago || 0)}</span>
+                        <span className="font-bold text-success text-chart-revenue">{formatCurrency(item.valorPago || 0)}</span>
                       </div>
                     </div>
                     
-                    <div className="bg-warning/10 border border-warning/20 rounded-lg p-4">
+                    <div className="bg-warning/10 border border-chart-expense rounded-lg p-4">
                       <div className="flex justify-between items-center">
                         <span className="flex items-center gap-2 text-sm text-lunar-text">
                           <span className="w-2 h-2 bg-warning rounded-full"></span>
                           A Receber
                         </span>
-                        <span className="font-bold text-warning">{formatCurrency(item.restante || 0)}</span>
+                        <span className="font-bold text-warning text-chart-expense">{formatCurrency(item.restante || 0)}</span>
                       </div>
                     </div>
                     
