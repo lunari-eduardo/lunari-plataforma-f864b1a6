@@ -29,6 +29,7 @@ export interface Appointment {
   whatsapp?: string;
   orcamentoId?: string;
   origem?: 'agenda' | 'orcamento';
+  clienteId?: string; // NOVO: Campo para relacionar com cliente específico (CRM)
 }
 
 export const useAgenda = () => {
@@ -107,6 +108,7 @@ export const useAgenda = () => {
         descricao: appointment.description || "",
         status: "", // Status vazio por padrão para workflow
         whatsapp: clienteData?.telefone || appointment.whatsapp || "",
+        clienteId: appointment.clienteId || clienteData?.id || '', // USAR CLIENTEID DO AGENDAMENTO
         categoria: categoria,
         pacote: pacote,
         valorPacote: valorPacote,

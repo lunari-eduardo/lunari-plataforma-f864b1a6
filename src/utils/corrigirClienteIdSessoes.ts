@@ -84,6 +84,72 @@ export const corrigirClienteIdSessoes = (): number => {
   }
 };
 
+// Função para corrigir agendamentos existentes sem clienteId
+export const corrigirClienteIdAgendamentos = (): number => {
+  try {
+    const appointments = JSON.parse(localStorage.getItem('appointments') || '[]');
+    const clientes: Cliente[] = JSON.parse(localStorage.getItem('clients') || '[]');
+    
+    console.log('🔧 Iniciando correção de clienteId nos agendamentos...');
+    console.log(`📊 Agendamentos: ${appointments.length}, Clientes: ${clientes.length}`);
+    
+    let corrigidos = 0;
+    
+    const appointmentsCorrigidos = appointments.map((appointment: any) => {
+      if (appointment.clienteId) {
+        return appointment;
+      }
+      
+      const cliente = clientes.find(c => {
+        // Buscar por nome
+        if (appointment.client && c.nome && 
+            appointment.client.toLowerCase().trim() === c.nome.toLowerCase().trim()) {
+          return true;
+        }
+        
+        // Buscar por telefone
+        if (appointment.whatsapp && c.telefone) {
+          const whatsappLimpo = appointment.whatsapp.replace(/\D/g, '');
+          const telefoneLimpo = c.telefone.replace(/\D/g, '');
+          if (whatsappLimpo === telefoneLimpo && whatsappLimpo.length >= 10) {
+            return true;
+          }
+        }
+        
+        // Buscar por email
+        if (appointment.email && c.email && 
+            appointment.email.toLowerCase().trim() === c.email.toLowerCase().trim()) {
+          return true;
+        }
+        
+        return false;
+      });
+      
+      if (cliente) {
+        console.log(`✅ Relacionando agendamento "${appointment.client}" com cliente ID: ${cliente.id}`);
+        corrigidos++;
+        return { ...appointment, clienteId: cliente.id };
+      }
+      
+      console.log(`⚠️ Não foi possível relacionar agendamento: ${appointment.client}`);
+      return appointment;
+    });
+    
+    if (corrigidos > 0) {
+      localStorage.setItem('appointments', JSON.stringify(appointmentsCorrigidos));
+      console.log(`🎉 Correção de agendamentos concluída: ${corrigidos} agendamentos relacionados com clientes`);
+    } else {
+      console.log('ℹ️ Nenhum agendamento precisou de correção');
+    }
+    
+    return corrigidos;
+    
+  } catch (error) {
+    console.error('❌ Erro ao corrigir clienteId dos agendamentos:', error);
+    return 0;
+  }
+};
+
 // Auto-executar se importado diretamente
 if (typeof window !== 'undefined') {
   // Executar apenas uma vez por sessão
@@ -91,6 +157,7 @@ if (typeof window !== 'undefined') {
   if (!sessionStorage.getItem(chaveExecucao)) {
     setTimeout(() => {
       corrigirClienteIdSessoes();
+      corrigirClienteIdAgendamentos();
       sessionStorage.setItem(chaveExecucao, 'true');
     }, 1000);
   }

@@ -11,7 +11,7 @@ import { migrateWorkflowClienteId } from '@/utils/migrateWorkflowClienteId';
 import { initializeApp, needsInitialization } from '@/utils/initializeApp';
 import { Projeto, CriarProjetoInput } from '@/types/projeto';
 import { ProjetoService } from '@/services/ProjetoService';
-import { corrigirClienteIdSessoes } from '@/utils/corrigirClienteIdSessoes';
+import { corrigirClienteIdSessoes, corrigirClienteIdAgendamentos } from '@/utils/corrigirClienteIdSessoes';
 
 // Types
 import { Orcamento, Template, OrigemCliente, MetricasOrcamento, Cliente } from '@/types/orcamentos';
@@ -1332,14 +1332,71 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // Função para sincronizar nome do cliente com orçamentos
+  const sincronizarNomeClienteComOrcamentos = (clienteId: string, novoNome: string) => {
+    try {
+      const orcamentos = JSON.parse(localStorage.getItem('budget_data') || '[]');
+      let orcamentosAtualizados = 0;
+      
+      const orcamentosCorrigidos = orcamentos.map((orc: any) => {
+        if (orc.cliente?.id === clienteId && orc.cliente?.nome !== novoNome) {
+          orcamentosAtualizados++;
+          return {
+            ...orc,
+            cliente: { ...orc.cliente, nome: novoNome }
+          };
+        }
+        return orc;
+      });
+      
+      if (orcamentosAtualizados > 0) {
+        localStorage.setItem('budget_data', JSON.stringify(orcamentosCorrigidos));
+        console.log(`✅ ${orcamentosAtualizados} orçamentos atualizados com novo nome: ${novoNome}`);
+        
+        // Atualizar estado dos orçamentos também
+        setOrcamentos(orcamentosCorrigidos);
+      }
+    } catch (error) {
+      console.error('❌ Erro ao sincronizar nome nos orçamentos:', error);
+    }
+  };
+
+  // Função para sincronizar nome do cliente com agendamentos
+  const sincronizarNomeClienteComAgendamentos = (clienteId: string, novoNome: string) => {
+    try {
+      const appointments = JSON.parse(localStorage.getItem('appointments') || '[]');
+      let appointmentsAtualizados = 0;
+      
+      const appointmentsCorrigidos = appointments.map((app: any) => {
+        if (app.clienteId === clienteId && app.client !== novoNome) {
+          appointmentsAtualizados++;
+          return { ...app, client: novoNome };
+        }
+        return app;
+      });
+      
+      if (appointmentsAtualizados > 0) {
+        localStorage.setItem('appointments', JSON.stringify(appointmentsCorrigidos));
+        console.log(`✅ ${appointmentsAtualizados} agendamentos atualizados com novo nome: ${novoNome}`);
+        
+        // Atualizar estado dos appointments também
+        setAppointments(appointmentsCorrigidos);
+      }
+    } catch (error) {
+      console.error('❌ Erro ao sincronizar nome nos agendamentos:', error);
+    }
+  };
+
   const atualizarCliente = (id: string, dadosAtualizados: Partial<Cliente>) => {
     setClientes(prev => prev.map(cliente => 
       cliente.id === id ? { ...cliente, ...dadosAtualizados } : cliente
     ));
     
-    // SINCRONIZAÇÃO AUTOMÁTICA: Quando o nome for alterado, propagar para workflow
+    // SINCRONIZAÇÃO AUTOMÁTICA: Quando o nome for alterado, propagar para todos os sistemas
     if (dadosAtualizados.nome) {
       sincronizarNomeClienteComWorkflow(id, dadosAtualizados.nome);
+      sincronizarNomeClienteComOrcamentos(id, dadosAtualizados.nome);
+      sincronizarNomeClienteComAgendamentos(id, dadosAtualizados.nome);
     }
   };
 
@@ -1361,6 +1418,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const newAppointment: Appointment = {
       ...appointment,
       id: Date.now().toString(),
+      clienteId: appointment.clienteId, // Preservar clienteId
     };
     
     // Inserir appointment em ordem cronológica crescente
@@ -2008,8 +2066,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }
         }
         
-        // Executar correção de clienteId nas sessões existentes
+        // Executar correção de clienteId nas sessões e agendamentos existentes
         corrigirClienteIdSessoes();
+        corrigirClienteIdAgendamentos();
       } catch (error) {
         console.error('❌ Erro na inicialização automática:', error);
       }

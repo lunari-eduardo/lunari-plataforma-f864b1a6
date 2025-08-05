@@ -244,7 +244,9 @@ export default function AppointmentForm({
       produtosIncluidos: produtosIncluidos.length > 0 ? produtosIncluidos : undefined,
       paidAmount: formData.paidAmount,
       client: clientInfo.client,
-      clientId: clientInfo.clientId,
+      clientId: clientInfo.clientId, // INCLUIR CLIENTEID
+      whatsapp: clientInfo.clientPhone, // INCLUIR WHATSAPP
+      email: clientInfo.clientEmail, // INCLUIR EMAIL
       clientPhone: clientInfo.clientPhone,
       clientEmail: clientInfo.clientEmail
     };
