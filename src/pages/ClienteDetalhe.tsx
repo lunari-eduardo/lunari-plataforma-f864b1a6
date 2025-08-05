@@ -57,13 +57,20 @@ export default function ClienteDetalhe() {
 
   // Métricas simplificadas e precisas
   const metricas = useMemo(() => {
-    if (!cliente) return { totalSessoes: 0, totalFaturado: 0, totalPago: 0, aReceber: 0 };
-    
+    if (!cliente) return {
+      totalSessoes: 0,
+      totalFaturado: 0,
+      totalPago: 0,
+      aReceber: 0
+    };
     const clientMetrics = getSimplifiedClientMetrics([cliente]);
     const metrics = clientMetrics[0];
-    
-    if (!metrics) return { totalSessoes: 0, totalFaturado: 0, totalPago: 0, aReceber: 0 };
-    
+    if (!metrics) return {
+      totalSessoes: 0,
+      totalFaturado: 0,
+      totalPago: 0,
+      aReceber: 0
+    };
     return {
       totalSessoes: metrics.totalSessoes,
       totalFaturado: metrics.totalFaturado,
@@ -261,7 +268,7 @@ export default function ClienteDetalhe() {
                   Todos os orçamentos e trabalhos realizados para este cliente
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="bg-neutral-50">
                 <WorkflowHistoryTable cliente={cliente} />
               </CardContent>
             </Card>
@@ -295,7 +302,7 @@ export default function ClienteDetalhe() {
                     <div className="flex justify-between items-center">
                       <span>Taxa de Pagamento</span>
                       <span className="font-semibold text-primary">
-                        {metricas.totalFaturado > 0 ? Math.round((metricas.totalPago / metricas.totalFaturado) * 100) : 0}%
+                        {metricas.totalFaturado > 0 ? Math.round(metricas.totalPago / metricas.totalFaturado * 100) : 0}%
                       </span>
                     </div>
                   </div>

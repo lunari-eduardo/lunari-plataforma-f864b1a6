@@ -143,17 +143,17 @@ export function WorkflowHistoryTable({
                 <div className="flex flex-row md:flex-col gap-4 md:gap-1 md:text-right">
                   <div className="flex flex-col items-start md:items-end">
                     <span className="text-xs text-lunar-textSecondary uppercase tracking-wide">Total</span>
-                    <span className="font-bold text-sm text-lunar-text">{formatCurrency(item.total || 0)}</span>
+                    <span className="font-bold text-sm text-blue-700">{formatCurrency(item.total || 0)}</span>
                   </div>
                   
                   <div className="flex gap-4 md:gap-2 md:flex-col">
                     <div className="flex flex-col items-start md:items-end">
                       <span className="text-xs text-lunar-textSecondary">Pago</span>
-                      <span className="font-semibold text-xs text-success">{formatCurrency(item.valorPago || 0)}</span>
+                      <span className="font-semibold text-xs text-success text-lunar-success">{formatCurrency(item.valorPago || 0)}</span>
                     </div>
                     <div className="flex flex-col items-start md:items-end">
                       <span className="text-xs text-lunar-textSecondary">Pendente</span>
-                      <span className="font-semibold text-xs text-warning">{formatCurrency(item.restante || 0)}</span>
+                      <span className="font-semibold text-xs text-warning text-chart-expense">{formatCurrency(item.restante || 0)}</span>
                     </div>
                   </div>
                 </div>
@@ -172,7 +172,7 @@ export function WorkflowHistoryTable({
                     </h3>
                   </div>
                   
-                  <div className="space-y-3 bg-lunar-accent/5 rounded-lg p-4">
+                  <div className="space-y-3 rounded-lg p-4 bg-neutral-50">
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-lunar-textSecondary">Base do Pacote</span>
                       <span className="font-semibold text-sm text-lunar-text">{formatCurrency(item.valorPacote || 0)}</span>
@@ -216,7 +216,7 @@ export function WorkflowHistoryTable({
                     </h3>
                   </div>
                   
-                  <div className="space-y-4">
+                  <div className="space-y-4 bg-neutral-50 rounded-lg">
                     <div className="bg-success/10 border border-chart-revenue rounded-lg p-4">
                       <div className="flex justify-between items-center">
                         <span className="flex items-center gap-2 text-sm text-lunar-text">
@@ -233,12 +233,12 @@ export function WorkflowHistoryTable({
                           <span className="w-2 h-2 bg-warning rounded-full"></span>
                           A Receber
                         </span>
-                        <span className="font-bold text-warning text-chart-expense">{formatCurrency(item.restante || 0)}</span>
+                        <span className="font-bold text-warning text-lunar-error">{formatCurrency(item.restante || 0)}</span>
                       </div>
                     </div>
                     
                     {/* Indicador de Status de Pagamento */}
-                    <div className="mt-4 p-3 bg-lunar-surface border border-lunar-border/30 rounded-lg">
+                    <div className="mt-4 p-3 border border-lunar-border/30 rounded-lg bg-neutral-50">
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-lunar-textSecondary">Status do Pagamento</span>
                         <Badge className={`text-xs ${item.restante === 0 ? 'bg-success/20 text-success' : 'bg-warning/20 text-warning'}`}>
@@ -258,7 +258,7 @@ export function WorkflowHistoryTable({
                       Produtos Incluídos
                     </h3>
                   </div>
-                  <div className="bg-lunar-accent/5 rounded-lg p-4 space-y-3">
+                  <div className="rounded-lg p-4 space-y-3 bg-neutral-50">
                     {item.produtosList.map((p: any, index: number) => <div key={index} className="flex justify-between items-center py-2 border-b border-lunar-border/20 last:border-0">
                         <div className="flex flex-col">
                           <span className="font-medium text-sm text-lunar-text">{p.nome}</span>
