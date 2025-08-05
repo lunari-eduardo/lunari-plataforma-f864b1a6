@@ -383,33 +383,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       .map(converterProjetoParaWorkflowItem);
   }, [projetos, workflowFilters]);
 
-  // ✅ CORREÇÃO: workflowSummary calculado APÓS workflowFilters ser inicializado
-  const workflowSummary = useMemo(() => {
-    console.log('📊 [AppContext] Recalculando workflowSummary...');
-    
-    const filteredItems = workflowItems.filter(item => {
-      // Handle ISO date format (YYYY-MM-DD) from new Projeto structure
-      const itemDate = new Date(item.data);
-      const itemMonth = itemDate.getMonth() + 1; // 1-12
-      const itemYear = itemDate.getFullYear();
-      
-      const [filterMonth, filterYear] = workflowFilters.mes.split('/');
-      const monthMatches = itemMonth === parseInt(filterMonth) && itemYear === parseInt(filterYear);
-
-      const searchMatches = !workflowFilters.busca || 
-        item.nome.toLowerCase().includes(workflowFilters.busca.toLowerCase());
-
-      return monthMatches && searchMatches;
-    });
-
-    const receita = filteredItems.reduce((sum, item) => sum + item.valorPago, 0);
-    const aReceber = filteredItems.reduce((sum, item) => sum + item.restante, 0);
-    const previsto = filteredItems.reduce((sum, item) => sum + item.total, 0);
-
-    console.log('📊 [AppContext] WorkflowSummary calculado:', { receita, aReceber, previsto });
-    return { receita, aReceber, previsto };
-  }, [workflowItems, workflowFilters]);
-
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(() => {
     return storage.load(STORAGE_KEYS.WORKFLOW_COLUMNS, {
       data: true,
@@ -1190,6 +1163,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   }, [orcamentos, workflowItems, pacotes, produtos]);
 
+  // Calculate workflow summary
+  const workflowSummary = React.useMemo(() => {
+    const filteredItems = workflowItems.filter(item => {
+      // Handle ISO date format (YYYY-MM-DD) from new Projeto structure
+      const itemDate = new Date(item.data);
+      const itemMonth = itemDate.getMonth() + 1; // 1-12
+      const itemYear = itemDate.getFullYear();
+      
+      const [filterMonth, filterYear] = workflowFilters.mes.split('/');
+      const monthMatches = itemMonth === parseInt(filterMonth) && itemYear === parseInt(filterYear);
+
+      const searchMatches = !workflowFilters.busca || 
+        item.nome.toLowerCase().includes(workflowFilters.busca.toLowerCase());
+
+      return monthMatches && searchMatches;
+    });
+
+    const receita = filteredItems.reduce((sum, item) => sum + item.valorPago, 0);
+    const aReceber = filteredItems.reduce((sum, item) => sum + item.restante, 0);
+    const previsto = filteredItems.reduce((sum, item) => sum + item.total, 0);
+
+    return { receita, aReceber, previsto };
+  }, [workflowItems, workflowFilters]);
 
   // Action functions
   const adicionarOrcamento = (orcamento: Omit<Orcamento, 'id' | 'criadoEm'>) => {
@@ -2064,15 +2060,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // ✅ DEBUG: Verificar se todos os dados estão inicializados corretamente
-  console.log('✅ [AppContext] Contexto inicializando com dados:', {
-    projetos: projetos.length,
-    allWorkflowItems: allWorkflowItems.length,
-    workflowItems: workflowItems.length,
-    workflowFilters,
-    workflowSummary
-  });
-
   const contextValue: AppContextType = {
     // Data
     orcamentos,
@@ -2084,7 +2071,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     pacotes,
     metricas,
     appointments,
-    
     
     // ✅ CORREÇÃO: Estrutura correta com projetos RAW
     projetos, // Dados RAW dos projetos
