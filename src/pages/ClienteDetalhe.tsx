@@ -262,7 +262,7 @@ export default function ClienteDetalhe() {
           {/* Aba 2: Histórico & Projetos */}
           <TabsContent value="historico" className="space-y-6">
             <Card>
-              <CardHeader>
+              <CardHeader className="bg-neutral-50">
                 <CardTitle>Histórico Completo</CardTitle>
                 <CardDescription>
                   Todos os orçamentos e trabalhos realizados para este cliente
