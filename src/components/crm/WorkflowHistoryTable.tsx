@@ -161,7 +161,7 @@ export function WorkflowHistoryTable({
             </AccordionTrigger>
             
             <AccordionContent className="px-4 md:px-6 pb-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-8 py-0">
                 
                 {/* COMPOSIÇÃO DO VALOR */}
                 <div className="space-y-4">
@@ -172,7 +172,7 @@ export function WorkflowHistoryTable({
                     </h3>
                   </div>
                   
-                  <div className="space-y-3 rounded-lg p-4 bg-neutral-50">
+                  <div className="space-y-3 rounded-lg p-4 bg-neutral-50 py-[6px]">
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-lunar-textSecondary">Base do Pacote</span>
                       <span className="font-semibold text-sm text-lunar-text">{formatCurrency(item.valorPacote || 0)}</span>
@@ -208,7 +208,7 @@ export function WorkflowHistoryTable({
                 </div>
 
                 {/* SITUAÇÃO FINANCEIRA */}
-                <div className="space-y-4">
+                <div className="space-y-1">
                   <div className="flex items-center gap-2 mb-4">
                     <CreditCard className="h-4 w-4 text-lunar-accent" />
                     <h3 className="font-semibold text-sm text-lunar-text uppercase tracking-wide">
@@ -216,8 +216,8 @@ export function WorkflowHistoryTable({
                     </h3>
                   </div>
                   
-                  <div className="space-y-4 bg-neutral-50 rounded-lg">
-                    <div className="bg-success/10 border border-chart-revenue rounded-lg p-4">
+                  <div className="space-y-4 rounded-lg bg-lunar-surface py-0 my-px">
+                    <div className="border border-chart-revenue rounded-lg p-4 bg-neutral-50 py-[6px]">
                       <div className="flex justify-between items-center">
                         <span className="flex items-center gap-2 text-sm text-lunar-text">
                           <span className="w-2 h-2 bg-success rounded-full"></span>
@@ -227,7 +227,7 @@ export function WorkflowHistoryTable({
                       </div>
                     </div>
                     
-                    <div className="bg-warning/10 border border-chart-expense rounded-lg p-4">
+                    <div className="border border-chart-expense rounded-lg p-4 bg-neutral-50 py-[6px]">
                       <div className="flex justify-between items-center">
                         <span className="flex items-center gap-2 text-sm text-lunar-text">
                           <span className="w-2 h-2 bg-warning rounded-full"></span>
@@ -238,7 +238,7 @@ export function WorkflowHistoryTable({
                     </div>
                     
                     {/* Indicador de Status de Pagamento */}
-                    <div className="mt-4 p-3 border border-lunar-border/30 rounded-lg bg-neutral-50">
+                    <div className="mt-4 p-3 border border-lunar-border/30 rounded-lg bg-neutral-50 py-[6px]">
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-lunar-textSecondary">Status do Pagamento</span>
                         <Badge className={`text-xs ${item.restante === 0 ? 'bg-success/20 text-success' : 'bg-warning/20 text-warning'}`}>
