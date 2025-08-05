@@ -36,17 +36,23 @@ function normalizeClientName(nome: string): string {
 }
 
 /**
- * Função para converter valor monetário com segurança
+ * Função robusta para parsing de valores financeiros (UNIFICADA)
+ * Mesma lógica usada no WorkflowHistoryTable para garantir consistência
  */
-function parseMonetaryValue(value: any): number {
-  if (typeof value === 'number' && !isNaN(value)) return value;
+function parseFinancialValue(value: any): number {
+  if (value === null || value === undefined || value === '') return 0;
+
+  // Se já é um número, retornar diretamente
+  if (typeof value === 'number') return isNaN(value) ? 0 : value;
+
+  // Se é string, limpar e converter
   if (typeof value === 'string') {
-    const cleanValue = value
-      .replace(/R\$\s*/g, '')
-      .replace(/\./g, '')
-      .replace(',', '.')
-      .trim();
-    const parsed = parseFloat(cleanValue);
+    // Remover R$, espaços, pontos de milhares e converter vírgula para ponto
+    const cleaned = value.replace(/[^\d,.-]/g, '') // Remove tudo exceto dígitos, vírgula, ponto e hífen
+      .replace(/\./g, '') // Remove pontos (milhares)
+      .replace(/,/g, '.'); // Converte vírgula para ponto
+
+    const parsed = parseFloat(cleaned);
     return isNaN(parsed) ? 0 : parsed;
   }
   return 0;
@@ -131,14 +137,14 @@ export function fixCrmDataDefinitive(): boolean {
     // 3. CORRIGIR TODOS OS VALORES NaN
     workflowSessions = workflowSessions.map((item: any) => ({
       ...item,
-      total: parseMonetaryValue(item.total),
-      valorPago: parseMonetaryValue(item.valorPago),
-      valorPacote: parseMonetaryValue(item.valorPacote),
-      valorTotalFotoExtra: parseMonetaryValue(item.valorTotalFotoExtra),
-      valorTotalProduto: parseMonetaryValue(item.valorTotalProduto),
-      valorAdicional: parseMonetaryValue(item.valorAdicional),
-      desconto: parseMonetaryValue(item.desconto),
-      restante: parseMonetaryValue(item.total) - parseMonetaryValue(item.valorPago)
+      total: parseFinancialValue(item.total),
+      valorPago: parseFinancialValue(item.valorPago),
+      valorPacote: parseFinancialValue(item.valorPacote),
+      valorTotalFotoExtra: parseFinancialValue(item.valorTotalFotoExtra),
+      valorTotalProduto: parseFinancialValue(item.valorTotalProduto),
+      valorAdicional: parseFinancialValue(item.valorAdicional),
+      desconto: parseFinancialValue(item.desconto),
+      restante: parseFinancialValue(item.total) - parseFinancialValue(item.valorPago)
     }));
     
     // 4. CORRIGIR CLIENTEID ÓRFÃOS
@@ -220,6 +226,7 @@ export function fixCrmDataDefinitive(): boolean {
 
 /**
  * Função para calcular métricas simplificadas e precisas
+ * SINCRONIZADA COM WorkflowHistoryTable para garantir totais idênticos
  */
 export function getSimplifiedClientMetrics(clientes: Cliente[]): SimplifiedMetrics[] {
   const workflowSessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
@@ -231,22 +238,49 @@ export function getSimplifiedClientMetrics(clientes: Cliente[]): SimplifiedMetri
       const matchByName = !session.clienteId && 
         session.nome?.toLowerCase().trim() === cliente.nome.toLowerCase().trim();
       return matchByClienteId || matchByName;
+    }).sort((a: any, b: any) => new Date(b.data).getTime() - new Date(a.data).getTime());
+
+    // DEDUPLICAÇÃO FINAL por sessionId (MESMA LÓGICA DO WorkflowHistoryTable)
+    const sessionMap = new Map();
+    clienteSessions.forEach((session: any) => {
+      const sessionKey = session.sessionId || session.id;
+      if (!sessionMap.has(sessionKey)) {
+        sessionMap.set(sessionKey, session);
+      }
+    });
+
+    // Converter Map de volta para array e RECALCULAR TOTAIS DINAMICAMENTE
+    const sessionsCalculadas = Array.from(sessionMap.values()).map((session: any) => {
+      const valorPacote = parseFinancialValue(session.valorPacote);
+      const valorTotalFotoExtra = parseFinancialValue(session.valorTotalFotoExtra);
+      const valorTotalProduto = parseFinancialValue(session.valorTotalProduto);
+      const valorAdicional = parseFinancialValue(session.valorAdicional);
+      const desconto = parseFinancialValue(session.desconto);
+      
+      // RECÁLCULO DINÂMICO (mesma fórmula do WorkflowHistoryTable)
+      const totalCalculado = valorPacote + valorTotalFotoExtra + valorTotalProduto + valorAdicional - desconto;
+      
+      return {
+        ...session,
+        total: totalCalculado,
+        valorPago: parseFinancialValue(session.valorPago)
+      };
     });
     
-    // Cálculos simples e diretos
-    const totalSessoes = clienteSessions.length;
-    const totalFaturado = clienteSessions.reduce((acc: number, session: any) => 
-      acc + parseMonetaryValue(session.total), 0
+    // Cálculos usando dados recalculados (garantia de precisão)
+    const totalSessoes = sessionsCalculadas.length;
+    const totalFaturado = sessionsCalculadas.reduce((acc: number, session: any) => 
+      acc + session.total, 0
     );
-    const totalPago = clienteSessions.reduce((acc: number, session: any) => 
-      acc + parseMonetaryValue(session.valorPago), 0
+    const totalPago = sessionsCalculadas.reduce((acc: number, session: any) => 
+      acc + session.valorPago, 0
     );
     const aReceber = totalFaturado - totalPago;
     
-    // Última sessão
+    // Última sessão (usando dados recalculados)
     let ultimaSessao: Date | null = null;
-    if (clienteSessions.length > 0) {
-      const datasOrdenadas = clienteSessions
+    if (sessionsCalculadas.length > 0) {
+      const datasOrdenadas = sessionsCalculadas
         .map((session: any) => new Date(session.data))
         .filter(data => !isNaN(data.getTime()))
         .sort((a, b) => b.getTime() - a.getTime());
