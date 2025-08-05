@@ -654,7 +654,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     migrateWorkflowClienteId();
   }, []);
 
-  // Sync configuration data (OTIMIZADO - sem setInterval)
+  // Sync configuration data (CORRIGIDO - sincronização correta)
   useEffect(() => {
     const syncConfigData = () => {
       const configCategorias = storage.load('configuracoes_categorias', []);
@@ -664,33 +664,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // Transform categorias from objects to string array
       const categoriasNomes = configCategorias.map((cat: any) => cat.nome || cat);
       
-      // ✅ OTIMIZAÇÃO: Só atualizar se realmente mudou
-      if (JSON.stringify(categoriasNomes) !== JSON.stringify(categorias)) {
-        setCategorias(categoriasNomes);
-      }
-      
-      if (JSON.stringify(configProdutos) !== JSON.stringify(produtos)) {
-        setProdutos(configProdutos);
-      }
-      
-      if (JSON.stringify(configPacotes) !== JSON.stringify(pacotes)) {
-        setPacotes(configPacotes);
-      }
+      // ✅ CORREÇÃO: Atualizar sempre para garantir dados corretos
+      setCategorias(categoriasNomes);
+      setProdutos(configProdutos);
+      setPacotes(configPacotes);
     };
 
-    // ✅ Executar apenas uma vez na inicialização
+    // Executar na inicialização
     syncConfigData();
     
-    // ✅ Escutar eventos de mudança ao invés de polling constante
+    // Escutar eventos de mudança
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key?.includes('configuracoes_')) {
         syncConfigData();
       }
     };
     
+    // Também adicionar listener personalizado para mudanças locais
+    const handleCustomUpdate = () => {
+      syncConfigData();
+    };
+    
     window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []); // ✅ Dependências vazias - executa só uma vez
+    window.addEventListener('configuracoes-updated', handleCustomUpdate);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('configuracoes-updated', handleCustomUpdate);
+    };
+  }, []); // Dependências vazias mas com listeners apropriados
 
   // Calculate metrics
   useEffect(() => {

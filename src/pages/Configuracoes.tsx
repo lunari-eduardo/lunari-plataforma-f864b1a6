@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/
 import { Package, Box, Workflow, Shapes, DollarSign } from 'lucide-react';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
+import { saveConfigWithNotification } from '@/utils/configNotification';
 
 // Importação dos componentes de configuração
 import Categorias from '@/components/configuracoes/Categorias';
@@ -133,15 +134,17 @@ export default function Configuracoes() {
   });
   const [tabAtiva, setTabAtiva] = useState('categorias');
 
-  // Efeitos para salvar automaticamente no localStorage
+  // Efeitos para salvar automaticamente no localStorage COM NOTIFICAÇÃO
   useEffect(() => {
-    storage.save('configuracoes_categorias', categorias);
+    saveConfigWithNotification('configuracoes_categorias', categorias);
   }, [categorias]);
+  
   useEffect(() => {
-    storage.save('configuracoes_pacotes', pacotes);
+    saveConfigWithNotification('configuracoes_pacotes', pacotes);
   }, [pacotes]);
+  
   useEffect(() => {
-    storage.save('configuracoes_produtos', produtos);
+    saveConfigWithNotification('configuracoes_produtos', produtos);
   }, [produtos]);
   return <ScrollArea className="h-[calc(100vh-120px)]">
       <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 space-y-6">
