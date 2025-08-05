@@ -11,25 +11,22 @@ interface WorkflowHistoryTableProps {
 // Função robusta para parsing de valores financeiros
 const parseFinancialValue = (value: any): number => {
   if (value === null || value === undefined || value === '') return 0;
-  
+
   // Se já é um número, retornar diretamente
   if (typeof value === 'number') return isNaN(value) ? 0 : value;
-  
+
   // Se é string, limpar e converter
   if (typeof value === 'string') {
     // Remover R$, espaços, pontos de milhares e converter vírgula para ponto
-    const cleaned = value
-      .replace(/[^\d,.-]/g, '') // Remove tudo exceto dígitos, vírgula, ponto e hífen
-      .replace(/\./g, '') // Remove pontos (milhares)
-      .replace(/,/g, '.'); // Converte vírgula para ponto
-    
+    const cleaned = value.replace(/[^\d,.-]/g, '') // Remove tudo exceto dígitos, vírgula, ponto e hífen
+    .replace(/\./g, '') // Remove pontos (milhares)
+    .replace(/,/g, '.'); // Converte vírgula para ponto
+
     const parsed = parseFloat(cleaned);
     return isNaN(parsed) ? 0 : parsed;
   }
-  
   return 0;
 };
-
 export function WorkflowHistoryTable({
   cliente
 }: WorkflowHistoryTableProps) {
@@ -66,7 +63,7 @@ export function WorkflowHistoryTable({
 
       // CÁLCULO CORRETO DO TOTAL com validação
       const totalCalculado = valorPacote + valorTotalFotoExtra + valorTotalProduto + valorAdicional - desconto;
-      
+
       // Validação final para garantir que não há NaN
       const totalFinal = isNaN(totalCalculado) ? 0 : totalCalculado;
       const restante = totalFinal - valorPago;
@@ -83,7 +80,6 @@ export function WorkflowHistoryTable({
           originalSession: session
         });
       }
-
       return {
         ...session,
         valorPacote,
@@ -118,11 +114,11 @@ export function WorkflowHistoryTable({
   return <div className="space-y-4">
       <Accordion type="single" collapsible className="w-full">
         {workflowData.map((item: any) => <AccordionItem key={item.id} value={item.id} className="border rounded-lg mb-4">
-            <AccordionTrigger className="px-6 py-4 hover:no-underline">
+            <AccordionTrigger className="px-6 hover:no-underline py-[9px]">
               <div className="flex items-center justify-between w-full mr-4">
                 {/* Data */}
                 <div className="flex items-center gap-2">
-                  <span className="font-medium text-lg">{formatDateForDisplay(item.data)}</span>
+                  <span className="font-medium text-sm">{formatDateForDisplay(item.data)}</span>
                 </div>
                 
                 {/* Informações do Pacote */}
