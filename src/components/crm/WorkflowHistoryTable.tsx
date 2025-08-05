@@ -113,82 +113,97 @@ export function WorkflowHistoryTable({
   }
   return <div className="space-y-4">
       <Accordion type="single" collapsible className="w-full">
-        {workflowData.map((item: any) => <AccordionItem key={item.id} value={item.id} className="border rounded-lg mb-4">
-            <AccordionTrigger className="px-6 hover:no-underline py-[9px] bg-neutral-50 rounded-lg">
-              <div className="flex items-center justify-between w-full mr-4">
-                {/* Data */}
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-sm">{formatDateForDisplay(item.data)}</span>
+        {workflowData.map((item: any) => <AccordionItem key={item.id} value={item.id} className="border border-lunar-border rounded-lg mb-4 bg-lunar-surface shadow-lunar-sm hover:shadow-lunar-md transition-all duration-200">
+            <AccordionTrigger className="px-4 md:px-6 hover:no-underline py-4 bg-lunar-accent/5 rounded-lg">
+              <div className="flex flex-col md:flex-row md:items-center justify-between w-full gap-4">
+                {/* Data e Status - Mobile First */}
+                <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-lunar-textSecondary" />
+                    <span className="font-medium text-sm text-lunar-text">{formatDateForDisplay(item.data)}</span>
+                  </div>
+                  {item.status && (
+                    <Badge className={`text-xs ${getStatusBadge(item.status)}`}>
+                      {item.status}
+                    </Badge>
+                  )}
                 </div>
                 
-                {/* Informações do Pacote */}
-                <div className="flex-1 mx-8">
-                  <div className="text-left">
-                    <div className="font-medium uppercase tracking-wide">PACOTE</div>
-                    <div className="font-medium uppercase tracking-wide">CATEGORIA</div>
-                    <div className="font-medium uppercase tracking-wide">DESCRIÇÃO</div>
+                {/* Informações do Pacote - Responsivo */}
+                <div className="flex-1 md:mx-8">
+                  <div className="text-left space-y-1">
+                    <div className="font-medium text-sm text-lunar-text">
+                      {item.pacote || 'Pacote não especificado'}
+                    </div>
+                    <div className="text-xs text-lunar-textSecondary">
+                      {item.categoria || ''} {item.categoria && item.descricao && '•'} {item.descricao || ''}
+                    </div>
                   </div>
                 </div>
 
-                {/* Valores Financeiros */}
-                <div className="text-right">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium uppercase tracking-wide text-xs">TOTAL:</span>
-                      <span className="font-bold text-xs">{formatCurrency(item.total || 0)}</span>
+                {/* Valores Financeiros - Cards Compactos */}
+                <div className="flex flex-row md:flex-col gap-4 md:gap-1 md:text-right">
+                  <div className="flex flex-col items-start md:items-end">
+                    <span className="text-xs text-lunar-textSecondary uppercase tracking-wide">Total</span>
+                    <span className="font-bold text-sm text-lunar-text">{formatCurrency(item.total || 0)}</span>
+                  </div>
+                  
+                  <div className="flex gap-4 md:gap-2 md:flex-col">
+                    <div className="flex flex-col items-start md:items-end">
+                      <span className="text-xs text-lunar-textSecondary">Pago</span>
+                      <span className="font-semibold text-xs text-success">{formatCurrency(item.valorPago || 0)}</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium uppercase tracking-wide text-xs">PAGO:</span>
-                      <span className="font-bold text-green-600 text-xs">{formatCurrency(item.valorPago || 0)}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium uppercase tracking-wide text-xs">PENDENTE:</span>
-                      <span className="font-bold text-orange-600 text-xs">{formatCurrency(item.restante || 0)}</span>
+                    <div className="flex flex-col items-start md:items-end">
+                      <span className="text-xs text-lunar-textSecondary">Pendente</span>
+                      <span className="font-semibold text-xs text-warning">{formatCurrency(item.restante || 0)}</span>
                     </div>
                   </div>
                 </div>
               </div>
             </AccordionTrigger>
             
-            <AccordionContent className="px-6 pb-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <AccordionContent className="px-4 md:px-6 pb-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
                 
                 {/* COMPOSIÇÃO DO VALOR */}
                 <div className="space-y-4">
-                  <div className="font-bold text-base uppercase tracking-wide mb-4">
-                    COMPOSIÇÃO DO VALOR
+                  <div className="flex items-center gap-2 mb-4">
+                    <DollarSign className="h-4 w-4 text-lunar-accent" />
+                    <h3 className="font-semibold text-sm text-lunar-text uppercase tracking-wide">
+                      Composição do Valor
+                    </h3>
                   </div>
                   
-                  <div className="space-y-3">
+                  <div className="space-y-3 bg-lunar-accent/5 rounded-lg p-4">
                     <div className="flex justify-between items-center">
-                      <span className="font-medium uppercase tracking-wide text-xs">BASE</span>
-                      <span className="font-bold text-xs">{formatCurrency(item.valorPacote || 0)}</span>
+                      <span className="text-xs text-lunar-textSecondary">Base do Pacote</span>
+                      <span className="font-semibold text-sm text-lunar-text">{formatCurrency(item.valorPacote || 0)}</span>
                     </div>
                     
                     <div className="flex justify-between items-center">
-                      <span className="font-medium uppercase tracking-wide text-xs">TOTAL FOTO EXTRA</span>
-                      <span className="font-bold text-xs">{formatCurrency(item.valorTotalFotoExtra || 0)}</span>
+                      <span className="text-xs text-lunar-textSecondary">Fotos Extras</span>
+                      <span className="font-semibold text-sm text-lunar-text">{formatCurrency(item.valorTotalFotoExtra || 0)}</span>
                     </div>
                     
                     <div className="flex justify-between items-center">
-                      <span className="font-medium uppercase tracking-wide text-xs">TOTAL PRODUTOS</span>
-                      <span className="font-bold text-xs">{formatCurrency(item.valorTotalProduto || 0)}</span>
+                      <span className="text-xs text-lunar-textSecondary">Produtos</span>
+                      <span className="font-semibold text-sm text-lunar-text">{formatCurrency(item.valorTotalProduto || 0)}</span>
                     </div>
                     
                     <div className="flex justify-between items-center">
-                      <span className="font-medium uppercase tracking-wide text-xs">ADICIONAL</span>
-                      <span className="font-bold text-xs">{formatCurrency(item.valorAdicional || 0)}</span>
+                      <span className="text-xs text-lunar-textSecondary">Adicional</span>
+                      <span className="font-semibold text-sm text-lunar-text">{formatCurrency(item.valorAdicional || 0)}</span>
                     </div>
                     
                     {item.desconto > 0 && <div className="flex justify-between items-center">
-                        <span className="font-medium uppercase tracking-wide text-xs">DESCONTO</span>
-                        <span className="font-bold text-red-600 text-xs">-{formatCurrency(item.desconto || 0)}</span>
+                        <span className="text-xs text-lunar-textSecondary">Desconto</span>
+                        <span className="font-semibold text-sm text-error">-{formatCurrency(item.desconto || 0)}</span>
                       </div>}
                     
-                    <div className="border-t pt-3 mt-4">
+                    <div className="border-t border-lunar-border/50 pt-3 mt-4">
                       <div className="flex justify-between items-center">
-                        <span className="font-bold uppercase tracking-wide text-sm">TOTAL:</span>
-                        <span className="font-bold text-sm">{formatCurrency(item.total || 0)}</span>
+                        <span className="font-bold text-sm text-lunar-text">Total</span>
+                        <span className="font-bold text-sm text-lunar-text">{formatCurrency(item.total || 0)}</span>
                       </div>
                     </div>
                   </div>
@@ -196,49 +211,78 @@ export function WorkflowHistoryTable({
 
                 {/* SITUAÇÃO FINANCEIRA */}
                 <div className="space-y-4">
-                  <div className="font-bold text-base uppercase tracking-wide mb-4">
-                    SITUAÇÃO FINANCEIRA
+                  <div className="flex items-center gap-2 mb-4">
+                    <CreditCard className="h-4 w-4 text-lunar-accent" />
+                    <h3 className="font-semibold text-sm text-lunar-text uppercase tracking-wide">
+                      Situação Financeira
+                    </h3>
                   </div>
                   
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="font-medium uppercase tracking-wide flex items-center gap-2 text-sm">
-                        <span className="text-green-600">✓</span>
-                        VALOR PAGO
-                      </span>
-                      <span className="font-bold">{formatCurrency(item.valorPago || 0)}</span>
+                  <div className="space-y-4">
+                    <div className="bg-success/10 border border-success/20 rounded-lg p-4">
+                      <div className="flex justify-between items-center">
+                        <span className="flex items-center gap-2 text-sm text-lunar-text">
+                          <span className="w-2 h-2 bg-success rounded-full"></span>
+                          Valor Pago
+                        </span>
+                        <span className="font-bold text-success">{formatCurrency(item.valorPago || 0)}</span>
+                      </div>
                     </div>
                     
-                    <div className="flex justify-between items-center">
-                      <span className="font-medium uppercase tracking-wide flex items-center gap-2 text-sm">
-                        <span className="text-orange-600">−</span>
-                        A RECEBER
-                      </span>
-                      <span className="font-bold">{formatCurrency(item.restante || 0)}</span>
+                    <div className="bg-warning/10 border border-warning/20 rounded-lg p-4">
+                      <div className="flex justify-between items-center">
+                        <span className="flex items-center gap-2 text-sm text-lunar-text">
+                          <span className="w-2 h-2 bg-warning rounded-full"></span>
+                          A Receber
+                        </span>
+                        <span className="font-bold text-warning">{formatCurrency(item.restante || 0)}</span>
+                      </div>
+                    </div>
+                    
+                    {/* Indicador de Status de Pagamento */}
+                    <div className="mt-4 p-3 bg-lunar-surface border border-lunar-border/30 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-lunar-textSecondary">Status do Pagamento</span>
+                        <Badge className={`text-xs ${item.restante === 0 ? 'bg-success/20 text-success' : 'bg-warning/20 text-warning'}`}>
+                          {item.restante === 0 ? 'Quitado' : 'Pendente'}
+                        </Badge>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* DESCRIÇÃO DE PRODUTOS */}
-              {item.produtosList && item.produtosList.length > 0 && <div className="mt-8 pt-6 border-t">
-                  <div className="font-bold text-base uppercase tracking-wide mb-4">
-                    DESCRIÇÃO DE PRODUTOS
+              {item.produtosList && item.produtosList.length > 0 && <div className="mt-6 pt-6 border-t border-lunar-border/30">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Package className="h-4 w-4 text-lunar-accent" />
+                    <h3 className="font-semibold text-sm text-lunar-text uppercase tracking-wide">
+                      Produtos Incluídos
+                    </h3>
                   </div>
-                  <div className="space-y-2">
-                    {item.produtosList.map((p: any, index: number) => <div key={index} className="flex justify-between items-center">
-                        <span className="font-medium">{p.nome} {p.quantidade > 1 ? `${p.quantidade}x` : ''}</span>
-                        <span className="font-bold">
+                  <div className="bg-lunar-accent/5 rounded-lg p-4 space-y-3">
+                    {item.produtosList.map((p: any, index: number) => <div key={index} className="flex justify-between items-center py-2 border-b border-lunar-border/20 last:border-0">
+                        <div className="flex flex-col">
+                          <span className="font-medium text-sm text-lunar-text">{p.nome}</span>
+                          {p.quantidade > 1 && <span className="text-xs text-lunar-textSecondary">Quantidade: {p.quantidade}x</span>}
+                        </div>
+                        <span className="font-semibold text-sm text-lunar-text">
                           {p.tipo === 'manual' ? formatCurrency(p.valorUnitario * p.quantidade) : formatCurrency(0)}
                         </span>
                       </div>)}
                   </div>
                 </div>}
 
-              {/* OBS */}
-              {item.detalhes && <div className="mt-8 pt-6 border-t">
-                  <div className="font-bold text-base uppercase tracking-wide mb-4">
-                    OBS: {item.detalhes}
+              {/* OBSERVAÇÕES */}
+              {item.detalhes && <div className="mt-6 pt-6 border-t border-lunar-border/30">
+                  <div className="flex items-center gap-2 mb-3">
+                    <History className="h-4 w-4 text-lunar-accent" />
+                    <h3 className="font-semibold text-sm text-lunar-text uppercase tracking-wide">
+                      Observações
+                    </h3>
+                  </div>
+                  <div className="bg-lunar-accent/5 rounded-lg p-4">
+                    <p className="text-sm text-lunar-text leading-relaxed">{item.detalhes}</p>
                   </div>
                 </div>}
             </AccordionContent>
