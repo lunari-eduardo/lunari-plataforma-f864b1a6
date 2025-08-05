@@ -92,7 +92,7 @@ export default function Financas() {
   };
   const infoTipo = getInfoPorTipo(activeSubTab);
   return <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
-      <div className="p-2 sm:p-4 lg:p-6 space-y-4 sm:space-y-6 bg-lunar-bg py-0 my-[3px]">
+      <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 p-2 sm:p-4 lg:p-6 space-y-4 sm:space-y-6 bg-lunar-bg py-0 my-[3px]">
         {/* Header Simplificado */}
         
 

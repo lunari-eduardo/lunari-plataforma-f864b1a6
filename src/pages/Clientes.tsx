@@ -127,7 +127,7 @@ export default function Clientes() {
 
   return (
     <ScrollArea className="h-[calc(100vh-120px)]">
-      <div className="space-y-6 pr-4">
+      <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-primary">Clientes</h1>

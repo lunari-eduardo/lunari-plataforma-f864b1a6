@@ -232,7 +232,7 @@ export default function Agenda() {
       setIsBudgetModalOpen(true);
     }
   };
-  return <div className="space-y-2 md:space-y-4 pb-20 md:pb-4 px-2 md:px-0">
+  return <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 space-y-2 md:space-y-4 pb-20 md:pb-4">
       <Card className="p-2 md:p-4 bg-lunar-bg mx-0">
         <div className="flex flex-col items-center justify-center mb-2 md:mb-4 gap-2 md:gap-3">
           {/* Navigation and Date Display */}

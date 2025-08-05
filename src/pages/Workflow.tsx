@@ -571,7 +571,7 @@ export default function Workflow() {
   }, [sortField, sortDirection]);
   return <div className="h-full flex flex-col bg-gray-50">
       <div className="bg-white border-b shadow-sm sticky top-0 z-50">
-        <div className="flex items-center justify-between px-4 pt-3 bg-lunar-bg">
+        <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 flex items-center justify-between pt-3 bg-lunar-bg">
           <div className="flex items-center space-x-3">
             <Button variant="outline" size="icon" onClick={handlePreviousMonth} className="h-8 w-8">
               <ChevronLeft className="h-4 w-4" />
@@ -591,7 +591,7 @@ export default function Workflow() {
           </div>
         </div>
 
-        {showMetrics && <div className="px-4 pt-2 pb-3 bg-lunar-bg">
+        {showMetrics && <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 pt-2 pb-3 bg-lunar-bg">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-green-50 p-3 rounded-lg border border-green-200">
                 <div className="text-xs text-green-700 font-medium">Receita</div>
@@ -616,7 +616,7 @@ export default function Workflow() {
             </div>
           </div>}
 
-        <div className="flex items-center justify-between gap-4 px-4 pb-3 pt-2 bg-lunar-surface">
+        <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 flex items-center justify-between gap-4 pb-3 pt-2 bg-lunar-surface">
           <div className="flex items-center space-x-2 flex-1 bg-lunar-bg">
             <div className="relative max-w-xs flex-1 bg-lunar-bg">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />

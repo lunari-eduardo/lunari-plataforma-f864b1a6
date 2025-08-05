@@ -15,7 +15,7 @@ export default function Precificacao() {
     setCustosFixosTotal(total);
   };
   return <ScrollArea className="h-[calc(100vh-120px)]">
-      <div className="p-3 md:p-6 space-y-4 md:space-y-6 bg-lunar-bg min-h-screen px-[2px]">
+      <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 p-3 md:p-6 space-y-4 md:space-y-6 bg-lunar-bg min-h-screen">
       {/* Header da Página */}
       <div className="px-1">
         <h1 className="text-lg md:text-xl font-bold text-lunar-text mb-2">Precificação e Metas</h1>
