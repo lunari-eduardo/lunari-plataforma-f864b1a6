@@ -2,8 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { FinancialEngine } from '@/services/FinancialEngine';
 import { useNovoFinancas } from '@/hooks/useNovoFinancas';
-import { useUnifiedWorkflowData } from '@/hooks/useUnifiedWorkflowData';
-import { getCurrentDateString } from '@/utils/dateUtils';
+import { getCurrentDateString, parseDateFromStorage } from '@/utils/dateUtils';
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
 
 // Interfaces específicas para o Dashboard
@@ -54,7 +53,7 @@ interface HistoricalGoal {
 export function useDashboardFinanceiro() {
   // ============= OBTER DADOS DAS FONTES PRIMÁRIAS =============
   
-  const { unifiedWorkflowData, getAvailableYears, filterByYear } = useUnifiedWorkflowData();
+  const { workflowItems } = useAppContext();
   const { itensFinanceiros } = useNovoFinancas();
 
   // Carregar transações financeiras diretamente do FinancialEngine
@@ -75,13 +74,33 @@ export function useDashboardFinanceiro() {
 
   // ============= NOVO SISTEMA DE FILTROS =============
   
-  // Seletor de ano dinâmico
-  const anosDisponiveis = useMemo(() => {
+  // Função para filtrar workflow por ano
+  const filterWorkflowByYear = (year: number) => {
+    return workflowItems.filter(item => {
+      try {
+        const itemYear = new Date(item.data).getFullYear();
+        return itemYear === year;
+      } catch {
+        return false;
+      }
+    });
+  };
+
+  // Função para obter anos disponíveis
+  const getAvailableYears = () => {
     const anos = new Set<number>();
     
-    // Extrair anos dos dados unificados do workflow
-    const anosWorkflow = getAvailableYears();
-    anosWorkflow.forEach(ano => anos.add(ano));
+    // Extrair anos do workflow
+    workflowItems.forEach(item => {
+      try {
+        const year = new Date(item.data).getFullYear();
+        if (!isNaN(year)) {
+          anos.add(year);
+        }
+      } catch {
+        // Ignorar itens com data inválida
+      }
+    });
     
     // Extrair anos das transações financeiras
     transacoesFinanceiras.forEach(transacao => {
@@ -102,7 +121,12 @@ export function useDashboardFinanceiro() {
     
     // Converter para array e ordenar (mais recente primeiro)
     return Array.from(anos).sort((a, b) => b - a);
-  }, [unifiedWorkflowData, transacoesFinanceiras, getAvailableYears]);
+  };
+
+  // Seletor de ano dinâmico
+  const anosDisponiveis = useMemo(() => {
+    return getAvailableYears();
+  }, [workflowItems, transacoesFinanceiras]);
 
   // Estados dos filtros
   const [anoSelecionado, setAnoSelecionado] = useState(() => {
@@ -115,7 +139,7 @@ export function useDashboardFinanceiro() {
   
   const workflowItemsFiltrados = useMemo(() => {
     const ano = parseInt(anoSelecionado);
-    let filtrados = filterByYear(ano);
+    let filtrados = filterWorkflowByYear(ano);
 
     // Aplicar filtro de mês se selecionado
     if (mesSelecionado && mesSelecionado !== 'ano-completo') {
@@ -127,7 +151,7 @@ export function useDashboardFinanceiro() {
     }
 
     return filtrados;
-  }, [filterByYear, anoSelecionado, mesSelecionado]);
+  }, [workflowItems, anoSelecionado, mesSelecionado]);
 
   const transacoesFiltradas = useMemo(() => {
     const ano = parseInt(anoSelecionado);
@@ -260,7 +284,7 @@ export function useDashboardFinanceiro() {
 
     // Dados apenas para o ano selecionado (ignorar filtro de mês aqui)
     const ano = parseInt(anoSelecionado);
-    const workflowDoAno = filterByYear(ano);
+    const workflowDoAno = filterWorkflowByYear(ano);
     const transacoesDoAno = transacoesComItens.filter(transacao => {
       if (!transacao.dataVencimento || typeof transacao.dataVencimento !== 'string') {
         return false;
@@ -297,7 +321,7 @@ export function useDashboardFinanceiro() {
         lucro: dadosMes.receita - dadosMes.despesas
       };
     });
-  }, [filterByYear, anoSelecionado, transacoesComItens]);
+  }, [workflowItems, anoSelecionado, transacoesComItens]);
 
   // ============= COMPOSIÇÃO DE DESPESAS =============
   

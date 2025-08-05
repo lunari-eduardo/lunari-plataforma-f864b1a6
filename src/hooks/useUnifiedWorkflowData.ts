@@ -51,15 +51,13 @@ export function useUnifiedWorkflowData() {
   const { workflowItems } = useAppContext();
   const [workflowSessions, setWorkflowSessions] = useState<WorkflowSessionData[]>([]);
 
-  // Carregar dados de workflow_sessions do localStorage
+  // Carregar dados de workflow_sessions do localStorage (SIMPLIFICADO)
   useEffect(() => {
     const loadWorkflowSessions = () => {
       try {
         const saved = localStorage.getItem('workflow_sessions');
         const sessions = saved ? JSON.parse(saved) : [];
         setWorkflowSessions(sessions);
-        
-        console.log('📂 Workflow Sessions carregadas:', sessions.length);
       } catch (error) {
         console.error('❌ Erro ao carregar workflow_sessions:', error);
         setWorkflowSessions([]);
@@ -75,17 +73,9 @@ export function useUnifiedWorkflowData() {
       }
     };
     
-    // Escutar mudanças diretas no workflow_sessions (via MutationObserver)
-    const checkForChanges = () => {
-      loadWorkflowSessions();
-    };
-    
-    const intervalId = setInterval(checkForChanges, 5000); // Verificar a cada 5 segundos (OTIMIZADO)
-    
     window.addEventListener('storage', handleStorageChange);
     return () => {
       window.removeEventListener('storage', handleStorageChange);
-      clearInterval(intervalId);
     };
   }, []);
 
@@ -148,19 +138,10 @@ export function useUnifiedWorkflowData() {
     };
   };
 
-  // Dados unificados - WORKFLOW ITEMS COMO FONTE ABSOLUTA DE VERDADE
+  // Dados unificados - WORKFLOW ITEMS COMO FONTE ABSOLUTA DE VERDADE (SIMPLIFICADO)
   const unifiedWorkflowData = useMemo(() => {
-  // ESTRATÉGIA SIMPLIFICADA PÓS-MIGRAÇÃO: AppContext é a fonte única de verdade
-    const shouldLog = workflowItems.length > 0;
-    if (shouldLog) {
-      console.log('🎯 UNIFIED WORKFLOW (PÓS-MIGRAÇÃO):', {
-        workflowItems: workflowItems.length,
-        fonte: 'AppContext (workflow_sessions)'
-      });
-    }
-
     // RESULTADO DIRETO: workflowItems do AppContext já vem de workflow_sessions
-    const resultado = workflowItems.map(item => ({
+    return workflowItems.map(item => ({
       ...item,
       // Garantir valores válidos
       total: typeof item.total === 'number' ? item.total : 0,
@@ -169,21 +150,7 @@ export function useUnifiedWorkflowData() {
       fonte: item.fonte || 'agenda',
       dataOriginal: item.dataOriginal || parseDateFromStorage(item.data)
     }));
-    // LOG RESUMO FINAL
-    if (shouldLog) {
-      const totalGeral = resultado.reduce((acc, item) => acc + (item.total || 0), 0);
-      const pagoGeral = resultado.reduce((acc, item) => acc + (item.valorPago || 0), 0);
-      
-      console.log('✅ DADOS UNIFICADOS (PÓS-MIGRAÇÃO):', {
-        total: resultado.length,
-        faturado: totalGeral.toFixed(2),
-        pago: pagoGeral.toFixed(2),
-        aReceber: (totalGeral - pagoGeral).toFixed(2)
-      });
-    }
-
-    return resultado;
-  }, [workflowItems]); // SIMPLIFICADO: apenas workflowItems como dependência
+  }, [workflowItems]);
 
   // Função para filtrar por ano
   const filterByYear = (year: number) => {
