@@ -10,7 +10,7 @@ export default function Layout() {
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header />
         
-        <main className="flex-1 overflow-hidden p-1 md:p-4 py-px px-[4px] bg-neutral-50">
+        <main className="flex-1 overflow-hidden p-1 md:p-4 py-px px-[4px] bg-white">
           <div className="animate-lunar">
             <Outlet />
           </div>

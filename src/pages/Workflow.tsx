@@ -13,15 +13,12 @@ import { useContext } from 'react';
 import { AppContext } from '@/contexts/AppContext';
 import { parseDateFromStorage } from "@/utils/dateUtils";
 import { FixPricingRulesButton } from '@/components/workflow/FixPricingRulesButton';
-
-
 interface ProdutoWorkflow {
   nome: string;
   quantidade: number;
   valorUnitario: number;
   tipo: 'incluso' | 'manual';
 }
-
 interface SessionPayment {
   id: string;
   valor: number;
@@ -100,8 +97,6 @@ export default function Workflow() {
     produtos,
     categorias
   } = useOrcamentoData();
-  
-  
   const getClienteByName = (nome: string) => {
     return clientes.find(cliente => cliente.nome === nome);
   };
@@ -196,10 +191,9 @@ export default function Workflow() {
       try {
         // Sempre fazer merge com dados existentes para não perder outras alterações
         const allSavedSessions = JSON.parse(window.localStorage.getItem('workflow_sessions') || '[]');
-        
+
         // Criar um novo array com merge inteligente
         const mergedSessions = [...allSavedSessions];
-        
         sessions.forEach(currentSession => {
           const existingIndex = mergedSessions.findIndex(s => s.id === currentSession.id);
           if (existingIndex >= 0) {
@@ -210,7 +204,6 @@ export default function Workflow() {
             mergedSessions.push(currentSession);
           }
         });
-        
         window.localStorage.setItem('workflow_sessions', JSON.stringify(mergedSessions));
         // ✅ OTIMIZADO: Remover console.log constante
         // console.log('Workflow sessions saved to localStorage:', sessions.length, 'sessions');
@@ -281,7 +274,7 @@ export default function Workflow() {
         };
       }
     });
-    
+
     // ✅ OTIMIZADO: Só atualizar se realmente mudou
     setSessions(prevSessions => {
       if (JSON.stringify(prevSessions) !== JSON.stringify(currentMonthSessions)) {
@@ -290,7 +283,6 @@ export default function Workflow() {
       return prevSessions;
     });
   }, [currentMonth.month, currentMonth.year, getConfirmedSessionsForWorkflow, getClienteByName, pacotes, produtos]);
-
   useEffect(() => {
     loadWorkflowData();
   }, [loadWorkflowData]);
@@ -356,7 +348,6 @@ export default function Workflow() {
       return 0;
     }
   }, []);
-
   const calculateRestante = useCallback((session: SessionData) => {
     const total = calculateTotal(session);
     const valorPagoStr = typeof session.valorPago === 'string' ? session.valorPago : String(session.valorPago || '0');
@@ -383,7 +374,6 @@ export default function Workflow() {
     const totalOutstanding = currentMonthSessions.reduce((sum, session) => {
       return sum + calculateRestante(session);
     }, 0);
-
     return {
       revenue: totalRevenue,
       forecasted: totalForecasted,
@@ -486,7 +476,6 @@ export default function Workflow() {
       [field]: value
     } : session));
   }, []);
-
   const sortedSessions = useMemo(() => {
     // Função auxiliar para criar timestamp a partir de data + hora
     const createTimestamp = (data: string, hora: string) => {
@@ -524,7 +513,6 @@ export default function Workflow() {
         'paid': 'valorPago',
         'remaining': 'restante'
       };
-
       let aValue: any, bValue: any;
 
       // Handle different data types
@@ -536,7 +524,6 @@ export default function Workflow() {
         const actualField = fieldMapping[sortField] || sortField as keyof SessionData;
         aValue = a[actualField];
         bValue = b[actualField];
-
         if (['packageValue', 'discount', 'extraPhotoTotal', 'productTotal', 'additionalValue', 'total', 'paid', 'remaining'].includes(sortField)) {
           aValue = parseFloat(String(aValue).replace(/[^\d,]/g, '').replace(',', '.')) || 0;
           bValue = parseFloat(String(bValue).replace(/[^\d,]/g, '').replace(',', '.')) || 0;
@@ -548,7 +535,6 @@ export default function Workflow() {
           bValue = bValue.toLowerCase();
         }
       }
-      
       if (sortDirection === 'asc') {
         return aValue > bValue ? 1 : -1;
       } else {
@@ -573,8 +559,8 @@ export default function Workflow() {
     }
   }, [sortField, sortDirection]);
   return <div className="h-full flex flex-col bg-gray-50">
-      <div className="bg-white border-b shadow-sm sticky top-0 z-50">
-        <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 flex items-center justify-between pt-3 bg-lunar-bg">
+      <div className="border-b shadow-sm sticky top-0 z-50 bg-white">
+        <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 flex items-center justify-between pt-3 bg-white">
           <div className="flex items-center space-x-3">
             <Button variant="outline" size="icon" onClick={handlePreviousMonth} className="h-8 w-8">
               <ChevronLeft className="h-4 w-4" />
@@ -594,7 +580,7 @@ export default function Workflow() {
           </div>
         </div>
 
-        {showMetrics && <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 pt-2 pb-3 bg-lunar-bg">
+        {showMetrics && <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 pt-2 pb-3 bg-white">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-green-50 p-3 rounded-lg border border-green-200">
                 <div className="text-xs text-green-700 font-medium">Receita</div>
@@ -619,16 +605,16 @@ export default function Workflow() {
             </div>
           </div>}
 
-        <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 flex items-center justify-between gap-4 pb-3 pt-2 bg-lunar-surface">
-          <div className="flex items-center space-x-2 flex-1 bg-lunar-bg">
+        <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 flex items-center justify-between gap-4 pb-3 pt-2 bg-white">
+          <div className="flex items-center space-x-2 flex-1 bg-white">
             <div className="relative max-w-xs flex-1 bg-lunar-bg">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input placeholder="Buscar por cliente (sem acentos)..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 h-9 bg-neutral-50" />
+              <Input placeholder="Buscar por cliente (sem acentos)..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 h-9 bg-lunar-surface" />
             </div>
             <Button variant="outline" size="sm" onClick={handleResetFilters} className="text-zinc-700 bg-neutral-50">Limpar</Button>
           </div>
           <div className="flex items-center space-x-2">
-            <span className="text-sm text-gray-500 hidden md:inline">
+            <span className="text-gray-500 hidden md:inline text-xs">
               Mostrando {filteredSessions.length} sessões
             </span>
             <ColumnSettings visibleColumns={visibleColumns} onColumnVisibilityChange={handleColumnVisibilityChange} availableColumns={{
