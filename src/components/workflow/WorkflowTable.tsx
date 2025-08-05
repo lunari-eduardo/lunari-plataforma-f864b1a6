@@ -5,6 +5,7 @@ import { WorkflowPackageCombobox } from "./WorkflowPackageCombobox";
 import { StatusBadge } from "./StatusBadge";
 import { GerenciarProdutosModal } from "./GerenciarProdutosModal";
 import { MessageCircle, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Package, Plus } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatToDayMonth } from "@/utils/dateUtils";
 import { calculateTotals } from '@/services/FinancialCalculationEngine';
@@ -46,6 +47,8 @@ interface SessionData {
   desconto: number;
   // NOVO: Campo para regras congeladas
   regrasDePrecoFotoExtraCongeladas?: RegrasPrecoFotoExtraCongeladas;
+  // NOVO: Campo para relacionar com cliente específico (CRM)
+  clienteId?: string;
 }
 interface WorkflowTableProps {
   sessions: SessionData[];
@@ -674,7 +677,16 @@ export function WorkflowTable({
                 {renderCell('date', <div className="font-medium">{formatToDayMonth(session.data)}</div>, true)}
                 
                 {renderCell('client', <div className="flex items-center gap-2">
-                    <span className="font-medium">{session.nome}</span>
+                    {session.clienteId ? (
+                      <Link 
+                        to={`/clientes/${session.clienteId}`}
+                        className="font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                      >
+                        {session.nome}
+                      </Link>
+                    ) : (
+                      <span className="font-medium text-gray-600">{session.nome}</span>
+                    )}
                     {session.whatsapp && <a href={`https://wa.me/${session.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
                         <MessageCircle className="h-3 w-3 text-green-600 hover:text-green-700 cursor-pointer" />
                       </a>}
