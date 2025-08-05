@@ -421,19 +421,20 @@ export function useDashboardFinanceiro() {
     return meses[numero - 1] || '';
   };
 
-  // ============= DEBUG =============
+  // ============= DEBUG (OTIMIZADO) =============
   
-  useEffect(() => {
-    console.log('🔍 Dashboard Debug (REFATORADO):', {
-      anoSelecionado,
-      mesSelecionado,
-      anosDisponiveis,
-      workflowItemsFiltrados: workflowItemsFiltrados.length,
-      transacoesFiltradas: transacoesFiltradas.length,
-      kpisData,
-      metasData
-    });
-  }, [anoSelecionado, mesSelecionado, anosDisponiveis, workflowItemsFiltrados, transacoesFiltradas, kpisData, metasData]);
+  // ✅ CORREÇÃO: Remover useEffect de debug que causava loop infinito
+  // useEffect(() => {
+  //   console.log('🔍 Dashboard Debug (REFATORADO):', {
+  //     anoSelecionado,
+  //     mesSelecionado,
+  //     anosDisponiveis,
+  //     workflowItemsFiltrados: workflowItemsFiltrados.length,
+  //     transacoesFiltradas: transacoesFiltradas.length,
+  //     kpisData,
+  //     metasData
+  //   });
+  // }, [anoSelecionado, mesSelecionado, anosDisponiveis, workflowItemsFiltrados, transacoesFiltradas, kpisData, metasData]);
 
   // ============= RETORNO DO HOOK =============
   

@@ -212,7 +212,8 @@ export default function Workflow() {
         });
         
         window.localStorage.setItem('workflow_sessions', JSON.stringify(mergedSessions));
-        console.log('Workflow sessions saved to localStorage:', sessions.length, 'sessions');
+        // ✅ OTIMIZADO: Remover console.log constante
+        // console.log('Workflow sessions saved to localStorage:', sessions.length, 'sessions');
       } catch (error) {
         console.error("Erro ao salvar sessões no localStorage", error);
       }
@@ -247,7 +248,8 @@ export default function Workflow() {
 
   // Integração com dados reais da agenda - carregar sessões do mês selecionado
   useEffect(() => {
-    console.log('Loading workflow data for month:', currentMonth);
+    // ✅ OTIMIZADO: Remover console.log constante
+    // console.log('Loading workflow data for month:', currentMonth);
     
     const confirmedSessions = getConfirmedSessionsForWorkflow(currentMonth.month, currentMonth.year, getClienteByName, pacotes, produtos);
 
@@ -256,7 +258,8 @@ export default function Workflow() {
       try {
         const saved = window.localStorage.getItem('workflow_sessions');
         const result = saved ? JSON.parse(saved) : [];
-        console.log('Loaded saved sessions from localStorage:', result.length, 'total sessions');
+        // ✅ OTIMIZADO: Remover console.log constante
+        // console.log('Loaded saved sessions from localStorage:', result.length, 'total sessions');
         return result;
       } catch (error) {
         console.error("Erro ao carregar sessões salvas", error);
