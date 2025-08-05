@@ -114,7 +114,7 @@ export function WorkflowHistoryTable({
   return <div className="space-y-4">
       <Accordion type="single" collapsible className="w-full">
         {workflowData.map((item: any) => <AccordionItem key={item.id} value={item.id} className="border rounded-lg mb-4">
-            <AccordionTrigger className="px-6 hover:no-underline py-[9px]">
+            <AccordionTrigger className="px-6 hover:no-underline py-[9px] bg-neutral-50 rounded-lg">
               <div className="flex items-center justify-between w-full mr-4">
                 {/* Data */}
                 <div className="flex items-center gap-2">
