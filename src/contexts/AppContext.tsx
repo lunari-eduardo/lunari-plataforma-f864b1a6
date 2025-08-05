@@ -1307,10 +1307,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return novoCliente;
   };
 
+  // Função para sincronizar nome do cliente com workflow_sessions
+  const sincronizarNomeClienteComWorkflow = (clienteId: string, novoNome: string) => {
+    try {
+      const sessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
+      let sessionsAtualizadas = 0;
+      
+      const sessionsCorrigidas = sessions.map((session: any) => {
+        if (session.clienteId === clienteId && session.nome !== novoNome) {
+          sessionsAtualizadas++;
+          return { ...session, nome: novoNome };
+        }
+        return session;
+      });
+      
+      if (sessionsAtualizadas > 0) {
+        localStorage.setItem('workflow_sessions', JSON.stringify(sessionsCorrigidas));
+        console.log(`✅ ${sessionsAtualizadas} sessões do workflow atualizadas com novo nome: ${novoNome}`);
+      }
+    } catch (error) {
+      console.error('❌ Erro ao sincronizar nome no workflow:', error);
+    }
+  };
+
   const atualizarCliente = (id: string, dadosAtualizados: Partial<Cliente>) => {
     setClientes(prev => prev.map(cliente => 
       cliente.id === id ? { ...cliente, ...dadosAtualizados } : cliente
     ));
+    
+    // SINCRONIZAÇÃO AUTOMÁTICA: Quando o nome for alterado, propagar para workflow
+    if (dadosAtualizados.nome) {
+      sincronizarNomeClienteComWorkflow(id, dadosAtualizados.nome);
+    }
   };
 
   const removerCliente = (id: string) => {
