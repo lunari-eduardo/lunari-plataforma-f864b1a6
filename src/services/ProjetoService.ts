@@ -66,12 +66,37 @@ export class ProjetoService {
    * FUNÇÃO PRINCIPAL: Criar ou atualizar projeto
    * Implementa a lógica à prova de duplicação
    */
+  // Cache para evitar verificações redundantes
+  private static processedCache = new Map<string, string>();
+  private static lastCleanup = 0;
+  
   static criarProjeto(input: CriarProjetoInput): Projeto {
+    // Limpar cache periodicamente (a cada 5 minutos)
+    const now = Date.now();
+    if (now - this.lastCleanup > 300000) {
+      this.processedCache.clear();
+      this.lastCleanup = now;
+    }
+    
+    // Criar chave única para o input
+    const inputKey = `${input.clienteId}-${input.nome}-${input.dataAgendada.toDateString()}-${input.orcamentoId || ''}-${input.agendamentoId || ''}`;
+    
+    // Verificar cache primeiro
+    if (this.processedCache.has(inputKey)) {
+      const cachedProjectId = this.processedCache.get(inputKey)!;
+      const cachedProject = this.buscarPorId(cachedProjectId);
+      if (cachedProject) {
+        return cachedProject;
+      }
+      // Se projeto não existe mais, remover do cache
+      this.processedCache.delete(inputKey);
+    }
+    
     const projetos = this.carregarProjetos();
     
-    // VERIFICAR SE JÁ EXISTE (à prova de duplicação com critérios mais específicos)
+    // VERIFICAR SE JÁ EXISTE com critérios mais rigorosos
     const projetoExistente = projetos.find(p => {
-      // Prioridade 1: Se tem orcamentoId ou agendamentoId, usar apenas esses
+      // Prioridade 1: IDs únicos primeiro
       if (input.orcamentoId && p.orcamentoId) {
         return p.orcamentoId === input.orcamentoId;
       }
@@ -79,33 +104,42 @@ export class ProjetoService {
         return p.agendamentoId === input.agendamentoId;
       }
       
-      // Prioridade 2: Comparação tripla mais específica
-      return p.clienteId === input.clienteId && 
-             p.nome.trim().toLowerCase() === input.nome.trim().toLowerCase() && 
-             Math.abs(p.dataAgendada.getTime() - input.dataAgendada.getTime()) < 24 * 60 * 60 * 1000; // Mesmo dia
+      // Prioridade 2: Comparação mais específica
+      const mesmoCliente = p.clienteId === input.clienteId;
+      const mesmoNome = p.nome.trim().toLowerCase() === input.nome.trim().toLowerCase();
+      const mesmaData = Math.abs(p.dataAgendada.getTime() - input.dataAgendada.getTime()) < 12 * 60 * 60 * 1000; // 12 horas
+      const mesmaHora = p.horaAgendada === input.horaAgendada;
+      
+      return mesmoCliente && mesmoNome && mesmaData && mesmaHora;
     });
 
     if (projetoExistente) {
-      // Evitar atualizações desnecessárias comparando valores
-      const needsUpdate = 
+      // Cache do resultado
+      this.processedCache.set(inputKey, projetoExistente.projectId);
+      
+      // Verificação mais granular de mudanças
+      const hasChanges = 
         projetoExistente.categoria !== input.categoria ||
         projetoExistente.pacote !== input.pacote ||
         projetoExistente.valorPacote !== (input.valorPacote || 0) ||
-        projetoExistente.descricao !== (input.descricao || '') ||
-        projetoExistente.horaAgendada !== input.horaAgendada;
+        projetoExistente.descricao !== (input.descricao || '').trim() ||
+        projetoExistente.horaAgendada !== input.horaAgendada ||
+        projetoExistente.whatsapp !== (input.whatsapp || '').trim() ||
+        projetoExistente.email !== (input.email || '').trim();
 
-      if (needsUpdate) {
+      if (hasChanges) {
         return this.atualizarProjeto(projetoExistente.projectId, {
           categoria: input.categoria,
           pacote: input.pacote,
           valorPacote: input.valorPacote,
           descricao: input.descricao,
           horaAgendada: input.horaAgendada,
+          whatsapp: input.whatsapp,
+          email: input.email,
           atualizadoEm: new Date()
         });
       }
       
-      // Retornar projeto existente sem atualizações
       return projetoExistente;
     }
 

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
 import { parseDateFromStorage, formatDateForStorage, getCurrentDateString } from '@/utils/dateUtils';
 import { formatCurrency } from '@/utils/financialUtils';
@@ -631,10 +631,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     storage.save(STORAGE_KEYS.APPOINTMENTS, serialized);
   }, [appointments]);
 
+  // Salvar projetos com debounce para evitar loops
+  const projetosStringified = JSON.stringify(projetos);
   useEffect(() => {
-    // NOVA ARQUITETURA: Salvar projetos diretamente
-    ProjetoService.salvarProjetos(projetos);
-  }, [projetos]);
+    const timer = setTimeout(() => {
+      ProjetoService.salvarProjetos(projetos);
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, [projetosStringified]); // Usar string para comparação profunda
 
   useEffect(() => {
     storage.save(STORAGE_KEYS.WORKFLOW_COLUMNS, visibleColumns);
@@ -756,26 +761,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // ===================================================================
 
   // Process confirmed appointments to workflow
+  const processConfirmedAppointmentsRef = useRef<Set<string>>(new Set());
+  
   useEffect(() => {
     const confirmedAppointments = appointments.filter(app => app.status === 'confirmado');
     
     const newItems: WorkflowItem[] = [];
+    const processedIds = new Set<string>();
     
     confirmedAppointments.forEach(appointment => {
+      const appointmentKey = `agenda-${appointment.id}`;
+      
+      // Evitar processamento duplicado
+      if (processConfirmedAppointmentsRef.current.has(appointmentKey)) {
+        return;
+      }
+      
       const existingItem = workflowItems.find(item => 
-        item.id === `agenda-${appointment.id}` && item.fonte === 'agenda'
+        item.id === appointmentKey && item.fonte === 'agenda'
       );
       
       if (!existingItem) {
         // Buscar dados do pacote selecionado
         let pacoteData = null;
         let categoriaName = '';
-        let valorFotoExtraFromPackage = 35; // valor padrão
+        let valorFotoExtraFromPackage = 35;
         
         if (appointment.packageId) {
           pacoteData = pacotes.find(p => p.id === appointment.packageId);
           if (pacoteData) {
-            // Buscar categoria pelo ID do pacote
             if (pacoteData.categoria_id) {
               const configCategorias = storage.load('configuracoes_categorias', []);
               const categoria = configCategorias.find((cat: any) => cat.id === pacoteData.categoria_id);
@@ -787,27 +801,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }
         }
         
-        // Se não há pacote específico, usar lógica de fallback baseada no tipo
         if (!pacoteData) {
           categoriaName = appointment.type.includes('Gestante') ? 'Gestante' : 
                         appointment.type.includes('Família') ? 'Família' : 
                         appointment.type.includes('Corporativo') ? 'Corporativo' : 'Outros';
         }
 
-        // CONGELAR REGRAS DE PREÇO NO MOMENTO DA CRIAÇÃO
+        // CONGELAR REGRAS APENAS UMA VEZ
         const regrasCongeladas = congelarRegrasPrecoFotoExtra({
           valorFotoExtra: valorFotoExtraFromPackage,
           categoria: categoriaName,
           categoriaId: pacoteData?.categoria_id
         });
 
-        // CORREÇÃO: Encontrar clienteId pelo nome
         const clienteId = clientes.find(c => 
           c.nome.toLowerCase().trim() === appointment.client.toLowerCase().trim()
         )?.id;
 
         const newWorkflowItem: WorkflowItem = {
-          id: `agenda-${appointment.id}`,
+          id: appointmentKey,
           sessionId: `session-agenda-${appointment.id}`,
           data: formatDateForStorage(appointment.date),
           hora: appointment.time,
@@ -817,7 +829,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           descricao: appointment.description || '',
           status: "",
           categoria: categoriaName,
-          clienteId: clienteId, // CORREÇÃO: Atribuir clienteId
+          clienteId: clienteId,
           pacote: pacoteData ? pacoteData.nome : (
             appointment.type.includes('Gestante') ? 'Completo' : 
             appointment.type.includes('Família') ? 'Básico' : 
@@ -847,39 +859,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }] : [],
           fonte: 'agenda',
           dataOriginal: appointment.date,
-          // NOVO: Adicionar regras congeladas
           regrasDePrecoFotoExtraCongeladas: regrasCongeladas
         };
 
-        // CORREÇÃO: Adicionar TODOS os produtos incluídos do agendamento
+        // Adicionar produtos incluídos
         let allProductsFromAppointment: ProdutoWorkflow[] = [];
         
-        // Produtos incluídos salvos diretamente no agendamento
         if (appointment.produtosIncluidos && appointment.produtosIncluidos.length > 0) {
           allProductsFromAppointment = appointment.produtosIncluidos.map(p => ({
             nome: p.nome,
             quantidade: p.quantidade,
-            valorUnitario: 0, // Produtos inclusos têm valor 0 para cálculos
+            valorUnitario: 0,
             tipo: 'incluso' as const
           }));
         }
-        // Fallback: buscar produtos do pacote se não estiverem salvos no agendamento
         else if (pacoteData && pacoteData.produtosIncluidos && pacoteData.produtosIncluidos.length > 0) {
           allProductsFromAppointment = pacoteData.produtosIncluidos.map(produtoIncluido => {
             const produtoData = produtos.find(p => p.id === produtoIncluido.produtoId);
             return {
               nome: produtoData?.nome || 'Produto não encontrado',
               quantidade: produtoIncluido.quantidade || 1,
-              valorUnitario: 0, // Produtos inclusos têm valor 0 para cálculos
+              valorUnitario: 0,
               tipo: 'incluso' as const
             };
           });
         }
 
-        // Adicionar lista completa de produtos
         newWorkflowItem.produtosList = allProductsFromAppointment;
 
-        // Para compatibilidade com sistema atual - usar primeiro produto
         if (allProductsFromAppointment.length > 0) {
           const primeiroProduto = allProductsFromAppointment[0];
           newWorkflowItem.produto = `${primeiroProduto.nome} (incluso no pacote)`;
@@ -887,50 +894,67 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           newWorkflowItem.valorTotalProduto = primeiroProduto.valorUnitario * primeiroProduto.quantidade;
         }
 
-        // NOVA LÓGICA: Total = Valor do pacote + fotos extra + produtos manuais (produtos inclusos não somam)
         newWorkflowItem.total = newWorkflowItem.valorPacote + newWorkflowItem.valorTotalFotoExtra + 
                                newWorkflowItem.valorTotalProduto + newWorkflowItem.valorAdicional - newWorkflowItem.desconto;
         newWorkflowItem.restante = newWorkflowItem.total - newWorkflowItem.valorPago;
 
         newItems.push(newWorkflowItem);
+        processedIds.add(appointmentKey);
       }
     });
 
-    // NOVA ARQUITETURA: Criar projetos para novos agendamentos
-    newItems.forEach(item => {
-      criarProjeto({
-        clienteId: item.clienteId || '',
-        nome: item.nome,
-        categoria: item.categoria,
-        pacote: item.pacote,
-        descricao: item.descricao,
-        detalhes: item.detalhes,
-        whatsapp: item.whatsapp,
-        email: item.email,
-        dataAgendada: item.dataOriginal || new Date(item.data),
-        horaAgendada: item.hora,
-        valorPacote: item.valorPacote,
-        fonte: 'agenda',
-        agendamentoId: item.id
-      });
-    });
-  }, [appointments, workflowItems, pacotes, categorias, produtos]);
+    // Criar projetos apenas se há novos items e evitar loops
+    if (newItems.length > 0) {
+      // Marcar como processados antes de criar projetos
+      processedIds.forEach(id => processConfirmedAppointmentsRef.current.add(id));
+      
+      // Usar setTimeout para quebrar o loop de dependências
+      setTimeout(() => {
+        newItems.forEach(item => {
+          criarProjeto({
+            clienteId: item.clienteId || '',
+            nome: item.nome,
+            categoria: item.categoria,
+            pacote: item.pacote,
+            descricao: item.descricao,
+            detalhes: item.detalhes,
+            whatsapp: item.whatsapp,
+            email: item.email,
+            dataAgendada: item.dataOriginal || new Date(item.data),
+            horaAgendada: item.hora,
+            valorPacote: item.valorPacote,
+            fonte: 'agenda',
+            agendamentoId: item.id
+          });
+        });
+      }, 0);
+    }
+  }, [appointments.length, workflowItems.length]); // Dependências simplificadas
 
-  // Process closed budgets to workflow
+  // Process closed budgets to workflow  
+  const processClosedBudgetsRef = useRef<Set<string>>(new Set());
+  
   useEffect(() => {
     const orcamentosFechados = orcamentos.filter(orc => orc.status === 'fechado');
     
     const newItems: WorkflowItem[] = [];
+    const processedIds = new Set<string>();
     
     orcamentosFechados.forEach(orc => {
+      const budgetKey = `orcamento-${orc.id}`;
+      
+      // Evitar processamento duplicado
+      if (processClosedBudgetsRef.current.has(budgetKey)) {
+        return;
+      }
+      
       const existingItem = workflowItems.find(item => 
-        item.id === `orcamento-${orc.id}` && item.fonte === 'orcamento'
+        item.id === budgetKey && item.fonte === 'orcamento'
       );
       
-      // CORREÇÃO: Sempre atualizar a descrição, mesmo para items existentes
       if (existingItem) {
         existingItem.descricao = orc.descricao || '';
-        return; // Item já existe, apenas atualizamos a descrição
+        return;
       }
       
       // Buscar dados do pacote do orçamento
@@ -941,33 +965,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       
       if (orc.pacotes && orc.pacotes.length > 0) {
         const pacoteOrcamento = orc.pacotes[0];
-        
-        console.log('DEBUG: Buscando pacote para workflow', {
-          pacoteOrcamento,
-          pacotesDisponiveis: pacotes,
-          orcamentoCompleto: orc
-        });
-        
-        // CORREÇÃO DEFINITIVA: Busca inteligente do pacote com múltiplos fallbacks
         let pacoteId = pacoteOrcamento.id;
         
-        // 1. Buscar por ID exato primeiro
+        // Busca inteligente do pacote com múltiplos fallbacks
         pacoteData = pacotes.find(p => p.id === pacoteId);
         
-        // 2. Fallback: remover prefixos e buscar por ID limpo
         if (!pacoteData && pacoteId) {
           const idLimpo = pacoteId.replace(/^pacote-/, '');
           pacoteData = pacotes.find(p => p.id === idLimpo);
         }
         
-        // 3. Fallback: buscar por nome
         if (!pacoteData && pacoteOrcamento.nome) {
           pacoteData = pacotes.find(p => p.nome === pacoteOrcamento.nome);
         }
         
-        // 4. Fallback: usar valores do orçamento se não encontrar na configuração
         if (!pacoteData) {
-          console.log('DEBUG: Pacote não encontrado na configuração, usando dados do orçamento');
           pacoteData = {
             id: pacoteOrcamento.id,
             nome: pacoteOrcamento.nome,
@@ -977,14 +989,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           };
         }
         
-        console.log('DEBUG: Resultado da busca de pacote:', { 
-          encontrado: !!pacoteData, 
-          pacoteData,
-          valorPacote: pacoteData?.valor || pacoteOrcamento.preco || 0
-        });
-        
         if (pacoteData) {
-          // Buscar categoria pelo ID do pacote
           if (pacoteData.categoria_id) {
             const configCategorias = storage.load('configuracoes_categorias', []);
             const categoria = configCategorias.find((cat: any) => cat.id === pacoteData.categoria_id);
@@ -993,15 +998,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             categoriaName = pacoteData.categoria || orc.categoria;
           }
           valorFotoExtraFromPackage = pacoteData.valor_foto_extra || pacoteData.valorFotoExtra || 35;
-          // Usar valor do pacote nas configurações como congelamento
           valorPacoteFromBudget = pacoteData.valor_base || pacoteData.valorVenda || pacoteData.valor || 0;
         } else {
-          // Se não encontrou o pacote nas configurações, usar dados do orçamento
           valorPacoteFromBudget = pacoteOrcamento.preco || 0;
         }
       }
 
-      // CONGELAR REGRAS DE PREÇO NO MOMENTO DA CRIAÇÃO
+      // CONGELAR REGRAS APENAS UMA VEZ
       const regrasCongeladas = congelarRegrasPrecoFotoExtra({
         valorFotoExtra: valorFotoExtraFromPackage,
         categoria: categoriaName,

@@ -55,7 +55,7 @@ export default function PackageSearchCombobox({
     } else {
       setFilteredPackages(availablePackages);
     }
-  }, [searchTerm]);
+  }, [searchTerm, availablePackages.length]); // Dependência otimizada
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
