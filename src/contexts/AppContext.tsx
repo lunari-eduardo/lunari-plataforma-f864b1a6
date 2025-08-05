@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
 import { parseDateFromStorage, formatDateForStorage, getCurrentDateString } from '@/utils/dateUtils';
 import { formatCurrency } from '@/utils/financialUtils';
@@ -323,33 +323,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // ✅ CORREÇÃO: allWorkflowItems sempre reflete TODOS os projetos (dados não-filtrados)
   const allWorkflowItems: WorkflowItem[] = projetos.map(converterProjetoParaWorkflowItem);
 
-  // ✅ SEPARAÇÃO: workflowItems para página Workflow (com filtros)
-  const workflowItems: WorkflowItem[] = projetos
-    .filter(projeto => {
-      // Aplicar filtros específicos da página Workflow
-      if (workflowFilters.mes && workflowFilters.mes !== 'todos') {
-        const [mes, ano] = workflowFilters.mes.split('/');
-        const projetoData = new Date(projeto.dataAgendada);
-        const projetoMes = projetoData.getMonth() + 1;
-        const projetoAno = projetoData.getFullYear();
-        
-        if (projetoMes !== parseInt(mes) || projetoAno !== parseInt(ano)) {
-          return false;
-        }
-      }
-      
-      // Filtro de busca
-      if (workflowFilters.busca) {
-        const busca = workflowFilters.busca.toLowerCase();
-        return projeto.nome.toLowerCase().includes(busca) || 
-               projeto.whatsapp.includes(busca) ||
-               projeto.email.toLowerCase().includes(busca);
-      }
-      
-      return true;
-    })
-    .map(converterProjetoParaWorkflowItem);
-
   // FUNÇÕES PARA GERENCIAR PROJETOS
   const criarProjeto = (input: CriarProjetoInput): Projeto => {
     const novoProjeto = ProjetoService.criarProjeto(input);
@@ -375,6 +348,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       busca: ''
     };
   });
+
+  // ✅ CORREÇÃO: workflowItems calculado APÓS workflowFilters ser inicializado
+  const workflowItems: WorkflowItem[] = useMemo(() => {
+    console.log('🔧 [AppContext] Recalculando workflowItems filtrados...', { 
+      totalProjetos: projetos.length, 
+      filtros: workflowFilters 
+    });
+    
+    return projetos
+      .filter(projeto => {
+        // Aplicar filtros específicos da página Workflow
+        if (workflowFilters.mes && workflowFilters.mes !== 'todos') {
+          const [mes, ano] = workflowFilters.mes.split('/');
+          const projetoData = new Date(projeto.dataAgendada);
+          const projetoMes = projetoData.getMonth() + 1;
+          const projetoAno = projetoData.getFullYear();
+          
+          if (projetoMes !== parseInt(mes) || projetoAno !== parseInt(ano)) {
+            return false;
+          }
+        }
+        
+        // Filtro de busca
+        if (workflowFilters.busca) {
+          const busca = workflowFilters.busca.toLowerCase();
+          return projeto.nome.toLowerCase().includes(busca) || 
+                 projeto.whatsapp.includes(busca) ||
+                 projeto.email.toLowerCase().includes(busca);
+        }
+        
+        return true;
+      })
+      .map(converterProjetoParaWorkflowItem);
+  }, [projetos, workflowFilters]);
 
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(() => {
     return storage.load(STORAGE_KEYS.WORKFLOW_COLUMNS, {
