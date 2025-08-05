@@ -279,6 +279,39 @@ export function useOptimizedDashboard() {
     });
   }, [allWorkflowItems, anoSelecionado]);
 
+  // ============= COMPOSIÇÃO DE DESPESAS =============
+  
+  const composicaoDespesas = useMemo(() => {
+    const grupos: Record<string, number> = {
+      'Despesas Fixas': 0,
+      'Despesas Variáveis': 0,
+      'Investimentos': 0
+    };
+
+    transacoesFiltradas
+      .filter(t => t.status === 'Pago' && t.item)
+      .forEach(transacao => {
+        if (transacao.item?.grupo_principal === 'Despesa Fixa') {
+          grupos['Despesas Fixas'] += transacao.valor;
+        } else if (transacao.item?.grupo_principal === 'Despesa Variável') {
+          grupos['Despesas Variáveis'] += transacao.valor;
+        } else if (transacao.item?.grupo_principal === 'Investimento') {
+          grupos['Investimentos'] += transacao.valor;
+        }
+      });
+
+    const totalDespesas = Object.values(grupos).reduce((sum, valor) => sum + valor, 0);
+
+    return Object.entries(grupos)
+      .filter(([_, valor]) => valor > 0)
+      .map(([grupo, valor]) => ({
+        grupo,
+        valor,
+        percentual: totalDespesas > 0 ? (valor / totalDespesas) * 100 : 0
+      }))
+      .sort((a, b) => b.valor - a.valor);
+  }, [transacoesFiltradas]);
+
   // ============= CATEGORIAS E EVOLUÇÃO =============
   
   const categoriasDisponiveis = useMemo(() => {
@@ -304,6 +337,50 @@ export function useOptimizedDashboard() {
   const [categoriaSelecionada, setCategoriaSelecionada] = useState(() => 
     categoriasDisponiveis[0] || 'Aluguel'
   );
+
+  const evolucaoCategoria = useMemo((): Record<string, Array<{mes: string; valor: number}>> => {
+    const meses = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
+    const evolucoes: Record<string, Array<{mes: string; valor: number}>> = {};
+
+    // Usar transações do ano inteiro para gráfico de evolução
+    const ano = parseInt(anoSelecionado);
+    const transacoesDoAno = transacoesComItens.filter(transacao => {
+      if (!transacao.dataVencimento || typeof transacao.dataVencimento !== 'string') {
+        return false;
+      }
+      const anoTransacao = parseInt(transacao.dataVencimento.split('-')[0]);
+      return anoTransacao === ano;
+    });
+
+    categoriasDisponiveis.forEach(categoria => {
+      const dadosPorMes: Record<number, number> = {};
+      
+      // Inicializar todos os meses
+      for (let i = 1; i <= 12; i++) {
+        dadosPorMes[i] = 0;
+      }
+
+      // Agregar dados por mês para esta categoria
+      transacoesDoAno
+        .filter(t => t.status === 'Pago' && t.item?.nome === categoria)
+        .forEach(transacao => {
+          if (!transacao.dataVencimento || typeof transacao.dataVencimento !== 'string') {
+            return;
+          }
+          const mes = parseInt(transacao.dataVencimento.split('-')[1]);
+          if (!isNaN(mes) && mes >= 1 && mes <= 12) {
+            dadosPorMes[mes] += transacao.valor;
+          }
+        });
+
+      evolucoes[categoria] = meses.map((nome, index) => ({
+        mes: nome,
+        valor: dadosPorMes[index + 1]
+      }));
+    });
+
+    return evolucoes;
+  }, [transacoesComItens, categoriasDisponiveis, anoSelecionado]);
 
   // ============= FUNÇÕES AUXILIARES =============
   
@@ -334,6 +411,8 @@ export function useOptimizedDashboard() {
     kpisData,
     metasData,
     dadosMensais,
+    composicaoDespesas,
+    evolucaoCategoria,
     
     // Funções auxiliares
     getNomeMes,

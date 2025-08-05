@@ -166,13 +166,21 @@ export function useDashboardFinanceiro() {
     // Aplicar filtro de mês se selecionado
     if (mesSelecionado && mesSelecionado !== 'ano-completo') {
       const mesNumero = parseInt(mesSelecionado);
-      filtradas = filtradas.filter(transacao => {
-        if (!transacao.dataVencimento || typeof transacao.dataVencimento !== 'string') {
-          return false;
-        }
-        const mesTransacao = parseInt(transacao.dataVencimento.split('-')[1]);
-        return mesTransacao === mesNumero;
-      });
+      if (!isNaN(mesNumero)) {
+        filtradas = filtradas.filter(transacao => {
+          if (!transacao.dataVencimento || typeof transacao.dataVencimento !== 'string') {
+            return false;
+          }
+          try {
+            const dateParts = transacao.dataVencimento.split('-');
+            if (dateParts.length < 2) return false;
+            const mesTransacao = parseInt(dateParts[1]);
+            return !isNaN(mesTransacao) && mesTransacao === mesNumero;
+          } catch {
+            return false;
+          }
+        });
+      }
     }
 
     return filtradas;

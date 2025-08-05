@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatCurrency } from '@/utils/financialUtils';
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
-import { useDashboardFinanceiro } from '@/hooks/useDashboardFinanceiro';
+import { useOptimizedDashboard } from '@/hooks/useOptimizedDashboard';
 
 // Paleta de cores elegantes para gráficos
 const COLORS = ['hsl(var(--chart-primary))', 'hsl(var(--chart-neutral))'];
@@ -30,7 +30,7 @@ export default function DashboardFinanceiro() {
     composicaoDespesas,
     evolucaoCategoria,
     getNomeMes
-  } = useDashboardFinanceiro();
+  } = useOptimizedDashboard();
 
   // Cálculos para gráficos de metas
   const lucratividade = metasData.receitaAtual > 0 ? metasData.lucroAtual / metasData.receitaAtual * 100 : 0;
