@@ -19,10 +19,7 @@ export const STORAGE_KEYS = {
   FIN_BLUEPRINTS: 'lunari_fin_recurring_blueprints',
   FIN_ITEMS: 'lunari_fin_items',
   // Metas históricas
-  HISTORICAL_GOALS: 'lunari_historical_metas',
-  // Cache de receitas (preparado para Supabase)
-  MONTHLY_REVENUE_CACHE: 'lunari_monthly_revenue_cache',
-  REVENUE_CACHE_VERSION: 'lunari_revenue_cache_version'
+  HISTORICAL_GOALS: 'lunari_historical_metas'
 } as const;
 
 export const storage = {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { WorkflowPackageCombobox } from "./WorkflowPackageCombobox";
@@ -631,8 +631,8 @@ export function WorkflowTable({
           {/* NÍVEL 4: O CORPO DA TABELA */}
           <tbody className="divide-y divide-gray-50">
             {sessions.map(session => {
-            return <React.Fragment key={session.id}>
-                <tr className="group transition-colors duration-150 ease-in-out">
+            return <>
+                <tr key={session.id} className="group transition-colors duration-150 ease-in-out">
                 {renderCell('date', <div className="font-medium">{formatToDayMonth(session.data)}</div>, true)}
                 
                 {renderCell('client', <div className="flex items-center gap-2">
@@ -890,7 +890,7 @@ export function WorkflowTable({
                     </Button>
                   </div>)}
                 </tr>
-               </React.Fragment>;
+               </>;
           })}
           </tbody>
         </table>
