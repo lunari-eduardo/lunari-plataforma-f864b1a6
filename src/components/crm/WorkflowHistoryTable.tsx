@@ -175,22 +175,22 @@ export function WorkflowHistoryTable({
                   <div className="space-y-3 rounded-lg p-4 bg-neutral-50 py-[6px]">
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-lunar-textSecondary">Base do Pacote</span>
-                      <span className="font-semibold text-sm text-lunar-text">{formatCurrency(item.valorPacote || 0)}</span>
+                      <span className="font-semibold text-lunar-text text-xs">{formatCurrency(item.valorPacote || 0)}</span>
                     </div>
                     
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-lunar-textSecondary">Fotos Extras</span>
-                      <span className="font-semibold text-sm text-lunar-text">{formatCurrency(item.valorTotalFotoExtra || 0)}</span>
+                      <span className="font-semibold text-lunar-text text-xs">{formatCurrency(item.valorTotalFotoExtra || 0)}</span>
                     </div>
                     
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-lunar-textSecondary">Produtos</span>
-                      <span className="font-semibold text-sm text-lunar-text">{formatCurrency(item.valorTotalProduto || 0)}</span>
+                      <span className="font-semibold text-lunar-text text-xs">{formatCurrency(item.valorTotalProduto || 0)}</span>
                     </div>
                     
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-lunar-textSecondary">Adicional</span>
-                      <span className="font-semibold text-sm text-lunar-text">{formatCurrency(item.valorAdicional || 0)}</span>
+                      <span className="font-semibold text-lunar-text text-xs">{formatCurrency(item.valorAdicional || 0)}</span>
                     </div>
                     
                     {item.desconto > 0 && <div className="flex justify-between items-center">
