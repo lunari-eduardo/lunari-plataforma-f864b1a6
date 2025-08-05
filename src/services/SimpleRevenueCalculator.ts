@@ -1,4 +1,4 @@
-import { Projeto } from '@/types/projeto';
+import { WorkflowItem } from '@/contexts/AppContext';
 
 // Interface simplificada para receitas mensais
 export interface MonthlyRevenue {
@@ -10,76 +10,71 @@ export interface MonthlyRevenue {
 }
 
 /**
- * ✅ CALCULADOR SIMPLIFICADO DE RECEITAS
- * Trabalha diretamente com Projeto[] para eliminar conversões desnecessárias
- * Esta é a fonte única de verdade para cálculos de receita
+ * Calculador simplificado de receitas por mês
+ * Substitui o sistema complexo do RevenueCache
  */
 export class SimpleRevenueCalculator {
   
   /**
-   * ✅ FUNÇÃO PRINCIPAL: Calcula receita diretamente dos projetos
-   * Elimina conversões e dupla filtragem
+   * Calcula receita de workflow para um mês específico
    */
-  static calcularReceita(
-    projetos: Projeto[],
-    filtros: {
-      year?: number;
-      month?: number;
-    } = {}
+  static calcularReceitaWorkflowMes(
+    workflowItems: WorkflowItem[], 
+    year: number, 
+    month: number
   ): number {
-    let projetosFiltrados = projetos;
+    const itemsFiltrados = workflowItems.filter(item => {
+      try {
+        const itemDate = new Date(item.data);
+        return itemDate.getFullYear() === year && 
+               itemDate.getMonth() + 1 === month;
+      } catch {
+        return false;
+      }
+    });
 
-    // Debug: Log dos dados de entrada
-    console.log(`🔍 [SimpleRevenueCalculator] Entrada: ${projetos.length} projetos, filtros:`, filtros);
-
-    if (filtros.year) {
-      projetosFiltrados = projetosFiltrados.filter(projeto => {
-        try {
-          const projetoYear = projeto.dataAgendada.getFullYear();
-          return projetoYear === filtros.year;
-        } catch {
-          return false;
-        }
-      });
-    }
-
-    if (filtros.month) {
-      projetosFiltrados = projetosFiltrados.filter(projeto => {
-        try {
-          const projetoMonth = projeto.dataAgendada.getMonth() + 1;
-          return projetoMonth === filtros.month;
-        } catch {
-          return false;
-        }
-      });
-    }
-
-    const total = projetosFiltrados.reduce((sum, projeto) => sum + projeto.valorPago, 0);
+    const total = itemsFiltrados.reduce((sum, item) => sum + item.valorPago, 0);
     
-    // Debug detalhado
-    console.log(`💰 [SimpleRevenueCalculator] Resultado: ${projetosFiltrados.length} projetos filtrados, R$ ${total.toFixed(2)}`);
-    console.log(`📊 [SimpleRevenueCalculator] Projetos processados:`, projetosFiltrados.map(p => ({
-      id: p.projectId,
-      nome: p.nome,
-      data: p.dataAgendada.toDateString(),
-      valorPago: p.valorPago
-    })));
+    console.log(`💰 [SimpleRevenueCalculator] Ano ${year}, Mês ${month}: ${itemsFiltrados.length} itens, R$ ${total.toFixed(2)}`);
     
     return total;
   }
 
   /**
-   * ✅ FUNÇÃO DE COMPATIBILIDADE: Obter dados mensais para gráficos
+   * Calcula receita de workflow para um ano completo
+   */
+  static calcularReceitaWorkflowAno(
+    workflowItems: WorkflowItem[], 
+    year: number
+  ): number {
+    const itemsFiltrados = workflowItems.filter(item => {
+      try {
+        const itemDate = new Date(item.data);
+        return itemDate.getFullYear() === year;
+      } catch {
+        return false;
+      }
+    });
+
+    const total = itemsFiltrados.reduce((sum, item) => sum + item.valorPago, 0);
+    
+    console.log(`💰 [SimpleRevenueCalculator] Ano ${year} completo: ${itemsFiltrados.length} itens, R$ ${total.toFixed(2)}`);
+    
+    return total;
+  }
+
+  /**
+   * Obter receitas mensais para gráficos (ano completo)
    */
   static obterDadosMensais(
-    projetos: Projeto[], 
+    workflowItems: WorkflowItem[], 
     year: number
   ): Array<{ mes: string; receita: number; lucro: number }> {
     const meses = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
     
     return meses.map((nome, index) => {
       const month = index + 1;
-      const receita = this.calcularReceita(projetos, { year, month });
+      const receita = this.calcularReceitaWorkflowMes(workflowItems, year, month);
       
       return {
         mes: nome,
@@ -90,36 +85,39 @@ export class SimpleRevenueCalculator {
   }
 
   /**
-   * ✅ FUNÇÕES DE COMPATIBILIDADE: Para manter a interface existente
-   * Essas funções convertem Projetos em dados compatíveis com o sistema antigo
+   * Calcula receita com filtros opcionais
    */
-  static calcularReceitaWorkflowMes(projetos: Projeto[], year: number, month: number): number {
-    return this.calcularReceita(projetos, { year, month });
-  }
+  static calcularReceita(
+    workflowItems: WorkflowItem[],
+    filtros: {
+      year?: number;
+      month?: number;
+    } = {}
+  ): number {
+    let itemsFiltrados = workflowItems;
 
-  static calcularReceitaWorkflowAno(projetos: Projeto[], year: number): number {
-    return this.calcularReceita(projetos, { year });
-  }
+    if (filtros.year) {
+      itemsFiltrados = itemsFiltrados.filter(item => {
+        try {
+          const itemDate = new Date(item.data);
+          return itemDate.getFullYear() === filtros.year;
+        } catch {
+          return false;
+        }
+      });
+    }
 
-  /**
-   * ✅ FUNÇÃO DE DEBUG: Para verificar integridade dos dados
-   */
-  static debugReceitas(projetos: Projeto[]): void {
-    console.log('🐛 [SimpleRevenueCalculator] DEBUG - Resumo dos projetos:');
-    console.log(`Total de projetos: ${projetos.length}`);
-    
-    const receitaTotal = projetos.reduce((sum, projeto) => sum + projeto.valorPago, 0);
-    console.log(`Receita total de todos os projetos: R$ ${receitaTotal.toFixed(2)}`);
-    
-    // Agrupar por ano
-    const porAno: Record<number, { projetos: number; receita: number }> = {};
-    projetos.forEach(projeto => {
-      const ano = projeto.dataAgendada.getFullYear();
-      if (!porAno[ano]) porAno[ano] = { projetos: 0, receita: 0 };
-      porAno[ano].projetos++;
-      porAno[ano].receita += projeto.valorPago;
-    });
-    
-    console.log('📊 Por ano:', porAno);
+    if (filtros.month) {
+      itemsFiltrados = itemsFiltrados.filter(item => {
+        try {
+          const itemDate = new Date(item.data);
+          return itemDate.getMonth() + 1 === filtros.month;
+        } catch {
+          return false;
+        }
+      });
+    }
+
+    return itemsFiltrados.reduce((sum, item) => sum + item.valorPago, 0);
   }
 }
