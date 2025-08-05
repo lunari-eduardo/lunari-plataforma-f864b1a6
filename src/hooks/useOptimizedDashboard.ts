@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { useNovoFinancas } from '@/hooks/useNovoFinancas';
 import { FinancialEngine } from '@/services/FinancialEngine';
@@ -27,10 +27,17 @@ interface MetasData {
 export function useOptimizedDashboard() {
   // ============= DADOS PRIMÁRIOS (NÃO-FILTRADOS) =============
   
-  const { allWorkflowItems } = useAppContext(); // ✅ Sempre usar dados não-filtrados
+  const { projetos } = useAppContext(); // ✅ CORREÇÃO: Usar dados RAW diretamente
   
   // Debug: Log dos dados não-filtrados
-  console.log(`🔍 [useOptimizedDashboard] Total itens workflow não-filtrados: ${allWorkflowItems.length}`);
+  console.log(`🔍 [useOptimizedDashboard] Total projetos RAW: ${projetos.length}`);
+  
+  // ✅ DEBUG CRÍTICO: Verificar integridade dos dados recebidos
+  useEffect(() => {
+    if (projetos.length > 0) {
+      SimpleRevenueCalculator.debugReceitas(projetos);
+    }
+  }, [projetos]);
   const { itensFinanceiros } = useNovoFinancas();
 
   // Transações financeiras
@@ -53,10 +60,10 @@ export function useOptimizedDashboard() {
   const anosDisponiveis = useMemo(() => {
     const anos = new Set<number>();
     
-    // Anos do workflow (dados não-filtrados)
-    allWorkflowItems.forEach(item => {
+    // ✅ CORREÇÃO: Anos dos projetos (dados RAW não-filtrados)
+    projetos.forEach(projeto => {
       try {
-        const year = new Date(item.data).getFullYear();
+        const year = projeto.dataAgendada.getFullYear();
         if (!isNaN(year)) anos.add(year);
       } catch {}
     });
@@ -70,7 +77,7 @@ export function useOptimizedDashboard() {
     });
     
     return anos.size === 0 ? [new Date().getFullYear()] : Array.from(anos).sort((a, b) => b - a);
-  }, [allWorkflowItems, transacoesFinanceiras]);
+  }, [projetos, transacoesFinanceiras]);
 
   const [anoSelecionado, setAnoSelecionado] = useState(() => {
     return anosDisponiveis[0]?.toString() || new Date().getFullYear().toString();
@@ -80,12 +87,13 @@ export function useOptimizedDashboard() {
 
   // ============= DADOS FILTRADOS SIMPLIFICADOS =============
   
-  const workflowItemsFiltrados = useMemo(() => {
+  // ✅ CORREÇÃO: Filtrar projetos diretamente (não mais WorkflowItems)
+  const projetosFiltrados = useMemo(() => {
     const ano = parseInt(anoSelecionado);
-    let filtrados = allWorkflowItems.filter(item => {
+    let filtrados = projetos.filter(projeto => {
       try {
-        const itemYear = new Date(item.data).getFullYear();
-        return itemYear === ano;
+        const projetoYear = projeto.dataAgendada.getFullYear();
+        return projetoYear === ano;
       } catch {
         return false;
       }
@@ -93,10 +101,10 @@ export function useOptimizedDashboard() {
 
     if (mesSelecionado && mesSelecionado !== 'ano-completo') {
       const mesNumero = parseInt(mesSelecionado);
-      filtrados = filtrados.filter(item => {
+      filtrados = filtrados.filter(projeto => {
         try {
-          const mesItem = new Date(item.data).getMonth() + 1;
-          return mesItem === mesNumero;
+          const mesProjeto = projeto.dataAgendada.getMonth() + 1;
+          return mesProjeto === mesNumero;
         } catch {
           return false;
         }
@@ -104,7 +112,7 @@ export function useOptimizedDashboard() {
     }
 
     return filtrados;
-  }, [allWorkflowItems, anoSelecionado, mesSelecionado]);
+  }, [projetos, anoSelecionado, mesSelecionado]);
 
   const transacoesFiltradas = useMemo(() => {
     const ano = parseInt(anoSelecionado);
@@ -133,23 +141,32 @@ export function useOptimizedDashboard() {
   // ============= CÁLCULOS SIMPLIFICADOS (DIRETOS) =============
   
   const kpisData = useMemo((): KPIsData => {
-    // ✅ CORREÇÃO: Usar SimpleRevenueCalculator diretamente
+    // ✅ CORREÇÃO FINAL: Usar projetos RAW com SimpleRevenueCalculator
     const filtros = {
       year: parseInt(anoSelecionado),
       ...(mesSelecionado !== 'ano-completo' && { month: parseInt(mesSelecionado) })
     };
 
-    const receitaOperacional = SimpleRevenueCalculator.calcularReceita(allWorkflowItems, filtros);
+    // ✅ RECEITA OPERACIONAL: Soma de todos os valorPago dos projetos filtrados
+    const receitaOperacional = SimpleRevenueCalculator.calcularReceita(projetos, filtros);
     
+    // Debug para verificar cálculo
+    console.log(`💰 [useOptimizedDashboard] Receita operacional calculada: R$ ${receitaOperacional.toFixed(2)}`);
+    
+    // ✅ RECEITAS EXTRAS: Transações de "Receita Não Operacional"
     const receitasExtras = transacoesFiltradas
       .filter(t => t.status === 'Pago' && t.item?.grupo_principal === 'Receita Não Operacional')
       .reduce((sum, t) => sum + t.valor, 0);
       
+    // ✅ TOTAL RECEITA: Fórmula correta conforme especificação
     const totalReceita = receitaOperacional + receitasExtras;
     
+    // ✅ DESPESAS: Todas as transações pagas que não são receitas
     const totalDespesas = transacoesFiltradas
       .filter(t => t.status === 'Pago' && t.item && t.item.grupo_principal !== 'Receita Não Operacional')
       .reduce((sum, t) => sum + t.valor, 0);
+
+    console.log(`🔍 [useOptimizedDashboard] KPIs calculados - Receita Op.: R$ ${receitaOperacional.toFixed(2)}, Receitas Extra: R$ ${receitasExtras.toFixed(2)}, Total: R$ ${totalReceita.toFixed(2)}`);
 
     return {
       totalReceita,
@@ -157,7 +174,7 @@ export function useOptimizedDashboard() {
       totalLucro: totalReceita - totalDespesas,
       saldoTotal: totalReceita - totalDespesas
     };
-  }, [allWorkflowItems, transacoesFiltradas, anoSelecionado, mesSelecionado]);
+  }, [projetos, transacoesFiltradas, anoSelecionado, mesSelecionado]);
 
   // ============= METAS SIMPLIFICADAS =============
   
@@ -195,9 +212,9 @@ export function useOptimizedDashboard() {
   const dadosMensais = useMemo(() => {
     const ano = parseInt(anoSelecionado);
     
-    // ✅ CORREÇÃO: Usar SimpleRevenueCalculator para obter dados mensais corretos
-    return SimpleRevenueCalculator.obterDadosMensais(allWorkflowItems, ano);
-  }, [allWorkflowItems, anoSelecionado]);
+    // ✅ CORREÇÃO FINAL: Usar projetos RAW para gráficos mensais
+    return SimpleRevenueCalculator.obterDadosMensais(projetos, ano);
+  }, [projetos, anoSelecionado]);
 
   // ============= COMPOSIÇÃO DE DESPESAS =============
   
@@ -344,7 +361,7 @@ export function useOptimizedDashboard() {
     invalidateAndRecalculateCache,
     
     // Dados filtrados
-    workflowItemsFiltrados,
+    projetosFiltrados,
     transacoesFiltradas
   };
 }

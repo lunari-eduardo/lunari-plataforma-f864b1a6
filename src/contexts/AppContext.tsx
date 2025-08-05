@@ -108,8 +108,9 @@ interface AppContextType {
   appointments: Appointment[];
   
   // Workflow
-  allWorkflowItems: WorkflowItem[]; // ✅ Dados não-filtrados para dashboard
-  workflowItems: WorkflowItem[];
+  projetos: Projeto[]; // ✅ FONTE ÚNICA DE VERDADE: Dados RAW não-filtrados
+  allWorkflowItems: WorkflowItem[]; // ✅ Dados não-filtrados para dashboard (conversão direta)
+  workflowItems: WorkflowItem[]; // ✅ Dados filtrados para página Workflow
   workflowSummary: { receita: number; aReceber: number; previsto: number };
   workflowFilters: WorkflowFilters;
   visibleColumns: Record<string, boolean>;
@@ -271,8 +272,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   });
 
-  // COMPATIBILIDADE: WorkflowItems derivados dos Projetos
-  const workflowItems: WorkflowItem[] = projetos.map(projeto => ({
+  // ✅ CORREÇÃO: Função utilitária para converter Projeto → WorkflowItem
+  const converterProjetoParaWorkflowItem = (projeto: Projeto): WorkflowItem => ({
     id: projeto.projectId,
     sessionId: projeto.projectId,
     data: projeto.dataAgendada.toISOString().split('T')[0],
@@ -317,7 +318,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ? { valorFotoExtra: projeto.valorFotoExtra } as any 
       : undefined,
     clienteId: projeto.clienteId
-  }));
+  });
+
+  // ✅ CORREÇÃO: allWorkflowItems sempre reflete TODOS os projetos (dados não-filtrados)
+  const allWorkflowItems: WorkflowItem[] = projetos.map(converterProjetoParaWorkflowItem);
+
+  // ✅ SEPARAÇÃO: workflowItems para página Workflow (com filtros)
+  const workflowItems: WorkflowItem[] = projetos
+    .filter(projeto => {
+      // Aplicar filtros específicos da página Workflow
+      if (workflowFilters.mes && workflowFilters.mes !== 'todos') {
+        const [mes, ano] = workflowFilters.mes.split('/');
+        const projetoData = new Date(projeto.dataAgendada);
+        const projetoMes = projetoData.getMonth() + 1;
+        const projetoAno = projetoData.getFullYear();
+        
+        if (projetoMes !== parseInt(mes) || projetoAno !== parseInt(ano)) {
+          return false;
+        }
+      }
+      
+      // Filtro de busca
+      if (workflowFilters.busca) {
+        const busca = workflowFilters.busca.toLowerCase();
+        return projeto.nome.toLowerCase().includes(busca) || 
+               projeto.whatsapp.includes(busca) ||
+               projeto.email.toLowerCase().includes(busca);
+      }
+      
+      return true;
+    })
+    .map(converterProjetoParaWorkflowItem);
 
   // FUNÇÕES PARA GERENCIAR PROJETOS
   const criarProjeto = (input: CriarProjetoInput): Projeto => {
@@ -2033,33 +2064,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     pacotes,
     metricas,
     appointments,
-    // ✅ CORREÇÃO: Dados não-filtrados para dashboard (RAW DATA)
-    allWorkflowItems: workflowItems, // Dados RAW, sem filtros
-    workflowItems: workflowItems.filter(item => {
-      // Handle ISO date format (YYYY-MM-DD) from new Projeto structure
-      const itemDate = new Date(item.data);
-      const itemMonth = itemDate.getMonth() + 1; // 1-12
-      const itemYear = itemDate.getFullYear();
-      
-      const [filterMonth, filterYear] = workflowFilters.mes.split('/');
-      const monthMatches = itemMonth === parseInt(filterMonth) && itemYear === parseInt(filterYear);
-
-      const searchMatches = !workflowFilters.busca || 
-        item.nome.toLowerCase().includes(workflowFilters.busca.toLowerCase());
-
-      return monthMatches && searchMatches;
-    }).sort((a, b) => {
-      const dateA = a.dataOriginal || parseDateFromStorage(a.data);
-      const dateB = b.dataOriginal || parseDateFromStorage(b.data);
-      
-      if (dateA.getTime() !== dateB.getTime()) {
-        return dateA.getTime() - dateB.getTime();
-      }
-      
-      const timeA = a.hora.split(':').map(Number);
-      const timeB = b.hora.split(':').map(Number);
-      return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
-    }),
+    
+    // ✅ CORREÇÃO: Estrutura correta com projetos RAW
+    projetos, // Dados RAW dos projetos
+    allWorkflowItems, // Conversão direta para compatibilidade
+    workflowItems, // ✅ Dados filtrados para página Workflow (já calculado acima)
     workflowSummary,
     workflowFilters,
     visibleColumns,
