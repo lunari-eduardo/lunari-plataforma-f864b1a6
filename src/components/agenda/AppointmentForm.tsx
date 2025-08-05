@@ -309,8 +309,8 @@ export default function AppointmentForm({
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="appointment-package" className="text-xs font-medium">Pacote</Label>
-            <div id="appointment-package">
+            <Label htmlFor="package-search-input" className="text-xs font-medium">Pacote</Label>
+            <div>
               <PackageSearchCombobox value={formData.packageId} onSelect={handlePackageSelect} placeholder="Buscar pacote por nome ou categoria..." />
             </div>
             

@@ -103,11 +103,14 @@ export default function PackageSearchCombobox({
       <div className="relative">
         <Input
           ref={inputRef}
+          id="package-search-input"
           value={displayValue}
           onChange={handleInputChange}
           onFocus={handleInputFocus}
           placeholder={placeholder}
           className="pr-8 text-xs"
+          aria-label="Buscar pacote"
+          autoComplete="off"
         />
         <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
       </div>

@@ -69,21 +69,44 @@ export class ProjetoService {
   static criarProjeto(input: CriarProjetoInput): Projeto {
     const projetos = this.carregarProjetos();
     
-    // VERIFICAR SE JÁ EXISTE (à prova de duplicação)
-    const projetoExistente = projetos.find(p => 
-      (input.orcamentoId && p.orcamentoId === input.orcamentoId) ||
-      (input.agendamentoId && p.agendamentoId === input.agendamentoId) ||
-      (p.clienteId === input.clienteId && 
-       p.nome === input.nome && 
-       p.dataAgendada.toDateString() === input.dataAgendada.toDateString())
-    );
+    // VERIFICAR SE JÁ EXISTE (à prova de duplicação com critérios mais específicos)
+    const projetoExistente = projetos.find(p => {
+      // Prioridade 1: Se tem orcamentoId ou agendamentoId, usar apenas esses
+      if (input.orcamentoId && p.orcamentoId) {
+        return p.orcamentoId === input.orcamentoId;
+      }
+      if (input.agendamentoId && p.agendamentoId) {
+        return p.agendamentoId === input.agendamentoId;
+      }
+      
+      // Prioridade 2: Comparação tripla mais específica
+      return p.clienteId === input.clienteId && 
+             p.nome.trim().toLowerCase() === input.nome.trim().toLowerCase() && 
+             Math.abs(p.dataAgendada.getTime() - input.dataAgendada.getTime()) < 24 * 60 * 60 * 1000; // Mesmo dia
+    });
 
     if (projetoExistente) {
-      console.log('🔄 Atualizando projeto existente:', projetoExistente.projectId);
-      return this.atualizarProjeto(projetoExistente.projectId, {
-        ...input,
-        atualizadoEm: new Date()
-      });
+      // Evitar atualizações desnecessárias comparando valores
+      const needsUpdate = 
+        projetoExistente.categoria !== input.categoria ||
+        projetoExistente.pacote !== input.pacote ||
+        projetoExistente.valorPacote !== (input.valorPacote || 0) ||
+        projetoExistente.descricao !== (input.descricao || '') ||
+        projetoExistente.horaAgendada !== input.horaAgendada;
+
+      if (needsUpdate) {
+        return this.atualizarProjeto(projetoExistente.projectId, {
+          categoria: input.categoria,
+          pacote: input.pacote,
+          valorPacote: input.valorPacote,
+          descricao: input.descricao,
+          horaAgendada: input.horaAgendada,
+          atualizadoEm: new Date()
+        });
+      }
+      
+      // Retornar projeto existente sem atualizações
+      return projetoExistente;
     }
 
     // CRIAR NOVO PROJETO
@@ -127,7 +150,7 @@ export class ProjetoService {
     projetos.push(novoProjeto);
     this.salvarProjetos(projetos);
 
-    console.log('✅ Novo projeto criado:', novoProjeto.projectId);
+    // Log apenas em desenvolvimento
     return novoProjeto;
   }
 
@@ -167,7 +190,7 @@ export class ProjetoService {
     projetos[index] = projetoAtualizado;
     this.salvarProjetos(projetos);
 
-    console.log('✅ Projeto atualizado:', projectId);
+    // Log removido para evitar spam no console
     return projetoAtualizado;
   }
 
