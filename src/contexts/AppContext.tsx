@@ -11,6 +11,7 @@ import { migrateWorkflowClienteId } from '@/utils/migrateWorkflowClienteId';
 import { initializeApp, needsInitialization } from '@/utils/initializeApp';
 import { Projeto, CriarProjetoInput } from '@/types/projeto';
 import { ProjetoService } from '@/services/ProjetoService';
+import { corrigirClienteIdSessoes } from '@/utils/corrigirClienteIdSessoes';
 
 // Types
 import { Orcamento, Template, OrigemCliente, MetricasOrcamento, Cliente } from '@/types/orcamentos';
@@ -553,6 +554,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       nome: orcamento.cliente?.nome || '',
       email: orcamento.cliente?.email || '',
       whatsapp: orcamento.cliente?.telefone || '',
+      clienteId: orcamento.cliente?.id || '',
       descricao: orcamento.descricao || '',
       detalhes: orcamento.detalhes || '',
       observacoes: '',
@@ -2005,6 +2007,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             console.log('✅ Sistema inicializado com sucesso');
           }
         }
+        
+        // Executar correção de clienteId nas sessões existentes
+        corrigirClienteIdSessoes();
       } catch (error) {
         console.error('❌ Erro na inicialização automática:', error);
       }
