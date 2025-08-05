@@ -147,22 +147,22 @@ export default function ClienteDetalhe() {
           </div>
           
           {/* Métricas Rápidas */}
-          <div className="flex gap-2">
-            <Card className="p-3">
+          <div className="flex gap-1 md:gap-2">
+            <Card className="p-2 md:p-3">
               <div className="text-center">
-                <div className="text-lg font-bold text-primary">{metricas.totalSessoes}</div>
+                <div className="text-sm md:text-lg font-bold text-primary">{metricas.totalSessoes}</div>
                 <div className="text-xs text-muted-foreground">Sessões</div>
               </div>
             </Card>
-            <Card className="p-3">
+            <Card className="p-2 md:p-3">
               <div className="text-center">
-                <div className="text-lg font-bold text-green-600">{formatCurrency(metricas.totalFaturado)}</div>
+                <div className="text-sm md:text-lg font-bold text-green-600">{formatCurrency(metricas.totalFaturado)}</div>
                 <div className="text-xs text-muted-foreground">Total</div>
               </div>
             </Card>
-            <Card className="p-3">
+            <Card className="p-2 md:p-3">
               <div className="text-center">
-                <div className="text-lg font-bold text-orange-600">{formatCurrency(metricas.aReceber)}</div>
+                <div className="text-sm md:text-lg font-bold text-orange-600">{formatCurrency(metricas.aReceber)}</div>
                 <div className="text-xs text-muted-foreground">A Receber</div>
               </div>
             </Card>
