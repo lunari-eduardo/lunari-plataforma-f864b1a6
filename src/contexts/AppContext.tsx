@@ -1127,9 +1127,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Calculate workflow summary
   const workflowSummary = React.useMemo(() => {
     const filteredItems = workflowItems.filter(item => {
-      const [itemDay, itemMonth, itemYear] = item.data.split('/');
+      // Handle ISO date format (YYYY-MM-DD) from new Projeto structure
+      const itemDate = new Date(item.data);
+      const itemMonth = itemDate.getMonth() + 1; // 1-12
+      const itemYear = itemDate.getFullYear();
+      
       const [filterMonth, filterYear] = workflowFilters.mes.split('/');
-      const monthMatches = itemMonth === filterMonth && itemYear === filterYear;
+      const monthMatches = itemMonth === parseInt(filterMonth) && itemYear === parseInt(filterYear);
 
       const searchMatches = !workflowFilters.busca || 
         item.nome.toLowerCase().includes(workflowFilters.busca.toLowerCase());
@@ -2029,9 +2033,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     metricas,
     appointments,
     workflowItems: workflowItems.filter(item => {
-      const [itemDay, itemMonth, itemYear] = item.data.split('/');
+      // Handle ISO date format (YYYY-MM-DD) from new Projeto structure
+      const itemDate = new Date(item.data);
+      const itemMonth = itemDate.getMonth() + 1; // 1-12
+      const itemYear = itemDate.getFullYear();
+      
       const [filterMonth, filterYear] = workflowFilters.mes.split('/');
-      const monthMatches = itemMonth === filterMonth && itemYear === filterYear;
+      const monthMatches = itemMonth === parseInt(filterMonth) && itemYear === parseInt(filterYear);
 
       const searchMatches = !workflowFilters.busca || 
         item.nome.toLowerCase().includes(workflowFilters.busca.toLowerCase());
