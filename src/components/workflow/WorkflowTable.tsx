@@ -799,11 +799,11 @@ export function WorkflowTable({
                   
                   if (session.regrasDePrecoFotoExtraCongeladas) {
                     // Item com regras congeladas - usar motor de cálculo específico
-                    console.log('🧮 [WORKFLOW] Calculando com regras congeladas para:', session.id);
+                    // Log removido para evitar spam no console
                     total = calcularComRegrasProprias(qtd, session.regrasDePrecoFotoExtraCongeladas);
                   } else {
                     // Item sem regras congeladas - usar motor global (para compatibilidade)
-                    console.log('🧮 [WORKFLOW] Calculando com motor global para:', session.id);
+                    // Log removido para evitar spam no console
                     const valorFotoExtra = parseFloat((session.valorFotoExtra || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0;
                     
                     // Buscar ID da categoria pelo nome

@@ -274,7 +274,7 @@ export class ProjetoService {
             fonte: session.fonte || 'agenda'
           });
 
-          console.log('📦 Migrado para projeto:', projeto.projectId);
+          // Log removido para evitar spam no console
         }
       });
 
@@ -320,7 +320,7 @@ export class ProjetoService {
           chaves.add(chave);
           projetosUnicos.push(projeto);
         } else {
-          console.log('🗑️ Removendo duplicata:', projeto.projectId);
+          // Log removido para evitar spam no console
         }
       });
 

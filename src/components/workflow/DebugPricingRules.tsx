@@ -23,7 +23,7 @@ export function DebugPricingRules() {
     
     try {
       // Debug no console
-      console.log('🔍 =================== DEBUG PRICING RULES ===================');
+      // Log removido para evitar spam no console
       debugWorkflowItems();
       
       // Coletar informações para UI
@@ -43,7 +43,7 @@ export function DebugPricingRules() {
         modelosEncontrados
       });
       
-      console.log('🔍 =================== FIM DEBUG ===================');
+      // Log removido para evitar spam no console
       
     } catch (error) {
       console.error('❌ Erro no debug:', error);
@@ -53,11 +53,11 @@ export function DebugPricingRules() {
   };
 
   const testarCalculo = () => {
-    console.log('🧮 =================== TESTE DE CÁLCULO ===================');
+    // Log removido para evitar spam no console
     
     // Teste com 10 fotos
     const resultado = calcularTotalFotosExtras(10, { valorFotoExtra: 25 });
-    console.log('📊 Teste com configuração atual (10 fotos):', resultado);
+    // Log removido para evitar spam no console
     
     console.log('🧮 =================== FIM TESTE ===================');
   };
@@ -72,7 +72,7 @@ export function DebugPricingRules() {
         });
         
         localStorage.setItem('workflow_sessions', JSON.stringify(itemsLimpos));
-        console.log('🧹 Regras congeladas removidas de todos os items');
+        // Log removido para evitar spam no console
         executarDebug(); // Atualizar debug
       } catch (error) {
         console.error('❌ Erro na limpeza:', error);

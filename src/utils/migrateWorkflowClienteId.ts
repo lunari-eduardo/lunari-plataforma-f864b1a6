@@ -12,20 +12,17 @@ export function migrateWorkflowClienteId() {
     
     // Verificar se migração já foi executada
     if (localStorage.getItem(MIGRATION_KEY) === 'true') {
-      console.log('🔄 Migração de clienteId já executada anteriormente');
+      // Migração já executada, retornando silenciosamente
       return;
     }
 
-    console.log('🚀 Iniciando migração de clienteId para workflowItems...');
+    // Migração executando silenciosamente
 
     // Carregar dados necessários
     const workflowItems: WorkflowItem[] = storage.load(STORAGE_KEYS.WORKFLOW_ITEMS, []);
     const clientes: Cliente[] = storage.load(STORAGE_KEYS.CLIENTS, []);
     
-    console.log('📊 Dados para migração:', {
-      workflowItems: workflowItems.length,
-      clientes: clientes.length
-    });
+    // Dados carregados silenciosamente
 
     let itemsAtualizados = 0;
     
@@ -85,10 +82,7 @@ export function migrateWorkflowClienteId() {
     // Marcar migração como concluída
     localStorage.setItem(MIGRATION_KEY, 'true');
 
-    console.log('✅ Migração concluída:', {
-      workflowItemsAtualizados: itemsAtualizados,
-      workflowSessionsAtualizadas: workflowSessions.length
-    });
+    // Migração concluída silenciosamente
 
   } catch (error) {
     console.error('❌ Erro durante migração de clienteId:', error);

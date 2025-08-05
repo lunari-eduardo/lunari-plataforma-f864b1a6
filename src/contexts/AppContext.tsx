@@ -207,11 +207,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         // Usar valorTotal como base, assumindo desconto zero se não tiver
         const valorFinalMigrado = (typeof orc.valorTotal === 'number' && orc.valorTotal > 0) ? orc.valorTotal : 1000;
         
-        console.log('🔧 Migrando valorFinal para orçamento:', {
-          id: orc.id,
-          valorTotal: orc.valorTotal,
-          valorFinalNovo: valorFinalMigrado
-        });
+        // Log removido para evitar spam no console
         
         return { ...orc, valorFinal: valorFinalMigrado };
       }
@@ -401,8 +397,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const sincronizarComWorkflow = useCallback((orcamento: Orcamento) => {
     if (!orcamento || orcamento.status !== 'fechado') return;
 
-    console.log('=== SINCRONIZANDO COM WORKFLOW (NOVA ARQUITETURA) ===');
-    console.log('Orçamento completo:', orcamento);
+    // Logs removidos para evitar spam no console
 
     // FUNÇÃO AUXILIAR: Normalizar nome do produto removendo sufixos
     const normalizarNomeProduto = (nome: string): string => {
@@ -440,10 +435,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       
       const resultado = Array.from(produtosUnicos.values());
       
-      if (resultado.length < produtos.length) {
-        console.log(`🔄 Deduplicação: ${produtos.length} → ${resultado.length} produtos`);
-        console.log('🔍 Produtos normalizados:', produtos.map(p => ({ original: p.nome, normalizado: normalizarNomeProduto(p.nome) })));
-      }
+      // Logs removidos para evitar spam no console
       
       return resultado;
     };
@@ -454,16 +446,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       let valorPacote = 0;
       let valorProdutosManuais = 0;
 
-      console.log('📊 Extraindo produtos do orçamento (nova estrutura apenas)...');
+      // Log removido para evitar spam no console
 
       // NOVA ESTRUTURA: Pacote Principal
       const pacotePrincipal = orcamento.pacotePrincipal;
       if (pacotePrincipal) {
-        console.log('✅ Usando Pacote Principal');
+        // Logs removidos para evitar spam no console
         
         // Adicionar produtos inclusos do pacote principal
         if (pacotePrincipal.produtosIncluidos && pacotePrincipal.produtosIncluidos.length > 0) {
-          console.log(`📦 Adicionando ${pacotePrincipal.produtosIncluidos.length} produtos inclusos`);
           pacotePrincipal.produtosIncluidos.forEach((produto: any) => {
             produtosList.push({
               nome: produto.nome,
@@ -479,7 +470,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       // NOVA ESTRUTURA: Produtos Adicionais
       if (orcamento.produtosAdicionais && orcamento.produtosAdicionais.length > 0) {
-        console.log(`📦 Adicionando ${orcamento.produtosAdicionais.length} produtos adicionais`);
+        // Log removido para evitar spam no console
         orcamento.produtosAdicionais.forEach((produto: any) => {
           produtosList.push({
             nome: produto.nome,
@@ -513,7 +504,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         valorPacote = orcamento.valorManual || orcamento.valorTotal || 0;
       }
 
-      console.log(`📊 Produtos extraídos: ${produtosList.length} itens`);
+      // Log removido para evitar spam no console
       
       // DEDUPLICAÇÃO FINAL: Aplicada como segurança
       const produtosDeduplikados = deduplikarProdutosPorNome(produtosList);
@@ -584,7 +575,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       percentualAjusteOrcamento
     };
 
-    console.log('✅ Dados sincronizados com estrutura unificada:', sessaoWorkflow);
+    // Log removido para evitar spam no console
 
     // SALVAR COM PREVENÇÃO DE DUPLICAÇÃO
     const saved = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
@@ -606,7 +597,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     
     localStorage.setItem('workflow_sessions', JSON.stringify(saved));
-    console.log('✅ Workflow sincronizado com sucesso');
+    // Log removido para evitar spam no console
   }, [pacotes, produtos]);
 
   // Save effects

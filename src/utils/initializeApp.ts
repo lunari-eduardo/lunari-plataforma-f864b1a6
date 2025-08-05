@@ -21,7 +21,7 @@ interface InitializationResult {
  * Deve ser chamada uma única vez na inicialização do app
  */
 export async function initializeApp(): Promise<InitializationResult> {
-  console.log('🚀 Iniciando inicialização do sistema...');
+  // Log de inicialização removido para evitar spam
   
   const result: InitializationResult = {
     success: true,
@@ -32,7 +32,7 @@ export async function initializeApp(): Promise<InitializationResult> {
   
   try {
     // 1. DETECTAR PROBLEMAS ATUAIS
-    console.log('🔍 Detectando problemas no sistema...');
+    // Log removido para evitar spam
     const corruptions = detectClienteIdCorruptions();
     
     if (corruptions.workflowItemsCorrupted > 0 || corruptions.sessionsCorrupted > 0) {
@@ -43,7 +43,7 @@ export async function initializeApp(): Promise<InitializationResult> {
     // 2. EXECUTAR MIGRAÇÃO DE CLIENTEID (SE NECESSÁRIO)
     const migrationAlreadyRun = localStorage.getItem('workflow_clienteId_migrated') === 'true';
     if (!migrationAlreadyRun) {
-      console.log('📋 Executando migração de clienteId...');
+      // Log removido para evitar spam
   migrateWorkflowClienteId();
   
   // MIGRAÇÃO INVERTIDA: Consolidar dados para workflow_sessions
@@ -61,7 +61,7 @@ export async function initializeApp(): Promise<InitializationResult> {
                               !corruptionAlreadyFixed;
     
     if (needsCorruptionFix) {
-      console.log('🔧 Corrigindo corrupções de clienteId...');
+      // Log removido para evitar spam
       const fixResult = fixClienteIdCorruption();
       result.migrationsRun.push('fixClienteIdCorruption');
       
@@ -73,7 +73,7 @@ export async function initializeApp(): Promise<InitializationResult> {
     }
     
     // 4. LIMPEZA DE CACHES ANTIGOS
-    console.log('🧹 Limpando caches desnecessários...');
+    // Log removido para evitar spam
     const cachesToClear = [
       'workflow_sync_data',
       'unified_workflow_cache',
@@ -83,12 +83,12 @@ export async function initializeApp(): Promise<InitializationResult> {
     cachesToClear.forEach(cache => {
       if (localStorage.getItem(cache)) {
         localStorage.removeItem(cache);
-        console.log(`🗑️ Cache removido: ${cache}`);
+        // Log removido para evitar spam
       }
     });
     
     // 5. OTIMIZAÇÃO DE PERFORMANCE
-    console.log('⚡ Aplicando otimizações de performance...');
+    // Log removido para evitar spam
     
     // Configurar debounce para operações pesadas
     const performanceConfig = {
@@ -102,7 +102,7 @@ export async function initializeApp(): Promise<InitializationResult> {
     result.migrationsRun.push('performanceOptimization');
     
     // 6. VERIFICAÇÃO FINAL
-    console.log('✅ Verificação final do sistema...');
+    // Log removido para evitar spam
     const finalCorruptions = detectClienteIdCorruptions();
     
     if (finalCorruptions.workflowItemsCorrupted > 0 || finalCorruptions.sessionsCorrupted > 0) {
@@ -124,12 +124,7 @@ export async function initializeApp(): Promise<InitializationResult> {
     
     // 8. RESULTADO FINAL
     if (result.success) {
-      console.log('✅ Inicialização concluída com sucesso!');
-      console.log('📊 Relatório:', {
-        migrações: result.migrationsRun.length,
-        avisos: result.warnings.length,
-        erros: result.errors.length
-      });
+      // Logs removidos para evitar spam no console
       
       // Toast de sucesso apenas se houve correções importantes
       if (result.migrationsRun.length > 0 || result.warnings.length > 0) {
