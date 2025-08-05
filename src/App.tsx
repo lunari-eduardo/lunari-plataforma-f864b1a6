@@ -1,6 +1,6 @@
 
 import * as React from "react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -20,24 +20,68 @@ import NotFound from "./pages/NotFound";
 import { AppProvider } from "./contexts/AppContext";
 import { useIntegration } from "./hooks/useIntegration";
 
-// Create a new QueryClient instance outside of the component
-const queryClient = new QueryClient();
+// Create a stable QueryClient instance
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: false,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
-// Component to safely initialize integration hooks
+// Integration component that safely uses hooks within providers
 function AppIntegration() {
-  // ✅ OTIMIZADO: Hook simplificado sem estados condicionais
-  useIntegration();
+  try {
+    useIntegration();
+  } catch (error) {
+    console.error('Integration hook error:', error);
+  }
   return null;
 }
 
-// Define App as a proper function component to ensure React hooks work correctly
+// Define App as a proper function component
 function App() {
+  const [isInitialized, setIsInitialized] = useState(false);
+
   useEffect(() => {
-    // Initialize app data after React is ready
-    import('./utils/initializeAppFixed').then(({ initializeAppWithFix }) => {
-      initializeAppWithFix();
-    });
+    // Initialize app with defensive checks
+    const initializeApp = async () => {
+      try {
+        // Ensure React is properly initialized before importing utils
+        await new Promise(resolve => setTimeout(resolve, 10));
+        
+        const { initializeAppWithFix } = await import('./utils/initializeAppFixed');
+        initializeAppWithFix();
+        
+        setIsInitialized(true);
+        console.log('✅ App successfully initialized');
+      } catch (error) {
+        console.error('❌ App initialization error:', error);
+        // Continue with basic initialization even if fix fails
+        setIsInitialized(true);
+      }
+    };
+
+    initializeApp();
   }, []);
+
+  // Show loading state until initialized
+  if (!isInitialized) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        height: '100vh',
+        backgroundColor: '#FAF8F5',
+        color: '#3A3A3A',
+        fontSize: '14px'
+      }}>
+        Carregando...
+      </div>
+    );
+  }
   
   return (
     <BrowserRouter>

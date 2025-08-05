@@ -6,9 +6,16 @@ import { toast } from '@/hooks/use-toast';
 import { parseDateFromStorage, formatDateForStorage } from '@/utils/dateUtils';
 
 export const useIntegration = () => {
+  // Defensive hook initialization to prevent conditional calls
+  const [isReady, setIsReady] = useState(false);
+  
   // SEMPRE chamar os hooks no mesmo lugar (regra dos hooks do React)
-  const { orcamentos, atualizarOrcamento } = useOrcamentos();
-  const { appointments, addAppointment, updateAppointment, deleteAppointment } = useAgenda();
+  const orcamentosHook = useOrcamentos();
+  const agendaHook = useAgenda();
+  
+  // Extract with null checks
+  const { orcamentos = [], atualizarOrcamento } = orcamentosHook || {};
+  const { appointments = [], addAppointment, updateAppointment, deleteAppointment } = agendaHook || {};
   
   // Controle de sincronização para evitar loops infinitos
   const syncInProgressRef = useRef(false);
@@ -45,9 +52,16 @@ export const useIntegration = () => {
     return true;
   }, []);
 
+  // Initialize ready state
+  useEffect(() => {
+    if (orcamentos && appointments && addAppointment && updateAppointment && deleteAppointment) {
+      setIsReady(true);
+    }
+  }, [orcamentos, appointments, addAppointment, updateAppointment, deleteAppointment]);
+
   // Monitor orçamentos fechados e criar agendamentos automaticamente
   useEffect(() => {
-    if (syncInProgressRef.current) return;
+    if (!isReady || syncInProgressRef.current) return;
 
     const orcamentosFechados = orcamentos.filter(orc => orc.status === 'fechado');
     
@@ -110,7 +124,7 @@ export const useIntegration = () => {
 
   // Monitor agendamentos removidos de orçamentos cancelados ou não fechados
   useEffect(() => {
-    if (syncInProgressRef.current) return;
+    if (!isReady || syncInProgressRef.current) return;
 
     const orcamentosCancelados = orcamentos.filter(orc => orc.status === 'cancelado');
     
@@ -143,7 +157,7 @@ export const useIntegration = () => {
 
   // Monitor agendamentos "confirmado" cujos orçamentos não estão mais "fechado"
   useEffect(() => {
-    if (syncInProgressRef.current) return;
+    if (!isReady || syncInProgressRef.current) return;
 
     const agendamentosOrfaos = appointments.filter(appointment => {
       // Só verificar agendamentos de orçamento que estão confirmados
