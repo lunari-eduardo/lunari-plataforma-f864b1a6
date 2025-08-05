@@ -1,7 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
-import { WorkflowFilter, FilterOptions } from "@/components/workflow/WorkflowFilter";
 import { WorkflowTable } from "@/components/workflow/WorkflowTable";
 import { ColumnSettings } from "@/components/workflow/ColumnSettings";
 import { ChevronLeft, ChevronRight, Eye, EyeOff, Search } from "lucide-react";
@@ -12,76 +10,11 @@ import { useOrcamentoData } from "@/hooks/useOrcamentoData";
 import { useContext } from 'react';
 import { AppContext } from '@/contexts/AppContext';
 import { parseDateFromStorage } from "@/utils/dateUtils";
-import { FixPricingRulesButton } from '@/components/workflow/FixPricingRulesButton';
-interface ProdutoWorkflow {
-  nome: string;
-  quantidade: number;
-  valorUnitario: number;
-  tipo: 'incluso' | 'manual';
-}
-interface SessionPayment {
-  id: string;
-  valor: number;
-  data: string;
-  forma_pagamento?: string;
-  observacoes?: string;
-}
-interface SessionData {
-  id: string;
-  data: string;
-  hora: string;
-  nome: string;
-  email: string;
-  descricao: string;
-  status: string;
-  whatsapp: string;
-  categoria: string;
-  pacote: string;
-  valorPacote: string;
-  valorFotoExtra: string;
-  qtdFotosExtra: number;
-  valorTotalFotoExtra: string;
-  produto: string;
-  qtdProduto: number;
-  valorTotalProduto: string;
-  valorAdicional: string;
-  detalhes: string;
-  observacoes: string;
-  valor: string;
-  total: string;
-  valorPago: string;
-  restante: string;
-  desconto: number;
-  pagamentos?: SessionPayment[];
-  produtosList?: ProdutoWorkflow[];
-  // Novos campos para orçamentos ajustados
-  valorFinalAjustado?: boolean;
-  valorOriginalOrcamento?: number;
-  percentualAjusteOrcamento?: number;
-}
-interface CategoryOption {
-  id: string;
-  nome: string;
-}
-interface PackageOption {
-  id: string;
-  nome: string;
-  valor: string;
-  valorFotoExtra: string;
-  categoria: string;
-}
-interface ProductOption {
-  id: string;
-  nome: string;
-  valor: string;
-}
+import type { SessionData, CategoryOption, PackageOption, ProductOption } from '@/types/workflow';
 const removeAccents = (str: string) => {
   return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 };
 export default function Workflow() {
-  const {
-    toast
-  } = useToast();
   const {
     getConfirmedSessionsForWorkflow
   } = useAgenda();
@@ -89,8 +22,7 @@ export default function Workflow() {
     getStatusOptions
   } = useWorkflowStatus();
   const {
-    clientes,
-    addAppointment
+    clientes
   } = useContext(AppContext);
   const {
     pacotes,
@@ -430,14 +362,6 @@ export default function Workflow() {
         {isPositive ? '↑' : '↓'} {Math.abs(change).toFixed(1)}%
       </span>;
   };
-  const handleFilterChange = (filters: any) => {
-    if (filters.search !== undefined) {
-      setSearchTerm(filters.search);
-    }
-  };
-  const handleResetFilters = () => {
-    setSearchTerm('');
-  };
   const handleColumnVisibilityChange = (cols: any) => {
     setVisibleColumns(cols);
     // Persistir configurações de colunas visíveis
@@ -462,12 +386,21 @@ export default function Workflow() {
       status
     } : s));
   };
-  const handleEditSession = (id: string) => {
-    console.log('Edit session:', id);
-  };
-  const handleAddPayment = (id: string) => {
-    console.log('Add payment:', id);
-  };
+  const handleEditSession = useCallback((id: string) => {
+    const session = sessions.find(s => s.id === id);
+    if (session) {
+      // Implementar lógica de edição se necessário
+      console.log('Edit session:', id, session);
+    }
+  }, [sessions]);
+
+  const handleAddPayment = useCallback((id: string) => {
+    const session = sessions.find(s => s.id === id);
+    if (session) {
+      // Implementar lógica de adição de pagamento se necessário
+      console.log('Add payment for session:', id, session);
+    }
+  }, [sessions]);
 
   // Função de atualização corrigida
   const handleFieldUpdate = useCallback((id: string, field: string, value: any) => {
@@ -611,7 +544,7 @@ export default function Workflow() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input placeholder="Buscar por cliente (sem acentos)..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 h-9 bg-lunar-surface" />
             </div>
-            <Button variant="outline" size="sm" onClick={handleResetFilters} className="text-zinc-700 bg-neutral-50">Limpar</Button>
+            <Button variant="outline" size="sm" onClick={() => setSearchTerm('')} className="text-zinc-700 bg-neutral-50">Limpar</Button>
           </div>
           <div className="flex items-center space-x-2">
             <span className="text-gray-500 hidden md:inline text-xs">

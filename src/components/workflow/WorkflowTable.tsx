@@ -8,48 +8,10 @@ import { MessageCircle, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Packa
 import { Link } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatToDayMonth } from "@/utils/dateUtils";
-import { calculateTotals } from '@/services/FinancialCalculationEngine';
+
 import { calcularTotalFotosExtras, obterConfiguracaoPrecificacao, obterTabelaGlobal, obterTabelaCategoria, calcularValorPorFoto, formatarMoeda, calcularComRegrasProprias, migrarRegrasParaItemAntigo } from '@/utils/precificacaoUtils';
 import { RegrasCongeladasIndicator } from './RegrasCongeladasIndicator';
-import { RegrasPrecoFotoExtraCongeladas } from '@/contexts/AppContext';
-interface ProdutoWorkflow {
-  nome: string;
-  quantidade: number;
-  valorUnitario: number;
-  tipo: 'incluso' | 'manual';
-}
-interface SessionData {
-  id: string;
-  data: string;
-  hora: string;
-  nome: string;
-  email: string;
-  descricao: string;
-  status: string;
-  whatsapp: string;
-  categoria: string;
-  pacote: string;
-  valorPacote: string;
-  valorFotoExtra: string;
-  qtdFotosExtra: number;
-  valorTotalFotoExtra: string;
-  produto: string;
-  qtdProduto: number;
-  valorTotalProduto: string;
-  produtosList?: ProdutoWorkflow[]; // LISTA COMPLETA DE PRODUTOS
-  valorAdicional: string;
-  detalhes: string;
-  observacoes: string;
-  valor: string;
-  total: string;
-  valorPago: string;
-  restante: string;
-  desconto: number;
-  // NOVO: Campo para regras congeladas
-  regrasDePrecoFotoExtraCongeladas?: RegrasPrecoFotoExtraCongeladas;
-  // NOVO: Campo para relacionar com cliente específico (CRM)
-  clienteId?: string;
-}
+import type { SessionData } from '@/types/workflow';
 interface WorkflowTableProps {
   sessions: SessionData[];
   statusOptions: string[];
@@ -218,7 +180,6 @@ export function WorkflowTable({
     };
   }, []);
   const handleFieldUpdateStable = useCallback((sessionId: string, field: string, value: any) => {
-    console.log('Updating field:', field, 'for session:', sessionId, 'with value:', value);
     onFieldUpdate(sessionId, field, value);
   }, [onFieldUpdate]);
   const handlePaymentAdd = useCallback((sessionId: string) => {
@@ -447,8 +408,6 @@ export function WorkflowTable({
         if (session) {
           const novaQuantidade = parseInt(newValue) || 0;
           
-          // Buscar o item correspondente no contexto para verificar regras congeladas
-          console.log('🧮 Recalculando fotos extras para sessão:', sessionId, 'quantidade:', novaQuantidade);
           
           // Como não temos acesso direto às regras congeladas aqui, 
           // vamos disparar o recálculo através do contexto
