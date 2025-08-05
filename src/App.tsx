@@ -31,6 +31,12 @@ function AppIntegration() {
 
 // Define App as a proper function component to ensure React hooks work correctly
 function App() {
+  useEffect(() => {
+    // Initialize app data after React is ready
+    import('./utils/initializeAppFixed').then(({ initializeAppWithFix }) => {
+      initializeAppWithFix();
+    });
+  }, []);
   
   return (
     <BrowserRouter>
