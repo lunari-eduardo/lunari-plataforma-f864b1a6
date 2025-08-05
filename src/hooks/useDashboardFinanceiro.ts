@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { FinancialEngine } from '@/services/FinancialEngine';
 import { useNovoFinancas } from '@/hooks/useNovoFinancas';

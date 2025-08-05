@@ -654,8 +654,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     migrateWorkflowClienteId();
   }, []);
 
-  // Sync configuration data (CORRIGIDO - sincronização correta)
+  // ✅ OTIMIZADO: Sync configuration data com debounce
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    
     const syncConfigData = () => {
       const configCategorias = storage.load('configuracoes_categorias', []);
       const configProdutos = storage.load('configuracoes_produtos', []);
@@ -664,35 +666,59 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // Transform categorias from objects to string array
       const categoriasNomes = configCategorias.map((cat: any) => cat.nome || cat);
       
-      // ✅ CORREÇÃO: Atualizar sempre para garantir dados corretos
-      setCategorias(categoriasNomes);
-      setProdutos(configProdutos);
-      setPacotes(configPacotes);
+      // ✅ OTIMIZADO: Só atualizar se dados realmente mudaram
+      setCategorias(prev => {
+        if (JSON.stringify(prev) !== JSON.stringify(categoriasNomes)) {
+          return categoriasNomes;
+        }
+        return prev;
+      });
+      
+      setProdutos(prev => {
+        if (JSON.stringify(prev) !== JSON.stringify(configProdutos)) {
+          return configProdutos;
+        }
+        return prev;
+      });
+      
+      setPacotes(prev => {
+        if (JSON.stringify(prev) !== JSON.stringify(configPacotes)) {
+          return configPacotes;
+        }
+        return prev;
+      });
+    };
+
+    // ✅ OTIMIZADO: Debounce para evitar múltiplas execuções
+    const debouncedSyncConfigData = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(syncConfigData, 100);
     };
 
     // Executar na inicialização
     syncConfigData();
     
-    // Escutar eventos de mudança
+    // Escutar eventos de mudança com debounce
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key?.includes('configuracoes_')) {
-        syncConfigData();
+        debouncedSyncConfigData();
       }
     };
     
     // Também adicionar listener personalizado para mudanças locais
     const handleCustomUpdate = () => {
-      syncConfigData();
+      debouncedSyncConfigData();
     };
     
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('configuracoes-updated', handleCustomUpdate);
     
     return () => {
+      clearTimeout(timeoutId);
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('configuracoes-updated', handleCustomUpdate);
     };
-  }, []); // Dependências vazias mas com listeners apropriados
+  }, []); // Dependências vazias com listeners otimizados
 
   // Calculate metrics
   useEffect(() => {
@@ -2077,11 +2103,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         // Verificar se precisa de inicialização
         if (needsInitialization()) {
-          console.log('🔧 Executando inicialização automática do sistema...');
+          // console.log('🔧 Executando inicialização automática do sistema...');
           const result = await initializeApp();
           
           if (mounted && result.success) {
-            console.log('✅ Sistema inicializado com sucesso');
+            // console.log('✅ Sistema inicializado com sucesso');
           }
         }
         

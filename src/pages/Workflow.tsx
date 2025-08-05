@@ -247,20 +247,15 @@ export default function Workflow() {
   }, [sessions, searchTerm]);
 
   // Integração com dados reais da agenda - carregar sessões do mês selecionado
-  useEffect(() => {
-    // ✅ OTIMIZADO: Remover console.log constante
-    // console.log('Loading workflow data for month:', currentMonth);
-    
+  // ✅ OTIMIZADO: useCallback para evitar recreação desnecessária
+  const loadWorkflowData = useCallback(() => {
     const confirmedSessions = getConfirmedSessionsForWorkflow(currentMonth.month, currentMonth.year, getClienteByName, pacotes, produtos);
 
     // Carregar todas as sessões salvas do localStorage
     const allSavedSessions = (() => {
       try {
         const saved = window.localStorage.getItem('workflow_sessions');
-        const result = saved ? JSON.parse(saved) : [];
-        // ✅ OTIMIZADO: Remover console.log constante
-        // console.log('Loaded saved sessions from localStorage:', result.length, 'total sessions');
-        return result;
+        return saved ? JSON.parse(saved) : [];
       } catch (error) {
         console.error("Erro ao carregar sessões salvas", error);
         return [];
@@ -273,16 +268,12 @@ export default function Workflow() {
       return sessionDate.getUTCMonth() + 1 === currentMonth.month && sessionDate.getUTCFullYear() === currentMonth.year;
     });
 
-    console.log('Found existing sessions for current month:', existingSessionsForCurrentMonth.length);
-
     // Mapear agendamentos confirmados, preservando dados editados ou criando novos
     const currentMonthSessions: SessionData[] = confirmedSessions.map(agendamento => {
       const existingSession = existingSessionsForCurrentMonth.find((s: SessionData) => s.id === agendamento.id);
       if (existingSession) {
-        console.log('Using existing session data for:', agendamento.id);
         return existingSession;
       } else {
-        console.log('Creating new session data for:', agendamento.id);
         return {
           ...agendamento,
           status: '',
@@ -291,9 +282,18 @@ export default function Workflow() {
       }
     });
     
-    console.log('Setting sessions for current month:', currentMonthSessions.length, 'sessions');
-    setSessions(currentMonthSessions);
-  }, [currentMonth, getConfirmedSessionsForWorkflow, getClienteByName, pacotes, produtos]);
+    // ✅ OTIMIZADO: Só atualizar se realmente mudou
+    setSessions(prevSessions => {
+      if (JSON.stringify(prevSessions) !== JSON.stringify(currentMonthSessions)) {
+        return currentMonthSessions;
+      }
+      return prevSessions;
+    });
+  }, [currentMonth.month, currentMonth.year, getConfirmedSessionsForWorkflow, getClienteByName, pacotes, produtos]);
+
+  useEffect(() => {
+    loadWorkflowData();
+  }, [loadWorkflowData]);
   const handlePreviousMonth = () => {
     let newMonth = currentMonth.month - 1;
     let newYear = currentMonth.year;

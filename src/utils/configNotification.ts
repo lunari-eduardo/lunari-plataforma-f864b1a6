@@ -25,5 +25,5 @@ export const saveConfigWithNotification = (key: string, data: any) => {
     notifyConfigUpdate('categorias');
   }
   
-  console.log(`✅ Configuração salva e notificada: ${key}`);
+  // console.log(`✅ Configuração salva e notificada: ${key}`);
 };

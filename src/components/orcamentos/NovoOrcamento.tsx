@@ -294,13 +294,15 @@ export default function NovoOrcamento() {
             </CardHeader>
             <CardContent className="space-y-3 rounded-lg bg-neutral-50 pt-3">
               <div>
-                <label className="text-xs font-medium mb-1 block">Cliente Existente</label>
-                <ClientSearchInput 
-                  clientes={clientes} 
-                  selectedClient={clienteSelecionado} 
-                  onSelectClient={setClienteSelecionado} 
-                  placeholder="Selecione um cliente" 
-                />
+                <label htmlFor="budget-client-search" className="text-xs font-medium mb-1 block">Cliente Existente</label>
+                <div id="budget-client-search">
+                  <ClientSearchInput 
+                    clientes={clientes} 
+                    selectedClient={clienteSelecionado}
+                    onSelectClient={setClienteSelecionado} 
+                    placeholder="Selecione um cliente" 
+                  />
+                </div>
               </div>
 
               <div className="text-xs text-neumorphic-textLight text-center">ou</div>
@@ -442,7 +444,9 @@ export default function NovoOrcamento() {
               </CardTitle>
             </CardHeader>
             <CardContent className="rounded-lg bg-neutral-50 pt-3">
+              <label htmlFor="budget-details" className="sr-only">Detalhes do Orçamento</label>
               <Textarea 
+                id="budget-details"
                 placeholder="Descreva os detalhes do serviço..." 
                 value={detalhes} 
                 onChange={e => setDetalhes(e.target.value)} 
@@ -473,8 +477,9 @@ export default function NovoOrcamento() {
               {produtosAdicionais.map(produto => (
                 <div key={produto.id} className="grid grid-cols-1 md:grid-cols-5 gap-2 items-end">
                   <div className="md:col-span-2">
-                    <label className="text-xs font-medium mb-1 block">Nome</label>
+                    <label htmlFor={`budget-product-name-${produto.id}`} className="text-xs font-medium mb-1 block">Nome</label>
                     <Input 
+                      id={`budget-product-name-${produto.id}`}
                       placeholder="Nome do produto" 
                       value={produto.nome} 
                       onChange={e => atualizarProduto(produto.id, 'nome', e.target.value)}
@@ -483,8 +488,9 @@ export default function NovoOrcamento() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-medium mb-1 block">Qtd</label>
+                    <label htmlFor={`budget-product-qty-${produto.id}`} className="text-xs font-medium mb-1 block">Qtd</label>
                     <Input 
+                      id={`budget-product-qty-${produto.id}`}
                       type="number" 
                       min="1" 
                       value={produto.quantidade} 
@@ -494,8 +500,9 @@ export default function NovoOrcamento() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-medium mb-1 block">Preço</label>
+                    <label htmlFor={`budget-product-price-${produto.id}`} className="text-xs font-medium mb-1 block">Preço</label>
                     <Input 
+                      id={`budget-product-price-${produto.id}`}
                       type="text" 
                       value={produto.id.startsWith('auto-') ? 'Incluso' : produto.preco.toFixed(2)}
                       onChange={e => !produto.id.startsWith('auto-') && atualizarProduto(produto.id, 'preco', parseFloat(e.target.value) || 0)}

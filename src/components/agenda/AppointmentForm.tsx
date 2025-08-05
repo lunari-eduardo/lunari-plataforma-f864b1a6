@@ -279,18 +279,18 @@ export default function AppointmentForm({
           
           <TabsContent value="new" className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="newClientName" className="text-xs font-medium">Nome*</Label>
-              <Input id="newClientName" name="newClientName" value={formData.newClientName} onChange={handleChange} placeholder="Nome completo" />
+              <Label htmlFor="new-client-name" className="text-xs font-medium">Nome*</Label>
+              <Input id="new-client-name" name="newClientName" value={formData.newClientName} onChange={handleChange} placeholder="Nome completo" />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="newClientPhone" className="text-xs font-medium">Telefone*</Label>
-              <Input id="newClientPhone" name="newClientPhone" value={formData.newClientPhone} onChange={handleChange} placeholder="+55 (DDD) 00000-0000" />
+              <Label htmlFor="new-client-phone" className="text-xs font-medium">Telefone*</Label>
+              <Input id="new-client-phone" name="newClientPhone" value={formData.newClientPhone} onChange={handleChange} placeholder="+55 (DDD) 00000-0000" />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="newClientEmail" className="text-xs font-medium">E-mail</Label>
-              <Input id="newClientEmail" name="newClientEmail" type="email" value={formData.newClientEmail} onChange={handleChange} placeholder="email@exemplo.com" />
+              <Label htmlFor="new-client-email" className="text-xs font-medium">E-mail</Label>
+              <Input id="new-client-email" name="newClientEmail" type="email" value={formData.newClientEmail} onChange={handleChange} placeholder="email@exemplo.com" />
             </div>
             <p className="text-[11px] text-lunar-accent">
               🆕 Novo cliente será automaticamente adicionado ao CRM
@@ -304,13 +304,15 @@ export default function AppointmentForm({
 
       {!isFromBudgetAppointment && <>
           <div className="space-y-2">
-            <Label htmlFor="description" className="text-xs font-medium">Descrição</Label>
-            <Textarea id="description" name="description" value={formData.description} onChange={handleChange} placeholder="Detalhes da sessão..." className="min-h-[80px]" />
+            <Label htmlFor="appointment-description" className="text-xs font-medium">Descrição</Label>
+            <Textarea id="appointment-description" name="description" value={formData.description} onChange={handleChange} placeholder="Detalhes da sessão..." className="min-h-[80px]" />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="package" className="text-xs font-medium">Pacote</Label>
-            <PackageSearchCombobox value={formData.packageId} onSelect={handlePackageSelect} placeholder="Buscar pacote por nome ou categoria..." />
+            <Label htmlFor="appointment-package" className="text-xs font-medium">Pacote</Label>
+            <div id="appointment-package">
+              <PackageSearchCombobox value={formData.packageId} onSelect={handlePackageSelect} placeholder="Buscar pacote por nome ou categoria..." />
+            </div>
             
             {/* Seção de Produtos Incluídos - aparece quando pacote é selecionado */}
             {formData.packageId && getIncludedProducts().length > 0 && (
@@ -333,14 +335,14 @@ export default function AppointmentForm({
           
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="paidAmount" className="text-xs font-medium">Valor pago</Label>
-              <Input id="paidAmount" name="paidAmount" type="number" min="0" step="0.01" value={formData.paidAmount} onChange={handleChange} placeholder="0.00" />
+              <Label htmlFor="appointment-paid-amount" className="text-xs font-medium">Valor pago</Label>
+              <Input id="appointment-paid-amount" name="paidAmount" type="number" min="0" step="0.01" value={formData.paidAmount} onChange={handleChange} placeholder="0.00" />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="status" className="text-xs font-medium">Status do Agendamento</Label>
+              <Label htmlFor="appointment-status" className="text-xs font-medium">Status do Agendamento</Label>
               <Select value={formData.status} onValueChange={handleStatusSelect}>
-                <SelectTrigger>
+                <SelectTrigger id="appointment-status">
                   <SelectValue placeholder="Selecione o status" />
                 </SelectTrigger>
                 <SelectContent>
