@@ -2033,8 +2033,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     pacotes,
     metricas,
     appointments,
-    // ✅ CORREÇÃO: Expor dados não-filtrados para dashboard
-    allWorkflowItems: workflowItems,
+    // ✅ CORREÇÃO: Dados não-filtrados para dashboard (RAW DATA)
+    allWorkflowItems: workflowItems, // Dados RAW, sem filtros
     workflowItems: workflowItems.filter(item => {
       // Handle ISO date format (YYYY-MM-DD) from new Projeto structure
       const itemDate = new Date(item.data);
