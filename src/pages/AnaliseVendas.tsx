@@ -7,14 +7,11 @@ import { Calendar, TrendingUp, TrendingDown, DollarSign, Users, Target, BarChart
 import { SalesMetricsCards } from '@/components/analise-vendas/SalesMetricsCards';
 import { SalesChartsGrid } from '@/components/analise-vendas/SalesChartsGrid';
 import { SalesFilterBar } from '@/components/analise-vendas/SalesFilterBar';
-
 export default function AnaliseVendas() {
   const [selectedPeriod, setSelectedPeriod] = useState('thisMonth');
   const [selectedService, setSelectedService] = useState('all');
   const [selectedClient, setSelectedClient] = useState('all');
-
-  return (
-    <div className="min-h-screen max-h-screen overflow-y-auto overflow-x-hidden bg-lunar-bg p-1 md:p-4 space-y-4 scrollbar-thin scrollbar-thumb-lunar-accent scrollbar-track-lunar-surface">
+  return <div className="min-h-screen max-h-screen overflow-y-auto overflow-x-hidden bg-lunar-bg p-1 md:p-4 space-y-4 scrollbar-thin scrollbar-thumb-lunar-accent scrollbar-track-lunar-surface">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
@@ -29,22 +26,12 @@ export default function AnaliseVendas() {
             <Download className="h-3 w-3 mr-1" />
             Exportar
           </Button>
-          <Button variant="outline" size="sm" className="text-xs">
-            <Filter className="h-3 w-3 mr-1" />
-            Filtros
-          </Button>
+          
         </div>
       </div>
 
       {/* Filter Bar */}
-      <SalesFilterBar
-        selectedPeriod={selectedPeriod}
-        selectedService={selectedService}
-        selectedClient={selectedClient}
-        onPeriodChange={setSelectedPeriod}
-        onServiceChange={setSelectedService}
-        onClientChange={setSelectedClient}
-      />
+      <SalesFilterBar selectedPeriod={selectedPeriod} selectedService={selectedService} selectedClient={selectedClient} onPeriodChange={setSelectedPeriod} onServiceChange={setSelectedService} onClientChange={setSelectedClient} />
 
       {/* Quick Metrics Cards */}
       <SalesMetricsCards />
@@ -118,6 +105,5 @@ export default function AnaliseVendas() {
           </CardContent>
         </Card>
       </div>
-    </div>
-  );
+    </div>;
 }
