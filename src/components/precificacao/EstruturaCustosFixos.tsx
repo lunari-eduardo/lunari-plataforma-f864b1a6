@@ -234,7 +234,7 @@ export function EstruturaCustosFixos({
             
             {/* Linha de adição rápida */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs text-blue-700">Descrição</Label>
                   <Input placeholder="Ex: Alimentação, Transporte..." value={novoGastoPessoal.descricao} onChange={e => setNovoGastoPessoal(prev => ({
@@ -249,12 +249,12 @@ export function EstruturaCustosFixos({
                   valor: e.target.value
                 }))} className="bg-white" />
                 </div>
-                <div>
-                  <Button onClick={adicionarNovoGastoPessoal} disabled={!novoGastoPessoal.descricao || !novoGastoPessoal.valor} className="h-9 w-full md:w-auto">
-                    <Plus className="h-4 w-4 mr-1" />
-                    Adicionar
-                  </Button>
-                </div>
+              </div>
+              <div className="mt-3">
+                <Button onClick={adicionarNovoGastoPessoal} disabled={!novoGastoPessoal.descricao || !novoGastoPessoal.valor} className="h-9 w-full">
+                  <Plus className="h-4 w-4 mr-1" />
+                  Adicionar
+                </Button>
               </div>
             </div>
 
@@ -327,7 +327,7 @@ export function EstruturaCustosFixos({
             
             {/* Linha de adição rápida */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs text-blue-700">Descrição</Label>
                   <Input placeholder="Ex: Aluguel, Energia, Internet..." value={novoCustoEstudio.descricao} onChange={e => setNovoCustoEstudio(prev => ({
@@ -342,12 +342,12 @@ export function EstruturaCustosFixos({
                   valor: e.target.value
                 }))} className="bg-white" />
                 </div>
-                <div>
-                  <Button onClick={adicionarNovoCustoEstudio} disabled={!novoCustoEstudio.descricao || !novoCustoEstudio.valor} className="h-9 w-full md:w-auto">
-                    <Plus className="h-4 w-4 mr-1" />
-                    Adicionar
-                  </Button>
-                </div>
+              </div>
+              <div className="mt-3">
+                <Button onClick={adicionarNovoCustoEstudio} disabled={!novoCustoEstudio.descricao || !novoCustoEstudio.valor} className="h-9 w-full">
+                  <Plus className="h-4 w-4 mr-1" />
+                  Adicionar
+                </Button>
               </div>
             </div>
 
