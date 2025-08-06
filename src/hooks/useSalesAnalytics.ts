@@ -29,7 +29,7 @@ export function useSalesAnalytics(selectedYear: number, selectedCategory: string
 
   // Calculate main metrics
   const salesMetrics = useMemo((): SalesMetrics => {
-    const totalRevenue = filteredData.reduce((sum, item) => sum + item.total, 0);
+    const totalRevenue = filteredData.reduce((sum, item) => sum + item.valorPago, 0);
     const totalSessions = filteredData.length;
     const averageTicket = totalSessions > 0 ? totalRevenue / totalSessions : 0;
     
@@ -42,7 +42,7 @@ export function useSalesAnalytics(selectedYear: number, selectedCategory: string
     const currentMonth = new Date().getMonth();
     const currentMonthRevenue = filteredData
       .filter(item => item.month === currentMonth)
-      .reduce((sum, item) => sum + item.total, 0);
+      .reduce((sum, item) => sum + item.valorPago, 0);
     
     const monthlyGoal = 50000;
     const monthlyGoalProgress = (currentMonthRevenue / monthlyGoal) * 100;
@@ -82,27 +82,55 @@ export function useSalesAnalytics(selectedYear: number, selectedCategory: string
   const categoryData = useMemo((): CategoryData[] => {
     console.log(`🏷️ [useSalesAnalytics] Calculando distribuição por categoria`);
     
-    const categoryStats = new Map<string, { sessions: number; revenue: number }>();
+    const categoryStats = new Map<string, { 
+      sessions: number; 
+      revenue: number; 
+      totalExtraPhotos: number;
+      packages: Map<string, number>;
+    }>();
 
     filteredData.forEach(item => {
       const category = item.categoria || 'Não categorizado';
-      const current = categoryStats.get(category) || { sessions: 0, revenue: 0 };
+      const current = categoryStats.get(category) || { 
+        sessions: 0, 
+        revenue: 0, 
+        totalExtraPhotos: 0,
+        packages: new Map()
+      };
+      
+      // Contabilizar pacotes
+      const packageName = item.pacote || 'Sem pacote';
+      current.packages.set(packageName, (current.packages.get(packageName) || 0) + 1);
       
       categoryStats.set(category, {
         sessions: current.sessions + 1,
-        revenue: current.revenue + item.total
+        revenue: current.revenue + item.valorPago,
+        totalExtraPhotos: current.totalExtraPhotos + (item.qtdFotosExtra || 0),
+        packages: current.packages
       });
     });
 
     const totalRevenue = Array.from(categoryStats.values())
       .reduce((sum, cat) => sum + cat.revenue, 0);
 
-    const categories = Array.from(categoryStats.entries()).map(([name, stats]) => ({
-      name,
-      sessions: stats.sessions,
-      revenue: stats.revenue,
-      percentage: totalRevenue > 0 ? (stats.revenue / totalRevenue) * 100 : 0
-    })).sort((a, b) => b.revenue - a.revenue);
+    const categories = Array.from(categoryStats.entries()).map(([name, stats]) => {
+      // Calcular distribuição de pacotes
+      const totalPackages = Array.from(stats.packages.values()).reduce((sum, count) => sum + count, 0);
+      const packageDistribution = Array.from(stats.packages.entries()).map(([packageName, count]) => ({
+        packageName,
+        count,
+        percentage: totalPackages > 0 ? (count / totalPackages) * 100 : 0
+      })).sort((a, b) => b.count - a.count);
+
+      return {
+        name,
+        sessions: stats.sessions,
+        revenue: stats.revenue,
+        percentage: totalRevenue > 0 ? (stats.revenue / totalRevenue) * 100 : 0,
+        totalExtraPhotos: stats.totalExtraPhotos,
+        packageDistribution
+      };
+    }).sort((a, b) => b.revenue - a.revenue);
     
     console.log(`🏷️ [useSalesAnalytics] ${categories.length} categorias encontradas`);
     return categories;

@@ -56,4 +56,12 @@ export interface CategoryData {
   sessions: number;
   revenue: number;
   percentage: number;
+  totalExtraPhotos: number;
+  packageDistribution: PackageDistribution[];
+}
+
+export interface PackageDistribution {
+  packageName: string;
+  count: number;
+  percentage: number;
 }

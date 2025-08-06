@@ -126,7 +126,7 @@ export function generateAllMonthsData(year: number, normalizedData: NormalizedWo
       item.year === year && item.month === index
     );
 
-    const revenue = monthData.reduce((sum, item) => sum + item.total, 0);
+    const revenue = monthData.reduce((sum, item) => sum + item.valorPago, 0);
     const sessions = monthData.length;
     const averageTicket = sessions > 0 ? revenue / sessions : 0;
     const extraPhotoRevenue = monthData.reduce((sum, item) => sum + item.valorTotalFotoExtra, 0);
