@@ -513,26 +513,78 @@ export default function Workflow() {
         </div>
 
         {showMetrics && <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 pt-2 pb-3 bg-lunar-bg">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-green-50 p-3 rounded-lg border border-green-200">
-                <div className="text-xs text-green-700 font-medium">Receita</div>
-                <div className="text-lg font-bold text-green-800">{formatCurrency(financials.revenue)}</div>
-                {renderChange(financials.revenue, prevMonthFinancials.revenue)}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <div className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 p-4 rounded-2xl" style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '16px'
+              }}>
+                <div className="text-xs font-medium uppercase tracking-wide mb-2" style={{
+                  color: '#8B6F3E'
+                }}>RECEITA</div>
+                <div className="text-xl font-bold" style={{
+                  color: '#2D7A4F'
+                }}>
+                  {formatCurrency(financials.revenue)}
+                </div>
+                <div className="text-xs mt-1" style={{
+                  color: '#8B6F3E'
+                }}>
+                  {renderChange(financials.revenue, prevMonthFinancials.revenue)}
+                </div>
               </div>
-              <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                <div className="text-xs text-blue-700 font-medium">Previsto</div>
-                <div className="text-lg font-bold text-blue-800">{formatCurrency(financials.forecasted)}</div>
-                {renderChange(financials.forecasted, prevMonthFinancials.forecasted)}
+              <div className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 p-4 rounded-2xl" style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '16px'
+              }}>
+                <div className="text-xs font-medium uppercase tracking-wide mb-2" style={{
+                  color: '#8B6F3E'
+                }}>PREVISTO</div>
+                <div className="text-xl font-bold" style={{
+                  color: '#1E5F99'
+                }}>
+                  {formatCurrency(financials.forecasted)}
+                </div>
+                <div className="text-xs mt-1" style={{
+                  color: '#8B6F3E'
+                }}>
+                  {renderChange(financials.forecasted, prevMonthFinancials.forecasted)}
+                </div>
               </div>
-              <div className="bg-orange-50 p-3 rounded-lg border border-orange-200">
-                <div className="text-xs text-orange-700 font-medium">A Receber</div>
-                <div className="text-lg font-bold text-orange-800">{formatCurrency(financials.outstanding)}</div>
-                {renderChange(financials.outstanding, prevMonthFinancials.outstanding)}
+              <div className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 p-4 rounded-2xl" style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '16px'
+              }}>
+                <div className="text-xs font-medium uppercase tracking-wide mb-2" style={{
+                  color: '#8B6F3E'
+                }}>A RECEBER</div>
+                <div className="text-xl font-bold" style={{
+                  color: '#cfb38a'
+                }}>
+                  {formatCurrency(financials.outstanding)}
+                </div>
+                <div className="text-xs mt-1" style={{
+                  color: '#8B6F3E'
+                }}>
+                  {renderChange(financials.outstanding, prevMonthFinancials.outstanding)}
+                </div>
               </div>
-              <div className="bg-purple-50 p-3 rounded-lg border border-purple-200">
-                <div className="text-xs text-purple-700 font-medium">Sessões</div>
-                <div className="text-lg font-bold text-purple-800">{financials.sessionCount}</div>
-                {renderChange(financials.sessionCount, prevMonthFinancials.sessionCount)}
+              <div className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 p-4 rounded-2xl" style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '16px'
+              }}>
+                <div className="text-xs font-medium uppercase tracking-wide mb-2" style={{
+                  color: '#8B6F3E'
+                }}>SESSÕES</div>
+                <div className="text-xl font-bold" style={{
+                  color: '#8B6F3E'
+                }}>
+                  {financials.sessionCount}
+                </div>
+                <div className="text-xs mt-1" style={{
+                  color: '#8B6F3E'
+                }}>
+                  {renderChange(financials.sessionCount, prevMonthFinancials.sessionCount)}
+                </div>
               </div>
             </div>
           </div>}
