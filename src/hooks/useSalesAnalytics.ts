@@ -1,48 +1,35 @@
 import { useMemo } from 'react';
-import { useUnifiedWorkflowData } from './useUnifiedWorkflowData';
+import { SalesMetrics, MonthlyData, CategoryData, NormalizedWorkflowData } from '@/types/salesAnalytics';
+import { normalizeWorkflowItems, generateAllMonthsData } from '@/utils/salesDataNormalizer';
 
-export interface SalesMetrics {
-  totalRevenue: number;
-  totalSessions: number;
-  averageTicket: number;
-  newClients: number;
-  monthlyGoalProgress: number;
-  conversionRate: number;
-}
-
-export interface MonthlyData {
-  month: string;
-  revenue: number;
-  sessions: number;
-  averageTicket: number;
-  extraPhotoRevenue: number;
-  goal: number;
-}
-
-export interface CategoryData {
-  name: string;
-  sessions: number;
-  revenue: number;
-  percentage: number;
-}
+// Re-export types for backward compatibility
+export type { SalesMetrics, MonthlyData, CategoryData };
 
 export function useSalesAnalytics(selectedYear: number, selectedCategory: string) {
-  const { unifiedWorkflowData } = useUnifiedWorkflowData();
+  console.log(`🔍 [useSalesAnalytics] Iniciando análise para ano ${selectedYear}, categoria: ${selectedCategory}`);
+
+  // Carregar e normalizar dados diretamente do localStorage
+  const normalizedData = useMemo(() => {
+    console.log(`📊 [useSalesAnalytics] Normalizando dados...`);
+    return normalizeWorkflowItems();
+  }, []);
 
   // Filter data by year and category
   const filteredData = useMemo(() => {
-    return unifiedWorkflowData.filter(item => {
-      const itemYear = new Date(item.data).getFullYear();
-      const yearMatch = itemYear === selectedYear;
+    const filtered = normalizedData.filter(item => {
+      const yearMatch = item.year === selectedYear;
       const categoryMatch = selectedCategory === 'all' || item.categoria === selectedCategory;
       
-      return yearMatch && categoryMatch && item.status !== 'Cancelado';
+      return yearMatch && categoryMatch;
     });
-  }, [unifiedWorkflowData, selectedYear, selectedCategory]);
+    
+    console.log(`🔍 [useSalesAnalytics] ${filtered.length} sessões filtradas para ${selectedYear}/${selectedCategory}`);
+    return filtered;
+  }, [normalizedData, selectedYear, selectedCategory]);
 
   // Calculate main metrics
   const salesMetrics = useMemo((): SalesMetrics => {
-    const totalRevenue = filteredData.reduce((sum, item) => sum + (item.total || 0), 0);
+    const totalRevenue = filteredData.reduce((sum, item) => sum + item.total, 0);
     const totalSessions = filteredData.length;
     const averageTicket = totalSessions > 0 ? totalRevenue / totalSessions : 0;
     
@@ -54,14 +41,16 @@ export function useSalesAnalytics(selectedYear: number, selectedCategory: string
     // Calculate goal progress (assuming monthly goal of R$ 50k)
     const currentMonth = new Date().getMonth();
     const currentMonthRevenue = filteredData
-      .filter(item => new Date(item.data).getMonth() === currentMonth)
-      .reduce((sum, item) => sum + (item.total || 0), 0);
+      .filter(item => item.month === currentMonth)
+      .reduce((sum, item) => sum + item.total, 0);
     
     const monthlyGoal = 50000;
     const monthlyGoalProgress = (currentMonthRevenue / monthlyGoal) * 100;
     
     // Simple conversion rate estimate (70% average)
     const conversionRate = 68;
+
+    console.log(`💰 [useSalesAnalytics] Métricas calculadas: R$ ${totalRevenue.toLocaleString()}, ${totalSessions} sessões, ${uniqueClients} clientes únicos`);
 
     return {
       totalRevenue,
@@ -73,45 +62,26 @@ export function useSalesAnalytics(selectedYear: number, selectedCategory: string
     };
   }, [filteredData]);
 
-  // Calculate monthly data
+  // Calculate monthly data - SEMPRE TODOS OS 12 MESES
   const monthlyData = useMemo((): MonthlyData[] => {
-    const months = [
-      'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
-      'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'
-    ];
-
-    return months.map((month, index) => {
-      const monthData = filteredData.filter(item => {
-        const itemMonth = new Date(item.data).getMonth();
-        return itemMonth === index;
-      });
-
-      const revenue = monthData.reduce((sum, item) => sum + (item.total || 0), 0);
-      const sessions = monthData.length;
-      const averageTicket = sessions > 0 ? revenue / sessions : 0;
-      
-      // Calculate extra photo revenue
-      const extraPhotoRevenue = monthData.reduce((sum, item) => 
-        sum + (item.valorTotalFotoExtra || 0), 0
-      );
-
-      // Set monthly goals (progressive growth)
-      const baseGoal = 30000;
-      const goal = baseGoal + (index * 2000);
-
-      return {
-        month,
-        revenue,
-        sessions,
-        averageTicket,
-        extraPhotoRevenue,
-        goal
-      };
-    });
-  }, [filteredData]);
+    console.log(`📅 [useSalesAnalytics] Calculando dados mensais para ${selectedYear}`);
+    
+    const allMonthsData = generateAllMonthsData(selectedYear, filteredData);
+    
+    // Debug: Log resumo dos dados mensais
+    const totalRevenue = allMonthsData.reduce((sum, month) => sum + month.revenue, 0);
+    const totalSessions = allMonthsData.reduce((sum, month) => sum + month.sessions, 0);
+    const monthsWithData = allMonthsData.filter(month => month.sessions > 0).length;
+    
+    console.log(`📊 [useSalesAnalytics] Dados mensais: ${monthsWithData}/12 meses com dados, Total: R$ ${totalRevenue.toLocaleString()}, ${totalSessions} sessões`);
+    
+    return allMonthsData;
+  }, [selectedYear, filteredData]);
 
   // Calculate category distribution
   const categoryData = useMemo((): CategoryData[] => {
+    console.log(`🏷️ [useSalesAnalytics] Calculando distribuição por categoria`);
+    
     const categoryStats = new Map<string, { sessions: number; revenue: number }>();
 
     filteredData.forEach(item => {
@@ -120,48 +90,52 @@ export function useSalesAnalytics(selectedYear: number, selectedCategory: string
       
       categoryStats.set(category, {
         sessions: current.sessions + 1,
-        revenue: current.revenue + (item.total || 0)
+        revenue: current.revenue + item.total
       });
     });
 
     const totalRevenue = Array.from(categoryStats.values())
       .reduce((sum, cat) => sum + cat.revenue, 0);
 
-    return Array.from(categoryStats.entries()).map(([name, stats]) => ({
+    const categories = Array.from(categoryStats.entries()).map(([name, stats]) => ({
       name,
       sessions: stats.sessions,
       revenue: stats.revenue,
       percentage: totalRevenue > 0 ? (stats.revenue / totalRevenue) * 100 : 0
     })).sort((a, b) => b.revenue - a.revenue);
+    
+    console.log(`🏷️ [useSalesAnalytics] ${categories.length} categorias encontradas`);
+    return categories;
   }, [filteredData]);
 
   // Get available years from data
   const availableYears = useMemo(() => {
     const years = new Set<number>();
-    unifiedWorkflowData.forEach(item => {
-      const year = new Date(item.data).getFullYear();
-      if (!isNaN(year)) {
-        years.add(year);
-      }
+    normalizedData.forEach(item => {
+      years.add(item.year);
     });
     
     if (years.size === 0) {
       years.add(new Date().getFullYear());
     }
     
-    return Array.from(years).sort((a, b) => b - a);
-  }, [unifiedWorkflowData]);
+    const sortedYears = Array.from(years).sort((a, b) => b - a);
+    console.log(`📅 [useSalesAnalytics] Anos disponíveis: ${sortedYears.join(', ')}`);
+    return sortedYears;
+  }, [normalizedData]);
 
   // Get available categories
   const availableCategories = useMemo(() => {
     const categories = new Set<string>();
-    unifiedWorkflowData.forEach(item => {
+    normalizedData.forEach(item => {
       if (item.categoria) {
         categories.add(item.categoria);
       }
     });
-    return Array.from(categories).sort();
-  }, [unifiedWorkflowData]);
+    const sortedCategories = Array.from(categories).sort();
+    console.log(`🏷️ [useSalesAnalytics] Categorias disponíveis: ${sortedCategories.join(', ')}`);
+    return sortedCategories;
+  }, [normalizedData]);
 
   return {
     salesMetrics,
