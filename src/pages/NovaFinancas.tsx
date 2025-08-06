@@ -34,12 +34,12 @@ export default function NovaFinancas() {
   const [activeTab, setActiveTab] = useState('lancamentos');
   return <ScrollArea className="h-[calc(100vh-120px)]">
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white bg-lunar-bg pr-4">
-        <div className="p-2 sm:p-4 lg:p-6 space-y-2 sm:space-y-6 bg-lunar-bg py-0 px-0">
+        <div className="p-2 sm:p-4 lg:p-6 space-y-2 sm:space-y-6 bg-lunar-bg py-0">
         {/* Header */}
         
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3 h-10 p-1 text-sm bg-white border border-gray-200 py-0 mx-0 px-0">
+          <TabsList className="grid w-full grid-cols-3 h-10 p-1 text-sm bg-white border border-gray-200 py-0">
             <TabsTrigger value="lancamentos" className="text-sm py-2 data-[state=active]:bg-blue-50 text-stone-700">
               Lançamentos
             </TabsTrigger>
