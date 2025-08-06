@@ -69,7 +69,7 @@ export function SalesChartsGrid() {
   ];
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4">
       {/* Revenue vs Goals Chart */}
       <Card className="border-0 shadow-lg bg-lunar-surface lg:col-span-2">
         <CardHeader className="pb-2">
@@ -79,17 +79,19 @@ export function SalesChartsGrid() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={chartConfig} className="h-[300px]">
+          <ChartContainer config={chartConfig} className="h-[250px] md:h-[300px]">
             <AreaChart data={revenueData}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis 
                 dataKey="month" 
                 stroke="hsl(var(--muted-foreground))"
                 fontSize={11}
+                tick={{ fontSize: 10 }}
               />
               <YAxis 
                 stroke="hsl(var(--muted-foreground))"
                 fontSize={11}
+                tick={{ fontSize: 10 }}
                 tickFormatter={(value) => `R$ ${(value / 1000).toFixed(0)}k`}
               />
               <ChartTooltip 
@@ -127,17 +129,17 @@ export function SalesChartsGrid() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={chartConfig} className="h-[250px]">
+          <ChartContainer config={chartConfig} className="h-[200px] md:h-[250px]">
             <PieChart>
               <Pie
                 data={serviceData}
                 cx="50%"
                 cy="50%"
-                outerRadius={80}
+                outerRadius={60}
                 dataKey="value"
                 label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                 labelLine={false}
-                fontSize={10}
+                fontSize={9}
               >
                 {serviceData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -164,17 +166,19 @@ export function SalesChartsGrid() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={chartConfig} className="h-[250px]">
+          <ChartContainer config={chartConfig} className="h-[200px] md:h-[250px]">
             <BarChart data={conversionData}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis 
                 dataKey="period" 
                 stroke="hsl(var(--muted-foreground))"
                 fontSize={11}
+                tick={{ fontSize: 10 }}
               />
               <YAxis 
                 stroke="hsl(var(--muted-foreground))"
                 fontSize={11}
+                tick={{ fontSize: 10 }}
               />
               <ChartTooltip content={<ChartTooltipContent />} />
               <Bar dataKey="orcamentos" fill="hsl(var(--chart-tertiary))" radius={[2, 2, 0, 0]} />

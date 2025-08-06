@@ -14,7 +14,7 @@ export default function AnaliseVendas() {
   const [selectedClient, setSelectedClient] = useState('all');
 
   return (
-    <div className="h-full overflow-y-auto overflow-x-hidden bg-lunar-bg p-1 md:p-4 space-y-4">
+    <div className="min-h-screen overflow-y-auto overflow-x-hidden bg-lunar-bg p-2 md:p-4 space-y-3 md:space-y-4">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
@@ -53,7 +53,7 @@ export default function AnaliseVendas() {
       <SalesChartsGrid />
 
       {/* Additional Insights */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4">
         <Card className="border-0 shadow-lg bg-lunar-surface">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-lunar-text flex items-center gap-2">
