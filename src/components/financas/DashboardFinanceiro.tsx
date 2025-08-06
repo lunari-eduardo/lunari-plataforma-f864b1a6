@@ -245,6 +245,183 @@ export default function DashboardFinanceiro() {
           </Card>
         </div>
 
+        {/* Gráficos Circulares de Metas */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Meta de Receita */}
+          <Card className="border-0 shadow-lg" style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '16px'
+          }}>
+            <CardHeader className="text-center pb-2">
+              <CardTitle className="text-sm font-medium uppercase tracking-wide" style={{
+                color: '#8B6F3E'
+              }}>META DE RECEITA</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center">
+              <div className="relative">
+                <ResponsiveContainer width={200} height={200}>
+                  <PieChart>
+                    <Pie
+                      data={[
+                        { name: 'Atingido', value: Math.max(0, metasData.receitaAtual) },
+                        { name: 'Restante', value: Math.max(0, metasData.metaReceita - metasData.receitaAtual) }
+                      ]}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      startAngle={90}
+                      endAngle={450}
+                      dataKey="value"
+                      strokeWidth={2}
+                      stroke="#ffffff"
+                    >
+                      <Cell fill="#2D7A4F" />
+                      <Cell fill="#e6dccd" opacity={0.3} />
+                    </Pie>
+                    <text
+                      x="50%"
+                      y="50%"
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      style={{
+                        fontSize: '18px',
+                        fontWeight: 'bold',
+                        fill: '#8B6F3E'
+                      }}
+                    >
+                      {metasData.metaReceita > 0 ? 
+                        `${(metasData.receitaAtual / metasData.metaReceita * 100).toFixed(1)}%` : 
+                        '0%'
+                      }
+                    </text>
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="text-center mt-2">
+                <div className="text-sm text-muted-foreground">
+                  {formatCurrency(metasData.receitaAtual)} / {formatCurrency(metasData.metaReceita)}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Meta de Lucro */}
+          <Card className="border-0 shadow-lg" style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '16px'
+          }}>
+            <CardHeader className="text-center pb-2">
+              <CardTitle className="text-sm font-medium uppercase tracking-wide" style={{
+                color: '#8B6F3E'
+              }}>META DE LUCRO</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center">
+              <div className="relative">
+                <ResponsiveContainer width={200} height={200}>
+                  <PieChart>
+                    <Pie
+                      data={[
+                        { name: 'Atingido', value: Math.max(0, metasData.lucroAtual) },
+                        { name: 'Restante', value: Math.max(0, metasData.metaLucro - metasData.lucroAtual) }
+                      ]}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      startAngle={90}
+                      endAngle={450}
+                      dataKey="value"
+                      strokeWidth={2}
+                      stroke="#ffffff"
+                    >
+                      <Cell fill="#1E5F99" />
+                      <Cell fill="#e6dccd" opacity={0.3} />
+                    </Pie>
+                    <text
+                      x="50%"
+                      y="50%"
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      style={{
+                        fontSize: '18px',
+                        fontWeight: 'bold',
+                        fill: '#8B6F3E'
+                      }}
+                    >
+                      {metasData.metaLucro > 0 ? 
+                        `${(metasData.lucroAtual / metasData.metaLucro * 100).toFixed(1)}%` : 
+                        '0%'
+                      }
+                    </text>
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="text-center mt-2">
+                <div className="text-sm text-muted-foreground">
+                  {formatCurrency(metasData.lucroAtual)} / {formatCurrency(metasData.metaLucro)}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Lucratividade */}
+          <Card className="border-0 shadow-lg" style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '16px'
+          }}>
+            <CardHeader className="text-center pb-2">
+              <CardTitle className="text-sm font-medium uppercase tracking-wide" style={{
+                color: '#8B6F3E'
+              }}>LUCRATIVIDADE</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center">
+              <div className="relative">
+                <ResponsiveContainer width={200} height={200}>
+                  <PieChart>
+                    <Pie
+                      data={[
+                        { name: 'Lucratividade', value: Math.max(0, Math.min(100, lucratividade)) },
+                        { name: 'Restante', value: Math.max(0, 100 - lucratividade) }
+                      ]}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      startAngle={90}
+                      endAngle={450}
+                      dataKey="value"
+                      strokeWidth={2}
+                      stroke="#ffffff"
+                    >
+                      <Cell fill="#cfb38a" />
+                      <Cell fill="#e6dccd" opacity={0.3} />
+                    </Pie>
+                    <text
+                      x="50%"
+                      y="50%"
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      style={{
+                        fontSize: '18px',
+                        fontWeight: 'bold',
+                        fill: '#8B6F3E'
+                      }}
+                    >
+                      {lucratividade.toFixed(1)}%
+                    </text>
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="text-center mt-2">
+                <div className="text-sm text-muted-foreground">
+                  Margem de Lucro Atual
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Gráfico Principal - Receita vs Lucro */}
         <Card className="border-0 shadow-lg" style={{
         backgroundColor: '#ffffff',
@@ -282,18 +459,24 @@ export default function DashboardFinanceiro() {
               }} axisLine={{
                 stroke: '#e6dccd'
               }} />
-                <YAxis tick={{
-                fontSize: 12,
-                fill: '#8B6F3E',
-                fontWeight: 500
-              }} tickLine={{
-                stroke: '#e6dccd'
-              }} axisLine={{
-                stroke: '#e6dccd'
-              }} tickFormatter={value => `R$ ${Number(value).toLocaleString('pt-BR', {
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 0
-              })}`} />
+                <YAxis 
+                  domain={[0, 'dataMax']}
+                  tick={{
+                    fontSize: 12,
+                    fill: '#8B6F3E',
+                    fontWeight: 500
+                  }} 
+                  tickLine={{
+                    stroke: '#e6dccd'
+                  }} 
+                  axisLine={{
+                    stroke: '#e6dccd'
+                  }} 
+                  tickFormatter={value => `R$ ${Number(value).toLocaleString('pt-BR', {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
+                  })}`} 
+                />
                 <Tooltip formatter={(value: number, name: string) => [formatCurrency(value), name === 'lucro' ? 'Lucro' : 'Receita']} labelStyle={{
                 color: '#8B6F3E',
                 fontSize: '12px',
