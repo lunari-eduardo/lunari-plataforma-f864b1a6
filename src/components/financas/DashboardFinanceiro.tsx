@@ -4,10 +4,10 @@ import { formatCurrency } from '@/utils/financialUtils';
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { useDashboardFinanceiro } from '@/hooks/useDashboardFinanceiro';
 
-// Paleta de cores elegantes para gráficos
-const COLORS = ['hsl(var(--chart-primary))', 'hsl(var(--chart-neutral))'];
+// Paleta de cores beige/marrom elegantes
+const COLORS = ['hsl(var(--finance-primary))', 'hsl(var(--finance-secondary))'];
 const EXPENSE_COLORS = [
-  'hsl(var(--chart-primary))', 
+  'hsl(var(--finance-primary))', 
   'hsl(var(--chart-secondary))', 
   'hsl(var(--chart-tertiary))', 
   'hsl(var(--chart-quaternary))', 
@@ -99,13 +99,14 @@ export default function DashboardFinanceiro() {
     value: '12',
     label: 'Dezembro'
   }];
-  return <div className="space-y-6">
-      {/* Nova Barra de Filtros de Período */}
-      <Card className="bg-neutral-50 rounded-lg">
-        <CardHeader className="pb-1 bg-neutral-50 rounded-lg">
-          <CardTitle className="text-base">Filtros de Período</CardTitle>
-        </CardHeader>
-        <CardContent className="bg-neutral-50 rounded-lg">
+  return <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #e6dccd 0%, #f5f1ec 100%)' }}>
+      <div className="p-6 space-y-6">
+        {/* Barra de Filtros de Período - Design elegante */}
+        <Card className="border-0 shadow-lg" style={{ backgroundColor: '#ffffff', borderRadius: '12px' }}>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg font-semibold" style={{ color: '#8B6F3E' }}>Filtros de Período</CardTitle>
+          </CardHeader>
+          <CardContent>
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
               <label className="text-sm font-medium text-muted-foreground block mb-2">
@@ -148,224 +149,194 @@ export default function DashboardFinanceiro() {
         </CardContent>
       </Card>
 
-      {/* Widget 1: KPIs de Alto Nível */}
-      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">RECEITA</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-lg font-bold text-green-600">{formatCurrency(kpisData.totalReceita)}</div>
-          </CardContent>
-        </Card>
+        {/* KPIs Cards - Design elegante */}
+        <div className="grid grid-cols-2 lg:grid-cols-6 gap-6">
+          <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300" style={{ backgroundColor: '#ffffff', borderRadius: '16px' }}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs font-medium uppercase tracking-wide" style={{ color: '#8B6F3E' }}>RECEITA</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-xl font-bold" style={{ color: '#2D7A4F' }}>
+                {formatCurrency(kpisData.totalReceita)}
+              </div>
+              <div className="text-xs mt-1" style={{ color: '#8B6F3E' }}>↗ 12% em comparação ao mês anterior</div>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">PREVISTO</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-lg font-bold text-blue-600">{formatCurrency(kpisData.valorPrevisto)}</div>
-          </CardContent>
-        </Card>
+          <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300" style={{ backgroundColor: '#ffffff', borderRadius: '16px' }}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs font-medium uppercase tracking-wide" style={{ color: '#8B6F3E' }}>PREVISTO</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-xl font-bold" style={{ color: '#1E5F99' }}>
+                {formatCurrency(kpisData.valorPrevisto)}
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">A RECEBER</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-lg font-bold text-orange-600">{formatCurrency(kpisData.aReceber)}</div>
-          </CardContent>
-        </Card>
+          <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300" style={{ backgroundColor: '#ffffff', borderRadius: '16px' }}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs font-medium uppercase tracking-wide" style={{ color: '#8B6F3E' }}>A RECEBER</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-xl font-bold" style={{ color: '#cfb38a' }}>
+                {formatCurrency(kpisData.aReceber)}
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">DESPESAS</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-lg font-bold text-red-600">-{formatCurrency(kpisData.totalDespesas)}</div>
-          </CardContent>
-        </Card>
+          <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300" style={{ backgroundColor: '#ffffff', borderRadius: '16px' }}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs font-medium uppercase tracking-wide" style={{ color: '#8B6F3E' }}>DESPESAS</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-xl font-bold" style={{ color: '#D85A47' }}>
+                -{formatCurrency(kpisData.totalDespesas)}
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">LUCRO</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-lg font-bold text-green-600">{formatCurrency(kpisData.totalLucro)}</div>
-          </CardContent>
-        </Card>
+          <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300" style={{ backgroundColor: '#ffffff', borderRadius: '16px' }}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs font-medium uppercase tracking-wide" style={{ color: '#8B6F3E' }}>LUCRO</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-xl font-bold" style={{ color: '#2D7A4F' }}>
+                {formatCurrency(kpisData.totalLucro)}
+              </div>
+              <div className="text-xs mt-1" style={{ color: '#8B6F3E' }}>↗ 18% em comparação ao mês anterior</div>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">SALDO</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-lg font-bold">{formatCurrency(kpisData.saldoTotal)}</div>
-          </CardContent>
-        </Card>
-      </div>
+          <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300" style={{ backgroundColor: '#ffffff', borderRadius: '16px' }}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs font-medium uppercase tracking-wide" style={{ color: '#8B6F3E' }}>SALDO</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-xl font-bold" style={{ color: '#cfb38a' }}>
+                {formatCurrency(kpisData.saldoTotal)}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-      {/* Widget 2: Acompanhamento de Metas */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card>
+        {/* Gráfico Principal - Receita vs Lucro */}
+        <Card className="border-0 shadow-lg" style={{ backgroundColor: '#ffffff', borderRadius: '16px' }}>
           <CardHeader>
-            <CardTitle className="text-center">META DE RECEITA</CardTitle>
-            <p className="text-center text-sm text-muted-foreground">{formatCurrency(metasData.metaReceita)}</p>
+            <CardTitle className="text-lg font-semibold flex items-center gap-2" style={{ color: '#8B6F3E' }}>
+              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#1E5F99' }}></div>
+              RECEITA
+              <div className="w-3 h-3 rounded-full ml-4" style={{ backgroundColor: '#2D7A4F' }}></div>
+              LUCRO
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={200}>
-              <PieChart>
-                <Pie 
-                  data={dadosGraficoReceita} 
-                  cx="50%" 
-                  cy="50%" 
-                  innerRadius={60} 
-                  outerRadius={80} 
-                  startAngle={90} 
-                  endAngle={450} 
-                  dataKey="value"
-                  strokeWidth={2}
-                  stroke="#FAF8F5"
-                >
-                  <Cell fill="hsl(var(--chart-revenue))" />
-                  <Cell fill="hsl(var(--chart-neutral))" opacity={0.3} />
-                </Pie>
-                <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="fill-foreground">
-                  <tspan x="50%" dy="-0.5em" className="text-lg font-bold">{formatCurrency(metasData.receitaAtual)}</tspan>
-                  <tspan x="50%" dy="1.2em" className="text-sm text-muted-foreground">{percentMetaReceita.toFixed(1)}%</tspan>
-                </text>
-              </PieChart>
+            <ResponsiveContainer width="100%" height={350}>
+              <BarChart data={dadosMensais} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e6dccd" opacity={0.6} />
+                <XAxis 
+                  dataKey="mes" 
+                  tick={{ fontSize: 12, fill: '#8B6F3E', fontWeight: 500 }}
+                  tickLine={{ stroke: '#e6dccd' }}
+                  axisLine={{ stroke: '#e6dccd' }}
+                />
+                <YAxis 
+                  tick={{ fontSize: 12, fill: '#8B6F3E', fontWeight: 500 }}
+                  tickLine={{ stroke: '#e6dccd' }}
+                  axisLine={{ stroke: '#e6dccd' }}
+                  tickFormatter={(value) => `R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
+                />
+                <Tooltip 
+                  formatter={(value: number, name: string) => [
+                    formatCurrency(value), 
+                    name === 'lucro' ? 'Lucro' : 'Receita'
+                  ]} 
+                  labelStyle={{ color: '#8B6F3E', fontSize: '12px', fontWeight: 500 }}
+                  contentStyle={{
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #e6dccd',
+                    borderRadius: '12px',
+                    fontSize: '12px',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
+                  }} 
+                />
+                <Legend wrapperStyle={{ fontSize: '12px', color: '#8B6F3E', fontWeight: 500 }} />
+                <Bar 
+                  dataKey="receita" 
+                  fill="#1E5F99" 
+                  name="Receita"
+                  radius={[6, 6, 0, 0]}
+                  opacity={0.9}
+                />
+                <Bar 
+                  dataKey="lucro" 
+                  fill="#cfb38a" 
+                  name="Lucro"
+                  radius={[6, 6, 0, 0]}
+                  opacity={0.9}
+                />
+              </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        <Card>
+        {/* Fluxo de Caixa - Gráfico de Área */}
+        <Card className="border-0 shadow-lg" style={{ backgroundColor: '#ffffff', borderRadius: '16px' }}>
           <CardHeader>
-            <CardTitle className="text-center">META DE LUCRO</CardTitle>
-            <p className="text-center text-sm text-muted-foreground">{formatCurrency(metasData.metaLucro)}</p>
+            <CardTitle className="text-lg font-semibold" style={{ color: '#8B6F3E' }}>FLUXO DE CAIXA</CardTitle>
+            <p className="text-sm" style={{ color: '#8B6F3E' }}>Análise mensal do ano selecionado</p>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={200}>
-              <PieChart>
-                <Pie 
-                  data={dadosGraficoLucro} 
-                  cx="50%" 
-                  cy="50%" 
-                  innerRadius={60} 
-                  outerRadius={80} 
-                  startAngle={90} 
-                  endAngle={450} 
-                  dataKey="value"
-                  strokeWidth={2}
-                  stroke="#FAF8F5"
-                >
-                  <Cell fill="hsl(var(--chart-profit))" />
-                  <Cell fill="hsl(var(--chart-neutral))" opacity={0.3} />
-                </Pie>
-                <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="fill-foreground">
-                  <tspan x="50%" dy="-0.5em" className="text-lg font-bold">{formatCurrency(metasData.lucroAtual)}</tspan>
-                  <tspan x="50%" dy="1.2em" className="text-sm text-muted-foreground">{percentMetaLucro.toFixed(1)}%</tspan>
-                </text>
-              </PieChart>
+            <ResponsiveContainer width="100%" height={280}>
+              <AreaChart data={dadosMensais} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                <defs>
+                  <linearGradient id="colorArea" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#cfb38a" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#cfb38a" stopOpacity={0.05}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e6dccd" opacity={0.4} />
+                <XAxis 
+                  dataKey="mes" 
+                  tick={{ fontSize: 11, fill: '#8B6F3E', fontWeight: 500 }}
+                  tickLine={{ stroke: '#e6dccd' }}
+                  axisLine={{ stroke: '#e6dccd' }}
+                />
+                <YAxis 
+                  tick={{ fontSize: 11, fill: '#8B6F3E', fontWeight: 500 }}
+                  tickLine={{ stroke: '#e6dccd' }}
+                  axisLine={{ stroke: '#e6dccd' }}
+                  tickFormatter={(value) => `${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
+                />
+                <Tooltip 
+                  formatter={(value: number) => formatCurrency(value)} 
+                  labelStyle={{ color: '#8B6F3E', fontSize: '12px', fontWeight: 500 }}
+                  contentStyle={{
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #e6dccd',
+                    borderRadius: '12px',
+                    fontSize: '12px',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
+                  }} 
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="receita" 
+                  stroke="#cfb38a" 
+                  fillOpacity={1} 
+                  fill="url(#colorArea)"
+                  strokeWidth={3}
+                />
+              </AreaChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        <Card>
+        {/* Despesas por Categoria */}
+        <Card className="border-0 shadow-lg" style={{ backgroundColor: '#ffffff', borderRadius: '16px' }}>
           <CardHeader>
-            <CardTitle className="text-center">LUCRATIVIDADE</CardTitle>
+            <CardTitle className="text-lg font-semibold text-center" style={{ color: '#8B6F3E' }}>DESPESAS POR CATEGORIA</CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={200}>
-              <PieChart>
-                <Pie 
-                  data={dadosGraficoLucratividade} 
-                  cx="50%" 
-                  cy="50%" 
-                  innerRadius={60} 
-                  outerRadius={80} 
-                  startAngle={90} 
-                  endAngle={450} 
-                  dataKey="value"
-                  strokeWidth={2}
-                  stroke="#FAF8F5"
-                >
-                  <Cell fill="hsl(var(--chart-primary))" />
-                  <Cell fill="hsl(var(--chart-neutral))" opacity={0.3} />
-                </Pie>
-                <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="fill-foreground">
-                  <tspan x="50%" className="text-2xl font-bold">{lucratividade.toFixed(1)}%</tspan>
-                </text>
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Widget 3: Fluxo de Caixa (Não Interativo) */}
-      <Card>
-        <CardHeader>
-          <CardTitle>FLUXO DE CAIXA</CardTitle>
-          <p className="text-sm text-muted-foreground">Análise mensal do ano selecionado</p>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={dadosMensais}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E1DFDA" opacity={0.6} />
-              <XAxis 
-                dataKey="mes" 
-                tick={{ fontSize: 11, fill: '#7C7C7C', fontWeight: 500 }}
-                tickLine={{ stroke: '#E1DFDA' }}
-                axisLine={{ stroke: '#E1DFDA' }}
-              />
-              <YAxis 
-                tick={{ fontSize: 11, fill: '#7C7C7C', fontWeight: 500 }}
-                tickLine={{ stroke: '#E1DFDA' }}
-                axisLine={{ stroke: '#E1DFDA' }}
-                tickFormatter={(value) => `R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
-              />
-              <Tooltip 
-                formatter={(value: number, name: string) => [
-                  formatCurrency(value), 
-                  name === 'lucro' ? 'Lucro' : 'Receita'
-                ]} 
-                labelStyle={{ color: '#3A3A3A', fontSize: '12px', fontWeight: 500 }}
-                contentStyle={{
-                  backgroundColor: '#FAF8F5',
-                  border: '1px solid #E1DFDA',
-                  borderRadius: '8px',
-                  fontSize: '12px',
-                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)'
-                }} 
-              />
-              <Legend wrapperStyle={{ fontSize: '12px', color: '#7C7C7C', fontWeight: 500 }} />
-              <Bar 
-                dataKey="receita" 
-                fill="hsl(var(--chart-revenue))" 
-                name="Receita"
-                radius={[4, 4, 0, 0]}
-                opacity={0.9}
-              />
-              <Bar 
-                dataKey="lucro" 
-                fill="hsl(var(--chart-profit))" 
-                name="Lucro"
-                radius={[4, 4, 0, 0]}
-                opacity={0.9}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
-      {/* Widget 4: Composição das Despesas */}
-      <Card>
-        <CardHeader>
-          <CardTitle>COMPOSIÇÃO DAS DESPESAS</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            {mesSelecionado && mesSelecionado !== 'ano-completo' ? `Período: ${getNomeMes(mesSelecionado)} ${anoSelecionado}` : `Período: ${anoSelecionado}`}
-          </p>
-        </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={400}>
             <PieChart>
@@ -376,29 +347,29 @@ export default function DashboardFinanceiro() {
                 innerRadius={80} 
                 outerRadius={150} 
                 dataKey="valor"
-                strokeWidth={2}
-                stroke="#FAF8F5"
-              >
-                {composicaoDespesas.map((entry, index) => (
-                  <Cell 
-                    key={`cell-${index}`} 
-                    fill={EXPENSE_COLORS[index % EXPENSE_COLORS.length]} 
-                    opacity={0.9}
-                  />
-                ))}
-              </Pie>
+                  strokeWidth={3}
+                  stroke="#ffffff"
+                >
+                  {composicaoDespesas.map((entry, index) => (
+                    <Cell 
+                      key={`cell-${index}`} 
+                      fill={EXPENSE_COLORS[index % EXPENSE_COLORS.length]} 
+                      opacity={0.85}
+                    />
+                  ))}
+                </Pie>
               <Tooltip 
                 formatter={(value: number, name: string, props: any) => [
                   formatCurrency(value), 
                   `${props.payload.grupo} (${props.payload.percentual.toFixed(1)}%)`
                 ]} 
-                labelStyle={{ color: '#3A3A3A', fontSize: '12px', fontWeight: 500 }}
+                labelStyle={{ color: '#8B6F3E', fontSize: '12px', fontWeight: 500 }}
                 contentStyle={{
-                  backgroundColor: '#FAF8F5',
-                  border: '1px solid #E1DFDA',
-                  borderRadius: '8px',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #e6dccd',
+                  borderRadius: '12px',
                   fontSize: '12px',
-                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)'
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
                 }} 
               />
               <Legend 
@@ -414,63 +385,45 @@ export default function DashboardFinanceiro() {
             </PieChart>
           </ResponsiveContainer>
         </CardContent>
-      </Card>
+        </Card>
 
-      {/* Widget 5: Evolução de Categoria */}
-      <Card>
-        <CardHeader className="space-y-4">
-          <div className="flex items-center justify-between">
-            <CardTitle>EVOLUÇÃO DE CUSTO POR CATEGORIA</CardTitle>
-            <Select value={categoriaSelecionada} onValueChange={setCategoriaSelecionada}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Gastos por Categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                {categoriasDisponiveis.map(categoria => <SelectItem key={categoria} value={categoria}>
-                    {categoria}
-                  </SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={evolucaoCategoria[categoriaSelecionada] || []}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E1DFDA" opacity={0.6} />
-              <XAxis 
-                dataKey="mes" 
-                tick={{ fontSize: 11, fill: '#7C7C7C', fontWeight: 500 }}
-                tickLine={{ stroke: '#E1DFDA' }}
-                axisLine={{ stroke: '#E1DFDA' }}
-              />
-              <YAxis 
-                tick={{ fontSize: 11, fill: '#7C7C7C', fontWeight: 500 }}
-                tickLine={{ stroke: '#E1DFDA' }}
-                axisLine={{ stroke: '#E1DFDA' }}
-                tickFormatter={(value) => `R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
-              />
-              <Tooltip 
-                formatter={(value: number) => formatCurrency(value)} 
-                labelStyle={{ color: '#3A3A3A', fontSize: '12px', fontWeight: 500 }}
-                contentStyle={{
-                  backgroundColor: '#FAF8F5',
-                  border: '1px solid #E1DFDA',
-                  borderRadius: '8px',
-                  fontSize: '12px',
-                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)'
-                }} 
-              />
-              <Area 
-                type="monotone" 
-                dataKey="valor" 
-                stroke="hsl(var(--chart-secondary))" 
-                fill="hsl(var(--chart-secondary))" 
-                fillOpacity={0.3}
-                strokeWidth={2}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-    </div>;
+        {/* ROI Section - Inspirado na imagem */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Card className="border-0 shadow-lg" style={{ backgroundColor: '#ffffff', borderRadius: '16px' }}>
+            <CardHeader className="text-center">
+              <CardTitle className="text-sm font-medium" style={{ color: '#8B6F3E' }}>ROI</CardTitle>
+            </CardHeader>
+            <CardContent className="text-center">
+              <div className="text-sm" style={{ color: '#8B6F3E' }}>VALOR INVESTIDO</div>
+              <div className="text-2xl font-bold" style={{ color: '#8B6F3E' }}>
+                {formatCurrency(kpisData.totalDespesas * 0.3)}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-lg" style={{ backgroundColor: '#ffffff', borderRadius: '16px' }}>
+            <CardHeader className="text-center">
+              <CardTitle className="text-sm font-medium" style={{ color: '#8B6F3E' }}>RETORNO SOBRE INVESTIMENTO</CardTitle>
+            </CardHeader>
+            <CardContent className="text-center">
+              <div className="text-4xl font-bold" style={{ color: '#cfb38a' }}>
+                {kpisData.totalDespesas > 0 ? ((kpisData.totalReceita / (kpisData.totalDespesas * 0.3)) * 100).toFixed(2) : '0'}%
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-lg" style={{ backgroundColor: '#ffffff', borderRadius: '16px' }}>
+            <CardHeader className="text-center">
+              <CardTitle className="text-sm font-medium" style={{ color: '#8B6F3E' }}>META ANUAL</CardTitle>
+            </CardHeader>
+            <CardContent className="text-center">
+              <div className="text-2xl font-bold" style={{ color: '#2D7A4F' }}>
+                {formatCurrency(metasData.metaReceita * 12)}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
 }

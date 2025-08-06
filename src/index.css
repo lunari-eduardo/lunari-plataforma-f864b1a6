@@ -37,17 +37,22 @@
 
     --radius: 8px;
 
-    /* Paleta elegante para gráficos */
-    --chart-primary: #CBA977;      /* Dourado principal */
-    --chart-secondary: #8B9CAE;    /* Azul acinzentado */
-    --chart-tertiary: #A67C6B;     /* Marrom suave */
-    --chart-quaternary: #9FB5A8;   /* Verde acinzentado */
-    --chart-quinary: #B0A8C1;      /* Roxo suave */
-    --chart-senary: #C4A084;       /* Bege rosado */
-    --chart-revenue: #70B59A;      /* Verde para receitas */
-    --chart-expense: #E89B8A;      /* Coral para despesas */
-    --chart-profit: #6B8DB5;       /* Azul para lucro */
-    --chart-neutral: #9CA3AF;      /* Cinza neutro */
+    /* Paleta elegante beige/marrom para gráficos */
+    --chart-primary: 32 25% 55%;       /* #cfb38a - tom principal */
+    --chart-secondary: 32 25% 45%;     /* tom mais escuro */
+    --chart-tertiary: 32 25% 65%;      /* tom mais claro */
+    --chart-quaternary: 32 25% 75%;    /* tom muito claro */
+    --chart-quinary: 32 25% 35%;       /* tom escuro */
+    --chart-senary: 32 25% 85%;        /* tom muito claro */
+    --chart-revenue: 140 35% 55%;      /* Verde suave para receitas */
+    --chart-expense: 15 55% 65%;       /* Coral para despesas */
+    --chart-profit: 32 25% 55%;        /* Beige para lucro */
+    --chart-neutral: 32 15% 70%;       /* Neutro beige */
+    
+    /* Cores específicas do design */
+    --finance-primary: 32 25% 55%;     /* #cfb38a */
+    --finance-secondary: 32 25% 85%;   /* #e6dccd */
+    --finance-accent: 32 25% 45%;      /* tom mais escuro */
   }
 }
 
