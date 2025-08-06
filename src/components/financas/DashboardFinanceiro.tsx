@@ -487,24 +487,47 @@ export default function DashboardFinanceiro() {
                     maximumFractionDigits: 0
                   })}`} 
                 />
-                <Tooltip formatter={(value: number, name: string) => [formatCurrency(value), name === 'lucro' ? 'Lucro' : 'Receita']} labelStyle={{
-                color: '#8B6F3E',
-                fontSize: '12px',
-                fontWeight: 500
-              }} contentStyle={{
-                backgroundColor: '#ffffff',
-                border: '1px solid #e6dccd',
-                borderRadius: '12px',
-                fontSize: '12px',
-                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
-              }} />
+                <Tooltip 
+                  formatter={(value: number, dataKey: string) => [
+                    formatCurrency(value), 
+                    dataKey === 'lucro' ? 'Lucro' : 'Receita'
+                  ]} 
+                  labelStyle={{
+                    color: '#8B6F3E',
+                    fontSize: '12px',
+                    fontWeight: 500
+                  }} 
+                  contentStyle={{
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #e6dccd',
+                    borderRadius: '12px',
+                    fontSize: '12px',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+                    transition: 'all 0.2s ease'
+                  }}
+                  cursor={{ fill: 'rgba(139, 111, 62, 0.1)' }}
+                />
                 <Legend wrapperStyle={{
-                fontSize: '12px',
-                color: '#8B6F3E',
-                fontWeight: 500
-              }} />
-                <Bar dataKey="receita" fill="#cfb38a" name="Receita" radius={[6, 6, 0, 0]} opacity={0.9} />
-                <Bar dataKey="lucro" fill="#e6dccd" name="Lucro" radius={[6, 6, 0, 0]} opacity={0.9} />
+                  fontSize: '12px',
+                  color: '#8B6F3E',
+                  fontWeight: 500
+                }} />
+                <Bar 
+                  dataKey="receita" 
+                  fill="#cfb38a" 
+                  name="Receita" 
+                  radius={[6, 6, 0, 0]} 
+                  opacity={0.9}
+                  style={{ transition: 'all 0.3s ease' }}
+                />
+                <Bar 
+                  dataKey="lucro" 
+                  fill="#e6dccd" 
+                  name="Lucro" 
+                  radius={[6, 6, 0, 0]} 
+                  opacity={0.9}
+                  style={{ transition: 'all 0.3s ease' }}
+                />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
