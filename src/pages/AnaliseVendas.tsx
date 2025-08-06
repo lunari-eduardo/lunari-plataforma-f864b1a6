@@ -11,7 +11,7 @@ export default function AnaliseVendas() {
   const [selectedPeriod, setSelectedPeriod] = useState('thisMonth');
   const [selectedService, setSelectedService] = useState('all');
   const [selectedClient, setSelectedClient] = useState('all');
-  return <div className="min-h-screen max-h-screen overflow-y-auto overflow-x-hidden bg-lunar-bg p-1 md:p-4 space-y-4 scrollbar-thin scrollbar-thumb-lunar-accent scrollbar-track-lunar-surface">
+  return <div className="min-h-screen overflow-y-auto overflow-x-hidden bg-lunar-bg p-1 md:p-4 space-y-4 scrollbar-thin scrollbar-thumb-lunar-accent scrollbar-track-lunar-surface">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
