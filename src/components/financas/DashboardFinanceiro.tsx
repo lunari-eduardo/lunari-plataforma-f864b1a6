@@ -22,6 +22,7 @@ export default function DashboardFinanceiro() {
     dadosMensais,
     composicaoDespesas,
     evolucaoCategoria,
+    roiData,
     getNomeMes
   } = useDashboardFinanceiro();
 
@@ -606,7 +607,7 @@ export default function DashboardFinanceiro() {
           </CardContent>
         </Card>
 
-        {/* ROI Section - Inspirado na imagem */}
+        {/* ROI Section - Cálculo correto: Lucro / Investimentos */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <Card className="border-0 shadow-lg" style={{
           backgroundColor: '#ffffff',
@@ -624,7 +625,7 @@ export default function DashboardFinanceiro() {
               <div className="text-2xl font-bold" style={{
               color: '#8B6F3E'
             }}>
-                {formatCurrency(kpisData.totalDespesas * 0.3)}
+                {formatCurrency(roiData.totalInvestimento)}
               </div>
             </CardContent>
           </Card>
@@ -642,7 +643,7 @@ export default function DashboardFinanceiro() {
               <div className="text-4xl font-bold" style={{
               color: '#cfb38a'
             }}>
-                {kpisData.totalDespesas > 0 ? (kpisData.totalReceita / (kpisData.totalDespesas * 0.3) * 100).toFixed(2) : '0'}%
+                {roiData.roi.toFixed(1)}%
               </div>
             </CardContent>
           </Card>

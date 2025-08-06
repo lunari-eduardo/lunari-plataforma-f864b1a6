@@ -279,6 +279,23 @@ export function useDashboardFinanceiro() {
     };
   }, [workflowItemsFiltrados, transacoesFiltradas]);
 
+  // ============= CÁLCULOS ESPECÍFICOS PARA ROI =============
+  
+  const roiData = useMemo(() => {
+    // Despesas de investimento (somente)
+    const totalInvestimento = transacoesFiltradas
+      .filter(t => t.status === 'Pago' && t.item?.grupo_principal === 'Investimento')
+      .reduce((sum, t) => sum + t.valor, 0);
+
+    // ROI = (Lucro Total / Despesas de Investimento) * 100
+    const roi = totalInvestimento > 0 ? (kpisData.totalLucro / totalInvestimento) * 100 : 0;
+
+    return {
+      totalInvestimento,
+      roi: Math.max(0, roi) // Garante que não seja negativo
+    };
+  }, [transacoesFiltradas, kpisData.totalLucro]);
+
   // ============= METAS HISTÓRICAS =============
   
   const metasData = useMemo((): MetasData => {
@@ -549,6 +566,7 @@ export function useDashboardFinanceiro() {
     dadosMensais,
     evolucaoCategoria,
     composicaoDespesas,
+    roiData,
     
     // Funções auxiliares
     getNomeMes,
