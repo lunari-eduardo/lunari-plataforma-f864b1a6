@@ -2,16 +2,26 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, TrendingUp, TrendingDown, DollarSign, Users, Target, BarChart3, Filter, Download } from 'lucide-react';
+import { TrendingUp, Target, Download } from 'lucide-react';
 import { SalesMetricsCards } from '@/components/analise-vendas/SalesMetricsCards';
 import { SalesChartsGrid } from '@/components/analise-vendas/SalesChartsGrid';
 import { SalesFilterBar } from '@/components/analise-vendas/SalesFilterBar';
+import { useSalesAnalytics } from '@/hooks/useSalesAnalytics';
+
 export default function AnaliseVendas() {
-  const [selectedPeriod, setSelectedPeriod] = useState('thisMonth');
-  const [selectedService, setSelectedService] = useState('all');
-  const [selectedClient, setSelectedClient] = useState('all');
-  return <div className="min-h-screen overflow-y-auto overflow-x-hidden bg-lunar-bg p-1 md:p-4 space-y-4 scrollbar-thin scrollbar-thumb-lunar-accent scrollbar-track-lunar-surface">
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  
+  const { 
+    salesMetrics, 
+    monthlyData, 
+    categoryData, 
+    availableYears, 
+    availableCategories 
+  } = useSalesAnalytics(selectedYear, selectedCategory);
+
+  return (
+    <div className="min-h-screen overflow-y-auto overflow-x-hidden bg-lunar-bg p-1 md:p-4 space-y-4 scrollbar-thin scrollbar-thumb-lunar-accent scrollbar-track-lunar-surface">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
@@ -26,18 +36,24 @@ export default function AnaliseVendas() {
             <Download className="h-3 w-3 mr-1" />
             Exportar
           </Button>
-          
         </div>
       </div>
 
       {/* Filter Bar */}
-      <SalesFilterBar selectedPeriod={selectedPeriod} selectedService={selectedService} selectedClient={selectedClient} onPeriodChange={setSelectedPeriod} onServiceChange={setSelectedService} onClientChange={setSelectedClient} />
+      <SalesFilterBar 
+        selectedYear={selectedYear}
+        selectedCategory={selectedCategory}
+        availableYears={availableYears}
+        availableCategories={availableCategories}
+        onYearChange={setSelectedYear}
+        onCategoryChange={setSelectedCategory}
+      />
 
       {/* Quick Metrics Cards */}
-      <SalesMetricsCards />
+      <SalesMetricsCards metrics={salesMetrics} />
 
       {/* Charts Grid */}
-      <SalesChartsGrid />
+      <SalesChartsGrid monthlyData={monthlyData} categoryData={categoryData} />
 
       {/* Additional Insights */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -105,5 +121,6 @@ export default function AnaliseVendas() {
           </CardContent>
         </Card>
       </div>
-    </div>;
+    </div>
+  );
 }
