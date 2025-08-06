@@ -271,7 +271,7 @@ export default function DashboardFinanceiro() {
               right: 30,
               left: 20,
               bottom: 20
-            }}>
+            }} barCategoryGap="20%">
                 <CartesianGrid strokeDasharray="3 3" stroke="#e6dccd" opacity={0.6} />
                 <XAxis dataKey="mes" tick={{
                 fontSize: 12,
