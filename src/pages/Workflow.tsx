@@ -590,7 +590,7 @@ export default function Workflow() {
           </div>}
 
         <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 flex items-center justify-between gap-4 pb-3 pt-2 bg-lunar-bg">
-          <div className="flex items-center space-x-2 flex-1 bg-white">
+          <div className="flex items-center space-x-2 flex-1 bg-lunar-bg">
             <div className="relative max-w-xs flex-1 bg-lunar-bg">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input placeholder="Buscar por cliente (sem acentos)..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 h-9 bg-neutral-50" />
