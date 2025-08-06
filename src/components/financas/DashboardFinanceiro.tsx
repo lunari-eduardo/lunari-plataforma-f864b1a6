@@ -255,11 +255,11 @@ export default function DashboardFinanceiro() {
             color: '#8B6F3E'
           }}>
               <div className="w-3 h-3 rounded-full" style={{
-              backgroundColor: '#1E5F99'
+              backgroundColor: '#cfb38a'
             }}></div>
               RECEITA
               <div className="w-3 h-3 rounded-full ml-4" style={{
-              backgroundColor: '#2D7A4F'
+              backgroundColor: '#e6dccd'
             }}></div>
               LUCRO
             </CardTitle>
@@ -310,8 +310,8 @@ export default function DashboardFinanceiro() {
                 color: '#8B6F3E',
                 fontWeight: 500
               }} />
-                <Bar dataKey="receita" fill="#1E5F99" name="Receita" radius={[6, 6, 0, 0]} opacity={0.9} />
-                <Bar dataKey="lucro" fill="#cfb38a" name="Lucro" radius={[6, 6, 0, 0]} opacity={0.9} />
+                <Bar dataKey="receita" fill="#cfb38a" name="Receita" radius={[6, 6, 0, 0]} opacity={0.9} />
+                <Bar dataKey="lucro" fill="#e6dccd" name="Lucro" radius={[6, 6, 0, 0]} opacity={0.9} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
