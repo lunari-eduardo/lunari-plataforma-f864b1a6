@@ -129,7 +129,7 @@ export default function DashboardFinanceiro() {
         </Card>
 
         {/* KPIs Cards - Design elegante */}
-        <div className="grid grid-cols- lg:grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 lg:grid-cols-6 gap-6">
           <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300" style={{
           backgroundColor: '#ffffff',
           borderRadius: '16px'
