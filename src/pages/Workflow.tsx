@@ -393,7 +393,6 @@ export default function Workflow() {
       console.log('Edit session:', id, session);
     }
   }, [sessions]);
-
   const handleAddPayment = useCallback((id: string) => {
     const session = sessions.find(s => s.id === id);
     if (session) {
@@ -492,8 +491,8 @@ export default function Workflow() {
     }
   }, [sortField, sortDirection]);
   return <div className="h-full flex flex-col bg-gray-50">
-      <div className="border-b shadow-sm sticky top-0 z-50 bg-white">
-        <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 flex items-center justify-between pt-3 bg-white">
+      <div className="border-b shadow-sm sticky top-0 z-50 bg-lunar-bg">
+        <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 flex items-center justify-between pt-3 bg-lunar-bg">
           <div className="flex items-center space-x-3">
             <Button variant="outline" size="icon" onClick={handlePreviousMonth} className="h-8 w-8">
               <ChevronLeft className="h-4 w-4" />
@@ -513,7 +512,7 @@ export default function Workflow() {
           </div>
         </div>
 
-        {showMetrics && <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 pt-2 pb-3 bg-white">
+        {showMetrics && <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 pt-2 pb-3 bg-lunar-bg">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-green-50 p-3 rounded-lg border border-green-200">
                 <div className="text-xs text-green-700 font-medium">Receita</div>
