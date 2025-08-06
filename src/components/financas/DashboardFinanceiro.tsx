@@ -14,6 +14,7 @@ const EXPENSE_COLORS = [
   'hsl(var(--chart-quinary))', 
   'hsl(var(--chart-senary))'
 ];
+
 export default function DashboardFinanceiro() {
   const {
     anoSelecionado,
@@ -36,70 +37,26 @@ export default function DashboardFinanceiro() {
   const lucratividade = metasData.receitaAtual > 0 ? metasData.lucroAtual / metasData.receitaAtual * 100 : 0;
   const percentMetaReceita = metasData.metaReceita > 0 ? metasData.receitaAtual / metasData.metaReceita * 100 : 0;
   const percentMetaLucro = metasData.metaLucro > 0 ? metasData.lucroAtual / metasData.metaLucro * 100 : 0;
-  const dadosGraficoReceita = [{
-    name: 'Atingido',
-    value: Math.max(0, metasData.receitaAtual)
-  }, {
-    name: 'Restante',
-    value: Math.max(0, metasData.metaReceita - metasData.receitaAtual)
-  }];
-  const dadosGraficoLucro = [{
-    name: 'Atingido',
-    value: Math.max(0, metasData.lucroAtual)
-  }, {
-    name: 'Restante',
-    value: Math.max(0, metasData.metaLucro - metasData.lucroAtual)
-  }];
-  const dadosGraficoLucratividade = [{
-    name: 'Lucratividade',
-    value: Math.max(0, Math.min(100, lucratividade))
-  }, {
-    name: 'Restante',
-    value: Math.max(0, 100 - lucratividade)
-  }];
 
   // Opções para o seletor de mês
-  const opcoesmes = [{
-    value: 'ano-completo',
-    label: 'Ano Completo'
-  }, {
-    value: '1',
-    label: 'Janeiro'
-  }, {
-    value: '2',
-    label: 'Fevereiro'
-  }, {
-    value: '3',
-    label: 'Março'
-  }, {
-    value: '4',
-    label: 'Abril'
-  }, {
-    value: '5',
-    label: 'Maio'
-  }, {
-    value: '6',
-    label: 'Junho'
-  }, {
-    value: '7',
-    label: 'Julho'
-  }, {
-    value: '8',
-    label: 'Agosto'
-  }, {
-    value: '9',
-    label: 'Setembro'
-  }, {
-    value: '10',
-    label: 'Outubro'
-  }, {
-    value: '11',
-    label: 'Novembro'
-  }, {
-    value: '12',
-    label: 'Dezembro'
-  }];
-  return <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #e6dccd 0%, #f5f1ec 100%)' }}>
+  const opcoesmes = [
+    { value: 'ano-completo', label: 'Ano Completo' },
+    { value: '1', label: 'Janeiro' },
+    { value: '2', label: 'Fevereiro' },
+    { value: '3', label: 'Março' },
+    { value: '4', label: 'Abril' },
+    { value: '5', label: 'Maio' },
+    { value: '6', label: 'Junho' },
+    { value: '7', label: 'Julho' },
+    { value: '8', label: 'Agosto' },
+    { value: '9', label: 'Setembro' },
+    { value: '10', label: 'Outubro' },
+    { value: '11', label: 'Novembro' },
+    { value: '12', label: 'Dezembro' }
+  ];
+
+  return (
+    <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #e6dccd 0%, #f5f1ec 100%)' }}>
       <div className="p-6 space-y-6">
         {/* Barra de Filtros de Período - Design elegante */}
         <Card className="border-0 shadow-lg" style={{ backgroundColor: '#ffffff', borderRadius: '12px' }}>
@@ -107,47 +64,53 @@ export default function DashboardFinanceiro() {
             <CardTitle className="text-lg font-semibold" style={{ color: '#8B6F3E' }}>Filtros de Período</CardTitle>
           </CardHeader>
           <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <label className="text-sm font-medium text-muted-foreground block mb-2">
-                Ano
-              </label>
-              <Select value={anoSelecionado} onValueChange={setAnoSelecionado}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Selecione o ano" />
-                </SelectTrigger>
-                <SelectContent>
-                  {anosDisponiveis.map(ano => <SelectItem key={ano} value={ano.toString()}>
-                      {ano}
-                    </SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1">
+                <label className="text-sm font-medium text-muted-foreground block mb-2">
+                  Ano
+                </label>
+                <Select value={anoSelecionado} onValueChange={setAnoSelecionado}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione o ano" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {anosDisponiveis.map(ano => (
+                      <SelectItem key={ano} value={ano.toString()}>
+                        {ano}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="flex-1">
-              <label className="text-sm font-medium text-muted-foreground block mb-2">
-                Período
-              </label>
-              <Select value={mesSelecionado} onValueChange={setMesSelecionado}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Selecione o período" />
-                </SelectTrigger>
-                <SelectContent>
-                  {opcoesmes.map(opcao => <SelectItem key={opcao.value} value={opcao.value}>
-                      {opcao.label}
-                    </SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
+              <div className="flex-1">
+                <label className="text-sm font-medium text-muted-foreground block mb-2">
+                  Período
+                </label>
+                <Select value={mesSelecionado} onValueChange={setMesSelecionado}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione o período" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {opcoesmes.map(opcao => (
+                      <SelectItem key={opcao.value} value={opcao.value}>
+                        {opcao.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            {mesSelecionado && mesSelecionado !== 'ano-completo' && <div className="flex items-end">
-                <div className="px-3 py-2 bg-primary/10 rounded-lg text-sm font-medium">
-                  Período: {getNomeMes(mesSelecionado)} {anoSelecionado}
+              {mesSelecionado && mesSelecionado !== 'ano-completo' && (
+                <div className="flex items-end">
+                  <div className="px-3 py-2 bg-primary/10 rounded-lg text-sm font-medium">
+                    Período: {getNomeMes(mesSelecionado)} {anoSelecionado}
+                  </div>
                 </div>
-              </div>}
-          </div>
-        </CardContent>
-      </Card>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* KPIs Cards - Design elegante */}
         <div className="grid grid-cols-2 lg:grid-cols-6 gap-6">
@@ -337,16 +300,16 @@ export default function DashboardFinanceiro() {
           <CardHeader>
             <CardTitle className="text-lg font-semibold text-center" style={{ color: '#8B6F3E' }}>DESPESAS POR CATEGORIA</CardTitle>
           </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={400}>
-            <PieChart>
-              <Pie 
-                data={composicaoDespesas} 
-                cx="50%" 
-                cy="50%" 
-                innerRadius={80} 
-                outerRadius={150} 
-                dataKey="valor"
+          <CardContent>
+            <ResponsiveContainer width="100%" height={400}>
+              <PieChart>
+                <Pie 
+                  data={composicaoDespesas} 
+                  cx="50%" 
+                  cy="50%" 
+                  innerRadius={80} 
+                  outerRadius={150} 
+                  dataKey="valor"
                   strokeWidth={3}
                   stroke="#ffffff"
                 >
@@ -358,33 +321,33 @@ export default function DashboardFinanceiro() {
                     />
                   ))}
                 </Pie>
-              <Tooltip 
-                formatter={(value: number, name: string, props: any) => [
-                  formatCurrency(value), 
-                  `${props.payload.grupo} (${props.payload.percentual.toFixed(1)}%)`
-                ]} 
-                labelStyle={{ color: '#8B6F3E', fontSize: '12px', fontWeight: 500 }}
-                contentStyle={{
-                  backgroundColor: '#ffffff',
-                  border: '1px solid #e6dccd',
-                  borderRadius: '12px',
-                  fontSize: '12px',
-                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
-                }} 
-              />
-              <Legend 
-                verticalAlign="bottom" 
-                height={36} 
-                wrapperStyle={{ fontSize: '12px', fontWeight: 500 }}
-                formatter={(value, entry) => (
-                  <span style={{ color: entry.color }}>
-                    {value} ({composicaoDespesas.find(item => item.grupo === value)?.percentual.toFixed(1)}%)
-                  </span>
-                )} 
-              />
-            </PieChart>
-          </ResponsiveContainer>
-        </CardContent>
+                <Tooltip 
+                  formatter={(value: number, name: string, props: any) => [
+                    formatCurrency(value), 
+                    `${props.payload.grupo} (${props.payload.percentual.toFixed(1)}%)`
+                  ]} 
+                  labelStyle={{ color: '#8B6F3E', fontSize: '12px', fontWeight: 500 }}
+                  contentStyle={{
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #e6dccd',
+                    borderRadius: '12px',
+                    fontSize: '12px',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
+                  }} 
+                />
+                <Legend 
+                  verticalAlign="bottom" 
+                  height={36} 
+                  wrapperStyle={{ fontSize: '12px', fontWeight: 500 }}
+                  formatter={(value, entry) => (
+                    <span style={{ color: entry.color }}>
+                      {value} ({composicaoDespesas.find(item => item.grupo === value)?.percentual.toFixed(1)}%)
+                    </span>
+                  )} 
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
         </Card>
 
         {/* ROI Section - Inspirado na imagem */}
