@@ -79,7 +79,7 @@ export function SalesChartsGrid() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={chartConfig} className="h-[300px]">
+          <ChartContainer config={chartConfig} className="h-[200px] sm:h-[250px] lg:h-[300px]">
             <AreaChart data={revenueData}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis 
@@ -127,7 +127,7 @@ export function SalesChartsGrid() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={chartConfig} className="h-[250px]">
+          <ChartContainer config={chartConfig} className="h-[180px] sm:h-[220px] lg:h-[250px]">
             <PieChart>
               <Pie
                 data={serviceData}
@@ -164,7 +164,7 @@ export function SalesChartsGrid() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={chartConfig} className="h-[250px]">
+          <ChartContainer config={chartConfig} className="h-[180px] sm:h-[220px] lg:h-[250px]">
             <BarChart data={conversionData}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis 
@@ -193,7 +193,7 @@ export function SalesChartsGrid() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={chartConfig} className="h-[200px]">
+          <ChartContainer config={chartConfig} className="h-[150px] sm:h-[180px] lg:h-[200px]">
             <LineChart data={monthlyGrowthData}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis 

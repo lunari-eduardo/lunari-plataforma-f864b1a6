@@ -45,7 +45,7 @@ export function SalesMetricsCards() {
     icon: Target,
     description: 'progresso atual'
   }];
-  return <div className="grid grid-cols-0 md:grid-cols-3 lg:grid-cols-6 gap-2 py-2 my-0 px-[34px]">
+  return <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 py-2 my-0 px-2 md:px-4 lg:px-[34px]">
       {metrics.map((metric, index) => {
       const Icon = metric.icon;
       const isPositive = metric.trend === 'up';
