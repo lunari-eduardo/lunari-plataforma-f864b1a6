@@ -657,33 +657,6 @@ export default function DashboardFinanceiro() {
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-lg" style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '16px'
-        }}>
-            <CardHeader className="text-center">
-              <div className="flex items-center justify-between px-4">
-                <CardTitle className="text-sm font-medium" style={{
-                  color: '#8B6F3E'
-                }}>META ANUAL</CardTitle>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={handleExcluirMeta}
-                  className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-                >
-                  <Trash2 className="h-3 w-3" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="text-center">
-              <div className="text-2xl font-bold" style={{
-              color: '#2D7A4F'
-            }}>
-                {formatCurrency(metasData.metaReceita * 12)}
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>;
