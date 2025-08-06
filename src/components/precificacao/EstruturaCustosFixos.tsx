@@ -28,12 +28,21 @@ export function EstruturaCustosFixos({
   const [percentualProLabore, setPercentualProLabore] = useState(30);
   const [custosEstudio, setCustosEstudio] = useState<GastoItem[]>([]);
   const [equipamentos, setEquipamentos] = useState<Equipamento[]>([]);
-  
+
   // Estados para linhas de adição rápida
-  const [novoGastoPessoal, setNovoGastoPessoal] = useState({ descricao: '', valor: '' });
-  const [novoCustoEstudio, setNovoCustoEstudio] = useState({ descricao: '', valor: '' });
+  const [novoGastoPessoal, setNovoGastoPessoal] = useState({
+    descricao: '',
+    valor: ''
+  });
+  const [novoCustoEstudio, setNovoCustoEstudio] = useState({
+    descricao: '',
+    valor: ''
+  });
   const [novoEquipamento, setNovoEquipamento] = useState({
-    nome: '', valorPago: '', dataCompra: '', vidaUtil: '5'
+    nome: '',
+    valorPago: '',
+    dataCompra: '',
+    vidaUtil: '5'
   });
 
   // Carregar dados salvos
@@ -141,10 +150,12 @@ export function EstruturaCustosFixos({
         descricao: novoGastoPessoal.descricao,
         valor: parseFloat(novoGastoPessoal.valor) || 0
       }]);
-      setNovoGastoPessoal({ descricao: '', valor: '' });
+      setNovoGastoPessoal({
+        descricao: '',
+        valor: ''
+      });
     }
   };
-
   const adicionarNovoCustoEstudio = () => {
     if (novoCustoEstudio.descricao && novoCustoEstudio.valor) {
       setCustosEstudio(prev => [...prev, {
@@ -152,10 +163,12 @@ export function EstruturaCustosFixos({
         descricao: novoCustoEstudio.descricao,
         valor: parseFloat(novoCustoEstudio.valor) || 0
       }]);
-      setNovoCustoEstudio({ descricao: '', valor: '' });
+      setNovoCustoEstudio({
+        descricao: '',
+        valor: ''
+      });
     }
   };
-
   const adicionarNovoEquipamento = () => {
     if (novoEquipamento.nome && novoEquipamento.valorPago) {
       setEquipamentos(prev => [...prev, {
@@ -165,7 +178,12 @@ export function EstruturaCustosFixos({
         dataCompra: novoEquipamento.dataCompra || new Date().toISOString().split('T')[0],
         vidaUtil: parseInt(novoEquipamento.vidaUtil) || 5
       }]);
-      setNovoEquipamento({ nome: '', valorPago: '', dataCompra: '', vidaUtil: '5' });
+      setNovoEquipamento({
+        nome: '',
+        valorPago: '',
+        dataCompra: '',
+        vidaUtil: '5'
+      });
     }
   };
   return <Card>
@@ -219,31 +237,20 @@ export function EstruturaCustosFixos({
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
                 <div>
                   <Label className="text-xs text-blue-700">Descrição</Label>
-                  <Input 
-                    placeholder="Ex: Alimentação, Transporte..." 
-                    value={novoGastoPessoal.descricao} 
-                    onChange={e => setNovoGastoPessoal(prev => ({...prev, descricao: e.target.value}))} 
-                    className="bg-white"
-                  />
+                  <Input placeholder="Ex: Alimentação, Transporte..." value={novoGastoPessoal.descricao} onChange={e => setNovoGastoPessoal(prev => ({
+                  ...prev,
+                  descricao: e.target.value
+                }))} className="bg-white" />
                 </div>
                 <div>
                   <Label className="text-xs text-blue-700">Valor</Label>
-                  <Input 
-                    type="number" 
-                    min="0" 
-                    step="0.01" 
-                    placeholder="0,00" 
-                    value={novoGastoPessoal.valor} 
-                    onChange={e => setNovoGastoPessoal(prev => ({...prev, valor: e.target.value}))} 
-                    className="bg-white"
-                  />
+                  <Input type="number" min="0" step="0.01" placeholder="0,00" value={novoGastoPessoal.valor} onChange={e => setNovoGastoPessoal(prev => ({
+                  ...prev,
+                  valor: e.target.value
+                }))} className="bg-white" />
                 </div>
                 <div>
-                  <Button 
-                    onClick={adicionarNovoGastoPessoal} 
-                    disabled={!novoGastoPessoal.descricao || !novoGastoPessoal.valor}
-                    className="h-9 w-full md:w-auto"
-                  >
+                  <Button onClick={adicionarNovoGastoPessoal} disabled={!novoGastoPessoal.descricao || !novoGastoPessoal.valor} className="h-9 w-full md:w-auto">
                     <Plus className="h-4 w-4 mr-1" />
                     Adicionar
                   </Button>
@@ -323,31 +330,20 @@ export function EstruturaCustosFixos({
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
                 <div>
                   <Label className="text-xs text-blue-700">Descrição</Label>
-                  <Input 
-                    placeholder="Ex: Aluguel, Energia, Internet..." 
-                    value={novoCustoEstudio.descricao} 
-                    onChange={e => setNovoCustoEstudio(prev => ({...prev, descricao: e.target.value}))} 
-                    className="bg-white"
-                  />
+                  <Input placeholder="Ex: Aluguel, Energia, Internet..." value={novoCustoEstudio.descricao} onChange={e => setNovoCustoEstudio(prev => ({
+                  ...prev,
+                  descricao: e.target.value
+                }))} className="bg-white" />
                 </div>
                 <div>
                   <Label className="text-xs text-blue-700">Valor</Label>
-                  <Input 
-                    type="number" 
-                    min="0" 
-                    step="0.01" 
-                    placeholder="0,00" 
-                    value={novoCustoEstudio.valor} 
-                    onChange={e => setNovoCustoEstudio(prev => ({...prev, valor: e.target.value}))} 
-                    className="bg-white"
-                  />
+                  <Input type="number" min="0" step="0.01" placeholder="0,00" value={novoCustoEstudio.valor} onChange={e => setNovoCustoEstudio(prev => ({
+                  ...prev,
+                  valor: e.target.value
+                }))} className="bg-white" />
                 </div>
                 <div>
-                  <Button 
-                    onClick={adicionarNovoCustoEstudio} 
-                    disabled={!novoCustoEstudio.descricao || !novoCustoEstudio.valor}
-                    className="h-9 w-full md:w-auto"
-                  >
+                  <Button onClick={adicionarNovoCustoEstudio} disabled={!novoCustoEstudio.descricao || !novoCustoEstudio.valor} className="h-9 w-full md:w-auto">
                     <Plus className="h-4 w-4 mr-1" />
                     Adicionar
                   </Button>
@@ -386,9 +382,9 @@ export function EstruturaCustosFixos({
           {/* Equipamentos */}
           <TabsContent value="equipamentos" className="space-y-4">
             <div className="flex justify-between items-center">
-              <h3 className="font-medium text-sm">Equipamentos</h3>
+              <h3 className="text-sm font-medium">Equipamentos</h3>
               <div className="flex items-center gap-4">
-                <span className="text-green-600 font-medium text-xs">
+                <span className="text-green-600 text-xs font-normal text-center">
                   Depreciação Mensal: R$ {totalDepreciacaoMensal.toFixed(2)}
                 </span>
                 <Button onClick={adicionarEquipamento} size="sm" className="text-xs">
@@ -403,57 +399,40 @@ export function EstruturaCustosFixos({
               <div className="grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
                 <div>
                   <Label className="text-xs text-blue-700">Nome</Label>
-                  <Input 
-                    placeholder="Ex: Câmera Canon..." 
-                    value={novoEquipamento.nome} 
-                    onChange={e => setNovoEquipamento(prev => ({...prev, nome: e.target.value}))} 
-                    className="bg-white"
-                  />
+                  <Input placeholder="Ex: Câmera Canon..." value={novoEquipamento.nome} onChange={e => setNovoEquipamento(prev => ({
+                  ...prev,
+                  nome: e.target.value
+                }))} className="bg-white" />
                 </div>
                 <div>
                   <Label className="text-xs text-blue-700">Valor Pago</Label>
-                  <Input 
-                    type="number" 
-                    min="0" 
-                    step="0.01" 
-                    placeholder="0,00" 
-                    value={novoEquipamento.valorPago} 
-                    onChange={e => setNovoEquipamento(prev => ({...prev, valorPago: e.target.value}))} 
-                    className="bg-white"
-                  />
+                  <Input type="number" min="0" step="0.01" placeholder="0,00" value={novoEquipamento.valorPago} onChange={e => setNovoEquipamento(prev => ({
+                  ...prev,
+                  valorPago: e.target.value
+                }))} className="bg-white" />
                 </div>
                 <div>
                   <Label className="text-xs text-blue-700">Data da Compra</Label>
-                  <Input 
-                    type="date" 
-                    value={novoEquipamento.dataCompra} 
-                    onChange={e => setNovoEquipamento(prev => ({...prev, dataCompra: e.target.value}))} 
-                    className="bg-white"
-                  />
+                  <Input type="date" value={novoEquipamento.dataCompra} onChange={e => setNovoEquipamento(prev => ({
+                  ...prev,
+                  dataCompra: e.target.value
+                }))} className="bg-white" />
                 </div>
                 <div>
                   <Label className="text-xs text-blue-700">Vida Útil (Anos)</Label>
-                  <Input 
-                    type="number" 
-                    min="1" 
-                    value={novoEquipamento.vidaUtil} 
-                    onChange={e => setNovoEquipamento(prev => ({...prev, vidaUtil: e.target.value}))} 
-                    className="bg-white"
-                  />
+                  <Input type="number" min="1" value={novoEquipamento.vidaUtil} onChange={e => setNovoEquipamento(prev => ({
+                  ...prev,
+                  vidaUtil: e.target.value
+                }))} className="bg-white" />
                 </div>
                 <div>
                   <Label className="text-xs text-blue-700">Depreciação Mensal</Label>
                   <div className="text-xs text-green-600 font-medium p-2 bg-white rounded border">
-                    R$ {novoEquipamento.valorPago && novoEquipamento.vidaUtil ? 
-                      (parseFloat(novoEquipamento.valorPago) / (parseInt(novoEquipamento.vidaUtil) * 12)).toFixed(2) : '0,00'}
+                    R$ {novoEquipamento.valorPago && novoEquipamento.vidaUtil ? (parseFloat(novoEquipamento.valorPago) / (parseInt(novoEquipamento.vidaUtil) * 12)).toFixed(2) : '0,00'}
                   </div>
                 </div>
                 <div>
-                  <Button 
-                    onClick={adicionarNovoEquipamento} 
-                    disabled={!novoEquipamento.nome || !novoEquipamento.valorPago}
-                    className="h-9 w-full"
-                  >
+                  <Button onClick={adicionarNovoEquipamento} disabled={!novoEquipamento.nome || !novoEquipamento.valorPago} className="h-9 w-full">
                     <Plus className="h-4 w-4 mr-1" />
                     Adicionar
                   </Button>
