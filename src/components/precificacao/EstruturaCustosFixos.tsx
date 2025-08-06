@@ -28,6 +28,13 @@ export function EstruturaCustosFixos({
   const [percentualProLabore, setPercentualProLabore] = useState(30);
   const [custosEstudio, setCustosEstudio] = useState<GastoItem[]>([]);
   const [equipamentos, setEquipamentos] = useState<Equipamento[]>([]);
+  
+  // Estados para linhas de adição rápida
+  const [novoGastoPessoal, setNovoGastoPessoal] = useState({ descricao: '', valor: '' });
+  const [novoCustoEstudio, setNovoCustoEstudio] = useState({ descricao: '', valor: '' });
+  const [novoEquipamento, setNovoEquipamento] = useState({
+    nome: '', valorPago: '', dataCompra: '', vidaUtil: '5'
+  });
 
   // Carregar dados salvos
   useEffect(() => {
@@ -125,6 +132,66 @@ export function EstruturaCustosFixos({
   const removerEquipamento = (id: string) => {
     setEquipamentos(equipamentos.filter(eq => eq.id !== id));
   };
+
+  // Funções para linhas de adição rápida
+  const handleNovoGastoPessoalChange = (campo: string, valor: string) => {
+    setNovoGastoPessoal(prev => ({ ...prev, [campo]: valor }));
+    
+    // Auto-criar se algum campo tiver valor
+    if (valor && (campo === 'descricao' || campo === 'valor')) {
+      const valorNum = campo === 'valor' ? parseFloat(valor) || 0 : 0;
+      const desc = campo === 'descricao' ? valor : novoGastoPessoal.descricao;
+      
+      if ((desc && valorNum > 0) || (desc && campo === 'descricao')) {
+        setGastosPessoais(prev => [...prev, {
+          id: Date.now().toString(),
+          descricao: desc,
+          valor: valorNum
+        }]);
+        setNovoGastoPessoal({ descricao: '', valor: '' });
+      }
+    }
+  };
+
+  const handleNovoCustoEstudioChange = (campo: string, valor: string) => {
+    setNovoCustoEstudio(prev => ({ ...prev, [campo]: valor }));
+    
+    // Auto-criar se algum campo tiver valor
+    if (valor && (campo === 'descricao' || campo === 'valor')) {
+      const valorNum = campo === 'valor' ? parseFloat(valor) || 0 : 0;
+      const desc = campo === 'descricao' ? valor : novoCustoEstudio.descricao;
+      
+      if ((desc && valorNum > 0) || (desc && campo === 'descricao')) {
+        setCustosEstudio(prev => [...prev, {
+          id: Date.now().toString(),
+          descricao: desc,
+          valor: valorNum
+        }]);
+        setNovoCustoEstudio({ descricao: '', valor: '' });
+      }
+    }
+  };
+
+  const handleNovoEquipamentoChange = (campo: string, valor: string) => {
+    setNovoEquipamento(prev => ({ ...prev, [campo]: valor }));
+    
+    // Auto-criar se algum campo obrigatório tiver valor
+    if (valor && (campo === 'nome' || campo === 'valorPago')) {
+      const valorNum = campo === 'valorPago' ? parseFloat(valor) || 0 : parseFloat(novoEquipamento.valorPago) || 0;
+      const nome = campo === 'nome' ? valor : novoEquipamento.nome;
+      
+      if (nome && valorNum > 0) {
+        setEquipamentos(prev => [...prev, {
+          id: Date.now().toString(),
+          nome: nome,
+          valorPago: valorNum,
+          dataCompra: novoEquipamento.dataCompra || new Date().toISOString().split('T')[0],
+          vidaUtil: parseInt(novoEquipamento.vidaUtil) || 5
+        }]);
+        setNovoEquipamento({ nome: '', valorPago: '', dataCompra: '', vidaUtil: '5' });
+      }
+    }
+  };
   return <Card>
       <CardHeader className="bg-gray-50">
         <div className="flex justify-between items-center">
@@ -194,6 +261,32 @@ export function EstruturaCustosFixos({
                         </Button>
                       </td>
                     </tr>)}
+                  
+                  {/* Linha de adição rápida */}
+                  <tr className="border-b border-gray-200 bg-gray-50/50">
+                    <td className="pr-4 py-1">
+                      <Input 
+                        placeholder="Digite para adicionar novo gasto..." 
+                        value={novoGastoPessoal.descricao} 
+                        onChange={e => handleNovoGastoPessoalChange('descricao', e.target.value)} 
+                        className="border-0 shadow-none focus-visible:ring-1 focus-visible:ring-offset-0 bg-transparent placeholder:text-gray-400" 
+                      />
+                    </td>
+                    <td className="pr-4 py-1">
+                      <Input 
+                        type="number" 
+                        min="0" 
+                        step="0.01" 
+                        placeholder="0,00" 
+                        value={novoGastoPessoal.valor} 
+                        onChange={e => handleNovoGastoPessoalChange('valor', e.target.value)} 
+                        className="border-0 shadow-none focus-visible:ring-1 focus-visible:ring-offset-0 bg-transparent placeholder:text-gray-400" 
+                      />
+                    </td>
+                    <td className="py-3">
+                      <div className="w-8"></div>
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>
@@ -261,6 +354,32 @@ export function EstruturaCustosFixos({
                         </Button>
                       </td>
                     </tr>)}
+                  
+                  {/* Linha de adição rápida */}
+                  <tr className="border-b border-gray-200 bg-gray-50/50">
+                    <td className="pr-4 py-1">
+                      <Input 
+                        placeholder="Digite para adicionar novo custo..." 
+                        value={novoCustoEstudio.descricao} 
+                        onChange={e => handleNovoCustoEstudioChange('descricao', e.target.value)} 
+                        className="border-0 shadow-none focus-visible:ring-1 focus-visible:ring-offset-0 bg-transparent placeholder:text-gray-400" 
+                      />
+                    </td>
+                    <td className="pr-4 py-1">
+                      <Input 
+                        type="number" 
+                        min="0" 
+                        step="0.01" 
+                        placeholder="0,00" 
+                        value={novoCustoEstudio.valor} 
+                        onChange={e => handleNovoCustoEstudioChange('valor', e.target.value)} 
+                        className="border-0 shadow-none focus-visible:ring-1 focus-visible:ring-offset-0 bg-transparent placeholder:text-gray-400" 
+                      />
+                    </td>
+                    <td className="py-3">
+                      <div className="w-8"></div>
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>
@@ -310,6 +429,58 @@ export function EstruturaCustosFixos({
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>)}
+                
+                {/* Linha de adição rápida - Desktop */}
+                <div className="grid grid-cols-6 gap-3 items-end border-t border-gray-200 pt-3 mt-3 bg-gray-50/50 p-3 rounded-lg">
+                  <div>
+                    <Label className="text-xs text-gray-500">Nome</Label>
+                    <Input 
+                      placeholder="Digite para adicionar..." 
+                      value={novoEquipamento.nome} 
+                      onChange={e => handleNovoEquipamentoChange('nome', e.target.value)} 
+                      className="bg-transparent placeholder:text-gray-400"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-gray-500">Valor Pago</Label>
+                    <Input 
+                      type="number" 
+                      min="0" 
+                      step="0.01" 
+                      placeholder="0,00" 
+                      value={novoEquipamento.valorPago} 
+                      onChange={e => handleNovoEquipamentoChange('valorPago', e.target.value)}
+                      className="bg-transparent placeholder:text-gray-400"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-gray-500">Data da Compra</Label>
+                    <Input 
+                      type="date" 
+                      value={novoEquipamento.dataCompra} 
+                      onChange={e => handleNovoEquipamentoChange('dataCompra', e.target.value)}
+                      className="bg-transparent"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-gray-500">Vida Útil (Anos)</Label>
+                    <Input 
+                      type="number" 
+                      min="1" 
+                      value={novoEquipamento.vidaUtil} 
+                      onChange={e => handleNovoEquipamentoChange('vidaUtil', e.target.value)}
+                      className="bg-transparent"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-gray-500">Depreciação</Label>
+                    <div className="text-xs text-gray-400 p-2">
+                      R$ {novoEquipamento.valorPago && novoEquipamento.vidaUtil ? 
+                        (parseFloat(novoEquipamento.valorPago) / (parseInt(novoEquipamento.vidaUtil) * 12)).toFixed(2) : '0,00'}
+                    </div>
+                  </div>
+                  <div className="w-8"></div>
+                </div>
               </div>
               
               {/* Mobile - Cards */}
@@ -352,6 +523,66 @@ export function EstruturaCustosFixos({
                       </div>
                     </div>
                   </Card>)}
+                
+                {/* Card de adição rápida - Mobile */}
+                <Card className="p-4 px-[10px] py-[7px] bg-gray-50/50 border-dashed border-2 border-gray-300">
+                  <div className="space-y-3">
+                    <div>
+                      <Label className="text-xs text-gray-500">Nome do Equipamento</Label>
+                      <Input 
+                        placeholder="Digite para adicionar novo equipamento..." 
+                        value={novoEquipamento.nome} 
+                        onChange={e => handleNovoEquipamentoChange('nome', e.target.value)}
+                        className="bg-transparent placeholder:text-gray-400"
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs text-gray-500">Valor Pago</Label>
+                        <Input 
+                          type="number" 
+                          min="0" 
+                          step="0.01" 
+                          placeholder="0,00" 
+                          value={novoEquipamento.valorPago} 
+                          onChange={e => handleNovoEquipamentoChange('valorPago', e.target.value)}
+                          className="bg-transparent placeholder:text-gray-400"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-gray-500">Vida Útil (Anos)</Label>
+                        <Input 
+                          type="number" 
+                          min="1" 
+                          value={novoEquipamento.vidaUtil} 
+                          onChange={e => handleNovoEquipamentoChange('vidaUtil', e.target.value)}
+                          className="bg-transparent"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <Label className="text-xs text-gray-500">Data da Compra</Label>
+                      <Input 
+                        type="date" 
+                        value={novoEquipamento.dataCompra} 
+                        onChange={e => handleNovoEquipamentoChange('dataCompra', e.target.value)}
+                        className="bg-transparent"
+                      />
+                    </div>
+                    
+                    <div className="bg-gray-100 p-3 rounded-lg">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-gray-500">Depreciação Mensal:</span>
+                        <span className="text-sm text-gray-600 font-medium">
+                          R$ {novoEquipamento.valorPago && novoEquipamento.vidaUtil ? 
+                            (parseFloat(novoEquipamento.valorPago) / (parseInt(novoEquipamento.vidaUtil) * 12)).toFixed(2) : '0,00'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
               </div>
             </div>
           </TabsContent>
