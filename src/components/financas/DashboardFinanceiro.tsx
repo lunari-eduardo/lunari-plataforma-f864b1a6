@@ -149,40 +149,58 @@ export default function DashboardFinanceiro() {
       </Card>
 
       {/* Widget 1: KPIs de Alto Nível */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">TOTAL RECEITA</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">RECEITA</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-xl font-bold">{formatCurrency(kpisData.totalReceita)}</div>
+            <div className="text-lg font-bold text-green-600">{formatCurrency(kpisData.totalReceita)}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">TOTAL DESPESAS</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">PREVISTO</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-xl font-bold text-destructive">-{formatCurrency(kpisData.totalDespesas)}</div>
+            <div className="text-lg font-bold text-blue-600">{formatCurrency(kpisData.valorPrevisto)}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">TOTAL LUCRO</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">A RECEBER</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-xl font-bold text-green-600">{formatCurrency(kpisData.totalLucro)}</div>
+            <div className="text-lg font-bold text-orange-600">{formatCurrency(kpisData.aReceber)}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">SALDO TOTAL</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">DESPESAS</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-xl font-bold">{formatCurrency(kpisData.saldoTotal)}</div>
+            <div className="text-lg font-bold text-red-600">-{formatCurrency(kpisData.totalDespesas)}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">LUCRO</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-lg font-bold text-green-600">{formatCurrency(kpisData.totalLucro)}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">SALDO</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-lg font-bold">{formatCurrency(kpisData.saldoTotal)}</div>
           </CardContent>
         </Card>
       </div>

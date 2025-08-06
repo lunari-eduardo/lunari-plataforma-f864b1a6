@@ -8,6 +8,8 @@ import { storage, STORAGE_KEYS } from '@/utils/localStorage';
 // Interfaces específicas para o Dashboard
 interface KPIsData {
   totalReceita: number;
+  valorPrevisto: number;
+  aReceber: number;
   totalDespesas: number;
   totalLucro: number;
   saldoTotal: number;
@@ -51,12 +53,71 @@ interface HistoricalGoal {
 }
 
 export function useDashboardFinanceiro() {
-  // ============= OBTER DADOS DAS FONTES PRIMÁRIAS =============
+  // ============= FUNÇÕES DE TRANSFORMAÇÃO DE DADOS =============
   
-  const { workflowItems } = useAppContext();
-  const { itensFinanceiros } = useNovoFinancas();
+  // Função para converter valores monetários formatados para números
+  const parseMonetaryValue = (value: string | number): number => {
+    if (typeof value === 'number') return value;
+    if (!value || typeof value !== 'string') return 0;
+    
+    // Remove "R$", espaços, pontos (milhares) e substitui vírgula por ponto
+    const cleanValue = value
+      .replace(/R\$\s*/g, '')
+      .replace(/\./g, '')
+      .replace(',', '.')
+      .trim();
+    
+    const parsed = parseFloat(cleanValue);
+    return isNaN(parsed) ? 0 : parsed;
+  };
 
-  // Carregar transações financeiras diretamente do FinancialEngine
+  // ============= CARREGAMENTO DE DADOS DO LOCALSTORAGE =============
+  
+  // Carregar dados do workflow_sessions diretamente do localStorage
+  const workflowItemsFromStorage = useMemo(() => {
+    try {
+      const saved = localStorage.getItem('workflow_sessions');
+      const sessions = saved ? JSON.parse(saved) : [];
+      
+      return sessions
+        .filter((session: any) => session.data && session.total) // Filtrar itens válidos
+        .map((session: any) => ({
+          id: session.id,
+          data: session.data,
+          hora: session.hora || '',
+          nome: session.nome || '',
+          whatsapp: session.whatsapp || '',
+          email: session.email || '',
+          descricao: session.descricao || '',
+          status: session.status || '',
+          categoria: session.categoria || '',
+          pacote: session.pacote || '',
+          valorPacote: parseMonetaryValue(session.valorPacote || session.valor),
+          desconto: session.desconto || 0,
+          valorFotoExtra: parseMonetaryValue(session.valorFotoExtra),
+          qtdFotoExtra: session.qtdFotosExtra || 0,
+          valorTotalFotoExtra: parseMonetaryValue(session.valorTotalFotoExtra),
+          produto: session.produto || '',
+          qtdProduto: session.qtdProduto || 0,
+          valorTotalProduto: parseMonetaryValue(session.valorTotalProduto),
+          valorAdicional: parseMonetaryValue(session.valorAdicional),
+          detalhes: session.detalhes || '',
+          valor: parseMonetaryValue(session.valor || session.total),
+          total: parseMonetaryValue(session.total || session.valor),
+          valorPago: parseMonetaryValue(session.valorPago),
+          restante: parseMonetaryValue(session.total || session.valor) - parseMonetaryValue(session.valorPago),
+          pagamentos: session.pagamentos || [],
+          fonte: session.fonte || 'agenda',
+          dataOriginal: session.dataOriginal ? new Date(session.dataOriginal) : new Date(session.data)
+        }));
+    } catch (error) {
+      console.error('❌ Erro ao carregar workflow_sessions:', error);
+      return [];
+    }
+  }, []);
+
+  // Carregar transações financeiras do localStorage
+  const { itensFinanceiros } = useNovoFinancas();
   const transacoesFinanceiras = useMemo(() => {
     return FinancialEngine.loadTransactions();
   }, []);
@@ -67,6 +128,7 @@ export function useDashboardFinanceiro() {
       const item = itensFinanceiros.find(item => item.id === transacao.itemId);
       return {
         ...transacao,
+        valor: parseMonetaryValue(transacao.valor),
         item: item || null
       };
     });
@@ -76,7 +138,7 @@ export function useDashboardFinanceiro() {
   
   // Função para filtrar workflow por ano
   const filterWorkflowByYear = (year: number) => {
-    return workflowItems.filter(item => {
+    return workflowItemsFromStorage.filter(item => {
       try {
         const itemYear = new Date(item.data).getFullYear();
         return itemYear === year;
@@ -91,7 +153,7 @@ export function useDashboardFinanceiro() {
     const anos = new Set<number>();
     
     // Extrair anos do workflow
-    workflowItems.forEach(item => {
+    workflowItemsFromStorage.forEach(item => {
       try {
         const year = new Date(item.data).getFullYear();
         if (!isNaN(year)) {
@@ -126,7 +188,7 @@ export function useDashboardFinanceiro() {
   // Seletor de ano dinâmico
   const anosDisponiveis = useMemo(() => {
     return getAvailableYears();
-  }, [workflowItems, transacoesFinanceiras]);
+  }, [workflowItemsFromStorage, transacoesFinanceiras]);
 
   // Estados dos filtros
   const [anoSelecionado, setAnoSelecionado] = useState(() => {
@@ -151,7 +213,7 @@ export function useDashboardFinanceiro() {
     }
 
     return filtrados;
-  }, [workflowItems, anoSelecionado, mesSelecionado]);
+  }, [workflowItemsFromStorage, anoSelecionado, mesSelecionado]);
 
   const transacoesFiltradas = useMemo(() => {
     const ano = parseInt(anoSelecionado);
@@ -190,9 +252,15 @@ export function useDashboardFinanceiro() {
 
     const totalReceita = receitaOperacional + receitasExtras;
 
+    // VALOR PREVISTO = Soma total de todos os trabalhos (pacotes + produtos + extras)
+    const valorPrevisto = workflowItemsFiltrados.reduce((sum, item) => sum + item.total, 0);
+
+    // A RECEBER = Valor que ainda não foi pago (restante)
+    const aReceber = workflowItemsFiltrados.reduce((sum, item) => sum + item.restante, 0);
+
     // TOTAL DESPESAS = Todas as despesas pagas (Fixas + Variáveis + Investimentos)
     const totalDespesas = transacoesFiltradas
-      .filter(t => t.status === 'Pago' && t.item && t.item.grupo_principal !== 'Receita Não Operacional')
+      .filter(t => t.status === 'Pago' && t.item && ['Despesa Fixa', 'Despesa Variável', 'Investimento'].includes(t.item.grupo_principal))
       .reduce((sum, t) => sum + t.valor, 0);
 
     // TOTAL LUCRO = Receita - Despesas
@@ -203,6 +271,8 @@ export function useDashboardFinanceiro() {
 
     return {
       totalReceita,
+      valorPrevisto,
+      aReceber,
       totalDespesas,
       totalLucro,
       saldoTotal
@@ -321,7 +391,7 @@ export function useDashboardFinanceiro() {
         lucro: dadosMes.receita - dadosMes.despesas
       };
     });
-  }, [workflowItems, anoSelecionado, transacoesComItens]);
+  }, [workflowItemsFromStorage, anoSelecionado, transacoesComItens]);
 
   // ============= COMPOSIÇÃO DE DESPESAS =============
   
