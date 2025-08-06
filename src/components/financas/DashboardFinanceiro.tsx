@@ -488,10 +488,12 @@ export default function DashboardFinanceiro() {
                   })}`} 
                 />
                 <Tooltip 
-                  formatter={(value: number, dataKey: string) => [
-                    formatCurrency(value), 
-                    dataKey === 'lucro' ? 'Lucro' : 'Receita'
-                  ]} 
+                  formatter={(value: number, name: string, props: any) => {
+                    // Force correct labels based on dataKey
+                    const label = props.dataKey === 'lucro' ? 'Lucro' : 
+                                 props.dataKey === 'receita' ? 'Receita' : name;
+                    return [formatCurrency(value), label];
+                  }}
                   labelStyle={{
                     color: '#8B6F3E',
                     fontSize: '12px',
