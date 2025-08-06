@@ -14,7 +14,7 @@ export default function AnaliseVendas() {
   const [selectedClient, setSelectedClient] = useState('all');
 
   return (
-    <div className="h-full overflow-auto bg-lunar-bg p-1 md:p-4 space-y-4">
+    <div className="h-full overflow-y-auto overflow-x-hidden bg-lunar-bg p-1 md:p-4 space-y-4">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
