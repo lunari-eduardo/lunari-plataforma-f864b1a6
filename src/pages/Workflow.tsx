@@ -513,74 +513,74 @@ export default function Workflow() {
         </div>
 
         {showMetrics && <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 pt-2 pb-3 bg-lunar-bg">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              <div className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 p-4 rounded-2xl" style={{
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 p-2.5 rounded-xl" style={{
                 backgroundColor: '#ffffff',
-                borderRadius: '16px'
+                borderRadius: '12px'
               }}>
-                <div className="text-xs font-medium uppercase tracking-wide mb-2" style={{
+                <div className="text-2xs font-medium uppercase tracking-wide mb-1" style={{
                   color: '#8B6F3E'
                 }}>RECEITA</div>
-                <div className="text-xl font-bold" style={{
+                <div className="text-sm font-bold" style={{
                   color: '#2D7A4F'
                 }}>
                   {formatCurrency(financials.revenue)}
                 </div>
-                <div className="text-xs mt-1" style={{
+                <div className="text-2xs mt-0.5" style={{
                   color: '#8B6F3E'
                 }}>
                   {renderChange(financials.revenue, prevMonthFinancials.revenue)}
                 </div>
               </div>
-              <div className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 p-4 rounded-2xl" style={{
+              <div className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 p-2.5 rounded-xl" style={{
                 backgroundColor: '#ffffff',
-                borderRadius: '16px'
+                borderRadius: '12px'
               }}>
-                <div className="text-xs font-medium uppercase tracking-wide mb-2" style={{
+                <div className="text-2xs font-medium uppercase tracking-wide mb-1" style={{
                   color: '#8B6F3E'
                 }}>PREVISTO</div>
-                <div className="text-xl font-bold" style={{
+                <div className="text-sm font-bold" style={{
                   color: '#1E5F99'
                 }}>
                   {formatCurrency(financials.forecasted)}
                 </div>
-                <div className="text-xs mt-1" style={{
+                <div className="text-2xs mt-0.5" style={{
                   color: '#8B6F3E'
                 }}>
                   {renderChange(financials.forecasted, prevMonthFinancials.forecasted)}
                 </div>
               </div>
-              <div className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 p-4 rounded-2xl" style={{
+              <div className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 p-2.5 rounded-xl" style={{
                 backgroundColor: '#ffffff',
-                borderRadius: '16px'
+                borderRadius: '12px'
               }}>
-                <div className="text-xs font-medium uppercase tracking-wide mb-2" style={{
+                <div className="text-2xs font-medium uppercase tracking-wide mb-1" style={{
                   color: '#8B6F3E'
                 }}>A RECEBER</div>
-                <div className="text-xl font-bold" style={{
+                <div className="text-sm font-bold" style={{
                   color: '#cfb38a'
                 }}>
                   {formatCurrency(financials.outstanding)}
                 </div>
-                <div className="text-xs mt-1" style={{
+                <div className="text-2xs mt-0.5" style={{
                   color: '#8B6F3E'
                 }}>
                   {renderChange(financials.outstanding, prevMonthFinancials.outstanding)}
                 </div>
               </div>
-              <div className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 p-4 rounded-2xl" style={{
+              <div className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 p-2.5 rounded-xl" style={{
                 backgroundColor: '#ffffff',
-                borderRadius: '16px'
+                borderRadius: '12px'
               }}>
-                <div className="text-xs font-medium uppercase tracking-wide mb-2" style={{
+                <div className="text-2xs font-medium uppercase tracking-wide mb-1" style={{
                   color: '#8B6F3E'
                 }}>SESSÕES</div>
-                <div className="text-xl font-bold" style={{
+                <div className="text-sm font-bold" style={{
                   color: '#8B6F3E'
                 }}>
                   {financials.sessionCount}
                 </div>
-                <div className="text-xs mt-1" style={{
+                <div className="text-2xs mt-0.5" style={{
                   color: '#8B6F3E'
                 }}>
                   {renderChange(financials.sessionCount, prevMonthFinancials.sessionCount)}
