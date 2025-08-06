@@ -532,6 +532,18 @@ export function useDashboardFinanceiro() {
     return meses[numero - 1] || '';
   };
 
+  // Função para excluir meta anual
+  const excluirMetaAnual = useCallback(() => {
+    const anoSelecionadoNum = parseInt(anoSelecionado);
+    const historicalGoals: HistoricalGoal[] = storage.load(STORAGE_KEYS.HISTORICAL_GOALS, []);
+    
+    // Remover meta do ano selecionado
+    const novasMetasHistoricas = historicalGoals.filter(goal => goal.ano !== anoSelecionadoNum);
+    
+    // Salvar no localStorage
+    storage.save(STORAGE_KEYS.HISTORICAL_GOALS, novasMetasHistoricas);
+  }, [anoSelecionado]);
+
   // ============= DEBUG (OTIMIZADO) =============
   
   // ✅ CORREÇÃO: Remover useEffect de debug que causava loop infinito
@@ -571,6 +583,7 @@ export function useDashboardFinanceiro() {
     // Funções auxiliares
     getNomeMes,
     getNomeMesCurto,
+    excluirMetaAnual,
     
     // Dados filtrados
     workflowItemsFiltrados,

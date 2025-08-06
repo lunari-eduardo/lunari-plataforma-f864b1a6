@@ -1,8 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/utils/financialUtils';
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { useDashboardFinanceiro } from '@/hooks/useDashboardFinanceiro';
+import { Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 // Paleta de cores beige/marrom elegantes
 const COLORS = ['hsl(var(--finance-primary))', 'hsl(var(--finance-secondary))'];
@@ -23,8 +26,14 @@ export default function DashboardFinanceiro() {
     composicaoDespesas,
     evolucaoCategoria,
     roiData,
-    getNomeMes
+    getNomeMes,
+    excluirMetaAnual
   } = useDashboardFinanceiro();
+
+  const handleExcluirMeta = () => {
+    excluirMetaAnual();
+    toast.success(`Meta anual para ${anoSelecionado} foi excluída`);
+  };
 
   // Cálculos para gráficos de metas
   const lucratividade = metasData.receitaAtual > 0 ? metasData.lucroAtual / metasData.receitaAtual * 100 : 0;
@@ -653,9 +662,19 @@ export default function DashboardFinanceiro() {
           borderRadius: '16px'
         }}>
             <CardHeader className="text-center">
-              <CardTitle className="text-sm font-medium" style={{
-              color: '#8B6F3E'
-            }}>META ANUAL</CardTitle>
+              <div className="flex items-center justify-between px-4">
+                <CardTitle className="text-sm font-medium" style={{
+                  color: '#8B6F3E'
+                }}>META ANUAL</CardTitle>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={handleExcluirMeta}
+                  className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="text-center">
               <div className="text-2xl font-bold" style={{
