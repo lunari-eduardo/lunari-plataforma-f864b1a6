@@ -7,7 +7,6 @@ import { Calendar, TrendingUp, TrendingDown, DollarSign, Users, Target, BarChart
 import { SalesMetricsCards } from '@/components/analise-vendas/SalesMetricsCards';
 import { SalesChartsGrid } from '@/components/analise-vendas/SalesChartsGrid';
 import { SalesFilterBar } from '@/components/analise-vendas/SalesFilterBar';
-import { SalesGoalsCard } from '@/components/analise-vendas/SalesGoalsCard';
 
 export default function AnaliseVendas() {
   const [selectedPeriod, setSelectedPeriod] = useState('thisMonth');
@@ -49,9 +48,6 @@ export default function AnaliseVendas() {
 
       {/* Quick Metrics Cards */}
       <SalesMetricsCards />
-
-      {/* Goals Card */}
-      <SalesGoalsCard />
 
       {/* Charts Grid */}
       <SalesChartsGrid />
