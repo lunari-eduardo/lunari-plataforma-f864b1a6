@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Calendar, Users, Settings, FileText, DollarSign, Menu, X, User, TrendingUp, Workflow, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Calendar, Users, Settings, FileText, DollarSign, Menu, X, User, TrendingUp, Workflow, ChevronRight, ChevronLeft, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -60,6 +60,10 @@ export default function Sidebar() {
     to: "/workflow",
     icon: <Workflow size={14} />,
     label: "Workflow"
+  }, {
+    to: "/analise-vendas",
+    icon: <BarChart3 size={14} />,
+    label: "Análise de Vendas"
   }, {
     to: "/configuracoes",
     icon: <Settings size={14} />,

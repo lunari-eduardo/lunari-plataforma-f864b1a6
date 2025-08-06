@@ -16,6 +16,7 @@ import Precificacao from "./pages/Precificacao";
 import Configuracoes from "./pages/Configuracoes";
 import ClienteDetalhe from "./pages/ClienteDetalhe";
 import Workflow from "./pages/Workflow";
+import AnaliseVendas from "./pages/AnaliseVendas";
 import NotFound from "./pages/NotFound";
 import { AppProvider } from "./contexts/AppContext";
 import { useIntegration } from "./hooks/useIntegration";
@@ -101,6 +102,7 @@ function App() {
                 <Route path="/financas" element={<NovaFinancas />} />
                 <Route path="/precificacao" element={<Precificacao />} />
                 <Route path="/workflow" element={<Workflow />} />
+                <Route path="/analise-vendas" element={<AnaliseVendas />} />
                 <Route path="/configuracoes" element={<Configuracoes />} />
                 <Route path="*" element={<NotFound />} />
               </Route>
