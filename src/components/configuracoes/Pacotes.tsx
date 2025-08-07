@@ -201,12 +201,12 @@ export default function Pacotes({
   }, [produtos, getNomeProduto, adicionarProdutoAoPacote, removerProdutoDoPacote, formatarMoeda]);
   return <div className="mt-4 space-y-6">
       {/* Formulário Novo Pacote */}
-      <div className="bg-lunar-surface rounded-lg border border-lunar-border/50">
-        <div className="p-4">
+      <div className="bg-neutral-100 rounded-lg border border-neutral-200/60 p-4">
+        <div className="max-w-4xl mx-auto">
           <div className="flex justify-center">
-            <Collapsible open={novoPacoteAberto} onOpenChange={setNovoPacoteAberto}>
+            <Collapsible open={novoPacoteAberto} onOpenChange={setNovoPacoteAberto} className="w-full">
               <CollapsibleTrigger asChild>
-                <Button className="bg-blue-500/20 border border-blue-500/30 text-blue-800 hover:bg-blue-500/30 flex items-center justify-center gap-2 px-4 py-2 rounded-lg">
+                <Button className="bg-blue-500/20 border border-blue-500/30 text-blue-800 hover:bg-blue-500/30 flex items-center justify-center gap-2 px-4 py-2 rounded-lg mx-auto">
                   <span className="text-sm">📦</span>
                   {novoPacoteAberto ? <>
                       Fechar Formulário
@@ -218,15 +218,17 @@ export default function Pacotes({
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <div className="mt-6 border-t border-lunar-border/30 pt-6">
-                  <div className="mb-4">
+                <div className="mt-6 border-t border-neutral-300/30 pt-6">
+                  <div className="mb-4 text-center">
                     <h3 className="font-medium text-sm">Novo Pacote Fotográfico</h3>
                     <p className="text-muted-foreground mt-1 text-xs">
                       Configure os pacotes fotográficos disponíveis para venda.
                     </p>
                   </div>
                   
-                  <PacoteForm categorias={categorias} produtos={produtos} onSubmit={adicionarPacote} submitLabel="Adicionar Pacote" />
+                  <div className="bg-white rounded-lg border border-neutral-200 p-4">
+                    <PacoteForm categorias={categorias} produtos={produtos} onSubmit={adicionarPacote} submitLabel="Adicionar Pacote" />
+                  </div>
                 </div>
               </CollapsibleContent>
             </Collapsible>
