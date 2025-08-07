@@ -15,6 +15,7 @@ import { useClientMetrics, ClientMetrics } from '@/hooks/useClientMetrics';
 import { formatCurrency } from '@/utils/financialUtils';
 import { formatDateForDisplay } from '@/utils/dateUtils';
 import { abrirWhatsApp } from '@/utils/whatsappUtils';
+import { ORIGENS_PADRAO } from '@/utils/defaultOrigens';
 export default function Clientes() {
   const {
     clientes,
@@ -33,7 +34,8 @@ export default function Clientes() {
   const [formData, setFormData] = useState({
     nome: '',
     email: '',
-    telefone: ''
+    telefone: '',
+    origem: ''
   });
 
   // Obter métricas dos clientes
@@ -54,7 +56,8 @@ export default function Clientes() {
     setFormData({
       nome: '',
       email: '',
-      telefone: ''
+      telefone: '',
+      origem: ''
     });
     setShowClientForm(true);
   };
@@ -63,7 +66,8 @@ export default function Clientes() {
     setFormData({
       nome: client.nome,
       email: client.email,
-      telefone: client.telefone
+      telefone: client.telefone,
+      origem: (client as any).origem || ''
     });
     setShowClientForm(true);
   };
@@ -284,6 +288,31 @@ export default function Clientes() {
                 ...prev,
                 telefone: e.target.value
               }))} placeholder="+55 (DDD) 00000-0000" />
+              </div>
+              
+              <div>
+                <Label htmlFor="origem">Origem</Label>
+                <Select value={formData.origem} onValueChange={value => setFormData(prev => ({
+                  ...prev,
+                  origem: value
+                }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a origem" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ORIGENS_PADRAO.map(origem => (
+                      <SelectItem key={origem.id} value={origem.id}>
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded-full" 
+                            style={{ backgroundColor: origem.cor }}
+                          />
+                          {origem.nome}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               
               <div className="flex justify-end gap-2 pt-4">
