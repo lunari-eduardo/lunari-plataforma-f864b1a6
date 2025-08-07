@@ -30,15 +30,6 @@ export default function Preferencias() {
     const updatedData = { ...formData, [field]: value };
     setFormData(updatedData);
     savePreferences({ [field]: value });
-    
-    // Apply theme change immediately
-    if (field === 'tema') {
-      if (value === 'escuro') {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
-    }
   };
 
   const handleSwitchChange = (field: keyof UserPreferences, checked: boolean) => {
@@ -48,12 +39,12 @@ export default function Preferencias() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-lunar-bg">
       <ScrollArea className="h-screen">
         <div className="container mx-auto p-4 max-w-4xl">
           <div className="mb-6">
-            <h1 className="text-2xl font-semibold text-foreground mb-2">Preferências</h1>
-            <p className="text-muted-foreground">Configure as preferências da sua conta e notificações</p>
+            <h1 className="text-2xl font-semibold text-lunar-text mb-2">Preferências</h1>
+            <p className="text-lunar-textSecondary">Configure as preferências da sua conta e notificações</p>
           </div>
 
           <Card className="mb-6">
@@ -175,7 +166,7 @@ export default function Preferencias() {
                             <Label htmlFor="tema-escuro">Escuro</Label>
                           </div>
                         </RadioGroup>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm text-lunar-textSecondary">
                           Escolha entre o tema claro ou escuro para a interface
                         </p>
                       </div>
@@ -187,7 +178,7 @@ export default function Preferencias() {
                   <div className="space-y-6">
                     <div>
                       <h3 className="text-lg font-medium mb-2">Configurações de Notificação</h3>
-                      <p className="text-muted-foreground">
+                      <p className="text-lunar-textSecondary">
                         Escolha como você deseja receber notificações sobre atividades importantes
                       </p>
                     </div>
@@ -198,7 +189,7 @@ export default function Preferencias() {
                           <div className="flex items-center justify-between">
                             <div className="space-y-1">
                               <Label htmlFor="notificacoes-email">Notificações por E-mail</Label>
-                              <p className="text-sm text-muted-foreground">
+                              <p className="text-sm text-lunar-textSecondary">
                                 Receba atualizações sobre orçamentos, agendamentos e lembretes importantes
                               </p>
                             </div>
@@ -216,7 +207,7 @@ export default function Preferencias() {
                           <div className="flex items-center justify-between">
                             <div className="space-y-1">
                               <Label htmlFor="notificacoes-whatsapp">Notificações por WhatsApp</Label>
-                              <p className="text-sm text-muted-foreground">
+                              <p className="text-sm text-lunar-textSecondary">
                                 Receba notificações rápidas através do WhatsApp Business
                               </p>
                             </div>
@@ -229,10 +220,10 @@ export default function Preferencias() {
                         </CardContent>
                       </Card>
 
-                      <div className="bg-muted/50 p-4 rounded-lg">
+                      <div className="bg-lunar-surface/50 p-4 rounded-lg">
                         <div className="flex items-start gap-3">
-                          <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
-                          <div className="text-sm text-muted-foreground">
+                          <div className="w-2 h-2 bg-lunar-accent rounded-full mt-2 flex-shrink-0"></div>
+                          <div className="text-sm text-lunar-textSecondary">
                             <p className="font-medium mb-1">Sobre as notificações:</p>
                             <ul className="space-y-1">
                               <li>• As configurações são salvas automaticamente</li>
