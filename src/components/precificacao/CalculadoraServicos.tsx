@@ -104,8 +104,8 @@ export function CalculadoraServicos({
     setCustosExtras(custosExtras.filter(c => c.id !== id));
   };
   return (
-    <div className="bg-lunar-surface rounded-lg border border-lunar-border/50">
-      <div className="p-4">
+    <Card className="bg-lunar-surface border-lunar-border/50">
+      <CardContent className="p-6">
         <div className="flex justify-center">
           <Collapsible open={isOpen} onOpenChange={setIsOpen}>
             <CollapsibleTrigger asChild>
@@ -383,20 +383,20 @@ export function CalculadoraServicos({
                      </div>
                    </div>
                  </div>
-             </CollapsibleContent>
-           </Collapsible>
-         </div>
-         
-         {/* Modal para Salvar Pacote */}
-         <SalvarPacoteModal
-           isOpen={salvarPacoteModalOpen}
-           onClose={() => setSalvarPacoteModalOpen(false)}
-           precoFinal={precoFinal}
-           produtos={produtos}
-           horasEstimadas={horasEstimadas}
-           markup={markup}
-         />
-       </div>
-     </div>
-  );
+              </CollapsibleContent>
+            </Collapsible>
+          </div>
+          
+           {/* Modal para Salvar Pacote */}
+           <SalvarPacoteModal
+             isOpen={salvarPacoteModalOpen}
+             onClose={() => setSalvarPacoteModalOpen(false)}
+             precoFinal={precoFinal}
+             produtos={produtos}
+             horasEstimadas={horasEstimadas}
+             markup={markup}
+           />
+        </CardContent>
+      </Card>
+    );
 }
