@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar, Clock, Pen, X, Package, Plus, Trash2 } from 'lucide-react';
 import { Orcamento, Cliente, PacoteProduto } from '@/types/orcamentos';
 import { useOrcamentos } from '@/hooks/useOrcamentos';
+import { ORIGENS_PADRAO } from '@/utils/defaultOrigens';
 import { useToast } from '@/hooks/use-toast';
 import { CategorySelector } from './CategorySelector';
 import ClientSearchInput from './ClientSearchInput';
@@ -27,7 +28,6 @@ export default function EditOrcamentoModal({
   const {
     atualizarOrcamento,
     clientes,
-    origens,
     categorias,
     pacotes,
     produtos
@@ -431,7 +431,7 @@ export default function EditOrcamentoModal({
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
-                  {origens.map(origem => <SelectItem key={origem.id} value={origem.id}>
+                  {ORIGENS_PADRAO.map(origem => <SelectItem key={origem.id} value={origem.id}>
                       {origem.nome}
                     </SelectItem>)}
                 </SelectContent>

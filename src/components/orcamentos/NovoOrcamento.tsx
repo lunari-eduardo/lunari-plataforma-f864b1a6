@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Trash2 } from 'lucide-react';
 import { useOrcamentos } from '@/hooks/useOrcamentos';
+import { ORIGENS_PADRAO } from '@/utils/defaultOrigens';
 import { Cliente, PacoteProduto } from '@/types/orcamentos';
 import { useToast } from '@/hooks/use-toast';
 import TemplateSelector from './TemplateSelector';
@@ -368,13 +369,13 @@ export default function NovoOrcamento() {
                      <SelectTrigger>
                        <SelectValue placeholder="Selecione" />
                      </SelectTrigger>
-                     <SelectContent>
-                       {origens.map(origem => (
-                         <SelectItem key={origem.id} value={origem.id}>
-                           {origem.nome}
-                         </SelectItem>
-                       ))}
-                     </SelectContent>
+                      <SelectContent>
+                        {ORIGENS_PADRAO.map(origem => (
+                          <SelectItem key={origem.id} value={origem.id}>
+                            {origem.nome}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
                    </Select>
                  </div>
               </div>

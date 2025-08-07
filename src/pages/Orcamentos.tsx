@@ -5,7 +5,7 @@ import { useOrcamentos } from '@/hooks/useOrcamentos';
 import MetricasOrcamento from '@/components/orcamentos/MetricasOrcamento';
 import NovoOrcamento from '@/components/orcamentos/NovoOrcamento';
 import ListaOrcamentos from '@/components/orcamentos/ListaOrcamentos';
-import GerenciarOrigens from '@/components/orcamentos/GerenciarOrigens';
+
 import MonthYearSelector from '@/components/orcamentos/MonthYearSelector';
 import { ScrollArea } from "@/components/ui/scroll-area";
 export default function Orcamentos() {
@@ -36,10 +36,9 @@ export default function Orcamentos() {
       <MetricasOrcamento selectedMonth={selectedMonth} />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3 py-0 my-1 bg-lunar-accent ">
+        <TabsList className="grid w-full grid-cols-2 py-0 my-1 bg-lunar-accent ">
           <TabsTrigger value="lista">Orçamentos</TabsTrigger>
           <TabsTrigger value="novo">Novo Orçamento</TabsTrigger>
-          <TabsTrigger value="origens">Origens</TabsTrigger>
         </TabsList>
 
         <TabsContent value="lista" className="mt-4">
@@ -51,9 +50,6 @@ export default function Orcamentos() {
           <NovoOrcamento />
         </TabsContent>
 
-        <TabsContent value="origens" className="mt-4">
-          <GerenciarOrigens />
-        </TabsContent>
       </Tabs>
       </div>
     </ScrollArea>;

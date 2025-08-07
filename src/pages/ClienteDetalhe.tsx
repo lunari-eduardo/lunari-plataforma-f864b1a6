@@ -19,6 +19,7 @@ import { formatCurrency } from '@/utils/financialUtils';
 import { formatDateForDisplay } from '@/utils/dateUtils';
 import { toast } from 'sonner';
 import { useOrcamentos } from '@/hooks/useOrcamentos';
+import { ORIGENS_PADRAO } from '@/utils/defaultOrigens';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 export default function ClienteDetalhe() {
   const {
@@ -36,7 +37,7 @@ export default function ClienteDetalhe() {
     loadFiles
   } = useFileUpload();
   
-  const { origens } = useOrcamentos();
+  
 
   // Carregar arquivos e executar correção automática
   useEffect(() => {
@@ -261,7 +262,7 @@ export default function ClienteDetalhe() {
                           <SelectValue placeholder="Selecione a origem" />
                         </SelectTrigger>
                         <SelectContent>
-                          {origens.map(origem => (
+                          {ORIGENS_PADRAO.map(origem => (
                             <SelectItem key={origem.id} value={origem.id}>
                               <div className="flex items-center gap-2">
                                 <div className="w-3 h-3 rounded-full" style={{ backgroundColor: origem.cor }} />
@@ -274,7 +275,7 @@ export default function ClienteDetalhe() {
                     ) : (
                       <Input 
                         id="origem" 
-                        value={origens.find(o => o.id === formData.origem)?.nome || 'Não informado'} 
+                        value={ORIGENS_PADRAO.find(o => o.id === formData.origem)?.nome || 'Não informado'} 
                         disabled 
                         placeholder="Origem não informada" 
                       />

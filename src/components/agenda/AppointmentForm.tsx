@@ -12,6 +12,7 @@ import { useContext } from 'react';
 import { AppContext } from '@/contexts/AppContext';
 import { useIntegration } from '@/hooks/useIntegration';
 import { useOrcamentos } from '@/hooks/useOrcamentos';
+import { ORIGENS_PADRAO } from '@/utils/defaultOrigens';
 
 // Tipo de agendamento
 type Appointment = {
@@ -305,7 +306,7 @@ export default function AppointmentForm({
                   <SelectValue placeholder="Selecione a origem" />
                 </SelectTrigger>
                 <SelectContent>
-                  {origens.map(origem => (
+                  {ORIGENS_PADRAO.map(origem => (
                     <SelectItem key={origem.id} value={origem.id}>
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-3 rounded-full" style={{ backgroundColor: origem.cor }} />

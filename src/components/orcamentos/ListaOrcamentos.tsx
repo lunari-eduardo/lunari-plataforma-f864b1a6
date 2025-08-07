@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Search, FileText, MessageCircle, Trash2, Settings, AlertCircle, Pencil } from 'lucide-react';
 import { useOrcamentos } from '@/hooks/useOrcamentos';
+import { ORIGENS_PADRAO } from '@/utils/defaultOrigens';
 import { gerarPDFOrcamento } from '@/utils/pdfUtils';
 import { abrirWhatsApp } from '@/utils/whatsappUtils';
 import { useToast } from '@/hooks/use-toast';
@@ -24,7 +25,6 @@ export default function ListaOrcamentos({ selectedMonth }: ListaOrcamentosProps)
   const {
     orcamentos,
     categorias,
-    origens,
     atualizarOrcamento,
     excluirOrcamento
   } = useOrcamentos();
@@ -204,7 +204,7 @@ export default function ListaOrcamentos({ selectedMonth }: ListaOrcamentosProps)
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="todas">Todas origens</SelectItem>
-              {origens.map(origem => <SelectItem key={origem.id} value={origem.id}>{origem.nome}</SelectItem>)}
+              {ORIGENS_PADRAO.map(origem => <SelectItem key={origem.id} value={origem.id}>{origem.nome}</SelectItem>)}
             </SelectContent>
           </Select>
 
@@ -230,7 +230,7 @@ export default function ListaOrcamentos({ selectedMonth }: ListaOrcamentosProps)
             </TableHeader>
             <TableBody>
               {orcamentosOrdenados.map(orcamento => {
-              const origem = origens.find(o => o.id === orcamento.origemCliente);
+              const origem = ORIGENS_PADRAO.find(o => o.id === orcamento.origemCliente);
               const valorFinal = orcamento.valorFinal || orcamento.valorTotal;
               const atrasado = isAtrasado(orcamento);
               return <TableRow key={orcamento.id} className={atrasado ? 'bg-red-50' : ''}>
