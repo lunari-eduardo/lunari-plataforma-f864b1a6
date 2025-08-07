@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Calendar, Users, Settings, FileText, DollarSign, Menu, X, User, TrendingUp, Workflow, ChevronRight, ChevronLeft, BarChart3 } from 'lucide-react';
+import { Calendar, Users, Settings, FileText, DollarSign, Menu, X, User, TrendingUp, Workflow, ChevronRight, ChevronLeft, BarChart3, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -37,29 +37,33 @@ export default function Sidebar() {
   const [isDesktopExpanded, setIsDesktopExpanded] = useState(false);
   
   const navItems = [{
+    to: "/",
+    icon: <Home size={14} />,
+    label: "Início"
+  }, {
     to: "/agenda",
     icon: <Calendar size={14} />,
     label: "Agenda"
-  }, {
-    to: "/clientes",
-    icon: <Users size={14} />,
-    label: "Clientes"
   }, {
     to: "/orcamentos",
     icon: <FileText size={14} />,
     label: "Orçamentos"
   }, {
+    to: "/workflow",
+    icon: <Workflow size={14} />,
+    label: "Workflow"
+  }, {
     to: "/financas",
     icon: <DollarSign size={14} />,
     label: "Finanças"
   }, {
+    to: "/clientes",
+    icon: <Users size={14} />,
+    label: "Clientes"
+  }, {
     to: "/precificacao",
     icon: <TrendingUp size={14} />,
     label: "Precificação"
-  }, {
-    to: "/workflow",
-    icon: <Workflow size={14} />,
-    label: "Workflow"
   }, {
     to: "/analise-vendas",
     icon: <BarChart3 size={14} />,
@@ -128,8 +132,25 @@ export default function Sidebar() {
   // Desktop sidebar - colapsável
   return <div className={cn("flex flex-col h-screen p-2 bg-lunar-bg border-r border-lunar-border/50 transition-all duration-300", 
     isDesktopExpanded ? "w-48" : "w-16")}>
+      
+      {/* Minha Conta no topo do desktop */}
+      <div className="pt-4 pb-2 border-b border-lunar-border/50 mb-4">
+        <div className={cn("flex items-center transition-all duration-200", 
+          isDesktopExpanded ? "gap-3 px-3 py-2" : "w-12 h-12 rounded-lg justify-center")}>
+          <User className="h-4 w-4 text-lunar-accent flex-shrink-0" />
+          {isDesktopExpanded && (
+            <div>
+              <span className="font-semibold text-sm text-lunar-text">Minha Conta</span>
+              <div className="text-2xs text-lunar-textSecondary">
+                Lunari
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
       <div className="flex-1">
-        <div className="space-y-2 my-8 py-4">
+        <div className="space-y-2">
           {navItems.map(item => <NavItem key={item.to} {...item} iconOnly={!isDesktopExpanded} />)}
         </div>
       </div>
