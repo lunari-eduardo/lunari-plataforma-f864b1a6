@@ -18,6 +18,8 @@ import { WorkflowHistoryTable } from '@/components/crm/WorkflowHistoryTable';
 import { formatCurrency } from '@/utils/financialUtils';
 import { formatDateForDisplay } from '@/utils/dateUtils';
 import { toast } from 'sonner';
+import { useOrcamentos } from '@/hooks/useOrcamentos';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 export default function ClienteDetalhe() {
   const {
     id
@@ -33,6 +35,8 @@ export default function ClienteDetalhe() {
     getFilesByClient,
     loadFiles
   } = useFileUpload();
+  
+  const { origens } = useOrcamentos();
 
   // Carregar arquivos e executar correção automática
   useEffect(() => {
@@ -52,7 +56,8 @@ export default function ClienteDetalhe() {
     email: cliente?.email || '',
     telefone: cliente?.telefone || '',
     endereco: cliente?.endereco || '',
-    observacoes: cliente?.observacoes || ''
+    observacoes: cliente?.observacoes || '',
+    origem: cliente?.origem || ''
   });
 
   // Métricas simplificadas e precisas
@@ -104,7 +109,8 @@ export default function ClienteDetalhe() {
       email: cliente.email,
       telefone: cliente.telefone,
       endereco: cliente.endereco || '',
-      observacoes: cliente.observacoes || ''
+      observacoes: cliente.observacoes || '',
+      origem: cliente.origem || ''
     });
     setIsEditing(false);
   };
@@ -245,6 +251,34 @@ export default function ClienteDetalhe() {
                     ...prev,
                     endereco: e.target.value
                   }))} disabled={!isEditing} placeholder="Endereço completo" />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="origem">Como conheceu?</Label>
+                    {isEditing ? (
+                      <Select value={formData.origem} onValueChange={(value) => setFormData(prev => ({ ...prev, origem: value }))}>
+                        <SelectTrigger id="origem">
+                          <SelectValue placeholder="Selecione a origem" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {origens.map(origem => (
+                            <SelectItem key={origem.id} value={origem.id}>
+                              <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: origem.cor }} />
+                                {origem.nome}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Input 
+                        id="origem" 
+                        value={origens.find(o => o.id === formData.origem)?.nome || 'Não informado'} 
+                        disabled 
+                        placeholder="Origem não informada" 
+                      />
+                    )}
                   </div>
                 </div>
 

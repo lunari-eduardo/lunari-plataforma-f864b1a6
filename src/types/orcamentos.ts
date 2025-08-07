@@ -6,6 +6,7 @@ export interface Cliente {
   telefone: string;
   endereco?: string;
   observacoes?: string;
+  origem?: string;
 }
 
 export interface OrigemCliente {

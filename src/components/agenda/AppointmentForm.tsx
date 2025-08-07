@@ -72,6 +72,8 @@ export default function AppointmentForm({
     pacotes,
     produtos
   } = useOrcamentos();
+  
+  const { origens } = useOrcamentos();
 
   // Verifica se é agendamento de orçamento
   const isFromBudgetAppointment = appointment ? isFromBudget(appointment) : false;
@@ -91,7 +93,8 @@ export default function AppointmentForm({
     // Campos para novo cliente
     newClientName: '',
     newClientPhone: '',
-    newClientEmail: ''
+    newClientEmail: '',
+    newClientOrigem: ''
   });
 
   // Se estiver editando, preencher com dados existentes
@@ -108,7 +111,8 @@ export default function AppointmentForm({
         paidAmount: appointment.paidAmount || 0,
         newClientName: '',
         newClientPhone: '',
-        newClientEmail: ''
+        newClientEmail: '',
+        newClientOrigem: ''
       });
     }
   }, [appointment, clientes]);
@@ -187,7 +191,8 @@ export default function AppointmentForm({
       const novoCliente = adicionarCliente({
         nome: formData.newClientName,
         telefone: formData.newClientPhone,
-        email: formData.newClientEmail
+        email: formData.newClientEmail,
+        origem: formData.newClientOrigem
       });
       clientInfo = {
         client: formData.newClientName,
@@ -291,6 +296,25 @@ export default function AppointmentForm({
             <div className="space-y-2">
               <Label htmlFor="new-client-email" className="text-xs font-medium">E-mail</Label>
               <Input id="new-client-email" name="newClientEmail" type="email" value={formData.newClientEmail} onChange={handleChange} placeholder="email@exemplo.com" />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="new-client-origem" className="text-xs font-medium">Como conheceu?</Label>
+              <Select value={formData.newClientOrigem} onValueChange={(value) => setFormData(prev => ({ ...prev, newClientOrigem: value }))}>
+                <SelectTrigger id="new-client-origem">
+                  <SelectValue placeholder="Selecione a origem" />
+                </SelectTrigger>
+                <SelectContent>
+                  {origens.map(origem => (
+                    <SelectItem key={origem.id} value={origem.id}>
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: origem.cor }} />
+                        {origem.nome}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <p className="text-[11px] text-lunar-accent">
               🆕 Novo cliente será automaticamente adicionado ao CRM
