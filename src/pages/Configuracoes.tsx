@@ -144,8 +144,8 @@ export default function Configuracoes() {
   useEffect(() => {
     saveConfigWithNotification('configuracoes_produtos', produtos);
   }, [produtos]);
-  return <ScrollArea className="h-[calc(100vh-120px)] bg-card">
-      <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 space-y-6">
+  return <ScrollArea className="h-[calc(100vh-120px)] bg-inherit">
+      <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 space-y-6 bg-card">
       <Card className="bg-neutral-50">
         <CardHeader className="pb-3 bg-stone-50">
           <CardDescription>
