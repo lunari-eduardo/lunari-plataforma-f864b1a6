@@ -16,6 +16,7 @@ export interface SimplifiedMetrics {
   nome: string;
   email: string;
   telefone: string;
+  origem?: string;
   totalSessoes: number;
   totalFaturado: number;
   totalPago: number;
@@ -295,6 +296,7 @@ export function getSimplifiedClientMetrics(clientes: Cliente[]): SimplifiedMetri
       nome: cliente.nome,
       email: cliente.email,
       telefone: cliente.telefone,
+      origem: cliente.origem,
       totalSessoes,
       totalFaturado,
       totalPago,

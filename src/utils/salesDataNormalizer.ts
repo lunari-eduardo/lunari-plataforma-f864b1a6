@@ -57,20 +57,26 @@ export function normalizeWorkflowItems(): NormalizedWorkflowData[] {
           const calculatedYear = date.getFullYear();
           const monthName = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'][calculatedMonth];
           
-          // Extract origin - try session first, then fallback to client data
-          let clientOrigin = session.origemCliente || session.origem;
-          if (!clientOrigin && session.clienteId) {
-            // Try to get origin from client data in localStorage
+          // Extract origin - PRIORIDADE: CRM > sessão > fallback
+          let clientOrigin = 'Não especificado';
+          
+          // 1º: Buscar origem no CRM usando clienteId (fonte autoritativa)
+          if (session.clienteId) {
             try {
               const clientsData = localStorage.getItem('clients') || '[]';
               const clients = JSON.parse(clientsData);
               const client = clients.find((c: any) => c.id === session.clienteId);
-              if (client && client.origem) {
+              if (client?.origem) {
                 clientOrigin = client.origem;
               }
             } catch (error) {
               console.warn(`Failed to get client origin for clientId ${session.clienteId}:`, error);
             }
+          }
+          
+          // 2º: Fallback para origem na sessão se não encontrou no CRM
+          if (clientOrigin === 'Não especificado') {
+            clientOrigin = session.origemCliente || session.origem || 'Não especificado';
           }
 
           const normalized: NormalizedWorkflowData = {

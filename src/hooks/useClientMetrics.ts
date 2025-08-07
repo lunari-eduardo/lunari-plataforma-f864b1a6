@@ -7,6 +7,7 @@ export interface ClientMetrics {
   nome: string;
   email: string;
   telefone: string;
+  origem?: string;
   sessoes: number;
   totalFaturado: number;
   totalPago: number;
@@ -22,17 +23,23 @@ export function useClientMetrics(clientes: Cliente[]): ClientMetrics[] {
     // Obter métricas simplificadas e precisas
     const simplifiedMetrics = getSimplifiedClientMetrics(clientes);
     
-    // Converter para formato ClientMetrics
-    return simplifiedMetrics.map(metric => ({
-      id: metric.id,
-      nome: metric.nome,
-      email: metric.email,
-      telefone: metric.telefone,
-      sessoes: metric.totalSessoes,
-      totalFaturado: metric.totalFaturado,
-      totalPago: metric.totalPago,
-      aReceber: metric.aReceber,
-      ultimaSessao: metric.ultimaSessao
-    }));
+    // Converter para formato ClientMetrics incluindo origem dos dados originais
+    return simplifiedMetrics.map(metric => {
+      // Buscar cliente original para pegar a origem
+      const clienteOriginal = clientes.find(c => c.id === metric.id);
+      
+      return {
+        id: metric.id,
+        nome: metric.nome,
+        email: metric.email,
+        telefone: metric.telefone,
+        origem: clienteOriginal?.origem || '',
+        sessoes: metric.totalSessoes,
+        totalFaturado: metric.totalFaturado,
+        totalPago: metric.totalPago,
+        aReceber: metric.aReceber,
+        ultimaSessao: metric.ultimaSessao
+      };
+    });
   }, [clientes]);
 }
