@@ -36,8 +36,8 @@ export default function Orcamentos() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-2 py-0 my-1 border-lunar-accent bg-lunar-surface">
-          <TabsTrigger value="lista" className="rounded-sm border-lunar-accent">Orçamentos</TabsTrigger>
-          <TabsTrigger value="novo">Novo Orçamento</TabsTrigger>
+          <TabsTrigger value="lista" className="rounded-sm border-lunar-accent text-sm font-bold">Orçamentos</TabsTrigger>
+          <TabsTrigger value="novo" className="text-sm font-bold">Novo Orçamento</TabsTrigger>
         </TabsList>
 
         <TabsContent value="lista" className="mt-4">
