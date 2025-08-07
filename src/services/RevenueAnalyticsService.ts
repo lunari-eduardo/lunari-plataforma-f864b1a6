@@ -39,6 +39,13 @@ export interface OriginRevenueData {
   percentage: number;
 }
 
+export interface MonthlyOriginData {
+  month: string; // 'Jan', 'Fev', etc.
+  monthIndex: number; // 0-11
+  [originId: string]: number | string; // google: 5, instagram: 3
+  totalSessions: number;
+}
+
 export interface RevenueAnalyticsResult {
   clientOriginMatrix: OriginRevenueMatrix[];
   originSummary: OriginRevenueData[];
@@ -131,6 +138,97 @@ class RevenueAnalyticsService {
 
     // 3º: Fallback
     return 'nao-especificado';
+  }
+
+  /**
+   * Gera dados mensais de sessões por origem para timeline
+   */
+  public generateMonthlyOriginData(year?: number, category?: string): MonthlyOriginData[] {
+    console.log(`📈 [RevenueAnalytics] Gerando dados mensais por origem - ano: ${year || 'todos'}, categoria: ${category || 'todas'}`);
+
+    const { clients, sessions } = this.loadData();
+
+    // Filtrar sessões
+    const filteredSessions = sessions.filter(session => {
+      if (session.status === 'Cancelado') return false;
+      
+      if (year) {
+        const sessionDate = new Date(session.data);
+        if (sessionDate.getFullYear() !== year) return false;
+      }
+      
+      if (category && category !== 'all') {
+        if (session.categoria !== category) return false;
+      }
+      
+      return true;
+    });
+
+    // Deduplicar por sessionId
+    const sessionMap = new Map();
+    filteredSessions.forEach(session => {
+      const sessionKey = session.sessionId || session.id;
+      if (!sessionMap.has(sessionKey)) {
+        sessionMap.set(sessionKey, session);
+      }
+    });
+
+    const uniqueSessions = Array.from(sessionMap.values());
+
+    // Gerar dados mensais
+    const monthlyMap = new Map<number, Record<string, number>>();
+
+    // Inicializar todos os meses
+    for (let month = 0; month < 12; month++) {
+      monthlyMap.set(month, {});
+    }
+
+    // Processar sessões
+    uniqueSessions.forEach(session => {
+      const sessionDate = new Date(session.data);
+      const month = sessionDate.getMonth();
+      
+      const client = this.findClient(session, clients);
+      const origin = this.extractClientOrigin(session, client);
+      
+      const monthData = monthlyMap.get(month) || {};
+      monthData[origin] = (monthData[origin] || 0) + 1;
+      monthData.totalSessions = (monthData.totalSessions || 0) + 1;
+      monthlyMap.set(month, monthData);
+    });
+
+    // Coletar todas as origens ativas
+    const activeOrigins = new Set<string>();
+    monthlyMap.forEach(monthData => {
+      Object.keys(monthData).forEach(key => {
+        if (key !== 'totalSessions' && monthData[key] > 0) {
+          activeOrigins.add(key);
+        }
+      });
+    });
+
+    // Converter para array final
+    const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    
+    const result = Array.from(monthlyMap.entries()).map(([monthIndex, monthData]) => {
+      const data: MonthlyOriginData = {
+        month: monthNames[monthIndex],
+        monthIndex,
+        totalSessions: monthData.totalSessions || 0
+      };
+
+      // Adicionar dados de cada origem ativa
+      activeOrigins.forEach(origin => {
+        data[origin] = monthData[origin] || 0;
+      });
+
+      return data;
+    });
+
+    console.log(`📈 [RevenueAnalytics] Dados mensais gerados: ${activeOrigins.size} origens ativas, ${result.length} meses`);
+    console.log(`🎯 [RevenueAnalytics] Origens ativas:`, Array.from(activeOrigins));
+
+    return result;
   }
 
   /**

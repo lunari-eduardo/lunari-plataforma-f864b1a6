@@ -4,16 +4,18 @@ import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, LineChart, Line, X
 import { TrendingUp, BarChart3, PieChart as PieChartIcon, Calendar, Camera, DollarSign, Package } from 'lucide-react';
 import { MonthlyData, CategoryData, PackageDistributionData, OriginData } from '@/hooks/useSalesAnalytics';
 import { OriginChartsSection } from './OriginChartsSection';
+import { MonthlyOriginData } from '@/services/RevenueAnalyticsService';
 
 interface SalesChartsGridProps {
   monthlyData: MonthlyData[];
   categoryData: CategoryData[];
   packageDistributionData: PackageDistributionData[];
   originData: OriginData[];
+  monthlyOriginData: MonthlyOriginData[];
   selectedCategory: string;
 }
 
-export function SalesChartsGrid({ monthlyData, categoryData, packageDistributionData, originData, selectedCategory }: SalesChartsGridProps) {
+export function SalesChartsGrid({ monthlyData, categoryData, packageDistributionData, originData, monthlyOriginData, selectedCategory }: SalesChartsGridProps) {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency', 
@@ -229,7 +231,7 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
       </Card>
 
       {/* Origin Charts */}
-      <OriginChartsSection originData={originData} />
+      <OriginChartsSection originData={originData} monthlyOriginData={monthlyOriginData} />
 
       {/* Category Distribution */}
       <Card className="border-0 shadow-lg bg-lunar-surface lg:col-span-2">

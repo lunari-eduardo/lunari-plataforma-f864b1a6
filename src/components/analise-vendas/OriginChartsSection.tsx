@@ -3,12 +3,15 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { Globe, TrendingUp } from 'lucide-react';
 import { OriginData } from '@/types/salesAnalytics';
+import { OriginTimelineChart } from './OriginTimelineChart';
+import { MonthlyOriginData } from '@/services/RevenueAnalyticsService';
 
 interface OriginChartsSectionProps {
   originData: OriginData[];
+  monthlyOriginData: MonthlyOriginData[];
 }
 
-export function OriginChartsSection({ originData }: OriginChartsSectionProps) {
+export function OriginChartsSection({ originData, monthlyOriginData }: OriginChartsSectionProps) {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency', 
@@ -105,6 +108,11 @@ export function OriginChartsSection({ originData }: OriginChartsSectionProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Origin Timeline Chart - Full Width */}
+      <div className="col-span-full">
+        <OriginTimelineChart monthlyOriginData={monthlyOriginData} />
+      </div>
     </>
   );
 }

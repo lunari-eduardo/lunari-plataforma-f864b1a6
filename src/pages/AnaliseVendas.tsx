@@ -18,6 +18,7 @@ export default function AnaliseVendas() {
     categoryData, 
     packageDistributionData,
     originData,
+    monthlyOriginData,
     availableYears, 
     availableCategories 
   } = useSalesAnalytics(selectedYear, selectedCategory);
@@ -60,6 +61,7 @@ export default function AnaliseVendas() {
         categoryData={categoryData} 
         packageDistributionData={packageDistributionData}
         originData={originData}
+        monthlyOriginData={monthlyOriginData}
         selectedCategory={selectedCategory}
       />
 

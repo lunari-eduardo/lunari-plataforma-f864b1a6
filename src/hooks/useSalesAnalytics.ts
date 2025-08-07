@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { SalesMetrics, MonthlyData, CategoryData, PackageDistributionData, OriginData, NormalizedWorkflowData } from '@/types/salesAnalytics';
 import { normalizeWorkflowItems, generateAllMonthsData } from '@/utils/salesDataNormalizer';
 import { ORIGENS_PADRAO } from '@/utils/defaultOrigens';
+import { revenueAnalyticsService, MonthlyOriginData } from '@/services/RevenueAnalyticsService';
 
 // Re-export types for backward compatibility
 export type { SalesMetrics, MonthlyData, CategoryData, PackageDistributionData, OriginData };
@@ -227,6 +228,20 @@ export function useSalesAnalytics(selectedYear: number, selectedCategory: string
     return origins;
   }, [filteredData, selectedYear, selectedCategory]);
 
+  // Calculate monthly origin data for timeline chart
+  const monthlyOriginData = useMemo((): MonthlyOriginData[] => {
+    console.log(`📈 [useSalesAnalytics] Calculando dados mensais por origem para timeline`);
+    
+    try {
+      const result = revenueAnalyticsService.generateMonthlyOriginData(selectedYear, selectedCategory);
+      console.log(`📊 [useSalesAnalytics] Timeline gerada com ${result.length} meses de dados`);
+      return result;
+    } catch (error) {
+      console.error('❌ [useSalesAnalytics] Erro ao gerar dados mensais por origem:', error);
+      return [];
+    }
+  }, [selectedYear, selectedCategory]);
+
   // Get available categories
   const availableCategories = useMemo(() => {
     const categories = new Set<string>();
@@ -246,6 +261,7 @@ export function useSalesAnalytics(selectedYear: number, selectedCategory: string
     categoryData,
     packageDistributionData,
     originData,
+    monthlyOriginData,
     availableYears,
     availableCategories,
     filteredData
