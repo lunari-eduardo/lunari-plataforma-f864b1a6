@@ -116,7 +116,7 @@ export default function DailyView({
               key={`${time}-${index}`} 
               className="flex border border-gray-200 rounded-md overflow-hidden py-0 my-[2px] mx-0 px-0"
             >
-              <div className="p-3 w-16 flex-shrink-0 text-right text-sm text-gray-500 relative bg-lunar-border">
+              <div className="p-3 w-16 flex-shrink-0 text-right text-sm text-muted-foreground relative bg-muted">
                 {isEditing ? (
                   <TimeInput 
                     value={time} 
@@ -147,7 +147,7 @@ export default function DailyView({
                     />
                   </div>
                 ) : (
-                  <div className="h-full flex items-center justify-center text-xs text-gray-400">
+                  <div className="h-full flex items-center justify-center text-xs text-muted-foreground">
                     Disponível
                   </div>
                 )}

@@ -128,16 +128,16 @@ export default function FluxoTrabalho({
           <p className="text-muted-foreground text-xs">Lista de todas as etapas do fluxo de trabalho em ordem de execução. </p>
         </div>
         
-        <div className="bg-white rounded-lg border border-gray-100 overflow-hidden shadow-sm">
-          <div className="grid grid-cols-12 bg-gray-50/50 px-4 py-3 border-b border-gray-100 text-sm font-medium">
-            <div className="col-span-1 hidden sm:block text-gray-700">Ordem</div>
-            <div className="col-span-7 sm:col-span-5 text-gray-700">Etapa</div>
-            <div className="col-span-4 hidden sm:block text-gray-700">Cor</div>
-            <div className="col-span-5 sm:col-span-2 text-right text-gray-700">Ações</div>
+        <div className="bg-card rounded-lg border border-border overflow-hidden shadow-sm">
+          <div className="grid grid-cols-12 bg-muted/50 px-4 py-3 border-b border-border text-sm font-medium">
+            <div className="col-span-1 hidden sm:block text-card-foreground">Ordem</div>
+            <div className="col-span-7 sm:col-span-5 text-card-foreground">Etapa</div>
+            <div className="col-span-4 hidden sm:block text-card-foreground">Cor</div>
+            <div className="col-span-5 sm:col-span-2 text-right text-card-foreground">Ações</div>
           </div>
           
-          <div className="divide-y divide-gray-50">
-            {etapas.sort((a, b) => a.ordem - b.ordem).map((etapa, index) => <div key={etapa.id} className={`grid grid-cols-12 px-4 py-3 text-sm ${index % 2 === 0 ? 'bg-white' : 'bg-gray-25/30'} hover:bg-gray-50/70 transition-colors`}>
+          <div className="divide-y divide-border">
+            {etapas.sort((a, b) => a.ordem - b.ordem).map((etapa, index) => <div key={etapa.id} className={`grid grid-cols-12 px-4 py-3 text-sm ${index % 2 === 0 ? 'bg-card' : 'bg-muted/30'} hover:bg-accent/50 transition-colors`}>
                 {editandoEtapa === etapa.id ? <>
                     <div className="col-span-1 hidden sm:block">{etapa.ordem}</div>
                     <div className="col-span-7 sm:col-span-5 pr-2">
@@ -169,13 +169,13 @@ export default function FluxoTrabalho({
                   </> : <>
                     <div className="col-span-1 hidden sm:block">{etapa.ordem}</div>
                     <div className="col-span-7 sm:col-span-5 flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full border border-gray-200" style={{
+                      <div className="w-3 h-3 rounded-full border border-border" style={{
                   backgroundColor: etapa.cor
                 }} title={etapa.cor} />
                       {etapa.nome}
                     </div>
                     <div className="col-span-4 hidden sm:flex items-center">
-                      <div className="px-3 py-1 rounded-full text-xs border border-gray-200" style={{
+                      <div className="px-3 py-1 rounded-full text-xs border border-border" style={{
                   backgroundColor: etapa.cor,
                   color: etapa.cor.toLowerCase() === '#ffffff' ? '#000000' : '#ffffff'
                 }}>
@@ -199,7 +199,7 @@ export default function FluxoTrabalho({
                   </>}
               </div>)}
             
-            {etapas.length === 0 && <div className="px-4 py-8 text-center text-sm text-muted-foreground bg-white">
+            {etapas.length === 0 && <div className="px-4 py-8 text-center text-sm text-muted-foreground bg-card">
                 Nenhuma etapa cadastrada. Adicione sua primeira etapa acima.
               </div>}
           </div>

@@ -416,7 +416,7 @@ export default function NovoOrcamento() {
                         <p className="text-xs font-medium text-green-600 mb-1">
                           Produtos incluídos ({pacoteSelecionado.produtosIncluidos.length}):
                         </p>
-                        <div className="text-xs text-gray-600">
+                        <div className="text-xs text-muted-foreground">
                           {pacoteSelecionado.produtosIncluidos.map(produtoIncluido => {
                             const produto = produtos.find(p => p.id === produtoIncluido.produtoId);
                             return produto ? `${produto.nome} (${produtoIncluido.quantidade}x)` : '';

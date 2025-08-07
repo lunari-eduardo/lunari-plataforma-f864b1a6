@@ -146,7 +146,7 @@ export default function AppointmentDetails({
       <div className="space-y-4">
         <div>
           <Label htmlFor="title" className="text-xs font-medium text-lunar-text">Cliente</Label>
-          <Input id="title" name="title" value={formData.title} className="mt-1 bg-gray-100" placeholder="Nome do cliente" disabled readOnly />
+          <Input id="title" name="title" value={formData.title} className="mt-1 bg-muted" placeholder="Nome do cliente" disabled readOnly />
           
         </div>
 
@@ -173,7 +173,7 @@ export default function AppointmentDetails({
           <div>
             <Label htmlFor="package" className="text-xs font-medium text-lunar-text">Pacote</Label>
             <Select value={formData.packageId} onValueChange={handlePackageSelect} disabled={!isEditable}>
-              <SelectTrigger className={`mt-1 ${!isEditable ? 'bg-gray-100 cursor-not-allowed' : ''}`}>
+              <SelectTrigger className={`mt-1 ${!isEditable ? 'bg-muted cursor-not-allowed' : ''}`}>
                 <SelectValue placeholder="Selecionar pacote" />
               </SelectTrigger>
               <SelectContent>
@@ -220,7 +220,7 @@ export default function AppointmentDetails({
           
           <div>
             <Label htmlFor="paidAmount" className="text-xs font-medium text-lunar-text">Valor Pago</Label>
-            <Input id="paidAmount" name="paidAmount" type="number" min="0" step="0.01" value={formData.paidAmount} onChange={handleChange} className={`mt-1 ${!isEditable ? 'bg-gray-100 cursor-not-allowed' : ''}`} placeholder="0" disabled={!isEditable} />
+            <Input id="paidAmount" name="paidAmount" type="number" min="0" step="0.01" value={formData.paidAmount} onChange={handleChange} className={`mt-1 ${!isEditable ? 'bg-muted cursor-not-allowed' : ''}`} placeholder="0" disabled={!isEditable} />
             {!isEditable}
           </div>
         </div>

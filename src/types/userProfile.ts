@@ -28,7 +28,7 @@ export interface UserPreferences {
   moedaPadrao: 'BRL' | 'USD' | 'EUR';
   formatoData: 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'YYYY-MM-DD';
   // Aparência
-  tema: 'claro' | 'escuro';
+  tema: 'claro' | 'escuro' | 'sistema';
   // Notificações
   notificacoesEmail: boolean;
   notificacoesWhatsapp: boolean;
@@ -57,7 +57,7 @@ export const DEFAULT_USER_PREFERENCES: Omit<UserPreferences, 'id' | 'createdAt' 
   fusoHorario: 'America/Sao_Paulo',
   moedaPadrao: 'BRL',
   formatoData: 'DD/MM/YYYY',
-  tema: 'claro',
+  tema: 'sistema',
   notificacoesEmail: true,
   notificacoesWhatsapp: true
 };

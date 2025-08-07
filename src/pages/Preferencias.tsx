@@ -26,7 +26,13 @@ export default function Preferencias() {
     if (preferences) {
       setFormData(preferences);
       if (preferences.tema) {
-        setTheme(preferences.tema === 'escuro' ? 'dark' : 'light');
+        if (preferences.tema === 'escuro') {
+          setTheme('dark');
+        } else if (preferences.tema === 'claro') {
+          setTheme('light');
+        } else if (preferences.tema === 'sistema') {
+          setTheme('system');
+        }
       }
     }
   }, [preferences, setTheme]);
@@ -36,7 +42,13 @@ export default function Preferencias() {
     setFormData(updatedData);
     savePreferences({ [field]: value });
     if (field === 'tema') {
-      setTheme((value as 'claro' | 'escuro') === 'escuro' ? 'dark' : 'light');
+      if (value === 'escuro') {
+        setTheme('dark');
+      } else if (value === 'claro') {
+        setTheme('light');
+      } else if (value === 'sistema') {
+        setTheme('system');
+      }
     }
   };
 
@@ -162,7 +174,7 @@ export default function Preferencias() {
                         <Label>Tema</Label>
                         <RadioGroup 
                           value={formData.tema} 
-                          onValueChange={(value: 'claro' | 'escuro') => handleSelectChange('tema', value)}
+                          onValueChange={(value: 'claro' | 'escuro' | 'sistema') => handleSelectChange('tema', value)}
                           className="flex gap-6"
                         >
                           <div className="flex items-center space-x-2">
@@ -172,6 +184,10 @@ export default function Preferencias() {
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="escuro" id="tema-escuro" />
                             <Label htmlFor="tema-escuro">Escuro</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="sistema" id="tema-sistema" />
+                            <Label htmlFor="tema-sistema">Sistema</Label>
                           </div>
                         </RadioGroup>
                         <p className="text-sm text-lunar-textSecondary">

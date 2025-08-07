@@ -67,6 +67,27 @@
     --lunar-accentHover: 36 39% 50%;
     --lunar-error: 12 74% 61%;
     --lunar-success: 150 53% 55%;
+    
+    /* Shadcn compatible variables for light mode */
+    --background: 40 33% 97%;
+    --foreground: 0 0% 23%;
+    --muted: 42 16% 95%;
+    --muted-foreground: 0 0% 49%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 23%;
+    --card: 42 16% 95%;
+    --card-foreground: 0 0% 23%;
+    --border: 40 12% 88%;
+    --input: 42 16% 95%;
+    --primary: 36 39% 62%;
+    --primary-foreground: 0 0% 23%;
+    --secondary: 42 16% 95%;
+    --secondary-foreground: 0 0% 23%;
+    --accent: 42 16% 95%;
+    --accent-foreground: 0 0% 23%;
+    --destructive: 12 74% 61%;
+    --destructive-foreground: 0 0% 100%;
+    --ring: 36 39% 62%;
   }
 
   .dark {
@@ -79,6 +100,27 @@
     --lunar-accentHover: 36 39% 68%;
     --lunar-error: 10 74% 60%;
     --lunar-success: 150 53% 55%;
+    
+    /* Shadcn compatible variables for dark mode */
+    --background: 0 0% 8%;
+    --foreground: 0 0% 96%;
+    --muted: 0 0% 13%;
+    --muted-foreground: 0 0% 70%;
+    --popover: 0 0% 13%;
+    --popover-foreground: 0 0% 96%;
+    --card: 0 0% 13%;
+    --card-foreground: 0 0% 96%;
+    --border: 0 0% 22%;
+    --input: 0 0% 13%;
+    --primary: 36 39% 62%;
+    --primary-foreground: 0 0% 96%;
+    --secondary: 0 0% 13%;
+    --secondary-foreground: 0 0% 96%;
+    --accent: 0 0% 13%;
+    --accent-foreground: 0 0% 96%;
+    --destructive: 10 74% 60%;
+    --destructive-foreground: 0 0% 96%;
+    --ring: 36 39% 62%;
   }
 }
 

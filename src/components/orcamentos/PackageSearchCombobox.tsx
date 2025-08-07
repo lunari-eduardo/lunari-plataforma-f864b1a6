@@ -111,7 +111,7 @@ export function PackageSearchCombobox({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0 z-[9999] bg-white border shadow-lg">
+      <PopoverContent className="w-full p-0 z-[9999] bg-popover border shadow-lg">
         <Command>
           <CommandInput placeholder="Buscar pacote..." />
           <CommandList>
@@ -164,7 +164,7 @@ export function PackageSearchCombobox({
                     />
                     <div className="flex flex-col">
                       <span className="font-medium">{pacote.nome}</span>
-                      <span className="text-sm text-gray-500">
+                      <span className="text-sm text-muted-foreground">
                         R$ {getPackageValue(pacote).toFixed(2)}
                         {categoria && ` • ${categoria}`}
                       </span>

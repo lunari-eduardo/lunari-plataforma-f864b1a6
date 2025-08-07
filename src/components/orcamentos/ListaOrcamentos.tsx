@@ -217,7 +217,7 @@ export default function ListaOrcamentos({ selectedMonth }: ListaOrcamentosProps)
       <CardContent>
         <div className="overflow-x-auto max-h-96 overflow-y-auto">
           <Table>
-            <TableHeader className="sticky top-0 bg-white z-10">
+            <TableHeader className="sticky top-0 bg-background z-10">
               <TableRow>
                 {colunasVisiveis.cliente && <TableHead>Cliente</TableHead>}
                 {colunasVisiveis.categoria && <TableHead>Categoria</TableHead>}

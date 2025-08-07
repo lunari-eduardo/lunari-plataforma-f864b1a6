@@ -34,9 +34,9 @@ export default {
 				'2.25': '0.5625rem',
 			},
 			colors: {
-				// Nova paleta lunar clara
-				background: '#FAF8F5',
-				foreground: '#3A3A3A',
+				// Using HSL variables for proper theme switching
+				background: 'hsl(var(--background))',
+				foreground: 'hsl(var(--foreground))',
 				
 				// Cores lunares específicas
 				lunar: {
@@ -65,36 +65,36 @@ export default {
 					neutral: '#9CA3AF',      // Cinza neutro
 				},
 				
-				border: 'hsl(var(--lunar-border) / <alpha-value>)',
-				input: '#F3F1ED',
-				ring: '#CBA977',
+				border: 'hsl(var(--border) / <alpha-value>)',
+				input: 'hsl(var(--input))',
+				ring: 'hsl(var(--ring))',
 				primary: {
-					DEFAULT: '#CBA977',
-					foreground: '#3A3A3A'
+					DEFAULT: 'hsl(var(--primary))',
+					foreground: 'hsl(var(--primary-foreground))'
 				},
 				secondary: {
-					DEFAULT: '#F3F1ED',
-					foreground: '#3A3A3A'
+					DEFAULT: 'hsl(var(--secondary))',
+					foreground: 'hsl(var(--secondary-foreground))'
 				},
 				destructive: {
-					DEFAULT: '#E17055',
-					foreground: '#FAF8F5'
+					DEFAULT: 'hsl(var(--destructive))',
+					foreground: 'hsl(var(--destructive-foreground))'
 				},
 				muted: {
-					DEFAULT: '#F3F1ED',
-					foreground: '#7C7C7C'
+					DEFAULT: 'hsl(var(--muted))',
+					foreground: 'hsl(var(--muted-foreground))'
 				},
 				accent: {
-					DEFAULT: '#CBA977',
-					foreground: '#3A3A3A'
+					DEFAULT: 'hsl(var(--accent))',
+					foreground: 'hsl(var(--accent-foreground))'
 				},
 				popover: {
-					DEFAULT: '#FAF8F5',
-					foreground: '#3A3A3A'
+					DEFAULT: 'hsl(var(--popover))',
+					foreground: 'hsl(var(--popover-foreground))'
 				},
 				card: {
-					DEFAULT: '#F3F1ED',
-					foreground: '#3A3A3A'
+					DEFAULT: 'hsl(var(--card))',
+					foreground: 'hsl(var(--card-foreground))'
 				},
 				sidebar: {
 					DEFAULT: '#FAF8F5',

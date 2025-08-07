@@ -174,7 +174,7 @@ export default function TemplateSelector({ value, onChange, onSelectTemplate }: 
           </DialogHeader>
           <div className="space-y-4 max-h-96 overflow-y-auto">
             {templates.length === 0 ? (
-              <p className="text-center text-gray-500 py-8">Nenhum template encontrado</p>
+              <p className="text-center text-muted-foreground py-8">Nenhum template encontrado</p>
             ) : (
               templates.map(template => (
                 <div key={template.id} className="border rounded-lg p-4 space-y-2">
@@ -182,9 +182,9 @@ export default function TemplateSelector({ value, onChange, onSelectTemplate }: 
                     <div className="flex-1">
                       <h4 className="font-medium">{template.nome}</h4>
                       {template.categoria && (
-                        <span className="text-sm text-gray-500">Categoria: {template.categoria}</span>
+                        <span className="text-sm text-muted-foreground">Categoria: {template.categoria}</span>
                       )}
-                      <p className="text-sm text-gray-600 mt-1 line-clamp-2">{template.conteudo}</p>
+                      <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{template.conteudo}</p>
                     </div>
                     <div className="flex gap-2 ml-4">
                       <Button

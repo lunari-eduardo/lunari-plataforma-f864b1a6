@@ -35,14 +35,14 @@ export default function WeeklyView({
   return (
     <div className="overflow-x-auto pb-4">
       <div className="min-w-[300px] md:min-w-[700px]">
-        <div className="grid grid-cols-8 gap-px bg-gray-200">
+        <div className="grid grid-cols-8 gap-px bg-border">
           {/* First cell empty - for time labels */}
           <div className="bg-stone-200"></div>
           
           {/* Day headers */}
           {weekDays.map((day, index) => (
             <div key={index} className="p-1 md:p-2 text-center bg-stone-200">
-              <p className="text-xs text-gray-500 font-medium">{formatDayName(day)}</p>
+              <p className="text-xs text-muted-foreground font-medium">{formatDayName(day)}</p>
               <p className="font-semibold text-xs md:text-sm">{format(day, 'd')}</p>
             </div>
           ))}
@@ -51,7 +51,7 @@ export default function WeeklyView({
           {timeSlots.map(time => (
             <React.Fragment key={time}>
               {/* Time label */}
-              <div className="p-1 md:p-2 text-right text-xs text-gray-500 px-2 md:px-3 py-2 md:py-3 rounded-sm my-px bg-stone-100">
+              <div className="p-1 md:p-2 text-right text-xs text-muted-foreground px-2 md:px-3 py-2 md:py-3 rounded-sm my-px bg-muted">
                 {time}
               </div>
               

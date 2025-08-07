@@ -112,25 +112,25 @@ export default function PackageSearchCombobox({
           aria-label="Buscar pacote"
           autoComplete="off"
         />
-        <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+        <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
       </div>
 
       {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+        <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg max-h-60 overflow-auto">
           {Object.keys(groupedPackages).length > 0 ? (
             Object.entries(groupedPackages).map(([category, packages]) => (
               <div key={category}>
-                <div className="px-3 py-1 bg-gray-50 text-[11px] font-medium text-gray-700 border-b border-gray-100">
+                <div className="px-3 py-1 bg-muted text-[11px] font-medium text-muted-foreground border-b border-border">
                   {category}
                 </div>
                 {packages.map((pkg) => (
                   <div
                     key={pkg.id}
                     onClick={() => handleSelect(pkg.id)}
-                    className="px-3 py-2 hover:bg-gray-50 cursor-pointer text-xs border-b border-gray-100 last:border-b-0"
+                    className="px-3 py-2 hover:bg-accent cursor-pointer text-xs border-b border-border last:border-b-0"
                   >
                     <div className="flex items-center">
-                      <Package className="h-3 w-3 mr-2 text-gray-400" />
+                      <Package className="h-3 w-3 mr-2 text-muted-foreground" />
                       <div className="flex-1">
                         <div className="flex items-center">
                           <span className="font-medium">{pkg.name}</span>
@@ -138,7 +138,7 @@ export default function PackageSearchCombobox({
                             <Check className="ml-2 h-3 w-3 text-green-600" />
                           )}
                         </div>
-                        <div className="text-[11px] text-gray-500">
+                        <div className="text-[11px] text-muted-foreground">
                           R$ {pkg.price.toFixed(2)}
                         </div>
                       </div>
@@ -148,7 +148,7 @@ export default function PackageSearchCombobox({
               </div>
             ))
           ) : (
-            <div className="px-3 py-2 text-xs text-gray-500">
+            <div className="px-3 py-2 text-xs text-muted-foreground">
               Nenhum pacote encontrado
             </div>
           )}

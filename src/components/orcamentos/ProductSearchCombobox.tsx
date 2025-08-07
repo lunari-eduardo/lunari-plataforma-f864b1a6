@@ -52,7 +52,7 @@ export function ProductSearchCombobox({
           <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[300px] p-0 z-[9999] bg-white border shadow-lg">
+      <PopoverContent className="w-[300px] p-0 z-[9999] bg-popover border shadow-lg">
         <Command>
           <CommandInput placeholder="Buscar produto..." className="h-8 text-xs" />
           <CommandList>
@@ -88,7 +88,7 @@ export function ProductSearchCombobox({
                     />
                     <div className="flex flex-col">
                       <span className="font-medium">{product.nome}</span>
-                      <span className="text-2xs text-gray-500">
+                      <span className="text-2xs text-muted-foreground">
                         R$ {valorProduto.toFixed(2)}
                         {product.categoria && ` • ${product.categoria}`}
                       </span>

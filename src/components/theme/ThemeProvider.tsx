@@ -10,6 +10,7 @@ function ThemeSync() {
     const pref = preferences?.tema
     if (pref === 'escuro') setTheme('dark')
     else if (pref === 'claro') setTheme('light')
+    else if (pref === 'sistema') setTheme('system')
   }, [preferences?.tema, setTheme])
 
   return null

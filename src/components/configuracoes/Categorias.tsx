@@ -101,15 +101,15 @@ export default function Categorias({
           </p>
         </div>
         
-        <div className="bg-white rounded-lg border border-gray-100 overflow-hidden shadow-sm">
-          <div className="grid grid-cols-6 px-4 border-b border-gray-100 py-[10px] bg-lunar-surface">
-            <div className="font-medium text-sm col-span-3 sm:col-span-2 text-gray-700">Nome</div>
-            <div className="font-medium text-sm hidden sm:block text-gray-700">Cor</div>
-            <div className="font-medium text-sm col-span-3 text-gray-700">Ações</div>
+        <div className="bg-card rounded-lg border border-border overflow-hidden shadow-sm">
+          <div className="grid grid-cols-6 px-4 border-b border-border py-[10px] bg-muted">
+            <div className="font-medium text-sm col-span-3 sm:col-span-2 text-card-foreground">Nome</div>
+            <div className="font-medium text-sm hidden sm:block text-card-foreground">Cor</div>
+            <div className="font-medium text-sm col-span-3 text-card-foreground">Ações</div>
           </div>
           
-          <div className="divide-y divide-gray-50">
-            {categorias.map((categoria, index) => <div key={categoria.id} className={`grid grid-cols-6 px-4 py-3 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-25/30'} hover:bg-gray-50/70 transition-colors`}>
+          <div className="divide-y divide-border">
+            {categorias.map((categoria, index) => <div key={categoria.id} className={`grid grid-cols-6 px-4 py-3 ${index % 2 === 0 ? 'bg-card' : 'bg-muted/30'} hover:bg-accent/50 transition-colors`}>
                 {editandoCategoria === categoria.id ? <>
                     <div className="col-span-3 sm:col-span-2 pr-2">
                       <Input defaultValue={categoria.nome} onChange={e => {
@@ -142,7 +142,7 @@ export default function Categorias({
                       {categoria.nome}
                     </div>
                     <div className="hidden sm:flex items-center">
-                      <div className="w-6 h-6 rounded-full border border-gray-200" style={{
+                      <div className="w-6 h-6 rounded-full border border-border" style={{
                   backgroundColor: categoria.cor
                 }} title={categoria.cor} />
                     </div>
@@ -157,7 +157,7 @@ export default function Categorias({
                   </>}
               </div>)}
 
-            {categorias.length === 0 && <div className="px-4 py-8 text-center text-sm text-muted-foreground bg-white">
+            {categorias.length === 0 && <div className="px-4 py-8 text-center text-sm text-muted-foreground bg-card">
                 Nenhuma categoria cadastrada. Adicione sua primeira categoria acima.
               </div>}
           </div>

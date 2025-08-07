@@ -45,7 +45,7 @@ export default function MonthlyView({
   return <div className="w-full h-full overflow-auto">
       <div className="grid grid-cols-7 gap-px md:gap-1 rounded-lg p-px md:p-1 bg-neutral-50">
         {/* Weekday headers */}
-        {weekDays.map((day, index) => <div key={day} className="h-8 md:h-10 p-1 md:p-2 text-center text-xs font-medium text-gray-600 rounded bg-lunar-border">
+        {weekDays.map((day, index) => <div key={day} className="h-8 md:h-10 p-1 md:p-2 text-center text-xs font-medium text-muted-foreground rounded bg-muted">
             {day}
           </div>)}
         
@@ -62,7 +62,7 @@ export default function MonthlyView({
               <div className="flex justify-between items-center mb-1 md:mb-2">
                 <span className={`
                   text-xs md:text-sm font-medium h-5 w-5 md:h-6 md:w-6 flex items-center justify-center rounded-full
-                  ${isToday(day) ? 'bg-blue-500 text-white' : 'text-gray-700'}
+                  ${isToday(day) ? 'bg-primary text-primary-foreground' : 'text-foreground'}
                 `}>
                   {format(day, 'd')}
                 </span>
@@ -73,7 +73,7 @@ export default function MonthlyView({
                     <UnifiedEventCard event={event} onClick={onEventClick} variant="monthly" />
                   </div>)}
                 
-                {hasMoreEvents && <div className="text-xs p-0.5 md:p-1 text-gray-500 font-medium">
+                {hasMoreEvents && <div className="text-xs p-0.5 md:p-1 text-muted-foreground font-medium">
                     +{dayEvents.length - maxDisplayEvents} mais
                   </div>}
                 
