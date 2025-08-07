@@ -2,6 +2,7 @@ import * as React from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
+import { ThemeProvider } from './components/theme/ThemeProvider'
 
 // Defensive initialization to prevent ReactCurrentDispatcher error
 function initializeReact() {
@@ -16,7 +17,9 @@ function initializeReact() {
     // Render with error boundary
     root.render(
       React.createElement(React.StrictMode, null,
-        React.createElement(App)
+        React.createElement(ThemeProvider, null,
+          React.createElement(App)
+        )
       )
     )
     
@@ -27,7 +30,11 @@ function initializeReact() {
     const container = document.getElementById('root')
     if (container) {
       const root = createRoot(container)
-      root.render(React.createElement(App))
+      root.render(
+        React.createElement(ThemeProvider, null,
+          React.createElement(App)
+        )
+      )
     }
   }
 }
