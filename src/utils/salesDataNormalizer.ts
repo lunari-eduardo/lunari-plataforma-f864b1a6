@@ -63,14 +63,17 @@ export function normalizeWorkflowItems(): NormalizedWorkflowData[] {
           // 1º: Buscar origem no CRM usando clienteId (fonte autoritativa)
           if (session.clienteId) {
             try {
-              const clientsData = localStorage.getItem('clients') || '[]';
+              const clientsData = localStorage.getItem('lunari_clients') || '[]';
               const clients = JSON.parse(clientsData);
               const client = clients.find((c: any) => c.id === session.clienteId);
               if (client?.origem) {
                 clientOrigin = client.origem;
+                console.log(`✅ [SalesAnalytics] Origem encontrada no CRM: ${client.nome} → ${client.origem}`);
+              } else {
+                console.log(`⚠️ [SalesAnalytics] Cliente ${session.clienteId} sem origem no CRM`);
               }
             } catch (error) {
-              console.warn(`Failed to get client origin for clientId ${session.clienteId}:`, error);
+              console.warn(`❌ [SalesAnalytics] Erro ao buscar origem no CRM para clientId ${session.clienteId}:`, error);
             }
           }
           

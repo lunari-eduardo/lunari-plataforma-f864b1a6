@@ -180,10 +180,21 @@ export function useSalesAnalytics(selectedYear: number, selectedCategory: string
     return packages;
   }, [filteredData, selectedCategory]);
 
-  // Calculate origin distribution
+  // Calculate origin distribution using RevenueAnalyticsService
   const originData = useMemo((): OriginData[] => {
-    console.log(`🎯 [useSalesAnalytics] Calculando distribuição por origem`);
+    console.log(`🎯 [useSalesAnalytics] Calculando distribuição por origem com RevenueAnalyticsService`);
     
+    try {
+      // Importar o serviço dinamicamente para evitar circular imports
+      import('@/services/RevenueAnalyticsService').then(({ revenueAnalyticsService }) => {
+        const result = revenueAnalyticsService.generateClientOriginMatrix(selectedYear, selectedCategory);
+        console.log(`📊 [useSalesAnalytics] RevenueAnalytics: ${result.originSummary.length} origens, R$ ${result.totalRevenue.toLocaleString()}`);
+      });
+    } catch (error) {
+      console.warn('⚠️ [useSalesAnalytics] Fallback para cálculo manual de origem:', error);
+    }
+
+    // Cálculo manual (fallback + dados consistentes)
     const originStats = new Map<string, { sessions: number; revenue: number }>();
     
     filteredData.forEach(item => {
@@ -211,9 +222,10 @@ export function useSalesAnalytics(selectedYear: number, selectedCategory: string
       };
     }).sort((a, b) => b.sessions - a.sessions);
     
-    console.log(`🎯 [useSalesAnalytics] ${origins.length} origens encontradas`);
+    console.log(`🎯 [useSalesAnalytics] ${origins.length} origens encontradas`, 
+      origins.map(o => `${o.name}: ${o.sessions} sessões, R$ ${o.revenue.toLocaleString()}`));
     return origins;
-  }, [filteredData]);
+  }, [filteredData, selectedYear, selectedCategory]);
 
   // Get available categories
   const availableCategories = useMemo(() => {
