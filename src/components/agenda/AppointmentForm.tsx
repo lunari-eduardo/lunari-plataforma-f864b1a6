@@ -259,9 +259,9 @@ export default function AppointmentForm({
     onSave(appointmentData);
   };
   return <form onSubmit={handleSubmit} className="space-y-4 bg-lunar-surface/30 rounded-lg py-2 px-3">
-      {isFromBudgetAppointment && <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-sm font-medium text-blue-800 mb-1">📋 Agendamento de Orçamento</p>
-          <p className="text-xs text-blue-600">
+      {isFromBudgetAppointment && <div className="p-3 bg-muted border border-border rounded-lg">
+          <p className="text-sm font-medium text-foreground mb-1">📋 Agendamento de Orçamento</p>
+          <p className="text-xs text-muted-foreground">
             Este agendamento foi criado automaticamente a partir de um orçamento fechado. 
             Apenas data e horário podem ser editados aqui. Para alterar outras informações, 
             vá para a página de Orçamentos ou Workflow.
@@ -341,17 +341,17 @@ export default function AppointmentForm({
             
             {/* Seção de Produtos Incluídos - aparece quando pacote é selecionado */}
             {formData.packageId && getIncludedProducts().length > 0 && (
-              <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <h4 className="text-xs font-medium text-blue-800 mb-2">📦 Produtos Incluídos neste Pacote</h4>
+              <div className="mt-3 p-3 bg-muted border border-border rounded-lg">
+                <h4 className="text-xs font-medium text-foreground mb-2">📦 Produtos Incluídos neste Pacote</h4>
                 <div className="space-y-1">
                   {getIncludedProducts().map((produto, index) => (
-                    <div key={index} className="flex justify-between items-center text-xs text-blue-700">
+                    <div key={index} className="flex justify-between items-center text-xs text-muted-foreground">
                       <span>{produto.nome}</span>
                       <span className="font-medium">Qtd: {produto.quantidade}</span>
                     </div>
                   ))}
                 </div>
-                <p className="text-xs text-blue-600 mt-2 italic">
+                <p className="text-xs text-muted-foreground mt-2 italic">
                   Estes produtos serão automaticamente incluídos no agendamento
                 </p>
               </div>
@@ -377,11 +377,11 @@ export default function AppointmentForm({
                     className={`flex-1 text-xs h-8 ${
                       formData.status === status.value
                         ? status.value === 'a confirmar'
-                          ? 'bg-orange-500 hover:bg-orange-600 text-white border-orange-500'
-                          : 'bg-green-500 hover:bg-green-600 text-white border-green-500'
+                          ? 'bg-lunar-accent text-foreground border-lunar-accent hover:bg-lunar-accent/90'
+                          : 'bg-lunar-success text-foreground border-lunar-success hover:bg-lunar-success/90'
                         : status.value === 'a confirmar'
-                          ? 'border-orange-500 text-orange-600 hover:bg-orange-50'
-                          : 'border-green-500 text-green-600 hover:bg-green-50'
+                          ? 'border-lunar-accent text-lunar-accent hover:bg-lunar-accent/10'
+                          : 'border-lunar-success text-lunar-success hover:bg-lunar-success/10'
                     }`}
                   >
                     {status.label}
