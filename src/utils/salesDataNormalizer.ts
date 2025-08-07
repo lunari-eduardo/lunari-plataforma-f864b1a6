@@ -57,6 +57,22 @@ export function normalizeWorkflowItems(): NormalizedWorkflowData[] {
           const calculatedYear = date.getFullYear();
           const monthName = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'][calculatedMonth];
           
+          // Extract origin - try session first, then fallback to client data
+          let clientOrigin = session.origemCliente || session.origem;
+          if (!clientOrigin && session.clienteId) {
+            // Try to get origin from client data in localStorage
+            try {
+              const clientsData = localStorage.getItem('clients') || '[]';
+              const clients = JSON.parse(clientsData);
+              const client = clients.find((c: any) => c.id === session.clienteId);
+              if (client && client.origem) {
+                clientOrigin = client.origem;
+              }
+            } catch (error) {
+              console.warn(`Failed to get client origin for clientId ${session.clienteId}:`, error);
+            }
+          }
+
           const normalized: NormalizedWorkflowData = {
             id: session.id || `session-${index}`,
             sessionId: session.sessionId || session.id || `session-${index}`,
@@ -81,6 +97,7 @@ export function normalizeWorkflowItems(): NormalizedWorkflowData[] {
             restante: total - valorPago,
             fonte: session.fonte || 'agenda',
             clienteId: session.clienteId,
+            origem: clientOrigin,
             month: calculatedMonth, // 0-11 (Jan=0, Jul=6)
             year: calculatedYear,
             date: date

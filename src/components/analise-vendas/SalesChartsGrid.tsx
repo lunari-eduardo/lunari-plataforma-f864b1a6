@@ -2,16 +2,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Legend } from 'recharts';
 import { TrendingUp, BarChart3, PieChart as PieChartIcon, Calendar, Camera, DollarSign, Package } from 'lucide-react';
-import { MonthlyData, CategoryData, PackageDistributionData } from '@/hooks/useSalesAnalytics';
+import { MonthlyData, CategoryData, PackageDistributionData, OriginData } from '@/hooks/useSalesAnalytics';
+import { OriginChartsSection } from './OriginChartsSection';
 
 interface SalesChartsGridProps {
   monthlyData: MonthlyData[];
   categoryData: CategoryData[];
   packageDistributionData: PackageDistributionData[];
+  originData: OriginData[];
   selectedCategory: string;
 }
 
-export function SalesChartsGrid({ monthlyData, categoryData, packageDistributionData, selectedCategory }: SalesChartsGridProps) {
+export function SalesChartsGrid({ monthlyData, categoryData, packageDistributionData, originData, selectedCategory }: SalesChartsGridProps) {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency', 
@@ -188,7 +190,7 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
       </Card>
 
       {/* Package Distribution */}
-      <Card className="border-0 shadow-lg bg-lunar-surface lg:col-span-2">
+      <Card className="border-0 shadow-lg bg-lunar-surface">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-lunar-text flex items-center gap-2">
             <Package className="h-4 w-4 text-indigo-500" />
@@ -225,6 +227,9 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
           </ChartContainer>
         </CardContent>
       </Card>
+
+      {/* Origin Charts */}
+      <OriginChartsSection originData={originData} />
 
       {/* Category Distribution */}
       <Card className="border-0 shadow-lg bg-lunar-surface lg:col-span-2">

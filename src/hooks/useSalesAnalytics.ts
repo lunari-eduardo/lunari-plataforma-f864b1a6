@@ -1,9 +1,10 @@
 import { useMemo } from 'react';
-import { SalesMetrics, MonthlyData, CategoryData, PackageDistributionData, NormalizedWorkflowData } from '@/types/salesAnalytics';
+import { SalesMetrics, MonthlyData, CategoryData, PackageDistributionData, OriginData, NormalizedWorkflowData } from '@/types/salesAnalytics';
 import { normalizeWorkflowItems, generateAllMonthsData } from '@/utils/salesDataNormalizer';
+import { ORIGENS_PADRAO } from '@/utils/defaultOrigens';
 
 // Re-export types for backward compatibility
-export type { SalesMetrics, MonthlyData, CategoryData, PackageDistributionData };
+export type { SalesMetrics, MonthlyData, CategoryData, PackageDistributionData, OriginData };
 
 export function useSalesAnalytics(selectedYear: number, selectedCategory: string) {
   console.log(`🔍 [useSalesAnalytics] Iniciando análise para ano ${selectedYear}, categoria: ${selectedCategory}`);
@@ -179,6 +180,41 @@ export function useSalesAnalytics(selectedYear: number, selectedCategory: string
     return packages;
   }, [filteredData, selectedCategory]);
 
+  // Calculate origin distribution
+  const originData = useMemo((): OriginData[] => {
+    console.log(`🎯 [useSalesAnalytics] Calculando distribuição por origem`);
+    
+    const originStats = new Map<string, { sessions: number; revenue: number }>();
+    
+    filteredData.forEach(item => {
+      const originKey = item.origem || 'nao-especificado';
+      const current = originStats.get(originKey) || { sessions: 0, revenue: 0 };
+      originStats.set(originKey, {
+        sessions: current.sessions + 1,
+        revenue: current.revenue + item.valorPago
+      });
+    });
+
+    const totalSessions = filteredData.length;
+    const origins = Array.from(originStats.entries()).map(([originKey, stats]) => {
+      // Find matching origin from defaults or create fallback
+      const matchingOrigin = ORIGENS_PADRAO.find(o => o.id === originKey);
+      const name = matchingOrigin?.nome || (originKey === 'nao-especificado' ? 'Não especificado' : originKey);
+      const color = matchingOrigin?.cor || '#6B7280';
+
+      return {
+        name,
+        sessions: stats.sessions,
+        revenue: stats.revenue,
+        percentage: totalSessions > 0 ? (stats.sessions / totalSessions) * 100 : 0,
+        color
+      };
+    }).sort((a, b) => b.sessions - a.sessions);
+    
+    console.log(`🎯 [useSalesAnalytics] ${origins.length} origens encontradas`);
+    return origins;
+  }, [filteredData]);
+
   // Get available categories
   const availableCategories = useMemo(() => {
     const categories = new Set<string>();
@@ -197,6 +233,7 @@ export function useSalesAnalytics(selectedYear: number, selectedCategory: string
     monthlyData,
     categoryData,
     packageDistributionData,
+    originData,
     availableYears,
     availableCategories,
     filteredData

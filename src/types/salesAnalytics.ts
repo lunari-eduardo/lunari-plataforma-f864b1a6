@@ -27,6 +27,7 @@ export interface NormalizedWorkflowData {
   restante: number;
   fonte: 'agenda' | 'orcamento';
   clienteId?: string;
+  origem?: string; // Client origin
   month: number; // 0-11 (Jan-Dec)
   year: number;
   date: Date; // Parsed date object
@@ -71,4 +72,12 @@ export interface PackageDistributionData {
   sessions: number;
   revenue: number;
   percentage: number;
+}
+
+export interface OriginData {
+  name: string;
+  sessions: number;
+  revenue: number;
+  percentage: number;
+  color: string;
 }
