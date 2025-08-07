@@ -19,7 +19,11 @@ export const STORAGE_KEYS = {
   FIN_BLUEPRINTS: 'lunari_fin_recurring_blueprints',
   FIN_ITEMS: 'lunari_fin_items',
   // Metas históricas
-  HISTORICAL_GOALS: 'lunari_historical_metas'
+  HISTORICAL_GOALS: 'lunari_historical_metas',
+  // Configurações de usuário
+  USER_PROFILE: 'lunari_user_profile',
+  USER_PREFERENCES: 'lunari_user_preferences',
+  USER_BRANDING: 'lunari_user_branding'
 } as const;
 
 export const storage = {

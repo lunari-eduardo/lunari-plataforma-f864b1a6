@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Bell, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -14,11 +14,14 @@ const pageTitles: Record<string, string> = {
   "/clientes": "Clientes",
   "/financas": "Finanças",
   "/precificacao": "Precificação",
-  "/configuracoes": "Configurações"
+  "/configuracoes": "Configurações",
+  "/minha-conta": "Minha Conta",
+  "/preferencias": "Preferências"
 };
 
 export default function Header() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [notificationCount] = useState(2);
 
   // Get current page title
@@ -52,11 +55,19 @@ export default function Header() {
           <DropdownMenuContent align="end" className="w-48 bg-lunar-bg shadow-lunar-md border border-lunar-border/50">
             <DropdownMenuLabel className="text-xs text-lunar-text">Minha Conta</DropdownMenuLabel>
             <DropdownMenuSeparator className="bg-lunar-border/30" />
-            <DropdownMenuItem className="text-xs text-lunar-text hover:bg-lunar-surface/50 rounded">
+            <DropdownMenuItem 
+              className="text-xs text-lunar-text hover:bg-lunar-surface/50 rounded cursor-pointer"
+              onClick={() => navigate('/minha-conta')}
+            >
               <User className="mr-2 h-3 w-3" />
-              <span>Perfil</span>
+              <span>Minha Conta</span>
             </DropdownMenuItem>
-            <DropdownMenuItem className="text-xs text-lunar-text hover:bg-lunar-surface/50 rounded">Preferências</DropdownMenuItem>
+            <DropdownMenuItem 
+              className="text-xs text-lunar-text hover:bg-lunar-surface/50 rounded cursor-pointer"
+              onClick={() => navigate('/preferencias')}
+            >
+              Preferências
+            </DropdownMenuItem>
             <DropdownMenuItem className="text-xs text-lunar-text hover:bg-lunar-surface/50 rounded">Plano de Assinatura</DropdownMenuItem>
             <DropdownMenuSeparator className="bg-lunar-border/30" />
             <DropdownMenuItem className="text-xs text-lunar-text hover:bg-lunar-surface/50 rounded">Sair</DropdownMenuItem>

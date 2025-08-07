@@ -17,6 +17,8 @@ import Configuracoes from "./pages/Configuracoes";
 import ClienteDetalhe from "./pages/ClienteDetalhe";
 import Workflow from "./pages/Workflow";
 import AnaliseVendas from "./pages/AnaliseVendas";
+import MinhaConta from "./pages/MinhaConta";
+import Preferencias from "./pages/Preferencias";
 import NotFound from "./pages/NotFound";
 import { AppProvider } from "./contexts/AppContext";
 import { useIntegration } from "./hooks/useIntegration";
@@ -104,6 +106,8 @@ function App() {
                 <Route path="/workflow" element={<Workflow />} />
                 <Route path="/analise-vendas" element={<AnaliseVendas />} />
                 <Route path="/configuracoes" element={<Configuracoes />} />
+                <Route path="/minha-conta" element={<MinhaConta />} />
+                <Route path="/preferencias" element={<Preferencias />} />
                 <Route path="*" element={<NotFound />} />
               </Route>
             </Routes>
