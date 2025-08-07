@@ -21,14 +21,25 @@ export function normalizeWorkflowItems(): NormalizedWorkflowData[] {
     const normalizedData: NormalizedWorkflowData[] = sessions
       .map((session: any, index: number) => {
         try {
-          // Parse e validação da data
+          // Parse e validação da data com interpretação UTC para consistência
           const dateStr = session.data;
           if (!dateStr) {
             console.warn(`⚠️ [SalesAnalytics] Sessão ${index} sem data válida`);
             return null;
           }
 
-          const date = new Date(dateStr);
+          // Parse explícito da data garantindo interpretação UTC
+          let date: Date;
+          if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            // Para formato YYYY-MM-DD, usar interpretação UTC para evitar mudanças de timezone
+            const [year, month, day] = dateStr.split('-').map(Number);
+            date = new Date(year, month - 1, day); // month - 1 porque Date usa 0-11 para meses
+            console.log(`📅 [SalesAnalytics] Sessão ${index}: "${dateStr}" → ano:${year}, mês:${month-1} (${month}), dia:${day}`);
+          } else {
+            // Para outros formatos, usar parse padrão
+            date = new Date(dateStr);
+          }
+          
           if (isNaN(date.getTime())) {
             console.warn(`⚠️ [SalesAnalytics] Data inválida para sessão ${index}: ${dateStr}`);
             return null;
@@ -41,6 +52,11 @@ export function normalizeWorkflowItems(): NormalizedWorkflowData[] {
           const valorTotalFotoExtra = parseMonetaryValue(session.valorTotalFotoExtra || 0);
           const valorAdicional = parseMonetaryValue(session.valorAdicional || 0);
 
+          // Calcular mês e ano com logs detalhados
+          const calculatedMonth = date.getMonth(); // 0-11
+          const calculatedYear = date.getFullYear();
+          const monthName = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'][calculatedMonth];
+          
           const normalized: NormalizedWorkflowData = {
             id: session.id || `session-${index}`,
             sessionId: session.sessionId || session.id || `session-${index}`,
@@ -65,16 +81,20 @@ export function normalizeWorkflowItems(): NormalizedWorkflowData[] {
             restante: total - valorPago,
             fonte: session.fonte || 'agenda',
             clienteId: session.clienteId,
-            month: date.getMonth(),
-            year: date.getFullYear(),
+            month: calculatedMonth, // 0-11 (Jan=0, Jul=6)
+            year: calculatedYear,
             date: date
           };
 
-          // Debug log para primeiras 3 sessões
+          // Debug log detalhado para primeiras 3 sessões
           if (index < 3) {
             console.log(`📊 [SalesAnalytics] Sessão ${index} normalizada:`, {
               id: normalized.id,
-              data: normalized.data,
+              dataOriginal: normalized.data,
+              dataParsed: date.toISOString(),
+              monthIndex: calculatedMonth,
+              monthName: monthName,
+              year: calculatedYear,
               total: normalized.total,
               valorPago: normalized.valorPago,
               categoria: normalized.categoria,
@@ -95,14 +115,24 @@ export function normalizeWorkflowItems(): NormalizedWorkflowData[] {
     
     console.log(`✅ [SalesAnalytics] ${normalizedData.length} sessões normalizadas (${activeSessions.length} ativas)`);
     
-    // Debug: Mostrar distribuição por mês
+    // Debug: Mostrar distribuição detalhada por mês
     const monthlyDistribution = activeSessions.reduce((acc, item) => {
       const monthKey = `${item.year}-${String(item.month + 1).padStart(2, '0')}`;
-      acc[monthKey] = (acc[monthKey] || 0) + 1;
+      const monthName = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'][item.month];
+      const fullKey = `${monthKey} (${monthName})`;
+      acc[fullKey] = (acc[fullKey] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
     
-    console.log('📅 [SalesAnalytics] Distribuição por mês:', monthlyDistribution);
+    console.log('📅 [SalesAnalytics] Distribuição detalhada por mês:', monthlyDistribution);
+    
+    // Log específico para dados de julho 2025
+    const julyData = activeSessions.filter(item => item.year === 2025 && item.month === 6); // Julho = 6
+    if (julyData.length > 0) {
+      console.log(`🔍 [SalesAnalytics] Dados de Julho/2025 encontrados: ${julyData.length} sessões`, 
+        julyData.map(item => ({ data: item.data, month: item.month, valorPago: item.valorPago }))
+      );
+    }
 
     return activeSessions;
   } catch (error) {
