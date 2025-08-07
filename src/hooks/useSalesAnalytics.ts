@@ -156,18 +156,23 @@ export function useSalesAnalytics(selectedYear: number, selectedCategory: string
   const packageDistributionData = useMemo((): PackageDistributionData[] => {
     console.log(`📦 [useSalesAnalytics] Calculando distribuição de pacotes para categoria: ${selectedCategory}`);
     
-    const packageStats = new Map<string, number>();
+    const packageStats = new Map<string, { sessions: number; revenue: number }>();
     
     filteredData.forEach(item => {
       const packageName = item.pacote || 'Sem pacote';
-      packageStats.set(packageName, (packageStats.get(packageName) || 0) + 1);
+      const current = packageStats.get(packageName) || { sessions: 0, revenue: 0 };
+      packageStats.set(packageName, {
+        sessions: current.sessions + 1,
+        revenue: current.revenue + item.valorPago
+      });
     });
 
     const totalSessions = filteredData.length;
-    const packages = Array.from(packageStats.entries()).map(([name, sessions]) => ({
+    const packages = Array.from(packageStats.entries()).map(([name, stats]) => ({
       name,
-      sessions,
-      percentage: totalSessions > 0 ? (sessions / totalSessions) * 100 : 0
+      sessions: stats.sessions,
+      revenue: stats.revenue,
+      percentage: totalSessions > 0 ? (stats.sessions / totalSessions) * 100 : 0
     })).sort((a, b) => b.sessions - a.sessions);
     
     console.log(`📦 [useSalesAnalytics] ${packages.length} pacotes encontrados`);

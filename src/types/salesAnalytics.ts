@@ -69,5 +69,6 @@ export interface PackageDistribution {
 export interface PackageDistributionData {
   name: string;
   sessions: number;
+  revenue: number;
   percentage: number;
 }

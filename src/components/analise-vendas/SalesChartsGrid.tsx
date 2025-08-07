@@ -217,8 +217,8 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
               <ChartTooltip 
                 content={<ChartTooltipContent />}
                 formatter={(value: any, name: any, props: any) => [
-                  `${value.toFixed(1)}% (${props.payload.sessions} sessões)`,
-                  'Participação'
+                  `${value.toFixed(1)}% - ${props.payload.sessions} sessões - ${formatCurrency(props.payload.revenue)}`,
+                  ''
                 ]}
               />
             </PieChart>
