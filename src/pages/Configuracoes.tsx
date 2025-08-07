@@ -145,60 +145,6 @@ export default function Configuracoes() {
     saveConfigWithNotification('configuracoes_produtos', produtos);
   }, [produtos]);
   return <ScrollArea className="h-[calc(100vh-120px)] bg-inherit">
-      <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 space-y-6 bg-card">
-      <Card className="bg-neutral-50">
-        <CardHeader className="pb-3 bg-stone-50">
-          <CardDescription>
-            Configure os parâmetros principais de funcionamento do seu sistema.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="my-[8px] py-[6px] bg-card">
-          <Tabs value={tabAtiva} onValueChange={setTabAtiva} className="w-full">
-            <TabsList className="grid grid-cols-5 mb-2">
-              <TabsTrigger value="categorias" className="flex items-center gap-1.5">
-                <Shapes className="h-4 w-4" />
-                <span className="hidden sm:inline">Categorias</span>
-              </TabsTrigger>
-              <TabsTrigger value="pacotes" className="flex items-center gap-1.5">
-                <Package className="h-4 w-4" />
-                <span className="hidden sm:inline">Pacotes</span>
-              </TabsTrigger>
-              <TabsTrigger value="produtos" className="flex items-center gap-1.5">
-                <Box className="h-4 w-4" />
-                <span className="hidden sm:inline">Produtos</span>
-              </TabsTrigger>
-              <TabsTrigger value="precificacao" className="flex items-center gap-1.5">
-                <DollarSign className="h-4 w-4" />
-                <span className="hidden sm:inline">Modelos de preço</span>
-              </TabsTrigger>
-              <TabsTrigger value="fluxo" className="flex items-center gap-1.5">
-                <Workflow className="h-4 w-4" />
-                <span className="hidden sm:inline">Etapas</span>
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="categorias">
-              <Categorias categorias={categorias} setCategorias={setCategorias} pacotes={pacotes} />
-            </TabsContent>
-            
-            <TabsContent value="pacotes">
-              <Pacotes pacotes={pacotes} setPacotes={setPacotes} categorias={categorias} produtos={produtos} />
-            </TabsContent>
-            
-            <TabsContent value="produtos">
-              <Produtos produtos={produtos} setProdutos={setProdutos} />
-            </TabsContent>
-            
-            <TabsContent value="precificacao">
-              <PrecificacaoFotos categorias={categorias} />
-            </TabsContent>
-            
-            <TabsContent value="fluxo">
-              <FluxoTrabalho etapas={etapas} setEtapas={setEtapas} />
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
-      </div>
+      
     </ScrollArea>;
 }
