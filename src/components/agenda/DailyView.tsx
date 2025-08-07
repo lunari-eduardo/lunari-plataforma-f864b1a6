@@ -114,7 +114,7 @@ export default function DailyView({
           return (
             <div 
               key={`${time}-${index}`} 
-              className="flex border border-gray-200 rounded-md overflow-hidden py-0 my-[2px] mx-0 px-0"
+              className="flex border border-border rounded-md overflow-hidden py-0 my-[2px] mx-0 px-0"
             >
               <div className="p-3 w-16 flex-shrink-0 text-right text-sm text-muted-foreground relative bg-muted">
                 {isEditing ? (
@@ -126,7 +126,7 @@ export default function DailyView({
                 ) : (
                   <span 
                     onClick={() => !event && handleEditTimeSlot(index, time)} 
-                    className={`block text-xs ${!event ? 'cursor-pointer hover:bg-blue-50 rounded px-1 py-0.5' : ''}`} 
+                    className={`block text-xs ${!event ? 'cursor-pointer hover:bg-muted rounded px-1 py-0.5' : ''}`} 
                     title={!event ? 'Clique para editar' : ''}
                   >
                     {time}
