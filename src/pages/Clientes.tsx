@@ -15,7 +15,6 @@ import { useClientMetrics, ClientMetrics } from '@/hooks/useClientMetrics';
 import { formatCurrency } from '@/utils/financialUtils';
 import { formatDateForDisplay } from '@/utils/dateUtils';
 import { abrirWhatsApp } from '@/utils/whatsappUtils';
-
 export default function Clientes() {
   const {
     clientes,
@@ -24,7 +23,6 @@ export default function Clientes() {
     atualizarCliente,
     removerCliente
   } = useAppContext();
-
   const [filtro, setFiltro] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
   const [faturadoFilter, setFaturadoFilter] = useState('todos');
@@ -44,29 +42,13 @@ export default function Clientes() {
   // Filtrar clientes
   const clientesFiltrados = useMemo(() => {
     return clientMetrics.filter(cliente => {
-      const nomeMatch = cliente.nome.toLowerCase().includes(filtro.toLowerCase()) ||
-                       cliente.email.toLowerCase().includes(filtro.toLowerCase()) ||
-                       cliente.telefone.includes(filtro);
-      
-      const faturadoMatch = !faturadoFilter || faturadoFilter === 'todos' ||
-        (faturadoFilter === 'baixo' && cliente.totalFaturado < 1000) ||
-        (faturadoFilter === 'medio' && cliente.totalFaturado >= 1000 && cliente.totalFaturado < 5000) ||
-        (faturadoFilter === 'alto' && cliente.totalFaturado >= 5000);
-      
-      const pagoMatch = !pagoFilter || pagoFilter === 'todos' ||
-        (pagoFilter === 'baixo' && cliente.totalPago < 1000) ||
-        (pagoFilter === 'medio' && cliente.totalPago >= 1000 && cliente.totalPago < 5000) ||
-        (pagoFilter === 'alto' && cliente.totalPago >= 5000);
-      
-      const receberMatch = !receberFilter || receberFilter === 'todos' ||
-        (receberFilter === 'baixo' && cliente.aReceber < 1000) ||
-        (receberFilter === 'medio' && cliente.aReceber >= 1000 && cliente.aReceber < 5000) ||
-        (receberFilter === 'alto' && cliente.aReceber >= 5000);
-
+      const nomeMatch = cliente.nome.toLowerCase().includes(filtro.toLowerCase()) || cliente.email.toLowerCase().includes(filtro.toLowerCase()) || cliente.telefone.includes(filtro);
+      const faturadoMatch = !faturadoFilter || faturadoFilter === 'todos' || faturadoFilter === 'baixo' && cliente.totalFaturado < 1000 || faturadoFilter === 'medio' && cliente.totalFaturado >= 1000 && cliente.totalFaturado < 5000 || faturadoFilter === 'alto' && cliente.totalFaturado >= 5000;
+      const pagoMatch = !pagoFilter || pagoFilter === 'todos' || pagoFilter === 'baixo' && cliente.totalPago < 1000 || pagoFilter === 'medio' && cliente.totalPago >= 1000 && cliente.totalPago < 5000 || pagoFilter === 'alto' && cliente.totalPago >= 5000;
+      const receberMatch = !receberFilter || receberFilter === 'todos' || receberFilter === 'baixo' && cliente.aReceber < 1000 || receberFilter === 'medio' && cliente.aReceber >= 1000 && cliente.aReceber < 5000 || receberFilter === 'alto' && cliente.aReceber >= 5000;
       return nomeMatch && faturadoMatch && pagoMatch && receberMatch;
     });
   }, [clientMetrics, filtro, faturadoFilter, pagoFilter, receberFilter]);
-
   const handleAddClient = () => {
     setEditingClient(null);
     setFormData({
@@ -76,7 +58,6 @@ export default function Clientes() {
     });
     setShowClientForm(true);
   };
-
   const handleEditClient = (client: ClientMetrics) => {
     setEditingClient(client as Cliente);
     setFormData({
@@ -86,14 +67,12 @@ export default function Clientes() {
     });
     setShowClientForm(true);
   };
-
   const handleDeleteClient = (clientId: string) => {
     if (confirm('Tem certeza que deseja excluir este cliente?')) {
       removerCliente(clientId);
       toast.success('Cliente excluído com sucesso');
     }
   };
-
   const handleSaveClient = () => {
     if (!formData.nome || !formData.telefone) {
       toast.error('Nome e telefone são obrigatórios');
@@ -108,7 +87,6 @@ export default function Clientes() {
     }
     setShowClientForm(false);
   };
-
   const handleWhatsApp = (cliente: ClientMetrics) => {
     const telefone = cliente.telefone.replace(/\D/g, '');
     const mensagem = `Olá ${cliente.nome}! 😊\n\nComo você está? Espero que esteja tudo bem!\n\nEstou entrando em contato para...`;
@@ -116,7 +94,6 @@ export default function Clientes() {
     const link = `https://wa.me/55${telefone}?text=${mensagemCodificada}`;
     window.open(link, '_blank');
   };
-
   const limparFiltros = () => {
     setFiltro('');
     setStatusFilter('todos');
@@ -124,9 +101,7 @@ export default function Clientes() {
     setPagoFilter('todos');
     setReceberFilter('todos');
   };
-
-  return (
-    <ScrollArea className="h-[calc(100vh-120px)]">
+  return <ScrollArea className="h-[calc(100vh-120px)]">
       <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -141,12 +116,7 @@ export default function Clientes() {
         <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Buscar clientes..." 
-              className="pl-8" 
-              value={filtro} 
-              onChange={e => setFiltro(e.target.value)} 
-            />
+            <Input placeholder="Buscar clientes..." className="pl-8" value={filtro} onChange={e => setFiltro(e.target.value)} />
           </div>
 
           <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -203,43 +173,24 @@ export default function Clientes() {
 
         {/* Grid de Clientes */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {clientesFiltrados.map(cliente => (
-            <Card key={cliente.id} className="overflow-hidden hover:shadow-md transition-shadow">
+          {clientesFiltrados.map(cliente => <Card key={cliente.id} className="overflow-hidden hover:shadow-md transition-shadow">
               <CardContent className="p-4">
                 {/* Header do Card */}
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
-                    <Link 
-                      to={`/clientes/${cliente.id}`}
-                      className="text-lg font-semibold text-primary hover:text-primary/80 block"
-                    >
+                    <Link to={`/clientes/${cliente.id}`} className="text-lg font-semibold text-primary hover:text-primary/80 block">
                       {cliente.nome}
                     </Link>
-                    <p className="text-sm text-muted-foreground">{cliente.email}</p>
+                    <p className="text-muted-foreground text-xs">{cliente.email}</p>
                   </div>
                   <div className="flex gap-1">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => handleWhatsApp(cliente)}
-                      className="h-8 w-8 p-0 text-green-600 hover:text-green-700"
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => handleWhatsApp(cliente)} className="h-8 w-8 p-0 text-green-600 hover:text-green-700">
                       <MessageCircle className="h-4 w-4" />
                     </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => handleEditClient(cliente)}
-                      className="h-8 w-8 p-0"
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => handleEditClient(cliente)} className="h-8 w-8 p-0">
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => handleDeleteClient(cliente.id)}
-                      className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => handleDeleteClient(cliente.id)} className="h-8 w-8 p-0 text-red-600 hover:text-red-700">
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -248,7 +199,7 @@ export default function Clientes() {
                 {/* Informações de Contato */}
                 <div className="flex items-center gap-2 mb-3 text-sm text-muted-foreground">
                   <Phone className="h-3 w-3" />
-                  <span>{cliente.telefone}</span>
+                  <span className="text-xs">{cliente.telefone}</span>
                 </div>
 
                 {/* Métricas Financeiras */}
@@ -274,53 +225,32 @@ export default function Clientes() {
                 </div>
 
                 {/* Status Badge */}
-                <div className="mt-3 pt-3 border-t flex items-center justify-between">
+                <div className="mt-3 pt-3 border-t flex items-center justify-between py-[3px]">
                   <span className="text-xs text-muted-foreground">
                     {cliente.sessoes} sessões
                   </span>
-                  <span className={`px-2 py-1 text-xs rounded-full ${
-                    cliente.totalFaturado > 0 
-                      ? 'bg-green-100 text-green-700' 
-                      : 'bg-gray-100 text-gray-600'
-                  }`}>
+                  <span className={`px-2 py-1 text-xs rounded-full ${cliente.totalFaturado > 0 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
                     {cliente.totalFaturado > 0 ? 'Ativo' : 'Novo'}
                   </span>
                 </div>
               </CardContent>
-            </Card>
-          ))}
+            </Card>)}
         </div>
         
         {/* Empty State */}
-        {clientesFiltrados.length === 0 && (
-          <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-lg">
+        {clientesFiltrados.length === 0 && <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-lg">
             <User className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium mb-2">Nenhum cliente encontrado</h3>
             <p className="text-sm text-muted-foreground mb-4 text-center">
-              {(filtro || 
-                (statusFilter && statusFilter !== 'todos') || 
-                (faturadoFilter && faturadoFilter !== 'todos') || 
-                (pagoFilter && pagoFilter !== 'todos') || 
-                (receberFilter && receberFilter !== 'todos')) 
-                ? 'Não encontramos clientes com os critérios de busca informados.' 
-                : 'Adicione seus primeiros clientes para começar.'}
+              {filtro || statusFilter && statusFilter !== 'todos' || faturadoFilter && faturadoFilter !== 'todos' || pagoFilter && pagoFilter !== 'todos' || receberFilter && receberFilter !== 'todos' ? 'Não encontramos clientes com os critérios de busca informados.' : 'Adicione seus primeiros clientes para começar.'}
             </p>
-            {(filtro || 
-              (statusFilter && statusFilter !== 'todos') || 
-              (faturadoFilter && faturadoFilter !== 'todos') || 
-              (pagoFilter && pagoFilter !== 'todos') || 
-              (receberFilter && receberFilter !== 'todos')) ? (
-              <Button onClick={limparFiltros} variant="outline">
+            {filtro || statusFilter && statusFilter !== 'todos' || faturadoFilter && faturadoFilter !== 'todos' || pagoFilter && pagoFilter !== 'todos' || receberFilter && receberFilter !== 'todos' ? <Button onClick={limparFiltros} variant="outline">
                 Limpar filtros
-              </Button>
-            ) : (
-              <Button onClick={handleAddClient} className="flex items-center gap-2">
+              </Button> : <Button onClick={handleAddClient} className="flex items-center gap-2">
                 <UserPlus className="h-4 w-4" />
                 Adicionar Cliente
-              </Button>
-            )}
-          </div>
-        )}
+              </Button>}
+          </div>}
 
         {/* Modal do Formulário de Cliente */}
         <Dialog open={showClientForm} onOpenChange={setShowClientForm}>
@@ -334,42 +264,26 @@ export default function Clientes() {
             <div className="space-y-4">
               <div>
                 <Label htmlFor="nome">Nome *</Label>
-                <Input 
-                  id="nome" 
-                  value={formData.nome} 
-                  onChange={e => setFormData(prev => ({
-                    ...prev,
-                    nome: e.target.value
-                  }))} 
-                  placeholder="Nome completo" 
-                />
+                <Input id="nome" value={formData.nome} onChange={e => setFormData(prev => ({
+                ...prev,
+                nome: e.target.value
+              }))} placeholder="Nome completo" />
               </div>
               
               <div>
                 <Label htmlFor="email">E-mail</Label>
-                <Input 
-                  id="email" 
-                  type="email" 
-                  value={formData.email} 
-                  onChange={e => setFormData(prev => ({
-                    ...prev,
-                    email: e.target.value
-                  }))} 
-                  placeholder="email@exemplo.com" 
-                />
+                <Input id="email" type="email" value={formData.email} onChange={e => setFormData(prev => ({
+                ...prev,
+                email: e.target.value
+              }))} placeholder="email@exemplo.com" />
               </div>
               
               <div>
                 <Label htmlFor="telefone">Telefone *</Label>
-                <Input 
-                  id="telefone" 
-                  value={formData.telefone} 
-                  onChange={e => setFormData(prev => ({
-                    ...prev,
-                    telefone: e.target.value
-                  }))} 
-                  placeholder="+55 (DDD) 00000-0000" 
-                />
+                <Input id="telefone" value={formData.telefone} onChange={e => setFormData(prev => ({
+                ...prev,
+                telefone: e.target.value
+              }))} placeholder="+55 (DDD) 00000-0000" />
               </div>
               
               <div className="flex justify-end gap-2 pt-4">
@@ -384,6 +298,5 @@ export default function Clientes() {
           </DialogContent>
         </Dialog>
       </div>
-    </ScrollArea>
-  );
+    </ScrollArea>;
 }
