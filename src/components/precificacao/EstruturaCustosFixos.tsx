@@ -247,7 +247,7 @@ export function EstruturaCustosFixos({
                   <Input type="number" min="0" step="0.01" placeholder="0,00" value={novoGastoPessoal.valor} onChange={e => setNovoGastoPessoal(prev => ({
                   ...prev,
                   valor: e.target.value
-                }))} className="bg-white" />
+                }))} className="border bg-card text-foreground border-amber-100 " />
                 </div>
               </div>
               <div className="mt-3">
