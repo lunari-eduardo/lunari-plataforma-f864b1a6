@@ -17,6 +17,7 @@ export function StatusBadge({ status, className, showCircle = true }: StatusBadg
       case 'confirmado':
         return '#34C759';
       case 'a confirmar':
+      case 'pendente':
         return '#F59E0B';
       case 'cancelado':
         return '#EF4444';
@@ -37,7 +38,7 @@ export function StatusBadge({ status, className, showCircle = true }: StatusBadg
         />
       )}
       <span className="text-xs font-medium text-gray-700">
-        {status}
+        {status === 'A Confirmar' ? 'Pendente' : status}
       </span>
     </div>
   );

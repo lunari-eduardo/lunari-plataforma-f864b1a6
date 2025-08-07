@@ -34,7 +34,7 @@ interface AppointmentDetailsProps {
 // Lista de status disponíveis
 const availableStatus = [{
   value: 'a confirmar',
-  label: 'A Confirmar'
+  label: 'Pendente'
 }, {
   value: 'confirmado',
   label: 'Confirmado'
@@ -187,19 +187,27 @@ export default function AppointmentDetails({
           
           <div>
             <Label htmlFor="status" className="text-xs font-medium text-lunar-text">Status</Label>
-            <div className="mt-1">
-              <Select value={formData.status} onValueChange={handleStatusSelect}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o status" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableStatus.map(status => <SelectItem key={status.value} value={status.value}>
-                      <div className="flex items-center gap-2">
-                        <StatusBadge status={status.label} />
-                      </div>
-                    </SelectItem>)}
-                </SelectContent>
-              </Select>
+            <div className="mt-1 flex gap-2">
+              {availableStatus.map(status => (
+                <Button
+                  key={status.value}
+                  type="button"
+                  variant={formData.status === status.value ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handleStatusSelect(status.value as 'confirmado' | 'a confirmar')}
+                  className={`flex-1 text-xs h-8 ${
+                    formData.status === status.value
+                      ? status.value === 'a confirmar'
+                        ? 'bg-orange-500 hover:bg-orange-600 text-white border-orange-500'
+                        : 'bg-green-500 hover:bg-green-600 text-white border-green-500'
+                      : status.value === 'a confirmar'
+                        ? 'border-orange-500 text-orange-600 hover:bg-orange-50'
+                        : 'border-green-500 text-green-600 hover:bg-green-50'
+                  }`}
+                >
+                  {status.label}
+                </Button>
+              ))}
             </div>
           </div>
         </div>

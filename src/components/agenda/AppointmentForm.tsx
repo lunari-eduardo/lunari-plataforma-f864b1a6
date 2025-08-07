@@ -47,7 +47,7 @@ interface AppointmentFormProps {
 // Lista de status disponíveis
 const availableStatus = [{
   value: 'a confirmar',
-  label: 'A Confirmar'
+  label: 'Pendente'
 }, {
   value: 'confirmado',
   label: 'Confirmado'
@@ -366,16 +366,28 @@ export default function AppointmentForm({
             
             <div className="space-y-2">
               <Label htmlFor="appointment-status" className="text-xs font-medium">Status do Agendamento</Label>
-              <Select value={formData.status} onValueChange={handleStatusSelect}>
-                <SelectTrigger id="appointment-status">
-                  <SelectValue placeholder="Selecione o status" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableStatus.map(status => <SelectItem key={status.value} value={status.value}>
-                      {status.label}
-                    </SelectItem>)}
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2">
+                {availableStatus.map(status => (
+                  <Button
+                    key={status.value}
+                    type="button"
+                    variant={formData.status === status.value ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handleStatusSelect(status.value)}
+                    className={`flex-1 text-xs h-8 ${
+                      formData.status === status.value
+                        ? status.value === 'a confirmar'
+                          ? 'bg-orange-500 hover:bg-orange-600 text-white border-orange-500'
+                          : 'bg-green-500 hover:bg-green-600 text-white border-green-500'
+                        : status.value === 'a confirmar'
+                          ? 'border-orange-500 text-orange-600 hover:bg-orange-50'
+                          : 'border-green-500 text-green-600 hover:bg-green-50'
+                    }`}
+                  >
+                    {status.label}
+                  </Button>
+                ))}
+              </div>
             </div>
           </div>
         </>}
