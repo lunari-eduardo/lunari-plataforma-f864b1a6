@@ -240,7 +240,7 @@ export function EstruturaCustosFixos({
                   <Input placeholder="Ex: Alimentação, Transporte..." value={novoGastoPessoal.descricao} onChange={e => setNovoGastoPessoal(prev => ({
                   ...prev,
                   descricao: e.target.value
-                }))} className="border bg-card text-foreground" />
+                }))} className="border bg-card text-foreground border-amber-100 " />
                 </div>
                 <div>
                   <Label className="text-xs text-blue-700">Valor</Label>
