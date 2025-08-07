@@ -187,7 +187,7 @@ export function EstruturaCustosFixos({
     }
   };
   return <Card>
-      <CardHeader className="bg-gray-50">
+      <CardHeader className="bg-card">
         <div className="flex justify-between items-center">
           <div>
             <CardTitle className="text-lg">Estrutura de Custos Fixos</CardTitle>
@@ -201,7 +201,7 @@ export function EstruturaCustosFixos({
           </div>
         </div>
       </CardHeader>
-      <CardContent className="bg-gray-50 px-[9px]">
+      <CardContent className="bg-card px-[9px]">
         <Tabs defaultValue="gastos-pessoais" className="w-full">
           <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 gap-1 h-auto p-1">
             <TabsTrigger value="gastos-pessoais" className="text-xs md:text-sm px-2 py-2">
