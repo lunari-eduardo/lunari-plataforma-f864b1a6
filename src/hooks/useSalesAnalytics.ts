@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
-import { SalesMetrics, MonthlyData, CategoryData, NormalizedWorkflowData } from '@/types/salesAnalytics';
+import { SalesMetrics, MonthlyData, CategoryData, PackageDistributionData, NormalizedWorkflowData } from '@/types/salesAnalytics';
 import { normalizeWorkflowItems, generateAllMonthsData } from '@/utils/salesDataNormalizer';
 
 // Re-export types for backward compatibility
-export type { SalesMetrics, MonthlyData, CategoryData };
+export type { SalesMetrics, MonthlyData, CategoryData, PackageDistributionData };
 
 export function useSalesAnalytics(selectedYear: number, selectedCategory: string) {
   console.log(`🔍 [useSalesAnalytics] Iniciando análise para ano ${selectedYear}, categoria: ${selectedCategory}`);
@@ -152,6 +152,28 @@ export function useSalesAnalytics(selectedYear: number, selectedCategory: string
     return sortedYears;
   }, [normalizedData]);
 
+  // Calculate package distribution
+  const packageDistributionData = useMemo((): PackageDistributionData[] => {
+    console.log(`📦 [useSalesAnalytics] Calculando distribuição de pacotes para categoria: ${selectedCategory}`);
+    
+    const packageStats = new Map<string, number>();
+    
+    filteredData.forEach(item => {
+      const packageName = item.pacote || 'Sem pacote';
+      packageStats.set(packageName, (packageStats.get(packageName) || 0) + 1);
+    });
+
+    const totalSessions = filteredData.length;
+    const packages = Array.from(packageStats.entries()).map(([name, sessions]) => ({
+      name,
+      sessions,
+      percentage: totalSessions > 0 ? (sessions / totalSessions) * 100 : 0
+    })).sort((a, b) => b.sessions - a.sessions);
+    
+    console.log(`📦 [useSalesAnalytics] ${packages.length} pacotes encontrados`);
+    return packages;
+  }, [filteredData, selectedCategory]);
+
   // Get available categories
   const availableCategories = useMemo(() => {
     const categories = new Set<string>();
@@ -169,6 +191,7 @@ export function useSalesAnalytics(selectedYear: number, selectedCategory: string
     salesMetrics,
     monthlyData,
     categoryData,
+    packageDistributionData,
     availableYears,
     availableCategories,
     filteredData

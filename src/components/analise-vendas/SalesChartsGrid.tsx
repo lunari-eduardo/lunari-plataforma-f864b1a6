@@ -1,15 +1,17 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Legend } from 'recharts';
-import { TrendingUp, BarChart3, PieChart as PieChartIcon, Calendar, Camera, DollarSign } from 'lucide-react';
-import { MonthlyData, CategoryData } from '@/hooks/useSalesAnalytics';
+import { TrendingUp, BarChart3, PieChart as PieChartIcon, Calendar, Camera, DollarSign, Package } from 'lucide-react';
+import { MonthlyData, CategoryData, PackageDistributionData } from '@/hooks/useSalesAnalytics';
 
 interface SalesChartsGridProps {
   monthlyData: MonthlyData[];
   categoryData: CategoryData[];
+  packageDistributionData: PackageDistributionData[];
+  selectedCategory: string;
 }
 
-export function SalesChartsGrid({ monthlyData, categoryData }: SalesChartsGridProps) {
+export function SalesChartsGrid({ monthlyData, categoryData, packageDistributionData, selectedCategory }: SalesChartsGridProps) {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency', 
@@ -181,6 +183,45 @@ export function SalesChartsGrid({ monthlyData, categoryData }: SalesChartsGridPr
                 strokeWidth={2}
               />
             </AreaChart>
+          </ChartContainer>
+        </CardContent>
+      </Card>
+
+      {/* Package Distribution */}
+      <Card className="border-0 shadow-lg bg-lunar-surface lg:col-span-2">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium text-lunar-text flex items-center gap-2">
+            <Package className="h-4 w-4 text-indigo-500" />
+            {selectedCategory === 'all' ? 'Distribuição por Pacote' : `Pacotes em ${selectedCategory}`}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ChartContainer config={chartConfig} className="h-[200px] sm:h-[250px] lg:h-[280px]">
+            <PieChart>
+              <Pie
+                data={packageDistributionData}
+                cx="50%"
+                cy="50%"
+                outerRadius={100}
+                dataKey="percentage"
+                label={({ name, percentage }) => 
+                  percentage > 5 ? `${name} ${percentage.toFixed(0)}%` : ''
+                }
+                labelLine={false}
+                fontSize={11}
+              >
+                {packageDistributionData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <ChartTooltip 
+                content={<ChartTooltipContent />}
+                formatter={(value: any, name: any, props: any) => [
+                  `${value.toFixed(1)}% (${props.payload.sessions} sessões)`,
+                  'Participação'
+                ]}
+              />
+            </PieChart>
           </ChartContainer>
         </CardContent>
       </Card>

@@ -16,6 +16,7 @@ export default function AnaliseVendas() {
     salesMetrics, 
     monthlyData, 
     categoryData, 
+    packageDistributionData,
     availableYears, 
     availableCategories 
   } = useSalesAnalytics(selectedYear, selectedCategory);
@@ -53,7 +54,12 @@ export default function AnaliseVendas() {
       <SalesMetricsCards metrics={salesMetrics} />
 
       {/* Charts Grid */}
-      <SalesChartsGrid monthlyData={monthlyData} categoryData={categoryData} />
+      <SalesChartsGrid 
+        monthlyData={monthlyData} 
+        categoryData={categoryData} 
+        packageDistributionData={packageDistributionData}
+        selectedCategory={selectedCategory}
+      />
 
       {/* Additional Insights */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

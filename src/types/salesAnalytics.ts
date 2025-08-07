@@ -65,3 +65,9 @@ export interface PackageDistribution {
   count: number;
   percentage: number;
 }
+
+export interface PackageDistributionData {
+  name: string;
+  sessions: number;
+  percentage: number;
+}
