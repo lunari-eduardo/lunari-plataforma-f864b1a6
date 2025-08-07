@@ -40,15 +40,15 @@ export default {
 				
 				// Cores lunares específicas
 				lunar: {
-					bg: '#FAF8F5',           // Fundo principal bege claríssimo
-					surface: '#F3F1ED',      // Fundo de cards/inputs
-					text: '#3A3A3A',         // Texto principal
-					textSecondary: '#7C7C7C', // Texto secundário
-					border: '#E1DFDA',       // Bordas sutis
-					accent: '#CBA977',       // Bege dourado suave
-					accentHover: '#A07C4E',  // Hover accent
-					error: '#E17055',        // Erros suaves
-					success: '#50C878',      // Verde esmeralda
+					bg: 'hsl(var(--lunar-bg) / <alpha-value>)',
+					surface: 'hsl(var(--lunar-surface) / <alpha-value>)',
+					text: 'hsl(var(--lunar-text) / <alpha-value>)',
+					textSecondary: 'hsl(var(--lunar-textSecondary) / <alpha-value>)',
+					border: 'hsl(var(--lunar-border) / <alpha-value>)',
+					accent: 'hsl(var(--lunar-accent) / <alpha-value>)',
+					accentHover: 'hsl(var(--lunar-accentHover) / <alpha-value>)',
+					error: 'hsl(var(--lunar-error) / <alpha-value>)',
+					success: 'hsl(var(--lunar-success) / <alpha-value>)',
 				},
 
 				// Paleta elegante para gráficos
@@ -65,7 +65,7 @@ export default {
 					neutral: '#9CA3AF',      // Cinza neutro
 				},
 				
-				border: '#E1DFDA',
+				border: 'hsl(var(--lunar-border) / <alpha-value>)',
 				input: '#F3F1ED',
 				ring: '#CBA977',
 				primary: {

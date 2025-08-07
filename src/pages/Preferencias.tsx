@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTheme } from 'next-themes';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -19,17 +20,24 @@ import { UserPreferences } from '@/types/userProfile';
 export default function Preferencias() {
   const { preferences, savePreferences, getPreferencesOrDefault } = useUserPreferences();
   const [formData, setFormData] = useState<UserPreferences>(getPreferencesOrDefault());
+  const { setTheme } = useTheme();
 
   useEffect(() => {
     if (preferences) {
       setFormData(preferences);
+      if (preferences.tema) {
+        setTheme(preferences.tema === 'escuro' ? 'dark' : 'light');
+      }
     }
-  }, [preferences]);
+  }, [preferences, setTheme]);
 
   const handleSelectChange = (field: keyof UserPreferences, value: string) => {
     const updatedData = { ...formData, [field]: value };
     setFormData(updatedData);
     savePreferences({ [field]: value });
+    if (field === 'tema') {
+      setTheme((value as 'claro' | 'escuro') === 'escuro' ? 'dark' : 'light');
+    }
   };
 
   const handleSwitchChange = (field: keyof UserPreferences, checked: boolean) => {

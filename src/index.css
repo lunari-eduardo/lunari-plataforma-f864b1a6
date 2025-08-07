@@ -57,6 +57,32 @@
 }
 
 @layer base {
+  :root {
+    --lunar-bg: 40 33% 97%;
+    --lunar-surface: 42 16% 95%;
+    --lunar-text: 0 0% 23%;
+    --lunar-textSecondary: 0 0% 49%;
+    --lunar-border: 40 12% 88%;
+    --lunar-accent: 36 39% 62%;
+    --lunar-accentHover: 36 39% 50%;
+    --lunar-error: 12 74% 61%;
+    --lunar-success: 150 53% 55%;
+  }
+
+  .dark {
+    --lunar-bg: 0 0% 8%;
+    --lunar-surface: 0 0% 13%;
+    --lunar-text: 0 0% 96%;
+    --lunar-textSecondary: 0 0% 70%;
+    --lunar-border: 0 0% 22%;
+    --lunar-accent: 36 39% 62%;
+    --lunar-accentHover: 36 39% 68%;
+    --lunar-error: 10 74% 60%;
+    --lunar-success: 150 53% 55%;
+  }
+}
+
+@layer base {
   * {
     @apply border-border;
   }
@@ -65,7 +91,7 @@
     @apply bg-lunar-bg text-lunar-text font-sans antialiased text-sm;
     font-family: 'Inter', sans-serif;
     font-weight: 400;
-    background: linear-gradient(180deg, #FAF8F5 0%, #F8F6F2 100%);
+    background: linear-gradient(180deg, hsl(var(--lunar-bg)) 0%, hsl(var(--lunar-surface)) 100%);
     min-height: 100vh;
   }
   
@@ -95,7 +121,7 @@
   /* Lunar Card */
   .card-lunar {
     @apply bg-lunar-surface rounded-md p-3 shadow-lunar-sm border border-lunar-border/50;
-    background: linear-gradient(135deg, #F3F1ED 0%, #F5F3EF 100%);
+    background: linear-gradient(135deg, hsl(var(--lunar-surface)) 0%, hsl(var(--lunar-surface)) 100%);
     transition: all 0.15s ease-out;
   }
 
@@ -156,7 +182,7 @@
 
   .table-lunar th {
     @apply bg-lunar-bg text-lunar-text font-medium py-2 px-3 text-xs;
-    background: linear-gradient(180deg, #FAF8F5 0%, #F8F6F2 100%);
+    background: linear-gradient(180deg, hsl(var(--lunar-bg)) 0%, hsl(var(--lunar-surface)) 100%);
     border-bottom: 1px solid rgba(225, 223, 218, 0.5);
   }
 
