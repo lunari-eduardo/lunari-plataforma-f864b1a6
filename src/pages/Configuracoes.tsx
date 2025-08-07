@@ -138,11 +138,9 @@ export default function Configuracoes() {
   useEffect(() => {
     saveConfigWithNotification('configuracoes_categorias', categorias);
   }, [categorias]);
-  
   useEffect(() => {
     saveConfigWithNotification('configuracoes_pacotes', pacotes);
   }, [pacotes]);
-  
   useEffect(() => {
     saveConfigWithNotification('configuracoes_produtos', produtos);
   }, [produtos]);
@@ -154,7 +152,7 @@ export default function Configuracoes() {
             Configure os parâmetros principais de funcionamento do seu sistema.
           </CardDescription>
         </CardHeader>
-        <CardContent className="my-[8px] py-[6px] bg-neutral-50">
+        <CardContent className="my-[8px] py-[6px] bg-card">
           <Tabs value={tabAtiva} onValueChange={setTabAtiva} className="w-full">
             <TabsList className="grid grid-cols-5 mb-2">
               <TabsTrigger value="categorias" className="flex items-center gap-1.5">
