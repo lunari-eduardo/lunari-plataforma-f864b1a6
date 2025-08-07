@@ -144,7 +144,7 @@ export default function Configuracoes() {
   useEffect(() => {
     saveConfigWithNotification('configuracoes_produtos', produtos);
   }, [produtos]);
-  return <ScrollArea className="h-[calc(100vh-120px)] bg-card ">
+  return <ScrollArea className="h-[calc(100vh-120px)] bg-inherit">
       
     </ScrollArea>;
 }
