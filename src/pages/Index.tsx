@@ -1,9 +1,23 @@
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart3, Calendar, FileText, Users, Camera, DollarSign, TrendingUp, Clock, Plus } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
+import { Calendar, Camera, DollarSign, Users, Clock, BarChart3 } from "lucide-react";
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+
+import { useSalesAnalytics } from "@/hooks/useSalesAnalytics";
+
+import { useOrcamentos } from "@/hooks/useOrcamentos";
+import { useAgenda } from "@/hooks/useAgenda";
+import { useAvailability } from "@/hooks/useAvailability";
+
+import { formatCurrency } from "@/utils/financialUtils";
+import { formatDateForStorage, parseDateFromStorage } from "@/utils/dateUtils";
+import { normalizeWorkflowItems } from "@/utils/salesDataNormalizer";
+
 import {
   BarChart,
   Bar,
@@ -18,169 +32,268 @@ import {
   Legend,
 } from "recharts";
 
-const COLORS = ['#7950F2', '#FAB005', '#40C057', '#FF6B6B', '#15AABF'];
-
-const barData = [
-  { name: 'Jan', valor: 4000 },
-  { name: 'Fev', valor: 3000 },
-  { name: 'Mar', valor: 2000 },
-  { name: 'Abr', valor: 2780 },
-  { name: 'Mai', valor: 1890 },
-  { name: 'Jun', valor: 2390 },
-];
-
-const pieData = [
-  { name: 'Gestante', value: 35 },
-  { name: 'Família', value: 25 },
-  { name: 'Aniversário', value: 15 },
-  { name: 'Casamento', value: 10 },
-  { name: 'Newborn', value: 15 },
-];
-
-// Próximos eventos
-const proximosEventos = [
-  { 
-    id: 1, 
-    cliente: "Maria Oliveira", 
-    tipo: "Gestante", 
-    data: "12/05/2025", 
-    hora: "09:30" 
-  },
-  { 
-    id: 2, 
-    cliente: "José Santos", 
-    tipo: "Família", 
-    data: "15/05/2025", 
-    hora: "14:00" 
-  },
-  { 
-    id: 3, 
-    cliente: "Pedro Henrique", 
-    tipo: "Corporativo", 
-    data: "22/05/2025", 
-    hora: "16:30" 
-  },
-];
-
 export default function Index() {
-  const [periodoSelecionado] = useState("mes");
+  // SEO basics
+  useEffect(() => {
+    const title = "Dashboard de Negócios | Início";
+    document.title = title;
+    const desc = "Dashboard: receita do mês vs metas, categoria mais rentável, novos clientes, horários livres, orçamentos e próximos agendamentos.";
+    let meta = document.querySelector('meta[name="description"]');
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.setAttribute("name", "description");
+      document.head.appendChild(meta);
+    }
+    meta.setAttribute("content", desc);
+
+    const linkRel = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+    if (!linkRel) {
+      const link = document.createElement("link");
+      link.setAttribute("rel", "canonical");
+      link.setAttribute("href", window.location.href);
+      document.head.appendChild(link);
+    }
+  }, []);
+
+  const year = new Date().getFullYear();
+  const { monthlyData, categoryData } = useSalesAnalytics(year, "all");
+  const { appointments } = useAgenda();
+  const { orcamentos } = useOrcamentos();
+  const { availability } = useAvailability();
   
-  const cardStatsList = [
-    {
-      title: "Receita Total",
-      value: "R$ 12.750",
-      change: "+5,2%",
-      positive: true,
-      icon: <DollarSign className="h-5 w-5" />,
-      color: "bg-green-500",
-    },
-    {
-      title: "Sessões Realizadas",
-      value: "24",
-      change: "+12,5%",
-      positive: true,
-      icon: <Camera className="h-5 w-5" />,
-      color: "bg-violet-500",
-    },
-    {
-      title: "Novos Clientes",
-      value: "18",
-      change: "+8,3%",
-      positive: true,
-      icon: <Users className="h-5 w-5" />,
-      color: "bg-blue-500",
-    },
-    {
-      title: "Taxa de Conversão",
-      value: "67%",
-      change: "-2,1%",
-      positive: false,
-      icon: <TrendingUp className="h-5 w-5" />,
-      color: "bg-amber-500",
-    },
-  ];
-  
+
+  // Receita do mês atual vs meta
+  const currentMonthIndex = new Date().getMonth();
+  const currentMonthData = monthlyData.find((m) => m.monthIndex === currentMonthIndex);
+  const receitaMes = currentMonthData?.revenue || 0;
+  const metaMes = currentMonthData?.goal || 0;
+  const progressoMeta = metaMes > 0 ? Math.min(100, (receitaMes / metaMes) * 100) : 0;
+
+  // Categoria mais rentável
+  const topCategoria = categoryData[0] || null;
+
+  // Novos clientes nos últimos 60 dias (primeira sessão registrada)
+  const novosClientes60d = useMemo(() => {
+    const all = normalizeWorkflowItems();
+    if (all.length === 0) return 0;
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 60);
+
+    const firstSeen = new Map<string, Date>();
+    all.forEach((s) => {
+      const key = s.clienteId || s.email || s.whatsapp || s.nome;
+      if (!key) return;
+      const d = s.date instanceof Date ? s.date : parseDateFromStorage(s.data);
+      if (!firstSeen.has(key) || d < (firstSeen.get(key) as Date)) {
+        firstSeen.set(key, d);
+      }
+    });
+    let count = 0;
+    firstSeen.forEach((d) => {
+      if (d >= cutoff) count++;
+    });
+    return count;
+  }, []);
+
+  // Horários livres na semana (próximos 7 dias)
+  const { livresSemana, proximoLivre } = useMemo(() => {
+    const start = new Date();
+    const end = new Date();
+    end.setDate(start.getDate() + 7);
+
+    const startKey = formatDateForStorage(start);
+    const endKey = formatDateForStorage(end);
+
+    const isWithinRange = (iso: string) => iso >= startKey && iso <= endKey;
+
+    const busyMap = new Set<string>();
+    appointments.forEach((app) => {
+      const d = formatDateForStorage(app.date);
+      const key = `${d}T${app.time}`;
+      busyMap.add(key); // considera qualquer status como ocupado
+    });
+
+    const slots = availability.filter((s) => isWithinRange(s.date));
+
+    const freeSlots = slots.filter((s) => !busyMap.has(`${s.date}T${s.time}`));
+
+    // Encontrar próximo slot livre (>= agora)
+    const now = new Date();
+    const freeWithDate = freeSlots
+      .map((s) => {
+        const dt = parseDateFromStorage(s.date);
+        const [hh, mm] = s.time.split(":").map(Number);
+        dt.setHours(hh, mm, 0, 0);
+        return { slot: s, dt };
+      })
+      .filter(({ dt }) => dt >= now)
+      .sort((a, b) => a.dt.getTime() - b.dt.getTime());
+
+    return {
+      livresSemana: freeSlots.length,
+      proximoLivre: freeWithDate.length > 0 ? freeWithDate[0].dt : null,
+    };
+  }, [appointments, availability]);
+
+  // Resumo de orçamentos do mês atual
+  const resumoOrcamentos = useMemo(() => {
+    const now = new Date();
+    const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const desteMes = orcamentos.filter((o) => (o.criadoEm || o.data || "").startsWith(ym));
+    const contagem = {
+      enviado: 0,
+      pendente: 0,
+      followup: 0,
+      fechado: 0,
+      cancelado: 0,
+    } as Record<string, number>;
+
+    desteMes.forEach((o) => {
+      const st = (o.status || "").toLowerCase();
+      if (st === "enviado") contagem.enviado++;
+      else if (st === "pendente") contagem.pendente++;
+      else if (st === "follow-up" || st === "followup") contagem.followup++;
+      else if (st === "fechado") contagem.fechado++;
+      else if (st === "cancelado") contagem.cancelado++;
+    });
+
+    const base = contagem.enviado + contagem.pendente + contagem.followup;
+    const conversao = base > 0 ? (contagem.fechado / base) * 100 : 0;
+
+    return { contagem, conversao };
+  }, [orcamentos]);
+
+  // Próximos agendamentos confirmados (top 5)
+  const proximosAgendamentos = useMemo(() => {
+    const now = new Date();
+    const items = appointments
+      .filter((a) => a.date >= new Date(now.getFullYear(), now.getMonth(), now.getDate()))
+      .filter((a) => a.status === "confirmado")
+      .map((a) => ({
+        id: a.id,
+        cliente: a.client,
+        tipo: a.type,
+        data: a.date,
+        hora: a.time,
+      }))
+      .sort((a, b) => a.data.getTime() - b.data.getTime())
+      .slice(0, 5);
+    return items;
+  }, [appointments]);
+
+  const pieColors = ["#7c3aed", "#f59e0b", "#10b981", "#ef4444", "#06b6d4", "#8b5cf6", "#14b8a6"];
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">
-          Bem-vindo ao Lunari 2.0 - Seu sistema de gestão para fotógrafos.
-        </p>
-      </div>
-      
-      {/* Cards de estatísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {cardStatsList.map((stat, index) => (
-          <Card key={index}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-              <div className={`${stat.color} p-2 rounded-md text-white`}>
-                {stat.icon}
+    <main className="space-y-6">
+      <header>
+        <h1 className="text-xl font-semibold text-lunar-text">Dashboard de Negócios</h1>
+        <p className="text-2xs text-lunar-textSecondary">Visão geral: receita, metas, clientes, horários, orçamentos e agenda.</p>
+      </header>
+
+      {/* KPIs */}
+      <section aria-label="Indicadores principais" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+            <CardTitle className="text-sm">Receita do mês vs Meta</CardTitle>
+            <DollarSign className="h-5 w-5 text-lunar-accent" />
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-baseline justify-between">
+              <p className="text-lg font-semibold">{formatCurrency(receitaMes)}</p>
+              <span className="text-2xs text-lunar-textSecondary">Meta: {formatCurrency(metaMes)}</span>
+            </div>
+            <div className="mt-2">
+              <Progress value={progressoMeta} />
+              <span className="text-2xs text-lunar-textSecondary">{progressoMeta.toFixed(0)}%</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+            <CardTitle className="text-sm">Categoria mais rentável</CardTitle>
+            <BarChart3 className="h-5 w-5 text-lunar-accent" />
+          </CardHeader>
+          <CardContent>
+            {topCategoria ? (
+              <div>
+                <p className="text-lg font-semibold">{topCategoria.name}</p>
+                <p className="text-2xs text-lunar-textSecondary mt-1">Receita: {formatCurrency(topCategoria.revenue)} • {topCategoria.sessions} sessões</p>
               </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">{stat.value}</p>
-              <p className={`text-xs ${stat.positive ? 'text-green-600' : 'text-red-600'} flex items-center mt-1`}>
-                {stat.change}
-                <span className="text-muted-foreground ml-1">vs. mês passado</span>
-              </p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-      
+            ) : (
+              <p className="text-2xs text-lunar-textSecondary">Sem dados</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+            <CardTitle className="text-sm">Novos clientes (60 dias)</CardTitle>
+            <Users className="h-5 w-5 text-lunar-accent" />
+          </CardHeader>
+          <CardContent>
+            <p className="text-lg font-semibold">{novosClientes60d}</p>
+            <p className="text-2xs text-lunar-textSecondary mt-1">Primeira sessão registrada nos últimos 60 dias</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+            <CardTitle className="text-sm">Horários livres (7 dias)</CardTitle>
+            <Clock className="h-5 w-5 text-lunar-accent" />
+          </CardHeader>
+          <CardContent>
+            <p className="text-lg font-semibold">{livresSemana}</p>
+            <p className="text-2xs text-lunar-textSecondary mt-1">
+              {proximoLivre ? (
+                <>Próximo: {proximoLivre.toLocaleDateString("pt-BR")} • {proximoLivre.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</>
+              ) : (
+                <>
+                  Sem horários livres. <Link to="/agenda" className="underline">Configurar disponibilidade</Link>
+                </>
+              )}
+            </p>
+          </CardContent>
+        </Card>
+      </section>
+
       {/* Gráficos */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2">
           <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base">Receita Mensal</CardTitle>
-              <div className="flex">
-                <Button variant="ghost" size="sm" className={periodoSelecionado === "semana" ? "text-violet-600 underline" : ""}>
-                  Semana
-                </Button>
-                <Button variant="ghost" size="sm" className={periodoSelecionado === "mes" ? "text-violet-600 underline" : ""}>
-                  Mês
-                </Button>
-                <Button variant="ghost" size="sm" className={periodoSelecionado === "ano" ? "text-violet-600 underline" : ""}>
-                  Ano
-                </Button>
-              </div>
-            </div>
+            <CardTitle className="text-base">Receita Mensal</CardTitle>
           </CardHeader>
           <CardContent className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={barData}>
+              <BarChart data={monthlyData.map(m => ({ name: m.month, receita: m.revenue }))}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                <YAxis axisLine={false} tickLine={false} tickFormatter={(value) => `R$ ${value}`} />
-                <Tooltip formatter={(value) => [`R$ ${value}`, 'Receita']} />
-                <Bar dataKey="valor" fill="#7950F2" radius={[4, 4, 0, 0]} />
+                <YAxis axisLine={false} tickLine={false} tickFormatter={(v) => formatCurrency(v)} />
+                <Tooltip formatter={(v: any) => [formatCurrency(Number(v)), "Receita"]} />
+                <Bar dataKey="receita" fill="#7c3aed" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Distribuição por Tipo</CardTitle>
+            <CardTitle className="text-base">Distribuição por Categoria</CardTitle>
           </CardHeader>
           <CardContent className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={pieData}
+                  data={categoryData.map(c => ({ name: c.name, value: c.percentage || 0 }))}
                   cx="50%"
                   cy="45%"
                   outerRadius={80}
-                  fill="#8884d8"
                   dataKey="value"
                   label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                   labelLine={false}
                 >
-                  {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  {categoryData.map((_, i) => (
+                    <Cell key={`cell-${i}`} fill={pieColors[i % pieColors.length]} />
                   ))}
                 </Pie>
                 <Legend layout="horizontal" verticalAlign="bottom" align="center" />
@@ -188,82 +301,70 @@ export default function Index() {
             </ResponsiveContainer>
           </CardContent>
         </Card>
-      </div>
-      
-      {/* Próximos Eventos e Tarefas */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      </section>
+
+      {/* Orçamentos e Agenda */}
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Calendar className="h-5 w-5 text-violet-600" />
+            <div className="flex items-center gap-2">
+              <Camera className="h-5 w-5 text-lunar-accent" />
+              <CardTitle className="text-base">Resumo de Orçamentos (mês)</CardTitle>
+            </div>
+            <Link to="/orcamentos">
+              <Button variant="ghost" size="sm">Ver todos</Button>
+            </Link>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="secondary">Enviados: {resumoOrcamentos.contagem.enviado}</Badge>
+              <Badge variant="secondary">Pendentes: {resumoOrcamentos.contagem.pendente}</Badge>
+              <Badge variant="secondary">Follow-up: {resumoOrcamentos.contagem.followup}</Badge>
+              <Badge variant="secondary">Fechados: {resumoOrcamentos.contagem.fechado}</Badge>
+              <Badge variant="secondary">Cancelados: {resumoOrcamentos.contagem.cancelado}</Badge>
+            </div>
+            <p className="text-2xs text-lunar-textSecondary mt-3">Taxa de conversão do mês: {resumoOrcamentos.conversao.toFixed(1)}%</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2 flex flex-row items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-lunar-accent" />
               <CardTitle className="text-base">Próximos Agendamentos</CardTitle>
             </div>
             <Link to="/agenda">
-              <Button variant="ghost" size="sm" className="text-violet-600">
-                Ver todos
-              </Button>
+              <Button variant="ghost" size="sm">Ver todos</Button>
             </Link>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {proximosEventos.map((evento) => (
-                <div key={evento.id} className="border-b pb-3 last:border-b-0 last:pb-0">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="font-medium">{evento.cliente}</p>
-                      <div className="flex items-center mt-1">
-                        <div className={`h-2 w-2 rounded-full mr-2 ${
-                          evento.tipo === "Gestante" ? "bg-green-500" : 
-                          evento.tipo === "Família" ? "bg-orange-500" : "bg-blue-500"
-                        }`}></div>
-                        <p className="text-sm text-muted-foreground">{evento.tipo}</p>
+            {proximosAgendamentos.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-36 border border-dashed rounded-md">
+                <Calendar className="h-6 w-6 text-lunar-textSecondary mb-2" />
+                <p className="text-2xs text-lunar-textSecondary">Nenhum agendamento confirmado futuro</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {proximosAgendamentos.map((ev) => (
+                  <div key={ev.id} className="border-b pb-3 last:border-b-0 last:pb-0">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="font-medium text-sm">{ev.cliente}</p>
+                        <p className="text-2xs text-lunar-textSecondary mt-0.5">{ev.tipo}</p>
                       </div>
-                    </div>
-                    <div className="flex flex-col items-end">
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <Calendar className="h-3.5 w-3.5 mr-1" />
-                        {evento.data}
-                      </div>
-                      <div className="flex items-center text-sm text-muted-foreground mt-1">
-                        <Clock className="h-3.5 w-3.5 mr-1" />
-                        {evento.hora}
+                      <div className="text-right text-2xs text-lunar-textSecondary">
+                        <div>{ev.data.toLocaleDateString("pt-BR")}</div>
+                        <div className="mt-0.5">{ev.hora}</div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
-        
-        <Card>
-          <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <FileText className="h-5 w-5 text-violet-600" />
-              <CardTitle className="text-base">Orçamentos Pendentes</CardTitle>
-            </div>
-            <Link to="/orcamentos">
-              <Button variant="ghost" size="sm" className="text-violet-600">
-                Ver todos
-              </Button>
-            </Link>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col items-center justify-center h-40 border border-dashed rounded-md">
-              <FileText className="h-8 w-8 text-muted-foreground mb-2" />
-              <p className="text-sm text-muted-foreground">
-                Nenhum orçamento pendente no momento
-              </p>
-              <Link to="/orcamentos/novo">
-                <Button className="mt-4 bg-violet-600 hover:bg-violet-700">
-                  <Plus className="h-4 w-4 mr-1" />
-                  Criar novo orçamento
-                </Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }
+
