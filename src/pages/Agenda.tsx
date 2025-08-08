@@ -295,7 +295,7 @@ export default function Agenda() {
 
       {/* Appointment Form Modal */}
       <Dialog open={isAppointmentDialogOpen} onOpenChange={setIsAppointmentDialogOpen}>
-        <DialogContent className="sm:max-w-[500px] border-0 shadow-lg bg-neutral-50">
+        <DialogContent className="sm:max-w-[500px] border-0 shadow-lg bg-card text-foreground  ">
           <DialogHeader>
             <DialogTitle className="text-lg font-semibold text-gray-900">
               {editingAppointment ? 'Editar Agendamento' : 'Novo Agendamento'}
