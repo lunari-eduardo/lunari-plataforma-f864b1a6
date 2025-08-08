@@ -634,6 +634,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     storage.save(STORAGE_KEYS.APPOINTMENTS, serialized);
   }, [appointments]);
 
+  // Salvar disponibilidades da agenda
+  useEffect(() => {
+    storage.save(STORAGE_KEYS.AVAILABILITY, availability);
+  }, [availability]);
+
   // Salvar projetos com debounce para evitar loops
   const projetosStringified = JSON.stringify(projetos);
   useEffect(() => {
@@ -1570,6 +1575,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // Disponibilidades - Actions
+  const addAvailabilitySlots = (slots: AvailabilitySlot[]) => {
+    setAvailability(prev => {
+      const slotsWithId = slots.map((s, idx) => ({ ...s, id: s.id || `${Date.now()}_${idx}` }));
+      return [...prev, ...slotsWithId];
+    });
+  };
+
+  const clearAvailabilityForDate = (date: string) => {
+    setAvailability(prev => prev.filter(s => s.date !== date));
+  };
+
+  const deleteAvailabilitySlot = (id: string) => {
+    setAvailability(prev => prev.filter(s => s.id !== id));
+  };
+
   const updateWorkflowItem = (id: string, updates: Partial<WorkflowItem>) => {
     // NOVA ARQUITETURA: Atualizar projeto diretamente
     const projeto = projetos.find(p => p.projectId === id);
@@ -2044,6 +2065,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     pacotes,
     metricas,
     appointments,
+    availability,
     workflowItems: workflowItems.filter(item => {
       // Handle ISO date format (YYYY-MM-DD) from new Projeto structure
       const itemDate = new Date(item.data);
@@ -2093,6 +2115,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addAppointment,
     updateAppointment,
     deleteAppointment,
+    addAvailabilitySlots,
+    clearAvailabilityForDate,
+    deleteAvailabilitySlot,
     updateWorkflowItem,
     addPayment,
     toggleColumnVisibility,
