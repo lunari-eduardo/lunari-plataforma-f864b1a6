@@ -233,7 +233,7 @@ export function EstruturaCustosFixos({
             </div>
             
             {/* Linha de adição rápida */}
-            <div className="border bg-card text-foreground border border-blue-200 rounded-lg p-3 mb-4">
+            <div className="bg-card text-foreground border border-chart-primary rounded-lg p-3 mb-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs text-blue-700">Descrição</Label>
