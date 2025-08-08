@@ -424,7 +424,7 @@ export default function NovoOrcamento() {
             <CardHeader className="rounded-lg bg-lunar-border pb-3">
               <CardTitle className="text-sm flex justify-between items-center">
                 Produtos
-                <div className="flex gap-1">
+                <div className="flex gap-1 bg-card text-foreground border-chart-primary ">
                   <ProductSearchCombobox products={produtos} onSelect={adicionarProdutoDoCombobox} placeholder="Adicionar produto..." />
                   <Button onClick={adicionarProduto} size="sm" variant="outline">
                     <Plus className="h-3 w-3" />
