@@ -304,7 +304,7 @@ export default function NovoOrcamento() {
                 </div>
               </div>
 
-              <div className="text-xs text-neumorphic-textLight text-center">ou</div>
+              <div className="text-xs bg-card text-foreground -textLight text-center">ou</div>
 
               <div className="space-y-2">
                 <label className="text-xs font-medium">Novo Cliente</label>
