@@ -1,6 +1,6 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Calendar, DollarSign } from 'lucide-react';
+import { Calendar, DollarSign, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { formatDateForStorage } from '@/utils/dateUtils';
 interface ActionChoiceModalProps {
@@ -9,13 +9,15 @@ interface ActionChoiceModalProps {
   date: Date;
   time: string;
   onCreateAppointment: () => void;
+  onConfigureAvailability: () => void;
 }
 export default function ActionChoiceModal({
   isOpen,
   onClose,
   date,
   time,
-  onCreateAppointment
+  onCreateAppointment,
+  onConfigureAvailability
 }: ActionChoiceModalProps) {
   const navigate = useNavigate();
   const handleCreateBudget = () => {
@@ -25,6 +27,10 @@ export default function ActionChoiceModal({
   };
   const handleCreateAppointment = () => {
     onCreateAppointment();
+    onClose();
+  };
+  const handleConfigureAvailability = () => {
+    onConfigureAvailability();
     onClose();
   };
   return <Dialog open={isOpen} onOpenChange={onClose}>
@@ -37,6 +43,14 @@ export default function ActionChoiceModal({
         </DialogHeader>
 
         <div className="flex flex-col gap-3 mt-4">
+          <Button onClick={handleConfigureAvailability} className="flex items-center gap-2 h-12 justify-start" variant="outline">
+            <Settings className="h-5 w-5 text-purple-600" />
+            <div className="text-left">
+              <div className="font-medium">Configurar Disponibilidade</div>
+              <div className="text-xs text-muted-foreground">Defina horários disponíveis, duração e recorrência</div>
+            </div>
+          </Button>
+
           <Button onClick={handleCreateAppointment} className="flex items-center gap-2 h-12 justify-start" variant="outline">
             <Calendar className="h-5 w-5 text-green-600" />
             <div className="text-left">

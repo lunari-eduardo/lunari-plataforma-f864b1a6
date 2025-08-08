@@ -14,6 +14,7 @@ import AppointmentDetails from "@/components/agenda/AppointmentDetails";
 import ActionChoiceModal from "@/components/agenda/ActionChoiceModal";
 import EditOrcamentoModal from "@/components/orcamentos/EditOrcamentoModal";
 import BudgetAppointmentDetails from "@/components/agenda/BudgetAppointmentDetails";
+import AvailabilityConfigModal from "@/components/agenda/AvailabilityConfigModal";
 import { useUnifiedCalendar, UnifiedEvent } from "@/hooks/useUnifiedCalendar";
 import { useAgenda, Appointment } from "@/hooks/useAgenda";
 import { useIntegration } from "@/hooks/useIntegration";
@@ -47,12 +48,13 @@ export default function Agenda() {
   });
   const [date, setDate] = useState<Date>(new Date());
 
-  // Modal states
+// Modal states
   const [isAppointmentDialogOpen, setIsAppointmentDialogOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isChoiceModalOpen, setIsChoiceModalOpen] = useState(false);
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
   const [isBudgetAppointmentModalOpen, setIsBudgetAppointmentModalOpen] = useState(false);
+  const [isAvailabilityModalOpen, setIsAvailabilityModalOpen] = useState(false);
 
   // Selection states
   const [selectedSlot, setSelectedSlot] = useState<{
@@ -291,7 +293,7 @@ export default function Agenda() {
       </Card>
 
       {/* Action Choice Modal */}
-      <ActionChoiceModal isOpen={isChoiceModalOpen} onClose={() => setIsChoiceModalOpen(false)} date={selectedSlot?.date || new Date()} time={selectedSlot?.time || ''} onCreateAppointment={handleCreateAppointment} />
+      <ActionChoiceModal isOpen={isChoiceModalOpen} onClose={() => setIsChoiceModalOpen(false)} date={selectedSlot?.date || new Date()} time={selectedSlot?.time || ''} onCreateAppointment={handleCreateAppointment} onConfigureAvailability={() => { setIsChoiceModalOpen(false); setIsAvailabilityModalOpen(true); }} />
 
       {/* Appointment Form Modal */}
       <Dialog open={isAppointmentDialogOpen} onOpenChange={setIsAppointmentDialogOpen}>
@@ -325,5 +327,13 @@ export default function Agenda() {
 
       {/* Budget Edit Modal */}
       <EditOrcamentoModal isOpen={isBudgetModalOpen} onClose={() => setIsBudgetModalOpen(false)} orcamento={selectedBudget} />
+
+      {/* Availability Config Modal */}
+      <AvailabilityConfigModal
+        isOpen={isAvailabilityModalOpen}
+        onClose={() => setIsAvailabilityModalOpen(false)}
+        date={selectedSlot?.date || new Date()}
+        initialTime={selectedSlot?.time}
+      />
     </div>;
 }

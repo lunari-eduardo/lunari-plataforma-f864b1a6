@@ -1,10 +1,10 @@
-
 import { format, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { TimeInput } from "@/components/ui/time-input";
 import { useState, useEffect } from 'react';
 import { UnifiedEvent } from '@/hooks/useUnifiedCalendar';
 import UnifiedEventCard from './UnifiedEventCard';
+import { useAvailability } from '@/hooks/useAvailability';
 
 interface DailyViewProps {
   date: Date;
@@ -24,8 +24,9 @@ export default function DailyView({
   const [customTimeSlots, setCustomTimeSlots] = useState<{
     [key: string]: string[];
   }>({});
-  const [editingTimeSlot, setEditingTimeSlot] = useState<number | null>(null);
+const [editingTimeSlot, setEditingTimeSlot] = useState<number | null>(null);
   const dateKey = format(date, 'yyyy-MM-dd');
+  const { availability } = useAvailability();
 
   // Load custom time slots from localStorage
   useEffect(() => {
@@ -66,8 +67,11 @@ export default function DailyView({
   const timeSlots = getCurrentTimeSlots();
   const dayEvents = unifiedEvents.filter(event => isSameDay(event.date, date));
 
-  const getEventForSlot = (time: string) => {
+const getEventForSlot = (time: string) => {
     return dayEvents.find(event => event.time === time);
+  };
+  const hasAvailabilityForTime = (time: string) => {
+    return availability.some(s => s.date === dateKey && s.time === time);
   };
 
   const handleEditTimeSlot = (index: number, currentTime: string) => {
@@ -147,8 +151,10 @@ export default function DailyView({
                     />
                   </div>
                 ) : (
-                  <div className="h-full flex items-center justify-center text-xs text-muted-foreground">
-                    Disponível
+                  <div className="h-full flex items-center justify-center text-[11px]">
+                    <span className={hasAvailabilityForTime(time) ? 'inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-availability/20 border border-availability/50 text-lunar-text' : 'text-muted-foreground'}>
+                      Disponível
+                    </span>
                   </div>
                 )}
               </div>

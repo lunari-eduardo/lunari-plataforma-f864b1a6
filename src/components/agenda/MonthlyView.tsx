@@ -3,6 +3,7 @@ import { startOfMonth, endOfMonth, eachDayOfInterval, format, isSameMonth, isTod
 import { ptBR } from 'date-fns/locale';
 import { UnifiedEvent } from '@/hooks/useUnifiedCalendar';
 import UnifiedEventCard from './UnifiedEventCard';
+import { useAvailability } from '@/hooks/useAvailability';
 interface MonthlyViewProps {
   date: Date;
   unifiedEvents: UnifiedEvent[];
@@ -19,6 +20,7 @@ export default function MonthlyView({
   onEventClick,
   onDayClick
 }: MonthlyViewProps) {
+  const { availability } = useAvailability();
   const monthStart = startOfMonth(date);
   const monthEnd = endOfMonth(date);
   const daysInMonth = eachDayOfInterval({
@@ -58,14 +60,23 @@ export default function MonthlyView({
         const maxDisplayEvents = 1; // Sempre mostrar apenas 1 evento para evitar esticamento
         const hasMoreEvents = dayEvents.length > maxDisplayEvents;
         const displayEvents = dayEvents.slice(0, maxDisplayEvents);
-        return <div key={day.toString()} onClick={() => onDayClick(day)} className="min-h-[80px] md:min-h-[120px] rounded p-1 md:p-2 cursor-pointer transition-colors bg-lunar-surface hover:bg-lunar-bg">
+            return <div key={day.toString()} onClick={() => onDayClick(day)} className="min-h-[80px] md:min-h-[120px] rounded p-1 md:p-2 cursor-pointer transition-colors bg-lunar-surface hover:bg-lunar-bg">
               <div className="flex justify-between items-center mb-1 md:mb-2">
                 <span className={`
                   text-xs md:text-sm font-medium h-5 w-5 md:h-6 md:w-6 flex items-center justify-center rounded-full
                   ${isToday(day) ? 'bg-primary text-primary-foreground' : 'text-foreground'}
-                `}>
+               `}>
                   {format(day, 'd')}
                 </span>
+                {/* Availability count badge */}
+                {(() => {
+                  const count = availability.filter(a => a.date === format(day, 'yyyy-MM-dd')).length;
+                  return count > 0 ? (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-availability/20 border border-availability/50 text-lunar-text">
+                      {count}
+                    </span>
+                  ) : null;
+                })()}
               </div>
               
               <div className="space-y-px md:space-y-1">

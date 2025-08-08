@@ -17,6 +17,9 @@
     --lunar-error: 12 74% 61%;
     --lunar-success: 150 53% 55%;
     
+    /* Availability (lilac) */
+    --availability: 270 60% 70%;
+    
     /* Shadcn compatible variables for light mode */
     --background: 40 33% 97%;
     --foreground: 0 0% 23%;

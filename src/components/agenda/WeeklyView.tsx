@@ -1,9 +1,9 @@
-
 import React from 'react';
 import { startOfWeek, addDays, format, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { UnifiedEvent } from '@/hooks/useUnifiedCalendar';
 import UnifiedEventCard from './UnifiedEventCard';
+import { useAvailability } from '@/hooks/useAvailability';
 
 interface WeeklyViewProps {
   date: Date;
@@ -18,6 +18,7 @@ export default function WeeklyView({
   onCreateSlot,
   onEventClick
 }: WeeklyViewProps) {
+  const { availability } = useAvailability();
   const weekStart = startOfWeek(date);
   const timeSlots = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"];
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
@@ -26,10 +27,14 @@ export default function WeeklyView({
     return format(date, 'EEE', { locale: ptBR });
   };
 
-  const getEventForSlot = (day: Date, time: string) => {
+const getEventForSlot = (day: Date, time: string) => {
     return unifiedEvents.find(event => 
       isSameDay(event.date, day) && event.time === time
     );
+  };
+  const hasAvailabilityForSlot = (day: Date, time: string) => {
+    const ds = format(day, 'yyyy-MM-dd');
+    return availability.some(a => a.date === ds && a.time === time);
   };
 
   return (
@@ -62,7 +67,7 @@ export default function WeeklyView({
                   <div 
                     key={`${dayIndex}-${time}`} 
                     onClick={() => !event && onCreateSlot({ date: day, time })} 
-                    className="border border-gray-100 h-8 md:h-10 p-0.5 md:p-1 relative bg-stone-100 cursor-pointer hover:bg-stone-50"
+                    className={`border h-8 md:h-10 p-0.5 md:p-1 relative cursor-pointer ${hasAvailabilityForSlot(day, time) && !event ? 'bg-availability/10 border-availability/50 hover:bg-availability/20' : 'bg-stone-100 hover:bg-stone-50 border-gray-100'}`}
                   >
                     {event ? (
                       <div onClick={(e) => e.stopPropagation()}>
@@ -72,7 +77,13 @@ export default function WeeklyView({
                           variant="weekly"
                         />
                       </div>
-                    ) : null}
+                    ) : (
+                      hasAvailabilityForSlot(day, time) ? (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-availability/20 border border-availability/50 text-lunar-text">Disponível</span>
+                        </div>
+                      ) : null
+                    )}
                   </div>
                 );
               })}

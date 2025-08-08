@@ -49,23 +49,25 @@ export default {
 					accentHover: 'hsl(var(--lunar-accentHover) / <alpha-value>)',
 					error: 'hsl(var(--lunar-error) / <alpha-value>)',
 					success: 'hsl(var(--lunar-success) / <alpha-value>)',
-				},
+        },
 
-				// Paleta elegante para gráficos
-				chart: {
-					primary: '#CBA977',      // Dourado principal
-					secondary: '#8B9CAE',    // Azul acinzentado
-					tertiary: '#A67C6B',     // Marrom suave
-					quaternary: '#9FB5A8',   // Verde acinzentado
-					quinary: '#B0A8C1',      // Roxo suave
-					senary: '#C4A084',       // Bege rosado
-					revenue: '#70B59A',      // Verde para receitas
-					expense: '#E89B8A',      // Coral para despesas
-					profit: '#6B8DB5',       // Azul para lucro
-					neutral: '#9CA3AF',      // Cinza neutro
-				},
-				
-				border: 'hsl(var(--border) / <alpha-value>)',
+        // Paleta elegante para gráficos
+        chart: {
+          primary: '#CBA977',      // Dourado principal
+          secondary: '#8B9CAE',    // Azul acinzentado
+          tertiary: '#A67C6B',     // Marrom suave
+          quaternary: '#9FB5A8',   // Verde acinzentado
+          quinary: '#B0A8C1',      // Roxo suave
+          senary: '#C4A084',       // Bege rosado
+          revenue: '#70B59A',      // Verde para receitas
+          expense: '#E89B8A',      // Coral para despesas
+          profit: '#6B8DB5',       // Azul para lucro
+          neutral: '#9CA3AF',      // Cinza neutro
+        },
+        
+        availability: 'hsl(var(--availability) / <alpha-value>)',
+        
+        border: 'hsl(var(--border) / <alpha-value>)',
 				input: 'hsl(var(--input))',
 				ring: 'hsl(var(--ring))',
 				primary: {
