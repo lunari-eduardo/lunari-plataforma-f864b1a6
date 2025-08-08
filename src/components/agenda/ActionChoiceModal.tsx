@@ -94,10 +94,10 @@ export default function ActionChoiceModal({
         <div className="flex flex-col gap-3 mt-4">
           <Button onClick={handleConfigureAvailability} className="flex items-center gap-2 h-12 justify-start" variant="outline">
             <Settings className="h-5 w-5 text-purple-600" />
-            <div className="text-left">
-              <div className="font-medium">Configurar Disponibilidade</div>
-              <div className="text-xs text-muted-foreground">Defina horários disponíveis, duração e recorrência</div>
-            </div>
+              <div className="text-left">
+                <div className="font-medium">Configurar Disponibilidade</div>
+                <div className="text-xs text-muted-foreground">Defina horários disponíveis e duração</div>
+              </div>
           </Button>
 
 

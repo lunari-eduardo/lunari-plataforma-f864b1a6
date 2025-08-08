@@ -5,10 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { TimeInput } from '@/components/ui/time-input';
-import { format } from 'date-fns';
+import { format, startOfWeek, addDays } from 'date-fns';
 import { useEffect, useMemo, useState } from 'react';
 import { useAvailability } from '@/hooks/useAvailability';
-import type { RecurrenceType, AvailabilitySlot } from '@/types/availability';
+import type { AvailabilitySlot } from '@/types/availability';
 import { toast } from 'sonner';
 import { Checkbox } from '@/components/ui/checkbox';
 
@@ -20,12 +20,12 @@ interface AvailabilityConfigModalProps {
 }
 
 export default function AvailabilityConfigModal({ isOpen, onClose, date, initialTime }: AvailabilityConfigModalProps) {
-  const { addAvailabilitySlots, clearAvailabilityForDate } = useAvailability();
+  const { availability, addAvailabilitySlots, deleteAvailabilitySlot, clearAvailabilityForDate } = useAvailability();
   const [startTime, setStartTime] = useState<string>(initialTime || '09:00');
   const [endTime, setEndTime] = useState<string>('18:00');
-  const [duration, setDuration] = useState<number>(60);
-  const [recurrence, setRecurrence] = useState<RecurrenceType>('none');
+  const [duration, setDuration] = useState<number | null>(60);
   const [clearExisting, setClearExisting] = useState<boolean>(true);
+  const [endTouched, setEndTouched] = useState<boolean>(false);
   const [selectedWeekdays, setSelectedWeekdays] = useState<number[]>([]);
   const weekDaysLabels = useMemo(() => ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'], []);
   const toggleWeekday = (idx: number) => {
@@ -34,6 +34,7 @@ export default function AvailabilityConfigModal({ isOpen, onClose, date, initial
 
   useEffect(() => {
     setStartTime(initialTime || '09:00');
+    setEndTouched(false);
   }, [initialTime, isOpen]);
 
   const dateStr = useMemo(() => format(date, 'yyyy-MM-dd'), [date]);
@@ -52,49 +53,108 @@ export default function AvailabilityConfigModal({ isOpen, onClose, date, initial
     return times;
   };
 
-  const calculateTargetDates = (base: Date): Date[] => {
-    const dates: Date[] = [base];
-    if (recurrence === 'next3days') {
-      for (let i = 1; i <= 3; i++) {
-        const d = new Date(base);
-        d.setDate(d.getDate() + i);
-        dates.push(d);
-      }
-    } else if (recurrence === 'weekly4') {
-      for (let i = 1; i <= 3; i++) {
-        const d = new Date(base);
-        d.setDate(d.getDate() + i * 7);
-        dates.push(d);
+  const parseTimeToMinutes = (t: string) => {
+    const [h, m] = t.split(':').map(Number);
+    return h * 60 + m;
+  };
+
+  const minutesToTimeStr = (mins: number) => {
+    const h = String(Math.floor(mins / 60)).padStart(2, '0');
+    const m = String(mins % 60).padStart(2, '0');
+    return `${h}:${m}`;
+  };
+
+  const snapEndToDuration = (start: string, end: string, minutes: number) => {
+    const s = parseTimeToMinutes(start);
+    let e = parseTimeToMinutes(end);
+    if (e <= s) e = s + minutes;
+    const diff = e - s;
+    const remainder = diff % minutes;
+    return minutesToTimeStr(e - remainder);
+  };
+
+  const recomputeDurationFromWindow = (start: string, end: string): number | null => {
+    const s = parseTimeToMinutes(start);
+    const e = parseTimeToMinutes(end);
+    const total = e - s;
+    if (total <= 0) return null;
+    const allowed = [15, 30, 45, 60, 90];
+    const match = allowed.find(d => total % d === 0);
+    return match || null;
+  };
+
+  const computeTargetDates = (base: Date): Date[] => {
+    if (selectedWeekdays.length === 0) return [base];
+    const results: Date[] = [];
+    const baseWeekStart = startOfWeek(base);
+    for (let w = 0; w < 4; w++) {
+      for (const wd of selectedWeekdays) {
+        const d = addDays(baseWeekStart, wd + w * 7);
+        if (d >= base) results.push(d);
       }
     }
-    return dates;
+    results.sort((a, b) => a.getTime() - b.getTime());
+    return results;
+  };
+
+  useEffect(() => {
+    if (duration && !endTouched) {
+      setEndTime(prev => snapEndToDuration(startTime, prev, duration));
+    }
+  }, [duration, startTime, endTouched]);
+
+  const handleEndTimeChange = (value: string) => {
+    setEndTouched(true);
+    setEndTime(value);
+    const newDur = recomputeDurationFromWindow(startTime, value);
+    if (newDur) {
+      setDuration(newDur);
+    } else {
+      setDuration(null);
+      toast.error('O término não alinha com uma duração suportada. Selecione uma duração.');
+    }
   };
 
   const handleSave = () => {
-    if (!startTime || !endTime || duration <= 0) return;
+    if (!startTime || !endTime || !duration || duration <= 0) {
+      toast.error('Preencha início, término e duração válidos.');
+      return;
+    }
     const times = generateTimes(startTime, endTime, duration);
-    const baseDates = calculateTargetDates(date);
-    const targetDates = selectedWeekdays.length
-      ? baseDates.filter(d => selectedWeekdays.includes(d.getDay()))
-      : baseDates;
+    const targetDates = computeTargetDates(date);
 
-    const allSlots: AvailabilitySlot[] = [];
+    const toAdd: AvailabilitySlot[] = [];
+    const existingKeySet = new Set(availability.map(a => `${a.date}|${a.time}`));
+    const addedKeys = new Set<string>();
+
     for (const d of targetDates) {
       const ds = format(d, 'yyyy-MM-dd');
-      if (clearExisting) {
-        clearAvailabilityForDate(ds);
-      }
       for (const t of times) {
-        allSlots.push({ id: '', date: ds, time: t, duration });
+        const key = `${ds}|${t}`;
+        if (clearExisting) {
+          // Remove apenas os slots existentes exatamente nestes horários
+          availability
+            .filter(a => a.date === ds && a.time === t)
+            .forEach(a => deleteAvailabilitySlot(a.id));
+          if (!addedKeys.has(key)) {
+            toAdd.push({ id: '', date: ds, time: t, duration });
+            addedKeys.add(key);
+          }
+        } else {
+          if (!existingKeySet.has(key) && !addedKeys.has(key)) {
+            toAdd.push({ id: '', date: ds, time: t, duration });
+            addedKeys.add(key);
+          }
+        }
       }
     }
 
-    if (allSlots.length === 0) {
+    if (toAdd.length === 0) {
       toast.error('Nenhum horário gerado. Verifique os campos.');
       return;
     }
 
-    addAvailabilitySlots(allSlots);
+    addAvailabilitySlots(toAdd);
     toast.success('Disponibilidades configuradas com sucesso');
     onClose();
   };
@@ -117,15 +177,15 @@ export default function AvailabilityConfigModal({ isOpen, onClose, date, initial
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="space-y-2">
             <Label>Início</Label>
-            <TimeInput value={startTime} onChange={setStartTime} />
+            <TimeInput value={startTime} onChange={(v) => setStartTime(v)} />
           </div>
           <div className="space-y-2">
             <Label>Término</Label>
-            <TimeInput value={endTime} onChange={setEndTime} />
+            <TimeInput value={endTime} onChange={(v) => handleEndTimeChange(v)} />
           </div>
           <div className="space-y-2">
             <Label>Duração (min)</Label>
-            <Select value={String(duration)} onValueChange={(v) => setDuration(Number(v))}>
+            <Select value={duration ? String(duration) : undefined} onValueChange={(v) => setDuration(Number(v))}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
@@ -135,19 +195,6 @@ export default function AvailabilityConfigModal({ isOpen, onClose, date, initial
                 <SelectItem value="45">45</SelectItem>
                 <SelectItem value="60">60</SelectItem>
                 <SelectItem value="90">90</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label>Recorrência</Label>
-            <Select value={recurrence} onValueChange={(v) => setRecurrence(v as RecurrenceType)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Somente neste dia</SelectItem>
-                <SelectItem value="next3days">Próximos 3 dias</SelectItem>
-                <SelectItem value="weekly4">Semanal (4 semanas)</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -164,12 +211,12 @@ export default function AvailabilityConfigModal({ isOpen, onClose, date, initial
                 </label>
               ))}
             </div>
-            <p className="text-[11px] text-muted-foreground">Se selecionar dias, aplicaremos apenas nesses dias dentro da recorrência escolhida.</p>
+            <p className="text-[11px] text-muted-foreground">Se selecionar dias, aplicaremos nesses dias nas próximas 4 semanas.</p>
           </div>
           <div className="col-span-1 md:col-span-2 flex items-center justify-between rounded-md border p-3">
             <div>
               <p className="text-sm font-medium">Substituir existentes</p>
-              <p className="text-xs text-muted-foreground">Remove disponibilidades já criadas nestes dias</p>
+              <p className="text-xs text-muted-foreground">Remove apenas os mesmos horários que já existirem nestes dias</p>
             </div>
             <Switch checked={clearExisting} onCheckedChange={setClearExisting} />
           </div>
