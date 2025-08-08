@@ -11,6 +11,7 @@ import { useTasks } from '@/hooks/useTasks';
 import type { Task, TaskPriority, TaskStatus } from '@/types/tasks';
 import TaskFormModal from '@/components/tarefas/TaskFormModal';
 import TaskCard from '@/components/tarefas/TaskCard';
+import PriorityLegend from '@/components/tarefas/PriorityLegend';
 
 function groupByStatus(tasks: Task[]) {
   return tasks.reduce<Record<TaskStatus, Task[]>>((acc, t) => {
@@ -213,6 +214,8 @@ export default function Tarefas() {
           </div>
         </div>
       </Card>
+
+      <PriorityLegend />
 
       {view === 'kanban' ? (
         <div className="overflow-x-auto">

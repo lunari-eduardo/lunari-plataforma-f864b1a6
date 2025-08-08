@@ -42,8 +42,36 @@ export default function TaskCard({
     return null;
   }, [t.dueDate]);
 
+  const priorityUI = useMemo(() => {
+    switch (t.priority) {
+      case 'high':
+        return {
+          bar: 'bg-lunar-error',
+          tint: 'bg-lunar-error/5',
+          badge: 'text-lunar-error border-lunar-error/40 bg-lunar-error/10',
+        };
+      case 'medium':
+        return {
+          bar: 'bg-lunar-accent',
+          tint: 'bg-lunar-accent/5',
+          badge: 'text-lunar-accent border-lunar-accent/40 bg-lunar-accent/10',
+        };
+      default:
+        return {
+          bar: 'bg-lunar-border',
+          tint: '',
+          badge: 'text-lunar-textSecondary border-lunar-border/60 bg-transparent',
+        };
+    }
+  }, [t.priority]);
+
   return (
-    <li className="rounded-md border border-lunar-border/60 bg-lunar-surface p-2 shadow-sm">
+    <li className="relative overflow-hidden rounded-md border border-lunar-border/60 bg-lunar-surface p-2 shadow-sm">
+      {/* Priority visual accents */}
+      <span aria-hidden className={`pointer-events-none absolute inset-y-0 left-0 w-1 ${priorityUI.bar}`} />
+      {priorityUI.tint && (
+        <span aria-hidden className={`pointer-events-none absolute inset-0 ${priorityUI.tint}`} />
+      )}
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <h3 className="text-sm font-medium text-lunar-text truncate">{t.title}</h3>
@@ -51,7 +79,7 @@ export default function TaskCard({
             <p className="text-2xs text-lunar-textSecondary truncate">{t.description}</p>
           )}
           <div className="mt-1 flex flex-wrap items-center gap-1">
-            <Badge variant="outline" className="text-[10px]">{priorityLabel[t.priority]}</Badge>
+            <Badge variant="outline" className={`text-[10px] ${priorityUI.badge}`}>{priorityLabel[t.priority]}</Badge>
             {t.assigneeName && (
               <Badge variant="secondary" className="text-[10px]">{t.assigneeName}</Badge>
             )}
