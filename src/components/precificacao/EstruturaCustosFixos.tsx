@@ -387,9 +387,7 @@ export function EstruturaCustosFixos({
                 <span className="text-green-600 text-xs font-normal text-center">
                   Depreciação Mensal: R$ {totalDepreciacaoMensal.toFixed(2)}
                 </span>
-                <Button onClick={adicionarEquipamento} size="sm" className="text-xs">
-                  <Plus className="h-4 w-4" />
-                </Button>
+                
               </div>
             </div>
             
