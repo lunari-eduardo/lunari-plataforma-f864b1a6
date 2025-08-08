@@ -297,7 +297,7 @@ export default function Agenda() {
       <Dialog open={isAppointmentDialogOpen} onOpenChange={setIsAppointmentDialogOpen}>
         <DialogContent className="sm:max-w-[500px] border-0 shadow-lg bg-card text-foreground  ">
           <DialogHeader>
-            <DialogTitle className="text-lg font-semibold text-gray-900">
+            <DialogTitle className="text-lg font-semibold bg-card text-foreground ">
               {editingAppointment ? 'Editar Agendamento' : 'Novo Agendamento'}
             </DialogTitle>
             <DialogDescription className="text-sm text-gray-600">
