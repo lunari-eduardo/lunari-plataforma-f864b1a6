@@ -287,7 +287,7 @@ export default function ClienteDetalhe() {
           </TabsContent>
 
           {/* Aba 2: Histórico & Projetos */}
-          <TabsContent value="historico" className="space-y-6">
+          <TabsContent value="historico" className="space-y-6 bg-card text-foreground  ">
             <Card className="bg-card text-foreground ">
               <CardHeader className="bg-neutral-50">
                 <CardTitle>Histórico Completo</CardTitle>
