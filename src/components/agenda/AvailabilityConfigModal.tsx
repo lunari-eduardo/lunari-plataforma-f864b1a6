@@ -10,6 +10,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useAvailability } from '@/hooks/useAvailability';
 import type { RecurrenceType, AvailabilitySlot } from '@/types/availability';
 import { toast } from 'sonner';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface AvailabilityConfigModalProps {
   isOpen: boolean;
@@ -25,6 +26,11 @@ export default function AvailabilityConfigModal({ isOpen, onClose, date, initial
   const [duration, setDuration] = useState<number>(60);
   const [recurrence, setRecurrence] = useState<RecurrenceType>('none');
   const [clearExisting, setClearExisting] = useState<boolean>(true);
+  const [selectedWeekdays, setSelectedWeekdays] = useState<number[]>([]);
+  const weekDaysLabels = useMemo(() => ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'], []);
+  const toggleWeekday = (idx: number) => {
+    setSelectedWeekdays(prev => prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]);
+  };
 
   useEffect(() => {
     setStartTime(initialTime || '09:00');
@@ -67,7 +73,10 @@ export default function AvailabilityConfigModal({ isOpen, onClose, date, initial
   const handleSave = () => {
     if (!startTime || !endTime || duration <= 0) return;
     const times = generateTimes(startTime, endTime, duration);
-    const targetDates = calculateTargetDates(date);
+    const baseDates = calculateTargetDates(date);
+    const targetDates = selectedWeekdays.length
+      ? baseDates.filter(d => selectedWeekdays.includes(d.getDay()))
+      : baseDates;
 
     const allSlots: AvailabilitySlot[] = [];
     for (const d of targetDates) {
@@ -141,6 +150,21 @@ export default function AvailabilityConfigModal({ isOpen, onClose, date, initial
                 <SelectItem value="weekly4">Semanal (4 semanas)</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          <div className="col-span-1 md:col-span-2 space-y-2">
+            <Label>Dias da semana (opcional)</Label>
+            <div className="grid grid-cols-7 gap-2">
+              {weekDaysLabels.map((d, idx) => (
+                <label key={d} className="flex items-center gap-1.5 text-xs">
+                  <Checkbox
+                    checked={selectedWeekdays.includes(idx)}
+                    onCheckedChange={() => toggleWeekday(idx)}
+                  />
+                  <span>{d}</span>
+                </label>
+              ))}
+            </div>
+            <p className="text-[11px] text-muted-foreground">Se selecionar dias, aplicaremos apenas nesses dias dentro da recorrência escolhida.</p>
           </div>
           <div className="col-span-1 md:col-span-2 flex items-center justify-between rounded-md border p-3">
             <div>

@@ -1,8 +1,10 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Calendar, DollarSign, Settings } from 'lucide-react';
+import { Calendar, DollarSign, Settings, Share2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { formatDateForStorage } from '@/utils/dateUtils';
+import { useAvailability } from '@/hooks/useAvailability';
+import { toast } from 'sonner';
 interface ActionChoiceModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -20,6 +22,7 @@ export default function ActionChoiceModal({
   onConfigureAvailability
 }: ActionChoiceModalProps) {
   const navigate = useNavigate();
+  const { availability } = useAvailability();
   const handleCreateBudget = () => {
     const dateStr = formatDateForStorage(date);
     navigate(`/orcamentos?data=${dateStr}&hora=${time}`);
@@ -32,6 +35,27 @@ export default function ActionChoiceModal({
   const handleConfigureAvailability = () => {
     onConfigureAvailability();
     onClose();
+  };
+  const handleShareDay = async () => {
+    const ds = formatDateForStorage(date);
+    const slots = availability.filter(a => a.date === ds).map(a => a.time).sort();
+    if (slots.length === 0) {
+      toast.error('Não há disponibilidades para este dia.');
+      return;
+    }
+    const prettyDate = date.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+    const text = `Horários disponíveis em ${prettyDate}:\n${slots.join(', ')}\n\nMe diga qual funciona melhor e confirmo pra você.`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: 'Horários disponíveis', text });
+      } else {
+        await navigator.clipboard.writeText(text);
+        toast.success('Horários copiados para a área de transferência');
+      }
+    } catch (e) {
+      await navigator.clipboard.writeText(text);
+      toast.success('Horários copiados para a área de transferência');
+    }
   };
   return <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
@@ -48,6 +72,14 @@ export default function ActionChoiceModal({
             <div className="text-left">
               <div className="font-medium">Configurar Disponibilidade</div>
               <div className="text-xs text-muted-foreground">Defina horários disponíveis, duração e recorrência</div>
+            </div>
+          </Button>
+
+          <Button onClick={handleShareDay} className="flex items-center gap-2 h-12 justify-start" variant="outline">
+            <Share2 className="h-5 w-5 text-rose-600" />
+            <div className="text-left">
+              <div className="font-medium">Compartilhar horários</div>
+              <div className="text-xs text-muted-foreground">Copiar/compartilhar horários disponíveis deste dia</div>
             </div>
           </Button>
 
