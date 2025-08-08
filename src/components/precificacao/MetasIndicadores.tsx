@@ -85,7 +85,7 @@ export function MetasIndicadores({
             <div className="space-y-4">
               <div>
                 <Label htmlFor="margem-lucro">Margem de Lucro Desejada (%)</Label>
-                <Input id="margem-lucro" type="number" min="0" max="100" step="1" value={margemLucroDesejada} onChange={e => setMargemLucroDesejada(Number(e.target.value))} className="max-w-32" />
+                <Input id="margem-lucro" type="number" min="0" max="100" step="1" value={margemLucroDesejada} onChange={e => setMargemLucroDesejada(Number(e.target.value))} className="max-w-32 border-amber-100 " />
               </div>
             </div>
           </div>
