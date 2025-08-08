@@ -4,7 +4,9 @@ import { ptBR } from 'date-fns/locale';
 import { UnifiedEvent } from '@/hooks/useUnifiedCalendar';
 import UnifiedEventCard from './UnifiedEventCard';
 import { useAvailability } from '@/hooks/useAvailability';
-
+import { Button } from '@/components/ui/button';
+import { Share2 } from 'lucide-react';
+import { toast } from 'sonner';
 interface WeeklyViewProps {
   date: Date;
   unifiedEvents: UnifiedEvent[];
@@ -37,9 +39,53 @@ const getEventForSlot = (day: Date, time: string) => {
     return availability.some(a => a.date === ds && a.time === time);
   };
 
+  const formatTimeBr = (t: string) => {
+    const [hh, mm] = t.split(':');
+    return mm === '00' ? `${hh}h` : `${hh}h ${mm}min`;
+  };
+
+  const handleShareWeek = async () => {
+    const sections: string[] = [];
+    for (const day of weekDays) {
+      const ds = format(day, 'yyyy-MM-dd');
+      const slots = availability
+        .filter(a => a.date === ds)
+        .map(a => a.time)
+        .sort();
+      if (slots.length > 0) {
+        const dateStr = format(day, "dd 'de' MMMM", { locale: ptBR });
+        const weekdayStr = format(day, 'eeee', { locale: ptBR });
+        const times = slots.map(formatTimeBr).join('\n');
+        sections.push(`No dia ${dateStr}, ${weekdayStr}, tenho os seguintes horários:\n\n${times}`);
+      }
+    }
+    if (sections.length === 0) {
+      toast.error('Não há disponibilidades nesta semana.');
+      return;
+    }
+    const text = sections.join('\n\n') + '\n\nQual fica melhor para você?';
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: 'Horários da semana', text });
+      } else {
+        await navigator.clipboard.writeText(text);
+        toast.success('Horários da semana copiados');
+      }
+    } catch {
+      await navigator.clipboard.writeText(text);
+      toast.success('Horários da semana copiados');
+    }
+  };
+
   return (
     <div className="overflow-x-auto pb-4">
       <div className="min-w-[300px] md:min-w-[700px]">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs md:text-sm text-muted-foreground">Semana de {format(weekStart, "dd 'de' MMMM", { locale: ptBR })}</p>
+          <Button variant="ghost" size="icon" onClick={handleShareWeek} aria-label="Compartilhar horários da semana" title="Compartilhar horários da semana">
+            <Share2 className="h-4 w-4" />
+          </Button>
+        </div>
         <div className="grid grid-cols-8 gap-px bg-border">
           {/* First cell empty - for time labels */}
           <div className="bg-stone-200"></div>
