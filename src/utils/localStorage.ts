@@ -23,7 +23,9 @@ export const STORAGE_KEYS = {
   // Configurações de usuário
   USER_PROFILE: 'lunari_user_profile',
   USER_PREFERENCES: 'lunari_user_preferences',
-  USER_BRANDING: 'lunari_user_branding'
+  USER_BRANDING: 'lunari_user_branding',
+  // Agenda - Disponibilidades
+  AVAILABILITY: 'lunari_availability_slots'
 } as const;
 
 export const storage = {

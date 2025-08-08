@@ -16,6 +16,7 @@ import { corrigirClienteIdSessoes, corrigirClienteIdAgendamentos } from '@/utils
 // Types
 import { Orcamento, Template, OrigemCliente, MetricasOrcamento, Cliente } from '@/types/orcamentos';
 import { Appointment, AppointmentStatus } from '@/hooks/useAgenda';
+import { AvailabilitySlot } from '@/types/availability';
 
 export interface ProdutoWorkflow {
   nome: string;
@@ -106,6 +107,8 @@ interface AppContextType {
   
   // Agenda
   appointments: Appointment[];
+  // Disponibilidades da Agenda
+  availability: AvailabilitySlot[];
   
   // Workflow
   workflowItems: WorkflowItem[];
@@ -143,6 +146,10 @@ interface AppContextType {
   addAppointment: (appointment: Omit<Appointment, 'id'>) => Appointment;
   updateAppointment: (id: string, appointment: Partial<Appointment>) => void;
   deleteAppointment: (id: string) => void;
+  // Disponibilidades Actions
+  addAvailabilitySlots: (slots: AvailabilitySlot[]) => void;
+  clearAvailabilityForDate: (date: string) => void;
+  deleteAvailabilitySlot: (id: string) => void;
   
   // Workflow Actions
   updateWorkflowItem: (id: string, updates: Partial<WorkflowItem>) => void;
@@ -255,6 +262,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [appointments, setAppointments] = useState<Appointment[]>(() => {
     const stored = storage.load(STORAGE_KEYS.APPOINTMENTS, []);
     return stored.length > 0 ? deserializeAppointments(stored) : [];
+  });
+
+  // Disponibilidades da Agenda
+  const [availability, setAvailability] = useState<AvailabilitySlot[]>(() => {
+    return storage.load(STORAGE_KEYS.AVAILABILITY, [] as AvailabilitySlot[]);
   });
 
   // NOVA ARQUITETURA: Estado baseado em Projetos
