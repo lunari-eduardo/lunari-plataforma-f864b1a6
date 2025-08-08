@@ -19,6 +19,7 @@ import Workflow from "./pages/Workflow";
 import AnaliseVendas from "./pages/AnaliseVendas";
 import MinhaConta from "./pages/MinhaConta";
 import Preferencias from "./pages/Preferencias";
+import Tarefas from "./pages/Tarefas";
 import NotFound from "./pages/NotFound";
 import { AppProvider } from "./contexts/AppContext";
 import { useIntegration } from "./hooks/useIntegration";
@@ -120,6 +121,7 @@ function App() {
                 <Route path="/configuracoes" element={<Configuracoes />} />
                 <Route path="/minha-conta" element={<MinhaConta />} />
                 <Route path="/preferencias" element={<Preferencias />} />
+                <Route path="/tarefas" element={<Tarefas />} />
                 <Route path="*" element={<NotFound />} />
               </Route>
             </Routes>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { WorkflowPackageCombobox } from "./WorkflowPackageCombobox";
 import { StatusBadge } from "./StatusBadge";
@@ -635,7 +636,7 @@ export function WorkflowTable({
                 <tr key={session.id} className="group transition-colors duration-150 ease-in-out">
                 {renderCell('date', <div className="font-medium">{formatToDayMonth(session.data)}</div>, true)}
                 
-                {renderCell('client', <div className="flex items-center gap-2">
+{renderCell('client', <div className="flex items-center gap-2">
                     {session.clienteId ? (
                       <Link 
                         to={`/clientes/${session.clienteId}`}
@@ -645,6 +646,9 @@ export function WorkflowTable({
                       </Link>
                     ) : (
                       <span className="font-medium text-gray-600">{session.nome}</span>
+                    )}
+                    {session.produtosList && session.produtosList.length > 0 && (
+                      <Badge variant="secondary" className="h-5 text-[10px] px-1.5">Produtos</Badge>
                     )}
                     {session.whatsapp && <a href={`https://wa.me/${session.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
                         <MessageCircle className="h-3 w-3 text-green-600 hover:text-green-700 cursor-pointer" />
