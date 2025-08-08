@@ -18,10 +18,12 @@ import { PackageSearchCombobox } from './PackageSearchCombobox';
 import { useOrcamentoData } from '@/hooks/useOrcamentoData';
 import { formatDateForStorage } from '@/utils/dateUtils';
 import { calculateTotals } from '@/services/FinancialCalculationEngine';
+
 interface ProdutoIncluido {
   produtoId: string;
   quantidade: number;
 }
+
 interface MappedPackage {
   id: string;
   nome: string;
@@ -31,28 +33,15 @@ interface MappedPackage {
   produtosIncluidos?: ProdutoIncluido[];
   valorFotoExtra?: number;
 }
+
 export default function NovoOrcamento() {
   const location = useLocation();
-  const {
-    clientes,
-    origens,
-    adicionarOrcamento,
-    adicionarCliente
-  } = useOrcamentos();
-  const {
-    pacotes,
-    produtos,
-    categorias
-  } = useOrcamentoData();
-  const {
-    toast
-  } = useToast();
+  const { clientes, origens, adicionarOrcamento, adicionarCliente } = useOrcamentos();
+  const { pacotes, produtos, categorias } = useOrcamentoData();
+  const { toast } = useToast();
+
   const [clienteSelecionado, setClienteSelecionado] = useState<Cliente | null>(null);
-  const [novoCliente, setNovoCliente] = useState({
-    nome: '',
-    email: '',
-    whatsapp: ''
-  });
+  const [novoCliente, setNovoCliente] = useState({ nome: '', email: '', whatsapp: '' });
   const [data, setData] = useState('');
   const [hora, setHora] = useState('');
   const [categoria, setCategoria] = useState('');
@@ -68,9 +57,11 @@ export default function NovoOrcamento() {
     const searchParams = new URLSearchParams(location.search);
     const presetDate = searchParams.get('data');
     const presetTime = searchParams.get('hora');
+    
     if (presetDate) {
       setData(presetDate);
     }
+    
     if (presetTime) {
       setHora(presetTime);
     }
@@ -78,6 +69,7 @@ export default function NovoOrcamento() {
 
   // NOVA LÓGICA DE PACOTE FECHADO: O valor base do pacote é o preço final
   const valorPacote = pacoteSelecionado?.valor || 0;
+  
   const produtosParaCalculo = produtosAdicionais.map(p => ({
     id: p.id,
     nome: p.nome,
@@ -85,6 +77,7 @@ export default function NovoOrcamento() {
     quantidade: p.quantidade,
     tipo: p.id.startsWith('auto-') ? 'incluso' as const : 'manual' as const
   }));
+  
   const totalsCalculados = calculateTotals({
     pacotePrincipal: pacoteSelecionado ? {
       ...pacoteSelecionado,
@@ -95,7 +88,7 @@ export default function NovoOrcamento() {
     adicional: 0,
     desconto: 0
   });
-
+  
   // Dados compatíveis com o sistema existente
   const produtosInclusos = produtosAdicionais.filter(p => p.id.startsWith('auto-'));
   const produtosManuais = produtosAdicionais.filter(p => !p.id.startsWith('auto-'));
@@ -114,36 +107,33 @@ export default function NovoOrcamento() {
   // Função para lidar com a seleção de pacote
   const handlePackageSelection = (pacote: MappedPackage | null) => {
     setPacoteSelecionado(pacote);
-
+    
     // Remove produtos que foram incluídos automaticamente do pacote anterior
     setProdutosAdicionais(prev => prev.filter(p => !p.id.startsWith('auto-')));
-
+    
     // Se o pacote tem produtos incluídos, adiciona automaticamente
     if (pacote?.produtosIncluidos && pacote.produtosIncluidos.length > 0) {
-      const produtosDosPacotes = pacote.produtosIncluidos.map(produtoIncluido => {
+        const produtosDosPacotes = pacote.produtosIncluidos.map(produtoIncluido => {
         const produto = produtos.find(p => p.id === produtoIncluido.produtoId);
         if (produto) {
           return {
             id: `auto-${produto.id}`,
             nome: `${produto.nome} (incluso no pacote)`,
-            preco: 0,
-            // NOVA LÓGICA: Produtos inclusos têm preço 0 na exibição
+            preco: 0, // NOVA LÓGICA: Produtos inclusos têm preço 0 na exibição
             quantidade: produtoIncluido.quantidade
           };
         }
         return null;
       }).filter(Boolean);
+      
       setProdutosAdicionais(prev => [...prev, ...produtosDosPacotes.filter(Boolean)]);
     }
   };
+
   const adicionarProduto = () => {
-    setProdutosAdicionais([...produtosAdicionais, {
-      id: Date.now().toString(),
-      nome: '',
-      preco: 0,
-      quantidade: 1
-    }]);
+    setProdutosAdicionais([...produtosAdicionais, { id: Date.now().toString(), nome: '', preco: 0, quantidade: 1 }]);
   };
+
   const adicionarProdutoDoCombobox = (produto: any) => {
     if (produto) {
       setProdutosAdicionais(prev => [...prev, {
@@ -154,21 +144,22 @@ export default function NovoOrcamento() {
       }]);
     }
   };
+
   const atualizarProduto = (id: string, campo: keyof PacoteProduto, valor: any) => {
-    setProdutosAdicionais(produtosAdicionais.map(p => p.id === id ? {
-      ...p,
-      [campo]: valor
-    } : p));
+    setProdutosAdicionais(produtosAdicionais.map(p => p.id === id ? { ...p, [campo]: valor } : p));
   };
+
   const removerProduto = (id: string) => {
     setProdutosAdicionais(produtosAdicionais.filter(p => p.id !== id));
   };
+
   const usarTemplate = (template: any) => {
     setDetalhes(template.conteudo);
     if (template.categoria) {
       setCategoria(template.categoria);
     }
   };
+
   const criarNovoCliente = () => {
     if (!novoCliente.nome.trim() || !novoCliente.email.trim() || !novoCliente.whatsapp.trim()) {
       toast({
@@ -184,16 +175,13 @@ export default function NovoOrcamento() {
       telefone: novoCliente.whatsapp // Map whatsapp input to telefone field
     });
     setClienteSelecionado(cliente);
-    setNovoCliente({
-      nome: '',
-      email: '',
-      whatsapp: ''
-    });
+    setNovoCliente({ nome: '', email: '', whatsapp: '' });
     toast({
       title: "Sucesso",
       description: "Cliente criado com sucesso!"
     });
   };
+
   const salvarOrcamento = (status: 'rascunho' | 'enviado') => {
     // Se há um novo cliente preenchido mas não selecionado, criar o cliente automaticamente
     if (!clienteSelecionado && novoCliente.nome.trim() && novoCliente.email.trim() && novoCliente.whatsapp.trim()) {
@@ -203,12 +191,9 @@ export default function NovoOrcamento() {
         telefone: novoCliente.whatsapp
       });
       setClienteSelecionado(cliente);
-      setNovoCliente({
-        nome: '',
-        email: '',
-        whatsapp: ''
-      });
+      setNovoCliente({ nome: '', email: '', whatsapp: '' });
     }
+
     if (!clienteSelecionado || !data || !hora) {
       toast({
         title: "Erro",
@@ -217,12 +202,16 @@ export default function NovoOrcamento() {
       });
       return;
     }
-    const todosItens = [...(pacoteSelecionado ? [{
-      id: `pacote-${pacoteSelecionado.id}`,
-      nome: `Pacote: ${pacoteSelecionado.nome}`,
-      preco: pacoteSelecionado.valor,
-      quantidade: 1
-    }] : []), ...produtosAdicionais];
+
+    const todosItens = [
+      ...(pacoteSelecionado ? [{
+        id: `pacote-${pacoteSelecionado.id}`,
+        nome: `Pacote: ${pacoteSelecionado.nome}`,
+        preco: pacoteSelecionado.valor,
+        quantidade: 1
+      }] : []),
+      ...produtosAdicionais
+    ];
 
     // Converter para nova estrutura de dados
     const pacotePrincipal = pacoteSelecionado ? {
@@ -240,6 +229,7 @@ export default function NovoOrcamento() {
         };
       })
     } : undefined;
+
     const produtosAdicionaisNovo = produtosAdicionais.map(p => ({
       produtoId: p.id,
       nome: p.nome,
@@ -247,28 +237,33 @@ export default function NovoOrcamento() {
       valorUnitarioCongelado: p.preco,
       tipo: 'manual' as const
     }));
+
     adicionarOrcamento({
       cliente: clienteSelecionado,
-      data: formatDateForStorage(data),
-      // Garantir que a data seja salva no formato correto
+      data: formatDateForStorage(data), // Garantir que a data seja salva no formato correto
       hora,
       categoria,
       descricao,
       detalhes,
+      
       // NOVA ARQUITETURA DE DADOS
       pacotePrincipal,
       produtosAdicionais: produtosAdicionaisNovo,
       valorFinal: valorTotal - desconto,
       desconto,
+      
       // Compatibilidade com sistema antigo
       pacotes: todosItens,
       valorTotal,
+      
       status,
       origemCliente: origemSelecionada,
+      
       // Campos de compatibilidade
       packageId: pacoteSelecionado?.id,
       valorFotoExtra: pacoteSelecionado?.valorFotoExtra || 35
     });
+
     toast({
       title: "Sucesso",
       description: `Orçamento ${status === 'rascunho' ? 'salvo' : 'enviado'} com sucesso!`
@@ -286,7 +281,9 @@ export default function NovoOrcamento() {
     setProdutosAdicionais([]);
     setDesconto(0);
   };
-  return <div className="space-y-4">
+
+  return (
+    <div className="space-y-4">
       {/* Layout em duas colunas para desktop */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Coluna esquerda */}
@@ -299,29 +296,38 @@ export default function NovoOrcamento() {
             <CardContent className="space-y-3 rounded-lg bg-neutral-50 pt-3">
               <div>
                 <label htmlFor="budget-client-search" className="text-xs font-medium mb-1 block">Cliente Existente</label>
-                <div id="budget-client-search" className="text-foreground bg-inherit">
-                  <ClientSearchInput clientes={clientes} selectedClient={clienteSelecionado} onSelectClient={setClienteSelecionado} placeholder="Selecione um cliente" />
+                <div id="budget-client-search">
+                  <ClientSearchInput 
+                    clientes={clientes} 
+                    selectedClient={clienteSelecionado}
+                    onSelectClient={setClienteSelecionado} 
+                    placeholder="Selecione um cliente" 
+                  />
                 </div>
               </div>
 
-              <div className="text-xs bg-card text-foreground -textLight text-center">ou</div>
+              <div className="text-xs text-neumorphic-textLight text-center">ou</div>
 
               <div className="space-y-2">
                 <label className="text-xs font-medium">Novo Cliente</label>
                 <div className="grid grid-cols-1 gap-2">
-                  <Input placeholder="Nome" value={novoCliente.nome} onChange={e => setNovoCliente({
-                  ...novoCliente,
-                  nome: e.target.value
-                })} />
-                  <Input placeholder="E-mail" type="email" value={novoCliente.email} onChange={e => setNovoCliente({
-                  ...novoCliente,
-                  email: e.target.value
-                })} />
+                  <Input 
+                    placeholder="Nome" 
+                    value={novoCliente.nome} 
+                    onChange={e => setNovoCliente({ ...novoCliente, nome: e.target.value })} 
+                  />
+                  <Input 
+                    placeholder="E-mail" 
+                    type="email" 
+                    value={novoCliente.email} 
+                    onChange={e => setNovoCliente({ ...novoCliente, email: e.target.value })} 
+                  />
                   <div className="flex gap-2">
-                    <Input placeholder="WhatsApp" value={novoCliente.whatsapp} onChange={e => setNovoCliente({
-                    ...novoCliente,
-                    whatsapp: e.target.value
-                  })} />
+                    <Input 
+                      placeholder="WhatsApp" 
+                      value={novoCliente.whatsapp} 
+                      onChange={e => setNovoCliente({ ...novoCliente, whatsapp: e.target.value })} 
+                    />
                     <Button onClick={criarNovoCliente} size="sm">
                       <Plus className="h-3 w-3" />
                     </Button>
@@ -332,7 +338,7 @@ export default function NovoOrcamento() {
           </Card>
 
           {/* Dados Básicos */}
-          <Card className="rounded-lg bg-card text-foreground ">
+          <Card className="rounded-lg bg-neutral-50">
             <CardHeader className="rounded-lg bg-lunar-border pb-3">
               <CardTitle className="text-sm">Dados do Orçamento</CardTitle>
             </CardHeader>
@@ -350,7 +356,12 @@ export default function NovoOrcamento() {
               <div className="grid grid-cols-2 gap-2">
                  <div>
                    <label className="text-xs font-medium mb-1 block">Categoria</label>
-                   <CategorySelector categorias={categorias} value={categoria} onValueChange={setCategoria} placeholder="Selecione uma categoria" />
+                   <CategorySelector 
+                     categorias={categorias}
+                     value={categoria}
+                     onValueChange={setCategoria}
+                     placeholder="Selecione uma categoria"
+                   />
                  </div>
                  <div>
                    <label className="text-xs font-medium mb-1 block">Origem</label>
@@ -359,9 +370,11 @@ export default function NovoOrcamento() {
                        <SelectValue placeholder="Selecione" />
                      </SelectTrigger>
                       <SelectContent>
-                        {ORIGENS_PADRAO.map(origem => <SelectItem key={origem.id} value={origem.id}>
+                        {ORIGENS_PADRAO.map(origem => (
+                          <SelectItem key={origem.id} value={origem.id}>
                             {origem.nome}
-                          </SelectItem>)}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                    </Select>
                  </div>
@@ -369,7 +382,11 @@ export default function NovoOrcamento() {
               
               <div>
                 <label className="text-xs font-medium mb-1 block">Descrição</label>
-                <Input placeholder="Descrição do serviço (será levada para Agenda e Workflow)" value={descricao} onChange={e => setDescricao(e.target.value)} />
+                <Input
+                  placeholder="Descrição do serviço (será levada para Agenda e Workflow)"
+                  value={descricao}
+                  onChange={e => setDescricao(e.target.value)}
+                />
               </div>
             </CardContent>
           </Card>
@@ -380,25 +397,35 @@ export default function NovoOrcamento() {
               <CardTitle className="text-sm">Pacote Principal</CardTitle>
             </CardHeader>
              <CardContent className="rounded-lg bg-neutral-50 pt-3">
-                <PackageSearchCombobox pacotes={pacotes} value={pacoteSelecionado} onSelect={handlePackageSelection} placeholder="Selecionar pacote..." filtrarPorCategoria={categoria} />
-                {pacoteSelecionado && <div className="mt-3 p-3 bg-neumorphic-base rounded-lg shadow-neumorphic-inset">
+                <PackageSearchCombobox 
+                  pacotes={pacotes}
+                  value={pacoteSelecionado}
+                  onSelect={handlePackageSelection}
+                  placeholder="Selecionar pacote..."
+                  filtrarPorCategoria={categoria}
+                />
+                {pacoteSelecionado && (
+                  <div className="mt-3 p-3 bg-neumorphic-base rounded-lg shadow-neumorphic-inset">
                     <div className="flex justify-between items-center">
                       <span className="text-sm font-medium">{pacoteSelecionado.nome}</span>
                       <span className="text-sm font-bold">R$ {pacoteSelecionado.valor.toFixed(2)}</span>
                     </div>
                     <span className="text-xs text-neumorphic-textLight">{pacoteSelecionado.categoria}</span>
-                    {pacoteSelecionado.produtosIncluidos && pacoteSelecionado.produtosIncluidos.length > 0 && <div className="mt-2 pt-2 border-t border-gray-200">
+                    {pacoteSelecionado.produtosIncluidos && pacoteSelecionado.produtosIncluidos.length > 0 && (
+                      <div className="mt-2 pt-2 border-t border-gray-200">
                         <p className="text-xs font-medium text-green-600 mb-1">
                           Produtos incluídos ({pacoteSelecionado.produtosIncluidos.length}):
                         </p>
                         <div className="text-xs text-muted-foreground">
                           {pacoteSelecionado.produtosIncluidos.map(produtoIncluido => {
-                    const produto = produtos.find(p => p.id === produtoIncluido.produtoId);
-                    return produto ? `${produto.nome} (${produtoIncluido.quantidade}x)` : '';
-                  }).filter(Boolean).join(', ')}
+                            const produto = produtos.find(p => p.id === produtoIncluido.produtoId);
+                            return produto ? `${produto.nome} (${produtoIncluido.quantidade}x)` : '';
+                          }).filter(Boolean).join(', ')}
                         </div>
-                      </div>}
-                  </div>}
+                      </div>
+                    )}
+                  </div>
+                )}
              </CardContent>
           </Card>
         </div>
@@ -406,16 +433,27 @@ export default function NovoOrcamento() {
         {/* Coluna direita */}
         <div className="space-y-4">
           {/* Detalhes do Orçamento */}
-          <Card className="bg-card text-foreground rounded-lg">
+          <Card className="bg-neutral-50 rounded-lg">
             <CardHeader className="rounded-lg bg-lunar-border pb-3">
               <CardTitle className="text-sm flex justify-between items-center">
                 Detalhes do Orçamento
-                <TemplateSelector value={detalhes} onChange={setDetalhes} onSelectTemplate={usarTemplate} />
+                <TemplateSelector 
+                  value={detalhes} 
+                  onChange={setDetalhes} 
+                  onSelectTemplate={usarTemplate} 
+                />
               </CardTitle>
             </CardHeader>
             <CardContent className="rounded-lg bg-neutral-50 pt-3">
               <label htmlFor="budget-details" className="sr-only">Detalhes do Orçamento</label>
-              <Textarea id="budget-details" placeholder="Descreva os detalhes do serviço..." value={detalhes} onChange={e => setDetalhes(e.target.value)} rows={8} className="py-2 px-3" />
+              <Textarea 
+                id="budget-details"
+                placeholder="Descreva os detalhes do serviço..." 
+                value={detalhes} 
+                onChange={e => setDetalhes(e.target.value)} 
+                rows={8} 
+                className="py-2 px-3" 
+              />
             </CardContent>
           </Card>
 
@@ -424,8 +462,12 @@ export default function NovoOrcamento() {
             <CardHeader className="rounded-lg bg-lunar-border pb-3">
               <CardTitle className="text-sm flex justify-between items-center">
                 Produtos
-                <div className="flex gap-1 bg-card text-foreground border-chart-primary ">
-                  <ProductSearchCombobox products={produtos} onSelect={adicionarProdutoDoCombobox} placeholder="Adicionar produto..." />
+                <div className="flex gap-1">
+                  <ProductSearchCombobox
+                    products={produtos}
+                    onSelect={adicionarProdutoDoCombobox}
+                    placeholder="Adicionar produto..."
+                  />
                   <Button onClick={adicionarProduto} size="sm" variant="outline">
                     <Plus className="h-3 w-3" />
                   </Button>
@@ -433,27 +475,52 @@ export default function NovoOrcamento() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 rounded-lg bg-neutral-50 pt-3">
-              {produtosAdicionais.map(produto => <div key={produto.id} className="grid grid-cols-1 md:grid-cols-5 gap-2 items-end">
+              {produtosAdicionais.map(produto => (
+                <div key={produto.id} className="grid grid-cols-1 md:grid-cols-5 gap-2 items-end">
                   <div className="md:col-span-2">
                     <label htmlFor={`budget-product-name-${produto.id}`} className="text-xs font-medium mb-1 block">Nome</label>
-                    <Input id={`budget-product-name-${produto.id}`} placeholder="Nome do produto" value={produto.nome} onChange={e => atualizarProduto(produto.id, 'nome', e.target.value)} disabled={produto.id.startsWith('auto-')} // Produtos inclusos não podem ser editados
-                className={produto.id.startsWith('auto-') ? 'bg-green-50 text-green-700' : ''} />
+                    <Input 
+                      id={`budget-product-name-${produto.id}`}
+                      placeholder="Nome do produto" 
+                      value={produto.nome} 
+                      onChange={e => atualizarProduto(produto.id, 'nome', e.target.value)}
+                      disabled={produto.id.startsWith('auto-')} // Produtos inclusos não podem ser editados
+                      className={produto.id.startsWith('auto-') ? 'bg-green-50 text-green-700' : ''}
+                    />
                   </div>
                   <div>
                     <label htmlFor={`budget-product-qty-${produto.id}`} className="text-xs font-medium mb-1 block">Qtd</label>
-                    <Input id={`budget-product-qty-${produto.id}`} type="number" min="1" value={produto.quantidade} onChange={e => atualizarProduto(produto.id, 'quantidade', parseInt(e.target.value) || 1)} disabled={produto.id.startsWith('auto-')} // Produtos inclusos não podem ter quantidade alterada
-                className={produto.id.startsWith('auto-') ? 'bg-green-50 text-green-700' : ''} />
+                    <Input 
+                      id={`budget-product-qty-${produto.id}`}
+                      type="number" 
+                      min="1" 
+                      value={produto.quantidade} 
+                      onChange={e => atualizarProduto(produto.id, 'quantidade', parseInt(e.target.value) || 1)}
+                      disabled={produto.id.startsWith('auto-')} // Produtos inclusos não podem ter quantidade alterada
+                      className={produto.id.startsWith('auto-') ? 'bg-green-50 text-green-700' : ''}
+                    />
                   </div>
                   <div>
                     <label htmlFor={`budget-product-price-${produto.id}`} className="text-xs font-medium mb-1 block">Preço</label>
-                    <Input id={`budget-product-price-${produto.id}`} type="text" value={produto.id.startsWith('auto-') ? 'Incluso' : produto.preco.toFixed(2)} onChange={e => !produto.id.startsWith('auto-') && atualizarProduto(produto.id, 'preco', parseFloat(e.target.value) || 0)} disabled={produto.id.startsWith('auto-')} // Produtos inclusos mostram "Incluso"
-                className={produto.id.startsWith('auto-') ? 'bg-green-50 text-green-700 text-center font-medium' : ''} />
+                    <Input 
+                      id={`budget-product-price-${produto.id}`}
+                      type="text" 
+                      value={produto.id.startsWith('auto-') ? 'Incluso' : produto.preco.toFixed(2)}
+                      onChange={e => !produto.id.startsWith('auto-') && atualizarProduto(produto.id, 'preco', parseFloat(e.target.value) || 0)}
+                      disabled={produto.id.startsWith('auto-')} // Produtos inclusos mostram "Incluso"
+                      className={produto.id.startsWith('auto-') ? 'bg-green-50 text-green-700 text-center font-medium' : ''}
+                    />
                   </div>
-                  <Button onClick={() => removerProduto(produto.id)} variant="outline" size="sm" disabled={produto.id.startsWith('auto-')} // Produtos inclusos não podem ser removidos individualmente
-              >
+                  <Button 
+                    onClick={() => removerProduto(produto.id)} 
+                    variant="outline" 
+                    size="sm"
+                    disabled={produto.id.startsWith('auto-')} // Produtos inclusos não podem ser removidos individualmente
+                  >
                     <Trash2 className="h-3 w-3" />
                   </Button>
-                </div>)}
+                </div>
+              ))}
             </CardContent>
           </Card>
 
@@ -464,18 +531,24 @@ export default function NovoOrcamento() {
             </CardHeader>
             <CardContent className="rounded-lg bg-neutral-50 pt-3">
               <div className="space-y-2">
-                {pacoteSelecionado && <div className="flex justify-between text-sm">
+                {pacoteSelecionado && (
+                  <div className="flex justify-between text-sm">
                     <span>Pacote:</span>
                     <span>R$ {valorPacote.toFixed(2)}</span>
-                  </div>}
-                {produtosManuais.length > 0 && <div className="flex justify-between text-sm">
+                  </div>
+                )}
+                {produtosManuais.length > 0 && (
+                  <div className="flex justify-between text-sm">
                     <span>Produtos Manuais:</span>
                     <span>R$ {valorProdutosManuais.toFixed(2)}</span>
-                  </div>}
-                {produtosInclusos.length > 0 && <div className="flex justify-between text-sm text-green-600">
+                  </div>
+                )}
+                {produtosInclusos.length > 0 && (
+                  <div className="flex justify-between text-sm text-green-600">
                     <span>Produtos Inclusos:</span>
                     <span>Incluso no pacote</span>
-                  </div>}
+                  </div>
+                )}
                 <div className="border-t pt-2">
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-sm font-medium">Subtotal:</span>
@@ -483,12 +556,22 @@ export default function NovoOrcamento() {
                   </div>
                   <div className="flex justify-between items-center mb-2">
                     <label className="text-sm font-medium">Desconto (R$):</label>
-                    <Input type="number" min="0" step="0.01" placeholder="0,00" value={desconto || ''} onChange={e => setDesconto(parseFloat(e.target.value) || 0)} className="w-32" />
+                    <Input 
+                      type="number" 
+                      min="0" 
+                      step="0.01" 
+                      placeholder="0,00" 
+                      value={desconto || ''} 
+                      onChange={e => setDesconto(parseFloat(e.target.value) || 0)} 
+                      className="w-32" 
+                    />
                   </div>
-                  {desconto > 0 && <div className="flex justify-between text-sm text-red-600 mb-2">
+                  {desconto > 0 && (
+                    <div className="flex justify-between text-sm text-red-600 mb-2">
                       <span>Desconto:</span>
                       <span>-R$ {desconto.toFixed(2)}</span>
-                    </div>}
+                    </div>
+                  )}
                   <div className="text-lg font-bold text-right border-t pt-2">
                     Total: R$ {valorFinal.toFixed(2)}
                   </div>
@@ -505,5 +588,6 @@ export default function NovoOrcamento() {
           Salvar
         </Button>
       </div>
-    </div>;
+    </div>
+  );
 }

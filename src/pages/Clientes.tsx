@@ -110,7 +110,7 @@ export default function Clientes() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-primary">Clientes</h1>
-          <Button onClick={handleAddClient} className="flex items-center gap-2 bg-cyan-700 hover:bg-cyan-600">
+          <Button onClick={handleAddClient} className="flex items-center gap-2">
             <UserPlus className="h-4 w-4" />
             Novo Cliente
           </Button>
@@ -293,21 +293,24 @@ export default function Clientes() {
               <div>
                 <Label htmlFor="origem">Origem</Label>
                 <Select value={formData.origem} onValueChange={value => setFormData(prev => ({
-                ...prev,
-                origem: value
-              }))}>
+                  ...prev,
+                  origem: value
+                }))}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione a origem" />
                   </SelectTrigger>
                   <SelectContent>
-                    {ORIGENS_PADRAO.map(origem => <SelectItem key={origem.id} value={origem.id}>
+                    {ORIGENS_PADRAO.map(origem => (
+                      <SelectItem key={origem.id} value={origem.id}>
                         <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-full" style={{
-                        backgroundColor: origem.cor
-                      }} />
+                          <div 
+                            className="w-3 h-3 rounded-full" 
+                            style={{ backgroundColor: origem.cor }}
+                          />
                           {origem.nome}
                         </div>
-                      </SelectItem>)}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

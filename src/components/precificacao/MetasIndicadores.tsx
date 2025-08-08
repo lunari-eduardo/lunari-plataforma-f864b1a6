@@ -6,6 +6,7 @@ import { storage, STORAGE_KEYS } from '@/utils/localStorage';
 interface MetasIndicadoresProps {
   custosFixosTotal: number;
 }
+
 interface HistoricalGoal {
   ano: number;
   metaFaturamento: number;
@@ -31,21 +32,23 @@ export function MetasIndicadores({
     storage.save('precificacao_metas', {
       margemLucroDesejada
     });
-
+    
     // Salvar/atualizar metas históricas
     saveHistoricalGoals();
   }, [margemLucroDesejada, custosFixosTotal]);
+
   const saveHistoricalGoals = () => {
     const currentYear = new Date().getFullYear();
     const faturamentoMinimoAnual = custosFixosTotal * 12;
     const metaFaturamentoAnual = faturamentoMinimoAnual / (1 - margemLucroDesejada / 100);
     const metaLucroAnual = metaFaturamentoAnual - faturamentoMinimoAnual;
-
+    
     // Carregar metas históricas existentes
     const historicalGoals: HistoricalGoal[] = storage.load(STORAGE_KEYS.HISTORICAL_GOALS, []);
-
+    
     // Verificar se já existe uma entrada para o ano atual
     const existingGoalIndex = historicalGoals.findIndex(goal => goal.ano === currentYear);
+    
     const newGoal: HistoricalGoal = {
       ano: currentYear,
       metaFaturamento: metaFaturamentoAnual,
@@ -53,6 +56,7 @@ export function MetasIndicadores({
       dataCriacao: new Date().toISOString().split('T')[0],
       margemLucroDesejada
     };
+    
     if (existingGoalIndex !== -1) {
       // Atualizar entrada existente
       historicalGoals[existingGoalIndex] = newGoal;
@@ -60,7 +64,7 @@ export function MetasIndicadores({
       // Adicionar nova entrada
       historicalGoals.push(newGoal);
     }
-
+    
     // Salvar de volta
     storage.save(STORAGE_KEYS.HISTORICAL_GOALS, historicalGoals);
   };
@@ -71,13 +75,13 @@ export function MetasIndicadores({
   const metaFaturamentoMensal = metaFaturamentoAnual / 12;
   const metaLucroAnual = metaFaturamentoAnual - faturamentoMinimoAnual;
   return <Card>
-      <CardHeader className="border bg-card text-foreground">
+      <CardHeader className="bg-gray-50">
         <CardTitle className="text-lg text-lunar-success">Metas e Indicadores de Lucro</CardTitle>
         <p className="text-sm text-lunar-textSecondary">
           Defina suas metas financeiras e acompanhe os indicadores de lucro.
         </p>
       </CardHeader>
-      <CardContent className="border bg-card text-foreground">
+      <CardContent className="bg-gray-50">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Coluna Esquerda - Definição de Metas */}
           <div>
@@ -85,15 +89,15 @@ export function MetasIndicadores({
             <div className="space-y-4">
               <div>
                 <Label htmlFor="margem-lucro">Margem de Lucro Desejada (%)</Label>
-                <Input id="margem-lucro" type="number" min="0" max="100" step="1" value={margemLucroDesejada} onChange={e => setMargemLucroDesejada(Number(e.target.value))} className="max-w-32 border-chart-primary " />
+                <Input id="margem-lucro" type="number" min="0" max="100" step="1" value={margemLucroDesejada} onChange={e => setMargemLucroDesejada(Number(e.target.value))} className="max-w-32" />
               </div>
             </div>
           </div>
 
           {/* Coluna Direita - Indicadores Financeiros */}
-          <div className="border bg-card text-foreground">
+          <div className="bg-gray-50">
             <h3 className="font-semibold mb-4">Indicadores Financeiros</h3>
-            <div className="border bg-card text-foreground space-y-4">
+            <div className="space-y-4">
               <div className="flex justify-between">
                 <span className="text-sm">Faturamento Mínimo Anual:</span>
                 <span className="font-medium">R$ {faturamentoMinimoAnual.toFixed(2)}</span>

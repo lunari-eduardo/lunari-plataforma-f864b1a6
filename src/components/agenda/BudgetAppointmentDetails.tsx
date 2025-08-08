@@ -94,10 +94,10 @@ export default function BudgetAppointmentDetails({
       {/* Header com badge identificador */}
       <div className="text-center space-y-2">
         <div className="flex items-center justify-center gap-2">
-          <Calendar className="h-5 w-5 text-lunar-success" />
+          <Calendar className="h-5 w-5 text-green-600" />
           <h2 className="text-lg font-semibold text-lunar-text">Agendamento de Orçamento</h2>
         </div>
-        <Badge variant="secondary" className="bg-lunar-success/15 text-lunar-success border border-lunar-success/30">
+        <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
           Orçamento Fechado
         </Badge>
       </div>
@@ -161,18 +161,18 @@ export default function BudgetAppointmentDetails({
           <Separator />
 
           {/* Valor Total */}
-          <div className="flex items-center justify-between bg-lunar-success/10 border border-lunar-success/30 p-3 rounded-lg">
-            <div className="flex items-center gap-2 text-sm font-medium text-lunar-success">
+          <div className="flex items-center justify-between bg-green-50 border border-green-200 p-3 rounded-lg">
+            <div className="flex items-center gap-2 text-sm font-medium text-green-800">
               <DollarSign className="h-4 w-4" />
               Valor Total
             </div>
-            <div className="text-lg font-semibold text-lunar-success">
+            <div className="text-lg font-semibold text-green-800">
               R$ {valorTotal.toFixed(2)}
             </div>
           </div>
 
           {/* Link para ver orçamento completo */}
-          <Button variant="outline" size="sm" onClick={onViewFullBudget} className="w-full text-xs hover:border-border transition-colors">
+          <Button variant="outline" size="sm" onClick={onViewFullBudget} className="w-full text-xs hover:bg-transparent hover:border-gray-400 transition-colors">
             <ExternalLink className="h-3 w-3 mr-2" />
             Ver Orçamento Completo
           </Button>
@@ -213,7 +213,7 @@ export default function BudgetAppointmentDetails({
           </div>
 
           {/* Informação sobre sincronização */}
-          <div className="text-xs text-lunar-textSecondary bg-muted border border-border p-2 rounded">
+          <div className="text-xs text-lunar-textSecondary bg-blue-50 border border-blue-200 p-2 rounded">
             💡 As alterações de data e horário serão sincronizadas automaticamente com o orçamento original.
           </div>
         </CardContent>
@@ -226,7 +226,7 @@ export default function BudgetAppointmentDetails({
           <Button variant="outline" onClick={onCancel} className="text-xs">
             Fechar
           </Button>
-          <Button onClick={handleSave} className="text-xs bg-lunar-success text-foreground hover:bg-lunar-success/90">
+          <Button onClick={handleSave} className="text-xs bg-green-600 hover:bg-green-700">
             Salvar Reagendamento
           </Button>
         </div>

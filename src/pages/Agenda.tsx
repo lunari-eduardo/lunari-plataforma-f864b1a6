@@ -295,9 +295,9 @@ export default function Agenda() {
 
       {/* Appointment Form Modal */}
       <Dialog open={isAppointmentDialogOpen} onOpenChange={setIsAppointmentDialogOpen}>
-        <DialogContent className="sm:max-w-[500px] shadow-lg bg-card text-foreground border border-border">
+        <DialogContent className="sm:max-w-[500px] border-0 shadow-lg bg-neutral-50">
           <DialogHeader>
-            <DialogTitle className="text-lg font-semibold bg-card text-foreground ">
+            <DialogTitle className="text-lg font-semibold text-gray-900">
               {editingAppointment ? 'Editar Agendamento' : 'Novo Agendamento'}
             </DialogTitle>
             <DialogDescription className="text-sm text-gray-600">
@@ -311,14 +311,14 @@ export default function Agenda() {
 
       {/* Appointment Details Modal */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <DialogContent className="sm:max-w-[500px] shadow-lg bg-card text-foreground border border-border">
+        <DialogContent className="sm:max-w-[500px] border-0 shadow-lg bg-stone-50">
           {viewingAppointment && <AppointmentDetails appointment={viewingAppointment} onSave={handleSaveAppointment} onCancel={() => setIsDetailsOpen(false)} onDelete={handleDeleteAppointment} />}
         </DialogContent>
       </Dialog>
 
       {/* Budget Appointment Details Modal */}
       <Dialog open={isBudgetAppointmentModalOpen} onOpenChange={setIsBudgetAppointmentModalOpen}>
-        <DialogContent className="sm:max-w-[600px] shadow-lg bg-card text-foreground border border-border">
+        <DialogContent className="sm:max-w-[600px] border-0 shadow-lg bg-neutral-50">
           {selectedBudgetAppointment && <BudgetAppointmentDetails appointment={selectedBudgetAppointment.appointment} budget={selectedBudgetAppointment.budget} onSave={handleSaveBudgetAppointment} onCancel={() => setIsBudgetAppointmentModalOpen(false)} onViewFullBudget={handleViewFullBudget} onDelete={handleDeleteAppointment} />}
         </DialogContent>
       </Dialog>

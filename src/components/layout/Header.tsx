@@ -1,11 +1,11 @@
 
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Bell, User, Sun, Moon } from 'lucide-react';
-import { useTheme } from 'next-themes';
+import { Bell, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+
 const pageTitles: Record<string, string> = {
   "/": "Dashboard",
   "/workflow": "Workflow",
@@ -23,7 +23,7 @@ export default function Header() {
   const location = useLocation();
   const navigate = useNavigate();
   const [notificationCount] = useState(2);
-  const { resolvedTheme, setTheme } = useTheme();
+
   // Get current page title
   const currentTitle = pageTitles[location.pathname] || "Lunari";
 
@@ -43,17 +43,6 @@ export default function Header() {
           )}
         </Button>
         
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 hover:bg-lunar-surface/50"
-          onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
-          aria-label="Alternar tema"
-        >
-          <Sun className="h-4 w-4 dark:hidden" />
-          <Moon className="h-4 w-4 hidden dark:block" />
-        </Button>
-        
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-8 w-8 rounded-full hover:bg-lunar-surface/50" size="icon">
@@ -63,7 +52,7 @@ export default function Header() {
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48 bg-popover text-popover-foreground shadow-lunar-md border">
+          <DropdownMenuContent align="end" className="w-48 bg-lunar-bg shadow-lunar-md border border-lunar-border/50">
             <DropdownMenuLabel className="text-xs text-lunar-text">Minha Conta</DropdownMenuLabel>
             <DropdownMenuSeparator className="bg-lunar-border/30" />
             <DropdownMenuItem 

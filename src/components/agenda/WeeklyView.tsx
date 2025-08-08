@@ -37,11 +37,11 @@ export default function WeeklyView({
       <div className="min-w-[300px] md:min-w-[700px]">
         <div className="grid grid-cols-8 gap-px bg-border">
           {/* First cell empty - for time labels */}
-          <div className="bg-muted"></div>
+          <div className="bg-stone-200"></div>
           
           {/* Day headers */}
           {weekDays.map((day, index) => (
-            <div key={index} className="p-1 md:p-2 text-center bg-muted">
+            <div key={index} className="p-1 md:p-2 text-center bg-stone-200">
               <p className="text-xs text-muted-foreground font-medium">{formatDayName(day)}</p>
               <p className="font-semibold text-xs md:text-sm">{format(day, 'd')}</p>
             </div>
@@ -62,7 +62,7 @@ export default function WeeklyView({
                   <div 
                     key={`${dayIndex}-${time}`} 
                     onClick={() => !event && onCreateSlot({ date: day, time })} 
-                    className="border border-border h-8 md:h-10 p-0.5 md:p-1 relative bg-card cursor-pointer hover:bg-muted"
+                    className="border border-gray-100 h-8 md:h-10 p-0.5 md:p-1 relative bg-stone-100 cursor-pointer hover:bg-stone-50"
                   >
                     {event ? (
                       <div onClick={(e) => e.stopPropagation()}>
