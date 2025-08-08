@@ -91,9 +91,9 @@ export function MetasIndicadores({
           </div>
 
           {/* Coluna Direita - Indicadores Financeiros */}
-          <div className="bg-gray-50">
+          <div className="border bg-card text-foreground">
             <h3 className="font-semibold mb-4">Indicadores Financeiros</h3>
-            <div className="space-y-4">
+            <div className="border bg-card text-foreground space-y-4">
               <div className="flex justify-between">
                 <span className="text-sm">Faturamento Mínimo Anual:</span>
                 <span className="font-medium">R$ {faturamentoMinimoAnual.toFixed(2)}</span>
