@@ -100,7 +100,7 @@ const [createOpen, setCreateOpen] = useState(false);
       </header>
       <Card
         className={cn(
-          "p-2 bg-lunar-surface border-lunar-border/60 max-h-[70vh] overflow-y-auto",
+          "p-2 pb-8 bg-lunar-surface border-lunar-border/60 min-h-[70vh] max-h-[70vh] overflow-y-auto",
           dragOverColumn === statusKey ? "ring-2 ring-lunar-accent/60" : ""
         )}
         onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; if (draggingId) setDragOverColumn(statusKey as any); }}

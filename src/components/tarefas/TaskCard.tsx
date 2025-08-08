@@ -101,7 +101,7 @@ export default function TaskCard({
 
   return (
     <li
-      className={`relative overflow-hidden rounded-md border border-lunar-border/60 bg-lunar-surface p-2 shadow-sm ${isDragging ? 'opacity-70 border-dashed ring-1 ring-lunar-accent/40' : ''}`}
+      className={`relative overflow-hidden rounded-md border border-lunar-border/60 bg-lunar-surface p-2 transition-none ${isDragging ? 'opacity-70 border-dashed ring-1 ring-lunar-accent/40' : ''}`}
       draggable
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
