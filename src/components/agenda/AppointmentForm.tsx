@@ -73,8 +73,9 @@ export default function AppointmentForm({
     pacotes,
     produtos
   } = useOrcamentos();
-  
-  const { origens } = useOrcamentos();
+  const {
+    origens
+  } = useOrcamentos();
 
   // Verifica se é agendamento de orçamento
   const isFromBudgetAppointment = appointment ? isFromBudget(appointment) : false;
@@ -149,10 +150,8 @@ export default function AppointmentForm({
   // Obter produtos incluídos no pacote selecionado
   const getIncludedProducts = () => {
     if (!formData.packageId) return [];
-    
     const selectedPackage = pacotes.find(p => p.id === formData.packageId);
     if (!selectedPackage?.produtosIncluidos) return [];
-    
     return selectedPackage.produtosIncluidos.map(pi => {
       const produto = produtos.find(p => p.id === pi.produtoId);
       return {
@@ -220,16 +219,13 @@ export default function AppointmentForm({
     const selectedPackage = formData.packageId ? pacotes.find(p => p.id === formData.packageId) : null;
     let packageType = 'Sessão'; // Fallback padrão
     let packageCategory = '';
-    
     if (selectedPackage) {
       packageType = selectedPackage.nome;
       // Buscar nome da categoria baseado no categoria_id
       if (selectedPackage.categoria_id) {
         try {
           const configCategorias = JSON.parse(localStorage.getItem('configuracoes_categorias') || '[]');
-          const categoria = configCategorias.find((cat: any) => 
-            cat.id === selectedPackage.categoria_id || cat.id === String(selectedPackage.categoria_id)
-          );
+          const categoria = configCategorias.find((cat: any) => cat.id === selectedPackage.categoria_id || cat.id === String(selectedPackage.categoria_id));
           packageCategory = categoria?.nome || '';
         } catch (error) {
           console.error('Erro ao buscar categoria:', error);
@@ -242,17 +238,22 @@ export default function AppointmentForm({
       date: formData.date,
       time: formData.time,
       title: clientInfo.client,
-      type: packageType, // Nome real do pacote
-      category: packageCategory, // Categoria do pacote
+      type: packageType,
+      // Nome real do pacote
+      category: packageCategory,
+      // Categoria do pacote
       status: formData.status as 'confirmado' | 'a confirmar',
       description: formData.description,
       packageId: formData.packageId,
       produtosIncluidos: produtosIncluidos.length > 0 ? produtosIncluidos : undefined,
       paidAmount: formData.paidAmount,
       client: clientInfo.client,
-      clientId: clientInfo.clientId, // INCLUIR CLIENTEID
-      whatsapp: clientInfo.clientPhone, // INCLUIR WHATSAPP
-      email: clientInfo.clientEmail, // INCLUIR EMAIL
+      clientId: clientInfo.clientId,
+      // INCLUIR CLIENTEID
+      whatsapp: clientInfo.clientPhone,
+      // INCLUIR WHATSAPP
+      email: clientInfo.clientEmail,
+      // INCLUIR EMAIL
       clientPhone: clientInfo.clientPhone,
       clientEmail: clientInfo.clientEmail
     };
@@ -271,7 +272,7 @@ export default function AppointmentForm({
       {!isFromBudgetAppointment && <div className="space-y-2">
           <Label className="text-xs font-medium text-lunar-text">Cliente</Label>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-2 mb-2 h-8">
+          <TabsList className="grid grid-cols-2 mb-2 h-8 rounded-sm border-gray-500">
             <TabsTrigger value="existing" className="text-xs">Cliente do CRM</TabsTrigger>
             <TabsTrigger value="new" className="text-xs">Novo Cliente</TabsTrigger>
           </TabsList>
@@ -301,19 +302,22 @@ export default function AppointmentForm({
             
             <div className="space-y-2">
               <Label htmlFor="new-client-origem" className="text-xs font-medium">Como conheceu?</Label>
-              <Select value={formData.newClientOrigem} onValueChange={(value) => setFormData(prev => ({ ...prev, newClientOrigem: value }))}>
+              <Select value={formData.newClientOrigem} onValueChange={value => setFormData(prev => ({
+              ...prev,
+              newClientOrigem: value
+            }))}>
                 <SelectTrigger id="new-client-origem">
                   <SelectValue placeholder="Selecione a origem" />
                 </SelectTrigger>
                 <SelectContent>
-                  {ORIGENS_PADRAO.map(origem => (
-                    <SelectItem key={origem.id} value={origem.id}>
+                  {ORIGENS_PADRAO.map(origem => <SelectItem key={origem.id} value={origem.id}>
                       <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: origem.cor }} />
+                        <div className="w-3 h-3 rounded-full" style={{
+                      backgroundColor: origem.cor
+                    }} />
                         {origem.nome}
                       </div>
-                    </SelectItem>
-                  ))}
+                    </SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -340,53 +344,32 @@ export default function AppointmentForm({
             </div>
             
             {/* Seção de Produtos Incluídos - aparece quando pacote é selecionado */}
-            {formData.packageId && getIncludedProducts().length > 0 && (
-              <div className="mt-3 p-3 bg-muted border border-border rounded-lg">
+            {formData.packageId && getIncludedProducts().length > 0 && <div className="mt-3 p-3 bg-muted border border-border rounded-lg">
                 <h4 className="text-xs font-medium text-foreground mb-2">📦 Produtos Incluídos neste Pacote</h4>
                 <div className="space-y-1">
-                  {getIncludedProducts().map((produto, index) => (
-                    <div key={index} className="flex justify-between items-center text-xs text-muted-foreground">
+                  {getIncludedProducts().map((produto, index) => <div key={index} className="flex justify-between items-center text-xs text-muted-foreground">
                       <span>{produto.nome}</span>
                       <span className="font-medium">Qtd: {produto.quantidade}</span>
-                    </div>
-                  ))}
+                    </div>)}
                 </div>
                 <p className="text-xs text-muted-foreground mt-2 italic">
                   Estes produtos serão automaticamente incluídos no agendamento
                 </p>
-              </div>
-            )}
+              </div>}
           </div>
           
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="appointment-paid-amount" className="text-xs font-medium">Valor pago</Label>
-              <Input id="appointment-paid-amount" name="paidAmount" type="number" min="0" step="0.01" value={formData.paidAmount} onChange={handleChange} placeholder="0.00" />
+              <Input id="appointment-paid-amount" name="paidAmount" type="number" min="0" step="0.01" value={formData.paidAmount} onChange={handleChange} placeholder="0.00" className="border-gray-500" />
             </div>
             
             <div className="space-y-2">
               <Label htmlFor="appointment-status" className="text-xs font-medium">Status do Agendamento</Label>
               <div className="flex gap-2">
-                {availableStatus.map(status => (
-                  <Button
-                    key={status.value}
-                    type="button"
-                    variant={formData.status === status.value ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => handleStatusSelect(status.value)}
-                    className={`flex-1 text-xs h-8 ${
-                      formData.status === status.value
-                        ? status.value === 'a confirmar'
-                          ? 'bg-lunar-accent text-foreground border-lunar-accent hover:bg-lunar-accent/90'
-                          : 'bg-lunar-success text-foreground border-lunar-success hover:bg-lunar-success/90'
-                        : status.value === 'a confirmar'
-                          ? 'border-lunar-accent text-lunar-accent hover:bg-lunar-accent/10'
-                          : 'border-lunar-success text-lunar-success hover:bg-lunar-success/10'
-                    }`}
-                  >
+                {availableStatus.map(status => <Button key={status.value} type="button" variant={formData.status === status.value ? "default" : "outline"} size="sm" onClick={() => handleStatusSelect(status.value)} className={`flex-1 text-xs h-8 ${formData.status === status.value ? status.value === 'a confirmar' ? 'bg-lunar-accent text-foreground border-lunar-accent hover:bg-lunar-accent/90' : 'bg-lunar-success text-foreground border-lunar-success hover:bg-lunar-success/90' : status.value === 'a confirmar' ? 'border-lunar-accent text-lunar-accent hover:bg-lunar-accent/10' : 'border-lunar-success text-lunar-success hover:bg-lunar-success/10'}`}>
                     {status.label}
-                  </Button>
-                ))}
+                  </Button>)}
               </div>
             </div>
           </div>
