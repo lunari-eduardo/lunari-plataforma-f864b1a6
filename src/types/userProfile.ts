@@ -32,6 +32,12 @@ export interface UserPreferences {
   // Notificações
   notificacoesEmail: boolean;
   notificacoesWhatsapp: boolean;
+  // Automações
+  habilitarAutomacoesWorkflow: boolean;
+  habilitarAvisosApenasAgendamentosFuturos: boolean;
+  habilitarAlertaProdutosDoCliente: boolean;
+  habilitarFollowUpOrcamentosEnviados: boolean;
+  diasParaFollowUpOrcamento: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -59,5 +65,10 @@ export const DEFAULT_USER_PREFERENCES: Omit<UserPreferences, 'id' | 'createdAt' 
   formatoData: 'DD/MM/YYYY',
   tema: 'sistema',
   notificacoesEmail: true,
-  notificacoesWhatsapp: true
+  notificacoesWhatsapp: true,
+  habilitarAutomacoesWorkflow: true,
+  habilitarAvisosApenasAgendamentosFuturos: true,
+  habilitarAlertaProdutosDoCliente: true,
+  habilitarFollowUpOrcamentosEnviados: true,
+  diasParaFollowUpOrcamento: 3
 };

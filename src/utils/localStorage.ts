@@ -25,7 +25,11 @@ export const STORAGE_KEYS = {
   USER_PREFERENCES: 'lunari_user_preferences',
   USER_BRANDING: 'lunari_user_branding',
   // Agenda - Disponibilidades
-  AVAILABILITY: 'lunari_availability_slots'
+  AVAILABILITY: 'lunari_availability_slots',
+  // Tarefas e Automações
+  TASKS: 'lunari_tasks',
+  AUTOMATION_FLAGS: 'lunari_automation_flags',
+  FOLLOWUP_FLAGS: 'lunari_followup_flags'
 } as const;
 
 export const storage = {
