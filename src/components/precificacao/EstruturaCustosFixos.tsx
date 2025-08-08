@@ -294,7 +294,7 @@ export function EstruturaCustosFixos({
                 <Input id="percentual-pro-labore" type="number" min="0" step="1" value={percentualProLabore} onChange={e => setPercentualProLabore(Number(e.target.value))} className="max-w-32" />
               </div>
               
-              <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+              <div className="border bg-card text-foreground border-chart-primary  p-4 rounded-lg space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Gastos Pessoais:</span>
                   <span>R$ {totalGastosPessoais.toFixed(2)}</span>
