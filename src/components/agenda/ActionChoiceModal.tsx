@@ -22,7 +22,9 @@ export default function ActionChoiceModal({
   onConfigureAvailability
 }: ActionChoiceModalProps) {
   const navigate = useNavigate();
-  const { availability } = useAvailability();
+  const {
+    availability
+  } = useAvailability();
 
   // Formata "HH:mm" para "HHh" ou "HHh mmmin"
   const formatTimeBr = (t: string) => {
@@ -49,33 +51,41 @@ export default function ActionChoiceModal({
       toast.error('Não há disponibilidades para este dia.');
       return;
     }
-      const diaStr = date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' });
-      const semanaStr = date.toLocaleDateString('pt-BR', { weekday: 'long' });
-      const times = slots.map(formatTimeBr).join('\n');
-      const text = `No dia ${diaStr}, ${semanaStr}, tenho os seguintes horários:\n\n${times}\n\nQual fica melhor para você?`;
-      try {
-        if (navigator.share) {
-          await navigator.share({ title: 'Horários disponíveis', text });
-        } else {
-          await navigator.clipboard.writeText(text);
-          toast.success('Horários copiados para a área de transferência');
-        }
-      } catch (e) {
+    const diaStr = date.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: 'long'
+    });
+    const semanaStr = date.toLocaleDateString('pt-BR', {
+      weekday: 'long'
+    });
+    const times = slots.map(formatTimeBr).join('\n');
+    const text = `No dia ${diaStr}, ${semanaStr}, tenho os seguintes horários:\n\n${times}\n\nQual fica melhor para você?`;
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: 'Horários disponíveis',
+          text
+        });
+      } else {
         await navigator.clipboard.writeText(text);
         toast.success('Horários copiados para a área de transferência');
       }
+    } catch (e) {
+      await navigator.clipboard.writeText(text);
+      toast.success('Horários copiados para a área de transferência');
+    }
   };
   return <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <div className="flex items-start justify-between gap-2">
             <div>
-              <DialogTitle>O que deseja criar para este horário?</DialogTitle>
-              <DialogDescription>
+              
+              <DialogDescription className="text-sm font-semibold text-sky-950">
                 Escolha o tipo de compromisso que deseja agendar para {date.toLocaleDateString('pt-BR')} às {time}.
               </DialogDescription>
             </div>
-            <Button variant="ghost" size="icon" onClick={handleShareDay} aria-label="Compartilhar horários do dia" title="Compartilhar horários do dia">
+            <Button variant="ghost" size="icon" onClick={handleShareDay} aria-label="Compartilhar horários do dia" title="Compartilhar horários do dia" className="px-[8px] py-[2px] my-[9px] text-sky-950">
               <Share2 className="h-4 w-4" />
             </Button>
           </div>
