@@ -38,6 +38,23 @@
     --destructive: 12 74% 61%;
     --destructive-foreground: 0 0% 100%;
     --ring: 36 39% 62%;
+    --ring: 36 39% 62%;
+
+    /* Chart color tokens */
+    --chart-primary: 36 39% 62%;
+    --chart-secondary: 213 18% 61%;
+    --chart-tertiary: 17 25% 54%;
+    --chart-quaternary: 155 16% 66%;
+    --chart-quinary: 257 17% 70%;
+    --chart-senary: 27 34% 64%;
+    --chart-revenue: 158 33% 57%;
+    --chart-expense: 12 70% 73%;
+    --chart-profit: 211 31% 56%;
+    --chart-neutral: 217 9% 64%;
+
+    /* Finance color tokens */
+    --finance-primary: 36 39% 62%;
+    --finance-secondary: 213 18% 61%;
   }
 
   .dark {
@@ -71,6 +88,22 @@
     --destructive: 10 74% 60%;
     --destructive-foreground: 0 0% 96%;
     --ring: 36 39% 62%;
+
+    /* Chart color tokens */
+    --chart-primary: 36 39% 62%;
+    --chart-secondary: 213 18% 61%;
+    --chart-tertiary: 17 25% 54%;
+    --chart-quaternary: 155 16% 66%;
+    --chart-quinary: 257 17% 70%;
+    --chart-senary: 27 34% 64%;
+    --chart-revenue: 158 33% 57%;
+    --chart-expense: 12 70% 73%;
+    --chart-profit: 211 31% 56%;
+    --chart-neutral: 217 9% 64%;
+
+    /* Finance color tokens */
+    --finance-primary: 36 39% 62%;
+    --finance-secondary: 213 18% 61%;
   }
 }
 
