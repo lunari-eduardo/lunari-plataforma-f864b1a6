@@ -36,8 +36,6 @@ export default function ClienteDetalhe() {
     getFilesByClient,
     loadFiles
   } = useFileUpload();
-  
-  
 
   // Carregar arquivos e executar correção automática
   useEffect(() => {
@@ -256,30 +254,24 @@ export default function ClienteDetalhe() {
 
                   <div>
                     <Label htmlFor="origem">Como conheceu?</Label>
-                    {isEditing ? (
-                      <Select value={formData.origem} onValueChange={(value) => setFormData(prev => ({ ...prev, origem: value }))}>
+                    {isEditing ? <Select value={formData.origem} onValueChange={value => setFormData(prev => ({
+                    ...prev,
+                    origem: value
+                  }))}>
                         <SelectTrigger id="origem">
                           <SelectValue placeholder="Selecione a origem" />
                         </SelectTrigger>
                         <SelectContent>
-                          {ORIGENS_PADRAO.map(origem => (
-                            <SelectItem key={origem.id} value={origem.id}>
+                          {ORIGENS_PADRAO.map(origem => <SelectItem key={origem.id} value={origem.id}>
                               <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: origem.cor }} />
+                                <div className="w-3 h-3 rounded-full" style={{
+                            backgroundColor: origem.cor
+                          }} />
                                 {origem.nome}
                               </div>
-                            </SelectItem>
-                          ))}
+                            </SelectItem>)}
                         </SelectContent>
-                      </Select>
-                    ) : (
-                      <Input 
-                        id="origem" 
-                        value={ORIGENS_PADRAO.find(o => o.id === formData.origem)?.nome || 'Não informado'} 
-                        disabled 
-                        placeholder="Origem não informada" 
-                      />
-                    )}
+                      </Select> : <Input id="origem" value={ORIGENS_PADRAO.find(o => o.id === formData.origem)?.nome || 'Não informado'} disabled placeholder="Origem não informada" />}
                   </div>
                 </div>
 
@@ -296,7 +288,7 @@ export default function ClienteDetalhe() {
 
           {/* Aba 2: Histórico & Projetos */}
           <TabsContent value="historico" className="space-y-6">
-            <Card>
+            <Card className="bg-card text-foreground ">
               <CardHeader className="bg-neutral-50">
                 <CardTitle>Histórico Completo</CardTitle>
                 <CardDescription>
