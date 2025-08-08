@@ -29,7 +29,7 @@ export function CalculadoraServicos({
 }: CalculadoraServicosProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [salvarPacoteModalOpen, setSalvarPacoteModalOpen] = useState(false);
-  
+
   // Base de cálculo - Horas (persistente)
   const [horasDisponiveis, setHorasDisponiveis] = useState(8);
   const [diasTrabalhados, setDiasTrabalhados] = useState(5);
@@ -103,24 +103,19 @@ export function CalculadoraServicos({
   const removerCustoExtra = (id: string) => {
     setCustosExtras(custosExtras.filter(c => c.id !== id));
   };
-  return (
-    <div className="w-full">
+  return <div className="w-full">
       <div className="flex justify-center mb-6">
         <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-full">
           <CollapsibleTrigger asChild>
             <Button className="bg-amber-500/20 border border-amber-500/30 text-amber-800 hover:bg-amber-500/30 flex items-center justify-center gap-2 px-4 py-2 rounded-lg mx-auto">
               <span className="text-sm">📋</span>
-              {isOpen ? (
-                <>
+              {isOpen ? <>
                   Fechar Calculadora
                   <ChevronUp className="h-4 w-4" />
-                </>
-              ) : (
-                <>
+                </> : <>
                   [+] Calcular Novo Preço
                   <ChevronDown className="h-4 w-4" />
-                </>
-              )}
+                </>}
             </Button>
           </CollapsibleTrigger>
           
@@ -140,34 +135,19 @@ export function CalculadoraServicos({
                   {/* Coluna Esquerda - Base de Cálculo */}
                   <div className="space-y-4 lg:order-1">
                     {/* Base de Cálculo - Horas */}
-                    <Card className="bg-lunar-bg/50">
+                    <Card className="bg-neutral-50">
                       <CardHeader>
                         <CardTitle>Base de Cálculo - Horas</CardTitle>
                       </CardHeader>
-                      <CardContent className="space-y-4">
+                      <CardContent className="space-y-4 bg-neutral-50 rounded-lg">
                         <div className="grid grid-cols-2 gap-3">
                           <div>
                             <Label htmlFor="horas-disponiveis" className="text-sm">Horas disponíveis/dia</Label>
-                            <Input 
-                              id="horas-disponiveis" 
-                              type="number" 
-                              min="1" 
-                              value={horasDisponiveis} 
-                              onChange={e => setHorasDisponiveis(Number(e.target.value))} 
-                              className="h-8" 
-                            />
+                            <Input id="horas-disponiveis" type="number" min="1" value={horasDisponiveis} onChange={e => setHorasDisponiveis(Number(e.target.value))} className="h-8" />
                           </div>
                           <div>
                             <Label htmlFor="dias-trabalhados" className="text-sm">Dias trabalhados/semana</Label>
-                            <Input 
-                              id="dias-trabalhados" 
-                              type="number" 
-                              min="1" 
-                              max="7" 
-                              value={diasTrabalhados} 
-                              onChange={e => setDiasTrabalhados(Number(e.target.value))} 
-                              className="h-8" 
-                            />
+                            <Input id="dias-trabalhados" type="number" min="1" max="7" value={diasTrabalhados} onChange={e => setDiasTrabalhados(Number(e.target.value))} className="h-8" />
                           </div>
                         </div>
                         
@@ -177,15 +157,7 @@ export function CalculadoraServicos({
                         
                         <div>
                           <Label htmlFor="horas-estimadas" className="text-sm">Horas estimadas para o serviço</Label>
-                          <Input 
-                            id="horas-estimadas" 
-                            type="number" 
-                            min="0" 
-                            step="0.5" 
-                            value={horasEstimadas} 
-                            onChange={e => setHorasEstimadas(Number(e.target.value))} 
-                            className="h-8" 
-                          />
+                          <Input id="horas-estimadas" type="number" min="0" step="0.5" value={horasEstimadas} onChange={e => setHorasEstimadas(Number(e.target.value))} className="h-8" />
                         </div>
                         
                         <div className="space-y-2 pt-3 border-t border-lunar-border/30">
@@ -205,7 +177,7 @@ export function CalculadoraServicos({
                   {/* Coluna Direita - Produtos e Custos Extras */}
                   <div className="space-y-4 lg:order-2">
                     {/* Produtos Adicionais */}
-                    <Card className="bg-lunar-bg/50">
+                    <Card className="bg-neutral-50">
                       <CardHeader>
                         <div className="flex justify-between items-center">
                           <CardTitle>Produtos Adicionais</CardTitle>
@@ -217,59 +189,39 @@ export function CalculadoraServicos({
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-3">
-                          {produtos.length === 0 && (
-                            <p className="text-sm text-lunar-textSecondary text-center py-4">
+                          {produtos.length === 0 && <p className="text-sm text-lunar-textSecondary text-center py-4">
                               Nenhum produto adicionado
-                            </p>
-                          )}
-                          {produtos.map(produto => (
-                            <div key={produto.id} className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-end bg-lunar-surface/50 p-3 rounded border border-lunar-border/20">
+                            </p>}
+                          {produtos.map(produto => <div key={produto.id} className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-end bg-lunar-surface/50 p-3 rounded border border-lunar-border/20">
                               <div>
                                 <Label className="text-xs">Produto</Label>
-                                <ProductSelector 
-                                  value={produto.nome} 
-                                  onSelect={product => {
-                                    if (product) {
-                                      atualizarProduto(produto.id, 'nome', product.nome);
-                                      atualizarProduto(produto.id, 'custo', product.custo);
-                                      atualizarProduto(produto.id, 'valorVenda', product.valorVenda);
-                                    }
-                                  }} 
-                                />
+                                <ProductSelector value={produto.nome} onSelect={product => {
+                              if (product) {
+                                atualizarProduto(produto.id, 'nome', product.nome);
+                                atualizarProduto(produto.id, 'custo', product.custo);
+                                atualizarProduto(produto.id, 'valorVenda', product.valorVenda);
+                              }
+                            }} />
                               </div>
                               <div>
                                 <Label className="text-xs">Quantidade</Label>
-                                <Input 
-                                  type="number" 
-                                  min="1" 
-                                  value={produto.quantidade} 
-                                  onChange={e => atualizarProduto(produto.id, 'quantidade', parseInt(e.target.value) || 1)} 
-                                  className="h-8" 
-                                />
+                                <Input type="number" min="1" value={produto.quantidade} onChange={e => atualizarProduto(produto.id, 'quantidade', parseInt(e.target.value) || 1)} className="h-8" />
                               </div>
                               <div>
                                 <Label className="text-xs">Valor Venda</Label>
-                                <Input 
-                                  type="number" 
-                                  min="0" 
-                                  step="0.01" 
-                                  value={produto.valorVenda} 
-                                  onChange={e => atualizarProduto(produto.id, 'valorVenda', parseFloat(e.target.value) || 0)} 
-                                  className="h-8" 
-                                />
+                                <Input type="number" min="0" step="0.01" value={produto.valorVenda} onChange={e => atualizarProduto(produto.id, 'valorVenda', parseFloat(e.target.value) || 0)} className="h-8" />
                               </div>
                               <Button onClick={() => removerProduto(produto.id)} variant="outline" size="sm" className="h-8">
                                 <Trash2 className="h-3 w-3" />
                               </Button>
-                            </div>
-                          ))}
+                            </div>)}
                         </div>
                       </CardContent>
                     </Card>
 
                     {/* Custos Adicionais do Projeto */}
                     <Card className="bg-lunar-bg/50">
-                      <CardHeader>
+                      <CardHeader className="bg-neutral-50 rounded-lg">
                         <div className="flex justify-between items-center">
                           <CardTitle>Custos Adicionais do Projeto</CardTitle>
                           <Button onClick={adicionarCustoExtra} size="sm" variant="outline">
@@ -278,50 +230,28 @@ export function CalculadoraServicos({
                           </Button>
                         </div>
                       </CardHeader>
-                      <CardContent>
+                      <CardContent className="bg-neutral-50 rounded-lg">
                         <div className="space-y-3">
-                          {custosExtras.length === 0 && (
-                            <p className="text-sm text-lunar-textSecondary text-center py-4">
+                          {custosExtras.length === 0 && <p className="text-sm text-lunar-textSecondary text-center py-4">
                               Nenhum custo extra adicionado
-                            </p>
-                          )}
-                          {custosExtras.map(custo => (
-                            <div key={custo.id} className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-end bg-lunar-surface/50 p-3 rounded border border-lunar-border/20">
+                            </p>}
+                          {custosExtras.map(custo => <div key={custo.id} className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-end bg-lunar-surface/50 p-3 rounded border border-lunar-border/20">
                               <div>
                                 <Label className="text-xs">Descrição</Label>
-                                <Input 
-                                  placeholder="Descrição do custo" 
-                                  value={custo.descricao} 
-                                  onChange={e => atualizarCustoExtra(custo.id, 'descricao', e.target.value)} 
-                                  className="h-8" 
-                                />
+                                <Input placeholder="Descrição do custo" value={custo.descricao} onChange={e => atualizarCustoExtra(custo.id, 'descricao', e.target.value)} className="h-8" />
                               </div>
                               <div>
                                 <Label className="text-xs">Valor Unitário</Label>
-                                <Input 
-                                  type="number" 
-                                  min="0" 
-                                  step="0.01" 
-                                  value={custo.valorUnitario} 
-                                  onChange={e => atualizarCustoExtra(custo.id, 'valorUnitario', parseFloat(e.target.value) || 0)} 
-                                  className="h-8" 
-                                />
+                                <Input type="number" min="0" step="0.01" value={custo.valorUnitario} onChange={e => atualizarCustoExtra(custo.id, 'valorUnitario', parseFloat(e.target.value) || 0)} className="h-8" />
                               </div>
                               <div>
                                 <Label className="text-xs">Quantidade</Label>
-                                <Input 
-                                  type="number" 
-                                  min="1" 
-                                  value={custo.quantidade} 
-                                  onChange={e => atualizarCustoExtra(custo.id, 'quantidade', parseInt(e.target.value) || 1)} 
-                                  className="h-8" 
-                                />
+                                <Input type="number" min="1" value={custo.quantidade} onChange={e => atualizarCustoExtra(custo.id, 'quantidade', parseInt(e.target.value) || 1)} className="h-8" />
                               </div>
                               <Button onClick={() => removerCustoExtra(custo.id)} variant="outline" size="sm" className="h-8">
                                 <Trash2 className="h-3 w-3" />
                               </Button>
-                            </div>
-                          ))}
+                            </div>)}
                         </div>
                       </CardContent>
                     </Card>
@@ -329,22 +259,14 @@ export function CalculadoraServicos({
                   
                   {/* Resumo e Precificação Final - Aparece por último em mobile */}
                   <div className="lg:col-span-2 lg:order-3 order-last">
-                    <Card className="bg-lunar-bg/50">
+                    <Card className="bg-neutral-50">
                       <CardHeader>
                         <CardTitle>Resumo e Precificação Final</CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-4">
                         <div className="flex justify-between items-center">
                           <Label htmlFor="markup" className="text-sm">Markup (Multiplicador):</Label>
-                          <Input 
-                            id="markup" 
-                            type="number" 
-                            min="1" 
-                            step="0.1" 
-                            value={markup} 
-                            onChange={e => setMarkup(Number(e.target.value) || 1)} 
-                            className="w-20 h-8 text-right" 
-                          />
+                          <Input id="markup" type="number" min="1" step="0.1" value={markup} onChange={e => setMarkup(Number(e.target.value) || 1)} className="w-20 h-8 text-right" />
                         </div>
                         
                         <div className="flex justify-between text-sm">
@@ -370,11 +292,7 @@ export function CalculadoraServicos({
                           
                           {/* BOTÃO PARA SALVAR COMO PACOTE */}
                           <div className="border-t border-lunar-border/30 pt-4 mt-4">
-                            <Button 
-                              onClick={() => setSalvarPacoteModalOpen(true)}
-                              className="w-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-800 hover:bg-emerald-500/30"
-                              disabled={precoFinal <= 0}
-                            >
+                            <Button onClick={() => setSalvarPacoteModalOpen(true)} className="w-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-800 hover:bg-emerald-500/30" disabled={precoFinal <= 0}>
                               📦 [+] Salvar como Pacote
                             </Button>
                           </div>
@@ -390,14 +308,6 @@ export function CalculadoraServicos({
       </div>
       
       {/* Modal para Salvar Pacote */}
-      <SalvarPacoteModal
-        isOpen={salvarPacoteModalOpen}
-        onClose={() => setSalvarPacoteModalOpen(false)}
-        precoFinal={precoFinal}
-        produtos={produtos}
-        horasEstimadas={horasEstimadas}
-        markup={markup}
-      />
-    </div>
-    );
+      <SalvarPacoteModal isOpen={salvarPacoteModalOpen} onClose={() => setSalvarPacoteModalOpen(false)} precoFinal={precoFinal} produtos={produtos} horasEstimadas={horasEstimadas} markup={markup} />
+    </div>;
 }

@@ -190,7 +190,7 @@ export function EstruturaCustosFixos({
       <CardHeader className="bg-gray-50">
         <div className="flex justify-between items-center">
           <div>
-            <CardTitle className="text-lg">Estrutura de Custos Fixos</CardTitle>
+            <CardTitle className="text-sm">Estrutura de Custos Fixos</CardTitle>
             <p className="text-lunar-textSecondary mt-1 text-xs">
               Defina seus custos fixos mensais para calcular o valor da sua hora de trabalho.
             </p>
@@ -204,16 +204,16 @@ export function EstruturaCustosFixos({
       <CardContent className="bg-gray-50 px-[9px]">
         <Tabs defaultValue="gastos-pessoais" className="w-full">
           <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 gap-1 h-auto p-1">
-            <TabsTrigger value="gastos-pessoais" className="text-xs md:text-sm px-2 py-2">
+            <TabsTrigger value="gastos-pessoais" className="text-xs px-2 py-2 md:text-xs">
               Gastos Pessoais
             </TabsTrigger>
-            <TabsTrigger value="pro-labore" className="text-xs md:text-sm px-2 py-2">
+            <TabsTrigger value="pro-labore" className="text-xs px-2 py-2 md:text-xs">
               Pró-labore
             </TabsTrigger>
-            <TabsTrigger value="custos-estudio" className="text-xs md:text-sm px-2 py-2">
+            <TabsTrigger value="custos-estudio" className="text-xs px-2 py-2 md:text-xs">
               Custos do Estúdio
             </TabsTrigger>
-            <TabsTrigger value="equipamentos" className="text-xs md:text-sm px-2 py-2">
+            <TabsTrigger value="equipamentos" className="text-xs px-2 py-2 md:text-xs">
               Equipamentos
             </TabsTrigger>
           </TabsList>
@@ -398,35 +398,35 @@ export function EstruturaCustosFixos({
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
               <div className="grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
                 <div>
-                  <Label className="text-xs text-blue-700">Nome</Label>
+                  <Label className="text-xs text-black ">Nome</Label>
                   <Input placeholder="Ex: Câmera Canon..." value={novoEquipamento.nome} onChange={e => setNovoEquipamento(prev => ({
                   ...prev,
                   nome: e.target.value
                 }))} className="bg-white" />
                 </div>
                 <div>
-                  <Label className="text-xs text-blue-700">Valor Pago</Label>
+                  <Label className="text-xs text-black">Valor Pago</Label>
                   <Input type="number" min="0" step="0.01" placeholder="0,00" value={novoEquipamento.valorPago} onChange={e => setNovoEquipamento(prev => ({
                   ...prev,
                   valorPago: e.target.value
                 }))} className="bg-white" />
                 </div>
                 <div>
-                  <Label className="text-xs text-blue-700">Data da Compra</Label>
+                  <Label className="text-xs text-black">Data da Compra</Label>
                   <Input type="date" value={novoEquipamento.dataCompra} onChange={e => setNovoEquipamento(prev => ({
                   ...prev,
                   dataCompra: e.target.value
                 }))} className="bg-white" />
                 </div>
                 <div>
-                  <Label className="text-xs text-blue-700">Vida Útil (Anos)</Label>
+                  <Label className="text-xs text-black">Vida Útil (Anos)</Label>
                   <Input type="number" min="1" value={novoEquipamento.vidaUtil} onChange={e => setNovoEquipamento(prev => ({
                   ...prev,
                   vidaUtil: e.target.value
                 }))} className="bg-white" />
                 </div>
                 <div>
-                  <Label className="text-xs text-blue-700">Depreciação Mensal</Label>
+                  <Label className="text-xs text-chart-expense ">Depreciação Mensal</Label>
                   <div className="text-xs text-green-600 font-medium p-2 bg-white rounded border">
                     R$ {novoEquipamento.valorPago && novoEquipamento.vidaUtil ? (parseFloat(novoEquipamento.valorPago) / (parseInt(novoEquipamento.vidaUtil) * 12)).toFixed(2) : '0,00'}
                   </div>
