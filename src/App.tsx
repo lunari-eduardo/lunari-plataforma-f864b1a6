@@ -43,6 +43,17 @@ function AppIntegration() {
   return null;
 }
 
+// Automation integration mounting point
+function AutomationIntegration() {
+  try {
+    const { useAutomationEngine } = require('./hooks/useAutomationEngine');
+    useAutomationEngine();
+  } catch (error) {
+    console.error('Automation engine error:', error);
+  }
+  return null;
+}
+
 // Define App as a proper function component
 function App() {
   const [isInitialized, setIsInitialized] = useState(false);
@@ -92,6 +103,7 @@ function App() {
         <AppProvider>
           <TooltipProvider>
             <AppIntegration />
+            <AutomationIntegration />
             <Toaster />
             <Sonner />
             <Routes>

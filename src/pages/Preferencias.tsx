@@ -190,6 +190,81 @@ useEffect(() => {
                         </CardContent>
                       </Card>
 
+                      {/* Automações */}
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>Automações</CardTitle>
+                          <CardDescription>Controle regras automáticas do Workflow e Orçamentos</CardDescription>
+                        </CardHeader>
+                        <CardContent className="p-6 space-y-6">
+                          <div className="flex items-center justify-between">
+                            <div className="space-y-1">
+                              <Label htmlFor="habilitarAutomacoesWorkflow">Habilitar automações do Workflow</Label>
+                              <p className="text-sm text-lunar-textSecondary">Cria tarefas e avisos automaticamente</p>
+                            </div>
+                            <Switch
+                              id="habilitarAutomacoesWorkflow"
+                              checked={formData.habilitarAutomacoesWorkflow}
+                              onCheckedChange={(checked) => handleSwitchChange('habilitarAutomacoesWorkflow', checked)}
+                            />
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <div className="space-y-1">
+                              <Label htmlFor="habilitarAvisosApenasAgendamentosFuturos">Avisar apenas para agendamentos futuros</Label>
+                              <p className="text-sm text-lunar-textSecondary">Ignora sessões passadas para evitar spam</p>
+                            </div>
+                            <Switch
+                              id="habilitarAvisosApenasAgendamentosFuturos"
+                              checked={formData.habilitarAvisosApenasAgendamentosFuturos}
+                              onCheckedChange={(checked) => handleSwitchChange('habilitarAvisosApenasAgendamentosFuturos', checked)}
+                            />
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <div className="space-y-1">
+                              <Label htmlFor="habilitarAlertaProdutosDoCliente">Alertar sobre produtos do cliente</Label>
+                              <p className="text-sm text-lunar-textSecondary">Mostra um aviso quando o cliente possui produtos vinculados</p>
+                            </div>
+                            <Switch
+                              id="habilitarAlertaProdutosDoCliente"
+                              checked={formData.habilitarAlertaProdutosDoCliente}
+                              onCheckedChange={(checked) => handleSwitchChange('habilitarAlertaProdutosDoCliente', checked)}
+                            />
+                          </div>
+
+                          <Separator />
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="flex items-center justify-between">
+                              <div className="space-y-1">
+                                <Label htmlFor="habilitarFollowUpOrcamentosEnviados">Follow-up automático de orçamentos enviados</Label>
+                                <p className="text-sm text-lunar-textSecondary">Cria uma tarefa após X dias</p>
+                              </div>
+                              <Switch
+                                id="habilitarFollowUpOrcamentosEnviados"
+                                checked={formData.habilitarFollowUpOrcamentosEnviados}
+                                onCheckedChange={(checked) => handleSwitchChange('habilitarFollowUpOrcamentosEnviados', checked)}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="diasParaFollowUpOrcamento">Dias para follow-up</Label>
+                              <Input
+                                id="diasParaFollowUpOrcamento"
+                                type="number"
+                                min={1}
+                                max={30}
+                                value={formData.diasParaFollowUpOrcamento}
+                                onChange={(e) => {
+                                  const v = Math.max(1, Math.min(30, Number(e.target.value) || 1));
+                                  setFormData(prev => ({ ...prev, diasParaFollowUpOrcamento: v }));
+                                  savePreferences({ diasParaFollowUpOrcamento: v });
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+
                       <div className="bg-lunar-surface/50 p-4 rounded-lg">
                         <div className="flex items-start gap-3">
                           <div className="w-2 h-2 bg-lunar-accent rounded-full mt-2 flex-shrink-0"></div>
