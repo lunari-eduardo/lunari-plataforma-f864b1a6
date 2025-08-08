@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useTheme } from 'next-themes';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { useUserPreferences } from '@/hooks/useUserProfile';
@@ -20,36 +18,16 @@ import { UserPreferences } from '@/types/userProfile';
 export default function Preferencias() {
   const { preferences, savePreferences, getPreferencesOrDefault } = useUserPreferences();
   const [formData, setFormData] = useState<UserPreferences>(getPreferencesOrDefault());
-  const { setTheme } = useTheme();
-
-  useEffect(() => {
-    if (preferences) {
-      setFormData(preferences);
-      if (preferences.tema) {
-        if (preferences.tema === 'escuro') {
-          setTheme('dark');
-        } else if (preferences.tema === 'claro') {
-          setTheme('light');
-        } else if (preferences.tema === 'sistema') {
-          setTheme('system');
-        }
-      }
-    }
-  }, [preferences, setTheme]);
+useEffect(() => {
+  if (preferences) {
+    setFormData(preferences);
+  }
+}, [preferences]);
 
   const handleSelectChange = (field: keyof UserPreferences, value: string) => {
     const updatedData = { ...formData, [field]: value };
     setFormData(updatedData);
     savePreferences({ [field]: value });
-    if (field === 'tema') {
-      if (value === 'escuro') {
-        setTheme('dark');
-      } else if (value === 'claro') {
-        setTheme('light');
-      } else if (value === 'sistema') {
-        setTheme('system');
-      }
-    }
   };
 
   const handleSwitchChange = (field: keyof UserPreferences, checked: boolean) => {
@@ -163,39 +141,6 @@ export default function Preferencias() {
 
                   <Separator />
 
-                  {/* Seção Aparência */}
-                  <div className="space-y-4">
-                    <div>
-                      <h3 className="text-lg font-medium mb-4">Aparência</h3>
-                    </div>
-
-                    <div className="space-y-4">
-                      <div className="space-y-3">
-                        <Label>Tema</Label>
-                        <RadioGroup 
-                          value={formData.tema} 
-                          onValueChange={(value: 'claro' | 'escuro' | 'sistema') => handleSelectChange('tema', value)}
-                          className="flex gap-6"
-                        >
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="claro" id="tema-claro" />
-                            <Label htmlFor="tema-claro">Claro</Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="escuro" id="tema-escuro" />
-                            <Label htmlFor="tema-escuro">Escuro</Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="sistema" id="tema-sistema" />
-                            <Label htmlFor="tema-sistema">Sistema</Label>
-                          </div>
-                        </RadioGroup>
-                        <p className="text-sm text-lunar-textSecondary">
-                          Escolha entre o tema claro ou escuro para a interface
-                        </p>
-                      </div>
-                    </div>
-                  </div>
                 </TabsContent>
 
                 <TabsContent value="notificacoes" className="space-y-6 mt-6">
