@@ -299,7 +299,7 @@ export default function NovoOrcamento() {
             <CardContent className="space-y-3 rounded-lg bg-neutral-50 pt-3">
               <div>
                 <label htmlFor="budget-client-search" className="text-xs font-medium mb-1 block">Cliente Existente</label>
-                <div id="budget-client-search" className="bg-card text-foreground ">
+                <div id="budget-client-search" className="text-foreground bg-inherit">
                   <ClientSearchInput clientes={clientes} selectedClient={clienteSelecionado} onSelectClient={setClienteSelecionado} placeholder="Selecione um cliente" />
                 </div>
               </div>
