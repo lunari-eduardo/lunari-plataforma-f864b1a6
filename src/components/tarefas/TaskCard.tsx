@@ -1,10 +1,12 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import type { Task, TaskStatus, TaskPriority } from '@/types/tasks';
 import { Link } from 'react-router-dom';
+import { GripVertical } from 'lucide-react';
 
 function daysUntil(dateIso?: string) {
   if (!dateIso) return undefined;
@@ -26,12 +28,20 @@ export default function TaskCard({
   onReopen,
   onEdit,
   onDelete,
+  onDragStart,
+  onDragEnd,
+  isDragging = false,
+  onRequestMove,
 }: {
   task: Task;
   onComplete: () => void;
   onReopen: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onDragStart?: (id: string) => void;
+  onDragEnd?: () => void;
+  isDragging?: boolean;
+  onRequestMove?: (status: TaskStatus) => void;
 }) {
   const [open, setOpen] = useState(false);
   const dueInfo = useMemo(() => {
@@ -65,8 +75,34 @@ export default function TaskCard({
     }
   }, [t.priority]);
 
+  const [menuOpen, setMenuOpen] = useState(false);
+  const longPressRef = useRef<number | null>(null);
+  const handleTouchStart = () => {
+    longPressRef.current = window.setTimeout(() => setMenuOpen(true), 400);
+  };
+  const clearLongPress = () => {
+    if (longPressRef.current) {
+      clearTimeout(longPressRef.current);
+      longPressRef.current = null;
+    }
+  };
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData('text/plain', t.id);
+    e.dataTransfer.effectAllowed = 'move';
+    onDragStart?.(t.id);
+  };
+  const handleDragEnd = () => {
+    onDragEnd?.();
+  };
+
   return (
-    <li className="relative overflow-hidden rounded-md border border-lunar-border/60 bg-lunar-surface p-2 shadow-sm">
+    <li
+      className={`relative overflow-hidden rounded-md border border-lunar-border/60 bg-lunar-surface p-2 shadow-sm ${isDragging ? 'opacity-70 border-dashed ring-1 ring-lunar-accent/40' : ''}`}
+      draggable
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      aria-grabbed={isDragging ? true : undefined}
+    >
       {/* Priority visual accents */}
       <span aria-hidden className={`pointer-events-none absolute inset-y-0 left-0 w-1 ${priorityUI.bar}`} />
       {priorityUI.tint && (
@@ -92,6 +128,30 @@ export default function TaskCard({
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
+          <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 cursor-grab active:cursor-grabbing"
+                title="Mover"
+                onTouchStart={handleTouchStart}
+                onTouchEnd={clearLongPress}
+                onTouchCancel={clearLongPress}
+                onTouchMove={clearLongPress}
+              >
+                <GripVertical size={16} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="z-50">
+              <DropdownMenuLabel>Mover para</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => { onRequestMove?.('todo'); setMenuOpen(false); }}>A Fazer</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => { onRequestMove?.('doing'); setMenuOpen(false); }}>Em Andamento</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => { onRequestMove?.('waiting'); setMenuOpen(false); }}>Aguardando</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => { onRequestMove?.('done'); setMenuOpen(false); }}>Concluída</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           {t.status !== 'done' ? (
             <Button
               variant="secondary"

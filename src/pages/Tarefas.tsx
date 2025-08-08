@@ -12,6 +12,7 @@ import type { Task, TaskPriority, TaskStatus } from '@/types/tasks';
 import TaskFormModal from '@/components/tarefas/TaskFormModal';
 import TaskCard from '@/components/tarefas/TaskCard';
 import PriorityLegend from '@/components/tarefas/PriorityLegend';
+import { cn } from '@/lib/utils';
 
 function groupByStatus(tasks: Task[]) {
   return tasks.reduce<Record<TaskStatus, Task[]>>((acc, t) => {
@@ -46,6 +47,8 @@ export default function Tarefas() {
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editTaskData, setEditTaskData] = useState<Task | null>(null);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dragOverColumn, setDragOverColumn] = useState<TaskStatus | null>(null);
 
   const filtered = useMemo(() => {
     const tag = tagFilter.trim().toLowerCase();
@@ -83,7 +86,24 @@ export default function Tarefas() {
         <h2 className="text-sm font-semibold text-lunar-text">{title}</h2>
         <Badge variant="outline" className="text-2xs">{groups[statusKey]?.length || 0}</Badge>
       </header>
-      <Card className="p-2 bg-lunar-surface border-lunar-border/60">
+      <Card
+        className={cn(
+          "p-2 bg-lunar-surface border-lunar-border/60 max-h-[70vh] overflow-y-auto",
+          dragOverColumn === statusKey ? "ring-2 ring-lunar-accent/60" : ""
+        )}
+        onDragOver={(e) => { e.preventDefault(); if (draggingId) setDragOverColumn(statusKey); }}
+        onDragLeave={() => { if (dragOverColumn === statusKey) setDragOverColumn(null); }}
+        onDrop={(e) => {
+          e.preventDefault();
+          const id = e.dataTransfer.getData('text/plain');
+          if (id) {
+            updateTask(id, { status: statusKey });
+            toast({ title: 'Tarefa movida' });
+          }
+          setDragOverColumn(null);
+          setDraggingId(null);
+        }}
+      >
         <ul className="space-y-2">
           {(groups[statusKey] || []).map((t) => (
             <TaskCard
@@ -93,6 +113,10 @@ export default function Tarefas() {
               onReopen={() => updateTask(t.id, { status: 'todo' })}
               onEdit={() => setEditTaskData(t)}
               onDelete={() => deleteTask(t.id)}
+              onDragStart={(id) => setDraggingId(id)}
+              onDragEnd={() => { setDraggingId(null); setDragOverColumn(null); }}
+              isDragging={draggingId === t.id}
+              onRequestMove={(status) => { updateTask(t.id, { status }); toast({ title: 'Tarefa movida' }); }}
             />
           ))}
         </ul>
