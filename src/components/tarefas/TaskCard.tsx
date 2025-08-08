@@ -52,9 +52,9 @@ export default function TaskCard({
         };
       case 'medium':
         return {
-          bar: 'bg-lunar-accent',
-          tint: 'bg-lunar-accent/5',
-          badge: 'text-lunar-accent border-lunar-accent/40 bg-lunar-accent/10',
+          bar: 'bg-lunar-warning',
+          tint: 'bg-lunar-warning/5',
+          badge: 'text-lunar-warning border-lunar-warning/40 bg-lunar-warning/10',
         };
       default:
         return {

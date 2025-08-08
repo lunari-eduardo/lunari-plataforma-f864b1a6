@@ -12,7 +12,7 @@ export default function PriorityLegend() {
         Alta prioridade
       </span>
       <span className="flex items-center gap-1">
-        <Dot className="bg-lunar-accent" />
+        <Dot className="bg-lunar-warning" />
         Média prioridade
       </span>
       <span className="flex items-center gap-1">

@@ -44,11 +44,12 @@ export default {
 					surface: 'hsl(var(--lunar-surface) / <alpha-value>)',
 					text: 'hsl(var(--lunar-text) / <alpha-value>)',
 					textSecondary: 'hsl(var(--lunar-textSecondary) / <alpha-value>)',
-					border: 'hsl(var(--lunar-border) / <alpha-value>)',
-					accent: 'hsl(var(--lunar-accent) / <alpha-value>)',
-					accentHover: 'hsl(var(--lunar-accentHover) / <alpha-value>)',
-					error: 'hsl(var(--lunar-error) / <alpha-value>)',
-					success: 'hsl(var(--lunar-success) / <alpha-value>)',
+          border: 'hsl(var(--lunar-border) / <alpha-value>)',
+          accent: 'hsl(var(--lunar-accent) / <alpha-value>)',
+          accentHover: 'hsl(var(--lunar-accentHover) / <alpha-value>)',
+          error: 'hsl(var(--lunar-error) / <alpha-value>)',
+          success: 'hsl(var(--lunar-success) / <alpha-value>)',
+          warning: 'hsl(var(--lunar-warning) / <alpha-value>)',
         },
 
         // Paleta elegante para gráficos
