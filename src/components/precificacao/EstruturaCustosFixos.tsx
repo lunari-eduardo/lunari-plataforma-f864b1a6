@@ -329,14 +329,14 @@ export function EstruturaCustosFixos({
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs text-blue-700">Descrição</Label>
+                  <Label className="text-xs text-black">Descrição</Label>
                   <Input placeholder="Ex: Aluguel, Energia, Internet..." value={novoCustoEstudio.descricao} onChange={e => setNovoCustoEstudio(prev => ({
                   ...prev,
                   descricao: e.target.value
                 }))} className="bg-white" />
                 </div>
                 <div>
-                  <Label className="text-xs text-blue-700">Valor</Label>
+                  <Label className="text-xs text-black">Valor</Label>
                   <Input type="number" min="0" step="0.01" placeholder="0,00" value={novoCustoEstudio.valor} onChange={e => setNovoCustoEstudio(prev => ({
                   ...prev,
                   valor: e.target.value
