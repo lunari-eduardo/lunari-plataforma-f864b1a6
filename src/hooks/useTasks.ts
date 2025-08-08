@@ -22,9 +22,19 @@ export function useTasks() {
   }, []);
 
   const updateTask = useCallback((id: string, updates: Partial<Task>) => {
-    setTasks(prev => prev.map(t => (t.id === id ? { ...t, ...updates } : t)));
+    setTasks(prev => prev.map(t => {
+      if (t.id !== id) return t;
+      const next: Task = { ...t, ...updates } as Task;
+      if (updates.status && updates.status !== t.status) {
+        if (updates.status === 'done') {
+          next.completedAt = new Date().toISOString();
+        } else if (t.status === 'done') {
+          next.completedAt = undefined;
+        }
+      }
+      return next;
+    }));
   }, []);
-
   const deleteTask = useCallback((id: string) => {
     setTasks(prev => prev.filter(t => t.id !== id));
   }, []);

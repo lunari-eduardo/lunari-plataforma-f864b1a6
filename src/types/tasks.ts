@@ -8,6 +8,7 @@ export interface Task {
   status: TaskStatus;
   priority: TaskPriority;
   assigneeId?: string;
+  assigneeName?: string;
   createdAt: string; // ISO
   dueDate?: string;  // ISO
   tags?: string[];
@@ -17,6 +18,7 @@ export interface Task {
   lastNotifiedAt?: string; // ISO
   snoozeUntil?: string;    // ISO
   source: 'automation' | 'manual';
+  completedAt?: string; // ISO
 }
 
 export interface TeamMember {

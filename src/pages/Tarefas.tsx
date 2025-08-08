@@ -1,12 +1,15 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/components/ui/use-toast';
 import { Link } from 'react-router-dom';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 import { useTasks } from '@/hooks/useTasks';
-import type { Task, TaskStatus } from '@/types/tasks';
+import type { Task, TaskPriority, TaskStatus } from '@/types/tasks';
+import TaskFormModal from '@/components/tarefas/TaskFormModal';
 
 function groupByStatus(tasks: Task[]) {
   return tasks.reduce<Record<TaskStatus, Task[]>>((acc, t) => {
@@ -15,15 +18,68 @@ function groupByStatus(tasks: Task[]) {
   }, { todo: [], doing: [], waiting: [], done: [] } as any);
 }
 
+function daysUntil(dateIso?: string) {
+  if (!dateIso) return undefined;
+  const now = new Date();
+  const due = new Date(dateIso);
+  const diffMs = due.getTime() - now.getTime();
+  return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+}
+
+const priorityWeight: Record<TaskPriority, number> = { low: 1, medium: 2, high: 3 };
+
 export default function Tarefas() {
-  const { tasks, updateTask, deleteTask } = useTasks();
+  const { tasks, addTask, updateTask, deleteTask } = useTasks();
   const { toast } = useToast();
 
   useEffect(() => {
     document.title = 'Tarefas | Lunari';
   }, []);
 
-  const groups = useMemo(() => groupByStatus(tasks), [tasks]);
+  const [view, setView] = useState<'kanban' | 'list'>(() => (localStorage.getItem('lunari_tasks_view') as any) || 'kanban');
+  const [query, setQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | TaskStatus>('all');
+  const [assigneeFilter, setAssigneeFilter] = useState('');
+  const [tagFilter, setTagFilter] = useState('');
+  const [sortKey, setSortKey] = useState<'dueDate' | 'priority' | 'createdAt'>('dueDate');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editTaskData, setEditTaskData] = useState<Task | null>(null);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const tag = tagFilter.trim().toLowerCase();
+    const assignee = assigneeFilter.trim().toLowerCase();
+
+    let arr = tasks.filter(t => {
+      const inQuery = !q || t.title.toLowerCase().includes(q) || (t.description?.toLowerCase().includes(q));
+      const inStatus = statusFilter === 'all' || t.status === statusFilter;
+      const inAssignee = !assignee || (t.assigneeName?.toLowerCase().includes(assignee));
+      const inTag = !tag || (t.tags || []).some(x => x.toLowerCase().includes(tag));
+      return inQuery && inStatus && inAssignee && inTag;
+    });
+
+    arr.sort((a, b) => {
+      if (sortKey === 'priority') {
+        const diff = priorityWeight[(a.priority)] - priorityWeight[(b.priority)];
+        return sortDir === 'asc' ? diff : -diff;
+      }
+      if (sortKey === 'dueDate') {
+        const ad = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
+        const bd = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
+        const diff = ad - bd;
+        return sortDir === 'asc' ? diff : -diff;
+      }
+      // createdAt
+      const diff = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      return sortDir === 'asc' ? diff : -diff;
+    });
+
+    return arr;
+  }, [tasks, query, statusFilter, assigneeFilter, tagFilter, sortKey, sortDir]);
+
+  const groups = useMemo(() => groupByStatus(filtered), [filtered]);
 
   const StatusColumn = ({ title, statusKey }: { title: string; statusKey: TaskStatus }) => (
     <section className="flex-1 min-w-[260px]">
@@ -42,6 +98,8 @@ export default function Tarefas() {
                     <p className="text-2xs text-lunar-textSecondary truncate">{t.description}</p>
                   )}
                   <div className="mt-1 flex flex-wrap items-center gap-1">
+                    <Badge variant="outline" className="text-[10px]">{t.priority === 'high' ? 'Alta' : t.priority === 'medium' ? 'Média' : 'Baixa'}</Badge>
+                    {t.assigneeName && <Badge variant="secondary" className="text-[10px]">{t.assigneeName}</Badge>}
                     {t.tags?.map((tag) => (
                       <Badge key={tag} variant="secondary" className="text-[10px]">{tag}</Badge>
                     ))}
@@ -87,6 +145,15 @@ export default function Tarefas() {
                   )}
                   <Button
                     variant="ghost"
+                    size="sm"
+                    className="h-7 text-2xs"
+                    onClick={() => setEditTaskData(t)}
+                    title="Editar"
+                  >
+                    Editar
+                  </Button>
+                  <Button
+                    variant="ghost"
                     size="icon"
                     className="h-7 w-7"
                     onClick={() => deleteTask(t.id)}
@@ -96,12 +163,25 @@ export default function Tarefas() {
                   </Button>
                 </div>
               </div>
-              <div className="mt-2 flex items-center gap-2 text-2xs text-lunar-textSecondary">
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-2xs text-lunar-textSecondary">
                 <span>Criada: {new Date(t.createdAt).toLocaleDateString('pt-BR')}</span>
                 {t.dueDate && (
                   <>
                     <Separator orientation="vertical" className="h-3" />
                     <span>Prazo: {new Date(t.dueDate).toLocaleDateString('pt-BR')}</span>
+                    {(() => {
+                      const d = daysUntil(t.dueDate);
+                      if (d === undefined) return null;
+                      if (d < 0) return <span className="text-lunar-error">Vencida há {Math.abs(d)} dia(s)</span>;
+                      if (d <= 2) return <span className="text-lunar-accent">Faltam {d} dia(s)</span>;
+                      return null;
+                    })()}
+                  </>
+                )}
+                {t.completedAt && (
+                  <>
+                    <Separator orientation="vertical" className="h-3" />
+                    <span>Concluída: {new Date(t.completedAt).toLocaleDateString('pt-BR')}</span>
                   </>
                 )}
               </div>
@@ -112,17 +192,148 @@ export default function Tarefas() {
     </section>
   );
 
+  const ListView = () => (
+    <Card className="p-2 bg-lunar-surface border-lunar-border/60">
+      <ul className="divide-y divide-lunar-border/50">
+        {filtered.map(t => (
+          <li key={t.id} className="py-2 px-2 flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-medium text-lunar-text truncate">{t.title}</h3>
+                <Badge variant="outline" className="text-[10px]">{t.priority === 'high' ? 'Alta' : t.priority === 'medium' ? 'Média' : 'Baixa'}</Badge>
+                <Badge variant="outline" className="text-[10px]">{t.status === 'todo' ? 'A Fazer' : t.status === 'doing' ? 'Em Andamento' : t.status === 'waiting' ? 'Aguardando' : 'Concluída'}</Badge>
+              </div>
+              {t.description && <p className="text-2xs text-lunar-textSecondary truncate">{t.description}</p>}
+              <div className="mt-1 flex flex-wrap items-center gap-1">
+                {t.assigneeName && <Badge variant="secondary" className="text-[10px]">{t.assigneeName}</Badge>}
+                {t.tags?.map(tag => <Badge key={tag} variant="secondary" className="text-[10px]">{tag}</Badge>)}
+                {t.dueDate && (
+                  <>
+                    <Separator orientation="vertical" className="h-3" />
+                    <span className="text-2xs">Prazo: {new Date(t.dueDate).toLocaleDateString('pt-BR')}</span>
+                    {(() => {
+                      const d = daysUntil(t.dueDate);
+                      if (d === undefined) return null;
+                      if (d < 0) return <span className="text-lunar-error">Vencida há {Math.abs(d)} dia(s)</span>;
+                      if (d <= 2) return <span className="text-lunar-accent">Faltam {d} dia(s)</span>;
+                      return null;
+                    })()}
+                  </>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              {t.status !== 'done' ? (
+                <Button variant="secondary" size="sm" className="h-7 text-2xs" onClick={() => updateTask(t.id, { status: 'done' })}>Concluir</Button>
+              ) : (
+                <Button variant="ghost" size="sm" className="h-7 text-2xs" onClick={() => updateTask(t.id, { status: 'todo' })}>Reabrir</Button>
+              )}
+              <Select value={t.status} onValueChange={v => updateTask(t.id, { status: v as TaskStatus })}>
+                <SelectTrigger className="h-7 px-2 text-2xs w-[120px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todo">A Fazer</SelectItem>
+                  <SelectItem value="doing">Em Andamento</SelectItem>
+                  <SelectItem value="waiting">Aguardando</SelectItem>
+                  <SelectItem value="done">Concluída</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button variant="ghost" size="sm" className="h-7 text-2xs" onClick={() => setEditTaskData(t)}>Editar</Button>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteTask(t.id)} title="Excluir">×</Button>
+            </div>
+          </li>
+        ))}
+        {filtered.length === 0 && (
+          <li className="py-6 text-center text-2xs text-lunar-textSecondary">Nenhuma tarefa encontrada.</li>
+        )}
+      </ul>
+    </Card>
+  );
+
   return (
     <main className="p-4 space-y-4">
       <header className="flex items-center justify-between">
         <h1 className="text-base font-bold text-lunar-text">Tarefas</h1>
+        <div className="flex items-center gap-2">
+          <Select value={view} onValueChange={(v) => { setView(v as any); localStorage.setItem('lunari_tasks_view', v); }}>
+            <SelectTrigger className="h-8 w-[120px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="kanban">Kanban</SelectItem>
+              <SelectItem value="list">Lista</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button onClick={() => setCreateOpen(true)}>Nova tarefa</Button>
+        </div>
       </header>
-      <div className="grid gap-4 md:grid-cols-4 sm:grid-cols-2 grid-cols-1">
-        <StatusColumn title="A Fazer" statusKey="todo" />
-        <StatusColumn title="Fazendo" statusKey="doing" />
-        <StatusColumn title="Aguardando" statusKey="waiting" />
-        <StatusColumn title="Concluídas" statusKey="done" />
-      </div>
+
+      {/* Filtros */}
+      <Card className="p-3 bg-lunar-surface border-lunar-border/60">
+        <div className="grid md:grid-cols-5 sm:grid-cols-2 grid-cols-1 gap-2">
+          <Input placeholder="Buscar por título ou descrição" value={query} onChange={e => setQuery(e.target.value)} />
+          <Input placeholder="Filtrar por responsável" value={assigneeFilter} onChange={e => setAssigneeFilter(e.target.value)} />
+          <Input placeholder="Filtrar por etiqueta" value={tagFilter} onChange={e => setTagFilter(e.target.value)} />
+          <Select value={statusFilter} onValueChange={v => setStatusFilter(v as any)}>
+            <SelectTrigger className="h-8"><SelectValue placeholder="Status" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos status</SelectItem>
+              <SelectItem value="todo">A Fazer</SelectItem>
+              <SelectItem value="doing">Em Andamento</SelectItem>
+              <SelectItem value="waiting">Aguardando</SelectItem>
+              <SelectItem value="done">Concluída</SelectItem>
+            </SelectContent>
+          </Select>
+          <div className="flex gap-2">
+            <Select value={sortKey} onValueChange={v => setSortKey(v as any)}>
+              <SelectTrigger className="h-8 w-[140px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="dueDate">Ordenar: Prazo</SelectItem>
+                <SelectItem value="priority">Ordenar: Prioridade</SelectItem>
+                <SelectItem value="createdAt">Ordenar: Criação</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={sortDir} onValueChange={v => setSortDir(v as any)}>
+              <SelectTrigger className="h-8 w-[120px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="asc">Asc</SelectItem>
+                <SelectItem value="desc">Desc</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </Card>
+
+      {view === 'kanban' ? (
+        <div className="grid gap-4 md:grid-cols-4 sm:grid-cols-2 grid-cols-1">
+          <StatusColumn title="A Fazer" statusKey="todo" />
+          <StatusColumn title="Em Andamento" statusKey="doing" />
+          <StatusColumn title="Aguardando" statusKey="waiting" />
+          <StatusColumn title="Concluídas" statusKey="done" />
+        </div>
+      ) : (
+        <ListView />)
+      }
+
+      <TaskFormModal
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        mode="create"
+        onSubmit={(data: any) => {
+          const t = addTask({ ...data, source: 'manual' });
+          toast({ title: 'Tarefa criada', description: t.title });
+        }}
+      />
+
+      {editTaskData && (
+        <TaskFormModal
+          open={!!editTaskData}
+          onOpenChange={(o) => { if (!o) setEditTaskData(null); }}
+          mode="edit"
+          initial={editTaskData}
+          onSubmit={(data: any) => {
+            updateTask(editTaskData.id, data);
+            toast({ title: 'Tarefa atualizada', description: data.title });
+          }}
+        />
+      )}
     </main>
   );
 }
