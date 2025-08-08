@@ -1,0 +1,148 @@
+import { useState, useMemo } from 'react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import type { Task, TaskStatus, TaskPriority } from '@/types/tasks';
+import { Link } from 'react-router-dom';
+
+function daysUntil(dateIso?: string) {
+  if (!dateIso) return undefined;
+  const now = new Date();
+  const due = new Date(dateIso);
+  const diffMs = due.getTime() - now.getTime();
+  return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+}
+
+const priorityLabel: Record<TaskPriority, string> = {
+  low: 'Baixa',
+  medium: 'Média',
+  high: 'Alta',
+};
+
+export default function TaskCard({
+  task: t,
+  onComplete,
+  onReopen,
+  onEdit,
+  onDelete,
+}: {
+  task: Task;
+  onComplete: () => void;
+  onReopen: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const dueInfo = useMemo(() => {
+    const d = daysUntil(t.dueDate);
+    if (d === undefined) return null;
+    if (d < 0) return <span className="text-lunar-error">Vencida há {Math.abs(d)} dia(s)</span>;
+    if (d <= 2) return <span className="text-lunar-accent">Faltam {d} dia(s)</span>;
+    return null;
+  }, [t.dueDate]);
+
+  return (
+    <li className="rounded-md border border-lunar-border/60 bg-lunar-surface p-2 shadow-sm">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h3 className="text-sm font-medium text-lunar-text truncate">{t.title}</h3>
+          {t.description && (
+            <p className="text-2xs text-lunar-textSecondary truncate">{t.description}</p>
+          )}
+          <div className="mt-1 flex flex-wrap items-center gap-1">
+            <Badge variant="outline" className="text-[10px]">{priorityLabel[t.priority]}</Badge>
+            {t.assigneeName && (
+              <Badge variant="secondary" className="text-[10px]">{t.assigneeName}</Badge>
+            )}
+            {(t.tags || []).slice(0, 3).map((tag) => (
+              <Badge key={tag} variant="secondary" className="text-[10px]">{tag}</Badge>
+            ))}
+            {(t.tags?.length || 0) > 3 && (
+              <Badge variant="secondary" className="text-[10px]">+{(t.tags!.length - 3)}</Badge>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          {t.status !== 'done' ? (
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-7 text-2xs"
+              onClick={onComplete}
+            >
+              Concluir
+            </Button>
+          ) : (
+            <Button variant="ghost" size="sm" className="h-7 text-2xs" onClick={onReopen}>
+              Reabrir
+            </Button>
+          )}
+          <Button variant="ghost" size="sm" className="h-7 text-2xs" onClick={onEdit} title="Editar">
+            Editar
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onDelete} title="Excluir">
+            ×
+          </Button>
+        </div>
+      </div>
+
+      <div className="mt-2 flex flex-wrap items-center gap-2 text-2xs text-lunar-textSecondary">
+        <span>Criada: {new Date(t.createdAt).toLocaleDateString('pt-BR')}</span>
+        {t.dueDate && (
+          <>
+            <Separator orientation="vertical" className="h-3" />
+            <span>Prazo: {new Date(t.dueDate).toLocaleDateString('pt-BR')}</span>
+            {dueInfo}
+          </>
+        )}
+        {t.completedAt && (
+          <>
+            <Separator orientation="vertical" className="h-3" />
+            <span>Concluída: {new Date(t.completedAt).toLocaleDateString('pt-BR')}</span>
+          </>
+        )}
+      </div>
+
+      {(t.description || t.tags?.length || t.relatedClienteId || t.relatedBudgetId || t.relatedSessionId) && (
+        <Collapsible open={open} onOpenChange={setOpen} className="mt-1">
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-2xs">
+              {open ? 'Ocultar detalhes' : 'Ver detalhes'}
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="text-2xs text-lunar-textSecondary">
+            {t.description && (
+              <p className="mt-1 whitespace-pre-wrap leading-relaxed">{t.description}</p>
+            )}
+            {(t.tags?.length || 0) > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1">
+                <span className="font-medium text-lunar-text">Etiquetas:</span>
+                {t.tags!.map((tag) => (
+                  <Badge key={tag} variant="secondary" className="text-[10px]">{tag}</Badge>
+                ))}
+              </div>
+            )}
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              {t.relatedClienteId && (
+                <Link to={`/clientes/${t.relatedClienteId}`} className="text-lunar-accent underline">
+                  Ver cliente
+                </Link>
+              )}
+              {t.relatedBudgetId && (
+                <Link to={`/orcamentos`} className="text-lunar-accent underline">
+                  Ver orçamento
+                </Link>
+              )}
+              {t.relatedSessionId && (
+                <Link to={`/workflow`} className="text-lunar-accent underline">
+                  Ver sessão
+                </Link>
+              )}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      )}
+    </li>
+  );
+}

@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { useTasks } from '@/hooks/useTasks';
 import type { Task, TaskPriority, TaskStatus } from '@/types/tasks';
 import TaskFormModal from '@/components/tarefas/TaskFormModal';
+import TaskCard from '@/components/tarefas/TaskCard';
 
 function groupByStatus(tasks: Task[]) {
   return tasks.reduce<Record<TaskStatus, Task[]>>((acc, t) => {
@@ -90,102 +91,14 @@ export default function Tarefas() {
       <Card className="p-2 bg-lunar-surface border-lunar-border/60">
         <ul className="space-y-2">
           {(groups[statusKey] || []).map((t) => (
-            <li key={t.id} className="rounded-md border border-lunar-border/60 bg-white p-3">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <h3 className="text-sm font-medium text-lunar-text truncate">{t.title}</h3>
-                  {t.description && (
-                    <p className="text-2xs text-lunar-textSecondary truncate">{t.description}</p>
-                  )}
-                  <div className="mt-1 flex flex-wrap items-center gap-1">
-                    <Badge variant="outline" className="text-[10px]">{t.priority === 'high' ? 'Alta' : t.priority === 'medium' ? 'Média' : 'Baixa'}</Badge>
-                    {t.assigneeName && <Badge variant="secondary" className="text-[10px]">{t.assigneeName}</Badge>}
-                    {t.tags?.map((tag) => (
-                      <Badge key={tag} variant="secondary" className="text-[10px]">{tag}</Badge>
-                    ))}
-                    {t.relatedClienteId && (
-                      <Link to={`/clientes/${t.relatedClienteId}`} className="text-2xs text-lunar-accent underline">
-                        Ver cliente
-                      </Link>
-                    )}
-                    {t.relatedBudgetId && (
-                      <Link to={`/orcamentos`} className="text-2xs text-lunar-accent underline">
-                        Ver orçamento
-                      </Link>
-                    )}
-                    {t.relatedSessionId && (
-                      <Link to={`/workflow`} className="text-2xs text-lunar-accent underline">
-                        Ver sessão
-                      </Link>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  {t.status !== 'done' ? (
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      className="h-7 text-2xs"
-                      onClick={() => {
-                        updateTask(t.id, { status: 'done' });
-                        toast({ title: 'Tarefa concluída' });
-                      }}
-                    >
-                      Concluir
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 text-2xs"
-                      onClick={() => updateTask(t.id, { status: 'todo' })}
-                    >
-                      Reabrir
-                    </Button>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 text-2xs"
-                    onClick={() => setEditTaskData(t)}
-                    title="Editar"
-                  >
-                    Editar
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() => deleteTask(t.id)}
-                    title="Excluir"
-                  >
-                    ×
-                  </Button>
-                </div>
-              </div>
-              <div className="mt-2 flex flex-wrap items-center gap-2 text-2xs text-lunar-textSecondary">
-                <span>Criada: {new Date(t.createdAt).toLocaleDateString('pt-BR')}</span>
-                {t.dueDate && (
-                  <>
-                    <Separator orientation="vertical" className="h-3" />
-                    <span>Prazo: {new Date(t.dueDate).toLocaleDateString('pt-BR')}</span>
-                    {(() => {
-                      const d = daysUntil(t.dueDate);
-                      if (d === undefined) return null;
-                      if (d < 0) return <span className="text-lunar-error">Vencida há {Math.abs(d)} dia(s)</span>;
-                      if (d <= 2) return <span className="text-lunar-accent">Faltam {d} dia(s)</span>;
-                      return null;
-                    })()}
-                  </>
-                )}
-                {t.completedAt && (
-                  <>
-                    <Separator orientation="vertical" className="h-3" />
-                    <span>Concluída: {new Date(t.completedAt).toLocaleDateString('pt-BR')}</span>
-                  </>
-                )}
-              </div>
-            </li>
+            <TaskCard
+              key={t.id}
+              task={t}
+              onComplete={() => { updateTask(t.id, { status: 'done' }); toast({ title: 'Tarefa concluída' }); }}
+              onReopen={() => updateTask(t.id, { status: 'todo' })}
+              onEdit={() => setEditTaskData(t)}
+              onDelete={() => deleteTask(t.id)}
+            />
           ))}
         </ul>
       </Card>
@@ -196,7 +109,7 @@ export default function Tarefas() {
     <Card className="p-2 bg-lunar-surface border-lunar-border/60">
       <ul className="divide-y divide-lunar-border/50">
         {filtered.map(t => (
-          <li key={t.id} className="py-2 px-2 flex items-start justify-between gap-2">
+          <li key={t.id} className="py-1.5 px-2 flex items-start justify-between gap-2">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-medium text-lunar-text truncate">{t.title}</h3>
@@ -302,11 +215,13 @@ export default function Tarefas() {
       </Card>
 
       {view === 'kanban' ? (
-        <div className="grid gap-4 md:grid-cols-4 sm:grid-cols-2 grid-cols-1">
-          <StatusColumn title="A Fazer" statusKey="todo" />
-          <StatusColumn title="Em Andamento" statusKey="doing" />
-          <StatusColumn title="Aguardando" statusKey="waiting" />
-          <StatusColumn title="Concluídas" statusKey="done" />
+        <div className="overflow-x-auto">
+          <div className="flex gap-4 min-w-max pr-2">
+            <StatusColumn title="A Fazer" statusKey="todo" />
+            <StatusColumn title="Em Andamento" statusKey="doing" />
+            <StatusColumn title="Aguardando" statusKey="waiting" />
+            <StatusColumn title="Concluídas" statusKey="done" />
+          </div>
         </div>
       ) : (
         <ListView />)
