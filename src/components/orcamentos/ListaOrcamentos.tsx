@@ -14,14 +14,13 @@ import { Orcamento } from '@/types/orcamentos';
 import StatusBadge from './StatusBadge';
 import OrcamentoDetailsModal from './OrcamentoDetailsModal';
 import EditOrcamentoModal from './EditOrcamentoModal';
-
 import { formatDateForDisplay, isSameMonthYear, parseDateFromStorage } from '@/utils/dateUtils';
-
 interface ListaOrcamentosProps {
   selectedMonth: Date;
 }
-
-export default function ListaOrcamentos({ selectedMonth }: ListaOrcamentosProps) {
+export default function ListaOrcamentos({
+  selectedMonth
+}: ListaOrcamentosProps) {
   const {
     orcamentos,
     categorias,
@@ -39,7 +38,6 @@ export default function ListaOrcamentos({ selectedMonth }: ListaOrcamentosProps)
   });
   const [selectedOrcamento, setSelectedOrcamento] = useState<Orcamento | null>(null);
   const [orcamentoParaEditar, setOrcamentoParaEditar] = useState<Orcamento | null>(null);
-  
   const [colunasVisiveis, setColunasVisiveis] = useState({
     cliente: true,
     categoria: true,
@@ -56,10 +54,9 @@ export default function ListaOrcamentos({ selectedMonth }: ListaOrcamentosProps)
     const categoriaMatch = !filtros.categoria || orc.categoria === filtros.categoria;
     const statusMatch = !filtros.status || orc.status === filtros.status;
     const origemMatch = !filtros.origem || orc.origemCliente === filtros.origem;
-    
+
     // Aplicar filtro de mês automaticamente baseado no selectedMonth
     const mesMatch = isSameMonthYear(orc.data, selectedMonth.toISOString().split('T')[0]);
-    
     return nomeMatch && categoriaMatch && statusMatch && mesMatch && origemMatch;
   });
 
@@ -107,7 +104,6 @@ export default function ListaOrcamentos({ selectedMonth }: ListaOrcamentosProps)
   };
   const atualizarStatus = (id: string, novoStatus: string) => {
     const orcamento = orcamentos.find(o => o.id === id);
-    
     atualizarOrcamento(id, {
       status: novoStatus as any
     });
@@ -116,11 +112,12 @@ export default function ListaOrcamentos({ selectedMonth }: ListaOrcamentosProps)
     if (novoStatus === 'fechado') {
       if (orcamento) {
         console.log('Orçamento fechado - criando agendamento automático:', orcamento);
-        
+
         // Criar agendamento automaticamente quando o status for fechado
         // Este agendamento será automaticamente sincronizado com o workflow
         const agendamentoData = {
-          date: parseDateFromStorage(orcamento.data), // Usar função que trata timezone corretamente
+          date: parseDateFromStorage(orcamento.data),
+          // Usar função que trata timezone corretamente
           time: orcamento.hora,
           title: orcamento.cliente.nome,
           type: orcamento.categoria,
@@ -132,7 +129,6 @@ export default function ListaOrcamentos({ selectedMonth }: ListaOrcamentosProps)
           clientEmail: orcamento.cliente.email,
           paidAmount: 0
         };
-
         console.log('Dados do agendamento a ser criado:', agendamentoData);
       }
     }
@@ -216,7 +212,7 @@ export default function ListaOrcamentos({ selectedMonth }: ListaOrcamentosProps)
 
       <CardContent>
         <div className="overflow-x-auto max-h-96 overflow-y-auto">
-          <Table>
+          <Table className="bg-card text-foreground border-chart-primary ">
             <TableHeader className="sticky top-0 bg-background z-10">
               <TableRow>
                 {colunasVisiveis.cliente && <TableHead>Cliente</TableHead>}
@@ -316,18 +312,10 @@ export default function ListaOrcamentos({ selectedMonth }: ListaOrcamentosProps)
       </CardContent>
 
       {/* Modal de Detalhes */}
-      <OrcamentoDetailsModal 
-        isOpen={!!selectedOrcamento} 
-        onClose={() => setSelectedOrcamento(null)} 
-        orcamento={selectedOrcamento} 
-      />
+      <OrcamentoDetailsModal isOpen={!!selectedOrcamento} onClose={() => setSelectedOrcamento(null)} orcamento={selectedOrcamento} />
 
       {/* Modal de Edição */}
-      <EditOrcamentoModal
-        isOpen={!!orcamentoParaEditar}
-        onClose={() => setOrcamentoParaEditar(null)}
-        orcamento={orcamentoParaEditar}
-      />
+      <EditOrcamentoModal isOpen={!!orcamentoParaEditar} onClose={() => setOrcamentoParaEditar(null)} orcamento={orcamentoParaEditar} />
 
     </Card>;
 }
