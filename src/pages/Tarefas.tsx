@@ -39,9 +39,7 @@ export default function Tarefas() {
   }, []);
 
   const [view, setView] = useState<'kanban' | 'list'>(() => (localStorage.getItem('lunari_tasks_view') as any) || 'kanban');
-  const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | TaskStatus>('all');
-  const [assigneeFilter, setAssigneeFilter] = useState('');
   const [tagFilter, setTagFilter] = useState('');
   const [sortKey, setSortKey] = useState<'dueDate' | 'priority' | 'createdAt'>('dueDate');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
@@ -50,16 +48,12 @@ export default function Tarefas() {
   const [editTaskData, setEditTaskData] = useState<Task | null>(null);
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
     const tag = tagFilter.trim().toLowerCase();
-    const assignee = assigneeFilter.trim().toLowerCase();
 
     let arr = tasks.filter(t => {
-      const inQuery = !q || t.title.toLowerCase().includes(q) || (t.description?.toLowerCase().includes(q));
       const inStatus = statusFilter === 'all' || t.status === statusFilter;
-      const inAssignee = !assignee || (t.assigneeName?.toLowerCase().includes(assignee));
       const inTag = !tag || (t.tags || []).some(x => x.toLowerCase().includes(tag));
-      return inQuery && inStatus && inAssignee && inTag;
+      return inStatus && inTag;
     });
 
     arr.sort((a, b) => {
@@ -79,7 +73,7 @@ export default function Tarefas() {
     });
 
     return arr;
-  }, [tasks, query, statusFilter, assigneeFilter, tagFilter, sortKey, sortDir]);
+  }, [tasks, statusFilter, tagFilter, sortKey, sortDir]);
 
   const groups = useMemo(() => groupByStatus(filtered), [filtered]);
 
@@ -181,9 +175,7 @@ export default function Tarefas() {
 
       {/* Filtros */}
       <Card className="p-3 bg-lunar-surface border-lunar-border/60">
-        <div className="grid md:grid-cols-5 sm:grid-cols-2 grid-cols-1 gap-2">
-          <Input placeholder="Buscar por título ou descrição" value={query} onChange={e => setQuery(e.target.value)} />
-          <Input placeholder="Filtrar por responsável" value={assigneeFilter} onChange={e => setAssigneeFilter(e.target.value)} />
+        <div className="grid md:grid-cols-3 sm:grid-cols-2 grid-cols-1 gap-2">
           <Input placeholder="Filtrar por etiqueta" value={tagFilter} onChange={e => setTagFilter(e.target.value)} />
           <Select value={statusFilter} onValueChange={v => setStatusFilter(v as any)}>
             <SelectTrigger className="h-8"><SelectValue placeholder="Status" /></SelectTrigger>
