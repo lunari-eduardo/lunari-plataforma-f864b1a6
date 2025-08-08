@@ -395,7 +395,7 @@ export function EstruturaCustosFixos({
             
             
             {/* Formulário de adição rápida */}
-            <div className="border bg-card text-foreground border-chart-primary rounded-lg p-3 mb-4">
+            <div className=" bg-card text-foreground border-chart-neutral rounded-lg p-3 mb-4">
               <div className="grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
                 <div>
                   <Label className="text-xs text-blue-700">Nome</Label>
