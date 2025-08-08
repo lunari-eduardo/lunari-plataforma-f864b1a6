@@ -333,14 +333,14 @@ export function EstruturaCustosFixos({
                   <Input placeholder="Ex: Aluguel, Energia, Internet..." value={novoCustoEstudio.descricao} onChange={e => setNovoCustoEstudio(prev => ({
                   ...prev,
                   descricao: e.target.value
-                }))} className="bg-white" />
+                }))} className="border bg-card text-foreground border-chart-primary " />
                 </div>
                 <div>
                   <Label className="text-xs text-blue-700">Valor</Label>
                   <Input type="number" min="0" step="0.01" placeholder="0,00" value={novoCustoEstudio.valor} onChange={e => setNovoCustoEstudio(prev => ({
                   ...prev,
                   valor: e.target.value
-                }))} className="bg-white" />
+                }))} className="border bg-card text-foreground border-chart-primary " />
                 </div>
               </div>
               <div className="mt-3">
