@@ -295,7 +295,7 @@ export default function Agenda() {
 
       {/* Appointment Form Modal */}
       <Dialog open={isAppointmentDialogOpen} onOpenChange={setIsAppointmentDialogOpen}>
-        <DialogContent className="sm:max-w-[500px] border-0 shadow-lg bg-card text-foreground  ">
+        <DialogContent className="sm:max-w-[500px] shadow-lg bg-card text-foreground border border-border">
           <DialogHeader>
             <DialogTitle className="text-lg font-semibold bg-card text-foreground ">
               {editingAppointment ? 'Editar Agendamento' : 'Novo Agendamento'}
@@ -311,14 +311,14 @@ export default function Agenda() {
 
       {/* Appointment Details Modal */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <DialogContent className="sm:max-w-[500px] border-0 shadow-lg bg-stone-50">
+        <DialogContent className="sm:max-w-[500px] shadow-lg bg-card text-foreground border border-border">
           {viewingAppointment && <AppointmentDetails appointment={viewingAppointment} onSave={handleSaveAppointment} onCancel={() => setIsDetailsOpen(false)} onDelete={handleDeleteAppointment} />}
         </DialogContent>
       </Dialog>
 
       {/* Budget Appointment Details Modal */}
       <Dialog open={isBudgetAppointmentModalOpen} onOpenChange={setIsBudgetAppointmentModalOpen}>
-        <DialogContent className="sm:max-w-[600px] border-0 shadow-lg bg-neutral-50">
+        <DialogContent className="sm:max-w-[600px] shadow-lg bg-card text-foreground border border-border">
           {selectedBudgetAppointment && <BudgetAppointmentDetails appointment={selectedBudgetAppointment.appointment} budget={selectedBudgetAppointment.budget} onSave={handleSaveBudgetAppointment} onCancel={() => setIsBudgetAppointmentModalOpen(false)} onViewFullBudget={handleViewFullBudget} onDelete={handleDeleteAppointment} />}
         </DialogContent>
       </Dialog>
