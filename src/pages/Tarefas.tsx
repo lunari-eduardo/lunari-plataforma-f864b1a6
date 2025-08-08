@@ -13,7 +13,8 @@ import TaskFormModal from '@/components/tarefas/TaskFormModal';
 import TaskCard from '@/components/tarefas/TaskCard';
 import PriorityLegend from '@/components/tarefas/PriorityLegend';
 import { cn } from '@/lib/utils';
-
+import { useTaskStatuses } from '@/hooks/useTaskStatuses';
+import ManageTaskStatusesModal from '@/components/tarefas/ManageTaskStatusesModal';
 function groupByStatus(tasks: Task[]) {
   return tasks.reduce<Record<TaskStatus, Task[]>>((acc, t) => {
     (acc[t.status] ||= []).push(t);
@@ -45,7 +46,13 @@ export default function Tarefas() {
   const [sortKey, setSortKey] = useState<'dueDate' | 'priority' | 'createdAt'>('dueDate');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
 
-  const [createOpen, setCreateOpen] = useState(false);
+const { statuses, getDoneKey, getDefaultOpenKey } = useTaskStatuses();
+const doneKey = getDoneKey();
+const defaultOpenKey = getDefaultOpenKey();
+const statusOptions = useMemo(() => statuses.map(s => ({ value: s.key, label: s.name })), [statuses]);
+const [manageStatusesOpen, setManageStatusesOpen] = useState(false);
+
+const [createOpen, setCreateOpen] = useState(false);
   const [editTaskData, setEditTaskData] = useState<Task | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<TaskStatus | null>(null);
@@ -78,9 +85,14 @@ export default function Tarefas() {
     return arr;
   }, [tasks, statusFilter, tagFilter, sortKey, sortDir]);
 
-  const groups = useMemo(() => groupByStatus(filtered), [filtered]);
+  const groups = useMemo(() => {
+    const map: Record<string, Task[]> = {};
+    statuses.forEach(s => { map[s.key] = []; });
+    filtered.forEach(t => { (map[t.status] ||= []).push(t); });
+    return map;
+  }, [filtered, statuses]);
 
-  const StatusColumn = ({ title, statusKey }: { title: string; statusKey: TaskStatus }) => (
+  const StatusColumn = ({ title, statusKey }: { title: string; statusKey: string }) => (
     <section className="flex-1 min-w-[260px]">
       <header className="flex items-center justify-between mb-2">
         <h2 className="text-sm font-semibold text-lunar-text">{title}</h2>
@@ -91,13 +103,13 @@ export default function Tarefas() {
           "p-2 bg-lunar-surface border-lunar-border/60 max-h-[70vh] overflow-y-auto",
           dragOverColumn === statusKey ? "ring-2 ring-lunar-accent/60" : ""
         )}
-        onDragOver={(e) => { e.preventDefault(); if (draggingId) setDragOverColumn(statusKey); }}
-        onDragLeave={() => { if (dragOverColumn === statusKey) setDragOverColumn(null); }}
+        onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; if (draggingId) setDragOverColumn(statusKey as any); }}
+        onDragLeave={() => { if (dragOverColumn === (statusKey as any)) setDragOverColumn(null); }}
         onDrop={(e) => {
           e.preventDefault();
           const id = e.dataTransfer.getData('text/plain');
           if (id) {
-            updateTask(id, { status: statusKey });
+            updateTask(id, { status: statusKey as any });
             toast({ title: 'Tarefa movida' });
           }
           setDragOverColumn(null);
@@ -105,20 +117,22 @@ export default function Tarefas() {
         }}
       >
         <ul className="space-y-2">
-          {(groups[statusKey] || []).map((t) => (
-            <TaskCard
-              key={t.id}
-              task={t}
-              onComplete={() => { updateTask(t.id, { status: 'done' }); toast({ title: 'Tarefa concluída' }); }}
-              onReopen={() => updateTask(t.id, { status: 'todo' })}
-              onEdit={() => setEditTaskData(t)}
-              onDelete={() => deleteTask(t.id)}
-              onDragStart={(id) => setDraggingId(id)}
-              onDragEnd={() => { setDraggingId(null); setDragOverColumn(null); }}
-              isDragging={draggingId === t.id}
-              onRequestMove={(status) => { updateTask(t.id, { status }); toast({ title: 'Tarefa movida' }); }}
-            />
-          ))}
+            {(groups[statusKey] || []).map((t) => (
+              <TaskCard
+                key={t.id}
+                task={t}
+                onComplete={() => { updateTask(t.id, { status: doneKey as any }); toast({ title: 'Tarefa concluída' }); }}
+                onReopen={() => updateTask(t.id, { status: defaultOpenKey as any })}
+                onEdit={() => setEditTaskData(t)}
+                onDelete={() => deleteTask(t.id)}
+                onDragStart={(id) => setDraggingId(id)}
+                onDragEnd={() => { setDraggingId(null); setDragOverColumn(null); }}
+                isDragging={draggingId === t.id}
+                onRequestMove={(status) => { updateTask(t.id, { status: status as any }); toast({ title: 'Tarefa movida' }); }}
+                isDone={t.status === (doneKey as any)}
+                statusOptions={statusOptions}
+              />
+            ))}
         </ul>
       </Card>
     </section>
@@ -155,18 +169,17 @@ export default function Tarefas() {
               </div>
             </div>
             <div className="flex items-center gap-1 shrink-0">
-              {t.status !== 'done' ? (
-                <Button variant="secondary" size="sm" className="h-7 text-2xs" onClick={() => updateTask(t.id, { status: 'done' })}>Concluir</Button>
+              {t.status !== (doneKey as any) ? (
+                <Button variant="secondary" size="sm" className="h-7 text-2xs" onClick={() => updateTask(t.id, { status: doneKey as any })}>Concluir</Button>
               ) : (
-                <Button variant="ghost" size="sm" className="h-7 text-2xs" onClick={() => updateTask(t.id, { status: 'todo' })}>Reabrir</Button>
+                <Button variant="ghost" size="sm" className="h-7 text-2xs" onClick={() => updateTask(t.id, { status: defaultOpenKey as any })}>Reabrir</Button>
               )}
-              <Select value={t.status} onValueChange={v => updateTask(t.id, { status: v as TaskStatus })}>
-                <SelectTrigger className="h-7 px-2 text-2xs w-[120px]"><SelectValue /></SelectTrigger>
+              <Select value={t.status} onValueChange={v => updateTask(t.id, { status: v as any })}>
+                <SelectTrigger className="h-7 px-2 text-2xs w-[140px]"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="todo">A Fazer</SelectItem>
-                  <SelectItem value="doing">Em Andamento</SelectItem>
-                  <SelectItem value="waiting">Aguardando</SelectItem>
-                  <SelectItem value="done">Concluída</SelectItem>
+                  {statusOptions.map(opt => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <Button variant="ghost" size="sm" className="h-7 text-2xs" onClick={() => setEditTaskData(t)}>Editar</Button>
@@ -193,6 +206,7 @@ export default function Tarefas() {
               <SelectItem value="list">Lista</SelectItem>
             </SelectContent>
           </Select>
+          <Button variant="outline" onClick={() => setManageStatusesOpen(true)}>Gerenciar status</Button>
           <Button onClick={() => setCreateOpen(true)}>Nova tarefa</Button>
         </div>
       </header>
@@ -205,10 +219,9 @@ export default function Tarefas() {
             <SelectTrigger className="h-8"><SelectValue placeholder="Status" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos status</SelectItem>
-              <SelectItem value="todo">A Fazer</SelectItem>
-              <SelectItem value="doing">Em Andamento</SelectItem>
-              <SelectItem value="waiting">Aguardando</SelectItem>
-              <SelectItem value="done">Concluída</SelectItem>
+              {statusOptions.map(opt => (
+                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <div className="flex gap-2">
@@ -236,10 +249,9 @@ export default function Tarefas() {
       {view === 'kanban' ? (
         <div className="overflow-x-auto">
           <div className="flex gap-4 min-w-max pr-2">
-            <StatusColumn title="A Fazer" statusKey="todo" />
-            <StatusColumn title="Em Andamento" statusKey="doing" />
-            <StatusColumn title="Aguardando" statusKey="waiting" />
-            <StatusColumn title="Concluídas" statusKey="done" />
+            {statuses.map(col => (
+              <StatusColumn key={col.id} title={col.name} statusKey={col.key as any} />
+            ))}
           </div>
         </div>
       ) : (
@@ -255,6 +267,8 @@ export default function Tarefas() {
           toast({ title: 'Tarefa criada', description: t.title });
         }}
       />
+
+      <ManageTaskStatusesModal open={manageStatusesOpen} onOpenChange={setManageStatusesOpen} />
 
       {editTaskData && (
         <TaskFormModal

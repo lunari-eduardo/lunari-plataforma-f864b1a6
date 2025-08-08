@@ -28,6 +28,7 @@ export const STORAGE_KEYS = {
   AVAILABILITY: 'lunari_availability_slots',
   // Tarefas e Automações
   TASKS: 'lunari_tasks',
+  TASK_STATUSES: 'lunari_task_statuses',
   AUTOMATION_FLAGS: 'lunari_automation_flags',
   FOLLOWUP_FLAGS: 'lunari_followup_flags'
 } as const;

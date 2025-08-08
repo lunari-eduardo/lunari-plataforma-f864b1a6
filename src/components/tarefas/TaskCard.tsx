@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import type { Task, TaskStatus, TaskPriority } from '@/types/tasks';
+import type { Task, TaskPriority } from '@/types/tasks';
 import { Link } from 'react-router-dom';
 import { GripVertical } from 'lucide-react';
 
@@ -32,6 +32,8 @@ export default function TaskCard({
   onDragEnd,
   isDragging = false,
   onRequestMove,
+  isDone,
+  statusOptions,
 }: {
   task: Task;
   onComplete: () => void;
@@ -41,7 +43,9 @@ export default function TaskCard({
   onDragStart?: (id: string) => void;
   onDragEnd?: () => void;
   isDragging?: boolean;
-  onRequestMove?: (status: TaskStatus) => void;
+  onRequestMove?: (status: string) => void;
+  isDone: boolean;
+  statusOptions: { value: string; label: string }[];
 }) {
   const [open, setOpen] = useState(false);
   const dueInfo = useMemo(() => {
@@ -144,15 +148,14 @@ export default function TaskCard({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="z-50">
-              <DropdownMenuLabel>Mover para</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={() => { onRequestMove?.('todo'); setMenuOpen(false); }}>A Fazer</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => { onRequestMove?.('doing'); setMenuOpen(false); }}>Em Andamento</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => { onRequestMove?.('waiting'); setMenuOpen(false); }}>Aguardando</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => { onRequestMove?.('done'); setMenuOpen(false); }}>Concluída</DropdownMenuItem>
+              {statusOptions.map((opt) => (
+                <DropdownMenuItem key={opt.value} onSelect={() => { onRequestMove?.(opt.value); setMenuOpen(false); }} disabled={opt.value === t.status}>
+                  {opt.label}
+                </DropdownMenuItem>
+              ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          {t.status !== 'done' ? (
+          {!isDone ? (
             <Button
               variant="secondary"
               size="sm"
