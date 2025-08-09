@@ -10,12 +10,12 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-lunar-accent text-lunar-text shadow-sm hover:bg-lunar-accentHover hover:shadow-lunar-hover hover:translate-y-[-1px] active:translate-y-0",
-        destructive: "bg-lunar-error text-white shadow-sm hover:bg-lunar-error/90 hover:shadow-lunar-hover hover:translate-y-[-1px] active:translate-y-0",
-        outline: "border border-lunar-border bg-lunar-surface text-lunar-text hover:bg-lunar-bg hover:shadow-lunar-sm hover:translate-y-[-1px] active:translate-y-0",
-        secondary: "bg-lunar-surface text-lunar-textSecondary shadow-sm hover:bg-lunar-bg hover:text-lunar-text hover:shadow-lunar-sm hover:translate-y-[-1px] active:translate-y-0",
-        ghost: "text-lunar-text hover:bg-lunar-surface/50 hover:text-lunar-text hover:shadow-lunar-sm hover:translate-y-[-1px] active:translate-y-0",
-        link: "text-lunar-accent underline-offset-4 hover:underline",
+        default: "bg-lunar-accent text-lunar-text shadow-sm",
+        destructive: "bg-lunar-error text-white shadow-sm",
+        outline: "border border-lunar-border bg-lunar-surface text-lunar-text",
+        secondary: "bg-lunar-surface text-lunar-textSecondary shadow-sm",
+        ghost: "text-lunar-text",
+        link: "text-lunar-accent underline-offset-4",
       },
       size: {
         default: "h-7 px-3 py-1",

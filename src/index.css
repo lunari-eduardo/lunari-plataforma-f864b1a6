@@ -87,9 +87,7 @@
     transition: all 0.15s ease-out;
   }
 
-  .card-lunar:hover {
-    @apply shadow-lunar-md transform scale-[1.01];
-  }
+  /* Hover effects removed globally - card-lunar */
 
   /* Lunar Button */
   .btn-lunar {
@@ -127,10 +125,7 @@
     background: transparent;
   }
 
-  .nav-item-lunar:hover {
-    @apply bg-lunar-surface/50 transform translate-y-[-1px];
-    box-shadow: 0 2px 4px rgba(203, 169, 119, 0.1);
-  }
+  /* Hover effects removed globally - nav-item-lunar */
 
   .nav-item-lunar.active {
     @apply text-lunar-accent bg-lunar-surface;
@@ -152,9 +147,7 @@
     @apply py-2 px-3 text-xs text-lunar-text;
   }
 
-  .table-lunar tr:hover td {
-    @apply bg-lunar-bg/30;
-  }
+  /* Hover effects removed globally - table row highlight */
 
   /* Utilidades de espaçamento compacto */
   .space-compact > * + * {
@@ -213,6 +206,24 @@
     @apply bg-lunar-surface border-lunar-border text-lunar-text shadow-lunar-md;
   }
 
+  /* Global: remove all hover visual effects across the app (no functional changes) */
+  *:hover {
+    box-shadow: none !important;
+    transform: none !important;
+    filter: none !important;
+    text-decoration: none !important;
+  }
+  *:hover::before,
+  *:hover::after {
+    transform: none !important;
+    opacity: inherit !important;
+  }
+  /* Disable hover background highlight on tables */
+  table tr:hover td,
+  .table-lunar tr:hover td {
+    background: none !important;
+    background-color: inherit !important;
+  }
   /* Desativar efeitos de hover na página de Tarefas */
   .page-tarefas * {
     @apply transition-none;
