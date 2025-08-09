@@ -6,7 +6,7 @@ import { FeedStorage } from '@/services/FeedStorage';
 import type { FeedImage } from '@/types/feed';
 import { useToast } from '@/components/ui/use-toast';
 import { loadImageFromFile, compressToJpeg } from '@/utils/imageUtils';
-
+import { storage, STORAGE_KEYS } from '@/utils/localStorage';
 export default function FeedTest() {
   const [images, setImages] = useState<FeedImage[]>(() => FeedStorage.load());
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -14,13 +14,15 @@ export default function FeedTest() {
   const [dragId, setDragId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
 
-  // mobile long press
+  // mobile long press + modo reorganização
   const [mobileDragId, setMobileDragId] = useState<string | null>(null);
+  const [reorderMode, setReorderMode] = useState<boolean>(false);
+  const [device, setDevice] = useState<'mobile' | 'tablet' | 'desktop'>('mobile');
+  const [zoom, setZoom] = useState<number>(1);
   const pressTimer = useRef<number | null>(null);
 
   const inputRef = useRef<HTMLInputElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
-
   const { toast } = useToast();
 
   useEffect(() => {
@@ -34,6 +36,52 @@ export default function FeedTest() {
     }
     meta.setAttribute('content', desc);
   }, []);
+
+  // responsividade e zoom
+  const [deviceStateReady, setDeviceStateReady] = useState(false);
+  useEffect(() => {
+    const compute = () => {
+      const w = window.innerWidth;
+      const next = w < 768 ? 'mobile' : w < 1024 ? 'tablet' : 'desktop';
+      setDevice(next as any);
+    };
+    compute();
+    setDeviceStateReady(true);
+    window.addEventListener('resize', compute);
+    return () => window.removeEventListener('resize', compute);
+  }, []);
+
+  useEffect(() => {
+    if (!deviceStateReady) return;
+    if (device === 'mobile') {
+      setZoom(1);
+      return;
+    }
+    const key = device === 'desktop' ? STORAGE_KEYS.FEED_ZOOM_DESKTOP : STORAGE_KEYS.FEED_ZOOM_TABLET;
+    const defaults = device === 'desktop' ? 1 : 0.9;
+    const saved = storage.load<number>(key, defaults);
+    setZoom(saved);
+  }, [device, deviceStateReady]);
+
+  const zoomRange = useMemo(() => {
+    if (device === 'desktop') return { min: 0.6, max: 1.0, step: 0.05 } as const;
+    if (device === 'tablet') return { min: 0.75, max: 1.0, step: 0.05 } as const;
+    return { min: 1, max: 1, step: 1 } as const;
+  }, [device]);
+
+  const setZoomPersist = (val: number) => {
+    setZoom(val);
+    if (device !== 'mobile') {
+      const key = device === 'desktop' ? STORAGE_KEYS.FEED_ZOOM_DESKTOP : STORAGE_KEYS.FEED_ZOOM_TABLET;
+      storage.save(key, val);
+    }
+  };
+
+  const gridWidthStyle = useMemo(() => {
+    if (device === 'desktop') return { width: `calc(min(33vw, 400px) * ${zoom})` } as React.CSSProperties;
+    if (device === 'tablet') return { width: `calc(100vw * ${zoom})` } as React.CSSProperties;
+    return undefined;
+  }, [device, zoom]);
 
   // click fora para limpar seleção
   useEffect(() => {
@@ -160,12 +208,17 @@ export default function FeedTest() {
     });
   };
 
-  // Mobile long-press reorder
+  // Mobile long-press reorder + modo reorganização
   const onItemPointerDown = (id: string, e: React.PointerEvent) => {
     if (pressTimer.current) window.clearTimeout(pressTimer.current);
-    pressTimer.current = window.setTimeout(() => {
+    if (device === 'mobile' && reorderMode) {
+      e.preventDefault();
       setMobileDragId(id);
-    }, 220);
+    } else {
+      pressTimer.current = window.setTimeout(() => {
+        setMobileDragId(id);
+      }, 220);
+    }
   };
   const onItemPointerMove = (id: string, e: React.PointerEvent) => {
     if (!mobileDragId) return;
@@ -210,58 +263,104 @@ export default function FeedTest() {
               <Save className="h-4 w-4" />
               <span className="ml-2">Salvar Sequência</span>
             </Button>
+            <Button
+              size="sm"
+              variant={reorderMode ? 'destructive' : 'outline'}
+              className="md:hidden"
+              onClick={() => {
+                setReorderMode((prev) => {
+                  const next = !prev;
+                  if (prev) {
+                    FeedStorage.save(images);
+                    toast({ title: 'Ordem salva', description: 'Reorganização desativada.' });
+                  }
+                  return next;
+                });
+              }}
+            >
+              {reorderMode ? 'Concluir' : 'Reorganizar'}
+            </Button>
           </div>
         </div>
       </header>
 
-      <section ref={containerRef} className="mx-auto w-full px-[2px] bg-background">
-        <div className="grid grid-cols-3 gap-[1px]">
-          {images.map((item) => (
-            <div
-              key={item.id}
-              data-feed-id={item.id}
-              className="relative"
-              draggable
-              onDragStart={(e) => onDragStart(item.id, e)}
-              onDragOver={(e) => onDragOver(item.id, e)}
-              onDrop={(e) => onDrop(item.id, e)}
-              onPointerDown={(e) => onItemPointerDown(item.id, e)}
-              onPointerMove={(e) => onItemPointerMove(item.id, e)}
-              onPointerUp={(e) => onItemPointerUp(item.id, e)}
-              onClick={(e) => { e.stopPropagation(); handleItemClick(item.id); }}
-              onKeyDown={(e) => handleKeyDown(item.id, e)}
-              tabIndex={0}
-            >
-              <AspectRatio ratio={4/5}>
-                <img src={item.url} alt={`Imagem do feed ${item.ordem + 1}`} className="w-full h-full object-cover" loading="lazy" draggable={false} />
-              </AspectRatio>
+      <section ref={containerRef} className="w-full px-[2px] bg-background">
+        <div className="mx-auto" style={gridWidthStyle as React.CSSProperties}>
+          <div className="grid grid-cols-3 gap-[1px]">
+            {images.map((item) => (
+              <div
+                key={item.id}
+                data-feed-id={item.id}
+                className={`relative transition-transform ${mobileDragId === item.id ? 'ring-2 ring-primary shadow-md scale-[0.98]' : ''}`}
+                draggable
+                onDragStart={(e) => onDragStart(item.id, e)}
+                onDragOver={(e) => onDragOver(item.id, e)}
+                onDrop={(e) => onDrop(item.id, e)}
+                onPointerDown={(e) => onItemPointerDown(item.id, e)}
+                onPointerMove={(e) => onItemPointerMove(item.id, e)}
+                onPointerUp={(e) => onItemPointerUp(item.id, e)}
+                onClick={(e) => { e.stopPropagation(); handleItemClick(item.id); }}
+                onKeyDown={(e) => handleKeyDown(item.id, e)}
+                onContextMenu={(e) => { if (reorderMode) e.preventDefault(); }}
+                tabIndex={0}
+              >
+                <AspectRatio ratio={4/5}>
+                  <img src={item.url} alt={`Imagem do feed ${item.ordem + 1}`} className="w-full h-full object-cover" loading="lazy" draggable={false} />
+                </AspectRatio>
 
-              {selectedId === item.id && (
-                <div className="absolute top-1 right-1 flex gap-1 z-10">
-                  <button
-                    aria-label="Excluir"
-                    className="h-7 w-7 rounded bg-foreground/70 text-background grid place-items-center"
-                    onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }}
-                  >
-                    <Trash className="h-4 w-4" />
-                  </button>
-                  <button
-                    aria-label="Trocar foto"
-                    className="h-7 w-7 rounded bg-foreground/70 text-background grid place-items-center"
-                    onClick={(e) => { e.stopPropagation(); handleReplace(item.id); }}
-                  >
-                    <ImageUp className="h-4 w-4" />
-                  </button>
-                </div>
-              )}
+                {selectedId === item.id && !reorderMode && (
+                  <div className="absolute top-1 right-1 flex gap-1 z-10">
+                    <button
+                      aria-label="Excluir"
+                      className="h-7 w-7 rounded bg-foreground/70 text-background grid place-items-center"
+                      onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }}
+                    >
+                      <Trash className="h-4 w-4" />
+                    </button>
+                    <button
+                      aria-label="Trocar foto"
+                      className="h-7 w-7 rounded bg-foreground/70 text-background grid place-items-center"
+                      onClick={(e) => { e.stopPropagation(); handleReplace(item.id); }}
+                    >
+                      <ImageUp className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
 
-              {dragOverId === item.id && (
-                <div className="absolute inset-0 ring-2 ring-primary pointer-events-none" />
-              )}
-            </div>
-          ))}
+                {dragOverId === item.id && (
+                  <div className="absolute inset-0 ring-2 ring-primary pointer-events-none" />
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       </section>
+        {/* Zoom Controls (md+) */}
+        <div className="hidden md:flex fixed bottom-3 left-3 z-20 items-center gap-2 rounded-full bg-foreground/70 text-background px-3 py-2 shadow-md">
+          <button
+            aria-label="Diminuir zoom"
+            className="h-7 w-7 grid place-items-center rounded-full bg-background/20"
+            onClick={() => setZoomPersist(Math.max(zoomRange.min, Math.round((zoom - zoomRange.step) * 100) / 100))}
+          >
+            −
+          </button>
+          <input
+            type="range"
+            min={zoomRange.min}
+            max={zoomRange.max}
+            step={zoomRange.step}
+            value={zoom}
+            onChange={(e) => setZoomPersist(parseFloat(e.currentTarget.value))}
+            className="w-32"
+          />
+          <button
+            aria-label="Aumentar zoom"
+            className="h-7 w-7 grid place-items-center rounded-full bg-background/20"
+            onClick={() => setZoomPersist(Math.min(zoomRange.max, Math.round((zoom + zoomRange.step) * 100) / 100))}
+          >
+            +
+          </button>
+        </div>
 
     </main>
   );
