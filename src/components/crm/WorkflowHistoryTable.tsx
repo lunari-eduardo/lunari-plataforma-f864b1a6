@@ -1,13 +1,10 @@
-import { useMemo, useContext } from 'react';
+import { useMemo } from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { History, Calendar, DollarSign, Package, CreditCard } from "lucide-react";
 import { formatCurrency } from '@/utils/financialUtils';
 import { formatDateForDisplay } from '@/utils/dateUtils';
 import { Cliente } from '@/types/orcamentos';
-import { AppContext } from '@/contexts/AppContext';
-import { useAgenda } from '@/hooks/useAgenda';
-import { useUnifiedClientHistory } from '@/hooks/useUnifiedClientHistory';
 interface WorkflowHistoryTableProps {
   cliente: Cliente;
 }
@@ -33,28 +30,69 @@ const parseFinancialValue = (value: any): number => {
 export function WorkflowHistoryTable({
   cliente
 }: WorkflowHistoryTableProps) {
-  const { orcamentos, workflowItems } = useContext(AppContext);
-  const { appointments } = useAgenda();
-
-  // Usar histórico unificado com Projetos como fonte de verdade
-  const historico = useUnifiedClientHistory(cliente, orcamentos, appointments, workflowItems);
-
   const workflowData = useMemo(() => {
-    return historico.map((h) => ({
-      id: h.sessionId,
-      data: h.data.toISOString().split('T')[0],
-      hora: h.hora,
-      nome: h.cliente.nome,
-      categoria: h.categoria,
-      pacote: h.pacote,
-      descricao: h.descricao,
-      status: h.status,
-      total: h.valorFinal,
-      valorPago: h.valorPago,
-      restante: h.valorRestante,
-      produtosList: h.dadosCompletos.workflow?.produtosList || []
-    }));
-  }, [historico]);
+    if (!cliente) return [];
+
+    // FONTE ÚNICA: workflow_sessions com dados corrigidos E deduplicados
+    const workflowSessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
+
+    // Filtrar sessões do cliente (by clienteId E nome como fallback)
+    const clientSessions = workflowSessions.filter((session: any) => {
+      const matchByClienteId = session.clienteId === cliente.id;
+      const matchByName = !session.clienteId && session.nome?.toLowerCase().trim() === cliente.nome.toLowerCase().trim();
+      return matchByClienteId || matchByName;
+    }).sort((a: any, b: any) => new Date(b.data).getTime() - new Date(a.data).getTime());
+
+    // DEDUPLICAÇÃO FINAL por sessionId (caso ainda existam duplicatas)
+    const sessionMap = new Map();
+    clientSessions.forEach((session: any) => {
+      const sessionKey = session.sessionId || session.id;
+      if (!sessionMap.has(sessionKey)) {
+        sessionMap.set(sessionKey, session);
+      }
+    });
+
+    // Corrigir cálculos de cada sessão com parsing robusto
+    return Array.from(sessionMap.values()).map((session: any) => {
+      const valorPacote = parseFinancialValue(session.valorPacote);
+      const desconto = parseFinancialValue(session.desconto);
+      const valorTotalFotoExtra = parseFinancialValue(session.valorTotalFotoExtra);
+      const valorTotalProduto = parseFinancialValue(session.valorTotalProduto);
+      const valorAdicional = parseFinancialValue(session.valorAdicional);
+      const valorPago = parseFinancialValue(session.valorPago);
+
+      // CÁLCULO CORRETO DO TOTAL com validação
+      const totalCalculado = valorPacote + valorTotalFotoExtra + valorTotalProduto + valorAdicional - desconto;
+
+      // Validação final para garantir que não há NaN
+      const totalFinal = isNaN(totalCalculado) ? 0 : totalCalculado;
+      const restante = totalFinal - valorPago;
+
+      // Debug log para identificar problemas nos dados
+      if (isNaN(totalCalculado)) {
+        console.warn('Cálculo de total resultou em NaN:', {
+          sessionId: session.sessionId || session.id,
+          valorPacote,
+          valorTotalFotoExtra,
+          valorTotalProduto,
+          valorAdicional,
+          desconto,
+          originalSession: session
+        });
+      }
+      return {
+        ...session,
+        valorPacote,
+        valorTotalFotoExtra,
+        valorTotalProduto,
+        valorAdicional,
+        desconto,
+        valorPago,
+        total: totalFinal,
+        restante: isNaN(restante) ? 0 : restante
+      };
+    }).sort((a: any, b: any) => new Date(b.data).getTime() - new Date(a.data).getTime());
+  }, [cliente]);
   const getStatusBadge = (status: string) => {
     const colors = {
       'Agendado': 'bg-blue-100 text-blue-800',

@@ -12,7 +12,6 @@ import { initializeApp, needsInitialization } from '@/utils/initializeApp';
 import { Projeto, CriarProjetoInput } from '@/types/projeto';
 import { ProjetoService } from '@/services/ProjetoService';
 import { corrigirClienteIdSessoes, corrigirClienteIdAgendamentos } from '@/utils/corrigirClienteIdSessoes';
-import { saveWorkflowItemsToSessions } from '@/utils/workflowSessionsAdapter';
 
 // Types
 import { Orcamento, Template, OrigemCliente, MetricasOrcamento, Cliente } from '@/types/orcamentos';
@@ -331,17 +330,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     clienteId: projeto.clienteId
   }));
 
-// Compatibilidade: espelhar Projetos em workflow_sessions (legado)
-useEffect(() => {
-  try {
-    saveWorkflowItemsToSessions(workflowItems);
-  } catch (error) {
-    console.error('❌ Erro ao espelhar workflow_sessions:', error);
-  }
-}, [workflowItems]);
-
-// FUNÇÕES PARA GERENCIAR PROJETOS
-const criarProjeto = (input: CriarProjetoInput): Projeto => {
+  // FUNÇÕES PARA GERENCIAR PROJETOS
+  const criarProjeto = (input: CriarProjetoInput): Projeto => {
     const novoProjeto = ProjetoService.criarProjeto(input);
     setProjetos(ProjetoService.carregarProjetos());
     return novoProjeto;
@@ -1560,23 +1550,6 @@ const criarProjeto = (input: CriarProjetoInput): Projeto => {
           });
         }
       }
-
-      // SINCRONIZAÇÃO: Agenda → Projetos (Workflow)
-      try {
-        if (appointmentAtualizado) {
-          const agendamentoKey = `agenda-${id}`;
-          const projetoRelacionado = projetos.find(p => p.agendamentoId === agendamentoKey || p.agendamentoId === id);
-          if (projetoRelacionado) {
-            atualizarProjeto(projetoRelacionado.projectId, {
-              dataAgendada: appointmentAtualizado.date instanceof Date ? appointmentAtualizado.date : new Date(appointmentAtualizado.date),
-              horaAgendada: appointmentAtualizado.time || projetoRelacionado.horaAgendada,
-              descricao: appointmentAtualizado.description ?? projetoRelacionado.descricao
-            });
-          }
-        }
-      } catch (error) {
-        console.error('❌ Erro ao sincronizar resagendamento para Projeto:', error);
-      }
       
       return updatedAppointments;
     });
@@ -1585,14 +1558,21 @@ const criarProjeto = (input: CriarProjetoInput): Projeto => {
   const deleteAppointment = (id: string) => {
     setAppointments(prev => prev.filter(app => app.id !== id));
     
-    // Remover projeto associado se existir (considerando chave com prefixo)
-    const agendamentoKey = `agenda-${id}`;
-    const projeto = projetos.find(p => p.agendamentoId === agendamentoKey || p.agendamentoId === id);
+    // Remover projeto associado se existir
+    const projeto = projetos.find(p => p.agendamentoId === id);
     if (projeto) {
       excluirProjeto(projeto.projectId);
     }
     
-    // workflow_sessions será espelhado automaticamente a partir dos Projetos
+    // Remover do workflow_sessions no localStorage
+    try {
+      const workflowSessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
+      const updatedSessions = workflowSessions.filter((session: any) => session.id !== id);
+      localStorage.setItem('workflow_sessions', JSON.stringify(updatedSessions));
+      console.log('✅ Agendamento removido do workflow:', id);
+    } catch (error) {
+      console.error('❌ Erro ao remover do workflow_sessions:', error);
+    }
   };
 
   // Disponibilidades - Actions
