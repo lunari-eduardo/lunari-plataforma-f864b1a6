@@ -84,6 +84,8 @@ export interface Orcamento {
   // Campos financeiros
   valorFinal: number; // O valor total final calculado
   desconto: number;   // Valor de desconto em R$
+  descontoTipo?: 'valor' | 'percentual';
+  validade?: string;
   
   // Compatibilidade com sistema antigo
   pacotes?: PacoteProduto[]; // Manter para compatibilidade

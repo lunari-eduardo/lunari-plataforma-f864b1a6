@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, FileText, MessageCircle, Trash2, Settings, AlertCircle, Pencil } from 'lucide-react';
+import { Search, FileText, MessageCircle, Trash2, Settings, AlertCircle, Pencil, Copy } from 'lucide-react';
 import { useOrcamentos } from '@/hooks/useOrcamentos';
 import { ORIGENS_PADRAO } from '@/utils/defaultOrigens';
 import { gerarPDFOrcamento } from '@/utils/pdfUtils';
@@ -26,7 +26,8 @@ export default function ListaOrcamentos({ selectedMonth }: ListaOrcamentosProps)
     orcamentos,
     categorias,
     atualizarOrcamento,
-    excluirOrcamento
+    excluirOrcamento,
+    adicionarOrcamento
   } = useOrcamentos();
   const {
     toast
@@ -39,6 +40,7 @@ export default function ListaOrcamentos({ selectedMonth }: ListaOrcamentosProps)
   });
   const [selectedOrcamento, setSelectedOrcamento] = useState<Orcamento | null>(null);
   const [orcamentoParaEditar, setOrcamentoParaEditar] = useState<Orcamento | null>(null);
+  const [ordenacao, setOrdenacao] = useState<'recentes' | 'antigos'>('recentes');
   
   const [colunasVisiveis, setColunasVisiveis] = useState({
     cliente: true,
@@ -53,9 +55,9 @@ export default function ListaOrcamentos({ selectedMonth }: ListaOrcamentosProps)
   // Filtrar orçamentos
   const orcamentosFiltrados = orcamentos.filter(orc => {
     const nomeMatch = orc.cliente?.nome?.toLowerCase().includes(filtros.busca.toLowerCase()) || false;
-    const categoriaMatch = !filtros.categoria || orc.categoria === filtros.categoria;
-    const statusMatch = !filtros.status || orc.status === filtros.status;
-    const origemMatch = !filtros.origem || orc.origemCliente === filtros.origem;
+    const categoriaMatch = !filtros.categoria || filtros.categoria === 'todas' || orc.categoria === filtros.categoria;
+    const statusMatch = !filtros.status || filtros.status === 'todos' || orc.status === filtros.status;
+    const origemMatch = !filtros.origem || filtros.origem === 'todas' || orc.origemCliente === filtros.origem;
     
     // Aplicar filtro de mês automaticamente baseado no selectedMonth
     const mesMatch = isSameMonthYear(orc.data, selectedMonth.toISOString().split('T')[0]);
@@ -67,12 +69,13 @@ export default function ListaOrcamentos({ selectedMonth }: ListaOrcamentosProps)
   const orcamentosOrdenados = orcamentosFiltrados.sort((a, b) => {
     const dataA = parseDateFromStorage(a.data);
     const dataB = parseDateFromStorage(b.data);
-    // Adicionar hora se necessário para comparação
-    const [horaA] = a.hora.split(':').map(Number);
-    const [horaB] = b.hora.split(':').map(Number);
-    dataA.setUTCHours(horaA);
-    dataB.setUTCHours(horaB);
-    return dataA.getTime() - dataB.getTime();
+    // Adicionar hora para comparação
+    const [horaA, minA] = a.hora.split(':').map(Number);
+    const [horaB, minB] = b.hora.split(':').map(Number);
+    dataA.setHours(horaA, minA || 0, 0, 0);
+    dataB.setHours(horaB, minB || 0, 0, 0);
+    const diff = dataA.getTime() - dataB.getTime();
+    return ordenacao === 'recentes' ? -diff : diff;
   });
 
   // Verificar se orçamento está atrasado (follow-up há mais de 7 dias)
@@ -82,6 +85,13 @@ export default function ListaOrcamentos({ selectedMonth }: ListaOrcamentosProps)
     const agora = new Date();
     const diffDias = (agora.getTime() - dataOrc.getTime()) / (1000 * 3600 * 24);
     return diffDias > 7;
+  };
+
+  const daysUntil = (isoDate: string) => {
+    const today = new Date(); today.setHours(0,0,0,0);
+    const target = parseDateFromStorage(isoDate);
+    const diffMs = target.getTime() - today.getTime();
+    return Math.floor(diffMs / (1000 * 60 * 60 * 24));
   };
   const exportarPDF = async (orcamento: any) => {
     try {
@@ -169,10 +179,10 @@ export default function ListaOrcamentos({ selectedMonth }: ListaOrcamentosProps)
             <SelectTrigger>
               <SelectValue placeholder="Categoria" />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todas">Todas categorias</SelectItem>
-              {categorias.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
-            </SelectContent>
+              <SelectContent>
+                <SelectItem value="todas">Todas categorias</SelectItem>
+                {categorias.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+              </SelectContent>
           </Select>
 
           <Select value={filtros.status} onValueChange={value => setFiltros({
@@ -182,15 +192,15 @@ export default function ListaOrcamentos({ selectedMonth }: ListaOrcamentosProps)
             <SelectTrigger>
               <SelectValue placeholder="Status" />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos status</SelectItem>
-              <SelectItem value="rascunho">Novo</SelectItem>
-              <SelectItem value="pendente">Pendente</SelectItem>
-              <SelectItem value="enviado">Enviado</SelectItem>
-              <SelectItem value="follow-up">Follow-up</SelectItem>
-              <SelectItem value="fechado">Fechado</SelectItem>
-              <SelectItem value="cancelado">Cancelado</SelectItem>
-            </SelectContent>
+              <SelectContent>
+                <SelectItem value="todos">Todos status</SelectItem>
+                <SelectItem value="rascunho">Novo</SelectItem>
+                <SelectItem value="pendente">Pendente</SelectItem>
+                <SelectItem value="enviado">Enviado</SelectItem>
+                <SelectItem value="follow-up">Follow-up</SelectItem>
+                <SelectItem value="fechado">Fechado</SelectItem>
+                <SelectItem value="cancelado">Cancelado</SelectItem>
+              </SelectContent>
           </Select>
 
           
@@ -208,7 +218,17 @@ export default function ListaOrcamentos({ selectedMonth }: ListaOrcamentosProps)
             </SelectContent>
           </Select>
 
-          <Button variant="outline" onClick={limparFiltros}>
+          <Select value={ordenacao} onValueChange={(v: any) => setOrdenacao(v)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Ordenar" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="recentes">Mais recentes</SelectItem>
+              <SelectItem value="antigos">Mais antigos</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Button variant="outline" onClick={() => { limparFiltros(); setOrdenacao('recentes'); }}>
             Limpar
           </Button>
         </div>
@@ -267,6 +287,16 @@ export default function ListaOrcamentos({ selectedMonth }: ListaOrcamentosProps)
                         <div className="text-xs">
                           <div className="font-medium">{formatDateForDisplay(orcamento.data)}</div>
                           <div className="text-neumorphic-textLight">{orcamento.hora}</div>
+                          {orcamento.validade && (
+                            <div className="mt-1 text-[10px]">
+                              {(() => {
+                                const dias = daysUntil(orcamento.validade!);
+                                if (dias < 0) return <span className="text-destructive">Expirado</span>;
+                                if (dias <= 3) return <span className="text-amber-600">Vence em {dias} dia{dias === 1 ? '' : 's'}</span>;
+                                return <span className="text-muted-foreground">Válido até {formatDateForDisplay(orcamento.validade!)}</span>;
+                              })()}
+                            </div>
+                          )}
                         </div>
                       </TableCell>}
                     
@@ -292,12 +322,15 @@ export default function ListaOrcamentos({ selectedMonth }: ListaOrcamentosProps)
                            <Button size="sm" variant="ghost" onClick={() => setOrcamentoParaEditar(orcamento)} title="Editar Orçamento">
                              <Pencil className="h-3 w-3" />
                            </Button>
-                          <Button size="sm" variant="ghost" onClick={() => enviarWhatsAppOrcamento(orcamento)} title="Enviar WhatsApp">
-                            <MessageCircle className="h-3 w-3" />
-                          </Button>
-                          <Button size="sm" variant="ghost" onClick={() => excluirOrcamento(orcamento.id)} title="Excluir">
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
+                           <Button size="sm" variant="ghost" onClick={() => duplicarOrcamento(orcamento)} title="Duplicar Orçamento">
+                             <Copy className="h-3 w-3" />
+                           </Button>
+                           <Button size="sm" variant="ghost" onClick={() => enviarWhatsAppOrcamento(orcamento)} title="Enviar WhatsApp">
+                             <MessageCircle className="h-3 w-3" />
+                           </Button>
+                           <Button size="sm" variant="ghost" onClick={() => excluirOrcamento(orcamento.id)} title="Excluir">
+                             <Trash2 className="h-3 w-3" />
+                           </Button>
                         </div>
                       </TableCell>}
                   </TableRow>;

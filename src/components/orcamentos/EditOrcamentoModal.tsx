@@ -53,6 +53,8 @@ export default function EditOrcamentoModal({
     pacotePrincipal: null as any,
     produtosAdicionais: [] as ProdutoSelecionado[],
     desconto: 0,
+    descontoTipo: 'valor' as 'valor' | 'percentual',
+    validade: '',
     isOrcamentoFechado: false
   };
   const [formData, setFormData] = useState(initialFormState);
@@ -136,6 +138,8 @@ export default function EditOrcamentoModal({
         pacotePrincipal: pacotePrincipalCompleto,
         produtosAdicionais: produtosAdicionais,
         desconto: orcamento.desconto || 0,
+        descontoTipo: (orcamento as any).descontoTipo || 'valor',
+        validade: (orcamento as any).validade || '',
         isOrcamentoFechado: orcamento.status === 'fechado'
       });
     }
@@ -267,49 +271,51 @@ export default function EditOrcamentoModal({
       });
     }
     pacotesParaSalvar.push(...formData.produtosAdicionais);
-    const updates: Partial<Orcamento> = {
-      detalhes: formData.detalhes,
-      data: formatDateForStorage(formData.data),
-      hora: formData.hora,
-      descricao: formData.descricao // Permitir editar descrição mesmo em orçamentos fechados
-    };
-    if (!formData.isOrcamentoFechado) {
-      if (formData.cliente) {
-        updates.cliente = formData.cliente;
-      }
-      updates.categoria = formData.categoria;
-      updates.origemCliente = formData.origem;
-      updates.pacotes = pacotesParaSalvar;
-      updates.valorTotal = valorTotal;
-      updates.desconto = formData.desconto;
-      
-      // NOVA ESTRUTURA: Evitar duplicação de dados
-      if (formData.pacotePrincipal) {
-        updates.pacotePrincipal = {
-          pacoteId: formData.pacotePrincipal.id,
-          nome: formData.pacotePrincipal.nome,
-          valorCongelado: valorPacotePrincipal,
-          produtosIncluidos: (formData.pacotePrincipal.produtosIncluidos || []).map((produtoIncluso: any) => ({
-            produtoId: produtoIncluso.produtoId,
-            nome: produtoIncluso.nome || 'Produto não encontrado',
-            quantidade: produtoIncluso.quantidade || 1,
-            valorUnitarioCongelado: 0,
-            tipo: 'incluso' as const
-          }))
-        };
-      }
-      
-      updates.produtosAdicionais = produtosManuais.map(p => ({
-        produtoId: p.id,
-        nome: p.nome,
-        quantidade: p.quantidade,
-        valorUnitarioCongelado: p.preco,
-        tipo: 'manual' as const
-      }));
-      
-      updates.valorFinal = valorTotal - formData.desconto;
+  const updates: Partial<Orcamento> = {
+    detalhes: formData.detalhes,
+    data: formatDateForStorage(formData.data),
+    hora: formData.hora,
+    descricao: formData.descricao // Permitir editar descrição mesmo em orçamentos fechados
+  };
+  if (!formData.isOrcamentoFechado) {
+    if (formData.cliente) {
+      updates.cliente = formData.cliente;
     }
-    atualizarOrcamento(orcamento.id, updates);
+    updates.categoria = formData.categoria;
+    updates.origemCliente = formData.origem;
+    updates.pacotes = pacotesParaSalvar;
+    updates.valorTotal = valorTotal;
+    updates.desconto = descontoEmReais;
+    updates.descontoTipo = formData.descontoTipo;
+    updates.validade = formData.validade;
+    
+    // NOVA ESTRUTURA: Evitar duplicação de dados
+    if (formData.pacotePrincipal) {
+      updates.pacotePrincipal = {
+        pacoteId: formData.pacotePrincipal.id,
+        nome: formData.pacotePrincipal.nome,
+        valorCongelado: valorPacotePrincipal,
+        produtosIncluidos: (formData.pacotePrincipal.produtosIncluidos || []).map((produtoIncluso: any) => ({
+          produtoId: produtoIncluso.produtoId,
+          nome: produtoIncluso.nome || 'Produto não encontrado',
+          quantidade: produtoIncluso.quantidade || 1,
+          valorUnitarioCongelado: 0,
+          tipo: 'incluso' as const
+        }))
+      };
+    }
+    
+    updates.produtosAdicionais = produtosManuais.map(p => ({
+      produtoId: p.id,
+      nome: p.nome,
+      quantidade: p.quantidade,
+      valorUnitarioCongelado: p.preco,
+      tipo: 'manual' as const
+    }));
+    
+    updates.valorFinal = valorTotal - descontoEmReais;
+  }
+  atualizarOrcamento(orcamento.id, updates);
     toast({
       title: "Sucesso",
       description: "Orçamento atualizado com sucesso!"
@@ -334,7 +340,8 @@ export default function EditOrcamentoModal({
   const produtosManuais = formData.produtosAdicionais.filter(p => !(p as any).inclusoNoPacote);
   const valorProdutosManuais = totalsCalculados.valorProdutosAdicionais || 0;
   const valorTotal = totalsCalculados.totalGeral || 0;
-  const valorFinal = valorTotal - formData.desconto;
+  const descontoEmReais = formData.descontoTipo === 'percentual' ? (valorTotal * (formData.desconto || 0) / 100) : (formData.desconto || 0);
+  const valorFinal = valorTotal - descontoEmReais;
 
   // Debug para verificar se valores estão corretos
   console.log('🔍 Debug EditOrcamentoModal:', {
@@ -396,7 +403,16 @@ export default function EditOrcamentoModal({
                 </div>
               </div>
             </div>
-          </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Validade</label>
+              <div className="relative">
+                <Calendar className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input type="date" value={formData.validade} onChange={e => setFormData(prev => ({
+                  ...prev,
+                  validade: e.target.value
+                }))} className="pl-8" />
+              </div>
+            </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -548,17 +564,27 @@ export default function EditOrcamentoModal({
               <span className="text-sm">R$ {valorTotal.toFixed(2)}</span>
             </div>
             <div className="flex items-center gap-2 mb-2">
-              <label className="text-sm font-medium">Desconto (R$):</label>
+              <label className="text-sm font-medium">Desconto:</label>
+              <Select value={formData.descontoTipo} onValueChange={v => setFormData(prev => ({ ...prev, descontoTipo: v as 'valor' | 'percentual' }))} disabled={formData.isOrcamentoFechado}>
+                <SelectTrigger className="w-24">
+                  <SelectValue placeholder="Tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="valor">R$</SelectItem>
+                  <SelectItem value="percentual">%</SelectItem>
+                </SelectContent>
+              </Select>
               <Input 
                 type="number" 
                 min="0" 
-                step="0.01" 
+                step={formData.descontoTipo === 'percentual' ? 1 : 0.01} 
+                max={formData.descontoTipo === 'percentual' ? 100 : undefined as any}
                 value={formData.desconto || ''} 
                 onChange={e => setFormData(prev => ({
                   ...prev,
                   desconto: parseFloat(e.target.value) || 0
                 }))} 
-                placeholder="0,00" 
+                placeholder={formData.descontoTipo === 'percentual' ? '0' : '0,00'} 
                 className="max-w-40" 
                 disabled={formData.isOrcamentoFechado} 
               />
@@ -566,7 +592,7 @@ export default function EditOrcamentoModal({
             {formData.desconto > 0 && (
               <div className="flex justify-between items-center text-sm text-red-600 mb-2">
                 <span>Desconto:</span>
-                <span>-R$ {formData.desconto.toFixed(2)}</span>
+                <span>-R$ {descontoEmReais.toFixed(2)}</span>
               </div>
             )}
             <div className="flex justify-between items-center font-bold text-lg border-t pt-2">

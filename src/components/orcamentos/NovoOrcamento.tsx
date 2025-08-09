@@ -16,7 +16,7 @@ import { ProductSearchCombobox } from './ProductSearchCombobox';
 import { CategorySelector } from './CategorySelector';
 import { PackageSearchCombobox } from './PackageSearchCombobox';
 import { useOrcamentoData } from '@/hooks/useOrcamentoData';
-import { formatDateForStorage } from '@/utils/dateUtils';
+import { formatDateForStorage, formatDateForInput, safeParseInputDate } from '@/utils/dateUtils';
 import { calculateTotals } from '@/services/FinancialCalculationEngine';
 
 interface ProdutoIncluido {
@@ -51,6 +51,8 @@ export default function NovoOrcamento() {
   const [pacoteSelecionado, setPacoteSelecionado] = useState<MappedPackage | null>(null);
   const [produtosAdicionais, setProdutosAdicionais] = useState<PacoteProduto[]>([]);
   const [desconto, setDesconto] = useState<number>(0);
+  const [descontoTipo, setDescontoTipo] = useState<'valor' | 'percentual'>('valor');
+  const [validade, setValidade] = useState('');
 
   // FIX: Add useEffect to read URL parameters and pre-fill date/time
   useEffect(() => {
@@ -66,6 +68,18 @@ export default function NovoOrcamento() {
       setHora(presetTime);
     }
   }, [location.search]);
+
+  // Definir validade padrão (+15 dias) quando a data é escolhida
+  useEffect(() => {
+    if (data && !validade) {
+      const parsed = safeParseInputDate(data);
+      if (parsed) {
+        const v = new Date(parsed);
+        v.setDate(v.getDate() + 15);
+        setValidade(formatDateForInput(v));
+      }
+    }
+  }, [data, validade]);
 
   // NOVA LÓGICA DE PACOTE FECHADO: O valor base do pacote é o preço final
   const valorPacote = pacoteSelecionado?.valor || 0;
@@ -94,7 +108,8 @@ export default function NovoOrcamento() {
   const produtosManuais = produtosAdicionais.filter(p => !p.id.startsWith('auto-'));
   const valorProdutosManuais = totalsCalculados.valorProdutosAdicionais;
   const valorTotal = totalsCalculados.totalGeral;
-  const valorFinal = valorTotal - desconto;
+  const descontoEmReais = descontoTipo === 'percentual' ? (valorTotal * (desconto || 0) / 100) : (desconto || 0);
+  const valorFinal = valorTotal - descontoEmReais;
 
   // Lógica de preenchimento automático - A Regra de Ouro
   useEffect(() => {
@@ -249,8 +264,9 @@ export default function NovoOrcamento() {
       // NOVA ARQUITETURA DE DADOS
       pacotePrincipal,
       produtosAdicionais: produtosAdicionaisNovo,
-      valorFinal: valorTotal - desconto,
-      desconto,
+      valorFinal,
+      desconto: descontoEmReais,
+      descontoTipo,
       
       // Compatibilidade com sistema antigo
       pacotes: todosItens,
@@ -261,7 +277,10 @@ export default function NovoOrcamento() {
       
       // Campos de compatibilidade
       packageId: pacoteSelecionado?.id,
-      valorFotoExtra: pacoteSelecionado?.valorFotoExtra || 35
+      valorFotoExtra: pacoteSelecionado?.valorFotoExtra || 35,
+      
+      // Novo campo
+      validade
     });
 
     toast({
@@ -280,6 +299,8 @@ export default function NovoOrcamento() {
     setPacoteSelecionado(null);
     setProdutosAdicionais([]);
     setDesconto(0);
+    setDescontoTipo('valor');
+    setValidade('');
   };
 
   return (
@@ -379,8 +400,12 @@ export default function NovoOrcamento() {
                    </Select>
                  </div>
               </div>
-              
               <div>
+                <label className="text-xs font-medium mb-1 block">Validade do orçamento</label>
+                <Input type="date" value={validade} onChange={e => setValidade(e.target.value)} />
+              </div>
+              
+
                 <label className="text-xs font-medium mb-1 block">Descrição</label>
                 <Input
                   placeholder="Descrição do serviço (será levada para Agenda e Workflow)"
@@ -554,13 +579,25 @@ export default function NovoOrcamento() {
                     <span className="text-sm font-medium">Subtotal:</span>
                     <span className="text-sm">R$ {valorTotal.toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between items-center mb-2">
-                    <label className="text-sm font-medium">Desconto (R$):</label>
+                  <div className="flex justify-between items-center mb-2 gap-2">
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm font-medium">Desconto:</label>
+                      <Select value={descontoTipo} onValueChange={(v) => setDescontoTipo(v as 'valor' | 'percentual')}>
+                        <SelectTrigger className="w-24">
+                          <SelectValue placeholder="Tipo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="valor">R$</SelectItem>
+                          <SelectItem value="percentual">%</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <Input 
                       type="number" 
                       min="0" 
-                      step="0.01" 
-                      placeholder="0,00" 
+                      step={descontoTipo === 'percentual' ? 1 : 0.01} 
+                      max={descontoTipo === 'percentual' ? 100 : undefined as any}
+                      placeholder={descontoTipo === 'percentual' ? '0' : '0,00'} 
                       value={desconto || ''} 
                       onChange={e => setDesconto(parseFloat(e.target.value) || 0)} 
                       className="w-32" 
@@ -569,7 +606,7 @@ export default function NovoOrcamento() {
                   {desconto > 0 && (
                     <div className="flex justify-between text-sm text-red-600 mb-2">
                       <span>Desconto:</span>
-                      <span>-R$ {desconto.toFixed(2)}</span>
+                      <span>-R$ {descontoEmReais.toFixed(2)}</span>
                     </div>
                   )}
                   <div className="text-lg font-bold text-right border-t pt-2">
