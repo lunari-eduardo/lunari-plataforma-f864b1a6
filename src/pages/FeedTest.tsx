@@ -180,10 +180,9 @@ export default function FeedTest() {
     try {
       const clean = username.replace(/^@+/, '');
       const urls = Array.from({ length: 9 }).map((_, i) => `https://picsum.photos/seed/${encodeURIComponent(clean)}-${i}/1080/1350.jpg`);
-      const dataUrls = await Promise.all(urls.map((u) => imageUrlToDataUrl(u)));
-      const newIgItems: FeedImage[] = dataUrls.map((du, idx) => ({
+      const newIgItems: FeedImage[] = urls.map((url, idx) => ({
         id: crypto.randomUUID(),
-        url: du,
+        url,
         ordem: 0,
         origem: 'instagram',
         criadoEm: Date.now() - idx,
