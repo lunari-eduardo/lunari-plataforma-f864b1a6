@@ -58,10 +58,8 @@ export function GerenciarProdutosModal({
   const totais = useMemo(() => {
     const produtosManuais = localProdutos.filter(p => p.tipo === 'manual');
     const produtosInclusos = localProdutos.filter(p => p.tipo === 'incluso');
-    
     const totalManuais = produtosManuais.reduce((total, p) => total + p.valorUnitario * p.quantidade, 0);
     const totalInclusos = produtosInclusos.reduce((total, p) => total + p.valorUnitario * p.quantidade, 0);
-    
     return {
       manuais: totalManuais,
       inclusos: totalInclusos,
@@ -115,17 +113,15 @@ export function GerenciarProdutosModal({
     onOpenChange(false);
   };
   return <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent 
-        className="max-w-2xl max-h-[90vh] flex flex-col py-[17px]" 
-        style={{ overflow: 'visible' }}
-        onPointerDownOutside={(e) => {
-          // Prevenir fechamento do modal quando clicar no popover
-          const target = e.target as Element;
-          if (target.closest('[data-radix-popover-content]') || target.closest('[cmdk-item]')) {
-            e.preventDefault();
-          }
-        }}
-      >
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col py-[17px]" style={{
+      overflow: 'visible'
+    }} onPointerDownOutside={e => {
+      // Prevenir fechamento do modal quando clicar no popover
+      const target = e.target as Element;
+      if (target.closest('[data-radix-popover-content]') || target.closest('[cmdk-item]')) {
+        e.preventDefault();
+      }
+    }}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-sm">
             <Package className="h-5 w-5 text-blue-600" />
@@ -184,39 +180,28 @@ export function GerenciarProdutosModal({
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent 
-                    className="w-[--radix-popover-trigger-width] p-0" 
-                    align="start"
-                    style={{ 
-                      zIndex: 99999,
-                      position: 'fixed',
-                      pointerEvents: 'auto'
-                    }}
-                    onOpenAutoFocus={(e) => e.preventDefault()}
-                  >
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start" style={{
+                  zIndex: 99999,
+                  position: 'fixed',
+                  pointerEvents: 'auto'
+                }} onOpenAutoFocus={e => e.preventDefault()}>
                     <Command>
                       <CommandInput placeholder="Buscar produto..." className="h-9" />
                       <CommandList>
                         <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
                         <CommandGroup>
-                          {productOptions.map(product => (
-                            <CommandItem 
-                              key={product.id} 
-                              value={product.nome} 
-                              onSelect={(currentValue) => {
-                                setSelectedProduct(currentValue === selectedProduct ? "" : currentValue);
-                                setNovoProductOpen(false);
-                              }}
-                              className="cursor-pointer hover:bg-accent"
-                              style={{ pointerEvents: 'auto' }}
-                            >
+                          {productOptions.map(product => <CommandItem key={product.id} value={product.nome} onSelect={currentValue => {
+                          setSelectedProduct(currentValue === selectedProduct ? "" : currentValue);
+                          setNovoProductOpen(false);
+                        }} className="cursor-pointer hover:bg-accent" style={{
+                          pointerEvents: 'auto'
+                        }}>
                               <Check className={cn("mr-2 h-4 w-4", selectedProduct === product.nome ? "opacity-100" : "opacity-0")} />
                               <div className="flex flex-col">
                                 <span className="font-medium">{product.nome}</span>
                                 <span className="text-xs text-muted-foreground">{product.valor}</span>
                               </div>
-                            </CommandItem>
-                          ))}
+                            </CommandItem>)}
                         </CommandGroup>
                       </CommandList>
                     </Command>
@@ -238,45 +223,33 @@ export function GerenciarProdutosModal({
             
             {/* Detalhamento por tipo */}
             <div className="space-y-2 text-sm">
-              {totais.inclusos > 0 && (
-                <div className="flex justify-between items-center text-muted-foreground">
+              {totais.inclusos > 0 && <div className="flex justify-between items-center text-muted-foreground">
                   <span>Produtos inclusos no pacote:</span>
                   <span>{formatCurrency(totais.inclusos)}</span>
-                </div>
-              )}
+                </div>}
               
-              {totais.manuais > 0 && (
-                <div className="flex justify-between items-center">
-                  <span>Produtos adicionais:</span>
+              {totais.manuais > 0 && <div className="flex justify-between items-center">
+                  <span className="text-xs">Produtos adicionais:</span>
                   <span className="font-medium text-green-600">{formatCurrency(totais.manuais)}</span>
-                </div>
-              )}
+                </div>}
               
-              {totais.inclusos > 0 && totais.manuais > 0 && (
-                <div className="flex justify-between items-center pt-2 border-t">
+              {totais.inclusos > 0 && totais.manuais > 0 && <div className="flex justify-between items-center pt-2 border-t">
                   <span className="font-medium">Total geral dos produtos:</span>
                   <span className="text-lg font-bold text-green-600">{formatCurrency(totais.geral)}</span>
-                </div>
-              )}
+                </div>}
               
-              {totais.manuais === 0 && totais.inclusos > 0 && (
-                <div className="flex justify-between items-center">
+              {totais.manuais === 0 && totais.inclusos > 0 && <div className="flex justify-between items-center">
                   <span>Valor adicional a pagar:</span>
                   <span className="text-lg font-bold text-green-600">R$ 0,00</span>
-                </div>
-              )}
+                </div>}
               
-              {totais.manuais > 0 && totais.inclusos === 0 && (
-                <div className="flex justify-between items-center pt-2 border-t">
+              {totais.manuais > 0 && totais.inclusos === 0 && <div className="flex justify-between items-center pt-2 border-t">
                   <span className="font-medium">Total a pagar:</span>
                   <span className="text-lg font-bold text-green-600">{formatCurrency(totais.manuais)}</span>
-                </div>
-              )}
+                </div>}
             </div>
             
-            <p className="text-xs text-muted-foreground">
-              *Produtos inclusos no pacote já estão pagos
-            </p>
+            <p className="text-xs text-muted-foreground">*Produtos inclusos no pacote já estão contabilizados no pacote</p>
           </div>}
 
         <DialogFooter className="py-0 my-0">
