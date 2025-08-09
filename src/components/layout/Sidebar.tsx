@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Calendar, Users, Settings, FileText, DollarSign, Menu, X, User, TrendingUp, Workflow, ChevronRight, ChevronLeft, BarChart3, Home, CheckSquare } from 'lucide-react';
+import { Calendar, Users, Settings, FileText, DollarSign, Menu, X, User, TrendingUp, Workflow, ChevronRight, ChevronLeft, BarChart3, Home, CheckSquare, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 interface NavItemProps {
@@ -64,6 +64,10 @@ export default function Sidebar() {
     to: "/analise-vendas",
     icon: <BarChart3 size={14} />,
     label: "Análise de Vendas"
+  }, {
+    to: "/feed-test",
+    icon: <ImageIcon size={14} />,
+    label: "Feed Test"
   }, {
     to: "/configuracoes",
     icon: <Settings size={14} />,

@@ -30,7 +30,8 @@ export const STORAGE_KEYS = {
   TASKS: 'lunari_tasks',
   TASK_STATUSES: 'lunari_task_statuses',
   AUTOMATION_FLAGS: 'lunari_automation_flags',
-  FOLLOWUP_FLAGS: 'lunari_followup_flags'
+  FOLLOWUP_FLAGS: 'lunari_followup_flags',
+  FEED_IMAGES: 'lunari_feed_images'
 } as const;
 
 export const storage = {

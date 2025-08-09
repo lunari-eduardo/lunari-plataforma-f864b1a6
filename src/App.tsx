@@ -20,6 +20,7 @@ import AnaliseVendas from "./pages/AnaliseVendas";
 import MinhaConta from "./pages/MinhaConta";
 import Preferencias from "./pages/Preferencias";
 import Tarefas from "./pages/Tarefas";
+import FeedTest from "./pages/FeedTest";
 import NotFound from "./pages/NotFound";
 import { AppProvider } from "./contexts/AppContext";
 import { useIntegration } from "./hooks/useIntegration";
@@ -122,6 +123,7 @@ function App() {
                 <Route path="/minha-conta" element={<MinhaConta />} />
                 <Route path="/preferencias" element={<Preferencias />} />
                 <Route path="/tarefas" element={<Tarefas />} />
+                <Route path="/feed-test" element={<FeedTest />} />
                 <Route path="*" element={<NotFound />} />
               </Route>
             </Routes>
