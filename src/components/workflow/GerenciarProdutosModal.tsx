@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Plus, Package } from "lucide-react";
+import { Trash2, Package } from "lucide-react";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Check, ChevronsUpDown } from "lucide-react";
@@ -93,24 +93,22 @@ export function GerenciarProdutosModal({
     setLocalProdutos(prev => prev.map((p, i) => (i === index ? { ...p, [key]: value } : p)));
   };
 
-  const handleAdicionarProduto = () => {
-    if (!selectedProduct) return;
-    const productData = productOptions.find(p => p.nome === selectedProduct);
+  const handleAdicionarProduto = (productName?: string) => {
+    const name = productName ?? selectedProduct;
+    if (!name) return;
+    const productData = productOptions.find(p => p.nome === name);
     if (!productData) return;
 
     // Verificar se o produto já existe
-    const produtoExistente = localProdutos.find(p => p.nome === selectedProduct);
+    const produtoExistente = localProdutos.find(p => p.nome === name);
     if (produtoExistente) {
       // Se já existe, incrementar quantidade
-      setLocalProdutos(prev => prev.map(p => p.nome === selectedProduct ? {
-        ...p,
-        quantidade: p.quantidade + 1
-      } : p));
+      setLocalProdutos(prev => prev.map(p => (p.nome === name ? { ...p, quantidade: p.quantidade + 1 } : p)));
     } else {
       // Adicionar novo produto
       const valorUnitario = parseFloat(productData.valor.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
       const novoProduto: ProdutoWorkflow = {
-        nome: selectedProduct,
+        nome: name,
         quantidade: 1,
         valorUnitario,
         tipo: 'manual'
@@ -120,7 +118,6 @@ export function GerenciarProdutosModal({
     setSelectedProduct("");
     setNovoProductOpen(false);
   };
-
   const handleSave = () => {
     onSave(localProdutos);
     onOpenChange(false);
@@ -228,9 +225,8 @@ export function GerenciarProdutosModal({
                       <CommandList>
                         <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
                         <CommandGroup>
-                          {productOptions.map(product => <CommandItem key={product.id} value={product.nome} onSelect={currentValue => {
-                          setSelectedProduct(currentValue === selectedProduct ? "" : currentValue);
-                          setNovoProductOpen(false);
+                          {productOptions.map(product => <CommandItem key={product.id} value={product.nome} onSelect={(currentValue) => {
+                          handleAdicionarProduto(currentValue);
                         }} className="cursor-pointer hover:bg-accent" style={{
                           pointerEvents: 'auto'
                         }}>
@@ -247,10 +243,6 @@ export function GerenciarProdutosModal({
                 </Popover>
               </div>
               
-              <Button onClick={handleAdicionarProduto} disabled={!selectedProduct} size="sm" className="h-7 text-xs">
-                <Plus className="h-4 w-4 mr-1" />
-                Adicionar
-              </Button>
             </div>
           </div>
         </div>
