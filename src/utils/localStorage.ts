@@ -33,7 +33,8 @@ export const STORAGE_KEYS = {
   FOLLOWUP_FLAGS: 'lunari_followup_flags',
   FEED_IMAGES: 'lunari_feed_images',
   FEED_ZOOM_DESKTOP: 'lunari_feed_zoom_desktop',
-  FEED_ZOOM_TABLET: 'lunari_feed_zoom_tablet'
+  FEED_ZOOM_TABLET: 'lunari_feed_zoom_tablet',
+  FEED_INSTAGRAM_USERNAME: 'lunari_feed_instagram_username'
 } as const;
 
 export const storage = {

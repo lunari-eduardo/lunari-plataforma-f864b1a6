@@ -1,12 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { Button } from '@/components/ui/button';
-import { Plus, Save, Trash, ImageUp } from 'lucide-react';
+import { Plus, Save, Trash, ImageUp, Settings, RotateCcw, Loader2 } from 'lucide-react';
 import { FeedStorage } from '@/services/FeedStorage';
 import type { FeedImage } from '@/types/feed';
 import { useToast } from '@/components/ui/use-toast';
 import { loadImageFromFile, compressToJpeg } from '@/utils/imageUtils';
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 export default function FeedTest() {
   const [images, setImages] = useState<FeedImage[]>(() => FeedStorage.load());
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -24,7 +26,9 @@ export default function FeedTest() {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const { toast } = useToast();
-
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [igUsername, setIgUsername] = useState<string>('');
+  const [isLoadingIg, setIsLoadingIg] = useState(false);
   useEffect(() => {
     document.title = 'Feed Test – Instagram-like feed 4:5';
     const desc = 'Página Feed Test com upload, recorte 4:5, compressão JPG, drag-and-drop e persistência em LocalStorage.';
@@ -36,6 +40,21 @@ export default function FeedTest() {
     }
     meta.setAttribute('content', desc);
   }, []);
+
+  // Instagram username from storage
+  useEffect(() => {
+    const saved = storage.load<string>(STORAGE_KEYS.FEED_INSTAGRAM_USERNAME, '');
+    if (saved) setIgUsername(saved);
+  }, []);
+
+  // Auto-load Instagram on first visit if username is saved
+  useEffect(() => {
+    if (!igUsername) return;
+    if (!images.some((i) => i.origem === 'instagram')) {
+      handleReloadInstagram();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [igUsername]);
 
   // responsividade e zoom
   const [deviceStateReady, setDeviceStateReady] = useState(false);
@@ -118,26 +137,80 @@ export default function FeedTest() {
       );
 
       setImages((prev) => {
-        let next = [...prev];
-        const selectedIndex = selectedId ? next.findIndex((i) => i.id === selectedId) : -1;
-        const insertIndex = selectedIndex >= 0 ? selectedIndex + 1 : next.length;
-        const newItems: FeedImage[] = dataUrls.map((du, idx) => ({
+        const uploads = prev.filter((i) => i.origem !== 'instagram');
+        const instagram = prev.filter((i) => i.origem === 'instagram');
+        const newItems: FeedImage[] = dataUrls.map((du) => ({
           id: crypto.randomUUID(),
           url: du,
-          ordem: insertIndex + idx,
+          ordem: 0,
           origem: 'upload',
           criadoEm: Date.now(),
         }));
-        next.splice(insertIndex, 0, ...newItems);
-        next = next.map((img, idx) => ({ ...img, ordem: idx }));
-        FeedStorage.save(next);
-        return next;
+        const uploadsNext = [...newItems, ...uploads];
+        const combined = composeAndClamp([...uploadsNext, ...instagram]);
+        FeedStorage.save(combined);
+        return combined;
       });
     } finally {
       e.currentTarget.value = '';
     }
   };
 
+  // Composition: uploads first (max 30), instagram after (max 9)
+  function composeAndClamp(arr: FeedImage[]): FeedImage[] {
+    const uploads = arr.filter((i) => i.origem !== 'instagram');
+    const instagram = arr.filter((i) => i.origem === 'instagram');
+    const uploadsLimited = uploads.slice(0, 30);
+    const instagramLimited = instagram.slice(0, 9);
+    return [...uploadsLimited, ...instagramLimited].map((img, idx) => ({ ...img, ordem: idx }));
+  }
+
+  async function imageUrlToDataUrl(url: string): Promise<string> {
+    const res = await fetch(url, { cache: 'no-store' });
+    const blob = await res.blob();
+    return await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  const loadInstagram = async (username: string) => {
+    setIsLoadingIg(true);
+    try {
+      const clean = username.replace(/^@+/, '');
+      const urls = Array.from({ length: 9 }).map((_, i) => `https://picsum.photos/seed/${encodeURIComponent(clean)}-${i}/1080/1350.jpg`);
+      const dataUrls = await Promise.all(urls.map((u) => imageUrlToDataUrl(u)));
+      const newIgItems: FeedImage[] = dataUrls.map((du, idx) => ({
+        id: crypto.randomUUID(),
+        url: du,
+        ordem: 0,
+        origem: 'instagram',
+        criadoEm: Date.now() - idx,
+      }));
+      setImages((prev) => {
+        const withoutIg = prev.filter((i) => i.origem !== 'instagram');
+        const next = composeAndClamp([...withoutIg, ...newIgItems]);
+        FeedStorage.save(next);
+        return next;
+      });
+      storage.save(STORAGE_KEYS.FEED_INSTAGRAM_USERNAME, username);
+      toast({ title: 'Instagram carregado', description: 'Últimas 9 fotos atualizadas.' });
+    } catch (error) {
+      console.error(error);
+      toast({ title: 'Falha ao carregar', description: 'Não foi possível buscar as fotos.' });
+    } finally {
+      setIsLoadingIg(false);
+    }
+  };
+
+  const handleReloadInstagram = async () => {
+    if (!igUsername) {
+      setIsSettingsOpen(true);
+      return;
+    }
+    await loadInstagram(igUsername);
+  };
 
   const handleReplace = (id: string) => {
     const onChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -146,11 +219,12 @@ export default function FeedTest() {
       const img = await loadImageFromFile(file);
       const dataUrl = await compressToJpeg(img, 1080, 0.7);
       setImages((prev) => {
-        const next: FeedImage[] = prev.map((img) =>
+        const updated: FeedImage[] = prev.map((img) =>
           img.id === id ? ({ ...img, url: dataUrl, origem: 'upload' as const, criadoEm: Date.now() } as FeedImage) : img
         );
-        FeedStorage.save(next);
-        return next;
+        const recomposed = composeAndClamp(updated);
+        FeedStorage.save(recomposed);
+        return recomposed;
       });
       e.currentTarget.value = '';
     };
@@ -164,7 +238,8 @@ export default function FeedTest() {
 
   const handleDelete = (id: string) => {
     setImages((prev) => {
-      const next = prev.filter((i) => i.id !== id).map((img, idx) => ({ ...img, ordem: idx }));
+      const filtered = prev.filter((i) => i.id !== id);
+      const next = composeAndClamp(filtered);
       FeedStorage.save(next);
       if (selectedId === id) setSelectedId(null);
       return next;
@@ -172,7 +247,9 @@ export default function FeedTest() {
   };
 
   const handleSaveSequence = () => {
-    FeedStorage.save(images);
+    const recomposed = composeAndClamp(images);
+    setImages(recomposed);
+    FeedStorage.save(recomposed);
     toast({ title: 'Sequência salva', description: 'A ordem atual foi salva.' });
   };
 
@@ -202,7 +279,7 @@ export default function FeedTest() {
       if (fromIdx < 0 || toIdx < 0) return prev;
       const [moved] = arr.splice(fromIdx, 1);
       arr.splice(toIdx, 0, moved);
-      const next = arr.map((img, idx) => ({ ...img, ordem: idx }));
+      const next = composeAndClamp(arr);
       FeedStorage.save(next);
       return next;
     });
@@ -256,12 +333,24 @@ export default function FeedTest() {
           <h1 className="text-base font-semibold">Feed Test</h1>
           <div className="flex items-center gap-2">
             <input ref={inputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileSelected} />
-            <Button size="sm" onClick={openFilePicker}>
+            <Button size="sm" onClick={openFilePicker} title="Adicionar fotos">
               <Plus className="h-4 w-4" />
             </Button>
-            <Button size="sm" variant="secondary" onClick={handleSaveSequence}>
+            <Button size="sm" variant="secondary" onClick={handleSaveSequence} title="Salvar ordem">
               <Save className="h-4 w-4" />
               <span className="ml-2">Salvar Sequência</span>
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => { if (igUsername) handleReloadInstagram(); else setIsSettingsOpen(true); }}
+              disabled={isLoadingIg}
+              title="Recarregar Instagram"
+            >
+              {isLoadingIg ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setIsSettingsOpen(true)} title="Configurações do Instagram">
+              <Settings className="h-4 w-4" />
             </Button>
             <Button
               size="sm"
@@ -271,7 +360,7 @@ export default function FeedTest() {
                 setReorderMode((prev) => {
                   const next = !prev;
                   if (prev) {
-                    FeedStorage.save(images);
+                    FeedStorage.save(composeAndClamp(images));
                     toast({ title: 'Ordem salva', description: 'Reorganização desativada.' });
                   }
                   return next;
@@ -362,6 +451,29 @@ export default function FeedTest() {
             +
           </button>
         </div>
+
+      <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Configurações do Instagram</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <label className="text-sm font-medium">Usuário do Instagram</label>
+            <Input
+              value={igUsername}
+              onChange={(e) => setIgUsername(e.currentTarget.value)}
+              placeholder="@usuario"
+            />
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setIsSettingsOpen(false)}>Fechar</Button>
+              <Button onClick={() => { storage.save(STORAGE_KEYS.FEED_INSTAGRAM_USERNAME, igUsername); handleReloadInstagram(); }}>
+                {isLoadingIg ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                Carregar do Instagram
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
     </main>
   );
