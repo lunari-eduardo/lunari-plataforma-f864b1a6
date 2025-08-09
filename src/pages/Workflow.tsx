@@ -218,6 +218,17 @@ export default function Workflow() {
   useEffect(() => {
     loadWorkflowData();
   }, [loadWorkflowData]);
+
+  // Recarregar automaticamente quando workflow_sessions mudar em outra aba/fluxo
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'workflow_sessions') {
+        loadWorkflowData();
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [loadWorkflowData]);
   const handlePreviousMonth = () => {
     let newMonth = currentMonth.month - 1;
     let newYear = currentMonth.year;
