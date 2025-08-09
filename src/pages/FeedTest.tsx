@@ -64,7 +64,7 @@ export default function FeedTest() {
   }, [device, deviceStateReady]);
 
   const zoomRange = useMemo(() => {
-    if (device === 'desktop') return { min: 0.6, max: 1.0, step: 0.05 } as const;
+    if (device === 'desktop') return { min: 0.6, max: 1.3, step: 0.05 } as const;
     if (device === 'tablet') return { min: 0.75, max: 1.0, step: 0.05 } as const;
     return { min: 1, max: 1, step: 1 } as const;
   }, [device]);
@@ -351,7 +351,8 @@ export default function FeedTest() {
             step={zoomRange.step}
             value={zoom}
             onChange={(e) => setZoomPersist(parseFloat(e.currentTarget.value))}
-            className="w-32"
+            className="w-32 accent-background"
+            style={{ accentColor: 'hsl(var(--background))' }}
           />
           <button
             aria-label="Aumentar zoom"
