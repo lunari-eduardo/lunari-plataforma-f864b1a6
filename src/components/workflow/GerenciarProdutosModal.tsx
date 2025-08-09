@@ -152,6 +152,26 @@ export function GerenciarProdutosModal({
                     </div>
                     
                     <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-3 mr-2">
+                        <div className="flex items-center gap-1">
+                          <Checkbox
+                            id={`prod-${index}`}
+                            checked={!!produto.produzido}
+                            onCheckedChange={(checked) => handleSetFlag(index, 'produzido', !!checked)}
+                            className="h-4 w-4"
+                          />
+                          <Label htmlFor={`prod-${index}`} className="text-xs">Produção</Label>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Checkbox
+                            id={`ent-${index}`}
+                            checked={!!produto.entregue}
+                            onCheckedChange={(checked) => handleSetFlag(index, 'entregue', !!checked)}
+                            className="h-4 w-4"
+                          />
+                          <Label htmlFor={`ent-${index}`} className="text-xs">Entrega</Label>
+                        </div>
+                      </div>
                       <div className="flex items-center gap-1">
                         <Label className="text-xs">Qtd:</Label>
                         <Input type="number" value={produto.quantidade} onChange={e => handleQuantidadeChange(index, parseInt(e.target.value) || 0)} className="w-16 h-8 text-xs" min="0" />
