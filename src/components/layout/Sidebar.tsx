@@ -1,18 +1,15 @@
-
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Calendar, Users, Settings, FileText, DollarSign, Menu, X, User, TrendingUp, Workflow, ChevronRight, ChevronLeft, BarChart3, Home, CheckSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-
 interface NavItemProps {
   to: string;
   icon: React.ReactNode;
   label: string;
   iconOnly?: boolean;
 }
-
 const NavItem = ({
   to,
   icon,
@@ -22,20 +19,15 @@ const NavItem = ({
   const isMobile = useIsMobile();
   return <NavLink to={to} className={({
     isActive
-  }) => cn("nav-item-lunar mb-1 flex items-center transition-all duration-200", 
-    iconOnly ? "w-12 h-12 rounded-lg justify-center" : "gap-3 px-3 py-2 justify-start", 
-    isActive && "active bg-lunar-surface text-lunar-accent")} 
-    title={iconOnly ? label : undefined}>
+  }) => cn("nav-item-lunar mb-1 flex items-center transition-all duration-200", iconOnly ? "w-12 h-12 rounded-lg justify-center" : "gap-3 px-3 py-2 justify-start", isActive && "active bg-lunar-surface text-lunar-accent")} title={iconOnly ? label : undefined}>
       <span className="text-sm flex-shrink-0">{icon}</span>
       {!iconOnly && <span className="text-xs font-medium whitespace-nowrap">{label}</span>}
     </NavLink>;
 };
-
 export default function Sidebar() {
   const isMobile = useIsMobile();
   const [isOpen, setIsOpen] = useState(false);
   const [isDesktopExpanded, setIsDesktopExpanded] = useState(false);
-  
   const navItems = [{
     to: "/",
     icon: <Home size={14} />,
@@ -77,11 +69,9 @@ export default function Sidebar() {
     icon: <Settings size={14} />,
     label: "Configurações"
   }];
-
   const toggleDesktopSidebar = () => {
     setIsDesktopExpanded(!isDesktopExpanded);
   };
-
   const toggleSidebar = () => {
     setIsOpen(!isOpen);
   };
@@ -89,7 +79,7 @@ export default function Sidebar() {
   // Mobile bottom navigation
   if (isMobile) {
     return <>
-        <div className="fixed bottom-0 left-0 right-0 backdrop-blur-sm shadow-lunar-md z-10 p-2 border-t border-lunar-border/50 bg-lunar-border">
+        <div className="fixed bottom-0 left-0 right-0 backdrop-blur-sm shadow-lunar-md z-10 p-2 border-t border-lunar-border/50 bg-neutral-50">
           <div className="grid grid-cols-5 h-12 gap-1">
             {navItems.slice(0, 4).map(item => <NavLink key={item.to} to={item.to} className={({
             isActive
@@ -98,7 +88,7 @@ export default function Sidebar() {
                 <span className="text-2xs font-medium leading-tight">{item.label}</span>
               </NavLink>)}
 
-            <button className="flex flex-col items-center justify-center text-lunar-text py-1 rounded-md hover:bg-lunar-surface/30 hover:shadow-lunar-sm hover:translate-y-[-1px] transition-all duration-150" onClick={toggleSidebar}>
+            <button onClick={toggleSidebar} className="flex flex-col items-center justify-center text-lunar-text py-1 rounded-md hover:shadow-lunar-sm hover:translate-y-[-1px] transition-all duration-150 bg-zinc-200 hover:bg-zinc-100">
               <Menu size={14} className="mb-0.5" />
               <span className="text-2xs font-medium">Mais</span>
             </button>
@@ -134,22 +124,18 @@ export default function Sidebar() {
   }
 
   // Desktop sidebar - colapsável
-  return <div className={cn("flex flex-col h-screen p-2 bg-lunar-bg border-r border-lunar-border/50 transition-all duration-300", 
-    isDesktopExpanded ? "w-48" : "w-16")}>
+  return <div className={cn("flex flex-col h-screen p-2 bg-lunar-bg border-r border-lunar-border/50 transition-all duration-300", isDesktopExpanded ? "w-48" : "w-16")}>
       
       {/* Minha Conta no topo do desktop */}
       <div className="pt-4 pb-2 border-b border-lunar-border/50 mb-4">
-        <div className={cn("flex items-center transition-all duration-200", 
-          isDesktopExpanded ? "gap-3 px-3 py-2" : "w-12 h-12 rounded-lg justify-center")}>
+        <div className={cn("flex items-center transition-all duration-200", isDesktopExpanded ? "gap-3 px-3 py-2" : "w-12 h-12 rounded-lg justify-center")}>
           <User className="h-4 w-4 text-lunar-accent flex-shrink-0" />
-          {isDesktopExpanded && (
-            <div>
+          {isDesktopExpanded && <div>
               <span className="font-semibold text-sm text-lunar-text">Minha Conta</span>
               <div className="text-2xs text-lunar-textSecondary">
                 Lunari
               </div>
-            </div>
-          )}
+            </div>}
         </div>
       </div>
 
@@ -161,13 +147,7 @@ export default function Sidebar() {
       
       {/* Toggle button at bottom */}
       <div className="flex justify-center pb-2">
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={toggleDesktopSidebar}
-          className="h-8 w-8 text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-surface/50"
-          title={isDesktopExpanded ? "Recolher menu" : "Expandir menu"}
-        >
+        <Button variant="ghost" size="icon" onClick={toggleDesktopSidebar} className="h-8 w-8 text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-surface/50" title={isDesktopExpanded ? "Recolher menu" : "Expandir menu"}>
           {isDesktopExpanded ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
         </Button>
       </div>
