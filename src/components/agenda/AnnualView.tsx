@@ -40,7 +40,7 @@ export default function AnnualView({ date, unifiedEvents, onDayClick }: AnnualVi
         <h2 className="text-base font-semibold text-lunar-text">{year}</h2>
       </header>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-1.5">
         {Array.from({ length: 12 }, (_, monthIndex) => {
           const firstDay = new Date(year, monthIndex, 1);
           const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
@@ -52,7 +52,7 @@ export default function AnnualView({ date, unifiedEvents, onDayClick }: AnnualVi
           const totalMonthEvents = eventsPerMonth[monthIndex] || 0;
 
           return (
-            <Card key={monthIndex} className="p-2 bg-lunar-surface border-lunar-border">
+            <Card key={monthIndex} className="p-1.5 bg-lunar-surface border-lunar-border">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-medium capitalize text-lunar-text">
                   {monthNames[monthIndex]}
@@ -72,7 +72,7 @@ export default function AnnualView({ date, unifiedEvents, onDayClick }: AnnualVi
               {/* Days grid */}
               <div className="grid grid-cols-7 gap-1">
                 {blanks.map((_, i) => (
-                  <div key={`b-${i}`} className="h-7" />
+                  <div key={`b-${i}`} className="h-6" />
                 ))}
                 {days.map((day) => {
                   const current = new Date(year, monthIndex, day);
@@ -86,7 +86,7 @@ export default function AnnualView({ date, unifiedEvents, onDayClick }: AnnualVi
                       aria-label={`Dia ${day} de ${monthNames[monthIndex]} de ${year}${count ? `, ${count} eventos` : ''}`}
                       onClick={() => onDayClick(current)}
                       className={cn(
-                        "h-7 w-7 rounded-md flex flex-col items-center justify-center text-[11px] leading-none",
+                        "h-6 w-6 rounded-md flex flex-col items-center justify-center text-2xs leading-none",
                         "bg-lunar-bg text-lunar-text border border-lunar-border"
                       )}
                     >
@@ -94,9 +94,9 @@ export default function AnnualView({ date, unifiedEvents, onDayClick }: AnnualVi
                       <span
                         aria-hidden
                         className={cn(
-                          "mt-0.5 h-1.5 w-1.5 rounded-full",
-                          count > 0 ? "bg-lunar-accent" : "bg-transparent border border-transparent"
-                        )}
+                           "mt-0.5 h-1 w-1 rounded-full",
+                           count > 0 ? "bg-lunar-accent" : "bg-transparent border border-transparent"
+                         )}
                       />
                     </button>
                   );
