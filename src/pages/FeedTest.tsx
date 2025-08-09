@@ -1,19 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { Button } from '@/components/ui/button';
-import { Dialog } from '@/components/ui/dialog';
 import { Plus, Save, Trash, ImageUp } from 'lucide-react';
-import CropperModal from '@/components/feed/CropperModal';
 import { FeedStorage } from '@/services/FeedStorage';
 import type { FeedImage } from '@/types/feed';
 import { useToast } from '@/components/ui/use-toast';
+import { loadImageFromFile, compressToJpeg } from '@/utils/imageUtils';
 
 export default function FeedTest() {
   const [images, setImages] = useState<FeedImage[]>(() => FeedStorage.load());
   const [selectedId, setSelectedId] = useState<string | null>(null);
-
-  const [cropperFile, setCropperFile] = useState<File | null>(null);
-  const [cropperOpen, setCropperOpen] = useState(false);
 
   const [dragId, setDragId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
@@ -50,7 +46,6 @@ export default function FeedTest() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setSelectedId(null);
-        setCropperOpen(false);
       }
     };
     document.addEventListener('click', onDocClick);
@@ -63,75 +58,59 @@ export default function FeedTest() {
 
   const openFilePicker = () => inputRef.current?.click();
 
-  const handleFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setCropperFile(file);
-    setCropperOpen(true);
-    // reset value to allow re-select same file
-    e.currentTarget.value = '';
-  };
+  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+    try {
+      const dataUrls = await Promise.all(
+        files.map(async (file) => {
+          const img = await loadImageFromFile(file);
+          return await compressToJpeg(img, 1080, 0.7);
+        })
+      );
 
-  const insertAfterSelectedOrEnd = (dataUrl: string) => {
-    setImages((prev) => {
-      const newImg: FeedImage = {
-        id: crypto.randomUUID(),
-        url: dataUrl,
-        ordem: prev.length, // default at end
-        origem: 'upload',
-        criadoEm: Date.now(),
-      };
-
-      let next = [...prev];
-      const selIdx = selectedId ? next.findIndex((i) => i.id === selectedId) : -1;
-      if (selIdx >= 0) {
-        // insert after selected
-        next.splice(selIdx + 1, 0, newImg);
+      setImages((prev) => {
+        let next = [...prev];
+        const selectedIndex = selectedId ? next.findIndex((i) => i.id === selectedId) : -1;
+        const insertIndex = selectedIndex >= 0 ? selectedIndex + 1 : next.length;
+        const newItems: FeedImage[] = dataUrls.map((du, idx) => ({
+          id: crypto.randomUUID(),
+          url: du,
+          ordem: insertIndex + idx,
+          origem: 'upload',
+          criadoEm: Date.now(),
+        }));
+        next.splice(insertIndex, 0, ...newItems);
         next = next.map((img, idx) => ({ ...img, ordem: idx }));
-      } else {
-        next.push(newImg);
-        next = next.map((img, idx) => ({ ...img, ordem: idx }));
-      }
-      FeedStorage.save(next);
-      return next;
-    });
+        FeedStorage.save(next);
+        return next;
+      });
+    } finally {
+      e.currentTarget.value = '';
+    }
   };
 
-  const handleCropConfirm = (dataUrl: string) => {
-    insertAfterSelectedOrEnd(dataUrl);
-    setCropperFile(null);
-  };
 
   const handleReplace = (id: string) => {
-    const doReplace = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const onChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
-      setCropperFile(file);
-      setCropperOpen(true);
-      const unsub = (dataUrl: string) => {
-        setImages((prev) => {
-          const next: FeedImage[] = prev.map((img) =>
-            img.id === id ? ({ ...img, url: dataUrl, origem: 'upload' as const, criadoEm: Date.now() } as FeedImage) : img
-          );
-          FeedStorage.save(next);
-          return next;
-        });
-      };
-      // intercept confirm once
-      const prevConfirm = handleCropConfirmRef.current;
-      handleCropConfirmRef.current = (du: string) => {
-        unsub(du);
-        handleCropConfirmRef.current = prevConfirm;
-        setCropperFile(null);
-      };
+      const img = await loadImageFromFile(file);
+      const dataUrl = await compressToJpeg(img, 1080, 0.7);
+      setImages((prev) => {
+        const next: FeedImage[] = prev.map((img) =>
+          img.id === id ? ({ ...img, url: dataUrl, origem: 'upload' as const, criadoEm: Date.now() } as FeedImage) : img
+        );
+        FeedStorage.save(next);
+        return next;
+      });
       e.currentTarget.value = '';
     };
 
-    // open hidden input temporarily
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
-    input.onchange = (ev: any) => doReplace(ev as any);
+    input.onchange = (ev: any) => onChange(ev as any);
     input.click();
   };
 
@@ -217,17 +196,13 @@ export default function FeedTest() {
     }
   };
 
-  // dynamic confirm for replace flow
-  const handleCropConfirmRef = useRef<(du: string) => void>(handleCropConfirm);
-  useEffect(() => { handleCropConfirmRef.current = handleCropConfirm; }, [handleCropConfirm]);
-
   return (
     <main className="w-full">
       <header className="sticky top-0 z-10 bg-background border-b border-lunar-border">
         <div className="mx-auto w-full max-w-[680px] px-[2px] py-2 flex items-center justify-between">
           <h1 className="text-base font-semibold">Feed Test</h1>
           <div className="flex items-center gap-2">
-            <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelected} />
+            <input ref={inputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileSelected} />
             <Button size="sm" onClick={openFilePicker}>
               <Plus className="h-4 w-4" />
             </Button>
@@ -239,8 +214,8 @@ export default function FeedTest() {
         </div>
       </header>
 
-      <section ref={containerRef} className="mx-auto w-full max-w-[680px] px-[2px] bg-background">
-        <div className="flex flex-col gap-[2px]">
+      <section ref={containerRef} className="mx-auto w-full px-[2px] bg-background">
+        <div className="grid grid-cols-3 gap-[1px]">
           {images.map((item) => (
             <div
               key={item.id}
@@ -288,13 +263,6 @@ export default function FeedTest() {
         </div>
       </section>
 
-      <CropperModal
-        open={cropperOpen}
-        onOpenChange={setCropperOpen}
-        file={cropperFile}
-        onCancel={() => { setCropperOpen(false); setCropperFile(null); }}
-        onConfirm={(du) => handleCropConfirmRef.current(du)}
-      />
     </main>
   );
 }
