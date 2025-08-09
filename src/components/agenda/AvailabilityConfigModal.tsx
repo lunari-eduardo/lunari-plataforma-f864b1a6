@@ -8,7 +8,7 @@ import { TimeInput } from '@/components/ui/time-input';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Textarea } from '@/components/ui/textarea';
-import { format, eachDayOfInterval } from 'date-fns';
+import { format, startOfWeek, addDays } from 'date-fns';
 import { useEffect, useMemo, useState } from 'react';
 import { useAvailability } from '@/hooks/useAvailability';
 import type { AvailabilitySlot } from '@/types/availability';
@@ -52,13 +52,30 @@ export default function AvailabilityConfigModal({ isOpen, onClose, date, initial
     weekdays: number[];
   };
 
-  const [startDate, setStartDate] = useState<Date>(date);
-  const [endDate, setEndDate] = useState<Date>(date);
-  const [manualTimesText, setManualTimesText] = useState<string>('');
-  const manualTimes = useMemo(() => parseManualTimes(manualTimesText), [manualTimesText]);
-  const [presets, setPresets] = useState<AvailabilityPreset[]>(() => storage.load(STORAGE_KEYS.AVAILABILITY_PRESETS, [] as AvailabilityPreset[]));
-  const [presetName, setPresetName] = useState<string>('');
-  const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
+const [startDate, setStartDate] = useState<Date>(date);
+const [endDate, setEndDate] = useState<Date>(date);
+const [manualTimesText, setManualTimesText] = useState<string>('');
+
+// Parse a lista de horários manuais em HH:mm, removendo inválidos e duplicados
+function parseManualTimes(input: string): string[] {
+  const toMin = (t: string) => {
+    const [h, m] = t.split(':').map(Number);
+    return h * 60 + m;
+  };
+  const tokens = input
+    .split(/[\s,;]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const valid = tokens.filter((t) => /^([01]\d|2[0-3]):([0-5]\d)$/.test(t));
+  const unique = Array.from(new Set(valid));
+  unique.sort((a, b) => toMin(a) - toMin(b));
+  return unique;
+}
+
+const manualTimes = useMemo(() => parseManualTimes(manualTimesText), [manualTimesText]);
+const [presets, setPresets] = useState<AvailabilityPreset[]>(() => storage.load(STORAGE_KEYS.AVAILABILITY_PRESETS, [] as AvailabilityPreset[]));
+const [presetName, setPresetName] = useState<string>('');
+const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
 
   const dateStr = useMemo(() => format(date, 'yyyy-MM-dd'), [date]);
   const { appointments } = useAgenda();
