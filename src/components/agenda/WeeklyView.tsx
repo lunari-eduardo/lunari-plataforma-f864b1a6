@@ -5,7 +5,7 @@ import { UnifiedEvent } from '@/hooks/useUnifiedCalendar';
 import UnifiedEventCard from './UnifiedEventCard';
 import { useAvailability } from '@/hooks/useAvailability';
 import { Button } from '@/components/ui/button';
-import { Share2 } from 'lucide-react';
+import { Share2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 interface WeeklyViewProps {
   date: Date;
@@ -20,7 +20,7 @@ export default function WeeklyView({
   onCreateSlot,
   onEventClick
 }: WeeklyViewProps) {
-  const { availability } = useAvailability();
+  const { availability, deleteAvailabilitySlot } = useAvailability();
   const weekStart = startOfWeek(date);
   const timeSlots = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"];
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
@@ -44,6 +44,14 @@ const getEventForSlot = (day: Date, time: string) => {
     return mm === '00' ? `${hh}h` : `${hh}h ${mm}min`;
   };
 
+  const handleRemoveAvailability = (day: Date, time: string) => {
+    const ds = format(day, 'yyyy-MM-dd');
+    const matches = availability.filter(a => a.date === ds && a.time === time);
+    matches.forEach(a => deleteAvailabilitySlot(a.id));
+    if (matches.length > 0) {
+      toast.success('Disponibilidade removida');
+    }
+  };
   const handleShareWeek = async () => {
     const sections: string[] = [];
     for (const day of weekDays) {
@@ -125,9 +133,18 @@ const getEventForSlot = (day: Date, time: string) => {
                       </div>
                     ) : (
                       hasAvailabilityForSlot(day, time) ? (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-availability/20 border border-availability/50 text-lunar-text">Disponível</span>
-                        </div>
+                          <div className="absolute inset-0 flex items-center justify-center gap-2">
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-availability/20 border border-availability/50 text-lunar-text">Disponível</span>
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); handleRemoveAvailability(day, time); }}
+                              className="text-[10px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+                              aria-label="Remover disponibilidade"
+                              title="Remover disponibilidade"
+                            >
+                              <Trash2 className="h-3 w-3" /> Remover
+                            </button>
+                          </div>
                       ) : null
                     )}
                   </div>

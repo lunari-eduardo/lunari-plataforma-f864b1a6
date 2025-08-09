@@ -130,11 +130,49 @@ const removeTimeAt = (idx: number) => setTimesList(prev => prev.filter((_,i) => 
     onClose();
   };
 
+  const handleRemoveTimesInRange = () => {
+    const times = normalizeTimes(timesList);
+    if (times.length === 0) {
+      toast.error('Informe ao menos um horário para remover.');
+      return;
+    }
+    if (startDate > endDate) {
+      toast.error('Data inicial não pode ser maior que a final.');
+      return;
+    }
+    const targetDates = computeTargetDatesBetween(startDate, endDate, selectedWeekdays);
+    let removed = 0;
+    for (const d of targetDates) {
+      const ds = format(d, 'yyyy-MM-dd');
+      for (const t of times) {
+        availability
+          .filter(a => a.date === ds && a.time === t)
+          .forEach(a => { deleteAvailabilitySlot(a.id); removed++; });
+      }
+    }
+    toast.success(`Disponibilidades removidas: ${removed}.`);
+    onClose();
+  };
+
+  const handleRemoveAllInRange = () => {
+    if (startDate > endDate) {
+      toast.error('Data inicial não pode ser maior que a final.');
+      return;
+    }
+    const targetDates = computeTargetDatesBetween(startDate, endDate, selectedWeekdays);
+    const targetSet = new Set(targetDates.map(d => format(d, 'yyyy-MM-dd')));
+    let removed = 0;
+    availability
+      .filter(a => targetSet.has(a.date))
+      .forEach(a => { deleteAvailabilitySlot(a.id); removed++; });
+    toast.success(`Todas as disponibilidades no intervalo foram removidas: ${removed}.`);
+    onClose();
+  };
+
   const handleClearDay = () => {
     clearAvailabilityForDate(dateStr);
     toast.success('Disponibilidades do dia removidas');
   };
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[520px]">

@@ -5,7 +5,8 @@ import { useState, useEffect } from 'react';
 import { UnifiedEvent } from '@/hooks/useUnifiedCalendar';
 import UnifiedEventCard from './UnifiedEventCard';
 import { useAvailability } from '@/hooks/useAvailability';
-
+import { Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 interface DailyViewProps {
   date: Date;
   unifiedEvents: UnifiedEvent[];
@@ -26,7 +27,7 @@ export default function DailyView({
   }>({});
 const [editingTimeSlot, setEditingTimeSlot] = useState<number | null>(null);
   const dateKey = format(date, 'yyyy-MM-dd');
-  const { availability } = useAvailability();
+  const { availability, deleteAvailabilitySlot } = useAvailability();
 
   // Load custom time slots from localStorage
   useEffect(() => {
@@ -78,6 +79,13 @@ const getEventForSlot = (time: string) => {
     return availability.some(s => s.date === dateKey && s.time === time);
   };
 
+  const handleRemoveAvailability = (time: string) => {
+    const matches = availability.filter(s => s.date === dateKey && s.time === time);
+    matches.forEach(s => deleteAvailabilitySlot(s.id));
+    if (matches.length > 0) {
+      toast.success('Disponibilidade removida');
+    }
+  };
   const handleEditTimeSlot = (index: number, currentTime: string) => {
     if (getEventForSlot(currentTime)) return;
     setEditingTimeSlot(index);
@@ -155,11 +163,24 @@ const getEventForSlot = (time: string) => {
                     />
                   </div>
                 ) : (
-                  <div className="h-full flex items-center justify-center text-[11px]">
-                    <span className={hasAvailabilityForTime(time) ? 'inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-availability/20 border border-availability/50 text-lunar-text' : 'text-muted-foreground'}>
-                      Disponível
-                    </span>
-                  </div>
+                  hasAvailabilityForTime(time) ? (
+                    <div className="inline-flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-availability/20 border border-availability/50 text-lunar-text">
+                        Disponível
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleRemoveAvailability(time); }}
+                        className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+                        aria-label="Remover disponibilidade"
+                        title="Remover disponibilidade"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" /> Remover
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground">Disponível</span>
+                  )
                 )}
               </div>
             </div>
