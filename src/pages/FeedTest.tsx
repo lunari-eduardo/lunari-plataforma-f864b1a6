@@ -465,7 +465,13 @@ export default function FeedTest() {
             />
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="outline" onClick={() => setIsSettingsOpen(false)}>Fechar</Button>
-              <Button onClick={() => { storage.save(STORAGE_KEYS.FEED_INSTAGRAM_USERNAME, igUsername); handleReloadInstagram(); }}>
+              <Button onClick={() => { 
+                const u = igUsername.trim();
+                if (!u) { toast({ title: 'Usuário inválido', description: 'Informe o @usuario.' }); return; }
+                storage.save(STORAGE_KEYS.FEED_INSTAGRAM_USERNAME, u);
+                setIsSettingsOpen(false);
+                loadInstagram(u);
+              }} disabled={isLoadingIg}>
                 {isLoadingIg ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
                 Carregar do Instagram
               </Button>
