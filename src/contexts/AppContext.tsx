@@ -12,6 +12,7 @@ import { initializeApp, needsInitialization } from '@/utils/initializeApp';
 import { Projeto, CriarProjetoInput } from '@/types/projeto';
 import { ProjetoService } from '@/services/ProjetoService';
 import { corrigirClienteIdSessoes, corrigirClienteIdAgendamentos } from '@/utils/corrigirClienteIdSessoes';
+import { generateSessionId } from '@/utils/workflowSessionsAdapter';
 
 // Types
 import { Orcamento, Template, OrigemCliente, MetricasOrcamento, Cliente } from '@/types/orcamentos';
@@ -1305,6 +1306,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             excluirProjeto(projeto.projectId);
           }
         }
+
+        // Atualizar Projetos e workflow_sessions quando orçamento fechado muda data/hora
+        if (orcamentoAtualizado && orcamentoAtualizado.status === 'fechado' && (orcamento.data || orcamento.hora)) {
+          try {
+            const budgetKey = `orcamento-${id}`;
+
+            // Atualizar projetos vinculados ao orçamento
+            const projetosVinculados = projetos.filter(p => p.orcamentoId === budgetKey);
+            projetosVinculados.forEach(p => {
+              atualizarProjeto(p.projectId, {
+                dataAgendada: parseDateFromStorage(orcamentoAtualizado.data),
+                horaAgendada: orcamentoAtualizado.hora
+              });
+            });
+
+            // Atualizar workflow_sessions
+            const sessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
+            const matchIds = new Set([budgetKey, generateSessionId(budgetKey)]);
+            const updatedSessions = sessions.map((s: any) => {
+              if (matchIds.has(s.id) || matchIds.has(s.sessionId)) {
+                return { ...s, data: orcamentoAtualizado.data, hora: orcamentoAtualizado.hora };
+              }
+              return s;
+            });
+            localStorage.setItem('workflow_sessions', JSON.stringify(updatedSessions));
+          } catch (e) {
+            console.error('❌ Erro ao sincronizar orçamento com projetos e workflow_sessions:', e);
+          }
+        }
       }
       
       return updatedOrcamentos;
@@ -1550,6 +1580,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           });
         }
       }
+
+      // SINCRONIZAÇÃO: Atualizar Projetos e workflow_sessions com nova data/hora
+      if (appointmentAtualizado && (appointment.date || appointment.time)) {
+        try {
+          // Atualizar Projetos vinculados (agendamentoId ou orcamentoId igual ao ID do agendamento)
+          const projetosVinculados = projetos.filter(p => p.agendamentoId === appointmentAtualizado.id || p.orcamentoId === appointmentAtualizado.id);
+          projetosVinculados.forEach(p => {
+            atualizarProjeto(p.projectId, {
+              dataAgendada: appointmentAtualizado.date,
+              horaAgendada: appointmentAtualizado.time
+            });
+          });
+
+          // Atualizar workflow_sessions
+          const sessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
+          const dateStr = formatDateForStorage(appointmentAtualizado.date);
+          const matchIds = new Set([appointmentAtualizado.id, generateSessionId(appointmentAtualizado.id)]);
+          const updatedSessions = sessions.map((s: any) => {
+            if (matchIds.has(s.id) || matchIds.has(s.sessionId)) {
+              return { ...s, data: dateStr, hora: appointmentAtualizado.time };
+            }
+            return s;
+          });
+          localStorage.setItem('workflow_sessions', JSON.stringify(updatedSessions));
+        } catch (e) {
+          console.error('❌ Erro ao sincronizar data/hora com projetos e workflow_sessions:', e);
+        }
+      }
       
       return updatedAppointments;
     });
@@ -1567,7 +1625,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Remover do workflow_sessions no localStorage
     try {
       const workflowSessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
-      const updatedSessions = workflowSessions.filter((session: any) => session.id !== id);
+      const matchIds = new Set([id, generateSessionId(id)]);
+      const updatedSessions = workflowSessions.filter((session: any) => !(matchIds.has(session.id) || matchIds.has(session.sessionId)));
       localStorage.setItem('workflow_sessions', JSON.stringify(updatedSessions));
       console.log('✅ Agendamento removido do workflow:', id);
     } catch (error) {
