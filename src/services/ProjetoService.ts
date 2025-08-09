@@ -124,6 +124,7 @@ export class ProjetoService {
         projetoExistente.valorPacote !== (input.valorPacote || 0) ||
         projetoExistente.descricao !== (input.descricao || '').trim() ||
         projetoExistente.horaAgendada !== input.horaAgendada ||
+        projetoExistente.dataAgendada.getTime() !== input.dataAgendada.getTime() ||
         projetoExistente.whatsapp !== (input.whatsapp || '').trim() ||
         projetoExistente.email !== (input.email || '').trim();
 
@@ -133,6 +134,7 @@ export class ProjetoService {
           pacote: input.pacote,
           valorPacote: input.valorPacote,
           descricao: input.descricao,
+          dataAgendada: input.dataAgendada,
           horaAgendada: input.horaAgendada,
           whatsapp: input.whatsapp,
           email: input.email,

@@ -12,6 +12,7 @@ import { initializeApp, needsInitialization } from '@/utils/initializeApp';
 import { Projeto, CriarProjetoInput } from '@/types/projeto';
 import { ProjetoService } from '@/services/ProjetoService';
 import { corrigirClienteIdSessoes, corrigirClienteIdAgendamentos } from '@/utils/corrigirClienteIdSessoes';
+import { saveWorkflowItemsToSessions, generateSessionId } from '@/utils/workflowSessionsAdapter';
 
 // Types
 import { Orcamento, Template, OrigemCliente, MetricasOrcamento, Cliente } from '@/types/orcamentos';
@@ -283,55 +284,86 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   // COMPATIBILIDADE: WorkflowItems derivados dos Projetos
-  const workflowItems: WorkflowItem[] = projetos.map(projeto => ({
-    id: projeto.projectId,
-    sessionId: projeto.projectId,
-    data: projeto.dataAgendada.toISOString().split('T')[0],
-    hora: projeto.horaAgendada,
-    nome: projeto.nome,
-    whatsapp: projeto.whatsapp,
-    email: projeto.email,
-    descricao: projeto.descricao,
-    status: projeto.status,
-    categoria: projeto.categoria,
-    pacote: projeto.pacote,
-    valorPacote: projeto.valorPacote,
-    desconto: projeto.desconto,
-    valorFotoExtra: projeto.valorFotoExtra,
-    qtdFotoExtra: projeto.qtdFotosExtra,
-    valorTotalFotoExtra: projeto.valorTotalFotosExtra,
-    produto: projeto.produto,
-    qtdProduto: projeto.qtdProduto,
-    valorTotalProduto: projeto.valorTotalProduto,
-    produtosList: projeto.produtosList.map(p => ({
-      nome: p.nome,
-      quantidade: p.quantidade,
-      valorUnitario: p.valorUnitario,
-      tipo: p.tipo
-    })),
-    valorAdicional: projeto.valorAdicional,
-    detalhes: projeto.detalhes,
-    total: projeto.total,
-    valorPago: projeto.valorPago,
-    restante: projeto.restante,
-    pagamentos: projeto.pagamentos.map(p => ({
-      id: p.id,
-      valor: p.valor,
-      data: p.data
-    })),
-    fonte: projeto.fonte as 'agenda' | 'orcamento',
-    dataOriginal: projeto.dataOriginal || projeto.dataAgendada,
-    valorFinalAjustado: Boolean(projeto.valorFinalAjustado),
-    valorOriginalOrcamento: projeto.valorOriginalOrcamento,
-    percentualAjusteOrcamento: projeto.percentualAjusteOrcamento,
-    regrasDePrecoFotoExtraCongeladas: projeto.regrasDePrecoFotoExtraCongeladas 
-      ? { valorFotoExtra: projeto.valorFotoExtra } as any 
-      : undefined,
-    clienteId: projeto.clienteId
-  }));
+  const workflowItems: WorkflowItem[] = projetos.map(projeto => {
+    // Normalizar sessionId determinístico baseado na origem
+    let sessionId: string;
+    if (projeto.orcamentoId) {
+      const orcIdClean = projeto.orcamentoId.replace(/^orcamento-/, '').replace(/^orc-/, '');
+      sessionId = generateSessionId(`orc-${orcIdClean}`);
+    } else if (projeto.agendamentoId) {
+      const agId = projeto.agendamentoId.startsWith('agenda-') ? projeto.agendamentoId : `agenda-${projeto.agendamentoId}`;
+      sessionId = generateSessionId(agId);
+    } else {
+      sessionId = generateSessionId(projeto.projectId);
+    }
 
-  // FUNÇÕES PARA GERENCIAR PROJETOS
-  const criarProjeto = (input: CriarProjetoInput): Projeto => {
+    // Debug temporário
+    console.debug('🧭 sessionId mapeado', {
+      projectId: projeto.projectId,
+      orcamentoId: projeto.orcamentoId,
+      agendamentoId: projeto.agendamentoId,
+      sessionId
+    });
+
+    return {
+      id: projeto.projectId,
+      sessionId,
+      data: projeto.dataAgendada.toISOString().split('T')[0],
+      hora: projeto.horaAgendada,
+      nome: projeto.nome,
+      whatsapp: projeto.whatsapp,
+      email: projeto.email,
+      descricao: projeto.descricao,
+      status: projeto.status,
+      categoria: projeto.categoria,
+      pacote: projeto.pacote,
+      valorPacote: projeto.valorPacote,
+      desconto: projeto.desconto,
+      valorFotoExtra: projeto.valorFotoExtra,
+      qtdFotoExtra: projeto.qtdFotosExtra,
+      valorTotalFotoExtra: projeto.valorTotalFotosExtra,
+      produto: projeto.produto,
+      qtdProduto: projeto.qtdProduto,
+      valorTotalProduto: projeto.valorTotalProduto,
+      produtosList: projeto.produtosList.map(p => ({
+        nome: p.nome,
+        quantidade: p.quantidade,
+        valorUnitario: p.valorUnitario,
+        tipo: p.tipo
+      })),
+      valorAdicional: projeto.valorAdicional,
+      detalhes: projeto.detalhes,
+      total: projeto.total,
+      valorPago: projeto.valorPago,
+      restante: projeto.restante,
+      pagamentos: projeto.pagamentos.map(p => ({
+        id: p.id,
+        valor: p.valor,
+        data: p.data
+      })),
+      fonte: projeto.fonte as 'agenda' | 'orcamento',
+      dataOriginal: projeto.dataOriginal || projeto.dataAgendada,
+      valorFinalAjustado: Boolean(projeto.valorFinalAjustado),
+      valorOriginalOrcamento: projeto.valorOriginalOrcamento,
+      percentualAjusteOrcamento: projeto.percentualAjusteOrcamento,
+      regrasDePrecoFotoExtraCongeladas: projeto.regrasDePrecoFotoExtraCongeladas 
+        ? { valorFotoExtra: projeto.valorFotoExtra } as any 
+        : undefined,
+      clienteId: projeto.clienteId
+    };
+  });
+
+// Compatibilidade: espelhar Projetos em workflow_sessions (legado)
+useEffect(() => {
+  try {
+    saveWorkflowItemsToSessions(workflowItems);
+  } catch (error) {
+    console.error('❌ Erro ao espelhar workflow_sessions:', error);
+  }
+}, [workflowItems]);
+
+// FUNÇÕES PARA GERENCIAR PROJETOS
+const criarProjeto = (input: CriarProjetoInput): Projeto => {
     const novoProjeto = ProjetoService.criarProjeto(input);
     setProjetos(ProjetoService.carregarProjetos());
     return novoProjeto;
@@ -1550,6 +1582,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           });
         }
       }
+
+      // SINCRONIZAÇÃO: Agenda → Projetos (Workflow)
+      try {
+        if (appointmentAtualizado) {
+          const agendamentoKey = `agenda-${id}`;
+          const projetoRelacionado = projetos.find(p => p.agendamentoId === agendamentoKey || p.agendamentoId === id);
+          if (projetoRelacionado) {
+            atualizarProjeto(projetoRelacionado.projectId, {
+              dataAgendada: appointmentAtualizado.date instanceof Date ? appointmentAtualizado.date : new Date(appointmentAtualizado.date),
+              horaAgendada: appointmentAtualizado.time || projetoRelacionado.horaAgendada,
+              descricao: appointmentAtualizado.description ?? projetoRelacionado.descricao
+            });
+          }
+        }
+      } catch (error) {
+        console.error('❌ Erro ao sincronizar resagendamento para Projeto:', error);
+      }
       
       return updatedAppointments;
     });
@@ -1558,21 +1607,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteAppointment = (id: string) => {
     setAppointments(prev => prev.filter(app => app.id !== id));
     
-    // Remover projeto associado se existir
-    const projeto = projetos.find(p => p.agendamentoId === id);
+    // Remover projeto associado se existir (considerando chave com prefixo)
+    const agendamentoKey = `agenda-${id}`;
+    const projeto = projetos.find(p => p.agendamentoId === agendamentoKey || p.agendamentoId === id);
     if (projeto) {
       excluirProjeto(projeto.projectId);
     }
     
-    // Remover do workflow_sessions no localStorage
-    try {
-      const workflowSessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
-      const updatedSessions = workflowSessions.filter((session: any) => session.id !== id);
-      localStorage.setItem('workflow_sessions', JSON.stringify(updatedSessions));
-      console.log('✅ Agendamento removido do workflow:', id);
-    } catch (error) {
-      console.error('❌ Erro ao remover do workflow_sessions:', error);
-    }
+    // workflow_sessions será espelhado automaticamente a partir dos Projetos
   };
 
   // Disponibilidades - Actions

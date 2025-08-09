@@ -88,8 +88,8 @@ export function useUnifiedClientHistory(
     });
     
     orcamentosDoCliente.forEach(orcamento => {
-      // Gerar sessionId baseado no orçamento
-      const sessionId = orcamento.sessionId || generateSessionId(`orc-${orcamento.id}`);
+      // Gerar sessionId baseado no orçamento (normalizado)
+      const sessionId = generateSessionId(`orc-${orcamento.id}`);
       
       const projeto: UnifiedHistoryItem = {
         sessionId,
@@ -131,15 +131,10 @@ export function useUnifiedClientHistory(
     );
     
     agendamentosDoCliente.forEach(agendamento => {
-      let sessionId = agendamento.sessionId;
-      
-      // Se o agendamento veio de um orçamento, usar o sessionId do orçamento
-      if (agendamento.orcamentoId) {
-        sessionId = generateSessionId(`orc-${agendamento.orcamentoId}`);
-      } else {
-        // Agendamento direto
-        sessionId = agendamento.sessionId || generateSessionId(`agenda-${agendamento.id}`);
-      }
+      // Normalizar sessionId (determinístico)
+      const sessionId = agendamento.orcamentoId
+        ? generateSessionId(`orc-${agendamento.orcamentoId}`)
+        : generateSessionId(`agenda-${agendamento.id}`);
       
       const projetoExistente = projetosPorSessionId.get(sessionId);
       
@@ -204,16 +199,17 @@ export function useUnifiedClientHistory(
     });
     
     workflowDoCliente.forEach(workflowItem => {
-      let sessionId = workflowItem.sessionId;
-      
-      // Se não tem sessionId, tentar determinar baseado no ID
-      if (!sessionId) {
-        if (workflowItem.id.startsWith('orcamento-')) {
-          const orcamentoId = workflowItem.id.replace('orcamento-', '');
-          sessionId = generateSessionId(`orc-${orcamentoId}`);
-        } else {
-          sessionId = generateSessionId(workflowItem.id);
-        }
+      // Normalizar sessionId a partir do ID sempre que possível (evita duplicações)
+      let sessionId: string;
+      if (workflowItem.id?.startsWith('orcamento-')) {
+        const orcamentoId = workflowItem.id.replace('orcamento-', '');
+        sessionId = generateSessionId(`orc-${orcamentoId}`);
+      } else if (workflowItem.id?.startsWith('agenda-')) {
+        sessionId = generateSessionId(workflowItem.id);
+      } else if (workflowItem.sessionId?.startsWith('session-')) {
+        sessionId = workflowItem.sessionId;
+      } else {
+        sessionId = generateSessionId(workflowItem.sessionId || workflowItem.id);
       }
       
       const projetoExistente = projetosPorSessionId.get(sessionId);
@@ -293,8 +289,42 @@ export function useUnifiedClientHistory(
       projeto.timeline.sort((a, b) => a.data.getTime() - b.data.getTime());
     });
     
-    // Retornar histórico ordenado por data (mais recente primeiro)
-    const historicoUnificado = Array.from(projetosPorSessionId.values())
+    // Retornar histórico ordenado por data (mais recente primeiro) com deduplicação defensiva
+    const baseHistorico = Array.from(projetosPorSessionId.values());
+
+    // Deduplicação por chave de negócio para evitar "agendamento fantasma"
+    const tipoRank: Record<UnifiedHistoryItem['tipo'], number> = {
+      orcamento: 0,
+      agendamento: 1,
+      workflow: 2,
+      projeto: 3,
+    };
+
+    const dedupMap = new Map<string, UnifiedHistoryItem>();
+
+    for (const item of baseHistorico) {
+      const chave = `${item.cliente.id}|${item.data.toISOString().slice(0,10)}|${item.hora}|${(item.pacote || item.categoria || '').toLowerCase().trim()}`;
+      const existente = dedupMap.get(chave);
+      if (!existente) {
+        dedupMap.set(chave, item);
+      } else {
+        const rNovo = tipoRank[item.tipo];
+        const rExistente = tipoRank[existente.tipo];
+        if (rNovo > rExistente) {
+          dedupMap.set(chave, item);
+        } else if (rNovo === rExistente) {
+          const hasWorkflowNovo = Boolean(item.dadosCompletos.workflow);
+          const hasWorkflowExistente = Boolean(existente.dadosCompletos.workflow);
+          if (hasWorkflowNovo && !hasWorkflowExistente) {
+            dedupMap.set(chave, item);
+          } else if (item.dataUltimaAtualizacao.getTime() > existente.dataUltimaAtualizacao.getTime()) {
+            dedupMap.set(chave, item);
+          }
+        }
+      }
+    }
+
+    const historicoUnificado = Array.from(dedupMap.values())
       .sort((a, b) => b.dataUltimaAtualizacao.getTime() - a.dataUltimaAtualizacao.getTime());
     
     console.log('✅ HISTÓRICO UNIFICADO CRIADO:', {
