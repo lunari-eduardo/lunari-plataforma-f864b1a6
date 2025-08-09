@@ -45,23 +45,27 @@ const [editingTimeSlot, setEditingTimeSlot] = useState<number | null>(null);
     localStorage.setItem('customTimeSlots', JSON.stringify(customTimeSlots));
   }, [customTimeSlots]);
 
-  // Get time slots for the current date
+  // Get time slots for the current date (include events and availability times)
   const getCurrentTimeSlots = () => {
-    const daySlots = customTimeSlots[dateKey] || DEFAULT_TIME_SLOTS;
+    const baseSlots = customTimeSlots[dateKey] || DEFAULT_TIME_SLOTS;
     const eventTimes = unifiedEvents
       .filter(event => isSameDay(event.date, date))
       .map(event => event.time);
-    const missingTimes = eventTimes.filter(time => !daySlots.includes(time));
+    const availabilityTimes = availability
+      .filter(s => s.date === dateKey)
+      .map(s => s.time);
 
-    if (missingTimes.length > 0) {
-      const updatedSlots = [...daySlots, ...missingTimes].sort();
+    const merged = Array.from(new Set([...baseSlots, ...eventTimes, ...availabilityTimes])).sort();
+
+    // If merged differs from stored, persist for this day
+    if (merged.join('|') !== baseSlots.sort().join('|')) {
       setCustomTimeSlots(prev => ({
         ...prev,
-        [dateKey]: updatedSlots
+        [dateKey]: merged
       }));
-      return updatedSlots;
+      return merged;
     }
-    return daySlots;
+    return baseSlots;
   };
 
   const timeSlots = getCurrentTimeSlots();

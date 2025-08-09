@@ -1578,7 +1578,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Disponibilidades - Actions
   const addAvailabilitySlots = (slots: AvailabilitySlot[]) => {
     setAvailability(prev => {
-      const slotsWithId = slots.map((s, idx) => ({ ...s, id: s.id || `${Date.now()}_${idx}` }));
+      const existing = new Set(prev.map(s => `${s.date}|${s.time}`));
+      const filtered = slots.filter(s => !existing.has(`${s.date}|${s.time}`));
+      const slotsWithId = filtered.map((s, idx) => ({ ...s, id: s.id || `${Date.now()}_${idx}` }));
       return [...prev, ...slotsWithId];
     });
   };

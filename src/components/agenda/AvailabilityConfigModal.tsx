@@ -5,12 +5,18 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { TimeInput } from '@/components/ui/time-input';
-import { format, startOfWeek, addDays } from 'date-fns';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Textarea } from '@/components/ui/textarea';
+import { format, eachDayOfInterval } from 'date-fns';
 import { useEffect, useMemo, useState } from 'react';
 import { useAvailability } from '@/hooks/useAvailability';
 import type { AvailabilitySlot } from '@/types/availability';
 import { toast } from 'sonner';
 import { Checkbox } from '@/components/ui/checkbox';
+import { cn } from '@/lib/utils';
+import { storage, STORAGE_KEYS } from '@/utils/localStorage';
+import { useAgenda } from '@/hooks/useAgenda';
 
 interface AvailabilityConfigModalProps {
   isOpen: boolean;
@@ -35,9 +41,27 @@ export default function AvailabilityConfigModal({ isOpen, onClose, date, initial
   useEffect(() => {
     setStartTime(initialTime || '09:00');
     setEndTouched(false);
-  }, [initialTime, isOpen]);
+    setStartDate(date);
+    setEndDate(date);
+  }, [initialTime, isOpen, date]);
+
+  type AvailabilityPreset = {
+    id: string;
+    name: string;
+    times: string[];
+    weekdays: number[];
+  };
+
+  const [startDate, setStartDate] = useState<Date>(date);
+  const [endDate, setEndDate] = useState<Date>(date);
+  const [manualTimesText, setManualTimesText] = useState<string>('');
+  const manualTimes = useMemo(() => parseManualTimes(manualTimesText), [manualTimesText]);
+  const [presets, setPresets] = useState<AvailabilityPreset[]>(() => storage.load(STORAGE_KEYS.AVAILABILITY_PRESETS, [] as AvailabilityPreset[]));
+  const [presetName, setPresetName] = useState<string>('');
+  const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
 
   const dateStr = useMemo(() => format(date, 'yyyy-MM-dd'), [date]);
+  const { appointments } = useAgenda();
 
   const generateTimes = (start: string, end: string, minutes: number): string[] => {
     const [sh, sm] = start.split(':').map(Number);

@@ -70,7 +70,10 @@ export default function MonthlyView({
                 </span>
                 {/* Availability count badge */}
                 {(() => {
-                  const count = availability.filter(a => a.date === format(day, 'yyyy-MM-dd')).length;
+                  const dayKey = format(day, 'yyyy-MM-dd');
+                  const count = new Set(
+                    availability.filter(a => a.date === dayKey).map(a => a.time)
+                  ).size;
                   return count > 0 ? (
                     <span className="text-[10px] px-1.5 py-0.5 rounded bg-availability/20 border border-availability/50 text-lunar-text">
                       {count}
