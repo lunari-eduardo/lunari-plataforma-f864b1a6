@@ -72,7 +72,7 @@ function parseManualTimes(input: string): string[] {
   return unique;
 }
 
-const manualTimes = useMemo(() => parseManualTimes(manualTimesText), [manualTimesText]);
+const manualTimes = useMemo(() => { const toMin = (t: string) => { const [h,m] = t.split(":").map(Number); return h*60+m; }; const tokens = manualTimesText.split(/[\s,;]+/).map(s=>s.trim()).filter(Boolean); const valid = tokens.filter(t=>/^([01]\d|2[0-3]):([0-5]\d)$/.test(t)); const unique = Array.from(new Set(valid)); unique.sort((a,b)=>toMin(a)-toMin(b)); return unique; }, [manualTimesText]);
 const [presets, setPresets] = useState<AvailabilityPreset[]>(() => storage.load(STORAGE_KEYS.AVAILABILITY_PRESETS, [] as AvailabilityPreset[]));
 const [presetName, setPresetName] = useState<string>('');
 const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
