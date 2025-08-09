@@ -64,8 +64,8 @@ export default function AnnualView({ date, unifiedEvents, onDayClick }: AnnualVi
 
               {/* Weekday labels */}
               <div className="grid grid-cols-7 gap-1 mb-1 text-[10px] text-lunar-textSecondary">
-                {['D','S','T','Q','Q','S','S'].map((d) => (
-                  <div key={d} className="text-center">{d}</div>
+                {['D','S','T','Q','Q','S','S'].map((d, i) => (
+                  <div key={`${d}-${i}`} className="text-center">{d}</div>
                 ))}
               </div>
 

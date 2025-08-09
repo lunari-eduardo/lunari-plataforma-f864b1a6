@@ -75,7 +75,7 @@ export default function ActionChoiceModal({
       toast.success('Horários copiados para a área de transferência');
     }
   };
-  return <Dialog open={isOpen} onOpenChange={onClose}>
+  return <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <div className="flex items-start justify-between gap-2">
