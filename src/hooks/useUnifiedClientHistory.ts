@@ -289,8 +289,42 @@ export function useUnifiedClientHistory(
       projeto.timeline.sort((a, b) => a.data.getTime() - b.data.getTime());
     });
     
-    // Retornar histórico ordenado por data (mais recente primeiro)
-    const historicoUnificado = Array.from(projetosPorSessionId.values())
+    // Retornar histórico ordenado por data (mais recente primeiro) com deduplicação defensiva
+    const baseHistorico = Array.from(projetosPorSessionId.values());
+
+    // Deduplicação por chave de negócio para evitar "agendamento fantasma"
+    const tipoRank: Record<UnifiedHistoryItem['tipo'], number> = {
+      orcamento: 0,
+      agendamento: 1,
+      workflow: 2,
+      projeto: 3,
+    };
+
+    const dedupMap = new Map<string, UnifiedHistoryItem>();
+
+    for (const item of baseHistorico) {
+      const chave = `${item.cliente.id}|${item.data.toISOString().slice(0,10)}|${item.hora}|${(item.pacote || item.categoria || '').toLowerCase().trim()}`;
+      const existente = dedupMap.get(chave);
+      if (!existente) {
+        dedupMap.set(chave, item);
+      } else {
+        const rNovo = tipoRank[item.tipo];
+        const rExistente = tipoRank[existente.tipo];
+        if (rNovo > rExistente) {
+          dedupMap.set(chave, item);
+        } else if (rNovo === rExistente) {
+          const hasWorkflowNovo = Boolean(item.dadosCompletos.workflow);
+          const hasWorkflowExistente = Boolean(existente.dadosCompletos.workflow);
+          if (hasWorkflowNovo && !hasWorkflowExistente) {
+            dedupMap.set(chave, item);
+          } else if (item.dataUltimaAtualizacao.getTime() > existente.dataUltimaAtualizacao.getTime()) {
+            dedupMap.set(chave, item);
+          }
+        }
+      }
+    }
+
+    const historicoUnificado = Array.from(dedupMap.values())
       .sort((a, b) => b.dataUltimaAtualizacao.getTime() - a.dataUltimaAtualizacao.getTime());
     
     console.log('✅ HISTÓRICO UNIFICADO CRIADO:', {
