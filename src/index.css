@@ -206,16 +206,14 @@
     @apply bg-lunar-surface border-lunar-border text-lunar-text shadow-lunar-md;
   }
 
-  /* Global: remove all hover visual effects across the app (no functional changes) */
+  /* Global: neutralize heavy hover visuals without affecting layout transforms */
   *:hover {
     box-shadow: none !important;
-    transform: none !important;
     filter: none !important;
     text-decoration: none !important;
   }
   *:hover::before,
   *:hover::after {
-    transform: none !important;
     opacity: inherit !important;
   }
   /* Disable hover background highlight on tables */
@@ -232,7 +230,6 @@
     background: none !important;
     background-color: inherit !important;
     box-shadow: none !important;
-    transform: none !important;
     text-decoration: none !important;
     filter: none !important;
   }
