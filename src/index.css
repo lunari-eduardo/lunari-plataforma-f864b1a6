@@ -212,4 +212,20 @@
   .toast-lunar {
     @apply bg-lunar-surface border-lunar-border text-lunar-text shadow-lunar-md;
   }
+
+  /* Desativar efeitos de hover na página de Tarefas */
+  .page-tarefas * {
+    @apply transition-none;
+  }
+  .page-tarefas :is(button, .card, .card-lunar, li, .hover-scale, .story-link, .nav-item-lunar):hover {
+    background: none !important;
+    background-color: inherit !important;
+    box-shadow: none !important;
+    transform: none !important;
+    text-decoration: none !important;
+    filter: none !important;
+  }
+  .page-tarefas .table-lunar tr:hover td {
+    @apply bg-transparent;
+  }
 }

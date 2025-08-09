@@ -195,7 +195,7 @@ const [createOpen, setCreateOpen] = useState(false);
   );
 
   return (
-    <main className="p-4 space-y-4">
+    <main className="page-tarefas p-4 space-y-4">
       <header className="flex items-center justify-between">
         <h1 className="text-base font-bold text-lunar-text">Tarefas</h1>
         <div className="flex items-center gap-2">
