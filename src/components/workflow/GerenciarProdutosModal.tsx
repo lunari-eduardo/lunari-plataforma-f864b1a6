@@ -9,17 +9,23 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Checkbox } from "@/components/ui/checkbox";
+
 interface ProdutoWorkflow {
   nome: string;
   quantidade: number;
   valorUnitario: number;
   tipo: 'incluso' | 'manual';
+  produzido?: boolean;
+  entregue?: boolean;
 }
+
 interface ProductOption {
   id: string;
   nome: string;
   valor: string;
 }
+
 interface GerenciarProdutosModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -29,6 +35,7 @@ interface GerenciarProdutosModalProps {
   productOptions: ProductOption[];
   onSave: (produtos: ProdutoWorkflow[]) => void;
 }
+
 export function GerenciarProdutosModal({
   open,
   onOpenChange,
@@ -66,18 +73,26 @@ export function GerenciarProdutosModal({
       geral: totalManuais + totalInclusos
     };
   }, [localProdutos]);
+
   const formatCurrency = (value: number) => {
     return `R$ ${value.toFixed(2).replace('.', ',')}`;
   };
+
   const handleQuantidadeChange = (index: number, novaQuantidade: number) => {
     setLocalProdutos(prev => prev.map((produto, i) => i === index ? {
       ...produto,
       quantidade: Math.max(0, novaQuantidade)
     } : produto));
   };
+
   const handleRemoverProduto = (index: number) => {
     setLocalProdutos(prev => prev.filter((_, i) => i !== index));
   };
+
+  const handleSetFlag = (index: number, key: 'produzido' | 'entregue', value: boolean) => {
+    setLocalProdutos(prev => prev.map((p, i) => (i === index ? { ...p, [key]: value } : p)));
+  };
+
   const handleAdicionarProduto = () => {
     if (!selectedProduct) return;
     const productData = productOptions.find(p => p.nome === selectedProduct);
@@ -105,13 +120,16 @@ export function GerenciarProdutosModal({
     setSelectedProduct("");
     setNovoProductOpen(false);
   };
+
   const handleSave = () => {
     onSave(localProdutos);
     onOpenChange(false);
   };
+
   const handleCancel = () => {
     onOpenChange(false);
   };
+
   return <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col py-[17px]" style={{
       overflow: 'visible'
