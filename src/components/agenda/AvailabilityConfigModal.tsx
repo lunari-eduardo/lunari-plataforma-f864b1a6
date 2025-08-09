@@ -1,21 +1,21 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+
 import { Switch } from '@/components/ui/switch';
 import { TimeInput } from '@/components/ui/time-input';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Textarea } from '@/components/ui/textarea';
-import { format, startOfWeek, addDays } from 'date-fns';
+
+import { format, addDays } from 'date-fns';
 import { useEffect, useMemo, useState } from 'react';
 import { useAvailability } from '@/hooks/useAvailability';
 import type { AvailabilitySlot } from '@/types/availability';
 import { toast } from 'sonner';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
-import { storage, STORAGE_KEYS } from '@/utils/localStorage';
+
 import { useAgenda } from '@/hooks/useAgenda';
 
 interface AvailabilityConfigModalProps {
@@ -27,11 +27,8 @@ interface AvailabilityConfigModalProps {
 
 export default function AvailabilityConfigModal({ isOpen, onClose, date, initialTime }: AvailabilityConfigModalProps) {
   const { availability, addAvailabilitySlots, deleteAvailabilitySlot, clearAvailabilityForDate } = useAvailability();
-  const [startTime, setStartTime] = useState<string>(initialTime || '09:00');
-  const [endTime, setEndTime] = useState<string>('18:00');
-  const [duration, setDuration] = useState<number | null>(60);
+  const [timesList, setTimesList] = useState<string[]>([]);
   const [clearExisting, setClearExisting] = useState<boolean>(true);
-  const [endTouched, setEndTouched] = useState<boolean>(false);
   const [selectedWeekdays, setSelectedWeekdays] = useState<number[]>([]);
   const weekDaysLabels = useMemo(() => ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'], []);
   const toggleWeekday = (idx: number) => {
@@ -39,153 +36,86 @@ export default function AvailabilityConfigModal({ isOpen, onClose, date, initial
   };
 
   useEffect(() => {
-    setStartTime(initialTime || '09:00');
-    setEndTouched(false);
+    setTimesList(initialTime ? [initialTime] : []);
     setStartDate(date);
     setEndDate(date);
   }, [initialTime, isOpen, date]);
 
-  type AvailabilityPreset = {
-    id: string;
-    name: string;
-    times: string[];
-    weekdays: number[];
-  };
 
 const [startDate, setStartDate] = useState<Date>(date);
 const [endDate, setEndDate] = useState<Date>(date);
 const [manualTimesText, setManualTimesText] = useState<string>('');
 
-// Parse a lista de horários manuais em HH:mm, removendo inválidos e duplicados
-function parseManualTimes(input: string): string[] {
-  const toMin = (t: string) => {
-    const [h, m] = t.split(':').map(Number);
-    return h * 60 + m;
-  };
-  const tokens = input
-    .split(/[\s,;]+/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-  const valid = tokens.filter((t) => /^([01]\d|2[0-3]):([0-5]\d)$/.test(t));
+// Utilitários e manipuladores para lista de horários
+function isValidTime(t: string) {
+  return /^([01]\d|2[0-3]):([0-5]\d)$/.test(t);
+}
+const toMinutes = (t: string) => { const [h,m] = t.split(":").map(Number); return h*60+m; };
+function normalizeTimes(list: string[]) {
+  const valid = list.filter(isValidTime);
   const unique = Array.from(new Set(valid));
-  unique.sort((a, b) => toMin(a) - toMin(b));
+  unique.sort((a,b)=>toMinutes(a)-toMinutes(b));
   return unique;
 }
-
-const manualTimes = useMemo(() => { const toMin = (t: string) => { const [h,m] = t.split(":").map(Number); return h*60+m; }; const tokens = manualTimesText.split(/[\s,;]+/).map(s=>s.trim()).filter(Boolean); const valid = tokens.filter(t=>/^([01]\d|2[0-3]):([0-5]\d)$/.test(t)); const unique = Array.from(new Set(valid)); unique.sort((a,b)=>toMin(a)-toMin(b)); return unique; }, [manualTimesText]);
-const [presets, setPresets] = useState<AvailabilityPreset[]>(() => storage.load(STORAGE_KEYS.AVAILABILITY_PRESETS, [] as AvailabilityPreset[]));
-const [presetName, setPresetName] = useState<string>('');
-const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
+const addTimeRow = () => setTimesList(prev => [...prev, '']);
+const updateTimeAt = (idx: number, value: string) => setTimesList(prev => prev.map((t,i) => i===idx ? value : t));
+const removeTimeAt = (idx: number) => setTimesList(prev => prev.filter((_,i) => i!==idx));
 
   const dateStr = useMemo(() => format(date, 'yyyy-MM-dd'), [date]);
   const { appointments } = useAgenda();
 
-  const generateTimes = (start: string, end: string, minutes: number): string[] => {
-    const [sh, sm] = start.split(':').map(Number);
-    const [eh, em] = end.split(':').map(Number);
-    const startTotal = sh * 60 + sm;
-    const endTotal = eh * 60 + em;
-    const times: string[] = [];
-    for (let t = startTotal; t + minutes <= endTotal; t += minutes) {
-      const h = Math.floor(t / 60).toString().padStart(2, '0');
-      const m = (t % 60).toString().padStart(2, '0');
-      times.push(`${h}:${m}`);
-    }
-    return times;
-  };
-
-  const parseTimeToMinutes = (t: string) => {
-    const [h, m] = t.split(':').map(Number);
-    return h * 60 + m;
-  };
-
-  const minutesToTimeStr = (mins: number) => {
-    const h = String(Math.floor(mins / 60)).padStart(2, '0');
-    const m = String(mins % 60).padStart(2, '0');
-    return `${h}:${m}`;
-  };
-
-  const snapEndToDuration = (start: string, end: string, minutes: number) => {
-    const s = parseTimeToMinutes(start);
-    let e = parseTimeToMinutes(end);
-    if (e <= s) e = s + minutes;
-    const diff = e - s;
-    const remainder = diff % minutes;
-    return minutesToTimeStr(e - remainder);
-  };
-
-  const recomputeDurationFromWindow = (start: string, end: string): number | null => {
-    const s = parseTimeToMinutes(start);
-    const e = parseTimeToMinutes(end);
-    const total = e - s;
-    if (total <= 0) return null;
-    const allowed = [15, 30, 45, 60, 90];
-    const match = allowed.find(d => total % d === 0);
-    return match || null;
-  };
-
-  const computeTargetDates = (base: Date): Date[] => {
-    if (selectedWeekdays.length === 0) return [base];
+  // Calcula as datas alvo entre início e fim, aplicando dias da semana quando selecionados
+  const computeTargetDatesBetween = (start: Date, end: Date, weekdays: number[]): Date[] => {
     const results: Date[] = [];
-    const baseWeekStart = startOfWeek(base);
-    for (let w = 0; w < 4; w++) {
-      for (const wd of selectedWeekdays) {
-        const d = addDays(baseWeekStart, wd + w * 7);
-        if (d >= base) results.push(d);
+    let d = new Date(start);
+    while (d <= end) {
+      if (weekdays.length === 0 || weekdays.includes(d.getDay())) {
+        results.push(new Date(d));
       }
+      d = addDays(d, 1);
     }
-    results.sort((a, b) => a.getTime() - b.getTime());
     return results;
   };
 
-  useEffect(() => {
-    if (duration && !endTouched) {
-      setEndTime(prev => snapEndToDuration(startTime, prev, duration));
-    }
-  }, [duration, startTime, endTouched]);
-
-  const handleEndTimeChange = (value: string) => {
-    setEndTouched(true);
-    setEndTime(value);
-    const newDur = recomputeDurationFromWindow(startTime, value);
-    if (newDur) {
-      setDuration(newDur);
-    } else {
-      setDuration(null);
-      toast.error('O término não alinha com uma duração suportada. Selecione uma duração.');
-    }
-  };
+  // Sem sincronização automática de término/duração: usando lista manual de horários
 
   const handleSave = () => {
-    if (!startTime || !endTime || !duration || duration <= 0) {
-      toast.error('Preencha início, término e duração válidos.');
+    const times = normalizeTimes(timesList);
+    if (times.length === 0) {
+      toast.error('Adicione pelo menos um horário válido (HH:mm).');
       return;
     }
-    const times = generateTimes(startTime, endTime, duration);
-    const targetDates = computeTargetDates(date);
+    if (startDate > endDate) {
+      toast.error('Data inicial não pode ser maior que a final.');
+      return;
+    }
+
+    const targetDates = computeTargetDatesBetween(startDate, endDate, selectedWeekdays);
+    const appointmentKeys = new Set(appointments.map(a => `${format(a.date, 'yyyy-MM-dd')}|${a.time}`));
+    const existingAvailabilitySet = new Set(availability.map(a => `${a.date}|${a.time}`));
+    const addedKeys = new Set<string>();
 
     const toAdd: AvailabilitySlot[] = [];
-    const existingKeySet = new Set(availability.map(a => `${a.date}|${a.time}`));
-    const addedKeys = new Set<string>();
+    let conflicts = 0;
+    let duplicates = 0;
 
     for (const d of targetDates) {
       const ds = format(d, 'yyyy-MM-dd');
       for (const t of times) {
         const key = `${ds}|${t}`;
+        if (appointmentKeys.has(key)) { conflicts++; continue; }
+
         if (clearExisting) {
-          // Remove apenas os slots existentes exatamente nestes horários
           availability
             .filter(a => a.date === ds && a.time === t)
             .forEach(a => deleteAvailabilitySlot(a.id));
-          if (!addedKeys.has(key)) {
-            toAdd.push({ id: '', date: ds, time: t, duration });
-            addedKeys.add(key);
-          }
+        }
+
+        if (!existingAvailabilitySet.has(key) && !addedKeys.has(key)) {
+          toAdd.push({ id: '', date: ds, time: t, duration: 60 });
+          addedKeys.add(key);
         } else {
-          if (!existingKeySet.has(key) && !addedKeys.has(key)) {
-            toAdd.push({ id: '', date: ds, time: t, duration });
-            addedKeys.add(key);
-          }
+          duplicates++;
         }
       }
     }
@@ -196,7 +126,7 @@ const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
     }
 
     addAvailabilitySlots(toAdd);
-    toast.success('Disponibilidades configuradas com sucesso');
+    toast.success(`Disponibilidades adicionadas: ${toAdd.length}. Conflitos com agendamentos: ${conflicts}. Duplicados: ${duplicates}.`);
     onClose();
   };
 
@@ -217,28 +147,44 @@ const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="space-y-2">
-            <Label>Início</Label>
-            <TimeInput value={startTime} onChange={(v) => setStartTime(v)} />
+            <Label>Data inicial</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className={cn("justify-start font-normal", !startDate && "text-muted-foreground")}> 
+                  {format(startDate, 'dd/MM/yyyy')}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar 
+                  mode="single" 
+                  selected={startDate}
+                  onSelect={(d) => d && setStartDate(d)}
+                  initialFocus 
+                  className={cn("p-3 pointer-events-auto")} 
+                />
+              </PopoverContent>
+            </Popover>
           </div>
           <div className="space-y-2">
-            <Label>Término</Label>
-            <TimeInput value={endTime} onChange={(v) => handleEndTimeChange(v)} />
+            <Label>Data final</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className={cn("justify-start font-normal", !endDate && "text-muted-foreground")}> 
+                  {format(endDate, 'dd/MM/yyyy')}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar 
+                  mode="single" 
+                  selected={endDate}
+                  onSelect={(d) => d && setEndDate(d)}
+                  initialFocus 
+                  className={cn("p-3 pointer-events-auto")} 
+                />
+              </PopoverContent>
+            </Popover>
           </div>
-          <div className="space-y-2">
-            <Label>Duração (min)</Label>
-            <Select value={duration ? String(duration) : undefined} onValueChange={(v) => setDuration(Number(v))}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="15">15</SelectItem>
-                <SelectItem value="30">30</SelectItem>
-                <SelectItem value="45">45</SelectItem>
-                <SelectItem value="60">60</SelectItem>
-                <SelectItem value="90">90</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+
           <div className="col-span-1 md:col-span-2 space-y-2">
             <Label>Dias da semana (opcional)</Label>
             <div className="grid grid-cols-7 gap-2">
@@ -252,8 +198,28 @@ const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
                 </label>
               ))}
             </div>
-            <p className="text-[11px] text-muted-foreground">Se selecionar dias, aplicaremos nesses dias nas próximas 4 semanas.</p>
+            <p className="text-[11px] text-muted-foreground">Deixe em branco para aplicar em todos os dias do intervalo.</p>
           </div>
+
+          <div className="col-span-1 md:col-span-2 space-y-2">
+            <Label>Horários a liberar</Label>
+            <div className="space-y-2">
+              {timesList.length === 0 && (
+                <p className="text-xs text-muted-foreground">Nenhum horário adicionado ainda.</p>
+              )}
+              {timesList.map((t, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <div className="w-28">
+                    <TimeInput value={t} onChange={(v) => updateTimeAt(idx, v)} />
+                  </div>
+                  <Button variant="ghost" onClick={() => removeTimeAt(idx)}>Remover</Button>
+                </div>
+              ))}
+              <Button variant="secondary" onClick={addTimeRow}>+ Adicionar horário</Button>
+              <p className="text-[11px] text-muted-foreground">Os horários serão criados apenas onde não houver agendamento.</p>
+            </div>
+          </div>
+
           <div className="col-span-1 md:col-span-2 flex items-center justify-between rounded-md border p-3">
             <div>
               <p className="text-sm font-medium">Substituir existentes</p>
