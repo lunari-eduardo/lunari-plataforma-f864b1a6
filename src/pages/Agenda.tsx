@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { format, addMonths, addWeeks, addDays, subMonths, subWeeks, subDays } from "date-fns";
+import { format, addMonths, addWeeks, addDays, subMonths, subWeeks, subDays, addYears, subYears } from "date-fns";
 import { ptBR } from 'date-fns/locale';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import MonthlyView from "@/components/agenda/MonthlyView";
 import WeeklyView from "@/components/agenda/WeeklyView";
 import DailyView from "@/components/agenda/DailyView";
+import AnnualView from "@/components/agenda/AnnualView";
 import AppointmentForm from "@/components/agenda/AppointmentForm";
 import AppointmentDetails from "@/components/agenda/AppointmentDetails";
 import ActionChoiceModal from "@/components/agenda/ActionChoiceModal";
@@ -20,7 +21,7 @@ import { useAgenda, Appointment } from "@/hooks/useAgenda";
 import { useIntegration } from "@/hooks/useIntegration";
 import { useOrcamentos } from "@/hooks/useOrcamentos";
 import { Orcamento } from "@/types/orcamentos";
-type ViewType = 'month' | 'week' | 'day';
+type ViewType = 'month' | 'week' | 'day' | 'year';
 export default function Agenda() {
   const {
     unifiedEvents,
@@ -77,6 +78,10 @@ export default function Agenda() {
   // Format date for display
   const formatDateTitle = () => {
     switch (view) {
+      case 'year':
+        return format(date, "yyyy", {
+          locale: ptBR
+        });
       case 'month':
         return format(date, "MMMM yyyy", {
           locale: ptBR
@@ -100,6 +105,9 @@ export default function Agenda() {
   // Navigation functions
   const navigatePrevious = () => {
     switch (view) {
+      case 'year':
+        setDate(subYears(date, 1));
+        break;
       case 'month':
         setDate(subMonths(date, 1));
         break;
@@ -113,6 +121,9 @@ export default function Agenda() {
   };
   const navigateNext = () => {
     switch (view) {
+      case 'year':
+        setDate(addYears(date, 1));
+        break;
       case 'month':
         setDate(addMonths(date, 1));
         break;
@@ -234,7 +245,7 @@ export default function Agenda() {
       setIsBudgetModalOpen(true);
     }
   };
-  return <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 space-y-2 md:space-y-4 pb-20 md:pb-4">
+  return <div className="w-full max-w-7xl mx-auto px-2 md:px-4 lg:px-6 space-y-2 md:space-y-4 pb-20 md:pb-4">
       <Card className="p-2 md:p-4 bg-lunar-bg mx-0">
         <div className="flex flex-col items-center justify-center mb-2 md:mb-4 gap-2 md:gap-3">
           {/* Navigation and Date Display */}
@@ -268,6 +279,9 @@ export default function Agenda() {
               <Button variant={view === 'month' ? "default" : "ghost"} size="sm" onClick={() => setView('month')} className={view === 'month' ? "bg-lunar-accent text-lunar-text hover:bg-lunar-accentHover" : "text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-bg/50"}>
                 Mês
               </Button>
+              <Button variant={view === 'year' ? "default" : "ghost"} size="sm" onClick={() => setView('year')} className={view === 'year' ? "bg-lunar-accent text-lunar-text hover:bg-lunar-accentHover" : "text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-bg/50"}>
+                Ano
+              </Button>
             </div>
           </div>
           
@@ -282,10 +296,14 @@ export default function Agenda() {
             <Button variant={view === 'month' ? "default" : "ghost"} size="sm" onClick={() => setView('month')} className={`flex-1 ${view === 'month' ? "bg-lunar-accent text-lunar-text hover:bg-lunar-accentHover" : "text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-bg/50"}`}>
               Mês
             </Button>
+            <Button variant={view === 'year' ? "default" : "ghost"} size="sm" onClick={() => setView('year')} className={`flex-1 ${view === 'year' ? "bg-lunar-accent text-lunar-text hover:bg-lunar-accentHover" : "text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-bg/50"}`}>
+              Ano
+            </Button>
           </div>
         </div>
           
         <div className="mt-4">
+          {view === 'year' && <AnnualView date={date} unifiedEvents={unifiedEvents} onDayClick={handleDayClick} onEventClick={handleEventClick} />}
           {view === 'month' && <MonthlyView date={date} unifiedEvents={unifiedEvents} onCreateSlot={handleCreateSlot} onEventClick={handleEventClick} onDayClick={handleDayClick} />}
           {view === 'week' && <WeeklyView date={date} unifiedEvents={unifiedEvents} onCreateSlot={handleCreateSlot} onEventClick={handleEventClick} />}
           {view === 'day' && <DailyView date={date} unifiedEvents={unifiedEvents} onCreateSlot={handleCreateSlot} onEventClick={handleEventClick} />}
