@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { Button } from '@/components/ui/button';
-import { Plus, Save, Trash, ImageUp, Settings, RotateCcw, Loader2 } from 'lucide-react';
+import { Plus, Save, Trash, ArrowLeftRight, Settings, RotateCcw, Loader2 } from 'lucide-react';
 import { FeedStorage } from '@/services/FeedStorage';
 import type { FeedImage } from '@/types/feed';
 import { useToast } from '@/components/ui/use-toast';
@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 export default function FeedTest() {
   const [images, setImages] = useState<FeedImage[]>(() => FeedStorage.load());
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [swapSourceId, setSwapSourceId] = useState<string | null>(null);
 
   const [dragId, setDragId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
@@ -83,8 +84,8 @@ export default function FeedTest() {
   }, [device, deviceStateReady]);
 
   const zoomRange = useMemo(() => {
-    if (device === 'desktop') return { min: 0.6, max: 1.3, step: 0.05 } as const;
-    if (device === 'tablet') return { min: 0.75, max: 1.0, step: 0.05 } as const;
+    if (device === 'desktop') return { min: 0.5, max: 1.3, step: 0.05 } as const;
+    if (device === 'tablet') return { min: 0.5, max: 1.0, step: 0.05 } as const;
     return { min: 1, max: 1, step: 1 } as const;
   }, [device]);
 
@@ -108,11 +109,13 @@ export default function FeedTest() {
       if (!containerRef.current) return;
       if (!containerRef.current.contains(e.target as Node)) {
         setSelectedId(null);
+        setSwapSourceId(null);
       }
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setSelectedId(null);
+        setSwapSourceId(null);
       }
     };
     document.addEventListener('click', onDocClick);
@@ -211,28 +214,41 @@ export default function FeedTest() {
     await loadInstagram(igUsername);
   };
 
-  const handleReplace = (id: string) => {
-    const onChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      const img = await loadImageFromFile(file);
-      const dataUrl = await compressToJpeg(img, 1080, 0.7);
-      setImages((prev) => {
-        const updated: FeedImage[] = prev.map((img) =>
-          img.id === id ? ({ ...img, url: dataUrl, origem: 'upload' as const, criadoEm: Date.now() } as FeedImage) : img
-        );
-        const recomposed = composeAndClamp(updated);
-        FeedStorage.save(recomposed);
-        return recomposed;
-      });
-      e.currentTarget.value = '';
-    };
+  const handleStartSwap = (id: string) => {
+    setSelectedId(null);
+    if (reorderMode) {
+      setReorderMode(false);
+      FeedStorage.save(composeAndClamp(images));
+    }
+    setSwapSourceId((cur) => {
+      if (cur === id) return null;
+      toast({ title: 'Modo de troca', description: 'Selecione outra foto para trocar de posição.' });
+      return id;
+    });
+  };
 
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.onchange = (ev: any) => onChange(ev as any);
-    input.click();
+  const performSwap = (aId: string, bId: string) => {
+    if (aId === bId) {
+      setSwapSourceId(null);
+      return;
+    }
+    setImages((prev) => {
+      const arr = [...prev];
+      const iA = arr.findIndex((i) => i.id === aId);
+      const iB = arr.findIndex((i) => i.id === bId);
+      if (iA < 0 || iB < 0) return prev;
+      if (arr[iA].origem !== arr[iB].origem) {
+        toast({ title: 'Troca não permitida', description: 'Troque apenas dentro do mesmo grupo (Uploads ou Instagram).' });
+        return prev;
+      }
+      [arr[iA], arr[iB]] = [arr[iB], arr[iA]];
+      const next = composeAndClamp(arr);
+      FeedStorage.save(next);
+      return next;
+    });
+    setSwapSourceId(null);
+    setSelectedId(null);
+    toast({ title: 'Posições trocadas' });
   };
 
   const handleDelete = (id: string) => {
@@ -379,15 +395,15 @@ export default function FeedTest() {
               <div
                 key={item.id}
                 data-feed-id={item.id}
-                className={`relative transition-transform ${mobileDragId === item.id ? 'ring-2 ring-primary shadow-md scale-[0.98]' : ''}`}
-                draggable
+                className={`relative transition-transform ${mobileDragId === item.id ? 'ring-2 ring-primary shadow-md scale-[0.98]' : ''} ${swapSourceId === item.id ? 'ring-2 ring-primary' : ''}`}
+                draggable={!swapSourceId}
                 onDragStart={(e) => onDragStart(item.id, e)}
                 onDragOver={(e) => onDragOver(item.id, e)}
                 onDrop={(e) => onDrop(item.id, e)}
-                onPointerDown={(e) => onItemPointerDown(item.id, e)}
-                onPointerMove={(e) => onItemPointerMove(item.id, e)}
-                onPointerUp={(e) => onItemPointerUp(item.id, e)}
-                onClick={(e) => { e.stopPropagation(); handleItemClick(item.id); }}
+                onPointerDown={(e) => { if (swapSourceId) return; onItemPointerDown(item.id, e); }}
+                onPointerMove={(e) => { if (swapSourceId) return; onItemPointerMove(item.id, e); }}
+                onPointerUp={(e) => { if (swapSourceId) return; onItemPointerUp(item.id, e); }}
+                onClick={(e) => { e.stopPropagation(); if (swapSourceId) { if (swapSourceId === item.id) { setSwapSourceId(null); } else { performSwap(swapSourceId, item.id); } return; } handleItemClick(item.id); }}
                 onKeyDown={(e) => handleKeyDown(item.id, e)}
                 onContextMenu={(e) => { if (reorderMode) e.preventDefault(); }}
                 tabIndex={0}
@@ -406,11 +422,12 @@ export default function FeedTest() {
                       <Trash className="h-4 w-4" />
                     </button>
                     <button
-                      aria-label="Trocar foto"
+                      aria-label="Trocar posição"
                       className="h-7 w-7 rounded bg-foreground/70 text-background grid place-items-center"
-                      onClick={(e) => { e.stopPropagation(); handleReplace(item.id); }}
+                      onClick={(e) => { e.stopPropagation(); handleStartSwap(item.id); }}
+                      title={swapSourceId === item.id ? 'Cancelar troca' : 'Trocar posição'}
                     >
-                      <ImageUp className="h-4 w-4" />
+                      <ArrowLeftRight className="h-4 w-4" />
                     </button>
                   </div>
                 )}
