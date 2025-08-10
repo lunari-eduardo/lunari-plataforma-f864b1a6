@@ -4,6 +4,7 @@ import { ptBR } from 'date-fns/locale';
 import { UnifiedEvent } from '@/hooks/useUnifiedCalendar';
 import UnifiedEventCard from './UnifiedEventCard';
 import { useAvailability } from '@/hooks/useAvailability';
+import { useIsMobile } from '@/hooks/use-mobile';
 interface MonthlyViewProps {
   date: Date;
   unifiedEvents: UnifiedEvent[];
@@ -21,6 +22,7 @@ export default function MonthlyView({
   onDayClick
 }: MonthlyViewProps) {
   const { availability } = useAvailability();
+  const isMobile = useIsMobile();
   const monthStart = startOfMonth(date);
   const monthEnd = endOfMonth(date);
   const daysInMonth = eachDayOfInterval({
@@ -68,8 +70,8 @@ export default function MonthlyView({
                `}>
                   {format(day, 'd')}
                 </span>
-                {/* Availability count badge */}
-                {(() => {
+                {/* Availability count badge (desktop only) */}
+                {!isMobile && (() => {
                   const dayKey = format(day, 'yyyy-MM-dd');
                   const count = new Set(
                     availability.filter(a => a.date === dayKey).map(a => a.time)
@@ -81,17 +83,52 @@ export default function MonthlyView({
                   ) : null;
                 })()}
               </div>
-              
+
               <div className="space-y-px md:space-y-1">
-                {displayEvents.map(event => <div key={event.id} onClick={e => e.stopPropagation()}>
-                    <UnifiedEventCard event={event} onClick={onEventClick} variant="monthly" />
-                  </div>)}
-                
-                {hasMoreEvents && <div className="text-xs p-0.5 md:p-1 text-muted-foreground font-medium">
-                    +{dayEvents.length - maxDisplayEvents} mais
-                  </div>}
-                
-                {dayEvents.length === 0}
+                {isMobile ? (
+                  <div className="flex items-center gap-2">
+                    {(() => {
+                      const dayKey = format(day, 'yyyy-MM-dd');
+                      const sessionCount = unifiedEvents.filter(e => isSameDay(e.date, day) && e.type === 'appointment').length;
+                      const takenTimes = new Set(
+                        unifiedEvents.filter(e => isSameDay(e.date, day) && e.type === 'appointment').map(e => e.time || '')
+                      );
+                      const availCount = new Set(
+                        availability.filter(a => a.date === dayKey && !takenTimes.has(a.time)).map(a => a.time)
+                      ).size;
+                      return (
+                        <>
+                          {sessionCount > 0 && (
+                            <span className="inline-flex items-center gap-1 text-[10px]">
+                              <span className="h-2.5 w-2.5 rounded-full bg-primary" aria-hidden></span>
+                              {sessionCount}
+                            </span>
+                          )}
+                          {availCount > 0 && (
+                            <span className="inline-flex items-center gap-1 text-[10px]">
+                              <span className="h-2.5 w-2.5 rounded-full bg-availability" aria-hidden></span>
+                              {availCount}
+                            </span>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </div>
+                ) : (
+                  <>
+                    {displayEvents.map(event => (
+                      <div key={event.id} onClick={e => e.stopPropagation()}>
+                        <UnifiedEventCard event={event} onClick={onEventClick} variant="monthly" />
+                      </div>
+                    ))}
+                    {hasMoreEvents && (
+                      <div className="text-xs p-0.5 md:p-1 text-muted-foreground font-medium">
+                        +{dayEvents.length - maxDisplayEvents} mais
+                      </div>
+                    )}
+                    {dayEvents.length === 0}
+                  </>
+                )}
               </div>
             </div>;
       })}

@@ -737,6 +737,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     storage.save(STORAGE_KEYS.AVAILABILITY, availability);
   }, [availability]);
 
+  // Limpeza automática: remover disponibilidades que conflitam com agendamentos
+  useEffect(() => {
+    setAvailability(prev => {
+      const appointmentKeys = new Set(
+        appointments.map(a => `${formatDateForStorage(a.date)}|${a.time}`)
+      );
+      const cleaned = prev.filter(s => !appointmentKeys.has(`${s.date}|${s.time}`));
+      return cleaned;
+    });
+  }, [appointments]);
+
   // Salvar projetos com debounce para evitar loops
   const projetosStringified = JSON.stringify(projetos);
   useEffect(() => {
@@ -1739,7 +1750,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addAvailabilitySlots = (slots: AvailabilitySlot[]) => {
     setAvailability(prev => {
       const existing = new Set(prev.map(s => `${s.date}|${s.time}`));
-      const filtered = slots.filter(s => !existing.has(`${s.date}|${s.time}`));
+      const appointmentKeys = new Set(
+        appointments.map(a => `${formatDateForStorage(a.date)}|${a.time}`)
+      );
+      // Evitar duplicados e conflitos com agendamentos
+      const filtered = slots.filter(s => {
+        const key = `${s.date}|${s.time}`;
+        return !existing.has(key) && !appointmentKeys.has(key);
+      });
       const slotsWithId = filtered.map((s, idx) => ({ ...s, id: s.id || `${Date.now()}_${idx}` }));
       return [...prev, ...slotsWithId];
     });

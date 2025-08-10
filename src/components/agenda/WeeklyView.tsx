@@ -4,6 +4,7 @@ import { ptBR } from 'date-fns/locale';
 import { UnifiedEvent } from '@/hooks/useUnifiedCalendar';
 import UnifiedEventCard from './UnifiedEventCard';
 import { useAvailability } from '@/hooks/useAvailability';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { Share2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -24,6 +25,7 @@ export default function WeeklyView({
   const weekStart = startOfWeek(date);
   const timeSlots = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"];
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const isMobile = useIsMobile();
 
   const formatDayName = (date: Date) => {
     return format(date, 'EEE', { locale: ptBR });
@@ -31,11 +33,14 @@ export default function WeeklyView({
 
 const getEventForSlot = (day: Date, time: string) => {
     return unifiedEvents.find(event => 
-      isSameDay(event.date, day) && event.time === time
+      isSameDay(event.date, day) && event.time === time && event.type === 'appointment'
     );
   };
   const hasAvailabilityForSlot = (day: Date, time: string) => {
     const ds = format(day, 'yyyy-MM-dd');
+    // Não considerar disponibilidade se houver agendamento no mesmo horário
+    const hasAppointment = unifiedEvents.some(e => isSameDay(e.date, day) && e.time === time && e.type === 'appointment');
+    if (hasAppointment) return false;
     return availability.some(a => a.date === ds && a.time === time);
   };
 
@@ -44,6 +49,15 @@ const getEventForSlot = (day: Date, time: string) => {
     return mm === '00' ? `${hh}h` : `${hh}h ${mm}min`;
   };
 
+  const getDayCounts = (day: Date) => {
+    const dayAppointments = unifiedEvents.filter(e => isSameDay(e.date, day) && e.type === 'appointment');
+    const takenTimes = new Set(dayAppointments.map(e => e.time));
+    const ds = format(day, 'yyyy-MM-dd');
+    const availCount = new Set(
+      availability.filter(a => a.date === ds && !takenTimes.has(a.time)).map(a => a.time)
+    ).size;
+    return { sessionsCount: dayAppointments.length, availCount };
+  };
   const handleRemoveAvailability = (day: Date, time: string) => {
     const ds = format(day, 'yyyy-MM-dd');
     const matches = availability.filter(a => a.date === ds && a.time === time);
@@ -103,6 +117,27 @@ const getEventForSlot = (day: Date, time: string) => {
             <div key={index} className="p-1 md:p-2 text-center bg-stone-200">
               <p className="text-xs text-muted-foreground font-medium">{formatDayName(day)}</p>
               <p className="font-semibold text-xs md:text-sm">{format(day, 'd')}</p>
+              {/* Mobile: dots with counts */}
+              {(() => {
+                if (!isMobile) return null;
+                const { sessionsCount, availCount } = getDayCounts(day);
+                return (
+                  <div className="mt-0.5 flex items-center justify-center gap-2 md:hidden">
+                    {sessionsCount > 0 && (
+                      <span className="inline-flex items-center gap-1 text-[10px]">
+                        <span className="h-2.5 w-2.5 rounded-full bg-primary" aria-hidden></span>
+                        {sessionsCount}
+                      </span>
+                    )}
+                    {availCount > 0 && (
+                      <span className="inline-flex items-center gap-1 text-[10px]">
+                        <span className="h-2.5 w-2.5 rounded-full bg-availability" aria-hidden></span>
+                        {availCount}
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           ))}
           
@@ -124,27 +159,29 @@ const getEventForSlot = (day: Date, time: string) => {
                     className="border h-8 md:h-10 p-0.5 md:p-1 relative cursor-pointer bg-stone-100 hover:bg-stone-50 border-gray-100"
                   >
                     {event ? (
-                      <div onClick={(e) => e.stopPropagation()}>
-                        <UnifiedEventCard 
-                          event={event} 
-                          onClick={onEventClick}
-                          variant="weekly"
-                        />
-                      </div>
+                      !isMobile && (
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <UnifiedEventCard 
+                            event={event} 
+                            onClick={onEventClick}
+                            variant="weekly"
+                          />
+                        </div>
+                      )
                     ) : (
-                      hasAvailabilityForSlot(day, time) ? (
-                          <div className="absolute inset-0 flex items-center justify-center gap-2">
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-availability/20 border border-availability/50 text-lunar-text">Disponível</span>
-                            <button
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); handleRemoveAvailability(day, time); }}
-                              className="text-[10px] text-muted-foreground hover:text-foreground hidden lg:inline-flex items-center gap-1"
-                              aria-label="Remover disponibilidade"
-                              title="Remover disponibilidade"
-                            >
-                              <Trash2 className="h-3 w-3" /> Remover
-                            </button>
-                          </div>
+                      !isMobile && hasAvailabilityForSlot(day, time) ? (
+                        <div className="absolute inset-0 flex items-center justify-center gap-2">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-availability/20 border border-availability/50 text-lunar-text">Disponível</span>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); handleRemoveAvailability(day, time); }}
+                            className="text-[10px] text-muted-foreground hover:text-foreground hidden lg:inline-flex items-center gap-1"
+                            aria-label="Remover disponibilidade"
+                            title="Remover disponibilidade"
+                          >
+                            <Trash2 className="h-3 w-3" /> Remover
+                          </button>
+                        </div>
                       ) : null
                     )}
                   </div>
