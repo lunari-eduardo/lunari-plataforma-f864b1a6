@@ -352,6 +352,96 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setProjetos(ProjetoService.carregarProjetos());
   };
   
+  // SYNC: workflow_sessions → Projetos (inclui inclusos e manuais)
+  const syncSessionsToProjects = useCallback((sessionsRaw: any[]) => {
+    try {
+      if (!Array.isArray(sessionsRaw) || sessionsRaw.length === 0) return;
+      const projetosExistentes = ProjetoService.carregarProjetos();
+      let houveAlteracao = false;
+
+      const normalizar = (s: any) => ({
+        id: s.id,
+        data: s.data,
+        hora: s.hora,
+        nome: (s.nome || '').trim(),
+        clienteId: s.clienteId || '',
+        produtosList: Array.isArray(s.produtosList) ? s.produtosList : [],
+      });
+
+      sessionsRaw.map(normalizar).forEach(session => {
+        // Tentar localizar projeto correspondente
+        let dataSessao: Date | null = null;
+        if (typeof session.data === 'string' && session.data.includes('/')) {
+          const [dia, mes, ano] = session.data.split('/').map((n: string) => parseInt(n, 10));
+          if (!isNaN(dia) && !isNaN(mes) && !isNaN(ano)) {
+            dataSessao = new Date(ano, mes - 1, dia);
+          }
+        }
+
+        const proj = projetosExistentes.find(p => {
+          const mesmoCliente = session.clienteId
+            ? p.clienteId === session.clienteId
+            : p.nome.trim().toLowerCase() === session.nome.toLowerCase();
+          const mesmaHora = session.hora ? p.horaAgendada === session.hora : true;
+          let mesmaData = true;
+          if (dataSessao) {
+            const diff = Math.abs(p.dataAgendada.getTime() - dataSessao.getTime());
+            mesmaData = diff < 12 * 60 * 60 * 1000; // 12h
+          }
+          return mesmoCliente && mesmaHora && mesmaData;
+        });
+
+        if (!proj) return;
+
+        const produtosNorm = session.produtosList.map((p: any) => ({
+          nome: p.nome,
+          quantidade: Number(p.quantidade) || 0,
+          valorUnitario: Number(p.valorUnitario) || 0,
+          tipo: p.tipo === 'incluso' ? 'incluso' as const : 'manual' as const,
+          produzido: !!p.produzido,
+          entregue: !!p.entregue
+        }));
+
+        const valorProdutosManuais = produtosNorm
+          .filter(p => p.tipo === 'manual')
+          .reduce((sum, p) => sum + p.valorUnitario * p.quantidade, 0);
+
+        const updates: Partial<Projeto> = {
+          produtosList: produtosNorm as any,
+          valorTotalProduto: valorProdutosManuais,
+          valorProdutos: valorProdutosManuais,
+          produto: produtosNorm.map(p => p.nome).join(', '),
+          qtdProduto: produtosNorm.reduce((acc, p) => acc + p.quantidade, 0),
+        };
+
+        ProjetoService.atualizarProjeto(proj.projectId, updates);
+        houveAlteracao = true;
+      });
+
+      if (houveAlteracao) {
+        setProjetos(ProjetoService.carregarProjetos());
+      }
+    } catch (e) {
+      console.error('❌ Erro ao sincronizar workflow_sessions → projetos:', e);
+    }
+  }, [setProjetos]);
+
+  // Listener para eventos e backfill inicial
+  useEffect(() => {
+    const handler = (e: any) => {
+      const sessions = e?.detail?.sessions || [];
+      syncSessionsToProjects(sessions);
+    };
+    window.addEventListener('workflow-sessions-updated', handler);
+    try {
+      const initial = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
+      if (Array.isArray(initial) && initial.length > 0) {
+        syncSessionsToProjects(initial);
+      }
+    } catch {}
+    return () => window.removeEventListener('workflow-sessions-updated', handler);
+  }, [syncSessionsToProjects]);
+
   const [workflowFilters, setWorkflowFilters] = useState<WorkflowFilters>(() => {
     const hoje = getCurrentDateString();
     const [ano, mes] = hoje.split('-');
@@ -613,7 +703,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       saved.push(sessaoWorkflow);
     }
     
+    
     localStorage.setItem('workflow_sessions', JSON.stringify(saved));
+    // Notificar listeners (Dashboard/Projetos)
+    window.dispatchEvent(new CustomEvent('workflow-sessions-updated', { detail: { sessions: saved } }));
     // Log removido para evitar spam no console
   }, [pacotes, produtos]);
 
@@ -1335,6 +1428,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               return s;
             });
             localStorage.setItem('workflow_sessions', JSON.stringify(updatedSessions));
+            // Notificar listeners para sincronização com Projetos
+            window.dispatchEvent(new CustomEvent('workflow-sessions-updated', { detail: { sessions: updatedSessions } }));
           } catch (e) {
             console.error('❌ Erro ao sincronizar orçamento com projetos e workflow_sessions:', e);
           }
@@ -1419,6 +1514,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       
       if (sessionsAtualizadas > 0) {
         localStorage.setItem('workflow_sessions', JSON.stringify(sessionsCorrigidas));
+        // Notificar listeners
+        window.dispatchEvent(new CustomEvent('workflow-sessions-updated', { detail: { sessions: sessionsCorrigidas } }));
         console.log(`✅ ${sessionsAtualizadas} sessões do workflow atualizadas com novo nome: ${novoNome}`);
       }
     } catch (error) {

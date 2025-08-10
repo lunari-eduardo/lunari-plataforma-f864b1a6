@@ -137,6 +137,8 @@ export default function Workflow() {
           }
         });
         window.localStorage.setItem('workflow_sessions', JSON.stringify(mergedSessions));
+        // Disparar evento para sincronização com Projetos/Dashboard
+        window.dispatchEvent(new CustomEvent('workflow-sessions-updated', { detail: { sessions: mergedSessions } }));
         // ✅ OTIMIZADO: Remover console.log constante
         // console.log('Workflow sessions saved to localStorage:', sessions.length, 'sessions');
       } catch (error) {
