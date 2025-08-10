@@ -284,6 +284,8 @@ export default function FeedTest() {
     reorderByIds(fromId, id);
     setDragId(null);
     setDragOverId(null);
+    setSwapSourceId(null);
+    setSelectedId(null);
   };
 
   const reorderByIds = (fromId: string, toId: string) => {
@@ -328,6 +330,8 @@ export default function FeedTest() {
     }
     setMobileDragId(null);
     setDragOverId(null);
+    setSwapSourceId(null);
+    setSelectedId(null);
   };
 
   const handleItemClick = (id: string) => {
