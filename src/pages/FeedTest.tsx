@@ -270,6 +270,9 @@ export default function FeedTest() {
 
   // Desktop DnD
   const onDragStart = (id: string, e: React.DragEvent) => {
+    // Clear any long-press timers/state when starting desktop drag
+    if (pressTimer.current) window.clearTimeout(pressTimer.current);
+    setMobileDragId(null);
     setDragId(id);
     e.dataTransfer.setData('text/plain', id);
   };
@@ -284,6 +287,8 @@ export default function FeedTest() {
     reorderByIds(fromId, id);
     setDragId(null);
     setDragOverId(null);
+    if (pressTimer.current) window.clearTimeout(pressTimer.current);
+    setMobileDragId(null);
     setSwapSourceId(null);
     setSelectedId(null);
   };
@@ -305,7 +310,8 @@ export default function FeedTest() {
   // Mobile long-press reorder + modo reorganização
   const onItemPointerDown = (id: string, e: React.PointerEvent) => {
     if (pressTimer.current) window.clearTimeout(pressTimer.current);
-    if (device === 'mobile' && reorderMode) {
+    if (device !== 'mobile') return;
+    if (reorderMode) {
       e.preventDefault();
       setMobileDragId(id);
     } else {
@@ -315,6 +321,7 @@ export default function FeedTest() {
     }
   };
   const onItemPointerMove = (id: string, e: React.PointerEvent) => {
+    if (device !== 'mobile') return;
     if (!mobileDragId) return;
     const target = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
     const item = target?.closest('[data-feed-id]') as HTMLElement | null;
@@ -325,6 +332,11 @@ export default function FeedTest() {
   };
   const onItemPointerUp = (id: string, e: React.PointerEvent) => {
     if (pressTimer.current) window.clearTimeout(pressTimer.current);
+    if (device !== 'mobile') {
+      setMobileDragId(null);
+      setDragOverId(null);
+      return;
+    }
     if (mobileDragId && dragOverId && mobileDragId !== dragOverId) {
       reorderByIds(mobileDragId, dragOverId);
     }
@@ -421,6 +433,11 @@ export default function FeedTest() {
                     <button
                       aria-label="Excluir"
                       className="h-7 w-7 rounded bg-foreground/70 text-background grid place-items-center"
+                      draggable={false}
+                      onDragStart={(e) => e.preventDefault()}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onPointerUp={(e) => e.stopPropagation()}
+                      onPointerMove={(e) => e.stopPropagation()}
                       onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }}
                     >
                       <Trash className="h-4 w-4" />
@@ -428,6 +445,11 @@ export default function FeedTest() {
                     <button
                       aria-label="Trocar posição"
                       className="h-7 w-7 rounded bg-foreground/70 text-background grid place-items-center"
+                      draggable={false}
+                      onDragStart={(e) => e.preventDefault()}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onPointerUp={(e) => e.stopPropagation()}
+                      onPointerMove={(e) => e.stopPropagation()}
                       onClick={(e) => { e.stopPropagation(); handleStartSwap(item.id); }}
                       title={swapSourceId === item.id ? 'Cancelar troca' : 'Trocar posição'}
                     >
