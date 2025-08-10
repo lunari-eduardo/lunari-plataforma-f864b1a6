@@ -115,6 +115,36 @@ export default function ListaOrcamentos({ selectedMonth }: ListaOrcamentosProps)
       description: "Abrindo WhatsApp..."
     });
   };
+
+  const duplicarOrcamento = (orig: Orcamento) => {
+    try {
+      const copia: Omit<Orcamento, 'id' | 'criadoEm'> = {
+        cliente: orig.cliente,
+        data: orig.data,
+        hora: orig.hora,
+        categoria: orig.categoria,
+        descricao: orig.descricao ? `${orig.descricao} (cópia)` : 'Orçamento copiado',
+        detalhes: orig.detalhes || '',
+        pacotePrincipal: orig.pacotePrincipal,
+        produtosAdicionais: orig.produtosAdicionais || [],
+        valorFinal: typeof orig.valorFinal === 'number' ? orig.valorFinal : (orig.valorTotal || 0),
+        desconto: orig.desconto || 0,
+        descontoTipo: orig.descontoTipo,
+        validade: orig.validade,
+        pacotes: orig.pacotes,
+        valorTotal: orig.valorTotal,
+        status: 'rascunho',
+        origemCliente: orig.origemCliente,
+        packageId: orig.packageId,
+        produtosIncluidos: orig.produtosIncluidos,
+        valorFotoExtra: orig.valorFotoExtra
+      };
+      adicionarOrcamento(copia);
+      toast({ title: 'Duplicado', description: 'Orçamento duplicado como rascunho.' });
+    } catch (e) {
+      toast({ title: 'Erro', description: 'Não foi possível duplicar o orçamento.', variant: 'destructive' });
+    }
+  };
   const atualizarStatus = (id: string, novoStatus: string) => {
     const orcamento = orcamentos.find(o => o.id === id);
     

@@ -406,13 +406,14 @@ export default function NovoOrcamento() {
               </div>
               
 
-                <label className="text-xs font-medium mb-1 block">Descrição</label>
-                <Input
-                  placeholder="Descrição do serviço (será levada para Agenda e Workflow)"
-                  value={descricao}
-                  onChange={e => setDescricao(e.target.value)}
-                />
-              </div>
+                <div>
+                  <label className="text-xs font-medium mb-1 block">Descrição</label>
+                  <Input
+                    placeholder="Descrição do serviço (será levada para Agenda e Workflow)"
+                    value={descricao}
+                    onChange={e => setDescricao(e.target.value)}
+                  />
+                </div>
             </CardContent>
           </Card>
 
