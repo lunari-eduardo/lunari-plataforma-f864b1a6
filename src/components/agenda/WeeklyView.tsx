@@ -121,7 +121,7 @@ const getEventForSlot = (day: Date, time: string) => {
                   <div 
                     key={`${dayIndex}-${time}`} 
                     onClick={() => !event && onCreateSlot({ date: day, time })} 
-                    className={`border h-8 md:h-10 p-0.5 md:p-1 relative cursor-pointer ${hasAvailabilityForSlot(day, time) && !event ? 'bg-availability/10 border-availability/50 hover:bg-availability/20' : 'bg-stone-100 hover:bg-stone-50 border-gray-100'}`}
+                    className="border h-8 md:h-10 p-0.5 md:p-1 relative cursor-pointer bg-stone-100 hover:bg-stone-50 border-gray-100"
                   >
                     {event ? (
                       <div onClick={(e) => e.stopPropagation()}>
@@ -138,7 +138,7 @@ const getEventForSlot = (day: Date, time: string) => {
                             <button
                               type="button"
                               onClick={(e) => { e.stopPropagation(); handleRemoveAvailability(day, time); }}
-                              className="text-[10px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+                              className="text-[10px] text-muted-foreground hover:text-foreground hidden lg:inline-flex items-center gap-1"
                               aria-label="Remover disponibilidade"
                               title="Remover disponibilidade"
                             >
