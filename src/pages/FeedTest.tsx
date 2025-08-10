@@ -77,7 +77,7 @@ export default function FeedTest() {
       return;
     }
     const key = device === 'desktop' ? STORAGE_KEYS.FEED_ZOOM_DESKTOP : STORAGE_KEYS.FEED_ZOOM_TABLET;
-    const defaults = device === 'desktop' ? 1 : 0.9;
+    const defaults = device === 'desktop' ? 1 : 0.75;
     const saved = storage.load<number>(key, defaults);
     setZoom(saved);
   }, [device, deviceStateReady]);
@@ -98,7 +98,7 @@ export default function FeedTest() {
 
   const gridWidthStyle = useMemo(() => {
     if (device === 'desktop') return { width: `calc(min(33vw, 400px) * ${zoom})` } as React.CSSProperties;
-    if (device === 'tablet') return { width: `calc(100vw * ${zoom})` } as React.CSSProperties;
+    if (device === 'tablet') return { width: `calc(100% * ${zoom})` } as React.CSSProperties;
     return undefined;
   }, [device, zoom]);
 
@@ -372,7 +372,7 @@ export default function FeedTest() {
         </div>
       </header>
 
-      <section ref={containerRef} className="w-full px-[2px] bg-background">
+      <section ref={containerRef} className="w-full px-[2px] bg-background overflow-x-hidden">
         <div className="mx-auto" style={gridWidthStyle as React.CSSProperties}>
           <div className="grid grid-cols-3 gap-[1px]">
             {images.map((item) => (
