@@ -102,8 +102,6 @@ export default function FeedTest() {
     return undefined;
   }, [device, zoom]);
 
-  const zoomControlsPositionClass = useMemo(() => (device === 'tablet' ? 'bottom-[88px] left-3' : 'bottom-3 left-3'), [device]);
-
   // click fora para limpar seleção
   useEffect(() => {
     const onDocClick = (e: MouseEvent) => {
@@ -426,7 +424,7 @@ export default function FeedTest() {
         </div>
       </section>
         {/* Zoom Controls (md+) */}
-        <div className={`hidden md:flex fixed ${zoomControlsPositionClass} z-20 items-center gap-2 rounded-full bg-foreground/70 text-background px-3 py-2 shadow-md`}>
+        <div className="hidden md:flex fixed bottom-3 left-3 z-20 items-center gap-2 rounded-full bg-foreground/70 text-background px-3 py-2 shadow-md">
           <button
             aria-label="Diminuir zoom"
             className="h-7 w-7 grid place-items-center rounded-full bg-background/20"
