@@ -1,7 +1,7 @@
 
 import { useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { Calendar, Camera, DollarSign, Users, Clock, BarChart3 } from "lucide-react";
+import { Calendar, Camera, DollarSign, Users, Clock, BarChart3, AlertTriangle } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { useSalesAnalytics } from "@/hooks/useSalesAnalytics";
 import { useOrcamentos } from "@/hooks/useOrcamentos";
 import { useAgenda } from "@/hooks/useAgenda";
 import { useAvailability } from "@/hooks/useAvailability";
+import { useAppContext } from "@/contexts/AppContext";
 
 import { formatCurrency } from "@/utils/financialUtils";
 import { formatDateForStorage, parseDateFromStorage } from "@/utils/dateUtils";
@@ -60,8 +61,7 @@ export default function Index() {
   const { appointments } = useAgenda();
   const { orcamentos } = useOrcamentos();
   const { availability } = useAvailability();
-  
-
+  const { workflowItems } = useAppContext();
   // Receita do mês atual vs meta
   const currentMonthIndex = new Date().getMonth();
   const currentMonthData = monthlyData.find((m) => m.monthIndex === currentMonthIndex);
@@ -163,6 +163,19 @@ export default function Index() {
     return { contagem, conversao };
   }, [orcamentos]);
 
+  // Lembretes de Produção
+  const lembretesProducao = useMemo(() => {
+    const reminders: Array<{ id: string; cliente: string; produto: string; tipo: string }> = [];
+    workflowItems.forEach((item) => {
+      (item.produtosList || []).forEach((p) => {
+        // Inclusos e manuais geram lembrete até serem marcados como produzidos
+        if (!p.produzido) {
+          reminders.push({ id: `${item.id}-${p.nome}` , cliente: item.nome, produto: p.nome, tipo: p.tipo });
+        }
+      });
+    });
+    return reminders;
+  }, [workflowItems]);
   // Próximos agendamentos confirmados (top 5)
   const proximosAgendamentos = useMemo(() => {
     const now = new Date();
@@ -253,6 +266,37 @@ export default function Index() {
                 </>
               )}
             </p>
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* Lembretes de Produção */}
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-3">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-lunar-accent" />
+              <CardTitle className="text-base">Lembretes de Produção</CardTitle>
+            </div>
+            <Link to="/workflow">
+              <Button variant="ghost" size="sm">Ir para Workflow</Button>
+            </Link>
+          </CardHeader>
+          <CardContent>
+            {lembretesProducao.length === 0 ? (
+              <p className="text-2xs text-lunar-textSecondary">Sem pendências de produção.</p>
+            ) : (
+              <div className="space-y-2">
+                {lembretesProducao.slice(0, 8).map((r) => (
+                  <div key={r.id} className="text-sm">
+                    O <span className="font-medium">{r.produto}</span> de <span className="font-medium">{r.cliente}</span> ainda não foi para produção!
+                  </div>
+                ))}
+                {lembretesProducao.length > 8 && (
+                  <p className="text-2xs text-lunar-textSecondary mt-1">+{lembretesProducao.length - 8} lembretes adicionais</p>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       </section>

@@ -24,6 +24,8 @@ export interface ProdutoWorkflow {
   quantidade: number;
   valorUnitario: number;
   tipo: 'incluso' | 'manual';
+  produzido?: boolean;
+  entregue?: boolean;
 }
 
 export interface RegrasPrecoFotoExtraCongeladas {
@@ -308,7 +310,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       nome: p.nome,
       quantidade: p.quantidade,
       valorUnitario: p.valorUnitario,
-      tipo: p.tipo
+      tipo: p.tipo,
+      produzido: p.produzido,
+      entregue: p.entregue
     })),
     valorAdicional: projeto.valorAdicional,
     detalhes: projeto.detalhes,
@@ -1681,7 +1685,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           valor: p.valor,
           metodo: '',
           observacoes: ''
-        })) : projeto.pagamentos
+        })) : projeto.pagamentos,
+        produtosList: updates.produtosList ?? projeto.produtosList
       });
     } else {
       // COMPATIBILIDADE: Manter código legado para casos especiais
@@ -1912,6 +1917,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               valorPago: updatedItem.valorPago,
               restante: updatedItem.restante,
               pagamentos: updatedItem.pagamentos || existingSession.pagamentos || [],
+              produtosList: updatedItem.produtosList || existingSession.produtosList || [],
               dataUltimaAtualizacao: new Date().toISOString()
             };
             

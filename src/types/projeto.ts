@@ -3,6 +3,8 @@ export interface ProdutoProjeto {
   quantidade: number;
   valorUnitario: number;
   tipo: 'incluso' | 'manual';
+  produzido?: boolean;
+  entregue?: boolean;
 }
 
 export interface Pagamento {

@@ -5,6 +5,8 @@ export interface ProdutoWorkflow {
   quantidade: number;
   valorUnitario: number;
   tipo: 'incluso' | 'manual';
+  produzido?: boolean;
+  entregue?: boolean;
 }
 
 export interface SessionPayment {
