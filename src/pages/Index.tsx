@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { HighPriorityDueSoonCard } from "@/components/tarefas/HighPriorityDueSoonCard";
 
 import { useSalesAnalytics } from "@/hooks/useSalesAnalytics";
 
@@ -19,19 +20,6 @@ import { formatCurrency } from "@/utils/financialUtils";
 import { formatDateForStorage, parseDateFromStorage } from "@/utils/dateUtils";
 import { normalizeWorkflowItems } from "@/utils/salesDataNormalizer";
 
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
-} from "recharts";
 
 export default function Index() {
   // SEO basics
@@ -194,7 +182,6 @@ export default function Index() {
     return items;
   }, [appointments]);
 
-  const pieColors = ["#7c3aed", "#f59e0b", "#10b981", "#ef4444", "#06b6d4", "#8b5cf6", "#14b8a6"];
 
   return (
     <main className="space-y-6">
@@ -301,50 +288,9 @@ export default function Index() {
         </Card>
       </section>
 
-      {/* Gráficos */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Receita Mensal</CardTitle>
-          </CardHeader>
-          <CardContent className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={monthlyData.map(m => ({ name: m.month, receita: m.revenue }))}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                <YAxis axisLine={false} tickLine={false} tickFormatter={(v) => formatCurrency(v)} />
-                <Tooltip formatter={(v: any) => [formatCurrency(Number(v)), "Receita"]} />
-                <Bar dataKey="receita" fill="#7c3aed" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Distribuição por Categoria</CardTitle>
-          </CardHeader>
-          <CardContent className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={categoryData.map(c => ({ name: c.name, value: c.percentage || 0 }))}
-                  cx="50%"
-                  cy="45%"
-                  outerRadius={80}
-                  dataKey="value"
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  labelLine={false}
-                >
-                  {categoryData.map((_, i) => (
-                    <Cell key={`cell-${i}`} fill={pieColors[i % pieColors.length]} />
-                  ))}
-                </Pie>
-                <Legend layout="horizontal" verticalAlign="bottom" align="center" />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+      {/* Tarefas de alta prioridade (até 5 dias) */}
+      <section>
+        <HighPriorityDueSoonCard />
       </section>
 
       {/* Orçamentos e Agenda */}

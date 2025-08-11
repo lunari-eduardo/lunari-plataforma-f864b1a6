@@ -9,7 +9,32 @@ export function useTasks() {
 
   useEffect(() => {
     storage.save(STORAGE_KEYS.TASKS, tasks);
+    window.dispatchEvent(new CustomEvent('tasks:changed'));
   }, [tasks]);
+
+  // Listen for external changes (other tabs or other parts of the app)
+  useEffect(() => {
+    const reload = () => {
+      const latest = storage.load<Task[]>(STORAGE_KEYS.TASKS, []);
+      setTasks((prev) => {
+        try {
+          if (JSON.stringify(prev) === JSON.stringify(latest)) return prev;
+        } catch {}
+        return latest;
+      });
+    };
+
+    const onStorage = (e: StorageEvent) => {
+      if (!e.key || e.key === STORAGE_KEYS.TASKS) reload();
+    };
+
+    window.addEventListener('storage', onStorage);
+    window.addEventListener('tasks:changed', reload as EventListener);
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener('tasks:changed', reload as EventListener);
+    };
+  }, []);
 
   const addTask = useCallback((input: Omit<Task, 'id' | 'createdAt'>) => {
     const task: Task = {
