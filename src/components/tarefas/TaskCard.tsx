@@ -7,7 +7,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import type { Task, TaskPriority } from '@/types/tasks';
 import { Link } from 'react-router-dom';
 import { MoreVertical } from 'lucide-react';
-
 function daysUntil(dateIso?: string) {
   if (!dateIso) return undefined;
   const now = new Date();
@@ -15,13 +14,11 @@ function daysUntil(dateIso?: string) {
   const diffMs = due.getTime() - now.getTime();
   return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 }
-
 const priorityLabel: Record<TaskPriority, string> = {
   low: 'Baixa',
   medium: 'Média',
-  high: 'Alta',
+  high: 'Alta'
 };
-
 export default function TaskCard({
   task: t,
   onComplete,
@@ -35,7 +32,7 @@ export default function TaskCard({
   dndListeners,
   dndAttributes,
   dndStyle,
-  isDragging = false,
+  isDragging = false
 }: {
   task: Task;
   onComplete: () => void;
@@ -44,7 +41,10 @@ export default function TaskCard({
   onDelete: () => void;
   onRequestMove?: (status: string) => void;
   isDone: boolean;
-  statusOptions: { value: string; label: string }[];
+  statusOptions: {
+    value: string;
+    label: string;
+  }[];
   dndRef?: (node: HTMLElement | null) => void;
   dndListeners?: any;
   dndAttributes?: any;
@@ -60,108 +60,69 @@ export default function TaskCard({
     if (d <= 2) return <span className="text-lunar-accent">Faltam {d} dia(s)</span>;
     return null;
   }, [t.dueDate]);
-
   const priorityUI = useMemo(() => {
     switch (t.priority) {
       case 'high':
         return {
           bar: 'bg-tasks-priority-high',
           tint: 'bg-tasks-priority-high/5',
-          badge: 'text-tasks-priority-high border-tasks-priority-high/40 bg-tasks-priority-high/10',
+          badge: 'text-tasks-priority-high border-tasks-priority-high/40 bg-tasks-priority-high/10'
         };
       case 'medium':
         return {
           bar: 'bg-tasks-priority-medium',
           tint: 'bg-tasks-priority-medium/5',
-          badge: 'text-tasks-priority-medium border-tasks-priority-medium/40 bg-tasks-priority-medium/10',
+          badge: 'text-tasks-priority-medium border-tasks-priority-medium/40 bg-tasks-priority-medium/10'
         };
       default:
         return {
           bar: 'bg-lunar-border',
           tint: '',
-          badge: 'text-lunar-textSecondary border-lunar-border/60 bg-transparent',
+          badge: 'text-lunar-textSecondary border-lunar-border/60 bg-transparent'
         };
     }
   }, [t.priority]);
-
-  return (
-    <li
-      className={`relative overflow-hidden rounded-md border border-lunar-border/60 bg-lunar-surface p-2 transition-none cursor-grab active:cursor-grabbing select-none touch-none transform-gpu ${isDragging ? 'opacity-70 border-dashed ring-1 ring-lunar-accent/40' : ''} ${isPressing ? 'ring-1 ring-lunar-accent/50' : ''}`}
-      ref={dndRef as any}
-      style={dndStyle}
-      {...(dndAttributes || {})}
-      {...(dndListeners || {})}
-      onPointerDownCapture={(e) => { const target = e.target as HTMLElement; if (target?.closest('[data-no-drag="true"]')) { e.stopPropagation(); } }}
-      onMouseDown={() => setIsPressing(true)}
-      onMouseUp={() => setIsPressing(false)}
-      onMouseLeave={() => setIsPressing(false)}
-      onDoubleClick={() => { setIsPressing(true); setTimeout(() => setIsPressing(false), 600); }}
-    >
+  return <li className={`relative overflow-hidden rounded-md border border-lunar-border/60 bg-lunar-surface p-2 transition-none cursor-grab active:cursor-grabbing select-none touch-none transform-gpu ${isDragging ? 'opacity-70 border-dashed ring-1 ring-lunar-accent/40' : ''} ${isPressing ? 'ring-1 ring-lunar-accent/50' : ''}`} ref={dndRef as any} style={dndStyle} {...dndAttributes || {}} {...dndListeners || {}} onPointerDownCapture={e => {
+    const target = e.target as HTMLElement;
+    if (target?.closest('[data-no-drag="true"]')) {
+      e.stopPropagation();
+    }
+  }} onMouseDown={() => setIsPressing(true)} onMouseUp={() => setIsPressing(false)} onMouseLeave={() => setIsPressing(false)} onDoubleClick={() => {
+    setIsPressing(true);
+    setTimeout(() => setIsPressing(false), 600);
+  }}>
       {/* Priority visual accents */}
       <span aria-hidden className={`pointer-events-none absolute inset-y-0 left-0 w-1 ${priorityUI.bar}`} />
-      {priorityUI.tint && (
-        <span aria-hidden className={`pointer-events-none absolute inset-0 ${priorityUI.tint}`} />
-      )}
+      {priorityUI.tint && <span aria-hidden className={`pointer-events-none absolute inset-0 ${priorityUI.tint}`} />}
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <h3
-            className="text-sm font-medium text-lunar-text truncate cursor-pointer hover:text-lunar-accent"
-            onClick={onEdit}
-            data-no-drag="true"
-            title="Abrir detalhes"
-          >
+          <h3 className="text-sm font-medium text-lunar-text truncate cursor-pointer hover:text-lunar-accent" onClick={onEdit} data-no-drag="true" title="Abrir detalhes">
             {t.title}
           </h3>
-          {t.description && (
-            <p className="text-2xs text-lunar-textSecondary truncate">{t.description}</p>
-          )}
+          {t.description && <p className="text-2xs text-lunar-textSecondary truncate">{t.description}</p>}
           <div className="mt-1 flex flex-wrap items-center gap-1">
             <Badge variant="outline" className={`text-[10px] ${priorityUI.badge}`}>{priorityLabel[t.priority]}</Badge>
-            {t.assigneeName && (
-              <Badge variant="secondary" className="text-[10px]">{t.assigneeName}</Badge>
-            )}
-            {(t.tags || []).slice(0, 3).map((tag) => (
-              <Badge key={tag} variant="secondary" className="text-[10px]">{tag}</Badge>
-            ))}
-            {(t.tags?.length || 0) > 3 && (
-              <Badge variant="secondary" className="text-[10px]">+{(t.tags!.length - 3)}</Badge>
-            )}
+            {t.assigneeName && <Badge variant="secondary" className="text-[10px]">{t.assigneeName}</Badge>}
+            {(t.tags || []).slice(0, 3).map(tag => <Badge key={tag} variant="secondary" className="text-[10px]">{tag}</Badge>)}
+            {(t.tags?.length || 0) > 3 && <Badge variant="secondary" className="text-[10px]">+{t.tags!.length - 3}</Badge>}
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-7 w-7" title="Mover para..." data-no-drag="true">
-                <MoreVertical size={16} />
-              </Button>
+              
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="z-50">
-              {statusOptions.map((opt) => (
-                <DropdownMenuItem
-                  key={opt.value}
-                  onSelect={() => onRequestMove?.(opt.value)}
-                  disabled={opt.value === t.status}
-                >
+              {statusOptions.map(opt => <DropdownMenuItem key={opt.value} onSelect={() => onRequestMove?.(opt.value)} disabled={opt.value === t.status}>
                   {opt.label}
-                </DropdownMenuItem>
-              ))}
+                </DropdownMenuItem>)}
             </DropdownMenuContent>
           </DropdownMenu>
-          {!isDone ? (
-            <Button
-              variant="secondary"
-              size="sm"
-              className="h-7 text-2xs"
-              onClick={onComplete}
-              data-no-drag="true"
-            >
+          {!isDone ? <Button variant="secondary" size="sm" className="h-7 text-2xs" onClick={onComplete} data-no-drag="true">
               Concluir
-            </Button>
-          ) : (
-            <Button variant="ghost" size="sm" className="h-7 text-2xs" onClick={onReopen} data-no-drag="true">
+            </Button> : <Button variant="ghost" size="sm" className="h-7 text-2xs" onClick={onReopen} data-no-drag="true">
               Reabrir
-            </Button>
-          )}
+            </Button>}
           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onDelete} title="Excluir" data-no-drag="true">
             ×
           </Button>
@@ -170,60 +131,41 @@ export default function TaskCard({
 
       <div className="mt-2 flex flex-wrap items-center gap-2 text-2xs text-lunar-textSecondary">
         <span>Criada: {new Date(t.createdAt).toLocaleDateString('pt-BR')}</span>
-        {t.dueDate && (
-          <>
+        {t.dueDate && <>
             <Separator orientation="vertical" className="h-3" />
             <span>Prazo: {new Date(t.dueDate).toLocaleDateString('pt-BR')}</span>
             {dueInfo}
-          </>
-        )}
-        {t.completedAt && (
-          <>
+          </>}
+        {t.completedAt && <>
             <Separator orientation="vertical" className="h-3" />
             <span>Concluída: {new Date(t.completedAt).toLocaleDateString('pt-BR')}</span>
-          </>
-        )}
+          </>}
       </div>
 
-      {(t.description || t.tags?.length || t.relatedClienteId || t.relatedBudgetId || t.relatedSessionId) && (
-        <Collapsible open={open} onOpenChange={setOpen} className="mt-1">
+      {(t.description || t.tags?.length || t.relatedClienteId || t.relatedBudgetId || t.relatedSessionId) && <Collapsible open={open} onOpenChange={setOpen} className="mt-1">
           <CollapsibleTrigger asChild>
             <Button variant="ghost" size="sm" className="h-7 px-2 text-2xs" data-no-drag="true">
               {open ? 'Ocultar detalhes' : 'Ver detalhes'}
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent className="text-2xs text-lunar-textSecondary">
-            {t.description && (
-              <p className="mt-1 whitespace-pre-wrap leading-relaxed">{t.description}</p>
-            )}
-            {(t.tags?.length || 0) > 0 && (
-              <div className="mt-2 flex flex-wrap gap-1">
+            {t.description && <p className="mt-1 whitespace-pre-wrap leading-relaxed">{t.description}</p>}
+            {(t.tags?.length || 0) > 0 && <div className="mt-2 flex flex-wrap gap-1">
                 <span className="font-medium text-lunar-text">Etiquetas:</span>
-                {t.tags!.map((tag) => (
-                  <Badge key={tag} variant="secondary" className="text-[10px]">{tag}</Badge>
-                ))}
-              </div>
-            )}
+                {t.tags!.map(tag => <Badge key={tag} variant="secondary" className="text-[10px]">{tag}</Badge>)}
+              </div>}
             <div className="mt-2 flex flex-wrap items-center gap-2">
-              {t.relatedClienteId && (
-                <Link to={`/clientes/${t.relatedClienteId}`} className="text-lunar-accent underline" data-no-drag="true">
+              {t.relatedClienteId && <Link to={`/clientes/${t.relatedClienteId}`} className="text-lunar-accent underline" data-no-drag="true">
                   Ver cliente
-                </Link>
-              )}
-              {t.relatedBudgetId && (
-                <Link to={`/orcamentos`} className="text-lunar-accent underline" data-no-drag="true">
+                </Link>}
+              {t.relatedBudgetId && <Link to={`/orcamentos`} className="text-lunar-accent underline" data-no-drag="true">
                   Ver orçamento
-                </Link>
-              )}
-              {t.relatedSessionId && (
-                <Link to={`/workflow`} className="text-lunar-accent underline" data-no-drag="true">
+                </Link>}
+              {t.relatedSessionId && <Link to={`/workflow`} className="text-lunar-accent underline" data-no-drag="true">
                   Ver sessão
-                </Link>
-              )}
+                </Link>}
             </div>
           </CollapsibleContent>
-        </Collapsible>
-      )}
-    </li>
-  );
+        </Collapsible>}
+    </li>;
 }
