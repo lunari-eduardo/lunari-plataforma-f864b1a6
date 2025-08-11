@@ -49,6 +49,7 @@ export default function TaskCard({
 }) {
   const [open, setOpen] = useState(false);
   const [isPressing, setIsPressing] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
   const dueInfo = useMemo(() => {
     const d = daysUntil(t.dueDate);
     if (d === undefined) return null;
@@ -88,15 +89,24 @@ export default function TaskCard({
     }
     e.dataTransfer.setData('text/plain', t.id);
     e.dataTransfer.effectAllowed = 'move';
+    try {
+      // Use the card itself as drag image for consistent feedback
+      const el = e.currentTarget as HTMLElement;
+      if (el && el instanceof HTMLElement) {
+        e.dataTransfer.setDragImage(el, 16, 16);
+      }
+    } catch {}
+    setDragActive(true);
     onDragStart?.(t.id);
   };
   const handleDragEnd = () => {
+    setDragActive(false);
     onDragEnd?.();
   };
 
   return (
     <li
-      className={`relative overflow-hidden rounded-md border border-lunar-border/60 bg-lunar-surface p-2 transition-none ${isDragging ? 'opacity-70 border-dashed ring-1 ring-lunar-accent/40' : ''}`}
+      className={`relative overflow-hidden rounded-md border border-lunar-border/60 bg-lunar-surface p-2 transition-none cursor-grab active:cursor-grabbing ${(dragActive || isDragging) ? 'opacity-70 border-dashed ring-1 ring-lunar-accent/40' : ''} ${isPressing ? 'ring-1 ring-lunar-accent/50' : ''}`}
       draggable
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
@@ -104,7 +114,7 @@ export default function TaskCard({
       onMouseUp={() => setIsPressing(false)}
       onMouseLeave={() => setIsPressing(false)}
       onDoubleClick={() => { setIsPressing(true); setTimeout(() => setIsPressing(false), 600); }}
-      aria-grabbed={isDragging ? true : undefined}
+      aria-grabbed={(dragActive || isDragging) ? true : undefined}
     >
       {/* Priority visual accents */}
       <span aria-hidden className={`pointer-events-none absolute inset-y-0 left-0 w-1 ${priorityUI.bar}`} />
@@ -140,7 +150,7 @@ export default function TaskCard({
         <div className="flex items-center gap-1 shrink-0">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-7 w-7" title="Mover para...">
+              <Button variant="ghost" size="icon" className="h-7 w-7" title="Mover para..." data-no-drag="true">
                 <MoreVertical size={16} />
               </Button>
             </DropdownMenuTrigger>
@@ -162,15 +172,16 @@ export default function TaskCard({
               size="sm"
               className="h-7 text-2xs"
               onClick={onComplete}
+              data-no-drag="true"
             >
               Concluir
             </Button>
           ) : (
-            <Button variant="ghost" size="sm" className="h-7 text-2xs" onClick={onReopen}>
+            <Button variant="ghost" size="sm" className="h-7 text-2xs" onClick={onReopen} data-no-drag="true">
               Reabrir
             </Button>
           )}
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onDelete} title="Excluir">
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onDelete} title="Excluir" data-no-drag="true">
             ×
           </Button>
         </div>
@@ -196,7 +207,7 @@ export default function TaskCard({
       {(t.description || t.tags?.length || t.relatedClienteId || t.relatedBudgetId || t.relatedSessionId) && (
         <Collapsible open={open} onOpenChange={setOpen} className="mt-1">
           <CollapsibleTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-7 px-2 text-2xs">
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-2xs" data-no-drag="true">
               {open ? 'Ocultar detalhes' : 'Ver detalhes'}
             </Button>
           </CollapsibleTrigger>
@@ -214,17 +225,17 @@ export default function TaskCard({
             )}
             <div className="mt-2 flex flex-wrap items-center gap-2">
               {t.relatedClienteId && (
-                <Link to={`/clientes/${t.relatedClienteId}`} className="text-lunar-accent underline">
+                <Link to={`/clientes/${t.relatedClienteId}`} className="text-lunar-accent underline" data-no-drag="true">
                   Ver cliente
                 </Link>
               )}
               {t.relatedBudgetId && (
-                <Link to={`/orcamentos`} className="text-lunar-accent underline">
+                <Link to={`/orcamentos`} className="text-lunar-accent underline" data-no-drag="true">
                   Ver orçamento
                 </Link>
               )}
               {t.relatedSessionId && (
-                <Link to={`/workflow`} className="text-lunar-accent underline">
+                <Link to={`/workflow`} className="text-lunar-accent underline" data-no-drag="true">
                   Ver sessão
                 </Link>
               )}

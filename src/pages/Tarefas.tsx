@@ -58,8 +58,21 @@ const [createOpen, setCreateOpen] = useState(false);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<TaskStatus | null>(null);
 
-  const checklistItems = useMemo(() => tasks.filter(t => t.type === 'checklist'), [tasks]);
+  // Garantir limpeza global do estado de arraste
+  useEffect(() => {
+    const clearDrag = () => {
+      setDraggingId(null);
+      setDragOverColumn(null);
+    };
+    window.addEventListener('dragend', clearDrag);
+    window.addEventListener('drop', clearDrag);
+    return () => {
+      window.removeEventListener('dragend', clearDrag);
+      window.removeEventListener('drop', clearDrag);
+    };
+  }, []);
 
+  const checklistItems = useMemo(() => tasks.filter(t => t.type === 'checklist'), [tasks]);
   const filtered = useMemo(() => {
     const tag = tagFilter.trim().toLowerCase();
 
@@ -108,6 +121,7 @@ const [createOpen, setCreateOpen] = useState(false);
           "p-2 pb-8 bg-lunar-surface border-lunar-border/60 min-h-[70vh] max-h-[70vh] overflow-y-auto",
           dragOverColumn === statusKey ? "ring-2 ring-lunar-accent/60" : ""
         )}
+        onDragEnter={() => { setDragOverColumn(statusKey as any); }}
         onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOverColumn(statusKey as any); }}
         onDragLeave={() => { if (dragOverColumn === (statusKey as any)) setDragOverColumn(null); }}
         onDrop={(e) => {
