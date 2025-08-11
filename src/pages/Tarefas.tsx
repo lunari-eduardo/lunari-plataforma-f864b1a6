@@ -17,7 +17,7 @@ import { useTaskStatuses } from '@/hooks/useTaskStatuses';
 import ManageTaskStatusesModal from '@/components/tarefas/ManageTaskStatusesModal';
 import ChecklistPanel from '@/components/tarefas/ChecklistPanel';
 import { DndContext, rectIntersection, useSensor, useSensors, PointerSensor, DragOverlay, useDroppable, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core';
-import { restrictToVerticalAxis, restrictToFirstScrollableAncestor } from '@dnd-kit/modifiers';
+import { restrictToFirstScrollableAncestor } from '@dnd-kit/modifiers';
 import DraggableTaskCard from '@/components/tarefas/dnd/DraggableTaskCard';
 function groupByStatus(tasks: Task[]) {
   return tasks.reduce<Record<TaskStatus, Task[]>>((acc, t) => {
@@ -260,7 +260,7 @@ const sensors = useSensors(pointerSensor);
         <DndContext
           sensors={sensors}
           collisionDetection={rectIntersection}
-          modifiers={[restrictToVerticalAxis, restrictToFirstScrollableAncestor]}
+          modifiers={[restrictToFirstScrollableAncestor]}
           onDragStart={(e) => {
             setActiveId(String(e.active.id));
             console.log('[DND] drag start', e.active.id);
