@@ -60,7 +60,7 @@ const [editTaskData, setEditTaskData] = useState<Task | null>(null);
 const [activeId, setActiveId] = useState<string | null>(null);
 
 const mouseSensor = useSensor(MouseSensor, { activationConstraint: { distance: 8 } });
-const touchSensor = useSensor(TouchSensor, { pressDelay: 120, activationConstraint: { distance: 8 } });
+const touchSensor = useSensor(TouchSensor, { activationConstraint: { delay: 120, tolerance: 8 } });
 const sensors = useSensors(mouseSensor, touchSensor);
 
   const checklistItems = useMemo(() => tasks.filter(t => t.type === 'checklist'), [tasks]);
