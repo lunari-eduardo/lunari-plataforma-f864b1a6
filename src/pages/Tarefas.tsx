@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 import { useTaskStatuses } from '@/hooks/useTaskStatuses';
 import ManageTaskStatusesModal from '@/components/tarefas/ManageTaskStatusesModal';
 import ChecklistPanel from '@/components/tarefas/ChecklistPanel';
-import { DndContext, closestCenter, useSensor, useSensors, MouseSensor, TouchSensor, DragOverlay, useDroppable, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core';
+import { DndContext, rectIntersection, useSensor, useSensors, PointerSensor, DragOverlay, useDroppable, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core';
 import DraggableTaskCard from '@/components/tarefas/dnd/DraggableTaskCard';
 function groupByStatus(tasks: Task[]) {
   return tasks.reduce<Record<TaskStatus, Task[]>>((acc, t) => {
@@ -59,9 +59,8 @@ const [createOpen, setCreateOpen] = useState(false);
 const [editTaskData, setEditTaskData] = useState<Task | null>(null);
 const [activeId, setActiveId] = useState<string | null>(null);
 
-const mouseSensor = useSensor(MouseSensor, { activationConstraint: { distance: 8 } });
-const touchSensor = useSensor(TouchSensor, { activationConstraint: { delay: 120, tolerance: 8 } });
-const sensors = useSensors(mouseSensor, touchSensor);
+const pointerSensor = useSensor(PointerSensor, { activationConstraint: { distance: 4 } });
+const sensors = useSensors(pointerSensor);
 
   const checklistItems = useMemo(() => tasks.filter(t => t.type === 'checklist'), [tasks]);
   const filtered = useMemo(() => {
@@ -259,10 +258,14 @@ const sensors = useSensors(mouseSensor, touchSensor);
       {view === 'kanban' ? (
         <DndContext
           sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragStart={(e) => setActiveId(String(e.active.id))}
+          collisionDetection={rectIntersection}
+          onDragStart={(e) => {
+            setActiveId(String(e.active.id));
+            console.log('[DND] drag start', e.active.id);
+          }}
           onDragEnd={(e) => {
             const overId = e.over?.id as string | undefined;
+            console.log('[DND] drag end', { activeId, overId });
             if (activeId && overId) {
               const current = tasks.find(tt => tt.id === activeId);
               if (current && current.status !== overId) {

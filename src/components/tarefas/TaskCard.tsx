@@ -86,11 +86,12 @@ export default function TaskCard({
 
   return (
     <li
-      className={`relative overflow-hidden rounded-md border border-lunar-border/60 bg-lunar-surface p-2 transition-none cursor-grab active:cursor-grabbing ${isDragging ? 'opacity-70 border-dashed ring-1 ring-lunar-accent/40' : ''} ${isPressing ? 'ring-1 ring-lunar-accent/50' : ''}`}
+      className={`relative overflow-hidden rounded-md border border-lunar-border/60 bg-lunar-surface p-2 transition-none cursor-grab active:cursor-grabbing select-none touch-none ${isDragging ? 'opacity-70 border-dashed ring-1 ring-lunar-accent/40' : ''} ${isPressing ? 'ring-1 ring-lunar-accent/50' : ''}`}
       ref={dndRef as any}
       style={dndStyle}
       {...(dndAttributes || {})}
       {...(dndListeners || {})}
+      onPointerDownCapture={(e) => { const target = e.target as HTMLElement; if (target?.closest('[data-no-drag="true"]')) { e.stopPropagation(); } }}
       onMouseDown={() => setIsPressing(true)}
       onMouseUp={() => setIsPressing(false)}
       onMouseLeave={() => setIsPressing(false)}
