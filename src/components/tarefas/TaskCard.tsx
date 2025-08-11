@@ -65,15 +65,15 @@ export default function TaskCard({
     switch (t.priority) {
       case 'high':
         return {
-          bar: 'bg-lunar-error',
-          tint: 'bg-lunar-error/5',
-          badge: 'text-lunar-error border-lunar-error/40 bg-lunar-error/10',
+          bar: 'bg-tasks-priority-high',
+          tint: 'bg-tasks-priority-high/5',
+          badge: 'text-tasks-priority-high border-tasks-priority-high/40 bg-tasks-priority-high/10',
         };
       case 'medium':
         return {
-          bar: 'bg-lunar-warning',
-          tint: 'bg-lunar-warning/5',
-          badge: 'text-lunar-warning border-lunar-warning/40 bg-lunar-warning/10',
+          bar: 'bg-tasks-priority-medium',
+          tint: 'bg-tasks-priority-medium/5',
+          badge: 'text-tasks-priority-medium border-tasks-priority-medium/40 bg-tasks-priority-medium/10',
         };
       default:
         return {

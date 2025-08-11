@@ -52,6 +52,14 @@ export default {
           warning: 'hsl(var(--lunar-warning) / <alpha-value>)',
         },
 
+        // Cores específicas para tarefas (prioridades)
+        tasks: {
+          priority: {
+            high: 'hsl(var(--task-priority-high) / <alpha-value>)',
+            medium: 'hsl(var(--task-priority-medium) / <alpha-value>)',
+          },
+        },
+
         // Paleta elegante para gráficos
         chart: {
           primary: '#CBA977',      // Dourado principal
