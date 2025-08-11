@@ -7,12 +7,22 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import type { Task, TaskPriority } from '@/types/tasks';
 import { Link } from 'react-router-dom';
 import { MoreVertical } from 'lucide-react';
+import { differenceInCalendarDays } from 'date-fns';
+import { formatDateForDisplay } from '@/utils/dateUtils';
 function daysUntil(dateIso?: string) {
   if (!dateIso) return undefined;
+  // Parse due date safely (supports 'YYYY-MM-DD' without timezone shift)
+  let due: Date;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateIso)) {
+    const [y, m, d] = dateIso.split('-').map(Number);
+    due = new Date(y, m - 1, d);
+  } else {
+    due = new Date(dateIso);
+  }
+  // Normalize "today" to local midnight to avoid off-by-one issues
   const now = new Date();
-  const due = new Date(dateIso);
-  const diffMs = due.getTime() - now.getTime();
-  return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  const todayLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return differenceInCalendarDays(due, todayLocal);
 }
 const priorityLabel: Record<TaskPriority, string> = {
   low: 'Baixa',
@@ -54,12 +64,14 @@ export default function TaskCard({
   const [open, setOpen] = useState(false);
   const [isPressing, setIsPressing] = useState(false);
   const dueInfo = useMemo(() => {
+    if (isDone || t.completedAt) return null;
     const d = daysUntil(t.dueDate);
     if (d === undefined) return null;
     if (d < 0) return <span className="text-lunar-error">Vencida há {Math.abs(d)} dia(s)</span>;
+    if (d === 1) return <span className="text-lunar-accent">Falta 1 dia</span>;
     if (d <= 2) return <span className="text-lunar-accent">Faltam {d} dia(s)</span>;
     return null;
-  }, [t.dueDate]);
+  }, [t.dueDate, isDone, t.completedAt]);
   const priorityUI = useMemo(() => {
     switch (t.priority) {
       case 'high':
@@ -133,7 +145,7 @@ export default function TaskCard({
         <span>Criada: {new Date(t.createdAt).toLocaleDateString('pt-BR')}</span>
         {t.dueDate && <>
             <Separator orientation="vertical" className="h-3" />
-            <span>Prazo: {new Date(t.dueDate).toLocaleDateString('pt-BR')}</span>
+            <span>Prazo: {formatDateForDisplay(t.dueDate!)}</span>
             {dueInfo}
           </>}
         {t.completedAt && <>
