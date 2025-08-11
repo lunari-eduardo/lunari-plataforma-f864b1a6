@@ -17,6 +17,7 @@ import { useTaskStatuses } from '@/hooks/useTaskStatuses';
 import ManageTaskStatusesModal from '@/components/tarefas/ManageTaskStatusesModal';
 import ChecklistPanel from '@/components/tarefas/ChecklistPanel';
 import { DndContext, rectIntersection, useSensor, useSensors, PointerSensor, DragOverlay, useDroppable, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core';
+import { restrictToVerticalAxis, restrictToFirstScrollableAncestor } from '@dnd-kit/modifiers';
 import DraggableTaskCard from '@/components/tarefas/dnd/DraggableTaskCard';
 function groupByStatus(tasks: Task[]) {
   return tasks.reduce<Record<TaskStatus, Task[]>>((acc, t) => {
@@ -259,6 +260,7 @@ const sensors = useSensors(pointerSensor);
         <DndContext
           sensors={sensors}
           collisionDetection={rectIntersection}
+          modifiers={[restrictToVerticalAxis, restrictToFirstScrollableAncestor]}
           onDragStart={(e) => {
             setActiveId(String(e.active.id));
             console.log('[DND] drag start', e.active.id);
@@ -294,22 +296,24 @@ const sensors = useSensors(pointerSensor);
             </div>
           </div>
           <DragOverlay>
-            {activeId ? (() => {
-              const at = tasks.find(tt => tt.id === activeId);
-              return at ? (
-                <TaskCard
-                  task={at}
-                  onComplete={() => {}}
-                  onReopen={() => {}}
-                  onEdit={() => {}}
-                  onDelete={() => {}}
-                  onRequestMove={() => {}}
-                  isDone={at.status === (doneKey as any)}
-                  statusOptions={statusOptions}
-                  isDragging={true}
-                />
-              ) : null;
-            })() : null}
+            <div className="pointer-events-none">
+              {activeId ? (() => {
+                const at = tasks.find(tt => tt.id === activeId);
+                return at ? (
+                  <TaskCard
+                    task={at}
+                    onComplete={() => {}}
+                    onReopen={() => {}}
+                    onEdit={() => {}}
+                    onDelete={() => {}}
+                    onRequestMove={() => {}}
+                    isDone={at.status === (doneKey as any)}
+                    statusOptions={statusOptions}
+                    isDragging={true}
+                  />
+                ) : null;
+              })() : null}
+            </div>
           </DragOverlay>
         </DndContext>
       ) : (

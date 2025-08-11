@@ -17,7 +17,7 @@ export default function DraggableTaskCard(props: {
   const { task, activeId, ...rest } = props as any;
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: task.id, data: { task } });
 
-  const style = transform ? { transform: CSS.Transform.toString(transform) } : undefined;
+  const style = isDragging ? { opacity: 0, pointerEvents: 'none' } : (transform ? { transform: CSS.Transform.toString(transform) } : undefined);
 
   return (
     <TaskCard
