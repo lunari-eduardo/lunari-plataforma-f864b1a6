@@ -126,6 +126,9 @@ export default function TaskCard({
             role="button"
             aria-label="Arrastar"
             title="Arrastar"
+            draggable
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
           >
             <GripVertical size={16} />
           </div>

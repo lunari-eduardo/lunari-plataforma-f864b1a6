@@ -108,11 +108,11 @@ const [createOpen, setCreateOpen] = useState(false);
           "p-2 pb-8 bg-lunar-surface border-lunar-border/60 min-h-[70vh] max-h-[70vh] overflow-y-auto",
           dragOverColumn === statusKey ? "ring-2 ring-lunar-accent/60" : ""
         )}
-        onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; if (draggingId) setDragOverColumn(statusKey as any); }}
+        onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOverColumn(statusKey as any); }}
         onDragLeave={() => { if (dragOverColumn === (statusKey as any)) setDragOverColumn(null); }}
         onDrop={(e) => {
           e.preventDefault();
-          const id = e.dataTransfer.getData('text/plain');
+          const id = e.dataTransfer.getData('text/plain') || draggingId;
           if (id) {
             updateTask(id, { status: statusKey as any });
             toast({ title: 'Tarefa movida' });
