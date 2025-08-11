@@ -28,28 +28,31 @@ export default function TaskCard({
   onReopen,
   onEdit,
   onDelete,
-  onDragStart,
-  onDragEnd,
-  isDragging = false,
   onRequestMove,
   isDone,
   statusOptions,
+  dndRef,
+  dndListeners,
+  dndAttributes,
+  dndStyle,
+  isDragging = false,
 }: {
   task: Task;
   onComplete: () => void;
   onReopen: () => void;
   onEdit: () => void;
   onDelete: () => void;
-  onDragStart?: (id: string) => void;
-  onDragEnd?: () => void;
-  isDragging?: boolean;
   onRequestMove?: (status: string) => void;
   isDone: boolean;
   statusOptions: { value: string; label: string }[];
+  dndRef?: (node: HTMLElement | null) => void;
+  dndListeners?: any;
+  dndAttributes?: any;
+  dndStyle?: any;
+  isDragging?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [isPressing, setIsPressing] = useState(false);
-  const [dragActive, setDragActive] = useState(false);
   const dueInfo = useMemo(() => {
     const d = daysUntil(t.dueDate);
     if (d === undefined) return null;
@@ -81,40 +84,17 @@ export default function TaskCard({
     }
   }, [t.priority]);
 
-  const handleDragStart = (e: React.DragEvent) => {
-    const target = e.target as HTMLElement | null;
-    if (target && target.closest('[data-no-drag="true"]')) {
-      e.preventDefault();
-      return;
-    }
-    e.dataTransfer.setData('text/plain', t.id);
-    e.dataTransfer.effectAllowed = 'move';
-    try {
-      // Use the card itself as drag image for consistent feedback
-      const el = e.currentTarget as HTMLElement;
-      if (el && el instanceof HTMLElement) {
-        e.dataTransfer.setDragImage(el, 16, 16);
-      }
-    } catch {}
-    setDragActive(true);
-    onDragStart?.(t.id);
-  };
-  const handleDragEnd = () => {
-    setDragActive(false);
-    onDragEnd?.();
-  };
-
   return (
     <li
-      className={`relative overflow-hidden rounded-md border border-lunar-border/60 bg-lunar-surface p-2 transition-none cursor-grab active:cursor-grabbing ${(dragActive || isDragging) ? 'opacity-70 border-dashed ring-1 ring-lunar-accent/40' : ''} ${isPressing ? 'ring-1 ring-lunar-accent/50' : ''}`}
-      draggable
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
+      className={`relative overflow-hidden rounded-md border border-lunar-border/60 bg-lunar-surface p-2 transition-none cursor-grab active:cursor-grabbing ${isDragging ? 'opacity-70 border-dashed ring-1 ring-lunar-accent/40' : ''} ${isPressing ? 'ring-1 ring-lunar-accent/50' : ''}`}
+      ref={dndRef as any}
+      style={dndStyle}
+      {...(dndAttributes || {})}
+      {...(dndListeners || {})}
       onMouseDown={() => setIsPressing(true)}
       onMouseUp={() => setIsPressing(false)}
       onMouseLeave={() => setIsPressing(false)}
       onDoubleClick={() => { setIsPressing(true); setTimeout(() => setIsPressing(false), 600); }}
-      aria-grabbed={(dragActive || isDragging) ? true : undefined}
     >
       {/* Priority visual accents */}
       <span aria-hidden className={`pointer-events-none absolute inset-y-0 left-0 w-1 ${priorityUI.bar}`} />

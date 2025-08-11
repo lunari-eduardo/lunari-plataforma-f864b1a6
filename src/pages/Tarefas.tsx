@@ -16,6 +16,8 @@ import { cn } from '@/lib/utils';
 import { useTaskStatuses } from '@/hooks/useTaskStatuses';
 import ManageTaskStatusesModal from '@/components/tarefas/ManageTaskStatusesModal';
 import ChecklistPanel from '@/components/tarefas/ChecklistPanel';
+import { DndContext, closestCenter, useSensor, useSensors, MouseSensor, TouchSensor, DragOverlay, useDroppable, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core';
+import DraggableTaskCard from '@/components/tarefas/dnd/DraggableTaskCard';
 function groupByStatus(tasks: Task[]) {
   return tasks.reduce<Record<TaskStatus, Task[]>>((acc, t) => {
     (acc[t.status] ||= []).push(t);
@@ -54,23 +56,12 @@ const statusOptions = useMemo(() => statuses.map(s => ({ value: s.key, label: s.
 const [manageStatusesOpen, setManageStatusesOpen] = useState(false);
 
 const [createOpen, setCreateOpen] = useState(false);
-  const [editTaskData, setEditTaskData] = useState<Task | null>(null);
-  const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [dragOverColumn, setDragOverColumn] = useState<TaskStatus | null>(null);
+const [editTaskData, setEditTaskData] = useState<Task | null>(null);
+const [activeId, setActiveId] = useState<string | null>(null);
 
-  // Garantir limpeza global do estado de arraste
-  useEffect(() => {
-    const clearDrag = () => {
-      setDraggingId(null);
-      setDragOverColumn(null);
-    };
-    window.addEventListener('dragend', clearDrag);
-    window.addEventListener('drop', clearDrag);
-    return () => {
-      window.removeEventListener('dragend', clearDrag);
-      window.removeEventListener('drop', clearDrag);
-    };
-  }, []);
+const mouseSensor = useSensor(MouseSensor, { activationConstraint: { distance: 8 } });
+const touchSensor = useSensor(TouchSensor, { pressDelay: 120, activationConstraint: { distance: 8 } });
+const sensors = useSensors(mouseSensor, touchSensor);
 
   const checklistItems = useMemo(() => tasks.filter(t => t.type === 'checklist'), [tasks]);
   const filtered = useMemo(() => {
@@ -110,52 +101,41 @@ const [createOpen, setCreateOpen] = useState(false);
     return map;
   }, [filtered, statuses]);
 
-  const StatusColumn = ({ title, statusKey }: { title: string; statusKey: string }) => (
-    <section className="flex-1 min-w-[260px]">
-      <header className="flex items-center justify-between mb-2">
-        <h2 className="text-sm font-semibold text-lunar-text">{title}</h2>
-        <Badge variant="outline" className="text-2xs">{groups[statusKey]?.length || 0}</Badge>
-      </header>
-      <Card
-        className={cn(
-          "p-2 pb-8 bg-lunar-surface border-lunar-border/60 min-h-[70vh] max-h-[70vh] overflow-y-auto",
-          dragOverColumn === statusKey ? "ring-2 ring-lunar-accent/60" : ""
-        )}
-        onDragEnter={() => { setDragOverColumn(statusKey as any); }}
-        onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOverColumn(statusKey as any); }}
-        onDragLeave={() => { if (dragOverColumn === (statusKey as any)) setDragOverColumn(null); }}
-        onDrop={(e) => {
-          e.preventDefault();
-          const id = e.dataTransfer.getData('text/plain') || draggingId;
-          if (id) {
-            updateTask(id, { status: statusKey as any });
-            toast({ title: 'Tarefa movida' });
-          }
-          setDragOverColumn(null);
-          setDraggingId(null);
-        }}
-      >
-        <ul className="space-y-2">
-            {(groups[statusKey] || []).map((t) => (
-              <TaskCard
-                key={t.id}
-                task={t}
-                onComplete={() => { updateTask(t.id, { status: doneKey as any }); toast({ title: 'Tarefa concluída' }); }}
-                onReopen={() => updateTask(t.id, { status: defaultOpenKey as any })}
-                onEdit={() => setEditTaskData(t)}
-                onDelete={() => deleteTask(t.id)}
-                onDragStart={(id) => setDraggingId(id)}
-                onDragEnd={() => { setDraggingId(null); setDragOverColumn(null); }}
-                isDragging={draggingId === t.id}
-                onRequestMove={(status) => { updateTask(t.id, { status: status as any }); toast({ title: 'Tarefa movida' }); }}
-                isDone={t.status === (doneKey as any)}
-                statusOptions={statusOptions}
-              />
-            ))}
-        </ul>
-      </Card>
-    </section>
-  );
+  const StatusColumn = ({ title, statusKey }: { title: string; statusKey: string }) => {
+    const { isOver, setNodeRef } = useDroppable({ id: statusKey });
+    return (
+      <section className="flex-1 min-w-[260px]">
+        <header className="flex items-center justify-between mb-2">
+          <h2 className="text-sm font-semibold text-lunar-text">{title}</h2>
+          <Badge variant="outline" className="text-2xs">{groups[statusKey]?.length || 0}</Badge>
+        </header>
+        <Card
+          ref={setNodeRef}
+          className={cn(
+            "p-2 pb-8 bg-lunar-surface border-lunar-border/60 min-h-[70vh] max-h-[70vh] overflow-y-auto",
+            isOver ? "ring-2 ring-lunar-accent/60" : ""
+          )}
+        >
+          <ul className="space-y-2">
+              {(groups[statusKey] || []).map((t) => (
+                <DraggableTaskCard
+                  key={t.id}
+                  task={t}
+                  onComplete={() => { updateTask(t.id, { status: doneKey as any }); toast({ title: 'Tarefa concluída' }); }}
+                  onReopen={() => updateTask(t.id, { status: defaultOpenKey as any })}
+                  onEdit={() => setEditTaskData(t)}
+                  onDelete={() => deleteTask(t.id)}
+                  onRequestMove={(status) => { updateTask(t.id, { status: status as any }); toast({ title: 'Tarefa movida' }); }}
+                  isDone={t.status === (doneKey as any)}
+                  statusOptions={statusOptions}
+                  activeId={activeId}
+                />
+              ))}
+          </ul>
+        </Card>
+      </section>
+    );
+  };
 
   const ListView = () => (
     <div className="space-y-2">
@@ -277,22 +257,58 @@ const [createOpen, setCreateOpen] = useState(false);
       <PriorityLegend />
 
       {view === 'kanban' ? (
-        <div className="overflow-x-auto">
-          <div className="flex gap-4 min-w-max pr-2">
-            <ChecklistPanel
-              items={checklistItems}
-              addTask={addTask}
-              updateTask={updateTask}
-              deleteTask={deleteTask}
-              doneKey={doneKey}
-              defaultOpenKey={defaultOpenKey}
-              variant="column"
-            />
-            {statuses.map(col => (
-              <StatusColumn key={col.id} title={col.name} statusKey={col.key as any} />
-            ))}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={(e) => setActiveId(String(e.active.id))}
+          onDragEnd={(e) => {
+            const overId = e.over?.id as string | undefined;
+            if (activeId && overId) {
+              const current = tasks.find(tt => tt.id === activeId);
+              if (current && current.status !== overId) {
+                updateTask(activeId, { status: overId as any });
+                toast({ title: 'Tarefa movida' });
+              }
+            }
+            setActiveId(null);
+          }}
+          onDragCancel={() => setActiveId(null)}
+        >
+          <div className="overflow-x-auto">
+            <div className="flex gap-4 min-w-max pr-2">
+              <ChecklistPanel
+                items={checklistItems}
+                addTask={addTask}
+                updateTask={updateTask}
+                deleteTask={deleteTask}
+                doneKey={doneKey}
+                defaultOpenKey={defaultOpenKey}
+                variant="column"
+              />
+              {statuses.map(col => (
+                <StatusColumn key={col.id} title={col.name} statusKey={col.key as any} />
+              ))}
+            </div>
           </div>
-        </div>
+          <DragOverlay>
+            {activeId ? (() => {
+              const at = tasks.find(tt => tt.id === activeId);
+              return at ? (
+                <TaskCard
+                  task={at}
+                  onComplete={() => {}}
+                  onReopen={() => {}}
+                  onEdit={() => {}}
+                  onDelete={() => {}}
+                  onRequestMove={() => {}}
+                  isDone={at.status === (doneKey as any)}
+                  statusOptions={statusOptions}
+                  isDragging={true}
+                />
+              ) : null;
+            })() : null}
+          </DragOverlay>
+        </DndContext>
       ) : (
         <ListView />)
       }
