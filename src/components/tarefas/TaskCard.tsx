@@ -109,10 +109,10 @@ export default function TaskCard({
         </div>
         <div className="flex items-center gap-1 shrink-0">
           <DropdownMenu>
-            <Button variant="ghost" size="icon" className="h-7 w-7" title="Alterar status" data-no-drag="true">
+            <Button variant="ghost" size="icon" type="button" className="h-7 w-7" title="Alterar status" data-no-drag="true" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
               <MoreVertical className="h-4 w-4" />
             </Button>
-            <DropdownMenuContent align="end" className="z-50">
+            <DropdownMenuContent align="end" className="z-[100] bg-lunar-surface text-lunar-text border border-lunar-border/60 shadow-lg">
               {statusOptions.map(opt => <DropdownMenuItem key={opt.value} onSelect={() => onRequestMove?.(opt.value)} disabled={opt.value === t.status}>
                   {opt.label}
                 </DropdownMenuItem>)}
