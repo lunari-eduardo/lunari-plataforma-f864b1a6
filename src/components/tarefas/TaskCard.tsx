@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -6,7 +6,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import type { Task, TaskPriority } from '@/types/tasks';
 import { Link } from 'react-router-dom';
-import { GripVertical } from 'lucide-react';
+import { GripVertical, MoreVertical } from 'lucide-react';
 
 function daysUntil(dateIso?: string) {
   if (!dateIso) return undefined;
@@ -79,17 +79,6 @@ export default function TaskCard({
     }
   }, [t.priority]);
 
-  const [menuOpen, setMenuOpen] = useState(false);
-  const longPressRef = useRef<number | null>(null);
-  const handleTouchStart = () => {
-    longPressRef.current = window.setTimeout(() => setMenuOpen(true), 400);
-  };
-  const clearLongPress = () => {
-    if (longPressRef.current) {
-      clearTimeout(longPressRef.current);
-      longPressRef.current = null;
-    }
-  };
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.setData('text/plain', t.id);
     e.dataTransfer.effectAllowed = 'move';
@@ -132,24 +121,27 @@ export default function TaskCard({
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+          <div
+            className="h-7 w-7 flex items-center justify-center cursor-grab active:cursor-grabbing rounded"
+            role="button"
+            aria-label="Arrastar"
+            title="Arrastar"
+          >
+            <GripVertical size={16} />
+          </div>
+          <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 cursor-grab active:cursor-grabbing"
-                title="Mover"
-                onTouchStart={handleTouchStart}
-                onTouchEnd={clearLongPress}
-                onTouchCancel={clearLongPress}
-                onTouchMove={clearLongPress}
-              >
-                <GripVertical size={16} />
+              <Button variant="ghost" size="icon" className="h-7 w-7" title="Mover para...">
+                <MoreVertical size={16} />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="z-50">
               {statusOptions.map((opt) => (
-                <DropdownMenuItem key={opt.value} onSelect={() => { onRequestMove?.(opt.value); setMenuOpen(false); }} disabled={opt.value === t.status}>
+                <DropdownMenuItem
+                  key={opt.value}
+                  onSelect={() => onRequestMove?.(opt.value)}
+                  disabled={opt.value === t.status}
+                >
                   {opt.label}
                 </DropdownMenuItem>
               ))}
