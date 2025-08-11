@@ -10,6 +10,54 @@ import { useTaskPeople } from '@/hooks/useTaskPeople';
 import { useTaskTags } from '@/hooks/useTaskTags';
 import { useMemo, useState } from 'react';
 
+function ManagePeopleSection() {
+  const { people, addPerson, updatePerson, removePerson, movePerson } = useTaskPeople();
+  const [name, setName] = useState('');
+  return (
+    <div className="space-y-3">
+      <div className="space-y-2">
+        {people.map((p, idx) => (
+          <div key={p.id} className="flex items-center gap-2">
+            <Input value={p.name} onChange={(e) => updatePerson(p.id, { name: e.target.value })} className="flex-1" />
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => movePerson(p.id, 'up')} disabled={idx===0}>↑</Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => movePerson(p.id, 'down')} disabled={idx===people.length-1}>↓</Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => removePerson(p.id)} title="Remover">×</Button>
+          </div>
+        ))}
+      </div>
+      <Separator />
+      <form onSubmit={(e)=>{e.preventDefault(); if(!name.trim()) return; addPerson(name.trim()); setName('');}} className="flex items-center gap-2">
+        <Input placeholder="Novo responsável" value={name} onChange={(e)=>setName(e.target.value)} />
+        <Button type="submit">Adicionar</Button>
+      </form>
+    </div>
+  );
+}
+
+function ManageTagsSection() {
+  const { tags, addTag, updateTag, removeTag, moveTag } = useTaskTags();
+  const [name, setName] = useState('');
+  return (
+    <div className="space-y-3">
+      <div className="space-y-2">
+        {tags.map((t, idx) => (
+          <div key={t.id} className="flex items-center gap-2">
+            <Input value={t.name} onChange={(e)=>updateTag(t.id, { name: e.target.value })} className="flex-1" />
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={()=>moveTag(t.id,'up')} disabled={idx===0}>↑</Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={()=>moveTag(t.id,'down')} disabled={idx===tags.length-1}>↓</Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={()=>removeTag(t.id)} title="Remover">×</Button>
+          </div>
+        ))}
+      </div>
+      <Separator />
+      <form onSubmit={(e)=>{e.preventDefault(); if(!name.trim()) return; addTag(name.trim()); setName('');}} className="flex items-center gap-2">
+        <Input placeholder="Nova etiqueta" value={name} onChange={(e)=>setName(e.target.value)} />
+        <Button type="submit">Adicionar</Button>
+      </form>
+    </div>
+  );
+}
+
 export default function ManageTaskStatusesModal({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void; }) {
   const { statuses, addStatus, updateStatus, removeStatus, moveStatus } = useTaskStatuses();
   const [newName, setNewName] = useState('');
@@ -96,53 +144,5 @@ export default function ManageTaskStatusesModal({ open, onOpenChange }: { open: 
         </Tabs>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function ManagePeopleSection() {
-  const { people, addPerson, updatePerson, removePerson, movePerson } = useTaskPeople();
-  const [name, setName] = useState('');
-  return (
-    <div className="space-y-3">
-      <div className="space-y-2">
-        {people.map((p, idx) => (
-          <div key={p.id} className="flex items-center gap-2">
-            <Input value={p.name} onChange={(e) => updatePerson(p.id, { name: e.target.value })} className="flex-1" />
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => movePerson(p.id, 'up')} disabled={idx===0}>↑</Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => movePerson(p.id, 'down')} disabled={idx===people.length-1}>↓</Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => removePerson(p.id)} title="Remover">×</Button>
-          </div>
-        ))}
-      </div>
-      <Separator />
-      <form onSubmit={(e)=>{e.preventDefault(); if(!name.trim()) return; addPerson(name.trim()); setName('');}} className="flex items-center gap-2">
-        <Input placeholder="Novo responsável" value={name} onChange={(e)=>setName(e.target.value)} />
-        <Button type="submit">Adicionar</Button>
-      </form>
-    </div>
-  );
-}
-
-function ManageTagsSection() {
-  const { tags, addTag, updateTag, removeTag, moveTag } = useTaskTags();
-  const [name, setName] = useState('');
-  return (
-    <div className="space-y-3">
-      <div className="space-y-2">
-        {tags.map((t, idx) => (
-          <div key={t.id} className="flex items-center gap-2">
-            <Input value={t.name} onChange={(e)=>updateTag(t.id, { name: e.target.value })} className="flex-1" />
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={()=>moveTag(t.id,'up')} disabled={idx===0}>↑</Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={()=>moveTag(t.id,'down')} disabled={idx===tags.length-1}>↓</Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={()=>removeTag(t.id)} title="Remover">×</Button>
-          </div>
-        ))}
-      </div>
-      <Separator />
-      <form onSubmit={(e)=>{e.preventDefault(); if(!name.trim()) return; addTag(name.trim()); setName('');}} className="flex items-center gap-2">
-        <Input placeholder="Nova etiqueta" value={name} onChange={(e)=>setName(e.target.value)} />
-        <Button type="submit">Adicionar</Button>
-      </form>
-    </div>
   );
 }
