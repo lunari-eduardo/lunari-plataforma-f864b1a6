@@ -19,6 +19,9 @@ export interface Task {
   snoozeUntil?: string;    // ISO
   source: 'automation' | 'manual';
   completedAt?: string; // ISO
+  // New optional fields for checklist-type tasks
+  type?: 'standard' | 'checklist';
+  checked?: boolean;
 }
 
 export interface TeamMember {
