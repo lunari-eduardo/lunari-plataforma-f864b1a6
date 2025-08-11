@@ -30,6 +30,8 @@ export const STORAGE_KEYS = {
   // Tarefas e Automações
   TASKS: 'lunari_tasks',
   TASK_STATUSES: 'lunari_task_statuses',
+  TASK_PEOPLE: 'lunari_task_people',
+  TASK_TAGS: 'lunari_task_tags',
   AUTOMATION_FLAGS: 'lunari_automation_flags',
   FOLLOWUP_FLAGS: 'lunari_followup_flags',
   FEED_IMAGES: 'lunari_feed_images',

@@ -222,7 +222,7 @@ const [createOpen, setCreateOpen] = useState(false);
               <SelectItem value="list">Lista</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" onClick={() => setManageStatusesOpen(true)}>Gerenciar status</Button>
+          <Button variant="outline" onClick={() => setManageStatusesOpen(true)}>Gerenciar</Button>
           <Button onClick={() => setCreateOpen(true)}>Nova tarefa</Button>
         </div>
       </header>
