@@ -109,9 +109,9 @@ export default function TaskCard({
         </div>
         <div className="flex items-center gap-1 shrink-0">
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              
-            </DropdownMenuTrigger>
+            <Button variant="ghost" size="icon" className="h-7 w-7" title="Alterar status" data-no-drag="true">
+              <MoreVertical className="h-4 w-4" />
+            </Button>
             <DropdownMenuContent align="end" className="z-50">
               {statusOptions.map(opt => <DropdownMenuItem key={opt.value} onSelect={() => onRequestMove?.(opt.value)} disabled={opt.value === t.status}>
                   {opt.label}
