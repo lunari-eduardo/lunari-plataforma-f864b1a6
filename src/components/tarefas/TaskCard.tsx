@@ -6,7 +6,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import type { Task, TaskPriority } from '@/types/tasks';
 import { Link } from 'react-router-dom';
-import { GripVertical, MoreVertical } from 'lucide-react';
+import { MoreVertical } from 'lucide-react';
 
 function daysUntil(dateIso?: string) {
   if (!dateIso) return undefined;
@@ -48,6 +48,7 @@ export default function TaskCard({
   statusOptions: { value: string; label: string }[];
 }) {
   const [open, setOpen] = useState(false);
+  const [isPressing, setIsPressing] = useState(false);
   const dueInfo = useMemo(() => {
     const d = daysUntil(t.dueDate);
     if (d === undefined) return null;
@@ -80,6 +81,11 @@ export default function TaskCard({
   }, [t.priority]);
 
   const handleDragStart = (e: React.DragEvent) => {
+    const target = e.target as HTMLElement | null;
+    if (target && target.closest('[data-no-drag="true"]')) {
+      e.preventDefault();
+      return;
+    }
     e.dataTransfer.setData('text/plain', t.id);
     e.dataTransfer.effectAllowed = 'move';
     onDragStart?.(t.id);
@@ -94,6 +100,10 @@ export default function TaskCard({
       draggable
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
+      onMouseDown={() => setIsPressing(true)}
+      onMouseUp={() => setIsPressing(false)}
+      onMouseLeave={() => setIsPressing(false)}
+      onDoubleClick={() => { setIsPressing(true); setTimeout(() => setIsPressing(false), 600); }}
       aria-grabbed={isDragging ? true : undefined}
     >
       {/* Priority visual accents */}
@@ -103,7 +113,14 @@ export default function TaskCard({
       )}
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <h3 className="text-sm font-medium text-lunar-text truncate">{t.title}</h3>
+          <h3
+            className="text-sm font-medium text-lunar-text truncate cursor-pointer hover:text-lunar-accent"
+            onClick={onEdit}
+            data-no-drag="true"
+            title="Abrir detalhes"
+          >
+            {t.title}
+          </h3>
           {t.description && (
             <p className="text-2xs text-lunar-textSecondary truncate">{t.description}</p>
           )}
@@ -121,17 +138,6 @@ export default function TaskCard({
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          <div
-            className="h-7 w-7 flex items-center justify-center cursor-grab active:cursor-grabbing rounded"
-            role="button"
-            aria-label="Arrastar"
-            title="Arrastar"
-            draggable
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-          >
-            <GripVertical size={16} />
-          </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-7 w-7" title="Mover para...">
@@ -164,9 +170,6 @@ export default function TaskCard({
               Reabrir
             </Button>
           )}
-          <Button variant="ghost" size="sm" className="h-7 text-2xs" onClick={onEdit} title="Editar">
-            Editar
-          </Button>
           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onDelete} title="Excluir">
             ×
           </Button>
