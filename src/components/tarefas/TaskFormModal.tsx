@@ -5,6 +5,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { useTaskPeople } from '@/hooks/useTaskPeople';
+import { useTaskTags } from '@/hooks/useTaskTags';
 import type { Task, TaskPriority, TaskStatus } from '@/types/tasks';
 
 interface TaskFormModalProps {
@@ -22,7 +25,7 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
   const [priority, setPriority] = useState<TaskPriority>(initial?.priority ?? 'medium');
   const [status, setStatus] = useState<TaskStatus>(initial?.status ?? 'todo');
   const [assigneeName, setAssigneeName] = useState<string>(initial?.assigneeName ?? '');
-  const [tagsText, setTagsText] = useState<string>((initial?.tags ?? []).join(', '));
+  const [selectedTags, setSelectedTags] = useState<string[]>(initial?.tags ?? []);
 
   useEffect(() => {
     if (open) {
@@ -32,11 +35,12 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
       setPriority(initial?.priority ?? 'medium');
       setStatus(initial?.status ?? 'todo');
       setAssigneeName(initial?.assigneeName ?? '');
-      setTagsText((initial?.tags ?? []).join(', '));
+      setSelectedTags(initial?.tags ?? []);
     }
   }, [open, initial]);
 
-  const tags = useMemo(() => tagsText.split(',').map(t => t.trim()).filter(Boolean), [tagsText]);
+  const { people } = useTaskPeople();
+  const { tags: tagDefs } = useTaskTags();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,7 +52,7 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
       priority,
       status,
       assigneeName: assigneeName.trim() || undefined,
-      tags: tags.length ? tags : undefined,
+      tags: selectedTags.length ? selectedTags : undefined,
       // allow override but default to manual
       source: (initial?.source ?? 'manual') as any,
     } as any);
@@ -106,14 +110,49 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="assignee">Responsável</Label>
-              <Input id="assignee" value={assigneeName} onChange={e => setAssigneeName(e.target.value)} placeholder="Pessoa ou equipe" />
+              <Label>Responsável</Label>
+              <Select value={assigneeName || '__none__'} onValueChange={(v) => setAssigneeName(v === '__none__' ? '' : v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Sem responsável</SelectItem>
+                  {people.map((p) => (
+                    <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="tags">Etiquetas</Label>
-            <Input id="tags" value={tagsText} onChange={e => setTagsText(e.target.value)} placeholder="Ex.: Casamento, Pós-edição" />
-            <p className="text-2xs text-lunar-textSecondary">Separe múltiplas etiquetas por vírgula.</p>
+            <Label>Etiquetas</Label>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="w-full justify-between">
+                  {selectedTags.length ? selectedTags.join(', ') : 'Selecione etiquetas'}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="z-[10000] bg-lunar-bg w-[var(--radix-select-trigger-width,16rem)] min-w-[12rem]">
+                {tagDefs.length ? (
+                  tagDefs.map((tag) => (
+                    <DropdownMenuCheckboxItem
+                      key={tag.id}
+                      checked={selectedTags.includes(tag.name)}
+                      onCheckedChange={(checked) => {
+                        setSelectedTags((prev) =>
+                          checked ? [...prev, tag.name] : prev.filter((t) => t !== tag.name)
+                        )
+                      }}
+                    >
+                      {tag.name}
+                    </DropdownMenuCheckboxItem>
+                  ))
+                ) : (
+                  <div className="px-3 py-2 text-2xs text-lunar-textSecondary">Nenhuma etiqueta cadastrada.</div>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <p className="text-2xs text-lunar-textSecondary">Gerencie as opções em "Gerenciar".</p>
           </div>
           <div className="pt-2 flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
