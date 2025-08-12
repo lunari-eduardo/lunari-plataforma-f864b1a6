@@ -179,7 +179,7 @@ export default function AvailabilityConfigModal({
   return <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[520px]">
         <DialogHeader>
-          <DialogTitle>Configurar disponibilidade</DialogTitle>
+          <DialogTitle className="text-sm">Configurar disponibilidade</DialogTitle>
           <DialogDescription>
             Defina horários disponíveis para {format(date, "d 'de' MMMM, yyyy")}.
           </DialogDescription>
