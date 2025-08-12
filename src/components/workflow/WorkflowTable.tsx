@@ -580,9 +580,12 @@ export function WorkflowTable({
   const renderCell = useCallback((key: string, content: React.ReactNode, isFixed = false) => {
     if (!visibleColumns[key]) return null;
     const width = currentColumnWidths[key] || responsiveColumnWidths[key];
-    return <td className={`
+return <td className={`
           p-2 border-r border-border min-h-[40px] text-xs transition-colors duration-150 ease-in-out
-          ${isFixed ? 'sticky z-10 bg-card shadow-sm group-hover:bg-muted group-focus-within:bg-accent dark:bg-gray-900 dark:group-hover:bg-gray-800 dark:group-focus-within:bg-gray-800' : 'group-hover:bg-muted group-focus-within:bg-accent dark:group-hover:bg-gray-800'}
+          ${isFixed 
+            ? 'sticky z-10 bg-card shadow-sm group-hover:bg-lunar-accent/5 group-focus-within:bg-lunar-accent/10 dark:bg-gray-900 dark:group-hover:bg-gray-800 dark:group-focus-within:bg-gray-800' 
+            : 'group-hover:bg-lunar-accent/5 group-focus-within:bg-lunar-accent/10 dark:group-hover:bg-gray-800'}
+          ${key === 'date' ? 'border-l-2 border-l-transparent group-hover:border-l-lunar-accent/40 group-focus-within:border-l-lunar-accent' : ''}
         `} style={{
       width: `${width}px`,
       minWidth: `${width}px`,
@@ -633,7 +636,7 @@ export function WorkflowTable({
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
             {sessions.map(session => {
             return <>
-                <tr key={session.id} className="group transition-colors duration-150 ease-in-out">
+                <tr key={session.id} className="group transition-colors duration-150 ease-in-out focus-within:ring-1 focus-within:ring-lunar-accent/30">
                 {renderCell('date', <div className="font-medium">{formatToDayMonth(session.data)}</div>, true)}
                 
 {renderCell('client', <div className="flex items-center gap-2">
@@ -665,7 +668,7 @@ export function WorkflowTable({
                   </div>)}
 
                 {renderCell('status', <Select key={`status-${session.id}-${session.status}`} value={session.status} onValueChange={value => handleStatusChangeStable(session.id, value)}>
-                    <SelectTrigger className="h-auto p-2 text-xs w-full border-none bg-transparent hover:bg-gray-50">
+                    <SelectTrigger className="h-auto p-2 text-xs w-full border-none bg-transparent hover:bg-lunar-accent/5 focus:bg-lunar-accent/10 transition-colors">
                       <SelectValue asChild>
                         <StatusBadge status={session.status} />
                       </SelectValue>
