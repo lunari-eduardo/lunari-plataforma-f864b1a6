@@ -35,9 +35,12 @@ export default function AvailabilityConfigModal({
   const [clearExisting, setClearExisting] = useState<boolean>(true);
   const [selectedWeekdays, setSelectedWeekdays] = useState<number[]>([]);
   const weekDaysLabels = useMemo(() => ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'], []);
+  const allWeekdays = useMemo(() => [0,1,2,3,4,5,6], []);
+  const allSelected = selectedWeekdays.length === 7;
   const toggleWeekday = (idx: number) => {
     setSelectedWeekdays(prev => prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]);
   };
+  const handleSelectAllWeekdays = () => setSelectedWeekdays(allSelected ? [] : allWeekdays);
   useEffect(() => {
     setTimesList(initialTime ? [initialTime] : []);
     setStartDate(date);
@@ -180,7 +183,7 @@ export default function AvailabilityConfigModal({
       <DialogContent className="sm:max-w-[520px]">
         <DialogHeader>
           <DialogTitle className="text-sm">Configurar disponibilidade</DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="mb-4">
             Defina horários disponíveis para {format(date, "d 'de' MMMM, yyyy")}.
           </DialogDescription>
         </DialogHeader>
@@ -214,7 +217,12 @@ export default function AvailabilityConfigModal({
           </div>
 
           <div className="col-span-1 md:col-span-2 space-y-2">
-            <Label>Dias da semana (opcional)</Label>
+            <div className="flex items-center justify-between">
+              <Label>Dias da semana (opcional)</Label>
+              <Button type="button" variant="outline" className="h-7 px-2 text-xs" onClick={handleSelectAllWeekdays}>
+                {allSelected ? 'Limpar' : 'Todos'}
+              </Button>
+            </div>
             <div className="grid grid-cols-7 gap-2">
               {weekDaysLabels.map((d, idx) => <label key={d} className="flex items-center gap-1.5 text-xs">
                   <Checkbox checked={selectedWeekdays.includes(idx)} onCheckedChange={() => toggleWeekday(idx)} />
