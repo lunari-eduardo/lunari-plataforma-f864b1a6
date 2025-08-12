@@ -26,13 +26,10 @@ export default function DailyHero() {
   const dayMonth = dayFmt.format(now);
 
   return (
-    <Card className="rounded-lg ring-1 ring-lunar-accent/30 overflow-hidden">
+    <Card className="rounded-lg ring-1 ring-lunar-border/60 shadow-brand overflow-hidden">
       <div className="relative">
         {/* decorative accents */}
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -top-8 -right-8 h-40 w-40 rounded-full bg-lunar-accent/20 blur-2xl" />
-          <div className="absolute -bottom-10 -left-10 h-44 w-44 rounded-full bg-lunar-accent/10 blur-2xl" />
-        </div>
+        <div className="pointer-events-none absolute inset-0 bg-brand-gradient opacity-[0.08]" />
         <CardContent className="relative py-5 px-4 md:px-6">
           <div className="flex items-start justify-between gap-4">
             <div>

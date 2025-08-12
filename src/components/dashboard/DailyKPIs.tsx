@@ -6,7 +6,7 @@ export default function DailyKPIs() {
   const { sessionsToday, tasksToday } = useTodayOverview();
 
   const Item = ({ icon, title, value, hint }: { icon: React.ReactNode; title: string; value: string; hint: string }) => (
-    <Card className="rounded-lg ring-1 ring-lunar-accent/20">
+    <Card className="rounded-lg ring-1 ring-lunar-border/60 shadow-brand">
       <CardContent className="py-4 px-4">
         <div className="flex items-start justify-between">
           <div>
