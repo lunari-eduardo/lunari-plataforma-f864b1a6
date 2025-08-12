@@ -1,12 +1,14 @@
 
 import { useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { Calendar, Camera, DollarSign, Users, Clock, BarChart3, AlertTriangle } from "lucide-react";
+import { Calendar, Camera } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
+
+import { KPIGroupCard } from "@/components/dashboard/KPIGroupCard";
+import { ProductionRemindersCard } from "@/components/dashboard/ProductionRemindersCard";
 import { HighPriorityDueSoonCard } from "@/components/tarefas/HighPriorityDueSoonCard";
 
 import { useSalesAnalytics } from "@/hooks/useSalesAnalytics";
@@ -16,7 +18,7 @@ import { useAgenda } from "@/hooks/useAgenda";
 import { useAvailability } from "@/hooks/useAvailability";
 import { useAppContext } from "@/contexts/AppContext";
 
-import { formatCurrency } from "@/utils/financialUtils";
+
 import { formatDateForStorage, parseDateFromStorage } from "@/utils/dateUtils";
 import { normalizeWorkflowItems } from "@/utils/salesDataNormalizer";
 
@@ -190,102 +192,22 @@ export default function Index() {
         <p className="text-2xs text-lunar-textSecondary">Visão geral: receita, metas, clientes, horários, orçamentos e agenda.</p>
       </header>
 
-      {/* KPIs */}
-      <section aria-label="Indicadores principais" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm">Receita do mês vs Meta</CardTitle>
-            <DollarSign className="h-5 w-5 text-lunar-accent" />
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-baseline justify-between">
-              <p className="text-lg font-semibold">{formatCurrency(receitaMes)}</p>
-              <span className="text-2xs text-lunar-textSecondary">Meta: {formatCurrency(metaMes)}</span>
-            </div>
-            <div className="mt-2">
-              <Progress value={progressoMeta} />
-              <span className="text-2xs text-lunar-textSecondary">{progressoMeta.toFixed(0)}%</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm">Categoria mais rentável</CardTitle>
-            <BarChart3 className="h-5 w-5 text-lunar-accent" />
-          </CardHeader>
-          <CardContent>
-            {topCategoria ? (
-              <div>
-                <p className="text-lg font-semibold">{topCategoria.name}</p>
-                <p className="text-2xs text-lunar-textSecondary mt-1">Receita: {formatCurrency(topCategoria.revenue)} • {topCategoria.sessions} sessões</p>
-              </div>
-            ) : (
-              <p className="text-2xs text-lunar-textSecondary">Sem dados</p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm">Novos clientes (60 dias)</CardTitle>
-            <Users className="h-5 w-5 text-lunar-accent" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-lg font-semibold">{novosClientes60d}</p>
-            <p className="text-2xs text-lunar-textSecondary mt-1">Primeira sessão registrada nos últimos 60 dias</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm">Horários livres (7 dias)</CardTitle>
-            <Clock className="h-5 w-5 text-lunar-accent" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-lg font-semibold">{livresSemana}</p>
-            <p className="text-2xs text-lunar-textSecondary mt-1">
-              {proximoLivre ? (
-                <>Próximo: {proximoLivre.toLocaleDateString("pt-BR")} • {proximoLivre.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</>
-              ) : (
-                <>
-                  Sem horários livres. <Link to="/agenda" className="underline">Configurar disponibilidade</Link>
-                </>
-              )}
-            </p>
-          </CardContent>
-        </Card>
+      {/* KPIs modernizados */}
+      <section aria-label="Indicadores principais" className="animate-fade-in">
+        <KPIGroupCard
+          receitaMes={receitaMes}
+          metaMes={metaMes}
+          progressoMeta={progressoMeta}
+          topCategoria={topCategoria}
+          novosClientes60d={novosClientes60d}
+          livresSemana={livresSemana}
+          proximoLivre={proximoLivre}
+        />
       </section>
 
       {/* Lembretes de Produção */}
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-3">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-lunar-accent" />
-              <CardTitle className="text-base">Lembretes de Produção</CardTitle>
-            </div>
-            <Link to="/workflow">
-              <Button variant="ghost" size="sm">Ir para Workflow</Button>
-            </Link>
-          </CardHeader>
-          <CardContent>
-            {lembretesProducao.length === 0 ? (
-              <p className="text-2xs text-lunar-textSecondary">Sem pendências de produção.</p>
-            ) : (
-              <div className="space-y-2">
-                {lembretesProducao.slice(0, 8).map((r) => (
-                  <div key={r.id} className="text-sm">
-                    O <span className="font-medium">{r.produto}</span> de <span className="font-medium">{r.cliente}</span> ainda não foi para produção!
-                  </div>
-                ))}
-                {lembretesProducao.length > 8 && (
-                  <p className="text-2xs text-lunar-textSecondary mt-1">+{lembretesProducao.length - 8} lembretes adicionais</p>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <ProductionRemindersCard lembretes={lembretesProducao} />
       </section>
 
       {/* Tarefas de alta prioridade (até 5 dias) */}
@@ -295,10 +217,10 @@ export default function Index() {
 
       {/* Orçamentos e Agenda */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
+        <Card className="rounded-lg ring-1 ring-lunar-accent/30 animate-fade-in">
           <CardHeader className="pb-2 flex flex-row items-center justify-between">
             <div className="flex items-center gap-2">
-              <Camera className="h-5 w-5 text-lunar-accent" />
+              <Camera className="h-5 w-5 text-lunar-success" />
               <CardTitle className="text-base">Resumo de Orçamentos (mês)</CardTitle>
             </div>
             <Link to="/orcamentos">
@@ -317,7 +239,7 @@ export default function Index() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="rounded-lg ring-1 ring-lunar-success/25 animate-fade-in">
           <CardHeader className="pb-2 flex flex-row items-center justify-between">
             <div className="flex items-center gap-2">
               <Calendar className="h-5 w-5 text-lunar-accent" />
