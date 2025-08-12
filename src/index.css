@@ -49,6 +49,14 @@
     --destructive: 12 74% 61%;
     --destructive-foreground: 0 0% 100%;
     --ring: 210 84% 56%;
+
+    /* Chart palette */
+    --chart-primary: var(--primary);
+    --chart-secondary: 217 91% 60%;
+    --chart-tertiary: 200 98% 58%;
+    --chart-quaternary: 190 94% 42%;
+    --chart-quinary: 230 89% 65%;
+    --chart-revenue: 210 84% 56%;
   }
 }
 

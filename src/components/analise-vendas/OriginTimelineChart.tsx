@@ -66,7 +66,7 @@ export function OriginTimelineChart({ monthlyOriginData }: OriginTimelineChartPr
 
   if (originsList.length === 0) {
     return (
-      <Card className="border-0 shadow-lg bg-lunar-surface">
+      <Card className="rounded-lg ring-1 ring-lunar-border/60 shadow-brand bg-lunar-surface">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-lunar-text flex items-center gap-2">
             <TrendingUp className="h-4 w-4 text-orange-500" />
@@ -83,7 +83,7 @@ export function OriginTimelineChart({ monthlyOriginData }: OriginTimelineChartPr
   }
 
   return (
-    <Card className="border-0 shadow-lg bg-lunar-surface">
+    <Card className="rounded-lg ring-1 ring-lunar-border/60 shadow-brand bg-lunar-surface">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium text-lunar-text flex items-center gap-2">
           <TrendingUp className="h-4 w-4 text-orange-500" />

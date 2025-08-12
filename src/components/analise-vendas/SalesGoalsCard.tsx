@@ -64,7 +64,7 @@ export function SalesGoalsCard() {
   };
 
   return (
-    <Card className="border-0 shadow-lg bg-lunar-surface">
+    <Card className="rounded-lg ring-1 ring-lunar-border/60 shadow-brand bg-lunar-surface">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium text-lunar-text flex items-center gap-2">

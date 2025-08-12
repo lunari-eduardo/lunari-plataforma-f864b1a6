@@ -44,7 +44,7 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       {/* Monthly Revenue Chart */}
-      <Card className="border-0 shadow-lg bg-lunar-surface">
+      <Card className="rounded-lg ring-1 ring-lunar-border/60 shadow-brand bg-lunar-surface">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-lunar-text flex items-center gap-2">
             <DollarSign className="h-4 w-4 text-green-500" />
@@ -80,7 +80,7 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
       </Card>
 
       {/* Sessions per Month Chart */}
-      <Card className="border-0 shadow-lg bg-lunar-surface">
+      <Card className="rounded-lg ring-1 ring-lunar-border/60 shadow-brand bg-lunar-surface">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-lunar-text flex items-center gap-2">
             <Calendar className="h-4 w-4 text-blue-500" />
@@ -115,7 +115,7 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
       </Card>
 
       {/* Average Ticket Chart */}
-      <Card className="border-0 shadow-lg bg-lunar-surface">
+      <Card className="rounded-lg ring-1 ring-lunar-border/60 shadow-brand bg-lunar-surface">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-lunar-text flex items-center gap-2">
             <TrendingUp className="h-4 w-4 text-purple-500" />
@@ -153,7 +153,7 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
       </Card>
 
       {/* Extra Photos Revenue Chart */}
-      <Card className="border-0 shadow-lg bg-lunar-surface">
+      <Card className="rounded-lg ring-1 ring-lunar-border/60 shadow-brand bg-lunar-surface">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-lunar-text flex items-center gap-2">
             <Camera className="h-4 w-4 text-orange-500" />
@@ -192,7 +192,7 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
       </Card>
 
       {/* Package Distribution */}
-      <Card className="border-0 shadow-lg bg-lunar-surface">
+      <Card className="rounded-lg ring-1 ring-lunar-border/60 shadow-brand bg-lunar-surface">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-lunar-text flex items-center gap-2">
             <Package className="h-4 w-4 text-indigo-500" />
@@ -234,7 +234,7 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
       <OriginChartsSection originData={originData} monthlyOriginData={monthlyOriginData} />
 
       {/* Category Distribution */}
-      <Card className="border-0 shadow-lg bg-lunar-surface lg:col-span-2">
+      <Card className="rounded-lg ring-1 ring-lunar-border/60 shadow-brand bg-lunar-surface lg:col-span-2">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-lunar-text flex items-center gap-2">
             <PieChartIcon className="h-4 w-4 text-blue-500" />

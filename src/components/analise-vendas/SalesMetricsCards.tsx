@@ -69,7 +69,7 @@ export function SalesMetricsCards({ metrics }: SalesMetricsCardsProps) {
         const isNegative = metric.trend === 'down';
         
         return (
-          <Card key={index} className="border-0 shadow-lg bg-lunar-surface hover:shadow-xl transition-all duration-200">
+          <Card key={index} className="rounded-lg ring-1 ring-lunar-border/60 shadow-brand bg-lunar-surface hover:shadow-xl transition-all duration-200">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <Icon className={`h-4 w-4 ${isPositive ? 'text-green-500' : isNegative ? 'text-red-500' : 'text-lunar-accent'}`} />
