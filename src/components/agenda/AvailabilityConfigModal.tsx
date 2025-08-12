@@ -177,7 +177,7 @@ export default function AvailabilityConfigModal({
   };
   const handleClearDay = () => {
     clearAvailabilityForDate(dateStr);
-    toast.success('Disponibilidades do dia removidas');
+    onClose();
   };
   return <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[520px]">
