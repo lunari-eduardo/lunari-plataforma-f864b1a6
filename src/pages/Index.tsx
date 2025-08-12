@@ -49,7 +49,7 @@ export default function Index() {
   const { appointments } = useAgenda();
   const { orcamentos } = useOrcamentos();
   const { availability } = useAvailability();
-  const { workflowItems } = useAppContext();
+  const { workflowItemsAll } = useAppContext();
   // Receita do mês atual vs meta
   const currentMonthIndex = new Date().getMonth();
   const currentMonthData = monthlyData.find((m) => m.monthIndex === currentMonthIndex);
@@ -154,7 +154,7 @@ export default function Index() {
   // Lembretes de Produção
   const lembretesProducao = useMemo(() => {
     const reminders: Array<{ id: string; cliente: string; produto: string; tipo: string }> = [];
-    workflowItems.forEach((item) => {
+    workflowItemsAll.forEach((item) => {
       (item.produtosList || []).forEach((p) => {
         // Inclusos e manuais geram lembrete até serem marcados como produzidos
         if (!p.produzido) {
@@ -163,7 +163,7 @@ export default function Index() {
       });
     });
     return reminders;
-  }, [workflowItems]);
+  }, [workflowItemsAll]);
   // Próximos agendamentos confirmados (top 5)
   const proximosAgendamentos = useMemo(() => {
     const now = new Date();

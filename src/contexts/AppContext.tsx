@@ -115,6 +115,7 @@ interface AppContextType {
   
   // Workflow
   workflowItems: WorkflowItem[];
+  workflowItemsAll: WorkflowItem[];
   workflowSummary: { receita: number; aReceber: number; previsto: number };
   workflowFilters: WorkflowFilters;
   visibleColumns: Record<string, boolean>;
@@ -2248,6 +2249,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     metricas,
     appointments,
     availability,
+    workflowItemsAll: workflowItems,
     workflowItems: workflowItems.filter(item => {
       // Handle ISO date format (YYYY-MM-DD) from new Projeto structure
       const itemDate = new Date(item.data);
