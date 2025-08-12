@@ -240,9 +240,9 @@
   *:hover::after {
     opacity: inherit !important;
   }
-  /* Disable hover background highlight on tables */
-  table tr:hover td,
-  .table-lunar tr:hover td {
+  /* Disable hover background highlight on tables ONLY on Tasks page */
+  .page-tarefas table tr:hover td,
+  .page-tarefas .table-lunar tr:hover td {
     background: none !important;
     background-color: inherit !important;
   }

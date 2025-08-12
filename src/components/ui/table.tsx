@@ -10,7 +10,7 @@ const Table = React.forwardRef<
   <div className="relative w-full overflow-auto">
     <table
       ref={ref}
-      className={cn("w-full caption-bottom text-sm bg-white rounded-lg border border-gray-100 overflow-hidden shadow-sm", className)}
+      className={cn("w-full caption-bottom text-sm bg-card text-card-foreground rounded-lg border border-border overflow-hidden shadow-sm dark:bg-gray-900 dark:border-gray-800", className)}
       {...props}
     />
   </div>
@@ -21,7 +21,7 @@ const TableHeader = React.forwardRef<
   HTMLTableSectionElement,
   React.HTMLAttributes<HTMLTableSectionElement>
 >(({ className, ...props }, ref) => (
-  <thead ref={ref} className={cn("bg-gray-50/50 border-b border-gray-100", className)} {...props} />
+  <thead ref={ref} className={cn("bg-muted border-b border-border dark:bg-gray-800 dark:border-gray-800", className)} {...props} />
 ))
 TableHeader.displayName = "TableHeader"
 
@@ -31,7 +31,7 @@ const TableBody = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <tbody
     ref={ref}
-    className={cn("divide-y divide-gray-50", className)}
+    className={cn("divide-y divide-gray-100 dark:divide-gray-800", className)}
     {...props}
   />
 ))
@@ -44,7 +44,7 @@ const TableFooter = React.forwardRef<
   <tfoot
     ref={ref}
     className={cn(
-      "border-t border-gray-100 bg-gray-50/30 font-medium",
+      "border-t border-border bg-muted font-medium dark:bg-gray-800 dark:border-gray-800",
       className
     )}
     {...props}
@@ -59,7 +59,7 @@ const TableRow = React.forwardRef<
   <tr
     ref={ref}
     className={cn(
-      "transition-colors hover:bg-gray-50/70 data-[state=selected]:bg-gray-50",
+      "transition-colors hover:bg-muted data-[state=selected]:bg-muted dark:hover:bg-gray-800 dark:data-[state=selected]:bg-gray-800",
       className
     )}
     {...props}
@@ -74,7 +74,7 @@ const TableHead = React.forwardRef<
   <th
     ref={ref}
     className={cn(
-      "h-12 px-4 text-left align-middle font-medium text-gray-700 [&:has([role=checkbox])]:pr-0",
+      "h-12 px-4 text-left align-middle font-medium text-foreground/80 [&:has([role=checkbox])]:pr-0 dark:text-gray-200",
       className
     )}
     {...props}

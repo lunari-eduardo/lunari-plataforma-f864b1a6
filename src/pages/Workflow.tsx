@@ -492,9 +492,9 @@ export default function Workflow() {
       setSortDirection('asc');
     }
   }, [sortField, sortDirection]);
-  return <div className="h-full flex flex-col bg-gray-50">
-      <div className="border-b shadow-sm sticky top-0 z-50 bg-lunar-bg">
-        <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 flex items-center justify-between pt-3 bg-lunar-bg">
+  return <div className="page-workflow h-full flex flex-col bg-background text-foreground dark:bg-gray-950">
+      <div className="border-b shadow-sm sticky top-0 z-50 bg-background">
+        <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 flex items-center justify-between pt-3 bg-background">
           <div className="flex items-center space-x-3">
             <Button variant="outline" size="icon" onClick={handlePreviousMonth} className="h-8 w-8">
               <ChevronLeft className="h-4 w-4" />
@@ -514,7 +514,7 @@ export default function Workflow() {
           </div>
         </div>
 
-        {showMetrics && <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 pt-2 pb-3 bg-lunar-bg">
+        {showMetrics && <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 pt-2 pb-3 bg-background">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 p-2.5 rounded-xl" style={{
                 backgroundColor: '#ffffff',
@@ -591,9 +591,9 @@ export default function Workflow() {
             </div>
           </div>}
 
-        <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 flex items-center justify-between gap-4 pb-3 pt-2 bg-lunar-bg">
-          <div className="flex items-center space-x-2 flex-1 bg-lunar-bg">
-            <div className="relative max-w-xs flex-1 bg-lunar-bg">
+        <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 flex items-center justify-between gap-4 pb-3 pt-2 bg-background">
+          <div className="flex items-center space-x-2 flex-1 bg-background">
+            <div className="relative max-w-xs flex-1 bg-background">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input placeholder="Buscar por cliente (sem acentos)..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 h-9 bg-neutral-50" />
             </div>

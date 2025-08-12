@@ -558,7 +558,7 @@ export function WorkflowTable({
     if (!visibleColumns[key]) return null;
     const width = currentColumnWidths[key] || responsiveColumnWidths[key];
     return <th key={key} className={`
-          relative bg-lunar-surface border-r border-gray-200 p-2 text-left text-xs font-medium text-gray-700
+          relative bg-card border-r border-border p-2 text-left text-xs font-medium text-foreground/80 dark:bg-gray-900 dark:border-gray-800 dark:text-gray-200
           ${isFixed ? 'sticky z-20 shadow-sm' : ''}
         `} style={{
       width: `${width}px`,
@@ -581,8 +581,8 @@ export function WorkflowTable({
     if (!visibleColumns[key]) return null;
     const width = currentColumnWidths[key] || responsiveColumnWidths[key];
     return <td className={`
-          p-2 border-r border-gray-100 min-h-[40px] text-xs transition-colors duration-150 ease-in-out
-          ${isFixed ? 'sticky z-10 bg-white shadow-sm group-hover:bg-gray-50 group-focus-within:bg-blue-50' : 'group-hover:bg-lunar-surface/50 group-focus-within:bg-lunar-accent/10'}
+          p-2 border-r border-border min-h-[40px] text-xs transition-colors duration-150 ease-in-out
+          ${isFixed ? 'sticky z-10 bg-card shadow-sm group-hover:bg-muted group-focus-within:bg-accent dark:bg-gray-900 dark:group-hover:bg-gray-800 dark:group-focus-within:bg-gray-800' : 'group-hover:bg-muted group-focus-within:bg-accent dark:group-hover:bg-gray-800'}
         `} style={{
       width: `${width}px`,
       minWidth: `${width}px`,
@@ -592,7 +592,7 @@ export function WorkflowTable({
         {content}
       </td>;
   }, [visibleColumns, currentColumnWidths, responsiveColumnWidths]);
-  return <div className="relative flex flex-col h-full bg-white">
+  return <div className="relative flex flex-col h-full bg-background text-foreground dark:bg-gray-950">
       {/* NÍVEL 1: O "BOX DE ROLAGEM" */}
       <div ref={scrollContainerRef} className="h-full w-full overflow-auto" style={{
       height: 'calc(100vh - 280px)'
@@ -604,7 +604,7 @@ export function WorkflowTable({
         tableLayout: 'auto'
       }}>
           {/* NÍVEL 3: O CABEÇALHO STICKY */}
-          <thead className="sticky top-0 z-30 bg-white border-b-2 border-gray-200">
+          <thead className="sticky top-0 z-30 bg-card border-b-2 border-border dark:bg-gray-900 dark:border-gray-800">
             <tr>
               {renderHeaderCell('date', 'Data', true, true)}
               {renderHeaderCell('client', 'Nome', true, true)}
@@ -630,7 +630,7 @@ export function WorkflowTable({
           </thead>
           
           {/* NÍVEL 4: O CORPO DA TABELA */}
-          <tbody className="divide-y divide-gray-50">
+          <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
             {sessions.map(session => {
             return <>
                 <tr key={session.id} className="group transition-colors duration-150 ease-in-out">
@@ -670,7 +670,7 @@ export function WorkflowTable({
                         <StatusBadge status={session.status} />
                       </SelectValue>
                     </SelectTrigger>
-                    <SelectContent className="z-50 bg-white border shadow-lg">
+                    <SelectContent className="z-50 bg-popover text-popover-foreground border border-border shadow-lg dark:bg-gray-900 dark:text-gray-100 dark:border-gray-800">
                       {statusOptions.map(status => (
                         <SelectItem key={status} value={status} className="text-xs p-2">
                           <StatusBadge status={status} />
