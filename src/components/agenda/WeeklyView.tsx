@@ -101,7 +101,7 @@ const getEventForSlot = (day: Date, time: string) => {
 
   return (
     <div className="overflow-x-auto pb-4">
-      <div className="min-w-[300px] md:min-w-[700px]">
+      <div className="min-w-[960px]">
         <div className="flex items-center justify-between mb-2">
           <p className="text-xs md:text-sm text-muted-foreground">Semana de {format(weekStart, "dd 'de' MMMM", { locale: ptBR })}</p>
           <Button variant="ghost" size="icon" onClick={handleShareWeek} aria-label="Compartilhar horários da semana" title="Compartilhar horários da semana">
@@ -110,11 +110,11 @@ const getEventForSlot = (day: Date, time: string) => {
         </div>
         <div className="grid grid-cols-8 gap-px bg-border">
           {/* First cell empty - for time labels */}
-          <div className="bg-stone-200"></div>
+          <div className="bg-muted"></div>
           
           {/* Day headers */}
           {weekDays.map((day, index) => (
-            <div key={index} className="p-1 md:p-2 text-center bg-stone-200">
+            <div key={index} className="p-1 md:p-2 text-center bg-muted">
               <p className="text-xs text-muted-foreground font-medium">{formatDayName(day)}</p>
               <p className="font-semibold text-xs md:text-sm">{format(day, 'd')}</p>
               {/* Mobile: dots with counts */}
@@ -145,7 +145,7 @@ const getEventForSlot = (day: Date, time: string) => {
           {timeSlots.map(time => (
             <React.Fragment key={time}>
               {/* Time label */}
-              <div className="p-1 md:p-2 text-right text-xs text-muted-foreground px-3 md:px-4 py-3 md:py-4 rounded-sm my-px bg-muted">
+              <div className="flex items-center justify-end h-12 md:h-16 text-xs text-muted-foreground px-3 md:px-4 rounded-sm bg-muted">
                 {time}
               </div>
               
@@ -156,7 +156,7 @@ const getEventForSlot = (day: Date, time: string) => {
                   <div 
                     key={`${dayIndex}-${time}`} 
                     onClick={() => !event && onCreateSlot({ date: day, time })} 
-                    className="border h-12 md:h-16 p-0.5 md:p-1 relative cursor-pointer bg-stone-100 hover:bg-stone-50 border-gray-100"
+                    className="h-12 md:h-16 p-0.5 md:p-1 relative cursor-pointer bg-stone-100 hover:bg-stone-50"
                   >
                     {event ? (
                       !isMobile && (
