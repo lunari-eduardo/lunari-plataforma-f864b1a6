@@ -145,7 +145,7 @@ const getEventForSlot = (day: Date, time: string) => {
           {timeSlots.map(time => (
             <React.Fragment key={time}>
               {/* Time label */}
-              <div className="p-1 md:p-2 text-right text-xs text-muted-foreground px-2 md:px-3 py-2 md:py-3 rounded-sm my-px bg-muted">
+              <div className="p-1 md:p-2 text-right text-xs text-muted-foreground px-3 md:px-4 py-3 md:py-4 rounded-sm my-px bg-muted">
                 {time}
               </div>
               
@@ -156,7 +156,7 @@ const getEventForSlot = (day: Date, time: string) => {
                   <div 
                     key={`${dayIndex}-${time}`} 
                     onClick={() => !event && onCreateSlot({ date: day, time })} 
-                    className="border h-8 md:h-10 p-0.5 md:p-1 relative cursor-pointer bg-stone-100 hover:bg-stone-50 border-gray-100"
+                    className="border h-12 md:h-16 p-0.5 md:p-1 relative cursor-pointer bg-stone-100 hover:bg-stone-50 border-gray-100"
                   >
                     {event ? (
                       !isMobile && (
