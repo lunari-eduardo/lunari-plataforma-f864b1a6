@@ -1,0 +1,78 @@
+import { Link } from "react-router-dom";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Sun, Sunset, Moon, Calendar, CheckCircle } from "lucide-react";
+import { useUserProfile } from "@/hooks/useUserProfile";
+import useTodayOverview from "@/hooks/useTodayOverview";
+
+function getGreeting(): { label: string; Icon: React.ComponentType<any> } {
+  const h = new Date().getHours();
+  if (h < 12) return { label: "Bom dia", Icon: Sun };
+  if (h < 18) return { label: "Boa tarde", Icon: Sunset };
+  return { label: "Boa noite", Icon: Moon };
+}
+
+export default function DailyHero() {
+  const { profile } = useUserProfile();
+  const name = profile?.nomeCompleto?.split(" ")[0] || "";
+  const { sessionsToday, tasksToday, nextAppointment } = useTodayOverview();
+  const { label, Icon } = getGreeting();
+
+  const weekdayFmt = new Intl.DateTimeFormat("pt-BR", { weekday: "long" });
+  const dayFmt = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "long" });
+  const now = new Date();
+  const weekday = weekdayFmt.format(now);
+  const dayMonth = dayFmt.format(now);
+
+  return (
+    <Card className="rounded-lg ring-1 ring-lunar-accent/30 overflow-hidden">
+      <div className="relative">
+        {/* decorative accents */}
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute -top-8 -right-8 h-40 w-40 rounded-full bg-lunar-accent/20 blur-2xl" />
+          <div className="absolute -bottom-10 -left-10 h-44 w-44 rounded-full bg-lunar-accent/10 blur-2xl" />
+        </div>
+        <CardContent className="relative py-5 px-4 md:px-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <Icon className="h-5 w-5 text-lunar-accent" />
+                <h1 className="text-lg font-semibold text-lunar-text">
+                  {label}
+                  {name ? `, ${name}` : ''}
+                </h1>
+              </div>
+              <p className="mt-1 text-2xs text-lunar-textSecondary">
+                Hoje é {weekday}, {dayMonth}. Vamos fazer um dia incrível!
+              </p>
+
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <Badge variant="secondary" className="bg-lunar-surface text-lunar-text border border-lunar-border/60">
+                  <Calendar className="mr-1 h-3 w-3 text-lunar-accent" />
+                  {sessionsToday} sessão{sessionsToday === 1 ? '' : 's'} hoje
+                </Badge>
+                <Badge variant="secondary" className="bg-lunar-surface text-lunar-text border border-lunar-border/60">
+                  <CheckCircle className="mr-1 h-3 w-3 text-lunar-accent" />
+                  {tasksToday} tarefa{tasksToday === 1 ? '' : 's'} para hoje
+                </Badge>
+              </div>
+
+              <div className="mt-3 flex gap-2">
+                <Link to="/agenda"><Button size="sm" variant="secondary">Abrir Agenda</Button></Link>
+                <Link to="/tarefas"><Button size="sm" variant="ghost">Ver Tarefas</Button></Link>
+              </div>
+            </div>
+
+            <div className="hidden md:flex flex-col items-end gap-1 text-right">
+              <span className="text-2xs text-lunar-textSecondary">Próximo compromisso</span>
+              <span className="text-sm font-medium text-lunar-text">
+                {nextAppointment ? new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(nextAppointment) : 'Nenhum hoje'}
+              </span>
+            </div>
+          </div>
+        </CardContent>
+      </div>
+    </Card>
+  );
+}

@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { KPIGroupCard } from "@/components/dashboard/KPIGroupCard";
 import { ProductionRemindersCard } from "@/components/dashboard/ProductionRemindersCard";
 import { HighPriorityDueSoonCard } from "@/components/tarefas/HighPriorityDueSoonCard";
+import DailyHero from "@/components/dashboard/DailyHero";
+import DailyKPIs from "@/components/dashboard/DailyKPIs";
 
 import { useSalesAnalytics } from "@/hooks/useSalesAnalytics";
 
@@ -187,23 +189,26 @@ export default function Index() {
 
   return (
     <main className="space-y-6">
-      <header>
-        <h1 className="text-xl font-semibold text-lunar-text">Dashboard de Negócios</h1>
-        <p className="text-2xs text-lunar-textSecondary">Visão geral: receita, metas, clientes, horários, orçamentos e agenda.</p>
-      </header>
+    <section aria-label="Resumo do dia" className="animate-fade-in">
+      <DailyHero />
+    </section>
 
-      {/* KPIs modernizados */}
-      <section aria-label="Indicadores principais" className="animate-fade-in">
-        <KPIGroupCard
-          receitaMes={receitaMes}
-          metaMes={metaMes}
-          progressoMeta={progressoMeta}
-          topCategoria={topCategoria}
-          novosClientes60d={novosClientes60d}
-          livresSemana={livresSemana}
-          proximoLivre={proximoLivre}
-        />
-      </section>
+    <section aria-label="KPIs do dia" className="animate-fade-in">
+      <DailyKPIs />
+    </section>
+
+    {/* KPIs modernizados (mensal) */}
+    <section aria-label="Indicadores principais" className="animate-fade-in">
+      <KPIGroupCard
+        receitaMes={receitaMes}
+        metaMes={metaMes}
+        progressoMeta={progressoMeta}
+        topCategoria={topCategoria}
+        novosClientes60d={novosClientes60d}
+        livresSemana={livresSemana}
+        proximoLivre={proximoLivre}
+      />
+    </section>
 
       {/* Lembretes de Produção */}
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
