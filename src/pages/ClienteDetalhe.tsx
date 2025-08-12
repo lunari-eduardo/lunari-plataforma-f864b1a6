@@ -10,9 +10,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, User, History, Save, Edit3, Upload, FileText, TrendingUp, Calendar } from "lucide-react";
+import { ArrowLeft, User, History, Save, Edit3, Upload, FileText, TrendingUp, Calendar, MessageCircle, Mail, Plus, Trash } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { FileUploadZone } from '@/components/shared/FileUploadZone';
 import { WorkflowHistoryTable } from '@/components/crm/WorkflowHistoryTable';
 import { formatCurrency } from '@/utils/financialUtils';
@@ -50,6 +51,15 @@ export default function ClienteDetalhe() {
     return clientes.find(c => c.id === id);
   }, [clientes, id]);
 
+  const origemInfo = useMemo(() => ORIGENS_PADRAO.find(o => o.id === cliente?.origem), [cliente]);
+  const getInitials = (name?: string) => {
+    if (!name) return '';
+    const parts = name.trim().split(' ');
+    const first = parts[0]?.[0] || '';
+    const last = parts.length > 1 ? parts[parts.length - 1][0] : '';
+    return (first + last).toUpperCase();
+  };
+
   // Estados para edição
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
@@ -58,7 +68,11 @@ export default function ClienteDetalhe() {
     telefone: cliente?.telefone || '',
     endereco: cliente?.endereco || '',
     observacoes: cliente?.observacoes || '',
-    origem: cliente?.origem || ''
+    origem: cliente?.origem || '',
+    dataNascimento: cliente?.dataNascimento || '',
+    estadoCivil: (cliente as any)?.estadoCivil || '',
+    conjuge: (cliente as any)?.conjuge || { nome: '', dataNascimento: '', telefone: '', email: '' },
+    filhos: (((cliente as any)?.filhos) || []) as { id: string; nome?: string; dataNascimento?: string }[],
   });
 
   // Métricas simplificadas e precisas
@@ -111,9 +125,25 @@ export default function ClienteDetalhe() {
       telefone: cliente.telefone,
       endereco: cliente.endereco || '',
       observacoes: cliente.observacoes || '',
-      origem: cliente.origem || ''
+      origem: cliente.origem || '',
+      dataNascimento: cliente.dataNascimento || '',
+      estadoCivil: (cliente as any).estadoCivil || '',
+      conjuge: (cliente as any).conjuge || { nome: '', dataNascimento: '', telefone: '', email: '' },
+      filhos: ((cliente as any).filhos || []) as { id: string; nome?: string; dataNascimento?: string }[],
     });
     setIsEditing(false);
+  };
+  const addFilho = () => {
+    setFormData(prev => ({
+      ...prev,
+      filhos: ([...(prev.filhos || []), { id: `filho_${Date.now()}`, nome: '', dataNascimento: '' }])
+    }));
+  };
+  const removeFilho = (id: string) => {
+    setFormData(prev => ({
+      ...prev,
+      filhos: (prev.filhos || []).filter(f => f.id !== id)
+    }));
   };
   const formatDate = (dateString: string) => {
     // Usar formatDateForDisplay das dateUtils para evitar problemas de timezone
@@ -147,32 +177,66 @@ export default function ClienteDetalhe() {
               <ArrowLeft className="h-4 w-4 mr-2" />
               Voltar
             </Button>
-            <div>
-              <h1 className="font-bold text-base">{cliente.nome}</h1>
-              <p className="text-muted-foreground text-xs">Perfil completo do cliente</p>
+            <div className="flex items-center gap-3">
+              <Avatar className="h-10 w-10">
+                <AvatarFallback>{getInitials(cliente.nome)}</AvatarFallback>
+              </Avatar>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h1 className="font-bold text-base">{cliente.nome}</h1>
+                  {origemInfo && (
+                    <Badge variant="secondary" className="flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: origemInfo.cor }} />
+                      {origemInfo.nome}
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-muted-foreground text-xs">Perfil completo do cliente</p>
+              </div>
             </div>
           </div>
-          
-          {/* Métricas Rápidas */}
-          <div className="flex gap-1 md:gap-2">
-            <Card className="p-2 md:p-3">
-              <div className="text-center">
-                <div className="text-sm md:text-lg font-bold text-primary">{metricas.totalSessoes}</div>
-                <div className="text-xs text-muted-foreground">Sessões</div>
-              </div>
-            </Card>
-            <Card className="p-2 md:p-3">
-              <div className="text-center">
-                <div className="text-sm md:text-lg font-bold text-green-600">{formatCurrency(metricas.totalFaturado)}</div>
-                <div className="text-xs text-muted-foreground">Total</div>
-              </div>
-            </Card>
-            <Card className="p-2 md:p-3">
-              <div className="text-center">
-                <div className="text-sm md:text-lg font-bold text-orange-600">{formatCurrency(metricas.aReceber)}</div>
-                <div className="text-xs text-muted-foreground">A Receber</div>
-              </div>
-            </Card>
+
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex items-center gap-2">
+              {cliente.telefone && (
+                <Button asChild variant="outline" size="sm">
+                  <a href={`https://wa.me/${cliente.telefone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
+                    <MessageCircle className="h-4 w-4 mr-1" />
+                    WhatsApp
+                  </a>
+                </Button>
+              )}
+              {cliente.email && (
+                <Button asChild variant="outline" size="sm">
+                  <a href={`mailto:${cliente.email}`}>
+                    <Mail className="h-4 w-4 mr-1" />
+                    E-mail
+                  </a>
+                </Button>
+              )}
+            </div>
+
+            {/* Métricas Rápidas */}
+            <div className="flex gap-1 md:gap-2">
+              <Card className="p-2 md:p-3">
+                <div className="text-center">
+                  <div className="text-sm md:text-lg font-bold text-primary">{metricas.totalSessoes}</div>
+                  <div className="text-xs text-muted-foreground">Sessões</div>
+                </div>
+              </Card>
+              <Card className="p-2 md:p-3">
+                <div className="text-center">
+                  <div className="text-sm md:text-lg font-bold text-green-600">{formatCurrency(metricas.totalFaturado)}</div>
+                  <div className="text-xs text-muted-foreground">Total</div>
+                </div>
+              </Card>
+              <Card className="p-2 md:p-3">
+                <div className="text-center">
+                  <div className="text-sm md:text-lg font-bold text-orange-600">{formatCurrency(metricas.aReceber)}</div>
+                  <div className="text-xs text-muted-foreground">A Receber</div>
+                </div>
+              </Card>
+            </div>
           </div>
         </div>
 
@@ -220,75 +284,147 @@ export default function ClienteDetalhe() {
                     </Button>
                   </div>}
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="nome">Nome *</Label>
-                    <Input id="nome" value={formData.nome} onChange={e => setFormData(prev => ({
-                    ...prev,
-                    nome: e.target.value
-                  }))} disabled={!isEditing} placeholder="Nome completo" />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="telefone">Telefone *</Label>
-                    <Input id="telefone" value={formData.telefone} onChange={e => setFormData(prev => ({
-                    ...prev,
-                    telefone: e.target.value
-                  }))} disabled={!isEditing} placeholder="+55 (DDD) 00000-0000" />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="email">E-mail</Label>
-                    <Input id="email" type="email" value={formData.email} onChange={e => setFormData(prev => ({
-                    ...prev,
-                    email: e.target.value
-                  }))} disabled={!isEditing} placeholder="email@exemplo.com" />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="endereco">Endereço</Label>
-                    <Input id="endereco" value={formData.endereco} onChange={e => setFormData(prev => ({
-                    ...prev,
-                    endereco: e.target.value
-                  }))} disabled={!isEditing} placeholder="Endereço completo" />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="origem">Como conheceu?</Label>
-                    {isEditing ? (
-                      <Select value={formData.origem} onValueChange={(value) => setFormData(prev => ({ ...prev, origem: value }))}>
-                        <SelectTrigger id="origem">
-                          <SelectValue placeholder="Selecione a origem" />
+              <CardContent className="space-y-6">
+                {/* Seção: Informações Pessoais */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium text-muted-foreground">Informações Pessoais</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="md:col-span-1">
+                      <Label htmlFor="nome">Nome *</Label>
+                      <Input id="nome" value={formData.nome} onChange={e => setFormData(prev => ({ ...prev, nome: e.target.value }))} disabled={!isEditing} placeholder="Nome completo" />
+                    </div>
+                    <div>
+                      <Label htmlFor="dataNascimento">Data de Nascimento</Label>
+                      <Input id="dataNascimento" type="date" value={formData.dataNascimento} onChange={e => setFormData(prev => ({ ...prev, dataNascimento: e.target.value }))} disabled={!isEditing} />
+                    </div>
+                    <div>
+                      <Label htmlFor="estadoCivil">Estado Civil</Label>
+                      <Select value={formData.estadoCivil} onValueChange={(value) => setFormData(prev => ({ ...prev, estadoCivil: value }))}>
+                        <SelectTrigger id="estadoCivil" disabled={!isEditing}>
+                          <SelectValue placeholder="Selecione" />
                         </SelectTrigger>
                         <SelectContent>
-                          {ORIGENS_PADRAO.map(origem => (
-                            <SelectItem key={origem.id} value={origem.id}>
-                              <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: origem.cor }} />
-                                {origem.nome}
-                              </div>
-                            </SelectItem>
-                          ))}
+                          <SelectItem value="solteiro">Solteiro(a)</SelectItem>
+                          <SelectItem value="casado">Casado(a)</SelectItem>
+                          <SelectItem value="uniao-estavel">União estável</SelectItem>
+                          <SelectItem value="divorciado">Divorciado(a)</SelectItem>
+                          <SelectItem value="viuvo">Viúvo(a)</SelectItem>
                         </SelectContent>
                       </Select>
-                    ) : (
-                      <Input 
-                        id="origem" 
-                        value={ORIGENS_PADRAO.find(o => o.id === formData.origem)?.nome || 'Não informado'} 
-                        disabled 
-                        placeholder="Origem não informada" 
-                      />
-                    )}
+                    </div>
                   </div>
                 </div>
 
-                <div>
+                {/* Seção: Contatos e Endereço */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium text-muted-foreground">Contatos e Endereço</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="telefone">Telefone *</Label>
+                      <Input id="telefone" value={formData.telefone} onChange={e => setFormData(prev => ({ ...prev, telefone: e.target.value }))} disabled={!isEditing} placeholder="+55 (DDD) 00000-0000" />
+                    </div>
+                    <div>
+                      <Label htmlFor="email">E-mail</Label>
+                      <Input id="email" type="email" value={formData.email} onChange={e => setFormData(prev => ({ ...prev, email: e.target.value }))} disabled={!isEditing} placeholder="email@exemplo.com" />
+                    </div>
+                    <div className="md:col-span-2">
+                      <Label htmlFor="endereco">Endereço</Label>
+                      <Input id="endereco" value={formData.endereco} onChange={e => setFormData(prev => ({ ...prev, endereco: e.target.value }))} disabled={!isEditing} placeholder="Endereço completo" />
+                    </div>
+                    <div className="md:col-span-2">
+                      <Label htmlFor="origem">Como conheceu?</Label>
+                      {isEditing ? (
+                        <Select value={formData.origem} onValueChange={(value) => setFormData(prev => ({ ...prev, origem: value }))}>
+                          <SelectTrigger id="origem">
+                            <SelectValue placeholder="Selecione a origem" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {ORIGENS_PADRAO.map(origem => (
+                              <SelectItem key={origem.id} value={origem.id}>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: origem.cor }} />
+                                  {origem.nome}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input id="origem" value={ORIGENS_PADRAO.find(o => o.id === formData.origem)?.nome || 'Não informado'} disabled placeholder="Origem não informada" />
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Seção: Observações */}
+                <div className="space-y-2">
                   <Label htmlFor="observacoes">Observações</Label>
-                  <Textarea id="observacoes" value={formData.observacoes} onChange={e => setFormData(prev => ({
-                  ...prev,
-                  observacoes: e.target.value
-                }))} disabled={!isEditing} placeholder="Observações sobre o cliente..." rows={4} />
+                  <Textarea id="observacoes" value={formData.observacoes} onChange={e => setFormData(prev => ({ ...prev, observacoes: e.target.value }))} disabled={!isEditing} placeholder="Observações sobre o cliente..." rows={4} />
+                </div>
+
+                {/* Seção: Relacionamentos */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium text-muted-foreground">Relacionamentos</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="conjugeNome">Cônjuge - Nome</Label>
+                      <Input id="conjugeNome" value={formData.conjuge?.nome || ''} onChange={e => setFormData(prev => ({ ...prev, conjuge: { ...(prev.conjuge || {}), nome: e.target.value } }))} disabled={!isEditing} placeholder="Nome do cônjuge" />
+                    </div>
+                    <div>
+                      <Label htmlFor="conjugeNascimento">Cônjuge - Data de Nascimento</Label>
+                      <Input id="conjugeNascimento" type="date" value={formData.conjuge?.dataNascimento || ''} onChange={e => setFormData(prev => ({ ...prev, conjuge: { ...(prev.conjuge || {}), dataNascimento: e.target.value } }))} disabled={!isEditing} />
+                    </div>
+                    <div>
+                      <Label htmlFor="conjugeTelefone">Cônjuge - Telefone</Label>
+                      <Input id="conjugeTelefone" value={formData.conjuge?.telefone || ''} onChange={e => setFormData(prev => ({ ...prev, conjuge: { ...(prev.conjuge || {}), telefone: e.target.value } }))} disabled={!isEditing} placeholder="Telefone do cônjuge" />
+                    </div>
+                    <div>
+                      <Label htmlFor="conjugeEmail">Cônjuge - E-mail</Label>
+                      <Input id="conjugeEmail" type="email" value={formData.conjuge?.email || ''} onChange={e => setFormData(prev => ({ ...prev, conjuge: { ...(prev.conjuge || {}), email: e.target.value } }))} disabled={!isEditing} placeholder="E-mail do cônjuge" />
+                    </div>
+                  </div>
+
+                  {/* Filhos */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-medium">Filhos</h4>
+                      {isEditing && (
+                        <Button type="button" variant="outline" size="sm" onClick={addFilho}>
+                          <Plus className="h-4 w-4 mr-1" /> Adicionar filho
+                        </Button>
+                      )}
+                    </div>
+                    <div className="space-y-3">
+                      {(formData.filhos || []).length === 0 && (
+                        <p className="text-xs text-muted-foreground">Nenhum filho cadastrado</p>
+                      )}
+                      {(formData.filhos || []).map((filho, idx) => (
+                        <div key={filho.id} className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+                          <div className="md:col-span-2">
+                            <Label>Nome</Label>
+                            <Input value={filho.nome || ''} onChange={e => setFormData(prev => ({
+                              ...prev,
+                              filhos: (prev.filhos || []).map(f => f.id === filho.id ? { ...f, nome: e.target.value } : f)
+                            }))} disabled={!isEditing} placeholder="Nome do filho" />
+                          </div>
+                          <div>
+                            <Label>Data de Nascimento</Label>
+                            <Input type="date" value={filho.dataNascimento || ''} onChange={e => setFormData(prev => ({
+                              ...prev,
+                              filhos: (prev.filhos || []).map(f => f.id === filho.id ? { ...f, dataNascimento: e.target.value } : f)
+                            }))} disabled={!isEditing} />
+                          </div>
+                          {isEditing && (
+                            <div className="md:col-span-2 flex justify-end">
+                              <Button type="button" variant="ghost" size="sm" onClick={() => removeFilho(filho.id)}>
+                                <Trash className="h-4 w-4 mr-1" /> Remover
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
