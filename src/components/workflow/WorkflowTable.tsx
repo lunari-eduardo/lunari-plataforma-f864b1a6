@@ -583,7 +583,7 @@ export function WorkflowTable({
 return <td className={`
           p-2 border-r border-border min-h-[40px] text-xs transition-colors duration-150 ease-in-out
           ${isFixed 
-            ? 'sticky z-10 bg-card shadow-sm group-hover:bg-lunar-accent/5 group-focus-within:bg-lunar-accent/10 dark:bg-gray-900 dark:group-hover:bg-gray-800 dark:group-focus-within:bg-gray-800' 
+            ? 'sticky z-20 bg-card shadow-sm dark:bg-gray-900' 
             : 'group-hover:bg-lunar-accent/5 group-focus-within:bg-lunar-accent/10 dark:group-hover:bg-gray-800'}
           ${key === 'date' ? 'border-l-2 border-l-transparent group-hover:border-l-lunar-accent/40 group-focus-within:border-l-lunar-accent' : ''}
         `} style={{
