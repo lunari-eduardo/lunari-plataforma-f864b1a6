@@ -9,12 +9,9 @@ export interface Cliente {
   origem?: string;
   // Novos campos opcionais para perfil completo
   dataNascimento?: string;
-  estadoCivil?: 'solteiro' | 'casado' | 'uniao-estavel' | 'divorciado' | 'viuvo' | string;
   conjuge?: {
     nome?: string;
     dataNascimento?: string;
-    telefone?: string;
-    email?: string;
   };
   filhos?: Array<{
     id: string;

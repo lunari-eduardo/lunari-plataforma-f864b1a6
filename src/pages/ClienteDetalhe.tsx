@@ -70,8 +70,7 @@ export default function ClienteDetalhe() {
     observacoes: cliente?.observacoes || '',
     origem: cliente?.origem || '',
     dataNascimento: cliente?.dataNascimento || '',
-    estadoCivil: (cliente as any)?.estadoCivil || '',
-    conjuge: (cliente as any)?.conjuge || { nome: '', dataNascimento: '', telefone: '', email: '' },
+    conjuge: (cliente as any)?.conjuge || { nome: '', dataNascimento: '' },
     filhos: (((cliente as any)?.filhos) || []) as { id: string; nome?: string; dataNascimento?: string }[],
   });
 
@@ -127,8 +126,7 @@ export default function ClienteDetalhe() {
       observacoes: cliente.observacoes || '',
       origem: cliente.origem || '',
       dataNascimento: cliente.dataNascimento || '',
-      estadoCivil: (cliente as any).estadoCivil || '',
-      conjuge: (cliente as any).conjuge || { nome: '', dataNascimento: '', telefone: '', email: '' },
+      conjuge: (cliente as any).conjuge || { nome: '', dataNascimento: '' },
       filhos: ((cliente as any).filhos || []) as { id: string; nome?: string; dataNascimento?: string }[],
     });
     setIsEditing(false);
@@ -288,7 +286,7 @@ export default function ClienteDetalhe() {
                 {/* Seção: Informações Pessoais */}
                 <div className="space-y-3">
                   <h3 className="text-sm font-medium text-muted-foreground">Informações Pessoais</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="md:col-span-1">
                       <Label htmlFor="nome">Nome *</Label>
                       <Input id="nome" value={formData.nome} onChange={e => setFormData(prev => ({ ...prev, nome: e.target.value }))} disabled={!isEditing} placeholder="Nome completo" />
@@ -296,21 +294,6 @@ export default function ClienteDetalhe() {
                     <div>
                       <Label htmlFor="dataNascimento">Data de Nascimento</Label>
                       <Input id="dataNascimento" type="date" value={formData.dataNascimento} onChange={e => setFormData(prev => ({ ...prev, dataNascimento: e.target.value }))} disabled={!isEditing} />
-                    </div>
-                    <div>
-                      <Label htmlFor="estadoCivil">Estado Civil</Label>
-                      <Select value={formData.estadoCivil} onValueChange={(value) => setFormData(prev => ({ ...prev, estadoCivil: value }))}>
-                        <SelectTrigger id="estadoCivil" disabled={!isEditing}>
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="solteiro">Solteiro(a)</SelectItem>
-                          <SelectItem value="casado">Casado(a)</SelectItem>
-                          <SelectItem value="uniao-estavel">União estável</SelectItem>
-                          <SelectItem value="divorciado">Divorciado(a)</SelectItem>
-                          <SelectItem value="viuvo">Viúvo(a)</SelectItem>
-                        </SelectContent>
-                      </Select>
                     </div>
                   </div>
                 </div>
@@ -364,7 +347,7 @@ export default function ClienteDetalhe() {
 
                 {/* Seção: Relacionamentos */}
                 <div className="space-y-3">
-                  <h3 className="text-sm font-medium text-muted-foreground">Relacionamentos</h3>
+                  
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="conjugeNome">Cônjuge - Nome</Label>
@@ -373,14 +356,6 @@ export default function ClienteDetalhe() {
                     <div>
                       <Label htmlFor="conjugeNascimento">Cônjuge - Data de Nascimento</Label>
                       <Input id="conjugeNascimento" type="date" value={formData.conjuge?.dataNascimento || ''} onChange={e => setFormData(prev => ({ ...prev, conjuge: { ...(prev.conjuge || {}), dataNascimento: e.target.value } }))} disabled={!isEditing} />
-                    </div>
-                    <div>
-                      <Label htmlFor="conjugeTelefone">Cônjuge - Telefone</Label>
-                      <Input id="conjugeTelefone" value={formData.conjuge?.telefone || ''} onChange={e => setFormData(prev => ({ ...prev, conjuge: { ...(prev.conjuge || {}), telefone: e.target.value } }))} disabled={!isEditing} placeholder="Telefone do cônjuge" />
-                    </div>
-                    <div>
-                      <Label htmlFor="conjugeEmail">Cônjuge - E-mail</Label>
-                      <Input id="conjugeEmail" type="email" value={formData.conjuge?.email || ''} onChange={e => setFormData(prev => ({ ...prev, conjuge: { ...(prev.conjuge || {}), email: e.target.value } }))} disabled={!isEditing} placeholder="E-mail do cônjuge" />
                     </div>
                   </div>
 
