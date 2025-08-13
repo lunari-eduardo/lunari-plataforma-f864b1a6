@@ -444,19 +444,19 @@ export function EstruturaCustosFixos({
                 {equipamentos.map(equipamento => <div key={equipamento.id} className="grid grid-cols-6 gap-3 items-end">
                     <div>
                       <Label className="text-xs">Nome</Label>
-                      <Input placeholder="Ex: Câmera Canon..." value={equipamento.nome} onChange={e => atualizarEquipamento(equipamento.id, 'nome', e.target.value)} />
+                      <Input placeholder="Ex: Câmera Canon..." value={equipamento.nome} onChange={e => atualizarEquipamento(equipamento.id, 'nome', e.target.value)} className="bg-card" />
                     </div>
                     <div>
                       <Label className="text-xs">Valor Pago</Label>
-                      <Input type="number" min="0" step="0.01" value={equipamento.valorPago} onChange={e => atualizarEquipamento(equipamento.id, 'valorPago', parseFloat(e.target.value) || 0)} />
+                      <Input type="number" min="0" step="0.01" value={equipamento.valorPago} onChange={e => atualizarEquipamento(equipamento.id, 'valorPago', parseFloat(e.target.value) || 0)} className="bg-card" />
                     </div>
                     <div>
                       <Label className="text-xs">Data da Compra</Label>
-                      <Input type="date" value={equipamento.dataCompra} onChange={e => atualizarEquipamento(equipamento.id, 'dataCompra', e.target.value)} />
+                      <Input type="date" value={equipamento.dataCompra} onChange={e => atualizarEquipamento(equipamento.id, 'dataCompra', e.target.value)} className="bg-card" />
                     </div>
                     <div>
                       <Label className="text-xs">Vida Útil (Anos)</Label>
-                      <Input type="number" min="1" value={equipamento.vidaUtil} onChange={e => atualizarEquipamento(equipamento.id, 'vidaUtil', parseInt(e.target.value) || 1)} />
+                      <Input type="number" min="1" value={equipamento.vidaUtil} onChange={e => atualizarEquipamento(equipamento.id, 'vidaUtil', parseInt(e.target.value) || 1)} className="bg-card" />
                     </div>
                     <div>
                       <Label className="text-xs">Depreciação Mensal</Label>
@@ -487,17 +487,17 @@ export function EstruturaCustosFixos({
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <Label className="text-xs">Valor Pago</Label>
-                          <Input type="number" min="0" step="0.01" value={equipamento.valorPago} onChange={e => atualizarEquipamento(equipamento.id, 'valorPago', parseFloat(e.target.value) || 0)} />
+                          <Input type="number" min="0" step="0.01" value={equipamento.valorPago} onChange={e => atualizarEquipamento(equipamento.id, 'valorPago', parseFloat(e.target.value) || 0)} className="bg-card" />
                         </div>
                         <div>
                           <Label className="text-xs">Vida Útil (Anos)</Label>
-                          <Input type="number" min="1" value={equipamento.vidaUtil} onChange={e => atualizarEquipamento(equipamento.id, 'vidaUtil', parseInt(e.target.value) || 1)} />
+                          <Input type="number" min="1" value={equipamento.vidaUtil} onChange={e => atualizarEquipamento(equipamento.id, 'vidaUtil', parseInt(e.target.value) || 1)} className="bg-card" />
                         </div>
                       </div>
                       
                       <div>
                         <Label className="text-xs">Data da Compra</Label>
-                        <Input type="date" value={equipamento.dataCompra} onChange={e => atualizarEquipamento(equipamento.id, 'dataCompra', e.target.value)} />
+                        <Input type="date" value={equipamento.dataCompra} onChange={e => atualizarEquipamento(equipamento.id, 'dataCompra', e.target.value)} className="bg-card" />
                       </div>
                       
                       <div className="bg-muted p-3 rounded-lg">

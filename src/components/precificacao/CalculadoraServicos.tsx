@@ -107,7 +107,7 @@ export function CalculadoraServicos({
       <div className="flex justify-center mb-6">
         <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-full">
           <CollapsibleTrigger asChild>
-            <Button className="bg-amber-500/20 border border-amber-500/30 text-amber-800 hover:bg-amber-500/30 flex items-center justify-center gap-2 px-4 py-2 rounded-lg mx-auto">
+            <Button variant="secondary" className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg mx-auto">
               <span className="text-sm">📋</span>
               {isOpen ? <>
                   Fechar Calculadora
@@ -292,7 +292,7 @@ export function CalculadoraServicos({
                           
                           {/* BOTÃO PARA SALVAR COMO PACOTE */}
                           <div className="border-t border-lunar-border/30 pt-4 mt-4">
-                            <Button onClick={() => setSalvarPacoteModalOpen(true)} className="w-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-800 hover:bg-emerald-500/30" disabled={precoFinal <= 0}>
+                            <Button onClick={() => setSalvarPacoteModalOpen(true)} variant="default" className="w-full" disabled={precoFinal <= 0}>
                               📦 [+] Salvar como Pacote
                             </Button>
                           </div>
