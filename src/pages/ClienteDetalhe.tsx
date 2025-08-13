@@ -408,13 +408,13 @@ export default function ClienteDetalhe() {
           {/* Aba 2: Histórico & Projetos */}
           <TabsContent value="historico" className="space-y-6">
             <Card>
-              <CardHeader className="bg-neutral-50">
+              <CardHeader>
                 <CardTitle>Histórico Completo</CardTitle>
                 <CardDescription>
                   Todos os orçamentos e trabalhos realizados para este cliente
                 </CardDescription>
               </CardHeader>
-              <CardContent className="bg-neutral-50">
+              <CardContent>
                 <WorkflowHistoryTable cliente={cliente} />
               </CardContent>
             </Card>
