@@ -310,11 +310,11 @@ export default function NovoOrcamento() {
         {/* Coluna esquerda */}
         <div className="space-y-4">
           {/* Seleção de Cliente */}
-          <Card className="rounded-lg bg-neutral-50">
-            <CardHeader className="rounded-lg bg-lunar-border pb-3">
+          <Card className="rounded-lg bg-lunar-surface border border-border shadow-sm">
+            <CardHeader className="pb-3 border-b border-border bg-lunar-surface rounded-t-lg">
               <CardTitle className="text-sm">Cliente</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3 rounded-lg bg-neutral-50 pt-3">
+            <CardContent className="space-y-3 pt-3 bg-lunar-surface">
               <div>
                 <label htmlFor="budget-client-search" className="text-xs font-medium mb-1 block">Cliente Existente</label>
                 <div id="budget-client-search">
@@ -327,7 +327,7 @@ export default function NovoOrcamento() {
                 </div>
               </div>
 
-              <div className="text-xs text-neumorphic-textLight text-center">ou</div>
+              <div className="text-xs text-muted-foreground text-center">ou</div>
 
               <div className="space-y-2">
                 <label className="text-xs font-medium">Novo Cliente</label>
@@ -359,11 +359,11 @@ export default function NovoOrcamento() {
           </Card>
 
           {/* Dados Básicos */}
-          <Card className="rounded-lg bg-neutral-50">
-            <CardHeader className="rounded-lg bg-lunar-border pb-3">
+          <Card className="rounded-lg bg-lunar-surface border border-border shadow-sm">
+            <CardHeader className="pb-3 border-b border-border bg-lunar-surface rounded-t-lg">
               <CardTitle className="text-sm">Dados do Orçamento</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3 rounded-lg bg-neutral-50 pt-3">
+            <CardContent className="space-y-3 pt-3 bg-lunar-surface">
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="text-xs font-medium mb-1 block">Data pretendida</label>
@@ -418,11 +418,11 @@ export default function NovoOrcamento() {
           </Card>
 
           {/* Seleção de Pacote */}
-          <Card className="bg-neutral-50 rounded-lg">
-            <CardHeader className="rounded-lg bg-lunar-border pb-3">
+          <Card className="rounded-lg bg-lunar-surface border border-border shadow-sm">
+            <CardHeader className="pb-3 border-b border-border bg-lunar-surface rounded-t-lg">
               <CardTitle className="text-sm">Pacote Principal</CardTitle>
             </CardHeader>
-             <CardContent className="rounded-lg bg-neutral-50 pt-3">
+             <CardContent className="pt-3 bg-lunar-surface">
                 <PackageSearchCombobox 
                   pacotes={pacotes}
                   value={pacoteSelecionado}
@@ -431,15 +431,15 @@ export default function NovoOrcamento() {
                   filtrarPorCategoria={categoria}
                 />
                 {pacoteSelecionado && (
-                  <div className="mt-3 p-3 bg-neumorphic-base rounded-lg shadow-neumorphic-inset">
+                  <div className="mt-3 p-3 rounded-lg border border-border bg-lunar-surface/60">
                     <div className="flex justify-between items-center">
                       <span className="text-sm font-medium">{pacoteSelecionado.nome}</span>
                       <span className="text-sm font-bold">R$ {pacoteSelecionado.valor.toFixed(2)}</span>
                     </div>
-                    <span className="text-xs text-neumorphic-textLight">{pacoteSelecionado.categoria}</span>
+                    <span className="text-xs text-muted-foreground">{pacoteSelecionado.categoria}</span>
                     {pacoteSelecionado.produtosIncluidos && pacoteSelecionado.produtosIncluidos.length > 0 && (
-                      <div className="mt-2 pt-2 border-t border-gray-200">
-                        <p className="text-xs font-medium text-green-600 mb-1">
+                      <div className="mt-2 pt-2 border-t border-border">
+                        <p className="text-xs font-medium text-muted-foreground mb-1">
                           Produtos incluídos ({pacoteSelecionado.produtosIncluidos.length}):
                         </p>
                         <div className="text-xs text-muted-foreground">
@@ -459,8 +459,8 @@ export default function NovoOrcamento() {
         {/* Coluna direita */}
         <div className="space-y-4">
           {/* Detalhes do Orçamento */}
-          <Card className="bg-neutral-50 rounded-lg">
-            <CardHeader className="rounded-lg bg-lunar-border pb-3">
+          <Card className="rounded-lg bg-lunar-surface border border-border shadow-sm">
+            <CardHeader className="pb-3 border-b border-border bg-lunar-surface rounded-t-lg">
               <CardTitle className="text-sm flex justify-between items-center">
                 Detalhes do Orçamento
                 <TemplateSelector 
@@ -470,7 +470,7 @@ export default function NovoOrcamento() {
                 />
               </CardTitle>
             </CardHeader>
-            <CardContent className="rounded-lg bg-neutral-50 pt-3">
+            <CardContent className="pt-3 bg-lunar-surface">
               <label htmlFor="budget-details" className="sr-only">Detalhes do Orçamento</label>
               <Textarea 
                 id="budget-details"
@@ -484,8 +484,8 @@ export default function NovoOrcamento() {
           </Card>
 
           {/* Produtos Adicionais */}
-          <Card className="rounded-lg bg-neutral-50">
-            <CardHeader className="rounded-lg bg-lunar-border pb-3">
+          <Card className="rounded-lg bg-lunar-surface border border-border shadow-sm">
+            <CardHeader className="pb-3 border-b border-border bg-lunar-surface rounded-t-lg">
               <CardTitle className="text-sm flex justify-between items-center">
                 Produtos
                 <div className="flex gap-1">
@@ -500,7 +500,7 @@ export default function NovoOrcamento() {
                 </div>
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2 rounded-lg bg-neutral-50 pt-3">
+            <CardContent className="space-y-2 pt-3 bg-lunar-surface">
               {produtosAdicionais.map(produto => (
                 <div key={produto.id} className="grid grid-cols-1 md:grid-cols-5 gap-2 items-end">
                   <div className="md:col-span-2">
@@ -511,7 +511,7 @@ export default function NovoOrcamento() {
                       value={produto.nome} 
                       onChange={e => atualizarProduto(produto.id, 'nome', e.target.value)}
                       disabled={produto.id.startsWith('auto-')} // Produtos inclusos não podem ser editados
-                      className={produto.id.startsWith('auto-') ? 'bg-green-50 text-green-700' : ''}
+                       className={produto.id.startsWith('auto-') ? 'bg-muted text-muted-foreground' : ''}
                     />
                   </div>
                   <div>
@@ -523,7 +523,7 @@ export default function NovoOrcamento() {
                       value={produto.quantidade} 
                       onChange={e => atualizarProduto(produto.id, 'quantidade', parseInt(e.target.value) || 1)}
                       disabled={produto.id.startsWith('auto-')} // Produtos inclusos não podem ter quantidade alterada
-                      className={produto.id.startsWith('auto-') ? 'bg-green-50 text-green-700' : ''}
+                      className={produto.id.startsWith('auto-') ? 'bg-muted text-muted-foreground' : ''}
                     />
                   </div>
                   <div>
@@ -534,7 +534,7 @@ export default function NovoOrcamento() {
                       value={produto.id.startsWith('auto-') ? 'Incluso' : produto.preco.toFixed(2)}
                       onChange={e => !produto.id.startsWith('auto-') && atualizarProduto(produto.id, 'preco', parseFloat(e.target.value) || 0)}
                       disabled={produto.id.startsWith('auto-')} // Produtos inclusos mostram "Incluso"
-                      className={produto.id.startsWith('auto-') ? 'bg-green-50 text-green-700 text-center font-medium' : ''}
+                      className={produto.id.startsWith('auto-') ? 'bg-muted text-muted-foreground text-center font-medium' : ''}
                     />
                   </div>
                   <Button 
@@ -551,11 +551,11 @@ export default function NovoOrcamento() {
           </Card>
 
           {/* Resumo Financeiro */}
-          <Card className="bg-neutral-50">
-            <CardHeader className="rounded-lg bg-lunar-border pb-3">
+          <Card className="rounded-lg bg-lunar-surface border border-border shadow-sm">
+            <CardHeader className="pb-3 border-b border-border bg-lunar-surface rounded-t-lg">
               <CardTitle className="text-sm">Resumo Financeiro</CardTitle>
             </CardHeader>
-            <CardContent className="rounded-lg bg-neutral-50 pt-3">
+            <CardContent className="pt-3 bg-lunar-surface">
               <div className="space-y-2">
                 {pacoteSelecionado && (
                   <div className="flex justify-between text-sm">
@@ -570,12 +570,12 @@ export default function NovoOrcamento() {
                   </div>
                 )}
                 {produtosInclusos.length > 0 && (
-                  <div className="flex justify-between text-sm text-green-600">
+                  <div className="flex justify-between text-sm text-muted-foreground">
                     <span>Produtos Inclusos:</span>
                     <span>Incluso no pacote</span>
                   </div>
                 )}
-                <div className="border-t pt-2">
+                <div className="border-t border-border pt-2">
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-sm font-medium">Subtotal:</span>
                     <span className="text-sm">R$ {valorTotal.toFixed(2)}</span>
@@ -605,12 +605,12 @@ export default function NovoOrcamento() {
                     />
                   </div>
                   {desconto > 0 && (
-                    <div className="flex justify-between text-sm text-red-600 mb-2">
+                    <div className="flex justify-between text-sm text-destructive mb-2">
                       <span>Desconto:</span>
                       <span>-R$ {descontoEmReais.toFixed(2)}</span>
                     </div>
                   )}
-                  <div className="text-lg font-bold text-right border-t pt-2">
+                  <div className="text-lg font-bold text-right border-t border-border pt-2">
                     Total: R$ {valorFinal.toFixed(2)}
                   </div>
                 </div>
