@@ -156,12 +156,13 @@ export function useUserPreferences() {
   const savePreferences = (preferencesData: Partial<Omit<UserPreferences, 'id' | 'createdAt' | 'updatedAt'>>) => {
     try {
       const now = new Date().toISOString();
+      const base = preferences ?? (storage.load<UserPreferences | null>(STORAGE_KEYS.USER_PREFERENCES, null) ?? null);
       const updatedPreferences: UserPreferences = {
         ...DEFAULT_USER_PREFERENCES,
-        ...preferences,
+        ...(base ? base : {}),
         ...preferencesData,
-        id: preferences?.id || `preferences_${Date.now()}`,
-        createdAt: preferences?.createdAt || now,
+        id: base?.id || preferences?.id || `preferences_${Date.now()}`,
+        createdAt: base?.createdAt || preferences?.createdAt || now,
         updatedAt: now
       };
 

@@ -304,9 +304,13 @@ useEffect(() => {
                   <div className="flex items-center justify-end">
                     <Button
                       onClick={async () => {
-                        await savePreferences({ temaCor: formData.temaCor, temaCorHex: formData.temaCorHex });
-                        toast.success('Tema salvo. Recarregando...');
-                        window.location.reload();
+                        const ok = await savePreferences({ temaCor: formData.temaCor, temaCorHex: formData.temaCorHex });
+                        if (ok) {
+                          toast.success('Tema salvo. Recarregando...');
+                          window.location.reload();
+                        } else {
+                          toast.error('Não foi possível salvar o tema. Tente novamente.');
+                        }
                       }}
                     >
                       Salvar e recarregar
