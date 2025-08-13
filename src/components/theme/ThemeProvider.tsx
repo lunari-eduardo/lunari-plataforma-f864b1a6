@@ -58,6 +58,18 @@ function readableForegroundHslFromHex(hex: string) {
   return brightness < 155 ? '0 0% 100%' : '0 0% 12%'
 }
 
+// Helpers para gerar paleta dinâmica baseada na cor base
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value))
+}
+function shiftHue(h: number, delta: number) {
+  const v = (h + delta) % 360
+  return v < 0 ? v + 360 : v
+}
+function toHslStr(hsl: { h: number; s: number; l: number }) {
+  return `${hsl.h} ${hsl.s}% ${hsl.l}%`
+}
+
 const COLOR_MAP: Record<string, string> = {
   azul: '#1c4274',
   verde: '#98b281',
@@ -95,9 +107,21 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
     // Foreground específico para o accent (botões customizados)
     root.style.setProperty('--lunar-accent-foreground', foregroundHsl)
 
-    // Gráficos
-    root.style.setProperty('--chart-primary', hslStr)
-    root.style.setProperty('--chart-revenue', hslStr)
+    // Gráficos (paleta dinâmica)
+    const palette = [
+      baseHsl,
+      { h: shiftHue(baseHsl.h, 16), s: clamp(baseHsl.s + 6, 20, 95), l: clamp(baseHsl.l - 4, 10, 90) },
+      { h: shiftHue(baseHsl.h, -12), s: clamp(baseHsl.s - 4, 20, 95), l: clamp(baseHsl.l + 6, 10, 90) },
+      { h: shiftHue(baseHsl.h, 28), s: clamp(baseHsl.s - 8, 20, 95), l: clamp(baseHsl.l - 8, 10, 90) },
+      { h: shiftHue(baseHsl.h, -24), s: clamp(baseHsl.s + 8, 20, 95), l: clamp(baseHsl.l - 2, 10, 90) },
+    ]
+
+    root.style.setProperty('--chart-primary', toHslStr(palette[0]))
+    root.style.setProperty('--chart-secondary', toHslStr(palette[1]))
+    root.style.setProperty('--chart-tertiary', toHslStr(palette[2]))
+    root.style.setProperty('--chart-quaternary', toHslStr(palette[3]))
+    root.style.setProperty('--chart-quinary', toHslStr(palette[4]))
+    root.style.setProperty('--chart-revenue', toHslStr(palette[0]))
   }, [effective.temaCor, effective.temaCorHex])
 
   return <>{children}</>
