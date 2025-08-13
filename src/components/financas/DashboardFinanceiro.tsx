@@ -434,7 +434,7 @@ export default function DashboardFinanceiro() {
                 />
                 <Legend wrapperStyle={{
                   fontSize: '12px',
-                  color: '#8B6F3E',
+                  color: 'hsl(var(--muted-foreground))',
                   fontWeight: 500
                 }} />
                 <Bar 
@@ -443,7 +443,6 @@ export default function DashboardFinanceiro() {
                   name="Receita" 
                   radius={[6, 6, 0, 0]} 
                   opacity={0.9}
-                  style={{ transition: 'all 0.3s ease' }}
                 />
                 <Bar 
                   dataKey="lucro" 
@@ -451,7 +450,6 @@ export default function DashboardFinanceiro() {
                   name="Lucro" 
                   radius={[6, 6, 0, 0]} 
                   opacity={0.9}
-                  style={{ transition: 'all 0.3s ease' }}
                 />
               </BarChart>
             </ResponsiveContainer>
