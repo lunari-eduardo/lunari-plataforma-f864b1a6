@@ -226,7 +226,7 @@ export default function Pacotes({
                     </p>
                   </div>
                   
-                  <div className="bg-white rounded-lg border border-neutral-200 p-4">
+                  <div className="bg-card rounded-lg border border-border p-4">
                     <PacoteForm categorias={categorias} produtos={produtos} onSubmit={adicionarPacote} submitLabel="Adicionar Pacote" />
                   </div>
                 </div>
@@ -238,7 +238,7 @@ export default function Pacotes({
       
       {/* Seção Pacotes Cadastrados */}
       <div>
-        <div className="space-y-2 mb-4 rounded-lg px-[15px] bg-neutral-50">
+        <div className="space-y-2 mb-4 rounded-lg px-[15px] bg-muted">
           <h3 className="font-medium text-sm text-inherit">Pacotes Cadastrados</h3>
           <p className="text-muted-foreground text-xs">Lista de todos os pacotes disponíveis.</p>
         </div>

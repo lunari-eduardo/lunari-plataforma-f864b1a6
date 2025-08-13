@@ -133,7 +133,7 @@ export default function ConfiguracoesFinanceirasTab({
         <TabsContent value="itens" className="mt-6">
           <div className="space-y-6">
             {/* Formulário para Adicionar Novo Item */}
-            <Card className="bg-neutral-50 rounded-lg">
+            <Card className="bg-card rounded-lg">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-sm">
                   <Plus className="h-5 w-5" />
@@ -173,15 +173,15 @@ export default function ConfiguracoesFinanceirasTab({
 
             {/* Lista de Itens por Grupo */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-              {grupos.map(grupo => <Card key={grupo} className="h-fit rounded-lg bg-neutral-50">
-                  <CardHeader className="pb-2 bg-neutral-50 rounded-lg">
+              {grupos.map(grupo => <Card key={grupo} className="h-fit rounded-lg bg-card">
+                  <CardHeader className="pb-2 bg-card rounded-lg">
                     <CardTitle className="text-sm">
                       <Badge className={`${getCorGrupo(grupo)} text-xs font-medium`}>
                         {grupo}
                       </Badge>
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="pt-0 bg-neutral-50 rounded-lg">
+                  <CardContent className="pt-0 bg-card rounded-lg">
                     {itensPorGrupo[grupo].length === 0 ? <p className="text-lunar-textSecondary text-xs italic text-center py-2">
                         Nenhum item cadastrado neste grupo.
                       </p> : <div className="space-y-1">

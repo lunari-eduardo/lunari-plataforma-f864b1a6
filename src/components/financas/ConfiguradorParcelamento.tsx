@@ -84,8 +84,8 @@ export default function ConfiguradorParcelamento({
           )}
 
           {configuracao.tipo === 'parcelado' && valor > 0 && (
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <p className="text-sm text-gray-600">
+            <div className="p-3 bg-muted rounded-lg">
+              <p className="text-sm text-muted-foreground">
                 {configuracao.quantidadeParcelas}x de <strong>R$ {valorParcela.toFixed(2)}</strong>
               </p>
             </div>

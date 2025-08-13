@@ -81,7 +81,7 @@ export default function Categorias({
             </label>
             <div className="flex items-center gap-2">
               
-              <Input id="cor" type="color" value={novaCor} onChange={e => setNovaCor(e.target.value)} className="w-20 h-7 bg-neutral-50" />
+              <Input id="cor" type="color" value={novaCor} onChange={e => setNovaCor(e.target.value)} className="w-20 h-7 bg-muted" />
             </div>
           </div>
           <div className="w-full sm:w-auto mt-3 sm:mt-0">

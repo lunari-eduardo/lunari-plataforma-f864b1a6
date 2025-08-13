@@ -161,18 +161,18 @@ export default function BudgetAppointmentDetails({
           <Separator />
 
           {/* Valor Total */}
-          <div className="flex items-center justify-between bg-green-50 border border-green-200 p-3 rounded-lg">
-            <div className="flex items-center gap-2 text-sm font-medium text-green-800">
+          <div className="flex items-center justify-between rounded-lg border p-3 bg-[hsl(var(--lunar-success)/0.12)] border-[hsl(var(--lunar-success)/0.30)]">
+            <div className="flex items-center gap-2 text-sm font-medium text-[hsl(var(--lunar-success))]">
               <DollarSign className="h-4 w-4" />
               Valor Total
             </div>
-            <div className="text-lg font-semibold text-green-800">
+            <div className="text-lg font-semibold text-[hsl(var(--lunar-success))]">
               R$ {valorTotal.toFixed(2)}
             </div>
           </div>
 
           {/* Link para ver orçamento completo */}
-          <Button variant="outline" size="sm" onClick={onViewFullBudget} className="w-full text-xs hover:bg-transparent hover:border-gray-400 transition-colors">
+          <Button variant="outline" size="sm" onClick={onViewFullBudget} className="w-full text-xs hover:bg-transparent hover:border-border transition-colors">
             <ExternalLink className="h-3 w-3 mr-2" />
             Ver Orçamento Completo
           </Button>
@@ -213,7 +213,7 @@ export default function BudgetAppointmentDetails({
           </div>
 
           {/* Informação sobre sincronização */}
-          <div className="text-xs text-lunar-textSecondary bg-blue-50 border border-blue-200 p-2 rounded">
+          <div className="text-xs text-lunar-textSecondary bg-primary/10 border border-primary/30 p-2 rounded">
             💡 As alterações de data e horário serão sincronizadas automaticamente com o orçamento original.
           </div>
         </CardContent>

@@ -72,14 +72,14 @@ export default function ConfiguracaoCartoes({}: ConfiguracaoCartoesProps) {
               <Input id="nomeCartao" placeholder="Ex: Nubank, Itaú, etc." value={novoCartao.nome} onChange={e => setNovoCartao({
               ...novoCartao,
               nome: e.target.value
-            })} className="bg-neutral-50" />
+             })} className="bg-card" />
             </div>
             <div>
               <Label htmlFor="diaVencimento">Dia de Vencimento</Label>
               <Input id="diaVencimento" type="number" min="1" max="31" placeholder="Ex: 15" value={novoCartao.diaVencimento} onChange={e => setNovoCartao({
               ...novoCartao,
               diaVencimento: e.target.value
-            })} className="bg-neutral-50" />
+             })} className="bg-card" />
               <p className="text-xs text-gray-500 mt-1">
                 Dia do mês que a fatura vence
               </p>
@@ -89,7 +89,7 @@ export default function ConfiguracaoCartoes({}: ConfiguracaoCartoesProps) {
               <Input id="diaFechamento" type="number" min="1" max="31" placeholder="Ex: 10" value={novoCartao.diaFechamento} onChange={e => setNovoCartao({
               ...novoCartao,
               diaFechamento: e.target.value
-            })} className="bg-neutral-50" />
+            })} className="bg-card" />
               <p className="text-xs text-gray-500 mt-1">
                 Dia do mês que a fatura fecha
               </p>

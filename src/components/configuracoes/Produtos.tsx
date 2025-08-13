@@ -231,7 +231,7 @@ export default function Produtos({
         })}
           </div> :
       // Layout em tabela para desktop
-      <div className="bg-white rounded-lg border border-border overflow-hidden shadow-sm">
+      <div className="bg-card rounded-lg border border-border overflow-hidden shadow-sm">
             <div className="grid grid-cols-12 px-4 py-3 border-b text-xs font-medium bg-lunar-surface">
               <div className="col-span-5 text-foreground">Produto</div>
               <div className="col-span-2 text-foreground">Custo</div>

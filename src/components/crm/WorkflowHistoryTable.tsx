@@ -172,7 +172,7 @@ export function WorkflowHistoryTable({
                     </h3>
                   </div>
                   
-                  <div className="space-y-3 rounded-lg p-4 bg-neutral-50 py-[6px]">
+                  <div className="space-y-3 rounded-lg p-4 bg-muted py-[6px]">
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-lunar-textSecondary">Base do Pacote</span>
                       <span className="font-semibold text-lunar-text text-xs">{formatCurrency(item.valorPacote || 0)}</span>
@@ -217,7 +217,7 @@ export function WorkflowHistoryTable({
                   </div>
                   
                   <div className="space-y-4 rounded-lg bg-lunar-surface py-0 my-px">
-                    <div className="border border-chart-revenue rounded-lg p-4 bg-neutral-50 py-[6px]">
+                    <div className="border border-chart-revenue rounded-lg p-4 bg-muted py-[6px]">
                       <div className="flex justify-between items-center">
                         <span className="flex items-center gap-2 text-sm text-lunar-text">
                           <span className="w-2 h-2 bg-success rounded-full"></span>
@@ -227,7 +227,7 @@ export function WorkflowHistoryTable({
                       </div>
                     </div>
                     
-                    <div className="border border-chart-expense rounded-lg p-4 bg-neutral-50 py-[6px]">
+                    <div className="border border-chart-expense rounded-lg p-4 bg-muted py-[6px]">
                       <div className="flex justify-between items-center">
                         <span className="flex items-center gap-2 text-sm text-lunar-text">
                           <span className="w-2 h-2 bg-warning rounded-full"></span>
@@ -238,7 +238,7 @@ export function WorkflowHistoryTable({
                     </div>
                     
                     {/* Indicador de Status de Pagamento */}
-                    <div className="mt-4 p-3 border border-lunar-border/30 rounded-lg bg-neutral-50 py-[6px]">
+                    <div className="mt-4 p-3 border border-lunar-border/30 rounded-lg bg-muted py-[6px]">
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-lunar-textSecondary">Status do Pagamento</span>
                         <Badge className={`text-xs ${item.restante === 0 ? 'bg-success/20 text-success' : 'bg-warning/20 text-warning'}`}>
@@ -258,7 +258,7 @@ export function WorkflowHistoryTable({
                       Produtos Incluídos
                     </h3>
                   </div>
-                  <div className="rounded-lg p-4 space-y-3 bg-neutral-50">
+                  <div className="rounded-lg p-4 space-y-3 bg-muted">
                     {item.produtosList.map((p: any, index: number) => <div key={index} className="flex justify-between items-center py-2 border-b border-lunar-border/20 last:border-0">
                         <div className="flex flex-col">
                           <span className="font-medium text-sm text-lunar-text">{p.nome}</span>
