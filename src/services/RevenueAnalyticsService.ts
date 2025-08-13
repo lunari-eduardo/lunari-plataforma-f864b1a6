@@ -381,7 +381,7 @@ class RevenueAnalyticsService {
     const originSummary: OriginRevenueData[] = Array.from(originSummaryMap.entries()).map(([originId, data]) => {
       const matchingOrigin = ORIGENS_PADRAO.find(o => o.id === originId);
       const name = matchingOrigin?.nome || (originId === 'nao-especificado' ? 'Não especificado' : originId);
-      const color = matchingOrigin?.cor || '#6B7280';
+      const color = matchingOrigin?.cor || 'hsl(var(--muted-foreground))';
 
       return {
         originId,

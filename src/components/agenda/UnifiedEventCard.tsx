@@ -103,7 +103,7 @@ export default function UnifiedEventCard({ event, onClick, compact = false, vari
       // Outros Orçamentos: Manter borda tracejada e fundo semi-transparente
       const config = getBudgetStatusConfig(event.status);
       const baseStyle = 'border-2 border-dashed hover:bg-opacity-80';
-      return `${config.bgColor.replace('100', '50')} ${config.textColor} ${config.borderColor.replace('border-', 'border-').replace('500', '300')} hover:${config.bgColor} ${baseStyle}`;
+      return `${config.bgColor} ${config.textColor} ${config.borderColor} ${baseStyle}`;
     }
   };
 

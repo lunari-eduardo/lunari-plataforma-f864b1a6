@@ -9,45 +9,45 @@ export interface StatusConfig {
 export const BUDGET_STATUS_CONFIG: Record<string, StatusConfig> = {
   rascunho: {
     label: 'Novo',
-    color: '#3B82F6', // blue-500
-    bgColor: 'bg-blue-100',
-    textColor: 'text-blue-800',
-    borderColor: 'border-blue-500'
+    color: 'hsl(var(--primary))',
+    bgColor: 'bg-primary/10',
+    textColor: 'text-primary',
+    borderColor: 'border-primary'
   },
   pendente: {
     label: 'Pendente',
-    color: '#EAB308', // yellow-500
-    bgColor: 'bg-yellow-100',
-    textColor: 'text-yellow-800',
-    borderColor: 'border-yellow-500'
+    color: 'hsl(var(--lunar-warning))',
+    bgColor: 'bg-lunar-warning/15',
+    textColor: 'text-lunar-warning',
+    borderColor: 'border-lunar-warning'
   },
   enviado: {
     label: 'Enviado',
-    color: '#6B7280', // gray-500
-    bgColor: 'bg-gray-100',
-    textColor: 'text-gray-800',
-    borderColor: 'border-gray-500'
+    color: 'hsl(var(--muted-foreground))',
+    bgColor: 'bg-muted',
+    textColor: 'text-muted-foreground',
+    borderColor: 'border-border'
   },
   'follow-up': {
     label: 'Follow-up',
-    color: '#F97316', // orange-500
-    bgColor: 'bg-orange-100',
-    textColor: 'text-orange-800',
-    borderColor: 'border-orange-500'
+    color: 'hsl(var(--lunar-accent))',
+    bgColor: 'bg-lunar-accent/10',
+    textColor: 'text-lunar-accent',
+    borderColor: 'border-lunar-accent'
   },
   fechado: {
     label: 'Fechado',
-    color: '#10B981', // green-500
-    bgColor: 'bg-green-100',
-    textColor: 'text-green-800',
-    borderColor: 'border-green-500'
+    color: 'hsl(var(--lunar-success))',
+    bgColor: 'bg-lunar-success/15',
+    textColor: 'text-lunar-success',
+    borderColor: 'border-lunar-success'
   },
   cancelado: {
     label: 'Cancelado',
-    color: '#EF4444', // red-500
-    bgColor: 'bg-red-100',
-    textColor: 'text-red-800',
-    borderColor: 'border-red-500'
+    color: 'hsl(var(--lunar-error))',
+    bgColor: 'bg-lunar-error/15',
+    textColor: 'text-lunar-error',
+    borderColor: 'border-lunar-error'
   }
 };
 

@@ -212,7 +212,7 @@ export function useSalesAnalytics(selectedYear: number, selectedCategory: string
       // Find matching origin from defaults or create fallback
       const matchingOrigin = ORIGENS_PADRAO.find(o => o.id === originKey);
       const name = matchingOrigin?.nome || (originKey === 'nao-especificado' ? 'Não especificado' : originKey);
-      const color = matchingOrigin?.cor || '#6B7280';
+      const color = matchingOrigin?.cor || 'hsl(var(--muted-foreground))';
 
       return {
         name,

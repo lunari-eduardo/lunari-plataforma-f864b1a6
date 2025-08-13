@@ -129,7 +129,7 @@ export function OriginTimelineChart({ monthlyOriginData }: OriginTimelineChartPr
             <Legend 
               wrapperStyle={{ fontSize: '11px', paddingTop: '20px' }}
               formatter={(value) => (
-                <span style={{ color: 'hsl(var(--lunar-text))' }}>
+                <span className="text-lunar-text">
                   {chartConfig[value]?.label || value}
                 </span>
               )}
