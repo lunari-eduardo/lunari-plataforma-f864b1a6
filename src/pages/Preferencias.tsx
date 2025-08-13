@@ -290,7 +290,7 @@ useEffect(() => {
                   <div className="space-y-2">
                     <h3 className="text-lg font-medium">Aparência</h3>
                     <p className="text-lunar-textSecondary text-sm">Escolha a cor do sistema para botões, bordas e gráficos</p>
-                    <p className="text-[11px] text-lunar-textSecondary">As alterações são aplicadas e salvas automaticamente.</p>
+                    <p className="text-[11px] text-lunar-textSecondary">Selecione uma cor e clique em “Salvar e recarregar” para aplicar.</p>
                   </div>
 
                   <ThemeColorPicker
@@ -298,18 +298,19 @@ useEffect(() => {
                     valueHex={formData.temaCorHex}
                     onChange={({ temaCor, temaCorHex }) => {
                       setFormData(prev => ({ ...prev, temaCor, temaCorHex }));
-                      savePreferences({ temaCor, temaCorHex });
-                      toast.success('Tema atualizado');
                     }}
                   />
 
-                  <div className="space-y-2">
-                    <p className="text-[11px] text-lunar-textSecondary">Pré-visualização do tema</p>
-                    <div className="flex items-center gap-3">
-                      <Button variant="default">Botão padrão</Button>
-                      <button className="btn-lunar">Botão lunar</button>
-                      <div className="h-6 w-6 rounded-full" style={{ backgroundColor: 'hsl(var(--ring))' }} title="Amostra do ring" />
-                    </div>
+                  <div className="flex items-center justify-end">
+                    <Button
+                      onClick={async () => {
+                        await savePreferences({ temaCor: formData.temaCor, temaCorHex: formData.temaCorHex });
+                        toast.success('Tema salvo. Recarregando...');
+                        window.location.reload();
+                      }}
+                    >
+                      Salvar e recarregar
+                    </Button>
                   </div>
                 </TabsContent>
               </Tabs>

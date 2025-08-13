@@ -29,7 +29,7 @@ export interface UserPreferences {
   formatoData: 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'YYYY-MM-DD';
   // Aparência
   tema: 'claro' | 'escuro' | 'sistema';
-  temaCor: 'azul' | 'verde' | 'terracota' | 'rosa' | 'cinza' | 'lilas';
+  temaCor: 'azul' | 'verde' | 'terracota' | 'rosa' | 'cinza' | 'lilas' | 'bege';
   temaCorHex: string;
   // Notificações
   notificacoesEmail: boolean;

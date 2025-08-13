@@ -2,7 +2,7 @@ import React from 'react'
 import { Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-export type ThemeColorKey = 'verde' | 'terracota' | 'rosa' | 'cinza' | 'azul' | 'lilas'
+export type ThemeColorKey = 'verde' | 'terracota' | 'rosa' | 'cinza' | 'azul' | 'lilas' | 'bege'
 
 const COLORS: { key: ThemeColorKey; label: string; hex: `#${string}` }[] = [
   { key: 'verde', label: 'Verde', hex: '#98b281' },
@@ -11,6 +11,7 @@ const COLORS: { key: ThemeColorKey; label: string; hex: `#${string}` }[] = [
   { key: 'cinza', label: 'Cinza', hex: '#494949' },
   { key: 'azul', label: 'Azul (padrão)', hex: '#1c4274' },
   { key: 'lilas', label: 'Lilás', hex: '#beb7fb' },
+  { key: 'bege', label: 'Bege', hex: '#dbbd96' },
 ]
 
 interface ThemeColorPickerProps {
@@ -41,7 +42,7 @@ export default function ThemeColorPicker({ valueKey, valueHex, onChange }: Theme
             >
               <span
                 className="inline-flex h-6 w-6 rounded-full ring-2 ring-offset-2 ring-offset-background"
-                style={{ backgroundColor: hex, boxShadow: selected ? '0 0 0 2px hsl(var(--lunar-accent))' : undefined }}
+                style={{ backgroundColor: hex }}
                 aria-hidden
               />
               <div className="flex-1 text-left">

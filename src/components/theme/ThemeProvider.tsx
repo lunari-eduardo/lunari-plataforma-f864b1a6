@@ -65,6 +65,7 @@ const COLOR_MAP: Record<string, string> = {
   rosa: '#d8a4ce',
   cinza: '#494949',
   lilas: '#beb7fb',
+  bege: '#dbbd96',
 }
 
 export default function ThemeProvider({ children }: { children: React.ReactNode }) {
