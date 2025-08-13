@@ -17,6 +17,7 @@ import {
 import { UserPreferences } from '@/types/userProfile';
 import ThemeColorPicker from '@/components/preferences/ThemeColorPicker';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
 export default function Preferencias() {
   const { preferences, savePreferences, getPreferencesOrDefault } = useUserPreferences();
@@ -289,6 +290,7 @@ useEffect(() => {
                   <div className="space-y-2">
                     <h3 className="text-lg font-medium">Aparência</h3>
                     <p className="text-lunar-textSecondary text-sm">Escolha a cor do sistema para botões, bordas e gráficos</p>
+                    <p className="text-[11px] text-lunar-textSecondary">As alterações são aplicadas e salvas automaticamente.</p>
                   </div>
 
                   <ThemeColorPicker
@@ -297,13 +299,17 @@ useEffect(() => {
                     onChange={({ temaCor, temaCorHex }) => {
                       setFormData(prev => ({ ...prev, temaCor, temaCorHex }));
                       savePreferences({ temaCor, temaCorHex });
+                      toast.success('Tema atualizado');
                     }}
                   />
 
-                  <div className="flex items-center gap-3">
-                    <Button variant="default">Botão padrão</Button>
-                    <button className="btn-lunar">Botão lunar</button>
-                    <div className="h-6 w-6 rounded-full" style={{ backgroundColor: 'hsl(var(--ring))' }} title="Amostra do ring" />
+                  <div className="space-y-2">
+                    <p className="text-[11px] text-lunar-textSecondary">Pré-visualização do tema</p>
+                    <div className="flex items-center gap-3">
+                      <Button variant="default">Botão padrão</Button>
+                      <button className="btn-lunar">Botão lunar</button>
+                      <div className="h-6 w-6 rounded-full" style={{ backgroundColor: 'hsl(var(--ring))' }} title="Amostra do ring" />
+                    </div>
                   </div>
                 </TabsContent>
               </Tabs>
