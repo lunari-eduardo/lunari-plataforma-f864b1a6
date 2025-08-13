@@ -36,8 +36,10 @@ export function OriginDonutCard({ originData }: OriginDonutCardProps) {
               data={originData}
               cx="50%"
               cy="50%"
-              innerRadius="55%"
+              innerRadius="62%"
               outerRadius="85%"
+              paddingAngle={3}
+              cornerRadius={12}
               dataKey="percentage"
               label={({ name, percentage }) => (percentage > 5 ? `${name} ${percentage.toFixed(0)}%` : '')}
               labelLine={false}
