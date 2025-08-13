@@ -107,7 +107,7 @@ export function CalculadoraServicos({
       <div className="flex justify-center mb-6">
         <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-full">
           <CollapsibleTrigger asChild>
-            <Button variant="secondary" className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg mx-auto">
+            <Button variant="default" className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg mx-auto">
               <span className="text-sm">📋</span>
               {isOpen ? <>
                   Fechar Calculadora

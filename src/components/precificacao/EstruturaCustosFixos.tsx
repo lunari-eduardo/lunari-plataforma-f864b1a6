@@ -414,14 +414,14 @@ export function EstruturaCustosFixos({
                   <Input type="date" value={novoEquipamento.dataCompra} onChange={e => setNovoEquipamento(prev => ({
                   ...prev,
                   dataCompra: e.target.value
-                }))} className="bg-white" />
+                }))} className="bg-card" />
                 </div>
                 <div>
                   <Label className="text-xs text-foreground">Vida Útil (Anos)</Label>
                   <Input type="number" min="1" value={novoEquipamento.vidaUtil} onChange={e => setNovoEquipamento(prev => ({
                   ...prev,
                   vidaUtil: e.target.value
-                }))} className="bg-white" />
+                }))} className="bg-card" />
                 </div>
                 <div>
                   <Label className="text-xs text-chart-expense ">Depreciação Mensal</Label>
