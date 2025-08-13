@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell } from 'recharts';
 import { Globe, TrendingUp } from 'lucide-react';
 import { OriginData } from '@/types/salesAnalytics';
 import { OriginTimelineChart } from './OriginTimelineChart';
@@ -36,13 +36,14 @@ export function OriginChartsSection({ originData, monthlyOriginData }: OriginCha
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={chartConfig} className="h-[200px] sm:h-[250px] lg:h-[280px]">
+          <ChartContainer config={chartConfig} className="w-full aspect-square">
             <PieChart>
               <Pie
                 data={originData}
                 cx="50%"
                 cy="50%"
-                outerRadius={100}
+                innerRadius="55%"
+                outerRadius="85%"
                 dataKey="percentage"
                 label={({ name, percentage }) => 
                   percentage > 5 ? `${name} ${percentage.toFixed(0)}%` : ''

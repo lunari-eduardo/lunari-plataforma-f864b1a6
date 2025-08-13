@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Legend } from 'recharts';
+import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { TrendingUp, BarChart3, PieChart as PieChartIcon, Calendar, Camera, DollarSign, Package } from 'lucide-react';
 import { MonthlyData, CategoryData, PackageDistributionData, OriginData } from '@/hooks/useSalesAnalytics';
 import { OriginChartsSection } from './OriginChartsSection';
@@ -52,8 +52,14 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={chartConfig} className="h-[200px] sm:h-[250px] lg:h-[280px]">
+          <ChartContainer config={chartConfig} className="w-full aspect-auto h-[220px] sm:h-[260px] lg:h-[300px]">
             <BarChart data={monthlyData}>
+              <defs>
+                <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(var(--chart-primary))" stopOpacity="0.9" />
+                  <stop offset="100%" stopColor="hsl(var(--chart-primary))" stopOpacity="0.6" />
+                </linearGradient>
+              </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis 
                 dataKey="month" 
@@ -71,7 +77,7 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
               />
               <Bar
                 dataKey="revenue"
-                fill="hsl(var(--chart-primary))"
+                fill="url(#revenueGradient)"
                 radius={[4, 4, 0, 0]}
               />
             </BarChart>
@@ -88,8 +94,14 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={chartConfig} className="h-[200px] sm:h-[250px] lg:h-[280px]">
+          <ChartContainer config={chartConfig} className="w-full h-[220px] sm:h-[260px] lg:h-[300px]">
             <BarChart data={monthlyData}>
+              <defs>
+                <linearGradient id="sessionsGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(var(--chart-tertiary))" stopOpacity="0.9" />
+                  <stop offset="100%" stopColor="hsl(var(--chart-tertiary))" stopOpacity="0.6" />
+                </linearGradient>
+              </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis 
                 dataKey="month" 
@@ -106,7 +118,7 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
               />
               <Bar
                 dataKey="sessions"
-                fill="hsl(var(--chart-tertiary))"
+                fill="url(#sessionsGradient)"
                 radius={[4, 4, 0, 0]}
               />
             </BarChart>
@@ -123,7 +135,7 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={chartConfig} className="h-[200px] sm:h-[250px] lg:h-[280px]">
+          <ChartContainer config={chartConfig} className="w-full h-[220px] sm:h-[260px] lg:h-[300px]">
             <LineChart data={monthlyData}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis 
@@ -161,8 +173,14 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={chartConfig} className="h-[200px] sm:h-[250px] lg:h-[280px]">
+          <ChartContainer config={chartConfig} className="w-full h-[220px] sm:h-[260px] lg:h-[300px]">
             <AreaChart data={monthlyData}>
+              <defs>
+                <linearGradient id="extraGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(var(--chart-quaternary))" stopOpacity="0.6" />
+                  <stop offset="100%" stopColor="hsl(var(--chart-quaternary))" stopOpacity="0.2" />
+                </linearGradient>
+              </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis 
                 dataKey="month" 
@@ -182,8 +200,8 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
                 type="monotone"
                 dataKey="extraPhotoRevenue"
                 stroke="hsl(var(--chart-quaternary))"
-                fill="hsl(var(--chart-quaternary))"
-                fillOpacity={0.4}
+                fill="url(#extraGradient)"
+                fillOpacity={1}
                 strokeWidth={2}
               />
             </AreaChart>
@@ -200,13 +218,14 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={chartConfig} className="h-[200px] sm:h-[250px] lg:h-[280px]">
+          <ChartContainer config={chartConfig} className="w-full aspect-square">
             <PieChart>
-              <Pie
+            <Pie
                 data={packageDistributionData}
                 cx="50%"
                 cy="50%"
-                outerRadius={100}
+                innerRadius="55%"
+                outerRadius="85%"
                 dataKey="percentage"
                 label={({ name, percentage }) => 
                   percentage > 5 ? `${name} ${percentage.toFixed(0)}%` : ''
@@ -242,13 +261,14 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={chartConfig} className="h-[200px] sm:h-[250px] lg:h-[280px]">
+          <ChartContainer config={chartConfig} className="w-full aspect-square">
             <PieChart>
-              <Pie
+            <Pie
                 data={categoryData}
                 cx="50%"
                 cy="50%"
-                outerRadius={100}
+                innerRadius="55%"
+                outerRadius="85%"
                 dataKey="percentage"
                 label={({ name, percentage }) => 
                   percentage > 5 ? `${name} ${percentage.toFixed(0)}%` : ''

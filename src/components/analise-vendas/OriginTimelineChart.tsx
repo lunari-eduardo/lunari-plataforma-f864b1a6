@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Legend } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, Legend } from 'recharts';
 import { TrendingUp } from 'lucide-react';
 import { MonthlyOriginData } from '@/services/RevenueAnalyticsService';
 import { ORIGENS_PADRAO } from '@/utils/defaultOrigens';
@@ -91,52 +91,50 @@ export function OriginTimelineChart({ monthlyOriginData }: OriginTimelineChartPr
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={chartConfig} className="h-[280px] sm:h-[320px] lg:h-[360px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={monthlyOriginData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-              <XAxis 
-                dataKey="month" 
-                tick={{ fontSize: 11, fill: 'hsl(var(--lunar-textSecondary))' }}
-                axisLine={{ stroke: 'hsl(var(--lunar-border))' }}
-                tickLine={{ stroke: 'hsl(var(--lunar-border))' }}
+        <ChartContainer config={chartConfig} className="w-full h-[300px] sm:h-[340px] lg:h-[380px]">
+          <LineChart data={monthlyOriginData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+            <XAxis 
+              dataKey="month" 
+              tick={{ fontSize: 11, fill: 'hsl(var(--lunar-textSecondary))' }}
+              axisLine={{ stroke: 'hsl(var(--lunar-border))' }}
+              tickLine={{ stroke: 'hsl(var(--lunar-border))' }}
+            />
+            <YAxis 
+              tick={{ fontSize: 11, fill: 'hsl(var(--lunar-textSecondary))' }}
+              axisLine={{ stroke: 'hsl(var(--lunar-border))' }}
+              tickLine={{ stroke: 'hsl(var(--lunar-border))' }}
+              label={{ 
+                value: 'Sessões', 
+                angle: -90, 
+                position: 'insideLeft',
+                style: { textAnchor: 'middle', fontSize: '11px', fill: 'hsl(var(--lunar-textSecondary))' }
+              }}
+            />
+            
+            {originsList.map((originId) => (
+              <Line
+                key={originId}
+                type="monotone"
+                dataKey={originId}
+                stroke={chartConfig[originId]?.color || '#6B7280'}
+                strokeWidth={2}
+                dot={{ fill: chartConfig[originId]?.color || '#6B7280', strokeWidth: 0, r: 3 }}
+                activeDot={{ r: 5, stroke: chartConfig[originId]?.color || '#6B7280', strokeWidth: 2 }}
+                connectNulls={false}
               />
-              <YAxis 
-                tick={{ fontSize: 11, fill: 'hsl(var(--lunar-textSecondary))' }}
-                axisLine={{ stroke: 'hsl(var(--lunar-border))' }}
-                tickLine={{ stroke: 'hsl(var(--lunar-border))' }}
-                label={{ 
-                  value: 'Sessões', 
-                  angle: -90, 
-                  position: 'insideLeft',
-                  style: { textAnchor: 'middle', fontSize: '11px', fill: 'hsl(var(--lunar-textSecondary))' }
-                }}
-              />
-              
-              {originsList.map((originId) => (
-                <Line
-                  key={originId}
-                  type="monotone"
-                  dataKey={originId}
-                  stroke={chartConfig[originId]?.color || '#6B7280'}
-                  strokeWidth={2}
-                  dot={{ fill: chartConfig[originId]?.color || '#6B7280', strokeWidth: 0, r: 3 }}
-                  activeDot={{ r: 5, stroke: chartConfig[originId]?.color || '#6B7280', strokeWidth: 2 }}
-                  connectNulls={false}
-                />
-              ))}
-              
-              <ChartTooltip content={<CustomTooltip />} />
-              
-              <Legend 
-                wrapperStyle={{ fontSize: '11px', paddingTop: '20px' }}
-                formatter={(value) => (
-                  <span style={{ color: 'hsl(var(--lunar-text))' }}>
-                    {chartConfig[value]?.label || value}
-                  </span>
-                )}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+            ))}
+            
+            <ChartTooltip content={<CustomTooltip />} />
+            
+            <Legend 
+              wrapperStyle={{ fontSize: '11px', paddingTop: '20px' }}
+              formatter={(value) => (
+                <span style={{ color: 'hsl(var(--lunar-text))' }}>
+                  {chartConfig[value]?.label || value}
+                </span>
+              )}
+            />
+          </LineChart>
         </ChartContainer>
       </CardContent>
     </Card>
