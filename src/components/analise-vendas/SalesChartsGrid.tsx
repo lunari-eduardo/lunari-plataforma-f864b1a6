@@ -4,6 +4,7 @@ import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, LineChart, Line, X
 import { TrendingUp, BarChart3, PieChart as PieChartIcon, Calendar, Camera, DollarSign, Package } from 'lucide-react';
 import { MonthlyData, CategoryData, PackageDistributionData, OriginData } from '@/hooks/useSalesAnalytics';
 import { OriginChartsSection } from './OriginChartsSection';
+import { OriginDonutCard } from './OriginDonutCard';
 import { MonthlyOriginData } from '@/services/RevenueAnalyticsService';
 
 interface SalesChartsGridProps {
@@ -209,88 +210,94 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
         </CardContent>
       </Card>
 
-      {/* Package Distribution */}
-      <Card className="rounded-lg ring-1 ring-lunar-border/60 shadow-brand bg-lunar-surface">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-lunar-text flex items-center gap-2">
-            <Package className="h-4 w-4 text-indigo-500" />
-            {selectedCategory === 'all' ? 'Distribuição por Pacote' : `Pacotes em ${selectedCategory}`}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ChartContainer config={chartConfig} className="w-full aspect-square">
-            <PieChart>
-            <Pie
-                data={packageDistributionData}
-                cx="50%"
-                cy="50%"
-                innerRadius="55%"
-                outerRadius="85%"
-                dataKey="percentage"
-                label={({ name, percentage }) => 
-                  percentage > 5 ? `${name} ${percentage.toFixed(0)}%` : ''
-                }
-                labelLine={false}
-                fontSize={11}
-              >
-                {packageDistributionData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <ChartTooltip 
-                content={<ChartTooltipContent />}
-                formatter={(value: any, name: any, props: any) => [
-                  `${value.toFixed(1)}% - ${props.payload.sessions} sessões - ${formatCurrency(props.payload.revenue)}`,
-                  ''
-                ]}
-              />
-            </PieChart>
-          </ChartContainer>
-        </CardContent>
-      </Card>
+      {/* Donut Charts: Package, Origin, Category */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 items-stretch">
+        {/* Package Distribution */}
+        <Card className="rounded-lg ring-1 ring-lunar-border/60 shadow-brand bg-lunar-surface">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-lunar-text flex items-center gap-2">
+              <Package className="h-4 w-4 text-indigo-500" />
+              {selectedCategory === 'all' ? 'Distribuição por Pacote' : `Pacotes em ${selectedCategory}`}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={chartConfig} className="w-full aspect-square max-w-[360px] sm:max-w-[420px] mx-auto">
+              <PieChart>
+                <Pie
+                  data={packageDistributionData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius="55%"
+                  outerRadius="85%"
+                  dataKey="percentage"
+                  label={({ name, percentage }) => 
+                    percentage > 5 ? `${name} ${percentage.toFixed(0)}%` : ''
+                  }
+                  labelLine={false}
+                  fontSize={11}
+                >
+                  {packageDistributionData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <ChartTooltip 
+                  content={<ChartTooltipContent />}
+                  formatter={(value: any, name: any, props: any) => [
+                    `${value.toFixed(1)}% - ${props.payload.sessions} sessões - ${formatCurrency(props.payload.revenue)}`,
+                    ''
+                  ]}
+                />
+              </PieChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
 
-      {/* Origin Charts */}
+        {/* Origin Distribution */}
+        <OriginDonutCard originData={originData} />
+
+        {/* Category Distribution */}
+        <Card className="rounded-lg ring-1 ring-lunar-border/60 shadow-brand bg-lunar-surface">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-lunar-text flex items-center gap-2">
+              <PieChartIcon className="h-4 w-4 text-blue-500" />
+              Distribuição por Categoria
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={chartConfig} className="w-full aspect-square max-w-[360px] sm:max-w-[420px] mx-auto">
+              <PieChart>
+                <Pie
+                  data={categoryData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius="55%"
+                  outerRadius="85%"
+                  dataKey="percentage"
+                  label={({ name, percentage }) => 
+                    percentage > 5 ? `${name} ${percentage.toFixed(0)}%` : ''
+                  }
+                  labelLine={false}
+                  fontSize={11}
+                >
+                  {categoryData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <ChartTooltip 
+                  content={<ChartTooltipContent />}
+                  formatter={(value: any, name: any, props: any) => [
+                    `${value.toFixed(1)}% (${formatCurrency(props.payload.revenue)})`,
+                    'Participação'
+                  ]}
+                />
+              </PieChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Origin Summary + Timeline */}
       <OriginChartsSection originData={originData} monthlyOriginData={monthlyOriginData} />
-
-      {/* Category Distribution */}
-      <Card className="rounded-lg ring-1 ring-lunar-border/60 shadow-brand bg-lunar-surface lg:col-span-2">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-lunar-text flex items-center gap-2">
-            <PieChartIcon className="h-4 w-4 text-blue-500" />
-            Distribuição por Categoria
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ChartContainer config={chartConfig} className="w-full aspect-square">
-            <PieChart>
-            <Pie
-                data={categoryData}
-                cx="50%"
-                cy="50%"
-                innerRadius="55%"
-                outerRadius="85%"
-                dataKey="percentage"
-                label={({ name, percentage }) => 
-                  percentage > 5 ? `${name} ${percentage.toFixed(0)}%` : ''
-                }
-                labelLine={false}
-                fontSize={11}
-              >
-                {categoryData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <ChartTooltip 
-                content={<ChartTooltipContent />}
-                formatter={(value: any, name: any, props: any) => [
-                  `${value.toFixed(1)}% (${formatCurrency(props.payload.revenue)})`,
-                  'Participação'
-                ]}
-              />
-            </PieChart>
-          </ChartContainer>
-        </CardContent>
-      </Card>
 
     </div>
   );
