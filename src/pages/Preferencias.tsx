@@ -24,9 +24,9 @@ export default function Preferencias() {
   const [formData, setFormData] = useState<UserPreferences>(getPreferencesOrDefault());
 useEffect(() => {
   if (preferences) {
-    setFormData({ ...getPreferencesOrDefault(), ...preferences });
+    setFormData(prev => ({ ...prev, ...preferences }));
   }
-}, [preferences, getPreferencesOrDefault]);
+}, [preferences]);
 
   const handleSelectChange = (field: keyof UserPreferences, value: string) => {
     const updatedData = { ...formData, [field]: value };
