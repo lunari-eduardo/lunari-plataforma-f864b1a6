@@ -24,6 +24,7 @@ import FeedTest from "./pages/FeedTest";
 import NotFound from "./pages/NotFound";
 import { AppProvider } from "./contexts/AppContext";
 import { useIntegration } from "./hooks/useIntegration";
+import ThemeProvider from "./components/theme/ThemeProvider";
 
 // Create a stable QueryClient instance
 const queryClient = new QueryClient({
@@ -102,33 +103,35 @@ function App() {
   return (
     <BrowserRouter>
       <QueryClientProvider client={queryClient}>
-        <AppProvider>
-          <TooltipProvider>
-            <AppIntegration />
-            <AutomationIntegration />
-            <Toaster />
-            <Sonner />
-            <Routes>
-              <Route path="/" element={<Layout />}>
-                <Route path="/" element={<Index />} />
-                <Route path="/agenda" element={<Agenda />} />
-                <Route path="/clientes" element={<Clientes />} />
-                <Route path="/clientes/:id" element={<ClienteDetalhe />} />
-                <Route path="/orcamentos" element={<Orcamentos />} />
-                <Route path="/financas" element={<NovaFinancas />} />
-                <Route path="/precificacao" element={<Precificacao />} />
-                <Route path="/workflow" element={<Workflow />} />
-                <Route path="/analise-vendas" element={<AnaliseVendas />} />
-                <Route path="/configuracoes" element={<Configuracoes />} />
-                <Route path="/minha-conta" element={<MinhaConta />} />
-                <Route path="/preferencias" element={<Preferencias />} />
-                <Route path="/tarefas" element={<Tarefas />} />
-                <Route path="/feed-test" element={<FeedTest />} />
-                <Route path="*" element={<NotFound />} />
-              </Route>
-            </Routes>
-          </TooltipProvider>
-        </AppProvider>
+        <ThemeProvider>
+          <AppProvider>
+            <TooltipProvider>
+              <AppIntegration />
+              <AutomationIntegration />
+              <Toaster />
+              <Sonner />
+              <Routes>
+                <Route path="/" element={<Layout />}>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/agenda" element={<Agenda />} />
+                  <Route path="/clientes" element={<Clientes />} />
+                  <Route path="/clientes/:id" element={<ClienteDetalhe />} />
+                  <Route path="/orcamentos" element={<Orcamentos />} />
+                  <Route path="/financas" element={<NovaFinancas />} />
+                  <Route path="/precificacao" element={<Precificacao />} />
+                  <Route path="/workflow" element={<Workflow />} />
+                  <Route path="/analise-vendas" element={<AnaliseVendas />} />
+                  <Route path="/configuracoes" element={<Configuracoes />} />
+                  <Route path="/minha-conta" element={<MinhaConta />} />
+                  <Route path="/preferencias" element={<Preferencias />} />
+                  <Route path="/tarefas" element={<Tarefas />} />
+                  <Route path="/feed-test" element={<FeedTest />} />
+                  <Route path="*" element={<NotFound />} />
+                </Route>
+              </Routes>
+            </TooltipProvider>
+          </AppProvider>
+        </ThemeProvider>
       </QueryClientProvider>
     </BrowserRouter>
   );

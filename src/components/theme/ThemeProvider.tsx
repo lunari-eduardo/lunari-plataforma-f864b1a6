@@ -124,5 +124,21 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
     root.style.setProperty('--chart-revenue', toHslStr(palette[0]))
   }, [effective.temaCor, effective.temaCorHex])
 
+  // Apply dark mode class based on preferences.tema ('claro' | 'escuro' | 'sistema')
+  useEffect(() => {
+    const root = document.documentElement
+    const mql = window.matchMedia?.('(prefers-color-scheme: dark)')
+    const apply = () => {
+      const isDark = effective.tema === 'escuro' || (effective.tema === 'sistema' && !!mql?.matches)
+      root.classList.toggle('dark', isDark)
+    }
+    apply()
+    if (effective.tema === 'sistema' && mql) {
+      const listener = () => apply()
+      mql.addEventListener?.('change', listener)
+      return () => mql.removeEventListener?.('change', listener)
+    }
+  }, [effective.tema])
+
   return <>{children}</>
 }

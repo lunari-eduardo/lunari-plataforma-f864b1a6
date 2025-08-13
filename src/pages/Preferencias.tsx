@@ -3,6 +3,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
@@ -291,6 +292,32 @@ useEffect(() => {
                     <h3 className="text-lg font-medium">Aparência</h3>
                     <p className="text-lunar-textSecondary text-sm">Escolha a cor do sistema para botões, bordas e gráficos</p>
                     <p className="text-[11px] text-lunar-textSecondary">Selecione uma cor e clique em “Salvar e recarregar” para aplicar.</p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-medium">Tema</h4>
+                    <p className="text-lunar-textSecondary text-[11px]">Escolha claro, escuro ou seguir o sistema. Aplica imediatamente.</p>
+                    <RadioGroup
+                      value={formData.tema}
+                      onValueChange={(v: 'claro' | 'escuro' | 'sistema') => {
+                        setFormData(prev => ({ ...prev, tema: v }));
+                        savePreferences({ tema: v });
+                      }}
+                      className="grid grid-cols-1 sm:grid-cols-3 gap-3"
+                    >
+                      <div className="flex items-center gap-2">
+                        <RadioGroupItem id="tema-claro" value="claro" />
+                        <Label htmlFor="tema-claro">Claro</Label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <RadioGroupItem id="tema-escuro" value="escuro" />
+                        <Label htmlFor="tema-escuro">Escuro</Label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <RadioGroupItem id="tema-sistema" value="sistema" />
+                        <Label htmlFor="tema-sistema">Seguir o sistema</Label>
+                      </div>
+                    </RadioGroup>
                   </div>
 
                   <ThemeColorPicker
