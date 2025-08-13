@@ -20,7 +20,7 @@ export function OriginChartsSection({ originData, monthlyOriginData }: OriginCha
   };
 
   return (
-    <>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-stretch">
       {/* Origin Summary Table */}
       <Card className="rounded-lg ring-1 ring-lunar-border/60 shadow-brand bg-lunar-surface">
         <CardHeader className="pb-2">
@@ -64,10 +64,10 @@ export function OriginChartsSection({ originData, monthlyOriginData }: OriginCha
         </CardContent>
       </Card>
 
-      {/* Origin Timeline Chart - Full Width */}
-      <div className="col-span-full">
+      {/* Origin Timeline Chart */}
+      <div className="lg:col-span-2">
         <OriginTimelineChart monthlyOriginData={monthlyOriginData} />
       </div>
-    </>
+    </div>
   );
 }
