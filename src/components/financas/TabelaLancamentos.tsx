@@ -154,16 +154,16 @@ export default function TabelaLancamentos({
   const getStatusBadge = (status: StatusTransacao, onMarcarPago?: () => void) => {
     switch (status) {
       case 'Agendado':
-        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200 my-[2px] py-0">Agendado</Badge>;
+        return <Badge className="bg-primary/15 text-primary border-border my-[2px] py-0">Agendado</Badge>;
       case 'Faturado':
         return <div className="flex items-center gap-2">
-            <Badge className="bg-red-100 text-red-800 border-red-200">Faturado</Badge>
-            {onMarcarPago && <input type="checkbox" onChange={onMarcarPago} className="w-4 h-4 text-green-600 bg-muted border-border rounded focus:ring-green-500" title="Marcar como pago" />}
+            <Badge className="bg-lunar-error/20 text-lunar-error border-lunar-error/30">Faturado</Badge>
+            {onMarcarPago && <input type="checkbox" onChange={onMarcarPago} className="w-4 h-4 text-lunar-success bg-muted border-border rounded focus:ring-lunar-success" title="Marcar como pago" />}
           </div>;
       case 'Pago':
-        return <Badge className="bg-green-100 text-green-800 border-green-200 py-0 my-[2px]">Pago</Badge>;
+        return <Badge className="bg-lunar-success/20 text-lunar-success border-lunar-success/30 py-0 my-[2px]">Pago</Badge>;
       default:
-        return <Badge className="bg-gray-100 text-gray-800 border-gray-200">-</Badge>;
+        return <Badge className="bg-muted text-foreground border-border">-</Badge>;
     }
   };
   const itensDisponiveis = obterItensPorGrupo(grupoAtivo);
@@ -242,9 +242,9 @@ export default function TabelaLancamentos({
               })} className="w-full h-8 text-sm" />
               </td>
               <td className="px-4 py-3">
-                {opcoesNovaTransacao.cartaoCredito ? <span className="text-xs text-purple-600">
+                {opcoesNovaTransacao.cartaoCredito ? <span className="text-xs text-primary">
                     1/{opcoesNovaTransacao.numeroParcelas}
-                  </span> : <span className="text-xs text-gray-400">-</span>}
+                  </span> : <span className="text-xs text-muted-foreground">-</span>}
               </td>
               <td className="px-4 py-3">
                 <Input placeholder="Observações..." value={novaTransacao.observacoes} onChange={e => setNovaTransacao({
@@ -274,11 +274,11 @@ export default function TabelaLancamentos({
             {/* Lista de transações existentes */}
             {transacoes.length === 0 ? <tr>
                 <td colSpan={7} className="px-4 py-8 text-center">
-                  <div className="text-gray-400 mb-4">
+                  <div className="text-muted-foreground mb-4">
                     <Calendar className="h-12 w-12 mx-auto" />
                   </div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhuma transação encontrada</h3>
-                  <p className="text-gray-500">Use a linha acima para adicionar uma nova transação.</p>
+                  <h3 className="text-lg font-medium text-foreground mb-2">Nenhuma transação encontrada</h3>
+                  <p className="text-muted-foreground">Use a linha acima para adicionar uma nova transação.</p>
                 </td>
               </tr> : transacoes.map(transacao => <tr key={transacao.id} className="hover:bg-muted/50">
                   {editandoId === transacao.id ?
@@ -338,15 +338,15 @@ export default function TabelaLancamentos({
                     </> :
             // Modo de visualização
             <>
-                      <td className="px-4 text-sm text-gray-900 py-[2px]">
+                      <td className="px-4 text-sm text-foreground py-[2px]">
                         {formatarData(transacao.data_vencimento)}
                       </td>
-                      <td className="px-4 text-sm font-medium text-gray-900 py-[2px]">
+                      <td className="px-4 text-sm font-medium text-foreground py-[2px]">
                         {transacao.item.nome}
                       </td>
                      <td className="px-4 py-[2px]">
                         <div className="flex flex-col">
-                          <span className="text-sm font-medium text-gray-900">
+                          <span className="text-sm font-medium text-foreground">
                             {formatCurrency(transacao.valor)}
                           </span>
                           <div className="mt-1">
@@ -354,15 +354,15 @@ export default function TabelaLancamentos({
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 text-sm text-gray-500 py-[2px]">
-                        {transacao.parcelas || transacao.parcelaInfo ? <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                      <td className="px-4 text-sm text-muted-foreground py-[2px]">
+                        {transacao.parcelas || transacao.parcelaInfo ? <span className="text-xs bg-primary/15 text-primary px-2 py-1 rounded">
                             {transacao.parcelas?.atual || transacao.parcelaInfo?.atual || 1}/{transacao.parcelas?.total || transacao.parcelaInfo?.total || 1}
                           </span> : '-'}
                       </td>
-                      <td className="px-4 text-sm text-gray-500 py-[2px]">
+                      <td className="px-4 text-sm text-muted-foreground py-[2px]">
                         {transacao.observacoes || '-'}
                       </td>
-                     <td className="px-4 text-xs text-gray-500 py-[2px]">
+                     <td className="px-4 text-xs text-muted-foreground py-[2px]">
                        Status atualizado automaticamente
                      </td>
                      <td className="px-4 py-[2px]">

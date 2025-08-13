@@ -161,7 +161,7 @@ export default function ClientForm({ client, onSave, onCancel }: ClientFormProps
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancelar
         </Button>
-        <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white">
+        <Button type="submit">
           {client ? 'Atualizar' : 'Salvar'}
         </Button>
       </div>

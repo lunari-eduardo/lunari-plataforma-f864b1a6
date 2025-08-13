@@ -100,7 +100,7 @@ export function WorkflowHistoryTable({
       'Cancelado': 'bg-red-100 text-red-800',
       'Em Andamento': 'bg-yellow-100 text-yellow-800'
     };
-    return colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+    return colors[status as keyof typeof colors] || 'bg-muted text-foreground';
   };
   if (workflowData.length === 0) {
     return <div className="text-center py-8">
