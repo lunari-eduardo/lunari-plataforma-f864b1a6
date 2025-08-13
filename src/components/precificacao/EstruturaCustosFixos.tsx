@@ -187,7 +187,7 @@ export function EstruturaCustosFixos({
     }
   };
   return <Card>
-      <CardHeader className="bg-gray-50">
+      <CardHeader>
         <div className="flex justify-between items-center">
           <div>
             <CardTitle className="text-sm">Estrutura de Custos Fixos</CardTitle>
@@ -201,7 +201,7 @@ export function EstruturaCustosFixos({
           </div>
         </div>
       </CardHeader>
-      <CardContent className="bg-gray-50 px-[9px]">
+      <CardContent className="px-[9px]">
         <Tabs defaultValue="gastos-pessoais" className="w-full">
           <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 gap-1 h-auto p-1">
             <TabsTrigger value="gastos-pessoais" className="text-xs px-2 py-2 md:text-xs">
@@ -233,21 +233,21 @@ export function EstruturaCustosFixos({
             </div>
             
             {/* Linha de adição rápida */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+            <div className="bg-muted border border-border rounded-lg p-3 mb-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs text-blue-700">Descrição</Label>
+                  <Label className="text-xs text-muted-foreground">Descrição</Label>
                   <Input placeholder="Ex: Alimentação, Transporte..." value={novoGastoPessoal.descricao} onChange={e => setNovoGastoPessoal(prev => ({
                   ...prev,
                   descricao: e.target.value
-                }))} className="bg-white" />
+                }))} className="bg-card" />
                 </div>
                 <div>
-                  <Label className="text-xs text-blue-700">Valor</Label>
+                  <Label className="text-xs text-muted-foreground">Valor</Label>
                   <Input type="number" min="0" step="0.01" placeholder="0,00" value={novoGastoPessoal.valor} onChange={e => setNovoGastoPessoal(prev => ({
                   ...prev,
                   valor: e.target.value
-                }))} className="bg-white" />
+                }))} className="bg-card" />
                 </div>
               </div>
               <div className="mt-3">
@@ -262,13 +262,13 @@ export function EstruturaCustosFixos({
               <table className="w-full min-w-[500px] border-collapse">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left text-xs font-medium text-gray-600 pb-2 pr-4 w-40">Descrição</th>
-                    <th className="text-left text-xs font-medium text-gray-600 pb-2 pr-4 w-32">Valor</th>
-                    <th className="text-left text-xs font-medium text-gray-600 pb-2 w-12">Ações</th>
+                    <th className="text-left text-xs font-medium text-muted-foreground pb-2 pr-4 w-40">Descrição</th>
+                    <th className="text-left text-xs font-medium text-muted-foreground pb-2 pr-4 w-32">Valor</th>
+                    <th className="text-left text-xs font-medium text-muted-foreground pb-2 w-12">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {gastosPessoais.map(gasto => <tr key={gasto.id} className="border-b border-gray-100">
+                  {gastosPessoais.map(gasto => <tr key={gasto.id} className="border-b border-border">
                       <td className="pr-4 py-0">
                         <Input placeholder="Ex: Alimentação, Transporte..." value={gasto.descricao} onChange={e => atualizarGastoPessoal(gasto.id, 'descricao', e.target.value)} className="border-0 shadow-none focus-visible:ring-1 focus-visible:ring-offset-0" />
                       </td>
@@ -294,7 +294,7 @@ export function EstruturaCustosFixos({
                 <Input id="percentual-pro-labore" type="number" min="0" step="1" value={percentualProLabore} onChange={e => setPercentualProLabore(Number(e.target.value))} className="max-w-32" />
               </div>
               
-              <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+              <div className="bg-muted p-4 rounded-lg space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Gastos Pessoais:</span>
                   <span>R$ {totalGastosPessoais.toFixed(2)}</span>
@@ -326,21 +326,21 @@ export function EstruturaCustosFixos({
             </div>
             
             {/* Linha de adição rápida */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+            <div className="bg-muted border border-border rounded-lg p-3 mb-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs text-black">Descrição</Label>
+                  <Label className="text-xs text-foreground">Descrição</Label>
                   <Input placeholder="Ex: Aluguel, Energia, Internet..." value={novoCustoEstudio.descricao} onChange={e => setNovoCustoEstudio(prev => ({
                   ...prev,
                   descricao: e.target.value
-                }))} className="bg-white" />
+                }))} className="bg-card" />
                 </div>
                 <div>
-                  <Label className="text-xs text-black">Valor</Label>
+                  <Label className="text-xs text-foreground">Valor</Label>
                   <Input type="number" min="0" step="0.01" placeholder="0,00" value={novoCustoEstudio.valor} onChange={e => setNovoCustoEstudio(prev => ({
                   ...prev,
                   valor: e.target.value
-                }))} className="bg-white" />
+                }))} className="bg-card" />
                 </div>
               </div>
               <div className="mt-3">
@@ -355,13 +355,13 @@ export function EstruturaCustosFixos({
               <table className="w-full min-w-[500px] border-collapse">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left text-xs font-medium text-gray-600 pb-2 pr-4 w-40">Descrição</th>
-                    <th className="text-left text-xs font-medium text-gray-600 pb-2 pr-4 w-32">Valor</th>
-                    <th className="text-left text-xs font-medium text-gray-600 pb-2 w-12">Ações</th>
+                    <th className="text-left text-xs font-medium text-muted-foreground pb-2 pr-4 w-40">Descrição</th>
+                    <th className="text-left text-xs font-medium text-muted-foreground pb-2 pr-4 w-32">Valor</th>
+                    <th className="text-left text-xs font-medium text-muted-foreground pb-2 w-12">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {custosEstudio.map(custo => <tr key={custo.id} className="border-b border-gray-100">
+                  {custosEstudio.map(custo => <tr key={custo.id} className="border-b border-border">
                       <td className="pr-4 py-0">
                         <Input placeholder="Ex: Aluguel, Energia, Internet..." value={custo.descricao} onChange={e => atualizarCustoEstudio(custo.id, 'descricao', e.target.value)} className="border-0 shadow-none focus-visible:ring-1 focus-visible:ring-offset-0" />
                       </td>
@@ -393,31 +393,31 @@ export function EstruturaCustosFixos({
             
             
             {/* Formulário de adição rápida */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+            <div className="bg-muted border border-border rounded-lg p-3 mb-4">
               <div className="grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
                 <div>
-                  <Label className="text-xs text-black ">Nome</Label>
+                  <Label className="text-xs text-foreground ">Nome</Label>
                   <Input placeholder="Ex: Câmera Canon..." value={novoEquipamento.nome} onChange={e => setNovoEquipamento(prev => ({
                   ...prev,
                   nome: e.target.value
-                }))} className="bg-white" />
+                }))} className="bg-card" />
                 </div>
                 <div>
-                  <Label className="text-xs text-black">Valor Pago</Label>
+                  <Label className="text-xs text-foreground">Valor Pago</Label>
                   <Input type="number" min="0" step="0.01" placeholder="0,00" value={novoEquipamento.valorPago} onChange={e => setNovoEquipamento(prev => ({
                   ...prev,
                   valorPago: e.target.value
-                }))} className="bg-white" />
+                }))} className="bg-card" />
                 </div>
                 <div>
-                  <Label className="text-xs text-black">Data da Compra</Label>
+                  <Label className="text-xs text-foreground">Data da Compra</Label>
                   <Input type="date" value={novoEquipamento.dataCompra} onChange={e => setNovoEquipamento(prev => ({
                   ...prev,
                   dataCompra: e.target.value
                 }))} className="bg-white" />
                 </div>
                 <div>
-                  <Label className="text-xs text-black">Vida Útil (Anos)</Label>
+                  <Label className="text-xs text-foreground">Vida Útil (Anos)</Label>
                   <Input type="number" min="1" value={novoEquipamento.vidaUtil} onChange={e => setNovoEquipamento(prev => ({
                   ...prev,
                   vidaUtil: e.target.value
@@ -425,7 +425,7 @@ export function EstruturaCustosFixos({
                 </div>
                 <div>
                   <Label className="text-xs text-chart-expense ">Depreciação Mensal</Label>
-                  <div className="text-xs text-green-600 font-medium p-2 bg-white rounded border">
+                  <div className="text-xs text-green-600 font-medium p-2 bg-muted rounded border border-border">
                     R$ {novoEquipamento.valorPago && novoEquipamento.vidaUtil ? (parseFloat(novoEquipamento.valorPago) / (parseInt(novoEquipamento.vidaUtil) * 12)).toFixed(2) : '0,00'}
                   </div>
                 </div>
@@ -500,9 +500,9 @@ export function EstruturaCustosFixos({
                         <Input type="date" value={equipamento.dataCompra} onChange={e => atualizarEquipamento(equipamento.id, 'dataCompra', e.target.value)} />
                       </div>
                       
-                      <div className="bg-green-50 p-3 rounded-lg">
+                      <div className="bg-muted p-3 rounded-lg">
                         <div className="flex justify-between items-center">
-                          <span className="text-xs text-gray-600">Depreciação Mensal:</span>
+                          <span className="text-xs text-muted-foreground">Depreciação Mensal:</span>
                           <span className="text-sm text-green-600 font-medium">
                             R$ {(equipamento.valorPago / (equipamento.vidaUtil * 12)).toFixed(2)}
                           </span>

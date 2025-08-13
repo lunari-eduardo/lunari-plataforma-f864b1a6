@@ -135,11 +135,11 @@ export function CalculadoraServicos({
                   {/* Coluna Esquerda - Base de Cálculo */}
                   <div className="space-y-4 lg:order-1">
                     {/* Base de Cálculo - Horas */}
-                    <Card className="bg-neutral-50">
+                    <Card className="bg-card border border-border shadow-sm">
                       <CardHeader>
                         <CardTitle>Base de Cálculo - Horas</CardTitle>
                       </CardHeader>
-                      <CardContent className="space-y-4 bg-neutral-50 rounded-lg">
+                      <CardContent className="space-y-4">
                         <div className="grid grid-cols-2 gap-3">
                           <div>
                             <Label htmlFor="horas-disponiveis" className="text-sm">Horas disponíveis/dia</Label>
@@ -177,7 +177,7 @@ export function CalculadoraServicos({
                   {/* Coluna Direita - Produtos e Custos Extras */}
                   <div className="space-y-4 lg:order-2">
                     {/* Produtos Adicionais */}
-                    <Card className="bg-neutral-50">
+                    <Card className="bg-card border border-border shadow-sm">
                       <CardHeader>
                         <div className="flex justify-between items-center">
                           <CardTitle>Produtos Adicionais</CardTitle>
@@ -220,8 +220,8 @@ export function CalculadoraServicos({
                     </Card>
 
                     {/* Custos Adicionais do Projeto */}
-                    <Card className="bg-lunar-bg/50">
-                      <CardHeader className="bg-neutral-50 rounded-lg">
+                    <Card className="bg-card border border-border shadow-sm">
+                      <CardHeader>
                         <div className="flex justify-between items-center">
                           <CardTitle>Custos Adicionais do Projeto</CardTitle>
                           <Button onClick={adicionarCustoExtra} size="sm" variant="outline">
@@ -230,7 +230,7 @@ export function CalculadoraServicos({
                           </Button>
                         </div>
                       </CardHeader>
-                      <CardContent className="bg-neutral-50 rounded-lg">
+                      <CardContent>
                         <div className="space-y-3">
                           {custosExtras.length === 0 && <p className="text-sm text-lunar-textSecondary text-center py-4">
                               Nenhum custo extra adicionado
@@ -259,7 +259,7 @@ export function CalculadoraServicos({
                   
                   {/* Resumo e Precificação Final - Aparece por último em mobile */}
                   <div className="lg:col-span-2 lg:order-3 order-last">
-                    <Card className="bg-neutral-50">
+                    <Card className="bg-card border border-border shadow-sm">
                       <CardHeader>
                         <CardTitle>Resumo e Precificação Final</CardTitle>
                       </CardHeader>

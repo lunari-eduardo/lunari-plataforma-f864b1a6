@@ -201,7 +201,7 @@ export default function Pacotes({
   }, [produtos, getNomeProduto, adicionarProdutoAoPacote, removerProdutoDoPacote, formatarMoeda]);
   return <div className="mt-4 space-y-6">
       {/* Formulário Novo Pacote */}
-      <div className="bg-neutral-100 rounded-lg border border-neutral-200/60 p-4">
+      <div className="bg-muted rounded-lg border border-border p-4">
         <div className="max-w-4xl mx-auto">
           <div className="flex justify-center">
             <Collapsible open={novoPacoteAberto} onOpenChange={setNovoPacoteAberto} className="w-full">

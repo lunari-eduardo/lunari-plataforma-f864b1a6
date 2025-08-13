@@ -148,13 +148,13 @@ export default function Configuracoes() {
   }, [produtos]);
   return <ScrollArea className="h-[calc(100vh-120px)]">
       <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 space-y-6">
-      <Card className="bg-neutral-50">
-        <CardHeader className="pb-3 bg-stone-50">
+      <Card className="bg-card border border-border shadow-sm">
+        <CardHeader className="pb-3">
           <CardDescription>
             Configure os parâmetros principais de funcionamento do seu sistema.
           </CardDescription>
         </CardHeader>
-        <CardContent className="my-[8px] py-[6px] bg-neutral-50">
+        <CardContent className="my-[8px] py-[6px]">
           <Tabs value={tabAtiva} onValueChange={setTabAtiva} className="w-full">
             <TabsList className="grid grid-cols-5 mb-2">
               <TabsTrigger value="categorias" className="flex items-center gap-1.5">

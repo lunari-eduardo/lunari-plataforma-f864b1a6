@@ -109,7 +109,7 @@ export default function FluxoTrabalho({
               <Input id="etapa-cor" type="color" value={novaEtapa.cor} onChange={e => setNovaEtapa({
               ...novaEtapa,
               cor: e.target.value
-            })} className="w-20 h-7 bg-neutral-50" />
+            })} className="w-20 h-7 bg-muted" />
             </div>
           </div>
         </div>

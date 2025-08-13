@@ -75,13 +75,13 @@ export function MetasIndicadores({
   const metaFaturamentoMensal = metaFaturamentoAnual / 12;
   const metaLucroAnual = metaFaturamentoAnual - faturamentoMinimoAnual;
   return <Card>
-      <CardHeader className="bg-gray-50">
+      <CardHeader>
         <CardTitle className="text-lg text-lunar-success">Metas e Indicadores de Lucro</CardTitle>
         <p className="text-sm text-lunar-textSecondary">
           Defina suas metas financeiras e acompanhe os indicadores de lucro.
         </p>
       </CardHeader>
-      <CardContent className="bg-gray-50">
+      <CardContent>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Coluna Esquerda - Definição de Metas */}
           <div>
@@ -95,7 +95,7 @@ export function MetasIndicadores({
           </div>
 
           {/* Coluna Direita - Indicadores Financeiros */}
-          <div className="bg-gray-50">
+          <div>
             <h3 className="font-semibold mb-4">Indicadores Financeiros</h3>
             <div className="space-y-4">
               <div className="flex justify-between">
