@@ -42,6 +42,7 @@
     --input: 0 0% 100%;
     --primary: 210 84% 56%;
     --primary-foreground: 0 0% 100%;
+    --lunar-accent-foreground: 0 0% 100%;
     --secondary: 210 33% 98%;
     --secondary-foreground: 0 0% 23%;
     --accent: 210 33% 98%;
@@ -115,7 +116,8 @@
 
   /* Lunar Button */
   .btn-lunar {
-    @apply bg-lunar-accent text-lunar-text rounded-md px-3 py-1.5 text-xs font-medium transition-all duration-150 ease-out;
+    @apply bg-lunar-accent rounded-md px-3 py-1.5 text-xs font-medium transition-all duration-150 ease-out;
+    color: hsl(var(--lunar-accent-foreground));
     box-shadow: 0 1px 3px rgba(203, 169, 119, 0.2);
   }
 

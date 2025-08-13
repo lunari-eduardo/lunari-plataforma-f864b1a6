@@ -29,6 +29,8 @@ export interface UserPreferences {
   formatoData: 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'YYYY-MM-DD';
   // Aparência
   tema: 'claro' | 'escuro' | 'sistema';
+  temaCor: 'azul' | 'verde' | 'terracota' | 'rosa' | 'cinza' | 'lilas';
+  temaCorHex: string;
   // Notificações
   notificacoesEmail: boolean;
   notificacoesWhatsapp: boolean;
@@ -64,6 +66,8 @@ export const DEFAULT_USER_PREFERENCES: Omit<UserPreferences, 'id' | 'createdAt' 
   moedaPadrao: 'BRL',
   formatoData: 'DD/MM/YYYY',
   tema: 'sistema',
+  temaCor: 'azul',
+  temaCorHex: '#1c4274',
   notificacoesEmail: true,
   notificacoesWhatsapp: true,
   habilitarAutomacoesWorkflow: true,

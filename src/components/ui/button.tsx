@@ -10,7 +10,7 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-lunar-accent text-lunar-text shadow-sm",
+        default: "bg-lunar-accent text-[hsl(var(--lunar-accent-foreground))] shadow-sm",
         destructive: "bg-lunar-error text-white shadow-sm",
         outline: "border border-lunar-border bg-lunar-surface text-lunar-text",
         secondary: "bg-lunar-surface text-lunar-textSecondary shadow-sm",

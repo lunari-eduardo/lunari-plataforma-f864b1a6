@@ -15,15 +15,17 @@ import {
   FORMATOS_DATA_OPCOES 
 } from '@/utils/userUtils';
 import { UserPreferences } from '@/types/userProfile';
+import ThemeColorPicker from '@/components/preferences/ThemeColorPicker';
+import { Button } from '@/components/ui/button';
 
 export default function Preferencias() {
   const { preferences, savePreferences, getPreferencesOrDefault } = useUserPreferences();
   const [formData, setFormData] = useState<UserPreferences>(getPreferencesOrDefault());
 useEffect(() => {
   if (preferences) {
-    setFormData(preferences);
+    setFormData({ ...getPreferencesOrDefault(), ...preferences });
   }
-}, [preferences]);
+}, [preferences, getPreferencesOrDefault]);
 
   const handleSelectChange = (field: keyof UserPreferences, value: string) => {
     const updatedData = { ...formData, [field]: value };
@@ -49,9 +51,10 @@ useEffect(() => {
           <Card className="mb-6">
             <CardContent className="p-6">
               <Tabs defaultValue="gerais" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
+                <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="gerais">Preferências Gerais</TabsTrigger>
                   <TabsTrigger value="notificacoes">Notificações</TabsTrigger>
+                  <TabsTrigger value="aparencia">Aparência</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="gerais" className="space-y-6 mt-6">
@@ -279,6 +282,28 @@ useEffect(() => {
                         </div>
                       </div>
                     </div>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="aparencia" className="space-y-6 mt-6">
+                  <div className="space-y-2">
+                    <h3 className="text-lg font-medium">Aparência</h3>
+                    <p className="text-lunar-textSecondary text-sm">Escolha a cor do sistema para botões, bordas e gráficos</p>
+                  </div>
+
+                  <ThemeColorPicker
+                    valueKey={formData.temaCor as any}
+                    valueHex={formData.temaCorHex}
+                    onChange={({ temaCor, temaCorHex }) => {
+                      setFormData(prev => ({ ...prev, temaCor, temaCorHex }));
+                      savePreferences({ temaCor, temaCorHex });
+                    }}
+                  />
+
+                  <div className="flex items-center gap-3">
+                    <Button variant="default">Botão padrão</Button>
+                    <button className="btn-lunar">Botão lunar</button>
+                    <div className="h-6 w-6 rounded-full" style={{ backgroundColor: 'hsl(var(--ring))' }} title="Amostra do ring" />
                   </div>
                 </TabsContent>
               </Tabs>
