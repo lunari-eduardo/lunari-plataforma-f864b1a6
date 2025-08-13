@@ -58,6 +58,51 @@
     --chart-quaternary: 190 94% 42%;
     --chart-quinary: 230 89% 65%;
     --chart-revenue: 210 84% 56%;
+}
+}
+
+@layer base {
+  .dark {
+    --lunar-bg: 222 20% 10%;
+    --lunar-surface: 222 15% 14%;
+    --lunar-text: 0 0% 96%;
+    --lunar-textSecondary: 0 0% 70%;
+    --lunar-border: 222 12% 22%;
+    --lunar-accent: var(--primary);
+    --lunar-accentHover: var(--primary);
+    --lunar-error: 12 74% 55%;
+    --lunar-success: 150 53% 55%;
+    --lunar-warning: 42 35% 62%;
+
+    /* Shadcn-compatible variables for dark mode */
+    --background: 222 20% 10%;
+    --foreground: 0 0% 96%;
+    --muted: 222 15% 16%;
+    --muted-foreground: 0 0% 70%;
+    --popover: 222 15% 14%;
+    --popover-foreground: 0 0% 96%;
+    --card: 222 15% 14%;
+    --card-foreground: 0 0% 96%;
+    --border: 222 12% 22%;
+    --input: 222 15% 14%;
+    --primary: var(--lunar-accent);
+    --primary-foreground: 0 0% 100%;
+    --lunar-accent-foreground: 0 0% 100%;
+    --secondary: 222 15% 16%;
+    --secondary-foreground: 0 0% 96%;
+    --accent: 222 15% 16%;
+    --accent-foreground: 0 0% 96%;
+    --destructive: 12 74% 45%;
+    --destructive-foreground: 0 0% 100%;
+    --ring: var(--lunar-accent);
+
+    /* Charts */
+    --chart-primary: var(--primary);
+    --chart-secondary: 217 35% 60%;
+    --chart-tertiary: 200 50% 58%;
+    --chart-quaternary: 190 45% 52%;
+    --chart-quinary: 230 40% 65%;
+    --chart-revenue: var(--primary);
   }
 }
 

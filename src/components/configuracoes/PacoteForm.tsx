@@ -160,14 +160,14 @@ export default function PacoteForm({
       </div>
       
       {/* Seção de Produtos Incluídos */}
-      <div className="p-4 bg-gray-50 rounded-lg">
+      <div className="p-4 bg-muted rounded-lg">
         <h4 className="text-sm font-medium mb-3 text-center">Produtos Incluídos no Pacote</h4>
         
         <div className="space-y-2">
-          {formData.produtosIncluidos.map(produtoIncluido => <div key={produtoIncluido.produtoId} className="flex items-center gap-2 p-2 bg-white rounded border">
+          {formData.produtosIncluidos.map(produtoIncluido => <div key={produtoIncluido.produtoId} className="flex items-center gap-2 p-2 bg-card rounded border border-border">
               <span className="flex-1 text-sm">{getNomeProduto(produtoIncluido.produtoId)}</span>
               <div className="flex items-center gap-2">
-                <label className="text-xs text-gray-500">Qtd:</label>
+                <label className="text-xs text-muted-foreground">Qtd:</label>
                 <Input type="number" min="1" value={produtoIncluido.quantidade} onChange={e => atualizarQuantidadeProduto(produtoIncluido.produtoId, Number(e.target.value))} className="w-16 h-7 text-xs" />
                 <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => removerProdutoIncluido(produtoIncluido.produtoId)}>
                   <X className="h-3 w-3" />

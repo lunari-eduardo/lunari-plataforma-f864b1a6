@@ -102,7 +102,7 @@ export default function LancamentosTab({
   const infoGrupo = getInfoPorGrupo(activeSubTab);
   return <div className="space-y-6">
       {/* Linha 1: Barra de Totais */}
-      <div className="rounded-lg border border-gray-200 p-4 shadow-sm bg-lunar-bg">
+      <div className="rounded-lg border border-border p-4 shadow-sm bg-lunar-bg">
         <div className="flex flex-wrap items-center gap-6 text-sm">
           <div className="flex items-center gap-2">
             <span className="font-medium text-gray-700">Total:</span>
@@ -132,20 +132,20 @@ export default function LancamentosTab({
         {!isMobile && <div className="flex items-center justify-between">
             {/* Grupo da Esquerda: Sub-abas */}
             <Tabs value={activeSubTab} onValueChange={value => setActiveSubTab(value as GrupoPrincipal)}>
-              <TabsList className="flex h-10 p-1 bg-white border border-gray-200 rounded-lg py-0 px-0">
-                <TabsTrigger value="Despesa Fixa" className="flex items-center gap-2 px-4 data-[state=active]:bg-gray-50 data-[state=active]:text-red-600 py-[7px] text-xs">
+              <TabsList className="flex h-10 p-1 bg-card border border-border rounded-lg py-0 px-0">
+                <TabsTrigger value="Despesa Fixa" className="flex items-center gap-2 px-4 data-[state=active]:bg-muted data-[state=active]:text-red-600 py-[7px] text-xs">
                   <Receipt className="h-4 w-4" />
                   Fixas
                 </TabsTrigger>
-                <TabsTrigger value="Despesa Variável" className="flex items-center gap-2 px-4 data-[state=active]:bg-gray-50 data-[state=active]:text-orange-600 py-[5px] text-xs">
+                <TabsTrigger value="Despesa Variável" className="flex items-center gap-2 px-4 data-[state=active]:bg-muted data-[state=active]:text-orange-600 py-[5px] text-xs">
                   <CreditCard className="h-4 w-4" />
                   Variáveis
                 </TabsTrigger>
-                <TabsTrigger value="Investimento" className="flex items-center gap-2 px-4 data-[state=active]:bg-gray-50 data-[state=active]:text-purple-600 py-[5px] text-xs">
+                <TabsTrigger value="Investimento" className="flex items-center gap-2 px-4 data-[state=active]:bg-muted data-[state=active]:text-purple-600 py-[5px] text-xs">
                   <TrendingUp className="h-4 w-4" />
                   Investimentos
                 </TabsTrigger>
-                <TabsTrigger value="Receita Não Operacional" className="flex items-center gap-2 px-4 data-[state=active]:bg-gray-50 data-[state=active]:text-green-600 py-[5px] text-xs">
+                <TabsTrigger value="Receita Não Operacional" className="flex items-center gap-2 px-4 data-[state=active]:bg-muted data-[state=active]:text-green-600 py-[5px] text-xs">
                   <PiggyBank className="h-4 w-4" />
                   Receitas
                 </TabsTrigger>
@@ -153,7 +153,7 @@ export default function LancamentosTab({
             </Tabs>
 
             {/* Grupo Central: Seletor de Mês/Ano */}
-            <div className="flex items-center bg-white rounded-lg border border-gray-200 p-2 shadow-sm py-[2px] px-0">
+            <div className="flex items-center bg-card rounded-lg border border-border p-2 shadow-sm py-[2px] px-0">
               <Button variant="ghost" size="sm" onClick={() => navegarMes('anterior')} className="h-8 w-8 p-0">
                 <ChevronLeft className="h-4 w-4" />
               </Button>
@@ -194,7 +194,7 @@ export default function LancamentosTab({
             </div>
 
             {/* Grupo da Direita: Botão Novo Lançamento */}
-            <Button onClick={() => setModalNovoLancamentoAberto(true)} className="bg-blue-600 hover:bg-blue-700 text-white text-xs py-0">
+            <Button onClick={() => setModalNovoLancamentoAberto(true)} className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs py-0">
               <Plus className="h-4 w-4 mr-2" />
               Novo Lançamento
             </Button>
@@ -204,23 +204,23 @@ export default function LancamentosTab({
         {isMobile && <div className="space-y-4">
             {/* Sub-abas para Mobile */}
             <Tabs value={activeSubTab} onValueChange={value => setActiveSubTab(value as GrupoPrincipal)}>
-              <TabsList className="grid grid-cols-2 h-10 p-1 bg-white border border-gray-200 rounded-lg w-full py-0">
-                <TabsTrigger value="Despesa Fixa" className="flex items-center gap-1 text-xs data-[state=active]:bg-gray-50 data-[state=active]:text-red-600 px-0 py-[2px]">
+              <TabsList className="grid grid-cols-2 h-10 p-1 bg-card border border-border rounded-lg w/full py-0">
+                <TabsTrigger value="Despesa Fixa" className="flex items-center gap-1 text-xs data-[state=active]:bg-muted data-[state=active]:text-red-600 px-0 py-[2px]">
                   <Receipt className="h-3 w-3" />
                   Fixas
                 </TabsTrigger>
-                <TabsTrigger value="Despesa Variável" className="flex items-center gap-1 text-xs data-[state=active]:bg-gray-50 data-[state=active]:text-orange-600 py-[3px] px-0">
+                <TabsTrigger value="Despesa Variável" className="flex items-center gap-1 text-xs data-[state=active]:bg-muted data-[state=active]:text-orange-600 py-[3px] px-0">
                   <CreditCard className="h-3 w-3" />
                   Variáveis
                 </TabsTrigger>
               </TabsList>
               
-              <TabsList className="grid grid-cols-2 h-10 p-1 bg-white border border-gray-200 rounded-lg w-full py-0 px-[4px]">
-                <TabsTrigger value="Investimento" className="flex items-center gap-1 text-xs data-[state=active]:bg-gray-50 data-[state=active]:text-purple-600 px-0 py-[2px]">
+              <TabsList className="grid grid-cols-2 h-10 p-1 bg-card border border-border rounded-lg w-full py-0 px-[4px]">
+                <TabsTrigger value="Investimento" className="flex items-center gap-1 text-xs data-[state=active]:bg-muted data-[state=active]:text-purple-600 px-0 py-[2px]">
                   <TrendingUp className="h-3 w-3" />
                   Investimentos
                 </TabsTrigger>
-                <TabsTrigger value="Receita Não Operacional" className="flex items-center gap-1 text-xs data-[state=active]:bg-gray-50 data-[state=active]:text-green-600 py-[2px] px-0">
+                <TabsTrigger value="Receita Não Operacional" className="flex items-center gap-1 text-xs data-[state=active]:bg-muted data-[state=active]:text-green-600 py-[2px] px-0">
                   <PiggyBank className="h-3 w-3" />
                   Receitas
                 </TabsTrigger>
@@ -230,7 +230,7 @@ export default function LancamentosTab({
             {/* Seletor de Mês/Ano e Botão de Novo Lançamento para Mobile */}
             <div className="flex items-center justify-between gap-3">
               {/* Seletor de Mês/Ano */}
-              <div className="flex items-center bg-white rounded-lg border border-gray-200 p-2 shadow-sm py-[2px] px-[24px] mx-0">
+              <div className="flex items-center bg-card rounded-lg border border-border p-2 shadow-sm py-[2px] px-[24px] mx-0">
                 <Button variant="ghost" size="sm" onClick={() => navegarMes('anterior')} className="h-8 w-8 p-0">
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
@@ -271,7 +271,7 @@ export default function LancamentosTab({
               </div>
 
               {/* Botão de Novo Lançamento Compacto */}
-              <Button onClick={() => setModalNovoLancamentoAberto(true)} className="bg-blue-600 hover:bg-blue-700 text-white h-8 px-3" size="sm">
+              <Button onClick={() => setModalNovoLancamentoAberto(true)} className="bg-primary hover:bg-primary/90 text-primary-foreground h-8 px-3" size="sm">
                 <Plus className="h-4 w-4" />
               </Button>
             </div>

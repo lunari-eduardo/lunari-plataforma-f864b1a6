@@ -905,11 +905,11 @@ return <td className={`
 
       {/* Navigation Buttons with Tailwind's built-in pulse animation */}
       {maxScroll > 0 && <div className="fixed bottom-20 md:bottom-8 left-1/2 transform -translate-x-1/2 z-10 flex items-center gap-6">
-          <Button variant="ghost" size="icon" onMouseDown={() => startContinuousScroll('left')} onMouseUp={stopContinuousScroll} onMouseLeave={stopContinuousScroll} onTouchStart={() => startContinuousScroll('left')} onTouchEnd={stopContinuousScroll} disabled={scrollPercent <= 1} className={`h-12 w-12 rounded-full bg-white/40 backdrop-blur-sm shadow-lg border border-gray-200/50 hover:bg-white/60 transition-all duration-300 ease-out hover:scale-110 active:scale-95 disabled:opacity-30 ${scrollPercent <= 1 ? '' : 'animate-pulse'}`}>
+          <Button variant="ghost" size="icon" onMouseDown={() => startContinuousScroll('left')} onMouseUp={stopContinuousScroll} onMouseLeave={stopContinuousScroll} onTouchStart={() => startContinuousScroll('left')} onTouchEnd={stopContinuousScroll} disabled={scrollPercent <= 1} className={`h-12 w-12 rounded-full bg-card/60 backdrop-blur-sm shadow-lg border border-border/50 hover:bg-card/80 transition-all duration-300 ease-out hover:scale-110 active:scale-95 disabled:opacity-30 ${scrollPercent <= 1 ? '' : 'animate-pulse'}`}>
             <ChevronLeft className="h-5 w-5" />
           </Button>
           
-          <Button variant="ghost" size="icon" onMouseDown={() => startContinuousScroll('right')} onMouseUp={stopContinuousScroll} onMouseLeave={stopContinuousScroll} onTouchStart={() => startContinuousScroll('right')} onTouchEnd={stopContinuousScroll} disabled={scrollPercent >= 99} className={`h-12 w-12 rounded-full bg-white/40 backdrop-blur-sm shadow-lg border border-gray-200/50 hover:bg-white/60 transition-all duration-300 ease-out hover:scale-110 active:scale-95 disabled:opacity-30 ${scrollPercent >= 99 ? '' : 'animate-pulse'}`}>
+          <Button variant="ghost" size="icon" onMouseDown={() => startContinuousScroll('right')} onMouseUp={stopContinuousScroll} onMouseLeave={stopContinuousScroll} onTouchStart={() => startContinuousScroll('right')} onTouchEnd={stopContinuousScroll} disabled={scrollPercent >= 99} className={`h-12 w-12 rounded-full bg-card/60 backdrop-blur-sm shadow-lg border border-border/50 hover:bg-card/80 transition-all duration-300 ease-out hover:scale-110 active:scale-95 disabled:opacity-30 ${scrollPercent >= 99 ? '' : 'animate-pulse'}`}>
             <ChevronRight className="h-5 w-5" />
           </Button>
         </div>}

@@ -90,7 +90,7 @@ const TimeInput = React.forwardRef<HTMLInputElement, TimeInputProps>(
         placeholder={placeholder}
         maxLength={5}
         className={cn(
-          "w-full text-xs bg-white border border-blue-300 rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-500",
+          "w-full text-xs bg-card border border-border rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-ring",
           className
         )}
         {...props}

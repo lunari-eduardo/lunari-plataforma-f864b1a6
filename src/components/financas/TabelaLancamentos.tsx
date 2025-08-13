@@ -158,7 +158,7 @@ export default function TabelaLancamentos({
       case 'Faturado':
         return <div className="flex items-center gap-2">
             <Badge className="bg-red-100 text-red-800 border-red-200">Faturado</Badge>
-            {onMarcarPago && <input type="checkbox" onChange={onMarcarPago} className="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500" title="Marcar como pago" />}
+            {onMarcarPago && <input type="checkbox" onChange={onMarcarPago} className="w-4 h-4 text-green-600 bg-muted border-border rounded focus:ring-green-500" title="Marcar como pago" />}
           </div>;
       case 'Pago':
         return <Badge className="bg-green-100 text-green-800 border-green-200 py-0 my-[2px]">Pago</Badge>;
@@ -183,35 +183,35 @@ export default function TabelaLancamentos({
         return 'bg-blue-50 border-blue-200';
     }
   };
-  return <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
+  return <div className="bg-card rounded-lg border border-border overflow-hidden shadow-sm">
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gray-50 border-b border-gray-200">
+          <thead className="bg-muted border-b border-border">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Data
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Descrição
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Valor
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Parcela
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Observações
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Opções
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Ações
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-card divide-y divide-border">
             {/* Linha para nova transação */}
             <tr className={`${getCorPorGrupo(grupoAtivo)} border-b`}>
               <td className="px-4 py-3">
@@ -280,7 +280,7 @@ export default function TabelaLancamentos({
                   <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhuma transação encontrada</h3>
                   <p className="text-gray-500">Use a linha acima para adicionar uma nova transação.</p>
                 </td>
-              </tr> : transacoes.map(transacao => <tr key={transacao.id} className="hover:bg-gray-50">
+              </tr> : transacoes.map(transacao => <tr key={transacao.id} className="hover:bg-muted/50">
                   {editandoId === transacao.id ?
             // Modo de edição
             <>

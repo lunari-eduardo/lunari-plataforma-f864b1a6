@@ -91,13 +91,13 @@ export default function Financas() {
     }
   };
   const infoTipo = getInfoPorTipo(activeSubTab);
-  return <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
+  return <div className="min-h-screen bg-gradient-to-br from-background to-card">
       <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 p-2 sm:p-4 lg:p-6 space-y-4 sm:space-y-6 bg-lunar-bg py-0 my-[3px]">
         {/* Header Simplificado */}
         
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3 h-10 p-1 text-sm bg-white border border-gray-200">
+          <TabsList className="grid w-full grid-cols-3 h-10 p-1 text-sm bg-card border border-border">
             <TabsTrigger value="resumo" className="text-sm py-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-b-2 data-[state=active]:border-blue-500">
               Resumo
             </TabsTrigger>
@@ -117,7 +117,7 @@ export default function Financas() {
             <div className="space-y-6">
               {/* Seletor de Mês Centralizado */}
               <div className="flex justify-center">
-                <div className="flex items-center bg-white rounded-lg border border-gray-200 p-2 shadow-sm">
+                <div className="flex items-center bg-card rounded-lg border border-border p-2 shadow-sm">
                   <Button variant="ghost" size="sm" onClick={() => navegarMes('anterior')} className="h-8 w-8 p-0">
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
@@ -159,7 +159,7 @@ export default function Financas() {
               </div>
 
               {/* Barra de Totais Atualizada (sem "faturado") */}
-              {metricas && <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+              {metricas && <div className="bg-card rounded-lg border border-border p-4 shadow-sm">
                   <div className="flex flex-wrap items-center gap-6 text-sm">
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-gray-700">Total:</span>

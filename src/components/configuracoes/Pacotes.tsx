@@ -244,7 +244,7 @@ export default function Pacotes({
         </div>
         
         {/* Barra de Filtros */}
-        <div className="bg-gray-50 p-4 rounded-lg mb-4 py-[10px]">
+        <div className="bg-muted p-4 rounded-lg mb-4 py-[10px]">
           <div className="flex items-center gap-2 mb-3">
             <Filter className="h-3 w-3" />
             <span className="font-medium text-xs">Filtros</span>
@@ -297,16 +297,16 @@ export default function Pacotes({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {pacotesFiltrados.map(pacote => <TableRow key={pacote.id} className="hover:bg-gray-50/70">
+              {pacotesFiltrados.map(pacote => <TableRow key={pacote.id} className="hover:bg-muted/60">
                   {/* Nome - Editável */}
                   <TableCell className="p-2">
-                    <Input value={pacote.nome} onChange={e => atualizarPacote(pacote.id, 'nome', e.target.value)} className="h-7 text-xs border-0 bg-transparent hover:bg-gray-50 focus:bg-white focus:border-gray-200" />
+                    <Input value={pacote.nome} onChange={e => atualizarPacote(pacote.id, 'nome', e.target.value)} className="h-7 text-xs border-0 bg-transparent hover:bg-muted/50 focus:bg-card focus:border-border" />
                   </TableCell>
                   
                   {/* Categoria - Seletor */}
                   <TableCell className="p-2">
                     <Select value={pacote.categoria_id} onValueChange={value => atualizarPacote(pacote.id, 'categoria_id', value)}>
-                      <SelectTrigger className="h-7 text-xs border-0 bg-transparent hover:bg-gray-50 focus:bg-white focus:border-gray-200">
+                      <SelectTrigger className="h-7 text-xs border-0 bg-transparent hover:bg-muted/50 focus:bg-card focus:border-border">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -319,12 +319,12 @@ export default function Pacotes({
                   
                   {/* Valor Base - Editável */}
                   <TableCell className="p-2">
-                    <Input type="number" value={pacote.valor_base} onChange={e => atualizarPacote(pacote.id, 'valor_base', parseFloat(e.target.value) || 0)} className="h-7 text-xs border-0 bg-transparent hover:bg-gray-50 focus:bg-white focus:border-gray-200" />
+                    <Input type="number" value={pacote.valor_base} onChange={e => atualizarPacote(pacote.id, 'valor_base', parseFloat(e.target.value) || 0)} className="h-7 text-xs border-0 bg-transparent hover:bg-muted/50 focus:bg-card focus:border-border" />
                   </TableCell>
                   
                   {/* Valor Foto Extra - Editável apenas no modelo fixo */}
                   <TableCell className="p-2">
-                    {isFixedPricing ? <Input type="number" value={pacote.valor_foto_extra} onChange={e => atualizarPacote(pacote.id, 'valor_foto_extra', parseFloat(e.target.value) || 0)} className="h-7 text-xs border-0 bg-transparent hover:bg-gray-50 focus:bg-white focus:border-gray-200" /> : <div className="h-7 flex items-center text-xs text-muted-foreground px-2">
+                    {isFixedPricing ? <Input type="number" value={pacote.valor_foto_extra} onChange={e => atualizarPacote(pacote.id, 'valor_foto_extra', parseFloat(e.target.value) || 0)} className="h-7 text-xs border-0 bg-transparent hover:bg-muted/50 focus:bg-card focus:border-border" /> : <div className="h-7 flex items-center text-xs text-muted-foreground px-2">
                         {configPrecificacao.modelo === 'global' ? 'Tabela Global' : 'Por Categoria'}
                       </div>}
                   </TableCell>

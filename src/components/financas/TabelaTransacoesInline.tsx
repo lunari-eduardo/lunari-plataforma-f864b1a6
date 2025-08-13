@@ -157,7 +157,7 @@ export default function TabelaTransacoesInline({
         <div className="flex justify-end">
           <Button 
             onClick={handleAdicionarNova}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground"
           >
             <Plus className="h-4 w-4 mr-2" />
             Nova {tipo === 'receita_nao_operacional' ? 'Receita' : 'Despesa'}
@@ -166,22 +166,22 @@ export default function TabelaTransacoesInline({
       )}
 
       {/* Tabela de transações */}
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+      <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow className="bg-gray-50">
-                <TableHead className="font-semibold text-gray-700 text-sm p-3">Data</TableHead>
-                <TableHead className="font-semibold text-gray-700 text-sm p-3">Descrição</TableHead>
-                <TableHead className="font-semibold text-gray-700 text-sm p-3">Categoria</TableHead>
-                <TableHead className="font-semibold text-gray-700 text-sm p-3">Valor</TableHead>
-                <TableHead className="font-semibold text-gray-700 text-sm p-3 hidden sm:table-cell">Parcelas</TableHead>
-                <TableHead className="font-semibold text-gray-700 text-sm p-3">Status</TableHead>
+              <TableRow className="bg-muted">
+                <TableHead className="font-semibold text-foreground text-sm p-3">Data</TableHead>
+                <TableHead className="font-semibold text-foreground text-sm p-3">Descrição</TableHead>
+                <TableHead className="font-semibold text-foreground text-sm p-3">Categoria</TableHead>
+                <TableHead className="font-semibold text-foreground text-sm p-3">Valor</TableHead>
+                <TableHead className="font-semibold text-foreground text-sm p-3 hidden sm:table-cell">Parcelas</TableHead>
+                <TableHead className="font-semibold text-foreground text-sm p-3">Status</TableHead>
                 {tipo === 'despesa_fixa' && (
-                  <TableHead className="font-semibold text-gray-700 text-sm p-3 hidden lg:table-cell">Recorrente</TableHead>
+                  <TableHead className="font-semibold text-foreground text-sm p-3 hidden lg:table-cell">Recorrente</TableHead>
                 )}
-                <TableHead className="font-semibold text-gray-700 text-sm p-3 hidden lg:table-cell">Obs.</TableHead>
-                <TableHead className="font-semibold text-gray-700 text-sm p-3 text-center w-20">Ações</TableHead>
+                <TableHead className="font-semibold text-foreground text-sm p-3 hidden lg:table-cell">Obs.</TableHead>
+                <TableHead className="font-semibold text-foreground text-sm p-3 text-center w-20">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -293,7 +293,7 @@ export default function TabelaTransacoesInline({
 
               {/* Transações Existentes */}
               {transacoesOrdenadas.map(transacao => (
-                <TableRow key={transacao.id} className="hover:bg-gray-50 transition-colors">
+                <TableRow key={transacao.id} className="hover:bg-muted/50 transition-colors">
                   <TableCell className="p-3">
                     {editandoId === transacao.id ? (
                       <Input
@@ -343,7 +343,7 @@ export default function TabelaTransacoesInline({
                         </SelectContent>
                       </Select>
                     ) : (
-                      <span className="text-sm text-gray-600">
+                      <span className="text-sm text-muted-foreground">
                         {subcategorias.find(s => s.id === transacao.subcategoriaId)?.nome}
                       </span>
                     )}

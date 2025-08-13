@@ -68,7 +68,7 @@ export default function ComboboxDescricao({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0 bg-white border border-gray-200 shadow-lg z-50">
+      <PopoverContent className="w-full p-0 bg-popover border border-border shadow-lg z-50">
         <Command>
           <CommandInput
             placeholder="Digite para buscar ou criar nova descrição..."
@@ -84,7 +84,7 @@ export default function ComboboxDescricao({
                     key={descricao}
                     value={descricao}
                     onSelect={() => handleSelect(descricao)}
-                    className="cursor-pointer hover:bg-gray-50"
+                    className="cursor-pointer hover:bg-muted"
                   >
                     <Check
                       className={cn(
@@ -97,7 +97,7 @@ export default function ComboboxDescricao({
                 ))}
               </CommandGroup>
             ) : (
-              <CommandEmpty className="py-6 text-center text-sm text-gray-500">
+              <CommandEmpty className="py-6 text-center text-sm text-muted-foreground">
                 {inputValue 
                   ? `Pressione Enter para criar "${inputValue}"`
                   : "Nenhuma descrição encontrada."
