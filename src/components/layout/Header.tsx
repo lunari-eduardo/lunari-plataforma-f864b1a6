@@ -37,7 +37,7 @@ export default function Header() {
         <Button variant="ghost" size="icon" className="relative h-8 w-8 hover:bg-lunar-surface/50">
           <Bell className="h-3.5 w-3.5" />
           {notificationCount > 0 && (
-            <span className="absolute -top-1 -right-1 bg-lunar-error text-white text-2xs rounded-full h-4 w-4 flex items-center justify-center font-medium">
+            <span className="absolute -top-1 -right-1 bg-lunar-error text-primary-foreground text-2xs rounded-full h-4 w-4 flex items-center justify-center font-medium">
               {notificationCount}
             </span>
           )}

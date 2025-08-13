@@ -198,11 +198,11 @@ export default function AppointmentDetails({
                   className={`flex-1 text-xs h-8 ${
                     formData.status === status.value
                       ? status.value === 'a confirmar'
-                        ? 'bg-orange-500 hover:bg-orange-600 text-white border-orange-500'
-                        : 'bg-green-500 hover:bg-green-600 text-white border-green-500'
+                        ? 'bg-lunar-error text-primary-foreground border-lunar-error hover:opacity-90'
+                        : 'bg-lunar-success text-primary-foreground border-lunar-success hover:opacity-90'
                       : status.value === 'a confirmar'
-                        ? 'border-orange-500 text-orange-600 hover:bg-orange-50'
-                        : 'border-green-500 text-green-600 hover:bg-green-50'
+                        ? 'border-lunar-error text-lunar-error hover:bg-lunar-error/10'
+                        : 'border-lunar-success text-lunar-success hover:bg-lunar-success/10'
                   }`}
                 >
                   {status.label}

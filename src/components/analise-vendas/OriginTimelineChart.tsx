@@ -28,7 +28,7 @@ export function OriginTimelineChart({ monthlyOriginData }: OriginTimelineChartPr
   // Configurar cores para as linhas
   const chartConfig = originsList.reduce((config, originId) => {
     const matchingOrigin = ORIGENS_PADRAO.find(o => o.id === originId);
-    const color = matchingOrigin?.cor || '#6B7280';
+    const color = matchingOrigin?.cor || 'hsl(var(--muted-foreground))';
     
     config[originId] = {
       label: matchingOrigin?.nome || (originId === 'nao-especificado' ? 'Não especificado' : originId),
@@ -69,7 +69,7 @@ export function OriginTimelineChart({ monthlyOriginData }: OriginTimelineChartPr
       <Card className="rounded-lg ring-1 ring-lunar-border/60 shadow-brand bg-lunar-surface">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-lunar-text flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-orange-500" />
+            <TrendingUp className="h-4 w-4 text-lunar-warning" />
             Timeline de Sessões por Origem
           </CardTitle>
         </CardHeader>
@@ -86,7 +86,7 @@ export function OriginTimelineChart({ monthlyOriginData }: OriginTimelineChartPr
     <Card className="rounded-lg ring-1 ring-lunar-border/60 shadow-brand bg-lunar-surface">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium text-lunar-text flex items-center gap-2">
-          <TrendingUp className="h-4 w-4 text-orange-500" />
+          <TrendingUp className="h-4 w-4 text-lunar-warning" />
           Timeline de Sessões por Origem
         </CardTitle>
       </CardHeader>
@@ -116,10 +116,10 @@ export function OriginTimelineChart({ monthlyOriginData }: OriginTimelineChartPr
                 key={originId}
                 type="monotone"
                 dataKey={originId}
-                stroke={chartConfig[originId]?.color || '#6B7280'}
+                stroke={chartConfig[originId]?.color || 'hsl(var(--muted-foreground))'}
                 strokeWidth={2}
-                dot={{ fill: chartConfig[originId]?.color || '#6B7280', strokeWidth: 0, r: 3 }}
-                activeDot={{ r: 5, stroke: chartConfig[originId]?.color || '#6B7280', strokeWidth: 2 }}
+                dot={{ fill: chartConfig[originId]?.color || 'hsl(var(--muted-foreground))', strokeWidth: 0, r: 3 }}
+                activeDot={{ r: 5, stroke: chartConfig[originId]?.color || 'hsl(var(--muted-foreground))', strokeWidth: 2 }}
                 connectNulls={false}
               />
             ))}

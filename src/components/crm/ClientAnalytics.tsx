@@ -30,21 +30,21 @@ export function ClientAnalytics({ metrics, files, historico }: ClientAnalyticsPr
     : 0;
 
   const getStatusColor = (percentage: number) => {
-    if (percentage >= 90) return 'text-green-600 bg-green-100';
-    if (percentage >= 70) return 'text-yellow-600 bg-yellow-100';
-    return 'text-red-600 bg-red-100';
+    if (percentage >= 90) return 'text-lunar-success bg-lunar-success/10';
+    if (percentage >= 70) return 'text-lunar-warning bg-lunar-warning/10';
+    return 'text-destructive bg-destructive/10';
   };
 
   const getClientStatus = () => {
     if (metrics.aReceber > 0) return { 
       icon: AlertTriangle, 
       text: 'Valores em aberto', 
-      color: 'text-orange-600' 
+      color: 'text-lunar-warning' 
     };
     return { 
       icon: CheckCircle, 
       text: 'Em dia', 
-      color: 'text-green-600' 
+      color: 'text-lunar-success' 
     };
   };
 
@@ -68,11 +68,11 @@ export function ClientAnalytics({ metrics, files, historico }: ClientAnalyticsPr
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">Total Pago</span>
-              <span className="font-semibold text-green-600">{formatCurrency(metrics.totalPago)}</span>
+              <span className="font-semibold text-lunar-success">{formatCurrency(metrics.totalPago)}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">A Receber</span>
-              <span className="font-semibold text-orange-600">{formatCurrency(metrics.aReceber)}</span>
+              <span className="font-semibold text-lunar-warning">{formatCurrency(metrics.aReceber)}</span>
             </div>
           </div>
           
@@ -95,7 +95,7 @@ export function ClientAnalytics({ metrics, files, historico }: ClientAnalyticsPr
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
-            <TrendingUp className="h-5 w-5 text-blue-600" />
+            <TrendingUp className="h-5 w-5 text-primary" />
             Engajamento
           </CardTitle>
         </CardHeader>
@@ -135,7 +135,7 @@ export function ClientAnalytics({ metrics, files, historico }: ClientAnalyticsPr
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
-            <Calendar className="h-5 w-5 text-purple-600" />
+            <Calendar className="h-5 w-5 text-primary" />
             Timeline
           </CardTitle>
         </CardHeader>
@@ -150,7 +150,7 @@ export function ClientAnalytics({ metrics, files, historico }: ClientAnalyticsPr
                     {formatDateForDisplay(item.data)}
                   </p>
                 </div>
-                <span className="text-sm font-semibold text-green-600 flex-shrink-0">
+                <span className="text-sm font-semibold text-lunar-success flex-shrink-0">
                   {formatCurrency(item.valor)}
                 </span>
               </div>
@@ -184,7 +184,7 @@ export function ClientAnalytics({ metrics, files, historico }: ClientAnalyticsPr
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <div className={`w-3 h-3 rounded-full ${
-                    metrics.aReceber > 0 ? 'bg-orange-500' : 'bg-green-500'
+                    metrics.aReceber > 0 ? 'bg-lunar-warning' : 'bg-lunar-success'
                   }`}></div>
                   <span className="text-sm">
                     {metrics.aReceber > 0 ? 'Possui valores em aberto' : 'Em dia com pagamentos'}
@@ -192,7 +192,7 @@ export function ClientAnalytics({ metrics, files, historico }: ClientAnalyticsPr
                 </div>
                 <div className="flex items-center gap-2">
                   <div className={`w-3 h-3 rounded-full ${
-                    metrics.sessoes >= 3 ? 'bg-blue-500' : 'bg-gray-400'
+                    metrics.sessoes >= 3 ? 'bg-primary' : 'bg-muted'
                   }`}></div>
                   <span className="text-sm">
                     {metrics.sessoes >= 3 ? 'Cliente recorrente' : 'Cliente em desenvolvimento'}
@@ -200,7 +200,7 @@ export function ClientAnalytics({ metrics, files, historico }: ClientAnalyticsPr
                 </div>
                 <div className="flex items-center gap-2">
                   <div className={`w-3 h-3 rounded-full ${
-                    files.length > 0 ? 'bg-purple-500' : 'bg-gray-400'
+                    files.length > 0 ? 'bg-primary' : 'bg-muted'
                   }`}></div>
                   <span className="text-sm">
                     {files.length > 0 ? 'Documentação organizada' : 'Sem documentos'}

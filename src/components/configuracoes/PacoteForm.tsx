@@ -115,22 +115,22 @@ export default function PacoteForm({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label htmlFor="pacote-nome" className="block text-sm font-medium mb-1">
-            Nome<span className="text-red-500">*</span>
+            Nome<span className="text-destructive">*</span>
           </label>
           <Input id="pacote-nome" placeholder="Nome do pacote" value={formData.nome} onChange={e => setFormData({
           ...formData,
           nome: e.target.value
-        })} className="bg-neutral-50" />
+        })} className="bg-muted" />
         </div>
         
         <div>
           <label htmlFor="pacote-categoria" className="block text-sm font-medium mb-1">
-            Categoria<span className="text-red-500">*</span>
+            Categoria<span className="text-destructive">*</span>
           </label>
           <select id="pacote-categoria" value={formData.categoria_id} onChange={e => setFormData({
           ...formData,
           categoria_id: e.target.value
-        })} className="w-full h-7 rounded-md border border-input px-3 text-base ring-0 file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm py-[1px] bg-neutral-50">
+        })} className="w-full h-7 rounded-md border border-input px-3 text-base ring-0 file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm py-[1px] bg-muted">
             <option value="">Selecione...</option>
             {categorias.map(cat => <option key={cat.id} value={cat.id}>{cat.nome}</option>)}
           </select>
@@ -140,12 +140,12 @@ export default function PacoteForm({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label htmlFor="pacote-valor-base" className="block text-sm font-medium mb-1">
-            Valor Base (R$)<span className="text-red-500">*</span>
+            Valor Base (R$)<span className="text-destructive">*</span>
           </label>
           <Input id="pacote-valor-base" type="number" placeholder="0,00" value={formData.valor_base || ''} onChange={e => setFormData({
           ...formData,
           valor_base: Number(e.target.value)
-        })} className="bg-neutral-50" />
+        })} className="bg-muted" />
         </div>
         
         <div>
@@ -155,7 +155,7 @@ export default function PacoteForm({
           <Input id="pacote-valor-foto" type="number" placeholder="0,00" value={formData.valor_foto_extra || ''} onChange={e => setFormData({
           ...formData,
           valor_foto_extra: Number(e.target.value)
-        })} className="bg-neutral-50" />
+        })} className="bg-muted" />
         </div>
       </div>
       
@@ -175,7 +175,7 @@ export default function PacoteForm({
               </div>
             </div>)}
           
-          {formData.produtosIncluidos.length === 0 && <p className="text-xs text-gray-500 text-center py-0">
+          {formData.produtosIncluidos.length === 0 && <p className="text-xs text-lunar-textSecondary text-center py-0">
               Nenhum produto incluído. Adicione produtos abaixo.
             </p>}
         </div>
@@ -209,7 +209,7 @@ export default function PacoteForm({
                       >
                         <div className="flex flex-col">
                           <span className="font-medium">{produto.nome}</span>
-                          <span className="text-sm text-gray-500">
+                          <span className="text-sm text-lunar-textSecondary">
                             R$ {produto.preco_venda.toFixed(2)}
                           </span>
                         </div>

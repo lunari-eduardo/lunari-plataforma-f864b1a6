@@ -90,8 +90,8 @@ function App() {
         alignItems: 'center', 
         justifyContent: 'center', 
         height: '100vh',
-        backgroundColor: '#FAF8F5',
-        color: '#3A3A3A',
+        backgroundColor: 'hsl(var(--background))',
+        color: 'hsl(var(--foreground))',
         fontSize: '14px'
       }}>
         Carregando...

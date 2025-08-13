@@ -108,15 +108,15 @@ export default function ConfiguracoesFinanceirasTab({
   const getCorGrupo = (grupo: GrupoPrincipal) => {
     switch (grupo) {
       case 'Despesa Fixa':
-        return 'bg-red-100 text-red-800 border-red-200';
+        return 'bg-destructive/10 text-destructive border-destructive/20';
       case 'Despesa Variável':
-        return 'bg-orange-100 text-orange-800 border-orange-200';
+        return 'bg-lunar-warning/10 text-lunar-warning border-lunar-warning/20';
       case 'Investimento':
-        return 'bg-purple-100 text-purple-800 border-purple-200';
+        return 'bg-primary/10 text-primary border-primary/20';
       case 'Receita Não Operacional':
-        return 'bg-green-100 text-green-800 border-green-200';
+        return 'bg-availability/10 text-availability border-availability/20';
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return 'bg-muted text-foreground border-border';
     }
   };
   const itensPorGrupo = grupos.reduce((acc, grupo) => {
@@ -126,8 +126,8 @@ export default function ConfiguracoesFinanceirasTab({
   return <div className="space-y-6">
       <Tabs defaultValue="itens" className="w-full">
         <TabsList className="grid w-full grid-cols-2 bg-lunar-accent">
-          <TabsTrigger value="itens" className="text-xs text-stone-900 font-bold">Itens Financeiros</TabsTrigger>
-          <TabsTrigger value="cartoes" className="text-xs font-bold text-neutral-900">Cartões de Crédito</TabsTrigger>
+          <TabsTrigger value="itens" className="text-xs text-primary-foreground font-bold">Itens Financeiros</TabsTrigger>
+          <TabsTrigger value="cartoes" className="text-xs font-bold text-primary-foreground">Cartões de Crédito</TabsTrigger>
         </TabsList>
         
         <TabsContent value="itens" className="mt-6">
@@ -200,13 +200,13 @@ export default function ConfiguracoesFinanceirasTab({
                                   <Button size="sm" variant="ghost" onClick={() => handleEditarItem(item)} className="h-8 w-8 p-0 hover:bg-lunar-accent/20">
                                     <Edit2 className="h-3.5 w-3.5" />
                                   </Button>
-                                  <Button size="sm" variant="ghost" onClick={() => handleRemoverItem(item.id, item.nome)} className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-50">
+                                  <Button size="sm" variant="ghost" onClick={() => handleRemoverItem(item.id, item.nome)} className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10">
                                     <Trash2 className="h-3.5 w-3.5" />
                                   </Button>
                                 </div>
                               </>}
                           </div>)}
-                      </div>}
+                        </div>}
                   </CardContent>
                 </Card>)}
             </div>
