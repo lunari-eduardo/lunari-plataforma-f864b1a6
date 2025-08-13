@@ -221,7 +221,7 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ChartContainer config={chartConfig} className="w-full aspect-square max-w-[360px] sm:max-w-[420px] mx-auto">
+            <ChartContainer config={chartConfig} className="w-full aspect-square max-w-[280px] sm:max-w-[320px] mx-auto">
               <PieChart>
                 <Pie
                   data={categoryData}
@@ -266,7 +266,7 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ChartContainer config={chartConfig} className="w-full aspect-square max-w-[360px] sm:max-w-[420px] mx-auto">
+            <ChartContainer config={chartConfig} className="w-full aspect-square max-w-[280px] sm:max-w-[320px] mx-auto">
               <PieChart>
                 <Pie
                   data={packageDistributionData}
