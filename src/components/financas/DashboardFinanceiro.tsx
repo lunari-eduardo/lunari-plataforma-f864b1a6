@@ -84,14 +84,9 @@ export default function DashboardFinanceiro() {
   return <div className="min-h-screen bg-lunar-bg">
       <div className="p-6 space-y-6 bg-lunar-bg">
         {/* Barra de Filtros de Período - Design elegante */}
-        <Card className="border-0 shadow-lg" style={{
-        backgroundColor: '#ffffff',
-        borderRadius: '12px'
-      }}>
+        <Card className="border-0 shadow-lg bg-card rounded-lg">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg font-semibold" style={{
-            color: '#8B6F3E'
-          }}>Filtros de Período</CardTitle>
+            <CardTitle className="text-lg font-semibold text-primary">Filtros de Período</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col sm:flex-row gap-4">
@@ -138,115 +133,69 @@ export default function DashboardFinanceiro() {
 
         {/* KPIs Cards - Design elegante */}
         <div className="grid grid-cols-2 lg:grid-cols-6 gap-6">
-          <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300" style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '16px'
-        }}>
+          <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-card rounded-lg">
             <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-medium uppercase tracking-wide" style={{
-              color: '#8B6F3E'
-            }}>RECEITA</CardTitle>
+              <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">RECEITA</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-xl font-bold" style={{
-              color: '#2D7A4F'
-            }}>
+              <div className="text-xl font-bold text-lunar-success">
                 {formatCurrency(kpisData.totalReceita)}
               </div>
-              <div className="text-xs mt-1" style={{
-              color: '#8B6F3E'
-            }}>↗ 12% em comparação ao mês anterior</div>
+              <div className="text-xs mt-1 text-muted-foreground">↗ 12% em comparação ao mês anterior</div>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300" style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '16px'
-        }}>
+          <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-card rounded-lg">
             <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-medium uppercase tracking-wide" style={{
-              color: '#8B6F3E'
-            }}>PREVISTO</CardTitle>
+              <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">PREVISTO</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-xl font-bold" style={{
-              color: '#1E5F99'
-            }}>
+              <div className="text-xl font-bold text-primary">
                 {formatCurrency(kpisData.valorPrevisto)}
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300" style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '16px'
-        }}>
+          <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-card rounded-lg">
             <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-medium uppercase tracking-wide" style={{
-              color: '#8B6F3E'
-            }}>A RECEBER</CardTitle>
+              <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">A RECEBER</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-xl font-bold" style={{
-              color: '#cfb38a'
-            }}>
+              <div className="text-xl font-bold text-chart-primary">
                 {formatCurrency(kpisData.aReceber)}
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300" style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '16px'
-        }}>
+          <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-card rounded-lg">
             <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-medium uppercase tracking-wide" style={{
-              color: '#8B6F3E'
-            }}>DESPESAS</CardTitle>
+              <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">DESPESAS</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-xl font-bold" style={{
-              color: '#D85A47'
-            }}>
+              <div className="text-xl font-bold text-destructive">
                 -{formatCurrency(kpisData.totalDespesas)}
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300" style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '16px'
-        }}>
+          <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-card rounded-lg">
             <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-medium uppercase tracking-wide" style={{
-              color: '#8B6F3E'
-            }}>LUCRO</CardTitle>
+              <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">LUCRO</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-xl font-bold" style={{
-              color: '#2D7A4F'
-            }}>
+              <div className="text-xl font-bold text-lunar-success">
                 {formatCurrency(kpisData.totalLucro)}
               </div>
-              <div className="text-xs mt-1" style={{
-              color: '#8B6F3E'
-            }}>↗ 18% em comparação ao mês anterior</div>
+              <div className="text-xs mt-1 text-muted-foreground">↗ 18% em comparação ao mês anterior</div>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300" style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '16px'
-        }}>
+          <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-card rounded-lg">
             <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-medium uppercase tracking-wide" style={{
-              color: '#8B6F3E'
-            }}>SALDO</CardTitle>
+              <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">SALDO</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-xl font-bold" style={{
-              color: '#cfb38a'
-            }}>
+              <div className="text-xl font-bold text-chart-primary">
                 {formatCurrency(kpisData.saldoTotal)}
               </div>
             </CardContent>
@@ -256,14 +205,9 @@ export default function DashboardFinanceiro() {
         {/* Gráficos Circulares de Metas */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Meta de Receita */}
-          <Card className="border-0 shadow-lg" style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '16px'
-          }}>
+          <Card className="border-0 shadow-lg bg-card rounded-lg">
             <CardHeader className="text-center pb-2">
-              <CardTitle className="text-sm font-medium uppercase tracking-wide" style={{
-                color: '#8B6F3E'
-              }}>META DE RECEITA</CardTitle>
+                <CardTitle className="text-sm font-medium uppercase tracking-wide text-primary">META DE RECEITA</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col items-center">
               <div className="relative">
@@ -292,11 +236,11 @@ export default function DashboardFinanceiro() {
                       y="50%"
                       textAnchor="middle"
                       dominantBaseline="middle"
-                      style={{
-                        fontSize: '18px',
-                        fontWeight: 'bold',
-                        fill: '#8B6F3E'
-                      }}
+                        style={{
+                          fontSize: '18px',
+                          fontWeight: 'bold',
+                          fill: 'hsl(var(--primary))'
+                        }}
                     >
                       {metasData.metaReceita > 0 ? 
                         `${(metasData.receitaAtual / metasData.metaReceita * 100).toFixed(1)}%` : 
@@ -315,14 +259,9 @@ export default function DashboardFinanceiro() {
           </Card>
 
           {/* Meta de Lucro */}
-          <Card className="border-0 shadow-lg" style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '16px'
-          }}>
+          <Card className="border-0 shadow-lg bg-card rounded-lg">
             <CardHeader className="text-center pb-2">
-              <CardTitle className="text-sm font-medium uppercase tracking-wide" style={{
-                color: '#8B6F3E'
-              }}>META DE LUCRO</CardTitle>
+                <CardTitle className="text-sm font-medium uppercase tracking-wide text-primary">META DE LUCRO</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col items-center">
               <div className="relative">
@@ -351,11 +290,11 @@ export default function DashboardFinanceiro() {
                       y="50%"
                       textAnchor="middle"
                       dominantBaseline="middle"
-                      style={{
-                        fontSize: '18px',
-                        fontWeight: 'bold',
-                        fill: '#8B6F3E'
-                      }}
+                        style={{
+                          fontSize: '18px',
+                          fontWeight: 'bold',
+                          fill: 'hsl(var(--primary))'
+                        }}
                     >
                       {metasData.metaLucro > 0 ? 
                         `${(metasData.lucroAtual / metasData.metaLucro * 100).toFixed(1)}%` : 
@@ -374,14 +313,9 @@ export default function DashboardFinanceiro() {
           </Card>
 
           {/* Lucratividade */}
-          <Card className="border-0 shadow-lg" style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '16px'
-          }}>
+          <Card className="border-0 shadow-lg bg-card rounded-lg">
             <CardHeader className="text-center pb-2">
-              <CardTitle className="text-sm font-medium uppercase tracking-wide" style={{
-                color: '#8B6F3E'
-              }}>LUCRATIVIDADE</CardTitle>
+                <CardTitle className="text-sm font-medium uppercase tracking-wide text-primary">LUCRATIVIDADE</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col items-center">
               <div className="relative">
@@ -410,11 +344,11 @@ export default function DashboardFinanceiro() {
                       y="50%"
                       textAnchor="middle"
                       dominantBaseline="middle"
-                      style={{
-                        fontSize: '18px',
-                        fontWeight: 'bold',
-                        fill: '#8B6F3E'
-                      }}
+                        style={{
+                          fontSize: '18px',
+                          fontWeight: 'bold',
+                          fill: 'hsl(var(--primary))'
+                        }}
                     >
                       {lucratividade.toFixed(1)}%
                     </text>
@@ -431,21 +365,12 @@ export default function DashboardFinanceiro() {
         </div>
 
         {/* Gráfico Principal - Receita vs Lucro */}
-        <Card className="border-0 shadow-lg" style={{
-        backgroundColor: '#ffffff',
-        borderRadius: '16px'
-      }}>
+        <Card className="border-0 shadow-lg bg-card rounded-lg">
           <CardHeader>
-            <CardTitle className="text-lg font-semibold flex items-center gap-2" style={{
-            color: '#8B6F3E'
-          }}>
-              <div className="w-3 h-3 rounded-full" style={{
-              backgroundColor: '#cfb38a'
-            }}></div>
+            <CardTitle className="text-lg font-semibold flex items-center gap-2 text-primary">
+              <div className="w-3 h-3 rounded-full bg-chart-primary"></div>
               RECEITA
-              <div className="w-3 h-3 rounded-full ml-4" style={{
-              backgroundColor: '#e6dccd'
-            }}></div>
+              <div className="w-3 h-3 rounded-full ml-4 bg-muted"></div>
               LUCRO
             </CardTitle>
           </CardHeader>
@@ -471,15 +396,15 @@ export default function DashboardFinanceiro() {
                   domain={[0, 'dataMax']}
                   tick={{
                     fontSize: 12,
-                    fill: '#8B6F3E',
+                    fill: 'hsl(var(--muted-foreground))',
                     fontWeight: 500
                   }} 
                   tickLine={{
-                    stroke: '#e6dccd'
+                    stroke: 'hsl(var(--border))'
                   }} 
                   axisLine={{
-                    stroke: '#e6dccd'
-                  }} 
+                    stroke: 'hsl(var(--border))'
+                  }}
                   tickFormatter={value => `R$ ${Number(value).toLocaleString('pt-BR', {
                     minimumFractionDigits: 0,
                     maximumFractionDigits: 0
@@ -493,19 +418,19 @@ export default function DashboardFinanceiro() {
                     return [formatCurrency(value), label];
                   }}
                   labelStyle={{
-                    color: '#8B6F3E',
+                    color: 'hsl(var(--muted-foreground))',
                     fontSize: '12px',
                     fontWeight: 500
                   }} 
                   contentStyle={{
-                    backgroundColor: '#ffffff',
-                    border: '1px solid #e6dccd',
+                    backgroundColor: 'hsl(var(--card))',
+                    border: '1px solid hsl(var(--border))',
                     borderRadius: '12px',
                     fontSize: '12px',
                     boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
                     transition: 'all 0.2s ease'
                   }}
-                  cursor={{ fill: 'rgba(139, 111, 62, 0.1)' }}
+                  cursor={{ fill: 'hsl(var(--primary) / 0.1)' }}
                 />
                 <Legend wrapperStyle={{
                   fontSize: '12px',
@@ -534,17 +459,10 @@ export default function DashboardFinanceiro() {
         </Card>
 
         {/* Fluxo de Caixa - Gráfico de Área */}
-        <Card className="border-0 shadow-lg" style={{
-        backgroundColor: '#ffffff',
-        borderRadius: '16px'
-      }}>
+        <Card className="border-0 shadow-lg bg-card rounded-lg">
           <CardHeader>
-            <CardTitle className="text-lg font-semibold" style={{
-            color: '#8B6F3E'
-          }}>FLUXO DE CAIXA</CardTitle>
-            <p className="text-sm" style={{
-            color: '#8B6F3E'
-          }}>Análise mensal do ano selecionado</p>
+            <CardTitle className="text-lg font-semibold text-primary">FLUXO DE CAIXA</CardTitle>
+            <p className="text-sm text-muted-foreground">Análise mensal do ano selecionado</p>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={280}>
@@ -556,39 +474,39 @@ export default function DashboardFinanceiro() {
             }}>
                 <defs>
                   <linearGradient id="colorArea" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#cfb38a" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#cfb38a" stopOpacity={0.05} />
+                    <stop offset="5%" stopColor="hsl(var(--chart-primary))" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="hsl(var(--chart-primary))" stopOpacity={0.05} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} />
                 <XAxis dataKey="mes" tick={{
                 fontSize: 11,
-                fill: '#8B6F3E',
+                fill: 'hsl(var(--muted-foreground))',
                 fontWeight: 500
               }} tickLine={{
-                stroke: '#e6dccd'
+                stroke: 'hsl(var(--border))'
               }} axisLine={{
-                stroke: '#e6dccd'
+                stroke: 'hsl(var(--border))'
               }} />
                 <YAxis tick={{
                 fontSize: 11,
-                fill: '#8B6F3E',
+                fill: 'hsl(var(--muted-foreground))',
                 fontWeight: 500
               }} tickLine={{
-                stroke: '#e6dccd'
+                stroke: 'hsl(var(--border))'
               }} axisLine={{
-                stroke: '#e6dccd'
+                stroke: 'hsl(var(--border))'
               }} tickFormatter={value => `${Number(value).toLocaleString('pt-BR', {
                 minimumFractionDigits: 0,
                 maximumFractionDigits: 0
               })}`} />
                 <Tooltip formatter={(value: number) => formatCurrency(value)} labelStyle={{
-                color: '#8B6F3E',
+                color: 'hsl(var(--muted-foreground))',
                 fontSize: '12px',
                 fontWeight: 500
               }} contentStyle={{
-                backgroundColor: '#ffffff',
-                border: '1px solid #e6dccd',
+                backgroundColor: 'hsl(var(--card))',
+                border: '1px solid hsl(var(--border))',
                 borderRadius: '12px',
                 fontSize: '12px',
                 boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
@@ -600,14 +518,9 @@ export default function DashboardFinanceiro() {
         </Card>
 
         {/* Despesas por Categoria */}
-        <Card className="border-0 shadow-lg" style={{
-        backgroundColor: '#ffffff',
-        borderRadius: '16px'
-      }}>
+        <Card className="border-0 shadow-lg bg-card rounded-lg">
           <CardHeader>
-            <CardTitle className="text-lg font-semibold text-center" style={{
-            color: '#8B6F3E'
-          }}>DESPESAS POR CATEGORIA</CardTitle>
+            <CardTitle className="text-lg font-semibold text-center text-primary">DESPESAS POR CATEGORIA</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={400}>
@@ -616,12 +529,12 @@ export default function DashboardFinanceiro() {
                   {composicaoDespesas.map((entry, index) => <Cell key={`cell-${index}`} fill={EXPENSE_COLORS[index % EXPENSE_COLORS.length]} opacity={0.85} />)}
                 </Pie>
                 <Tooltip formatter={(value: number, name: string, props: any) => [formatCurrency(value), `${props.payload.grupo} (${props.payload.percentual.toFixed(1)}%)`]} labelStyle={{
-                color: '#8B6F3E',
+                color: 'hsl(var(--muted-foreground))',
                 fontSize: '12px',
                 fontWeight: 500
               }} contentStyle={{
-                backgroundColor: '#ffffff',
-                border: '1px solid #e6dccd',
+                backgroundColor: 'hsl(var(--card))',
+                border: '1px solid hsl(var(--border))',
                 borderRadius: '12px',
                 fontSize: '12px',
                 boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
@@ -641,40 +554,24 @@ export default function DashboardFinanceiro() {
 
         {/* ROI Section - Cálculo correto: Lucro / Investimentos */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Card className="border-0 shadow-lg" style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '16px'
-        }}>
+          <Card className="border-0 shadow-lg bg-card rounded-lg">
             <CardHeader className="text-center">
-              <CardTitle className="text-sm font-medium" style={{
-              color: '#8B6F3E'
-            }}>ROI</CardTitle>
+              <CardTitle className="text-sm font-medium text-primary">ROI</CardTitle>
             </CardHeader>
             <CardContent className="text-center">
-              <div className="text-sm" style={{
-              color: '#8B6F3E'
-            }}>VALOR INVESTIDO</div>
-              <div className="text-2xl font-bold" style={{
-              color: '#8B6F3E'
-            }}>
+              <div className="text-sm text-muted-foreground">VALOR INVESTIDO</div>
+              <div className="text-2xl font-bold text-primary">
                 {formatCurrency(roiData.totalInvestimento)}
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-lg" style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '16px'
-        }}>
+          <Card className="border-0 shadow-lg bg-card rounded-lg">
             <CardHeader className="text-center">
-              <CardTitle className="text-sm font-medium" style={{
-              color: '#8B6F3E'
-            }}>RETORNO SOBRE INVESTIMENTO</CardTitle>
+              <CardTitle className="text-sm font-medium text-primary">RETORNO SOBRE INVESTIMENTO</CardTitle>
             </CardHeader>
             <CardContent className="text-center">
-              <div className="text-4xl font-bold" style={{
-              color: '#cfb38a'
-            }}>
+              <div className="text-4xl font-bold text-chart-primary">
                 {roiData.roi.toFixed(1)}%
               </div>
             </CardContent>
