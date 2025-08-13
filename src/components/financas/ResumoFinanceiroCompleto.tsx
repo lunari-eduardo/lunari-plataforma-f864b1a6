@@ -14,40 +14,40 @@ export default function ResumoFinanceiroCompleto({ resumo }: ResumoFinanceiroCom
       title: "Total de Receitas Extras",
       value: resumo.totalReceitasExtras,
       icon: <Receipt className="h-5 w-5" />,
-      color: "bg-green-500",
-      textColor: "text-green-600",
+      color: "bg-lunar-success",
+      textColor: "text-lunar-success",
       subtitle: "Receitas não operacionais do mês"
     },
     {
       title: "Total de Despesas",
       value: resumo.totalDespesas,
       icon: <DollarSign className="h-5 w-5" />,
-      color: "bg-red-500",
-      textColor: "text-red-600",
+      color: "bg-destructive",
+      textColor: "text-destructive",
       subtitle: "Despesas faturadas + pagas"
     },
     {
       title: "Receita Operacional",
       value: resumo.receitaOperacional,
       icon: <Briefcase className="h-5 w-5" />,
-      color: "bg-blue-500",
-      textColor: "text-blue-600",
+      color: "bg-primary",
+      textColor: "text-primary",
       subtitle: "Vinda do Workflow"
     },
     {
       title: "Resultado Mensal",
       value: resumo.resultadoMensal,
       icon: resumo.resultadoMensal >= 0 ? <TrendingUp className="h-5 w-5" /> : <TrendingDown className="h-5 w-5" />,
-      color: resumo.resultadoMensal >= 0 ? "bg-emerald-500" : "bg-red-500",
-      textColor: resumo.resultadoMensal >= 0 ? "text-emerald-600" : "text-red-600",
+      color: resumo.resultadoMensal >= 0 ? "bg-lunar-success" : "bg-destructive",
+      textColor: resumo.resultadoMensal >= 0 ? "text-lunar-success" : "text-destructive",
       subtitle: "Receitas - Despesas"
     },
     {
       title: "Lucro Líquido do Mês",
       value: resumo.lucroLiquido,
       icon: <Target className="h-5 w-5" />,
-      color: resumo.lucroLiquido >= 0 ? "bg-violet-500" : "bg-red-500",
-      textColor: resumo.lucroLiquido >= 0 ? "text-violet-600" : "text-red-600",
+      color: resumo.lucroLiquido >= 0 ? "bg-primary" : "bg-destructive",
+      textColor: resumo.lucroLiquido >= 0 ? "text-primary" : "text-destructive",
       highlight: true,
       subtitle: "Resultado final"
     }
@@ -61,7 +61,7 @@ export default function ResumoFinanceiroCompleto({ resumo }: ResumoFinanceiroCom
             <CardTitle className="text-sm font-medium">
               {card.title}
               {card.subtitle && (
-                <div className="text-xs text-gray-500 mt-1 font-normal">
+                <div className="text-xs text-muted-foreground mt-1 font-normal">
                   {card.subtitle}
                 </div>
               )}

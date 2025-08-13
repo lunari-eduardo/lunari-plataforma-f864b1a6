@@ -105,23 +105,23 @@ export default function LancamentosTab({
       <div className="rounded-lg border border-border p-4 shadow-sm bg-lunar-bg">
         <div className="flex flex-wrap items-center gap-6 text-sm">
           <div className="flex items-center gap-2">
-            <span className="font-medium text-gray-700">Total:</span>
-            <span className="font-bold text-gray-900">{formatCurrency(metricas.total)}</span>
+            <span className="font-medium text-foreground">Total:</span>
+            <span className="font-bold text-foreground">{formatCurrency(metricas.total)}</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-            <span className="text-gray-600">Pago:</span>
-            <span className="font-semibold text-green-600">{formatCurrency(metricas.pago)}</span>
+            <div className="w-2 h-2 bg-lunar-success rounded-full"></div>
+            <span className="text-muted-foreground">Pago:</span>
+            <span className="font-semibold text-lunar-success">{formatCurrency(metricas.pago)}</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-            <span className="text-gray-600">Faturado:</span>
-            <span className="font-semibold text-red-600">{formatCurrency(metricas.faturado)}</span>
+            <div className="w-2 h-2 bg-lunar-error rounded-full"></div>
+            <span className="text-muted-foreground">Faturado:</span>
+            <span className="font-semibold text-lunar-error">{formatCurrency(metricas.faturado)}</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-            <span className="text-gray-600">Agendado:</span>
-            <span className="font-semibold text-yellow-600">{formatCurrency(metricas.agendado)}</span>
+            <div className="w-2 h-2 bg-lunar-warning rounded-full"></div>
+            <span className="text-muted-foreground">Agendado:</span>
+            <span className="font-semibold text-lunar-warning">{formatCurrency(metricas.agendado)}</span>
           </div>
         </div>
       </div>
@@ -133,19 +133,19 @@ export default function LancamentosTab({
             {/* Grupo da Esquerda: Sub-abas */}
             <Tabs value={activeSubTab} onValueChange={value => setActiveSubTab(value as GrupoPrincipal)}>
               <TabsList className="flex h-10 p-1 bg-card border border-border rounded-lg py-0 px-0">
-                <TabsTrigger value="Despesa Fixa" className="flex items-center gap-2 px-4 data-[state=active]:bg-muted data-[state=active]:text-red-600 py-[7px] text-xs">
+                <TabsTrigger value="Despesa Fixa" className="flex items-center gap-2 px-4 data-[state=active]:bg-muted data-[state=active]:text-lunar-error py-[7px] text-xs">
                   <Receipt className="h-4 w-4" />
                   Fixas
                 </TabsTrigger>
-                <TabsTrigger value="Despesa Variável" className="flex items-center gap-2 px-4 data-[state=active]:bg-muted data-[state=active]:text-orange-600 py-[5px] text-xs">
+                <TabsTrigger value="Despesa Variável" className="flex items-center gap-2 px-4 data-[state=active]:bg-muted data-[state=active]:text-lunar-warning py-[5px] text-xs">
                   <CreditCard className="h-4 w-4" />
                   Variáveis
                 </TabsTrigger>
-                <TabsTrigger value="Investimento" className="flex items-center gap-2 px-4 data-[state=active]:bg-muted data-[state=active]:text-purple-600 py-[5px] text-xs">
+                <TabsTrigger value="Investimento" className="flex items-center gap-2 px-4 data-[state=active]:bg-muted data-[state=active]:text-primary py-[5px] text-xs">
                   <TrendingUp className="h-4 w-4" />
                   Investimentos
                 </TabsTrigger>
-                <TabsTrigger value="Receita Não Operacional" className="flex items-center gap-2 px-4 data-[state=active]:bg-muted data-[state=active]:text-green-600 py-[5px] text-xs">
+                <TabsTrigger value="Receita Não Operacional" className="flex items-center gap-2 px-4 data-[state=active]:bg-muted data-[state=active]:text-lunar-success py-[5px] text-xs">
                   <PiggyBank className="h-4 w-4" />
                   Receitas
                 </TabsTrigger>
@@ -209,18 +209,18 @@ export default function LancamentosTab({
                   <Receipt className="h-3 w-3" />
                   Fixas
                 </TabsTrigger>
-                <TabsTrigger value="Despesa Variável" className="flex items-center gap-1 text-xs data-[state=active]:bg-muted data-[state=active]:text-orange-600 py-[3px] px-0">
+                <TabsTrigger value="Despesa Variável" className="flex items-center gap-1 text-xs data-[state=active]:bg-muted data-[state=active]:text-lunar-warning py-[3px] px-0">
                   <CreditCard className="h-3 w-3" />
                   Variáveis
                 </TabsTrigger>
               </TabsList>
               
               <TabsList className="grid grid-cols-2 h-10 p-1 bg-card border border-border rounded-lg w-full py-0 px-[4px]">
-                <TabsTrigger value="Investimento" className="flex items-center gap-1 text-xs data-[state=active]:bg-muted data-[state=active]:text-purple-600 px-0 py-[2px]">
+                <TabsTrigger value="Investimento" className="flex items-center gap-1 text-xs data-[state=active]:bg-muted data-[state=active]:text-primary px-0 py-[2px]">
                   <TrendingUp className="h-3 w-3" />
                   Investimentos
                 </TabsTrigger>
-                <TabsTrigger value="Receita Não Operacional" className="flex items-center gap-1 text-xs data-[state=active]:bg-muted data-[state=active]:text-green-600 py-[2px] px-0">
+                <TabsTrigger value="Receita Não Operacional" className="flex items-center gap-1 text-xs data-[state=active]:bg-muted data-[state=active]:text-lunar-success py-[2px] px-0">
                   <PiggyBank className="h-3 w-3" />
                   Receitas
                 </TabsTrigger>

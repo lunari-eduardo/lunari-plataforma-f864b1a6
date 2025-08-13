@@ -81,9 +81,7 @@ export default function DashboardFinanceiro() {
     value: '12',
     label: 'Dezembro'
   }];
-  return <div className="min-h-screen" style={{
-    background: 'linear-gradient(135deg, #e6dccd 0%, #f5f1ec 100%)'
-  }}>
+  return <div className="min-h-screen bg-lunar-bg">
       <div className="p-6 space-y-6 bg-lunar-bg">
         {/* Barra de Filtros de Período - Design elegante */}
         <Card className="border-0 shadow-lg" style={{
@@ -284,10 +282,10 @@ export default function DashboardFinanceiro() {
                       endAngle={450}
                       dataKey="value"
                       strokeWidth={2}
-                      stroke="#ffffff"
+                      stroke="hsl(var(--card))"
                     >
-                      <Cell fill="#2D7A4F" />
-                      <Cell fill="#e6dccd" opacity={0.3} />
+                      <Cell fill="hsl(var(--chart-revenue))" />
+                      <Cell fill="hsl(var(--muted))" opacity={0.3} />
                     </Pie>
                     <text
                       x="50%"
@@ -343,10 +341,10 @@ export default function DashboardFinanceiro() {
                       endAngle={450}
                       dataKey="value"
                       strokeWidth={2}
-                      stroke="#ffffff"
+                      stroke="hsl(var(--card))"
                     >
-                      <Cell fill="#1E5F99" />
-                      <Cell fill="#e6dccd" opacity={0.3} />
+                      <Cell fill="hsl(var(--chart-secondary))" />
+                      <Cell fill="hsl(var(--muted))" opacity={0.3} />
                     </Pie>
                     <text
                       x="50%"
@@ -402,10 +400,10 @@ export default function DashboardFinanceiro() {
                       endAngle={450}
                       dataKey="value"
                       strokeWidth={2}
-                      stroke="#ffffff"
+                      stroke="hsl(var(--card))"
                     >
-                      <Cell fill="#cfb38a" />
-                      <Cell fill="#e6dccd" opacity={0.3} />
+                      <Cell fill="hsl(var(--chart-primary))" />
+                      <Cell fill="hsl(var(--muted))" opacity={0.3} />
                     </Pie>
                     <text
                       x="50%"
@@ -459,15 +457,15 @@ export default function DashboardFinanceiro() {
               left: 20,
               bottom: 20
             }} barCategoryGap="20%">
-                <CartesianGrid strokeDasharray="3 3" stroke="#e6dccd" opacity={0.6} />
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.6} />
                 <XAxis dataKey="mes" tick={{
                 fontSize: 12,
-                fill: '#8B6F3E',
+                fill: 'hsl(var(--muted-foreground))',
                 fontWeight: 500
               }} tickLine={{
-                stroke: '#e6dccd'
+                stroke: 'hsl(var(--border))'
               }} axisLine={{
-                stroke: '#e6dccd'
+                stroke: 'hsl(var(--border))'
               }} />
                 <YAxis 
                   domain={[0, 'dataMax']}
@@ -516,7 +514,7 @@ export default function DashboardFinanceiro() {
                 }} />
                 <Bar 
                   dataKey="receita" 
-                  fill="#cfb38a" 
+                  fill="hsl(var(--chart-primary))" 
                   name="Receita" 
                   radius={[6, 6, 0, 0]} 
                   opacity={0.9}
@@ -524,7 +522,7 @@ export default function DashboardFinanceiro() {
                 />
                 <Bar 
                   dataKey="lucro" 
-                  fill="#e6dccd" 
+                  fill="hsl(var(--muted))" 
                   name="Lucro" 
                   radius={[6, 6, 0, 0]} 
                   opacity={0.9}
@@ -562,7 +560,7 @@ export default function DashboardFinanceiro() {
                     <stop offset="95%" stopColor="#cfb38a" stopOpacity={0.05} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e6dccd" opacity={0.4} />
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} />
                 <XAxis dataKey="mes" tick={{
                 fontSize: 11,
                 fill: '#8B6F3E',
@@ -595,7 +593,7 @@ export default function DashboardFinanceiro() {
                 fontSize: '12px',
                 boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
               }} />
-                <Area type="monotone" dataKey="receita" stroke="#cfb38a" fillOpacity={1} fill="url(#colorArea)" strokeWidth={3} />
+                <Area type="monotone" dataKey="receita" stroke="hsl(var(--chart-primary))" fillOpacity={1} fill="url(#colorArea)" strokeWidth={3} />
               </AreaChart>
             </ResponsiveContainer>
           </CardContent>
@@ -614,7 +612,7 @@ export default function DashboardFinanceiro() {
           <CardContent>
             <ResponsiveContainer width="100%" height={400}>
               <PieChart>
-                <Pie data={composicaoDespesas} cx="50%" cy="50%" innerRadius={80} outerRadius={150} dataKey="valor" strokeWidth={3} stroke="#ffffff">
+                <Pie data={composicaoDespesas} cx="50%" cy="50%" innerRadius={80} outerRadius={150} dataKey="valor" strokeWidth={3} stroke="hsl(var(--card))">
                   {composicaoDespesas.map((entry, index) => <Cell key={`cell-${index}`} fill={EXPENSE_COLORS[index % EXPENSE_COLORS.length]} opacity={0.85} />)}
                 </Pie>
                 <Tooltip formatter={(value: number, name: string, props: any) => [formatCurrency(value), `${props.payload.grupo} (${props.payload.percentual.toFixed(1)}%)`]} labelStyle={{

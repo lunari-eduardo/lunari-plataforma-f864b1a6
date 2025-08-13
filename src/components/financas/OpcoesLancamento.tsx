@@ -63,7 +63,7 @@ export default function OpcoesLancamento({
         />
         <Label 
           htmlFor="despesaRecorrente" 
-          className={`${labelClassName} ${opcoes.cartaoCredito ? 'text-gray-400 cursor-not-allowed' : ''}`}
+          className={`${labelClassName} ${opcoes.cartaoCredito ? 'text-muted-foreground cursor-not-allowed' : ''}`}
         >
           {textos.recorrente}
         </Label>
@@ -112,7 +112,7 @@ export default function OpcoesLancamento({
               </Select>
             </div>
             {cartoesFiltrados.length === 0 && (
-              <p className="text-xs text-red-600">
+              <p className="text-xs text-destructive">
                 Nenhum cartão configurado. Vá em Configurações para adicionar.
               </p>
             )}
@@ -132,7 +132,7 @@ export default function OpcoesLancamento({
               className={inputClassName}
               placeholder="Ex: 12 para 12 parcelas"
             />
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-muted-foreground">
               Será criado {opcoes.numeroParcelas} lançamento(s) automático(s)
             </p>
           </div>
@@ -141,12 +141,12 @@ export default function OpcoesLancamento({
 
       {/* Informações contextuais */}
       {opcoes.cartaoCredito && opcoes.cartaoCreditoId && tipoLancamento === 'despesa' && (
-        <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
-          <p className="text-sm text-purple-700">
+        <div className="p-3 bg-muted rounded-lg border border-border">
+          <p className="text-sm text-foreground">
             <strong>Cartão de Crédito:</strong> Lançamento será calculado baseado no cartão selecionado
           </p>
           {opcoes.numeroParcelas > 1 && (
-            <p className="text-xs text-purple-600 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               ✓ <strong>Parcelado:</strong> Cada parcela será lançada no vencimento da fatura correspondente.
             </p>
           )}
@@ -154,8 +154,8 @@ export default function OpcoesLancamento({
       )}
 
       {opcoes.despesaRecorrente && (
-        <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-          <p className="text-sm text-blue-700">
+        <div className="p-3 bg-muted rounded-lg border border-border">
+          <p className="text-sm text-foreground">
             <strong>{textos.recorrente}:</strong> Será criada automaticamente para todos os meses 
             restantes do ano {new Date().getFullYear()}.
           </p>

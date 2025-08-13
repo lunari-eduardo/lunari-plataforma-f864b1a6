@@ -158,7 +158,7 @@ export default function ModalNovoLancamento({
                 {/* Priorizar itens do grupo ativo */}
                 {itensGrupoAtivo.length > 0 && (
                   <>
-                    <div className="px-2 py-1 text-xs font-medium text-gray-500 uppercase">
+                    <div className="px-2 py-1 text-xs font-medium text-muted-foreground uppercase">
                       {grupoAtivo} (Recomendado)
                     </div>
                     {itensGrupoAtivo.map(item => (
@@ -171,12 +171,12 @@ export default function ModalNovoLancamento({
                 )}
                 
                 {/* Outros itens */}
-                <div className="px-2 py-1 text-xs font-medium text-gray-500 uppercase">
+                 <div className="px-2 py-1 text-xs font-medium text-muted-foreground uppercase">
                   Todos os Itens
                 </div>
                 {todosItens.map(item => (
                   <SelectItem key={item.id} value={item.id}>
-                    {item.nome} <span className="text-xs text-gray-500">({item.grupo_principal})</span>
+                    {item.nome} <span className="text-xs text-muted-foreground">({item.grupo_principal})</span>
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -204,7 +204,7 @@ export default function ModalNovoLancamento({
                 value={formData.data_vencimento}
                 onChange={(e) => setFormData({ ...formData, data_vencimento: e.target.value })}
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 Status será: <strong>{determinarStatus(formData.data_vencimento)}</strong>
               </p>
             </div>
@@ -238,7 +238,7 @@ export default function ModalNovoLancamento({
                         valorFixo: checked as boolean
                       })}
                     />
-                    <Label htmlFor="valorFixo" className="text-sm text-blue-700">
+                    <Label htmlFor="valorFixo" className="text-sm text-primary">
                       Manter valor fixo mensalmente?
                     </Label>
                   </div>
@@ -298,7 +298,7 @@ export default function ModalNovoLancamento({
                 </SelectContent>
               </Select>
               {cartoes.filter(c => c.ativo).length === 0 && (
-                <p className="text-xs text-red-600 mt-1">
+                <p className="text-xs text-destructive mt-1">
                   Nenhum cartão configurado. Vá em Configurações para adicionar.
                 </p>
               )}
@@ -323,22 +323,22 @@ export default function ModalNovoLancamento({
                 })}
                 placeholder="Ex: 12 para 12 parcelas"
               />
-              <p className="text-xs text-gray-500 mt-1">
+               <p className="text-xs text-muted-foreground mt-1">
                 Será criado {formData.parcelas.total} lançamento(s) automático(s)
               </p>
             </div>
           )}
 
           {formData.cartaoCredito && (
-            <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
-              <p className="text-sm text-purple-700">
+            <div className="p-3 bg-muted rounded-lg border border-border">
+              <p className="text-sm text-foreground">
                 <strong>Cartão de Crédito:</strong> {formData.cartaoCreditoId ? 
                   `Lançamento será calculado baseado no cartão selecionado` : 
                   'Selecione um cartão para continuar'
                 }
               </p>
               {formData.parcelado && (
-                <p className="text-xs text-purple-600 mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   ✓ <strong>Parcelado:</strong> Cada parcela será lançada no vencimento da fatura correspondente.
                 </p>
               )}
@@ -346,17 +346,17 @@ export default function ModalNovoLancamento({
           )}
 
           {formData.despesaRecorrente && (
-            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-              <p className="text-sm text-blue-700">
+            <div className="p-3 bg-muted rounded-lg border border-border">
+              <p className="text-sm text-foreground">
                 <strong>Despesa Recorrente:</strong> Será criada automaticamente para todos os meses 
                 restantes do ano {new Date().getFullYear()}.
               </p>
               {formData.valorFixo ? (
-                <p className="text-xs text-green-700 mt-1">
+                <p className="text-xs text-lunar-success mt-1">
                   ✓ <strong>Valor Fixo:</strong> O valor R$ {formData.valor || '0,00'} será mantido em todos os meses.
                 </p>
               ) : (
-                <p className="text-xs text-orange-700 mt-1">
+                <p className="text-xs text-lunar-warning mt-1">
                   ⚠ <strong>Valor Variável:</strong> Será criado com valor R$ 0,00 para edição manual a cada mês.
                 </p>
               )}

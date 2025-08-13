@@ -127,7 +127,7 @@ export default function ModalNovoLancamentoRefatorado({
                 {/* Priorizar itens do grupo ativo */}
                 {itensGrupoAtivo.length > 0 && (
                   <>
-                    <div className="px-2 py-1 text-xs font-medium text-gray-500 uppercase">
+                    <div className="px-2 py-1 text-xs font-medium text-muted-foreground uppercase">
                       {grupoAtivo} (Recomendado)
                     </div>
                     {itensGrupoAtivo.map(item => (
@@ -140,12 +140,12 @@ export default function ModalNovoLancamentoRefatorado({
                 )}
                 
                 {/* Outros itens */}
-                <div className="px-2 py-1 text-xs font-medium text-gray-500 uppercase">
+                <div className="px-2 py-1 text-xs font-medium text-muted-foreground uppercase">
                   Todos os Itens
                 </div>
                 {todosItens.map(item => (
                   <SelectItem key={item.id} value={item.id}>
-                    {item.nome} <span className="text-xs text-gray-500">({item.grupo_principal})</span>
+                    {item.nome} <span className="text-xs text-muted-foreground">({item.grupo_principal})</span>
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -189,7 +189,7 @@ export default function ModalNovoLancamentoRefatorado({
                         valorFixo: checked as boolean
                       })}
                     />
-                    <Label htmlFor="valorFixo" className="text-sm text-blue-700">
+                    <Label htmlFor="valorFixo" className="text-sm text-primary">
                       Manter valor fixo mensalmente?
                     </Label>
                   </div>
@@ -208,13 +208,13 @@ export default function ModalNovoLancamentoRefatorado({
 
           {/* Informação adicional para valor fixo/variável em recorrentes */}
           {opcoes.despesaRecorrente && (
-            <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+            <div className="p-3 bg-muted rounded-lg border border-border">
               {formData.valorFixo ? (
-                <p className="text-xs text-green-700">
+                <p className="text-xs text-lunar-success">
                   ✓ <strong>Valor Fixo:</strong> O valor R$ {formData.valor || '0,00'} será mantido em todos os meses.
                 </p>
               ) : (
-                <p className="text-xs text-orange-700">
+                <p className="text-xs text-lunar-warning">
                   ⚠ <strong>Valor Variável:</strong> Será criado com valor R$ 0,00 para edição manual a cada mês.
                 </p>
               )}

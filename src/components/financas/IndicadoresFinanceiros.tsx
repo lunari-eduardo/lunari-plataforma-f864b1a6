@@ -16,12 +16,12 @@ export default function IndicadoresFinanceirosComponent({ indicadores }: Indicad
           <CardTitle className="text-sm font-medium">
             Custo Total (Faturado)
           </CardTitle>
-          <div className="bg-red-500 p-2 rounded-md text-white">
+          <div className="bg-destructive p-2 rounded-md text-destructive-foreground">
             <DollarSign className="h-4 w-4" />
           </div>
         </CardHeader>
         <CardContent>
-          <p className="text-2xl font-bold text-red-600">
+          <p className="text-2xl font-bold text-destructive">
             {formatCurrency(indicadores.custoTotal)}
           </p>
           <p className="text-xs text-neumorphic-textLight">
@@ -35,12 +35,12 @@ export default function IndicadoresFinanceirosComponent({ indicadores }: Indicad
           <CardTitle className="text-sm font-medium">
             Custo Previsto
           </CardTitle>
-          <div className="bg-orange-500 p-2 rounded-md text-white">
+          <div className="bg-lunar-warning p-2 rounded-md text-lunar-accent-foreground">
             <TrendingUp className="h-4 w-4" />
           </div>
         </CardHeader>
         <CardContent>
-          <p className="text-2xl font-bold text-orange-600">
+          <p className="text-2xl font-bold text-lunar-warning">
             {formatCurrency(indicadores.custoPrevisto)}
           </p>
           <p className="text-xs text-neumorphic-textLight">

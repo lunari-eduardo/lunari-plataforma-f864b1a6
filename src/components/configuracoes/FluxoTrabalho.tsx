@@ -177,7 +177,7 @@ export default function FluxoTrabalho({
                     <div className="col-span-4 hidden sm:flex items-center">
                       <div className="px-3 py-1 rounded-full text-xs border border-border" style={{
                   backgroundColor: etapa.cor,
-                  color: etapa.cor.toLowerCase() === '#ffffff' ? '#000000' : '#ffffff'
+                  color: etapa.cor.toLowerCase() === '#ffffff' ? 'hsl(var(--foreground))' : 'hsl(var(--primary-foreground))'
                 }}>
                         {etapa.cor}
                       </div>

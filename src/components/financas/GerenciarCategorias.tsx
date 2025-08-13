@@ -73,7 +73,7 @@ export default function GerenciarCategorias({
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Nome</label>
+              <label className="block text-sm font-medium text-foreground mb-2">Nome</label>
               <Input
                 value={novaCategoria.nome}
                 onChange={(e) => setNovaCategoria({ ...novaCategoria, nome: e.target.value })}
@@ -82,7 +82,7 @@ export default function GerenciarCategorias({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
+              <label className="block text-sm font-medium text-foreground mb-2">Tipo</label>
               <Select value={novaCategoria.tipo} onValueChange={handleTipoChange}>
                 <SelectTrigger>
                   <SelectValue />
@@ -121,14 +121,14 @@ export default function GerenciarCategorias({
                   />
                   {tipoInfo.label}
                 </CardTitle>
-                <span className="text-sm text-gray-500">
+                <span className="text-sm text-muted-foreground">
                   {categorias.reduce((total, cat) => total + (cat.subcategorias?.length || 0), 0)} subcategorias
                 </span>
               </div>
             </CardHeader>
             <CardContent>
               {categorias.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">
+                <p className="text-muted-foreground text-center py-4">
                   Nenhuma subcategoria cadastrada
                 </p>
               ) : (
@@ -141,13 +141,13 @@ export default function GerenciarCategorias({
                             className="w-3 h-3 rounded-full" 
                             style={{ backgroundColor: categoria.cor }}
                           />
-                          <h4 className="font-medium text-gray-900">{categoria.nome}</h4>
+                          <h4 className="font-medium text-foreground">{categoria.nome}</h4>
                         </div>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => onRemoverCategoria(categoria.id)}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          className="text-destructive hover:text-destructive/90 hover:bg-destructive/10"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -156,8 +156,8 @@ export default function GerenciarCategorias({
                       {/* Subcategorias */}
                       <div className="space-y-2">
                         {categoria.subcategorias?.map(sub => (
-                          <div key={sub.id} className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded">
-                            <span className="text-sm text-gray-700">{sub.nome}</span>
+                          <div key={sub.id} className="flex items-center justify-between py-2 px-3 bg-muted rounded">
+                            <span className="text-sm text-foreground">{sub.nome}</span>
                           </div>
                         ))}
                         
@@ -201,7 +201,7 @@ export default function GerenciarCategorias({
                             variant="ghost"
                             size="sm"
                             onClick={() => setAdicionandoSubcategoria(categoria.id)}
-                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 mt-2"
+                              className="text-primary hover:text-primary/90 hover:bg-primary/10 mt-2"
                           >
                             <Plus className="h-3 w-3 mr-1" />
                             Adicionar subcategoria
