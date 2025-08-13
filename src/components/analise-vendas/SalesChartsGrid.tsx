@@ -211,7 +211,7 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
       </Card>
 
       {/* Donut Charts: Category, Origin, Package */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-stretch">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-stretch lg:col-span-2">
         {/* Category Distribution */}
         <Card className="rounded-lg ring-1 ring-lunar-border/60 shadow-brand bg-lunar-surface">
           <CardHeader className="pb-2">
