@@ -26,7 +26,7 @@ export default function DailyHero() {
   const dayMonth = dayFmt.format(now);
 
   return (
-    <Card className="rounded-2xl border-0 shadow-brand hover:shadow-brand-hover transition-shadow duration-300 overflow-hidden">
+    <Card className="rounded-2xl border-0 shadow-card hover:shadow-brand transition-shadow duration-300 overflow-hidden">
       <div className="relative">
         {/* decorative accents */}
         <div className="pointer-events-none absolute inset-0 bg-brand-gradient opacity-[0.12]" />

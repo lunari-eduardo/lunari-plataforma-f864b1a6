@@ -193,9 +193,6 @@ export default function Index() {
       <DailyHero />
     </section>
 
-    <section aria-label="KPIs do dia" className="animate-fade-in">
-      <DailyKPIs />
-    </section>
 
     {/* KPIs modernizados (mensal) */}
     <section aria-label="Indicadores principais" className="animate-fade-in">
@@ -222,7 +219,7 @@ export default function Index() {
 
       {/* Orçamentos e Agenda */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="rounded-2xl border-0 shadow-brand hover:shadow-brand-hover transition-shadow duration-300 animate-fade-in">
+        <Card className="rounded-2xl border-0 shadow-card hover:shadow-brand transition-shadow duration-300 animate-fade-in">
           <CardHeader className="pb-3 flex flex-row items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-xl bg-brand-gradient shadow-brand">
@@ -246,7 +243,7 @@ export default function Index() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border-0 shadow-brand hover:shadow-brand-hover transition-shadow duration-300 animate-fade-in">
+        <Card className="rounded-2xl border-0 shadow-card hover:shadow-brand transition-shadow duration-300 animate-fade-in">
           <CardHeader className="pb-3 flex flex-row items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-xl bg-brand-gradient shadow-brand">
