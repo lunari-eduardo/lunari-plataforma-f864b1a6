@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { KPIGroupCard } from "@/components/dashboard/KPIGroupCard";
 import { ProductionRemindersCard } from "@/components/dashboard/ProductionRemindersCard";
 import { HighPriorityDueSoonCard } from "@/components/tarefas/HighPriorityDueSoonCard";
+import { ReceitaPrevistaCard } from "@/components/dashboard/ReceitaPrevistaCard";
 import DailyHero from "@/components/dashboard/DailyHero";
 import DailyKPIs from "@/components/dashboard/DailyKPIs";
 
@@ -205,6 +206,11 @@ export default function Index() {
         livresSemana={livresSemana}
         proximoLivre={proximoLivre}
       />
+    </section>
+
+    {/* Receita Prevista do Mês */}
+    <section aria-label="Receita prevista" className="animate-fade-in">
+      <ReceitaPrevistaCard />
     </section>
 
       {/* Lembretes de Produção */}
