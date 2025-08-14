@@ -362,7 +362,12 @@ export function CalculadoraServicos({
                               </div>
                               <div>
                                 <Label className="text-xs">Quantidade</Label>
-                                <Input type="number" min="1" value={produto.quantidade} onChange={e => atualizarProduto(produto.id, 'quantidade', parseInt(e.target.value) || 1)} className="h-8" />
+                                <Input type="text" inputMode="numeric" pattern="[0-9]*" value={produto.quantidade} onChange={e => {
+                                  const value = parseInt(e.target.value) || 1;
+                                  if (value >= 1) {
+                                    atualizarProduto(produto.id, 'quantidade', value);
+                                  }
+                                }} className="h-8" />
                               </div>
                               <div>
                                 <Label className="text-xs">Valor Venda</Label>
@@ -403,7 +408,12 @@ export function CalculadoraServicos({
                               </div>
                               <div>
                                 <Label className="text-xs">Quantidade</Label>
-                                <Input type="number" min="1" value={custo.quantidade} onChange={e => atualizarCustoExtra(custo.id, 'quantidade', parseInt(e.target.value) || 1)} className="h-8" />
+                                <Input type="text" inputMode="numeric" pattern="[0-9]*" value={custo.quantidade} onChange={e => {
+                                  const value = parseInt(e.target.value) || 1;
+                                  if (value >= 1) {
+                                    atualizarCustoExtra(custo.id, 'quantidade', value);
+                                  }
+                                }} className="h-8" />
                               </div>
                               <Button onClick={() => removerCustoExtra(custo.id)} variant="outline" size="sm" className="h-8">
                                 <Trash2 className="h-3 w-3" />
