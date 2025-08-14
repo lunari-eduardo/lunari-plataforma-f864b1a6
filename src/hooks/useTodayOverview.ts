@@ -2,6 +2,8 @@ import { useMemo } from "react";
 import { useAgenda } from "@/hooks/useAgenda";
 import { useTasks } from "@/hooks/useTasks";
 import { useTaskStatuses } from "@/hooks/useTaskStatuses";
+import { differenceInCalendarDays } from 'date-fns';
+import { parseDateFromStorage } from '@/utils/dateUtils';
 
 function isSameDay(a: Date, b: Date) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
@@ -36,36 +38,27 @@ export default function useTodayOverview() {
 
   const tasksToday = useMemo(() => {
     const doneKey = getDoneKey();
-    console.log('🔍 Debug Tarefas:', {
-      totalTasks: tasks.length,
-      tasks: tasks,
-      doneKey,
-      todayYMD,
-      currentDate: new Date().toISOString()
-    });
-    
-    const filteredTasks = tasks.filter((t) => {
-      const hasDueDate = !!t.dueDate;
-      const isToday = t.dueDate?.slice(0, 10) === todayYMD;
-      const isNotDone = t.status !== doneKey;
-      
-      console.log(`🔍 Tarefa "${t.title}":`, {
-        dueDate: t.dueDate,
-        dueDateSliced: t.dueDate?.slice(0, 10),
-        todayYMD,
-        isToday,
-        status: t.status,
-        doneKey,
-        isNotDone,
-        shouldInclude: hasDueDate && isToday && isNotDone
-      });
-      
-      return hasDueDate && isToday && isNotDone;
-    });
-    
-    console.log('🔍 Tarefas filtradas para hoje:', filteredTasks.length);
-    return filteredTasks.length;
-  }, [tasks, getDoneKey, todayYMD]);
+    const todayLocal = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+    const parseDue = (iso?: string) => {
+      if (!iso) return undefined as unknown as Date | undefined;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return parseDateFromStorage(iso);
+      const d = new Date(iso);
+      return isNaN(d.getTime()) ? undefined : d;
+    };
+
+    return tasks
+      .filter((t) => t.dueDate)
+      .filter((t) => t.status !== doneKey && !t.completedAt)
+      .map((t) => ({ t, due: parseDue(t.dueDate) }))
+      .filter((x) => !!x.due)
+      .map((x) => ({
+        ...x,
+        days: differenceInCalendarDays(x.due as Date, todayLocal),
+      }))
+      .filter((x) => x.days === 0) // Only tasks due today
+      .length;
+  }, [tasks, getDoneKey, today]);
 
   return { sessionsToday, tasksToday, nextAppointment } as const;
 }
