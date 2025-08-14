@@ -4,23 +4,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Trash2, ChevronDown, ChevronUp, Save, RotateCcw, CheckCircle, AlertCircle } from 'lucide-react';
 import { ProductSelector } from './ProductSelector';
 import { SalvarPacoteModal } from './SalvarPacoteModal';
-import { storage, STORAGE_KEYS } from '@/utils/localStorage';
-interface ProdutoAdicional {
-  id: string;
-  nome: string;
-  custo: number;
-  valorVenda: number;
-  quantidade: number;
-}
-interface CustoExtra {
-  id: string;
-  descricao: string;
-  valorUnitario: number;
-  quantidade: number;
-}
+import { PadraoHorasService, CalculadoraService, IndicadoresService } from '@/services/PricingService';
+import type { ProdutoAdicional, CustoExtra, StatusSalvamento } from '@/types/precificacao';
+// Tipos movidos para src/types/precificacao.ts
 interface CalculadoraServicosProps {
   custosFixosTotal: number;
 }
@@ -34,25 +23,49 @@ export function CalculadoraServicos({
   const [horasDisponiveis, setHorasDisponiveis] = useState(8);
   const [diasTrabalhados, setDiasTrabalhados] = useState(5);
 
-  // Campos do projeto atual
+  // Campos do projeto atual (AGORA PERSISTENTES)
   const [horasEstimadas, setHorasEstimadas] = useState(0);
   const [markup, setMarkup] = useState(2);
 
-  // Produtos e custos extras
+  // Produtos e custos extras (AGORA PERSISTENTES)
   const [produtos, setProdutos] = useState<ProdutoAdicional[]>([]);
   const [custosExtras, setCustosExtras] = useState<CustoExtra[]>([]);
 
-  // Carregar dados salvos
+  // Status de salvamento
+  const [statusCalculadora, setStatusCalculadora] = useState<StatusSalvamento>('nao_salvo');
+  const [temEstadoSalvo, setTemEstadoSalvo] = useState(false);
+
+  // Carregar padrão de horas - NOVO SISTEMA
   useEffect(() => {
-    const dadosSalvos = storage.load('precificacao_padrao_horas', {
-      horasDisponiveis: 8,
-      diasTrabalhados: 5
-    });
-    setHorasDisponiveis(dadosSalvos.horasDisponiveis);
-    setDiasTrabalhados(dadosSalvos.diasTrabalhados);
+    try {
+      const dadosSalvos = PadraoHorasService.carregar();
+      setHorasDisponiveis(dadosSalvos.horasDisponiveis);
+      setDiasTrabalhados(dadosSalvos.diasTrabalhados);
+    } catch (error) {
+      console.error('Erro ao carregar padrão de horas:', error);
+    }
   }, []);
 
-  // Cálculos
+  // Carregar estado da calculadora salvo - NOVO RECURSO
+  useEffect(() => {
+    try {
+      const estadoSalvo = CalculadoraService.carregar();
+      if (estadoSalvo) {
+        setHorasEstimadas(estadoSalvo.horasEstimadas);
+        setMarkup(estadoSalvo.markup);
+        setProdutos(estadoSalvo.produtos);
+        setCustosExtras(estadoSalvo.custosExtras);
+        setStatusCalculadora('salvo');
+        setTemEstadoSalvo(true);
+        IndicadoresService.atualizarIndicador('calculadora', 'salvo', 'Estado anterior carregado');
+        console.log('✅ Estado da calculadora carregado');
+      }
+    } catch (error) {
+      console.error('Erro ao carregar estado da calculadora:', error);
+    }
+  }, []);
+
+  // Cálculos (movidos para cima para evitar erro de declaração)
   const horasMensais = horasDisponiveis * diasTrabalhados * 4; // 4 semanas por mês
   const custoHora = horasMensais > 0 ? custosFixosTotal / horasMensais : 0;
   const custoHorasServico = horasEstimadas * custoHora;
@@ -62,11 +75,112 @@ export function CalculadoraServicos({
   const precoFinal = custoTotalServico * markup;
   const lucroLiquido = precoFinal - custoTotalServico;
   const lucratividade = custoTotalServico > 0 ? lucroLiquido / precoFinal * 100 : 0;
+
+  // Auto-save do estado da calculadora - NOVO RECURSO
+  useEffect(() => {
+    // Só salvar se houver algum conteúdo significativo
+    const temConteudo = horasEstimadas > 0 || produtos.length > 0 || custosExtras.length > 0;
+    
+    if (temConteudo) {
+      const timeoutId = setTimeout(() => {
+        try {
+          setStatusCalculadora('salvando');
+          
+          const estadoAtual = {
+            horasEstimadas,
+            markup,
+            produtos,
+            custosExtras,
+            custoTotalCalculado: custoTotalServico,
+            precoFinalCalculado: precoFinal,
+            lucratividade,
+            salvo_automaticamente: true
+          };
+          
+          const sucesso = CalculadoraService.salvar(estadoAtual, true);
+          
+          if (sucesso) {
+            setStatusCalculadora('salvo');
+            setTemEstadoSalvo(true);
+            IndicadoresService.atualizarIndicador('calculadora', 'salvo', 'Auto-salvamento');
+          } else {
+            setStatusCalculadora('erro');
+          }
+        } catch (error) {
+          console.error('Erro no auto-save da calculadora:', error);
+          setStatusCalculadora('erro');
+        }
+      }, 2000); // Debounce de 2 segundos para calculadora
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [horasEstimadas, markup, produtos, custosExtras, custoTotalServico, precoFinal, lucratividade]);
   const salvarPadraoHoras = () => {
-    storage.save('precificacao_padrao_horas', {
-      horasDisponiveis,
-      diasTrabalhados
-    });
+    try {
+      const sucesso = PadraoHorasService.salvar({
+        horasDisponiveis,
+        diasTrabalhados
+      });
+      
+      if (sucesso) {
+        IndicadoresService.atualizarIndicador('padrao_horas', 'salvo', 'Padrão salvo');
+        console.log('✅ Padrão de horas salvo');
+      }
+    } catch (error) {
+      console.error('Erro ao salvar padrão de horas:', error);
+    }
+  };
+
+  // Limpar estado da calculadora - NOVO RECURSO
+  const limparCalculadora = () => {
+    try {
+      setHorasEstimadas(0);
+      setMarkup(2);
+      setProdutos([]);
+      setCustosExtras([]);
+      
+      CalculadoraService.limpar();
+      setStatusCalculadora('nao_salvo');
+      setTemEstadoSalvo(false);
+      
+      IndicadoresService.atualizarIndicador('calculadora', 'nao_salvo', 'Calculadora limpa');
+      console.log('✅ Calculadora limpa');
+    } catch (error) {
+      console.error('Erro ao limpar calculadora:', error);
+    }
+  };
+
+  // Salvar estado manualmente
+  const salvarEstadoManualmente = () => {
+    try {
+      setStatusCalculadora('salvando');
+      
+      const estadoAtual = {
+        nome: `Cálculo ${new Date().toLocaleString()}`,
+        horasEstimadas,
+        markup,
+        produtos,
+        custosExtras,
+        custoTotalCalculado: custoTotalServico,
+        precoFinalCalculado: precoFinal,
+        lucratividade,
+        salvo_automaticamente: false
+      };
+      
+      const sucesso = CalculadoraService.salvar(estadoAtual, false);
+      
+      if (sucesso) {
+        setStatusCalculadora('salvo');
+        setTemEstadoSalvo(true);
+        IndicadoresService.atualizarIndicador('calculadora', 'salvo', 'Salvo manualmente');
+        console.log('✅ Estado salvo manualmente');
+      } else {
+        setStatusCalculadora('erro');
+      }
+    } catch (error) {
+      console.error('Erro no salvamento manual:', error);
+      setStatusCalculadora('erro');
+    }
   };
   const adicionarProduto = () => {
     setProdutos([...produtos, {
@@ -113,7 +227,7 @@ export function CalculadoraServicos({
                   Fechar Calculadora
                   <ChevronUp className="h-4 w-4" />
                 </> : <>
-                  [+] Calcular Novo Preço
+                  {temEstadoSalvo ? '[📊] Continuar Cálculo' : '[+] Calcular Novo Preço'}
                   <ChevronDown className="h-4 w-4" />
                 </>}
             </Button>
@@ -122,12 +236,55 @@ export function CalculadoraServicos({
           <CollapsibleContent>
             <Card className="mt-6 bg-lunar-surface border-lunar-border/50">
               <CardContent className="p-6">
-                {/* Título e descrição no topo */}
+                {/* Título, descrição e controles no topo */}
                 <div className="mb-6">
-                  <h3 className="font-semibold text-lunar-text mb-2">Calculadora de Serviços</h3>
-                  <p className="text-sm text-lunar-textSecondary">
-                    Calcule o preço de um serviço específico com base nos seus custos e em variáveis do projeto.
-                  </p>
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <h3 className="font-semibold text-foreground mb-1">Calculadora de Serviços</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Calcule o preço de um serviço específico com base nos seus custos e em variáveis do projeto.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {/* Indicador de status */}
+                      <div className="flex items-center gap-1 text-xs">
+                        {statusCalculadora === 'salvando' && (
+                          <>
+                            <div className="animate-spin h-3 w-3 border border-blue-600 border-t-transparent rounded-full" />
+                            <span className="text-blue-600">Salvando...</span>
+                          </>
+                        )}
+                        {statusCalculadora === 'salvo' && (
+                          <>
+                            <CheckCircle className="h-3 w-3 text-green-600" />
+                            <span className="text-green-600">Auto-salvo</span>
+                          </>
+                        )}
+                        {statusCalculadora === 'erro' && (
+                          <>
+                            <AlertCircle className="h-3 w-3 text-red-600" />
+                            <span className="text-red-600">Erro</span>
+                          </>
+                        )}
+                      </div>
+                      
+                      {/* Botões de controle */}
+                      <Button onClick={salvarEstadoManualmente} variant="outline" size="sm" className="h-7 text-xs">
+                        <Save className="h-3 w-3 mr-1" />
+                        Salvar
+                      </Button>
+                      <Button onClick={limparCalculadora} variant="outline" size="sm" className="h-7 text-xs">
+                        <RotateCcw className="h-3 w-3 mr-1" />
+                        Limpar
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  {temEstadoSalvo && (
+                    <div className="text-xs text-blue-600 bg-blue-50 dark:bg-blue-900/20 p-2 rounded border border-blue-200 dark:border-blue-800">
+                      💾 Cálculo anterior carregado automaticamente. Use "Limpar" para começar novo cálculo.
+                    </div>
+                  )}
                 </div>
                 
                 {/* Layout principal - duas colunas */}

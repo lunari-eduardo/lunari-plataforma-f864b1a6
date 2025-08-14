@@ -2,7 +2,11 @@ import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Save, Download, CheckCircle, AlertCircle } from 'lucide-react';
+import { MetasService, IndicadoresService, BackupService } from '@/services/PricingService';
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
+import type { StatusSalvamento } from '@/types/precificacao';
 interface MetasIndicadoresProps {
   custosFixosTotal: number;
 }
@@ -18,23 +22,58 @@ export function MetasIndicadores({
   custosFixosTotal
 }: MetasIndicadoresProps) {
   const [margemLucroDesejada, setMargemLucroDesejada] = useState(30);
+  const [statusSalvamento, setStatusSalvamento] = useState<StatusSalvamento>('nao_salvo');
 
-  // Carregar dados salvos
+  // Carregar dados salvos - NOVO SISTEMA
   useEffect(() => {
-    const dados = storage.load('precificacao_metas', {
-      margemLucroDesejada: 30
-    });
-    setMargemLucroDesejada(dados.margemLucroDesejada);
+    try {
+      setStatusSalvamento('salvando');
+      const dados = MetasService.carregar();
+      setMargemLucroDesejada(dados.margemLucroDesejada);
+      setStatusSalvamento('salvo');
+      IndicadoresService.atualizarIndicador('metas', 'salvo', 'Dados carregados');
+    } catch (error) {
+      console.error('Erro ao carregar metas:', error);
+      setStatusSalvamento('erro');
+    }
   }, []);
 
-  // Salvar dados automaticamente
+  // Salvar dados automaticamente - NOVO SISTEMA
   useEffect(() => {
-    storage.save('precificacao_metas', {
-      margemLucroDesejada
-    });
+    const timeoutId = setTimeout(() => {
+      try {
+        setStatusSalvamento('salvando');
+        
+        const currentYear = new Date().getFullYear();
+        const faturamentoMinimoAnual = custosFixosTotal * 12;
+        const metaFaturamentoAnual = faturamentoMinimoAnual / (1 - margemLucroDesejada / 100);
+        const metaLucroAnual = metaFaturamentoAnual - faturamentoMinimoAnual;
+        
+        const dadosParaSalvar = {
+          margemLucroDesejada,
+          ano: currentYear,
+          metaFaturamentoAnual,
+          metaLucroAnual
+        };
+        
+        const sucesso = MetasService.salvar(dadosParaSalvar);
+        
+        if (sucesso) {
+          setStatusSalvamento('salvo');
+          IndicadoresService.atualizarIndicador('metas', 'salvo', 'Salvo automaticamente');
+          
+          // Salvar/atualizar metas históricas
+          saveHistoricalGoals();
+        } else {
+          setStatusSalvamento('erro');
+        }
+      } catch (error) {
+        console.error('Erro no auto-save das metas:', error);
+        setStatusSalvamento('erro');
+      }
+    }, 1000);
     
-    // Salvar/atualizar metas históricas
-    saveHistoricalGoals();
+    return () => clearTimeout(timeoutId);
   }, [margemLucroDesejada, custosFixosTotal]);
 
   const saveHistoricalGoals = () => {
@@ -74,12 +113,94 @@ export function MetasIndicadores({
   const metaFaturamentoAnual = faturamentoMinimoAnual / (1 - margemLucroDesejada / 100);
   const metaFaturamentoMensal = metaFaturamentoAnual / 12;
   const metaLucroAnual = metaFaturamentoAnual - faturamentoMinimoAnual;
+  // Salvar manualmente
+  const salvarManualmente = () => {
+    try {
+      setStatusSalvamento('salvando');
+      
+      const currentYear = new Date().getFullYear();
+      const faturamentoMinimoAnual = custosFixosTotal * 12;
+      const metaFaturamentoAnual = faturamentoMinimoAnual / (1 - margemLucroDesejada / 100);
+      const metaLucroAnual = metaFaturamentoAnual - faturamentoMinimoAnual;
+      
+      const dadosParaSalvar = {
+        margemLucroDesejada,
+        ano: currentYear,
+        metaFaturamentoAnual,
+        metaLucroAnual
+      };
+      
+      const sucesso = MetasService.salvar(dadosParaSalvar);
+      
+      if (sucesso) {
+        setStatusSalvamento('salvo');
+        IndicadoresService.atualizarIndicador('metas', 'salvo', 'Salvo manualmente');
+      } else {
+        setStatusSalvamento('erro');
+      }
+    } catch (error) {
+      console.error('Erro no salvamento manual:', error);
+      setStatusSalvamento('erro');
+    }
+  };
+
+  // Fazer backup completo
+  const fazerBackup = () => {
+    try {
+      BackupService.downloadBackup();
+      console.log('✅ Backup realizado com sucesso');
+    } catch (error) {
+      console.error('Erro ao fazer backup:', error);
+    }
+  };
+
+  // Renderizar indicador de status
+  const renderStatusIndicator = () => {
+    switch (statusSalvamento) {
+      case 'salvando':
+        return <div className="flex items-center gap-1 text-xs text-blue-600">
+          <div className="animate-spin h-3 w-3 border border-blue-600 border-t-transparent rounded-full" />
+          Salvando...
+        </div>;
+      case 'salvo':
+        return <div className="flex items-center gap-1 text-xs text-green-600">
+          <CheckCircle className="h-3 w-3" />
+          Salvo
+        </div>;
+      case 'erro':
+        return <div className="flex items-center gap-1 text-xs text-red-600">
+          <AlertCircle className="h-3 w-3" />
+          Erro
+        </div>;
+      default:
+        return <div className="flex items-center gap-1 text-xs text-gray-500">
+          <AlertCircle className="h-3 w-3" />
+          Não salvo
+        </div>;
+    }
+  };
+
   return <Card>
       <CardHeader>
-        <CardTitle className="text-lg text-lunar-success">Metas e Indicadores de Lucro</CardTitle>
-        <p className="text-sm text-lunar-textSecondary">
-          Defina suas metas financeiras e acompanhe os indicadores de lucro.
-        </p>
+        <div className="flex justify-between items-start">
+          <div>
+            <CardTitle className="text-lg text-green-600">Metas e Indicadores de Lucro</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Defina suas metas financeiras e acompanhe os indicadores de lucro.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            {renderStatusIndicator()}
+            <Button onClick={salvarManualmente} variant="outline" size="sm" className="h-7 text-xs">
+              <Save className="h-3 w-3 mr-1" />
+              Salvar
+            </Button>
+            <Button onClick={fazerBackup} variant="outline" size="sm" className="h-7 text-xs">
+              <Download className="h-3 w-3 mr-1" />
+              Backup
+            </Button>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

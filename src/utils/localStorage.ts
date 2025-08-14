@@ -37,7 +37,12 @@ export const STORAGE_KEYS = {
   FEED_IMAGES: 'lunari_feed_images',
   FEED_ZOOM_DESKTOP: 'lunari_feed_zoom_desktop',
   FEED_ZOOM_TABLET: 'lunari_feed_zoom_tablet',
-  FEED_INSTAGRAM_USERNAME: 'lunari_feed_instagram_username'
+  FEED_INSTAGRAM_USERNAME: 'lunari_feed_instagram_username',
+  // Precificação - Sistema padronizado
+  PRICING_FIXED_COSTS: 'lunari_pricing_fixed_costs',
+  PRICING_HOUR_DEFAULTS: 'lunari_pricing_hour_defaults', 
+  PRICING_GOALS: 'lunari_pricing_goals',
+  PRICING_CALCULATOR_STATE: 'lunari_pricing_calculator_state'
 } as const;
 
 export const storage = {

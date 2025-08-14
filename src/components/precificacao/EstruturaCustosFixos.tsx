@@ -4,23 +4,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Trash2 } from 'lucide-react';
-import { storage } from '@/utils/localStorage';
-interface GastoItem {
-  id: string;
-  descricao: string;
-  valor: number;
-}
-interface Equipamento {
-  id: string;
-  nome: string;
-  valorPago: number;
-  dataCompra: string;
-  vidaUtil: number;
-}
+import { Plus, Trash2, Save, CheckCircle, AlertCircle } from 'lucide-react';
+import { EstruturaCustosService, ValidacaoService, IndicadoresService } from '@/services/PricingService';
+import type { GastoItem, Equipamento, StatusSalvamento } from '@/types/precificacao';
+// Tipos movidos para src/types/precificacao.ts
 interface EstruturaCustosFixosProps {
   onTotalChange: (total: number) => void;
 }
+
 export function EstruturaCustosFixos({
   onTotalChange
 }: EstruturaCustosFixosProps) {
@@ -28,6 +19,7 @@ export function EstruturaCustosFixos({
   const [percentualProLabore, setPercentualProLabore] = useState(30);
   const [custosEstudio, setCustosEstudio] = useState<GastoItem[]>([]);
   const [equipamentos, setEquipamentos] = useState<Equipamento[]>([]);
+  const [statusSalvamento, setStatusSalvamento] = useState<StatusSalvamento>('nao_salvo');
 
   // Estados para linhas de adição rápida
   const [novoGastoPessoal, setNovoGastoPessoal] = useState({
@@ -45,31 +37,58 @@ export function EstruturaCustosFixos({
     vidaUtil: '5'
   });
 
-  // Carregar dados salvos
+  // Carregar dados salvos - NOVO SISTEMA
   useEffect(() => {
-    const dados = storage.load('precificacao_custos_fixos', {
-      gastosPessoais: [],
-      percentualProLabore: 30,
-      custosEstudio: [],
-      equipamentos: []
-    });
-    setGastosPessoais(dados.gastosPessoais);
-    setPercentualProLabore(dados.percentualProLabore);
-    setCustosEstudio(dados.custosEstudio);
-    setEquipamentos(dados.equipamentos);
+    try {
+      setStatusSalvamento('salvando');
+      const dados = EstruturaCustosService.carregar();
+      
+      setGastosPessoais(dados.gastosPessoais);
+      setPercentualProLabore(dados.percentualProLabore);
+      setCustosEstudio(dados.custosEstudio);
+      setEquipamentos(dados.equipamentos);
+      
+      setStatusSalvamento('salvo');
+      IndicadoresService.atualizarIndicador('estrutura_custos', 'salvo', 'Dados carregados');
+    } catch (error) {
+      console.error('Erro ao carregar estrutura de custos:', error);
+      setStatusSalvamento('erro');
+      IndicadoresService.atualizarIndicador('estrutura_custos', 'erro', 'Erro no carregamento');
+    }
   }, []);
 
-  // Salvar dados automaticamente
+  // Salvar dados automaticamente - NOVO SISTEMA  
   useEffect(() => {
-    storage.save('precificacao_custos_fixos', {
-      gastosPessoais,
-      percentualProLabore,
-      custosEstudio,
-      equipamentos
-    });
-  }, [gastosPessoais, percentualProLabore, custosEstudio, equipamentos]);
-
-  // Cálculos
+    const timeoutId = setTimeout(() => {
+      try {
+        setStatusSalvamento('salvando');
+        
+        const dadosParaSalvar = {
+          gastosPessoais,
+          percentualProLabore,
+          custosEstudio,
+          equipamentos,
+          totalCalculado: totalPrincipal
+        };
+        
+        const sucesso = EstruturaCustosService.salvar(dadosParaSalvar);
+        
+        if (sucesso) {
+          setStatusSalvamento('salvo');
+          IndicadoresService.atualizarIndicador('estrutura_custos', 'salvo', 'Salvo automaticamente');
+        } else {
+          setStatusSalvamento('erro');
+          IndicadoresService.atualizarIndicador('estrutura_custos', 'erro', 'Falha no salvamento');
+        }
+      } catch (error) {
+        console.error('Erro no auto-save:', error);
+        setStatusSalvamento('erro');
+        IndicadoresService.atualizarIndicador('estrutura_custos', 'erro', 'Erro no salvamento automático');
+      }
+    }, 1000); // Debounce de 1 segundo
+    
+    return () => clearTimeout(timeoutId);
+  // Cálculos (movidos para cima para evitar erro de declaração)
   const totalGastosPessoais = gastosPessoais.reduce((total, item) => total + item.valor, 0);
   const proLaboreCalculado = totalGastosPessoais * (1 + percentualProLabore / 100);
   const totalCustosEstudio = custosEstudio.reduce((total, item) => total + item.valor, 0);
@@ -80,6 +99,8 @@ export function EstruturaCustosFixos({
 
   // Total principal (não inclui gastos pessoais para evitar contagem dupla)
   const totalPrincipal = proLaboreCalculado + totalCustosEstudio + totalDepreciacaoMensal;
+
+  }, [gastosPessoais, percentualProLabore, custosEstudio, equipamentos, totalPrincipal]);
 
   // Notificar mudança no total
   useEffect(() => {
@@ -186,17 +207,112 @@ export function EstruturaCustosFixos({
       });
     }
   };
+  // Função para validar e salvar manualmente
+  const salvarManualmente = () => {
+    try {
+      setStatusSalvamento('salvando');
+      
+      const dadosParaSalvar = {
+        gastosPessoais,
+        percentualProLabore,
+        custosEstudio,
+        equipamentos,
+        totalCalculado: totalPrincipal
+      };
+      
+      // Validar antes de salvar
+      const erros = EstruturaCustosService.validar(dadosParaSalvar);
+      if (erros.length > 0) {
+        console.warn('Dados com avisos:', erros);
+      }
+      
+      const sucesso = EstruturaCustosService.salvar(dadosParaSalvar);
+      
+      if (sucesso) {
+        setStatusSalvamento('salvo');
+        IndicadoresService.atualizarIndicador('estrutura_custos', 'salvo', 'Salvo manualmente');
+      } else {
+        setStatusSalvamento('erro');
+      }
+    } catch (error) {
+      console.error('Erro no salvamento manual:', error);
+      setStatusSalvamento('erro');
+    }
+  };
+
+  // Função para exportar dados
+  const exportarDados = () => {
+    try {
+      const dados = {
+        gastosPessoais,
+        percentualProLabore,
+        custosEstudio,
+        equipamentos,
+        totalCalculado: totalPrincipal,
+        dataExport: new Date().toISOString()
+      };
+      
+      const dataStr = JSON.stringify(dados, null, 2);
+      const blob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `estrutura-custos-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Erro ao exportar:', error);
+    }
+  };
+
+  // Renderizar indicador de status
+  const renderStatusIndicator = () => {
+    switch (statusSalvamento) {
+      case 'salvando':
+        return <div className="flex items-center gap-1 text-xs text-blue-600">
+          <div className="animate-spin h-3 w-3 border border-blue-600 border-t-transparent rounded-full" />
+          Salvando...
+        </div>;
+      case 'salvo':
+        return <div className="flex items-center gap-1 text-xs text-green-600">
+          <CheckCircle className="h-3 w-3" />
+          Salvo
+        </div>;
+      case 'erro':
+        return <div className="flex items-center gap-1 text-xs text-red-600">
+          <AlertCircle className="h-3 w-3" />
+          Erro
+        </div>;
+      default:
+        return <div className="flex items-center gap-1 text-xs text-gray-500">
+          <AlertCircle className="h-3 w-3" />
+          Não salvo
+        </div>;
+    }
+  };
+
   return <Card>
       <CardHeader>
         <div className="flex justify-between items-center">
           <div>
             <CardTitle className="text-sm">Estrutura de Custos Fixos</CardTitle>
-            <p className="text-lunar-textSecondary mt-1 text-xs">
+            <p className="text-muted-foreground mt-1 text-xs">
               Defina seus custos fixos mensais para calcular o valor da sua hora de trabalho.
             </p>
           </div>
-          <div className="text-right">
-            <p className="text-sm text-lunar-textSecondary">Total:</p>
+          <div className="text-right space-y-1">
+            <div className="flex items-center gap-2">
+              {renderStatusIndicator()}
+              <Button onClick={salvarManualmente} variant="outline" size="sm" className="h-6 text-xs">
+                <Save className="h-3 w-3 mr-1" />
+                Salvar
+              </Button>
+            </div>
+            <p className="text-sm text-muted-foreground">Total:</p>
             <p className="font-bold text-green-600 text-base">R$ {totalPrincipal.toFixed(2)}</p>
           </div>
         </div>
