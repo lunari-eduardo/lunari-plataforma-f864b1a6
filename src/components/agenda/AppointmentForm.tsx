@@ -258,147 +258,204 @@ export default function AppointmentForm({
     };
     onSave(appointmentData);
   };
-  return <form onSubmit={handleSubmit} className="space-y-4 rounded-lg py-2 px-3">
-      {isFromBudgetAppointment && <div className="p-3 bg-muted border border-border rounded-lg">
+  return <div className="space-y-6">
+      {isFromBudgetAppointment && (
+        <div className="p-4 bg-muted border border-border rounded-lg">
           <p className="text-sm font-medium text-foreground mb-1">📋 Agendamento de Orçamento</p>
           <p className="text-xs text-muted-foreground">
             Este agendamento foi criado automaticamente a partir de um orçamento fechado. 
             Apenas data e horário podem ser editados aqui. Para alterar outras informações, 
             vá para a página de Orçamentos ou Workflow.
           </p>
-        </div>}
+        </div>
+      )}
       
-      {!isFromBudgetAppointment && <div className="space-y-2">
-          <Label className="text-xs font-medium text-lunar-text">Cliente</Label>
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-2 mb-2 h-8">
-            <TabsTrigger value="existing" className="text-xs">Cliente do CRM</TabsTrigger>
-            <TabsTrigger value="new" className="text-xs">Novo Cliente</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="existing" className="space-y-4">
-            <ClientSearchCombobox value={formData.clientId} onSelect={handleClientSelect} placeholder="Buscar cliente no CRM..." />
-            <p className="text-[11px] text-lunar-textSecondary">
-              💡 Clientes são gerenciados na página CRM. <a href="/clientes" className="text-lunar-accent hover:underline">Ver todos os clientes</a>
-            </p>
-          </TabsContent>
-          
-          <TabsContent value="new" className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="new-client-name" className="text-xs font-medium">Nome*</Label>
-              <Input id="new-client-name" name="newClientName" value={formData.newClientName} onChange={handleChange} placeholder="Nome completo" />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="new-client-phone" className="text-xs font-medium">Telefone*</Label>
-              <Input id="new-client-phone" name="newClientPhone" value={formData.newClientPhone} onChange={handleChange} placeholder="+55 (DDD) 00000-0000" />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="new-client-email" className="text-xs font-medium">E-mail</Label>
-              <Input id="new-client-email" name="newClientEmail" type="email" value={formData.newClientEmail} onChange={handleChange} placeholder="email@exemplo.com" />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="new-client-origem" className="text-xs font-medium">Como conheceu?</Label>
-              <Select value={formData.newClientOrigem} onValueChange={(value) => setFormData(prev => ({ ...prev, newClientOrigem: value }))}>
-                <SelectTrigger id="new-client-origem">
-                  <SelectValue placeholder="Selecione a origem" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ORIGENS_PADRAO.map(origem => (
-                    <SelectItem key={origem.id} value={origem.id}>
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: origem.cor }} />
-                        {origem.nome}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <p className="text-[11px] text-lunar-accent">
-              🆕 Novo cliente será automaticamente adicionado ao CRM
-            </p>
-          </TabsContent>
-        </Tabs>
-        </div>}
-      
-      {/* Campos de data e hora sempre visíveis */}
-      
-
-      {!isFromBudgetAppointment && <>
-          <div className="space-y-2">
-            <Label htmlFor="appointment-description" className="text-xs font-medium">Descrição</Label>
-            <Textarea id="appointment-description" name="description" value={formData.description} onChange={handleChange} placeholder="Detalhes da sessão..." className="min-h-[80px]" />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="package-search-input" className="text-xs font-medium">Pacote</Label>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {!isFromBudgetAppointment && (
+          <div className="space-y-4">
             <div>
-              <PackageSearchCombobox value={formData.packageId} onSelect={handlePackageSelect} placeholder="Buscar pacote por nome ou categoria..." />
+              <Label className="text-sm font-medium text-foreground">Cliente</Label>
+              <p className="text-xs text-muted-foreground mb-3">Complete os detalhes do agendamento abaixo.</p>
             </div>
             
-            {/* Seção de Produtos Incluídos - aparece quando pacote é selecionado */}
-            {formData.packageId && getIncludedProducts().length > 0 && (
-              <div className="mt-3 p-3 bg-muted border border-border rounded-lg">
-                <h4 className="text-xs font-medium text-foreground mb-2">📦 Produtos Incluídos neste Pacote</h4>
-                <div className="space-y-1">
-                  {getIncludedProducts().map((produto, index) => (
-                    <div key={index} className="flex justify-between items-center text-xs text-muted-foreground">
-                      <span>{produto.nome}</span>
-                      <span className="font-medium">Qtd: {produto.quantidade}</span>
-                    </div>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid grid-cols-2 w-full">
+                <TabsTrigger value="existing" className="text-sm">Cliente do CRM</TabsTrigger>
+                <TabsTrigger value="new" className="text-sm">Novo Cliente</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="existing" className="mt-4 space-y-4">
+                <div className="space-y-2">
+                  <ClientSearchCombobox 
+                    value={formData.clientId} 
+                    onSelect={handleClientSelect} 
+                    placeholder="Buscar cliente no CRM..." 
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    💡 Clientes são gerenciados na página CRM. <a href="/clientes" className="text-primary hover:underline">Ver todos os clientes</a>
+                  </p>
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="new" className="mt-4 space-y-4">
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="new-client-name" className="text-sm font-medium">Nome *</Label>
+                    <Input 
+                      id="new-client-name" 
+                      name="newClientName" 
+                      value={formData.newClientName} 
+                      onChange={handleChange} 
+                      placeholder="Nome completo" 
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="new-client-phone" className="text-sm font-medium">Telefone *</Label>
+                    <Input 
+                      id="new-client-phone" 
+                      name="newClientPhone" 
+                      value={formData.newClientPhone} 
+                      onChange={handleChange} 
+                      placeholder="+55 (DDD) 00000-0000" 
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="new-client-email" className="text-sm font-medium">E-mail</Label>
+                    <Input 
+                      id="new-client-email" 
+                      name="newClientEmail" 
+                      type="email" 
+                      value={formData.newClientEmail} 
+                      onChange={handleChange} 
+                      placeholder="email@exemplo.com" 
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="new-client-origem" className="text-sm font-medium">Como conheceu?</Label>
+                    <Select 
+                      value={formData.newClientOrigem} 
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, newClientOrigem: value }))}
+                    >
+                      <SelectTrigger id="new-client-origem">
+                        <SelectValue placeholder="Selecione a origem" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ORIGENS_PADRAO.map(origem => (
+                          <SelectItem key={origem.id} value={origem.id}>
+                            <div className="flex items-center gap-2">
+                              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: origem.cor }} />
+                              {origem.nome}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                <p className="text-xs text-primary">
+                  🆕 Novo cliente será automaticamente adicionado ao CRM
+                </p>
+              </TabsContent>
+            </Tabs>
+          </div>
+        )}
+        
+        {!isFromBudgetAppointment && (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="appointment-description" className="text-sm font-medium">Descrição</Label>
+              <Textarea 
+                id="appointment-description" 
+                name="description" 
+                value={formData.description} 
+                onChange={handleChange} 
+                placeholder="Detalhes da sessão..." 
+                className="min-h-[80px] resize-none" 
+              />
+            </div>
+            
+            <div className="space-y-3">
+              <Label htmlFor="package-search-input" className="text-sm font-medium">Pacote</Label>
+              <PackageSearchCombobox 
+                value={formData.packageId} 
+                onSelect={handlePackageSelect} 
+                placeholder="Buscar pacote por nome ou categoria..." 
+              />
+              
+              {formData.packageId && getIncludedProducts().length > 0 && (
+                <div className="p-4 bg-muted border border-border rounded-lg">
+                  <h4 className="text-sm font-medium text-foreground mb-3">📦 Produtos Incluídos neste Pacote</h4>
+                  <div className="space-y-2">
+                    {getIncludedProducts().map((produto, index) => (
+                      <div key={index} className="flex justify-between items-center text-sm">
+                        <span className="text-foreground">{produto.nome}</span>
+                        <span className="font-medium text-muted-foreground">Qtd: {produto.quantidade}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-3 italic">
+                    Estes produtos serão automaticamente incluídos no agendamento
+                  </p>
+                </div>
+              )}
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="appointment-paid-amount" className="text-sm font-medium">Valor pago</Label>
+                <Input 
+                  id="appointment-paid-amount" 
+                  name="paidAmount" 
+                  type="number" 
+                  min="0" 
+                  step="0.01" 
+                  value={formData.paidAmount} 
+                  onChange={handleChange} 
+                  placeholder="0,00" 
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Status do Agendamento</Label>
+                <div className="flex gap-2">
+                  {availableStatus.map(status => (
+                    <Button
+                      key={status.value}
+                      type="button"
+                      variant={formData.status === status.value ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handleStatusSelect(status.value)}
+                      className={`flex-1 text-sm ${
+                        formData.status === status.value
+                          ? status.value === 'a confirmar'
+                            ? 'bg-destructive hover:bg-destructive/90'
+                            : 'bg-green-600 hover:bg-green-700 text-white'
+                          : status.value === 'a confirmar'
+                            ? 'border-destructive text-destructive hover:bg-destructive/10'
+                            : 'border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-950'
+                      }`}
+                    >
+                      {status.label}
+                    </Button>
                   ))}
                 </div>
-                <p className="text-xs text-muted-foreground mt-2 italic">
-                  Estes produtos serão automaticamente incluídos no agendamento
-                </p>
-              </div>
-            )}
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="appointment-paid-amount" className="text-xs font-medium">Valor pago</Label>
-              <Input id="appointment-paid-amount" name="paidAmount" type="number" min="0" step="0.01" value={formData.paidAmount} onChange={handleChange} placeholder="0.00" />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="appointment-status" className="text-xs font-medium">Status do Agendamento</Label>
-              <div className="flex gap-2">
-                {availableStatus.map(status => (
-                  <Button
-                    key={status.value}
-                    type="button"
-                    variant={formData.status === status.value ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => handleStatusSelect(status.value)}
-                    className={`flex-1 text-xs h-8 ${
-                      formData.status === status.value
-                        ? status.value === 'a confirmar'
-                          ? 'bg-lunar-error text-primary-foreground border-lunar-error hover:opacity-90'
-                          : 'bg-lunar-success text-primary-foreground border-lunar-success hover:opacity-90'
-                        : status.value === 'a confirmar'
-                          ? 'border-lunar-error text-lunar-error hover:bg-lunar-error/10'
-                          : 'border-lunar-success text-lunar-success hover:bg-lunar-success/10'
-                    }`}
-                  >
-                    {status.label}
-                  </Button>
-                ))}
               </div>
             </div>
-          </div>
-        </>}
-      
-      <div className="flex justify-end pt-4 space-x-2">
-        <Button type="button" variant="outline" onClick={onCancel} className="text-xs">
-          Cancelar
-        </Button>
-        <Button type="submit" className="text-xs">
-          Salvar
-        </Button>
-      </div>
-    </form>;
+          </>
+        )}
+        
+        <div className="flex justify-end gap-2 pt-4 border-t border-border">
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancelar
+          </Button>
+          <Button type="submit">
+            Salvar
+          </Button>
+        </div>
+      </form>
+    </div>;
 }
