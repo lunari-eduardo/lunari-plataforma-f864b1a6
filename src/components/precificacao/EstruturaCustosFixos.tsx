@@ -57,6 +57,18 @@ export function EstruturaCustosFixos({
     }
   }, []);
 
+  // Cálculos (definidos antes dos useEffects)
+  const totalGastosPessoais = gastosPessoais.reduce((total, item) => total + item.valor, 0);
+  const proLaboreCalculado = totalGastosPessoais * (1 + percentualProLabore / 100);
+  const totalCustosEstudio = custosEstudio.reduce((total, item) => total + item.valor, 0);
+  const totalDepreciacaoMensal = equipamentos.reduce((total, eq) => {
+    const depreciacaoMensal = eq.valorPago / (eq.vidaUtil * 12);
+    return total + depreciacaoMensal;
+  }, 0);
+
+  // Total principal (não inclui gastos pessoais para evitar contagem dupla)
+  const totalPrincipal = proLaboreCalculado + totalCustosEstudio + totalDepreciacaoMensal;
+
   // Salvar dados automaticamente - NOVO SISTEMA  
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -88,18 +100,6 @@ export function EstruturaCustosFixos({
     }, 1000); // Debounce de 1 segundo
     
     return () => clearTimeout(timeoutId);
-  // Cálculos (movidos para cima para evitar erro de declaração)
-  const totalGastosPessoais = gastosPessoais.reduce((total, item) => total + item.valor, 0);
-  const proLaboreCalculado = totalGastosPessoais * (1 + percentualProLabore / 100);
-  const totalCustosEstudio = custosEstudio.reduce((total, item) => total + item.valor, 0);
-  const totalDepreciacaoMensal = equipamentos.reduce((total, eq) => {
-    const depreciacaoMensal = eq.valorPago / (eq.vidaUtil * 12);
-    return total + depreciacaoMensal;
-  }, 0);
-
-  // Total principal (não inclui gastos pessoais para evitar contagem dupla)
-  const totalPrincipal = proLaboreCalculado + totalCustosEstudio + totalDepreciacaoMensal;
-
   }, [gastosPessoais, percentualProLabore, custosEstudio, equipamentos, totalPrincipal]);
 
   // Notificar mudança no total
