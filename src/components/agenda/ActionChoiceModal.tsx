@@ -81,11 +81,11 @@ export default function ActionChoiceModal({
           <div className="flex items-start justify-between gap-2">
             <div>
               
-              <DialogDescription className="text-sm font-semibold text-sky-950">
+              <DialogDescription className="text-sm font-semibold text-foreground">
                 Escolha o tipo de compromisso que deseja agendar para {date.toLocaleDateString('pt-BR')} às {time}.
               </DialogDescription>
             </div>
-            <Button variant="ghost" size="icon" onClick={handleShareDay} aria-label="Compartilhar horários do dia" title="Compartilhar horários do dia" className="px-[8px] py-[2px] my-[9px] text-sky-950">
+            <Button variant="ghost" size="icon" onClick={handleShareDay} aria-label="Compartilhar horários do dia" title="Compartilhar horários do dia" className="px-[8px] py-[2px] my-[9px] text-muted-foreground">
               <Share2 className="h-4 w-4" />
             </Button>
           </div>
@@ -93,7 +93,7 @@ export default function ActionChoiceModal({
 
         <div className="flex flex-col gap-3 mt-4">
           <Button onClick={handleConfigureAvailability} className="flex items-center gap-2 h-12 justify-start" variant="outline">
-            <Settings className="h-5 w-5 text-purple-600" />
+            <Settings className="h-5 w-5 text-primary" />
               <div className="text-left">
                 <div className="font-medium">Configurar Disponibilidade</div>
                 <div className="text-xs text-muted-foreground">Defina horários disponíveis e duração</div>
@@ -102,7 +102,7 @@ export default function ActionChoiceModal({
 
 
           <Button onClick={handleCreateAppointment} className="flex items-center gap-2 h-12 justify-start" variant="outline">
-            <Calendar className="h-5 w-5 text-green-600" />
+            <Calendar className="h-5 w-5 text-primary" />
             <div className="text-left">
               <div className="font-medium">Novo Agendamento</div>
               <div className="text-xs text-muted-foreground">Cria agendamento na agenda</div>
@@ -110,7 +110,7 @@ export default function ActionChoiceModal({
           </Button>
 
           <Button onClick={handleCreateBudget} className="flex items-center gap-2 h-12 justify-start" variant="outline">
-            <DollarSign className="h-5 w-5 text-blue-600" />
+            <DollarSign className="h-5 w-5 text-primary" />
             <div className="text-left">
               <div className="font-medium">Novo Orçamento</div>
               <div className="text-xs text-muted-foreground">Cria um orçamento com esse horário</div>
