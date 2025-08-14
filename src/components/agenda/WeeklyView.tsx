@@ -156,7 +156,7 @@ const getEventForSlot = (day: Date, time: string) => {
                   <div 
                     key={`${dayIndex}-${time}`} 
                     onClick={() => !event && onCreateSlot({ date: day, time })} 
-                    className="h-12 md:h-16 p-0.5 md:p-1 relative cursor-pointer bg-stone-100 hover:bg-stone-50"
+                    className="h-12 md:h-16 p-0.5 md:p-1 relative cursor-pointer bg-card hover:bg-muted"
                   >
                     {event ? (
                       !isMobile && (
