@@ -289,7 +289,7 @@
     @apply bg-lunar-surface border-lunar-border text-lunar-text shadow-lunar-md;
   }
 
-  /* Global: neutralize heavy hover visuals without affecting layout transforms */
+  /* Global: neutralize heavy hover visuals without affecting layout transforms (EXCEPT for dashboard cards) */
   *:hover {
     box-shadow: none !important;
     filter: none !important;
@@ -298,6 +298,12 @@
   *:hover::before,
   *:hover::after {
     opacity: inherit !important;
+  }
+  
+  /* Allow dashboard cards to have proper shadow hover effects */
+  .dashboard-card:hover,
+  .dashboard-badge:hover {
+    box-shadow: var(--tw-shadow) !important;
   }
   /* Disable hover background highlight on tables ONLY on Tasks page */
   .page-tarefas table tr:hover td,

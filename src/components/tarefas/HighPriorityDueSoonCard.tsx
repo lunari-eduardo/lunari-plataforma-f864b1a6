@@ -48,14 +48,14 @@ export function HighPriorityDueSoonCard() {
   };
 
   return (
-    <Card className="rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300">
+    <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300">
       <CardHeader className="pb-3 flex flex-row items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-brand-gradient">
             <AlertTriangle className="h-5 w-5 text-white" />
           </div>
           <CardTitle className="text-lg font-semibold">Alta prioridade • vencem em até 5 dias</CardTitle>
-          <Badge variant="secondary" className="bg-card-gradient border-0 shadow-theme-subtle hover:shadow-theme text-sm font-semibold transition-shadow duration-300" aria-label={`Quantidade de tarefas: ${count}`}>{count}</Badge>
+          <Badge variant="secondary" className="dashboard-badge bg-card-gradient border-0 shadow-theme-subtle hover:shadow-theme text-sm font-semibold transition-shadow duration-300" aria-label={`Quantidade de tarefas: ${count}`}>{count}</Badge>
         </div>
         <Link to="/tarefas">
           <Button variant="ghost" size="sm">Ver todas</Button>

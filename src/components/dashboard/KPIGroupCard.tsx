@@ -24,7 +24,7 @@ export function KPIGroupCard({
   proximoLivre,
 }: KPIGroupCardProps) {
   return (
-    <Card className="rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300 animate-fade-in">
+    <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300 animate-fade-in">
       <CardHeader className="pb-4">
         <CardTitle className="text-lg font-semibold">Indicadores principais</CardTitle>
       </CardHeader>

@@ -125,10 +125,10 @@ export default {
 			},
 			boxShadow: {
 				// Sistema de sombras consistente
-				'card-subtle': '0 1px 3px rgba(0, 0, 0, 0.05)',
-				'card-elevated': '0 4px 12px rgba(0, 0, 0, 0.12)',
-				'theme-subtle': '0 1px 3px hsl(var(--lunar-accent) / 0.1)',
-				'theme': '0 4px 20px hsl(var(--lunar-accent) / 0.15)',
+				'card-subtle': '0 2px 6px rgba(0, 0, 0, 0.08)',
+				'card-elevated': '0 8px 24px rgba(0, 0, 0, 0.15)',
+				'theme-subtle': '0 2px 6px hsl(var(--lunar-accent) / 0.12)',
+				'theme': '0 8px 24px hsl(var(--lunar-accent) / 0.20)',
 			},
 			backgroundImage: {
 				'brand-gradient': 'linear-gradient(135deg, hsl(var(--lunar-accent)), hsl(var(--lunar-accent) / 0.8))',
