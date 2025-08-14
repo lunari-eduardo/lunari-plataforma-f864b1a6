@@ -302,6 +302,7 @@
   
   /* Allow dashboard cards to have proper shadow hover effects */
   .dashboard-card:hover,
+  .dashboard-card-inner:hover,
   .dashboard-badge:hover {
     box-shadow: var(--tw-shadow) !important;
   }

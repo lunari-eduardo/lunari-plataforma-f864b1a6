@@ -31,7 +31,7 @@ export function KPIGroupCard({
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Receita vs Meta */}
-            <div className="relative rounded-xl border border-lunar-border/30 bg-card-gradient shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 p-4">
+            <div className="dashboard-card-inner relative rounded-xl border border-lunar-border/30 bg-card-gradient shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs text-lunar-textSecondary font-medium">Receita do mês</span>
                <div className="p-2 rounded-lg bg-brand-gradient">
@@ -49,7 +49,7 @@ export function KPIGroupCard({
           </div>
 
           {/* Categoria mais rentável */}
-          <div className="relative rounded-xl border border-lunar-border/30 bg-card-gradient shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 p-4">
+          <div className="dashboard-card-inner relative rounded-xl border border-lunar-border/30 bg-card-gradient shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs text-lunar-textSecondary font-medium">Categoria mais rentável</span>
                <div className="p-2 rounded-lg bg-brand-gradient">
@@ -69,7 +69,7 @@ export function KPIGroupCard({
           </div>
 
           {/* Novos clientes 60d */}
-          <div className="relative rounded-xl border border-lunar-border/30 bg-card-gradient shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 p-4">
+          <div className="dashboard-card-inner relative rounded-xl border border-lunar-border/30 bg-card-gradient shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs text-lunar-textSecondary font-medium">Novos clientes (60 dias)</span>
                <div className="p-2 rounded-lg bg-brand-gradient">
@@ -81,7 +81,7 @@ export function KPIGroupCard({
           </div>
 
           {/* Horários livres 7d */}
-          <div className="relative rounded-xl border border-lunar-border/30 bg-card-gradient shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 p-4">
+          <div className="dashboard-card-inner relative rounded-xl border border-lunar-border/30 bg-card-gradient shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs text-lunar-textSecondary font-medium">Horários livres (7 dias)</span>
               <div className="p-2 rounded-lg bg-brand-gradient">
