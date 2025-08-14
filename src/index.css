@@ -96,6 +96,18 @@
     --destructive-foreground: 0 0% 100%;
     --ring: var(--lunar-accent);
 
+    /* Sombras modernas e temáticas */
+    --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.04);
+    --shadow-card-hover: 0 4px 16px rgba(0, 0, 0, 0.08);
+    --shadow-popover: 0 8px 32px rgba(0, 0, 0, 0.12);
+    --shadow-brand: 0 4px 20px hsl(var(--lunar-accent) / 0.15);
+    --shadow-brand-hover: 0 8px 32px hsl(var(--lunar-accent) / 0.25);
+    
+    /* Gradientes modernos */
+    --gradient-brand: linear-gradient(135deg, hsl(var(--lunar-accent)), hsl(var(--lunar-accent) / 0.8));
+    --gradient-card: linear-gradient(135deg, hsl(var(--lunar-surface)), hsl(var(--lunar-bg)));
+    --gradient-subtle: linear-gradient(180deg, hsl(var(--lunar-surface) / 0.5), transparent);
+
     /* Charts */
     --chart-primary: var(--primary);
     --chart-secondary: 217 35% 60%;

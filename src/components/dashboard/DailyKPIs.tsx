@@ -6,15 +6,15 @@ export default function DailyKPIs() {
   const { sessionsToday, tasksToday } = useTodayOverview();
 
   const Item = ({ icon, title, value, hint }: { icon: React.ReactNode; title: string; value: string; hint: string }) => (
-    <Card className="rounded-lg ring-1 ring-lunar-border/60 shadow-brand">
-      <CardContent className="py-4 px-4">
+    <Card className="rounded-2xl border-0 shadow-brand hover:shadow-brand-hover transition-all duration-300">
+      <CardContent className="py-5 px-5">
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-2xs text-lunar-textSecondary">{title}</p>
-            <p className="mt-1 text-xl font-semibold text-lunar-text">{value}</p>
-            <p className="mt-1 text-2xs text-lunar-textSecondary">{hint}</p>
+            <p className="text-xs text-lunar-textSecondary font-medium">{title}</p>
+            <p className="mt-2 text-2xl font-bold text-lunar-text">{value}</p>
+            <p className="mt-2 text-xs text-lunar-textSecondary">{hint}</p>
           </div>
-          <div className="h-9 w-9 rounded-md bg-lunar-surface ring-1 ring-lunar-border flex items-center justify-center">
+          <div className="h-12 w-12 rounded-xl bg-brand-gradient shadow-brand flex items-center justify-center">
             {icon}
           </div>
         </div>
@@ -25,13 +25,13 @@ export default function DailyKPIs() {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <Item
-        icon={<Calendar className="h-4 w-4 text-lunar-accent" />}
+        icon={<Calendar className="h-5 w-5 text-white" />}
         title="Sessões Hoje"
         value={`${sessionsToday}`}
         hint={sessionsToday === 1 ? "1 sessão agendada hoje" : `${sessionsToday} sessões agendadas hoje`}
       />
       <Item
-        icon={<CheckCircle className="h-4 w-4 text-lunar-accent" />}
+        icon={<CheckCircle className="h-5 w-5 text-white" />}
         title="Tarefas para Hoje"
         value={`${tasksToday}`}
         hint={tasksToday === 1 ? "1 tarefa vence hoje" : `${tasksToday} tarefas vencem hoje`}

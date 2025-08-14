@@ -24,17 +24,19 @@ export function KPIGroupCard({
   proximoLivre,
 }: KPIGroupCardProps) {
   return (
-    <Card className="rounded-lg animate-fade-in shadow-brand">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm">Indicadores principais</CardTitle>
+    <Card className="rounded-2xl border-0 shadow-brand hover:shadow-brand-hover transition-shadow duration-300 animate-fade-in">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-lg font-semibold">Indicadores principais</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Receita vs Meta */}
-          <div className="relative rounded-md border border-lunar-border/60 bg-lunar-bg/50 ring-1 ring-lunar-success/25 p-3">
+          <div className="relative rounded-xl border-0 bg-card-gradient shadow-card hover:shadow-card-hover transition-shadow duration-300 p-4">
             <div className="flex items-center justify-between">
-              <span className="text-2xs text-lunar-textSecondary">Receita do mês</span>
-              <DollarSign className="h-4 w-4 text-lunar-success" />
+              <span className="text-xs text-lunar-textSecondary font-medium">Receita do mês</span>
+              <div className="p-2 rounded-lg bg-brand-gradient shadow-brand">
+                <DollarSign className="h-4 w-4 text-white" />
+              </div>
             </div>
             <div className="mt-1 flex items-baseline justify-between">
               <p className="text-lg font-semibold">{formatCurrency(receitaMes)}</p>
@@ -47,10 +49,12 @@ export function KPIGroupCard({
           </div>
 
           {/* Categoria mais rentável */}
-          <div className="relative rounded-md border border-lunar-border/60 bg-lunar-bg/50 ring-1 ring-lunar-accent/30 p-3">
+          <div className="relative rounded-xl border-0 bg-card-gradient shadow-card hover:shadow-card-hover transition-shadow duration-300 p-4">
             <div className="flex items-center justify-between">
-              <span className="text-2xs text-lunar-textSecondary">Categoria mais rentável</span>
-              <BarChart3 className="h-4 w-4 text-lunar-accent" />
+              <span className="text-xs text-lunar-textSecondary font-medium">Categoria mais rentável</span>
+              <div className="p-2 rounded-lg bg-brand-gradient shadow-brand">
+                <BarChart3 className="h-4 w-4 text-white" />
+              </div>
             </div>
             {topCategoria ? (
               <div className="mt-1">
@@ -65,20 +69,24 @@ export function KPIGroupCard({
           </div>
 
           {/* Novos clientes 60d */}
-          <div className="relative rounded-md border border-lunar-border/60 bg-lunar-bg/50 ring-1 ring-lunar-warning/30 p-3">
+          <div className="relative rounded-xl border-0 bg-card-gradient shadow-card hover:shadow-card-hover transition-shadow duration-300 p-4">
             <div className="flex items-center justify-between">
-              <span className="text-2xs text-lunar-textSecondary">Novos clientes (60 dias)</span>
-              <Users className="h-4 w-4 text-lunar-warning" />
+              <span className="text-xs text-lunar-textSecondary font-medium">Novos clientes (60 dias)</span>
+              <div className="p-2 rounded-lg bg-brand-gradient shadow-brand">
+                <Users className="h-4 w-4 text-white" />
+              </div>
             </div>
             <p className="mt-1 text-lg font-semibold">{novosClientes60d}</p>
             <p className="text-2xs text-lunar-textSecondary mt-1">Primeira sessão registrada</p>
           </div>
 
           {/* Horários livres 7d */}
-          <div className="relative rounded-md border border-lunar-border/60 bg-lunar-bg/50 ring-1 ring-lunar-error/25 p-3">
+          <div className="relative rounded-xl border-0 bg-card-gradient shadow-card hover:shadow-card-hover transition-shadow duration-300 p-4">
             <div className="flex items-center justify-between">
-              <span className="text-2xs text-lunar-textSecondary">Horários livres (7 dias)</span>
-              <Clock className="h-4 w-4 text-lunar-error" />
+              <span className="text-xs text-lunar-textSecondary font-medium">Horários livres (7 dias)</span>
+              <div className="p-2 rounded-lg bg-brand-gradient shadow-brand">
+                <Clock className="h-4 w-4 text-white" />
+              </div>
             </div>
             <p className="mt-1 text-lg font-semibold">{livresSemana}</p>
             <p className="text-2xs text-lunar-textSecondary mt-1">

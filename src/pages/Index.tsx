@@ -222,11 +222,13 @@ export default function Index() {
 
       {/* Orçamentos e Agenda */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="rounded-lg ring-1 ring-lunar-accent/30 animate-fade-in">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Camera className="h-5 w-5 text-lunar-success" />
-              <CardTitle className="text-base">Resumo de Orçamentos (mês)</CardTitle>
+        <Card className="rounded-2xl border-0 shadow-brand hover:shadow-brand-hover transition-shadow duration-300 animate-fade-in">
+          <CardHeader className="pb-3 flex flex-row items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-brand-gradient shadow-brand">
+                <Camera className="h-5 w-5 text-white" />
+              </div>
+              <CardTitle className="text-lg font-semibold">Resumo de Orçamentos (mês)</CardTitle>
             </div>
             <Link to="/orcamentos">
               <Button variant="ghost" size="sm">Ver todos</Button>
@@ -244,11 +246,13 @@ export default function Index() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-lg ring-1 ring-lunar-success/25 animate-fade-in">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-lunar-accent" />
-              <CardTitle className="text-base">Próximos Agendamentos</CardTitle>
+        <Card className="rounded-2xl border-0 shadow-brand hover:shadow-brand-hover transition-shadow duration-300 animate-fade-in">
+          <CardHeader className="pb-3 flex flex-row items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-brand-gradient shadow-brand">
+                <Calendar className="h-5 w-5 text-white" />
+              </div>
+              <CardTitle className="text-lg font-semibold">Próximos Agendamentos</CardTitle>
             </div>
             <Link to="/agenda">
               <Button variant="ghost" size="sm">Ver todos</Button>

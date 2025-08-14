@@ -124,11 +124,16 @@ export default {
 				sm: '6px'
 			},
 			boxShadow: {
-				// Sombras suaves e elegantes
-				'lunar': '0 2px 8px rgba(203, 169, 119, 0.1)',
-				'lunar-hover': '0 4px 12px rgba(203, 169, 119, 0.15)',
-				'lunar-sm': '0 1px 3px rgba(0, 0, 0, 0.05)',
-				'lunar-md': '0 2px 6px rgba(0, 0, 0, 0.07)',
+				// Sombras modernas e temáticas
+				'brand': '0 4px 20px hsl(var(--lunar-accent) / 0.15)',
+				'brand-hover': '0 8px 32px hsl(var(--lunar-accent) / 0.25)',
+				'card': '0 2px 8px rgba(0, 0, 0, 0.04)',
+				'card-hover': '0 4px 16px rgba(0, 0, 0, 0.08)',
+			},
+			backgroundImage: {
+				'brand-gradient': 'linear-gradient(135deg, hsl(var(--lunar-accent)), hsl(var(--lunar-accent) / 0.8))',
+				'card-gradient': 'linear-gradient(135deg, hsl(var(--lunar-surface)), hsl(var(--lunar-bg)))',
+				'subtle-gradient': 'linear-gradient(180deg, hsl(var(--lunar-surface) / 0.5), transparent)',
 			},
 			keyframes: {
 				'accordion-down': {

@@ -26,16 +26,18 @@ export default function DailyHero() {
   const dayMonth = dayFmt.format(now);
 
   return (
-    <Card className="rounded-lg ring-1 ring-lunar-border/60 shadow-brand overflow-hidden">
+    <Card className="rounded-2xl border-0 shadow-brand hover:shadow-brand-hover transition-shadow duration-300 overflow-hidden">
       <div className="relative">
         {/* decorative accents */}
-        <div className="pointer-events-none absolute inset-0 bg-brand-gradient opacity-[0.08]" />
-        <CardContent className="relative py-5 px-4 md:px-6">
+        <div className="pointer-events-none absolute inset-0 bg-brand-gradient opacity-[0.12]" />
+        <CardContent className="relative py-6 px-6 md:px-8">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <div className="flex items-center gap-2">
-                <Icon className="h-5 w-5 text-lunar-accent" />
-                <h1 className="text-lg font-semibold text-lunar-text">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-brand-gradient shadow-brand">
+                  <Icon className="h-6 w-6 text-white" />
+                </div>
+                <h1 className="text-xl font-bold text-lunar-text">
                   {label}
                   {name ? `, ${name}` : ''}
                 </h1>
@@ -44,13 +46,13 @@ export default function DailyHero() {
                 Hoje é {weekday}, {dayMonth}. Vamos fazer um dia incrível!
               </p>
 
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <Badge variant="secondary" className="bg-lunar-surface text-lunar-text border border-lunar-border/60">
-                  <Calendar className="mr-1 h-3 w-3 text-lunar-accent" />
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <Badge variant="secondary" className="bg-card-gradient border-0 shadow-card px-3 py-1.5">
+                  <Calendar className="mr-2 h-4 w-4 text-lunar-accent" />
                   {sessionsToday} sessão{sessionsToday === 1 ? '' : 's'} hoje
                 </Badge>
-                <Badge variant="secondary" className="bg-lunar-surface text-lunar-text border border-lunar-border/60">
-                  <CheckCircle className="mr-1 h-3 w-3 text-lunar-accent" />
+                <Badge variant="secondary" className="bg-card-gradient border-0 shadow-card px-3 py-1.5">
+                  <CheckCircle className="mr-2 h-4 w-4 text-lunar-success" />
                   {tasksToday} tarefa{tasksToday === 1 ? '' : 's'} para hoje
                 </Badge>
               </div>

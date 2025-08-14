@@ -15,13 +15,13 @@ interface ProductionRemindersCardProps {
 
 export function ProductionRemindersCard({ lembretes }: ProductionRemindersCardProps) {
   return (
-    <Card className="lg:col-span-3 rounded-lg animate-fade-in">
-      <CardHeader className="pb-2 flex flex-row items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-lunar-warning/20 ring-1 ring-lunar-warning/30">
-            <AlertTriangle className="h-4 w-4 text-lunar-warning" />
-          </span>
-          <CardTitle className="text-base">Lembretes de Produção</CardTitle>
+    <Card className="lg:col-span-3 rounded-2xl border-0 shadow-brand hover:shadow-brand-hover transition-shadow duration-300 animate-fade-in">
+      <CardHeader className="pb-3 flex flex-row items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-brand-gradient shadow-brand">
+            <AlertTriangle className="h-5 w-5 text-white" />
+          </div>
+          <CardTitle className="text-lg font-semibold">Lembretes de Produção</CardTitle>
         </div>
         <Link to="/workflow" className="text-2xs text-lunar-textSecondary underline">
           Ir para Workflow
@@ -33,12 +33,12 @@ export function ProductionRemindersCard({ lembretes }: ProductionRemindersCardPr
         ) : (
           <div className="space-y-2">
             {lembretes.slice(0, 8).map((r) => (
-              <div key={r.id} className="flex items-start gap-3 text-sm">
-                <span className="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-lunar-error/15 ring-1 ring-lunar-error/30">
-                  <AlertTriangle className="h-4 w-4 text-lunar-error" />
-                </span>
+              <div key={r.id} className="flex items-start gap-3 text-sm p-3 rounded-xl bg-card-gradient shadow-card hover:shadow-card-hover transition-shadow duration-300">
+                <div className="p-1.5 rounded-lg bg-brand-gradient shadow-brand">
+                  <AlertTriangle className="h-4 w-4 text-white" />
+                </div>
                 <div>
-                  <span className="font-medium">{r.produto}</span> de <span className="font-medium">{r.cliente}</span> ainda não foi para produção!
+                  <span className="font-semibold">{r.produto}</span> de <span className="font-semibold">{r.cliente}</span> ainda não foi para produção!
                 </div>
               </div>
             ))}

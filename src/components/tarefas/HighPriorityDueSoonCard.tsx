@@ -48,12 +48,14 @@ export function HighPriorityDueSoonCard() {
   };
 
   return (
-    <Card>
-      <CardHeader className="pb-2 flex flex-row items-center justify-between">
-        <div className="flex items-center gap-2">
-          <AlertTriangle className="h-5 w-5 text-lunar-accent" />
-          <CardTitle className="text-base">Alta prioridade • vencem em até 5 dias</CardTitle>
-          <Badge variant="secondary" aria-label={`Quantidade de tarefas: ${count}`}>{count}</Badge>
+    <Card className="rounded-2xl border-0 shadow-brand hover:shadow-brand-hover transition-shadow duration-300">
+      <CardHeader className="pb-3 flex flex-row items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-brand-gradient shadow-brand">
+            <AlertTriangle className="h-5 w-5 text-white" />
+          </div>
+          <CardTitle className="text-lg font-semibold">Alta prioridade • vencem em até 5 dias</CardTitle>
+          <Badge variant="secondary" className="bg-card-gradient border-0 shadow-card text-sm font-semibold" aria-label={`Quantidade de tarefas: ${count}`}>{count}</Badge>
         </div>
         <Link to="/tarefas">
           <Button variant="ghost" size="sm">Ver todas</Button>
@@ -63,18 +65,18 @@ export function HighPriorityDueSoonCard() {
         {count === 0 ? (
           <p className="text-2xs text-lunar-textSecondary">Nenhuma tarefa de alta prioridade para os próximos 5 dias.</p>
         ) : (
-          <ul className="space-y-2">
-            {items.map(({ t, due, days }) => (
-              <li key={t.id} className="flex items-center justify-between border-b last:border-b-0 pb-2 last:pb-0">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-lunar-text truncate" title={t.title}>{t.title}</p>
-                  <p className="text-2xs text-lunar-textSecondary mt-0.5">
-                    Prazo: {formatDateForDisplay(t.dueDate!)} • {daysLabel(days)}
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ul>
+           <ul className="space-y-3">
+             {items.map(({ t, due, days }) => (
+               <li key={t.id} className="p-3 rounded-xl bg-card-gradient shadow-card hover:shadow-card-hover transition-shadow duration-300">
+                 <div className="min-w-0">
+                   <p className="text-sm font-semibold text-lunar-text truncate" title={t.title}>{t.title}</p>
+                   <p className="text-xs text-lunar-textSecondary mt-1">
+                     Prazo: {formatDateForDisplay(t.dueDate!)} • {daysLabel(days)}
+                   </p>
+                 </div>
+               </li>
+             ))}
+           </ul>
         )}
       </CardContent>
     </Card>
