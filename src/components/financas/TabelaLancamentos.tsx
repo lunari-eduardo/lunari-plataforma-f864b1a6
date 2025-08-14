@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -18,6 +18,7 @@ interface TabelaLancamentosProps {
   obterItensPorGrupo: (grupo: GrupoPrincipal) => ItemFinanceiro[];
   onAdicionarTransacao: (transacao: Omit<NovaTransacaoFinanceira, 'id' | 'userId' | 'criadoEm'>) => void;
   createTransactionEngine?: (input: any) => void; // Opcional para usar o motor centralizado
+  filtroMesAno: { mes: number; ano: number }; // Adicionado para sincronização
 }
 export default function TabelaLancamentos({
   transacoes,
@@ -27,7 +28,8 @@ export default function TabelaLancamentos({
   grupoAtivo,
   obterItensPorGrupo,
   onAdicionarTransacao,
-  createTransactionEngine
+  createTransactionEngine,
+  filtroMesAno
 }: TabelaLancamentosProps) {
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [valoresEditando, setValoresEditando] = useState<{
@@ -44,11 +46,18 @@ export default function TabelaLancamentos({
     observacoes: ''
   });
 
+  // Função para gerar data padrão baseada no filtro mes/ano
+  const gerarDataPadrao = () => {
+    const ano = filtroMesAno.ano;
+    const mes = filtroMesAno.mes.toString().padStart(2, '0');
+    return `${ano}-${mes}-01`;
+  };
+
   // Estado para nova transação (linha em branco)
   const [novaTransacao, setNovaTransacao] = useState({
     item_id: '',
     valor: '',
-    data_vencimento: new Date().toISOString().split('T')[0],
+    data_vencimento: gerarDataPadrao(),
     observacoes: ''
   });
 
@@ -60,6 +69,14 @@ export default function TabelaLancamentos({
     numeroParcelas: 1
   });
   const [popoverAberto, setPopoverAberto] = useState(false);
+
+  // Efeito para sincronizar a data da nova transação com o filtro mes/ano
+  useEffect(() => {
+    setNovaTransacao(prev => ({
+      ...prev,
+      data_vencimento: gerarDataPadrao()
+    }));
+  }, [filtroMesAno.mes, filtroMesAno.ano]);
   const iniciarEdicao = (transacao: TransacaoComItem) => {
     setEditandoId(transacao.id);
     setValoresEditando({
@@ -136,7 +153,7 @@ export default function TabelaLancamentos({
     setNovaTransacao({
       item_id: '',
       valor: '',
-      data_vencimento: new Date().toISOString().split('T')[0],
+      data_vencimento: gerarDataPadrao(), // Usar data padrão baseada no filtro
       observacoes: ''
     });
     setOpcoesNovaTransacao({
