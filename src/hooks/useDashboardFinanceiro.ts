@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { FinancialEngine } from '@/services/FinancialEngine';
 import { useNovoFinancas } from '@/hooks/useNovoFinancas';
+import { useUnifiedWorkflowData } from '@/hooks/useUnifiedWorkflowData';
 import { getCurrentDateString, parseDateFromStorage } from '@/utils/dateUtils';
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
 
@@ -71,50 +72,43 @@ export function useDashboardFinanceiro() {
     return isNaN(parsed) ? 0 : parsed;
   };
 
-  // ============= CARREGAMENTO DE DADOS DO LOCALSTORAGE =============
+  // ============= CARREGAMENTO DE DADOS UNIFICADOS =============
   
-  // Carregar dados do workflow_sessions diretamente do localStorage
+  // Usar dados já normalizados do hook unificado para consistência
+  const { unifiedWorkflowData } = useUnifiedWorkflowData();
+  
+  // Converter dados do formato unificado para o formato esperado pelo dashboard financeiro
   const workflowItemsFromStorage = useMemo(() => {
-    try {
-      const saved = localStorage.getItem('workflow_sessions');
-      const sessions = saved ? JSON.parse(saved) : [];
-      
-      return sessions
-        .filter((session: any) => session.data && session.total) // Filtrar itens válidos
-        .map((session: any) => ({
-          id: session.id,
-          data: session.data,
-          hora: session.hora || '',
-          nome: session.nome || '',
-          whatsapp: session.whatsapp || '',
-          email: session.email || '',
-          descricao: session.descricao || '',
-          status: session.status || '',
-          categoria: session.categoria || '',
-          pacote: session.pacote || '',
-          valorPacote: parseMonetaryValue(session.valorPacote || session.valor),
-          desconto: session.desconto || 0,
-          valorFotoExtra: parseMonetaryValue(session.valorFotoExtra),
-          qtdFotoExtra: session.qtdFotosExtra || 0,
-          valorTotalFotoExtra: parseMonetaryValue(session.valorTotalFotoExtra),
-          produto: session.produto || '',
-          qtdProduto: session.qtdProduto || 0,
-          valorTotalProduto: parseMonetaryValue(session.valorTotalProduto),
-          valorAdicional: parseMonetaryValue(session.valorAdicional),
-          detalhes: session.detalhes || '',
-          valor: parseMonetaryValue(session.valor || session.total),
-          total: parseMonetaryValue(session.total || session.valor),
-          valorPago: parseMonetaryValue(session.valorPago),
-          restante: parseMonetaryValue(session.total || session.valor) - parseMonetaryValue(session.valorPago),
-          pagamentos: session.pagamentos || [],
-          fonte: session.fonte || 'agenda',
-          dataOriginal: session.dataOriginal ? new Date(session.dataOriginal) : new Date(session.data)
-        }));
-    } catch (error) {
-      console.error('❌ Erro ao carregar workflow_sessions:', error);
-      return [];
-    }
-  }, []);
+    return unifiedWorkflowData.map(item => ({
+      id: item.id,
+      data: item.data,
+      hora: item.hora || '',
+      nome: item.nome || '',
+      whatsapp: item.whatsapp || '',
+      email: item.email || '',
+      descricao: item.descricao || '',
+      status: item.status || '',
+      categoria: item.categoria || '',
+      pacote: item.pacote || '',
+      valorPacote: item.valorPacote || 0,
+      desconto: item.desconto || 0,
+      valorFotoExtra: item.valorFotoExtra || 0,
+      qtdFotoExtra: item.qtdFotoExtra || 0,
+      valorTotalFotoExtra: item.valorTotalFotoExtra || 0,
+      produto: item.produto || '',
+      qtdProduto: item.qtdProduto || 0,
+      valorTotalProduto: item.valorTotalProduto || 0,
+      valorAdicional: item.valorAdicional || 0,
+      detalhes: item.detalhes || '',
+      valor: item.total || 0, // Use 'total' since 'valor' doesn't exist in unified data
+      total: item.total || 0,
+      valorPago: item.valorPago || 0,
+      restante: item.restante || 0,
+      pagamentos: item.pagamentos || [],
+      fonte: item.fonte || 'agenda',
+      dataOriginal: item.dataOriginal || new Date(item.data)
+    }));
+  }, [unifiedWorkflowData]);
 
   // Carregar transações financeiras do localStorage
   const { itensFinanceiros } = useNovoFinancas();
