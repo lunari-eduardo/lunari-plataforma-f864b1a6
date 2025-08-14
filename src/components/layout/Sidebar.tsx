@@ -83,7 +83,7 @@ export default function Sidebar() {
   // Mobile bottom navigation
   if (isMobile) {
     return <>
-        <div className="fixed bottom-0 left-0 right-0 backdrop-blur-sm shadow-lunar-md z-10 p-2 border-t border-lunar-border/50 bg-neutral-50">
+        <div className="fixed bottom-0 left-0 right-0 backdrop-blur-sm shadow-lunar-md z-10 p-2 border-t border-border bg-background/80">
           <div className="grid grid-cols-5 h-12 gap-1">
             {navItems.slice(0, 4).map(item => <NavLink key={item.to} to={item.to} className={({
             isActive
@@ -92,7 +92,7 @@ export default function Sidebar() {
                 <span className="text-2xs font-medium leading-tight">{item.label}</span>
               </NavLink>)}
 
-            <button onClick={toggleSidebar} className="flex flex-col items-center justify-center text-lunar-text py-1 rounded-md hover:shadow-lunar-sm hover:translate-y-[-1px] transition-all duration-150 bg-zinc-200 hover:bg-zinc-100">
+            <button onClick={toggleSidebar} className="flex flex-col items-center justify-center text-lunar-text py-1 rounded-md hover:shadow-lunar-sm hover:translate-y-[-1px] transition-all duration-150 bg-muted hover:bg-muted/80">
               <Menu size={14} className="mb-0.5" />
               <span className="text-2xs font-medium">Mais</span>
             </button>
