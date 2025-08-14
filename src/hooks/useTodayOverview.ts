@@ -12,10 +12,6 @@ export default function useTodayOverview() {
   const { tasks } = useTasks();
   const { getDoneKey } = useTaskStatuses();
 
-  // Debug para verificar tarefas
-  console.log('🔍 [useTodayOverview] Total tasks:', tasks.length);
-  console.log('🔍 [useTodayOverview] Tasks data:', tasks);
-
   const today = new Date();
   const todayYMD = today.toISOString().slice(0, 10);
 
@@ -40,28 +36,7 @@ export default function useTodayOverview() {
 
   const tasksToday = useMemo(() => {
     const doneKey = getDoneKey();
-    console.log('🔍 [useTodayOverview] doneKey:', doneKey);
-    console.log('🔍 [useTodayOverview] todayYMD:', todayYMD);
-    
-    const todayTasks = tasks.filter((t) => {
-      const hasDueDate = !!t.dueDate;
-      const isToday = t.dueDate?.slice(0, 10) === todayYMD;
-      const isNotDone = t.status !== doneKey;
-      
-      console.log(`🔍 [useTodayOverview] Task ${t.title}:`, {
-        dueDate: t.dueDate,
-        hasDueDate,
-        isToday,
-        status: t.status,
-        isNotDone,
-        include: hasDueDate && isToday && isNotDone
-      });
-      
-      return hasDueDate && isToday && isNotDone;
-    });
-    
-    console.log('🔍 [useTodayOverview] Tasks today:', todayTasks.length);
-    return todayTasks.length;
+    return tasks.filter((t) => !!t.dueDate && t.dueDate.slice(0, 10) === todayYMD && t.status !== doneKey).length;
   }, [tasks, getDoneKey, todayYMD]);
 
   return { sessionsToday, tasksToday, nextAppointment } as const;

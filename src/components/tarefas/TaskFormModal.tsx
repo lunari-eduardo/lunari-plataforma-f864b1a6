@@ -21,7 +21,7 @@ interface TaskFormModalProps {
 export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, mode = 'create' }: TaskFormModalProps) {
   const [title, setTitle] = useState(initial?.title ?? '');
   const [description, setDescription] = useState(initial?.description ?? '');
-  const [dueDate, setDueDate] = useState<string>(() => initial?.dueDate ? new Date(initial.dueDate).toISOString().slice(0,10) : '');
+  const [dueDate, setDueDate] = useState<string>(() => initial?.dueDate ? initial.dueDate.slice(0, 10) : '');
   const [priority, setPriority] = useState<TaskPriority>(initial?.priority ?? 'medium');
   const [status, setStatus] = useState<TaskStatus>(initial?.status ?? 'todo');
   const [assigneeName, setAssigneeName] = useState<string>(initial?.assigneeName ?? '');
@@ -31,7 +31,7 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
     if (open) {
       setTitle(initial?.title ?? '');
       setDescription(initial?.description ?? '');
-      setDueDate(initial?.dueDate ? new Date(initial.dueDate).toISOString().slice(0,10) : '');
+      setDueDate(initial?.dueDate ? initial.dueDate.slice(0, 10) : '');
       setPriority(initial?.priority ?? 'medium');
       setStatus(initial?.status ?? 'todo');
       setAssigneeName(initial?.assigneeName ?? '');
