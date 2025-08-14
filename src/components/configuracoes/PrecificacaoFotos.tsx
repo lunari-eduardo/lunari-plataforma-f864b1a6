@@ -83,27 +83,29 @@ export default function PrecificacaoFotos({
   const recalcularFaixasGlobal = (faixas: FaixaPreco[]) => {
     return faixas.map((faixa, index) => {
       if (index === 0) {
-        return { ...faixa, min: 1 }; // Primeira faixa sempre começa em 1
+        return {
+          ...faixa,
+          min: 1
+        }; // Primeira faixa sempre começa em 1
       } else {
         const faixaAnterior = faixas[index - 1];
         const novoMin = (faixaAnterior.max || faixaAnterior.min) + 1;
-        return { ...faixa, min: novoMin };
+        return {
+          ...faixa,
+          min: novoMin
+        };
       }
     });
   };
-
   const adicionarFaixa = () => {
     if (!tabelaGlobal) return;
-    
     const ultimaFaixa = tabelaGlobal.faixas[tabelaGlobal.faixas.length - 1];
     const novoMin = ultimaFaixa ? (ultimaFaixa.max || ultimaFaixa.min) + 1 : 1;
-    
     const novaFaixa: FaixaPreco = {
       min: novoMin,
       max: null,
       valor: 20
     };
-    
     setTabelaGlobal(prev => prev ? {
       ...prev,
       faixas: [...prev.faixas, novaFaixa]
@@ -111,10 +113,8 @@ export default function PrecificacaoFotos({
   };
   const removerFaixa = (index: number) => {
     if (!tabelaGlobal) return;
-    
     const novasFaixas = tabelaGlobal.faixas.filter((_, i) => i !== index);
     const faixasRecalculadas = recalcularFaixasGlobal(novasFaixas);
-    
     setTabelaGlobal(prev => prev ? {
       ...prev,
       faixas: faixasRecalculadas
@@ -122,16 +122,16 @@ export default function PrecificacaoFotos({
   };
   const atualizarFaixa = (index: number, campo: keyof FaixaPreco, valor: any) => {
     if (!tabelaGlobal) return;
-    
+
     // Prevenir edição do campo "min" exceto para a primeira faixa
     if (campo === 'min' && index !== 0) {
       return;
     }
-    
-    const novasFaixas = tabelaGlobal.faixas.map((faixa, i) => 
-      i === index ? { ...faixa, [campo]: valor } : faixa
-    );
-    
+    const novasFaixas = tabelaGlobal.faixas.map((faixa, i) => i === index ? {
+      ...faixa,
+      [campo]: valor
+    } : faixa);
+
     // Se alterou o campo "max", recalcular as faixas subsequentes
     if (campo === 'max') {
       const faixasRecalculadas = recalcularFaixasGlobal(novasFaixas);
@@ -274,17 +274,7 @@ export default function PrecificacaoFotos({
                     <TableBody>
                       {tabelaGlobal.faixas.map((faixa, index) => <TableRow key={index}>
                           <TableCell>
-                            {editandoTabela ? (
-                              <Input 
-                                type="number" 
-                                value={faixa.min} 
-                                onChange={e => atualizarFaixa(index, 'min', parseInt(e.target.value) || 0)} 
-                                className="w-20" 
-                                min="1"
-                                disabled={index !== 0}
-                                readOnly={index !== 0}
-                              />
-                            ) : faixa.min}
+                            {editandoTabela ? <Input type="number" value={faixa.min} onChange={e => atualizarFaixa(index, 'min', parseInt(e.target.value) || 0)} className="w-20" min="1" disabled={index !== 0} readOnly={index !== 0} /> : faixa.min}
                           </TableCell>
                           <TableCell>
                             {editandoTabela ? <Input type="number" value={faixa.max || ''} onChange={e => atualizarFaixa(index, 'max', e.target.value ? parseInt(e.target.value) : null)} placeholder="∞" className="w-20" /> : faixa.max || '∞'}
@@ -395,7 +385,7 @@ export default function PrecificacaoFotos({
       <AlertDialog open={showConfirmModal} onOpenChange={setShowConfirmModal}>
         <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-amber-600">
+            <AlertDialogTitle className="flex items-center gap-2 text-sky-950">
               <AlertTriangle className="h-5 w-5" />
               Atenção: Mudança no Modelo de Precificação
             </AlertDialogTitle>
@@ -418,7 +408,7 @@ export default function PrecificacaoFotos({
             <AlertDialogCancel onClick={cancelarMudanca}>
               Cancelar
             </AlertDialogCancel>
-            <AlertDialogAction onClick={confirmarMudanca} className="bg-amber-600 hover:bg-amber-700">
+            <AlertDialogAction onClick={confirmarMudanca} className="bg-[#1e254e] text-neutral-50">
               Sim, Entendi e Quero Continuar
             </AlertDialogAction>
           </AlertDialogFooter>
