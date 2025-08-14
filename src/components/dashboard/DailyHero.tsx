@@ -26,7 +26,7 @@ export default function DailyHero() {
   const dayMonth = dayFmt.format(now);
 
   return (
-    <Card className="rounded-2xl border-0 hover:shadow-card-elevated transition-shadow duration-300 overflow-hidden">
+    <Card className="rounded-2xl border-0 shadow-card-base hover:shadow-card-hover transition-shadow duration-300 overflow-hidden">
       <div className="relative">
         {/* decorative accents */}
         <div className="pointer-events-none absolute inset-0 bg-brand-gradient opacity-[0.12]" />
@@ -47,11 +47,11 @@ export default function DailyHero() {
               </p>
 
               <div className="mt-4 flex flex-wrap items-center gap-3">
-                <Badge variant="secondary" className="bg-card-gradient border-0 shadow-card px-3 py-1.5">
+                <Badge variant="secondary" className="bg-card-gradient border-0 shadow-none hover:shadow-theme px-3 py-1.5 transition-shadow duration-300">
                   <Calendar className="mr-2 h-4 w-4 text-lunar-accent" />
                   {sessionsToday} sessão{sessionsToday === 1 ? '' : 's'} hoje
                 </Badge>
-                <Badge variant="secondary" className="bg-card-gradient border-0 shadow-card px-3 py-1.5">
+                <Badge variant="secondary" className="bg-card-gradient border-0 shadow-none hover:shadow-theme px-3 py-1.5 transition-shadow duration-300">
                   <CheckCircle className="mr-2 h-4 w-4 text-lunar-success" />
                   {tasksToday} tarefa{tasksToday === 1 ? '' : 's'} para hoje
                 </Badge>

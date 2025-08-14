@@ -24,14 +24,14 @@ export function KPIGroupCard({
   proximoLivre,
 }: KPIGroupCardProps) {
   return (
-    <Card className="rounded-2xl border-0 hover:shadow-card-elevated transition-shadow duration-300 animate-fade-in">
+    <Card className="rounded-2xl border-0 shadow-card-base hover:shadow-card-hover transition-shadow duration-300 animate-fade-in">
       <CardHeader className="pb-4">
         <CardTitle className="text-lg font-semibold">Indicadores principais</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Receita vs Meta */}
-            <div className="relative rounded-xl border-0 bg-card-gradient hover:shadow-card transition-shadow duration-300 p-4">
+            <div className="relative rounded-xl border-0 bg-card-gradient shadow-none hover:shadow-card-base transition-shadow duration-300 p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs text-lunar-textSecondary font-medium">Receita do mês</span>
                <div className="p-2 rounded-lg bg-brand-gradient">
@@ -49,7 +49,7 @@ export function KPIGroupCard({
           </div>
 
           {/* Categoria mais rentável */}
-          <div className="relative rounded-xl border-0 bg-card-gradient hover:shadow-card transition-shadow duration-300 p-4">
+          <div className="relative rounded-xl border-0 bg-card-gradient shadow-none hover:shadow-card-base transition-shadow duration-300 p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs text-lunar-textSecondary font-medium">Categoria mais rentável</span>
                <div className="p-2 rounded-lg bg-brand-gradient">
@@ -69,7 +69,7 @@ export function KPIGroupCard({
           </div>
 
           {/* Novos clientes 60d */}
-          <div className="relative rounded-xl border-0 bg-card-gradient hover:shadow-card transition-shadow duration-300 p-4">
+          <div className="relative rounded-xl border-0 bg-card-gradient shadow-none hover:shadow-card-base transition-shadow duration-300 p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs text-lunar-textSecondary font-medium">Novos clientes (60 dias)</span>
                <div className="p-2 rounded-lg bg-brand-gradient">
@@ -81,7 +81,7 @@ export function KPIGroupCard({
           </div>
 
           {/* Horários livres 7d */}
-          <div className="relative rounded-xl border-0 bg-card-gradient hover:shadow-card transition-shadow duration-300 p-4">
+          <div className="relative rounded-xl border-0 bg-card-gradient shadow-none hover:shadow-card-base transition-shadow duration-300 p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs text-lunar-textSecondary font-medium">Horários livres (7 dias)</span>
               <div className="p-2 rounded-lg bg-brand-gradient">
