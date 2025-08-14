@@ -124,12 +124,11 @@ export default {
 				sm: '6px'
 			},
 			boxShadow: {
-				// Sombras mais visíveis e temáticas
-				'card': '0 2px 8px rgba(0, 0, 0, 0.06)',
-				'card-hover': '0 4px 16px rgba(0, 0, 0, 0.12)',
-				'brand': '0 4px 20px rgba(33, 150, 243, 0.25)',
-				'brand-hover': '0 8px 32px rgba(33, 150, 243, 0.35)',
-				'lunar-sm': '0 1px 3px rgba(0, 0, 0, 0.05)',
+				// Sombras modernas e temáticas
+				'brand': '0 4px 20px hsl(var(--lunar-accent) / 0.15)',
+				'brand-hover': '0 8px 32px hsl(var(--lunar-accent) / 0.25)',
+				'card': '0 2px 8px rgba(0, 0, 0, 0.04)',
+				'card-hover': '0 4px 16px rgba(0, 0, 0, 0.08)',
 			},
 			backgroundImage: {
 				'brand-gradient': 'linear-gradient(135deg, hsl(var(--lunar-accent)), hsl(var(--lunar-accent) / 0.8))',
