@@ -5,12 +5,15 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { storage } from '@/utils/localStorage';
 
 interface Product {
   id: string;
   nome: string;
-  custo: number;
-  valorVenda: number;
+  custo?: number;
+  valorVenda?: number;
+  preco_custo?: number;
+  preco_venda?: number;
 }
 
 interface ProductSelectorProps {
@@ -33,8 +36,19 @@ export function ProductSelector({ value, onSelect, className }: ProductSelectorP
   const [products, setProducts] = useState<Product[]>([]);
 
   useEffect(() => {
-    // In a real app, this would fetch from the database
-    setProducts(mockProducts);
+    // Carregar produtos reais das configurações
+    const savedProducts = storage.load('configuracoes_produtos', []);
+    
+    // Converter formato das configurações para o formato da calculadora
+    const convertedProducts: Product[] = savedProducts.map((produto: any) => ({
+      id: produto.id,
+      nome: produto.nome,
+      custo: produto.preco_custo,
+      valorVenda: produto.preco_venda
+    }));
+    
+    // Se não há produtos salvos, usar os mock como fallback
+    setProducts(convertedProducts.length > 0 ? convertedProducts : mockProducts);
   }, []);
 
   const selectedProduct = products.find(product => product.nome === value);
@@ -78,9 +92,9 @@ export function ProductSelector({ value, onSelect, className }: ProductSelectorP
                   />
                   <div className="flex flex-col">
                     <span className="font-medium">{product.nome}</span>
-                    <span className="text-2xs text-gray-500">
-                      Custo: R$ {product.custo.toFixed(2)} | Venda: R$ {product.valorVenda.toFixed(2)}
-                    </span>
+                     <span className="text-2xs text-gray-500">
+                       Custo: R$ {(product.custo || 0).toFixed(2)} | Venda: R$ {(product.valorVenda || 0).toFixed(2)}
+                     </span>
                   </div>
                 </CommandItem>
               ))}
