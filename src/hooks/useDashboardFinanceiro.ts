@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { FinancialEngine } from '@/services/FinancialEngine';
 import { useNovoFinancas } from '@/hooks/useNovoFinancas';
-import { useWorkflowMetrics } from '@/hooks/useWorkflowMetrics';
+import { useUnifiedWorkflowData } from '@/hooks/useUnifiedWorkflowData';
 import { getCurrentDateString, parseDateFromStorage } from '@/utils/dateUtils';
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
 
@@ -72,10 +72,43 @@ export function useDashboardFinanceiro() {
     return isNaN(parsed) ? 0 : parsed;
   };
 
-  // ============= CARREGAMENTO DE DADOS DE WORKFLOW (CACHE) =============
+  // ============= CARREGAMENTO DE DADOS UNIFICADOS =============
   
-  // Usar cache de métricas do workflow para consistência
-  const { getMetricsByPeriod, getMonthlyDataForYear } = useWorkflowMetrics();
+  // Usar dados já normalizados do hook unificado para consistência
+  const { unifiedWorkflowData } = useUnifiedWorkflowData();
+  
+  // Converter dados do formato unificado para o formato esperado pelo dashboard financeiro
+  const workflowItemsFromStorage = useMemo(() => {
+    return unifiedWorkflowData.map(item => ({
+      id: item.id,
+      data: item.data,
+      hora: item.hora || '',
+      nome: item.nome || '',
+      whatsapp: item.whatsapp || '',
+      email: item.email || '',
+      descricao: item.descricao || '',
+      status: item.status || '',
+      categoria: item.categoria || '',
+      pacote: item.pacote || '',
+      valorPacote: item.valorPacote || 0,
+      desconto: item.desconto || 0,
+      valorFotoExtra: item.valorFotoExtra || 0,
+      qtdFotoExtra: item.qtdFotoExtra || 0,
+      valorTotalFotoExtra: item.valorTotalFotoExtra || 0,
+      produto: item.produto || '',
+      qtdProduto: item.qtdProduto || 0,
+      valorTotalProduto: item.valorTotalProduto || 0,
+      valorAdicional: item.valorAdicional || 0,
+      detalhes: item.detalhes || '',
+      valor: item.total || 0, // Use 'total' since 'valor' doesn't exist in unified data
+      total: item.total || 0,
+      valorPago: item.valorPago || 0,
+      restante: item.restante || 0,
+      pagamentos: item.pagamentos || [],
+      fonte: item.fonte || 'agenda',
+      dataOriginal: item.dataOriginal || new Date(item.data)
+    }));
+  }, [unifiedWorkflowData]);
 
   // Carregar transações financeiras do localStorage
   const { itensFinanceiros } = useNovoFinancas();
@@ -95,11 +128,35 @@ export function useDashboardFinanceiro() {
     });
   }, [transacoesFinanceiras, itensFinanceiros]);
 
-  // ============= SISTEMA DE FILTROS BASEADO EM ANOS =============
+  // ============= NOVO SISTEMA DE FILTROS =============
+  
+  // Função para filtrar workflow por ano
+  const filterWorkflowByYear = (year: number) => {
+    return workflowItemsFromStorage.filter(item => {
+      try {
+        const itemYear = new Date(item.data).getFullYear();
+        return itemYear === year;
+      } catch {
+        return false;
+      }
+    });
+  };
 
-  // Função para obter anos disponíveis das transações financeiras
+  // Função para obter anos disponíveis
   const getAvailableYears = () => {
     const anos = new Set<number>();
+    
+    // Extrair anos do workflow
+    workflowItemsFromStorage.forEach(item => {
+      try {
+        const year = new Date(item.data).getFullYear();
+        if (!isNaN(year)) {
+          anos.add(year);
+        }
+      } catch {
+        // Ignorar itens com data inválida
+      }
+    });
     
     // Extrair anos das transações financeiras
     transacoesFinanceiras.forEach(transacao => {
@@ -125,7 +182,7 @@ export function useDashboardFinanceiro() {
   // Seletor de ano dinâmico
   const anosDisponiveis = useMemo(() => {
     return getAvailableYears();
-  }, [transacoesFinanceiras]);
+  }, [workflowItemsFromStorage, transacoesFinanceiras]);
 
   // Estados dos filtros
   const [anoSelecionado, setAnoSelecionado] = useState(() => {
@@ -134,14 +191,23 @@ export function useDashboardFinanceiro() {
 
   const [mesSelecionado, setMesSelecionado] = useState<string>('ano-completo'); // 'ano-completo' = Ano Completo
 
-  // ============= MÉTRICAS DO WORKFLOW (CACHE) =============
+  // ============= FILTROS POR PERÍODO =============
   
-  const workflowMetrics = useMemo(() => {
+  const workflowItemsFiltrados = useMemo(() => {
     const ano = parseInt(anoSelecionado);
-    const mes = mesSelecionado !== 'ano-completo' ? parseInt(mesSelecionado) : undefined;
-    
-    return getMetricsByPeriod(ano, mes);
-  }, [anoSelecionado, mesSelecionado, getMetricsByPeriod]);
+    let filtrados = filterWorkflowByYear(ano);
+
+    // Aplicar filtro de mês se selecionado
+    if (mesSelecionado && mesSelecionado !== 'ano-completo') {
+      const mesNumero = parseInt(mesSelecionado);
+      filtrados = filtrados.filter(item => {
+        const mesItem = new Date(item.data).getMonth() + 1;
+        return mesItem === mesNumero;
+      });
+    }
+
+    return filtrados;
+  }, [workflowItemsFromStorage, anoSelecionado, mesSelecionado]);
 
   const transacoesFiltradas = useMemo(() => {
     const ano = parseInt(anoSelecionado);
@@ -171,17 +237,20 @@ export function useDashboardFinanceiro() {
   // ============= CÁLCULOS DE MÉTRICAS =============
   
   const kpisData = useMemo((): KPIsData => {
-    // USAR MÉTRICAS CACHED DO WORKFLOW para consistência
-    const receitaOperacional = workflowMetrics.receita;
-    const valorPrevisto = workflowMetrics.previsto;
-    const aReceber = workflowMetrics.aReceber;
+    // TOTAL RECEITA = Receita Operacional (valorPago do Workflow) + Receitas Extras (transações)
+    const receitaOperacional = workflowItemsFiltrados.reduce((sum, item) => sum + item.valorPago, 0);
     
-    // Receitas extras das transações financeiras
     const receitasExtras = transacoesFiltradas
       .filter(t => t.status === 'Pago' && t.item?.grupo_principal === 'Receita Não Operacional')
       .reduce((sum, t) => sum + t.valor, 0);
 
     const totalReceita = receitaOperacional + receitasExtras;
+
+    // VALOR PREVISTO = Soma total de todos os trabalhos (pacotes + produtos + extras)
+    const valorPrevisto = workflowItemsFiltrados.reduce((sum, item) => sum + item.total, 0);
+
+    // A RECEBER = Valor que ainda não foi pago (restante)
+    const aReceber = workflowItemsFiltrados.reduce((sum, item) => sum + item.restante, 0);
 
     // TOTAL DESPESAS = Todas as despesas pagas (Fixas + Variáveis + Investimentos)
     const totalDespesas = transacoesFiltradas
@@ -202,7 +271,7 @@ export function useDashboardFinanceiro() {
       totalLucro,
       saldoTotal
     };
-  }, [workflowMetrics, transacoesFiltradas]);
+  }, [workflowItemsFiltrados, transacoesFiltradas]);
 
   // ============= CÁLCULOS ESPECÍFICOS PARA ROI =============
   
@@ -286,19 +355,17 @@ export function useDashboardFinanceiro() {
   // ============= DADOS PARA GRÁFICOS =============
   
   const dadosMensais = useMemo((): DadosMensais[] => {
-    const ano = parseInt(anoSelecionado);
-    
-    // Usar dados cached do workflow para receitas
-    const workflowMensalData = getMonthlyDataForYear(ano);
-    
-    // Calcular despesas por mês das transações
-    const despesasPorMes: Record<number, number> = {};
-    
+    const meses = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
+    const dadosPorMes: Record<number, { receita: number; despesas: number }> = {};
+
     // Inicializar todos os meses
     for (let i = 1; i <= 12; i++) {
-      despesasPorMes[i] = 0;
+      dadosPorMes[i] = { receita: 0, despesas: 0 };
     }
-    
+
+    // Dados apenas para o ano selecionado (ignorar filtro de mês aqui)
+    const ano = parseInt(anoSelecionado);
+    const workflowDoAno = filterWorkflowByYear(ano);
     const transacoesDoAno = transacoesComItens.filter(transacao => {
       if (!transacao.dataVencimento || typeof transacao.dataVencimento !== 'string') {
         return false;
@@ -307,27 +374,35 @@ export function useDashboardFinanceiro() {
       return anoTransacao === ano;
     });
 
-    // Agregar despesas por mês
+    // Agregrar receitas operacionais por mês
+    workflowDoAno.forEach(item => {
+      const mes = new Date(item.data).getMonth() + 1;
+      dadosPorMes[mes].receita += item.valorPago;
+    });
+
+    // Agregar transações por mês
     transacoesDoAno.filter(t => t.status === 'Pago').forEach(transacao => {
       if (!transacao.dataVencimento || typeof transacao.dataVencimento !== 'string') {
         return;
       }
       const mes = parseInt(transacao.dataVencimento.split('-')[1]);
       
-      if (transacao.item && ['Despesa Fixa', 'Despesa Variável', 'Investimento'].includes(transacao.item.grupo_principal)) {
-        despesasPorMes[mes] += transacao.valor;
+      if (transacao.item?.grupo_principal === 'Receita Não Operacional') {
+        dadosPorMes[mes].receita += transacao.valor;
+      } else if (transacao.item && ['Despesa Fixa', 'Despesa Variável', 'Investimento'].includes(transacao.item.grupo_principal)) {
+        dadosPorMes[mes].despesas += transacao.valor;
       }
     });
 
-    return workflowMensalData.map((monthData, index) => {
-      const despesasMes = despesasPorMes[index + 1];
+    return meses.map((nome, index) => {
+      const dadosMes = dadosPorMes[index + 1];
       return {
-        mes: monthData.mes,
-        receita: monthData.receita,
-        lucro: monthData.receita - despesasMes
+        mes: nome,
+        receita: dadosMes.receita,
+        lucro: dadosMes.receita - dadosMes.despesas
       };
     });
-  }, [anoSelecionado, getMonthlyDataForYear, transacoesComItens]);
+  }, [workflowItemsFromStorage, anoSelecionado, transacoesComItens]);
 
   // ============= COMPOSIÇÃO DE DESPESAS =============
   
@@ -505,7 +580,7 @@ export function useDashboardFinanceiro() {
     excluirMetaAnual,
     
     // Dados filtrados
-    workflowMetrics,
+    workflowItemsFiltrados,
     transacoesFiltradas
   };
 }

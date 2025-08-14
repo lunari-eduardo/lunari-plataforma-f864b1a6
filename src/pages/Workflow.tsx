@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { useAgenda } from "@/hooks/useAgenda";
 import { useWorkflowStatus } from "@/hooks/useWorkflowStatus";
 import { useOrcamentoData } from "@/hooks/useOrcamentoData";
-import { useWorkflowMetrics } from "@/hooks/useWorkflowMetrics";
 import { useContext } from 'react';
 import { AppContext } from '@/contexts/AppContext';
 import { parseDateFromStorage } from "@/utils/dateUtils";
@@ -30,7 +29,6 @@ export default function Workflow() {
     produtos,
     categorias
   } = useOrcamentoData();
-  const { saveMonthlyMetrics } = useWorkflowMetrics();
   const getClienteByName = (nome: string) => {
     return clientes.find(cliente => cliente.nome === nome);
   };
@@ -310,24 +308,13 @@ export default function Workflow() {
     const totalOutstanding = currentMonthSessions.reduce((sum, session) => {
       return sum + calculateRestante(session);
     }, 0);
-    
-    const metrics = {
+    return {
       revenue: totalRevenue,
       forecasted: totalForecasted,
       outstanding: totalOutstanding,
       sessionCount: currentMonthSessions.length
     };
-
-    // Salvar métricas no cache para uso em outras páginas
-    saveMonthlyMetrics(currentMonth.year, currentMonth.month, {
-      receita: totalRevenue,
-      previsto: totalForecasted,
-      aReceber: totalOutstanding,
-      sessoes: currentMonthSessions.length
-    });
-
-    return metrics;
-  }, [sessions, calculateTotal, calculateRestante, currentMonth.year, currentMonth.month, saveMonthlyMetrics]);
+  }, [sessions, calculateTotal, calculateRestante]);
 
   // Métricas do mês anterior para comparação
   const prevMonthFinancials = useMemo(() => {
