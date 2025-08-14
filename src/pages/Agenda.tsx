@@ -49,7 +49,7 @@ export default function Agenda() {
   });
   const [date, setDate] = useState<Date>(new Date());
 
-  // Modal states
+// Modal states
   const [isAppointmentDialogOpen, setIsAppointmentDialogOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isChoiceModalOpen, setIsChoiceModalOpen] = useState(false);
@@ -311,14 +311,11 @@ export default function Agenda() {
       </Card>
 
       {/* Action Choice Modal */}
-      <ActionChoiceModal isOpen={isChoiceModalOpen} onClose={() => setIsChoiceModalOpen(false)} date={selectedSlot?.date || new Date()} time={selectedSlot?.time || ''} onCreateAppointment={handleCreateAppointment} onConfigureAvailability={() => {
-      setIsChoiceModalOpen(false);
-      setIsAvailabilityModalOpen(true);
-    }} />
+      <ActionChoiceModal isOpen={isChoiceModalOpen} onClose={() => setIsChoiceModalOpen(false)} date={selectedSlot?.date || new Date()} time={selectedSlot?.time || ''} onCreateAppointment={handleCreateAppointment} onConfigureAvailability={() => { setIsChoiceModalOpen(false); setIsAvailabilityModalOpen(true); }} />
 
       {/* Appointment Form Modal */}
       <Dialog open={isAppointmentDialogOpen} onOpenChange={setIsAppointmentDialogOpen}>
-        <DialogContent className="sm:max-w-[500px] border-0 shadow-lg bg-[#070708]">
+        <DialogContent className="sm:max-w-[500px] border-0 shadow-lg bg-neutral-50">
           <DialogHeader>
             <DialogTitle className="text-lg font-semibold text-gray-900">
               {editingAppointment ? 'Editar Agendamento' : 'Novo Agendamento'}
@@ -350,6 +347,11 @@ export default function Agenda() {
       <EditOrcamentoModal isOpen={isBudgetModalOpen} onClose={() => setIsBudgetModalOpen(false)} orcamento={selectedBudget} />
 
       {/* Availability Config Modal */}
-      <AvailabilityConfigModal isOpen={isAvailabilityModalOpen} onClose={() => setIsAvailabilityModalOpen(false)} date={selectedSlot?.date || new Date()} initialTime={selectedSlot?.time} />
+      <AvailabilityConfigModal
+        isOpen={isAvailabilityModalOpen}
+        onClose={() => setIsAvailabilityModalOpen(false)}
+        date={selectedSlot?.date || new Date()}
+        initialTime={selectedSlot?.time}
+      />
     </div>;
 }
