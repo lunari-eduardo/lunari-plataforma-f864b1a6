@@ -36,7 +36,35 @@ export default function useTodayOverview() {
 
   const tasksToday = useMemo(() => {
     const doneKey = getDoneKey();
-    return tasks.filter((t) => !!t.dueDate && t.dueDate.slice(0, 10) === todayYMD && t.status !== doneKey).length;
+    console.log('🔍 Debug Tarefas:', {
+      totalTasks: tasks.length,
+      tasks: tasks,
+      doneKey,
+      todayYMD,
+      currentDate: new Date().toISOString()
+    });
+    
+    const filteredTasks = tasks.filter((t) => {
+      const hasDueDate = !!t.dueDate;
+      const isToday = t.dueDate?.slice(0, 10) === todayYMD;
+      const isNotDone = t.status !== doneKey;
+      
+      console.log(`🔍 Tarefa "${t.title}":`, {
+        dueDate: t.dueDate,
+        dueDateSliced: t.dueDate?.slice(0, 10),
+        todayYMD,
+        isToday,
+        status: t.status,
+        doneKey,
+        isNotDone,
+        shouldInclude: hasDueDate && isToday && isNotDone
+      });
+      
+      return hasDueDate && isToday && isNotDone;
+    });
+    
+    console.log('🔍 Tarefas filtradas para hoje:', filteredTasks.length);
+    return filteredTasks.length;
   }, [tasks, getDoneKey, todayYMD]);
 
   return { sessionsToday, tasksToday, nextAppointment } as const;
