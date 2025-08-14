@@ -189,15 +189,15 @@ export default function TabelaLancamentos({
   const getCorPorGrupo = (grupo: GrupoPrincipal) => {
     switch (grupo) {
       case 'Despesa Fixa':
-        return 'bg-red-50 border-red-200';
+        return 'bg-red-500/10 border-red-500/20 dark:bg-red-500/20 dark:border-red-500/30';
       case 'Despesa Variável':
-        return 'bg-orange-50 border-orange-200';
+        return 'bg-orange-500/10 border-orange-500/20 dark:bg-orange-500/20 dark:border-orange-500/30';
       case 'Investimento':
-        return 'bg-purple-50 border-purple-200';
+        return 'bg-purple-500/10 border-purple-500/20 dark:bg-purple-500/20 dark:border-purple-500/30';
       case 'Receita Não Operacional':
-        return 'bg-green-50 border-green-200';
+        return 'bg-green-500/10 border-green-500/20 dark:bg-green-500/20 dark:border-green-500/30';
       default:
-        return 'bg-blue-50 border-blue-200';
+        return 'bg-primary/10 border-primary/20 dark:bg-primary/20 dark:border-primary/30';
     }
   };
   return <div className="bg-card rounded-lg border border-border overflow-hidden shadow-sm">
