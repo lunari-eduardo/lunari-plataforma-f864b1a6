@@ -219,10 +219,10 @@ export default function Index() {
 
       {/* Orçamentos e Agenda */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="rounded-2xl border-0 shadow-lunar-sm hover:shadow-card-elevated transition-shadow duration-300 animate-fade-in">
+        <Card className="rounded-2xl border-0 hover:shadow-card-elevated transition-shadow duration-300 animate-fade-in">
           <CardHeader className="pb-3 flex flex-row items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-brand-gradient shadow-brand">
+               <div className="p-2 rounded-xl bg-brand-gradient">
                 <Camera className="h-5 w-5 text-white" />
               </div>
               <CardTitle className="text-lg font-semibold">Resumo de Orçamentos (mês)</CardTitle>
@@ -243,10 +243,10 @@ export default function Index() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border-0 shadow-lunar-sm hover:shadow-card-elevated transition-shadow duration-300 animate-fade-in">
+        <Card className="rounded-2xl border-0 hover:shadow-card-elevated transition-shadow duration-300 animate-fade-in">
           <CardHeader className="pb-3 flex flex-row items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-brand-gradient shadow-brand">
+              <div className="p-2 rounded-xl bg-brand-gradient">
                 <Calendar className="h-5 w-5 text-white" />
               </div>
               <CardTitle className="text-lg font-semibold">Próximos Agendamentos</CardTitle>

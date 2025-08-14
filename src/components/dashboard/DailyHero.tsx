@@ -26,7 +26,7 @@ export default function DailyHero() {
   const dayMonth = dayFmt.format(now);
 
   return (
-    <Card className="rounded-2xl border-0 shadow-lunar-sm hover:shadow-card-elevated transition-shadow duration-300 overflow-hidden">
+    <Card className="rounded-2xl border-0 hover:shadow-card-elevated transition-shadow duration-300 overflow-hidden">
       <div className="relative">
         {/* decorative accents */}
         <div className="pointer-events-none absolute inset-0 bg-brand-gradient opacity-[0.12]" />
@@ -34,7 +34,7 @@ export default function DailyHero() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-brand-gradient shadow-brand">
+                <div className="p-2.5 rounded-xl bg-brand-gradient">
                   <Icon className="h-6 w-6 text-white" />
                 </div>
                 <h1 className="text-xl font-bold text-lunar-text">
