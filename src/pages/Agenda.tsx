@@ -315,12 +315,12 @@ export default function Agenda() {
 
       {/* Appointment Form Modal */}
       <Dialog open={isAppointmentDialogOpen} onOpenChange={setIsAppointmentDialogOpen}>
-        <DialogContent className="sm:max-w-[500px] border-0 shadow-lg bg-neutral-50">
+        <DialogContent className="sm:max-w-[500px] bg-background border-border">
           <DialogHeader>
-            <DialogTitle className="text-lg font-semibold text-gray-900">
+            <DialogTitle className="text-lg font-semibold text-foreground">
               {editingAppointment ? 'Editar Agendamento' : 'Novo Agendamento'}
             </DialogTitle>
-            <DialogDescription className="text-sm text-gray-600">
+            <DialogDescription className="text-sm text-muted-foreground">
               Complete os detalhes do agendamento abaixo.
             </DialogDescription>
           </DialogHeader>
@@ -331,14 +331,14 @@ export default function Agenda() {
 
       {/* Appointment Details Modal */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <DialogContent className="sm:max-w-[500px] border-0 shadow-lg bg-stone-50">
+        <DialogContent className="sm:max-w-[500px] bg-background border-border">
           {viewingAppointment && <AppointmentDetails appointment={viewingAppointment} onSave={handleSaveAppointment} onCancel={() => setIsDetailsOpen(false)} onDelete={handleDeleteAppointment} />}
         </DialogContent>
       </Dialog>
 
       {/* Budget Appointment Details Modal */}
       <Dialog open={isBudgetAppointmentModalOpen} onOpenChange={setIsBudgetAppointmentModalOpen}>
-        <DialogContent className="sm:max-w-[600px] border-0 shadow-lg bg-neutral-50">
+        <DialogContent className="sm:max-w-[600px] bg-background border-border">
           {selectedBudgetAppointment && <BudgetAppointmentDetails appointment={selectedBudgetAppointment.appointment} budget={selectedBudgetAppointment.budget} onSave={handleSaveBudgetAppointment} onCancel={() => setIsBudgetAppointmentModalOpen(false)} onViewFullBudget={handleViewFullBudget} onDelete={handleDeleteAppointment} />}
         </DialogContent>
       </Dialog>
