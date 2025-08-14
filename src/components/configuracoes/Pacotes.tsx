@@ -206,13 +206,13 @@ export default function Pacotes({
           <div className="flex justify-center">
             <Collapsible open={novoPacoteAberto} onOpenChange={setNovoPacoteAberto} className="w-full">
               <CollapsibleTrigger asChild>
-                <Button className="bg-blue-500/20 border border-blue-500/30 text-blue-800 hover:bg-blue-500/30 flex items-center justify-center gap-2 px-4 py-2 rounded-lg mx-auto">
+                <Button className="bg-primary/20 border border-primary/30 text-primary hover:bg-primary/30 flex items-center justify-center gap-2 px-4 py-2 rounded-lg mx-auto">
                   <span className="text-sm">📦</span>
                   {novoPacoteAberto ? <>
                       Fechar Formulário
                       <ChevronUp className="h-4 w-4" />
                     </> : <>
-                      [+] Novo Pacote Fotográfico
+                      [+] Novo Pacote
                       <ChevronDown className="h-4 w-4" />
                     </>}
                 </Button>

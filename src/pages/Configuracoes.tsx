@@ -161,6 +161,10 @@ export default function Configuracoes() {
                 <Shapes className="h-4 w-4" />
                 <span className="hidden sm:inline">Categorias</span>
               </TabsTrigger>
+              <TabsTrigger value="precificacao" className="flex items-center gap-1.5">
+                <DollarSign className="h-4 w-4" />
+                <span className="hidden sm:inline">Modelos de preço</span>
+              </TabsTrigger>
               <TabsTrigger value="pacotes" className="flex items-center gap-1.5">
                 <Package className="h-4 w-4" />
                 <span className="hidden sm:inline">Pacotes</span>
@@ -168,10 +172,6 @@ export default function Configuracoes() {
               <TabsTrigger value="produtos" className="flex items-center gap-1.5">
                 <Box className="h-4 w-4" />
                 <span className="hidden sm:inline">Produtos</span>
-              </TabsTrigger>
-              <TabsTrigger value="precificacao" className="flex items-center gap-1.5">
-                <DollarSign className="h-4 w-4" />
-                <span className="hidden sm:inline">Modelos de preço</span>
               </TabsTrigger>
               <TabsTrigger value="fluxo" className="flex items-center gap-1.5">
                 <Workflow className="h-4 w-4" />
