@@ -48,7 +48,7 @@ export function HighPriorityDueSoonCard() {
   };
 
   return (
-    <Card className="rounded-2xl border-0 shadow-card hover:shadow-brand transition-shadow duration-300">
+    <Card className="rounded-2xl border-0 shadow-lunar-sm hover:shadow-card-elevated transition-shadow duration-300">
       <CardHeader className="pb-3 flex flex-row items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-brand-gradient shadow-brand">
@@ -67,7 +67,7 @@ export function HighPriorityDueSoonCard() {
         ) : (
            <ul className="space-y-3">
              {items.map(({ t, due, days }) => (
-               <li key={t.id} className="p-3 rounded-xl bg-card-gradient shadow-card hover:shadow-card-hover transition-shadow duration-300">
+               <li key={t.id} className="p-3 rounded-xl bg-card-gradient shadow-lunar-sm hover:shadow-card transition-shadow duration-300">
                  <div className="min-w-0">
                    <p className="text-sm font-semibold text-lunar-text truncate" title={t.title}>{t.title}</p>
                    <p className="text-xs text-lunar-textSecondary mt-1">

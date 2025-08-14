@@ -15,7 +15,7 @@ interface ProductionRemindersCardProps {
 
 export function ProductionRemindersCard({ lembretes }: ProductionRemindersCardProps) {
   return (
-    <Card className="lg:col-span-3 rounded-2xl border-0 shadow-card hover:shadow-brand transition-shadow duration-300 animate-fade-in">
+    <Card className="lg:col-span-3 rounded-2xl border-0 shadow-lunar-sm hover:shadow-card-elevated transition-shadow duration-300 animate-fade-in">
       <CardHeader className="pb-3 flex flex-row items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-brand-gradient shadow-brand">
@@ -33,7 +33,7 @@ export function ProductionRemindersCard({ lembretes }: ProductionRemindersCardPr
         ) : (
           <div className="space-y-2">
             {lembretes.slice(0, 8).map((r) => (
-              <div key={r.id} className="flex items-start gap-3 text-sm p-3 rounded-xl bg-card-gradient shadow-lunar-sm hover:shadow-brand transition-shadow duration-300">
+              <div key={r.id} className="flex items-start gap-3 text-sm p-3 rounded-xl bg-card-gradient shadow-lunar-sm hover:shadow-card transition-shadow duration-300">
                 <div className="p-1.5 rounded-lg bg-brand-gradient shadow-brand">
                   <AlertTriangle className="h-4 w-4 text-white" />
                 </div>
