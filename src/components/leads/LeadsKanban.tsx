@@ -12,28 +12,9 @@ import { useLeadStatuses } from '@/hooks/useLeadStatuses';
 import { useAppContext } from '@/contexts/AppContext';
 import LeadCard from './LeadCard';
 import LeadFormModal from './LeadFormModal';
+import DraggableLeadCard from './DraggableLeadCard';
 import type { Lead } from '@/types/leads';
 import { cn } from '@/lib/utils';
-
-interface DraggableLeadCardProps {
-  lead: Lead;
-  onEdit: () => void;
-  onDelete: () => void;
-  onConvertToOrcamento: () => void;
-  onRequestMove: (status: string) => void;
-  statusOptions: { value: string; label: string; }[];
-  activeId: string | null;
-}
-
-function DraggableLeadCard({ lead, activeId, ...props }: DraggableLeadCardProps) {
-  return (
-    <LeadCard
-      lead={lead}
-      {...props}
-      isDragging={activeId === lead.id}
-    />
-  );
-}
 
 export default function LeadsKanban() {
   const { leads, addLead, updateLead, deleteLead, convertToOrcamento } = useLeads();
@@ -104,10 +85,10 @@ export default function LeadsKanban() {
     const leadsInColumn = groupedLeads[statusKey] || [];
     
     return (
-      <section className="flex-1 min-w-[280px]">
-        <header className="flex items-center justify-between mb-3">
+      <section className="flex-1 min-w-[320px]">
+        <header className="flex items-center justify-between mb-2">
           <h2 className="text-sm font-semibold text-lunar-text">{title}</h2>
-          <Badge variant="outline" className="text-xs">
+          <Badge variant="outline" className="text-2xs">
             {leadsInColumn.length}
           </Badge>
         </header>
@@ -115,11 +96,11 @@ export default function LeadsKanban() {
         <Card
           ref={setNodeRef}
           className={cn(
-            "p-3 bg-lunar-surface border-lunar-border/60 min-h-[70vh] max-h-[70vh] overflow-y-auto",
+            "p-2 pb-8 bg-lunar-surface border-lunar-border/60 min-h-[75vh] max-h-[75vh] overflow-y-auto",
             isOver ? "ring-2 ring-lunar-accent/60" : ""
           )}
         >
-          <ul className="space-y-3">
+          <ul className="space-y-2">
             {leadsInColumn.map(lead => (
               <DraggableLeadCard
                 key={lead.id}
@@ -192,9 +173,11 @@ export default function LeadsKanban() {
         modifiers={[restrictToFirstScrollableAncestor]}
         onDragStart={(e) => {
           setActiveId(String(e.active.id));
+          console.log('[DND] drag start', e.active.id);
         }}
         onDragEnd={(e) => {
           const overId = e.over?.id as string | undefined;
+          console.log('[DND] drag end', { activeId, overId });
           if (activeId && overId) {
             const current = leads.find(lead => lead.id === activeId);
             if (current && current.status !== overId) {

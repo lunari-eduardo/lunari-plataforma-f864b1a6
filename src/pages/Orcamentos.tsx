@@ -34,7 +34,7 @@ export default function Orcamentos() {
     }
   }, [location.search]);
   return <ScrollArea className="h-[calc(100vh-120px)]">
-      <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 p-2 sm:p-4 space-y-4 bg-lunar-bg min-h-screen my-0 py-[33px]">
+      <div className="w-full max-w-full mx-auto px-2 sm:px-4 p-2 space-y-4 bg-lunar-bg min-h-screen my-0 py-[33px]">
       <div className="px-2">
         <h1 className="text-lg font-semibold text-lunar-text">Leads e Orçamentos</h1>
       </div>
