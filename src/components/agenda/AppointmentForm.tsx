@@ -3,7 +3,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { 
+  SelectModal as Select, 
+  SelectModalContent as SelectContent, 
+  SelectModalItem as SelectItem, 
+  SelectModalTrigger as SelectTrigger, 
+  SelectModalValue as SelectValue 
+} from "@/components/ui/select-in-modal";
+import { useDialogDropdownContext } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import ClientSearchCombobox from './ClientSearchCombobox';
@@ -75,6 +82,7 @@ export default function AppointmentForm({
   } = useOrcamentos();
   
   const { origens } = useOrcamentos();
+  const dropdownContext = useDialogDropdownContext();
 
   // Verifica se é agendamento de orçamento
   const isFromBudgetAppointment = appointment ? isFromBudget(appointment) : false;
@@ -335,10 +343,11 @@ export default function AppointmentForm({
                   
                   <div className="space-y-2">
                     <Label htmlFor="new-client-origem" className="text-sm font-medium">Como conheceu?</Label>
-                    <Select 
-                      value={formData.newClientOrigem} 
-                      onValueChange={(value) => setFormData(prev => ({ ...prev, newClientOrigem: value }))}
-                    >
+                     <Select 
+                       value={formData.newClientOrigem} 
+                       onValueChange={(value) => setFormData(prev => ({ ...prev, newClientOrigem: value }))}
+                       onOpenChange={(open) => dropdownContext?.setHasOpenDropdown(open)}
+                     >
                       <SelectTrigger id="new-client-origem">
                         <SelectValue placeholder="Selecione a origem" />
                       </SelectTrigger>

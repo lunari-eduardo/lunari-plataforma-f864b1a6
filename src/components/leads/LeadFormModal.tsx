@@ -4,7 +4,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { 
+  SelectModal as Select, 
+  SelectModalContent as SelectContent, 
+  SelectModalItem as SelectItem, 
+  SelectModalTrigger as SelectTrigger, 
+  SelectModalValue as SelectValue 
+} from '@/components/ui/select-in-modal';
+import { useDialogDropdownContext } from '@/components/ui/dialog';
 import { useAppContext } from '@/contexts/AppContext';
 import { useLeadStatuses } from '@/hooks/useLeadStatuses';
 import { ORIGENS_PADRAO } from '@/utils/defaultOrigens';
@@ -38,6 +45,7 @@ export default function LeadFormModal({
 }: LeadFormModalProps) {
   const { origens: contextOrigens, clientes } = useAppContext();
   const { statuses, getDefaultOpenKey } = useLeadStatuses();
+  const dropdownContext = useDialogDropdownContext();
   
   // Unified origin source: AppContext + fallback to default origins
   const origens: OrigemCliente[] = contextOrigens.length > 0 
@@ -197,7 +205,8 @@ export default function LeadFormModal({
   // Prevent modal from closing when clicking on dropdowns
   const handleSelectOpenChange = useCallback((open: boolean, selectType: string) => {
     console.log('🔽 Select open changed:', { selectType, open });
-  }, []);
+    dropdownContext?.setHasOpenDropdown(open);
+  }, [dropdownContext]);
 
   console.log('🎯 LeadFormModal render:', {
     open,
