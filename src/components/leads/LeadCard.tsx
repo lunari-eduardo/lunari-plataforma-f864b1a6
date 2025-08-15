@@ -85,8 +85,8 @@ export default function LeadCard({
       className={`relative overflow-hidden rounded-lg p-4 transition-all cursor-grab active:cursor-grabbing select-none touch-none transform-gpu border ${
         isDragging ? 'opacity-50 scale-95' : ''
       } ${isPressing ? 'scale-[0.98]' : ''} 
-      bg-lunar-surface border-lunar-border shadow-sm
-      dark:bg-lunar-surface dark:border-lunar-border
+      bg-gradient-to-br from-gray-100 to-white border-lunar-border shadow-sm
+      dark:from-gray-800 dark:to-gray-700 dark:border-lunar-border
       `}
       style={dndStyle}
       ref={dndRef as any}
