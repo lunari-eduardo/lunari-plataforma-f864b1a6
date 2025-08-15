@@ -42,6 +42,22 @@ const DialogContent = React.forwardRef<
 >(({ className, children, ...props }, ref) => {
   const [hasOpenDropdown, setHasOpenDropdown] = React.useState(false);
 
+  // Auto-cleanup when dialog state changes
+  React.useEffect(() => {
+    return () => {
+      // Force cleanup any lingering dropdown state
+      setHasOpenDropdown(false);
+    };
+  }, []);
+
+  // Force close dropdowns when dialog closes
+  React.useEffect(() => {
+    // Reset dropdown state when dialog unmounts or props change
+    return () => {
+      setHasOpenDropdown(false);
+    };
+  }, []);
+
   const handlePointerDownOutside = React.useCallback((event: CustomEvent<{ originalEvent: PointerEvent }>) => {
     // Don't close modal if there's an open dropdown inside it
     if (hasOpenDropdown) {

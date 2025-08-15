@@ -1,11 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppContext } from '@/contexts/AppContext';
 import { Cliente } from '@/types/orcamentos';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, useDialogDropdownContext } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { 
   SelectModal as Select, 
@@ -30,6 +30,8 @@ export default function Clientes() {
     atualizarCliente,
     removerCliente
   } = useAppContext();
+  
+  const dropdownContext = useDialogDropdownContext();
   const [filtro, setFiltro] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
   const [faturadoFilter, setFaturadoFilter] = useState('todos');
@@ -46,6 +48,12 @@ export default function Clientes() {
 
   // Obter métricas dos clientes
   const clientMetrics = useClientMetrics(clientes);
+
+  // Prevent modal from closing when clicking on dropdowns
+  const handleSelectOpenChange = useCallback((open: boolean, selectType: string) => {
+    console.log('🔽 Select open changed:', { selectType, open });
+    dropdownContext?.setHasOpenDropdown(open);
+  }, [dropdownContext]);
 
   // Filtrar clientes
   const clientesFiltrados = useMemo(() => {
@@ -298,10 +306,14 @@ export default function Clientes() {
               
               <div>
                 <Label htmlFor="origem">Origem</Label>
-                <Select value={formData.origem} onValueChange={value => setFormData(prev => ({
-                  ...prev,
-                  origem: value
-                }))}>
+                <Select 
+                  value={formData.origem} 
+                  onValueChange={value => setFormData(prev => ({
+                    ...prev,
+                    origem: value
+                  }))}
+                  onOpenChange={(open) => handleSelectOpenChange(open, 'origem')}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione a origem" />
                   </SelectTrigger>

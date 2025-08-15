@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, useDialogDropdownContext } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -32,6 +32,8 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
   const [status, setStatus] = useState<TaskStatus>(initial?.status ?? 'todo');
   const [assigneeName, setAssigneeName] = useState<string>(initial?.assigneeName ?? '');
   const [selectedTags, setSelectedTags] = useState<string[]>(initial?.tags ?? []);
+  
+  const dropdownContext = useDialogDropdownContext();
 
   useEffect(() => {
     if (open) {
@@ -47,6 +49,12 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
 
   const { people } = useTaskPeople();
   const { tags: tagDefs } = useTaskTags();
+
+  // Prevent modal from closing when clicking on dropdowns
+  const handleSelectOpenChange = useCallback((open: boolean, selectType: string) => {
+    console.log('🔽 Select open changed:', { selectType, open });
+    dropdownContext?.setHasOpenDropdown(open);
+  }, [dropdownContext]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,7 +96,11 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
             </div>
             <div className="space-y-1.5">
               <Label>Prioridade</Label>
-              <Select value={priority} onValueChange={v => setPriority(v as TaskPriority)}>
+              <Select 
+                value={priority} 
+                onValueChange={v => setPriority(v as TaskPriority)}
+                onOpenChange={(open) => handleSelectOpenChange(open, 'priority')}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
@@ -103,7 +115,11 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Status</Label>
-              <Select value={status} onValueChange={v => setStatus(v as TaskStatus)}>
+              <Select 
+                value={status} 
+                onValueChange={v => setStatus(v as TaskStatus)}
+                onOpenChange={(open) => handleSelectOpenChange(open, 'status')}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
@@ -117,7 +133,11 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
             </div>
             <div className="space-y-1.5">
               <Label>Responsável</Label>
-              <Select value={assigneeName || '__none__'} onValueChange={(v) => setAssigneeName(v === '__none__' ? '' : v)}>
+              <Select 
+                value={assigneeName || '__none__'} 
+                onValueChange={(v) => setAssigneeName(v === '__none__' ? '' : v)}
+                onOpenChange={(open) => handleSelectOpenChange(open, 'assignee')}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>

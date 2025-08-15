@@ -82,6 +82,17 @@ const SelectModalContent = React.forwardRef<
     return document.body;
   }, [container]);
 
+  // Auto-cleanup on unmount
+  React.useEffect(() => {
+    return () => {
+      // Force cleanup any event listeners or state
+      const activeElement = document.activeElement as HTMLElement;
+      if (activeElement && activeElement.blur) {
+        activeElement.blur();
+      }
+    };
+  }, []);
+
   return (
     <SelectPrimitive.Portal container={modalContainer}>
       <SelectPrimitive.Content
