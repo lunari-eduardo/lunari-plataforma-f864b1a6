@@ -158,7 +158,7 @@ export default function LeadFormModal({
     return Object.keys(newErrors).length === 0;
   }, [formData]);
 
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
+  const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
@@ -168,7 +168,9 @@ export default function LeadFormModal({
     setIsSubmitting(true);
 
     try {
-      await onSubmit({
+      console.log('📝 [LeadFormModal] Submetendo dados:', formData);
+      
+      onSubmit({
         nome: formData.nome.trim(),
         email: formData.email.trim(),
         telefone: formData.telefone.trim(),
