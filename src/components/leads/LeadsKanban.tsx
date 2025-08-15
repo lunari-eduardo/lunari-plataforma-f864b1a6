@@ -208,8 +208,10 @@ export default function LeadsKanban() {
         }
         setActiveId(null);
       }} onDragCancel={() => setActiveId(null)}>
-        <div className="flex gap-2 min-w-max pr-2">
-          {statuses.map(status => <StatusColumn key={status.id} title={status.name} statusKey={status.key} />)}
+        <div className="overflow-x-auto scrollbar-lunar">
+          <div className="flex gap-2 min-w-max pr-2">
+            {statuses.map(status => <StatusColumn key={status.id} title={status.name} statusKey={status.key} />)}
+          </div>
         </div>
 
         <DragOverlay>
