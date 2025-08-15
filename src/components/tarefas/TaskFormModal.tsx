@@ -4,7 +4,13 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { 
+  SelectModal as Select, 
+  SelectModalContent as SelectContent, 
+  SelectModalItem as SelectItem, 
+  SelectModalTrigger as SelectTrigger, 
+  SelectModalValue as SelectValue 
+} from '@/components/ui/select-in-modal';
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useTaskPeople } from '@/hooks/useTaskPeople';
 import { useTaskTags } from '@/hooks/useTaskTags';

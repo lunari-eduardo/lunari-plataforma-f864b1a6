@@ -7,7 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { 
+  SelectModal as Select, 
+  SelectModalContent as SelectContent, 
+  SelectModalItem as SelectItem, 
+  SelectModalTrigger as SelectTrigger, 
+  SelectModalValue as SelectValue 
+} from '@/components/ui/select-in-modal';
 import { Search, UserPlus, User, Phone, Mail, Edit, Trash2, MessageCircle } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from 'sonner';
