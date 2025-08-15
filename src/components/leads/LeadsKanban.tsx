@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
 import { DndContext, rectIntersection, useSensor, useSensors, PointerSensor, DragOverlay, useDroppable } from '@dnd-kit/core';
@@ -108,7 +108,7 @@ export default function LeadsKanban() {
 
     // Buscar cor do status
     const statusColor = statuses.find(s => s.key === statusKey)?.color || '#6b7280';
-    return <section className="flex-1 min-w-[280px]">
+    return <section className="flex-1 min-w-[240px]">
         <header className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full" style={{
@@ -121,7 +121,7 @@ export default function LeadsKanban() {
           </Badge>
         </header>
         
-        <Card ref={setNodeRef} className={cn("p-2 pb-8 border-lunar-border/60 min-h-full transition-colors", isOver ? "ring-2 ring-lunar-accent/60" : "")} style={{
+        <Card ref={setNodeRef} className={cn("p-2 pb-4 border-lunar-border/60 min-h-[70vh] transition-colors", isOver ? "ring-2 ring-lunar-accent/60" : "")} style={{
         backgroundColor: `${statusColor}08`,
         // 8% opacity do background
         borderColor: `${statusColor}40` // 40% opacity da borda
@@ -164,7 +164,7 @@ export default function LeadsKanban() {
 
       {/* Filtros */}
       <Card className="p-3 bg-lunar-surface border-lunar-border/60 py-0">
-        <div className="flex gap-2 overflow-x-auto">
+        <div className="flex flex-nowrap whitespace-nowrap overflow-x-auto gap-2">
           <div className="flex-1 min-w-[200px]">
             <Input placeholder="Buscar leads..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="text-sm" />
           </div>
@@ -186,8 +186,7 @@ export default function LeadsKanban() {
       </Card>
 
       {/* Kanban Board */}
-      <ScrollArea className="h-[70vh]">
-        <DndContext sensors={sensors} collisionDetection={rectIntersection} modifiers={[restrictToFirstScrollableAncestor]} onDragStart={e => {
+      <DndContext sensors={sensors} collisionDetection={rectIntersection} modifiers={[restrictToFirstScrollableAncestor]} onDragStart={e => {
         setActiveId(String(e.active.id));
       }} onDragEnd={e => {
         const overId = e.over?.id as string | undefined;
@@ -209,22 +208,19 @@ export default function LeadsKanban() {
         }
         setActiveId(null);
       }} onDragCancel={() => setActiveId(null)}>
-          <div className="overflow-x-auto">
-            <div className="flex gap-3 min-w-max pr-2">
-              {statuses.map(status => <StatusColumn key={status.id} title={status.name} statusKey={status.key} />)}
-            </div>
-          </div>
+        <div className="flex gap-2 min-w-max pr-2">
+          {statuses.map(status => <StatusColumn key={status.id} title={status.name} statusKey={status.key} />)}
+        </div>
 
-          <DragOverlay>
-            <div className="pointer-events-none">
-              {activeId ? (() => {
+        <DragOverlay>
+          <div className="pointer-events-none">
+            {activeId ? (() => {
               const lead = leads.find(l => l.id === activeId);
               return lead ? <LeadCard lead={lead} onDelete={() => {}} onConvertToOrcamento={() => {}} statusOptions={statusOptions} isDragging={true} /> : null;
             })() : null}
-            </div>
-          </DragOverlay>
-        </DndContext>
-      </ScrollArea>
+          </div>
+        </DragOverlay>
+      </DndContext>
 
       {/* Modals */}
       <LeadFormModal open={createModalOpen} onOpenChange={setCreateModalOpen} mode="create" onSubmit={data => {

@@ -82,7 +82,7 @@ export default function LeadCard({
 
   return (
     <li 
-      className={`relative overflow-hidden rounded-lg p-3 transition-all cursor-grab active:cursor-grabbing select-none touch-none transform-gpu border ${
+      className={`relative overflow-hidden rounded-lg p-2 transition-all cursor-grab active:cursor-grabbing select-none touch-none transform-gpu border ${
         isDragging ? 'opacity-50 scale-95' : ''
       } ${isPressing ? 'scale-[0.98]' : ''} 
       bg-gradient-to-br from-gray-100 to-white border-lunar-border shadow-sm
@@ -109,8 +109,8 @@ export default function LeadCard({
       />
       
       {/* Layout em Grid: Nome + Menu no topo */}
-      <div className="flex items-start justify-between mb-3">
-        <h3 className="text-sm font-medium text-lunar-text leading-tight">
+      <div className="flex items-start justify-between mb-2">
+        <h3 className="text-xs font-medium text-lunar-text leading-tight">
           {lead.nome}
         </h3>
         
@@ -124,7 +124,7 @@ export default function LeadCard({
           <Button 
             variant="ghost" 
             size="icon" 
-            className="h-6 w-6 -mt-1 -mr-1" 
+            className="h-5 w-5 -mt-1 -mr-1" 
             title="Mais opções"
             data-no-drag="true"
           >
@@ -135,7 +135,7 @@ export default function LeadCard({
 
       {/* Badge de Origem */}
       {lead.origem && (
-        <div className="mb-4">
+        <div className="mb-3">
           <Badge 
             className="text-xs px-2 py-1"
             style={{ 
@@ -150,7 +150,7 @@ export default function LeadCard({
       )}
 
       {/* Status Selector Centralizado */}
-      <div className="flex justify-center mb-4">
+      <div className="flex justify-center mb-3">
         <LeadStatusSelector
           lead={lead}
           onStatusChange={(status) => {
@@ -167,7 +167,7 @@ export default function LeadCard({
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20"
+          className="h-6 w-6 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20"
           onClick={handleStartConversation}
           title="Conversar no WhatsApp"
           data-no-drag="true"
