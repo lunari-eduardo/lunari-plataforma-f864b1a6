@@ -27,7 +27,7 @@ export default function Orcamentos() {
     if (presetDate && presetTime) {
       setActiveTab('novo');
     }
-    
+
     // If tab is specified in URL (for lead conversion)
     if (presetTab && ['leads', 'lista', 'novo'].includes(presetTab)) {
       setActiveTab(presetTab);
@@ -36,7 +36,7 @@ export default function Orcamentos() {
   return <ScrollArea className="h-[calc(100vh-120px)]">
       <div className="w-full max-w-full mx-auto px-2 sm:px-4 p-2 space-y-4 bg-lunar-bg min-h-screen my-0 py-[33px]">
       <div className="px-2">
-        <h1 className="text-lg font-semibold text-lunar-text">Leads e Orçamentos</h1>
+        
       </div>
 
       <MetricasOrcamento selectedMonth={selectedMonth} />
