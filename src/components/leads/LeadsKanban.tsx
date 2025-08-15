@@ -62,6 +62,11 @@ export default function LeadsKanban() {
     filteredLeads.forEach(lead => { 
       (groups[lead.status] ||= []).push(lead); 
     });
+    console.log('📊 [LeadsKanban] Leads agrupados:', {
+      totalLeads: filteredLeads.length,
+      statusCount: Object.keys(groups).length,
+      groups: Object.entries(groups).map(([key, leads]) => ({ status: key, count: leads.length }))
+    });
     return groups;
   }, [filteredLeads, statuses]);
 
@@ -256,18 +261,27 @@ export default function LeadsKanban() {
         onOpenChange={setCreateModalOpen}
         mode="create"
         onSubmit={(data) => {
-          const newLead = addLead(data);
+          console.log('🎯 [LeadsKanban] Submetendo novo lead:', data);
           
-          // Add creation interaction
-          addInteraction(
-            newLead.id,
-            'criacao',
-            `Lead criado com status "${statuses.find(s => s.key === data.status)?.name || data.status}"`,
-            true,
-            `Cliente criado automaticamente no CRM`
-          );
-          
-          toast({ title: 'Lead criado', description: data.nome });
+          try {
+            const newLead = addLead(data);
+            console.log('✅ [LeadsKanban] Lead criado:', newLead);
+            
+            // Add creation interaction
+            addInteraction(
+              newLead.id,
+              'criacao',
+              `Lead criado com status "${statuses.find(s => s.key === data.status)?.name || data.status}"`,
+              true,
+              `Cliente criado automaticamente no CRM`
+            );
+            
+            toast({ title: 'Lead criado', description: data.nome });
+            console.log('🎉 [LeadsKanban] Processo de criação concluído!');
+          } catch (error) {
+            console.error('❌ [LeadsKanban] Erro ao criar lead:', error);
+            toast({ title: 'Erro', description: 'Não foi possível criar o lead' });
+          }
         }}
       />
 

@@ -1499,12 +1499,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...cliente,
       id: Date.now().toString(),
     };
-    console.log('Adding new client:', novoCliente);
-    console.log('Current clients before adding:', clientes.length);
+    console.log('🔧 [adicionarCliente] Criando cliente:', novoCliente);
+    console.log('🔧 [adicionarCliente] Origem recebida:', cliente.origem);
+    console.log('🔧 [adicionarCliente] Clientes antes:', clientes.length);
+    
     setClientes(prev => {
       const existingClients = [...prev];
       const updatedClients = [...existingClients, novoCliente];
-      console.log('Updated clients count:', updatedClients.length);
+      console.log('🔧 [adicionarCliente] Clientes depois:', updatedClients.length);
+      
+      // Save to localStorage immediately
+      storage.save(STORAGE_KEYS.CLIENTS, updatedClients);
+      console.log('💾 [adicionarCliente] Cliente salvo no localStorage');
+      
       return updatedClients;
     });
     return novoCliente;

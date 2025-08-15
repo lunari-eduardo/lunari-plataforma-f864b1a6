@@ -5,12 +5,15 @@ import type { Lead } from '@/types/leads';
 
 export function useLeads() {
   const [leads, setLeads] = useState<Lead[]>(() => {
-    return storage.load<Lead[]>(STORAGE_KEYS.LEADS, []);
+    const loadedLeads = storage.load<Lead[]>(STORAGE_KEYS.LEADS, []);
+    console.log('🔍 [useLeads] Carregando leads do localStorage:', loadedLeads.length, 'leads');
+    return loadedLeads;
   });
 
   const { adicionarCliente, clientes } = useAppContext();
 
   useEffect(() => {
+    console.log('💾 [useLeads] Salvando leads no localStorage:', leads.length, 'leads');
     storage.save(STORAGE_KEYS.LEADS, leads);
     window.dispatchEvent(new CustomEvent('leads:changed'));
   }, [leads]);
@@ -40,6 +43,8 @@ export function useLeads() {
   }, []);
 
   const addLead = useCallback((input: Omit<Lead, 'id' | 'dataCriacao'>) => {
+    console.log('🚀 [addLead] Iniciando criação de lead:', input);
+    
     const now = new Date().toISOString();
     const lead: Lead = {
       ...input,
@@ -49,8 +54,18 @@ export function useLeads() {
       statusTimestamp: now,
     };
 
+    console.log('📝 [addLead] Lead criado:', lead);
+
     // Auto-create client in CRM
     if (!lead.clienteId) {
+      console.log('👤 [addLead] Criando cliente no CRM:', {
+        nome: lead.nome,
+        email: lead.email,
+        telefone: lead.telefone,
+        whatsapp: lead.whatsapp || lead.telefone,
+        origem: lead.origem || ''
+      });
+      
       const novoCliente = adicionarCliente({
         nome: lead.nome,
         email: lead.email,
@@ -58,10 +73,19 @@ export function useLeads() {
         whatsapp: lead.whatsapp || lead.telefone,
         origem: lead.origem || ''
       });
+      
+      console.log('✅ [addLead] Cliente criado:', novoCliente);
       lead.clienteId = novoCliente.id;
     }
 
-    setLeads(prev => [lead, ...prev]);
+    console.log('💾 [addLead] Salvando lead no estado...', lead);
+    setLeads(prev => {
+      const newLeads = [lead, ...prev];
+      console.log('📊 [addLead] Estado atualizado:', newLeads.length, 'leads total');
+      return newLeads;
+    });
+    
+    console.log('✅ [addLead] Lead criado com sucesso!');
     return lead;
   }, [adicionarCliente]);
 

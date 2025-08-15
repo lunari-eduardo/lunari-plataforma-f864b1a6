@@ -168,7 +168,7 @@ export default function LeadFormModal({
     setIsSubmitting(true);
 
     try {
-      await onSubmit({
+      const leadData = {
         nome: formData.nome.trim(),
         email: formData.email.trim(),
         telefone: formData.telefone.trim(),
@@ -178,11 +178,14 @@ export default function LeadFormModal({
         clienteId: formData.clienteId || undefined,
         interacoes: [],
         whatsapp: formData.telefone.trim()
-      });
+      };
+      
+      console.log('📤 [LeadFormModal] Enviando dados do lead:', leadData);
+      await onSubmit(leadData);
 
       handleClose(false);
     } catch (error) {
-      console.error('Erro ao salvar lead:', error);
+      console.error('❌ [LeadFormModal] Erro ao salvar lead:', error);
     } finally {
       setIsSubmitting(false);
     }
