@@ -90,6 +90,22 @@ const SelectModalContent = React.forwardRef<
       if (activeElement && activeElement.blur) {
         activeElement.blur();
       }
+      
+      // Aggressive cleanup of select portals that might be stuck
+      setTimeout(() => {
+        const portals = document.querySelectorAll('[data-radix-select-content]');
+        portals.forEach(portal => {
+          if (portal.parentNode) {
+            portal.parentNode.removeChild(portal);
+          }
+        });
+        
+        // Reset pointer events on overlays
+        const overlays = document.querySelectorAll('.radix-select-overlay, [data-radix-select-trigger]');
+        overlays.forEach(overlay => {
+          (overlay as HTMLElement).style.pointerEvents = '';
+        });
+      }, 100);
     };
   }, []);
 

@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppContext } from '@/contexts/AppContext';
 import { Cliente } from '@/types/orcamentos';
@@ -45,14 +45,58 @@ export default function Clientes() {
     telefone: '',
     origem: ''
   });
+  const [openDropdowns, setOpenDropdowns] = useState<Record<string, boolean>>({});
 
   // Obter métricas dos clientes
   const clientMetrics = useClientMetrics(clientes);
 
+  // Force cleanup on unmount
+  useEffect(() => {
+    return () => {
+      // Force close any open dropdowns
+      setOpenDropdowns({});
+      dropdownContext?.setHasOpenDropdown(false);
+      
+      // Aggressive cleanup of Radix Select portals
+      document.querySelectorAll('[data-radix-select-content]').forEach(el => {
+        if (el.parentNode) {
+          el.parentNode.removeChild(el);
+        }
+      });
+      
+      // Reset pointer events on any stuck overlays
+      document.querySelectorAll('[data-radix-select-trigger]').forEach(el => {
+        (el as HTMLElement).style.pointerEvents = '';
+      });
+    };
+  }, [dropdownContext]);
+
   // Prevent modal from closing when clicking on dropdowns
   const handleSelectOpenChange = useCallback((open: boolean, selectType: string) => {
     console.log('🔽 Select open changed:', { selectType, open });
-    dropdownContext?.setHasOpenDropdown(open);
+    setOpenDropdowns(prev => ({
+      ...prev,
+      [selectType]: open
+    }));
+    dropdownContext?.setHasOpenDropdown(Object.values({...openDropdowns, [selectType]: open}).some(Boolean));
+  }, [dropdownContext, openDropdowns]);
+
+  const handleModalClose = useCallback((newOpen: boolean) => {
+    if (!newOpen) {
+      // Force close all dropdowns before closing modal
+      setOpenDropdowns({});
+      dropdownContext?.setHasOpenDropdown(false);
+      
+      // Cleanup portal elements immediately
+      setTimeout(() => {
+        document.querySelectorAll('[data-radix-select-content]').forEach(el => {
+          if (el.parentNode) {
+            el.parentNode.removeChild(el);
+          }
+        });
+      }, 50);
+    }
+    setShowClientForm(newOpen);
   }, [dropdownContext]);
 
   // Filtrar clientes
@@ -271,7 +315,7 @@ export default function Clientes() {
           </div>}
 
         {/* Modal do Formulário de Cliente */}
-        <Dialog open={showClientForm} onOpenChange={setShowClientForm}>
+        <Dialog open={showClientForm} onOpenChange={handleModalClose}>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>

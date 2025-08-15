@@ -32,6 +32,7 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
   const [status, setStatus] = useState<TaskStatus>(initial?.status ?? 'todo');
   const [assigneeName, setAssigneeName] = useState<string>(initial?.assigneeName ?? '');
   const [selectedTags, setSelectedTags] = useState<string[]>(initial?.tags ?? []);
+  const [openDropdowns, setOpenDropdowns] = useState<Record<string, boolean>>({});
   
   const dropdownContext = useDialogDropdownContext();
 
@@ -44,8 +45,30 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
       setStatus(initial?.status ?? 'todo');
       setAssigneeName(initial?.assigneeName ?? '');
       setSelectedTags(initial?.tags ?? []);
+      setOpenDropdowns({});
     }
   }, [open, initial]);
+
+  // Force cleanup on unmount
+  useEffect(() => {
+    return () => {
+      // Force close any open dropdowns
+      setOpenDropdowns({});
+      dropdownContext?.setHasOpenDropdown(false);
+      
+      // Aggressive cleanup of Radix Select portals
+      document.querySelectorAll('[data-radix-select-content]').forEach(el => {
+        if (el.parentNode) {
+          el.parentNode.removeChild(el);
+        }
+      });
+      
+      // Reset pointer events on any stuck overlays
+      document.querySelectorAll('[data-radix-select-trigger]').forEach(el => {
+        (el as HTMLElement).style.pointerEvents = '';
+      });
+    };
+  }, [dropdownContext]);
 
   const { people } = useTaskPeople();
   const { tags: tagDefs } = useTaskTags();
@@ -53,8 +76,12 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
   // Prevent modal from closing when clicking on dropdowns
   const handleSelectOpenChange = useCallback((open: boolean, selectType: string) => {
     console.log('🔽 Select open changed:', { selectType, open });
-    dropdownContext?.setHasOpenDropdown(open);
-  }, [dropdownContext]);
+    setOpenDropdowns(prev => ({
+      ...prev,
+      [selectType]: open
+    }));
+    dropdownContext?.setHasOpenDropdown(Object.values({...openDropdowns, [selectType]: open}).some(Boolean));
+  }, [dropdownContext, openDropdowns]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,8 +100,26 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
     onOpenChange(false);
   };
 
+  const handleModalClose = useCallback((newOpen: boolean) => {
+    if (!newOpen) {
+      // Force close all dropdowns before closing modal
+      setOpenDropdowns({});
+      dropdownContext?.setHasOpenDropdown(false);
+      
+      // Cleanup portal elements immediately
+      setTimeout(() => {
+        document.querySelectorAll('[data-radix-select-content]').forEach(el => {
+          if (el.parentNode) {
+            el.parentNode.removeChild(el);
+          }
+        });
+      }, 50);
+    }
+    onOpenChange(newOpen);
+  }, [onOpenChange, dropdownContext]);
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleModalClose}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-base">{mode === 'create' ? 'Nova tarefa' : 'Editar tarefa'}</DialogTitle>

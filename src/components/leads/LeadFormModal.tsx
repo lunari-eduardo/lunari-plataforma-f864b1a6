@@ -69,6 +69,7 @@ export default function LeadFormModal({
   const [formData, setFormData] = useState<FormData>(getInitialFormData);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [openDropdowns, setOpenDropdowns] = useState<Record<string, boolean>>({});
 
   // Reset form when modal opens/closes or mode changes
   useEffect(() => {
@@ -88,16 +89,53 @@ export default function LeadFormModal({
       }
       setErrors({});
       setIsSubmitting(false);
+      setOpenDropdowns({});
     }
   }, [open, mode, initial, getInitialFormData]);
 
+  // Force cleanup on unmount
+  useEffect(() => {
+    return () => {
+      // Force close any open dropdowns
+      setOpenDropdowns({});
+      dropdownContext?.setHasOpenDropdown(false);
+      
+      // Aggressive cleanup of Radix Select portals
+      document.querySelectorAll('[data-radix-select-content]').forEach(el => {
+        if (el.parentNode) {
+          el.parentNode.removeChild(el);
+        }
+      });
+      
+      // Reset pointer events on any stuck overlays
+      document.querySelectorAll('[data-radix-select-trigger]').forEach(el => {
+        (el as HTMLElement).style.pointerEvents = '';
+      });
+    };
+  }, [dropdownContext]);
+
   const handleClose = useCallback((newOpen: boolean) => {
-    if (!newOpen && !isSubmitting) {
-      setFormData(getInitialFormData());
-      setErrors({});
+    if (!newOpen) {
+      // Force close all dropdowns before closing modal
+      setOpenDropdowns({});
+      dropdownContext?.setHasOpenDropdown(false);
+      
+      // Cleanup portal elements immediately
+      setTimeout(() => {
+        document.querySelectorAll('[data-radix-select-content]').forEach(el => {
+          if (el.parentNode) {
+            el.parentNode.removeChild(el);
+          }
+        });
+      }, 50);
+      
+      if (!isSubmitting) {
+        setFormData(getInitialFormData());
+        setErrors({});
+      }
     }
     onOpenChange(newOpen);
-  }, [onOpenChange, getInitialFormData, isSubmitting]);
+  }, [onOpenChange, getInitialFormData, isSubmitting, dropdownContext]);
 
   const validateForm = useCallback((): boolean => {
     const newErrors: Record<string, string> = {};
@@ -205,8 +243,12 @@ export default function LeadFormModal({
   // Prevent modal from closing when clicking on dropdowns
   const handleSelectOpenChange = useCallback((open: boolean, selectType: string) => {
     console.log('🔽 Select open changed:', { selectType, open });
-    dropdownContext?.setHasOpenDropdown(open);
-  }, [dropdownContext]);
+    setOpenDropdowns(prev => ({
+      ...prev,
+      [selectType]: open
+    }));
+    dropdownContext?.setHasOpenDropdown(Object.values({...openDropdowns, [selectType]: open}).some(Boolean));
+  }, [dropdownContext, openDropdowns]);
 
   console.log('🎯 LeadFormModal render:', {
     open,

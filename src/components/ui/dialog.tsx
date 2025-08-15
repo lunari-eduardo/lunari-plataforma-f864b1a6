@@ -47,6 +47,22 @@ const DialogContent = React.forwardRef<
     return () => {
       // Force cleanup any lingering dropdown state
       setHasOpenDropdown(false);
+      
+      // Aggressive cleanup of orphaned Radix Select portals
+      setTimeout(() => {
+        const portals = document.querySelectorAll('[data-radix-select-content]');
+        portals.forEach(portal => {
+          if (portal.parentNode) {
+            portal.parentNode.removeChild(portal);
+          }
+        });
+        
+        // Reset pointer events on any stuck overlays
+        const overlays = document.querySelectorAll('.radix-select-overlay, [data-radix-select-trigger]');
+        overlays.forEach(overlay => {
+          (overlay as HTMLElement).style.pointerEvents = '';
+        });
+      }, 100);
     };
   }, []);
 
