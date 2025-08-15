@@ -10,6 +10,7 @@ import LeadStatusSelector from './LeadStatusSelector';
 import LeadDetailsModal from './LeadDetailsModal';
 import { useLeadStatuses } from '@/hooks/useLeadStatuses';
 import { useLeadInteractions } from '@/hooks/useLeadInteractions';
+import { useFollowUpSystem } from '@/hooks/useFollowUpSystem';
 import { toast } from 'sonner';
 interface LeadCardProps {
   lead: Lead;
@@ -40,10 +41,9 @@ export default function LeadCard({
 }: LeadCardProps) {
   const [isPressing, setIsPressing] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
-  const {
-    statuses
-  } = useLeadStatuses();
+  const { statuses } = useLeadStatuses();
   const { addInteraction } = useLeadInteractions();
+  const { config } = useFollowUpSystem();
 
   // Calcular a data da última alteração real
   const lastUpdateIso = useMemo(() => {
@@ -80,6 +80,31 @@ export default function LeadCard({
     const status = statuses.find(s => s.key === lead.status);
     return status?.color || '#6b7280'; // gray fallback
   }, [lead.status, statuses]);
+
+  // Calculate if lead needs follow-up display
+  const showFollowUpBadge = useMemo(() => {
+    if (!config.ativo || lead.status !== config.statusMonitorado) return false;
+    
+    const statusChangeDate = lead.statusTimestamp || lead.dataCriacao;
+    const daysSinceChange = Math.floor(
+      (new Date().getTime() - new Date(statusChangeDate).getTime()) / (1000 * 60 * 60 * 24)
+    );
+    
+    return daysSinceChange >= config.diasParaFollowUp;
+  }, [lead, config]);
+
+  // Get scheduling status badge
+  const getSchedulingBadge = () => {
+    if (lead.scheduledAppointmentId) {
+      return { text: 'Agendado', color: 'bg-green-100 text-green-800 border-green-200' };
+    }
+    if (lead.needsScheduling) {
+      return { text: 'Agendar', color: 'bg-yellow-100 text-yellow-800 border-yellow-200' };
+    }
+    return null;
+  };
+
+  const schedulingBadge = getSchedulingBadge();
   const handleStartConversation = () => {
     try {
       const telefone = lead.telefone.replace(/\D/g, '');
@@ -127,16 +152,39 @@ export default function LeadCard({
         </LeadActionsPopover>
       </div>
 
-      {/* Badge de Origem */}
-      {lead.origem && <div className="mb-3">
-          <Badge style={{
-        backgroundColor: `${statusColor}20`,
-        color: statusColor,
-        borderColor: `${statusColor}40`
-      }} className="text-2xs px-2 py-0">
-            {lead.origem}
-          </Badge>
-        </div>}
+      {/* Badges de Status */}
+      <div className="mb-3 space-y-1">
+        {/* Badge de Origem */}
+        {lead.origem && (
+          <div>
+            <Badge style={{
+              backgroundColor: `${statusColor}20`,
+              color: statusColor,
+              borderColor: `${statusColor}40`
+            }} className="text-2xs px-2 py-0">
+              {lead.origem}
+            </Badge>
+          </div>
+        )}
+        
+        {/* Badge de Follow-up */}
+        {showFollowUpBadge && (
+          <div>
+            <Badge className="text-2xs px-2 py-0 bg-red-100 text-red-800 border-red-200">
+              Follow-up
+            </Badge>
+          </div>
+        )}
+        
+        {/* Badge de Agendamento */}
+        {schedulingBadge && (
+          <div>
+            <Badge className={`text-2xs px-2 py-0 ${schedulingBadge.color}`}>
+              {schedulingBadge.text}
+            </Badge>
+          </div>
+        )}
+      </div>
 
       {/* Status Selector Centralizado */}
       <div className="flex justify-center mb-3">

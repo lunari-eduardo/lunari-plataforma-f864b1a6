@@ -17,6 +17,7 @@ import LeadCard from './LeadCard';
 import LeadFormModal from './LeadFormModal';
 import DraggableLeadCard from './DraggableLeadCard';
 import FollowUpConfigModal from './FollowUpConfigModal';
+import SchedulingConfirmationModal from './SchedulingConfirmationModal';
 import type { Lead } from '@/types/leads';
 import { cn } from '@/lib/utils';
 export default function LeadsKanban() {
@@ -45,6 +46,8 @@ export default function LeadsKanban() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [configModalOpen, setConfigModalOpen] = useState(false);
+  const [schedulingModalOpen, setSchedulingModalOpen] = useState(false);
+  const [leadToSchedule, setLeadToSchedule] = useState<Lead | null>(null);
   const pointerSensor = useSensor(PointerSensor, {
     activationConstraint: {
       distance: 4
@@ -72,6 +75,71 @@ export default function LeadsKanban() {
     });
     return groups;
   }, [filteredLeads, statuses]);
+  const handleStatusChange = (lead: Lead, newStatus: string) => {
+    const statusName = statuses.find(s => s.key === newStatus)?.name || newStatus;
+    const convertedKey = getConvertedKey();
+
+    // Update lead status
+    updateLead(lead.id, { status: newStatus });
+
+    // Add interaction for status change
+    addInteraction(lead.id, 'mudanca_status', `Status alterado para "${statusName}"`, true, `Movido via Kanban`, lead.status, newStatus);
+
+    // Handle follow-up activation for 'proposta_enviada'
+    if (newStatus === 'proposta_enviada') {
+      // Reset follow-up timer
+      updateLead(lead.id, { 
+        needsFollowUp: false,
+        statusTimestamp: new Date().toISOString()
+      });
+      
+      addInteraction(lead.id, 'followup', 'Timer de follow-up iniciado', true, 'Contagem iniciada para follow-up automático');
+    }
+
+    // Handle scheduling confirmation for converted leads
+    if (newStatus === convertedKey) {
+      setLeadToSchedule(lead);
+      setSchedulingModalOpen(true);
+    }
+
+    toast({
+      title: 'Lead movido',
+      description: `${lead.nome} movido para ${statusName}`
+    });
+  };
+
+  const handleScheduled = (leadId: string, appointmentId: string) => {
+    updateLead(leadId, {
+      scheduledAppointmentId: appointmentId,
+      needsScheduling: false
+    });
+    
+    const lead = leads.find(l => l.id === leadId);
+    if (lead) {
+      addInteraction(leadId, 'manual', 'Cliente agendado com sucesso', false, `Agendamento criado: ${appointmentId}`);
+      toast({
+        title: 'Cliente Agendado',
+        description: `${lead.nome} foi agendado com sucesso!`
+      });
+    }
+  };
+
+  const handleNotScheduled = (leadId: string) => {
+    updateLead(leadId, {
+      needsScheduling: true,
+      scheduledAppointmentId: undefined
+    });
+    
+    const lead = leads.find(l => l.id === leadId);
+    if (lead) {
+      addInteraction(leadId, 'manual', 'Agendamento adiado', false, 'Cliente convertido mas agendamento foi adiado');
+      toast({
+        title: 'Agendamento Adiado',
+        description: `${lead.nome} está marcado para agendar.`
+      });
+    }
+  };
+
   const handleConvertToOrcamento = (leadId: string) => {
     const result = convertToOrcamento(leadId);
     if (result) {
@@ -133,12 +201,7 @@ export default function LeadsKanban() {
               title: 'Lead excluído'
             });
           }} onConvertToOrcamento={() => handleConvertToOrcamento(lead.id)} onRequestMove={status => {
-            updateLead(lead.id, {
-              status
-            });
-            toast({
-              title: 'Lead movido'
-            });
+            handleStatusChange(lead, status);
           }} statusOptions={statusOptions} activeId={activeId} />)}
             
             {leadsInColumn.length === 0 && <li className="text-center text-sm text-lunar-textSecondary py-8">
@@ -193,17 +256,7 @@ export default function LeadsKanban() {
         if (activeId && overId) {
           const current = leads.find(lead => lead.id === activeId);
           if (current && current.status !== overId) {
-            const statusName = statuses.find(s => s.key === overId)?.name || overId;
-            const statusAnteriorName = statuses.find(s => s.key === current.status)?.name || current.status;
-            updateLead(activeId, {
-              status: overId
-            });
-
-            // Add interaction for status change
-            addInteraction(activeId, 'mudanca_status', `Status alterado para "${statusName}"`, true, `Movido via Kanban`, current.status, overId);
-            toast({
-              title: 'Lead movido'
-            });
+            handleStatusChange(current, overId);
           }
         }
         setActiveId(null);
@@ -246,5 +299,16 @@ export default function LeadsKanban() {
 
       {/* Follow-up Config Modal */}
       <FollowUpConfigModal open={configModalOpen} onOpenChange={setConfigModalOpen} />
+
+      {/* Scheduling Confirmation Modal */}
+      {leadToSchedule && (
+        <SchedulingConfirmationModal
+          open={schedulingModalOpen}
+          onOpenChange={setSchedulingModalOpen}
+          lead={leadToSchedule}
+          onScheduled={(appointmentId) => handleScheduled(leadToSchedule.id, appointmentId)}
+          onNotScheduled={() => handleNotScheduled(leadToSchedule.id)}
+        />
+      )}
     </div>;
 }

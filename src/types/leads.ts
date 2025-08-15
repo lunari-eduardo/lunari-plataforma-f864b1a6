@@ -19,6 +19,8 @@ export interface Lead {
   diasSemInteracao?: number;
   needsFollowUp?: boolean;
   statusTimestamp?: string; // Timestamp da última mudança de status
+  needsScheduling?: boolean; // Indica se precisa agendar
+  scheduledAppointmentId?: string; // ID do agendamento criado
 }
 
 export interface LeadStatusDef {
