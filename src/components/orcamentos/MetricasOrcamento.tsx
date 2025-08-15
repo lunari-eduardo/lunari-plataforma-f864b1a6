@@ -59,78 +59,46 @@ export default function MetricasOrcamento({
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs flex items-center gap-2">
-              <TrendingUp className="h-3 w-3" />
-              Total
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="font-bold text-neumorphic-text text-base">{metricas.totalMes}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs flex items-center gap-2">
-              <Send className="h-3 w-3" />
-              Enviados
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-xl font-bold text-blue-600">{metricas.enviados}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs flex items-center gap-2">
-              <CheckCircle className="h-3 w-3" />
-              Fechados
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-xl font-bold text-green-600">{metricas.fechados}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs flex items-center gap-2">
-              <XCircle className="h-3 w-3" />
-              Cancelados
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-xl font-bold text-red-600">{metricas.cancelados}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs flex items-center gap-2">
-              <Clock className="h-3 w-3" />
-              Pendentes
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-xl font-bold text-yellow-600">{metricas.pendentes}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs flex items-center gap-2">
-              <Target className="h-3 w-3" />
-              Conversão
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-xl font-bold text-purple-600">{metricas.taxaConversao.toFixed(1)}%</p>
-          </CardContent>
-        </Card>
-      </div>
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-3 w-3 text-lunar-text" />
+              <span className="text-xs text-lunar-textSecondary">Total:</span>
+              <span className="font-semibold text-lunar-text">{metricas.totalMes}</span>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Send className="h-3 w-3 text-blue-600" />
+              <span className="text-xs text-lunar-textSecondary">Enviados:</span>
+              <span className="font-semibold text-blue-600">{metricas.enviados}</span>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-3 w-3 text-green-600" />
+              <span className="text-xs text-lunar-textSecondary">Fechados:</span>
+              <span className="font-semibold text-green-600">{metricas.fechados}</span>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <XCircle className="h-3 w-3 text-red-600" />
+              <span className="text-xs text-lunar-textSecondary">Cancelados:</span>
+              <span className="font-semibold text-red-600">{metricas.cancelados}</span>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Clock className="h-3 w-3 text-yellow-600" />
+              <span className="text-xs text-lunar-textSecondary">Pendentes:</span>
+              <span className="font-semibold text-yellow-600">{metricas.pendentes}</span>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Target className="h-3 w-3 text-purple-600" />
+              <span className="text-xs text-lunar-textSecondary">Conversão:</span>
+              <span className="font-semibold text-purple-600">{metricas.taxaConversao.toFixed(1)}%</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>;
 }

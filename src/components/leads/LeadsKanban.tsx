@@ -94,7 +94,7 @@ export default function LeadsKanban() {
     const statusColor = statuses.find(s => s.key === statusKey)?.color || '#6b7280';
     
     return (
-      <section className="flex-1 min-w-[320px]">
+      <section className="flex-1 min-w-[280px]">
         <header className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <div 
@@ -170,27 +170,32 @@ export default function LeadsKanban() {
       </div>
 
       {/* Filtros */}
-      <Card className="p-4 bg-lunar-surface border-lunar-border/60">
-        <div className="grid md:grid-cols-2 gap-3">
-          <Input
-            placeholder="Buscar por nome, email ou telefone..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+      <Card className="p-3 bg-lunar-surface border-lunar-border/60">
+        <div className="flex gap-2 overflow-x-auto">
+          <div className="flex-1 min-w-[200px]">
+            <Input
+              placeholder="Buscar leads..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="text-sm"
+            />
+          </div>
           
-          <Select value={origemFilter} onValueChange={setOrigemFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="Filtrar por origem" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas as origens</SelectItem>
-              {origens.map(origem => (
-                <SelectItem key={origem.id} value={origem.nome}>
-                  {origem.nome}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex-1 min-w-[150px]">
+            <Select value={origemFilter} onValueChange={setOrigemFilter}>
+              <SelectTrigger className="text-sm">
+                <SelectValue placeholder="Origem" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas</SelectItem>
+                {origens.map(origem => (
+                  <SelectItem key={origem.id} value={origem.nome}>
+                    {origem.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </Card>
 
@@ -232,7 +237,7 @@ export default function LeadsKanban() {
           onDragCancel={() => setActiveId(null)}
         >
           <div className="overflow-x-auto">
-            <div className="flex gap-4 min-w-max pr-2">
+            <div className="flex gap-3 min-w-max pr-2">
               {statuses.map(status => (
                 <StatusColumn 
                   key={status.id} 

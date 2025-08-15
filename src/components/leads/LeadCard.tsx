@@ -82,7 +82,7 @@ export default function LeadCard({
 
   return (
     <li 
-      className={`relative overflow-hidden rounded-lg p-4 transition-all cursor-grab active:cursor-grabbing select-none touch-none transform-gpu border ${
+      className={`relative overflow-hidden rounded-lg p-3 transition-all cursor-grab active:cursor-grabbing select-none touch-none transform-gpu border ${
         isDragging ? 'opacity-50 scale-95' : ''
       } ${isPressing ? 'scale-[0.98]' : ''} 
       bg-gradient-to-br from-gray-100 to-white border-lunar-border shadow-sm
