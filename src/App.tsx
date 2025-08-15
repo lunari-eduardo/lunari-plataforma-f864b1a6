@@ -48,12 +48,18 @@ function AppIntegration() {
 
 // Automation integration mounting point
 function AutomationIntegration() {
-  try {
-    const { useAutomationEngine } = require('./hooks/useAutomationEngine');
-    useAutomationEngine();
-  } catch (error) {
-    console.error('Automation engine error:', error);
-  }
+  React.useEffect(() => {
+    const loadAutomationEngine = async () => {
+      try {
+        const module = await import('./hooks/useAutomationEngine');
+        module.useAutomationEngine();
+      } catch (error) {
+        console.error('Automation engine error:', error);
+      }
+    };
+    loadAutomationEngine();
+  }, []);
+  
   return null;
 }
 

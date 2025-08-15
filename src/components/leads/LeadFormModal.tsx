@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAppContext } from '@/contexts/AppContext';
 import { useLeadStatuses } from '@/hooks/useLeadStatuses';
+import { ORIGENS_PADRAO } from '@/utils/defaultOrigens';
 import type { Lead } from '@/types/leads';
 
 interface LeadFormModalProps {
@@ -110,8 +111,27 @@ export default function LeadFormModal({
   const handleAssociateClient = (clienteId: string) => {
     const cliente = clientes.find(c => c.id === clienteId);
     if (cliente) {
-      // Buscar a origem do cliente nos origens disponíveis
-      const origemCliente = cliente.origem || '';
+      // Buscar a origem do cliente de forma inteligente
+      let origemEncontrada = '';
+      
+      if (cliente.origem) {
+        // Primeiro tentar encontrar por nome nas origens padrão
+        const origemPorNome = ORIGENS_PADRAO.find(o => o.nome === cliente.origem);
+        if (origemPorNome) {
+          origemEncontrada = origemPorNome.nome;
+        } else {
+          // Depois tentar por ID
+          const origemPorId = ORIGENS_PADRAO.find(o => o.id === cliente.origem);
+          if (origemPorId) {
+            origemEncontrada = origemPorId.nome;
+          } else {
+            // Se não encontrar, usar a string original
+            origemEncontrada = cliente.origem;
+          }
+        }
+      }
+      
+      console.log('Debug - Cliente origem:', cliente.origem, 'Origem encontrada:', origemEncontrada);
       
       setFormData(prev => ({
         ...prev,
@@ -119,7 +139,7 @@ export default function LeadFormModal({
         nome: cliente.nome,
         email: cliente.email || '',
         telefone: cliente.telefone || cliente.whatsapp || '',
-        origem: origemCliente
+        origem: origemEncontrada
       }));
     }
   };
@@ -144,7 +164,7 @@ export default function LeadFormModal({
               <SelectTrigger>
                 <SelectValue placeholder="Selecionar cliente existente" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-[10000] bg-background border border-border shadow-lg">
                 {clientes.map(cliente => (
                   <SelectItem key={cliente.id} value={cliente.id}>
                     {cliente.nome} - {cliente.email}
@@ -197,7 +217,7 @@ export default function LeadFormModal({
                   <SelectTrigger>
                     <SelectValue placeholder="Selecionar origem" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-[10000] bg-background border border-border shadow-lg">
                     {origens.map(origem => (
                       <SelectItem key={origem.id} value={origem.nome}>
                         {origem.nome}
@@ -213,7 +233,7 @@ export default function LeadFormModal({
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-[10000] bg-background border border-border shadow-lg">
                     {statuses.map(status => (
                       <SelectItem key={status.id} value={status.key}>
                         {status.name}
