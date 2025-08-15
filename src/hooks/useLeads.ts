@@ -1,62 +1,48 @@
 import { useEffect, useState, useCallback } from 'react';
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
 import { useAppContext } from '@/contexts/AppContext';
+import { useLeadStorage } from './useLeadStorage';
 import type { Lead } from '@/types/leads';
 
 export function useLeads() {
-  const [leads, setLeads] = useState<Lead[]>(() => {
-    const loadedLeads = storage.load<Lead[]>(STORAGE_KEYS.LEADS, []);
-    return loadedLeads;
-  });
-
+  const { loadLeads, atomicUpdate } = useLeadStorage();
+  const [leads, setLeads] = useState<Lead[]>(() => loadLeads());
   const { adicionarCliente, clientes } = useAppContext();
 
-  // Debounced save to prevent race conditions
+  // Listen for external changes only
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      storage.save(STORAGE_KEYS.LEADS, leads);
-      window.dispatchEvent(new CustomEvent('leads:changed'));
-    }, 100);
-
-    return () => clearTimeout(timeoutId);
-  }, [leads]);
-
-  // Listen for external changes
-  useEffect(() => {
-    const reload = () => {
-      const latest = storage.load<Lead[]>(STORAGE_KEYS.LEADS, []);
-      setLeads((prev) => {
-        try {
-          if (JSON.stringify(prev) === JSON.stringify(latest)) return prev;
-        } catch {}
-        return latest;
-      });
+    const handleLeadsChanged = (e: CustomEvent) => {
+      console.log('🔄 [LEADS] Evento de mudança recebido:', e.detail);
+      const latest = loadLeads();
+      setLeads(latest);
     };
 
-    const onStorage = (e: StorageEvent) => {
-      if (!e.key || e.key === STORAGE_KEYS.LEADS) reload();
-    };
-
-    window.addEventListener('storage', onStorage);
-    window.addEventListener('leads:changed', reload as EventListener);
+    window.addEventListener('leads:changed', handleLeadsChanged as EventListener);
     return () => {
-      window.removeEventListener('storage', onStorage);
-      window.removeEventListener('leads:changed', reload as EventListener);
+      window.removeEventListener('leads:changed', handleLeadsChanged as EventListener);
     };
-  }, []);
+  }, [loadLeads]);
 
   const addLead = useCallback((input: Omit<Lead, 'id' | 'dataCriacao'>) => {
+    console.log('🚀 [LEADS] Iniciando criação de lead:', { nome: input.nome, origem: input.origem });
+    
     const now = new Date().toISOString();
+    
+    // 1. PRIMEIRO: Criar lead SEM mutação
+    const leadId = `lead_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const lead: Lead = {
       ...input,
-      id: `lead_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: leadId,
       dataCriacao: now,
       interacoes: input.interacoes || [],
       statusTimestamp: now,
     };
 
-    // Auto-create client in CRM with proper origin mapping
-    if (!lead.clienteId) {
+    console.log('✅ [LEADS] Lead criado em memória:', { id: lead.id, origem: lead.origem });
+
+    // 2. SEGUNDO: Criar cliente CRM separadamente se necessário
+    let clienteId = lead.clienteId;
+    if (!clienteId) {
       const clienteData = {
         nome: lead.nome,
         email: lead.email,
@@ -65,21 +51,29 @@ export function useLeads() {
         origem: lead.origem || 'Não informado'
       };
       
+      console.log('🔄 [LEADS] Criando cliente no CRM:', clienteData);
       const novoCliente = adicionarCliente(clienteData);
-      lead.clienteId = novoCliente.id;
+      clienteId = novoCliente.id;
+      console.log('✅ [LEADS] Cliente criado no CRM:', { id: clienteId, origem: novoCliente.origem });
     }
 
-    // Synchronous state update to prevent race conditions
-    setLeads(prev => {
-      const newLeads = [lead, ...prev];
-      return newLeads;
-    });
+    // 3. TERCEIRO: Criar lead final com clienteId
+    const finalLead: Lead = {
+      ...lead,
+      clienteId
+    };
+
+    console.log('🎯 [LEADS] Lead final preparado:', { id: finalLead.id, clienteId: finalLead.clienteId, origem: finalLead.origem });
+
+    // 4. QUARTO: Update state e storage atomicamente
+    const updatedLeads = atomicUpdate(prev => [finalLead, ...prev]);
+    setLeads(updatedLeads);
     
-    return lead;
-  }, [adicionarCliente]);
+    return finalLead;
+  }, [adicionarCliente, atomicUpdate]);
 
   const updateLead = useCallback((id: string, updates: Partial<Lead> | ((lead: Lead) => Lead)) => {
-    setLeads(prev => prev.map(lead => {
+    const updatedLeads = atomicUpdate(prev => prev.map(lead => {
       if (lead.id !== id) return lead;
       
       if (typeof updates === 'function') {
@@ -96,11 +90,13 @@ export function useLeads() {
       
       return updatedLead;
     }));
-  }, []);
+    setLeads(updatedLeads);
+  }, [atomicUpdate]);
 
   const deleteLead = useCallback((id: string) => {
-    setLeads(prev => prev.filter(lead => lead.id !== id));
-  }, []);
+    const updatedLeads = atomicUpdate(prev => prev.filter(lead => lead.id !== id));
+    setLeads(updatedLeads);
+  }, [atomicUpdate]);
 
   const convertToClient = useCallback((leadId: string) => {
     const lead = leads.find(l => l.id === leadId);

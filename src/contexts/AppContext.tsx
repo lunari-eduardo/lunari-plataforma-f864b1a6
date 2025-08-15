@@ -1495,13 +1495,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const adicionarCliente = (cliente: Omit<Cliente, 'id'>) => {
+    console.log('🔥 [CRM] Iniciando criação de cliente:', cliente);
+    
     const novoCliente: Cliente = {
       ...cliente,
       id: Date.now().toString(),
     };
     
+    console.log('✅ [CRM] Cliente criado:', { id: novoCliente.id, nome: novoCliente.nome, origem: novoCliente.origem });
+    
     setClientes(prev => {
       const updatedClients = [...prev, novoCliente];
+      console.log('💾 [CRM] Total de clientes após adição:', updatedClients.length);
       return updatedClients;
     });
     

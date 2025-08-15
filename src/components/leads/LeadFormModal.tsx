@@ -180,6 +180,9 @@ export default function LeadFormModal({
         whatsapp: formData.telefone.trim()
       };
       
+      console.log('📝 [LeadFormModal] Enviando dados do lead:', leadData);
+      console.log('📋 [LeadFormModal] Form data original:', formData);
+      
       await onSubmit(leadData);
 
       handleClose(false);
