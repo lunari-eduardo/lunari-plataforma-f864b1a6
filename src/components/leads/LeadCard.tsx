@@ -103,11 +103,11 @@ export default function LeadCard({
 
       {/* Badge de Origem */}
       {lead.origem && <div className="mb-3">
-          <Badge className="text-xs px-2 py-1" style={{
+          <Badge style={{
         backgroundColor: `${statusColor}20`,
         color: statusColor,
         borderColor: `${statusColor}40`
-      }}>
+      }} className="text-2xs px-2 py-0">
             {lead.origem}
           </Badge>
         </div>}
