@@ -164,7 +164,7 @@ export default function LeadFormModal({
               <SelectTrigger>
                 <SelectValue placeholder="Selecionar cliente existente" />
               </SelectTrigger>
-              <SelectContent className="z-[10000] bg-background border border-border shadow-lg">
+              <SelectContent>
                 {clientes.map(cliente => (
                   <SelectItem key={cliente.id} value={cliente.id}>
                     {cliente.nome} - {cliente.email}
@@ -217,7 +217,7 @@ export default function LeadFormModal({
                   <SelectTrigger>
                     <SelectValue placeholder="Selecionar origem" />
                   </SelectTrigger>
-                  <SelectContent className="z-[10000] bg-background border border-border shadow-lg">
+                  <SelectContent>
                     {origens.map(origem => (
                       <SelectItem key={origem.id} value={origem.nome}>
                         {origem.nome}
@@ -233,7 +233,7 @@ export default function LeadFormModal({
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="z-[10000] bg-background border border-border shadow-lg">
+                  <SelectContent>
                     {statuses.map(status => (
                       <SelectItem key={status.id} value={status.key}>
                         {status.name}

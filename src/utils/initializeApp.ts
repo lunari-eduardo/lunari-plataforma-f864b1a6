@@ -2,6 +2,8 @@ import { fixClienteIdCorruption, detectClienteIdCorruptions } from './fixCliente
 import { migrateWorkflowClienteId } from './migrateWorkflowClienteId';
 import { migrateToWorkflowSessions } from './migrateToWorkflowSessions';
 import { cleanupAfterMigration } from './cleanupMigration';
+import { ORIGENS_PADRAO } from './defaultOrigens';
+import { storage, STORAGE_KEYS } from './localStorage';
 import { toast } from 'sonner';
 
 /**
@@ -72,7 +74,11 @@ export async function initializeApp(): Promise<InitializationResult> {
       }
     }
     
-    // 4. LIMPEZA DE CACHES ANTIGOS
+    // 4. INICIALIZAR ORIGENS PADRÃO SE NECESSÁRIO
+    initializeDefaultOrigens();
+    result.migrationsRun.push('initializeOrigins');
+    
+    // 5. LIMPEZA DE CACHES ANTIGOS
     // Log removido para evitar spam
     const cachesToClear = [
       'workflow_sync_data',
@@ -87,7 +93,7 @@ export async function initializeApp(): Promise<InitializationResult> {
       }
     });
     
-    // 5. OTIMIZAÇÃO DE PERFORMANCE
+    // 6. OTIMIZAÇÃO DE PERFORMANCE
     // Log removido para evitar spam
     
     // Configurar debounce para operações pesadas
@@ -101,7 +107,7 @@ export async function initializeApp(): Promise<InitializationResult> {
     localStorage.setItem('performance_config', JSON.stringify(performanceConfig));
     result.migrationsRun.push('performanceOptimization');
     
-    // 6. VERIFICAÇÃO FINAL
+    // 7. VERIFICAÇÃO FINAL
     // Log removido para evitar spam
     const finalCorruptions = detectClienteIdCorruptions();
     
@@ -112,7 +118,7 @@ export async function initializeApp(): Promise<InitializationResult> {
       result.success = false;
     }
     
-    // 7. MARCAR INICIALIZAÇÃO COMO CONCLUÍDA
+    // 8. MARCAR INICIALIZAÇÃO COMO CONCLUÍDA
     const initializationData = {
       completedAt: new Date().toISOString(),
       version: '1.0.0',
@@ -122,7 +128,7 @@ export async function initializeApp(): Promise<InitializationResult> {
     
     localStorage.setItem('app_initialized', JSON.stringify(initializationData));
     
-    // 8. RESULTADO FINAL
+    // 9. RESULTADO FINAL
     if (result.success) {
       // Logs removidos para evitar spam no console
       
@@ -184,6 +190,29 @@ export function needsInitialization(): boolean {
     return false;
   } catch {
     return true;
+  }
+}
+
+/**
+ * Inicializa origens padrão se não existirem
+ */
+function initializeDefaultOrigens(): void {
+  const existingOrigens = storage.load(STORAGE_KEYS.ORIGINS, []);
+  
+  if (existingOrigens.length === 0) {
+    console.log('🔄 Inicializando origens padrão...');
+    
+    // Converter ORIGENS_PADRAO para OrigemCliente
+    const origensConvertidas = ORIGENS_PADRAO.map(origem => ({
+      id: origem.id,
+      nome: origem.nome,
+      cor: origem.cor
+    }));
+    
+    storage.save(STORAGE_KEYS.ORIGINS, origensConvertidas);
+    console.log('✅ Origens padrão inicializadas:', origensConvertidas.length);
+  } else {
+    console.log('✅ Origens já existem:', existingOrigens.length);
   }
 }
 
