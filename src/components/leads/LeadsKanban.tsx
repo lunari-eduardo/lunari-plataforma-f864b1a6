@@ -17,7 +17,7 @@ import LeadCard from './LeadCard';
 import LeadFormModal from './LeadFormModal';
 import DraggableLeadCard from './DraggableLeadCard';
 import FollowUpConfigModal from './FollowUpConfigModal';
-import LeadDebugger from '../debug/LeadDebugger';
+
 import type { Lead } from '@/types/leads';
 import { cn } from '@/lib/utils';
 
@@ -138,9 +138,6 @@ export default function LeadsKanban() {
 
   return (
     <div className="space-y-4">
-      {/* Debug Panel - TEMPORÁRIO */}
-      <LeadDebugger />
-      
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-lunar-text">Leads</h2>
