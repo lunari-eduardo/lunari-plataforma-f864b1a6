@@ -16,17 +16,17 @@ export default function LeadStatusSelector({ lead, onStatusChange }: LeadStatusS
   return (
     <Select value={lead.status} onValueChange={onStatusChange}>
       <SelectTrigger 
-        className="h-7 w-24 text-2xs border-lunar-border/60 bg-lunar-surface" 
+        className="h-8 w-32 text-xs border-lunar-border bg-lunar-surface hover:bg-lunar-bg transition-colors rounded-md shadow-sm" 
         data-no-drag="true"
       >
         <SelectValue />
       </SelectTrigger>
-      <SelectContent className="z-50 bg-lunar-surface border-lunar-border">
-        <SelectItem value={lead.status} disabled>
+      <SelectContent className="z-[60] bg-lunar-surface border-lunar-border rounded-md shadow-lg">
+        <SelectItem value={lead.status} disabled className="text-xs">
           {currentStatus?.name || lead.status}
         </SelectItem>
         {otherStatuses.map(status => (
-          <SelectItem key={status.key} value={status.key}>
+          <SelectItem key={status.key} value={status.key} className="text-xs">
             {status.name}
           </SelectItem>
         ))}

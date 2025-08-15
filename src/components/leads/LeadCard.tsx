@@ -1,14 +1,13 @@
 import { useState, useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MoreVertical, Calendar, Phone, Mail, History } from 'lucide-react';
+import { MoreVertical, MessageCircle } from 'lucide-react';
 import type { Lead } from '@/types/leads';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import LeadActionsPopover from './LeadActionsPopover';
 import LeadStatusSelector from './LeadStatusSelector';
-import LeadHistoryPanel from './LeadHistoryPanel';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import LeadDetailsModal from './LeadDetailsModal';
 import { toast } from 'sonner';
 
 interface LeadCardProps {
@@ -40,7 +39,7 @@ export default function LeadCard({
   isDragging = false
 }: LeadCardProps) {
   const [isPressing, setIsPressing] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
 
   const timeAgo = useMemo(() => {
     try {
@@ -55,7 +54,6 @@ export default function LeadCard({
 
   const isConverted = lead.status === 'convertido';
   const isLost = lead.status === 'perdido';
-  const needsFollowUp = lead.needsFollowUp;
 
   const handleStartConversation = () => {
     try {
@@ -77,13 +75,16 @@ export default function LeadCard({
 
   return (
     <li 
-      className={`relative overflow-hidden rounded-md border border-lunar-border/60 bg-lunar-surface p-3 transition-none cursor-grab active:cursor-grabbing select-none touch-none transform-gpu ${
-        isDragging ? 'opacity-70 border-dashed ring-1 ring-lunar-accent/40' : ''
-      } ${isPressing ? 'ring-1 ring-lunar-accent/50' : ''} ${
-        isConverted ? 'bg-green-50 border-green-200' : isLost ? 'bg-red-50 border-red-200' : ''
-      }`}
+      className={`relative overflow-hidden rounded-lg p-4 transition-all cursor-grab active:cursor-grabbing select-none touch-none transform-gpu ${
+        isDragging ? 'opacity-50 scale-95' : ''
+      } ${isPressing ? 'scale-[0.98]' : ''}`}
+      style={{
+        background: 'linear-gradient(135deg, hsl(210 20% 95%) 0%, hsl(0 0% 100%) 100%)',
+        border: '1px solid hsl(215 20% 88%)',
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
+        ...dndStyle
+      }}
       ref={dndRef as any}
-      style={dndStyle}
       {...dndAttributes || {}}
       {...dndListeners || {}}
       onPointerDownCapture={e => {
@@ -96,139 +97,77 @@ export default function LeadCard({
       onMouseUp={() => setIsPressing(false)}
       onMouseLeave={() => setIsPressing(false)}
     >
-      {/* Status visual indicator */}
-      <span 
-        aria-hidden 
-        className={`pointer-events-none absolute inset-y-0 left-0 w-1 ${
-          isConverted ? 'bg-green-500' : isLost ? 'bg-red-500' : 'bg-blue-500'
-        }`} 
-      />
-
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <LeadActionsPopover
-            lead={lead}
-            onStartConversation={handleStartConversation}
-          >
-            <h3 
-              className="text-sm font-medium text-lunar-text truncate cursor-pointer hover:text-lunar-accent" 
-              data-no-drag="true"
-              title="Clique para ver opções"
-            >
-              {lead.nome}
-            </h3>
-          </LeadActionsPopover>
-          
-          <div className="mt-1 space-y-1">
-            <div className="flex items-center gap-1 text-xs text-lunar-textSecondary">
-              <Mail className="h-3 w-3" />
-              <span className="truncate">{lead.email}</span>
-            </div>
-            
-            <div className="flex items-center gap-1 text-xs text-lunar-textSecondary">
-              <Phone className="h-3 w-3" />
-              <span>{lead.telefone}</span>
-            </div>
-
-          </div>
-
-          <div className="mt-2 flex flex-wrap items-center gap-1">
-            {lead.origem && (
-              <Badge variant="secondary" className="text-[10px]">
-                {lead.origem}
-              </Badge>
-            )}
-            
-            {needsFollowUp && (
-              <Badge variant="destructive" className="text-[10px]">
-                Follow-up
-              </Badge>
-            )}
-            
-            <div className="flex items-center gap-1 text-xs text-lunar-textSecondary">
-              <Calendar className="h-3 w-3" />
-              <span>{timeAgo}</span>
-            </div>
-          </div>
-
-          {lead.observacoes && (
-            <p className="mt-2 text-xs text-lunar-textSecondary line-clamp-2">
-              {lead.observacoes}
-            </p>
-          )}
-        </div>
-
-        <div className="flex items-center gap-1 shrink-0">
-          <LeadStatusSelector
-            lead={lead}
-            onStatusChange={(status) => {
-              onRequestMove?.(status);
-              toast.success('Status alterado');
-            }}
-          />
-
+      {/* Layout em Grid: Nome + Menu no topo */}
+      <div className="flex items-start justify-between mb-3">
+        <h3 className="text-sm font-medium text-lunar-text leading-tight">
+          {lead.nome}
+        </h3>
+        
+        <LeadActionsPopover
+          lead={lead}
+          onStartConversation={handleStartConversation}
+          onShowDetails={() => setShowDetails(true)}
+          onConvert={onConvertToOrcamento}
+          onDelete={onDelete}
+        >
           <Button 
             variant="ghost" 
             size="icon" 
-            className="h-7 w-7" 
-            onClick={() => setShowHistory(true)}
-            title="Ver histórico"
+            className="h-6 w-6 -mt-1 -mr-1" 
+            title="Mais opções"
             data-no-drag="true"
           >
-            <History className="h-4 w-4" />
+            <MoreVertical className="h-4 w-4" />
           </Button>
-
-          <LeadActionsPopover
-            lead={lead}
-            onStartConversation={handleStartConversation}
-          >
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-7 w-7" 
-              title="Mais opções"
-              data-no-drag="true"
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </LeadActionsPopover>
-
-          {!isConverted && !isLost && (
-            <Button 
-              variant="secondary" 
-              size="sm" 
-              className="h-7 text-2xs" 
-              onClick={onConvertToOrcamento}
-              data-no-drag="true"
-            >
-              Converter
-            </Button>
-          )}
-
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-7 w-7" 
-            onClick={onDelete}
-            title="Excluir"
-            data-no-drag="true"
-          >
-            ×
-          </Button>
-        </div>
+        </LeadActionsPopover>
       </div>
 
-      {/* History Modal */}
-      <Dialog open={showHistory} onOpenChange={setShowHistory}>
-        <DialogContent className="max-w-2xl max-h-[80vh]">
-          <DialogHeader>
-            <DialogTitle>Histórico - {lead.nome}</DialogTitle>
-          </DialogHeader>
-          <LeadHistoryPanel lead={lead} />
-        </DialogContent>
-      </Dialog>
+      {/* Badge de Origem */}
+      {lead.origem && (
+        <div className="mb-4">
+          <Badge 
+            className="text-xs px-2 py-1 bg-purple-100 text-purple-700 border-purple-200"
+          >
+            {lead.origem}
+          </Badge>
+        </div>
+      )}
+
+      {/* Status Selector Centralizado */}
+      <div className="flex justify-center mb-4">
+        <LeadStatusSelector
+          lead={lead}
+          onStatusChange={(status) => {
+            onRequestMove?.(status);
+            toast.success('Status alterado');
+          }}
+        />
+      </div>
+
+      {/* Última alteração + WhatsApp */}
+      <div className="flex items-center justify-between text-xs text-lunar-textSecondary">
+        <span>Última alteração: {timeAgo}</span>
+        
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+          onClick={handleStartConversation}
+          title="Conversar no WhatsApp"
+          data-no-drag="true"
+        >
+          <MessageCircle className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {/* Details Modal */}
+      <LeadDetailsModal
+        lead={lead}
+        open={showDetails}
+        onOpenChange={setShowDetails}
+        onConvert={onConvertToOrcamento}
+        onDelete={onDelete}
+      />
     </li>
   );
 }
