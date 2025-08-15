@@ -40,22 +40,12 @@ export function useLeads() {
   }, []);
 
   const addLead = useCallback((input: Omit<Lead, 'id' | 'dataCriacao'>) => {
-    console.log('🚀 [useLeads] Criando novo lead:', input);
-    
     const lead: Lead = {
       ...input,
       id: `lead_${Date.now()}`,
       dataCriacao: new Date().toISOString(),
     };
-    
-    console.log('📄 [useLeads] Lead criado:', lead);
-    
-    setLeads(prev => {
-      const updated = [lead, ...prev];
-      console.log('📊 [useLeads] Total de leads após criação:', updated.length);
-      return updated;
-    });
-    
+    setLeads(prev => [lead, ...prev]);
     return lead;
   }, []);
 
