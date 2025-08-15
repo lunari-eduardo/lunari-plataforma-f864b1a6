@@ -2,12 +2,10 @@ import { useState, useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreVertical, Calendar, Phone, Mail, MessageCircle, ChevronDown } from 'lucide-react';
+import { MoreVertical, Calendar, Phone, Mail } from 'lucide-react';
 import type { Lead } from '@/types/leads';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import AcoesLeadModal from './AcoesLeadModal';
-import { useLeadActions } from '@/hooks/useLeadActions';
 
 interface LeadCardProps {
   lead: Lead;
@@ -40,8 +38,6 @@ export default function LeadCard({
   isDragging = false
 }: LeadCardProps) {
   const [isPressing, setIsPressing] = useState(false);
-  const [showAcoesModal, setShowAcoesModal] = useState(false);
-  const { iniciarConversaWhatsApp, enviarPDFPorWhatsApp } = useLeadActions();
 
   const timeAgo = useMemo(() => {
     try {
@@ -128,55 +124,41 @@ export default function LeadCard({
               {lead.observacoes}
             </p>
           )}
-
-          {/* Botões de Ação */}
-          <div className="mt-3 flex gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => setShowAcoesModal(true)}
-              className="flex-1 h-8 text-xs"
-              data-no-drag="true"
-            >
-              <MessageCircle className="h-3 w-3 mr-1" />
-              Ações
-            </Button>
-            
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button 
-                  variant="secondary" 
-                  size="sm" 
-                  className="h-8 text-xs"
-                  data-no-drag="true"
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  Mover
-                  <ChevronDown className="h-3 w-3 ml-1" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="z-[100]">
-                {statusOptions.map(opt => (
-                  <DropdownMenuItem 
-                    key={opt.value} 
-                    onSelect={() => onRequestMove?.(opt.value)}
-                    disabled={opt.value === lead.status}
-                  >
-                    {opt.label}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
         </div>
 
-        <div className="flex items-start gap-1 shrink-0">
+        <div className="flex items-center gap-1 shrink-0">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-7 w-7" 
+                title="Mais opções"
+                data-no-drag="true"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="z-[100]">
+              {statusOptions.map(opt => (
+                <DropdownMenuItem 
+                  key={opt.value} 
+                  onSelect={() => onRequestMove?.(opt.value)}
+                  disabled={opt.value === lead.status}
+                >
+                  {opt.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           {!isConverted && !isLost && (
             <Button 
               variant="secondary" 
               size="sm" 
-              className="h-7 text-xs" 
+              className="h-7 text-2xs" 
               onClick={onConvertToOrcamento}
               data-no-drag="true"
             >
@@ -196,14 +178,6 @@ export default function LeadCard({
           </Button>
         </div>
       </div>
-
-      <AcoesLeadModal
-        lead={lead}
-        isOpen={showAcoesModal}
-        onClose={() => setShowAcoesModal(false)}
-        onIniciarConversa={() => iniciarConversaWhatsApp(lead)}
-        onEnviarPDF={() => enviarPDFPorWhatsApp}
-      />
     </li>
   );
 }
