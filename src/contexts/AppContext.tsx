@@ -6,7 +6,7 @@ import { toast } from '@/hooks/use-toast';
 import { FinancialEngine, CreateTransactionInput } from '@/services/FinancialEngine';
 import { calculateTotals, calculateTotalsNew } from '@/services/FinancialCalculationEngine';
 import { autoMigrateIfNeeded } from '@/utils/dataMoveMigration';
-import { congelarRegrasPrecoFotoExtra, calcularComRegrasProprias, migrarRegrasParaItemAntigo } from '@/utils/precificacaoUtils';
+import { congelarRegrasPrecoFotoExtra, calcularComRegrasProprias, migrarRegrasParaItemAntigo, validarRegrasCongeladas } from '@/utils/precificacaoUtils';
 import { migrateWorkflowClienteId } from '@/utils/migrateWorkflowClienteId';
 import { initializeApp, needsInitialization } from '@/utils/initializeApp';
 import { Projeto, CriarProjetoInput } from '@/types/projeto';
@@ -1879,7 +1879,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             console.log('🧊 [WORKFLOW UPDATE] Usando regras congeladas específicas do item');
             
             // Validar regras antes de usar
-            const { validarRegrasCongeladas } = require('@/utils/precificacaoUtils');
             if (!validarRegrasCongeladas(updatedItem.regrasDePrecoFotoExtraCongeladas)) {
               console.error('❌ [WORKFLOW UPDATE] Regras congeladas inválidas, forçando migração');
               updatedItem.regrasDePrecoFotoExtraCongeladas = migrarRegrasParaItemAntigo(
