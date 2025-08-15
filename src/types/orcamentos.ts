@@ -4,6 +4,7 @@ export interface Cliente {
   nome: string;
   email: string;
   telefone: string;
+  whatsapp?: string;
   endereco?: string;
   observacoes?: string;
   origem?: string;
