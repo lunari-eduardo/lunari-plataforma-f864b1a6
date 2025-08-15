@@ -5,7 +5,6 @@ import type { Lead } from '@/types/leads';
 
 export default function DraggableLeadCard(props: {
   lead: Lead;
-  onEdit: () => void;
   onDelete: () => void;
   onConvertToOrcamento: () => void;
   onRequestMove?: (status: string) => void;
@@ -20,7 +19,6 @@ export default function DraggableLeadCard(props: {
   return (
     <LeadCard
       lead={lead}
-      onEdit={rest.onEdit}
       onDelete={rest.onDelete}
       onConvertToOrcamento={rest.onConvertToOrcamento}
       onRequestMove={rest.onRequestMove}

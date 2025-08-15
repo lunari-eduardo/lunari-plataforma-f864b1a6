@@ -1,19 +1,17 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Edit, MessageCircle } from 'lucide-react';
+import { MessageCircle } from 'lucide-react';
 import type { Lead } from '@/types/leads';
 
 interface LeadActionsPopoverProps {
   lead: Lead;
-  onEdit: () => void;
   onStartConversation: () => void;
   children: React.ReactNode;
 }
 
 export default function LeadActionsPopover({
   lead,
-  onEdit,
   onStartConversation,
   children
 }: LeadActionsPopoverProps) {
@@ -31,16 +29,6 @@ export default function LeadActionsPopover({
       </PopoverTrigger>
       <PopoverContent className="w-48 p-2" align="end">
         <div className="space-y-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start gap-2 h-8"
-            onClick={() => handleAction(onEdit)}
-          >
-            <Edit className="h-4 w-4" />
-            Editar
-          </Button>
-          
           <Button
             variant="ghost"
             size="sm"

@@ -6,13 +6,13 @@ import type { Lead } from '@/types/leads';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import LeadActionsPopover from './LeadActionsPopover';
+import LeadStatusSelector from './LeadStatusSelector';
 import LeadHistoryPanel from './LeadHistoryPanel';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 
 interface LeadCardProps {
   lead: Lead;
-  onEdit: () => void;
   onDelete: () => void;
   onConvertToOrcamento: () => void;
   onRequestMove?: (status: string) => void;
@@ -29,7 +29,6 @@ interface LeadCardProps {
 
 export default function LeadCard({
   lead,
-  onEdit,
   onDelete,
   onConvertToOrcamento,
   onRequestMove,
@@ -109,7 +108,6 @@ export default function LeadCard({
         <div className="min-w-0 flex-1">
           <LeadActionsPopover
             lead={lead}
-            onEdit={onEdit}
             onStartConversation={handleStartConversation}
           >
             <h3 
@@ -161,6 +159,14 @@ export default function LeadCard({
         </div>
 
         <div className="flex items-center gap-1 shrink-0">
+          <LeadStatusSelector
+            lead={lead}
+            onStatusChange={(status) => {
+              onRequestMove?.(status);
+              toast.success('Status alterado');
+            }}
+          />
+
           <Button 
             variant="ghost" 
             size="icon" 
@@ -174,7 +180,6 @@ export default function LeadCard({
 
           <LeadActionsPopover
             lead={lead}
-            onEdit={onEdit}
             onStartConversation={handleStartConversation}
           >
             <Button 

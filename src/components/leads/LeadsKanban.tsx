@@ -31,7 +31,6 @@ export default function LeadsKanban() {
   const [searchTerm, setSearchTerm] = useState('');
   const [origemFilter, setOrigemFilter] = useState('all');
   const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [editLead, setEditLead] = useState<Lead | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [configModalOpen, setConfigModalOpen] = useState(false);
 
@@ -112,7 +111,6 @@ export default function LeadsKanban() {
               <DraggableLeadCard
                 key={lead.id}
                 lead={lead}
-                onEdit={() => setEditLead(lead)}
                 onDelete={() => {
                   deleteLead(lead.id);
                   toast({ title: 'Lead excluído' });
@@ -242,7 +240,6 @@ export default function LeadsKanban() {
                 return lead ? (
                   <LeadCard
                     lead={lead}
-                    onEdit={() => {}}
                     onDelete={() => {}}
                     onConvertToOrcamento={() => {}}
                     statusOptions={statusOptions}
@@ -280,28 +277,6 @@ export default function LeadsKanban() {
         }}
       />
 
-      {editLead && (
-        <LeadFormModal
-          open={!!editLead}
-          onOpenChange={(open) => !open && setEditLead(null)}
-          mode="edit"
-          initial={editLead}
-          onSubmit={(data) => {
-            updateLead(editLead.id, data);
-            
-            // Add edit interaction
-            addInteraction(
-              editLead.id,
-              'manual',
-              'Informações do lead atualizadas',
-              false,
-              'Editado pelo usuário'
-            );
-            
-            toast({ title: 'Lead atualizado' });
-          }}
-        />
-      )}
 
       {/* Follow-up Config Modal */}
       <FollowUpConfigModal
