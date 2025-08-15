@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -27,45 +27,48 @@ export default function LeadFormModal({
   const { origens, clientes } = useAppContext();
   const { statuses, getDefaultOpenKey } = useLeadStatuses();
   
-  const [formData, setFormData] = useState({
+  const getInitialFormData = () => ({
     nome: '',
     email: '',
     telefone: '',
     whatsapp: '',
     origem: '',
-    status: getDefaultOpenKey(),
+    status: getDefaultOpenKey() || 'novo_contato',
     observacoes: '',
     clienteId: ''
   });
 
+  const [formData, setFormData] = useState(getInitialFormData);
+
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (mode === 'edit' && initial) {
-      setFormData({
-        nome: initial.nome,
-        email: initial.email,
-        telefone: initial.telefone,
-        whatsapp: initial.whatsapp || '',
-        origem: initial.origem || '',
-        status: initial.status,
-        observacoes: initial.observacoes || '',
-        clienteId: initial.clienteId || ''
-      });
-    } else {
-      setFormData({
-        nome: '',
-        email: '',
-        telefone: '',
-        whatsapp: '',
-        origem: '',
-        status: getDefaultOpenKey(),
-        observacoes: '',
-        clienteId: ''
-      });
+    if (open) {
+      if (mode === 'edit' && initial) {
+        setFormData({
+          nome: initial.nome,
+          email: initial.email,
+          telefone: initial.telefone,
+          whatsapp: initial.whatsapp || '',
+          origem: initial.origem || '',
+          status: initial.status,
+          observacoes: initial.observacoes || '',
+          clienteId: initial.clienteId || ''
+        });
+      } else {
+        setFormData(getInitialFormData());
+      }
+      setErrors({});
     }
-    setErrors({});
-  }, [mode, initial, open, getDefaultOpenKey]);
+  }, [open, mode, initial]);
+
+  const handleClose = (open: boolean) => {
+    if (!open) {
+      setFormData(getInitialFormData());
+      setErrors({});
+    }
+    onOpenChange(open);
+  };
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -122,13 +125,16 @@ export default function LeadFormModal({
     }
   };
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    return (
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>
             {mode === 'create' ? 'Novo Lead' : 'Editar Lead'}
           </DialogTitle>
+          <DialogDescription>
+            {mode === 'create' ? 'Preencha os dados para criar um novo lead' : 'Edite as informações do lead'}
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -241,7 +247,7 @@ export default function LeadFormModal({
           </div>
 
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => handleClose(false)}>
               Cancelar
             </Button>
             <Button type="submit">
