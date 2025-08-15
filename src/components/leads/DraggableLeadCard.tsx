@@ -10,6 +10,9 @@ export default function DraggableLeadCard(props: {
   onRequestMove?: (status: string) => void;
   statusOptions: { value: string; label: string }[];
   activeId?: string | null;
+  onScheduleClient: () => void;
+  onMarkAsScheduled: () => void;
+  onViewAppointment: () => void;
 }) {
   const { lead, activeId, ...rest } = props;
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: lead.id, data: { lead } });
@@ -23,6 +26,9 @@ export default function DraggableLeadCard(props: {
       onConvertToOrcamento={rest.onConvertToOrcamento}
       onRequestMove={rest.onRequestMove}
       statusOptions={rest.statusOptions}
+      onScheduleClient={rest.onScheduleClient}
+      onMarkAsScheduled={rest.onMarkAsScheduled}
+      onViewAppointment={rest.onViewAppointment}
       dndRef={setNodeRef as any}
       dndListeners={listeners}
       dndAttributes={attributes}

@@ -57,22 +57,29 @@ export default function SchedulingConfirmationModal({
 
   if (showAppointmentForm) {
     return (
-      <AppointmentForm
-        onSave={handleAppointmentSaved}
-        onCancel={handleAppointmentFormClose}
-        initialDate={new Date()}
-        initialTime="14:00"
-        appointment={{
-          id: '',
-          title: `Sessão - ${lead.nome}`,
-          date: new Date(),
-          time: '14:00',
-          type: 'Sessão',
-          client: lead.nome,
-          status: 'a confirmar',
-          description: `Lead convertido: ${lead.nome}`
-        }}
-      />
+      <Dialog open={true} onOpenChange={(open) => !open && handleAppointmentFormClose()}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Agendar Cliente</DialogTitle>
+          </DialogHeader>
+          <AppointmentForm
+            onSave={handleAppointmentSaved}
+            onCancel={handleAppointmentFormClose}
+            initialDate={new Date()}
+            initialTime="14:00"
+            appointment={{
+              id: '',
+              title: `Sessão - ${lead.nome}`,
+              date: new Date(),
+              time: '14:00',
+              type: 'Sessão',
+              client: lead.nome,
+              status: 'a confirmar',
+              description: `Lead convertido: ${lead.nome}`
+            }}
+          />
+        </DialogContent>
+      </Dialog>
     );
   }
 

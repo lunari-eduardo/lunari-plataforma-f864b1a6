@@ -21,6 +21,9 @@ interface LeadCardProps {
     value: string;
     label: string;
   }[];
+  onScheduleClient?: () => void;
+  onMarkAsScheduled?: () => void;
+  onViewAppointment?: () => void;
   dndRef?: (node: HTMLElement | null) => void;
   dndListeners?: any;
   dndAttributes?: any;
@@ -33,6 +36,9 @@ export default function LeadCard({
   onConvertToOrcamento,
   onRequestMove,
   statusOptions,
+  onScheduleClient,
+  onMarkAsScheduled,
+  onViewAppointment,
   dndRef,
   dndListeners,
   dndAttributes,
@@ -145,7 +151,7 @@ export default function LeadCard({
           {lead.nome}
         </h3>
         
-        <LeadActionsPopover lead={lead} onStartConversation={handleStartConversation} onShowDetails={() => setShowDetails(true)} onConvert={onConvertToOrcamento} onDelete={onDelete}>
+        <LeadActionsPopover lead={lead} onStartConversation={handleStartConversation} onShowDetails={() => setShowDetails(true)} onConvert={onConvertToOrcamento} onDelete={onDelete} onScheduleClient={onScheduleClient} onMarkAsScheduled={onMarkAsScheduled} onViewAppointment={onViewAppointment}>
           <Button variant="ghost" size="icon" className="h-5 w-5 -mt-1 -mr-1" title="Mais opções" data-no-drag="true">
             <MoreVertical className="h-4 w-4" />
           </Button>

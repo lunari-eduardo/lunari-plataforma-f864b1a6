@@ -48,6 +48,7 @@ export default function LeadsKanban() {
   const [configModalOpen, setConfigModalOpen] = useState(false);
   const [schedulingModalOpen, setSchedulingModalOpen] = useState(false);
   const [leadToSchedule, setLeadToSchedule] = useState<Lead | null>(null);
+  const [schedulingLead, setSchedulingLead] = useState<Lead | null>(null);
   const pointerSensor = useSensor(PointerSensor, {
     activationConstraint: {
       distance: 4
@@ -159,6 +160,34 @@ export default function LeadsKanban() {
       window.location.href = `/orcamentos?tab=novo&${searchParams.toString()}`;
     }
   };
+
+  const handleScheduleClient = (lead: Lead) => {
+    setSchedulingLead(lead);
+    setSchedulingModalOpen(true);
+  };
+
+  const handleMarkAsScheduled = (leadId: string) => {
+    updateLead(leadId, {
+      needsScheduling: false,
+      scheduledAppointmentId: `manual_${Date.now()}`
+    });
+    
+    const lead = leads.find(l => l.id === leadId);
+    if (lead) {
+      addInteraction(leadId, 'manual', 'Marcado como agendado manualmente', false, 'Cliente foi marcado como agendado sem criar agendamento específico');
+      toast({
+        title: 'Marcado como Agendado',
+        description: `${lead.nome} foi marcado como agendado.`
+      });
+    }
+  };
+
+  const handleViewAppointment = (lead: Lead) => {
+    if (lead.scheduledAppointmentId) {
+      // Future: Navigate to agenda with appointment highlighted
+      window.location.href = '/agenda';
+    }
+  };
   const StatusColumn = ({
     title,
     statusKey
@@ -202,7 +231,7 @@ export default function LeadsKanban() {
             });
           }} onConvertToOrcamento={() => handleConvertToOrcamento(lead.id)} onRequestMove={status => {
             handleStatusChange(lead, status);
-          }} statusOptions={statusOptions} activeId={activeId} />)}
+          }} statusOptions={statusOptions} activeId={activeId} onScheduleClient={() => handleScheduleClient(lead)} onMarkAsScheduled={() => handleMarkAsScheduled(lead.id)} onViewAppointment={() => handleViewAppointment(lead)} />)}
             
             {leadsInColumn.length === 0 && <li className="text-center text-sm text-lunar-textSecondary py-8">
                 Nenhum lead neste status
@@ -301,13 +330,33 @@ export default function LeadsKanban() {
       <FollowUpConfigModal open={configModalOpen} onOpenChange={setConfigModalOpen} />
 
       {/* Scheduling Confirmation Modal */}
-      {leadToSchedule && (
+      {(leadToSchedule || schedulingLead) && (
         <SchedulingConfirmationModal
           open={schedulingModalOpen}
-          onOpenChange={setSchedulingModalOpen}
-          lead={leadToSchedule}
-          onScheduled={(appointmentId) => handleScheduled(leadToSchedule.id, appointmentId)}
-          onNotScheduled={() => handleNotScheduled(leadToSchedule.id)}
+          onOpenChange={(open) => {
+            setSchedulingModalOpen(open);
+            if (!open) {
+              setLeadToSchedule(null);
+              setSchedulingLead(null);
+            }
+          }}
+          lead={leadToSchedule || schedulingLead!}
+          onScheduled={(appointmentId) => {
+            const targetLead = leadToSchedule || schedulingLead;
+            if (targetLead) {
+              handleScheduled(targetLead.id, appointmentId);
+              setLeadToSchedule(null);
+              setSchedulingLead(null);
+            }
+          }}
+          onNotScheduled={() => {
+            const targetLead = leadToSchedule || schedulingLead;
+            if (targetLead) {
+              handleNotScheduled(targetLead.id);
+              setLeadToSchedule(null);
+              setSchedulingLead(null);
+            }
+          }}
         />
       )}
     </div>;
