@@ -1,18 +1,24 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle, Eye, Trash2, ArrowRight } from 'lucide-react';
 import type { Lead } from '@/types/leads';
 
 interface LeadActionsPopoverProps {
   lead: Lead;
   onStartConversation: () => void;
+  onShowDetails: () => void;
+  onConvert?: () => void;
+  onDelete: () => void;
   children: React.ReactNode;
 }
 
 export default function LeadActionsPopover({
   lead,
   onStartConversation,
+  onShowDetails,
+  onConvert,
+  onDelete,
   children
 }: LeadActionsPopoverProps) {
   const [open, setOpen] = useState(false);
@@ -21,6 +27,9 @@ export default function LeadActionsPopover({
     action();
     setOpen(false);
   };
+
+  const isConverted = lead.status === 'convertido';
+  const isLost = lead.status === 'perdido';
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -33,10 +42,42 @@ export default function LeadActionsPopover({
             variant="ghost"
             size="sm"
             className="w-full justify-start gap-2 h-8"
+            onClick={() => handleAction(onShowDetails)}
+          >
+            <Eye className="h-4 w-4" />
+            Detalhes
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start gap-2 h-8"
             onClick={() => handleAction(onStartConversation)}
           >
             <MessageCircle className="h-4 w-4" />
             Iniciar Conversa
+          </Button>
+
+          {!isConverted && !isLost && onConvert && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start gap-2 h-8"
+              onClick={() => handleAction(onConvert)}
+            >
+              <ArrowRight className="h-4 w-4" />
+              Converter
+            </Button>
+          )}
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start gap-2 h-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+            onClick={() => handleAction(onDelete)}
+          >
+            <Trash2 className="h-4 w-4" />
+            Excluir
           </Button>
         </div>
       </PopoverContent>

@@ -1,14 +1,10 @@
-import { useState, useMemo } from 'react';
-import { Badge } from '@/components/ui/badge';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { MoreVertical, Calendar, Phone, Mail, History } from 'lucide-react';
+import { MoreVertical, MessageCircle } from 'lucide-react';
 import type { Lead } from '@/types/leads';
-import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 import LeadActionsPopover from './LeadActionsPopover';
 import LeadStatusSelector from './LeadStatusSelector';
-import LeadHistoryPanel from './LeadHistoryPanel';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import LeadDetailsModal from './LeadDetailsModal';
 import { toast } from 'sonner';
 
 interface LeadCardProps {
@@ -40,22 +36,10 @@ export default function LeadCard({
   isDragging = false
 }: LeadCardProps) {
   const [isPressing, setIsPressing] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
-
-  const timeAgo = useMemo(() => {
-    try {
-      return formatDistanceToNow(new Date(lead.dataCriacao), { 
-        addSuffix: true, 
-        locale: ptBR 
-      });
-    } catch {
-      return 'Data inválida';
-    }
-  }, [lead.dataCriacao]);
+  const [showDetails, setShowDetails] = useState(false);
 
   const isConverted = lead.status === 'convertido';
   const isLost = lead.status === 'perdido';
-  const needsFollowUp = lead.needsFollowUp;
 
   const handleStartConversation = () => {
     try {
@@ -76,159 +60,103 @@ export default function LeadCard({
   };
 
   return (
-    <li 
-      className={`relative overflow-hidden rounded-md border border-lunar-border/60 bg-lunar-surface p-3 transition-none cursor-grab active:cursor-grabbing select-none touch-none transform-gpu ${
-        isDragging ? 'opacity-70 border-dashed ring-1 ring-lunar-accent/40' : ''
-      } ${isPressing ? 'ring-1 ring-lunar-accent/50' : ''} ${
-        isConverted ? 'bg-green-50 border-green-200' : isLost ? 'bg-red-50 border-red-200' : ''
-      }`}
-      ref={dndRef as any}
-      style={dndStyle}
-      {...dndAttributes || {}}
-      {...dndListeners || {}}
-      onPointerDownCapture={e => {
-        const target = e.target as HTMLElement;
-        if (target?.closest('[data-no-drag="true"]')) {
-          e.stopPropagation();
-        }
-      }}
-      onMouseDown={() => setIsPressing(true)}
-      onMouseUp={() => setIsPressing(false)}
-      onMouseLeave={() => setIsPressing(false)}
-    >
-      {/* Status visual indicator */}
-      <span 
-        aria-hidden 
-        className={`pointer-events-none absolute inset-y-0 left-0 w-1 ${
-          isConverted ? 'bg-green-500' : isLost ? 'bg-red-500' : 'bg-blue-500'
-        }`} 
-      />
-
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <LeadActionsPopover
-            lead={lead}
-            onStartConversation={handleStartConversation}
-          >
-            <h3 
-              className="text-sm font-medium text-lunar-text truncate cursor-pointer hover:text-lunar-accent" 
-              data-no-drag="true"
-              title="Clique para ver opções"
+    <>
+      <li 
+        className={`relative overflow-hidden rounded-lg p-4 transition-all duration-200 cursor-grab active:cursor-grabbing select-none touch-none transform-gpu
+          bg-gradient-to-br from-gray-50 to-white border border-gray-200/60 shadow-sm hover:shadow-md
+          ${isDragging ? 'opacity-70 border-dashed ring-2 ring-blue-300/40 shadow-lg' : ''}
+          ${isPressing ? 'ring-2 ring-blue-300/50 shadow-md' : ''}
+          ${isConverted ? 'from-green-50 to-green-25 border-green-200' : ''}
+          ${isLost ? 'from-red-50 to-red-25 border-red-200' : ''}
+        `}
+        ref={dndRef as any}
+        style={dndStyle}
+        {...dndAttributes || {}}
+        {...dndListeners || {}}
+        onPointerDownCapture={e => {
+          const target = e.target as HTMLElement;
+          if (target?.closest('[data-no-drag="true"]')) {
+            e.stopPropagation();
+          }
+        }}
+        onMouseDown={() => setIsPressing(true)}
+        onMouseUp={() => setIsPressing(false)}
+        onMouseLeave={() => setIsPressing(false)}
+      >
+        {/* Layout Grid 3x3 */}
+        <div className="grid grid-rows-3 h-24 gap-2">
+          {/* Top Row - Menu de 3 pontos no canto direito */}
+          <div className="flex justify-end">
+            <LeadActionsPopover
+              lead={lead}
+              onStartConversation={handleStartConversation}
+              onShowDetails={() => setShowDetails(true)}
+              onConvert={!isConverted && !isLost ? onConvertToOrcamento : undefined}
+              onDelete={onDelete}
             >
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-6 w-6 text-gray-400 hover:text-gray-600" 
+                title="Mais opções"
+                data-no-drag="true"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </LeadActionsPopover>
+          </div>
+
+          {/* Middle Row - Nome centralizado */}
+          <div className="flex items-center justify-center -mt-2 -mb-2">
+            <h3 className="text-sm font-medium text-gray-800 text-center leading-tight px-2">
               {lead.nome}
             </h3>
-          </LeadActionsPopover>
-          
-          <div className="mt-1 space-y-1">
-            <div className="flex items-center gap-1 text-xs text-lunar-textSecondary">
-              <Mail className="h-3 w-3" />
-              <span className="truncate">{lead.email}</span>
-            </div>
-            
-            <div className="flex items-center gap-1 text-xs text-lunar-textSecondary">
-              <Phone className="h-3 w-3" />
-              <span>{lead.telefone}</span>
-            </div>
-
           </div>
 
-          <div className="mt-2 flex flex-wrap items-center gap-1">
-            {lead.origem && (
-              <Badge variant="secondary" className="text-[10px]">
-                {lead.origem}
-              </Badge>
-            )}
-            
-            {needsFollowUp && (
-              <Badge variant="destructive" className="text-[10px]">
-                Follow-up
-              </Badge>
-            )}
-            
-            <div className="flex items-center gap-1 text-xs text-lunar-textSecondary">
-              <Calendar className="h-3 w-3" />
-              <span>{timeAgo}</span>
+          {/* Bottom Row - Status no centro, WhatsApp no canto direito */}
+          <div className="flex items-center justify-between">
+            <div className="flex-1 flex justify-center">
+              <LeadStatusSelector
+                lead={lead}
+                onStatusChange={(status) => {
+                  onRequestMove?.(status);
+                  toast.success('Status alterado');
+                }}
+              />
             </div>
+            
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+              onClick={handleStartConversation}
+              title="Iniciar conversa no WhatsApp"
+              data-no-drag="true"
+            >
+              <MessageCircle className="h-4 w-4" />
+            </Button>
           </div>
-
-          {lead.observacoes && (
-            <p className="mt-2 text-xs text-lunar-textSecondary line-clamp-2">
-              {lead.observacoes}
-            </p>
-          )}
         </div>
 
-        <div className="flex items-center gap-1 shrink-0">
-          <LeadStatusSelector
-            lead={lead}
-            onStatusChange={(status) => {
-              onRequestMove?.(status);
-              toast.success('Status alterado');
-            }}
-          />
+        {/* Status visual indicator */}
+        <span 
+          aria-hidden 
+          className={`pointer-events-none absolute inset-y-0 left-0 w-1 rounded-l-lg ${
+            isConverted ? 'bg-green-500' : isLost ? 'bg-red-500' : 'bg-blue-500'
+          }`} 
+        />
+      </li>
 
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-7 w-7" 
-            onClick={() => setShowHistory(true)}
-            title="Ver histórico"
-            data-no-drag="true"
-          >
-            <History className="h-4 w-4" />
-          </Button>
-
-          <LeadActionsPopover
-            lead={lead}
-            onStartConversation={handleStartConversation}
-          >
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-7 w-7" 
-              title="Mais opções"
-              data-no-drag="true"
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </LeadActionsPopover>
-
-          {!isConverted && !isLost && (
-            <Button 
-              variant="secondary" 
-              size="sm" 
-              className="h-7 text-2xs" 
-              onClick={onConvertToOrcamento}
-              data-no-drag="true"
-            >
-              Converter
-            </Button>
-          )}
-
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-7 w-7" 
-            onClick={onDelete}
-            title="Excluir"
-            data-no-drag="true"
-          >
-            ×
-          </Button>
-        </div>
-      </div>
-
-      {/* History Modal */}
-      <Dialog open={showHistory} onOpenChange={setShowHistory}>
-        <DialogContent className="max-w-2xl max-h-[80vh]">
-          <DialogHeader>
-            <DialogTitle>Histórico - {lead.nome}</DialogTitle>
-          </DialogHeader>
-          <LeadHistoryPanel lead={lead} />
-        </DialogContent>
-      </Dialog>
-    </li>
+      {/* Details Modal */}
+      <LeadDetailsModal
+        open={showDetails}
+        onOpenChange={setShowDetails}
+        lead={lead}
+        onConvert={!isConverted && !isLost ? onConvertToOrcamento : undefined}
+        onDelete={onDelete}
+      />
+    </>
   );
 }
