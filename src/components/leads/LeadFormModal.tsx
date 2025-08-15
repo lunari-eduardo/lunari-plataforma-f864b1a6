@@ -180,7 +180,6 @@ export default function LeadFormModal({
         whatsapp: formData.telefone.trim()
       };
       
-      console.log('📤 [LeadFormModal] Enviando dados do lead:', leadData);
       await onSubmit(leadData);
 
       handleClose(false);
@@ -220,12 +219,6 @@ export default function LeadFormModal({
       }
     }
     
-    console.log('🔍 Cliente associado:', {
-      clienteId,
-      origemCliente: cliente.origem,
-      origemEncontrada,
-      origensDisponiveis: origens.length
-    });
     
     setFormData(prev => ({
       ...prev,
@@ -247,7 +240,6 @@ export default function LeadFormModal({
 
   // Prevent modal from closing when clicking on dropdowns
   const handleSelectOpenChange = useCallback((open: boolean, selectType: string) => {
-    console.log('🔽 Select open changed:', { selectType, open });
     setOpenDropdowns(prev => ({
       ...prev,
       [selectType]: open
@@ -255,14 +247,6 @@ export default function LeadFormModal({
     dropdownContext?.setHasOpenDropdown(Object.values({...openDropdowns, [selectType]: open}).some(Boolean));
   }, [dropdownContext, openDropdowns]);
 
-  console.log('🎯 LeadFormModal render:', {
-    open,
-    mode,
-    origensCount: origens.length,
-    contextOrigensCount: contextOrigens.length,
-    formDataStatus: formData.status,
-    statusesCount: statuses.length
-  });
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>

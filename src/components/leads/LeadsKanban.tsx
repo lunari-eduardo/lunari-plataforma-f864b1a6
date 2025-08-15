@@ -62,11 +62,6 @@ export default function LeadsKanban() {
     filteredLeads.forEach(lead => { 
       (groups[lead.status] ||= []).push(lead); 
     });
-    console.log('📊 [LeadsKanban] Leads agrupados:', {
-      totalLeads: filteredLeads.length,
-      statusCount: Object.keys(groups).length,
-      groups: Object.entries(groups).map(([key, leads]) => ({ status: key, count: leads.length }))
-    });
     return groups;
   }, [filteredLeads, statuses]);
 
@@ -193,11 +188,9 @@ export default function LeadsKanban() {
         modifiers={[restrictToFirstScrollableAncestor]}
         onDragStart={(e) => {
           setActiveId(String(e.active.id));
-          console.log('[DND] drag start', e.active.id);
         }}
         onDragEnd={(e) => {
           const overId = e.over?.id as string | undefined;
-          console.log('[DND] drag end', { activeId, overId });
           if (activeId && overId) {
             const current = leads.find(lead => lead.id === activeId);
             if (current && current.status !== overId) {
@@ -261,11 +254,8 @@ export default function LeadsKanban() {
         onOpenChange={setCreateModalOpen}
         mode="create"
         onSubmit={(data) => {
-          console.log('🎯 [LeadsKanban] Submetendo novo lead:', data);
-          
           try {
             const newLead = addLead(data);
-            console.log('✅ [LeadsKanban] Lead criado:', newLead);
             
             // Add creation interaction
             addInteraction(
@@ -277,9 +267,7 @@ export default function LeadsKanban() {
             );
             
             toast({ title: 'Lead criado', description: data.nome });
-            console.log('🎉 [LeadsKanban] Processo de criação concluído!');
           } catch (error) {
-            console.error('❌ [LeadsKanban] Erro ao criar lead:', error);
             toast({ title: 'Erro', description: 'Não foi possível criar o lead' });
           }
         }}

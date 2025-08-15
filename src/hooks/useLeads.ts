@@ -6,16 +6,19 @@ import type { Lead } from '@/types/leads';
 export function useLeads() {
   const [leads, setLeads] = useState<Lead[]>(() => {
     const loadedLeads = storage.load<Lead[]>(STORAGE_KEYS.LEADS, []);
-    console.log('🔍 [useLeads] Carregando leads do localStorage:', loadedLeads.length, 'leads');
     return loadedLeads;
   });
 
   const { adicionarCliente, clientes } = useAppContext();
 
+  // Debounced save to prevent race conditions
   useEffect(() => {
-    console.log('💾 [useLeads] Salvando leads no localStorage:', leads.length, 'leads');
-    storage.save(STORAGE_KEYS.LEADS, leads);
-    window.dispatchEvent(new CustomEvent('leads:changed'));
+    const timeoutId = setTimeout(() => {
+      storage.save(STORAGE_KEYS.LEADS, leads);
+      window.dispatchEvent(new CustomEvent('leads:changed'));
+    }, 100);
+
+    return () => clearTimeout(timeoutId);
   }, [leads]);
 
   // Listen for external changes
@@ -43,49 +46,35 @@ export function useLeads() {
   }, []);
 
   const addLead = useCallback((input: Omit<Lead, 'id' | 'dataCriacao'>) => {
-    console.log('🚀 [addLead] Iniciando criação de lead:', input);
-    
     const now = new Date().toISOString();
     const lead: Lead = {
       ...input,
-      id: `lead_${Date.now()}`,
+      id: `lead_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       dataCriacao: now,
       interacoes: input.interacoes || [],
       statusTimestamp: now,
     };
 
-    console.log('📝 [addLead] Lead criado:', lead);
-
-    // Auto-create client in CRM
+    // Auto-create client in CRM with proper origin mapping
     if (!lead.clienteId) {
-      console.log('👤 [addLead] Criando cliente no CRM:', {
+      const clienteData = {
         nome: lead.nome,
         email: lead.email,
         telefone: lead.telefone,
         whatsapp: lead.whatsapp || lead.telefone,
-        origem: lead.origem || ''
-      });
+        origem: lead.origem || 'Não informado'
+      };
       
-      const novoCliente = adicionarCliente({
-        nome: lead.nome,
-        email: lead.email,
-        telefone: lead.telefone,
-        whatsapp: lead.whatsapp || lead.telefone,
-        origem: lead.origem || ''
-      });
-      
-      console.log('✅ [addLead] Cliente criado:', novoCliente);
+      const novoCliente = adicionarCliente(clienteData);
       lead.clienteId = novoCliente.id;
     }
 
-    console.log('💾 [addLead] Salvando lead no estado...', lead);
+    // Synchronous state update to prevent race conditions
     setLeads(prev => {
       const newLeads = [lead, ...prev];
-      console.log('📊 [addLead] Estado atualizado:', newLeads.length, 'leads total');
       return newLeads;
     });
     
-    console.log('✅ [addLead] Lead criado com sucesso!');
     return lead;
   }, [adicionarCliente]);
 
