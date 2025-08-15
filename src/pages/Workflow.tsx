@@ -10,6 +10,7 @@ import { useOrcamentoData } from "@/hooks/useOrcamentoData";
 import { useContext } from 'react';
 import { AppContext } from '@/contexts/AppContext';
 import { parseDateFromStorage } from "@/utils/dateUtils";
+import { useWorkflowMetrics } from '@/hooks/useWorkflowMetrics';
 import type { SessionData, CategoryOption, PackageOption, ProductOption } from '@/types/workflow';
 const removeAccents = (str: string) => {
   return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -29,6 +30,8 @@ export default function Workflow() {
     produtos,
     categorias
   } = useOrcamentoData();
+  
+  const { saveMonthlyMetrics } = useWorkflowMetrics();
   const getClienteByName = (nome: string) => {
     return clientes.find(cliente => cliente.nome === nome);
   };
@@ -315,6 +318,18 @@ export default function Workflow() {
       sessionCount: currentMonthSessions.length
     };
   }, [sessions, calculateTotal, calculateRestante]);
+
+  // Salvar métricas no cache sempre que financials mudar
+  useEffect(() => {
+    if (financials.sessionCount > 0) {
+      saveMonthlyMetrics(currentMonth.year, currentMonth.month, {
+        receita: financials.revenue,
+        previsto: financials.forecasted,
+        aReceber: financials.outstanding,
+        sessoes: financials.sessionCount
+      });
+    }
+  }, [financials, currentMonth.year, currentMonth.month, saveMonthlyMetrics]);
 
   // Métricas do mês anterior para comparação
   const prevMonthFinancials = useMemo(() => {
