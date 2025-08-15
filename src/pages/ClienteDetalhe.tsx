@@ -21,6 +21,8 @@ import { formatDateForDisplay } from '@/utils/dateUtils';
 import { toast } from 'sonner';
 import { useOrcamentos } from '@/hooks/useOrcamentos';
 import { ORIGENS_PADRAO } from '@/utils/defaultOrigens';
+import { getOriginInfo, getOriginDisplayName } from '@/utils/originUtils';
+import { OriginBadge } from '@/components/shared/OriginBadge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 export default function ClienteDetalhe() {
   const {
@@ -51,7 +53,7 @@ export default function ClienteDetalhe() {
     return clientes.find(c => c.id === id);
   }, [clientes, id]);
 
-  const origemInfo = useMemo(() => ORIGENS_PADRAO.find(o => o.id === cliente?.origem), [cliente]);
+  const origemInfo = useMemo(() => getOriginInfo(cliente?.origem), [cliente]);
   const getInitials = (name?: string) => {
     if (!name) return '';
     const parts = name.trim().split(' ');
@@ -182,12 +184,7 @@ export default function ClienteDetalhe() {
               <div>
                 <div className="flex items-center gap-2">
                   <h1 className="font-bold text-base">{cliente.nome}</h1>
-                  {origemInfo && (
-                    <Badge variant="secondary" className="flex items-center gap-1">
-                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: origemInfo.cor }} />
-                      {origemInfo.nome}
-                    </Badge>
-                  )}
+                  <OriginBadge originId={cliente.origem} />
                 </div>
                 <p className="text-muted-foreground text-xs">Perfil completo do cliente</p>
               </div>
@@ -333,7 +330,7 @@ export default function ClienteDetalhe() {
                           </SelectContent>
                         </Select>
                       ) : (
-                        <Input id="origem" value={ORIGENS_PADRAO.find(o => o.id === formData.origem)?.nome || 'Não informado'} disabled placeholder="Origem não informada" />
+                        <Input id="origem" value={getOriginDisplayName(formData.origem)} disabled placeholder="Origem não informada" />
                       )}
                     </div>
                   </div>

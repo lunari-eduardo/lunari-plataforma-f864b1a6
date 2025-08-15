@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
 import { parseDateFromStorage, formatDateForStorage, getCurrentDateString } from '@/utils/dateUtils';
 import { formatCurrency } from '@/utils/financialUtils';
+import { normalizeOriginToId } from '@/utils/originUtils';
 import { toast } from '@/hooks/use-toast';
 import { FinancialEngine, CreateTransactionInput } from '@/services/FinancialEngine';
 import { calculateTotals, calculateTotalsNew } from '@/services/FinancialCalculationEngine';
@@ -1497,9 +1498,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const adicionarCliente = (cliente: Omit<Cliente, 'id'>) => {
     console.log('🔥 [CRM] Iniciando criação de cliente:', cliente);
     
+    // Normalize origin to ensure consistent ID storage
+    const normalizedOrigin = normalizeOriginToId(cliente.origem);
+    console.log('🔄 [CRM] Origem normalizada:', { original: cliente.origem, normalizada: normalizedOrigin });
+    
     const novoCliente: Cliente = {
       ...cliente,
       id: Date.now().toString(),
+      origem: normalizedOrigin
     };
     
     console.log('✅ [CRM] Cliente criado:', { id: novoCliente.id, nome: novoCliente.nome, origem: novoCliente.origem });

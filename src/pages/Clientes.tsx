@@ -22,6 +22,7 @@ import { formatCurrency } from '@/utils/financialUtils';
 import { formatDateForDisplay } from '@/utils/dateUtils';
 import { abrirWhatsApp } from '@/utils/whatsappUtils';
 import { ORIGENS_PADRAO } from '@/utils/defaultOrigens';
+import { OriginBadge } from '@/components/shared/OriginBadge';
 export default function Clientes() {
   const {
     clientes,
@@ -259,9 +260,12 @@ export default function Clientes() {
                 </div>
 
                 {/* Informações de Contato */}
-                <div className="flex items-center gap-2 mb-3 text-sm text-muted-foreground">
-                  <Phone className="h-3 w-3" />
-                  <span className="text-xs">{cliente.telefone}</span>
+                <div className="flex items-center justify-between mb-3 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-3 w-3" />
+                    <span className="text-xs">{cliente.telefone}</span>
+                  </div>
+                  <OriginBadge originId={(cliente as any).origem} className="text-xs" />
                 </div>
 
                 {/* Métricas Financeiras */}

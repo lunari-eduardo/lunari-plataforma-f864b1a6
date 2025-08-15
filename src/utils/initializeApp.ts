@@ -5,6 +5,7 @@ import { cleanupAfterMigration } from './cleanupMigration';
 import { ORIGENS_PADRAO } from './defaultOrigens';
 import { storage, STORAGE_KEYS } from './localStorage';
 import { toast } from 'sonner';
+import { runClientOriginMigration } from './clientOriginMigration';
 
 /**
  * Sistema de inicialização completo do app
@@ -78,7 +79,11 @@ export async function initializeApp(): Promise<InitializationResult> {
     initializeDefaultOrigens();
     result.migrationsRun.push('initializeOrigins');
     
-    // 5. LIMPEZA DE CACHES ANTIGOS
+    // 5. EXECUTAR MIGRAÇÃO DE ORIGENS DOS CLIENTES
+    runClientOriginMigration();
+    result.migrationsRun.push('clientOriginMigration');
+    
+    // 6. LIMPEZA DE CACHES ANTIGOS
     // Log removido para evitar spam
     const cachesToClear = [
       'workflow_sync_data',
@@ -93,7 +98,7 @@ export async function initializeApp(): Promise<InitializationResult> {
       }
     });
     
-    // 6. OTIMIZAÇÃO DE PERFORMANCE
+    // 7. OTIMIZAÇÃO DE PERFORMANCE
     // Log removido para evitar spam
     
     // Configurar debounce para operações pesadas
@@ -107,7 +112,7 @@ export async function initializeApp(): Promise<InitializationResult> {
     localStorage.setItem('performance_config', JSON.stringify(performanceConfig));
     result.migrationsRun.push('performanceOptimization');
     
-    // 7. VERIFICAÇÃO FINAL
+    // 8. VERIFICAÇÃO FINAL
     // Log removido para evitar spam
     const finalCorruptions = detectClienteIdCorruptions();
     
@@ -118,7 +123,7 @@ export async function initializeApp(): Promise<InitializationResult> {
       result.success = false;
     }
     
-    // 8. MARCAR INICIALIZAÇÃO COMO CONCLUÍDA
+    // 9. MARCAR INICIALIZAÇÃO COMO CONCLUÍDA
     const initializationData = {
       completedAt: new Date().toISOString(),
       version: '1.0.0',
@@ -128,7 +133,7 @@ export async function initializeApp(): Promise<InitializationResult> {
     
     localStorage.setItem('app_initialized', JSON.stringify(initializationData));
     
-    // 9. RESULTADO FINAL
+    // 10. RESULTADO FINAL
     if (result.success) {
       // Logs removidos para evitar spam no console
       
