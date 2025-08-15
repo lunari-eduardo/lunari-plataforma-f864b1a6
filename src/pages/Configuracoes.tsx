@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
-import { Package, Box, Workflow, Shapes, DollarSign } from 'lucide-react';
+import { Package, Box, Workflow, Shapes, DollarSign, FileText } from 'lucide-react';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
 import { saveConfigWithNotification } from '@/utils/configNotification';
@@ -12,6 +12,7 @@ import Pacotes from '@/components/configuracoes/Pacotes';
 import Produtos from '@/components/configuracoes/Produtos';
 import FluxoTrabalho from '@/components/configuracoes/FluxoTrabalho';
 import PrecificacaoFotos from '@/components/configuracoes/PrecificacaoFotos';
+import DocumentosPDF from '@/components/configuracoes/DocumentosPDF';
 
 // Types
 interface Categoria {
@@ -156,7 +157,7 @@ export default function Configuracoes() {
         </CardHeader>
         <CardContent className="my-[8px] py-[6px]">
           <Tabs value={tabAtiva} onValueChange={setTabAtiva} className="w-full">
-            <TabsList className="grid grid-cols-5 mb-2">
+            <TabsList className="grid grid-cols-6 mb-2">
               <TabsTrigger value="categorias" className="flex items-center gap-1.5">
                 <Shapes className="h-4 w-4" />
                 <span className="hidden sm:inline">Categorias</span>
@@ -176,6 +177,10 @@ export default function Configuracoes() {
               <TabsTrigger value="fluxo" className="flex items-center gap-1.5">
                 <Workflow className="h-4 w-4" />
                 <span className="hidden sm:inline">Etapas</span>
+              </TabsTrigger>
+              <TabsTrigger value="documentos" className="flex items-center gap-1.5">
+                <FileText className="h-4 w-4" />
+                <span className="hidden sm:inline">PDFs</span>
               </TabsTrigger>
             </TabsList>
             
@@ -197,6 +202,10 @@ export default function Configuracoes() {
             
             <TabsContent value="fluxo">
               <FluxoTrabalho etapas={etapas} setEtapas={setEtapas} />
+            </TabsContent>
+            
+            <TabsContent value="documentos">
+              <DocumentosPDF />
             </TabsContent>
           </Tabs>
         </CardContent>
