@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
 import { DndContext, rectIntersection, useSensor, useSensors, PointerSensor, DragOverlay, useDroppable } from '@dnd-kit/core';
@@ -102,7 +103,7 @@ export default function LeadsKanban() {
         <Card
           ref={setNodeRef}
           className={cn(
-            "p-2 pb-8 bg-lunar-surface border-lunar-border/60 min-h-[75vh] max-h-[75vh] overflow-y-auto",
+            "p-2 pb-8 bg-lunar-surface border-lunar-border/60 min-h-full",
             isOver ? "ring-2 ring-lunar-accent/60" : ""
           )}
         >
@@ -186,71 +187,73 @@ export default function LeadsKanban() {
       </Card>
 
       {/* Kanban Board */}
-      <DndContext
-        sensors={sensors}
-        collisionDetection={rectIntersection}
-        modifiers={[restrictToFirstScrollableAncestor]}
-        onDragStart={(e) => {
-          setActiveId(String(e.active.id));
-        }}
-        onDragEnd={(e) => {
-          const overId = e.over?.id as string | undefined;
-          if (activeId && overId) {
-            const current = leads.find(lead => lead.id === activeId);
-            if (current && current.status !== overId) {
-              const statusName = statuses.find(s => s.key === overId)?.name || overId;
-              const statusAnteriorName = statuses.find(s => s.key === current.status)?.name || current.status;
-              
-              updateLead(activeId, { status: overId });
-              
-              // Add interaction for status change
-              addInteraction(
-                activeId,
-                'mudanca_status',
-                `Status alterado para "${statusName}"`,
-                true,
-                `Movido via Kanban`,
-                current.status,
-                overId
-              );
-              
-              toast({ title: 'Lead movido' });
+      <ScrollArea className="h-[70vh]">
+        <DndContext
+          sensors={sensors}
+          collisionDetection={rectIntersection}
+          modifiers={[restrictToFirstScrollableAncestor]}
+          onDragStart={(e) => {
+            setActiveId(String(e.active.id));
+          }}
+          onDragEnd={(e) => {
+            const overId = e.over?.id as string | undefined;
+            if (activeId && overId) {
+              const current = leads.find(lead => lead.id === activeId);
+              if (current && current.status !== overId) {
+                const statusName = statuses.find(s => s.key === overId)?.name || overId;
+                const statusAnteriorName = statuses.find(s => s.key === current.status)?.name || current.status;
+                
+                updateLead(activeId, { status: overId });
+                
+                // Add interaction for status change
+                addInteraction(
+                  activeId,
+                  'mudanca_status',
+                  `Status alterado para "${statusName}"`,
+                  true,
+                  `Movido via Kanban`,
+                  current.status,
+                  overId
+                );
+                
+                toast({ title: 'Lead movido' });
+              }
             }
-          }
-          setActiveId(null);
-        }}
-        onDragCancel={() => setActiveId(null)}
-      >
-        <div className="overflow-x-auto">
-          <div className="flex gap-4 min-w-max pr-2">
-            {statuses.map(status => (
-              <StatusColumn 
-                key={status.id} 
-                title={status.name} 
-                statusKey={status.key} 
-              />
-            ))}
-          </div>
-        </div>
-
-        <DragOverlay>
-          <div className="pointer-events-none">
-            {activeId ? (() => {
-              const lead = leads.find(l => l.id === activeId);
-              return lead ? (
-                <LeadCard
-                  lead={lead}
-                  onEdit={() => {}}
-                  onDelete={() => {}}
-                  onConvertToOrcamento={() => {}}
-                  statusOptions={statusOptions}
-                  isDragging={true}
+            setActiveId(null);
+          }}
+          onDragCancel={() => setActiveId(null)}
+        >
+          <div className="overflow-x-auto">
+            <div className="flex gap-4 min-w-max pr-2">
+              {statuses.map(status => (
+                <StatusColumn 
+                  key={status.id} 
+                  title={status.name} 
+                  statusKey={status.key} 
                 />
-              ) : null;
-            })() : null}
+              ))}
+            </div>
           </div>
-        </DragOverlay>
-      </DndContext>
+
+          <DragOverlay>
+            <div className="pointer-events-none">
+              {activeId ? (() => {
+                const lead = leads.find(l => l.id === activeId);
+                return lead ? (
+                  <LeadCard
+                    lead={lead}
+                    onEdit={() => {}}
+                    onDelete={() => {}}
+                    onConvertToOrcamento={() => {}}
+                    statusOptions={statusOptions}
+                    isDragging={true}
+                  />
+                ) : null;
+              })() : null}
+            </div>
+          </DragOverlay>
+        </DndContext>
+      </ScrollArea>
 
       {/* Modals */}
       <LeadFormModal
