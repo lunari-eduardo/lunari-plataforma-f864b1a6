@@ -1,11 +1,14 @@
 import { useState, useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { MoreVertical, Calendar, Phone, Mail } from 'lucide-react';
 import type { Lead } from '@/types/leads';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import LeadActionsPopover from './LeadActionsPopover';
+import SendPDFModal from './SendPDFModal';
+import { abrirWhatsAppConversa } from '@/utils/leadWhatsappUtils';
+import { toast } from 'sonner';
 
 interface LeadCardProps {
   lead: Lead;
@@ -38,6 +41,7 @@ export default function LeadCard({
   isDragging = false
 }: LeadCardProps) {
   const [isPressing, setIsPressing] = useState(false);
+  const [showPDFModal, setShowPDFModal] = useState(false);
 
   const timeAgo = useMemo(() => {
     try {
@@ -52,6 +56,25 @@ export default function LeadCard({
 
   const isConverted = lead.status === 'convertido';
   const isLost = lead.status === 'perdido';
+
+  const handleStartConversation = () => {
+    try {
+      abrirWhatsAppConversa(lead);
+      toast.success('WhatsApp aberto para conversa');
+      // Move para "interessado" se ainda estiver em "novo_contato"
+      if (lead.status === 'novo_contato') {
+        onRequestMove?.('interessado');
+      }
+    } catch (error) {
+      toast.error('Erro ao abrir WhatsApp');
+    }
+  };
+
+  const handlePDFSent = () => {
+    // Move para "proposta_enviada" automaticamente
+    onRequestMove?.('proposta_enviada');
+    toast.success('Status atualizado para "Proposta Enviada"');
+  };
 
   return (
     <li 
@@ -84,14 +107,20 @@ export default function LeadCard({
 
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <h3 
-            className="text-sm font-medium text-lunar-text truncate cursor-pointer hover:text-lunar-accent" 
-            onClick={onEdit}
-            data-no-drag="true"
-            title="Editar lead"
+          <LeadActionsPopover
+            lead={lead}
+            onEdit={onEdit}
+            onStartConversation={handleStartConversation}
+            onSendPDF={() => setShowPDFModal(true)}
           >
-            {lead.nome}
-          </h3>
+            <h3 
+              className="text-sm font-medium text-lunar-text truncate cursor-pointer hover:text-lunar-accent" 
+              data-no-drag="true"
+              title="Clique para ver opções"
+            >
+              {lead.nome}
+            </h3>
+          </LeadActionsPopover>
           
           <div className="mt-1 space-y-1">
             <div className="flex items-center gap-1 text-xs text-lunar-textSecondary">
@@ -127,32 +156,24 @@ export default function LeadCard({
         </div>
 
         <div className="flex items-center gap-1 shrink-0">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-7 w-7" 
-                title="Mais opções"
-                data-no-drag="true"
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="z-[100]">
-              {statusOptions.map(opt => (
-                <DropdownMenuItem 
-                  key={opt.value} 
-                  onSelect={() => onRequestMove?.(opt.value)}
-                  disabled={opt.value === lead.status}
-                >
-                  {opt.label}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <LeadActionsPopover
+            lead={lead}
+            onEdit={onEdit}
+            onStartConversation={handleStartConversation}
+            onSendPDF={() => setShowPDFModal(true)}
+          >
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-7 w-7" 
+              title="Mais opções"
+              data-no-drag="true"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </LeadActionsPopover>
 
           {!isConverted && !isLost && (
             <Button 
@@ -178,6 +199,13 @@ export default function LeadCard({
           </Button>
         </div>
       </div>
+      
+      <SendPDFModal
+        open={showPDFModal}
+        onOpenChange={setShowPDFModal}
+        lead={lead}
+        onPDFSent={handlePDFSent}
+      />
     </li>
   );
 }
