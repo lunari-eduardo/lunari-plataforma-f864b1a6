@@ -9,6 +9,7 @@ import LeadActionsPopover from './LeadActionsPopover';
 import LeadStatusSelector from './LeadStatusSelector';
 import LeadDetailsModal from './LeadDetailsModal';
 import { useLeadStatuses } from '@/hooks/useLeadStatuses';
+import { useLeadInteractions } from '@/hooks/useLeadInteractions';
 import { toast } from 'sonner';
 interface LeadCardProps {
   lead: Lead;
@@ -42,7 +43,28 @@ export default function LeadCard({
   const {
     statuses
   } = useLeadStatuses();
+  const { addInteraction } = useLeadInteractions();
+
+  // Calcular a data da última alteração real
+  const lastUpdateIso = useMemo(() => {
+    // Prioridade: statusTimestamp > ultimaInteracao > dataCriacao
+    if (lead.statusTimestamp) return lead.statusTimestamp;
+    if (lead.ultimaInteracao) return lead.ultimaInteracao;
+    return lead.dataCriacao;
+  }, [lead.statusTimestamp, lead.ultimaInteracao, lead.dataCriacao]);
+
   const timeAgo = useMemo(() => {
+    try {
+      return formatDistanceToNow(new Date(lastUpdateIso), {
+        addSuffix: true,
+        locale: ptBR
+      });
+    } catch {
+      return 'Data inválida';
+    }
+  }, [lastUpdateIso]);
+
+  const createdAgo = useMemo(() => {
     try {
       return formatDistanceToNow(new Date(lead.dataCriacao), {
         addSuffix: true,
@@ -66,6 +88,10 @@ export default function LeadCard({
       const link = `https://wa.me/55${telefone}?text=${mensagemCodificada}`;
       window.open(link, '_blank');
       toast.success('WhatsApp aberto para conversa');
+      
+      // Registrar interação de conversa
+      addInteraction(lead.id, 'conversa', 'Conversa iniciada via WhatsApp', false);
+      
       // Move para "interessado" se ainda estiver em "novo_contato"
       if (lead.status === 'novo_contato') {
         onRequestMove?.('interessado');
@@ -120,13 +146,17 @@ export default function LeadCard({
       }} />
       </div>
 
-      {/* Última alteração + WhatsApp */}
-      <div className="flex items-center justify-between text-xs text-lunar-textSecondary">
-        <span className="text-xs font-extralight">Última alteração: {timeAgo}</span>
-        
-        <Button variant="ghost" size="icon" className="h-6 w-6 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20" onClick={handleStartConversation} title="Conversar no WhatsApp" data-no-drag="true">
-          <MessageCircle className="h-4 w-4" />
-        </Button>
+      {/* Datas + WhatsApp */}
+      <div className="space-y-1 mb-2">
+        <div className="flex items-center justify-between text-xs text-lunar-textSecondary">
+          <span className="text-xs font-extralight">Última alteração: {timeAgo}</span>
+        </div>
+        <div className="flex items-center justify-between text-xs text-lunar-textSecondary">
+          <span className="text-xs font-extralight">Criado em: {createdAgo}</span>
+          <Button variant="ghost" size="icon" className="h-6 w-6 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20" onClick={handleStartConversation} title="Conversar no WhatsApp" data-no-drag="true">
+            <MessageCircle className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       {/* Details Modal */}
