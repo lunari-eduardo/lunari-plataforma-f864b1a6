@@ -3,15 +3,33 @@ import { TrendingUp, DollarSign } from 'lucide-react';
 import { useMemo } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { formatCurrency } from '@/utils/financialUtils';
+import { useWorkflowMetrics } from '@/hooks/useWorkflowMetrics';
 
 export function ReceitaPrevistaCard() {
   const { workflowItemsAll } = useAppContext();
+  const { getMonthlyMetrics } = useWorkflowMetrics();
 
   const { valorPrevisto, valorRecebido, aReceber, percentualRecebido } = useMemo(() => {
     const now = new Date();
     const currentMonth = now.getMonth() + 1;
     const currentYear = now.getFullYear();
     
+    // Tentar obter do cache primeiro (mesma fonte do Workflow e Finanças)
+    const cachedMetrics = getMonthlyMetrics(currentYear, currentMonth);
+    
+    if (cachedMetrics) {
+      // Usar valores do cache - consistência total
+      const percentual = cachedMetrics.previsto > 0 ? (cachedMetrics.receita / cachedMetrics.previsto) * 100 : 0;
+      
+      return {
+        valorPrevisto: cachedMetrics.previsto,
+        valorRecebido: cachedMetrics.receita,
+        aReceber: cachedMetrics.aReceber,
+        percentualRecebido: percentual
+      };
+    }
+    
+    // Fallback para cálculo manual (primeira execução)
     const itemsDoMes = workflowItemsAll.filter(item => {
       if (!item.data) return false;
       const itemDate = new Date(item.data);
@@ -29,7 +47,7 @@ export function ReceitaPrevistaCard() {
       aReceber: restante,
       percentualRecebido: percentual
     };
-  }, [workflowItemsAll]);
+  }, [workflowItemsAll, getMonthlyMetrics]);
 
   return (
     <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300">
