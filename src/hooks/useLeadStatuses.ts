@@ -6,16 +6,17 @@ export interface LeadStatusDef {
   key: string; // valor salvo no lead
   name: string; // rótulo exibido
   order: number;
+  color?: string; // cor do status
   isConverted?: boolean; // identifica status de convertido
   isLost?: boolean; // identifica status de perdido
 }
 
 const DEFAULT_LEAD_STATUSES: LeadStatusDef[] = [
-  { id: 'novo_contato', key: 'novo_contato', name: 'Novo Contato', order: 1 },
-  { id: 'interessado', key: 'interessado', name: 'Interessado', order: 2 },
-  { id: 'proposta_enviada', key: 'proposta_enviada', name: 'Proposta Enviada', order: 3 },
-  { id: 'convertido', key: 'convertido', name: 'Convertido', order: 4, isConverted: true },
-  { id: 'perdido', key: 'perdido', name: 'Perdido', order: 5, isLost: true },
+  { id: 'novo_contato', key: 'novo_contato', name: 'Novo Contato', order: 1, color: '#3b82f6' }, // blue
+  { id: 'interessado', key: 'interessado', name: 'Interessado', order: 2, color: '#f59e0b' }, // amber
+  { id: 'proposta_enviada', key: 'proposta_enviada', name: 'Proposta Enviada', order: 3, color: '#8b5cf6' }, // violet
+  { id: 'convertido', key: 'convertido', name: 'Convertido', order: 4, isConverted: true, color: '#10b981' }, // emerald
+  { id: 'perdido', key: 'perdido', name: 'Perdido', order: 5, isLost: true, color: '#ef4444' }, // red
 ];
 
 export const useLeadStatuses = () => {

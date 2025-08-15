@@ -8,6 +8,7 @@ import { ptBR } from 'date-fns/locale';
 import LeadActionsPopover from './LeadActionsPopover';
 import LeadStatusSelector from './LeadStatusSelector';
 import LeadDetailsModal from './LeadDetailsModal';
+import { useLeadStatuses } from '@/hooks/useLeadStatuses';
 import { toast } from 'sonner';
 
 interface LeadCardProps {
@@ -40,6 +41,7 @@ export default function LeadCard({
 }: LeadCardProps) {
   const [isPressing, setIsPressing] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const { statuses } = useLeadStatuses();
 
   const timeAgo = useMemo(() => {
     try {
@@ -54,6 +56,11 @@ export default function LeadCard({
 
   const isConverted = lead.status === 'convertido';
   const isLost = lead.status === 'perdido';
+  
+  const statusColor = useMemo(() => {
+    const status = statuses.find(s => s.key === lead.status);
+    return status?.color || '#6b7280'; // gray fallback
+  }, [lead.status, statuses]);
 
   const handleStartConversation = () => {
     try {
@@ -75,15 +82,13 @@ export default function LeadCard({
 
   return (
     <li 
-      className={`relative overflow-hidden rounded-lg p-4 transition-all cursor-grab active:cursor-grabbing select-none touch-none transform-gpu ${
+      className={`relative overflow-hidden rounded-lg p-4 transition-all cursor-grab active:cursor-grabbing select-none touch-none transform-gpu border ${
         isDragging ? 'opacity-50 scale-95' : ''
-      } ${isPressing ? 'scale-[0.98]' : ''}`}
-      style={{
-        background: 'linear-gradient(135deg, hsl(210 20% 95%) 0%, hsl(0 0% 100%) 100%)',
-        border: '1px solid hsl(215 20% 88%)',
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
-        ...dndStyle
-      }}
+      } ${isPressing ? 'scale-[0.98]' : ''} 
+      bg-lunar-surface border-lunar-border shadow-sm
+      dark:bg-lunar-surface dark:border-lunar-border
+      `}
+      style={dndStyle}
       ref={dndRef as any}
       {...dndAttributes || {}}
       {...dndListeners || {}}
@@ -97,6 +102,12 @@ export default function LeadCard({
       onMouseUp={() => setIsPressing(false)}
       onMouseLeave={() => setIsPressing(false)}
     >
+      {/* Barra lateral colorida para identificação do status */}
+      <div 
+        className="absolute left-0 top-0 bottom-0 w-1"
+        style={{ backgroundColor: statusColor }}
+      />
+      
       {/* Layout em Grid: Nome + Menu no topo */}
       <div className="flex items-start justify-between mb-3">
         <h3 className="text-sm font-medium text-lunar-text leading-tight">
@@ -126,7 +137,12 @@ export default function LeadCard({
       {lead.origem && (
         <div className="mb-4">
           <Badge 
-            className="text-xs px-2 py-1 bg-purple-100 text-purple-700 border-purple-200"
+            className="text-xs px-2 py-1"
+            style={{ 
+              backgroundColor: `${statusColor}20`,
+              color: statusColor,
+              borderColor: `${statusColor}40`
+            }}
           >
             {lead.origem}
           </Badge>
@@ -151,7 +167,7 @@ export default function LeadCard({
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+          className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20"
           onClick={handleStartConversation}
           title="Conversar no WhatsApp"
           data-no-drag="true"

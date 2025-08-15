@@ -26,6 +26,7 @@ export interface LeadStatusDef {
   key: string; // valor salvo no lead
   name: string; // rótulo exibido
   order: number;
+  color?: string; // cor do status
   isConverted?: boolean; // identifica status de convertido
   isLost?: boolean; // identifica status de perdido
 }

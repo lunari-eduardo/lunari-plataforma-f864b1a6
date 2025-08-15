@@ -90,10 +90,19 @@ export default function LeadsKanban() {
     const { isOver, setNodeRef } = useDroppable({ id: statusKey });
     const leadsInColumn = groupedLeads[statusKey] || [];
     
+    // Buscar cor do status
+    const statusColor = statuses.find(s => s.key === statusKey)?.color || '#6b7280';
+    
     return (
       <section className="flex-1 min-w-[320px]">
         <header className="flex items-center justify-between mb-2">
-          <h2 className="text-sm font-semibold text-lunar-text">{title}</h2>
+          <div className="flex items-center gap-2">
+            <div 
+              className="w-3 h-3 rounded-full" 
+              style={{ backgroundColor: statusColor }}
+            />
+            <h2 className="text-sm font-semibold text-lunar-text">{title}</h2>
+          </div>
           <Badge variant="outline" className="text-2xs">
             {leadsInColumn.length}
           </Badge>
@@ -102,9 +111,13 @@ export default function LeadsKanban() {
         <Card
           ref={setNodeRef}
           className={cn(
-            "p-2 pb-8 bg-lunar-surface border-lunar-border/60 min-h-full",
+            "p-2 pb-8 border-lunar-border/60 min-h-full transition-colors",
             isOver ? "ring-2 ring-lunar-accent/60" : ""
           )}
+          style={{
+            backgroundColor: `${statusColor}08`, // 8% opacity do background
+            borderColor: `${statusColor}40` // 40% opacity da borda
+          }}
         >
           <ul className="space-y-2">
             {leadsInColumn.map(lead => (
