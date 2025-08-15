@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreVertical, Calendar, Phone, Mail, MessageCircle } from 'lucide-react';
+import { MoreVertical, Calendar, Phone, Mail } from 'lucide-react';
 import type { Lead } from '@/types/leads';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -104,12 +104,6 @@ export default function LeadCard({
               <span>{lead.telefone}</span>
             </div>
 
-            {lead.whatsapp && (
-              <div className="flex items-center gap-1 text-xs text-lunar-textSecondary">
-                <MessageCircle className="h-3 w-3" />
-                <span>{lead.whatsapp}</span>
-              </div>
-            )}
           </div>
 
           <div className="mt-2 flex flex-wrap items-center gap-1">

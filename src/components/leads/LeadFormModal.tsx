@@ -31,7 +31,6 @@ export default function LeadFormModal({
     nome: '',
     email: '',
     telefone: '',
-    whatsapp: '',
     origem: '',
     status: getDefaultOpenKey() || 'novo_contato',
     observacoes: '',
@@ -49,7 +48,6 @@ export default function LeadFormModal({
           nome: initial.nome,
           email: initial.email,
           telefone: initial.telefone,
-          whatsapp: initial.whatsapp || '',
           origem: initial.origem || '',
           status: initial.status,
           observacoes: initial.observacoes || '',
@@ -100,7 +98,6 @@ export default function LeadFormModal({
       nome: formData.nome.trim(),
       email: formData.email.trim(),
       telefone: formData.telefone.trim(),
-      whatsapp: formData.whatsapp.trim() || undefined,
       origem: formData.origem.trim() || undefined,
       status: formData.status,
       observacoes: formData.observacoes.trim() || undefined,
@@ -113,14 +110,16 @@ export default function LeadFormModal({
   const handleAssociateClient = (clienteId: string) => {
     const cliente = clientes.find(c => c.id === clienteId);
     if (cliente) {
+      // Buscar a origem do cliente nos origens disponíveis
+      const origemCliente = cliente.origem || '';
+      
       setFormData(prev => ({
         ...prev,
         clienteId,
         nome: cliente.nome,
         email: cliente.email || '',
-        telefone: cliente.telefone || '',
-        whatsapp: cliente.whatsapp || '',
-        origem: cliente.origem || ''
+        telefone: cliente.telefone || cliente.whatsapp || '',
+        origem: origemCliente
       }));
     }
   };
@@ -179,26 +178,16 @@ export default function LeadFormModal({
               {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-2">
-                <Label htmlFor="telefone">Telefone *</Label>
-                <Input
-                  id="telefone"
-                  value={formData.telefone}
-                  onChange={(e) => setFormData(prev => ({ ...prev, telefone: e.target.value }))}
-                  className={errors.telefone ? 'border-red-500' : ''}
-                />
-                {errors.telefone && <p className="text-sm text-red-500">{errors.telefone}</p>}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="whatsapp">WhatsApp</Label>
-                <Input
-                  id="whatsapp"
-                  value={formData.whatsapp}
-                  onChange={(e) => setFormData(prev => ({ ...prev, whatsapp: e.target.value }))}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="telefone">Telefone *</Label>
+              <Input
+                id="telefone"
+                value={formData.telefone}
+                onChange={(e) => setFormData(prev => ({ ...prev, telefone: e.target.value }))}
+                className={errors.telefone ? 'border-red-500' : ''}
+                placeholder="(11) 99999-9999"
+              />
+              {errors.telefone && <p className="text-sm text-red-500">{errors.telefone}</p>}
             </div>
 
             <div className="grid grid-cols-2 gap-2">
