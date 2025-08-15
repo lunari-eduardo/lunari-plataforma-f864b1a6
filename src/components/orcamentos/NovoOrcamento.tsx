@@ -218,6 +218,16 @@ export default function NovoOrcamento() {
       return;
     }
 
+    // Validação básica: deve ter pelo menos pacote ou produtos
+    if (!pacoteSelecionado && produtosAdicionais.length === 0) {
+      toast({
+        title: "Erro",
+        description: "Selecione pelo menos um pacote ou produto",
+        variant: "destructive"
+      });
+      return;
+    }
+
     const todosItens = [
       ...(pacoteSelecionado ? [{
         id: `pacote-${pacoteSelecionado.id}`,
