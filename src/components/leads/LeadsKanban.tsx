@@ -7,18 +7,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/components/ui/use-toast';
 import { DndContext, rectIntersection, useSensor, useSensors, PointerSensor, DragOverlay, useDroppable } from '@dnd-kit/core';
 import { restrictToFirstScrollableAncestor } from '@dnd-kit/modifiers';
+import { Settings } from 'lucide-react';
 import { useLeads } from '@/hooks/useLeads';
 import { useLeadStatuses } from '@/hooks/useLeadStatuses';
+import { useLeadInteractions } from '@/hooks/useLeadInteractions';
 import { useAppContext } from '@/contexts/AppContext';
 import LeadCard from './LeadCard';
 import LeadFormModal from './LeadFormModal';
 import DraggableLeadCard from './DraggableLeadCard';
+import FollowUpConfigModal from './FollowUpConfigModal';
 import type { Lead } from '@/types/leads';
 import { cn } from '@/lib/utils';
 
 export default function LeadsKanban() {
   const { leads, addLead, updateLead, deleteLead, convertToOrcamento } = useLeads();
   const { statuses, getConvertedKey } = useLeadStatuses();
+  const { addInteraction } = useLeadInteractions();
   const { origens } = useAppContext();
   const { toast } = useToast();
 
@@ -27,6 +31,7 @@ export default function LeadsKanban() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editLead, setEditLead] = useState<Lead | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [configModalOpen, setConfigModalOpen] = useState(false);
 
   const pointerSensor = useSensor(PointerSensor, { 
     activationConstraint: { distance: 4 } 
@@ -136,9 +141,19 @@ export default function LeadsKanban() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-lunar-text">Leads</h2>
-        <Button onClick={() => setCreateModalOpen(true)}>
-          Novo Lead
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setConfigModalOpen(true)}
+            title="Configurar Follow-up"
+          >
+            <Settings className="h-4 w-4" />
+          </Button>
+          <Button onClick={() => setCreateModalOpen(true)}>
+            Novo Lead
+          </Button>
+        </div>
       </div>
 
       {/* Filtros */}
@@ -181,7 +196,22 @@ export default function LeadsKanban() {
           if (activeId && overId) {
             const current = leads.find(lead => lead.id === activeId);
             if (current && current.status !== overId) {
+              const statusName = statuses.find(s => s.key === overId)?.name || overId;
+              const statusAnteriorName = statuses.find(s => s.key === current.status)?.name || current.status;
+              
               updateLead(activeId, { status: overId });
+              
+              // Add interaction for status change
+              addInteraction(
+                activeId,
+                'mudanca_status',
+                `Status alterado para "${statusName}"`,
+                true,
+                `Movido via Kanban`,
+                current.status,
+                overId
+              );
+              
               toast({ title: 'Lead movido' });
             }
           }
@@ -226,7 +256,17 @@ export default function LeadsKanban() {
         onOpenChange={setCreateModalOpen}
         mode="create"
         onSubmit={(data) => {
-          addLead(data);
+          const newLead = addLead(data);
+          
+          // Add creation interaction
+          addInteraction(
+            newLead.id,
+            'criacao',
+            `Lead criado com status "${statuses.find(s => s.key === data.status)?.name || data.status}"`,
+            true,
+            `Cliente criado automaticamente no CRM`
+          );
+          
           toast({ title: 'Lead criado', description: data.nome });
         }}
       />
@@ -239,10 +279,26 @@ export default function LeadsKanban() {
           initial={editLead}
           onSubmit={(data) => {
             updateLead(editLead.id, data);
+            
+            // Add edit interaction
+            addInteraction(
+              editLead.id,
+              'manual',
+              'Informações do lead atualizadas',
+              false,
+              'Editado pelo usuário'
+            );
+            
             toast({ title: 'Lead atualizado' });
           }}
         />
       )}
+
+      {/* Follow-up Config Modal */}
+      <FollowUpConfigModal
+        open={configModalOpen}
+        onOpenChange={setConfigModalOpen}
+      />
     </div>
   );
 }

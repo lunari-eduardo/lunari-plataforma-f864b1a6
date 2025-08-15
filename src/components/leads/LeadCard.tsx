@@ -1,11 +1,13 @@
 import { useState, useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MoreVertical, Calendar, Phone, Mail } from 'lucide-react';
+import { MoreVertical, Calendar, Phone, Mail, History } from 'lucide-react';
 import type { Lead } from '@/types/leads';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import LeadActionsPopover from './LeadActionsPopover';
+import LeadHistoryPanel from './LeadHistoryPanel';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 
 interface LeadCardProps {
@@ -39,6 +41,7 @@ export default function LeadCard({
   isDragging = false
 }: LeadCardProps) {
   const [isPressing, setIsPressing] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
 
   const timeAgo = useMemo(() => {
     try {
@@ -53,6 +56,7 @@ export default function LeadCard({
 
   const isConverted = lead.status === 'convertido';
   const isLost = lead.status === 'perdido';
+  const needsFollowUp = lead.needsFollowUp;
 
   const handleStartConversation = () => {
     try {
@@ -137,6 +141,12 @@ export default function LeadCard({
               </Badge>
             )}
             
+            {needsFollowUp && (
+              <Badge variant="destructive" className="text-[10px]">
+                Follow-up
+              </Badge>
+            )}
+            
             <div className="flex items-center gap-1 text-xs text-lunar-textSecondary">
               <Calendar className="h-3 w-3" />
               <span>{timeAgo}</span>
@@ -151,6 +161,17 @@ export default function LeadCard({
         </div>
 
         <div className="flex items-center gap-1 shrink-0">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-7 w-7" 
+            onClick={() => setShowHistory(true)}
+            title="Ver histórico"
+            data-no-drag="true"
+          >
+            <History className="h-4 w-4" />
+          </Button>
+
           <LeadActionsPopover
             lead={lead}
             onEdit={onEdit}
@@ -193,6 +214,16 @@ export default function LeadCard({
           </Button>
         </div>
       </div>
+
+      {/* History Modal */}
+      <Dialog open={showHistory} onOpenChange={setShowHistory}>
+        <DialogContent className="max-w-2xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Histórico - {lead.nome}</DialogTitle>
+          </DialogHeader>
+          <LeadHistoryPanel lead={lead} />
+        </DialogContent>
+      </Dialog>
     </li>
   );
 }

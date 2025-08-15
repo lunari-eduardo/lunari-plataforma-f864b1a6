@@ -40,19 +40,48 @@ export function useLeads() {
   }, []);
 
   const addLead = useCallback((input: Omit<Lead, 'id' | 'dataCriacao'>) => {
+    const now = new Date().toISOString();
     const lead: Lead = {
       ...input,
       id: `lead_${Date.now()}`,
-      dataCriacao: new Date().toISOString(),
+      dataCriacao: now,
+      interacoes: input.interacoes || [],
+      statusTimestamp: now,
     };
+
+    // Auto-create client in CRM
+    if (!lead.clienteId) {
+      const novoCliente = adicionarCliente({
+        nome: lead.nome,
+        email: lead.email,
+        telefone: lead.telefone,
+        whatsapp: lead.whatsapp || lead.telefone,
+        origem: lead.origem || ''
+      });
+      lead.clienteId = novoCliente.id;
+    }
+
     setLeads(prev => [lead, ...prev]);
     return lead;
-  }, []);
+  }, [adicionarCliente]);
 
-  const updateLead = useCallback((id: string, updates: Partial<Lead>) => {
+  const updateLead = useCallback((id: string, updates: Partial<Lead> | ((lead: Lead) => Lead)) => {
     setLeads(prev => prev.map(lead => {
       if (lead.id !== id) return lead;
-      return { ...lead, ...updates };
+      
+      if (typeof updates === 'function') {
+        return updates(lead);
+      }
+      
+      const updatedLead = { ...lead, ...updates };
+      
+      // Track status changes
+      if (updates.status && updates.status !== lead.status) {
+        updatedLead.statusTimestamp = new Date().toISOString();
+        updatedLead.needsFollowUp = false; // Reset follow-up when status changes
+      }
+      
+      return updatedLead;
     }));
   }, []);
 

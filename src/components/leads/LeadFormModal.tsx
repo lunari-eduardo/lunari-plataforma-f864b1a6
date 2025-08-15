@@ -175,7 +175,9 @@ export default function LeadFormModal({
         origem: formData.origem.trim() || undefined,
         status: formData.status,
         observacoes: formData.observacoes.trim() || undefined,
-        clienteId: formData.clienteId || undefined
+        clienteId: formData.clienteId || undefined,
+        interacoes: [],
+        whatsapp: formData.telefone.trim()
       });
 
       handleClose(false);

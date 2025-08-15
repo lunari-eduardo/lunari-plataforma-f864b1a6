@@ -13,6 +13,7 @@ import { HighPriorityDueSoonCard } from "@/components/tarefas/HighPriorityDueSoo
 import { ReceitaPrevistaCard } from "@/components/dashboard/ReceitaPrevistaCard";
 import DailyHero from "@/components/dashboard/DailyHero";
 import DailyKPIs from "@/components/dashboard/DailyKPIs";
+import FollowUpNotificationCard from "@/components/leads/FollowUpNotificationCard";
 
 import { useSalesAnalytics } from "@/hooks/useSalesAnalytics";
 
@@ -211,6 +212,11 @@ export default function Index() {
     {/* Receita Prevista do Mês */}
     <section aria-label="Receita prevista" className="animate-fade-in">
       <ReceitaPrevistaCard />
+    </section>
+
+    {/* Follow-up Notifications */}
+    <section aria-label="Follow-up de leads" className="animate-fade-in">
+      <FollowUpNotificationCard />
     </section>
 
       {/* Lembretes de Produção */}

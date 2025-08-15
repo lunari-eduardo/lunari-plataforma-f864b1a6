@@ -1,3 +1,5 @@
+import type { LeadInteraction } from './leadInteractions';
+
 export type LeadStatus = string;
 
 export interface Lead {
@@ -12,6 +14,11 @@ export interface Lead {
   dataCriacao: string; // ISO string
   clienteId?: string; // Relacionamento com Cliente CRM
   orcamentoId?: string; // Se foi convertido em orçamento
+  interacoes: LeadInteraction[];
+  ultimaInteracao?: string;
+  diasSemInteracao?: number;
+  needsFollowUp?: boolean;
+  statusTimestamp?: string; // Timestamp da última mudança de status
 }
 
 export interface LeadStatusDef {
