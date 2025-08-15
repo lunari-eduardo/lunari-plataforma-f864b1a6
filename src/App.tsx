@@ -24,6 +24,7 @@ import FeedTest from "./pages/FeedTest";
 import NotFound from "./pages/NotFound";
 import { AppProvider } from "./contexts/AppContext";
 import { useIntegration } from "./hooks/useIntegration";
+import { useAutomationEngine } from "./hooks/useAutomationEngine";
 import ThemeProvider from "./components/theme/ThemeProvider";
 
 // Create a stable QueryClient instance
@@ -48,9 +49,6 @@ function AppIntegration() {
 
 // Automation integration mounting point
 function AutomationIntegration() {
-  // Import and use the hook properly within the component
-  const { useAutomationEngine } = require('./hooks/useAutomationEngine');
-  
   try {
     useAutomationEngine();
   } catch (error) {
