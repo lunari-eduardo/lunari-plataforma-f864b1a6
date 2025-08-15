@@ -1,5 +1,15 @@
 export type LeadStatus = string;
 
+export interface LeadAction {
+  tipo: 'whatsapp_simples' | 'pdf_enviado' | 'status_alterado';
+  data: string;
+  dadosExtras?: {
+    pdfEnviado?: string;
+    statusAnterior?: string;
+    statusNovo?: string;
+  };
+}
+
 export interface Lead {
   id: string;
   nome: string;
@@ -12,6 +22,7 @@ export interface Lead {
   dataCriacao: string; // ISO string
   clienteId?: string; // Relacionamento com Cliente CRM
   orcamentoId?: string; // Se foi convertido em orçamento
+  ultimaAcao?: LeadAction; // Histórico da última ação realizada
 }
 
 export interface LeadStatusDef {
