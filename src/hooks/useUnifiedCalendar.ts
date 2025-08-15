@@ -40,8 +40,8 @@ export const useUnifiedCalendar = () => {
   const budgetEvents = useMemo(() => {
     return orcamentos
       .filter(orc => {
-        // Excluir orçamentos fechados e cancelados
-        if (orc.status === 'fechado' || orc.status === 'cancelado') {
+        // Excluir orçamentos fechados e perdidos
+        if (orc.status === 'fechado' || orc.status === 'perdido') {
           return false;
         }
         

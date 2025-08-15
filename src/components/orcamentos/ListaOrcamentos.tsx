@@ -78,9 +78,9 @@ export default function ListaOrcamentos({ selectedMonth }: ListaOrcamentosProps)
     return ordenacao === 'recentes' ? -diff : diff;
   });
 
-  // Verificar se orçamento está atrasado (follow-up há mais de 7 dias)
+  // Verificar se orçamento está atrasado (followup há mais de 7 dias)
   const isAtrasado = (orcamento: any) => {
-    if (orcamento.status !== 'follow-up') return false;
+    if (orcamento.status !== 'followup') return false;
     const dataOrc = new Date(orcamento.criadoEm + 'T00:00:00Z');
     const agora = new Date();
     const diffDias = (agora.getTime() - dataOrc.getTime()) / (1000 * 3600 * 24);
@@ -133,7 +133,7 @@ export default function ListaOrcamentos({ selectedMonth }: ListaOrcamentosProps)
         validade: orig.validade,
         pacotes: orig.pacotes,
         valorTotal: orig.valorTotal,
-        status: 'rascunho',
+        status: 'pendente',
         origemCliente: orig.origemCliente,
         packageId: orig.packageId,
         produtosIncluidos: orig.produtosIncluidos,
@@ -224,12 +224,11 @@ export default function ListaOrcamentos({ selectedMonth }: ListaOrcamentosProps)
             </SelectTrigger>
               <SelectContent>
                 <SelectItem value="todos">Todos status</SelectItem>
-                <SelectItem value="rascunho">Novo</SelectItem>
                 <SelectItem value="pendente">Pendente</SelectItem>
                 <SelectItem value="enviado">Enviado</SelectItem>
-                <SelectItem value="follow-up">Follow-up</SelectItem>
+                <SelectItem value="followup">Followup</SelectItem>
                 <SelectItem value="fechado">Fechado</SelectItem>
-                <SelectItem value="cancelado">Cancelado</SelectItem>
+                <SelectItem value="perdido">Perdido</SelectItem>
               </SelectContent>
           </Select>
 
@@ -303,12 +302,11 @@ export default function ListaOrcamentos({ selectedMonth }: ListaOrcamentosProps)
                             <StatusBadge status={orcamento.status as any} />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="rascunho">Novo</SelectItem>
                             <SelectItem value="pendente">Pendente</SelectItem>
                             <SelectItem value="enviado">Enviado</SelectItem>
-                            <SelectItem value="follow-up">Follow-up</SelectItem>
+                            <SelectItem value="followup">Followup</SelectItem>
                             <SelectItem value="fechado">Fechado</SelectItem>
-                            <SelectItem value="cancelado">Cancelado</SelectItem>
+                            <SelectItem value="perdido">Perdido</SelectItem>
                           </SelectContent>
                         </Select>
                       </TableCell>}

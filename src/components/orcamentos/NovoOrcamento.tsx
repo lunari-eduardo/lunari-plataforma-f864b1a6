@@ -197,7 +197,7 @@ export default function NovoOrcamento() {
     });
   };
 
-  const salvarOrcamento = (status: 'rascunho' | 'enviado') => {
+  const salvarOrcamento = (status: 'pendente' | 'enviado') => {
     // Se há um novo cliente preenchido mas não selecionado, criar o cliente automaticamente
     if (!clienteSelecionado && novoCliente.nome.trim() && novoCliente.email.trim() && novoCliente.whatsapp.trim()) {
       const cliente = adicionarCliente({
@@ -209,10 +209,10 @@ export default function NovoOrcamento() {
       setNovoCliente({ nome: '', email: '', whatsapp: '' });
     }
 
-    if (!clienteSelecionado || !data || !hora) {
+    if (!clienteSelecionado) {
       toast({
         title: "Erro",
-        description: "Preencha todos os campos obrigatórios (Cliente, Data e Hora)",
+        description: "Selecione ou crie um cliente",
         variant: "destructive"
       });
       return;
@@ -255,8 +255,8 @@ export default function NovoOrcamento() {
 
     adicionarOrcamento({
       cliente: clienteSelecionado,
-      data: formatDateForStorage(data), // Garantir que a data seja salva no formato correto
-      hora,
+      data: data ? formatDateForStorage(data) : '', // Data é opcional
+      hora: hora || '',
       categoria,
       descricao,
       detalhes,
@@ -285,7 +285,7 @@ export default function NovoOrcamento() {
 
     toast({
       title: "Sucesso",
-      description: `Orçamento ${status === 'rascunho' ? 'salvo' : 'enviado'} com sucesso!`
+      description: `Orçamento ${status === 'pendente' ? 'salvo' : 'enviado'} com sucesso!`
     });
 
     // Limpar formulário
@@ -366,13 +366,16 @@ export default function NovoOrcamento() {
             <CardContent className="space-y-3 pt-3 bg-lunar-surface">
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-xs font-medium mb-1 block">Data pretendida</label>
+                  <label className="text-xs font-medium mb-1 block">Data pretendida (opcional)</label>
                   <Input type="date" value={data} onChange={e => setData(e.target.value)} />
                 </div>
                 <div>
-                  <label className="text-xs font-medium mb-1 block">Hora</label>
+                  <label className="text-xs font-medium mb-1 block">Hora (opcional)</label>
                   <Input type="time" value={hora} onChange={e => setHora(e.target.value)} />
                 </div>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                * Orçamentos sem data/hora não aparecem na agenda
               </div>
               <div className="grid grid-cols-2 gap-2">
                  <div>
@@ -622,8 +625,11 @@ export default function NovoOrcamento() {
 
       {/* Ações - sempre embaixo */}
       <div className="flex gap-3 justify-end">
-        <Button onClick={() => salvarOrcamento('rascunho')}>
-          Salvar
+        <Button onClick={() => salvarOrcamento('pendente')} variant="outline">
+          Salvar Pendente
+        </Button>
+        <Button onClick={() => salvarOrcamento('enviado')}>
+          Enviar Orçamento
         </Button>
       </div>
     </div>

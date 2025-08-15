@@ -126,9 +126,9 @@ export const useIntegration = () => {
   useEffect(() => {
     if (!isReady || syncInProgressRef.current) return;
 
-    const orcamentosCancelados = orcamentos.filter(orc => orc.status === 'cancelado');
+    const orcamentosPerdidos = orcamentos.filter(orc => orc.status === 'perdido');
     
-    orcamentosCancelados.forEach(orcamento => {
+    orcamentosPerdidos.forEach(orcamento => {
       const currentTime = Date.now();
       if (!shouldSync(`delete-${orcamento.id}`, currentTime)) return;
 

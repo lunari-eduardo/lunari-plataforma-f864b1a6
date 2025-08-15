@@ -26,18 +26,18 @@ export default function MetricasOrcamento({
 
     const enviados = orcamentosMes.filter(o => o.status === 'enviado').length;
     const fechados = orcamentosMes.filter(o => o.status === 'fechado').length;
-    const cancelados = orcamentosMes.filter(o => o.status === 'cancelado').length;
+    const perdidos = orcamentosMes.filter(o => o.status === 'perdido').length;
     const pendentes = orcamentosMes.filter(o => o.status === 'pendente').length;
     
-    // Calcular taxa de conversão correta: fechados / (fechados + cancelados)
-    const totalDecididos = fechados + cancelados;
+    // Calcular taxa de conversão correta: fechados / (fechados + perdidos)
+    const totalDecididos = fechados + perdidos;
     const taxaConversao = totalDecididos > 0 ? (fechados / totalDecididos) * 100 : 0;
 
     return {
       totalMes: orcamentosMes.length,
       enviados,
       fechados,
-      cancelados,
+      perdidos,
       pendentes,
       taxaConversao
     };
@@ -82,8 +82,8 @@ export default function MetricasOrcamento({
             
             <div className="flex items-center gap-2">
               <XCircle className="h-3 w-3 text-red-600" />
-              <span className="text-xs text-lunar-textSecondary">Cancelados:</span>
-              <span className="font-semibold text-red-600">{metricas.cancelados}</span>
+              <span className="text-xs text-lunar-textSecondary">Perdidos:</span>
+              <span className="font-semibold text-red-600">{metricas.perdidos}</span>
             </div>
             
             <div className="flex items-center gap-2">

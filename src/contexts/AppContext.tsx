@@ -258,7 +258,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     totalMes: 0,
     enviados: 0,
     fechados: 0,
-    cancelados: 0,
+    perdidos: 0,
     pendentes: 0,
     taxaConversao: 0
   });
@@ -856,14 +856,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const enviados = orcamentosMes.filter(o => o.status === 'enviado').length;
     const fechados = orcamentosMes.filter(o => o.status === 'fechado').length;
-    const cancelados = orcamentosMes.filter(o => o.status === 'cancelado').length;
+    const perdidos = orcamentosMes.filter(o => o.status === 'perdido').length;
     const pendentes = orcamentosMes.filter(o => o.status === 'pendente').length;
 
     setMetricas({
       totalMes: orcamentosMes.length,
       enviados,
       fechados,
-      cancelados,
+      perdidos,
       pendentes,
       taxaConversao: enviados > 0 ? (fechados / enviados) * 100 : 0
     });
@@ -1309,7 +1309,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         // Detectar mudanças de status que afetam agendamentos
         const mudouDeFechado = statusAnterior === 'fechado' && statusAtual !== 'fechado';
         const mudouParaFechado = statusAnterior !== 'fechado' && statusAtual === 'fechado';
-        const mudouParaCancelado = statusAtual === 'cancelado';
+        const mudouParaPerdido = statusAtual === 'perdido';
         
         setAppointments(prevAppointments => {
           const agendamentoAssociado = prevAppointments.find(app => 

@@ -7,13 +7,6 @@ export interface StatusConfig {
 }
 
 export const BUDGET_STATUS_CONFIG: Record<string, StatusConfig> = {
-  rascunho: {
-    label: 'Novo',
-    color: 'hsl(var(--primary))',
-    bgColor: 'bg-primary/10',
-    textColor: 'text-primary',
-    borderColor: 'border-primary'
-  },
   pendente: {
     label: 'Pendente',
     color: 'hsl(var(--lunar-warning))',
@@ -28,8 +21,8 @@ export const BUDGET_STATUS_CONFIG: Record<string, StatusConfig> = {
     textColor: 'text-muted-foreground',
     borderColor: 'border-border'
   },
-  'follow-up': {
-    label: 'Follow-up',
+  followup: {
+    label: 'Followup',
     color: 'hsl(var(--lunar-accent))',
     bgColor: 'bg-lunar-accent/10',
     textColor: 'text-lunar-accent',
@@ -42,8 +35,8 @@ export const BUDGET_STATUS_CONFIG: Record<string, StatusConfig> = {
     textColor: 'text-lunar-success',
     borderColor: 'border-lunar-success'
   },
-  cancelado: {
-    label: 'Cancelado',
+  perdido: {
+    label: 'Perdido',
     color: 'hsl(var(--lunar-error))',
     bgColor: 'bg-lunar-error/15',
     textColor: 'text-lunar-error',
@@ -52,5 +45,5 @@ export const BUDGET_STATUS_CONFIG: Record<string, StatusConfig> = {
 };
 
 export const getBudgetStatusConfig = (status: string): StatusConfig => {
-  return BUDGET_STATUS_CONFIG[status] || BUDGET_STATUS_CONFIG.rascunho;
+  return BUDGET_STATUS_CONFIG[status] || BUDGET_STATUS_CONFIG.pendente;
 };

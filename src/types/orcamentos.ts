@@ -103,7 +103,7 @@ export interface Orcamento {
   pacotes?: PacoteProduto[]; // Manter para compatibilidade
   valorTotal?: number;
   
-  status: 'rascunho' | 'enviado' | 'fechado' | 'cancelado' | 'pendente' | 'follow-up';
+  status: 'pendente' | 'enviado' | 'followup' | 'fechado' | 'perdido';
   origemCliente: string;
   criadoEm: string;
   
@@ -117,7 +117,7 @@ export interface MetricasOrcamento {
   totalMes: number;
   enviados: number;
   fechados: number;
-  cancelados: number;
+  perdidos: number;
   pendentes: number;
   taxaConversao: number;
 }
