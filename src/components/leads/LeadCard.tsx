@@ -6,8 +6,6 @@ import type { Lead } from '@/types/leads';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import LeadActionsPopover from './LeadActionsPopover';
-import SendPDFModal from './SendPDFModal';
-import { abrirWhatsAppConversa } from '@/utils/leadWhatsappUtils';
 import { toast } from 'sonner';
 
 interface LeadCardProps {
@@ -41,7 +39,6 @@ export default function LeadCard({
   isDragging = false
 }: LeadCardProps) {
   const [isPressing, setIsPressing] = useState(false);
-  const [showPDFModal, setShowPDFModal] = useState(false);
 
   const timeAgo = useMemo(() => {
     try {
@@ -59,7 +56,12 @@ export default function LeadCard({
 
   const handleStartConversation = () => {
     try {
-      abrirWhatsAppConversa(lead);
+      const telefone = lead.telefone.replace(/\D/g, '');
+      const mensagem = `Olá ${lead.nome}! 😊\n\nVi que você demonstrou interesse em nossos serviços. Como posso ajudá-lo(a)?`;
+      const mensagemCodificada = encodeURIComponent(mensagem);
+      const link = `https://wa.me/55${telefone}?text=${mensagemCodificada}`;
+      window.open(link, '_blank');
+      
       toast.success('WhatsApp aberto para conversa');
       // Move para "interessado" se ainda estiver em "novo_contato"
       if (lead.status === 'novo_contato') {
@@ -68,12 +70,6 @@ export default function LeadCard({
     } catch (error) {
       toast.error('Erro ao abrir WhatsApp');
     }
-  };
-
-  const handlePDFSent = () => {
-    // Move para "proposta_enviada" automaticamente
-    onRequestMove?.('proposta_enviada');
-    toast.success('Status atualizado para "Proposta Enviada"');
   };
 
   return (
@@ -111,7 +107,6 @@ export default function LeadCard({
             lead={lead}
             onEdit={onEdit}
             onStartConversation={handleStartConversation}
-            onSendPDF={() => setShowPDFModal(true)}
           >
             <h3 
               className="text-sm font-medium text-lunar-text truncate cursor-pointer hover:text-lunar-accent" 
@@ -160,7 +155,6 @@ export default function LeadCard({
             lead={lead}
             onEdit={onEdit}
             onStartConversation={handleStartConversation}
-            onSendPDF={() => setShowPDFModal(true)}
           >
             <Button 
               variant="ghost" 
@@ -199,13 +193,6 @@ export default function LeadCard({
           </Button>
         </div>
       </div>
-      
-      <SendPDFModal
-        open={showPDFModal}
-        onOpenChange={setShowPDFModal}
-        lead={lead}
-        onPDFSent={handlePDFSent}
-      />
     </li>
   );
 }

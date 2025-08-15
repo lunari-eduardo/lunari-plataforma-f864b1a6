@@ -1,14 +1,13 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Edit, MessageCircle, FileText } from 'lucide-react';
+import { Edit, MessageCircle } from 'lucide-react';
 import type { Lead } from '@/types/leads';
 
 interface LeadActionsPopoverProps {
   lead: Lead;
   onEdit: () => void;
   onStartConversation: () => void;
-  onSendPDF: () => void;
   children: React.ReactNode;
 }
 
@@ -16,7 +15,6 @@ export default function LeadActionsPopover({
   lead,
   onEdit,
   onStartConversation,
-  onSendPDF,
   children
 }: LeadActionsPopoverProps) {
   const [open, setOpen] = useState(false);
@@ -51,16 +49,6 @@ export default function LeadActionsPopover({
           >
             <MessageCircle className="h-4 w-4" />
             Iniciar Conversa
-          </Button>
-          
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start gap-2 h-8"
-            onClick={() => handleAction(onSendPDF)}
-          >
-            <FileText className="h-4 w-4" />
-            Enviar Orçamento
           </Button>
         </div>
       </PopoverContent>
