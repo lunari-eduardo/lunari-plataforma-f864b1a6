@@ -41,6 +41,10 @@ export default function Sidebar() {
     icon: <FileText size={14} />,
     label: "Leads"
   }, {
+    to: "/orcamentos",
+    icon: <FileText size={14} />,
+    label: "Orçamentos"
+  }, {
     to: "/workflow",
     icon: <Workflow size={14} />,
     label: "Workflow"
