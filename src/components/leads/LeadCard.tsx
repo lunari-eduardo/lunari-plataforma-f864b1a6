@@ -228,6 +228,15 @@ export default function LeadCard({
           </div>
         )}
         
+        {/* Loss Reason Badge */}
+        {lead.status === 'perdido' && !lead.motivoPerda && (
+          <div>
+            <Badge variant="outline" className="text-2xs border-amber-400 text-amber-600 bg-amber-50 dark:bg-amber-950/20">
+              Motivo pendente
+            </Badge>
+          </div>
+        )}
+        
       </div>
 
       {/* Status Selector Centralizado */}

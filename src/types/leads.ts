@@ -20,6 +20,8 @@ export interface Lead {
   statusTimestamp?: string; // Timestamp da última mudança de status
   needsScheduling?: boolean; // Indica se precisa agendar
   scheduledAppointmentId?: string; // ID do agendamento criado
+  motivoPerda?: string; // Motivo da perda do lead
+  perdidoEm?: string; // Timestamp de quando foi perdido
 }
 
 export interface LeadStatusDef {

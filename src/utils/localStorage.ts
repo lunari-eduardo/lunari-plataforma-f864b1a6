@@ -36,6 +36,7 @@ export const STORAGE_KEYS = {
   LEADS: 'lunari_leads',
   LEAD_STATUSES: 'lunari_lead_statuses',
   LEAD_INTERACTIONS: 'lunari_lead_interactions',
+  LEAD_LOSS_REASONS: 'lunari_lead_loss_reasons',
   FOLLOW_UP_CONFIG: 'lunari_followup_config',
   FOLLOW_UP_NOTIFICATIONS: 'lunari_followup_notifications',
   AUTOMATION_FLAGS: 'lunari_automation_flags',

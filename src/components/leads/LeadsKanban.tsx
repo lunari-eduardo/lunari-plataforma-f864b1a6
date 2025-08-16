@@ -18,6 +18,7 @@ import LeadFormModal from './LeadFormModal';
 import DraggableLeadCard from './DraggableLeadCard';
 import FollowUpConfigModal from './FollowUpConfigModal';
 import LeadSchedulingModal from './LeadSchedulingModal';
+import LeadLossReasonModal from './LeadLossReasonModal';
 import type { Lead } from '@/types/leads';
 import { cn } from '@/lib/utils';
 export default function LeadsKanban() {
@@ -51,6 +52,8 @@ export default function LeadsKanban() {
   const [schedulingModalOpen, setSchedulingModalOpen] = useState(false);
   const [leadToSchedule, setLeadToSchedule] = useState<Lead | null>(null);
   const [schedulingLead, setSchedulingLead] = useState<Lead | null>(null);
+  const [lossReasonModalOpen, setLossReasonModalOpen] = useState(false);
+  const [leadForLossReason, setLeadForLossReason] = useState<Lead | null>(null);
   const pointerSensor = useSensor(PointerSensor, {
     activationConstraint: {
       distance: 4
@@ -82,7 +85,29 @@ export default function LeadsKanban() {
     const statusName = statuses.find(s => s.key === newStatus)?.name || newStatus;
     const convertedKey = getConvertedKey();
 
-    // Update lead status
+    // Check if moving to lost status
+    if (newStatus === 'perdido') {
+      // Open loss reason modal
+      setLeadForLossReason(lead);
+      setLossReasonModalOpen(true);
+      
+      // Update lead status but wait for reason
+      updateLead(lead.id, {
+        status: newStatus,
+        perdidoEm: new Date().toISOString()
+      });
+      
+      // Add interaction for status change
+      addInteraction(lead.id, 'mudanca_status', `Status alterado para "${statusName}"`, true, `Movido via Kanban`, lead.status, newStatus);
+      
+      toast({
+        title: 'Lead movido',
+        description: `${lead.nome} movido para ${statusName}`
+      });
+      return;
+    }
+
+    // Update lead status for non-lost statuses
     updateLead(lead.id, {
       status: newStatus
     });
@@ -156,6 +181,29 @@ export default function LeadsKanban() {
     setSelectedClientForScheduling(lead.clienteId);
     // Navigate to Agenda page
     navigate('/agenda');
+  };
+
+  const handleLossReasonConfirm = (leadId: string, reason: string) => {
+    updateLead(leadId, {
+      motivoPerda: reason
+    });
+    
+    const lead = leads.find(l => l.id === leadId);
+    if (lead) {
+      addInteraction(leadId, 'manual', `Motivo da perda definido: ${reason}`, false, 'Motivo selecionado pelo usuário');
+      toast({
+        title: 'Motivo Registrado',
+        description: `Motivo da perda foi registrado para ${lead.nome}`
+      });
+    }
+  };
+
+  const handleLossReasonSkip = (leadId: string) => {
+    // Lead already marked as lost, just close modal
+    const lead = leads.find(l => l.id === leadId);
+    if (lead) {
+      addInteraction(leadId, 'manual', 'Motivo da perda será definido posteriormente', false, 'Usuário optou por definir motivo mais tarde');
+    }
   };
   const handleMarkAsScheduled = (leadId: string) => {
     updateLead(leadId, {
@@ -344,5 +392,19 @@ export default function LeadsKanban() {
         setSchedulingLead(null);
       }
     }} />}
+
+      {/* Lead Loss Reason Modal */}
+      <LeadLossReasonModal
+        open={lossReasonModalOpen}
+        onOpenChange={(open) => {
+          setLossReasonModalOpen(open);
+          if (!open) {
+            setLeadForLossReason(null);
+          }
+        }}
+        lead={leadForLossReason}
+        onConfirm={handleLossReasonConfirm}
+        onSkip={handleLossReasonSkip}
+      />
     </div>;
 }

@@ -6,6 +6,7 @@ import { TrendingUp, Target, Download } from 'lucide-react';
 import { SalesMetricsCards } from '@/components/analise-vendas/SalesMetricsCards';
 import { SalesChartsGrid } from '@/components/analise-vendas/SalesChartsGrid';
 import { SalesFilterBar } from '@/components/analise-vendas/SalesFilterBar';
+import { LeadLossReasonsChart } from '@/components/analise-vendas/LeadLossReasonsChart';
 import { useSalesAnalytics } from '@/hooks/useSalesAnalytics';
 
 export default function AnaliseVendas() {
@@ -64,6 +65,9 @@ export default function AnaliseVendas() {
         monthlyOriginData={monthlyOriginData}
         selectedCategory={selectedCategory}
       />
+
+      {/* Lead Loss Reasons Chart */}
+      <LeadLossReasonsChart />
 
       {/* Additional Insights */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
