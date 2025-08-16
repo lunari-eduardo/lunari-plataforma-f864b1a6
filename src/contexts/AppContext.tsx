@@ -14,6 +14,7 @@ import { Projeto, CriarProjetoInput } from '@/types/projeto';
 import { ProjetoService } from '@/services/ProjetoService';
 import { corrigirClienteIdSessoes, corrigirClienteIdAgendamentos } from '@/utils/corrigirClienteIdSessoes';
 import { generateSessionId } from '@/utils/workflowSessionsAdapter';
+import { syncLeadsWithClientUpdate } from '@/utils/leadClientSync';
 
 // Types
 import { Orcamento, Template, OrigemCliente, MetricasOrcamento, Cliente } from '@/types/orcamentos';
@@ -1612,12 +1613,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     
     // Sincronizar com leads
-    try {
-      const { syncLeadsWithClientUpdate } = require('@/utils/leadClientSync');
-      syncLeadsWithClientUpdate(id, dadosAtualizados);
-    } catch (error) {
-      console.error('❌ Erro ao sincronizar leads:', error);
-    }
+    syncLeadsWithClientUpdate(id, dadosAtualizados);
     
     // Dispatch global client update event
     window.dispatchEvent(new CustomEvent('clients:updated', {
