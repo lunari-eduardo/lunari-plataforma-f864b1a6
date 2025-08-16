@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon } from 'lucide-react';
+
 import { 
   SelectModal as Select, 
   SelectModalContent as SelectContent, 
@@ -15,6 +15,7 @@ import {
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useTaskPeople } from '@/hooks/useTaskPeople';
 import { useTaskTags } from '@/hooks/useTaskTags';
+import { formatDateForInput, formatDateForStorage } from '@/utils/dateUtils';
 import type { Task, TaskPriority, TaskStatus } from '@/types/tasks';
 
 interface TaskFormModalProps {
@@ -28,7 +29,7 @@ interface TaskFormModalProps {
 export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, mode = 'create' }: TaskFormModalProps) {
   const [title, setTitle] = useState(initial?.title ?? '');
   const [description, setDescription] = useState(initial?.description ?? '');
-  const [dueDate, setDueDate] = useState<string>(() => initial?.dueDate ? initial.dueDate.slice(0, 10) : '');
+  const [dueDate, setDueDate] = useState<string>(() => initial?.dueDate ? formatDateForInput(initial.dueDate) : '');
   const [priority, setPriority] = useState<TaskPriority>(initial?.priority ?? 'medium');
   const [status, setStatus] = useState<TaskStatus>(initial?.status ?? 'todo');
   const [assigneeName, setAssigneeName] = useState<string>(initial?.assigneeName ?? '');
@@ -41,7 +42,7 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
     if (open) {
       setTitle(initial?.title ?? '');
       setDescription(initial?.description ?? '');
-      setDueDate(initial?.dueDate ? initial.dueDate.slice(0, 10) : '');
+      setDueDate(initial?.dueDate ? formatDateForInput(initial.dueDate) : '');
       setPriority(initial?.priority ?? 'medium');
       setStatus(initial?.status ?? 'todo');
       setAssigneeName(initial?.assigneeName ?? '');
@@ -138,16 +139,12 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="due">Prazo</Label>
-              <div className="relative">
-                <Input 
-                  id="due" 
-                  type="date" 
-                  value={dueDate} 
-                  onChange={e => setDueDate(e.target.value)}
-                  className="pr-10"
-                />
-                <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-lunar-textSecondary pointer-events-none" />
-              </div>
+              <Input 
+                id="due" 
+                type="date" 
+                value={dueDate} 
+                onChange={e => setDueDate(e.target.value)}
+              />
             </div>
             <div className="space-y-1.5">
               <Label>Prioridade</Label>
