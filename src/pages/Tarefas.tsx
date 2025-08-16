@@ -19,6 +19,7 @@ import ChecklistPanel from '@/components/tarefas/ChecklistPanel';
 import { DndContext, rectIntersection, useSensor, useSensors, PointerSensor, DragOverlay, useDroppable, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core';
 import { restrictToFirstScrollableAncestor } from '@dnd-kit/modifiers';
 import DraggableTaskCard from '@/components/tarefas/dnd/DraggableTaskCard';
+import { formatDateForDisplay } from '@/utils/dateUtils';
 function groupByStatus(tasks: Task[]) {
   return tasks.reduce<Record<TaskStatus, Task[]>>((acc, t) => {
     (acc[t.status] ||= []).push(t);
@@ -165,7 +166,7 @@ const sensors = useSensors(pointerSensor);
                   {t.dueDate && (
                     <>
                       <Separator orientation="vertical" className="h-3" />
-                      <span className="text-2xs">Prazo: {new Date(t.dueDate).toLocaleDateString('pt-BR')}</span>
+                      <span className="text-2xs">Prazo: {formatDateForDisplay(t.dueDate)}</span>
                       {(() => {
                         const d = daysUntil(t.dueDate);
                         if (d === undefined) return null;

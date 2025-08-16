@@ -87,7 +87,7 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const dueIso = dueDate ? new Date(`${dueDate}T23:59:59`).toISOString() : undefined;
+    const dueIso = dueDate ? formatDateForStorage(dueDate) : undefined;
     onSubmit({
       title: title.trim(),
       description: description.trim() || undefined,
