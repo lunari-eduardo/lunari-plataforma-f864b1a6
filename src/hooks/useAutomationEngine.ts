@@ -3,7 +3,7 @@ import { toast } from '@/hooks/use-toast';
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
 import { useTasks } from '@/hooks/useTasks';
 import { useUserPreferences } from '@/hooks/useUserProfile';
-import { useOrcamentos } from '@/hooks/useOrcamentos';
+// import { useOrcamentos } from '@/hooks/useOrcamentos'; // Removed - budgets decoupled
 import { useAgenda } from '@/hooks/useAgenda';
 
 function diffInDays(a: Date, b: Date) {
@@ -14,7 +14,7 @@ function diffInDays(a: Date, b: Date) {
 export function useAutomationEngine() {
   const { addTask } = useTasks();
   const { preferences, getPreferencesOrDefault } = useUserPreferences();
-  const { orcamentos } = useOrcamentos();
+  const orcamentos: any[] = []; // Empty - budgets removed
   const { appointments } = useAgenda();
   const timerRef = useRef<number | null>(null);
 

@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Cliente } from '@/types/orcamentos';
+import { Cliente } from '@/types/cliente';
 import { getSimplifiedClientMetrics, autoFixIfNeeded, SimplifiedMetrics } from '@/utils/crmDataFix';
 
 export interface ClientMetrics {

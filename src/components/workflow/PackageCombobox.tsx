@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { useOrcamentoData } from "@/hooks/useOrcamentoData";
+import { usePacotesProdutos } from '@/hooks/usePacotesProdutos';
 interface PackageComboboxProps {
   value?: string;
   onValueChange: (packageData: {
@@ -21,7 +21,7 @@ export function PackageCombobox({
   disabled = false
 }: PackageComboboxProps) {
   const [open, setOpen] = useState(false);
-  const { pacotes } = useOrcamentoData();
+  const { pacotes } = usePacotesProdutos();
   
   const selectedPackage = pacotes.find(pkg => pkg.nome === value);
   return <Popover open={open} onOpenChange={setOpen}>
@@ -50,7 +50,7 @@ export function PackageCombobox({
                 onValueChange({
                   nome: pkg.nome,
                   valor: `R$ ${(pkg.valor || 0).toFixed(2).replace('.', ',')}`,
-                  valorFotoExtra: `R$ ${(pkg.valorFotoExtra || 35).toFixed(2).replace('.', ',')}`,
+                  valorFotoExtra: `R$ ${(pkg.valor_foto_extra || 35).toFixed(2).replace('.', ',')}`,
                   categoria: pkg.categoria
                 });
               }

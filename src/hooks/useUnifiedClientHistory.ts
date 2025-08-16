@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Cliente, Orcamento } from '@/types/orcamentos';
+import { Cliente } from '@/types/cliente';
 import { WorkflowItem } from '@/contexts/AppContext';
 import { Appointment } from '@/hooks/useAgenda';
 import { generateSessionId } from '@/utils/workflowSessionsAdapter';
@@ -45,7 +45,7 @@ export interface UnifiedHistoryItem {
   
   // Dados completos para drill-down
   dadosCompletos: {
-    orcamento?: Orcamento;
+    orcamento?: any; // Budget type removed
     agendamento?: Appointment;
     workflow?: WorkflowItem;
   };
@@ -62,7 +62,7 @@ export interface UnifiedHistoryItem {
 
 export function useUnifiedClientHistory(
   cliente: Cliente,
-  orcamentos: Orcamento[],
+  orcamentos: any[], // Budget type removed
   agendamentos: Appointment[],
   workflowItems: WorkflowItem[]
 ): UnifiedHistoryItem[] {

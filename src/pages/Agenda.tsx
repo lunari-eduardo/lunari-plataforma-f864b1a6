@@ -13,21 +13,20 @@ import AnnualView from "@/components/agenda/AnnualView";
 import AppointmentForm from "@/components/agenda/AppointmentForm";
 import AppointmentDetails from "@/components/agenda/AppointmentDetails";
 import ActionChoiceModal from "@/components/agenda/ActionChoiceModal";
-import EditOrcamentoModal from "@/components/orcamentos/EditOrcamentoModal";
+// import EditOrcamentoModal from "@/components/orcamentos/EditOrcamentoModal"; // Removed - budgets decoupled
 import BudgetAppointmentDetails from "@/components/agenda/BudgetAppointmentDetails";
 import AvailabilityConfigModal from "@/components/agenda/AvailabilityConfigModal";
-import { useUnifiedCalendar, UnifiedEvent } from "@/hooks/useUnifiedCalendar";
+// import { useUnifiedCalendar, UnifiedEvent } from "@/hooks/useUnifiedCalendar"; // Removed - budgets decoupled
 import { useAgenda, Appointment } from "@/hooks/useAgenda";
 import { useIntegration } from "@/hooks/useIntegration";
-import { useOrcamentos } from "@/hooks/useOrcamentos";
-import { Orcamento } from "@/types/orcamentos";
+// import { useOrcamentos } from "@/hooks/useOrcamentos"; // Removed - budgets decoupled
+// import { Orcamento } from "@/types/orcamentos"; // Removed - budgets decoupled
 type ViewType = 'month' | 'week' | 'day' | 'year';
 export default function Agenda() {
-  const {
-    unifiedEvents,
-    getEventForSlot,
-    appointments
-  } = useUnifiedCalendar();
+  // DISABLED: Budget integration removed
+  const appointments = []; // Stub - will be replaced with proper agenda hook
+  const unifiedEvents: any[] = []; // Stub - will be replaced with proper calendar hook
+  const getEventForSlot = () => null; // Stub
   const {
     addAppointment,
     updateAppointment,
@@ -38,9 +37,8 @@ export default function Agenda() {
     getBudgetId,
     canEditFully
   } = useIntegration();
-  const {
-    orcamentos
-  } = useOrcamentos();
+  // DISABLED: Budget integration removed - all stubs
+  const orcamentos: any[] = []; // Stub
 
   // View and navigation state
   const [view, setView] = useState<ViewType>(() => {
@@ -64,10 +62,10 @@ export default function Agenda() {
   } | null>(null);
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
   const [viewingAppointment, setViewingAppointment] = useState<Appointment | null>(null);
-  const [selectedBudget, setSelectedBudget] = useState<Orcamento | null>(null);
+  const [selectedBudget, setSelectedBudget] = useState<any | null>(null); // Budget type removed
   const [selectedBudgetAppointment, setSelectedBudgetAppointment] = useState<{
     appointment: Appointment;
-    budget: Orcamento | null;
+    budget: any | null; // Budget type removed
   } | null>(null);
 
   // Save view preference
@@ -155,7 +153,7 @@ export default function Agenda() {
   };
 
   // Handle event click (existing appointment or budget)
-  const handleEventClick = (event: UnifiedEvent) => {
+  const handleEventClick = (event: any) => { // UnifiedEvent type removed
     if (event.type === 'appointment') {
       const appointment = event.originalData as Appointment;
       if (isFromBudget(appointment)) {
@@ -182,7 +180,7 @@ export default function Agenda() {
         setIsDetailsOpen(true);
       }
     } else if (event.type === 'budget') {
-      const budget = event.originalData as Orcamento;
+      const budget = event.originalData as any; // Budget type removed
       setSelectedBudget(budget);
       setIsBudgetModalOpen(true);
     }
@@ -344,7 +342,7 @@ export default function Agenda() {
       </Dialog>
 
       {/* Budget Edit Modal */}
-      <EditOrcamentoModal isOpen={isBudgetModalOpen} onClose={() => setIsBudgetModalOpen(false)} orcamento={selectedBudget} />
+      {/* Budget Edit Modal - DISABLED */}
 
       {/* Availability Config Modal */}
       <AvailabilityConfigModal

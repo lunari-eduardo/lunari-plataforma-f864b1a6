@@ -1,6 +1,6 @@
 
 import { useEffect, useCallback, useRef, useState } from 'react';
-import { useOrcamentos } from './useOrcamentos';
+// import { useOrcamentos } from './useOrcamentos'; // Removed - budgets decoupled
 import { useAgenda, Appointment } from './useAgenda';
 import { toast } from '@/hooks/use-toast';
 import { parseDateFromStorage, formatDateForStorage } from '@/utils/dateUtils';
@@ -9,12 +9,13 @@ export const useIntegration = () => {
   // Defensive hook initialization to prevent conditional calls
   const [isReady, setIsReady] = useState(false);
   
-  // SEMPRE chamar os hooks no mesmo lugar (regra dos hooks do React)
-  const orcamentosHook = useOrcamentos();
+  // DISABLED: Budget integration removed
+  // const orcamentosHook = useOrcamentos();
   const agendaHook = useAgenda();
   
-  // Extract with null checks
-  const { orcamentos = [], atualizarOrcamento } = orcamentosHook || {};
+  // Extract with null checks  
+  const orcamentos: any[] = []; // Empty - budgets removed
+  const atualizarOrcamento = () => {}; // Stub - budgets removed
   const { appointments = [], addAppointment, updateAppointment, deleteAppointment } = agendaHook || {};
   
   // Controle de sincronização para evitar loops infinitos
