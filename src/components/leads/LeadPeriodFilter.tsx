@@ -1,111 +1,56 @@
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { CalendarDays, Clock } from 'lucide-react';
+import { Calendar } from 'lucide-react';
+import type { PeriodType } from '@/hooks/useLeadMetrics';
 
 export interface PeriodFilterProps {
-  selectedMonth?: number;
-  selectedYear?: number;
-  dateType: 'criacao' | 'atualizacao';
-  onMonthChange: (month?: number) => void;
-  onYearChange: (year?: number) => void;
-  onDateTypeChange: (type: 'criacao' | 'atualizacao') => void;
+  periodType: PeriodType;
+  onPeriodChange: (periodType: PeriodType) => void;
 }
 
-const MONTHS = [
-  { value: 1, label: 'Janeiro' },
-  { value: 2, label: 'Fevereiro' },
-  { value: 3, label: 'Março' },
-  { value: 4, label: 'Abril' },
-  { value: 5, label: 'Maio' },
-  { value: 6, label: 'Junho' },
-  { value: 7, label: 'Julho' },
-  { value: 8, label: 'Agosto' },
-  { value: 9, label: 'Setembro' },
-  { value: 10, label: 'Outubro' },
-  { value: 11, label: 'Novembro' },
-  { value: 12, label: 'Dezembro' }
+const PERIOD_OPTIONS = [
+  { value: 'current_year' as PeriodType, label: 'Todos (Ano Atual)' },
+  { value: 'january_2025' as PeriodType, label: 'Janeiro 2025' },
+  { value: 'february_2025' as PeriodType, label: 'Fevereiro 2025' },
+  { value: 'march_2025' as PeriodType, label: 'Março 2025' },
+  { value: 'april_2025' as PeriodType, label: 'Abril 2025' },
+  { value: 'may_2025' as PeriodType, label: 'Maio 2025' },
+  { value: 'june_2025' as PeriodType, label: 'Junho 2025' },
+  { value: 'july_2025' as PeriodType, label: 'Julho 2025' },
+  { value: 'august_2025' as PeriodType, label: 'Agosto 2025' },
+  { value: 'september_2025' as PeriodType, label: 'Setembro 2025' },
+  { value: 'october_2025' as PeriodType, label: 'Outubro 2025' },
+  { value: 'november_2025' as PeriodType, label: 'Novembro 2025' },
+  { value: 'december_2025' as PeriodType, label: 'Dezembro 2025' },
+  { value: 'previous_year' as PeriodType, label: 'Ano Anterior' },
+  { value: 'all_time' as PeriodType, label: 'Todos (Histórico Completo)' }
 ];
 
-// Gerar anos (2023-2030)
-const YEARS = Array.from({ length: 8 }, (_, i) => 2023 + i);
-
 export default function LeadPeriodFilter({
-  selectedMonth,
-  selectedYear,
-  dateType,
-  onMonthChange,
-  onYearChange,
-  onDateTypeChange
+  periodType,
+  onPeriodChange
 }: PeriodFilterProps) {
   return (
     <Card className="p-3 bg-lunar-surface border-lunar-border/60">
-      <div className="flex flex-wrap gap-4 items-center">
-        {/* Seletor de Período */}
-        <div className="flex items-center gap-2">
-          <Label className="text-xs font-medium text-lunar-text whitespace-nowrap">
-            Período:
-          </Label>
-          
-          <Select 
-            value={selectedMonth?.toString() || 'all'} 
-            onValueChange={(value) => onMonthChange(value === 'all' ? undefined : parseInt(value))}
-          >
-            <SelectTrigger className="w-[120px] text-xs">
-              <SelectValue placeholder="Mês" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              {MONTHS.map(month => (
-                <SelectItem key={month.value} value={month.value.toString()}>
-                  {month.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select 
-            value={selectedYear?.toString() || 'all'} 
-            onValueChange={(value) => onYearChange(value === 'all' ? undefined : parseInt(value))}
-          >
-            <SelectTrigger className="w-[80px] text-xs">
-              <SelectValue placeholder="Ano" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              {YEARS.map(year => (
-                <SelectItem key={year} value={year.toString()}>
-                  {year}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Toggle Tipo de Data */}
-        <div className="flex items-center gap-2">
-          <Label className="text-xs font-medium text-lunar-text whitespace-nowrap">
-            Filtrar por:
-          </Label>
-          
-          <div className="flex items-center gap-2">
-            <CalendarDays className="h-3 w-3 text-lunar-textSecondary" />
-            <Label htmlFor="date-type-toggle" className="text-xs text-lunar-textSecondary">
-              Criação
-            </Label>
-            <Switch
-              id="date-type-toggle"
-              checked={dateType === 'atualizacao'}
-              onCheckedChange={(checked) => onDateTypeChange(checked ? 'atualizacao' : 'criacao')}
-              className="scale-75"
-            />
-            <Label htmlFor="date-type-toggle" className="text-xs text-lunar-textSecondary">
-              Atualização
-            </Label>
-            <Clock className="h-3 w-3 text-lunar-textSecondary" />
-          </div>
-        </div>
+      <div className="flex items-center gap-2">
+        <Calendar className="h-4 w-4 text-lunar-textSecondary" />
+        <Label className="text-sm font-medium text-lunar-text whitespace-nowrap">
+          Período:
+        </Label>
+        
+        <Select value={periodType} onValueChange={onPeriodChange}>
+          <SelectTrigger className="w-[200px] text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {PERIOD_OPTIONS.map(option => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
     </Card>
   );

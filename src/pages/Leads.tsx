@@ -2,23 +2,15 @@ import { useState } from 'react';
 import LeadsKanban from '@/components/leads/LeadsKanban';
 import LeadMetricsCards from '@/components/leads/LeadMetricsCards';
 import LeadPeriodFilter from '@/components/leads/LeadPeriodFilter';
-import type { PeriodFilter } from '@/hooks/useLeadMetrics';
+import type { PeriodFilter, PeriodType } from '@/hooks/useLeadMetrics';
 
 export default function Leads() {
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>({
-    dateType: 'criacao'
+    periodType: 'current_year'
   });
 
-  const handleMonthChange = (month?: number) => {
-    setPeriodFilter(prev => ({ ...prev, month }));
-  };
-
-  const handleYearChange = (year?: number) => {
-    setPeriodFilter(prev => ({ ...prev, year }));
-  };
-
-  const handleDateTypeChange = (dateType: 'criacao' | 'atualizacao') => {
-    setPeriodFilter(prev => ({ ...prev, dateType }));
+  const handlePeriodChange = (periodType: PeriodType) => {
+    setPeriodFilter({ periodType });
   };
 
   return (
@@ -30,12 +22,8 @@ export default function Leads() {
         
         {/* Filtro de Período */}
         <LeadPeriodFilter
-          selectedMonth={periodFilter.month}
-          selectedYear={periodFilter.year}
-          dateType={periodFilter.dateType}
-          onMonthChange={handleMonthChange}
-          onYearChange={handleYearChange}
-          onDateTypeChange={handleDateTypeChange}
+          periodType={periodFilter.periodType}
+          onPeriodChange={handlePeriodChange}
         />
       </div>
 

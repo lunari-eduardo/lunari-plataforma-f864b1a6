@@ -81,16 +81,46 @@ export default function LeadsKanban({ periodFilter }: LeadsKanbanProps) {
       
       // Apply period filter if provided
       let matchesPeriod = true;
-      if (periodFilter?.month && periodFilter?.year) {
-        const dateToCheck = periodFilter.dateType === 'criacao' 
-          ? lead.dataCriacao 
-          : lead.dataAtualizacao || lead.dataCriacao;
+      if (periodFilter) {
+        const convertPeriodTypeToFilter = (periodType: string) => {
+          const currentYear = new Date().getFullYear();
+          
+          switch (periodType) {
+            case 'current_year':
+              return { year: currentYear, month: undefined };
+            case 'january_2025': return { year: 2025, month: 1 };
+            case 'february_2025': return { year: 2025, month: 2 };
+            case 'march_2025': return { year: 2025, month: 3 };
+            case 'april_2025': return { year: 2025, month: 4 };
+            case 'may_2025': return { year: 2025, month: 5 };
+            case 'june_2025': return { year: 2025, month: 6 };
+            case 'july_2025': return { year: 2025, month: 7 };
+            case 'august_2025': return { year: 2025, month: 8 };
+            case 'september_2025': return { year: 2025, month: 9 };
+            case 'october_2025': return { year: 2025, month: 10 };
+            case 'november_2025': return { year: 2025, month: 11 };
+            case 'december_2025': return { year: 2025, month: 12 };
+            case 'previous_year':
+              return { year: currentYear - 1, month: undefined };
+            case 'all_time':
+            default:
+              return { year: undefined, month: undefined };
+          }
+        };
+
+        const { year, month } = convertPeriodTypeToFilter(periodFilter.periodType);
         
-        const date = new Date(dateToCheck);
-        const leadMonth = date.getMonth() + 1;
-        const leadYear = date.getFullYear();
-        
-        matchesPeriod = leadMonth === periodFilter.month && leadYear === periodFilter.year;
+        if (year || month) {
+          const date = new Date(lead.dataCriacao);
+          const leadMonth = date.getMonth() + 1;
+          const leadYear = date.getFullYear();
+          
+          if (year && month) {
+            matchesPeriod = leadMonth === month && leadYear === year;
+          } else if (year) {
+            matchesPeriod = leadYear === year;
+          }
+        }
       }
       
       return matchesSearch && matchesOrigem && matchesPeriod;

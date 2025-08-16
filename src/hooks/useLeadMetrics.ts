@@ -12,31 +12,75 @@ export interface LeadMetrics {
   topMotivoPerda: string | null;
 }
 
+export type PeriodType = 
+  | 'current_year'
+  | 'january_2025' | 'february_2025' | 'march_2025' | 'april_2025'
+  | 'may_2025' | 'june_2025' | 'july_2025' | 'august_2025'
+  | 'september_2025' | 'october_2025' | 'november_2025' | 'december_2025'
+  | 'previous_year'
+  | 'all_time';
+
 export interface PeriodFilter {
-  month?: number; // 1-12
-  year?: number;
-  dateType: 'criacao' | 'atualizacao';
+  periodType: PeriodType;
 }
+
+const convertPeriodTypeToFilter = (periodType: PeriodType) => {
+  const currentYear = new Date().getFullYear();
+  
+  switch (periodType) {
+    case 'current_year':
+      return { year: currentYear, month: undefined };
+    case 'january_2025': return { year: 2025, month: 1 };
+    case 'february_2025': return { year: 2025, month: 2 };
+    case 'march_2025': return { year: 2025, month: 3 };
+    case 'april_2025': return { year: 2025, month: 4 };
+    case 'may_2025': return { year: 2025, month: 5 };
+    case 'june_2025': return { year: 2025, month: 6 };
+    case 'july_2025': return { year: 2025, month: 7 };
+    case 'august_2025': return { year: 2025, month: 8 };
+    case 'september_2025': return { year: 2025, month: 9 };
+    case 'october_2025': return { year: 2025, month: 10 };
+    case 'november_2025': return { year: 2025, month: 11 };
+    case 'december_2025': return { year: 2025, month: 12 };
+    case 'previous_year':
+      return { year: currentYear - 1, month: undefined };
+    case 'all_time':
+    default:
+      return { year: undefined, month: undefined };
+  }
+};
 
 export function useLeadMetrics(periodFilter?: PeriodFilter) {
   const { leads } = useLeads();
   const lossReasons = getLossReasons();
 
   const filteredLeads = useMemo(() => {
-    if (!periodFilter?.month || !periodFilter?.year) {
-      return leads;
+    if (!periodFilter) {
+      // Default to current year
+      const currentYear = new Date().getFullYear();
+      return leads.filter(lead => {
+        const date = new Date(lead.dataCriacao);
+        return date.getFullYear() === currentYear;
+      });
+    }
+
+    const { year, month } = convertPeriodTypeToFilter(periodFilter.periodType);
+    
+    if (!year && !month) {
+      return leads; // all_time
     }
 
     return leads.filter(lead => {
-      const dateToCheck = periodFilter.dateType === 'criacao' 
-        ? lead.dataCriacao 
-        : lead.dataAtualizacao || lead.dataCriacao;
-      
-      const date = new Date(dateToCheck);
-      const leadMonth = date.getMonth() + 1; // getMonth() retorna 0-11
+      const date = new Date(lead.dataCriacao);
+      const leadMonth = date.getMonth() + 1;
       const leadYear = date.getFullYear();
       
-      return leadMonth === periodFilter.month && leadYear === periodFilter.year;
+      if (year && month) {
+        return leadMonth === month && leadYear === year;
+      } else if (year) {
+        return leadYear === year;
+      }
+      return true;
     });
   }, [leads, periodFilter]);
 
