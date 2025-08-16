@@ -109,13 +109,14 @@ export default function ActionChoiceModal({
             </div>
           </Button>
 
-          <Button onClick={handleCreateBudget} className="flex items-center gap-2 h-12 justify-start" variant="outline">
+          {/* Temporariamente desabilitado - Orçamentos */}
+          {/* <Button onClick={handleCreateBudget} className="flex items-center gap-2 h-12 justify-start" variant="outline">
             <DollarSign className="h-5 w-5 text-primary" />
             <div className="text-left">
               <div className="font-medium">Novo Orçamento</div>
               <div className="text-xs text-muted-foreground">Cria um orçamento com esse horário</div>
             </div>
-          </Button>
+          </Button> */}
         </div>
       </DialogContent>
     </Dialog>;

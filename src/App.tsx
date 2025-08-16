@@ -119,7 +119,7 @@ function App() {
                   <Route path="/clientes" element={<Clientes />} />
                   <Route path="/clientes/:id" element={<ClienteDetalhe />} />
                   <Route path="/leads" element={<Leads />} />
-                  <Route path="/orcamentos" element={<Orcamentos />} />
+                  {/* <Route path="/orcamentos" element={<Orcamentos />} /> */}
                   <Route path="/financas" element={<NovaFinancas />} />
                   <Route path="/precificacao" element={<Precificacao />} />
                   <Route path="/workflow" element={<Workflow />} />

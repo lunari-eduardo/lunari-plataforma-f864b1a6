@@ -74,7 +74,8 @@ export default function LeadActionButtons({ lead }: LeadActionButtonsProps) {
 
   return (
     <div className="flex gap-1 mt-2">
-      <Button
+      {/* Temporariamente desabilitado - Orçamentos */}
+      {/* <Button
         size="sm"
         variant="outline"
         className="h-7 px-2 text-xs"
@@ -82,7 +83,7 @@ export default function LeadActionButtons({ lead }: LeadActionButtonsProps) {
       >
         <MessageCircle className="h-3 w-3 mr-1" />
         Enviar Orçamento
-      </Button>
+      </Button> */}
     </div>
   );
 }

@@ -40,11 +40,11 @@ export default function Sidebar() {
     to: "/leads",
     icon: <FileText size={14} />,
     label: "Leads"
-  }, {
+  }, /* {
     to: "/orcamentos",
     icon: <FileText size={14} />,
     label: "Orçamentos"
-  }, {
+  }, */ {
     to: "/workflow",
     icon: <Workflow size={14} />,
     label: "Workflow"
