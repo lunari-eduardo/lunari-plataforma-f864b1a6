@@ -60,16 +60,29 @@ export default function ListaOrcamentos({ selectedMonth }: ListaOrcamentosProps)
     const origemMatch = !filtros.origem || filtros.origem === 'todas' || orc.origemCliente === filtros.origem;
     
     // Aplicar filtro de mês automaticamente baseado no selectedMonth
-    const mesMatch = isSameMonthYear(orc.data, selectedMonth.toISOString().split('T')[0]);
+    // Incluir orçamentos sem data válida (rascunhos) se forem do mês atual
+    const dataOrcamento = orc.data ? orc.data : '';
+    const mesMatch = dataOrcamento ? isSameMonthYear(dataOrcamento, selectedMonth.toISOString().split('T')[0]) : true;
     
     return nomeMatch && categoriaMatch && statusMatch && mesMatch && origemMatch;
   });
 
   // Ordenar por data/hora (mais próximos primeiro)
   const orcamentosOrdenados = orcamentosFiltrados.sort((a, b) => {
+    // Tratar rascunhos (sem hora) - colocar no final
+    const isRascunhoA = !a.hora || a.hora === '';
+    const isRascunhoB = !b.hora || b.hora === '';
+    
+    if (isRascunhoA && !isRascunhoB) return 1; // Rascunho vai para o final
+    if (!isRascunhoA && isRascunhoB) return -1; // Normal vem primeiro
+    if (isRascunhoA && isRascunhoB) {
+      // Ambos são rascunhos, ordenar por nome do cliente
+      return a.cliente.nome.localeCompare(b.cliente.nome);
+    }
+    
+    // Ambos têm data/hora, usar ordenação normal
     const dataA = parseDateFromStorage(a.data);
     const dataB = parseDateFromStorage(b.data);
-    // Adicionar hora para comparação
     const [horaA, minA] = a.hora.split(':').map(Number);
     const [horaB, minB] = b.hora.split(':').map(Number);
     dataA.setHours(horaA, minA || 0, 0, 0);
@@ -296,10 +309,10 @@ export default function ListaOrcamentos({ selectedMonth }: ListaOrcamentosProps)
                         </span>
                       </TableCell>}
                     
-                    {colunasVisiveis.status && <TableCell>
+                     {colunasVisiveis.status && <TableCell>
                         <Select value={orcamento.status} onValueChange={value => atualizarStatus(orcamento.id, value)}>
                           <SelectTrigger className="w-auto border-none p-0 h-auto">
-                            <StatusBadge status={orcamento.status as any} />
+                            <StatusBadge status={orcamento.status as any} isRascunho={!orcamento.hora || orcamento.hora === ''} />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="pendente">Pendente</SelectItem>
@@ -313,8 +326,17 @@ export default function ListaOrcamentos({ selectedMonth }: ListaOrcamentosProps)
                     
                      {colunasVisiveis.dataHora && <TableCell>
                         <div className="text-xs">
-                          <div className="font-medium">{formatDateForDisplay(orcamento.data)}</div>
-                          <div className="text-neumorphic-textLight">{orcamento.hora}</div>
+                          {orcamento.hora ? (
+                            <>
+                              <div className="font-medium">{formatDateForDisplay(orcamento.data)}</div>
+                              <div className="text-neumorphic-textLight">{orcamento.hora}</div>
+                            </>
+                          ) : (
+                            <div className="text-amber-600 font-medium">
+                              <div>Rascunho</div>
+                              <div className="text-xs">Sem data/hora</div>
+                            </div>
+                          )}
                           {orcamento.validade && (
                             <div className="mt-1 text-[10px]">
                               {(() => {

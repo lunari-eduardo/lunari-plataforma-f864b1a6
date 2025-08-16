@@ -45,6 +45,11 @@ export const useUnifiedCalendar = () => {
           return false;
         }
         
+        // Excluir rascunhos (orçamentos sem hora definida)
+        if (!orc.hora || orc.hora === '') {
+          return false;
+        }
+        
         // Excluir orçamentos que já têm agendamento correspondente
         const hasCorrespondingAppointment = appointments.some(app => 
           app.id === `orcamento-${orc.id}` || (app as any).orcamentoId === orc.id

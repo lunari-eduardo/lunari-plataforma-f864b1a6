@@ -39,6 +39,9 @@ export default function NovoOrcamento() {
   const { clientes, origens, adicionarOrcamento, adicionarCliente } = useOrcamentos();
   const { pacotes, produtos, categorias } = useOrcamentoData();
   const { toast } = useToast();
+  
+  // Usar mês atual como padrão para rascunhos
+  const selectedMonth = new Date();
 
   const [clienteSelecionado, setClienteSelecionado] = useState<Cliente | null>(null);
   const [novoCliente, setNovoCliente] = useState({ nome: '', email: '', whatsapp: '' });
@@ -218,15 +221,6 @@ export default function NovoOrcamento() {
       return;
     }
 
-    // Validação básica: deve ter pelo menos pacote ou produtos
-    if (!pacoteSelecionado && produtosAdicionais.length === 0) {
-      toast({
-        title: "Erro",
-        description: "Selecione pelo menos um pacote ou produto",
-        variant: "destructive"
-      });
-      return;
-    }
 
     const todosItens = [
       ...(pacoteSelecionado ? [{
@@ -263,11 +257,15 @@ export default function NovoOrcamento() {
       tipo: 'manual' as const
     }));
 
+    // Se não tiver data, usar primeiro dia do mês atual para filtro por mês
+    const dataParaSalvar = data ? formatDateForStorage(data) : 
+      `${selectedMonth.getFullYear()}-${String(selectedMonth.getMonth() + 1).padStart(2, '0')}-01`;
+    
     adicionarOrcamento({
       cliente: clienteSelecionado,
-      data: data ? formatDateForStorage(data) : '', // Data é opcional
-      hora: hora || '',
-      categoria,
+      data: dataParaSalvar,
+      hora: hora || '', // Hora vazia indica rascunho
+      categoria: categoria || '', // Categoria opcional
       descricao,
       detalhes,
       
