@@ -66,10 +66,15 @@ export function useLeads() {
       console.log('✅ [LEADS] Cliente criado no CRM:', { id: clienteId, origem: novoCliente.origem });
     }
 
-    // 3. TERCEIRO: Criar lead final com clienteId
+    // 3. TERCEIRO: Criar lead final com clienteId e histórico inicial
     const finalLead: Lead = {
       ...lead,
-      clienteId
+      clienteId,
+      dataAtualizacao: now,
+      historicoStatus: [{
+        status: lead.status,
+        data: now
+      }]
     };
 
     console.log('🎯 [LEADS] Lead final preparado:', { id: finalLead.id, clienteId: finalLead.clienteId, origem: finalLead.origem });
@@ -89,12 +94,30 @@ export function useLeads() {
         return updates(lead);
       }
       
-      const updatedLead = { ...lead, ...updates };
+      const now = new Date().toISOString();
+      const updatedLead = { 
+        ...lead, 
+        ...updates,
+        dataAtualizacao: now
+      };
       
-      // Track status changes
+      // Track status changes in history
       if (updates.status && updates.status !== lead.status) {
-        updatedLead.statusTimestamp = new Date().toISOString();
+        updatedLead.statusTimestamp = now;
         updatedLead.needsFollowUp = false; // Reset follow-up when status changes
+        
+        // Ensure historicoStatus exists and add new status
+        if (!updatedLead.historicoStatus) {
+          updatedLead.historicoStatus = [{
+            status: lead.status,
+            data: lead.dataCriacao
+          }];
+        }
+        
+        updatedLead.historicoStatus.push({
+          status: updates.status,
+          data: now
+        });
       }
       
       return updatedLead;

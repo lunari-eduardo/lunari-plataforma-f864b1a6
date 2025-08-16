@@ -12,6 +12,7 @@ export interface Lead {
   status: LeadStatus;
   observacoes?: string;
   dataCriacao: string; // ISO string
+  dataAtualizacao?: string; // Timestamp da última atualização
   clienteId?: string; // Relacionamento com Cliente CRM
   interacoes: LeadInteraction[];
   ultimaInteracao?: string;
@@ -22,6 +23,11 @@ export interface Lead {
   scheduledAppointmentId?: string; // ID do agendamento criado
   motivoPerda?: string; // Motivo da perda do lead
   perdidoEm?: string; // Timestamp de quando foi perdido
+  historicoStatus?: Array<{
+    status: string;
+    data: string; // ISO timestamp
+    usuario?: string; // para futura auditoria
+  }>;
 }
 
 export interface LeadStatusDef {

@@ -20,8 +20,14 @@ import FollowUpConfigModal from './FollowUpConfigModal';
 import LeadSchedulingModal from './LeadSchedulingModal';
 import LeadLossReasonModal from './LeadLossReasonModal';
 import type { Lead } from '@/types/leads';
+import type { PeriodFilter } from '@/hooks/useLeadMetrics';
 import { cn } from '@/lib/utils';
-export default function LeadsKanban() {
+
+export interface LeadsKanbanProps {
+  periodFilter?: PeriodFilter;
+}
+
+export default function LeadsKanban({ periodFilter }: LeadsKanbanProps) {
   const navigate = useNavigate();
   const {
     leads,
@@ -66,11 +72,30 @@ export default function LeadsKanban() {
   })), [statuses]);
   const filteredLeads = useMemo(() => {
     return leads.filter(lead => {
-      const matchesSearch = !searchTerm.trim() || lead.nome.toLowerCase().includes(searchTerm.toLowerCase()) || lead.email.toLowerCase().includes(searchTerm.toLowerCase()) || lead.telefone.includes(searchTerm);
+      const matchesSearch = !searchTerm.trim() || 
+        lead.nome.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        lead.email.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        lead.telefone.includes(searchTerm);
+      
       const matchesOrigem = origemFilter === 'all' || lead.origem === origemFilter;
-      return matchesSearch && matchesOrigem;
+      
+      // Apply period filter if provided
+      let matchesPeriod = true;
+      if (periodFilter?.month && periodFilter?.year) {
+        const dateToCheck = periodFilter.dateType === 'criacao' 
+          ? lead.dataCriacao 
+          : lead.dataAtualizacao || lead.dataCriacao;
+        
+        const date = new Date(dateToCheck);
+        const leadMonth = date.getMonth() + 1;
+        const leadYear = date.getFullYear();
+        
+        matchesPeriod = leadMonth === periodFilter.month && leadYear === periodFilter.year;
+      }
+      
+      return matchesSearch && matchesOrigem && matchesPeriod;
     });
-  }, [leads, searchTerm, origemFilter]);
+  }, [leads, searchTerm, origemFilter, periodFilter]);
   const groupedLeads = useMemo(() => {
     const groups: Record<string, Lead[]> = {};
     statuses.forEach(s => {
