@@ -205,7 +205,7 @@ export default function LeadsKanban() {
         backgroundColor: `${statusColor}08`,
         borderColor: `${statusColor}40`
       }}>
-          <div className="flex-1 overflow-y-auto scrollbar-lunar">
+          <div className="flex-1 overflow-y-auto scrollbar-kanban">
             <ul className="space-y-2 pb-2">
               {leadsInColumn.map(lead => <DraggableLeadCard key={lead.id} lead={lead} onDelete={() => {
               deleteLead(lead.id);
@@ -276,7 +276,7 @@ export default function LeadsKanban() {
       }} onDragCancel={() => setActiveId(null)}>
           
           {/* Kanban Columns - Scrollable horizontally */}
-          <div className="absolute inset-0 overflow-x-auto overflow-y-hidden">
+          <div className="absolute inset-0 overflow-x-auto overflow-y-hidden scrollbar-kanban">
             <div className="flex h-full gap-2 min-w-max px-2">
               {statuses.map(status => <StatusColumn key={status.id} title={status.name} statusKey={status.key} />)}
             </div>

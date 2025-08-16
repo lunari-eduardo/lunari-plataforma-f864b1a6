@@ -255,28 +255,65 @@
     padding-bottom: 0.5rem;
   }
 
-  /* Scrollbar personalizada */
+  /* Scrollbar personalizada elegante */
   .scrollbar-lunar {
     scrollbar-width: thin;
-    scrollbar-color: rgba(203, 169, 119, 0.3) transparent;
+    scrollbar-color: hsl(var(--lunar-accent) / 0.15) transparent;
   }
 
   .scrollbar-lunar::-webkit-scrollbar {
-    width: 4px;
-    height: 4px;
+    width: 6px;
+    height: 6px;
   }
 
   .scrollbar-lunar::-webkit-scrollbar-track {
     background: transparent;
+    border-radius: 4px;
   }
 
   .scrollbar-lunar::-webkit-scrollbar-thumb {
-    background-color: rgba(203, 169, 119, 0.3);
-    border-radius: 2px;
+    background: linear-gradient(135deg, hsl(var(--lunar-accent) / 0.2), hsl(var(--lunar-accent) / 0.1));
+    border-radius: 4px;
+    transition: all 0.2s ease;
   }
 
   .scrollbar-lunar::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(203, 169, 119, 0.5);
+    background: linear-gradient(135deg, hsl(var(--lunar-accent) / 0.4), hsl(var(--lunar-accent) / 0.25));
+    transform: scale(1.1);
+  }
+
+  /* Scrollbar elegante para kanban */
+  .scrollbar-kanban {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--lunar-accent) / 0.08) transparent;
+  }
+
+  .scrollbar-kanban::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .scrollbar-kanban::-webkit-scrollbar-track {
+    background: hsl(var(--lunar-surface) / 0.3);
+    border-radius: 6px;
+    margin: 4px;
+  }
+
+  .scrollbar-kanban::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, hsl(var(--lunar-accent) / 0.25), hsl(var(--lunar-accent) / 0.15));
+    border-radius: 6px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+    transition: all 0.3s ease;
+  }
+
+  .scrollbar-kanban::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, hsl(var(--lunar-accent) / 0.5), hsl(var(--lunar-accent) / 0.35));
+    transform: scale(1.05);
+  }
+
+  .scrollbar-kanban::-webkit-scrollbar-corner {
+    background: transparent;
   }
 
   /* Animações suaves */
