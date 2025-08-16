@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { MessageCircle, Eye, Trash2, FileText, Calendar, CheckCircle, ExternalLink } from 'lucide-react';
+import { MessageCircle, Eye, Trash2, FileText, Calendar, CheckCircle, ExternalLink, Link2, RefreshCw } from 'lucide-react';
 import type { Lead } from '@/types/leads';
+import { useAppContext } from '@/contexts/AppContext';
+import { checkLeadClientDivergence, syncLeadWithClient, linkLeadToClient, getAvailableClientsForLinking } from '@/utils/leadClientSync';
+import { toast } from 'sonner';
 
 interface LeadActionsPopoverProps {
   lead: Lead;
@@ -28,9 +31,48 @@ export default function LeadActionsPopover({
   children
 }: LeadActionsPopoverProps) {
   const [open, setOpen] = useState(false);
+  const { clientes } = useAppContext();
+
+  // Check client linking status
+  const clientLinkInfo = useMemo(() => {
+    if (!lead.clienteId) return { hasClient: false, hasDivergence: false, isOrphaned: false };
+    
+    const client = clientes.find(c => c.id === lead.clienteId);
+    if (!client) return { hasClient: false, hasDivergence: false, isOrphaned: true };
+    
+    const divergence = checkLeadClientDivergence(lead);
+    return {
+      hasClient: true,
+      client,
+      isOrphaned: false,
+      ...divergence
+    };
+  }, [lead, clientes]);
+
+  const availableClients = useMemo(() => {
+    return getAvailableClientsForLinking(lead.id);
+  }, [lead.id]);
 
   const handleAction = (action: () => void) => {
     action();
+    setOpen(false);
+  };
+
+  const handleSyncWithClient = () => {
+    if (syncLeadWithClient(lead.id)) {
+      toast.success('Lead sincronizado com cliente CRM');
+    } else {
+      toast.error('Erro ao sincronizar lead');
+    }
+    setOpen(false);
+  };
+
+  const handleLinkToClient = (clienteId: string) => {
+    if (linkLeadToClient(lead.id, clienteId)) {
+      toast.success('Lead vinculado ao cliente CRM');
+    } else {
+      toast.error('Erro ao vincular lead');
+    }
     setOpen(false);
   };
 
@@ -122,15 +164,53 @@ export default function LeadActionsPopover({
             </>
           )}
 
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start gap-2 h-8 text-lunar-error hover:text-lunar-error"
-            onClick={() => handleAction(onDelete)}
-          >
-            <Trash2 className="h-4 w-4" />
-            Excluir
-          </Button>
+          {/* CRM Sync Actions */}
+          {clientLinkInfo.hasDivergence && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start gap-2 h-8"
+              onClick={handleSyncWithClient}
+            >
+              <RefreshCw className="h-4 w-4" />
+              Sincronizar com CRM
+            </Button>
+          )}
+
+          {!clientLinkInfo.hasClient && availableClients.length > 0 && (
+            <div className="border-t pt-1 mt-1">
+              <div className="text-xs text-muted-foreground px-2 py-1">Vincular a Cliente:</div>
+              {availableClients.slice(0, 3).map(cliente => (
+                <Button
+                  key={cliente.id}
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start gap-2 h-8 text-xs"
+                  onClick={() => handleLinkToClient(cliente.id)}
+                >
+                  <Link2 className="h-3 w-3" />
+                  {cliente.nome}
+                </Button>
+              ))}
+              {availableClients.length > 3 && (
+                <div className="text-xs text-muted-foreground px-2 py-1">
+                  +{availableClients.length - 3} outros...
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="border-t pt-1 mt-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start gap-2 h-8 text-lunar-error hover:text-lunar-error"
+              onClick={() => handleAction(onDelete)}
+            >
+              <Trash2 className="h-4 w-4" />
+              Excluir
+            </Button>
+          </div>
         </div>
       </PopoverContent>
     </Popover>

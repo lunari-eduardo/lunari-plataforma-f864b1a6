@@ -17,9 +17,18 @@ export function useLeads() {
       setLeads(latest);
     };
 
+    const handleClientsUpdated = (e: CustomEvent) => {
+      console.log('🔄 [LEADS] Cliente atualizado, verificando sincronização:', e.detail);
+      const latest = loadLeads();
+      setLeads(latest);
+    };
+
     window.addEventListener('leads:changed', handleLeadsChanged as EventListener);
+    window.addEventListener('clients:updated', handleClientsUpdated as EventListener);
+    
     return () => {
       window.removeEventListener('leads:changed', handleLeadsChanged as EventListener);
+      window.removeEventListener('clients:updated', handleClientsUpdated as EventListener);
     };
   }, [loadLeads]);
 
@@ -108,12 +117,19 @@ export function useLeads() {
     );
 
     if (existingClient) {
-      // Associar lead ao cliente existente
-      updateLead(leadId, { clienteId: existingClient.id });
+      // Associar lead ao cliente existente e sincronizar dados
+      updateLead(leadId, { 
+        clienteId: existingClient.id,
+        nome: existingClient.nome,
+        email: existingClient.email,
+        telefone: existingClient.telefone,
+        whatsapp: existingClient.whatsapp || lead.whatsapp || ''
+      });
+      console.log('✅ [LEADS] Lead associado ao cliente existente:', { leadId, clienteId: existingClient.id });
       return existingClient;
     }
 
-    // Criar novo cliente
+    // Criar novo cliente com dados do lead
     const novoCliente = adicionarCliente({
       nome: lead.nome,
       email: lead.email,
@@ -122,8 +138,9 @@ export function useLeads() {
       origem: lead.origem || ''
     });
 
-    // Associar lead ao novo cliente
+    // Associar lead ao novo cliente (dados já estão sincronizados)
     updateLead(leadId, { clienteId: novoCliente.id });
+    console.log('✅ [LEADS] Novo cliente criado e vinculado:', { leadId, clienteId: novoCliente.id });
     
     return novoCliente;
   }, [leads, clientes, updateLead, adicionarCliente]);

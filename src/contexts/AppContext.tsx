@@ -1610,6 +1610,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       sincronizarNomeClienteComOrcamentos(id, dadosAtualizados.nome);
       sincronizarNomeClienteComAgendamentos(id, dadosAtualizados.nome);
     }
+    
+    // Sincronizar com leads
+    try {
+      const { syncLeadsWithClientUpdate } = require('@/utils/leadClientSync');
+      syncLeadsWithClientUpdate(id, dadosAtualizados);
+    } catch (error) {
+      console.error('❌ Erro ao sincronizar leads:', error);
+    }
+    
+    // Dispatch global client update event
+    window.dispatchEvent(new CustomEvent('clients:updated', {
+      detail: { clienteId: id, updates: dadosAtualizados }
+    }));
   };
 
   const removerCliente = (id: string) => {
