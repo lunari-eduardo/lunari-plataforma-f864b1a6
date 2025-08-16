@@ -1,10 +1,8 @@
 import { useState, useMemo } from 'react';
-
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
 import { DndContext, rectIntersection, useSensor, useSensors, PointerSensor, DragOverlay, useDroppable } from '@dnd-kit/core';
@@ -82,7 +80,9 @@ export default function LeadsKanban() {
     const convertedKey = getConvertedKey();
 
     // Update lead status
-    updateLead(lead.id, { status: newStatus });
+    updateLead(lead.id, {
+      status: newStatus
+    });
 
     // Add interaction for status change
     addInteraction(lead.id, 'mudanca_status', `Status alterado para "${statusName}"`, true, `Movido via Kanban`, lead.status, newStatus);
@@ -90,11 +90,10 @@ export default function LeadsKanban() {
     // Handle follow-up activation for 'orcamento_enviado'
     if (newStatus === 'orcamento_enviado') {
       // Reset follow-up timer
-      updateLead(lead.id, { 
+      updateLead(lead.id, {
         needsFollowUp: false,
         statusTimestamp: new Date().toISOString()
       });
-      
       addInteraction(lead.id, 'followup', 'Timer de follow-up iniciado', true, 'Contagem iniciada para follow-up automático');
     }
 
@@ -103,19 +102,16 @@ export default function LeadsKanban() {
       setLeadToSchedule(lead);
       setSchedulingModalOpen(true);
     }
-
     toast({
       title: 'Lead movido',
       description: `${lead.nome} movido para ${statusName}`
     });
   };
-
   const handleScheduled = (leadId: string, appointmentId: string) => {
     updateLead(leadId, {
       scheduledAppointmentId: appointmentId,
       needsScheduling: false
     });
-    
     const lead = leads.find(l => l.id === leadId);
     if (lead) {
       addInteraction(leadId, 'manual', 'Cliente agendado com sucesso', false, `Agendamento criado: ${appointmentId}`);
@@ -125,13 +121,11 @@ export default function LeadsKanban() {
       });
     }
   };
-
   const handleNotScheduled = (leadId: string) => {
     updateLead(leadId, {
       needsScheduling: true,
       scheduledAppointmentId: undefined
     });
-    
     const lead = leads.find(l => l.id === leadId);
     if (lead) {
       addInteraction(leadId, 'manual', 'Agendamento adiado', false, 'Cliente convertido mas agendamento foi adiado');
@@ -141,29 +135,27 @@ export default function LeadsKanban() {
       });
     }
   };
-
   const handleConvertToClient = (leadId: string) => {
     const cliente = convertToClient(leadId);
     if (cliente) {
-      updateLead(leadId, { status: 'fechado' });
+      updateLead(leadId, {
+        status: 'fechado'
+      });
       toast({
         title: 'Lead Convertido',
         description: `${cliente.nome} foi convertido em cliente.`
       });
     }
   };
-
   const handleScheduleClient = (lead: Lead) => {
     setSchedulingLead(lead);
     setSchedulingModalOpen(true);
   };
-
   const handleMarkAsScheduled = (leadId: string) => {
     updateLead(leadId, {
       needsScheduling: false,
       scheduledAppointmentId: `manual_${Date.now()}`
     });
-    
     const lead = leads.find(l => l.id === leadId);
     if (lead) {
       addInteraction(leadId, 'manual', 'Marcado como agendado manualmente', false, 'Cliente foi marcado como agendado sem criar agendamento específico');
@@ -173,7 +165,6 @@ export default function LeadsKanban() {
       });
     }
   };
-
   const handleViewAppointment = (lead: Lead) => {
     if (lead.scheduledAppointmentId) {
       // Future: Navigate to agenda with appointment highlighted
@@ -235,7 +226,7 @@ export default function LeadsKanban() {
   return <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-lunar-text">Leads</h2>
+        
         <div className="flex gap-2">
           <Button variant="outline" size="icon" onClick={() => setConfigModalOpen(true)} title="Configurar Follow-up">
             <Settings className="h-4 w-4" />
@@ -271,17 +262,17 @@ export default function LeadsKanban() {
 
       {/* Kanban Board */}
       <DndContext sensors={sensors} collisionDetection={rectIntersection} modifiers={[restrictToFirstScrollableAncestor]} onDragStart={e => {
-        setActiveId(String(e.active.id));
-      }} onDragEnd={e => {
-        const overId = e.over?.id as string | undefined;
-        if (activeId && overId) {
-          const current = leads.find(lead => lead.id === activeId);
-          if (current && current.status !== overId) {
-            handleStatusChange(current, overId);
-          }
+      setActiveId(String(e.active.id));
+    }} onDragEnd={e => {
+      const overId = e.over?.id as string | undefined;
+      if (activeId && overId) {
+        const current = leads.find(lead => lead.id === activeId);
+        if (current && current.status !== overId) {
+          handleStatusChange(current, overId);
         }
-        setActiveId(null);
-      }} onDragCancel={() => setActiveId(null)}>
+      }
+      setActiveId(null);
+    }} onDragCancel={() => setActiveId(null)}>
         <div className="overflow-x-auto scrollbar-lunar">
           <div className="flex gap-2 min-w-max pr-2">
             {statuses.map(status => <StatusColumn key={status.id} title={status.name} statusKey={status.key} />)}
@@ -291,9 +282,9 @@ export default function LeadsKanban() {
         <DragOverlay>
           <div className="pointer-events-none">
             {activeId ? (() => {
-              const lead = leads.find(l => l.id === activeId);
-              return lead ? <LeadCard lead={lead} onDelete={() => {}} onConvertToClient={() => {}} statusOptions={statusOptions} isDragging={true} /> : null;
-            })() : null}
+            const lead = leads.find(l => l.id === activeId);
+            return lead ? <LeadCard lead={lead} onDelete={() => {}} onConvertToClient={() => {}} statusOptions={statusOptions} isDragging={true} /> : null;
+          })() : null}
           </div>
         </DragOverlay>
       </DndContext>
@@ -322,34 +313,26 @@ export default function LeadsKanban() {
       <FollowUpConfigModal open={configModalOpen} onOpenChange={setConfigModalOpen} />
 
       {/* Lead Scheduling Modal */}
-      {(leadToSchedule || schedulingLead) && (
-        <LeadSchedulingModal
-          open={schedulingModalOpen}
-          onOpenChange={(open) => {
-            setSchedulingModalOpen(open);
-            if (!open) {
-              setLeadToSchedule(null);
-              setSchedulingLead(null);
-            }
-          }}
-          lead={leadToSchedule || schedulingLead!}
-          onScheduled={(appointmentId) => {
-            const targetLead = leadToSchedule || schedulingLead;
-            if (targetLead) {
-              handleScheduled(targetLead.id, appointmentId);
-              setLeadToSchedule(null);
-              setSchedulingLead(null);
-            }
-          }}
-          onSkip={() => {
-            const targetLead = leadToSchedule || schedulingLead;
-            if (targetLead) {
-              handleNotScheduled(targetLead.id);
-              setLeadToSchedule(null);
-              setSchedulingLead(null);
-            }
-          }}
-        />
-      )}
+      {(leadToSchedule || schedulingLead) && <LeadSchedulingModal open={schedulingModalOpen} onOpenChange={open => {
+      setSchedulingModalOpen(open);
+      if (!open) {
+        setLeadToSchedule(null);
+        setSchedulingLead(null);
+      }
+    }} lead={leadToSchedule || schedulingLead!} onScheduled={appointmentId => {
+      const targetLead = leadToSchedule || schedulingLead;
+      if (targetLead) {
+        handleScheduled(targetLead.id, appointmentId);
+        setLeadToSchedule(null);
+        setSchedulingLead(null);
+      }
+    }} onSkip={() => {
+      const targetLead = leadToSchedule || schedulingLead;
+      if (targetLead) {
+        handleNotScheduled(targetLead.id);
+        setLeadToSchedule(null);
+        setSchedulingLead(null);
+      }
+    }} />}
     </div>;
 }
