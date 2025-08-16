@@ -8,6 +8,8 @@ import { ptBR } from 'date-fns/locale';
 import LeadActionsPopover from './LeadActionsPopover';
 import LeadStatusSelector from './LeadStatusSelector';
 import LeadDetailsModal from './LeadDetailsModal';
+import LeadActionButtons from './LeadActionButtons';
+import FollowUpCounter from './FollowUpCounter';
 import { useLeadStatuses } from '@/hooks/useLeadStatuses';
 import { useLeadInteractions } from '@/hooks/useLeadInteractions';
 import { useFollowUpSystem } from '@/hooks/useFollowUpSystem';
@@ -98,7 +100,7 @@ export default function LeadCard({
       return 'Data inválida';
     }
   }, [lead.dataCriacao]);
-  const isConverted = lead.status === 'convertido';
+  const isConverted = lead.status === 'fechado';
   const isLost = lead.status === 'perdido';
   const statusColor = useMemo(() => {
     const status = statuses.find(s => s.key === lead.status);
@@ -141,9 +143,9 @@ export default function LeadCard({
       // Registrar interação de conversa
       addInteraction(lead.id, 'conversa', 'Conversa iniciada via WhatsApp', false);
       
-      // Move para "interessado" se ainda estiver em "novo_contato"
-      if (lead.status === 'novo_contato') {
-        onRequestMove?.('interessado');
+      // Move para "aguardando" se ainda estiver em "novo_interessado"
+      if (lead.status === 'novo_interessado') {
+        onRequestMove?.('aguardando');
       }
     } catch (error) {
       toast.error('Erro ao abrir WhatsApp');
@@ -199,6 +201,13 @@ export default function LeadCard({
           </div>
         )}
         
+        {/* Follow-up Counter for orcamento_enviado status */}
+        {lead.status === 'orcamento_enviado' && (
+          <div>
+            <FollowUpCounter statusTimestamp={lead.statusTimestamp} />
+          </div>
+        )}
+        
         {/* Badge de Follow-up */}
         {showFollowUpBadge && (
           <div>
@@ -239,6 +248,9 @@ export default function LeadCard({
           </Button>
         </div>
       </div>
+
+      {/* Action buttons for "aguardando" status */}
+      <LeadActionButtons lead={lead} />
 
       {/* Details Modal */}
       <LeadDetailsModal lead={lead} open={showDetails} onOpenChange={setShowDetails} onConvert={onConvertToOrcamento} onDelete={onDelete} />

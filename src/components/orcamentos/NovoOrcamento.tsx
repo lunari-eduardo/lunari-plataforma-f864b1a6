@@ -57,11 +57,12 @@ export default function NovoOrcamento() {
   const [descontoTipo, setDescontoTipo] = useState<'valor' | 'percentual'>('valor');
   const [validade, setValidade] = useState('');
 
-  // FIX: Add useEffect to read URL parameters and pre-fill date/time
+  // Add useEffect to read URL parameters and pre-fill client/date/time
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
     const presetDate = searchParams.get('data');
     const presetTime = searchParams.get('hora');
+    const clienteId = searchParams.get('clienteId');
     
     if (presetDate) {
       setData(presetDate);
@@ -70,7 +71,15 @@ export default function NovoOrcamento() {
     if (presetTime) {
       setHora(presetTime);
     }
-  }, [location.search]);
+    
+    // Pre-select client if clienteId is provided
+    if (clienteId) {
+      const cliente = clientes.find(c => c.id === clienteId);
+      if (cliente) {
+        setClienteSelecionado(cliente);
+      }
+    }
+  }, [location.search, clientes]);
 
   // Definir validade padrão (+15 dias) quando a data é escolhida
   useEffect(() => {

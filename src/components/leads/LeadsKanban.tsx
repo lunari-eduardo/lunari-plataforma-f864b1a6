@@ -86,8 +86,8 @@ export default function LeadsKanban() {
     // Add interaction for status change
     addInteraction(lead.id, 'mudanca_status', `Status alterado para "${statusName}"`, true, `Movido via Kanban`, lead.status, newStatus);
 
-    // Handle follow-up activation for 'proposta_enviada'
-    if (newStatus === 'proposta_enviada') {
+    // Handle follow-up activation for 'orcamento_enviado'
+    if (newStatus === 'orcamento_enviado') {
       // Reset follow-up timer
       updateLead(lead.id, { 
         needsFollowUp: false,
@@ -97,7 +97,7 @@ export default function LeadsKanban() {
       addInteraction(lead.id, 'followup', 'Timer de follow-up iniciado', true, 'Contagem iniciada para follow-up automático');
     }
 
-    // Handle scheduling confirmation for converted leads
+    // Handle scheduling confirmation for converted leads (fechado)
     if (newStatus === convertedKey) {
       setLeadToSchedule(lead);
       setSchedulingModalOpen(true);

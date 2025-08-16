@@ -8,7 +8,7 @@ import type { Lead } from '@/types/leads';
 const DEFAULT_CONFIG: FollowUpConfig = {
   diasParaFollowUp: 3,
   ativo: true,
-  statusMonitorado: 'proposta_enviada'
+  statusMonitorado: 'orcamento_enviado'
 };
 
 export function useFollowUpSystem() {
