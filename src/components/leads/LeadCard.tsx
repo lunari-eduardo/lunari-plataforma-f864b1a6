@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MoreVertical, MessageCircle } from 'lucide-react';
+import { MoreVertical, MessageCircle, Calendar } from 'lucide-react';
 import type { Lead } from '@/types/leads';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -28,6 +28,7 @@ interface LeadCardProps {
   onScheduleClient?: () => void;
   onMarkAsScheduled?: () => void;
   onViewAppointment?: () => void;
+  onDirectScheduling?: () => void;
   dndRef?: (node: HTMLElement | null) => void;
   dndListeners?: any;
   dndAttributes?: any;
@@ -43,6 +44,7 @@ export default function LeadCard({
   onScheduleClient,
   onMarkAsScheduled,
   onViewAppointment,
+  onDirectScheduling,
   dndRef,
   dndListeners,
   dndAttributes,
@@ -251,6 +253,21 @@ export default function LeadCard({
 
       {/* Action buttons for "aguardando" status */}
       <LeadActionButtons lead={lead} />
+
+      {/* Direct scheduling button for converted leads */}
+      {isConverted && onDirectScheduling && (
+        <div className="mt-3 pt-3 border-t border-gray-200/60 dark:border-gray-700/60">
+          <Button
+            onClick={onDirectScheduling}
+            size="sm"
+            className="w-full bg-lunar-accent hover:bg-lunar-accent/90 text-white"
+            data-no-drag="true"
+          >
+            <Calendar className="h-4 w-4 mr-2" />
+            Agendar Cliente
+          </Button>
+        </div>
+      )}
 
       {/* Details Modal */}
       <LeadDetailsModal lead={lead} open={showDetails} onOpenChange={setShowDetails} onConvert={onConvertToClient} onDelete={onDelete} />

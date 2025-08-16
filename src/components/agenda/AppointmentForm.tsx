@@ -71,7 +71,9 @@ export default function AppointmentForm({
 }: AppointmentFormProps) {
   const {
     clientes,
-    adicionarCliente
+    adicionarCliente,
+    selectedClientForScheduling,
+    clearSelectedClientForScheduling
   } = useContext(AppContext);
   const {
     isFromBudget
@@ -123,8 +125,17 @@ export default function AppointmentForm({
         newClientEmail: '',
         newClientOrigem: ''
       });
+    } else if (selectedClientForScheduling) {
+      // Se há cliente pré-selecionado (vindo do Kanban)
+      setFormData(prev => ({
+        ...prev,
+        clientId: selectedClientForScheduling
+      }));
+      setActiveTab('existing');
+      // Limpar após usar
+      clearSelectedClientForScheduling();
     }
-  }, [appointment, clientes]);
+  }, [appointment, clientes, selectedClientForScheduling, clearSelectedClientForScheduling]);
 
   // Manipular mudanças nos campos
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {

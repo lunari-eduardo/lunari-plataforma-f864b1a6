@@ -176,6 +176,11 @@ interface AppContextType {
   
   // Motor Financeiro Centralizado (NOVO)
   createTransactionEngine: (input: CreateTransactionInput) => void;
+  
+  // Cliente pré-selecionado para agendamento
+  selectedClientForScheduling: string | null;
+  setSelectedClientForScheduling: (clientId: string | null) => void;
+  clearSelectedClientForScheduling: () => void;
 }
 
 export const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -486,6 +491,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [cartoes, setCartoes] = useState(() => {
     return FinancialEngine.loadCreditCards();
   });
+
+  // Estado para cliente pré-selecionado para agendamento
+  const [selectedClientForScheduling, setSelectedClientForSchedulingState] = useState<string | null>(null);
+
+  const setSelectedClientForScheduling = useCallback((clientId: string | null) => {
+    setSelectedClientForSchedulingState(clientId);
+  }, []);
+
+  const clearSelectedClientForScheduling = useCallback(() => {
+    setSelectedClientForSchedulingState(null);
+  }, []);
 
   // Utility functions
   const isFromBudget = useCallback((appointment: Appointment) => {
@@ -2332,7 +2348,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Utilities
     isFromBudget,
     getBudgetId,
-    canEditFully
+    canEditFully,
+    
+    // Cliente pré-selecionado para agendamento
+    selectedClientForScheduling,
+    setSelectedClientForScheduling,
+    clearSelectedClientForScheduling
   };
 
   // Sistema de inicialização e correções automáticas

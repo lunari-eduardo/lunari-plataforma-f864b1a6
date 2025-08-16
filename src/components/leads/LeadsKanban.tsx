@@ -8,6 +8,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { DndContext, rectIntersection, useSensor, useSensors, PointerSensor, DragOverlay, useDroppable } from '@dnd-kit/core';
 import { restrictToFirstScrollableAncestor } from '@dnd-kit/modifiers';
 import { Settings } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useLeads } from '@/hooks/useLeads';
 import { useLeadStatuses } from '@/hooks/useLeadStatuses';
 import { useLeadInteractions } from '@/hooks/useLeadInteractions';
@@ -20,6 +21,7 @@ import LeadSchedulingModal from './LeadSchedulingModal';
 import type { Lead } from '@/types/leads';
 import { cn } from '@/lib/utils';
 export default function LeadsKanban() {
+  const navigate = useNavigate();
   const {
     leads,
     addLead,
@@ -35,7 +37,8 @@ export default function LeadsKanban() {
     addInteraction
   } = useLeadInteractions();
   const {
-    origens
+    origens,
+    setSelectedClientForScheduling
   } = useAppContext();
   const {
     toast
@@ -97,11 +100,7 @@ export default function LeadsKanban() {
       addInteraction(lead.id, 'followup', 'Timer de follow-up iniciado', true, 'Contagem iniciada para follow-up automático');
     }
 
-    // Handle scheduling confirmation for converted leads (fechado)
-    if (newStatus === convertedKey) {
-      setLeadToSchedule(lead);
-      setSchedulingModalOpen(true);
-    }
+    // Note: Direct scheduling button will be shown on card instead of modal
     toast({
       title: 'Lead movido',
       description: `${lead.nome} movido para ${statusName}`
@@ -150,6 +149,13 @@ export default function LeadsKanban() {
   const handleScheduleClient = (lead: Lead) => {
     setSchedulingLead(lead);
     setSchedulingModalOpen(true);
+  };
+
+  const handleDirectScheduling = (lead: Lead) => {
+    // Set client for pre-selection in Agenda
+    setSelectedClientForScheduling(lead.clienteId);
+    // Navigate to Agenda page
+    navigate('/agenda');
   };
   const handleMarkAsScheduled = (leadId: string) => {
     updateLead(leadId, {
@@ -214,7 +220,7 @@ export default function LeadsKanban() {
               });
             }} onConvertToClient={() => handleConvertToClient(lead.id)} onRequestMove={status => {
               handleStatusChange(lead, status);
-            }} statusOptions={statusOptions} activeId={activeId} onScheduleClient={() => handleScheduleClient(lead)} onMarkAsScheduled={() => handleMarkAsScheduled(lead.id)} onViewAppointment={() => handleViewAppointment(lead)} />)}
+            }} statusOptions={statusOptions} activeId={activeId} onScheduleClient={() => handleScheduleClient(lead)} onMarkAsScheduled={() => handleMarkAsScheduled(lead.id)} onViewAppointment={() => handleViewAppointment(lead)} onDirectScheduling={() => handleDirectScheduling(lead)} />)}
               
               {leadsInColumn.length === 0 && <li className="text-center text-sm text-lunar-textSecondary py-8">
                   Nenhum lead neste status
