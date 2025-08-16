@@ -1,6 +1,6 @@
 
 import { Appointment } from '@/hooks/useAgenda';
-import { Orcamento } from './orcamentos';
+// import { Orcamento } from './orcamentos'; // Removed - budgets decoupled
 
 export interface CalendarEvent {
   id: string;

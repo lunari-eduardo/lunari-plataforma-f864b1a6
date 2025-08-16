@@ -11,7 +11,7 @@ import Index from "./pages/Index";
 import Agenda from "./pages/Agenda";
 import Clientes from "./pages/Clientes";
 import Leads from "./pages/Leads";
-import Orcamentos from "./pages/Orcamentos";
+
 import NovaFinancas from "./pages/NovaFinancas";
 import Precificacao from "./pages/Precificacao";
 import Configuracoes from "./pages/Configuracoes";
@@ -119,7 +119,7 @@ function App() {
                   <Route path="/clientes" element={<Clientes />} />
                   <Route path="/clientes/:id" element={<ClienteDetalhe />} />
                   <Route path="/leads" element={<Leads />} />
-                  <Route path="/orcamentos" element={<Orcamentos />} />
+                  
                   <Route path="/financas" element={<NovaFinancas />} />
                   <Route path="/precificacao" element={<Precificacao />} />
                   <Route path="/workflow" element={<Workflow />} />

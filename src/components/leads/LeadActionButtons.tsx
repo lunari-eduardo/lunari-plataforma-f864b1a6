@@ -3,7 +3,7 @@ import { FileText, MessageCircle } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import { useLeads } from '@/hooks/useLeads';
 import { useLeadInteractions } from '@/hooks/useLeadInteractions';
-import { useOrcamentos } from '@/hooks/useOrcamentos';
+
 import type { Lead } from '@/types/leads';
 
 interface LeadActionButtonsProps {
@@ -14,7 +14,6 @@ export default function LeadActionButtons({ lead }: LeadActionButtonsProps) {
   const { updateLead } = useLeads();
   const { addInteraction } = useLeadInteractions();
   const { adicionarCliente } = useAppContext();
-  const { adicionarOrcamento } = useOrcamentos();
 
   const handleCreateBudget = () => {
     // Simply open WhatsApp to send budget
