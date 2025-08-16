@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { MessageCircle, Eye, Trash2, FileText, Calendar, CheckCircle, ExternalLink, Link2, RefreshCw } from 'lucide-react';
+import { MessageCircle, Eye, Trash2, FileText, Calendar, CheckCircle, ExternalLink, Link2 } from 'lucide-react';
 import type { Lead } from '@/types/leads';
 import { useAppContext } from '@/contexts/AppContext';
-import { checkLeadClientDivergence, syncLeadWithClient, linkLeadToClient, getAvailableClientsForLinking } from '@/utils/leadClientSync';
+import { linkLeadToClient, getAvailableClientsForLinking } from '@/utils/leadClientSync';
 import { toast } from 'sonner';
 
 interface LeadActionsPopoverProps {
@@ -35,18 +35,12 @@ export default function LeadActionsPopover({
 
   // Check client linking status
   const clientLinkInfo = useMemo(() => {
-    if (!lead.clienteId) return { hasClient: false, hasDivergence: false, isOrphaned: false };
+    if (!lead.clienteId) return { hasClient: false };
     
     const client = clientes.find(c => c.id === lead.clienteId);
-    if (!client) return { hasClient: false, hasDivergence: false, isOrphaned: true };
+    if (!client) return { hasClient: false };
     
-    const divergence = checkLeadClientDivergence(lead);
-    return {
-      hasClient: true,
-      client,
-      isOrphaned: false,
-      ...divergence
-    };
+    return { hasClient: true, client };
   }, [lead, clientes]);
 
   const availableClients = useMemo(() => {
@@ -58,14 +52,6 @@ export default function LeadActionsPopover({
     setOpen(false);
   };
 
-  const handleSyncWithClient = () => {
-    if (syncLeadWithClient(lead.id)) {
-      toast.success('Lead sincronizado com cliente CRM');
-    } else {
-      toast.error('Erro ao sincronizar lead');
-    }
-    setOpen(false);
-  };
 
   const handleLinkToClient = (clienteId: string) => {
     if (linkLeadToClient(lead.id, clienteId)) {
@@ -162,19 +148,6 @@ export default function LeadActionsPopover({
                 </Button>
               )}
             </>
-          )}
-
-          {/* CRM Sync Actions */}
-          {clientLinkInfo.hasDivergence && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full justify-start gap-2 h-8"
-              onClick={handleSyncWithClient}
-            >
-              <RefreshCw className="h-4 w-4" />
-              Sincronizar com CRM
-            </Button>
           )}
 
           {!clientLinkInfo.hasClient && availableClients.length > 0 && (

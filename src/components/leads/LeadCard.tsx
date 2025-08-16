@@ -54,20 +54,19 @@ export default function LeadCard({
   const { config } = useFollowUpSystem();
   const { clientes } = useAppContext();
 
-  // Check if lead has CRM client linked and if data diverges
-  const clientLinkInfo = useMemo(() => {
-    if (!lead.clienteId) return { hasClient: false, hasDivergence: false, isOrphaned: false };
+  // Check CRM client status and calculate dot color
+  const crmDot = useMemo(() => {
+    if (!lead.clienteId) return { show: false };
     
     const client = clientes.find(c => c.id === lead.clienteId);
-    if (!client) return { hasClient: false, hasDivergence: false, isOrphaned: true };
+    if (!client) return { show: true, color: 'bg-red-500', title: 'Cliente não encontrado' };
     
     const divergence = checkLeadClientDivergence(lead);
-    return {
-      hasClient: true,
-      client,
-      isOrphaned: false,
-      ...divergence
-    };
+    if (divergence.hasDivergence) {
+      return { show: true, color: 'bg-red-500', title: 'Dados desatualizados' };
+    }
+    
+    return { show: true, color: 'bg-green-500', title: 'Vinculado ao CRM' };
   }, [lead, clientes]);
 
   // Calcular a data da última alteração real
@@ -166,9 +165,17 @@ export default function LeadCard({
       
       {/* Layout em Grid: Nome + Menu no topo */}
       <div className="flex items-start justify-between mb-2">
-        <h3 className="text-xs font-medium text-lunar-text leading-tight">
-          {lead.nome}
-        </h3>
+        <div className="flex items-center gap-1">
+          <h3 className="text-xs font-medium text-lunar-text leading-tight">
+            {lead.nome}
+          </h3>
+          {crmDot.show && (
+            <div 
+              className={`w-2 h-2 rounded-full ${crmDot.color}`}
+              title={crmDot.title}
+            />
+          )}
+        </div>
         
         <LeadActionsPopover lead={lead} onStartConversation={handleStartConversation} onShowDetails={() => setShowDetails(true)} onConvert={onConvertToOrcamento} onDelete={onDelete} onScheduleClient={onScheduleClient} onMarkAsScheduled={onMarkAsScheduled} onViewAppointment={onViewAppointment}>
           <Button variant="ghost" size="icon" className="h-5 w-5 -mt-1 -mr-1" title="Mais opções" data-no-drag="true">
@@ -210,32 +217,6 @@ export default function LeadCard({
           </div>
         )}
         
-        {/* Badge de Vinculação CRM */}
-        {clientLinkInfo.hasClient && (
-          <div>
-            <Badge className="text-2xs px-2 py-0 bg-blue-100 text-blue-800 border-blue-200">
-              Vinculado ao CRM
-            </Badge>
-          </div>
-        )}
-        
-        {/* Badge de Divergência */}
-        {clientLinkInfo.hasDivergence && (
-          <div>
-            <Badge className="text-2xs px-2 py-0 bg-orange-100 text-orange-800 border-orange-200">
-              Dados Desatualizados
-            </Badge>
-          </div>
-        )}
-        
-        {/* Badge de Cliente Órfão */}
-        {clientLinkInfo.isOrphaned && (
-          <div>
-            <Badge className="text-2xs px-2 py-0 bg-red-100 text-red-800 border-red-200">
-              Cliente não encontrado
-            </Badge>
-          </div>
-        )}
       </div>
 
       {/* Status Selector Centralizado */}
