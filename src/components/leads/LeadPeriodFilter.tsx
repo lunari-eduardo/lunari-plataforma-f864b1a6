@@ -32,15 +32,17 @@ export default function LeadPeriodFilter({
   onPeriodChange
 }: PeriodFilterProps) {
   return (
-    <Card className="p-3 bg-lunar-surface border-lunar-border/60">
+    <Card className="p-3 bg-gradient-to-r from-lunar-surface to-lunar-surface/90 border-lunar-border/60 shadow-sm">
       <div className="flex items-center gap-2">
-        <Calendar className="h-4 w-4 text-lunar-textSecondary" />
-        <Label className="text-sm font-medium text-lunar-text whitespace-nowrap">
-          Período:
-        </Label>
+        <div className="flex items-center gap-2 px-2 py-1 rounded-md bg-lunar-accent/10 border border-lunar-accent/20">
+          <Calendar className="h-4 w-4 text-lunar-accent" />
+          <Label className="text-sm font-medium text-lunar-accent whitespace-nowrap">
+            Período:
+          </Label>
+        </div>
         
         <Select value={periodType} onValueChange={onPeriodChange}>
-          <SelectTrigger className="w-[200px] text-sm">
+          <SelectTrigger className="w-[200px] text-sm border-lunar-border/40 focus:border-lunar-accent/50 focus:ring-lunar-accent/20">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

@@ -56,11 +56,16 @@ export function useLeadMetrics(periodFilter?: PeriodFilter) {
 
   const filteredLeads = useMemo(() => {
     if (!periodFilter) {
-      // Default to current year
-      const currentYear = new Date().getFullYear();
+      // Default to current month
+      const now = new Date();
+      const currentMonth = now.getMonth() + 1;
+      const currentYear = now.getFullYear();
+      
       return leads.filter(lead => {
         const date = new Date(lead.dataCriacao);
-        return date.getFullYear() === currentYear;
+        const leadMonth = date.getMonth() + 1;
+        const leadYear = date.getFullYear();
+        return leadMonth === currentMonth && leadYear === currentYear;
       });
     }
 
