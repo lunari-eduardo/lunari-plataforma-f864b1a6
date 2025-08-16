@@ -25,10 +25,19 @@ export function OriginTimelineChart({ monthlyOriginData }: OriginTimelineChartPr
 
   const originsList = Array.from(activeOrigins);
 
-  // Configurar cores para as linhas
-  const chartConfig = originsList.reduce((config, originId) => {
+  // Configurar paleta monocromática para as linhas
+  const monochromaticColors = [
+    'hsl(var(--chart-primary))',
+    'hsl(var(--chart-secondary))',
+    'hsl(var(--chart-tertiary))',
+    'hsl(var(--chart-quaternary))',
+    'hsl(var(--chart-quinary))',
+    'hsl(var(--chart-senary))'
+  ];
+
+  const chartConfig = originsList.reduce((config, originId, index) => {
     const matchingOrigin = ORIGENS_PADRAO.find(o => o.id === originId);
-    const color = matchingOrigin?.cor || 'hsl(var(--muted-foreground))';
+    const color = monochromaticColors[index % monochromaticColors.length];
     
     config[originId] = {
       label: matchingOrigin?.nome || (originId === 'nao-especificado' ? 'Não especificado' : originId),
@@ -117,9 +126,14 @@ export function OriginTimelineChart({ monthlyOriginData }: OriginTimelineChartPr
                 type="monotone"
                 dataKey={originId}
                 stroke={chartConfig[originId]?.color || 'hsl(var(--muted-foreground))'}
-                strokeWidth={2}
-                dot={{ fill: chartConfig[originId]?.color || 'hsl(var(--muted-foreground))', strokeWidth: 0, r: 3 }}
-                activeDot={{ r: 5, stroke: chartConfig[originId]?.color || 'hsl(var(--muted-foreground))', strokeWidth: 2 }}
+                strokeWidth={3}
+                dot={{ fill: chartConfig[originId]?.color || 'hsl(var(--muted-foreground))', strokeWidth: 0, r: 4 }}
+                activeDot={{ 
+                  r: 7, 
+                  stroke: chartConfig[originId]?.color || 'hsl(var(--muted-foreground))', 
+                  strokeWidth: 2,
+                  fill: 'hsl(var(--lunar-surface))'
+                }}
                 connectNulls={false}
               />
             ))}

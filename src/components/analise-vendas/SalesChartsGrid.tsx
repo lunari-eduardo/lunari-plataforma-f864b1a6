@@ -34,12 +34,14 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
     crescimento: { label: 'Crescimento %', color: 'hsl(var(--chart-revenue))' }
   };
 
+  // Paleta monocromática sequencial baseada no tema lunar
   const COLORS = [
     'hsl(var(--chart-primary))',
     'hsl(var(--chart-secondary))',
     'hsl(var(--chart-tertiary))',
     'hsl(var(--chart-quaternary))',
-    'hsl(var(--chart-quinary))'
+    'hsl(var(--chart-quinary))',
+    'hsl(var(--chart-senary))'
   ];
 
   return (
@@ -57,20 +59,25 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
             <BarChart data={monthlyData}>
               <defs>
                 <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(var(--chart-primary))" stopOpacity="0.9" />
+                  <stop offset="0%" stopColor="hsl(var(--chart-primary))" stopOpacity="0.95" />
+                  <stop offset="50%" stopColor="hsl(var(--chart-primary))" stopOpacity="0.8" />
                   <stop offset="100%" stopColor="hsl(var(--chart-primary))" stopOpacity="0.6" />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <CartesianGrid strokeDasharray="2 4" stroke="hsl(var(--border))" opacity={0.3} />
               <XAxis 
                 dataKey="month" 
                 stroke="hsl(var(--muted-foreground))"
                 fontSize={11}
+                axisLine={false}
+                tickLine={false}
               />
               <YAxis 
                 stroke="hsl(var(--muted-foreground))"
                 fontSize={11}
                 tickFormatter={(value) => `R$ ${(value / 1000).toFixed(0)}k`}
+                axisLine={false}
+                tickLine={false}
               />
               <ChartTooltip 
                 content={<ChartTooltipContent />}
@@ -79,7 +86,7 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
               <Bar
                 dataKey="revenue"
                 fill="url(#revenueGradient)"
-                radius={[4, 4, 0, 0]}
+                radius={[8, 8, 0, 0]}
               />
             </BarChart>
           </ChartContainer>
@@ -99,19 +106,24 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
             <BarChart data={monthlyData}>
               <defs>
                 <linearGradient id="sessionsGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(var(--chart-tertiary))" stopOpacity="0.9" />
-                  <stop offset="100%" stopColor="hsl(var(--chart-tertiary))" stopOpacity="0.6" />
+                  <stop offset="0%" stopColor="hsl(var(--chart-secondary))" stopOpacity="0.95" />
+                  <stop offset="50%" stopColor="hsl(var(--chart-secondary))" stopOpacity="0.8" />
+                  <stop offset="100%" stopColor="hsl(var(--chart-secondary))" stopOpacity="0.6" />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <CartesianGrid strokeDasharray="2 4" stroke="hsl(var(--border))" opacity={0.3} />
               <XAxis 
                 dataKey="month" 
                 stroke="hsl(var(--muted-foreground))"
                 fontSize={11}
+                axisLine={false}
+                tickLine={false}
               />
               <YAxis 
                 stroke="hsl(var(--muted-foreground))"
                 fontSize={11}
+                axisLine={false}
+                tickLine={false}
               />
               <ChartTooltip 
                 content={<ChartTooltipContent />}
@@ -120,7 +132,7 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
               <Bar
                 dataKey="sessions"
                 fill="url(#sessionsGradient)"
-                radius={[4, 4, 0, 0]}
+                radius={[8, 8, 0, 0]}
               />
             </BarChart>
           </ChartContainer>
@@ -138,16 +150,26 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
         <CardContent>
           <ChartContainer config={chartConfig} className="w-full h-[220px] sm:h-[260px] lg:h-[300px]">
             <LineChart data={monthlyData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <defs>
+                <radialGradient id="ticketDotGradient" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stopColor="hsl(var(--chart-tertiary))" stopOpacity="1" />
+                  <stop offset="100%" stopColor="hsl(var(--chart-tertiary))" stopOpacity="0.7" />
+                </radialGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="2 4" stroke="hsl(var(--border))" opacity={0.3} />
               <XAxis 
                 dataKey="month" 
                 stroke="hsl(var(--muted-foreground))"
                 fontSize={11}
+                axisLine={false}
+                tickLine={false}
               />
               <YAxis 
                 stroke="hsl(var(--muted-foreground))"
                 fontSize={11}
                 tickFormatter={(value) => `R$ ${(value / 1000).toFixed(1)}k`}
+                axisLine={false}
+                tickLine={false}
               />
               <ChartTooltip 
                 content={<ChartTooltipContent />}
@@ -156,9 +178,10 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
               <Line
                 type="monotone"
                 dataKey="averageTicket"
-                stroke="hsl(var(--chart-revenue))"
+                stroke="hsl(var(--chart-tertiary))"
                 strokeWidth={3}
-                dot={{ fill: 'hsl(var(--chart-revenue))', strokeWidth: 2, r: 4 }}
+                dot={{ fill: 'url(#ticketDotGradient)', strokeWidth: 0, r: 6 }}
+                activeDot={{ fill: 'hsl(var(--chart-tertiary))', strokeWidth: 2, r: 8, stroke: 'hsl(var(--chart-quaternary))' }}
               />
             </LineChart>
           </ChartContainer>
@@ -178,20 +201,25 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
             <AreaChart data={monthlyData}>
               <defs>
                 <linearGradient id="extraGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(var(--chart-quaternary))" stopOpacity="0.6" />
-                  <stop offset="100%" stopColor="hsl(var(--chart-quaternary))" stopOpacity="0.2" />
+                  <stop offset="0%" stopColor="hsl(var(--chart-quaternary))" stopOpacity="0.7" />
+                  <stop offset="50%" stopColor="hsl(var(--chart-quaternary))" stopOpacity="0.4" />
+                  <stop offset="100%" stopColor="hsl(var(--chart-quaternary))" stopOpacity="0.1" />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <CartesianGrid strokeDasharray="2 4" stroke="hsl(var(--border))" opacity={0.3} />
               <XAxis 
                 dataKey="month" 
                 stroke="hsl(var(--muted-foreground))"
                 fontSize={11}
+                axisLine={false}
+                tickLine={false}
               />
               <YAxis 
                 stroke="hsl(var(--muted-foreground))"
                 fontSize={11}
                 tickFormatter={(value) => `R$ ${(value / 1000).toFixed(0)}k`}
+                axisLine={false}
+                tickLine={false}
               />
               <ChartTooltip 
                 content={<ChartTooltipContent />}
@@ -203,7 +231,7 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
                 stroke="hsl(var(--chart-quaternary))"
                 fill="url(#extraGradient)"
                 fillOpacity={1}
-                strokeWidth={2}
+                strokeWidth={3}
               />
             </AreaChart>
           </ChartContainer>
@@ -227,16 +255,16 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
                   data={categoryData}
                   cx="50%"
                   cy="50%"
-                  innerRadius="62%"
-                  outerRadius="85%"
-                  paddingAngle={3}
-                  cornerRadius={12}
+                  innerRadius="60%"
+                  outerRadius="90%"
+                  paddingAngle={2}
+                  cornerRadius={16}
                   dataKey="percentage"
                   label={({ name, percentage }) => 
-                    percentage > 5 ? `${name} ${percentage.toFixed(0)}%` : ''
+                    percentage > 8 ? `${name} ${percentage.toFixed(0)}%` : ''
                   }
                   labelLine={false}
-                  fontSize={11}
+                  fontSize={10}
                 >
                   {categoryData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -272,16 +300,16 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
                   data={packageDistributionData}
                   cx="50%"
                   cy="50%"
-                  innerRadius="62%"
-                  outerRadius="85%"
-                  paddingAngle={3}
-                  cornerRadius={12}
+                  innerRadius="60%"
+                  outerRadius="90%"
+                  paddingAngle={2}
+                  cornerRadius={16}
                   dataKey="percentage"
                   label={({ name, percentage }) => 
-                    percentage > 5 ? `${name} ${percentage.toFixed(0)}%` : ''
+                    percentage > 8 ? `${name} ${percentage.toFixed(0)}%` : ''
                   }
                   labelLine={false}
-                  fontSize={11}
+                  fontSize={10}
                 >
                   {packageDistributionData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />

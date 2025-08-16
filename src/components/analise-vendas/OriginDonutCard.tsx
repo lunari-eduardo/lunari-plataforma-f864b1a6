@@ -36,18 +36,29 @@ export function OriginDonutCard({ originData }: OriginDonutCardProps) {
               data={originData}
               cx="50%"
               cy="50%"
-              innerRadius="62%"
-              outerRadius="85%"
-              paddingAngle={3}
-              cornerRadius={12}
+              innerRadius="60%"
+              outerRadius="90%"
+              paddingAngle={2}
+              cornerRadius={16}
               dataKey="percentage"
-              label={({ name, percentage }) => (percentage > 5 ? `${name} ${percentage.toFixed(0)}%` : '')}
+              label={({ name, percentage }) => (percentage > 8 ? `${name} ${percentage.toFixed(0)}%` : '')}
               labelLine={false}
-              fontSize={11}
+              fontSize={10}
             >
-              {originData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.color} />
-              ))}
+              {originData.map((entry, index) => {
+                // Usar paleta monocromática em vez das cores personalizadas
+                const monochromaticColors = [
+                  'hsl(var(--chart-primary))',
+                  'hsl(var(--chart-secondary))',
+                  'hsl(var(--chart-tertiary))',
+                  'hsl(var(--chart-quaternary))',
+                  'hsl(var(--chart-quinary))',
+                  'hsl(var(--chart-senary))'
+                ];
+                return (
+                  <Cell key={`cell-${index}`} fill={monochromaticColors[index % monochromaticColors.length]} />
+                );
+              })}
             </Pie>
             <ChartTooltip
               content={<ChartTooltipContent />}

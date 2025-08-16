@@ -4,13 +4,14 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recha
 import { TrendingDown, AlertTriangle } from 'lucide-react';
 import { useLeadLossReasons } from '@/hooks/useLeadLossReasons';
 
+// Paleta monocromática baseada no tema lunar (do mais escuro ao mais claro)
 const COLORS = [
-  '#ef4444', // red
-  '#f97316', // orange
-  '#f59e0b', // amber
-  '#eab308', // yellow
-  '#84cc16', // lime
-  '#6b7280', // gray for "sem motivo"
+  'hsl(var(--chart-tertiary))',    // Tom mais escuro
+  'hsl(var(--chart-secondary))',   // Tom médio-escuro
+  'hsl(var(--chart-primary))',     // Tom principal
+  'hsl(var(--chart-quaternary))',  // Tom claro
+  'hsl(var(--chart-quinary))',     // Tom mais claro
+  'hsl(var(--chart-neutral))',     // Neutro para "sem motivo"
 ];
 
 export function LeadLossReasonsChart() {
@@ -73,9 +74,10 @@ export function LeadLossReasonsChart() {
                   data={chartData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={40}
-                  outerRadius={80}
-                  paddingAngle={2}
+                  innerRadius={45}
+                  outerRadius={85}
+                  paddingAngle={3}
+                  cornerRadius={12}
                   dataKey="count"
                 >
                   {chartData.map((entry, index) => (
