@@ -17,26 +17,8 @@ export default function LeadActionButtons({ lead }: LeadActionButtonsProps) {
   const { adicionarOrcamento } = useOrcamentos();
 
   const handleCreateBudget = () => {
-    // Get or create client
-    let clienteId = lead.clienteId;
-    
-    if (!clienteId) {
-      // Create client from lead data
-      const cliente = adicionarCliente({
-        nome: lead.nome,
-        email: lead.email,
-        telefone: lead.telefone,
-        whatsapp: lead.whatsapp,
-        origem: lead.origem
-      });
-      clienteId = cliente.id;
-      
-      // Update lead with client id
-      updateLead(lead.id, { clienteId });
-    }
-
-    // Navigate to budget creation with pre-filled client
-    window.location.href = `/orcamentos?tab=novo&clienteId=${clienteId}&leadId=${lead.id}`;
+    // Simply open WhatsApp to send budget
+    handleSendBudget();
   };
 
   const handleSendBudget = () => {
@@ -57,38 +39,6 @@ export default function LeadActionButtons({ lead }: LeadActionButtonsProps) {
       // Update lead with client id
       updateLead(lead.id, { clienteId });
     }
-
-    // Create ghost budget
-    const ghostOrcamento = adicionarOrcamento({
-      cliente: { 
-        id: clienteId,
-        nome: lead.nome, 
-        email: lead.email, 
-        telefone: lead.telefone,
-        whatsapp: lead.whatsapp 
-      },
-      data: new Date().toISOString().split('T')[0], // Today's date as fallback
-      hora: '', // Empty hour indicates draft/ghost status
-      categoria: '',
-      descricao: `Orçamento enviado via WhatsApp para ${lead.nome}`,
-      detalhes: 'Orçamento fantasma criado automaticamente',
-      pacotePrincipal: undefined,
-      produtosAdicionais: [],
-      valorFinal: 0,
-      desconto: 0,
-      descontoTipo: 'valor',
-      pacotes: [],
-      valorTotal: 0,
-      status: 'enviado',
-      origemCliente: lead.origem || '',
-      leadId: lead.id
-    });
-
-    // Update lead with budget reference
-    const currentIds = lead.orcamentoIds || [];
-    updateLead(lead.id, {
-      orcamentoIds: [...currentIds, ghostOrcamento.id]
-    });
     
     // Create WhatsApp link with simple message
     const telefone = lead.whatsapp || lead.telefone;
@@ -101,10 +51,9 @@ export default function LeadActionButtons({ lead }: LeadActionButtonsProps) {
     // Open WhatsApp
     window.open(whatsappUrl, '_blank');
     
-    // Move lead to "orcamento_enviado" and start follow-up
+    // Move lead to "negociacao" status
     updateLead(lead.id, {
-      status: 'orcamento_enviado',
-      needsFollowUp: false,
+      status: 'negociacao',
       statusTimestamp: new Date().toISOString()
     });
     
@@ -114,7 +63,7 @@ export default function LeadActionButtons({ lead }: LeadActionButtonsProps) {
       'followup',
       'Orçamento enviado via WhatsApp',
       true,
-      'Lead movido para "Orçamento Enviado" - contador de follow-up iniciado'
+      'Lead movido para "Em Negociação" após envio do orçamento'
     );
   };
 
@@ -128,16 +77,7 @@ export default function LeadActionButtons({ lead }: LeadActionButtonsProps) {
       <Button
         size="sm"
         variant="outline"
-        className="h-7 px-2 text-xs flex-1"
-        onClick={handleCreateBudget}
-      >
-        <FileText className="h-3 w-3 mr-1" />
-        Criar Orçamento
-      </Button>
-      <Button
-        size="sm"
-        variant="outline"
-        className="h-7 px-2 text-xs flex-1"
+        className="h-7 px-2 text-xs"
         onClick={handleSendBudget}
       >
         <MessageCircle className="h-3 w-3 mr-1" />

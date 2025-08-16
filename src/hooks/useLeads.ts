@@ -145,42 +145,12 @@ export function useLeads() {
     return novoCliente;
   }, [leads, clientes, updateLead, adicionarCliente]);
 
-  const convertToOrcamento = useCallback((leadId: string) => {
-    const lead = leads.find(l => l.id === leadId);
-    if (!lead) return null;
-
-    // Primeiro, converter para cliente se necessário
-    const cliente = convertToClient(leadId);
-    if (!cliente) return null;
-
-    // Marcar lead como convertido
-    updateLead(leadId, { 
-      status: 'convertido',
-      orcamentoId: `orcamento_${Date.now()}` // Será usado quando criar o orçamento
-    });
-
-    return {
-      cliente,
-      lead,
-      // Dados pré-preenchidos para o orçamento
-      dadosOrcamento: {
-        clienteId: cliente.id,
-        nomeCliente: cliente.nome,
-        email: cliente.email,
-        telefone: cliente.telefone,
-        whatsapp: cliente.whatsapp,
-        origem: lead.origem,
-        observacoes: lead.observacoes
-      }
-    };
-  }, [leads, convertToClient, updateLead]);
 
   return { 
     leads, 
     addLead, 
     updateLead, 
     deleteLead, 
-    convertToClient,
-    convertToOrcamento
+    convertToClient
   };
 }

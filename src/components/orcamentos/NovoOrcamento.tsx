@@ -311,8 +311,6 @@ export default function NovoOrcamento() {
       // Novo campo
       validade,
       
-      // Lead integration
-      leadId: leadId || undefined
     });
 
     // Update lead with budget link if applicable

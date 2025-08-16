@@ -19,7 +19,7 @@ import { toast } from 'sonner';
 interface LeadCardProps {
   lead: Lead;
   onDelete: () => void;
-  onConvertToOrcamento: () => void;
+  onConvertToClient: () => void;
   onRequestMove?: (status: string) => void;
   statusOptions: {
     value: string;
@@ -37,7 +37,7 @@ interface LeadCardProps {
 export default function LeadCard({
   lead,
   onDelete,
-  onConvertToOrcamento,
+  onConvertToClient,
   onRequestMove,
   statusOptions,
   onScheduleClient,
@@ -179,7 +179,7 @@ export default function LeadCard({
           )}
         </div>
         
-        <LeadActionsPopover lead={lead} onStartConversation={handleStartConversation} onShowDetails={() => setShowDetails(true)} onConvert={onConvertToOrcamento} onDelete={onDelete} onScheduleClient={onScheduleClient} onMarkAsScheduled={onMarkAsScheduled} onViewAppointment={onViewAppointment}>
+        <LeadActionsPopover lead={lead} onStartConversation={handleStartConversation} onShowDetails={() => setShowDetails(true)} onConvert={onConvertToClient} onDelete={onDelete} onScheduleClient={onScheduleClient} onMarkAsScheduled={onMarkAsScheduled} onViewAppointment={onViewAppointment}>
           <Button variant="ghost" size="icon" className="h-5 w-5 -mt-1 -mr-1" title="Mais opções" data-no-drag="true">
             <MoreVertical className="h-4 w-4" />
           </Button>
@@ -253,6 +253,6 @@ export default function LeadCard({
       <LeadActionButtons lead={lead} />
 
       {/* Details Modal */}
-      <LeadDetailsModal lead={lead} open={showDetails} onOpenChange={setShowDetails} onConvert={onConvertToOrcamento} onDelete={onDelete} />
+      <LeadDetailsModal lead={lead} open={showDetails} onOpenChange={setShowDetails} onConvert={onConvertToClient} onDelete={onDelete} />
     </li>;
 }

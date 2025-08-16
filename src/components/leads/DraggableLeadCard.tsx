@@ -6,7 +6,7 @@ import type { Lead } from '@/types/leads';
 export default function DraggableLeadCard(props: {
   lead: Lead;
   onDelete: () => void;
-  onConvertToOrcamento: () => void;
+  onConvertToClient: () => void;
   onRequestMove?: (status: string) => void;
   statusOptions: { value: string; label: string }[];
   activeId?: string | null;
@@ -23,7 +23,7 @@ export default function DraggableLeadCard(props: {
     <LeadCard
       lead={lead}
       onDelete={rest.onDelete}
-      onConvertToOrcamento={rest.onConvertToOrcamento}
+      onConvertToClient={rest.onConvertToClient}
       onRequestMove={rest.onRequestMove}
       statusOptions={rest.statusOptions}
       onScheduleClient={rest.onScheduleClient}

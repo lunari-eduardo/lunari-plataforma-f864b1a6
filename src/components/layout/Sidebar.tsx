@@ -37,6 +37,10 @@ export default function Sidebar() {
     icon: <Calendar size={14} />,
     label: "Agenda"
   }, {
+    to: "/leads",
+    icon: <FileText size={14} />,
+    label: "Leads"
+  }, {
     to: "/orcamentos",
     icon: <FileText size={14} />,
     label: "Orçamentos"

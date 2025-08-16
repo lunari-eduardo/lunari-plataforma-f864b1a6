@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useLeadOrcamentoIntegration } from '@/hooks/useLeadOrcamentoIntegration';
+
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -18,18 +18,16 @@ import LeadCard from './LeadCard';
 import LeadFormModal from './LeadFormModal';
 import DraggableLeadCard from './DraggableLeadCard';
 import FollowUpConfigModal from './FollowUpConfigModal';
-import SchedulingConfirmationModal from './SchedulingConfirmationModal';
+import LeadSchedulingModal from './LeadSchedulingModal';
 import type { Lead } from '@/types/leads';
 import { cn } from '@/lib/utils';
 export default function LeadsKanban() {
-  // Enable lead-budget synchronization
-  useLeadOrcamentoIntegration();
   const {
     leads,
     addLead,
     updateLead,
     deleteLead,
-    convertToOrcamento
+    convertToClient
   } = useLeads();
   const {
     statuses,
@@ -144,23 +142,14 @@ export default function LeadsKanban() {
     }
   };
 
-  const handleConvertToOrcamento = (leadId: string) => {
-    const result = convertToOrcamento(leadId);
-    if (result) {
+  const handleConvertToClient = (leadId: string) => {
+    const cliente = convertToClient(leadId);
+    if (cliente) {
+      updateLead(leadId, { status: 'fechado' });
       toast({
         title: 'Lead Convertido',
-        description: `${result.lead.nome} foi convertido em cliente e está pronto para orçamento.`
+        description: `${cliente.nome} foi convertido em cliente.`
       });
-
-      // Redirecionar para aba de novo orçamento com dados pré-preenchidos
-      const searchParams = new URLSearchParams({
-        clienteId: result.cliente.id,
-        origem: result.dadosOrcamento.origem || '',
-        observacoes: result.dadosOrcamento.observacoes || ''
-      });
-
-      // Usar navigate programaticamente ou window.location
-      window.location.href = `/orcamentos?tab=novo&${searchParams.toString()}`;
     }
   };
 
@@ -232,7 +221,7 @@ export default function LeadsKanban() {
             toast({
               title: 'Lead excluído'
             });
-          }} onConvertToOrcamento={() => handleConvertToOrcamento(lead.id)} onRequestMove={status => {
+          }} onConvertToClient={() => handleConvertToClient(lead.id)} onRequestMove={status => {
             handleStatusChange(lead, status);
           }} statusOptions={statusOptions} activeId={activeId} onScheduleClient={() => handleScheduleClient(lead)} onMarkAsScheduled={() => handleMarkAsScheduled(lead.id)} onViewAppointment={() => handleViewAppointment(lead)} />)}
             
@@ -303,7 +292,7 @@ export default function LeadsKanban() {
           <div className="pointer-events-none">
             {activeId ? (() => {
               const lead = leads.find(l => l.id === activeId);
-              return lead ? <LeadCard lead={lead} onDelete={() => {}} onConvertToOrcamento={() => {}} statusOptions={statusOptions} isDragging={true} /> : null;
+              return lead ? <LeadCard lead={lead} onDelete={() => {}} onConvertToClient={() => {}} statusOptions={statusOptions} isDragging={true} /> : null;
             })() : null}
           </div>
         </DragOverlay>
@@ -332,9 +321,9 @@ export default function LeadsKanban() {
       {/* Follow-up Config Modal */}
       <FollowUpConfigModal open={configModalOpen} onOpenChange={setConfigModalOpen} />
 
-      {/* Scheduling Confirmation Modal */}
+      {/* Lead Scheduling Modal */}
       {(leadToSchedule || schedulingLead) && (
-        <SchedulingConfirmationModal
+        <LeadSchedulingModal
           open={schedulingModalOpen}
           onOpenChange={(open) => {
             setSchedulingModalOpen(open);
@@ -352,7 +341,7 @@ export default function LeadsKanban() {
               setSchedulingLead(null);
             }
           }}
-          onNotScheduled={() => {
+          onSkip={() => {
             const targetLead = leadToSchedule || schedulingLead;
             if (targetLead) {
               handleNotScheduled(targetLead.id);
