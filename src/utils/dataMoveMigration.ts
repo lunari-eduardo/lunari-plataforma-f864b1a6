@@ -4,7 +4,7 @@
  * Converte dados do sistema antigo para a nova estrutura com valores congelados
  */
 
-import { Orcamento, PacotePrincipal, ProdutoAdicional } from '@/types/orcamentos';
+// import { Orcamento, PacotePrincipal, ProdutoAdicional } from '@/types/orcamentos'; // Removed - budgets decoupled
 
 interface OrcamentoAntigo {
   id: string;
@@ -34,9 +34,9 @@ export function migrateOrcamentoToNewStructure(
   orcamentoAntigo: OrcamentoAntigo,
   pacotesConfig: any[],
   produtosConfig: any[]
-): Orcamento {
-  let pacotePrincipal: PacotePrincipal | undefined;
-  let produtosAdicionais: ProdutoAdicional[] = [];
+): any { // Budget type removed
+  let pacotePrincipal: any | undefined; // Budget type removed
+  let produtosAdicionais: any[] = []; // Budget type removed
 
   // Processar pacotes do orçamento antigo
   if (orcamentoAntigo.pacotes && orcamentoAntigo.pacotes.length > 0) {
@@ -100,7 +100,7 @@ export function migrateAllOrcamentos(
   orcamentosAntigos: OrcamentoAntigo[],
   pacotesConfig: any[],
   produtosConfig: any[]
-): Orcamento[] {
+): any[] { // Budget type removed
   return orcamentosAntigos.map(orcamento => 
     migrateOrcamentoToNewStructure(orcamento, pacotesConfig, produtosConfig)
   );
@@ -120,7 +120,7 @@ export function autoMigrateIfNeeded(
   orcamentos: any[],
   pacotesConfig: any[],
   produtosConfig: any[]
-): Orcamento[] {
+): any[] { // Budget type removed
   const needsMigration = orcamentos.some(orc => !isNewStructure(orc));
   
   if (needsMigration) {
@@ -128,5 +128,5 @@ export function autoMigrateIfNeeded(
     return migrateAllOrcamentos(orcamentos, pacotesConfig, produtosConfig);
   }
   
-  return orcamentos as Orcamento[];
+  return orcamentos as any[]; // Budget type removed
 }

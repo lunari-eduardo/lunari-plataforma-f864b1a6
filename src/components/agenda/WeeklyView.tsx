@@ -1,7 +1,7 @@
 import React from 'react';
 import { startOfWeek, addDays, format, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { UnifiedEvent } from '@/hooks/useUnifiedCalendar';
+// import { UnifiedEvent } from '@/hooks/useUnifiedCalendar'; // Removed - budgets decoupled
 import UnifiedEventCard from './UnifiedEventCard';
 import { useAvailability } from '@/hooks/useAvailability';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -10,9 +10,9 @@ import { Share2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 interface WeeklyViewProps {
   date: Date;
-  unifiedEvents: UnifiedEvent[];
+  unifiedEvents: any[]; // UnifiedEvent type removed
   onCreateSlot: (slot: { date: Date; time: string }) => void;
-  onEventClick: (event: UnifiedEvent) => void;
+  onEventClick: (event: any) => void; // UnifiedEvent type removed
 }
 
 export default function WeeklyView({

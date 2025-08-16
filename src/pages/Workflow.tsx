@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight, Eye, EyeOff, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useAgenda } from "@/hooks/useAgenda";
 import { useWorkflowStatus } from "@/hooks/useWorkflowStatus";
-import { useOrcamentoData } from "@/hooks/useOrcamentoData";
+import { usePacotesProdutos } from "@/hooks/usePacotesProdutos";
 import { useContext } from 'react';
 import { AppContext } from '@/contexts/AppContext';
 import { parseDateFromStorage } from "@/utils/dateUtils";
@@ -25,11 +25,7 @@ export default function Workflow() {
   const {
     clientes
   } = useContext(AppContext);
-  const {
-    pacotes,
-    produtos,
-    categorias
-  } = useOrcamentoData();
+  const { pacotes, produtos, categorias } = usePacotesProdutos();
   
   const { saveMonthlyMetrics } = useWorkflowMetrics();
   const getClienteByName = (nome: string) => {
@@ -158,7 +154,7 @@ export default function Workflow() {
     id: pacote.id,
     nome: pacote.nome,
     valor: `R$ ${pacote.valor.toFixed(2).replace('.', ',')}`,
-    valorFotoExtra: `R$ ${(pacote.valorFotoExtra || 35).toFixed(2).replace('.', ',')}`,
+    valorFotoExtra: `R$ ${(pacote.valor_foto_extra || 35).toFixed(2).replace('.', ',')}`,
     categoria: pacote.categoria
   }));
   const productOptions: ProductOption[] = produtos.map(produto => ({

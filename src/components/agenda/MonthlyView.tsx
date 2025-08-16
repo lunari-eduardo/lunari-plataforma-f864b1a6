@@ -1,17 +1,17 @@
 import { useState } from 'react';
 import { startOfMonth, endOfMonth, eachDayOfInterval, format, isSameMonth, isToday, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { UnifiedEvent } from '@/hooks/useUnifiedCalendar';
+// import { UnifiedEvent } from '@/hooks/useUnifiedCalendar'; // Removed - budgets decoupled
 import UnifiedEventCard from './UnifiedEventCard';
 import { useAvailability } from '@/hooks/useAvailability';
 import { useIsMobile } from '@/hooks/use-mobile';
 interface MonthlyViewProps {
   date: Date;
-  unifiedEvents: UnifiedEvent[];
+  unifiedEvents: any[]; // UnifiedEvent type removed
   onCreateSlot: (slot: {
     date: Date;
   }) => void;
-  onEventClick: (event: UnifiedEvent) => void;
+  onEventClick: (event: any) => void; // UnifiedEvent type removed
   onDayClick: (date: Date) => void;
 }
 export default function MonthlyView({

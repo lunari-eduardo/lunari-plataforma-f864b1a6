@@ -1,6 +1,6 @@
 import { storage, STORAGE_KEYS } from './localStorage';
 import { WorkflowItem, ProdutoWorkflow } from '@/contexts/AppContext';
-import { Cliente } from '@/types/orcamentos';
+import { Cliente } from '@/types/cliente';
 import { performFullDataAudit, findClientByName, normalizeClientName } from './crmDataAudit';
 
 /**
