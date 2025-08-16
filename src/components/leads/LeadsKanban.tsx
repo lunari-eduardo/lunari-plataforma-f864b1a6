@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useLeadOrcamentoIntegration } from '@/hooks/useLeadOrcamentoIntegration';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -21,6 +22,8 @@ import SchedulingConfirmationModal from './SchedulingConfirmationModal';
 import type { Lead } from '@/types/leads';
 import { cn } from '@/lib/utils';
 export default function LeadsKanban() {
+  // Enable lead-budget synchronization
+  useLeadOrcamentoIntegration();
   const {
     leads,
     addLead,

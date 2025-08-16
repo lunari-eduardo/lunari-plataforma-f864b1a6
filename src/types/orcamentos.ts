@@ -82,6 +82,7 @@ export interface ProdutoAdicional {
 export interface Orcamento {
   id: string;
   sessionId?: string; // ID único universal para rastrear através de orçamento → agendamento → workflow
+  leadId?: string; // Link to originating lead
   cliente: Cliente;
   data: string;
   hora: string;

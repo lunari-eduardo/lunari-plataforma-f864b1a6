@@ -210,6 +210,9 @@ export default function NovoOrcamento() {
   };
 
   const salvarOrcamento = (status: 'pendente' | 'enviado') => {
+    const searchParams = new URLSearchParams(location.search);
+    const leadId = searchParams.get('leadId');
+
     // Se há um novo cliente preenchido mas não selecionado, criar o cliente automaticamente
     if (!clienteSelecionado && novoCliente.nome.trim() && novoCliente.email.trim() && novoCliente.whatsapp.trim()) {
       const cliente = adicionarCliente({
@@ -266,11 +269,10 @@ export default function NovoOrcamento() {
       tipo: 'manual' as const
     }));
 
-    // Se não tiver data, usar primeiro dia do mês atual para filtro por mês
     const dataParaSalvar = data ? formatDateForStorage(data) : 
       `${selectedMonth.getFullYear()}-${String(selectedMonth.getMonth() + 1).padStart(2, '0')}-01`;
     
-    adicionarOrcamento({
+    const orcamento = adicionarOrcamento({
       cliente: clienteSelecionado,
       data: dataParaSalvar,
       hora: hora || '', // Hora vazia indica rascunho
@@ -297,8 +299,19 @@ export default function NovoOrcamento() {
       valorFotoExtra: pacoteSelecionado?.valorFotoExtra || 35,
       
       // Novo campo
-      validade
+      validade,
+      
+      // Lead integration
+      leadId: leadId || undefined
     });
+
+    // Update lead with budget link if applicable
+    if (leadId && orcamento) {
+      // This will be handled by the sync hook
+      window.dispatchEvent(new CustomEvent('orcamento:statusChanged', {
+        detail: { orcamentoId: orcamento.id, newStatus: status, oldStatus: null }
+      }));
+    }
 
     toast({
       title: "Sucesso",

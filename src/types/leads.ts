@@ -13,7 +13,8 @@ export interface Lead {
   observacoes?: string;
   dataCriacao: string; // ISO string
   clienteId?: string; // Relacionamento com Cliente CRM
-  orcamentoId?: string; // Se foi convertido em orçamento
+  orcamentoId?: string; // DEPRECATED: Use orcamentoIds instead
+  orcamentoIds?: string[]; // Array of related budget IDs
   interacoes: LeadInteraction[];
   ultimaInteracao?: string;
   diasSemInteracao?: number;

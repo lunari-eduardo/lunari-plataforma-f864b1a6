@@ -3,6 +3,7 @@ import { FileText, MessageCircle } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import { useLeads } from '@/hooks/useLeads';
 import { useLeadInteractions } from '@/hooks/useLeadInteractions';
+import { useOrcamentos } from '@/hooks/useOrcamentos';
 import type { Lead } from '@/types/leads';
 
 interface LeadActionButtonsProps {
@@ -13,6 +14,7 @@ export default function LeadActionButtons({ lead }: LeadActionButtonsProps) {
   const { updateLead } = useLeads();
   const { addInteraction } = useLeadInteractions();
   const { adicionarCliente } = useAppContext();
+  const { adicionarOrcamento } = useOrcamentos();
 
   const handleCreateBudget = () => {
     // Get or create client
@@ -38,6 +40,56 @@ export default function LeadActionButtons({ lead }: LeadActionButtonsProps) {
   };
 
   const handleSendBudget = () => {
+    // Get or create client
+    let clienteId = lead.clienteId;
+    
+    if (!clienteId) {
+      // Create client from lead data
+      const cliente = adicionarCliente({
+        nome: lead.nome,
+        email: lead.email,
+        telefone: lead.telefone,
+        whatsapp: lead.whatsapp,
+        origem: lead.origem
+      });
+      clienteId = cliente.id;
+      
+      // Update lead with client id
+      updateLead(lead.id, { clienteId });
+    }
+
+    // Create ghost budget
+    const ghostOrcamento = adicionarOrcamento({
+      cliente: { 
+        id: clienteId,
+        nome: lead.nome, 
+        email: lead.email, 
+        telefone: lead.telefone,
+        whatsapp: lead.whatsapp 
+      },
+      data: new Date().toISOString().split('T')[0], // Today's date as fallback
+      hora: '', // Empty hour indicates draft/ghost status
+      categoria: '',
+      descricao: `Orçamento enviado via WhatsApp para ${lead.nome}`,
+      detalhes: 'Orçamento fantasma criado automaticamente',
+      pacotePrincipal: undefined,
+      produtosAdicionais: [],
+      valorFinal: 0,
+      desconto: 0,
+      descontoTipo: 'valor',
+      pacotes: [],
+      valorTotal: 0,
+      status: 'enviado',
+      origemCliente: lead.origem || '',
+      leadId: lead.id
+    });
+
+    // Update lead with budget reference
+    const currentIds = lead.orcamentoIds || [];
+    updateLead(lead.id, {
+      orcamentoIds: [...currentIds, ghostOrcamento.id]
+    });
+    
     // Create WhatsApp link with simple message
     const telefone = lead.whatsapp || lead.telefone;
     const cleanPhone = telefone.replace(/\D/g, '');

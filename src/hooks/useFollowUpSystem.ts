@@ -54,10 +54,11 @@ export function useFollowUpSystem() {
     leadsNeedingFollowUp.forEach(lead => {
       const daysSinceChange = calculateDaysSinceLastChange(lead);
       
-      // Mark lead as needing follow-up
+      // Mark lead as needing follow-up and move to follow-up column
       updateLead(lead.id, {
         needsFollowUp: true,
-        diasSemInteracao: daysSinceChange
+        diasSemInteracao: daysSinceChange,
+        status: 'followup' // Auto-move to follow-up column
       });
 
       // Create notification
@@ -78,7 +79,7 @@ export function useFollowUpSystem() {
         'followup',
         `Sistema detectou necessidade de follow-up após ${daysSinceChange} dias sem interação`,
         true,
-        `Lead está em "${config.statusMonitorado}" há ${daysSinceChange} dias`
+        `Lead foi automaticamente movido para coluna "Follow-up" após ${daysSinceChange} dias em "${config.statusMonitorado}"`
       );
     });
   }, [leads, config, calculateDaysSinceLastChange, updateLead, addInteraction]);
