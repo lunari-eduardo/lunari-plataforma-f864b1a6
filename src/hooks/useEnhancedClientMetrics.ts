@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Cliente } from '@/types/cliente';
+import { Cliente } from '@/types/orcamentos';
 import { WorkflowItem } from '@/contexts/AppContext';
 
 /**

@@ -16,7 +16,7 @@ import { useAppContext } from '@/contexts/AppContext';
 import { useLeadStatuses } from '@/hooks/useLeadStatuses';
 import { ORIGENS_PADRAO } from '@/utils/defaultOrigens';
 import type { Lead } from '@/types/leads';
-import type { OrigemCliente } from '@/types/cliente';
+import type { OrigemCliente } from '@/types/orcamentos';
 
 interface LeadFormModalProps {
   open: boolean;

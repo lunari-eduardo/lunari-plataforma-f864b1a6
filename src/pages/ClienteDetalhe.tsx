@@ -19,7 +19,7 @@ import { WorkflowHistoryTable } from '@/components/crm/WorkflowHistoryTable';
 import { formatCurrency } from '@/utils/financialUtils';
 import { formatDateForDisplay } from '@/utils/dateUtils';
 import { toast } from 'sonner';
-// import { useOrcamentos } from '@/hooks/useOrcamentos'; // Removed - budgets decoupled
+import { useOrcamentos } from '@/hooks/useOrcamentos';
 import { ORIGENS_PADRAO } from '@/utils/defaultOrigens';
 import { getOriginInfo, getOriginDisplayName } from '@/utils/originUtils';
 import { OriginBadge } from '@/components/shared/OriginBadge';

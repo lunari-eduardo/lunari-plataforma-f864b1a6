@@ -1,15 +1,44 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useOrcamentos } from '@/hooks/useOrcamentos';
+
+import MetricasOrcamento from '@/components/orcamentos/MetricasOrcamento';
+import NovoOrcamento from '@/components/orcamentos/NovoOrcamento';
+import ListaOrcamentos from '@/components/orcamentos/ListaOrcamentos';
+import MonthYearSelector from '@/components/orcamentos/MonthYearSelector';
 import LeadsKanban from '@/components/leads/LeadsKanban';
 
 export default function Leads() {
-  const [activeTab, setActiveTab] = useState('leads');
+  
+  const { metricas } = useOrcamentos();
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState('lista');
+  const [selectedMonth, setSelectedMonth] = useState(new Date());
 
-  return (
-    <div className="w-full max-w-full mx-auto px-2 sm:px-4 p-2 space-y-4 bg-lunar-bg min-h-screen my-0 py-0">
+  // Check for URL parameters when coming from agenda or lead conversion
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const presetDate = searchParams.get('data');
+    const presetTime = searchParams.get('hora');
+    const presetTab = searchParams.get('tab');
+
+    // If we have preset data from agenda, always go to novo tab
+    if (presetDate && presetTime) {
+      setActiveTab('novo');
+    }
+
+    // If tab is specified in URL (for lead conversion)
+    if (presetTab && ['leads', 'lista', 'novo'].includes(presetTab)) {
+      setActiveTab(presetTab);
+    }
+  }, [location.search]);
+  return <div className="w-full max-w-full mx-auto px-2 sm:px-4 p-2 space-y-4 bg-lunar-bg min-h-screen my-0 py-0">
       <div className="px-2">
-        <h1 className="text-xl font-semibold text-lunar-text mb-4">Gerenciamento de Leads</h1>
+        
       </div>
+
+      <MetricasOrcamento selectedMonth={selectedMonth} />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-2 py-0 my-1 border-lunar-accent bg-lunar-surface">
@@ -27,7 +56,7 @@ export default function Leads() {
             <p className="text-lunar-textSecondary">Formulário para criação de novo lead será implementado aqui.</p>
           </div>
         </TabsContent>
+
       </Tabs>
-    </div>
-  );
+      </div>;
 }

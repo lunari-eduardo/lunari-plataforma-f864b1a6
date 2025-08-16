@@ -11,7 +11,7 @@ export interface CalendarEvent {
   client: string;
   status: string;
   description?: string;
-  originalData: any; // Budget type removed
+  originalData: Appointment | Orcamento;
 }
 
 export interface CalendarSlot {
