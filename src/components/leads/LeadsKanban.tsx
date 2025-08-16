@@ -188,8 +188,8 @@ export default function LeadsKanban() {
 
     // Buscar cor do status
     const statusColor = statuses.find(s => s.key === statusKey)?.color || '#6b7280';
-    return <section className="flex-1 min-w-[240px]">
-        <header className="flex items-center justify-between mb-2">
+    return <section className="flex-1 min-w-[280px] h-full flex flex-col">
+        <header className="flex items-center justify-between mb-3 px-1">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full" style={{
             backgroundColor: statusColor
@@ -201,32 +201,32 @@ export default function LeadsKanban() {
           </Badge>
         </header>
         
-        <Card ref={setNodeRef} className={cn("p-2 pb-4 border-lunar-border/60 min-h-[70vh] transition-colors", isOver ? "ring-2 ring-lunar-accent/60" : "")} style={{
+        <Card ref={setNodeRef} className={cn("flex-1 p-2 border-lunar-border/60 transition-colors overflow-hidden flex flex-col", isOver ? "ring-2 ring-lunar-accent/60" : "")} style={{
         backgroundColor: `${statusColor}08`,
-        // 8% opacity do background
-        borderColor: `${statusColor}40` // 40% opacity da borda
+        borderColor: `${statusColor}40`
       }}>
-          <ul className="space-y-2">
-            {leadsInColumn.map(lead => <DraggableLeadCard key={lead.id} lead={lead} onDelete={() => {
-            deleteLead(lead.id);
-            toast({
-              title: 'Lead excluído'
-            });
-          }} onConvertToClient={() => handleConvertToClient(lead.id)} onRequestMove={status => {
-            handleStatusChange(lead, status);
-          }} statusOptions={statusOptions} activeId={activeId} onScheduleClient={() => handleScheduleClient(lead)} onMarkAsScheduled={() => handleMarkAsScheduled(lead.id)} onViewAppointment={() => handleViewAppointment(lead)} />)}
-            
-            {leadsInColumn.length === 0 && <li className="text-center text-sm text-lunar-textSecondary py-8">
-                Nenhum lead neste status
-              </li>}
-          </ul>
+          <div className="flex-1 overflow-y-auto scrollbar-lunar">
+            <ul className="space-y-2 pb-2">
+              {leadsInColumn.map(lead => <DraggableLeadCard key={lead.id} lead={lead} onDelete={() => {
+              deleteLead(lead.id);
+              toast({
+                title: 'Lead excluído'
+              });
+            }} onConvertToClient={() => handleConvertToClient(lead.id)} onRequestMove={status => {
+              handleStatusChange(lead, status);
+            }} statusOptions={statusOptions} activeId={activeId} onScheduleClient={() => handleScheduleClient(lead)} onMarkAsScheduled={() => handleMarkAsScheduled(lead.id)} onViewAppointment={() => handleViewAppointment(lead)} />)}
+              
+              {leadsInColumn.length === 0 && <li className="text-center text-sm text-lunar-textSecondary py-8">
+                  Nenhum lead neste status
+                </li>}
+            </ul>
+          </div>
         </Card>
       </section>;
   };
-  return <div className="space-y-4">
+  return <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        
+      <div className="flex items-center justify-between px-2 py-3">
         <div className="flex gap-2">
           <Button variant="outline" size="icon" onClick={() => setConfigModalOpen(true)} title="Configurar Follow-up">
             <Settings className="h-4 w-4" />
@@ -238,7 +238,7 @@ export default function LeadsKanban() {
       </div>
 
       {/* Filtros */}
-      <Card className="p-3 bg-lunar-surface border-lunar-border/60 py-0">
+      <Card className="mx-2 mb-3 p-3 bg-lunar-surface border-lunar-border/60">
         <div className="flex flex-nowrap whitespace-nowrap overflow-x-auto gap-2">
           <div className="flex-1 min-w-[200px]">
             <Input placeholder="Buscar leads..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="text-sm" />
@@ -260,34 +260,38 @@ export default function LeadsKanban() {
         </div>
       </Card>
 
-      {/* Kanban Board */}
-      <DndContext sensors={sensors} collisionDetection={rectIntersection} modifiers={[restrictToFirstScrollableAncestor]} onDragStart={e => {
-      setActiveId(String(e.active.id));
-    }} onDragEnd={e => {
-      const overId = e.over?.id as string | undefined;
-      if (activeId && overId) {
-        const current = leads.find(lead => lead.id === activeId);
-        if (current && current.status !== overId) {
-          handleStatusChange(current, overId);
+      {/* Kanban Board Container */}
+      <div className="flex-1 relative">
+        <DndContext sensors={sensors} collisionDetection={rectIntersection} modifiers={[restrictToFirstScrollableAncestor]} onDragStart={e => {
+        setActiveId(String(e.active.id));
+      }} onDragEnd={e => {
+        const overId = e.over?.id as string | undefined;
+        if (activeId && overId) {
+          const current = leads.find(lead => lead.id === activeId);
+          if (current && current.status !== overId) {
+            handleStatusChange(current, overId);
+          }
         }
-      }
-      setActiveId(null);
-    }} onDragCancel={() => setActiveId(null)}>
-        <div className="overflow-x-auto scrollbar-lunar">
-          <div className="flex gap-2 min-w-max pr-2">
-            {statuses.map(status => <StatusColumn key={status.id} title={status.name} statusKey={status.key} />)}
+        setActiveId(null);
+      }} onDragCancel={() => setActiveId(null)}>
+          
+          {/* Kanban Columns - Scrollable horizontally */}
+          <div className="absolute inset-0 overflow-x-auto overflow-y-hidden">
+            <div className="flex h-full gap-2 min-w-max px-2">
+              {statuses.map(status => <StatusColumn key={status.id} title={status.name} statusKey={status.key} />)}
+            </div>
           </div>
-        </div>
 
-        <DragOverlay>
-          <div className="pointer-events-none">
-            {activeId ? (() => {
-            const lead = leads.find(l => l.id === activeId);
-            return lead ? <LeadCard lead={lead} onDelete={() => {}} onConvertToClient={() => {}} statusOptions={statusOptions} isDragging={true} /> : null;
-          })() : null}
-          </div>
-        </DragOverlay>
-      </DndContext>
+          <DragOverlay>
+            <div className="pointer-events-none">
+              {activeId ? (() => {
+              const lead = leads.find(l => l.id === activeId);
+              return lead ? <LeadCard lead={lead} onDelete={() => {}} onConvertToClient={() => {}} statusOptions={statusOptions} isDragging={true} /> : null;
+            })() : null}
+            </div>
+          </DragOverlay>
+        </DndContext>
+      </div>
 
       {/* Modals */}
       <LeadFormModal open={createModalOpen} onOpenChange={setCreateModalOpen} mode="create" onSubmit={data => {
