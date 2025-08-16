@@ -148,6 +148,11 @@ export function formatDateForInput(date: Date | string): string {
     return date;
   }
   
+  // Se é uma string ISO com tempo (YYYY-MM-DDTHH:mm:ss...), extrai apenas a parte da data
+  if (typeof date === 'string' && date.includes('T')) {
+    return date.split('T')[0];
+  }
+  
   // Se é uma string, tenta converter para Date
   if (typeof date === 'string') {
     const parsedDate = safeParseInputDate(date);

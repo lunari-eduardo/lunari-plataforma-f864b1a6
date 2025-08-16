@@ -326,6 +326,21 @@
     @apply bg-lunar-surface border-lunar-border text-lunar-text shadow-lunar-md;
   }
 
+  /* Estilo para input de data - ícone visível em ambos os temas */
+  input[type="date"] {
+    color-scheme: light dark;
+  }
+
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.5);
+    opacity: 0.8;
+    cursor: pointer;
+  }
+
+  .dark input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.8);
+  }
+
   /* Global: neutralize heavy hover visuals without affecting layout transforms (EXCEPT for dashboard cards) */
   *:hover {
     box-shadow: none !important;
