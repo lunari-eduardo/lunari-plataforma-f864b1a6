@@ -1,12 +1,12 @@
 
-// import { UnifiedEvent } from '@/hooks/useUnifiedCalendar'; // Removed - budgets decoupled
-// import { getBudgetStatusConfig } from '@/utils/statusConfig'; // Removed - budgets decoupled
+import { UnifiedEvent } from '@/hooks/useUnifiedCalendar';
+import { getBudgetStatusConfig } from '@/utils/statusConfig';
 import { useIsMobile } from '@/hooks/use-mobile';
-// import { useOrcamentoData } from '@/hooks/useOrcamentoData'; // Removed - budgets decoupled
+import { useOrcamentoData } from '@/hooks/useOrcamentoData';
 
 interface UnifiedEventCardProps {
-  event: any; // UnifiedEvent type removed
-  onClick: (event: any) => void; // UnifiedEvent type removed
+  event: UnifiedEvent;
+  onClick: (event: UnifiedEvent) => void;
   compact?: boolean;
   variant?: 'daily' | 'weekly' | 'monthly';
 }
@@ -15,8 +15,7 @@ export default function UnifiedEventCard({ event, onClick, compact = false, vari
   const isAppointment = event.type === 'appointment';
   const isBudget = event.type === 'budget';
   const isMobile = useIsMobile();
-  const pacotes: any[] = []; // Stub - budgets decoupled
-  const getCategoriaNameById = () => ''; // Stub - budgets decoupled
+  const { pacotes, getCategoriaNameById } = useOrcamentoData();
 
   // Check if appointment is from a closed budget (origem: orcamento)
   const isFromClosedBudget = isAppointment && (event.originalData as any).origem === 'orcamento';
@@ -43,7 +42,7 @@ export default function UnifiedEventCard({ event, onClick, compact = false, vari
       if (!category && appointment.packageId) {
         const packageData = pacotes.find(p => p.id === appointment.packageId);
         if (packageData && packageData.categoriaId) {
-          category = getCategoriaNameById();
+          category = getCategoriaNameById(packageData.categoriaId);
         }
       }
       
@@ -102,7 +101,7 @@ export default function UnifiedEventCard({ event, onClick, compact = false, vari
       }
     } else {
       // Outros Orçamentos: Manter borda tracejada e fundo semi-transparente
-      const config = { bgColor: 'bg-gray-100', textColor: 'text-gray-800', borderColor: 'border-gray-400' }; // Stub - budgets decoupled
+      const config = getBudgetStatusConfig(event.status);
       const baseStyle = 'border-2 border-dashed hover:bg-opacity-80';
       return `${config.bgColor} ${config.textColor} ${config.borderColor} ${baseStyle}`;
     }

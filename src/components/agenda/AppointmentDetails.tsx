@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatusBadge } from "@/components/workflow/StatusBadge";
 import { toast } from 'sonner';
-// import { useOrcamentos } from '@/hooks/useOrcamentos'; // Removed - budgets decoupled
+import { useOrcamentos } from '@/hooks/useOrcamentos';
 
 type Appointment = {
   id: string;
@@ -46,7 +46,7 @@ export default function AppointmentDetails({
   onCancel,
   onDelete
 }: AppointmentDetailsProps) {
-  const pacotes: any[] = []; // Stub - budgets decoupled
+  const { pacotes } = useOrcamentos();
   const [formData, setFormData] = useState({
     date: appointment.date,
     time: appointment.time,

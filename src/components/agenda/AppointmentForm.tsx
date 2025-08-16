@@ -18,7 +18,7 @@ import PackageSearchCombobox from './PackageSearchCombobox';
 import { useContext } from 'react';
 import { AppContext } from '@/contexts/AppContext';
 import { useIntegration } from '@/hooks/useIntegration';
-// import { useOrcamentos } from '@/hooks/useOrcamentos'; // Removed - budgets decoupled
+import { useOrcamentos } from '@/hooks/useOrcamentos';
 import { ORIGENS_PADRAO } from '@/utils/defaultOrigens';
 
 // Tipo de agendamento
@@ -76,10 +76,12 @@ export default function AppointmentForm({
   const {
     isFromBudget
   } = useIntegration();
-  // DISABLED: Budget integration removed - all stubs
-  const pacotes: any[] = []; // Stub - budgets decoupled
-  const produtos: any[] = []; // Stub - budgets decoupled
-  const origens: any[] = []; // Stub - budgets decoupled
+  const {
+    pacotes,
+    produtos
+  } = useOrcamentos();
+  
+  const { origens } = useOrcamentos();
   const dropdownContext = useDialogDropdownContext();
 
   // Verifica se é agendamento de orçamento

@@ -1,6 +1,6 @@
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
 import type { Lead } from '@/types/leads';
-import type { Cliente } from '@/types/cliente';
+import type { Cliente } from '@/types/orcamentos';
 
 /**
  * Utility functions for synchronizing leads with CRM clients

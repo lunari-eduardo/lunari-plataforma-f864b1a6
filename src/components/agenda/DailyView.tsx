@@ -2,16 +2,16 @@ import { format, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { TimeInput } from "@/components/ui/time-input";
 import { useState, useEffect } from 'react';
-// import { UnifiedEvent } from '@/hooks/useUnifiedCalendar'; // Removed - budgets decoupled
+import { UnifiedEvent } from '@/hooks/useUnifiedCalendar';
 import UnifiedEventCard from './UnifiedEventCard';
 import { useAvailability } from '@/hooks/useAvailability';
 import { Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 interface DailyViewProps {
   date: Date;
-  unifiedEvents: any[]; // UnifiedEvent type removed
+  unifiedEvents: UnifiedEvent[];
   onCreateSlot: (slot: { date: Date; time: string }) => void;
-  onEventClick: (event: any) => void; // UnifiedEvent type removed
+  onEventClick: (event: UnifiedEvent) => void;
 }
 
 const DEFAULT_TIME_SLOTS = ["08:00", "09:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"];

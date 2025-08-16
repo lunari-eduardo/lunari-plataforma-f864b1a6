@@ -17,7 +17,7 @@ interface PackageSearchComboboxProps {
   placeholder?: string;
 }
 
-// import { useOrcamentos } from '@/hooks/useOrcamentos'; // Removed - budgets decoupled
+import { useOrcamentos } from '@/hooks/useOrcamentos';
 
 export default function PackageSearchCombobox({
   value,
@@ -29,8 +29,7 @@ export default function PackageSearchCombobox({
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   
-  const pacotes: any[] = []; // Stub - budgets decoupled
-  const categorias: any[] = []; // Stub - budgets decoupled
+  const { pacotes, categorias } = useOrcamentos();
   
   // Converter pacotes para o formato Package local
   const availablePackages: Package[] = pacotes.map(pacote => {

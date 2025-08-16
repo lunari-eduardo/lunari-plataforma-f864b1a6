@@ -12,10 +12,10 @@ import { Separator } from "@/components/ui/separator";
 import { Calendar, Clock, User, Package, DollarSign, FileText, ExternalLink } from "lucide-react";
 import { toast } from 'sonner';
 import { Appointment } from "@/hooks/useAgenda";
-// import { Orcamento } from "@/types/orcamentos"; // Removed - budgets decoupled
+import { Orcamento } from "@/types/orcamentos";
 interface BudgetAppointmentDetailsProps {
   appointment: Appointment;
-  budget: any | null; // Budget type removed
+  budget: Orcamento | null;
   onSave: (appointmentData: {
     date: Date;
     time: string;

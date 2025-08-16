@@ -1,6 +1,6 @@
 import { storage, STORAGE_KEYS } from './localStorage';
 import { WorkflowItem } from '@/contexts/AppContext';
-import { Cliente } from '@/types/cliente';
+import { Cliente } from '@/types/orcamentos';
 
 /**
  * Migração para adicionar clienteId aos workflowItems existentes

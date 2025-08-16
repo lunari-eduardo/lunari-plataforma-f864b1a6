@@ -17,7 +17,7 @@ import FollowUpNotificationCard from "@/components/leads/FollowUpNotificationCar
 
 import { useSalesAnalytics } from "@/hooks/useSalesAnalytics";
 
-// import { useOrcamentos } from "@/hooks/useOrcamentos"; // Removed - budgets decoupled
+import { useOrcamentos } from "@/hooks/useOrcamentos";
 import { useAgenda } from "@/hooks/useAgenda";
 import { useAvailability } from "@/hooks/useAvailability";
 import { useAppContext } from "@/contexts/AppContext";
@@ -53,7 +53,7 @@ export default function Index() {
   const year = new Date().getFullYear();
   const { monthlyData, categoryData } = useSalesAnalytics(year, "all");
   const { appointments } = useAgenda();
-  const orcamentos: any[] = []; // Stub - budgets decoupled
+  const { orcamentos } = useOrcamentos();
   const { availability } = useAvailability();
   const { workflowItemsAll } = useAppContext();
   // Receita do mês atual vs meta

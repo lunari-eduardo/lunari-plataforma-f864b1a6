@@ -3,7 +3,7 @@
  * Relaciona sessões com clientes por nome, telefone ou email
  */
 
-import { Cliente } from '@/types/cliente';
+import { Cliente } from '@/types/orcamentos';
 
 interface SessionWorkflow {
   id: string;

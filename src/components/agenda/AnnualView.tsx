@@ -2,14 +2,14 @@ import React from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Card } from "@/components/ui/card";
-// import { UnifiedEvent } from "@/hooks/useUnifiedCalendar"; // Removed - budgets decoupled
+import { UnifiedEvent } from "@/hooks/useUnifiedCalendar";
 import { cn } from "@/lib/utils";
 
 interface AnnualViewProps {
   date: Date;
-  unifiedEvents: any[]; // UnifiedEvent type removed
+  unifiedEvents: UnifiedEvent[];
   onDayClick: (date: Date) => void;
-  onEventClick?: (event: any) => void; // UnifiedEvent type removed
+  onEventClick?: (event: UnifiedEvent) => void;
 }
 
 // Helper: key for a date (yyyy-MM-dd)

@@ -1,6 +1,5 @@
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
-// import { Cliente } from '@/types/orcamentos'; // Removed - budgets decoupled
-import { Cliente } from '@/types/cliente';
+import { Cliente } from '@/types/orcamentos';
 import { parseMonetaryValue } from '@/utils/workflowSessionsAdapter';
 import { ORIGENS_PADRAO } from '@/utils/defaultOrigens';
 
