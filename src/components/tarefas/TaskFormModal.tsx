@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { CalendarIcon } from 'lucide-react';
 import { 
   SelectModal as Select, 
   SelectModalContent as SelectContent, 
@@ -137,7 +138,16 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="due">Prazo</Label>
-              <Input id="due" type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
+              <div className="relative">
+                <Input 
+                  id="due" 
+                  type="date" 
+                  value={dueDate} 
+                  onChange={e => setDueDate(e.target.value)}
+                  className="pr-10"
+                />
+                <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-lunar-textSecondary pointer-events-none" />
+              </div>
             </div>
             <div className="space-y-1.5">
               <Label>Prioridade</Label>
