@@ -175,6 +175,25 @@ export function useLeadOrcamentoSync() {
         });
       }
     });
+
+    // Auto-link budgets to leads when created
+    orcamentos.forEach(orcamento => {
+      if (orcamento.leadId && !orcamento.cliente.id) return;
+      
+      // Try to find matching lead by client
+      if (orcamento.cliente?.id && !orcamento.leadId) {
+        const matchingLead = leads.find(lead => lead.clienteId === orcamento.cliente.id);
+        if (matchingLead) {
+          atualizarOrcamento(orcamento.id, { leadId: matchingLead.id });
+          const currentIds = matchingLead.orcamentoIds || [];
+          if (!currentIds.includes(orcamento.id)) {
+            updateLead(matchingLead.id, {
+              orcamentoIds: [...currentIds, orcamento.id]
+            });
+          }
+        }
+      }
+    });
   }, [leads, orcamentos, updateLead, atualizarOrcamento]);
 
   return {

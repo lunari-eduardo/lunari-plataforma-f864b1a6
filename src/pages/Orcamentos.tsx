@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useOrcamentos } from '@/hooks/useOrcamentos';
+import { useLeadOrcamentoIntegration } from '@/hooks/useLeadOrcamentoIntegration';
 import MetricasOrcamento from '@/components/orcamentos/MetricasOrcamento';
 import NovoOrcamento from '@/components/orcamentos/NovoOrcamento';
 import ListaOrcamentos from '@/components/orcamentos/ListaOrcamentos';
@@ -9,9 +10,10 @@ import MonthYearSelector from '@/components/orcamentos/MonthYearSelector';
 import LeadsKanban from '@/components/leads/LeadsKanban';
 
 export default function Orcamentos() {
-  const {
-    metricas
-  } = useOrcamentos();
+  // Initialize lead-budget integration at page level
+  useLeadOrcamentoIntegration();
+  
+  const { metricas } = useOrcamentos();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState('lista');
   const [selectedMonth, setSelectedMonth] = useState(new Date());

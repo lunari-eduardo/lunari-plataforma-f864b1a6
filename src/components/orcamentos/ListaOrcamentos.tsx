@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Search, FileText, MessageCircle, Trash2, Settings, AlertCircle, Pencil, Copy } from 'lucide-react';
 import { useOrcamentos } from '@/hooks/useOrcamentos';
+import { useLeadOrcamentoIntegration } from '@/hooks/useLeadOrcamentoIntegration';
+import { useLeads } from '@/hooks/useLeads';
 import { ORIGENS_PADRAO } from '@/utils/defaultOrigens';
 import { gerarPDFOrcamento } from '@/utils/pdfUtils';
 import { abrirWhatsApp } from '@/utils/whatsappUtils';
@@ -14,6 +16,8 @@ import { Orcamento } from '@/types/orcamentos';
 import StatusBadge from './StatusBadge';
 import OrcamentoDetailsModal from './OrcamentoDetailsModal';
 import EditOrcamentoModal from './EditOrcamentoModal';
+import { Badge } from '@/components/ui/badge';
+import { ExternalLink } from 'lucide-react';
 
 import { formatDateForDisplay, isSameMonthYear, parseDateFromStorage } from '@/utils/dateUtils';
 
@@ -22,6 +26,9 @@ interface ListaOrcamentosProps {
 }
 
 export default function ListaOrcamentos({ selectedMonth }: ListaOrcamentosProps) {
+  // Initialize lead-budget synchronization
+  useLeadOrcamentoIntegration();
+  
   const {
     orcamentos,
     categorias,
@@ -29,9 +36,8 @@ export default function ListaOrcamentos({ selectedMonth }: ListaOrcamentosProps)
     excluirOrcamento,
     adicionarOrcamento
   } = useOrcamentos();
-  const {
-    toast
-  } = useToast();
+  const { leads } = useLeads();
+  const { toast } = useToast();
   const [filtros, setFiltros] = useState({
     busca: '',
     categoria: '',
@@ -160,10 +166,18 @@ export default function ListaOrcamentos({ selectedMonth }: ListaOrcamentosProps)
   };
   const atualizarStatus = (id: string, novoStatus: string) => {
     const orcamento = orcamentos.find(o => o.id === id);
+    const oldStatus = orcamento?.status;
     
     atualizarOrcamento(id, {
       status: novoStatus as any
     });
+
+    // Dispatch event for lead-budget synchronization
+    if (oldStatus !== novoStatus) {
+      window.dispatchEvent(new CustomEvent('orcamento:statusChanged', {
+        detail: { orcamentoId: id, newStatus: novoStatus, oldStatus }
+      }));
+    }
 
     // Lógica de negócio para integrações (sem notificações)
     if (novoStatus === 'fechado') {
@@ -296,10 +310,34 @@ export default function ListaOrcamentos({ selectedMonth }: ListaOrcamentosProps)
               const valorFinal = orcamento.valorFinal || orcamento.valorTotal;
               const atrasado = isAtrasado(orcamento);
               return <TableRow key={orcamento.id} className={atrasado ? 'bg-red-50' : ''}>
-                    {colunasVisiveis.cliente && <TableCell className="font-medium">
+                {colunasVisiveis.cliente && <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
                           {atrasado && <AlertCircle className="h-4 w-4 text-red-500" />}
-                          {orcamento.cliente.nome}
+                          <div className="flex flex-col">
+                            <span>{orcamento.cliente.nome}</span>
+                            {orcamento.leadId && (() => {
+                              const lead = leads.find(l => l.id === orcamento.leadId);
+                              return lead && (
+                                <div className="flex items-center gap-1 mt-1">
+                                  <Badge variant="outline" className="text-xs py-0 px-1 h-4">
+                                    Lead: {lead.status}
+                                  </Badge>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-4 w-4 p-0"
+                                    title="Ver Lead"
+                                    onClick={() => {
+                                      // Navigate to leads tab with this lead highlighted
+                                      window.location.hash = `#leads?leadId=${lead.id}`;
+                                    }}
+                                  >
+                                    <ExternalLink className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              );
+                            })()}
+                          </div>
                         </div>
                       </TableCell>}
                     

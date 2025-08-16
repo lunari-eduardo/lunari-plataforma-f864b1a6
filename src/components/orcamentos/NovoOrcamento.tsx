@@ -63,6 +63,7 @@ export default function NovoOrcamento() {
     const presetDate = searchParams.get('data');
     const presetTime = searchParams.get('hora');
     const clienteId = searchParams.get('clienteId');
+    const leadOrigem = searchParams.get('origem');
     
     if (presetDate) {
       setData(presetDate);
@@ -77,7 +78,16 @@ export default function NovoOrcamento() {
       const cliente = clientes.find(c => c.id === clienteId);
       if (cliente) {
         setClienteSelecionado(cliente);
+        // Set origin from client or URL parameter
+        if (leadOrigem) {
+          setOrigemSelecionada(leadOrigem);
+        } else if (cliente.origem) {
+          setOrigemSelecionada(cliente.origem);
+        }
       }
+    } else if (leadOrigem) {
+      // Set origin from lead even if no client is pre-selected
+      setOrigemSelecionada(leadOrigem);
     }
   }, [location.search, clientes]);
 

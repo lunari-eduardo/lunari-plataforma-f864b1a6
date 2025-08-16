@@ -10,7 +10,9 @@ interface StatusBadgeProps {
 export default function StatusBadge({ status, isRascunho }: StatusBadgeProps) {
   const config = getBudgetStatusConfig(status);
   
-  if (isRascunho) {
+  // Only show "Rascunho" if status is really pending/undefined AND there's no time
+  // This prevents showing "Rascunho" for budgets with valid statuses
+  if (isRascunho && (!status || status === 'pendente')) {
     return (
       <Badge className="bg-amber-100 text-amber-800 border-none hover:opacity-80 cursor-pointer">
         Rascunho
