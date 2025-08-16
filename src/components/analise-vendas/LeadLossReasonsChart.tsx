@@ -97,9 +97,6 @@ export function LeadLossReasonsChart() {
                     fontSize: '12px'
                   }}
                 />
-                <Legend 
-                  wrapperStyle={{ fontSize: '12px' }}
-                />
               </PieChart>
             </ResponsiveContainer>
           </div>
