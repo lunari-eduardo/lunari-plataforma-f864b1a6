@@ -67,11 +67,11 @@
 
 @layer base {
   .dark {
-    --lunar-bg: 222 20% 10%;
-    --lunar-surface: 222 15% 14%;
+    --lunar-bg: 0 0% 9%;
+    --lunar-surface: 0 0% 13%;
     --lunar-text: 0 0% 96%;
     --lunar-textSecondary: 0 0% 70%;
-    --lunar-border: 222 12% 22%;
+    --lunar-border: 0 0% 25%;
     --lunar-accent: var(--primary);
     --lunar-accentHover: var(--primary);
     --lunar-error: 12 74% 55%;
@@ -79,22 +79,22 @@
     --lunar-warning: 42 35% 62%;
 
     /* Shadcn-compatible variables for dark mode */
-    --background: 222 20% 10%;
+    --background: 0 0% 9%;
     --foreground: 0 0% 96%;
-    --muted: 222 15% 16%;
+    --muted: 0 0% 13%;
     --muted-foreground: 0 0% 70%;
-    --popover: 222 15% 14%;
+    --popover: 0 0% 13%;
     --popover-foreground: 0 0% 96%;
-    --card: 222 15% 14%;
+    --card: 0 0% 13%;
     --card-foreground: 0 0% 96%;
-    --border: 222 12% 22%;
-    --input: 222 15% 14%;
+    --border: 0 0% 25%;
+    --input: 0 0% 13%;
     --primary: var(--lunar-accent);
     --primary-foreground: 0 0% 100%;
     --lunar-accent-foreground: 0 0% 100%;
-    --secondary: 222 15% 16%;
+    --secondary: 0 0% 13%;
     --secondary-foreground: 0 0% 96%;
-    --accent: 222 15% 16%;
+    --accent: 0 0% 13%;
     --accent-foreground: 0 0% 96%;
     --destructive: 12 74% 45%;
     --destructive-foreground: 0 0% 100%;
