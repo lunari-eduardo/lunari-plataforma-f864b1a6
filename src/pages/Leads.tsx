@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import LeadsKanban from '@/components/leads/LeadsKanban';
 import LeadMetricsCards from '@/components/leads/LeadMetricsCards';
-import UnifiedLeadFilters from '@/components/leads/UnifiedLeadFilters';
+import LeadPeriodFilter from '@/components/leads/LeadPeriodFilter';
 import type { PeriodFilter, PeriodType } from '@/hooks/useLeadMetrics';
 
 const getCurrentMonthPeriodType = (): PeriodType => {
@@ -34,9 +34,6 @@ export default function Leads() {
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>({
     periodType: getCurrentMonthPeriodType()
   });
-  
-  const [searchTerm, setSearchTerm] = useState('');
-  const [origemFilter, setOrigemFilter] = useState('all');
 
   const handlePeriodChange = (periodType: PeriodType) => {
     setPeriodFilter({ periodType });
@@ -49,24 +46,16 @@ export default function Leads() {
         {/* Cards de Métricas */}
         <LeadMetricsCards periodFilter={periodFilter} />
         
-        {/* Filtros Unificados */}
-        <UnifiedLeadFilters
+        {/* Filtro de Período */}
+        <LeadPeriodFilter
           periodType={periodFilter.periodType}
           onPeriodChange={handlePeriodChange}
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          origemFilter={origemFilter}
-          onOrigemChange={setOrigemFilter}
         />
       </div>
 
       {/* Kanban - Ajustado para ocupar espaço restante */}
       <div className="flex-1 overflow-hidden">
-        <LeadsKanban 
-          periodFilter={periodFilter}
-          searchTerm={searchTerm}
-          origemFilter={origemFilter}
-        />
+        <LeadsKanban periodFilter={periodFilter} />
       </div>
     </div>
   );
