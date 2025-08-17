@@ -42,7 +42,6 @@ export default function Agenda() {
   const {
     orcamentos
   } = useOrcamentos();
-  
   const isMobile = useIsMobile();
   const isTablet = useIsTablet();
 
@@ -53,7 +52,7 @@ export default function Agenda() {
   });
   const [date, setDate] = useState<Date>(new Date());
 
-// Modal states
+  // Modal states
   const [isAppointmentDialogOpen, setIsAppointmentDialogOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
@@ -108,7 +107,9 @@ export default function Agenda() {
   // Format day title for daily view
   const formatDayTitle = () => {
     if (view === 'day') {
-      return format(date, "EEEE", { locale: ptBR });
+      return format(date, "EEEE", {
+        locale: ptBR
+      });
     }
     return '';
   };
@@ -202,7 +203,6 @@ export default function Agenda() {
     }
   };
 
-
   // Handle appointment save
   const handleSaveAppointment = (appointmentData: any) => {
     if (editingAppointment) {
@@ -254,8 +254,7 @@ export default function Agenda() {
       <Card className="p-2 md:p-4 bg-lunar-bg mx-0">
         <div className="flex flex-col items-center justify-center mb-2 md:mb-4 gap-2 md:gap-3">
           {/* Mobile Layout (unchanged) */}
-          {isMobile && (
-            <>
+          {isMobile && <>
               {/* Navigation and Date Display */}
               <div className="flex items-center justify-between w-full gap-1">
                 <Button variant="outline" onClick={navigateToday} className="h-8 px-2 text-xs bg-lunar-surface hover:bg-lunar-border border-lunar-border">
@@ -295,22 +294,14 @@ export default function Agenda() {
                 </div>
                 
                 {/* Mobile Manage Schedules Button - Only icon */}
-                <Button 
-                  variant="outline" 
-                  size="icon"
-                  onClick={() => setIsAvailabilityModalOpen(true)}
-                  className="bg-lunar-surface hover:bg-lunar-border border-lunar-border h-8 w-8"
-                  title="Gerenciar Horários"
-                >
+                <Button variant="outline" size="icon" onClick={() => setIsAvailabilityModalOpen(true)} className="bg-lunar-surface hover:bg-lunar-border border-lunar-border h-8 w-8" title="Gerenciar Horários">
                   <Settings className="h-4 w-4" />
                 </Button>
               </div>
-            </>
-          )}
+            </>}
 
           {/* Tablet Layout */}
-          {isTablet && (
-            <>
+          {isTablet && <>
               {/* First Line: Navigation and Date */}
               <div className="flex items-center justify-center w-full gap-4">
                 <Button variant="outline" onClick={navigateToday} className="h-8 px-3 text-sm bg-lunar-surface hover:bg-lunar-border border-lunar-border">
@@ -334,7 +325,7 @@ export default function Agenda() {
 
               {/* Second Line: View Toggles and Manage Button */}
               <div className="flex items-center justify-center w-full gap-4">
-                <div className="bg-lunar-surface border border-lunar-border rounded-lg p-1">
+                <div className="bg-lunar-surface border border-lunar-border rounded-lg p-1 py-0">
                   <Button variant={view === 'day' ? "default" : "ghost"} size="sm" onClick={() => setView('day')} className={view === 'day' ? "bg-lunar-accent text-lunar-text hover:bg-lunar-accentHover" : "text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-bg/50"}>
                     Dia
                   </Button>
@@ -349,21 +340,15 @@ export default function Agenda() {
                   </Button>
                 </div>
                 
-                <Button 
-                  variant="outline" 
-                  onClick={() => setIsAvailabilityModalOpen(true)}
-                  className="bg-lunar-surface hover:bg-lunar-border border-lunar-border h-8 px-3 text-sm"
-                >
+                <Button variant="outline" onClick={() => setIsAvailabilityModalOpen(true)} className="bg-lunar-surface hover:bg-lunar-border border-lunar-border h-6 px-3 py-0 my-0 text-xs">
                   <Settings className="h-4 w-4 mr-2" />
                   Gerenciar Horários
                 </Button>
               </div>
-            </>
-          )}
+            </>}
 
           {/* Desktop Layout */}
-          {!isMobile && !isTablet && (
-            <div className="flex items-center justify-between w-full">
+          {!isMobile && !isTablet && <div className="flex items-center justify-between w-full">
               <div className="flex items-center gap-4">
                 <Button variant="outline" onClick={navigateToday} className="h-8 px-3 text-sm bg-lunar-surface hover:bg-lunar-border border-lunar-border">
                   Hoje
@@ -400,23 +385,16 @@ export default function Agenda() {
               </div>
 
               {/* Manage Schedules Button - Far Right */}
-              <Button 
-                variant="outline" 
-                onClick={() => setIsAvailabilityModalOpen(true)}
-                className="bg-lunar-surface hover:bg-lunar-border border-lunar-border h-8 px-3 text-sm"
-              >
+              <Button variant="outline" onClick={() => setIsAvailabilityModalOpen(true)} className="bg-lunar-surface hover:bg-lunar-border border-lunar-border h-8 px-3 text-sm">
                 <Settings className="h-4 w-4 mr-2" />
                 Gerenciar Horários
               </Button>
-            </div>
-          )}
+            </div>}
 
           {/* Day Title for Daily View */}
-          {view === 'day' && formatDayTitle() && (
-            <div className="text-lg font-medium text-lunar-textSecondary capitalize">
+          {view === 'day' && formatDayTitle() && <div className="text-lg font-medium text-lunar-textSecondary capitalize">
               {formatDayTitle()}
-            </div>
-          )}
+            </div>}
         </div>
           
         <div className="mt-4">
@@ -462,11 +440,6 @@ export default function Agenda() {
       <EditOrcamentoModal isOpen={isBudgetModalOpen} onClose={() => setIsBudgetModalOpen(false)} orcamento={selectedBudget} />
 
       {/* Availability Config Modal */}
-      <AvailabilityConfigModal
-        isOpen={isAvailabilityModalOpen}
-        onClose={() => setIsAvailabilityModalOpen(false)}
-        date={selectedSlot?.date || new Date()}
-        initialTime={selectedSlot?.time}
-      />
+      <AvailabilityConfigModal isOpen={isAvailabilityModalOpen} onClose={() => setIsAvailabilityModalOpen(false)} date={selectedSlot?.date || new Date()} initialTime={selectedSlot?.time} />
     </div>;
 }
