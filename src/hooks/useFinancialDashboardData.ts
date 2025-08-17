@@ -19,12 +19,12 @@ interface TodayBilledSummary {
 }
 
 export function useFinancialDashboardData() {
-  const { itensFinanceiros, marcarComoPago } = useNovoFinancas();
+  const { itensFinanceiros, transacoes, marcarComoPago } = useNovoFinancas();
   
-  // Load transactions from FinancialEngine
-  const transacoes = useMemo(() => {
-    return FinancialEngine.loadTransactions();
-  }, []);
+  // Use transactions directly from useNovoFinancas for real-time updates
+  // const transacoes = useMemo(() => {
+  //   return FinancialEngine.loadTransactions();
+  // }, []);
 
   // Enhanced transactions with item details
   const transacoesComItens = useMemo(() => {
@@ -51,7 +51,8 @@ export function useFinancialDashboardData() {
         t.item && 
         (t.status === 'Agendado' || t.status === 'Faturado') &&
         t.dataVencimento >= todayStr &&
-        t.dataVencimento <= threeDaysStr
+        t.dataVencimento <= threeDaysStr &&
+        t.dataVencimento !== todayStr // Exclude today's billed items to avoid duplication
       )
       .map(t => {
         const dueDate = new Date(t.dataVencimento + 'T00:00:00');

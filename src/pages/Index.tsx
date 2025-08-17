@@ -220,20 +220,12 @@ export default function Index() {
       <FollowUpNotificationCard />
     </section>
 
-    {/* Financial Critical Reminders */}
-    <section aria-label="Contas críticas" className="animate-fade-in">
+    {/* Critical Cards - Side by side on large screens */}
+    <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
       <FinancialRemindersCard />
+      <ProductionRemindersCard lembretes={lembretesProducao} />
+      <HighPriorityDueSoonCard />
     </section>
-
-      {/* Lembretes de Produção */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <ProductionRemindersCard lembretes={lembretesProducao} />
-      </section>
-
-      {/* Tarefas de alta prioridade (até 5 dias) */}
-      <section>
-        <HighPriorityDueSoonCard />
-      </section>
 
       {/* Orçamentos e Agenda */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
