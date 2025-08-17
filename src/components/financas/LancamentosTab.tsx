@@ -102,7 +102,7 @@ export default function LancamentosTab({
   const infoGrupo = getInfoPorGrupo(activeSubTab);
   return <div className="space-y-6">
       {/* Linha 1: Barra de Totais */}
-      <div className="rounded-lg border border-border p-4 shadow-sm bg-lunar-bg">
+      <div className="rounded-lg border border-border p-4 shadow-sm bg-lunar-bg py-[4px]">
         <div className="flex flex-wrap items-center gap-6 text-sm">
           <div className="flex items-center gap-2">
             <span className="font-medium text-foreground">Total:</span>
