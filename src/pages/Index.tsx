@@ -11,6 +11,7 @@ import { KPIGroupCard } from "@/components/dashboard/KPIGroupCard";
 import { ProductionRemindersCard } from "@/components/dashboard/ProductionRemindersCard";
 import { HighPriorityDueSoonCard } from "@/components/tarefas/HighPriorityDueSoonCard";
 import { ReceitaPrevistaCard } from "@/components/dashboard/ReceitaPrevistaCard";
+import { FinancialRemindersCard } from "@/components/dashboard/FinancialRemindersCard";
 import DailyHero from "@/components/dashboard/DailyHero";
 import DailyKPIs from "@/components/dashboard/DailyKPIs";
 import FollowUpNotificationCard from "@/components/leads/FollowUpNotificationCard";
@@ -217,6 +218,11 @@ export default function Index() {
     {/* Follow-up Notifications */}
     <section aria-label="Follow-up de leads" className="animate-fade-in">
       <FollowUpNotificationCard />
+    </section>
+
+    {/* Financial Critical Reminders */}
+    <section aria-label="Contas críticas" className="animate-fade-in">
+      <FinancialRemindersCard />
     </section>
 
       {/* Lembretes de Produção */}
