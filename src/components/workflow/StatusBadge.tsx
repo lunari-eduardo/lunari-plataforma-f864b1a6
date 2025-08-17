@@ -37,7 +37,7 @@ export function StatusBadge({ status, className, showCircle = true }: StatusBadg
           style={{ backgroundColor: statusColor }}
         />
       )}
-      <span className="text-xs font-medium text-gray-700">
+      <span className="text-xs font-normal text-foreground">
         {status === 'A Confirmar' ? 'Pendente' : status}
       </span>
     </div>

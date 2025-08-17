@@ -85,10 +85,10 @@ export function WorkflowPackageCombobox({
         <Command className="bg-neumorphic-base">
           <CommandInput placeholder="Buscar pacote..." className="h-8 text-xs border-0 bg-transparent focus:ring-0" />
           <CommandList>
-            <CommandEmpty className="text-xs py-2 text-neumorphic-textLight">
+            <CommandEmpty className="text-xs py-2 text-muted-foreground">
               Nenhum pacote encontrado.
             </CommandEmpty>
-            <CommandGroup className="bg-neutral-50">
+            <CommandGroup>
               {pacotes.map(pkg => (
                 <CommandItem 
                   key={pkg.id} 
@@ -109,7 +109,7 @@ export function WorkflowPackageCombobox({
                   <Check className={cn("mr-2 h-3 w-3", value === pkg.nome ? "opacity-100" : "opacity-0")} />
                   <div className="flex flex-col">
                     <span className="font-medium">{pkg.nome}</span>
-                    <span className="text-2xs text-neumorphic-textLight">
+                    <span className="text-2xs text-muted-foreground">
                       R$ {(pkg.valor || 0).toFixed(2).replace('.', ',')} • Categoria: {pkg.categoria}
                     </span>
                   </div>
