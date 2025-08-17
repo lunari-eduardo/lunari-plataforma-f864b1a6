@@ -576,7 +576,7 @@ export default function Workflow() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input placeholder="Buscar por cliente (sem acentos)..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 h-9 bg-card" />
             </div>
-            <Button variant="outline" size="sm" onClick={() => setSearchTerm('')} className="text-zinc-700 bg-neutral-50">Limpar</Button>
+            <Button variant="outline" size="sm" onClick={() => setSearchTerm('')}>Limpar</Button>
           </div>
           <div className="flex items-center space-x-2">
             <span className="text-gray-500 hidden md:inline text-xs">
