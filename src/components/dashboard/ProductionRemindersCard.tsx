@@ -1,4 +1,4 @@
-import { AlertTriangle } from "lucide-react";
+import { Settings, Cog } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -19,7 +19,7 @@ export function ProductionRemindersCard({ lembretes }: ProductionRemindersCardPr
       <CardHeader className="pb-3 flex flex-row items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-brand-gradient">
-            <AlertTriangle className="h-5 w-5 text-white" />
+            <Settings className="h-5 w-5 text-white" />
           </div>
           <CardTitle className="text-lg font-semibold">Lembretes de Produção</CardTitle>
         </div>
@@ -35,7 +35,7 @@ export function ProductionRemindersCard({ lembretes }: ProductionRemindersCardPr
             {lembretes.slice(0, 8).map((r) => (
               <div key={r.id} className="flex items-start gap-3 text-sm p-3 rounded-xl bg-card-gradient shadow-none hover:shadow-card-subtle transition-shadow duration-300">
                 <div className="p-1.5 rounded-lg bg-brand-gradient">
-                  <AlertTriangle className="h-4 w-4 text-white" />
+                  <Cog className="h-4 w-4 text-white" />
                 </div>
                 <div>
                   <span className="font-semibold">{r.produto}</span> de <span className="font-semibold">{r.cliente}</span> ainda não foi para produção!

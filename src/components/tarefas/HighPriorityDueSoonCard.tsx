@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useMemo } from 'react';
 import { useTasks } from '@/hooks/useTasks';
@@ -26,7 +26,6 @@ export function HighPriorityDueSoonCard() {
     };
 
     return tasks
-      .filter((t) => t.priority === 'high')
       .filter((t) => t.dueDate)
       .filter((t) => t.status !== doneKey && !t.completedAt)
       .map((t) => ({ t, due: parseDue(t.dueDate) }))
@@ -57,9 +56,9 @@ export function HighPriorityDueSoonCard() {
       <CardHeader className="pb-3 flex flex-row items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-brand-gradient">
-            <AlertTriangle className="h-5 w-5 text-white" />
+            <Calendar className="h-5 w-5 text-white" />
           </div>
-          <CardTitle className="text-lg font-semibold">Tarefas prioritárias que vencem em menos de 5 dias</CardTitle>
+          <CardTitle className="text-lg font-semibold">Tarefas que vencem dentro de 5 dias</CardTitle>
           <Badge variant="secondary" className="dashboard-badge bg-card-gradient border-0 shadow-theme-subtle hover:shadow-theme text-sm font-semibold transition-shadow duration-300" aria-label={`Quantidade de tarefas: ${count}`}>{count}</Badge>
         </div>
         <Link to="/tarefas">
@@ -68,7 +67,7 @@ export function HighPriorityDueSoonCard() {
       </CardHeader>
       <CardContent>
         {count === 0 ? (
-          <p className="text-2xs text-lunar-textSecondary">Nenhuma tarefa de alta prioridade para os próximos 5 dias.</p>
+          <p className="text-2xs text-lunar-textSecondary">Nenhuma tarefa vence nos próximos 5 dias.</p>
         ) : (
            <ul className="space-y-3">
              {items.map(({ t, due, days }) => (

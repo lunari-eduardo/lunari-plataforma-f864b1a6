@@ -1,4 +1,4 @@
-import { AlertTriangle, DollarSign, CheckCircle2, Calendar, Clock } from "lucide-react";
+import { CreditCard, DollarSign, CheckCircle2, Calendar, Clock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,9 +34,9 @@ export function FinancialRemindersCard() {
       <CardHeader className="pb-3 flex flex-row items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-brand-gradient">
-            <AlertTriangle className="h-5 w-5 text-white" />
+            <CreditCard className="h-5 w-5 text-white" />
           </div>
-          <CardTitle className="text-lg font-semibold">Contas Críticas</CardTitle>
+          <CardTitle className="text-lg font-semibold">Contas a Pagar</CardTitle>
         </div>
         {(upcomingAccounts.length > 0 || todayBilledSummary.count > 0) && (
           <Badge variant="outline" className="text-2xs">
@@ -180,7 +180,7 @@ export function FinancialRemindersCard() {
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <CheckCircle2 className="h-8 w-8 text-lunar-success mb-3" />
             <p className="text-sm font-medium text-lunar-textSecondary">
-              Nenhuma conta crítica pendente
+              Nenhuma conta a pagar pendente
             </p>
             <p className="text-2xs text-lunar-textSecondary mt-1">
               Suas finanças estão em dia
