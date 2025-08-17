@@ -1,4 +1,4 @@
-import { CreditCard, DollarSign, CheckCircle2, Calendar, Clock } from "lucide-react";
+import { TrendingDown, DollarSign, CheckCircle2, Calendar, Clock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,7 +34,7 @@ export function FinancialRemindersCard() {
       <CardHeader className="pb-3 flex flex-row items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-brand-gradient">
-            <CreditCard className="h-5 w-5 text-white" />
+            <TrendingDown className="h-5 w-5 text-white" />
           </div>
           <CardTitle className="text-lg font-semibold">Contas a Pagar</CardTitle>
         </div>

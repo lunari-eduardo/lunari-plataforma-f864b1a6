@@ -58,7 +58,7 @@ export function HighPriorityDueSoonCard() {
           <div className="p-2 rounded-xl bg-brand-gradient">
             <Calendar className="h-5 w-5 text-white" />
           </div>
-          <CardTitle className="text-lg font-semibold">Tarefas que vencem dentro de 5 dias</CardTitle>
+          <CardTitle className="text-lg font-semibold">Próximas Tarefas</CardTitle>
           <Badge variant="secondary" className="dashboard-badge bg-card-gradient border-0 shadow-theme-subtle hover:shadow-theme text-sm font-semibold transition-shadow duration-300" aria-label={`Quantidade de tarefas: ${count}`}>{count}</Badge>
         </div>
         <Link to="/tarefas">

@@ -1,4 +1,4 @@
-import { Settings, Cog } from "lucide-react";
+import { Bell, Cog } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -19,7 +19,7 @@ export function ProductionRemindersCard({ lembretes }: ProductionRemindersCardPr
       <CardHeader className="pb-3 flex flex-row items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-brand-gradient">
-            <Settings className="h-5 w-5 text-white" />
+            <Bell className="h-5 w-5 text-white" />
           </div>
           <CardTitle className="text-lg font-semibold">Lembretes de Produção</CardTitle>
         </div>
