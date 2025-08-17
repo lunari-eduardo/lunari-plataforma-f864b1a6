@@ -152,47 +152,6 @@ export default function LancamentosTab({
               </TabsList>
             </Tabs>
 
-            {/* Grupo Central: Seletor de Mês/Ano */}
-            <div className="flex items-center bg-card rounded-lg border border-border p-2 shadow-sm py-[2px] px-0">
-              <Button variant="ghost" size="sm" onClick={() => navegarMes('anterior')} className="h-8 w-8 p-0">
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              
-              <div className="flex items-center gap-2 px-[1px]">
-                <Select value={filtroMesAno.mes.toString()} onValueChange={value => setFiltroMesAno({
-              ...filtroMesAno,
-              mes: parseInt(value)
-            })}>
-                  <SelectTrigger className="w-20 h-8 text-sm border-0">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {meses.map((mes, index) => <SelectItem key={index} value={(index + 1).toString()} className="text-sm">
-                        {mes}
-                      </SelectItem>)}
-                  </SelectContent>
-                </Select>
-
-                <Select value={filtroMesAno.ano.toString()} onValueChange={value => setFiltroMesAno({
-              ...filtroMesAno,
-              ano: parseInt(value)
-            })}>
-                  <SelectTrigger className="w-20 h-8 text-sm border-0">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[2023, 2024, 2025, 2026].map(ano => <SelectItem key={ano} value={ano.toString()} className="text-sm">
-                        {ano}
-                      </SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <Button variant="ghost" size="sm" onClick={() => navegarMes('proximo')} className="h-8 w-8 p-0">
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-
             {/* Grupo da Direita: Botão Novo Lançamento */}
             <Button onClick={() => setModalNovoLancamentoAberto(true)} className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs py-0">
               <Plus className="h-4 w-4 mr-2" />
@@ -289,6 +248,49 @@ export default function LancamentosTab({
                     {infoGrupo.titulo} - {meses[filtroMesAno.mes - 1]} {filtroMesAno.ano}
                   </h3>
                 </div>
+                
+                {/* Seletor de Mês/Ano para Desktop/Tablet */}
+                {!isMobile && (
+                  <div className="flex items-center bg-card rounded-lg border border-border p-2 shadow-sm py-[2px] px-0">
+                    <Button variant="ghost" size="sm" onClick={() => navegarMes('anterior')} className="h-8 w-8 p-0">
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    
+                    <div className="flex items-center gap-2 px-[1px]">
+                      <Select value={filtroMesAno.mes.toString()} onValueChange={value => setFiltroMesAno({
+                        ...filtroMesAno,
+                        mes: parseInt(value)
+                      })}>
+                        <SelectTrigger className="w-20 h-8 text-sm border-0">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {meses.map((mes, index) => <SelectItem key={index} value={(index + 1).toString()} className="text-sm">
+                              {mes}
+                            </SelectItem>)}
+                        </SelectContent>
+                      </Select>
+
+                      <Select value={filtroMesAno.ano.toString()} onValueChange={value => setFiltroMesAno({
+                        ...filtroMesAno,
+                        ano: parseInt(value)
+                      })}>
+                        <SelectTrigger className="w-20 h-8 text-sm border-0">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {[2023, 2024, 2025, 2026].map(ano => <SelectItem key={ano} value={ano.toString()} className="text-sm">
+                              {ano}
+                            </SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <Button variant="ghost" size="sm" onClick={() => navegarMes('proximo')} className="h-8 w-8 p-0">
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
               </div>
 
               {isMobile ? <TabelaLancamentosMobile transacoes={transacoesPorGrupo[grupo]} onAtualizarTransacao={atualizarTransacao} onRemoverTransacao={removerTransacao} onMarcarComoPago={marcarComoPago} grupoAtivo={grupo} obterItensPorGrupo={obterItensPorGrupo} /> : <TabelaLancamentos transacoes={transacoesPorGrupo[grupo]} onAtualizarTransacao={atualizarTransacao} onRemoverTransacao={removerTransacao} onMarcarComoPago={marcarComoPago} grupoAtivo={grupo} obterItensPorGrupo={obterItensPorGrupo} onAdicionarTransacao={adicionarTransacao} createTransactionEngine={createTransactionEngine} filtroMesAno={filtroMesAno} />}
