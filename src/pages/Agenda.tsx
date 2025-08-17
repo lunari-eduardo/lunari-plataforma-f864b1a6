@@ -3,7 +3,7 @@ import { format, addMonths, addWeeks, addDays, subMonths, subWeeks, subDays, add
 import { ptBR } from 'date-fns/locale';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Settings, Share2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import MonthlyView from "@/components/agenda/MonthlyView";
@@ -12,7 +12,6 @@ import DailyView from "@/components/agenda/DailyView";
 import AnnualView from "@/components/agenda/AnnualView";
 import AppointmentForm from "@/components/agenda/AppointmentForm";
 import AppointmentDetails from "@/components/agenda/AppointmentDetails";
-import ActionChoiceModal from "@/components/agenda/ActionChoiceModal";
 import EditOrcamentoModal from "@/components/orcamentos/EditOrcamentoModal";
 import BudgetAppointmentDetails from "@/components/agenda/BudgetAppointmentDetails";
 import AvailabilityConfigModal from "@/components/agenda/AvailabilityConfigModal";
@@ -52,7 +51,6 @@ export default function Agenda() {
 // Modal states
   const [isAppointmentDialogOpen, setIsAppointmentDialogOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [isChoiceModalOpen, setIsChoiceModalOpen] = useState(false);
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
   const [isBudgetAppointmentModalOpen, setIsBudgetAppointmentModalOpen] = useState(false);
   const [isAvailabilityModalOpen, setIsAvailabilityModalOpen] = useState(false);
@@ -145,13 +143,16 @@ export default function Agenda() {
     setView('day');
   };
 
-  // Handle slot click (empty time slot)
+  // Handle slot click (empty time slot) - directly open appointment form
   const handleCreateSlot = (slot: {
     date: Date;
     time?: string;
   }) => {
     setSelectedSlot(slot);
-    setIsChoiceModalOpen(true);
+    setEditingAppointment(null);
+    setViewingAppointment(null);
+    setIsAppointmentDialogOpen(true);
+    setIsDetailsOpen(false);
   };
 
   // Handle event click (existing appointment or budget)
@@ -188,15 +189,6 @@ export default function Agenda() {
     }
   };
 
-  // Handle appointment creation from choice modal
-  const handleCreateAppointment = () => {
-    if (selectedSlot) {
-      setEditingAppointment(null);
-      setViewingAppointment(null);
-      setIsAppointmentDialogOpen(true);
-      setIsDetailsOpen(false);
-    }
-  };
 
   // Handle appointment save
   const handleSaveAppointment = (appointmentData: any) => {
@@ -269,35 +261,60 @@ export default function Agenda() {
             </div>
 
             {/* View Toggle Buttons - Hidden on mobile, shown on desktop */}
-            <div className="hidden md:flex items-center bg-lunar-surface border border-lunar-border rounded-lg p-1">
-              <Button variant={view === 'day' ? "default" : "ghost"} size="sm" onClick={() => setView('day')} className={view === 'day' ? "bg-lunar-accent text-lunar-text hover:bg-lunar-accentHover" : "text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-bg/50"}>
-                Dia
-              </Button>
-              <Button variant={view === 'week' ? "default" : "ghost"} size="sm" onClick={() => setView('week')} className={view === 'week' ? "bg-lunar-accent text-lunar-text hover:bg-lunar-accentHover" : "text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-bg/50"}>
-                Semana
-              </Button>
-              <Button variant={view === 'month' ? "default" : "ghost"} size="sm" onClick={() => setView('month')} className={view === 'month' ? "bg-lunar-accent text-lunar-text hover:bg-lunar-accentHover" : "text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-bg/50"}>
-                Mês
-              </Button>
-              <Button variant={view === 'year' ? "default" : "ghost"} size="sm" onClick={() => setView('year')} className={view === 'year' ? "bg-lunar-accent text-lunar-text hover:bg-lunar-accentHover" : "text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-bg/50"}>
-                Ano
+            <div className="hidden md:flex items-center gap-2">
+              <div className="bg-lunar-surface border border-lunar-border rounded-lg p-1">
+                <Button variant={view === 'day' ? "default" : "ghost"} size="sm" onClick={() => setView('day')} className={view === 'day' ? "bg-lunar-accent text-lunar-text hover:bg-lunar-accentHover" : "text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-bg/50"}>
+                  Dia
+                </Button>
+                <Button variant={view === 'week' ? "default" : "ghost"} size="sm" onClick={() => setView('week')} className={view === 'week' ? "bg-lunar-accent text-lunar-text hover:bg-lunar-accentHover" : "text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-bg/50"}>
+                  Semana
+                </Button>
+                <Button variant={view === 'month' ? "default" : "ghost"} size="sm" onClick={() => setView('month')} className={view === 'month' ? "bg-lunar-accent text-lunar-text hover:bg-lunar-accentHover" : "text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-bg/50"}>
+                  Mês
+                </Button>
+                <Button variant={view === 'year' ? "default" : "ghost"} size="sm" onClick={() => setView('year')} className={view === 'year' ? "bg-lunar-accent text-lunar-text hover:bg-lunar-accentHover" : "text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-bg/50"}>
+                  Ano
+                </Button>
+              </div>
+              
+              {/* Manage Schedules Button */}
+              <Button 
+                variant="outline" 
+                onClick={() => setIsAvailabilityModalOpen(true)}
+                className="bg-lunar-surface hover:bg-lunar-border border-lunar-border h-8 px-3 text-xs"
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Gerenciar Horários
               </Button>
             </div>
           </div>
           
           {/* Mobile View Toggle Buttons */}
-          <div className="flex md:hidden items-center bg-lunar-surface border border-lunar-border rounded-lg p-1 w-full">
-            <Button variant={view === 'day' ? "default" : "ghost"} size="sm" onClick={() => setView('day')} className={`flex-1 ${view === 'day' ? "bg-lunar-accent text-lunar-text hover:bg-lunar-accentHover" : "text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-bg/50"}`}>
-              Dia
-            </Button>
-            <Button variant={view === 'week' ? "default" : "ghost"} size="sm" onClick={() => setView('week')} className={`flex-1 ${view === 'week' ? "bg-lunar-accent text-lunar-text hover:bg-lunar-accentHover" : "text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-bg/50"}`}>
-              Semana
-            </Button>
-            <Button variant={view === 'month' ? "default" : "ghost"} size="sm" onClick={() => setView('month')} className={`flex-1 ${view === 'month' ? "bg-lunar-accent text-lunar-text hover:bg-lunar-accentHover" : "text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-bg/50"}`}>
-              Mês
-            </Button>
-            <Button variant={view === 'year' ? "default" : "ghost"} size="sm" onClick={() => setView('year')} className={`flex-1 ${view === 'year' ? "bg-lunar-accent text-lunar-text hover:bg-lunar-accentHover" : "text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-bg/50"}`}>
-              Ano
+          <div className="flex md:hidden items-center gap-2 w-full">
+            <div className="flex bg-lunar-surface border border-lunar-border rounded-lg p-1 flex-1">
+              <Button variant={view === 'day' ? "default" : "ghost"} size="sm" onClick={() => setView('day')} className={`flex-1 ${view === 'day' ? "bg-lunar-accent text-lunar-text hover:bg-lunar-accentHover" : "text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-bg/50"}`}>
+                Dia
+              </Button>
+              <Button variant={view === 'week' ? "default" : "ghost"} size="sm" onClick={() => setView('week')} className={`flex-1 ${view === 'week' ? "bg-lunar-accent text-lunar-text hover:bg-lunar-accentHover" : "text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-bg/50"}`}>
+                Semana
+              </Button>
+              <Button variant={view === 'month' ? "default" : "ghost"} size="sm" onClick={() => setView('month')} className={`flex-1 ${view === 'month' ? "bg-lunar-accent text-lunar-text hover:bg-lunar-accentHover" : "text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-bg/50"}`}>
+                Mês
+              </Button>
+              <Button variant={view === 'year' ? "default" : "ghost"} size="sm" onClick={() => setView('year')} className={`flex-1 ${view === 'year' ? "bg-lunar-accent text-lunar-text hover:bg-lunar-accentHover" : "text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-bg/50"}`}>
+                Ano
+              </Button>
+            </div>
+            
+            {/* Mobile Manage Schedules Button - Only icon */}
+            <Button 
+              variant="outline" 
+              size="icon"
+              onClick={() => setIsAvailabilityModalOpen(true)}
+              className="bg-lunar-surface hover:bg-lunar-border border-lunar-border h-8 w-8"
+              title="Gerenciar Horários"
+            >
+              <Settings className="h-4 w-4" />
             </Button>
           </div>
         </div>
@@ -310,8 +327,6 @@ export default function Agenda() {
         </div>
       </Card>
 
-      {/* Action Choice Modal */}
-      <ActionChoiceModal isOpen={isChoiceModalOpen} onClose={() => setIsChoiceModalOpen(false)} date={selectedSlot?.date || new Date()} time={selectedSlot?.time || ''} onCreateAppointment={handleCreateAppointment} onConfigureAvailability={() => { setIsChoiceModalOpen(false); setIsAvailabilityModalOpen(true); }} />
 
       {/* Appointment Form Modal */}
       <Dialog open={isAppointmentDialogOpen} onOpenChange={setIsAppointmentDialogOpen}>
