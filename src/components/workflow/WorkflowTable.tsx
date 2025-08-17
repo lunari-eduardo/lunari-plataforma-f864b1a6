@@ -595,9 +595,9 @@ return <td className={`
         {content}
       </td>;
   }, [visibleColumns, currentColumnWidths, responsiveColumnWidths]);
-  return <div className="relative flex flex-col h-full bg-background text-foreground dark:bg-gray-950">
+  return <div className="relative flex flex-col h-full bg-background text-foreground dark:bg-lunar-bg">
       {/* NÍVEL 1: O "BOX DE ROLAGEM" */}
-      <div ref={scrollContainerRef} className="h-full w-full overflow-auto" style={{
+      <div ref={scrollContainerRef} className="h-full w-full overflow-auto bg-background dark:bg-lunar-surface" style={{
       height: 'calc(100vh - 280px)'
     }}>
           {/* NÍVEL 2: A TABELA ÚNICA COM LARGURA AUTOMÁTICA */}
