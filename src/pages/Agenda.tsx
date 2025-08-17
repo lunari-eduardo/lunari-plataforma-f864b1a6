@@ -90,15 +90,17 @@ export default function Agenda() {
         });
       case 'week':
         const endOfWeek = addDays(date, 6);
-        return `${format(date, "d", {
+        const weekTitle = `${format(date, "d", {
           locale: ptBR
         })} a ${format(endOfWeek, "d 'de' MMMM", {
           locale: ptBR
         })}`;
+        return weekTitle.toLowerCase();
       case 'day':
-        return format(date, "d 'de' MMMM", {
+        const dayTitle = format(date, "d 'de' MMMM", {
           locale: ptBR
         });
+        return dayTitle.toLowerCase();
       default:
         return '';
     }
