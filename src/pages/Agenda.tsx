@@ -287,8 +287,8 @@ export default function Agenda() {
     enabled: (isMobile || isTablet) && view !== 'year',
     onPrev: navigatePreviousDirect,
     onNext: navigateNextDirect,
-    thresholdPx: 50,
-    maxVerticalRatio: 0.7
+    thresholdPx: 38,
+    maxVerticalRatio: 0.8
   });
 
   // Handle view full budget from appointment modal
@@ -453,7 +453,7 @@ export default function Agenda() {
         >
           {/* Visual content container (with transitions) */}
           <div 
-            className={`transition-opacity duration-200 select-none sm:select-auto ${
+            className={`transition-opacity duration-200 ${
               isTransitioning ? 'opacity-70' : 'opacity-100'
             }`}
           >

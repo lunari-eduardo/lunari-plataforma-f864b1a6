@@ -13,6 +13,7 @@ interface TouchState {
   startY: number;
   startTime: number;
   isValid: boolean;
+  scrollEl?: HTMLElement | null;
 }
 
 export function useSwipeNavigation({
@@ -36,11 +37,7 @@ export function useSwipeNavigation({
         return true;
       }
       
-      // Check for specific classes that indicate scrollable content
-      if (current.classList.contains('overflow-x-auto') || 
-          current.classList.contains('scrollbar-elegant')) {
-        return true;
-      }
+      // Removed class-based scroll detection to avoid blocking swipes on containers with decorative scroll classes
       
       current = current.parentElement as Element;
     }
@@ -65,27 +62,41 @@ export function useSwipeNavigation({
 
   const onTouchStart = useCallback((e: React.TouchEvent) => {
     if (!enabled) return;
-    
+
     const target = e.target as Element;
-    
-    // Only block swipe for actual inputs or scrollable areas
+    const touch = e.touches[0];
+
+    // Only block swipe for actual input elements
     if (isInteractiveElement(target)) {
       touchState.current = null;
       return;
     }
 
-    // Less aggressive scrollable detection - only block if actively scrollable
-    if (isScrollableParent(target)) {
-      touchState.current = null;
-      return;
+    // Edge swipes are always allowed
+    const vw = window.innerWidth || document.documentElement.clientWidth;
+    const edgeSwipe = touch.clientX < 24 || touch.clientX > vw - 24;
+
+    // Find nearest horizontally scrollable parent (if any)
+    let scrollEl: HTMLElement | null = null;
+    if (!edgeSwipe) {
+      let current: Element | null = target;
+      while (current && current !== document.body) {
+        const styles = window.getComputedStyle(current);
+        const overflowX = styles.overflowX;
+        if ((overflowX === 'auto' || overflowX === 'scroll') && (current as HTMLElement).scrollWidth > (current as HTMLElement).clientWidth) {
+          scrollEl = current as HTMLElement;
+          break;
+        }
+        current = current.parentElement;
+      }
     }
-    
-    const touch = e.touches[0];
+
     touchState.current = {
       startX: touch.clientX,
       startY: touch.clientY,
       startTime: Date.now(),
-      isValid: true
+      isValid: true,
+      scrollEl
     };
   }, [enabled, isInteractiveElement, isScrollableParent]);
 
@@ -99,6 +110,21 @@ export function useSwipeNavigation({
     // Check if this is a horizontal swipe
     const absX = Math.abs(deltaX);
     const absY = Math.abs(deltaY);
+
+    // If inside a horizontally scrollable container, only allow swipe when at boundaries
+    const el = touchState.current.scrollEl;
+    if (el) {
+      const movingLeft = deltaX < 0;
+      const maxScrollLeft = el.scrollWidth - el.clientWidth;
+      const atLeft = el.scrollLeft <= 0;
+      const atRight = el.scrollLeft >= maxScrollLeft - 1;
+
+      // If the container can scroll further in the gesture direction, cancel swipe handling
+      if ((movingLeft && !atRight) || (!movingLeft && !atLeft)) {
+        touchState.current.isValid = false;
+        return;
+      }
+    }
     
     // More sensitive horizontal detection for swipes  
     if (absX > thresholdPx * 0.2 && absY / absX < maxVerticalRatio) {
@@ -127,7 +153,7 @@ export function useSwipeNavigation({
     // Validate the swipe with optimized parameters
     if (absX > thresholdPx && 
         absY / absX < maxVerticalRatio && 
-        deltaTime < 800) {
+        deltaTime < 600) {
       
       if (deltaX < 0) {
         onNext(); // Swipe left = next
