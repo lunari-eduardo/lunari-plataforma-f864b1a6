@@ -292,7 +292,7 @@ const sensors = useSensors(pointerSensor);
           }}
           onDragCancel={() => setActiveId(null)}
         >
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto scrollbar-kanban">
             <div className="flex gap-4 min-w-max pr-2">
               <ChecklistPanel
                 items={checklistItems}

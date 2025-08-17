@@ -254,7 +254,7 @@ export default function LeadFormModal({
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent 
-        className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto"
+        className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto scrollbar-elegant"
         onPointerDownOutside={(e) => {
           if (isSubmitting) {
             e.preventDefault();

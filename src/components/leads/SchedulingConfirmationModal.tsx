@@ -58,7 +58,7 @@ export default function SchedulingConfirmationModal({
   if (showAppointmentForm) {
     return (
       <Dialog open={true} onOpenChange={(open) => !open && handleAppointmentFormClose()}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto scrollbar-elegant">
           <DialogHeader>
             <DialogTitle>Agendar Cliente</DialogTitle>
           </DialogHeader>

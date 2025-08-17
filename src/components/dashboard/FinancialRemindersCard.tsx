@@ -81,7 +81,7 @@ export function FinancialRemindersCard() {
 
             {/* Individual items if multiple */}
             {todayBilledSummary.transactions.length > 1 && (
-              <div className="mt-3 space-y-2 max-h-32 overflow-y-auto scrollbar-lunar">
+              <div className="mt-3 space-y-2 max-h-32 overflow-y-auto scrollbar-elegant">
                 {todayBilledSummary.transactions.map((transaction) => (
                   <div 
                     key={transaction.id}
@@ -121,7 +121,7 @@ export function FinancialRemindersCard() {
               </span>
             </div>
 
-            <div className="space-y-2 max-h-48 overflow-y-auto scrollbar-lunar">
+            <div className="space-y-2 max-h-48 overflow-y-auto scrollbar-elegant">
               {upcomingAccounts.map((account) => (
                 <div
                   key={account.id}

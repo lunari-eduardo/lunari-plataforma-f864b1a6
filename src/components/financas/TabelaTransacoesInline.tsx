@@ -167,7 +167,7 @@ export default function TabelaTransacoesInline({
 
       {/* Tabela de transações */}
       <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto scrollbar-elegant">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted">

@@ -374,7 +374,7 @@ export function EstruturaCustosFixos({
               </div>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto scrollbar-elegant">
               <table className="w-full min-w-[500px] border-collapse">
                 <thead>
                   <tr className="border-b">
@@ -467,7 +467,7 @@ export function EstruturaCustosFixos({
               </div>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto scrollbar-elegant">
               <table className="w-full min-w-[500px] border-collapse">
                 <thead>
                   <tr className="border-b">

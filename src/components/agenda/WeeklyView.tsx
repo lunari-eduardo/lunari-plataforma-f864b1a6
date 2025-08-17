@@ -100,7 +100,7 @@ const getEventForSlot = (day: Date, time: string) => {
   };
 
   return (
-    <div className="overflow-x-auto pb-4">
+    <div className="overflow-x-auto pb-4 scrollbar-elegant">
       <div className="min-w-[960px]">
         <div className="flex items-center justify-between mb-2">
           <p className="text-xs md:text-sm text-muted-foreground">Semana de {format(weekStart, "dd 'de' MMMM", { locale: ptBR })}</p>

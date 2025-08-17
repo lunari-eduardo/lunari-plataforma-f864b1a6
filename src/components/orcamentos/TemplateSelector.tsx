@@ -172,7 +172,7 @@ export default function TemplateSelector({ value, onChange, onSelectTemplate }: 
           <DialogHeader>
             <DialogTitle>Gerenciar Templates</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 max-h-96 overflow-y-auto">
+          <div className="space-y-4 max-h-96 overflow-y-auto scrollbar-elegant">
             {templates.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">Nenhum template encontrado</p>
             ) : (

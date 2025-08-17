@@ -353,7 +353,7 @@ export default function EditOrcamentoModal({
     totalsCalculados
   });
   return <Dialog open={isOpen} onOpenChange={onClose} modal={false}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" onInteractOutside={event => {
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto scrollbar-elegant" onInteractOutside={event => {
       // Verifica se algum dos menus está aberto
       if (categoriaMenuAberto || origemMenuAberto) {
         // Impede que o clique feche o Dialog

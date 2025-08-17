@@ -115,7 +115,7 @@ export default function ClientSearchInput({
       </div>
 
       {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg max-h-60 overflow-auto">
+        <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg max-h-60 overflow-auto scrollbar-minimal">
           {filteredClients.length > 0 ? (
             filteredClients.map((client) => (
               <div

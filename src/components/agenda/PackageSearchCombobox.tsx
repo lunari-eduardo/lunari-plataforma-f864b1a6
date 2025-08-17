@@ -116,7 +116,7 @@ export default function PackageSearchCombobox({
       </div>
 
       {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg max-h-60 overflow-auto">
+        <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg max-h-60 overflow-auto scrollbar-minimal">
           {Object.keys(groupedPackages).length > 0 ? (
             Object.entries(groupedPackages).map(([category, packages]) => (
               <div key={category}>

@@ -205,7 +205,7 @@ export default function TabelaLancamentos({
     }
   };
   return <div className="bg-card rounded-lg border border-border overflow-hidden shadow-sm">
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto scrollbar-elegant">
         <table className="w-full">
           <thead className="bg-muted border-b border-border">
             <tr>

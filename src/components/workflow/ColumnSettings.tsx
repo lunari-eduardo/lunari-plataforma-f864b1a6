@@ -68,7 +68,7 @@ export function ColumnSettings({
             <Separator />
           </div>
           
-          <div className="grid gap-2 max-h-[250px] overflow-y-auto pr-2">
+          <div className="grid gap-2 max-h-[250px] overflow-y-auto pr-2 scrollbar-elegant">
             {Object.entries(availableColumns).map(([key, label]) => <div key={key} className="flex items-center space-x-2">
                 <Checkbox id={`column-${key}`} checked={localColumns[key] !== false} onCheckedChange={() => toggleColumn(key)} />
                 <Label htmlFor={`column-${key}`} className="text-xs cursor-pointer">

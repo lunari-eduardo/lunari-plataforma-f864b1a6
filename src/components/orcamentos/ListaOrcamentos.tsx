@@ -289,7 +289,7 @@ export default function ListaOrcamentos({ selectedMonth }: ListaOrcamentosProps)
       </CardHeader>
 
       <CardContent>
-        <div className="overflow-x-auto max-h-96 overflow-y-auto">
+        <div className="overflow-x-auto max-h-96 overflow-y-auto scrollbar-elegant">
           <Table>
             <TableHeader className="sticky top-0 bg-background z-10">
               <TableRow>

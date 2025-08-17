@@ -76,7 +76,7 @@ export default function ComboboxDescricao({
             onValueChange={handleInputChange}
             className="border-0"
           />
-          <CommandList className="max-h-[200px] overflow-y-auto">
+          <CommandList className="max-h-[200px] overflow-y-auto scrollbar-minimal">
             {filteredDescricoes.length > 0 ? (
               <CommandGroup>
                 {filteredDescricoes.map((descricao) => (

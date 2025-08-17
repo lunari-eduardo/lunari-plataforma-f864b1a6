@@ -147,7 +147,7 @@ export function GerenciarProdutosModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto space-y-4 py-[8px]">
+        <div className="flex-1 overflow-y-auto space-y-4 py-[8px] scrollbar-elegant">
           {/* Lista de Produtos Atuais */}
           {localProdutos.length > 0 ? <div className="space-y-3 py-0">
               <Label className="text-sm font-normal ">Produtos Associados</Label>

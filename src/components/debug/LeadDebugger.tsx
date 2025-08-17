@@ -47,7 +47,7 @@ export default function LeadDebugger() {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <h4 className="font-semibold">React State ({leads.length})</h4>
-          <div className="text-xs max-h-32 overflow-y-auto bg-white p-2 rounded">
+          <div className="text-xs max-h-32 overflow-y-auto bg-white p-2 rounded scrollbar-elegant">
             {leads.map(lead => (
               <div key={lead.id} className="border-b py-1">
                 {lead.nome} - {lead.origem} ({lead.id.slice(-6)})
@@ -58,7 +58,7 @@ export default function LeadDebugger() {
         
         <div>
           <h4 className="font-semibold">Storage ({storageLeads.length})</h4>
-          <div className="text-xs max-h-32 overflow-y-auto bg-white p-2 rounded">
+          <div className="text-xs max-h-32 overflow-y-auto bg-white p-2 rounded scrollbar-elegant">
             {storageLeads.map((lead: any) => (
               <div key={lead.id} className="border-b py-1">
                 {lead.nome} - {lead.origem} ({lead.id?.slice(-6)})
@@ -76,7 +76,7 @@ export default function LeadDebugger() {
             <Button size="sm" variant="destructive" onClick={clearStorage}>Clear Storage</Button>
           </div>
         </div>
-        <div className="text-xs max-h-32 overflow-y-auto bg-white p-2 rounded">
+        <div className="text-xs max-h-32 overflow-y-auto bg-white p-2 rounded scrollbar-elegant">
           {events.map((event, idx) => (
             <div key={idx} className="font-mono text-xs py-1 border-b">
               {event}

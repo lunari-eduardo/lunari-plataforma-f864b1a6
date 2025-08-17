@@ -284,7 +284,7 @@ export default function Pacotes({
         </div>
 
         {/* Tabela Responsiva */}
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto scrollbar-elegant">
           <Table>
             <TableHeader>
               <TableRow>

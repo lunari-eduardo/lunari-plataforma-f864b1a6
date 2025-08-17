@@ -25,7 +25,7 @@ export default function AnaliseVendas() {
   } = useSalesAnalytics(selectedYear, selectedCategory);
 
   return (
-    <div className="min-h-screen overflow-y-auto overflow-x-hidden bg-lunar-bg p-1 md:p-4 space-y-4 scrollbar-thin scrollbar-thumb-lunar-accent scrollbar-track-lunar-surface">
+    <div className="min-h-screen overflow-y-auto overflow-x-hidden bg-lunar-bg p-1 md:p-4 space-y-4 scrollbar-elegant">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
