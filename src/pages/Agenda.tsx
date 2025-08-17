@@ -21,6 +21,7 @@ import { useIntegration } from "@/hooks/useIntegration";
 import { useOrcamentos } from "@/hooks/useOrcamentos";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useIsTablet } from "@/hooks/useIsTablet";
+import { useSwipeNavigation } from "@/hooks/useSwipeNavigation";
 import { Orcamento } from "@/types/orcamentos";
 type ViewType = 'month' | 'week' | 'day' | 'year';
 export default function Agenda() {
@@ -44,6 +45,32 @@ export default function Agenda() {
   } = useOrcamentos();
   const isMobile = useIsMobile();
   const isTablet = useIsTablet();
+
+  // Helper functions for proper date formatting
+  const capitalizeFirst = (str: string): string => {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  };
+
+  const formatWeekTitle = (date: Date): string => {
+    const endOfWeek = addDays(date, 6);
+    const startDay = format(date, "d", { locale: ptBR });
+    const endDayMonth = format(endOfWeek, "d 'de' MMMM", { locale: ptBR });
+    const monthName = format(endOfWeek, "MMMM", { locale: ptBR });
+    const capitalizedMonth = capitalizeFirst(monthName);
+    return `${startDay} a ${format(endOfWeek, "d")} de ${capitalizedMonth}`;
+  };
+
+  const formatDayHeaderTitle = (date: Date): string => {
+    const monthName = format(date, "MMMM", { locale: ptBR });
+    const capitalizedMonth = capitalizeFirst(monthName);
+    return `${format(date, "d")} de ${capitalizedMonth}`;
+  };
+
+  const formatMonthTitle = (date: Date): string => {
+    const monthName = format(date, "MMMM", { locale: ptBR });
+    const capitalizedMonth = capitalizeFirst(monthName);
+    return `${capitalizedMonth} ${format(date, "yyyy")}`;
+  };
 
   // View and navigation state
   const [view, setView] = useState<ViewType>(() => {
@@ -81,26 +108,13 @@ export default function Agenda() {
   const formatDateTitle = () => {
     switch (view) {
       case 'year':
-        return format(date, "yyyy", {
-          locale: ptBR
-        });
+        return format(date, "yyyy", { locale: ptBR });
       case 'month':
-        return format(date, "MMMM yyyy", {
-          locale: ptBR
-        });
+        return formatMonthTitle(date);
       case 'week':
-        const endOfWeek = addDays(date, 6);
-        const weekTitle = `${format(date, "d", {
-          locale: ptBR
-        })} a ${format(endOfWeek, "d 'de' MMMM", {
-          locale: ptBR
-        })}`;
-        return weekTitle.toLowerCase();
+        return formatWeekTitle(date);
       case 'day':
-        const dayTitle = format(date, "d 'de' MMMM", {
-          locale: ptBR
-        });
-        return dayTitle.toLowerCase();
+        return formatDayHeaderTitle(date);
       default:
         return '';
     }
@@ -109,9 +123,8 @@ export default function Agenda() {
   // Format day title for daily view
   const formatDayTitle = () => {
     if (view === 'day') {
-      return format(date, "EEEE", {
-        locale: ptBR
-      });
+      const dayName = format(date, "EEEE", { locale: ptBR });
+      return capitalizeFirst(dayName);
     }
     return '';
   };
@@ -244,6 +257,15 @@ export default function Agenda() {
     }
   };
 
+  // Swipe navigation for mobile and tablet
+  const swipeHandlers = useSwipeNavigation({
+    enabled: (isMobile || isTablet) && view !== 'year',
+    onPrev: navigatePrevious,
+    onNext: navigateNext,
+    thresholdPx: 50,
+    maxVerticalRatio: 0.4
+  });
+
   // Handle view full budget from appointment modal
   const handleViewFullBudget = () => {
     if (selectedBudgetAppointment?.budget) {
@@ -268,7 +290,7 @@ export default function Agenda() {
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
                   
-                  <div className="text-sm font-medium capitalize min-w-[150px] text-center px-2">
+                  <div className="text-sm font-medium min-w-[150px] text-center px-2">
                     {formatDateTitle()}
                   </div>
                   
@@ -315,7 +337,7 @@ export default function Agenda() {
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
                   
-                  <div className="text-base font-medium capitalize min-w-[250px] text-center px-2">
+                  <div className="text-base font-medium min-w-[250px] text-center px-2">
                     {formatDateTitle()}
                   </div>
                   
@@ -361,7 +383,7 @@ export default function Agenda() {
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
                   
-                  <div className="text-base font-medium capitalize min-w-[200px] text-center px-2">
+                  <div className="text-base font-medium min-w-[200px] text-center px-2">
                     {formatDateTitle()}
                   </div>
                   
@@ -394,12 +416,15 @@ export default function Agenda() {
             </div>}
 
           {/* Day Title for Daily View */}
-          {view === 'day' && formatDayTitle() && <div className="text-lg font-medium text-lunar-textSecondary capitalize">
+          {view === 'day' && formatDayTitle() && <div className="text-lg font-medium text-lunar-textSecondary">
               {formatDayTitle()}
             </div>}
         </div>
           
-        <div className="mt-4">
+        <div 
+          className="mt-4 touch-pan-y select-none sm:select-auto"
+          {...((isMobile || isTablet) && view !== 'year' ? swipeHandlers : {})}
+        >
           {view === 'year' && <AnnualView date={date} unifiedEvents={unifiedEvents} onDayClick={handleDayClick} onEventClick={handleEventClick} />}
           {view === 'month' && <MonthlyView date={date} unifiedEvents={unifiedEvents} onCreateSlot={handleCreateSlot} onEventClick={handleEventClick} onDayClick={handleDayClick} />}
           {view === 'week' && <WeeklyView date={date} unifiedEvents={unifiedEvents} onCreateSlot={handleCreateSlot} onEventClick={handleEventClick} />}
