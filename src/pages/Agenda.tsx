@@ -287,9 +287,12 @@ export default function Agenda() {
     enabled: (isMobile || isTablet) && view !== 'year',
     onPrev: navigatePreviousDirect,
     onNext: navigateNextDirect,
-    thresholdPx: 30,
-    maxVerticalRatio: 0.6
+    thresholdPx: 25,
+    maxVerticalRatio: 0.8
   });
+
+  // Debug logs
+  console.log('📱 Device detection:', { isMobile, isTablet, view, swipeEnabled: (isMobile || isTablet) && view !== 'year' });
 
   // Handle view full budget from appointment modal
   const handleViewFullBudget = () => {
