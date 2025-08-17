@@ -49,12 +49,13 @@ export function useSwipeNavigation({
 
   const isInteractiveElement = useCallback((element: Element): boolean => {
     const tagName = element.tagName.toLowerCase();
-    const interactiveTags = ['input', 'textarea', 'select', 'button'];
     
-    if (interactiveTags.includes(tagName)) {
+    // Only prevent swipe for actual input elements
+    if (tagName === 'input' || tagName === 'textarea') {
       return true;
     }
     
+    // Check for contenteditable
     if (element.hasAttribute('contenteditable')) {
       return true;
     }
@@ -67,8 +68,14 @@ export function useSwipeNavigation({
     
     const target = e.target as Element;
     
-    // Check if target is interactive or has scrollable parent
-    if (isInteractiveElement(target) || isScrollableParent(target)) {
+    // Only block swipe for actual inputs or scrollable areas
+    if (isInteractiveElement(target)) {
+      touchState.current = null;
+      return;
+    }
+
+    // Less aggressive scrollable detection - only block if actively scrollable
+    if (isScrollableParent(target)) {
       touchState.current = null;
       return;
     }
@@ -93,11 +100,11 @@ export function useSwipeNavigation({
     const absX = Math.abs(deltaX);
     const absY = Math.abs(deltaY);
     
-    // More aggressive horizontal detection for swipes
-    if (absX > thresholdPx * 0.7 && absY / absX < maxVerticalRatio) {
+    // More sensitive horizontal detection for swipes  
+    if (absX > thresholdPx * 0.5 && absY / absX < maxVerticalRatio) {
       // This is a valid horizontal swipe, prevent default scrolling
       e.preventDefault();
-    } else if (absY > absX * 1.5) {
+    } else if (absY > absX * 2) {
       // This is more of a vertical gesture, invalidate
       touchState.current.isValid = false;
     }
@@ -117,10 +124,10 @@ export function useSwipeNavigation({
     const absX = Math.abs(deltaX);
     const absY = Math.abs(deltaY);
     
-    // Validate the swipe
+    // Validate the swipe with more lenient parameters
     if (absX > thresholdPx && 
         absY / absX < maxVerticalRatio && 
-        deltaTime < 500) {
+        deltaTime < 800) {
       
       if (deltaX < 0) {
         onNext(); // Swipe left = next

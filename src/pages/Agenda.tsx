@@ -140,43 +140,49 @@ export default function Agenda() {
       setTimeout(() => setIsTransitioning(false), 100);
     }, 100);
   };
+
+  // Direct navigation functions (for gestures, without transitions)
+  const navigatePreviousDirect = () => {
+    switch (view) {
+      case 'year':
+        setDate(subYears(date, 1));
+        break;
+      case 'month':
+        setDate(subMonths(date, 1));
+        break;
+      case 'week':
+        setDate(subWeeks(date, 1));
+        break;
+      case 'day':
+        setDate(subDays(date, 1));
+        break;
+    }
+  };
   
+  const navigateNextDirect = () => {
+    switch (view) {
+      case 'year':
+        setDate(addYears(date, 1));
+        break;
+      case 'month':
+        setDate(addMonths(date, 1));
+        break;
+      case 'week':
+        setDate(addWeeks(date, 1));
+        break;
+      case 'day':
+        setDate(addDays(date, 1));
+        break;
+    }
+  };
+  
+  // Button navigation functions (with transitions)
   const navigatePrevious = () => {
-    navigateWithTransition(() => {
-      switch (view) {
-        case 'year':
-          setDate(subYears(date, 1));
-          break;
-        case 'month':
-          setDate(subMonths(date, 1));
-          break;
-        case 'week':
-          setDate(subWeeks(date, 1));
-          break;
-        case 'day':
-          setDate(subDays(date, 1));
-          break;
-      }
-    });
+    navigateWithTransition(navigatePreviousDirect);
   };
   
   const navigateNext = () => {
-    navigateWithTransition(() => {
-      switch (view) {
-        case 'year':
-          setDate(addYears(date, 1));
-          break;
-        case 'month':
-          setDate(addMonths(date, 1));
-          break;
-        case 'week':
-          setDate(addWeeks(date, 1));
-          break;
-        case 'day':
-          setDate(addDays(date, 1));
-          break;
-      }
-    });
+    navigateWithTransition(navigateNextDirect);
   };
   
   const navigateToday = () => {
@@ -276,13 +282,13 @@ export default function Agenda() {
     }
   };
 
-  // Swipe navigation for mobile and tablet
+  // Swipe navigation for mobile and tablet (using direct functions, no transitions)
   const swipeHandlers = useSwipeNavigation({
     enabled: (isMobile || isTablet) && view !== 'year',
-    onPrev: navigatePrevious,
-    onNext: navigateNext,
-    thresholdPx: 50,
-    maxVerticalRatio: 0.4
+    onPrev: navigatePreviousDirect,
+    onNext: navigateNextDirect,
+    thresholdPx: 30,
+    maxVerticalRatio: 0.6
   });
 
   // Handle view full budget from appointment modal
