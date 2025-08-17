@@ -2,6 +2,7 @@ import { format, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { TimeInput } from "@/components/ui/time-input";
 import { useState, useEffect } from 'react';
+import ConflictIndicator from './ConflictIndicator';
 import { UnifiedEvent } from '@/hooks/useUnifiedCalendar';
 import UnifiedEventCard from './UnifiedEventCard';
 import { useAvailability } from '@/hooks/useAvailability';
@@ -162,26 +163,29 @@ const getEventForSlot = (time: string) => {
                       variant="daily"
                     />
                   </div>
-                ) : (
-                  hasAvailabilityForTime(time) ? (
-                    <div className="inline-flex items-center gap-2">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-availability/20 border border-availability/50 text-lunar-text">
-                        Disponível
-                      </span>
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); handleRemoveAvailability(time); }}
-                        className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
-                        aria-label="Remover disponibilidade"
-                        title="Remover disponibilidade"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" /> Remover
-                      </button>
-                    </div>
-                  ) : (
-                    <span className="text-muted-foreground">Disponível</span>
-                  )
-                )}
+                 ) : (
+                   <div className="flex items-center justify-between">
+                     {hasAvailabilityForTime(time) ? (
+                       <div className="inline-flex items-center gap-2">
+                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-availability/20 border border-availability/50 text-lunar-text">
+                           Disponível
+                         </span>
+                         <button
+                           type="button"
+                           onClick={(e) => { e.stopPropagation(); handleRemoveAvailability(time); }}
+                           className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+                           aria-label="Remover disponibilidade"
+                           title="Remover disponibilidade"
+                         >
+                           <Trash2 className="h-3.5 w-3.5" /> Remover
+                         </button>
+                       </div>
+                     ) : (
+                       <span className="text-muted-foreground">Disponível</span>
+                     )}
+                     <ConflictIndicator date={date} time={time} />
+                   </div>
+                 )}
               </div>
             </div>
           );

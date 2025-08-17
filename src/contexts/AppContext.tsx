@@ -1652,6 +1652,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const addAppointment = (appointment: Omit<Appointment, 'id'>) => {
+    // Validação de conflitos para agendamentos confirmados
+    if (appointment.status === 'confirmado') {
+      const existingConfirmed = appointments.find(app => 
+        app.date instanceof Date ? 
+          (app.date.toDateString() === (appointment.date instanceof Date ? appointment.date : new Date(appointment.date)).toDateString() && app.time === appointment.time && app.status === 'confirmado') :
+          (new Date(app.date).toDateString() === (appointment.date instanceof Date ? appointment.date : new Date(appointment.date)).toDateString() && app.time === appointment.time && app.status === 'confirmado')
+      );
+      
+      if (existingConfirmed) {
+        throw new Error('Já existe um agendamento confirmado neste horário');
+      }
+    }
+
     const newAppointment: Appointment = {
       ...appointment,
       id: Date.now().toString(),

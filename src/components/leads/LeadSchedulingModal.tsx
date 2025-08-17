@@ -5,7 +5,9 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar, Clock, Check, X } from 'lucide-react';
 import { useAgenda } from '@/hooks/useAgenda';
+import { useConflictResolution } from '@/hooks/useConflictResolution';
 import { useToast } from '@/hooks/use-toast';
+import ConflictResolutionModal from '@/components/agenda/ConflictResolutionModal';
 import type { Lead } from '@/types/leads';
 
 interface LeadSchedulingModalProps {
@@ -26,12 +28,16 @@ export default function LeadSchedulingModal({
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [time, setTime] = useState('14:00');
   const [notes, setNotes] = useState('');
+  const [showConflictModal, setShowConflictModal] = useState(false);
+  const [pendingAppointment, setPendingAppointment] = useState<any>(null);
+  const [conflictingAppointments, setConflictingAppointments] = useState<any[]>([]);
   const { addAppointment } = useAgenda();
+  const { validateTimeConflict, resolveTimeConflicts } = useConflictResolution();
   const { toast } = useToast();
 
   const handleSchedule = () => {
     try {
-      const appointment = addAppointment({
+      const appointmentToCreate = {
         title: `${lead.nome} - Sessão`,
         date: new Date(date),
         time: time,
@@ -41,8 +47,32 @@ export default function LeadSchedulingModal({
         description: notes || `Agendamento do lead: ${lead.nome}`,
         status: 'confirmado' as const,
         origem: 'agenda' as const
-      });
+      };
 
+      // Validar conflitos para agendamentos confirmados
+      const validation = validateTimeConflict(
+        appointmentToCreate.date, 
+        appointmentToCreate.time, 
+        appointmentToCreate.status
+      );
+
+      if (!validation.valid) {
+        toast({
+          title: 'Conflito de Horário',
+          description: validation.reason,
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      if (validation.needsResolution && validation.conflictingAppointments) {
+        setPendingAppointment(appointmentToCreate);
+        setConflictingAppointments(validation.conflictingAppointments);
+        setShowConflictModal(true);
+        return;
+      }
+
+      const appointment = addAppointment(appointmentToCreate);
       onScheduled(appointment.id);
       onOpenChange(false);
       
@@ -60,10 +90,48 @@ export default function LeadSchedulingModal({
     }
   };
 
+  const handleConflictResolved = () => {
+    if (pendingAppointment) {
+      try {
+        const appointment = addAppointment(pendingAppointment);
+        resolveTimeConflicts(appointment);
+        onScheduled(appointment.id);
+        setShowConflictModal(false);
+        onOpenChange(false);
+        setPendingAppointment(null);
+        setConflictingAppointments([]);
+        
+        toast({
+          title: 'Agendamento Criado',
+          description: `${lead.nome} foi agendado e conflitos resolvidos`
+        });
+      } catch (error) {
+        console.error('Erro ao criar agendamento:', error);
+        toast({
+          title: 'Erro',
+          description: 'Não foi possível criar o agendamento',
+          variant: 'destructive'
+        });
+      }
+    }
+  };
+
   const handleSkip = () => {
     onSkip();
     onOpenChange(false);
   };
+
+  if (showConflictModal && pendingAppointment) {
+    return (
+      <ConflictResolutionModal
+        open={true}
+        onOpenChange={setShowConflictModal}
+        confirmedAppointment={pendingAppointment}
+        conflictingAppointments={conflictingAppointments}
+        onResolved={handleConflictResolved}
+      />
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
