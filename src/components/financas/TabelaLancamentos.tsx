@@ -18,7 +18,10 @@ interface TabelaLancamentosProps {
   obterItensPorGrupo: (grupo: GrupoPrincipal) => ItemFinanceiro[];
   onAdicionarTransacao: (transacao: Omit<NovaTransacaoFinanceira, 'id' | 'userId' | 'criadoEm'>) => void;
   createTransactionEngine?: (input: any) => void; // Opcional para usar o motor centralizado
-  filtroMesAno: { mes: number; ano: number }; // Adicionado para sincronização
+  filtroMesAno: {
+    mes: number;
+    ano: number;
+  }; // Adicionado para sincronização
 }
 export default function TabelaLancamentos({
   transacoes,
@@ -153,7 +156,8 @@ export default function TabelaLancamentos({
     setNovaTransacao({
       item_id: '',
       valor: '',
-      data_vencimento: gerarDataPadrao(), // Usar data padrão baseada no filtro
+      data_vencimento: gerarDataPadrao(),
+      // Usar data padrão baseada no filtro
       observacoes: ''
     });
     setOpcoesNovaTransacao({
@@ -237,7 +241,7 @@ export default function TabelaLancamentos({
                 data_vencimento: e.target.value
               })} className="w-full h-8 text-sm" />
               </td>
-              <td className="px-4 py-3">
+              <td className="px-2 py-3">
                 <Select value={novaTransacao.item_id} onValueChange={value => setNovaTransacao({
                 ...novaTransacao,
                 item_id: value
@@ -252,7 +256,7 @@ export default function TabelaLancamentos({
                   </SelectContent>
                 </Select>
               </td>
-              <td className="px-4 py-3">
+              <td className="px-1 py-3">
                 <Input type="number" step="0.01" placeholder="0,00" value={novaTransacao.valor} onChange={e => setNovaTransacao({
                 ...novaTransacao,
                 valor: e.target.value
