@@ -7,11 +7,11 @@
 
 @layer base {
   :root {
-    --lunar-bg: 210 33% 98%;
-    --lunar-surface: 0 0% 100%;
+    --lunar-bg: 60 4% 97%;        /* #f8f8f7 */
+    --lunar-surface: 0 0% 99%;    /* #fdfdfd */
     --lunar-text: 0 0% 23%;
     --lunar-textSecondary: 0 0% 49%;
-    --lunar-border: 215 20% 88%;
+    --lunar-border: 60 3% 94%;    /* #efefee */
     --lunar-accent: 210 84% 56%;
     --lunar-accentHover: 210 84% 48%;
     --lunar-error: 12 74% 61%;
@@ -30,22 +30,22 @@
     --brand-gradient-end: 224 76% 52%;
     
     /* Shadcn compatible variables for light mode */
-    --background: 210 33% 98%;
+    --background: 60 4% 97%;       /* #f8f8f7 */
     --foreground: 0 0% 23%;
-    --muted: 210 33% 98%;
+    --muted: 60 4% 97%;            /* #f8f8f7 */
     --muted-foreground: 0 0% 49%;
-    --popover: 0 0% 100%;
+    --popover: 0 0% 99%;           /* #fdfdfd */
     --popover-foreground: 0 0% 23%;
-    --card: 0 0% 100%;
+    --card: 0 0% 99%;              /* #fdfdfd */
     --card-foreground: 0 0% 23%;
-    --border: 215 20% 88%;
+    --border: 60 3% 94%;           /* #efefee */
     --input: 0 0% 100%;
     --primary: 210 84% 56%;
     --primary-foreground: 0 0% 100%;
     --lunar-accent-foreground: 0 0% 100%;
-    --secondary: 210 33% 98%;
+    --secondary: 60 4% 97%;        /* #f8f8f7 */
     --secondary-foreground: 0 0% 23%;
-    --accent: 210 33% 98%;
+    --accent: 60 4% 97%;           /* #f8f8f7 */
     --accent-foreground: 0 0% 23%;
     --destructive: 12 74% 61%;
     --destructive-foreground: 0 0% 100%;
