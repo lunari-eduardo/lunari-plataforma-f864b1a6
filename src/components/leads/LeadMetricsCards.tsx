@@ -63,27 +63,24 @@ export default function LeadMetricsCards({
         </div>
       </Card>;
   }
-  return <div className={cn("grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3", className)}>
+  return <div className={cn("grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-2", className)}>
       {cards.map((card, index) => {
       const Icon = card.icon;
-      return <Card key={index} className="bg-lunar-surface border-lunar-border/50 hover:border-lunar-border transition-colors py-0 my-0">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0">
-              <CardTitle className="text-2xs font-medium text-lunar-textSecondary line-clamp-2">
-                {card.title}
-              </CardTitle>
-              <div className={cn("p-1.5 rounded-md", card.bgColor)}>
+      return <Card key={index} className="bg-lunar-surface border-lunar-border/50 hover:border-lunar-border transition-colors">
+            <CardContent className="flex items-center justify-between px-3 py-2">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-lunar-textSecondary truncate mb-1">
+                  {card.title}
+                </p>
+                <p className="text-sm font-bold text-lunar-text">
+                  {card.isText ? <span className={cn("text-xs", card.value === 'N/A' ? 'text-lunar-textSecondary' : '')}>
+                      {card.value}
+                    </span> : card.value}
+                </p>
+              </div>
+              <div className={cn("p-1.5 rounded-md flex-shrink-0 ml-2", card.bgColor)}>
                 <Icon className={cn("h-3 w-3", card.color)} />
               </div>
-            </CardHeader>
-            <CardContent className="pb-2">
-              <div className="text-lg font-bold text-lunar-text mb-1">
-                {card.isText ? <span className={cn("text-xs", card.value === 'N/A' ? 'text-lunar-textSecondary' : '')}>
-                    {card.value}
-                  </span> : card.value}
-              </div>
-              {card.subtitle && <p className="text-2xs text-lunar-textSecondary">
-                  {card.subtitle}
-                </p>}
             </CardContent>
           </Card>;
     })}
