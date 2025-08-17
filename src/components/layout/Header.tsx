@@ -16,10 +16,33 @@ const pageTitles: Record<string, string> = {
   "/orcamentos": "Orçamentos",
   "/clientes": "Clientes",
   "/financas": "Finanças",
+  "/nova-financas": "Nova Finanças",
   "/precificacao": "Precificação",
   "/configuracoes": "Configurações",
+  "/tarefas": "Tarefas",
+  "/analise-vendas": "Análise de Vendas",
   "/minha-conta": "Minha Conta",
   "/preferencias": "Preferências"
+};
+
+const getPageTitleFromPath = (pathname: string): string => {
+  // Exact match first
+  if (pageTitles[pathname]) return pageTitles[pathname];
+  
+  // Handle dynamic routes like /clientes/:id
+  const pathSegments = pathname.split('/').filter(Boolean);
+  if (pathSegments.length > 1) {
+    const basePath = `/${pathSegments[0]}`;
+    if (pageTitles[basePath]) return pageTitles[basePath];
+  }
+  
+  // Fallback: capitalize first segment
+  if (pathSegments.length > 0) {
+    const segment = pathSegments[0];
+    return segment.charAt(0).toUpperCase() + segment.slice(1);
+  }
+  
+  return "Dashboard";
 };
 
 export default function Header() {
@@ -32,7 +55,7 @@ export default function Header() {
   const ModeIcon = mode === 'claro' ? Sun : mode === 'escuro' ? Moon : Laptop;
 
   // Get current page title
-  const currentTitle = pageTitles[location.pathname] || "Lunari";
+  const currentTitle = getPageTitleFromPath(location.pathname);
 
   return (
     <header className="h-12 flex items-center justify-between px-4 bg-lunar-bg/80 backdrop-blur-sm border-b border-lunar-border/50">

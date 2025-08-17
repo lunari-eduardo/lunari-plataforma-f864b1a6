@@ -7,13 +7,14 @@ export interface TaskStatusDef {
   name: string; // rótulo exibido
   order: number;
   isDone?: boolean; // identifica a coluna de concluídos
+  color?: string; // cor da coluna
 }
 
 const DEFAULT_STATUSES: TaskStatusDef[] = [
-  { id: 'todo', key: 'todo', name: 'A Fazer', order: 1 },
-  { id: 'doing', key: 'doing', name: 'Em Andamento', order: 2 },
-  { id: 'waiting', key: 'waiting', name: 'Aguardando', order: 3 },
-  { id: 'done', key: 'done', name: 'Concluída', order: 4, isDone: true },
+  { id: 'todo', key: 'todo', name: 'A Fazer', order: 1, color: '#3b82f6' },
+  { id: 'doing', key: 'doing', name: 'Em Andamento', order: 2, color: '#f59e0b' },
+  { id: 'waiting', key: 'waiting', name: 'Aguardando', order: 3, color: '#8b5cf6' },
+  { id: 'done', key: 'done', name: 'Concluída', order: 4, isDone: true, color: '#10b981' },
 ];
 
 export const useTaskStatuses = () => {

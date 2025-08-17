@@ -102,20 +102,32 @@ const sensors = useSensors(pointerSensor);
     return map;
   }, [filtered, statuses]);
 
-  const StatusColumn = ({ title, statusKey }: { title: string; statusKey: string }) => {
+  const StatusColumn = ({ title, statusKey, color }: { title: string; statusKey: string; color?: string }) => {
     const { isOver, setNodeRef } = useDroppable({ id: statusKey });
     return (
       <section className="flex-1 min-w-[260px]">
         <header className="flex items-center justify-between mb-2">
-          <h2 className="text-sm font-semibold text-lunar-text">{title}</h2>
+          <div className="flex items-center gap-2">
+            <div 
+              className="w-3 h-3 rounded-full" 
+              style={{ backgroundColor: color || '#6b7280' }}
+            />
+            <h2 className="text-sm font-semibold text-lunar-text">{title}</h2>
+          </div>
           <Badge variant="outline" className="text-2xs">{groups[statusKey]?.length || 0}</Badge>
         </header>
         <Card
           ref={setNodeRef}
           className={cn(
-            "p-2 pb-8 bg-lunar-surface border-lunar-border/60 min-h-[70vh] max-h-[70vh] overflow-y-auto",
+            "p-2 pb-8 bg-lunar-surface min-h-[70vh] max-h-[70vh] overflow-y-auto",
             isOver ? "ring-2 ring-lunar-accent/60" : ""
           )}
+          style={{ 
+            borderLeft: `3px solid ${color || '#6b7280'}`,
+            borderTopColor: 'hsl(var(--lunar-border) / 0.6)',
+            borderRightColor: 'hsl(var(--lunar-border) / 0.6)', 
+            borderBottomColor: 'hsl(var(--lunar-border) / 0.6)'
+          }}
         >
           <ul className="space-y-2">
               {(groups[statusKey] || []).map((t) => (
@@ -292,7 +304,7 @@ const sensors = useSensors(pointerSensor);
                 variant="column"
               />
               {statuses.map(col => (
-                <StatusColumn key={col.id} title={col.name} statusKey={col.key as any} />
+                <StatusColumn key={col.id} title={col.name} statusKey={col.key as any} color={col.color} />
               ))}
             </div>
           </div>

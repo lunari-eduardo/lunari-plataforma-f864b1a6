@@ -91,6 +91,17 @@ export default function ManageTaskStatusesModal({ open, onOpenChange }: { open: 
               <div className="space-y-2">
                 {statuses.map((s, idx) => (
                   <div key={s.id} className="flex items-center gap-2">
+                    <div 
+                      className="w-4 h-4 rounded border border-lunar-border/50 shrink-0" 
+                      style={{ backgroundColor: s.color || '#6b7280' }}
+                    />
+                    <input
+                      type="color"
+                      value={s.color || '#6b7280'}
+                      onChange={(e) => updateStatus(s.id, { color: e.target.value })}
+                      className="w-8 h-8 rounded border-0 cursor-pointer"
+                      title="Escolher cor"
+                    />
                     <Input
                       value={s.name}
                       onChange={(e) => updateStatus(s.id, { name: e.target.value })}
