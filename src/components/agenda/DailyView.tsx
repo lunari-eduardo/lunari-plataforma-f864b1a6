@@ -73,8 +73,8 @@ const [editingTimeSlot, setEditingTimeSlot] = useState<number | null>(null);
   const timeSlots = getCurrentTimeSlots();
   const dayEvents = unifiedEvents.filter(event => isSameDay(event.date, date));
 
-const getEventForSlot = (time: string) => {
-    return dayEvents.find(event => event.time === time);
+const getEventsForSlot = (time: string) => {
+    return dayEvents.filter(event => event.time === time);
   };
   const hasAvailabilityForTime = (time: string) => {
     return availability.some(s => s.date === dateKey && s.time === time);
@@ -88,7 +88,8 @@ const getEventForSlot = (time: string) => {
     }
   };
   const handleEditTimeSlot = (index: number, currentTime: string) => {
-    if (getEventForSlot(currentTime)) return;
+    const events = getEventsForSlot(currentTime);
+    if (events.length > 0) return;
     setEditingTimeSlot(index);
   };
 
@@ -125,7 +126,7 @@ const getEventForSlot = (time: string) => {
       
       <div className="space-y-1">
         {timeSlots.map((time, index) => {
-          const event = getEventForSlot(time);
+          const events = getEventsForSlot(time);
           const isEditing = editingTimeSlot === index;
           
           return (
@@ -142,39 +143,50 @@ const getEventForSlot = (time: string) => {
                   />
                 ) : (
                   <span 
-                    onClick={() => !event && handleEditTimeSlot(index, time)} 
-                    className={`block text-xs ${!event ? 'cursor-pointer hover:bg-accent/30 rounded px-1 py-0.5' : ''}`} 
-                    title={!event ? 'Clique para editar' : ''}
+                    onClick={() => events.length === 0 && handleEditTimeSlot(index, time)} 
+                    className={`block text-xs ${events.length === 0 ? 'cursor-pointer hover:bg-accent/30 rounded px-1 py-0.5' : ''}`} 
+                    title={events.length === 0 ? 'Clique para editar' : ''}
                   >
                     {time}
+                    {events.length > 1 && (
+                      <span className="block text-[10px] text-muted-foreground/70">
+                        ({events.length})
+                      </span>
+                    )}
                   </span>
                 )}
               </div>
               
               <div 
-                onClick={() => !event && onCreateSlot({ date, time })} 
+                onClick={() => events.length === 0 && onCreateSlot({ date, time })} 
                 className="flex-1 p-2 min-h-[50px] cursor-pointer bg-lunar-surface"
               >
-                {event ? (
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1" onClick={(e) => e.stopPropagation()}>
-                      <UnifiedEventCard 
-                        event={event} 
-                        onClick={onEventClick}
-                        variant="daily"
-                      />
-                    </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onCreateSlot({ date, time });
-                      }}
-                      className="flex-shrink-0 p-1.5 rounded-md bg-lunar-accent/10 hover:bg-lunar-accent/20 text-lunar-accent border border-lunar-accent/30 transition-colors"
-                      title="Adicionar outro agendamento no mesmo horário"
-                      aria-label="Adicionar agendamento"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </button>
+                {events.length > 0 ? (
+                  <div className="space-y-2">
+                    {events.map((event, eventIndex) => (
+                      <div key={event.id} className="flex items-center gap-2">
+                        <div className="flex-1" onClick={(e) => e.stopPropagation()}>
+                          <UnifiedEventCard 
+                            event={event} 
+                            onClick={onEventClick}
+                            variant="daily"
+                          />
+                        </div>
+                        {eventIndex === events.length - 1 && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onCreateSlot({ date, time });
+                            }}
+                            className="flex-shrink-0 p-1.5 rounded-md bg-lunar-accent/10 hover:bg-lunar-accent/20 text-lunar-accent border border-lunar-accent/30 transition-colors"
+                            title="Adicionar outro agendamento no mesmo horário"
+                            aria-label="Adicionar agendamento"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
                   </div>
                  ) : (
                    <div className="flex items-center justify-between">
