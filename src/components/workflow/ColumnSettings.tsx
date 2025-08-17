@@ -81,7 +81,7 @@ export function ColumnSettings({
             <Button variant="outline" size="sm" onClick={handleShowAll} className="text-xs h-7">
               Mostrar tudo
             </Button>
-            <Button size="sm" onClick={handleApply} className="text-xs h-7 bg-violet-600 hover:bg-violet-700">
+            <Button size="sm" onClick={handleApply} className="text-xs h-7 bg-neutral-500 hover:bg-neutral-400">
               Aplicar
             </Button>
           </div>
