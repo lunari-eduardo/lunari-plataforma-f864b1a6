@@ -47,14 +47,14 @@ export default function MonthlyView({
     });
   };
   return <div className="w-full h-full overflow-auto">
-      <div className="grid grid-cols-7 gap-px md:gap-1 rounded-lg p-px md:p-1 bg-muted">
+      <div className="grid grid-cols-7 gap-px rounded-lg p-1 bg-lunar-border/30">
         {/* Weekday headers */}
-        {weekDays.map((day, index) => <div key={day} className="h-8 md:h-10 p-1 md:p-2 text-center text-xs font-medium text-muted-foreground rounded bg-muted">
+        {weekDays.map((day, index) => <div key={day} className="h-8 md:h-10 p-1 md:p-2 text-center text-xs font-medium text-muted-foreground bg-lunar-surface border border-lunar-border/20">
             {day}
           </div>)}
         
         {/* Empty cells before first day */}
-        {emptyDaysBefore.map((_, index) => <div key={`empty-${index}`} className="min-h-[80px] md:min-h-[120px] rounded bg-lunar-bg"></div>)}
+        {emptyDaysBefore.map((_, index) => <div key={`empty-${index}`} className="min-h-[80px] md:min-h-[120px] bg-lunar-bg border border-lunar-border/20"></div>)}
         
         {/* Days of the month */}
         {daysInMonth.map(day => {
@@ -62,7 +62,7 @@ export default function MonthlyView({
         const maxDisplayEvents = 1; // Sempre mostrar apenas 1 evento para evitar esticamento
         const hasMoreEvents = dayEvents.length > maxDisplayEvents;
         const displayEvents = dayEvents.slice(0, maxDisplayEvents);
-            return <div key={day.toString()} onClick={() => onDayClick(day)} className="min-h-[80px] md:min-h-[120px] rounded p-1 md:p-2 cursor-pointer transition-colors bg-lunar-surface hover:bg-lunar-bg">
+            return <div key={day.toString()} onClick={() => onDayClick(day)} className="min-h-[80px] md:min-h-[120px] p-1 md:p-2 cursor-pointer transition-colors bg-lunar-surface hover:bg-lunar-surface/80 border border-lunar-border/20 hover:border-lunar-border/40">
               <div className="flex justify-between items-center mb-1 md:mb-2">
                 <span className={`
                   text-xs md:text-sm font-medium h-5 w-5 md:h-6 md:w-6 flex items-center justify-center rounded-full
