@@ -115,8 +115,8 @@ export default function Financas() {
 
           <TabsContent value="despesas-receitas" className="mt-6">
             <div className="space-y-6">
-              {/* Seletor de Mês Centralizado */}
-              <div className="flex justify-center">
+              {/* Seletor de Mês - Responsivo */}
+              <div className="flex justify-center lg:hidden">
                 <div className="flex items-center bg-card rounded-lg border border-border p-2 shadow-sm">
                   <Button variant="ghost" size="sm" onClick={() => navegarMes('anterior')} className="h-8 w-8 p-0">
                     <ChevronLeft className="h-4 w-4" />
@@ -180,21 +180,64 @@ export default function Financas() {
 
               {/* Sub-abas Simplificadas */}
               <Tabs value={activeSubTab} onValueChange={setActiveSubTab}>
-                <div className="flex items-center justify-between">
-                  <TabsList className="flex h-10 p-1 bg-white border border-gray-200 rounded-lg">
-                    <TabsTrigger value="fixas" className="flex items-center gap-2 text-sm py-2 px-4 data-[state=active]:bg-gray-50 data-[state=active]:text-red-600 data-[state=active]:border-b-2 data-[state=active]:border-red-500">
-                      <Receipt className="h-4 w-4" />
-                      Fixas
-                    </TabsTrigger>
-                    <TabsTrigger value="variaveis" className="flex items-center gap-2 text-sm py-2 px-4 data-[state=active]:bg-gray-50 data-[state=active]:text-orange-600 data-[state=active]:border-b-2 data-[state=active]:border-orange-500">
-                      <CreditCard className="h-4 w-4" />
-                      Variáveis
-                    </TabsTrigger>
-                    <TabsTrigger value="receitas" className="flex items-center gap-2 text-sm py-2 px-4 data-[state=active]:bg-gray-50 data-[state=active]:text-green-600 data-[state=active]:border-b-2 data-[state=active]:border-green-500">
-                      <PiggyBank className="h-4 w-4" />
-                      Receitas
-                    </TabsTrigger>
-                  </TabsList>
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                    <TabsList className="flex h-10 p-1 bg-white border border-gray-200 rounded-lg">
+                      <TabsTrigger value="fixas" className="flex items-center gap-2 text-sm py-2 px-4 data-[state=active]:bg-gray-50 data-[state=active]:text-red-600 data-[state=active]:border-b-2 data-[state=active]:border-red-500">
+                        <Receipt className="h-4 w-4" />
+                        Fixas
+                      </TabsTrigger>
+                      <TabsTrigger value="variaveis" className="flex items-center gap-2 text-sm py-2 px-4 data-[state=active]:bg-gray-50 data-[state=active]:text-orange-600 data-[state=active]:border-b-2 data-[state=active]:border-orange-500">
+                        <CreditCard className="h-4 w-4" />
+                        Variáveis
+                      </TabsTrigger>
+                      <TabsTrigger value="receitas" className="flex items-center gap-2 text-sm py-2 px-4 data-[state=active]:bg-gray-50 data-[state=active]:text-green-600 data-[state=active]:border-b-2 data-[state=active]:border-green-500">
+                        <PiggyBank className="h-4 w-4" />
+                        Receitas
+                      </TabsTrigger>
+                    </TabsList>
+
+                    {/* Seletor de Mês para Desktop/Tablet */}
+                    <div className="hidden lg:flex items-center bg-card rounded-lg border border-border p-2 shadow-sm">
+                      <Button variant="ghost" size="sm" onClick={() => navegarMes('anterior')} className="h-8 w-8 p-0">
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      
+                      <div className="flex items-center gap-2 px-4">
+                        <Select value={filtroMesAno.mes.toString()} onValueChange={value => setFiltroMesAno({
+                        ...filtroMesAno,
+                        mes: parseInt(value)
+                      })}>
+                          <SelectTrigger className="w-20 h-8 text-sm border-0">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {meses.map((mes, index) => <SelectItem key={index} value={(index + 1).toString()} className="text-sm">
+                                {mes}
+                              </SelectItem>)}
+                          </SelectContent>
+                        </Select>
+
+                        <Select value={filtroMesAno.ano.toString()} onValueChange={value => setFiltroMesAno({
+                        ...filtroMesAno,
+                        ano: parseInt(value)
+                      })}>
+                          <SelectTrigger className="w-20 h-8 text-sm border-0">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {[2023, 2024, 2025, 2026].map(ano => <SelectItem key={ano} value={ano.toString()} className="text-sm">
+                                {ano}
+                              </SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <Button variant="ghost" size="sm" onClick={() => navegarMes('proximo')} className="h-8 w-8 p-0">
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
 
                   <div className="flex gap-2">
                     <Button 
