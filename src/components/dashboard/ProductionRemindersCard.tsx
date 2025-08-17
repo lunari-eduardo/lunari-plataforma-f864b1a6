@@ -15,7 +15,7 @@ interface ProductionRemindersCardProps {
 
 export function ProductionRemindersCard({ lembretes }: ProductionRemindersCardProps) {
   return (
-    <Card className="dashboard-card lg:col-span-3 rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300 animate-fade-in">
+    <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300 animate-fade-in">
       <CardHeader className="pb-3 flex flex-row items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-brand-gradient">
