@@ -25,9 +25,11 @@ import { cn } from '@/lib/utils';
 
 export interface LeadsKanbanProps {
   periodFilter?: PeriodFilter;
+  searchTerm?: string;
+  originFilter?: string;
 }
 
-export default function LeadsKanban({ periodFilter }: LeadsKanbanProps) {
+export default function LeadsKanban({ periodFilter, searchTerm = '', originFilter = 'all' }: LeadsKanbanProps) {
   const navigate = useNavigate();
   const {
     leads,
@@ -50,8 +52,6 @@ export default function LeadsKanban({ periodFilter }: LeadsKanbanProps) {
   const {
     toast
   } = useToast();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [origemFilter, setOrigemFilter] = useState('all');
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [configModalOpen, setConfigModalOpen] = useState(false);
@@ -77,7 +77,7 @@ export default function LeadsKanban({ periodFilter }: LeadsKanbanProps) {
         lead.email.toLowerCase().includes(searchTerm.toLowerCase()) || 
         lead.telefone.includes(searchTerm);
       
-      const matchesOrigem = origemFilter === 'all' || lead.origem === origemFilter;
+      const matchesOrigem = originFilter === 'all' || lead.origem === originFilter;
       
       // Apply period filter if provided
       let matchesPeriod = true;
@@ -125,7 +125,7 @@ export default function LeadsKanban({ periodFilter }: LeadsKanbanProps) {
       
       return matchesSearch && matchesOrigem && matchesPeriod;
     });
-  }, [leads, searchTerm, origemFilter, periodFilter]);
+  }, [leads, searchTerm, originFilter, periodFilter]);
   const groupedLeads = useMemo(() => {
     const groups: Record<string, Lead[]> = {};
     statuses.forEach(s => {
@@ -346,28 +346,6 @@ export default function LeadsKanban({ periodFilter }: LeadsKanbanProps) {
         </div>
       </div>
 
-      {/* Filtros */}
-      <Card className="mx-2 mb-3 p-3 bg-lunar-surface border-lunar-border/60">
-        <div className="flex flex-nowrap whitespace-nowrap overflow-x-auto gap-2">
-          <div className="flex-1 min-w-[200px]">
-            <Input placeholder="Buscar leads..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="text-sm" />
-          </div>
-          
-          <div className="flex-1 min-w-[150px]">
-            <Select value={origemFilter} onValueChange={setOrigemFilter}>
-              <SelectTrigger className="text-sm">
-                <SelectValue placeholder="Origem" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
-                {origens.map(origem => <SelectItem key={origem.id} value={origem.nome}>
-                    {origem.nome}
-                  </SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </Card>
 
       {/* Kanban Board Container */}
       <div className="flex-1 relative">

@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import LeadsKanban from '@/components/leads/LeadsKanban';
 import LeadMetricsCards from '@/components/leads/LeadMetricsCards';
-import LeadPeriodFilter from '@/components/leads/LeadPeriodFilter';
+import UnifiedLeadFilters from '@/components/leads/UnifiedLeadFilters';
+import { useAppContext } from '@/contexts/AppContext';
 import type { PeriodFilter, PeriodType } from '@/hooks/useLeadMetrics';
 
 const getCurrentMonthPeriodType = (): PeriodType => {
@@ -31,9 +32,13 @@ const getCurrentMonthPeriodType = (): PeriodType => {
 };
 
 export default function Leads() {
+  const { origens } = useAppContext();
+  
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>({
     periodType: getCurrentMonthPeriodType()
   });
+  const [searchTerm, setSearchTerm] = useState('');
+  const [originFilter, setOriginFilter] = useState('all');
 
   const handlePeriodChange = (periodType: PeriodType) => {
     setPeriodFilter({ periodType });
@@ -46,16 +51,25 @@ export default function Leads() {
         {/* Cards de Métricas */}
         <LeadMetricsCards periodFilter={periodFilter} />
         
-        {/* Filtro de Período */}
-        <LeadPeriodFilter
+        {/* Filtros Unificados */}
+        <UnifiedLeadFilters
           periodType={periodFilter.periodType}
           onPeriodChange={handlePeriodChange}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          originFilter={originFilter}
+          onOriginChange={setOriginFilter}
+          origins={origens}
         />
       </div>
 
       {/* Kanban - Ajustado para ocupar espaço restante */}
       <div className="flex-1 overflow-hidden">
-        <LeadsKanban periodFilter={periodFilter} />
+        <LeadsKanban 
+          periodFilter={periodFilter}
+          searchTerm={searchTerm}
+          originFilter={originFilter}
+        />
       </div>
     </div>
   );
