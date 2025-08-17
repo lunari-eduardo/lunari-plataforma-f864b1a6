@@ -189,7 +189,7 @@ export default function LancamentosTab({
             {/* Seletor de Mês/Ano e Botão de Novo Lançamento para Mobile */}
             <div className="flex items-center justify-between gap-3">
               {/* Seletor de Mês/Ano */}
-              <div className="flex items-center bg-card rounded-lg border border-border p-2 shadow-sm py-[2px] px-[24px] mx-0">
+              <div className="flex items-center bg-card rounded-lg border border-border p-2 shadow-sm mx-0 py-1 my-0 px-[15px]">
                 <Button variant="ghost" size="sm" onClick={() => navegarMes('anterior')} className="h-8 w-8 p-0">
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
@@ -250,17 +250,16 @@ export default function LancamentosTab({
                 </div>
                 
                 {/* Seletor de Mês/Ano para Desktop/Tablet */}
-                {!isMobile && (
-                  <div className="flex items-center bg-card rounded-lg border border-border p-2 shadow-sm py-[2px] px-0">
+                {!isMobile && <div className="flex items-center bg-card rounded-lg border border-border p-2 shadow-sm py-[2px] px-0">
                     <Button variant="ghost" size="sm" onClick={() => navegarMes('anterior')} className="h-8 w-8 p-0">
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
                     
                     <div className="flex items-center gap-2 px-[1px]">
                       <Select value={filtroMesAno.mes.toString()} onValueChange={value => setFiltroMesAno({
-                        ...filtroMesAno,
-                        mes: parseInt(value)
-                      })}>
+                  ...filtroMesAno,
+                  mes: parseInt(value)
+                })}>
                         <SelectTrigger className="w-20 h-8 text-sm border-0">
                           <SelectValue />
                         </SelectTrigger>
@@ -272,9 +271,9 @@ export default function LancamentosTab({
                       </Select>
 
                       <Select value={filtroMesAno.ano.toString()} onValueChange={value => setFiltroMesAno({
-                        ...filtroMesAno,
-                        ano: parseInt(value)
-                      })}>
+                  ...filtroMesAno,
+                  ano: parseInt(value)
+                })}>
                         <SelectTrigger className="w-20 h-8 text-sm border-0">
                           <SelectValue />
                         </SelectTrigger>
@@ -289,8 +288,7 @@ export default function LancamentosTab({
                     <Button variant="ghost" size="sm" onClick={() => navegarMes('proximo')} className="h-8 w-8 p-0">
                       <ChevronRight className="h-4 w-4" />
                     </Button>
-                  </div>
-                )}
+                  </div>}
               </div>
 
               {isMobile ? <TabelaLancamentosMobile transacoes={transacoesPorGrupo[grupo]} onAtualizarTransacao={atualizarTransacao} onRemoverTransacao={removerTransacao} onMarcarComoPago={marcarComoPago} grupoAtivo={grupo} obterItensPorGrupo={obterItensPorGrupo} /> : <TabelaLancamentos transacoes={transacoesPorGrupo[grupo]} onAtualizarTransacao={atualizarTransacao} onRemoverTransacao={removerTransacao} onMarcarComoPago={marcarComoPago} grupoAtivo={grupo} obterItensPorGrupo={obterItensPorGrupo} onAdicionarTransacao={adicionarTransacao} createTransactionEngine={createTransactionEngine} filtroMesAno={filtroMesAno} />}
