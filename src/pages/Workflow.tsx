@@ -531,75 +531,39 @@ export default function Workflow() {
 
         {showMetrics && <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 pt-2 pb-3 bg-background">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 p-2.5 rounded-xl" style={{
-                backgroundColor: '#ffffff',
-                borderRadius: '12px'
-              }}>
-                <div className="text-2xs font-medium uppercase tracking-wide mb-1" style={{
-                  color: '#8B6F3E'
-                }}>RECEITA</div>
-                <div className="text-sm font-bold" style={{
-                  color: '#2D7A4F'
-                }}>
+              <div className="bg-lunar-surface border border-lunar-border rounded-xl p-2.5 hover:shadow-lg hover:scale-[1.02] transition-all duration-300">
+                <div className="text-2xs font-medium uppercase tracking-wide mb-1 text-muted-foreground">RECEITA</div>
+                <div className="text-sm font-bold text-emerald-600">
                   {formatCurrency(financials.revenue)}
                 </div>
-                <div className="text-2xs mt-0.5" style={{
-                  color: '#8B6F3E'
-                }}>
+                <div className="text-2xs mt-0.5 text-muted-foreground">
                   {renderChange(financials.revenue, prevMonthFinancials.revenue)}
                 </div>
               </div>
-              <div className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 p-2.5 rounded-xl" style={{
-                backgroundColor: '#ffffff',
-                borderRadius: '12px'
-              }}>
-                <div className="text-2xs font-medium uppercase tracking-wide mb-1" style={{
-                  color: '#8B6F3E'
-                }}>PREVISTO</div>
-                <div className="text-sm font-bold" style={{
-                  color: '#1E5F99'
-                }}>
+              <div className="bg-lunar-surface border border-lunar-border rounded-xl p-2.5 hover:shadow-lg hover:scale-[1.02] transition-all duration-300">
+                <div className="text-2xs font-medium uppercase tracking-wide mb-1 text-muted-foreground">PREVISTO</div>
+                <div className="text-sm font-bold text-blue-600">
                   {formatCurrency(financials.forecasted)}
                 </div>
-                <div className="text-2xs mt-0.5" style={{
-                  color: '#8B6F3E'
-                }}>
+                <div className="text-2xs mt-0.5 text-muted-foreground">
                   {renderChange(financials.forecasted, prevMonthFinancials.forecasted)}
                 </div>
               </div>
-              <div className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 p-2.5 rounded-xl" style={{
-                backgroundColor: '#ffffff',
-                borderRadius: '12px'
-              }}>
-                <div className="text-2xs font-medium uppercase tracking-wide mb-1" style={{
-                  color: '#8B6F3E'
-                }}>A RECEBER</div>
-                <div className="text-sm font-bold" style={{
-                  color: '#cfb38a'
-                }}>
+              <div className="bg-lunar-surface border border-lunar-border rounded-xl p-2.5 hover:shadow-lg hover:scale-[1.02] transition-all duration-300">
+                <div className="text-2xs font-medium uppercase tracking-wide mb-1 text-muted-foreground">A RECEBER</div>
+                <div className="text-sm font-bold text-amber-600">
                   {formatCurrency(financials.outstanding)}
                 </div>
-                <div className="text-2xs mt-0.5" style={{
-                  color: '#8B6F3E'
-                }}>
+                <div className="text-2xs mt-0.5 text-muted-foreground">
                   {renderChange(financials.outstanding, prevMonthFinancials.outstanding)}
                 </div>
               </div>
-              <div className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 p-2.5 rounded-xl" style={{
-                backgroundColor: '#ffffff',
-                borderRadius: '12px'
-              }}>
-                <div className="text-2xs font-medium uppercase tracking-wide mb-1" style={{
-                  color: '#8B6F3E'
-                }}>SESSÕES</div>
-                <div className="text-sm font-bold" style={{
-                  color: '#8B6F3E'
-                }}>
+              <div className="bg-lunar-surface border border-lunar-border rounded-xl p-2.5 hover:shadow-lg hover:scale-[1.02] transition-all duration-300">
+                <div className="text-2xs font-medium uppercase tracking-wide mb-1 text-muted-foreground">SESSÕES</div>
+                <div className="text-sm font-bold text-foreground">
                   {financials.sessionCount}
                 </div>
-                <div className="text-2xs mt-0.5" style={{
-                  color: '#8B6F3E'
-                }}>
+                <div className="text-2xs mt-0.5 text-muted-foreground">
                   {renderChange(financials.sessionCount, prevMonthFinancials.sessionCount)}
                 </div>
               </div>

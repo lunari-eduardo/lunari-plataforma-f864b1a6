@@ -558,7 +558,7 @@ export function WorkflowTable({
     if (!visibleColumns[key]) return null;
     const width = currentColumnWidths[key] || responsiveColumnWidths[key];
     return <th key={key} className={`
-          relative bg-card border-r border-border p-2 text-left text-xs font-medium text-foreground/80 dark:bg-gray-900 dark:border-gray-800 dark:text-gray-200
+          relative bg-lunar-surface border-r border-lunar-border p-2 text-left text-xs font-medium text-foreground/80
           ${isFixed ? 'sticky z-20 shadow-sm' : ''}
         `} style={{
       width: `${width}px`,
@@ -581,10 +581,10 @@ export function WorkflowTable({
     if (!visibleColumns[key]) return null;
     const width = currentColumnWidths[key] || responsiveColumnWidths[key];
 return <td className={`
-          p-2 border-r border-border min-h-[40px] text-xs transition-colors duration-150 ease-in-out
+          p-2 border-r border-lunar-border min-h-[40px] text-xs transition-colors duration-150 ease-in-out
           ${isFixed 
-            ? 'sticky z-20 bg-card shadow-sm dark:bg-gray-900' 
-            : 'group-hover:bg-lunar-accent/5 group-focus-within:bg-lunar-accent/10 dark:group-hover:bg-gray-800'}
+            ? 'sticky z-20 bg-lunar-surface shadow-sm' 
+            : 'group-hover:bg-lunar-accent/5 group-focus-within:bg-lunar-accent/10'}
           ${key === 'date' ? 'border-l-2 border-l-transparent group-hover:border-l-lunar-accent/40 group-focus-within:border-l-lunar-accent' : ''}
         `} style={{
       width: `${width}px`,
@@ -607,7 +607,7 @@ return <td className={`
         tableLayout: 'auto'
       }}>
           {/* NÍVEL 3: O CABEÇALHO STICKY */}
-          <thead className="sticky top-0 z-30 bg-card border-b-2 border-border dark:bg-gray-900 dark:border-gray-800">
+          <thead className="sticky top-0 z-30 bg-lunar-surface border-b-2 border-lunar-border">
             <tr>
               {renderHeaderCell('date', 'Data', true, true)}
               {renderHeaderCell('client', 'Nome', true, true)}
@@ -673,7 +673,7 @@ return <td className={`
                         <StatusBadge status={session.status} />
                       </SelectValue>
                     </SelectTrigger>
-                    <SelectContent className="z-50 bg-popover text-popover-foreground border border-border shadow-lg dark:bg-gray-900 dark:text-gray-100 dark:border-gray-800">
+                    <SelectContent className="z-50 bg-lunar-surface text-foreground border border-lunar-border shadow-lg">
                       {statusOptions.map(status => (
                         <SelectItem key={status} value={status} className="text-xs p-2">
                           <StatusBadge status={status} />
@@ -860,7 +860,7 @@ return <td className={`
                 {renderCell('product', <Button variant="ghost" size="sm" onClick={() => {
                   setSessionSelecionada(session);
                   setModalAberto(true);
-                }} className="h-6 p-2 text-xs justify-start hover:bg-blue-50 w-full">
+                }} className="h-6 p-2 text-xs justify-start hover:bg-lunar-accent/10 w-full">
                     {session.produtosList && session.produtosList.length > 0 ? <div className="flex items-center gap-1">
                         <Package className="h-3 w-3 text-blue-600" />
                         <span className="text-blue-700 font-medium">

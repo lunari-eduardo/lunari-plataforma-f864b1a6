@@ -80,8 +80,8 @@ export function RegrasCongeladasIndicator({ regras, compact = false }: RegrasCon
             variant={regraValida ? "secondary" : "destructive"} 
             className={`text-xs gap-1 ${
               regraValida 
-                ? 'bg-blue-50 text-blue-700 border-blue-200' 
-                : 'bg-red-50 text-red-700 border-red-200'
+                ? 'bg-blue-600/10 text-blue-600 border-blue-600/20 dark:bg-blue-400/10 dark:text-blue-400 dark:border-blue-400/20' 
+                : 'bg-red-600/10 text-red-600 border-red-600/20 dark:bg-red-400/10 dark:text-red-400 dark:border-red-400/20'
             }`}
           >
             <Snowflake className="h-3 w-3" />
