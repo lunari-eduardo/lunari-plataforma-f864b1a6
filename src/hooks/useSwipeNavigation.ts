@@ -30,8 +30,15 @@ export function useSwipeNavigation({
       const styles = window.getComputedStyle(current);
       const overflowX = styles.overflowX;
       
+      // Check if element has horizontal scrolling capability and content
       if ((overflowX === 'auto' || overflowX === 'scroll') && 
           current.scrollWidth > current.clientWidth) {
+        return true;
+      }
+      
+      // Check for specific classes that indicate scrollable content
+      if (current.classList.contains('overflow-x-auto') || 
+          current.classList.contains('scrollbar-elegant')) {
         return true;
       }
       
@@ -86,10 +93,11 @@ export function useSwipeNavigation({
     const absX = Math.abs(deltaX);
     const absY = Math.abs(deltaY);
     
-    if (absX > thresholdPx && absY / absX < maxVerticalRatio) {
+    // More aggressive horizontal detection for swipes
+    if (absX > thresholdPx * 0.7 && absY / absX < maxVerticalRatio) {
       // This is a valid horizontal swipe, prevent default scrolling
       e.preventDefault();
-    } else if (absY > absX) {
+    } else if (absY > absX * 1.5) {
       // This is more of a vertical gesture, invalidate
       touchState.current.isValid = false;
     }

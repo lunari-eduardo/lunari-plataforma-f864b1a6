@@ -5,6 +5,7 @@ import { UnifiedEvent } from '@/hooks/useUnifiedCalendar';
 import UnifiedEventCard from './UnifiedEventCard';
 import { useAvailability } from '@/hooks/useAvailability';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useIsTablet } from '@/hooks/useIsTablet';
 import { Button } from '@/components/ui/button';
 import { Share2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -33,6 +34,7 @@ export default function WeeklyView({
     length: 7
   }, (_, i) => addDays(weekStart, i));
   const isMobile = useIsMobile();
+  const isTablet = useIsTablet();
   const formatDayName = (date: Date) => {
     return format(date, 'EEE', {
       locale: ptBR
@@ -106,8 +108,8 @@ export default function WeeklyView({
       toast.success('Horários da semana copiados');
     }
   };
-  return <div className="overflow-x-auto pb-4 scrollbar-elegant">
-      <div className="min-w-[960px]">
+  return <div className={`pb-4 scrollbar-elegant ${isMobile ? 'overflow-x-auto' : ''}`}>
+      <div className={`${isMobile ? 'min-w-[960px]' : 'w-full'}`}>
         <div className="flex items-center justify-between mb-2">
           
           <Button variant="ghost" size="icon" onClick={handleShareWeek} aria-label="Compartilhar horários da semana" title="Compartilhar horários da semana">
@@ -119,9 +121,9 @@ export default function WeeklyView({
           <div className="bg-muted"></div>
           
           {/* Day headers */}
-          {weekDays.map((day, index) => <div key={index} className="p-1 md:p-2 text-center bg-muted">
-              <p className="text-xs text-muted-foreground font-medium">{formatDayName(day)}</p>
-              <p className="font-semibold text-xs md:text-sm">{format(day, 'd')}</p>
+          {weekDays.map((day, index) => <div key={index} className={`text-center bg-muted ${isTablet ? 'p-1' : 'p-1 md:p-2'}`}>
+              <p className={`text-muted-foreground font-medium ${isTablet ? 'text-[10px]' : 'text-xs'}`}>{formatDayName(day)}</p>
+              <p className={`font-semibold ${isTablet ? 'text-xs' : 'text-xs md:text-sm'}`}>{format(day, 'd')}</p>
               {/* Mobile: dots with counts */}
               {(() => {
             if (!isMobile) return null;
@@ -145,7 +147,7 @@ export default function WeeklyView({
           {/* Time slots */}
           {timeSlots.map(time => <React.Fragment key={time}>
               {/* Time label */}
-              <div className="flex items-center justify-end h-12 md:h-16 text-xs text-muted-foreground px-3 md:px-4 rounded-sm bg-muted">
+              <div className={`flex items-center justify-end text-muted-foreground rounded-sm bg-muted ${isTablet ? 'h-10 text-[10px] px-2' : 'h-12 md:h-16 text-xs px-3 md:px-4'}`}>
                 {time}
               </div>
               
@@ -155,16 +157,16 @@ export default function WeeklyView({
             return <div key={`${dayIndex}-${time}`} onClick={() => !event && onCreateSlot({
               date: day,
               time
-            })} className="h-12 md:h-16 p-0.5 md:p-1 relative cursor-pointer bg-card hover:bg-muted">
+            })} className={`relative cursor-pointer bg-card hover:bg-muted ${isTablet ? 'h-10 p-0.5' : 'h-12 md:h-16 p-0.5 md:p-1'}`}>
                     {event ? !isMobile && <div onClick={e => e.stopPropagation()}>
                           <UnifiedEventCard event={event} onClick={onEventClick} variant="weekly" />
-                        </div> : !isMobile && hasAvailabilityForSlot(day, time) ? <div className="absolute inset-0 flex items-center justify-center gap-2">
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-availability/20 border border-availability/50 text-lunar-text">Disponível</span>
+                        </div> : !isMobile && hasAvailabilityForSlot(day, time) ? <div className={`absolute inset-0 flex items-center justify-center ${isTablet ? 'gap-1' : 'gap-2'}`}>
+                          <span className={`rounded bg-availability/20 border border-availability/50 text-lunar-text ${isTablet ? 'text-[8px] px-1 py-0.5' : 'text-[10px] px-1.5 py-0.5'}`}>Disponível</span>
                           <button type="button" onClick={e => {
                   e.stopPropagation();
                   handleRemoveAvailability(day, time);
-                }} className="text-[10px] text-muted-foreground hover:text-foreground hidden lg:inline-flex items-center gap-1" aria-label="Remover disponibilidade" title="Remover disponibilidade">
-                            <Trash2 className="h-3 w-3" /> Remover
+                }} className={`text-muted-foreground hover:text-foreground items-center gap-1 ${isTablet ? 'text-[8px] inline-flex' : 'text-[10px] hidden lg:inline-flex'}`} aria-label="Remover disponibilidade" title="Remover disponibilidade">
+                            <Trash2 className={isTablet ? 'h-2.5 w-2.5' : 'h-3 w-3'} /> {!isTablet && 'Remover'}
                           </button>
                         </div> : null}
                   </div>;

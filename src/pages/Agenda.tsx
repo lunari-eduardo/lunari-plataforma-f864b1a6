@@ -45,6 +45,9 @@ export default function Agenda() {
   } = useOrcamentos();
   const isMobile = useIsMobile();
   const isTablet = useIsTablet();
+  
+  // Transition state for smooth navigation
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   // Helper functions for proper date formatting
   const capitalizeFirst = (str: string): string => {
@@ -129,41 +132,57 @@ export default function Agenda() {
     return '';
   };
 
-  // Navigation functions
+  // Navigation functions with smooth transitions
+  const navigateWithTransition = (navFunction: () => void) => {
+    setIsTransitioning(true);
+    setTimeout(() => {
+      navFunction();
+      setTimeout(() => setIsTransitioning(false), 100);
+    }, 100);
+  };
+  
   const navigatePrevious = () => {
-    switch (view) {
-      case 'year':
-        setDate(subYears(date, 1));
-        break;
-      case 'month':
-        setDate(subMonths(date, 1));
-        break;
-      case 'week':
-        setDate(subWeeks(date, 1));
-        break;
-      case 'day':
-        setDate(subDays(date, 1));
-        break;
-    }
+    navigateWithTransition(() => {
+      switch (view) {
+        case 'year':
+          setDate(subYears(date, 1));
+          break;
+        case 'month':
+          setDate(subMonths(date, 1));
+          break;
+        case 'week':
+          setDate(subWeeks(date, 1));
+          break;
+        case 'day':
+          setDate(subDays(date, 1));
+          break;
+      }
+    });
   };
+  
   const navigateNext = () => {
-    switch (view) {
-      case 'year':
-        setDate(addYears(date, 1));
-        break;
-      case 'month':
-        setDate(addMonths(date, 1));
-        break;
-      case 'week':
-        setDate(addWeeks(date, 1));
-        break;
-      case 'day':
-        setDate(addDays(date, 1));
-        break;
-    }
+    navigateWithTransition(() => {
+      switch (view) {
+        case 'year':
+          setDate(addYears(date, 1));
+          break;
+        case 'month':
+          setDate(addMonths(date, 1));
+          break;
+        case 'week':
+          setDate(addWeeks(date, 1));
+          break;
+        case 'day':
+          setDate(addDays(date, 1));
+          break;
+      }
+    });
   };
+  
   const navigateToday = () => {
-    setDate(new Date());
+    navigateWithTransition(() => {
+      setDate(new Date());
+    });
   };
 
   // Handle day click in monthly view
@@ -422,7 +441,9 @@ export default function Agenda() {
         </div>
           
         <div 
-          className="mt-4 touch-pan-y select-none sm:select-auto"
+          className={`mt-4 touch-pan-y select-none sm:select-auto transition-all duration-200 ease-out ${
+            isTransitioning ? 'opacity-50 scale-95' : 'opacity-100 scale-100'
+          }`}
           {...((isMobile || isTablet) && view !== 'year' ? swipeHandlers : {})}
         >
           {view === 'year' && <AnnualView date={date} unifiedEvents={unifiedEvents} onDayClick={handleDayClick} onEventClick={handleEventClick} />}
