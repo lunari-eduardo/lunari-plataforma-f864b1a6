@@ -104,21 +104,21 @@ export default function LancamentosTab({
       {/* Linha 1: Barra de Totais */}
       <div className="rounded-lg border border-border p-4 shadow-sm bg-lunar-bg py-[4px]">
         <div className="flex flex-wrap items-center gap-6 text-sm">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <span className="font-medium text-foreground">Total:</span>
             <span className="font-bold text-foreground">{formatCurrency(metricas.total)}</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <div className="w-2 h-2 bg-lunar-success rounded-full"></div>
             <span className="text-muted-foreground">Pago:</span>
             <span className="font-semibold text-lunar-success">{formatCurrency(metricas.pago)}</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <div className="w-2 h-2 bg-lunar-error rounded-full"></div>
             <span className="text-muted-foreground">Faturado:</span>
             <span className="font-semibold text-lunar-error">{formatCurrency(metricas.faturado)}</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <div className="w-2 h-2 bg-lunar-warning rounded-full"></div>
             <span className="text-muted-foreground">Agendado:</span>
             <span className="font-semibold text-lunar-warning">{formatCurrency(metricas.agendado)}</span>
