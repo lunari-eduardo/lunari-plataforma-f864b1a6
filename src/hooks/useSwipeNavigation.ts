@@ -64,26 +64,18 @@ export function useSwipeNavigation({
   }, []);
 
   const onTouchStart = useCallback((e: React.TouchEvent) => {
-    console.log('🚀 onTouchStart called, enabled:', enabled);
-    
-    if (!enabled) {
-      console.log('❌ Swipe disabled');
-      return;
-    }
+    if (!enabled) return;
     
     const target = e.target as Element;
-    console.log('🎯 Touch target:', target.tagName, target.className);
     
     // Only block swipe for actual inputs or scrollable areas
     if (isInteractiveElement(target)) {
-      console.log('❌ Interactive element detected');
       touchState.current = null;
       return;
     }
 
     // Less aggressive scrollable detection - only block if actively scrollable
     if (isScrollableParent(target)) {
-      console.log('❌ Scrollable parent detected');
       touchState.current = null;
       return;
     }
@@ -95,8 +87,6 @@ export function useSwipeNavigation({
       startTime: Date.now(),
       isValid: true
     };
-    
-    console.log('✅ Touch started:', { x: touch.clientX, y: touch.clientY });
   }, [enabled, isInteractiveElement, isScrollableParent]);
 
   const onTouchMove = useCallback((e: React.TouchEvent) => {
@@ -111,20 +101,16 @@ export function useSwipeNavigation({
     const absY = Math.abs(deltaY);
     
     // More sensitive horizontal detection for swipes  
-    if (absX > thresholdPx * 0.3 && absY / absX < maxVerticalRatio) {
+    if (absX > thresholdPx * 0.2 && absY / absX < maxVerticalRatio) {
       // This is a valid horizontal swipe, prevent default scrolling
-      console.log('🔄 Preventing default, deltaX:', deltaX, 'deltaY:', deltaY);
       e.preventDefault();
     } else if (absY > absX * 1.5) {
       // This is more of a vertical gesture, invalidate
-      console.log('❌ Vertical gesture detected, invalidating');
       touchState.current.isValid = false;
     }
   }, [enabled, thresholdPx, maxVerticalRatio]);
 
   const onTouchEnd = useCallback((e: React.TouchEvent) => {
-    console.log('🏁 onTouchEnd called, enabled:', enabled, 'valid:', touchState.current?.isValid);
-    
     if (!enabled || !touchState.current?.isValid) {
       touchState.current = null;
       return;
@@ -138,26 +124,16 @@ export function useSwipeNavigation({
     const absX = Math.abs(deltaX);
     const absY = Math.abs(deltaY);
     
-    console.log('📊 Swipe data:', { deltaX, deltaY, absX, absY, deltaTime, thresholdPx, maxVerticalRatio });
-    
-    // Validate the swipe with more lenient parameters
+    // Validate the swipe with optimized parameters
     if (absX > thresholdPx && 
         absY / absX < maxVerticalRatio && 
-        deltaTime < 1000) {
-      
-      console.log('✅ Valid swipe detected, direction:', deltaX < 0 ? 'left (next)' : 'right (prev)');
+        deltaTime < 800) {
       
       if (deltaX < 0) {
         onNext(); // Swipe left = next
       } else {
         onPrev(); // Swipe right = previous
       }
-    } else {
-      console.log('❌ Invalid swipe:', {
-        thresholdCheck: absX > thresholdPx,
-        ratioCheck: absY / absX < maxVerticalRatio,
-        timeCheck: deltaTime < 1000
-      });
     }
     
     touchState.current = null;

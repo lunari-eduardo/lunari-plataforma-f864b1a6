@@ -287,12 +287,9 @@ export default function Agenda() {
     enabled: (isMobile || isTablet) && view !== 'year',
     onPrev: navigatePreviousDirect,
     onNext: navigateNextDirect,
-    thresholdPx: 25,
-    maxVerticalRatio: 0.8
+    thresholdPx: 50,
+    maxVerticalRatio: 0.7
   });
-
-  // Debug logs
-  console.log('📱 Device detection:', { isMobile, isTablet, view, swipeEnabled: (isMobile || isTablet) && view !== 'year' });
 
   // Handle view full budget from appointment modal
   const handleViewFullBudget = () => {
@@ -449,16 +446,22 @@ export default function Agenda() {
             </div>}
         </div>
           
+        {/* Touch event container (no transitions) */}
         <div 
-          className={`mt-4 touch-pan-y select-none sm:select-auto transition-all duration-200 ease-out ${
-            isTransitioning ? 'opacity-50 scale-95' : 'opacity-100 scale-100'
-          }`}
+          className="mt-4"
           {...((isMobile || isTablet) && view !== 'year' ? swipeHandlers : {})}
         >
-          {view === 'year' && <AnnualView date={date} unifiedEvents={unifiedEvents} onDayClick={handleDayClick} onEventClick={handleEventClick} />}
-          {view === 'month' && <MonthlyView date={date} unifiedEvents={unifiedEvents} onCreateSlot={handleCreateSlot} onEventClick={handleEventClick} onDayClick={handleDayClick} />}
-          {view === 'week' && <WeeklyView date={date} unifiedEvents={unifiedEvents} onCreateSlot={handleCreateSlot} onEventClick={handleEventClick} />}
-          {view === 'day' && <DailyView date={date} unifiedEvents={unifiedEvents} onCreateSlot={handleCreateSlot} onEventClick={handleEventClick} />}
+          {/* Visual content container (with transitions) */}
+          <div 
+            className={`transition-opacity duration-200 select-none sm:select-auto ${
+              isTransitioning ? 'opacity-70' : 'opacity-100'
+            }`}
+          >
+            {view === 'year' && <AnnualView date={date} unifiedEvents={unifiedEvents} onDayClick={handleDayClick} onEventClick={handleEventClick} />}
+            {view === 'month' && <MonthlyView date={date} unifiedEvents={unifiedEvents} onCreateSlot={handleCreateSlot} onEventClick={handleEventClick} onDayClick={handleDayClick} />}
+            {view === 'week' && <WeeklyView date={date} unifiedEvents={unifiedEvents} onCreateSlot={handleCreateSlot} onEventClick={handleEventClick} />}
+            {view === 'day' && <DailyView date={date} unifiedEvents={unifiedEvents} onCreateSlot={handleCreateSlot} onEventClick={handleEventClick} />}
+          </div>
         </div>
       </Card>
 
