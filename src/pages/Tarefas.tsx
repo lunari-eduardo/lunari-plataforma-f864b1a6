@@ -270,67 +270,68 @@ const sensors = useSensors(pointerSensor);
       <PriorityLegend />
 
       {view === 'kanban' ? (
-        <div className="flex-1 relative">
-          <DndContext
-            sensors={sensors}
-            collisionDetection={rectIntersection}
-            onDragStart={(e) => {
-              setActiveId(String(e.active.id));
-            }}
-            onDragEnd={(e) => {
-              const overId = e.over?.id as string | undefined;
-              if (activeId && overId) {
-                const current = tasks.find(tt => tt.id === activeId);
-                if (current && current.status !== overId) {
-                  updateTask(activeId, { status: overId as any });
-                  toast({ title: 'Tarefa movida' });
-                }
+        <DndContext
+          sensors={sensors}
+          collisionDetection={rectIntersection}
+          modifiers={[restrictToFirstScrollableAncestor]}
+          onDragStart={(e) => {
+            setActiveId(String(e.active.id));
+            console.log('[DND] drag start', e.active.id);
+          }}
+          onDragEnd={(e) => {
+            const overId = e.over?.id as string | undefined;
+            console.log('[DND] drag end', { activeId, overId });
+            if (activeId && overId) {
+              const current = tasks.find(tt => tt.id === activeId);
+              if (current && current.status !== overId) {
+                updateTask(activeId, { status: overId as any });
+                toast({ title: 'Tarefa movida' });
               }
-              setActiveId(null);
-            }}
-            onDragCancel={() => setActiveId(null)}
-          >
-            <div className="absolute inset-0 overflow-x-auto overflow-y-hidden">
-              <div className="flex h-full gap-4 min-w-max px-2">
-                <ChecklistPanel
-                  items={checklistItems}
-                  addTask={addTask}
-                  updateTask={updateTask}
-                  deleteTask={deleteTask}
-                  doneKey={doneKey}
-                  defaultOpenKey={defaultOpenKey}
-                  variant="column"
-                />
-                {statuses.map(col => (
-                  <StatusColumn key={col.id} title={col.name} statusKey={col.key as any} color={col.color} />
-                ))}
-              </div>
+            }
+            setActiveId(null);
+          }}
+          onDragCancel={() => setActiveId(null)}
+        >
+          <div className="overflow-x-auto">
+            <div className="flex gap-4 min-w-max pr-2">
+              <ChecklistPanel
+                items={checklistItems}
+                addTask={addTask}
+                updateTask={updateTask}
+                deleteTask={deleteTask}
+                doneKey={doneKey}
+                defaultOpenKey={defaultOpenKey}
+                variant="column"
+              />
+              {statuses.map(col => (
+                <StatusColumn key={col.id} title={col.name} statusKey={col.key as any} color={col.color} />
+              ))}
             </div>
-            <DragOverlay>
-              <div className="pointer-events-none">
-                {activeId ? (() => {
-                  const at = tasks.find(tt => tt.id === activeId);
-                  return at ? (
-                    <TaskCard
-                      task={at}
-                      onComplete={() => {}}
-                      onReopen={() => {}}
-                      onEdit={() => {}}
-                      onDelete={() => {}}
-                      onRequestMove={() => {}}
-                      isDone={at.status === (doneKey as any)}
-                      statusOptions={statusOptions}
-                      isDragging={true}
-                    />
-                  ) : null;
-                })() : null}
-              </div>
-            </DragOverlay>
-          </DndContext>
-        </div>
+          </div>
+          <DragOverlay>
+            <div className="pointer-events-none">
+              {activeId ? (() => {
+                const at = tasks.find(tt => tt.id === activeId);
+                return at ? (
+                  <TaskCard
+                    task={at}
+                    onComplete={() => {}}
+                    onReopen={() => {}}
+                    onEdit={() => {}}
+                    onDelete={() => {}}
+                    onRequestMove={() => {}}
+                    isDone={at.status === (doneKey as any)}
+                    statusOptions={statusOptions}
+                    isDragging={true}
+                  />
+                ) : null;
+              })() : null}
+            </div>
+          </DragOverlay>
+        </DndContext>
       ) : (
-        <ListView />
-      )}
+        <ListView />)
+      }
 
       <TaskFormModal
         open={createOpen}
