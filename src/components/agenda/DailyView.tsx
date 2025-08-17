@@ -3,10 +3,10 @@ import { ptBR } from 'date-fns/locale';
 import { TimeInput } from "@/components/ui/time-input";
 import { useState, useEffect } from 'react';
 import ConflictIndicator from './ConflictIndicator';
+import { Plus, Trash2 } from 'lucide-react';
 import { UnifiedEvent } from '@/hooks/useUnifiedCalendar';
 import UnifiedEventCard from './UnifiedEventCard';
 import { useAvailability } from '@/hooks/useAvailability';
-import { Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 interface DailyViewProps {
   date: Date;
@@ -156,12 +156,25 @@ const getEventForSlot = (time: string) => {
                 className="flex-1 p-2 min-h-[50px] cursor-pointer bg-lunar-surface"
               >
                 {event ? (
-                  <div onClick={(e) => e.stopPropagation()}>
-                    <UnifiedEventCard 
-                      event={event} 
-                      onClick={onEventClick}
-                      variant="daily"
-                    />
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1" onClick={(e) => e.stopPropagation()}>
+                      <UnifiedEventCard 
+                        event={event} 
+                        onClick={onEventClick}
+                        variant="daily"
+                      />
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onCreateSlot({ date, time });
+                      }}
+                      className="flex-shrink-0 p-1.5 rounded-md bg-lunar-accent/10 hover:bg-lunar-accent/20 text-lunar-accent border border-lunar-accent/30 transition-colors"
+                      title="Adicionar outro agendamento no mesmo horário"
+                      aria-label="Adicionar agendamento"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
                   </div>
                  ) : (
                    <div className="flex items-center justify-between">
