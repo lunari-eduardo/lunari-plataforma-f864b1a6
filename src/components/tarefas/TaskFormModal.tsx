@@ -4,8 +4,9 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronDown, Paperclip } from 'lucide-react';
+import { ChevronDown, Paperclip, Calendar, User } from 'lucide-react';
 
 import { 
   SelectModal as Select, 
@@ -138,41 +139,63 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
     onOpenChange(newOpen);
   }, [onOpenChange, dropdownContext]);
 
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'high': return 'bg-red-500';
+      case 'medium': return 'bg-yellow-500';
+      case 'low': return 'bg-green-500';
+      default: return 'bg-gray-500';
+    }
+  };
+
+  const priorityLabels = {
+    low: 'Baixa',
+    medium: 'Média', 
+    high: 'Alta'
+  };
+
   return (
     <Dialog open={open} onOpenChange={handleModalClose}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="text-base">{mode === 'create' ? 'Nova tarefa' : 'Editar tarefa'}</DialogTitle>
-            <DialogDescription className="text-xs">Preencha os detalhes da tarefa.</DialogDescription>
+        <DialogContent className="sm:max-w-xl bg-lunar-surface border-lunar-border">
+          <DialogHeader className="space-y-3">
+            <DialogTitle className="text-xl font-bold text-lunar-text">
+              {mode === 'create' ? 'Nova tarefa' : 'Editar tarefa'}
+            </DialogTitle>
+            <DialogDescription className="text-sm text-lunar-textSecondary">
+              Preencha os detalhes da tarefa.
+            </DialogDescription>
           </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Basic fields */}
-          <div className="space-y-1.5">
-            <Label htmlFor="title">Título *</Label>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Title - Large and prominent */}
+          <div className="space-y-2">
+            <Label htmlFor="title" className="text-base font-medium text-lunar-text">Título</Label>
             <Input 
               id="title" 
               value={title} 
               onChange={e => setTitle(e.target.value)} 
               required 
-              placeholder="Ex.: Ligar para cliente João" 
+              placeholder="Ex.: Ligar para cliente João"
+              className="text-lg bg-lunar-background border-lunar-border" 
             />
           </div>
           
-          <div className="space-y-1.5">
-            <Label htmlFor="description">Descrição</Label>
+          {/* Description */}
+          <div className="space-y-2">
+            <Label htmlFor="description" className="text-base font-medium text-lunar-text">Descrição</Label>
             <Textarea 
               id="description" 
               value={description} 
               onChange={e => setDescription(e.target.value)} 
               placeholder="Detalhes do que deve ser feito"
-              rows={3}
+              rows={4}
+              className="bg-lunar-background border-lunar-border"
             />
           </div>
 
           {/* Collapsible Files Section */}
           <Collapsible open={filesOpen} onOpenChange={setFilesOpen}>
             <CollapsibleTrigger asChild>
-              <Button variant="outline" type="button" className="w-full justify-between">
+              <Button variant="outline" type="button" className="w-full justify-between bg-lunar-background border-lunar-border hover:bg-lunar-background/80">
                 <span className="flex items-center gap-2">
                   <Paperclip className="h-4 w-4" />
                   Arquivos
@@ -180,56 +203,79 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
                 <ChevronDown className={`h-4 w-4 transition-transform ${filesOpen ? 'rotate-180' : ''}`} />
               </Button>
             </CollapsibleTrigger>
-            <CollapsibleContent className="mt-2">
-              <div className="p-3 border border-dashed border-lunar-border rounded-lg bg-lunar-background/50">
-                <p className="text-xs text-lunar-textSecondary text-center">
+            <CollapsibleContent className="mt-3">
+              <div className="p-4 border border-dashed border-lunar-border rounded-lg bg-lunar-background/50">
+                <p className="text-sm text-lunar-textSecondary text-center">
                   Clique aqui ou arraste arquivos para anexar
                 </p>
               </div>
             </CollapsibleContent>
           </Collapsible>
 
-          {/* Common fields */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="due">Prazo</Label>
+          {/* Top row: Due Date and Priority */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-base font-medium text-lunar-text flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Prazo
+              </Label>
               <Input 
-                id="due" 
                 type="date" 
                 value={dueDate} 
                 onChange={e => setDueDate(e.target.value)}
+                className="bg-lunar-background border-lunar-border"
               />
             </div>
-            <div className="space-y-1.5">
-              <Label>Prioridade</Label>
+            <div className="space-y-2">
+              <Label className="text-base font-medium text-lunar-text">Prioridade</Label>
               <Select 
                 value={priority} 
                 onValueChange={v => setPriority(v as TaskPriority)}
                 onOpenChange={(open) => handleSelectOpenChange(open, 'priority')}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione" />
+                <SelectTrigger className="bg-lunar-background border-lunar-border">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-3 h-3 rounded-full ${getPriorityColor(priority)}`} />
+                    <SelectValue placeholder="Selecione prioridade" />
+                  </div>
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="low">Baixa</SelectItem>
-                  <SelectItem value="medium">Média</SelectItem>
-                  <SelectItem value="high">Alta</SelectItem>
+                <SelectContent className="bg-lunar-surface border-lunar-border">
+                  <SelectItem value="low">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-green-500" />
+                      Baixa
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="medium">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                      Média
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="high">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-red-500" />
+                      Alta
+                    </div>
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label>Status</Label>
+
+          {/* Second row: Status and Assignee */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-base font-medium text-lunar-text">Status</Label>
               <Select 
                 value={status} 
                 onValueChange={v => setStatus(v as TaskStatus)}
                 onOpenChange={(open) => handleSelectOpenChange(open, 'status')}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione" />
+                <SelectTrigger className="bg-lunar-background border-lunar-border">
+                  <SelectValue placeholder="Selecione status" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-lunar-surface border-lunar-border">
                   <SelectItem value="todo">A Fazer</SelectItem>
                   <SelectItem value="doing">Em Andamento</SelectItem>
                   <SelectItem value="waiting">Aguardando</SelectItem>
@@ -237,17 +283,26 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1.5">
-              <Label>Responsável</Label>
+            <div className="space-y-2">
+              <Label className="text-base font-medium text-lunar-text flex items-center gap-2">
+                <User className="w-4 h-4" />
+                Responsável
+              </Label>
               <Select 
                 value={assigneeName || '__none__'} 
                 onValueChange={(v) => setAssigneeName(v === '__none__' ? '' : v)}
                 onOpenChange={(open) => handleSelectOpenChange(open, 'assignee')}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione" />
+                <SelectTrigger className="bg-lunar-background border-lunar-border">
+                  {assigneeName ? (
+                    <Badge variant="secondary" className="text-sm">
+                      {assigneeName}
+                    </Badge>
+                  ) : (
+                    <SelectValue placeholder="Selecione responsável" />
+                  )}
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-lunar-surface border-lunar-border">
                   <SelectItem value="__none__">Sem responsável</SelectItem>
                   {people.map((p) => (
                     <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>
@@ -256,15 +311,28 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
               </Select>
             </div>
           </div>
-          <div className="space-y-1.5">
-            <Label>Etiquetas</Label>
+
+          {/* Tags */}
+          <div className="space-y-2">
+            <Label className="text-base font-medium text-lunar-text">Etiquetas</Label>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="w-full justify-between">
-                  {selectedTags.length ? selectedTags.join(', ') : 'Selecione etiquetas'}
+                <Button variant="outline" className="w-full justify-between bg-lunar-background border-lunar-border hover:bg-lunar-background/80">
+                  <div className="flex flex-wrap gap-1">
+                    {selectedTags.length ? (
+                      selectedTags.map(tag => (
+                        <Badge key={tag} variant="outline" className="text-xs">
+                          {tag}
+                        </Badge>
+                      ))
+                    ) : (
+                      <span className="text-lunar-textSecondary">Selecione etiquetas</span>
+                    )}
+                  </div>
+                  <ChevronDown className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="z-[10000] bg-lunar-bg w-[var(--radix-select-trigger-width,16rem)] min-w-[12rem]">
+              <DropdownMenuContent className="z-[10000] bg-lunar-surface border-lunar-border w-[var(--radix-select-trigger-width,16rem)] min-w-[12rem]">
                 {tagDefs.length ? (
                   tagDefs.map((tag) => (
                     <DropdownMenuCheckboxItem
@@ -280,15 +348,28 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
                     </DropdownMenuCheckboxItem>
                   ))
                 ) : (
-                  <div className="px-3 py-2 text-2xs text-lunar-textSecondary">Nenhuma etiqueta cadastrada.</div>
+                  <div className="px-3 py-2 text-sm text-lunar-textSecondary">Nenhuma etiqueta cadastrada.</div>
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
-            <p className="text-2xs text-lunar-textSecondary">Gerencie as opções em "Gerenciar".</p>
           </div>
-          <div className="pt-2 flex justify-end gap-2">
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
-            <Button type="submit">{mode === 'create' ? 'Criar' : 'Salvar'}</Button>
+
+          {/* Action Buttons */}
+          <div className="flex gap-3 pt-4">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => onOpenChange(false)}
+              className="flex-1 bg-lunar-background border-lunar-border hover:bg-lunar-background/80"
+            >
+              Cancelar
+            </Button>
+            <Button 
+              type="submit" 
+              className="flex-1"
+            >
+              {mode === 'create' ? 'Criar Tarefa' : 'Salvar Alterações'}
+            </Button>
           </div>
         </form>
       </DialogContent>
