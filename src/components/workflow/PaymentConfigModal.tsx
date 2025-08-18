@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,6 +29,8 @@ export function PaymentConfigModal({
   clienteNome
 }: PaymentConfigModalProps) {
   const [valorRestanteEditavel, setValorRestanteEditavel] = useState(Math.max(0, valorTotal - valorJaPago));
+  const [displayValue, setDisplayValue] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
   const [formaPagamento, setFormaPagamento] = useState<'avista' | 'parcelado'>('avista');
   const [numeroParcelas, setNumeroParcelas] = useState(2);
   const [diaVencimento, setDiaVencimento] = useState(10);
@@ -36,6 +38,15 @@ export function PaymentConfigModal({
   const [loading, setLoading] = useState(false);
 
   const { criarOuAtualizarPlanoPagamento } = useClientReceivables();
+
+  // Sincronizar com mudanças nas props
+  useEffect(() => {
+    const novoValorRestante = Math.max(0, valorTotal - valorJaPago);
+    setValorRestanteEditavel(novoValorRestante);
+    if (!isEditing) {
+      setDisplayValue(formatCurrency(novoValorRestante));
+    }
+  }, [valorTotal, valorJaPago, isEditing]);
 
   const valorTotalNegociado = valorRestanteEditavel + valorJaPago;
   const valorParcela = formaPagamento === 'avista' ? valorRestanteEditavel : valorRestanteEditavel / numeroParcelas;
@@ -92,22 +103,30 @@ export function PaymentConfigModal({
               <span className="text-sm font-medium text-lunar-text">Restante a Pagar:</span>
               <Input
                 type="text"
-                value={formatCurrency(valorRestanteEditavel)}
+                value={isEditing ? displayValue : formatCurrency(valorRestanteEditavel)}
                 onChange={(e) => {
-                  const valor = parseFloat(e.target.value.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-                  setValorRestanteEditavel(Math.max(0, valor));
+                  setDisplayValue(e.target.value);
                 }}
-                onFocus={(e) => {
-                  const numericValue = valorRestanteEditavel.toFixed(2).replace('.', ',');
-                  e.target.value = numericValue;
-                  e.target.select();
+                onFocus={() => {
+                  setIsEditing(true);
+                  setDisplayValue(valorRestanteEditavel.toFixed(2).replace('.', ','));
                 }}
-                onBlur={(e) => {
-                  const valor = parseFloat(e.target.value.replace(',', '.')) || 0;
-                  setValorRestanteEditavel(Math.max(0, valor));
-                  e.target.value = formatCurrency(Math.max(0, valor));
+                onBlur={() => {
+                  setIsEditing(false);
+                  // Parse the value and update
+                  const cleanValue = displayValue.replace(/[^\d,]/g, '').replace(',', '.');
+                  const numericValue = parseFloat(cleanValue) || 0;
+                  const finalValue = Math.max(0, numericValue);
+                  setValorRestanteEditavel(finalValue);
+                  setDisplayValue(formatCurrency(finalValue));
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.currentTarget.blur();
+                  }
                 }}
                 className="w-32 text-right font-bold text-primary bg-background"
+                placeholder="0,00"
               />
             </div>
           </div>
