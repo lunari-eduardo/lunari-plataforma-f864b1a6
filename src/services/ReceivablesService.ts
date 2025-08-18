@@ -82,12 +82,12 @@ export class ReceivablesService {
       plan = this.upsertPlan(sessionId, clienteId, valor, 'avista', 1, 10);
     }
 
-    // Check if entry payment already exists to prevent duplication
+    // Check if appointment entry payment already exists to prevent duplication
     const existingEntrada = installments.find(i => 
       i.paymentPlanId === plan.id && 
       i.numeroParcela === 0 && 
       i.status === 'pago' &&
-      i.observacoes?.includes('entrada')
+      i.observacoes === 'Entrada do agendamento'
     );
 
     if (existingEntrada) {
@@ -102,13 +102,46 @@ export class ReceivablesService {
       dataVencimento: data || getCurrentDateString(),
       status: 'pago',
       dataPagamento: data || getCurrentDateString(),
-      observacoes: 'Pagamento de entrada'
+      observacoes: 'Entrada do agendamento'
     };
 
     const updatedInstallments = [...installments, entradaParcela];
     this.saveInstallments(updatedInstallments);
 
     return entradaParcela;
+  }
+
+  static addPagamentoRapido(
+    sessionId: string,
+    clienteId: string,
+    valor: number,
+    data?: string
+  ): PaymentInstallment {
+    const plans = this.loadPaymentPlans();
+    const installments = this.loadInstallments();
+
+    let plan = plans.find(p => p.sessionId === sessionId);
+    
+    if (!plan) {
+      // Create a basic plan if it doesn't exist
+      plan = this.upsertPlan(sessionId, clienteId, valor, 'avista', 1, 10);
+    }
+
+    const pagamentoRapido: PaymentInstallment = {
+      id: `installment-${plan.id}-pagamento-${Date.now()}`,
+      paymentPlanId: plan.id,
+      numeroParcela: 0, // Quick payment
+      valor,
+      dataVencimento: data || getCurrentDateString(),
+      status: 'pago',
+      dataPagamento: data || getCurrentDateString(),
+      observacoes: 'Pagamento rápido'
+    };
+
+    const updatedInstallments = [...installments, pagamentoRapido];
+    this.saveInstallments(updatedInstallments);
+
+    return pagamentoRapido;
   }
 
   static removeBySessionId(sessionId: string): void {

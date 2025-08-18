@@ -1083,23 +1083,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           
           // Integrar entrada de agendamento com recebíveis
           if (item.valorPago > 0 && item.clienteId) {
-            // Check if payment already exists to prevent duplication
-            const projetosExistentes = ProjetoService.carregarProjetos();
-            const jaExiste = projetosExistentes.some(p => 
-              p.projectId === novoProjeto.projectId || 
-              (p.nome === item.nome && p.whatsapp === item.whatsapp && Math.abs(new Date(p.dataAgendada).getTime() - new Date(item.data).getTime()) < 24 * 60 * 60 * 1000)
+            // Add entry payment immediately when creating appointment
+            ReceivablesService.addEntradaPago(
+              novoProjeto.projectId,
+              item.clienteId!,
+              item.valorPago,
+              getCurrentDateString()
             );
-            
-            if (!jaExiste) {
-              setTimeout(() => {
-                ReceivablesService.addEntradaPago(
-                  novoProjeto.projectId,
-                  item.clienteId!,
-                  item.valorPago,
-                  getCurrentDateString()
-                );
-              }, 100);
-            }
           }
         });
       }, 0);
