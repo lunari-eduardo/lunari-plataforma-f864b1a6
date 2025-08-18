@@ -11,12 +11,16 @@ export function useTaskCaptions(task: Task, onUpdateTask: (updates: Partial<Task
     };
 
     const currentCaptions = task.captions || [];
+    const updatedCaptions = [...currentCaptions, caption];
+    
+    // Force update with complete task object to ensure persistence
     onUpdateTask({
-      captions: [...currentCaptions, caption]
+      ...task,
+      captions: updatedCaptions
     });
 
     toast.success('Legenda salva com sucesso!');
-  }, [task.captions, onUpdateTask]);
+  }, [task, onUpdateTask]);
 
   const updateCaption = useCallback((captionId: string, updates: Partial<TaskCaption>) => {
     const currentCaptions = task.captions || [];
@@ -24,23 +28,27 @@ export function useTaskCaptions(task: Task, onUpdateTask: (updates: Partial<Task
       c.id === captionId ? { ...c, ...updates } : c
     );
 
+    // Force update with complete task object to ensure persistence
     onUpdateTask({
+      ...task,
       captions: updatedCaptions
     });
 
     toast.success('Legenda atualizada');
-  }, [task.captions, onUpdateTask]);
+  }, [task, onUpdateTask]);
 
   const removeCaption = useCallback((captionId: string) => {
     const currentCaptions = task.captions || [];
     const updatedCaptions = currentCaptions.filter(c => c.id !== captionId);
 
+    // Force update with complete task object to ensure persistence
     onUpdateTask({
+      ...task,
       captions: updatedCaptions
     });
 
     toast.success('Legenda removida');
-  }, [task.captions, onUpdateTask]);
+  }, [task, onUpdateTask]);
 
   return {
     addCaption,

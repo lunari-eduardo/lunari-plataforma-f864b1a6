@@ -59,8 +59,12 @@ export function useTaskAttachments(task: Task, onUpdateTask: (updates: Partial<T
       };
 
       const currentAttachments = task.attachments || [];
+      const updatedAttachments = [...currentAttachments, attachment];
+      
+      // Force update with complete task object to ensure persistence
       onUpdateTask({
-        attachments: [...currentAttachments, attachment]
+        ...task,
+        attachments: updatedAttachments
       });
 
       toast.success('Anexo adicionado com sucesso!');
@@ -68,18 +72,20 @@ export function useTaskAttachments(task: Task, onUpdateTask: (updates: Partial<T
       console.error('❌ Erro ao adicionar anexo:', error);
       toast.error('Erro ao adicionar anexo');
     }
-  }, [task.attachments, onUpdateTask]);
+  }, [task, onUpdateTask]);
 
   const removeAttachment = useCallback((attachmentId: string) => {
     const currentAttachments = task.attachments || [];
     const updatedAttachments = currentAttachments.filter(a => a.id !== attachmentId);
     
+    // Force update with complete task object to ensure persistence
     onUpdateTask({
+      ...task,
       attachments: updatedAttachments
     });
 
     toast.success('Anexo removido');
-  }, [task.attachments, onUpdateTask]);
+  }, [task, onUpdateTask]);
 
   const addTextAttachment = useCallback((name: string, content: string) => {
     const attachment: TaskAttachment = {
@@ -91,12 +97,16 @@ export function useTaskAttachments(task: Task, onUpdateTask: (updates: Partial<T
     };
 
     const currentAttachments = task.attachments || [];
+    const updatedAttachments = [...currentAttachments, attachment];
+    
+    // Force update with complete task object to ensure persistence
     onUpdateTask({
-      attachments: [...currentAttachments, attachment]
+      ...task,
+      attachments: updatedAttachments
     });
 
     toast.success('Texto adicionado com sucesso!');
-  }, [task.attachments, onUpdateTask]);
+  }, [task, onUpdateTask]);
 
   return {
     uploadAttachment,
