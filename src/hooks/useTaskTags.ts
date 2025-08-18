@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
 
 export interface TaskTagDef {
@@ -10,36 +10,57 @@ export interface TaskTagDef {
 type Direction = 'up' | 'down';
 
 export function useTaskTags() {
+  const [tick, setTick] = useState(0);
   const [tags, setTags] = useState<TaskTagDef[]>(() => storage.load<TaskTagDef[]>(STORAGE_KEYS.TASK_TAGS, []));
 
+  // Reload tags when tick changes
   useEffect(() => {
-    storage.save(STORAGE_KEYS.TASK_TAGS, tags);
-  }, [tags]);
+    setTags(storage.load<TaskTagDef[]>(STORAGE_KEYS.TASK_TAGS, []));
+  }, [tick]);
 
-  const addTag = (name: string) => {
+  const save = useCallback((newTags: TaskTagDef[]) => {
+    storage.save(STORAGE_KEYS.TASK_TAGS, newTags);
+    setTags(newTags);
+    setTick(v => v + 1);
+    window.dispatchEvent(new Event('taskTagsUpdated'));
+  }, []);
+
+  const addTag = useCallback((name: string) => {
     const id = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    setTags(prev => [...prev, { id, name: name.trim() }]);
-  };
+    const newTags = [...tags, { id, name: name.trim() }];
+    save(newTags);
+  }, [tags, save]);
 
-  const updateTag = (id: string, patch: Partial<TaskTagDef>) => {
-    setTags(prev => prev.map(t => (t.id === id ? { ...t, ...patch } : t)));
-  };
+  const updateTag = useCallback((id: string, patch: Partial<TaskTagDef>) => {
+    const newTags = tags.map(t => (t.id === id ? { ...t, ...patch } : t));
+    save(newTags);
+  }, [tags, save]);
 
-  const removeTag = (id: string) => {
-    setTags(prev => prev.filter(t => t.id !== id));
-  };
+  const removeTag = useCallback((id: string) => {
+    const newTags = tags.filter(t => t.id !== id);
+    save(newTags);
+  }, [tags, save]);
 
-  const moveTag = (id: string, dir: Direction) => {
-    setTags(prev => {
-      const idx = prev.findIndex(t => t.id === id);
-      if (idx < 0) return prev;
-      const next = [...prev];
-      const swapWith = dir === 'up' ? idx - 1 : idx + 1;
-      if (swapWith < 0 || swapWith >= next.length) return prev;
-      [next[idx], next[swapWith]] = [next[swapWith], next[idx]];
-      return next;
-    });
-  };
+  const moveTag = useCallback((id: string, dir: Direction) => {
+    const idx = tags.findIndex(t => t.id === id);
+    if (idx < 0) return;
+    const next = [...tags];
+    const swapWith = dir === 'up' ? idx - 1 : idx + 1;
+    if (swapWith < 0 || swapWith >= next.length) return;
+    [next[idx], next[swapWith]] = [next[swapWith], next[idx]];
+    save(next);
+  }, [tags, save]);
+
+  // Listen for external updates
+  useEffect(() => {
+    const onChange = () => setTick(v => v + 1);
+    window.addEventListener('storage', onChange);
+    window.addEventListener('taskTagsUpdated', onChange);
+    return () => {
+      window.removeEventListener('storage', onChange);
+      window.removeEventListener('taskTagsUpdated', onChange);
+    };
+  }, []);
 
   return { tags, addTag, updateTag, removeTag, moveTag };
 }
