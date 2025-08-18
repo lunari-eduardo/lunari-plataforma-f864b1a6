@@ -13,6 +13,7 @@ import PriorityLegend from '@/components/tarefas/PriorityLegend';
 import { cn } from '@/lib/utils';
 import { useTaskStatuses } from '@/hooks/useTaskStatuses';
 import ManageTaskStatusesModal from '@/components/tarefas/ManageTaskStatusesModal';
+import TemplateManagerModal from '@/components/tarefas/TemplateManagerModal';
 import ChecklistPanel from '@/components/tarefas/ChecklistPanel';
 import TaskDetailsModal from '@/components/tarefas/TaskDetailsModal';
 import TaskFiltersBar, { type TaskFilters } from '@/components/tarefas/TaskFiltersBar';
@@ -20,6 +21,7 @@ import CleanTaskCard from '@/components/tarefas/CleanTaskCard';
 import { DndContext, rectIntersection, useSensor, useSensors, PointerSensor, DragOverlay, useDroppable } from '@dnd-kit/core';
 import { restrictToFirstScrollableAncestor } from '@dnd-kit/modifiers';
 import DraggableTaskCard from '@/components/tarefas/dnd/DraggableTaskCard';
+import { Sparkles } from 'lucide-react';
 // Filter tasks based on filters
 function filterTasks(tasks: Task[], filters: TaskFilters): Task[] {
   return tasks.filter(task => {
@@ -102,6 +104,7 @@ const assigneeOptions = useMemo(() => [
 
 const [manageStatusesOpen, setManageStatusesOpen] = useState(false);
 const [createOpen, setCreateOpen] = useState(false);
+const [showTemplateManager, setShowTemplateManager] = useState(false);
 const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 const [activeId, setActiveId] = useState<string | null>(null);
 
@@ -206,6 +209,10 @@ const sensors = useSensors(pointerSensor);
               <SelectItem value="list">Lista</SelectItem>
             </SelectContent>
           </Select>
+          <Button variant="outline" onClick={() => setShowTemplateManager(true)}>
+            <Sparkles className="h-4 w-4 mr-2" />
+            Templates
+          </Button>
           <Button variant="outline" onClick={() => setManageStatusesOpen(true)}>Gerenciar</Button>
           <Button onClick={() => setCreateOpen(true)}>Nova tarefa</Button>
         </div>
@@ -295,6 +302,11 @@ const sensors = useSensors(pointerSensor);
       />
 
       <ManageTaskStatusesModal open={manageStatusesOpen} onOpenChange={setManageStatusesOpen} />
+
+      <TemplateManagerModal 
+        open={showTemplateManager} 
+        onOpenChange={setShowTemplateManager} 
+      />
 
       <TaskDetailsModal
         task={selectedTask}

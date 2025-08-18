@@ -54,6 +54,12 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
       setStatus(data?.status ?? 'todo');
       setAssigneeName(data?.assigneeName ?? '');
       setSelectedTags(data?.tags ?? []);
+      setDescription(data?.description ?? '');
+      setDueDate(data?.dueDate ? formatDateForInput(data.dueDate) : '');
+      setPriority(data?.priority ?? 'medium');
+      setStatus(data?.status ?? 'todo');
+      setAssigneeName(data?.assigneeName ?? '');
+      setSelectedTags(data?.tags ?? []);
       setOpenDropdowns({});
       
       // Clear template data after applying
