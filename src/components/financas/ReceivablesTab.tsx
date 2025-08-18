@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -6,10 +6,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Calendar, Clock, DollarSign, TrendingUp, Users, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { useClientReceivables } from '@/hooks/useClientReceivables';
 import { formatCurrency } from '@/utils/financialUtils';
+import { convertISODateToBR } from '@/utils/dateUtils';
 import { PaymentInstallment } from '@/types/receivables';
+import { AppContext } from '@/contexts/AppContext';
 
 export default function ReceivablesTab() {
-  const { obterResumo, installments, marcarComoPago } = useClientReceivables();
+  const { obterResumo, installments, marcarComoPago, paymentPlans } = useClientReceivables();
+  const { clientes } = useContext(AppContext);
   const [filtroStatus, setFiltroStatus] = useState<'todos' | 'pendente' | 'pago'>('todos');
   
   const resumo = obterResumo();
@@ -24,6 +27,14 @@ export default function ReceivablesTab() {
       return <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">Pago</Badge>;
     }
     return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 border-yellow-200">Pendente</Badge>;
+  };
+
+  const getClienteName = (installment: PaymentInstallment) => {
+    const plan = paymentPlans.find(p => p.id === installment.paymentPlanId);
+    if (!plan) return 'Cliente não encontrado';
+    
+    const cliente = clientes.find(c => c.id === plan.clienteId);
+    return cliente?.nome || 'Cliente removido';
   };
 
   const getUrgencyBadge = (dataVencimento: string) => {
@@ -180,7 +191,7 @@ export default function ReceivablesTab() {
                           Parcela {installment.numeroParcela}
                         </div>
                         <div className="text-sm text-lunar-textSecondary">
-                          Vence em {new Date(installment.dataVencimento).toLocaleDateString('pt-BR')}
+                          Vence em {convertISODateToBR(installment.dataVencimento)}
                         </div>
                         <div className="text-lg font-bold text-orange-600">
                           {formatCurrency(installment.valor)}
@@ -231,6 +242,7 @@ export default function ReceivablesTab() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Cliente</TableHead>
                 <TableHead>Parcela</TableHead>
                 <TableHead>Valor</TableHead>
                 <TableHead>Vencimento</TableHead>
@@ -242,11 +254,16 @@ export default function ReceivablesTab() {
               {installmentsFiltradas.map((installment) => (
                 <TableRow key={installment.id}>
                   <TableCell>
-                    <div className="font-medium">
-                      Parcela {installment.numeroParcela}
+                    <div className="font-medium text-lunar-text">
+                      {getClienteName(installment)}
                     </div>
                     <div className="text-sm text-lunar-textSecondary">
                       ID: {installment.paymentPlanId.slice(-8)}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="font-medium">
+                      {installment.numeroParcela === 0 ? 'Entrada' : `Parcela ${installment.numeroParcela}`}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -257,7 +274,7 @@ export default function ReceivablesTab() {
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <span>
-                        {new Date(installment.dataVencimento).toLocaleDateString('pt-BR')}
+                        {convertISODateToBR(installment.dataVencimento)}
                       </span>
                       {getUrgencyBadge(installment.dataVencimento)}
                     </div>
@@ -277,7 +294,7 @@ export default function ReceivablesTab() {
                     )}
                     {installment.status === 'pago' && installment.dataPagamento && (
                       <div className="text-sm text-green-600">
-                        Pago em {new Date(installment.dataPagamento).toLocaleDateString('pt-BR')}
+                        Pago em {convertISODateToBR(installment.dataPagamento)}
                       </div>
                     )}
                   </TableCell>

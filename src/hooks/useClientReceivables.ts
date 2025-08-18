@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ClientPaymentPlan, PaymentInstallment, ReceivablesMetrics, ReceivablesSummary } from '@/types/receivables';
 import { formatCurrency } from '@/utils/financialUtils';
+import { getCurrentDateString, formatDateForStorage } from '@/utils/dateUtils';
+import { ReceivablesService } from '@/services/ReceivablesService';
 import { useToast } from '@/hooks/use-toast';
 
 const STORAGE_KEYS = {
@@ -15,27 +17,19 @@ export function useClientReceivables() {
 
   // Carregar dados do localStorage
   useEffect(() => {
-    const savedPlans = localStorage.getItem(STORAGE_KEYS.PAYMENT_PLANS);
-    const savedInstallments = localStorage.getItem(STORAGE_KEYS.INSTALLMENTS);
-    
-    if (savedPlans) {
-      setPaymentPlans(JSON.parse(savedPlans));
-    }
-    
-    if (savedInstallments) {
-      setInstallments(JSON.parse(savedInstallments));
-    }
+    setPaymentPlans(ReceivablesService.loadPaymentPlans());
+    setInstallments(ReceivablesService.loadInstallments());
   }, []);
 
   // Salvar planos de pagamento
   const savePaymentPlans = useCallback((plans: ClientPaymentPlan[]) => {
-    localStorage.setItem(STORAGE_KEYS.PAYMENT_PLANS, JSON.stringify(plans));
+    ReceivablesService.savePaymentPlans(plans);
     setPaymentPlans(plans);
   }, []);
 
   // Salvar parcelas
   const saveInstallments = useCallback((installmentsList: PaymentInstallment[]) => {
-    localStorage.setItem(STORAGE_KEYS.INSTALLMENTS, JSON.stringify(installmentsList));
+    ReceivablesService.saveInstallments(installmentsList);
     setInstallments(installmentsList);
   }, []);
 
@@ -76,14 +70,14 @@ export function useClientReceivables() {
     // Gerar parcela de entrada se houver valor já pago
     const novasParcelas: PaymentInstallment[] = [];
     if (valorJaPago > 0) {
-      const parcelaEntrada: PaymentInstallment = {
+        const parcelaEntrada: PaymentInstallment = {
         id: `installment-${planId}-entrada`,
         paymentPlanId: planId,
         numeroParcela: 0, // Entrada
         valor: valorJaPago,
-        dataVencimento: new Date().toISOString().split('T')[0],
+        dataVencimento: getCurrentDateString(),
         status: 'pago',
-        dataPagamento: new Date().toISOString().split('T')[0],
+        dataPagamento: getCurrentDateString(),
         observacoes: 'Pagamento já realizado (entrada/pagamento rápido)'
       };
       novasParcelas.push(parcelaEntrada);
@@ -111,7 +105,7 @@ export function useClientReceivables() {
           paymentPlanId: planId,
           numeroParcela: i,
           valor: valorParcela,
-          dataVencimento: dataVencimento.toISOString().split('T')[0],
+          dataVencimento: formatDateForStorage(dataVencimento),
           status: 'pendente'
         };
         
@@ -174,9 +168,9 @@ export function useClientReceivables() {
       paymentPlanId: planoExistente.id,
       numeroParcela: 0, // Pagamento avulso
       valor: valorPago,
-      dataVencimento: new Date().toISOString().split('T')[0],
+      dataVencimento: getCurrentDateString(),
       status: 'pago',
-      dataPagamento: new Date().toISOString().split('T')[0],
+      dataPagamento: getCurrentDateString(),
       observacoes: 'Pagamento rápido'
     };
 
@@ -201,7 +195,7 @@ export function useClientReceivables() {
         return {
           ...installment,
           status: 'pago' as const,
-          dataPagamento: dataPagamento || new Date().toISOString().split('T')[0],
+          dataPagamento: dataPagamento || getCurrentDateString(),
           observacoes
         };
       }
@@ -210,15 +204,30 @@ export function useClientReceivables() {
 
     saveInstallments(novasInstallments);
 
-    // Verificar se o plano foi quitado
+    // Dispatch event for global synchronization
     const installment = installments.find(i => i.id === installmentId);
     if (installment) {
-      const parcelasDoPlano = novasInstallments.filter(i => i.paymentPlanId === installment.paymentPlanId);
+      const plano = paymentPlans.find(p => p.id === installment.paymentPlanId);
+      if (plano?.sessionId) {
+        window.dispatchEvent(new CustomEvent('receivables:installment-paid', {
+          detail: {
+            sessionId: plano.sessionId,
+            clienteId: plano.clienteId,
+            valor: installment.valor
+          }
+        }));
+      }
+    }
+
+    // Verificar se o plano foi quitado
+    const foundInstallment = installments.find(i => i.id === installmentId);
+    if (foundInstallment) {
+      const parcelasDoPlano = novasInstallments.filter(i => i.paymentPlanId === foundInstallment.paymentPlanId);
       const todasPagas = parcelasDoPlano.every(p => p.status === 'pago');
       
       if (todasPagas) {
         const novosPlanos = paymentPlans.map(plan => {
-          if (plan.id === installment.paymentPlanId) {
+          if (plan.id === foundInstallment.paymentPlanId) {
             return { ...plan, status: 'quitado' as const };
           }
           return plan;
@@ -235,9 +244,9 @@ export function useClientReceivables() {
 
   // Calcular métricas do mês
   const calcularMetricasMes = useCallback((ano: number, mes: number): ReceivablesMetrics => {
-    const inicioMes = new Date(ano, mes - 1, 1).toISOString().split('T')[0];
-    const fimMes = new Date(ano, mes, 0).toISOString().split('T')[0];
-    const hoje = new Date().toISOString().split('T')[0];
+    const inicioMes = formatDateForStorage(new Date(ano, mes - 1, 1));
+    const fimMes = formatDateForStorage(new Date(ano, mes, 0));
+    const hoje = getCurrentDateString();
 
     const parcelasDoMes = installments.filter(installment => 
       installment.dataVencimento >= inicioMes && installment.dataVencimento <= fimMes
@@ -264,10 +273,10 @@ export function useClientReceivables() {
     const proximoMes = mesAtual === 12 ? 1 : mesAtual + 1;
     const anoProximoMes = mesAtual === 12 ? anoAtual + 1 : anoAtual;
 
-    const hojeFmtd = hoje.toISOString().split('T')[0];
+    const hojeFmtd = getCurrentDateString();
     const proximosSeteDias = new Date();
     proximosSeteDias.setDate(hoje.getDate() + 7);
-    const proximosSeteDiasFmtd = proximosSeteDias.toISOString().split('T')[0];
+    const proximosSeteDiasFmtd = formatDateForStorage(proximosSeteDias);
 
     return {
       mesAtual: calcularMetricasMes(anoAtual, mesAtual),

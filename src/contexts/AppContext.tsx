@@ -15,6 +15,7 @@ import { ProjetoService } from '@/services/ProjetoService';
 import { corrigirClienteIdSessoes, corrigirClienteIdAgendamentos } from '@/utils/corrigirClienteIdSessoes';
 import { generateSessionId } from '@/utils/workflowSessionsAdapter';
 import { syncLeadsWithClientUpdate } from '@/utils/leadClientSync';
+import { ReceivablesService } from '@/services/ReceivablesService';
 
 // Types
 import { Orcamento, Template, OrigemCliente, MetricasOrcamento, Cliente } from '@/types/orcamentos';
@@ -347,6 +348,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const criarProjeto = (input: CriarProjetoInput): Projeto => {
     const novoProjeto = ProjetoService.criarProjeto(input);
     setProjetos(ProjetoService.carregarProjetos());
+    
+    // Integrar com recebíveis se há valor pago (será integrado via criarProjeto com dados de agendamento)
+    // A integração acontece no processamento de agendamentos confirmados
+    
     return novoProjeto;
   };
 
@@ -449,6 +454,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch {}
     return () => window.removeEventListener('workflow-sessions-updated', handler);
   }, [syncSessionsToProjects]);
+
+  // Listener para eventos de recebíveis (sincronização global)
+  useEffect(() => {
+    const handler = (e: CustomEvent) => {
+      const { sessionId, valor } = e.detail;
+      if (sessionId && valor) {
+        addPayment(sessionId, valor);
+      }
+    };
+    
+    window.addEventListener('receivables:installment-paid', handler as EventListener);
+    return () => window.removeEventListener('receivables:installment-paid', handler as EventListener);
+  }, []);
 
   const [workflowFilters, setWorkflowFilters] = useState<WorkflowFilters>(() => {
     const hoje = getCurrentDateString();
@@ -1047,7 +1065,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // Usar setTimeout para quebrar o loop de dependências
       setTimeout(() => {
         newItems.forEach(item => {
-          criarProjeto({
+          const novoProjeto = criarProjeto({
             clienteId: item.clienteId || '',
             nome: item.nome,
             categoria: item.categoria,
@@ -1062,6 +1080,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             fonte: 'agenda',
             agendamentoId: item.id
           });
+          
+          // Integrar entrada de agendamento com recebíveis
+          if (item.valorPago > 0 && item.clienteId) {
+            setTimeout(() => {
+              ReceivablesService.addEntradaPago(
+                novoProjeto.projectId,
+                item.clienteId!,
+                item.valorPago,
+                getCurrentDateString()
+              );
+            }, 100);
+          }
         });
       }, 0);
     }
@@ -1639,6 +1669,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const removerCliente = (id: string) => {
     setClientes(prev => prev.filter(cliente => cliente.id !== id));
+    
+    // Limpar recebíveis do cliente
+    ReceivablesService.removeByClienteId(id);
   };
 
   const adicionarCategoria = (categoria: string) => {
@@ -1779,6 +1812,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Remover projeto associado se existir
     const projeto = projetos.find(p => p.agendamentoId === id);
     if (projeto) {
+      // Limpar recebíveis antes de excluir projeto
+      ReceivablesService.removeBySessionId(projeto.projectId);
       excluirProjeto(projeto.projectId);
     }
     
