@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { WorkflowPackageCombobox } from "./WorkflowPackageCombobox";
 import { StatusBadge } from "./StatusBadge";
 import { GerenciarProdutosModal } from "./GerenciarProdutosModal";
-import { MessageCircle, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Package, Plus } from "lucide-react";
+import { PaymentConfigModal } from "./PaymentConfigModal";
+import { MessageCircle, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Package, Plus, CreditCard } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatToDayMonth } from "@/utils/dateUtils";
@@ -141,6 +142,8 @@ export function WorkflowTable({
   const [editingValues, setEditingValues] = useState<Record<string, string>>({});
   const [modalAberto, setModalAberto] = useState(false);
   const [sessionSelecionada, setSessionSelecionada] = useState<SessionData | null>(null);
+  const [paymentConfigOpen, setPaymentConfigOpen] = useState(false);
+  const [selectedSessionForPayment, setSelectedSessionForPayment] = useState<SessionData | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [scrollPercent, setScrollPercent] = useState(0);
   const [maxScroll, setMaxScroll] = useState(0);
@@ -881,7 +884,21 @@ return <td className={`
 
                 {renderCell('details', renderEditableInput(session, 'observacoes', session.observacoes || '', 'text', 'Observações...'))}
 
-                {renderCell('total', <span className="font-bold text-blue-700 text-xs">{formatCurrency(calculateTotal(session))}</span>)}
+                {renderCell('total', <div className="flex items-center gap-2">
+                    <span className="font-bold text-blue-700 text-xs">{formatCurrency(calculateTotal(session))}</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedSessionForPayment(session);
+                        setPaymentConfigOpen(true);
+                      }}
+                      className="h-5 w-5 p-0 hover:bg-primary/10"
+                      title="Configurar Pagamento"
+                    >
+                      <CreditCard className="h-3 w-3 text-primary" />
+                    </Button>
+                  </div>)}
 
                 {renderCell('paid', <span className="font-bold text-green-600 text-xs">{session.valorPago || 'R$ 0,00'}</span>)}
 
@@ -955,6 +972,21 @@ return <td className={`
               handleFieldUpdateStable(sessionSelecionada.id, 'valorTotalProduto', formatCurrency(valorTotalManuais));
               setSessionSelecionada(null);
             }} 
+          />
+        )}
+
+        {/* Modal de Configuração de Pagamento */}
+        {selectedSessionForPayment && (
+          <PaymentConfigModal
+            isOpen={paymentConfigOpen}
+            onClose={() => {
+              setPaymentConfigOpen(false);
+              setSelectedSessionForPayment(null);
+            }}
+            sessionId={selectedSessionForPayment.id}
+            clienteId={selectedSessionForPayment.clienteId || selectedSessionForPayment.id}
+            valorTotal={calculateTotal(selectedSessionForPayment)}
+            clienteNome={selectedSessionForPayment.nome}
           />
         )}
     </div>;

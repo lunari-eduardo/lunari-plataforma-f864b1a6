@@ -23,6 +23,7 @@ import { useOrcamentos } from '@/hooks/useOrcamentos';
 import { ORIGENS_PADRAO } from '@/utils/defaultOrigens';
 import { getOriginInfo, getOriginDisplayName } from '@/utils/originUtils';
 import { OriginBadge } from '@/components/shared/OriginBadge';
+import { ClientPaymentHistory } from '@/components/crm/ClientPaymentHistory';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 export default function ClienteDetalhe() {
   const {
@@ -417,73 +418,12 @@ export default function ClienteDetalhe() {
             </Card>
           </TabsContent>
 
-          {/* Aba 3: Resumo Financeiro */}
+          {/* Aba 3: Informações Financeiras */}
           <TabsContent value="financeiro" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Resumo Financeiro */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <span className="text-primary">💰</span>
-                    Resumo Financeiro
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span>Total</span>
-                    <span className="font-semibold text-green-600">{formatCurrency(metricas.totalFaturado)}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>Total Pago</span>
-                    <span className="font-semibold text-blue-600">{formatCurrency(metricas.totalPago)}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>A Receber</span>
-                    <span className="font-semibold text-orange-600">{formatCurrency(metricas.aReceber)}</span>
-                  </div>
-                  <div className="border-t pt-2">
-                    <div className="flex justify-between items-center">
-                      <span>Taxa de Pagamento</span>
-                      <span className="font-semibold text-primary">
-                        {metricas.totalFaturado > 0 ? Math.round(metricas.totalPago / metricas.totalFaturado * 100) : 0}%
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>Ticket Médio</span>
-                    <span className="font-semibold">
-                      {formatCurrency(metricas.totalSessoes > 0 ? metricas.totalFaturado / metricas.totalSessoes : 0)}
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Engajamento */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <span className="text-primary">📊</span>
-                    Engajamento
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span>Total de Sessões</span>
-                    <span className="font-semibold text-blue-600">{metricas.totalSessoes}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>Arquivos Enviados</span>
-                    <span className="font-semibold">0</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>Última Sessão</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Em dia</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            <ClientPaymentHistory 
+              clienteId={cliente.id} 
+              clienteNome={cliente.nome} 
+            />
           </TabsContent>
 
           {/* Aba 4: Documentos */}
