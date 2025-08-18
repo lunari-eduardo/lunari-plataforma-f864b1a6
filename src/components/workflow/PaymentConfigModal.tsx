@@ -28,7 +28,7 @@ export function PaymentConfigModal({
   valorJaPago,
   clienteNome
 }: PaymentConfigModalProps) {
-  const [valorTotalNegociado, setValorTotalNegociado] = useState(valorTotal);
+  const [valorRestanteEditavel, setValorRestanteEditavel] = useState(Math.max(0, valorTotal - valorJaPago));
   const [formaPagamento, setFormaPagamento] = useState<'avista' | 'parcelado'>('avista');
   const [numeroParcelas, setNumeroParcelas] = useState(2);
   const [diaVencimento, setDiaVencimento] = useState(10);
@@ -37,8 +37,8 @@ export function PaymentConfigModal({
 
   const { criarOuAtualizarPlanoPagamento } = useClientReceivables();
 
-  const valorRestante = Math.max(0, valorTotalNegociado - valorJaPago);
-  const valorParcela = formaPagamento === 'avista' ? valorRestante : valorRestante / numeroParcelas;
+  const valorTotalNegociado = valorRestanteEditavel + valorJaPago;
+  const valorParcela = formaPagamento === 'avista' ? valorRestanteEditavel : valorRestanteEditavel / numeroParcelas;
 
   const handleSave = async () => {
     setLoading(true);
@@ -78,25 +78,7 @@ export function PaymentConfigModal({
           <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-sm text-lunar-textSecondary">Valor Total Negociado:</span>
-              <Input
-                type="text"
-                value={formatCurrency(valorTotalNegociado)}
-                onChange={(e) => {
-                  const valor = parseFloat(e.target.value.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-                  setValorTotalNegociado(valor);
-                }}
-                onFocus={(e) => {
-                  const numericValue = valorTotalNegociado.toFixed(2).replace('.', ',');
-                  e.target.value = numericValue;
-                  e.target.select();
-                }}
-                onBlur={(e) => {
-                  const valor = parseFloat(e.target.value.replace(',', '.')) || 0;
-                  setValorTotalNegociado(valor);
-                  e.target.value = formatCurrency(valor);
-                }}
-                className="w-32 text-right font-bold text-primary bg-background"
-              />
+              <span className="text-lg font-bold text-primary">{formatCurrency(valorTotalNegociado)}</span>
             </div>
             
             {valorJaPago > 0 && (
@@ -108,7 +90,25 @@ export function PaymentConfigModal({
             
             <div className="flex items-center justify-between border-t pt-2">
               <span className="text-sm font-medium text-lunar-text">Restante a Pagar:</span>
-              <span className="text-lg font-bold text-primary">{formatCurrency(valorRestante)}</span>
+              <Input
+                type="text"
+                value={formatCurrency(valorRestanteEditavel)}
+                onChange={(e) => {
+                  const valor = parseFloat(e.target.value.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+                  setValorRestanteEditavel(Math.max(0, valor));
+                }}
+                onFocus={(e) => {
+                  const numericValue = valorRestanteEditavel.toFixed(2).replace('.', ',');
+                  e.target.value = numericValue;
+                  e.target.select();
+                }}
+                onBlur={(e) => {
+                  const valor = parseFloat(e.target.value.replace(',', '.')) || 0;
+                  setValorRestanteEditavel(Math.max(0, valor));
+                  e.target.value = formatCurrency(Math.max(0, valor));
+                }}
+                className="w-32 text-right font-bold text-primary bg-background"
+              />
             </div>
           </div>
 
@@ -182,6 +182,9 @@ export function PaymentConfigModal({
                 <div className="text-xs text-lunar-textSecondary mt-1">
                   Vencimento todo dia {diaVencimento}
                 </div>
+                <div className="text-xs text-primary font-medium mt-1">
+                  Total: {formatCurrency(valorTotalNegociado)}
+                </div>
               </div>
             </div>
           )}
@@ -209,7 +212,7 @@ export function PaymentConfigModal({
                   <span className="text-sm font-medium text-lunar-text">Vencimento</span>
                 </div>
                 <div className="text-lg font-semibold text-primary">
-                  {formatCurrency(valorRestante)}
+                  {formatCurrency(valorRestanteEditavel)}
                 </div>
                 {valorJaPago > 0 && (
                   <div className="text-xs text-green-600 mt-1">
@@ -218,6 +221,9 @@ export function PaymentConfigModal({
                 )}
                 <div className="text-xs text-lunar-textSecondary">
                   Vencimento no dia {diaVencimento}
+                </div>
+                <div className="text-xs text-primary font-medium mt-1">
+                  Total: {formatCurrency(valorTotalNegociado)}
                 </div>
               </div>
             </div>

@@ -95,13 +95,16 @@ export function useClientReceivables() {
       const parcelas = formaPagamento === 'avista' ? 1 : numeroParcelas;
       
       for (let i = 1; i <= parcelas; i++) {
-        // Fix: Calcular data corretamente para parcelas sequenciais
-        const dataVencimento = new Date(hoje.getFullYear(), hoje.getMonth() + i - 1, diaVencimento);
+        // Calcular data corretamente para parcelas sequenciais
+        let dataVencimento = new Date(hoje.getFullYear(), hoje.getMonth(), diaVencimento);
         
-        // Se a data já passou, mover para o próximo mês
+        // Se a data do vencimento já passou no mês atual, começar no próximo mês
         if (dataVencimento <= hoje) {
-          dataVencimento.setMonth(dataVencimento.getMonth() + 1);
+          dataVencimento = new Date(hoje.getFullYear(), hoje.getMonth() + 1, diaVencimento);
         }
+        
+        // Adicionar i-1 meses para parcelas sequenciais (primeira parcela no próximo mês válido)
+        dataVencimento.setMonth(dataVencimento.getMonth() + (i - 1));
         
         const parcela: PaymentInstallment = {
           id: `installment-${planId}-${i}`,
