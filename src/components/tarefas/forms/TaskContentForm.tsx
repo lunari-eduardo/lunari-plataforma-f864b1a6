@@ -16,7 +16,7 @@ interface TaskContentFormProps {
   hashtags: string[];
   setHashtags: (value: string[]) => void;
   socialPlatforms: string[];
-  setSocialPlatforms: (value: string[]) => void;
+  setSocialPlatforms: (value: string[] | ((prev: string[]) => string[])) => void;
 }
 
 const PLATFORMS = ['instagram', 'facebook', 'tiktok', 'youtube', 'linkedin'];
@@ -47,7 +47,7 @@ export default function TaskContentForm({
   };
 
   const togglePlatform = (platform: string) => {
-    setSocialPlatforms(prev => 
+    setSocialPlatforms((prev: string[]) => 
       prev.includes(platform) 
         ? prev.filter(p => p !== platform)
         : [...prev, platform]
