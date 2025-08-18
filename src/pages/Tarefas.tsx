@@ -203,23 +203,30 @@ const sensors = useSensors(pointerSensor);
   );
 
   return (
-    <main className="page-tarefas p-4 space-y-4">
-      <header className="flex items-center justify-between">
+    <main className="page-tarefas p-2 md:p-4 space-y-2 md:space-y-4">
+      <header className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-base font-bold text-lunar-text">Tarefas</h1>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 md:gap-2 flex-wrap">
           <Select value={view} onValueChange={(v) => { setView(v as any); localStorage.setItem('lunari_tasks_view', v); }}>
-            <SelectTrigger className="h-8 w-[120px]"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-8 w-[100px] md:w-[120px] text-xs md:text-sm"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="kanban">Kanban</SelectItem>
               <SelectItem value="list">Lista</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" onClick={() => setShowTemplateManager(true)}>
-            <Sparkles className="h-4 w-4 mr-2" />
-            Templates
+          <Button variant="outline" size="sm" onClick={() => setShowTemplateManager(true)} className="hidden md:flex">
+            <Sparkles className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+            <span className="hidden md:inline">Templates</span>
+            <span className="md:hidden">T</span>
           </Button>
-          <Button variant="outline" onClick={() => setManageStatusesOpen(true)}>Gerenciar</Button>
-          <Button onClick={() => setCreateOpen(true)}>Nova tarefa</Button>
+          <Button variant="outline" size="sm" onClick={() => setManageStatusesOpen(true)} className="text-xs md:text-sm">
+            <span className="hidden md:inline">Gerenciar</span>
+            <span className="md:hidden">Config</span>
+          </Button>
+          <Button size="sm" onClick={() => setCreateOpen(true)} className="text-xs md:text-sm">
+            <span className="hidden sm:inline">Nova tarefa</span>
+            <span className="sm:hidden">+ Tarefa</span>
+          </Button>
         </div>
       </header>
 
