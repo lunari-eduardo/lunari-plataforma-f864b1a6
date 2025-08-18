@@ -26,6 +26,8 @@ export interface Task {
   attachments?: TaskAttachment[];
   notes?: string;
   estimatedHours?: number;
+  // Phase 2 extensions
+  captions?: TaskCaption[];
 }
 
 export interface TaskAttachment {
@@ -35,6 +37,17 @@ export interface TaskAttachment {
   url?: string;
   content?: string; // For text attachments
   uploadedAt: string;
+  size?: number;
+  mimeType?: string;
+}
+
+export interface TaskCaption {
+  id: string;
+  title: string;
+  content: string;
+  hashtags?: string[];
+  createdAt: string;
+  platform?: 'instagram' | 'facebook' | 'general';
 }
 
 export interface TeamMember {

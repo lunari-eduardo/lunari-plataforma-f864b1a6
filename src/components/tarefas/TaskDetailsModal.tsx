@@ -4,10 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
-import { FileText, Image, Edit3, Trash2, Plus, Calendar } from 'lucide-react';
-import type { Task, TaskAttachment } from '@/types/tasks';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Edit3, Trash2, Calendar, FileText, MessageSquare } from 'lucide-react';
+import type { Task } from '@/types/tasks';
 import { formatDateForDisplay } from '@/utils/dateUtils';
 import TaskFormModal from './TaskFormModal';
+import TaskAttachmentsSection from './TaskAttachmentsSection';
+import TaskCaptionsSection from './TaskCaptionsSection';
 
 interface TaskDetailsModalProps {
   task: Task | null;
@@ -138,36 +141,33 @@ export default function TaskDetailsModal({
               />
             </div>
 
-            {/* Attachments */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h3 className="font-medium text-lunar-text">Anexos</h3>
-                <Button variant="outline" size="sm" className="text-xs">
-                  <Plus className="w-3 h-3 mr-1" />
-                  Adicionar
-                </Button>
-              </div>
+            {/* Tabs for Attachments and Captions */}
+            <Tabs defaultValue="attachments" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 bg-lunar-background border-lunar-border">
+                <TabsTrigger value="attachments" className="flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  Anexos
+                </TabsTrigger>
+                <TabsTrigger value="captions" className="flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4" />
+                  Legendas
+                </TabsTrigger>
+              </TabsList>
               
-              {task.attachments && task.attachments.length > 0 ? (
-                <div className="space-y-2">
-                  {task.attachments.map((attachment) => (
-                    <div key={attachment.id} className="flex items-center gap-3 p-2 rounded border border-lunar-border/60">
-                      {attachment.type === 'image' ? (
-                        <Image className="w-4 h-4 text-lunar-textSecondary" />
-                      ) : (
-                        <FileText className="w-4 h-4 text-lunar-textSecondary" />
-                      )}
-                      <span className="text-sm flex-1">{attachment.name}</span>
-                      <Button variant="ghost" size="sm">
-                        <Trash2 className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-lunar-textSecondary">Nenhum anexo</p>
-              )}
-            </div>
+              <TabsContent value="attachments" className="mt-4">
+                <TaskAttachmentsSection 
+                  task={task} 
+                  onUpdateTask={(updates) => onUpdate(task.id, updates)} 
+                />
+              </TabsContent>
+              
+              <TabsContent value="captions" className="mt-4">
+                <TaskCaptionsSection 
+                  task={task} 
+                  onUpdateTask={(updates) => onUpdate(task.id, updates)} 
+                />
+              </TabsContent>
+            </Tabs>
 
             <Separator className="bg-lunar-border/60" />
 
