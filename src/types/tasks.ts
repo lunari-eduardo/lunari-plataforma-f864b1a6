@@ -22,6 +22,19 @@ export interface Task {
   // New optional fields for checklist-type tasks
   type?: 'standard' | 'checklist';
   checked?: boolean;
+  // Phase 1 extensions
+  attachments?: TaskAttachment[];
+  notes?: string;
+  estimatedHours?: number;
+}
+
+export interface TaskAttachment {
+  id: string;
+  name: string;
+  type: 'document' | 'image' | 'text';
+  url?: string;
+  content?: string; // For text attachments
+  uploadedAt: string;
 }
 
 export interface TeamMember {
