@@ -39,69 +39,157 @@ export function useClientReceivables() {
     setInstallments(installmentsList);
   }, []);
 
-  // Criar plano de pagamento
-  const criarPlanoPagamento = useCallback(async (
+  // Criar ou atualizar plano de pagamento (considerando pagamentos já existentes)
+  const criarOuAtualizarPlanoPagamento = useCallback(async (
     sessionId: string,
     clienteId: string,
-    valorTotal: number,
+    valorTotalNegociado: number,
+    valorJaPago: number,
     formaPagamento: 'avista' | 'parcelado',
     numeroParcelas: number = 1,
     diaVencimento: number = 10
   ) => {
+    // Remover plano existente se houver
+    const planosExistentes = paymentPlans.filter(plan => plan.sessionId !== sessionId);
+    const parcelasExistentes = installments.filter(installment => {
+      const planoDaParcela = paymentPlans.find(plan => plan.id === installment.paymentPlanId);
+      return planoDaParcela?.sessionId !== sessionId;
+    });
+
     const planId = `plan-${Date.now()}`;
-    const valorParcela = valorTotal / numeroParcelas;
+    const valorRestante = Math.max(0, valorTotalNegociado - valorJaPago);
+    const valorParcela = formaPagamento === 'avista' ? valorRestante : valorRestante / numeroParcelas;
     
     const novoPlan: ClientPaymentPlan = {
       id: planId,
       sessionId,
       clienteId,
-      valorTotal,
+      valorTotal: valorTotalNegociado,
       formaPagamento,
-      numeroParcelas,
+      numeroParcelas: formaPagamento === 'avista' ? 1 : numeroParcelas,
       valorParcela,
       diaVencimento,
-      status: 'ativo',
+      status: valorRestante <= 0 ? 'quitado' : 'ativo',
       criadoEm: new Date().toISOString()
     };
 
-    // Gerar parcelas automaticamente
+    // Gerar parcela de entrada se houver valor já pago
     const novasParcelas: PaymentInstallment[] = [];
-    const hoje = new Date();
-    
-    for (let i = 1; i <= numeroParcelas; i++) {
-      const dataVencimento = new Date(hoje.getFullYear(), hoje.getMonth() + (i - 1), diaVencimento);
-      
-      // Se a data já passou neste mês, mover para o próximo mês
-      if (i === 1 && dataVencimento < hoje) {
-        dataVencimento.setMonth(dataVencimento.getMonth() + 1);
-      }
-      
-      const parcela: PaymentInstallment = {
-        id: `installment-${planId}-${i}`,
+    if (valorJaPago > 0) {
+      const parcelaEntrada: PaymentInstallment = {
+        id: `installment-${planId}-entrada`,
         paymentPlanId: planId,
-        numeroParcela: i,
-        valor: valorParcela,
-        dataVencimento: dataVencimento.toISOString().split('T')[0],
-        status: 'pendente'
+        numeroParcela: 0, // Entrada
+        valor: valorJaPago,
+        dataVencimento: new Date().toISOString().split('T')[0],
+        status: 'pago',
+        dataPagamento: new Date().toISOString().split('T')[0],
+        observacoes: 'Pagamento já realizado (entrada/pagamento rápido)'
       };
+      novasParcelas.push(parcelaEntrada);
+    }
+
+    // Gerar parcelas futuras apenas se houver valor restante
+    if (valorRestante > 0) {
+      const hoje = new Date();
+      const parcelas = formaPagamento === 'avista' ? 1 : numeroParcelas;
       
-      novasParcelas.push(parcela);
+      for (let i = 1; i <= parcelas; i++) {
+        // Fix: Calcular data corretamente para parcelas sequenciais
+        const dataVencimento = new Date(hoje.getFullYear(), hoje.getMonth() + i - 1, diaVencimento);
+        
+        // Se a data já passou, mover para o próximo mês
+        if (dataVencimento <= hoje) {
+          dataVencimento.setMonth(dataVencimento.getMonth() + 1);
+        }
+        
+        const parcela: PaymentInstallment = {
+          id: `installment-${planId}-${i}`,
+          paymentPlanId: planId,
+          numeroParcela: i,
+          valor: valorParcela,
+          dataVencimento: dataVencimento.toISOString().split('T')[0],
+          status: 'pendente'
+        };
+        
+        novasParcelas.push(parcela);
+      }
     }
 
     // Salvar no localStorage
-    const novosPlanos = [...paymentPlans, novoPlan];
-    const novasInstallments = [...installments, ...novasParcelas];
+    const novosPlanos = [...planosExistentes, novoPlan];
+    const novasInstallments = [...parcelasExistentes, ...novasParcelas];
     
     savePaymentPlans(novosPlanos);
     saveInstallments(novasInstallments);
 
+    const descricao = valorJaPago > 0 
+      ? `Entrada: ${formatCurrency(valorJaPago)} + ${formaPagamento === 'avista' ? 1 : numeroParcelas}x de ${formatCurrency(valorParcela)}`
+      : `${formaPagamento === 'avista' ? 1 : numeroParcelas}x de ${formatCurrency(valorParcela)}`;
+
     toast({
-      title: "Plano de pagamento criado",
-      description: `${numeroParcelas}x de ${formatCurrency(valorParcela)}`
+      title: "Plano de pagamento configurado",
+      description: descricao
     });
 
     return novoPlan;
   }, [paymentPlans, installments, savePaymentPlans, saveInstallments, toast]);
+
+  // Registrar pagamento rápido (cria parcela paga automaticamente)
+  const registrarPagamentoRapido = useCallback(async (
+    sessionId: string,
+    clienteId: string,
+    valorPago: number,
+    valorTotalSessao: number
+  ) => {
+    // Verificar se já existe plano para esta sessão
+    let planoExistente = paymentPlans.find(plan => plan.sessionId === sessionId);
+    
+    if (!planoExistente) {
+      // Criar plano básico se não existir
+      const planId = `plan-${Date.now()}`;
+      planoExistente = {
+        id: planId,
+        sessionId,
+        clienteId,
+        valorTotal: valorTotalSessao,
+        formaPagamento: 'avista',
+        numeroParcelas: 1,
+        valorParcela: valorTotalSessao,
+        diaVencimento: 10,
+        status: 'ativo',
+        criadoEm: new Date().toISOString()
+      };
+
+      const novosPlanos = [...paymentPlans, planoExistente];
+      savePaymentPlans(novosPlanos);
+    }
+
+    // Criar parcela paga
+    const novaParcela: PaymentInstallment = {
+      id: `installment-${planoExistente.id}-${Date.now()}`,
+      paymentPlanId: planoExistente.id,
+      numeroParcela: 0, // Pagamento avulso
+      valor: valorPago,
+      dataVencimento: new Date().toISOString().split('T')[0],
+      status: 'pago',
+      dataPagamento: new Date().toISOString().split('T')[0],
+      observacoes: 'Pagamento rápido'
+    };
+
+    const novasInstallments = [...installments, novaParcela];
+    saveInstallments(novasInstallments);
+
+    toast({
+      title: "Pagamento registrado",
+      description: formatCurrency(valorPago)
+    });
+
+    return novaParcela;
+  }, [paymentPlans, installments, savePaymentPlans, saveInstallments, toast]);
+
+  // Compatibilidade com nome antigo
+  const criarPlanoPagamento = criarOuAtualizarPlanoPagamento;
 
   // Marcar parcela como paga
   const marcarComoPago = useCallback(async (installmentId: string, dataPagamento?: string, observacoes?: string) => {
@@ -202,14 +290,29 @@ export function useClientReceivables() {
     return installments.filter(installment => installment.paymentPlanId === paymentPlanId);
   }, [installments]);
 
+  // Obter valores já pagos de uma sessão
+  const obterValorJaPago = useCallback((sessionId: string): number => {
+    const plano = paymentPlans.find(plan => plan.sessionId === sessionId);
+    if (!plano) return 0;
+    
+    const parcelasPagas = installments.filter(installment => 
+      installment.paymentPlanId === plano.id && installment.status === 'pago'
+    );
+    
+    return parcelasPagas.reduce((total, parcela) => total + parcela.valor, 0);
+  }, [paymentPlans, installments]);
+
   return {
     paymentPlans,
     installments,
     criarPlanoPagamento,
+    criarOuAtualizarPlanoPagamento,
+    registrarPagamentoRapido,
     marcarComoPago,
     calcularMetricasMes,
     obterResumo,
     obterPlanosPorCliente,
-    obterParcelasPorPlano
+    obterParcelasPorPlano,
+    obterValorJaPago
   };
 }

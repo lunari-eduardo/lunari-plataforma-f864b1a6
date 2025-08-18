@@ -9,6 +9,7 @@ import { PaymentConfigModal } from "./PaymentConfigModal";
 import { MessageCircle, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Package, Plus, CreditCard } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useClientReceivables } from '@/hooks/useClientReceivables';
 import { formatToDayMonth } from "@/utils/dateUtils";
 
 import { calcularTotalFotosExtras, obterConfiguracaoPrecificacao, obterTabelaGlobal, obterTabelaCategoria, calcularValorPorFoto, formatarMoeda, calcularComRegrasProprias, migrarRegrasParaItemAntigo } from '@/utils/precificacaoUtils';
@@ -158,6 +159,7 @@ export function WorkflowTable({
   const [initialWidth, setInitialWidth] = useState(0);
   const [currentColumnWidths, setCurrentColumnWidths] = useState<Record<string, number>>({});
   const [modeloPrecificacao, setModeloPrecificacao] = useState('fixo');
+  const { registrarPagamentoRapido } = useClientReceivables();
 
   // Atualizar larguras quando columnWidths prop mudar
   useEffect(() => {
@@ -186,91 +188,7 @@ export function WorkflowTable({
   const handleFieldUpdateStable = useCallback((sessionId: string, field: string, value: any) => {
     onFieldUpdate(sessionId, field, value);
   }, [onFieldUpdate]);
-  const handlePaymentAdd = useCallback((sessionId: string) => {
-    const value = paymentInputs[sessionId];
-    if (value && !isNaN(parseFloat(value))) {
-      const paymentValue = parseFloat(value);
 
-      // Atualizar o valor pago diretamente
-      const session = sessions.find(s => s.id === sessionId);
-      if (session) {
-        const valorPagoStr = typeof session.valorPago === 'string' ? session.valorPago : String(session.valorPago || '0');
-        const currentPaid = parseFloat(valorPagoStr.replace(/[^\d,-]/g, '').replace(',', '.')) || 0;
-        const newPaidValue = currentPaid + paymentValue;
-
-        // Formatar o novo valor pago
-        const formattedValue = `R$ ${newPaidValue.toFixed(2).replace('.', ',')}`;
-        handleFieldUpdateStable(sessionId, 'valorPago', formattedValue);
-      }
-
-      // Limpar o campo após adicionar
-      setPaymentInputs(prev => ({
-        ...prev,
-        [sessionId]: ''
-      }));
-    }
-  }, [paymentInputs, sessions, handleFieldUpdateStable]);
-  const handlePaymentKeyDown = useCallback((e: React.KeyboardEvent, sessionId: string) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handlePaymentAdd(sessionId);
-    }
-  }, [handlePaymentAdd]);
-  const handleScroll = useCallback(() => {
-    if (scrollContainerRef.current) {
-      const scrollLeft = scrollContainerRef.current.scrollLeft;
-      const maxScrollLeft = scrollContainerRef.current.scrollWidth - scrollContainerRef.current.clientWidth;
-      onScrollChange(scrollLeft);
-      setScrollPercent(maxScrollLeft > 0 ? scrollLeft / maxScrollLeft * 100 : 0);
-      setMaxScroll(maxScrollLeft);
-    }
-  }, [onScrollChange]);
-  const startContinuousScroll = useCallback((direction: 'left' | 'right') => {
-    if (navIntervalRef.current) {
-      clearInterval(navIntervalRef.current);
-      navIntervalRef.current = null;
-    }
-    scrollSpeedRef.current = 2;
-    accelerationRef.current = 0;
-    const performScroll = () => {
-      if (scrollContainerRef.current) {
-        accelerationRef.current += 0.5;
-        const currentSpeed = Math.min(scrollSpeedRef.current + accelerationRef.current, 50);
-        const scrollAmount = direction === 'left' ? -currentSpeed : currentSpeed;
-        scrollContainerRef.current.scrollBy({
-          left: scrollAmount,
-          behavior: 'auto'
-        });
-      }
-    };
-    performScroll();
-    navIntervalRef.current = setInterval(performScroll, 16);
-  }, []);
-  const stopContinuousScroll = useCallback(() => {
-    if (navIntervalRef.current) {
-      clearInterval(navIntervalRef.current);
-      navIntervalRef.current = null;
-    }
-    accelerationRef.current = 0;
-    scrollSpeedRef.current = 2;
-  }, []);
-  useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (container) {
-      container.addEventListener('scroll', handleScroll, {
-        passive: true
-      });
-      handleScroll();
-      return () => {
-        container.removeEventListener('scroll', handleScroll);
-      };
-    }
-  }, [handleScroll]);
-  useEffect(() => {
-    return () => {
-      stopContinuousScroll();
-    };
-  }, [stopContinuousScroll]);
   // Função para calcular valor real por foto baseado nas regras congeladas
   const calcularValorRealPorFoto = useCallback((session: SessionData) => {
     if (session.regrasDePrecoFotoExtraCongeladas) {
@@ -355,6 +273,7 @@ export function WorkflowTable({
       return 0;
     }
   }, []);
+  
   const calculateRestante = useCallback((session: SessionData) => {
     const total = calculateTotal(session);
     const valorPagoStr = typeof session.valorPago === 'string' ? session.valorPago : String(session.valorPago || '0');
@@ -372,6 +291,102 @@ export function WorkflowTable({
     
     return restante;
   }, [calculateTotal]);
+
+  const handlePaymentAdd = useCallback((sessionId: string) => {
+    const value = paymentInputs[sessionId];
+    if (value && !isNaN(parseFloat(value))) {
+      const paymentValue = parseFloat(value);
+
+      // Atualizar o valor pago diretamente
+      const session = sessions.find(s => s.id === sessionId);
+      if (session) {
+        const valorPagoStr = typeof session.valorPago === 'string' ? session.valorPago : String(session.valorPago || '0');
+        const currentPaid = parseFloat(valorPagoStr.replace(/[^\d,-]/g, '').replace(',', '.')) || 0;
+        const newPaidValue = currentPaid + paymentValue;
+
+        // Formatar o novo valor pago
+        const formattedValue = `R$ ${newPaidValue.toFixed(2).replace('.', ',')}`;
+        handleFieldUpdateStable(sessionId, 'valorPago', formattedValue);
+
+        // Registrar no sistema de recebíveis estruturado
+        const totalSession = calculateTotal(session);
+        registrarPagamentoRapido(
+          sessionId,
+          session.clienteId || sessionId,
+          paymentValue,
+          totalSession
+        );
+      }
+
+      // Limpar o campo após adicionar
+      setPaymentInputs(prev => ({
+        ...prev,
+        [sessionId]: ''
+      }));
+    }
+  }, [paymentInputs, sessions, handleFieldUpdateStable, calculateTotal, registrarPagamentoRapido]);
+  const handlePaymentKeyDown = useCallback((e: React.KeyboardEvent, sessionId: string) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handlePaymentAdd(sessionId);
+    }
+  }, [handlePaymentAdd]);
+  const handleScroll = useCallback(() => {
+    if (scrollContainerRef.current) {
+      const scrollLeft = scrollContainerRef.current.scrollLeft;
+      const maxScrollLeft = scrollContainerRef.current.scrollWidth - scrollContainerRef.current.clientWidth;
+      onScrollChange(scrollLeft);
+      setScrollPercent(maxScrollLeft > 0 ? scrollLeft / maxScrollLeft * 100 : 0);
+      setMaxScroll(maxScrollLeft);
+    }
+  }, [onScrollChange]);
+  const startContinuousScroll = useCallback((direction: 'left' | 'right') => {
+    if (navIntervalRef.current) {
+      clearInterval(navIntervalRef.current);
+      navIntervalRef.current = null;
+    }
+    scrollSpeedRef.current = 2;
+    accelerationRef.current = 0;
+    const performScroll = () => {
+      if (scrollContainerRef.current) {
+        accelerationRef.current += 0.5;
+        const currentSpeed = Math.min(scrollSpeedRef.current + accelerationRef.current, 50);
+        const scrollAmount = direction === 'left' ? -currentSpeed : currentSpeed;
+        scrollContainerRef.current.scrollBy({
+          left: scrollAmount,
+          behavior: 'auto'
+        });
+      }
+    };
+    performScroll();
+    navIntervalRef.current = setInterval(performScroll, 16);
+  }, []);
+  const stopContinuousScroll = useCallback(() => {
+    if (navIntervalRef.current) {
+      clearInterval(navIntervalRef.current);
+      navIntervalRef.current = null;
+    }
+    accelerationRef.current = 0;
+    scrollSpeedRef.current = 2;
+  }, []);
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (container) {
+      container.addEventListener('scroll', handleScroll, {
+        passive: true
+      });
+      handleScroll();
+      return () => {
+        container.removeEventListener('scroll', handleScroll);
+      };
+    }
+  }, [handleScroll]);
+  useEffect(() => {
+    return () => {
+      stopContinuousScroll();
+    };
+  }, [stopContinuousScroll]);
+  
   const formatCurrency = useCallback((value: number) => {
     return `R$ ${value.toFixed(2).replace('.', ',')}`;
   }, []);
@@ -884,21 +899,7 @@ return <td className={`
 
                 {renderCell('details', renderEditableInput(session, 'observacoes', session.observacoes || '', 'text', 'Observações...'))}
 
-                {renderCell('total', <div className="flex items-center gap-2">
-                    <span className="font-bold text-blue-700 text-xs">{formatCurrency(calculateTotal(session))}</span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedSessionForPayment(session);
-                        setPaymentConfigOpen(true);
-                      }}
-                      className="h-5 w-5 p-0 hover:bg-primary/10"
-                      title="Configurar Pagamento"
-                    >
-                      <CreditCard className="h-3 w-3 text-primary" />
-                    </Button>
-                  </div>)}
+                {renderCell('total', <span className="font-bold text-blue-700 text-xs">{formatCurrency(calculateTotal(session))}</span>)}
 
                 {renderCell('paid', <span className="font-bold text-green-600 text-xs">{session.valorPago || 'R$ 0,00'}</span>)}
 
@@ -911,6 +912,18 @@ return <td className={`
                   }))} onKeyDown={e => handlePaymentKeyDown(e, session.id)} className="h-6 text-xs p-1 flex-1 border-none bg-transparent focus:bg-lunar-accent/10 transition-colors duration-150" autoComplete="off" />
                     <Button variant="ghost" size="sm" onClick={() => handlePaymentAdd(session.id)} className="h-6 w-6 p-0 shrink-0">
                       <span className="text-xs font-bold">+</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedSessionForPayment(session);
+                        setPaymentConfigOpen(true);
+                      }}
+                      className="h-6 w-6 p-0 shrink-0 hover:bg-primary/10"
+                      title="Configurar Pagamento"
+                    >
+                      <CreditCard className="h-3 w-3 text-primary" />
                     </Button>
                   </div>)}
                 </tr>
@@ -986,6 +999,12 @@ return <td className={`
             sessionId={selectedSessionForPayment.id}
             clienteId={selectedSessionForPayment.clienteId || selectedSessionForPayment.id}
             valorTotal={calculateTotal(selectedSessionForPayment)}
+            valorJaPago={(() => {
+              const valorPagoStr = typeof selectedSessionForPayment.valorPago === 'string' 
+                ? selectedSessionForPayment.valorPago 
+                : String(selectedSessionForPayment.valorPago || '0');
+              return parseFloat(valorPagoStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+            })()}
             clienteNome={selectedSessionForPayment.nome}
           />
         )}
