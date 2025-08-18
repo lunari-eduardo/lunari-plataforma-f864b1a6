@@ -1,9 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, useDialogDropdownContext } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Sparkles } from 'lucide-react';
 
 import { 
@@ -17,9 +16,14 @@ import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMe
 import { useTaskPeople } from '@/hooks/useTaskPeople';
 import { useTaskTags } from '@/hooks/useTaskTags';
 import { formatDateForInput, formatDateForStorage } from '@/utils/dateUtils';
-import type { Task, TaskPriority, TaskStatus } from '@/types/tasks';
+import type { Task, TaskPriority, TaskStatus, TaskType, ChecklistItem } from '@/types/tasks';
 import TemplateSelector from './TemplateSelector';
 import { useTaskTemplates, type TaskTemplate } from '@/hooks/useTaskTemplates';
+import TaskTypeSelector from './TaskTypeSelector';
+import TaskSimpleForm from './forms/TaskSimpleForm';
+import TaskContentForm from './forms/TaskContentForm';
+import TaskChecklistForm from './forms/TaskChecklistForm';
+import TaskDocumentForm from './forms/TaskDocumentForm';
 
 interface TaskFormModalProps {
   open: boolean;
@@ -30,6 +34,7 @@ interface TaskFormModalProps {
 }
 
 export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, mode = 'create' }: TaskFormModalProps) {
+  const [taskType, setTaskType] = useState<TaskType>(initial?.type ?? 'simple');
   const [title, setTitle] = useState(initial?.title ?? '');
   const [description, setDescription] = useState(initial?.description ?? '');
   const [dueDate, setDueDate] = useState<string>(() => initial?.dueDate ? formatDateForInput(initial.dueDate) : '');
@@ -41,12 +46,24 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
   const [templateData, setTemplateData] = useState<Partial<Task> | null>(null);
   
+  // Content-specific fields
+  const [callToAction, setCallToAction] = useState(initial?.callToAction ?? '');
+  const [hashtags, setHashtags] = useState<string[]>(initial?.captions?.[0]?.hashtags ?? []);
+  const [socialPlatforms, setSocialPlatforms] = useState<string[]>(initial?.socialPlatforms ?? ['instagram']);
+  
+  // Checklist-specific fields
+  const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>(initial?.checklistItems ?? []);
+  
+  // Document-specific fields
+  const [attachments, setAttachments] = useState<any[]>(initial?.attachments ?? []);
+  
   const dropdownContext = useDialogDropdownContext();
 
   useEffect(() => {
     if (open) {
       // Template data takes priority over initial data
       const data = templateData || initial;
+      setTaskType(data?.type ?? 'simple');
       setTitle(data?.title ?? '');
       setDescription(data?.description ?? '');
       setDueDate(data?.dueDate ? formatDateForInput(data.dueDate) : '');
@@ -54,17 +71,24 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
       setStatus(data?.status ?? 'todo');
       setAssigneeName(data?.assigneeName ?? '');
       setSelectedTags(data?.tags ?? []);
+      setCallToAction(data?.callToAction ?? '');
+      setHashtags(data?.captions?.[0]?.hashtags ?? []);
+      setSocialPlatforms(data?.socialPlatforms ?? ['instagram']);
+      setChecklistItems(data?.checklistItems ?? []);
+      setAttachments(data?.attachments ?? []);
       setOpenDropdowns({});
       
       console.log('🎯 TaskFormModal: Aplicando dados do template/inicial:', {
         hasTemplateData: !!templateData,
         hasInitial: !!initial,
+        type: data?.type,
         title: data?.title,
         attachments: data?.attachments?.length || 0,
         captions: data?.captions?.length || 0
       });
     } else {
       // Reset form when modal closes
+      setTaskType('simple');
       setTitle('');
       setDescription('');
       setDueDate('');
@@ -72,6 +96,11 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
       setStatus('todo');
       setAssigneeName('');
       setSelectedTags([]);
+      setCallToAction('');
+      setHashtags([]);
+      setSocialPlatforms(['instagram']);
+      setChecklistItems([]);
+      setAttachments([]);
       setTemplateData(null);
     }
   }, [open, initial, templateData]);
@@ -114,6 +143,7 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
   const handleTemplateSelect = useCallback((template: TaskTemplate, variables: Record<string, string>) => {
     const applied = applyTemplate(template.id, variables);
     setTemplateData(applied);
+    setTaskType(template.taskType); // Update task type based on template
     setShowTemplateSelector(false);
   }, [applyTemplate]);
 
@@ -121,8 +151,9 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
     e.preventDefault();
     const dueIso = dueDate ? formatDateForStorage(dueDate) : undefined;
     
-    // Start with form data
+    // Base form data
     const formData = {
+      type: taskType,
       title: title.trim(),
       description: description.trim() || undefined,
       dueDate: dueIso,
@@ -133,21 +164,43 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
       source: (initial?.source ?? 'manual') as any,
     };
     
-    // Merge with template data if available (preserving attachments, captions, etc.)
+    // Add type-specific data
+    const typeSpecificData: any = {};
+    
+    if (taskType === 'content') {
+      typeSpecificData.callToAction = callToAction.trim() || undefined;
+      typeSpecificData.socialPlatforms = socialPlatforms.length ? socialPlatforms : undefined;
+      if (hashtags.length > 0) {
+        typeSpecificData.captions = [{
+          id: `cap_${Date.now()}`,
+          title: 'Post Principal',
+          content: description,
+          hashtags,
+          platform: 'general',
+          createdAt: new Date().toISOString()
+        }];
+      }
+    }
+    
+    if (taskType === 'checklist') {
+      typeSpecificData.checklistItems = checklistItems;
+    }
+    
+    if (taskType === 'document') {
+      typeSpecificData.attachments = attachments;
+    }
+    
+    // Merge all data
     const finalData = {
       ...formData,
-      ...(templateData?.attachments && { attachments: templateData.attachments }),
-      ...(templateData?.captions && { captions: templateData.captions }),
+      ...typeSpecificData,
       ...(templateData?.estimatedHours && { estimatedHours: templateData.estimatedHours }),
     };
     
     console.log('📝 TaskFormModal: Submetendo tarefa:', {
+      taskType,
       formData,
-      templateData: templateData ? {
-        attachments: templateData.attachments?.length || 0,
-        captions: templateData.captions?.length || 0,
-        estimatedHours: templateData.estimatedHours
-      } : null,
+      typeSpecificData,
       finalData
     });
     
@@ -197,15 +250,58 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
               )}
             </div>
           </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="title">Título</Label>
-            <Input id="title" value={title} onChange={e => setTitle(e.target.value)} required placeholder="Ex.: Ligar para cliente" />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="description">Descrição</Label>
-            <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Detalhes do que deve ser feito" />
-          </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <TaskTypeSelector
+            value={taskType}
+            onValueChange={setTaskType}
+            onOpenChange={(open) => handleSelectOpenChange(open, 'taskType')}
+          />
+          
+          {/* Dynamic form based on task type */}
+          {taskType === 'simple' && (
+            <TaskSimpleForm
+              title={title}
+              setTitle={setTitle}
+              description={description}
+              setDescription={setDescription}
+            />
+          )}
+          
+          {taskType === 'content' && (
+            <TaskContentForm
+              title={title}
+              setTitle={setTitle}
+              description={description}
+              setDescription={setDescription}
+              callToAction={callToAction}
+              setCallToAction={setCallToAction}
+              hashtags={hashtags}
+              setHashtags={setHashtags}
+              socialPlatforms={socialPlatforms}
+              setSocialPlatforms={setSocialPlatforms}
+            />
+          )}
+          
+          {taskType === 'checklist' && (
+            <TaskChecklistForm
+              title={title}
+              setTitle={setTitle}
+              checklistItems={checklistItems}
+              setChecklistItems={setChecklistItems}
+            />
+          )}
+          
+          {taskType === 'document' && (
+            <TaskDocumentForm
+              title={title}
+              setTitle={setTitle}
+              description={description}
+              setDescription={setDescription}
+              attachments={attachments}
+              setAttachments={setAttachments}
+            />
+          )}
+          {/* Common fields for all task types */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="due">Prazo</Label>

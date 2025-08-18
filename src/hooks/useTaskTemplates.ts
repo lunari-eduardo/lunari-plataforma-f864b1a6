@@ -8,12 +8,19 @@ export interface TaskTemplate {
   description?: string;
   category: 'photography' | 'client' | 'production' | 'marketing' | 'general';
   icon: string;
+  taskType: 'simple' | 'content' | 'checklist' | 'document';
   template: {
     title: string;
     description?: string;
     priority: TaskPriority;
     tags?: string[];
     estimatedHours?: number;
+    callToAction?: string;
+    socialPlatforms?: string[];
+    checklistItems?: Array<{
+      text: string;
+      completed: boolean;
+    }>;
     attachments?: Array<{
       name: string;
       type: 'document' | 'text';
@@ -36,6 +43,7 @@ const DEFAULT_TEMPLATES: TaskTemplate[] = [
     description: 'Template para contatos iniciais com clientes',
     category: 'client',
     icon: '📞',
+    taskType: 'simple',
     template: {
       title: 'Entrar em contato com {cliente}',
       description: 'Realizar contato inicial para discussão do projeto',
@@ -46,61 +54,68 @@ const DEFAULT_TEMPLATES: TaskTemplate[] = [
     createdAt: new Date().toISOString(),
   },
   {
-    id: 'template_photo_edit',
-    name: 'Edição de Fotos',
-    description: 'Template para tarefas de edição fotográfica',
+    id: 'template_photo_edit_checklist',
+    name: 'Checklist Edição de Fotos',
+    description: 'Lista de tarefas para edição fotográfica',
     category: 'production',
     icon: '📸',
+    taskType: 'checklist',
     template: {
       title: 'Editar fotos - {sessao}',
-      description: 'Realizar edição e tratamento das fotos da sessão',
+      description: 'Checklist completo para edição e tratamento das fotos',
       priority: 'medium',
       tags: ['edição', 'produção'],
       estimatedHours: 4,
-      attachments: [
-        {
-          name: 'Checklist de Edição',
-          type: 'text',
-          content: '• Ajuste de exposição\n• Correção de cores\n• Retoque básico\n• Redimensionamento\n• Exportação final'
-        }
+      checklistItems: [
+        { text: 'Importar fotos RAW', completed: false },
+        { text: 'Pré-seleção das melhores fotos', completed: false },
+        { text: 'Ajuste de exposição e contraste', completed: false },
+        { text: 'Correção de cores e balanço de branco', completed: false },
+        { text: 'Retoque básico de pele', completed: false },
+        { text: 'Aplicação de filtros/preset', completed: false },
+        { text: 'Exportação para galeria', completed: false }
       ]
     },
     createdAt: new Date().toISOString(),
   },
   {
-    id: 'template_social_media',
-    name: 'Post Redes Sociais',
-    description: 'Template para criação de posts',
+    id: 'template_newborn_content',
+    name: 'Legenda Ensaio Newborn',
+    description: 'Template para posts de ensaio newborn',
     category: 'marketing',
-    icon: '📱',
+    icon: '👶',
+    taskType: 'content',
     template: {
-      title: 'Criar post - {tema}',
-      description: 'Desenvolver conteúdo para redes sociais',
+      title: 'Post ensaio newborn - {cliente}',
+      description: 'Cada pequeno detalhe conta uma grande história ✨\n\nO ensaio newborn da {cliente} foi pura magia! Aqueles primeiros dias são únicos e merecem ser eternizados com todo o carinho.\n\n{detalhes}',
       priority: 'medium',
-      tags: ['marketing', 'social'],
+      tags: ['newborn', 'ensaio', 'social'],
       estimatedHours: 1,
+      callToAction: 'Agende seu ensaio newborn no link da bio 👆 Vagas limitadas!',
+      socialPlatforms: ['instagram', 'facebook'],
       captions: [
         {
           title: 'Instagram - Post Principal',
-          content: 'Conte sua história através das nossas lentes ✨\n\n{descrição}\n\nAgende sua sessão no link da bio 📸',
+          content: 'Cada pequeno detalhe conta uma grande história ✨',
           platform: 'instagram',
-          hashtags: ['fotografia', 'ensaio', 'memories', 'photooftheday']
+          hashtags: ['newborn', 'ensaionewborn', 'recem-nascido', 'fotografia', 'momentosunicos']
         }
       ]
     },
     createdAt: new Date().toISOString(),
   },
   {
-    id: 'template_delivery',
-    name: 'Entrega de Fotos',
-    description: 'Template para processo de entrega',
+    id: 'template_delivery_documents',
+    name: 'Entrega de Fotos - Documentos',
+    description: 'Template para organizar entrega com documentos',
     category: 'client',
     icon: '📦',
+    taskType: 'document',
     template: {
       title: 'Entregar fotos - {cliente}',
-      description: 'Finalizar e entregar as fotos editadas ao cliente',
+      description: 'Finalizar e entregar as fotos editadas ao cliente com toda documentação',
       priority: 'high',
-      tags: ['entrega', 'cliente'],
+      tags: ['entrega', 'cliente', 'documentos'],
       estimatedHours: 1,
       attachments: [
         {
@@ -108,6 +123,32 @@ const DEFAULT_TEMPLATES: TaskTemplate[] = [
           type: 'text',
           content: '• Fotos em alta resolução\n• Fotos para web\n• Galeria online criada\n• Cliente notificado\n• Feedback coletado'
         }
+      ]
+    },
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'template_atendimento_checklist',
+    name: 'Checklist Atendimento Cliente',
+    description: 'Processo completo de atendimento',
+    category: 'client',
+    icon: '✅',
+    taskType: 'checklist',
+    template: {
+      title: 'Atendimento completo - {cliente}',
+      description: 'Checklist para garantir excelência no atendimento',
+      priority: 'high',
+      tags: ['cliente', 'atendimento', 'processo'],
+      estimatedHours: 2,
+      checklistItems: [
+        { text: 'Primeiro contato via WhatsApp', completed: false },
+        { text: 'Envio de portfólio personalizado', completed: false },
+        { text: 'Apresentação de pacotes e valores', completed: false },
+        { text: 'Agendamento da sessão', completed: false },
+        { text: 'Confirmação 24h antes', completed: false },
+        { text: 'Realização da sessão', completed: false },
+        { text: 'Pré-visualização das fotos', completed: false },
+        { text: 'Entrega final', completed: false }
       ]
     },
     createdAt: new Date().toISOString(),
@@ -165,8 +206,11 @@ export function useTaskTemplates() {
       priority: template.template.priority,
       tags: template.template.tags,
       estimatedHours: template.template.estimatedHours,
+      type: template.taskType,
       status: 'todo',
       source: 'manual',
+      callToAction: template.template.callToAction ? replaceVariables(template.template.callToAction) : undefined,
+      socialPlatforms: template.template.socialPlatforms,
     };
 
     // Apply attachments if any
@@ -188,6 +232,16 @@ export function useTaskTemplates() {
         content: replaceVariables(cap.content),
         platform: cap.platform,
         hashtags: cap.hashtags,
+        createdAt: new Date().toISOString(),
+      }));
+    }
+
+    // Apply checklist items if any
+    if (template.template.checklistItems) {
+      taskData.checklistItems = template.template.checklistItems.map(item => ({
+        id: `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        text: replaceVariables(item.text),
+        completed: item.completed,
         createdAt: new Date().toISOString(),
       }));
     }

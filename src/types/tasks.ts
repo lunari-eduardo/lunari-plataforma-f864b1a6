@@ -1,5 +1,6 @@
 export type TaskStatus = string;
 export type TaskPriority = 'low' | 'medium' | 'high';
+export type TaskType = 'simple' | 'content' | 'checklist' | 'document';
 
 export interface Task {
   id: string;
@@ -19,9 +20,12 @@ export interface Task {
   snoozeUntil?: string;    // ISO
   source: 'automation' | 'manual';
   completedAt?: string; // ISO
-  // New optional fields for checklist-type tasks
-  type?: 'standard' | 'checklist';
-  checked?: boolean;
+  // Task type and specialized fields
+  type: TaskType;
+  checked?: boolean; // For checklist items
+  checklistItems?: ChecklistItem[];
+  callToAction?: string; // For content tasks
+  socialPlatforms?: string[]; // For content tasks
   // Phase 1 extensions
   attachments?: TaskAttachment[];
   notes?: string;
@@ -41,6 +45,13 @@ export interface TaskAttachment {
   mimeType?: string;
 }
 
+export interface ChecklistItem {
+  id: string;
+  text: string;
+  completed: boolean;
+  createdAt: string;
+}
+
 export interface TaskCaption {
   id: string;
   title: string;
@@ -48,6 +59,7 @@ export interface TaskCaption {
   hashtags?: string[];
   createdAt: string;
   platform?: 'instagram' | 'facebook' | 'general';
+  characterCount?: number;
 }
 
 export interface TeamMember {

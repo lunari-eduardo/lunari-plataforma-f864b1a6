@@ -38,6 +38,7 @@ export function useTasks() {
 
   const addTask = useCallback((input: Omit<Task, 'id' | 'createdAt'>) => {
     const task: Task = {
+      type: 'simple', // Default type
       ...input,
       id: `task_${Date.now()}`,
       createdAt: new Date().toISOString(),
