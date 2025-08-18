@@ -42,6 +42,17 @@ export function useTasks() {
       id: `task_${Date.now()}`,
       createdAt: new Date().toISOString(),
     };
+    
+    console.log('💾 useTasks: Salvando nova tarefa:', {
+      id: task.id,
+      title: task.title,
+      hasAttachments: !!task.attachments?.length,
+      hasCaptions: !!task.captions?.length,
+      attachmentsCount: task.attachments?.length || 0,
+      captionsCount: task.captions?.length || 0,
+      fullTask: task
+    });
+    
     setTasks(prev => [task, ...prev]);
     return task;
   }, []);

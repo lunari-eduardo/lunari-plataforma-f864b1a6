@@ -45,7 +45,7 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
 
   useEffect(() => {
     if (open) {
-      // If we have template data, use it; otherwise use initial
+      // Template data takes priority over initial data
       const data = templateData || initial;
       setTitle(data?.title ?? '');
       setDescription(data?.description ?? '');
@@ -54,18 +54,25 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
       setStatus(data?.status ?? 'todo');
       setAssigneeName(data?.assigneeName ?? '');
       setSelectedTags(data?.tags ?? []);
-      setDescription(data?.description ?? '');
-      setDueDate(data?.dueDate ? formatDateForInput(data.dueDate) : '');
-      setPriority(data?.priority ?? 'medium');
-      setStatus(data?.status ?? 'todo');
-      setAssigneeName(data?.assigneeName ?? '');
-      setSelectedTags(data?.tags ?? []);
       setOpenDropdowns({});
       
-      // Clear template data after applying
-      if (templateData) {
-        setTemplateData(null);
-      }
+      console.log('🎯 TaskFormModal: Aplicando dados do template/inicial:', {
+        hasTemplateData: !!templateData,
+        hasInitial: !!initial,
+        title: data?.title,
+        attachments: data?.attachments?.length || 0,
+        captions: data?.captions?.length || 0
+      });
+    } else {
+      // Reset form when modal closes
+      setTitle('');
+      setDescription('');
+      setDueDate('');
+      setPriority('medium');
+      setStatus('todo');
+      setAssigneeName('');
+      setSelectedTags([]);
+      setTemplateData(null);
     }
   }, [open, initial, templateData]);
 
@@ -114,7 +121,7 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
     e.preventDefault();
     const dueIso = dueDate ? formatDateForStorage(dueDate) : undefined;
     
-    // Merge form data with any template data (attachments, captions, etc.)
+    // Start with form data
     const formData = {
       title: title.trim(),
       description: description.trim() || undefined,
@@ -126,13 +133,23 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
       source: (initial?.source ?? 'manual') as any,
     };
     
-    // If we have template data with attachments/captions, include them
-    const finalData = templateData?.attachments || templateData?.captions ? {
+    // Merge with template data if available (preserving attachments, captions, etc.)
+    const finalData = {
       ...formData,
-      ...(templateData.attachments && { attachments: templateData.attachments }),
-      ...(templateData.captions && { captions: templateData.captions }),
-      ...(templateData.estimatedHours && { estimatedHours: templateData.estimatedHours }),
-    } : formData;
+      ...(templateData?.attachments && { attachments: templateData.attachments }),
+      ...(templateData?.captions && { captions: templateData.captions }),
+      ...(templateData?.estimatedHours && { estimatedHours: templateData.estimatedHours }),
+    };
+    
+    console.log('📝 TaskFormModal: Submetendo tarefa:', {
+      formData,
+      templateData: templateData ? {
+        attachments: templateData.attachments?.length || 0,
+        captions: templateData.captions?.length || 0,
+        estimatedHours: templateData.estimatedHours
+      } : null,
+      finalData
+    });
     
     onSubmit(finalData as any);
     onOpenChange(false);
