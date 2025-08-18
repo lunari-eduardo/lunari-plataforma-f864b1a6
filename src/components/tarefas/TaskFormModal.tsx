@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { Sparkles } from 'lucide-react';
 
 import { 
   SelectModal as Select, 
@@ -17,6 +18,8 @@ import { useTaskPeople } from '@/hooks/useTaskPeople';
 import { useTaskTags } from '@/hooks/useTaskTags';
 import { formatDateForInput, formatDateForStorage } from '@/utils/dateUtils';
 import type { Task, TaskPriority, TaskStatus } from '@/types/tasks';
+import TemplateSelector from './TemplateSelector';
+import { useTaskTemplates, type TaskTemplate } from '@/hooks/useTaskTemplates';
 
 interface TaskFormModalProps {
   open: boolean;
@@ -35,21 +38,30 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
   const [assigneeName, setAssigneeName] = useState<string>(initial?.assigneeName ?? '');
   const [selectedTags, setSelectedTags] = useState<string[]>(initial?.tags ?? []);
   const [openDropdowns, setOpenDropdowns] = useState<Record<string, boolean>>({});
+  const [showTemplateSelector, setShowTemplateSelector] = useState(false);
+  const [templateData, setTemplateData] = useState<Partial<Task> | null>(null);
   
   const dropdownContext = useDialogDropdownContext();
 
   useEffect(() => {
     if (open) {
-      setTitle(initial?.title ?? '');
-      setDescription(initial?.description ?? '');
-      setDueDate(initial?.dueDate ? formatDateForInput(initial.dueDate) : '');
-      setPriority(initial?.priority ?? 'medium');
-      setStatus(initial?.status ?? 'todo');
-      setAssigneeName(initial?.assigneeName ?? '');
-      setSelectedTags(initial?.tags ?? []);
+      // If we have template data, use it; otherwise use initial
+      const data = templateData || initial;
+      setTitle(data?.title ?? '');
+      setDescription(data?.description ?? '');
+      setDueDate(data?.dueDate ? formatDateForInput(data.dueDate) : '');
+      setPriority(data?.priority ?? 'medium');
+      setStatus(data?.status ?? 'todo');
+      setAssigneeName(data?.assigneeName ?? '');
+      setSelectedTags(data?.tags ?? []);
       setOpenDropdowns({});
+      
+      // Clear template data after applying
+      if (templateData) {
+        setTemplateData(null);
+      }
     }
-  }, [open, initial]);
+  }, [open, initial, templateData]);
 
   // Force cleanup on unmount
   useEffect(() => {
@@ -74,6 +86,7 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
 
   const { people } = useTaskPeople();
   const { tags: tagDefs } = useTaskTags();
+  const { applyTemplate } = useTaskTemplates();
 
   // Prevent modal from closing when clicking on dropdowns
   const handleSelectOpenChange = useCallback((open: boolean, selectType: string) => {
@@ -85,10 +98,18 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
     dropdownContext?.setHasOpenDropdown(Object.values({...openDropdowns, [selectType]: open}).some(Boolean));
   }, [dropdownContext, openDropdowns]);
 
+  const handleTemplateSelect = useCallback((template: TaskTemplate, variables: Record<string, string>) => {
+    const applied = applyTemplate(template.id, variables);
+    setTemplateData(applied);
+    setShowTemplateSelector(false);
+  }, [applyTemplate]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const dueIso = dueDate ? formatDateForStorage(dueDate) : undefined;
-    onSubmit({
+    
+    // Merge form data with any template data (attachments, captions, etc.)
+    const formData = {
       title: title.trim(),
       description: description.trim() || undefined,
       dueDate: dueIso,
@@ -96,9 +117,18 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
       status,
       assigneeName: assigneeName.trim() || undefined,
       tags: selectedTags.length ? selectedTags : undefined,
-      // allow override but default to manual
       source: (initial?.source ?? 'manual') as any,
-    } as any);
+    };
+    
+    // If we have template data with attachments/captions, include them
+    const finalData = templateData?.attachments || templateData?.captions ? {
+      ...formData,
+      ...(templateData.attachments && { attachments: templateData.attachments }),
+      ...(templateData.captions && { captions: templateData.captions }),
+      ...(templateData.estimatedHours && { estimatedHours: templateData.estimatedHours }),
+    } : formData;
+    
+    onSubmit(finalData as any);
     onOpenChange(false);
   };
 
@@ -121,12 +151,29 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
   }, [onOpenChange, dropdownContext]);
 
   return (
-    <Dialog open={open} onOpenChange={handleModalClose}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="text-base">{mode === 'create' ? 'Nova tarefa' : 'Editar tarefa'}</DialogTitle>
-          <DialogDescription className="text-xs">Preencha os detalhes da tarefa.</DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={handleModalClose}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle className="text-base">{mode === 'create' ? 'Nova tarefa' : 'Editar tarefa'}</DialogTitle>
+                <DialogDescription className="text-xs">Preencha os detalhes da tarefa.</DialogDescription>
+              </div>
+              {mode === 'create' && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowTemplateSelector(true)}
+                  className="flex items-center gap-2"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  Templates
+                </Button>
+              )}
+            </div>
+          </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div className="space-y-1.5">
             <Label htmlFor="title">Título</Label>
@@ -239,5 +286,12 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
         </form>
       </DialogContent>
     </Dialog>
+    
+    <TemplateSelector
+      open={showTemplateSelector}
+      onOpenChange={setShowTemplateSelector}
+      onSelectTemplate={handleTemplateSelect}
+    />
+    </>
   );
 }
