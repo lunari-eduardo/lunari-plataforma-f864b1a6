@@ -154,10 +154,10 @@ export default function Pacotes({
         <div className="flex flex-wrap gap-1 mb-2">
           {pacote.produtosIncluidos.map(produto => {
           const nomeProduto = getNomeProduto(produto.produtoId);
-          return <div key={produto.produtoId} className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs">
+          return <div key={produto.produtoId} className="inline-flex items-center gap-1 bg-lunar-accent/10 text-lunar-accent px-2 py-1 rounded text-xs border border-lunar-accent/20">
                 <span>{nomeProduto}</span>
                 {produto.quantidade > 1 && <span className="font-medium">({produto.quantidade}x)</span>}
-                <button onClick={() => removerProdutoDoPacote(pacote.id, produto.produtoId)} className="text-blue-500 hover:text-blue-700 ml-1">
+                <button onClick={() => removerProdutoDoPacote(pacote.id, produto.produtoId)} className="text-lunar-accent hover:text-lunar-accentHover ml-1">
                   ×
                 </button>
               </div>;

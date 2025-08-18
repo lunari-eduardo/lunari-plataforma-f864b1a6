@@ -4,13 +4,13 @@ import { Snowflake, Info, Shield } from "lucide-react";
 
 export function CongelamentoRegrasInfo() {
   return (
-    <Alert className="border-blue-200 bg-blue-50">
-      <Snowflake className="h-4 w-4 text-blue-600" />
-      <AlertTitle className="text-blue-800 flex items-center gap-2">
+    <Alert className="border-lunar-accent/30 bg-lunar-accent/5">
+      <Snowflake className="h-4 w-4 text-lunar-accent" />
+      <AlertTitle className="text-lunar-text flex items-center gap-2">
         <Shield className="h-4 w-4" />
         Sistema de Congelamento de Regras
       </AlertTitle>
-      <AlertDescription className="text-blue-700 space-y-2">
+      <AlertDescription className="text-lunar-textSecondary space-y-2">
         <p>
           Mudanças nesta configuração <strong>NÃO AFETAM</strong> projetos já existentes no Workflow.
         </p>
