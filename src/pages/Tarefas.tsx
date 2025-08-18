@@ -151,11 +151,16 @@ const sensors = useSensors(pointerSensor);
           <ul className="space-y-2">
               {(groups[statusKey] || []).map((t) => (
                 <li key={t.id}>
-                  <CleanTaskCard
+                  <DraggableTaskCard
                     task={t}
                     onComplete={() => { updateTask(t.id, { status: doneKey as any }); toast({ title: 'Tarefa concluída' }); }}
-                    onView={() => setSelectedTask(t)}
+                    onReopen={() => { updateTask(t.id, { status: defaultOpenKey as any }); toast({ title: 'Tarefa reaberta' }); }}
+                    onEdit={() => setSelectedTask(t)}
+                    onDelete={() => { deleteTask(t.id); toast({ title: 'Tarefa excluída' }); }}
+                    onRequestMove={(status) => { updateTask(t.id, { status: status as any }); toast({ title: 'Tarefa movida' }); }}
                     isDone={t.status === (doneKey as any)}
+                    statusOptions={statusOptions}
+                    activeId={activeId}
                   />
                 </li>
               ))}
