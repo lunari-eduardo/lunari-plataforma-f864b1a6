@@ -4,13 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Edit3, Trash2, Calendar, FileText, MessageSquare } from 'lucide-react';
+import { Edit3, Trash2, Calendar, FileText } from 'lucide-react';
 import type { Task } from '@/types/tasks';
 import { formatDateForDisplay } from '@/utils/dateUtils';
 import TaskFormModal from './TaskFormModal';
 import TaskAttachmentsSection from './TaskAttachmentsSection';
-import TaskCaptionsSection from './TaskCaptionsSection';
+
 
 interface TaskDetailsModalProps {
   task: Task | null;
@@ -141,33 +140,17 @@ export default function TaskDetailsModal({
               />
             </div>
 
-            {/* Tabs for Attachments and Captions */}
-            <Tabs defaultValue="attachments" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 bg-lunar-background border-lunar-border">
-                <TabsTrigger value="attachments" className="flex items-center gap-2">
-                  <FileText className="w-4 h-4" />
-                  Anexos
-                </TabsTrigger>
-                <TabsTrigger value="captions" className="flex items-center gap-2">
-                  <MessageSquare className="w-4 h-4" />
-                  Legendas
-                </TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="attachments" className="mt-4">
-                <TaskAttachmentsSection 
-                  task={task} 
-                  onUpdateTask={(updates) => onUpdate(task.id, updates)} 
-                />
-              </TabsContent>
-              
-              <TabsContent value="captions" className="mt-4">
-                <TaskCaptionsSection 
-                  task={task} 
-                  onUpdateTask={(updates) => onUpdate(task.id, updates)} 
-                />
-              </TabsContent>
-            </Tabs>
+            {/* Attachments Section */}
+            <div className="space-y-2">
+              <h3 className="font-medium text-lunar-text flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Anexos
+              </h3>
+              <TaskAttachmentsSection 
+                task={task} 
+                onUpdateTask={(updates) => onUpdate(task.id, updates)} 
+              />
+            </div>
 
             <Separator className="bg-lunar-border/60" />
 

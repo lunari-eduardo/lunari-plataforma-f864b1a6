@@ -1,9 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, useDialogDropdownContext } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Sparkles } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ChevronDown, Paperclip } from 'lucide-react';
 
 import { 
   SelectModal as Select, 
@@ -16,14 +18,8 @@ import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMe
 import { useTaskPeople } from '@/hooks/useTaskPeople';
 import { useTaskTags } from '@/hooks/useTaskTags';
 import { formatDateForInput, formatDateForStorage } from '@/utils/dateUtils';
-import type { Task, TaskPriority, TaskStatus, TaskType, ChecklistItem } from '@/types/tasks';
-import TemplateSelector from './TemplateSelector';
-import { useTaskTemplates, type TaskTemplate } from '@/hooks/useTaskTemplates';
-import TaskTypeSelector from './TaskTypeSelector';
-import TaskSimpleForm from './forms/TaskSimpleForm';
-import TaskContentForm from './forms/TaskContentForm';
-import TaskChecklistForm from './forms/TaskChecklistForm';
-import TaskDocumentForm from './forms/TaskDocumentForm';
+import type { Task, TaskPriority, TaskStatus } from '@/types/tasks';
+
 
 interface TaskFormModalProps {
   open: boolean;
@@ -34,7 +30,6 @@ interface TaskFormModalProps {
 }
 
 export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, mode = 'create' }: TaskFormModalProps) {
-  const [taskType, setTaskType] = useState<TaskType>(initial?.type ?? 'simple');
   const [title, setTitle] = useState(initial?.title ?? '');
   const [description, setDescription] = useState(initial?.description ?? '');
   const [dueDate, setDueDate] = useState<string>(() => initial?.dueDate ? formatDateForInput(initial.dueDate) : '');
@@ -43,52 +38,23 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
   const [assigneeName, setAssigneeName] = useState<string>(initial?.assigneeName ?? '');
   const [selectedTags, setSelectedTags] = useState<string[]>(initial?.tags ?? []);
   const [openDropdowns, setOpenDropdowns] = useState<Record<string, boolean>>({});
-  const [showTemplateSelector, setShowTemplateSelector] = useState(false);
-  const [templateData, setTemplateData] = useState<Partial<Task> | null>(null);
-  
-  // Content-specific fields
-  const [callToAction, setCallToAction] = useState(initial?.callToAction ?? '');
-  const [hashtags, setHashtags] = useState<string[]>(initial?.captions?.[0]?.hashtags ?? []);
-  const [socialPlatforms, setSocialPlatforms] = useState<string[]>(initial?.socialPlatforms ?? ['instagram']);
-  
-  // Checklist-specific fields
-  const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>(initial?.checklistItems ?? []);
-  
-  // Document-specific fields
-  const [attachments, setAttachments] = useState<any[]>(initial?.attachments ?? []);
+  const [filesOpen, setFilesOpen] = useState(false);
   
   const dropdownContext = useDialogDropdownContext();
 
   useEffect(() => {
     if (open) {
-      // Template data takes priority over initial data
-      const data = templateData || initial;
-      setTaskType(data?.type ?? 'simple');
-      setTitle(data?.title ?? '');
-      setDescription(data?.description ?? '');
-      setDueDate(data?.dueDate ? formatDateForInput(data.dueDate) : '');
-      setPriority(data?.priority ?? 'medium');
-      setStatus(data?.status ?? 'todo');
-      setAssigneeName(data?.assigneeName ?? '');
-      setSelectedTags(data?.tags ?? []);
-      setCallToAction(data?.callToAction ?? '');
-      setHashtags(data?.captions?.[0]?.hashtags ?? []);
-      setSocialPlatforms(data?.socialPlatforms ?? ['instagram']);
-      setChecklistItems(data?.checklistItems ?? []);
-      setAttachments(data?.attachments ?? []);
+      setTitle(initial?.title ?? '');
+      setDescription(initial?.description ?? '');
+      setDueDate(initial?.dueDate ? formatDateForInput(initial.dueDate) : '');
+      setPriority(initial?.priority ?? 'medium');
+      setStatus(initial?.status ?? 'todo');
+      setAssigneeName(initial?.assigneeName ?? '');
+      setSelectedTags(initial?.tags ?? []);
       setOpenDropdowns({});
-      
-      console.log('🎯 TaskFormModal: Aplicando dados do template/inicial:', {
-        hasTemplateData: !!templateData,
-        hasInitial: !!initial,
-        type: data?.type,
-        title: data?.title,
-        attachments: data?.attachments?.length || 0,
-        captions: data?.captions?.length || 0
-      });
+      setFilesOpen(false);
     } else {
       // Reset form when modal closes
-      setTaskType('simple');
       setTitle('');
       setDescription('');
       setDueDate('');
@@ -96,14 +62,8 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
       setStatus('todo');
       setAssigneeName('');
       setSelectedTags([]);
-      setCallToAction('');
-      setHashtags([]);
-      setSocialPlatforms(['instagram']);
-      setChecklistItems([]);
-      setAttachments([]);
-      setTemplateData(null);
     }
-  }, [open, initial, templateData]);
+  }, [open, initial]);
 
   // Force cleanup on unmount
   useEffect(() => {
@@ -128,7 +88,6 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
 
   const { people } = useTaskPeople();
   const { tags: tagDefs } = useTaskTags();
-  const { applyTemplate } = useTaskTemplates();
 
   // Prevent modal from closing when clicking on dropdowns
   const handleSelectOpenChange = useCallback((open: boolean, selectType: string) => {
@@ -140,20 +99,13 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
     dropdownContext?.setHasOpenDropdown(Object.values({...openDropdowns, [selectType]: open}).some(Boolean));
   }, [dropdownContext, openDropdowns]);
 
-  const handleTemplateSelect = useCallback((template: TaskTemplate, variables: Record<string, string>) => {
-    const applied = applyTemplate(template.id, variables);
-    setTemplateData(applied);
-    setTaskType(template.taskType); // Update task type based on template
-    setShowTemplateSelector(false);
-  }, [applyTemplate]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const dueIso = dueDate ? formatDateForStorage(dueDate) : undefined;
     
-    // Base form data
     const formData = {
-      type: taskType,
+      type: 'simple' as const,
       title: title.trim(),
       description: description.trim() || undefined,
       dueDate: dueIso,
@@ -164,47 +116,7 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
       source: (initial?.source ?? 'manual') as any,
     };
     
-    // Add type-specific data
-    const typeSpecificData: any = {};
-    
-    if (taskType === 'content') {
-      typeSpecificData.callToAction = callToAction.trim() || undefined;
-      typeSpecificData.socialPlatforms = socialPlatforms.length ? socialPlatforms : undefined;
-      if (hashtags.length > 0) {
-        typeSpecificData.captions = [{
-          id: `cap_${Date.now()}`,
-          title: 'Post Principal',
-          content: description,
-          hashtags,
-          platform: 'general',
-          createdAt: new Date().toISOString()
-        }];
-      }
-    }
-    
-    if (taskType === 'checklist') {
-      typeSpecificData.checklistItems = checklistItems;
-    }
-    
-    if (taskType === 'document') {
-      typeSpecificData.attachments = attachments;
-    }
-    
-    // Merge all data
-    const finalData = {
-      ...formData,
-      ...typeSpecificData,
-      ...(templateData?.estimatedHours && { estimatedHours: templateData.estimatedHours }),
-    };
-    
-    console.log('📝 TaskFormModal: Submetendo tarefa:', {
-      taskType,
-      formData,
-      typeSpecificData,
-      finalData
-    });
-    
-    onSubmit(finalData as any);
+    onSubmit(formData as any);
     onOpenChange(false);
   };
 
@@ -227,81 +139,57 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
   }, [onOpenChange, dropdownContext]);
 
   return (
-    <>
-      <Dialog open={open} onOpenChange={handleModalClose}>
+    <Dialog open={open} onOpenChange={handleModalClose}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <DialogTitle className="text-base">{mode === 'create' ? 'Nova tarefa' : 'Editar tarefa'}</DialogTitle>
-                <DialogDescription className="text-xs">Preencha os detalhes da tarefa.</DialogDescription>
-              </div>
-              {mode === 'create' && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowTemplateSelector(true)}
-                  className="flex items-center gap-2"
-                >
-                  <Sparkles className="h-4 w-4" />
-                  Templates
-                </Button>
-              )}
-            </div>
+            <DialogTitle className="text-base">{mode === 'create' ? 'Nova tarefa' : 'Editar tarefa'}</DialogTitle>
+            <DialogDescription className="text-xs">Preencha os detalhes da tarefa.</DialogDescription>
           </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <TaskTypeSelector
-            value={taskType}
-            onValueChange={setTaskType}
-            onOpenChange={(open) => handleSelectOpenChange(open, 'taskType')}
-          />
-          
-          {/* Dynamic form based on task type */}
-          {taskType === 'simple' && (
-            <TaskSimpleForm
-              title={title}
-              setTitle={setTitle}
-              description={description}
-              setDescription={setDescription}
+          {/* Basic fields */}
+          <div className="space-y-1.5">
+            <Label htmlFor="title">Título *</Label>
+            <Input 
+              id="title" 
+              value={title} 
+              onChange={e => setTitle(e.target.value)} 
+              required 
+              placeholder="Ex.: Ligar para cliente João" 
             />
-          )}
+          </div>
           
-          {taskType === 'content' && (
-            <TaskContentForm
-              title={title}
-              setTitle={setTitle}
-              description={description}
-              setDescription={setDescription}
-              callToAction={callToAction}
-              setCallToAction={setCallToAction}
-              hashtags={hashtags}
-              setHashtags={setHashtags}
-              socialPlatforms={socialPlatforms}
-              setSocialPlatforms={setSocialPlatforms}
+          <div className="space-y-1.5">
+            <Label htmlFor="description">Descrição</Label>
+            <Textarea 
+              id="description" 
+              value={description} 
+              onChange={e => setDescription(e.target.value)} 
+              placeholder="Detalhes do que deve ser feito"
+              rows={3}
             />
-          )}
-          
-          {taskType === 'checklist' && (
-            <TaskChecklistForm
-              title={title}
-              setTitle={setTitle}
-              checklistItems={checklistItems}
-              setChecklistItems={setChecklistItems}
-            />
-          )}
-          
-          {taskType === 'document' && (
-            <TaskDocumentForm
-              title={title}
-              setTitle={setTitle}
-              description={description}
-              setDescription={setDescription}
-              attachments={attachments}
-              setAttachments={setAttachments}
-            />
-          )}
-          {/* Common fields for all task types */}
+          </div>
+
+          {/* Collapsible Files Section */}
+          <Collapsible open={filesOpen} onOpenChange={setFilesOpen}>
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" type="button" className="w-full justify-between">
+                <span className="flex items-center gap-2">
+                  <Paperclip className="h-4 w-4" />
+                  Arquivos
+                </span>
+                <ChevronDown className={`h-4 w-4 transition-transform ${filesOpen ? 'rotate-180' : ''}`} />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-2">
+              <div className="p-3 border border-dashed border-lunar-border rounded-lg bg-lunar-background/50">
+                <p className="text-xs text-lunar-textSecondary text-center">
+                  Clique aqui ou arraste arquivos para anexar
+                </p>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* Common fields */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="due">Prazo</Label>
@@ -405,12 +293,5 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
         </form>
       </DialogContent>
     </Dialog>
-    
-    <TemplateSelector
-      open={showTemplateSelector}
-      onOpenChange={setShowTemplateSelector}
-      onSelectTemplate={handleTemplateSelect}
-    />
-    </>
   );
 }
