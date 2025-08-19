@@ -915,19 +915,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // ===================================================================
 
   // Process confirmed appointments to workflow
-  const processConfirmedAppointmentsRef = useRef<Set<string>>(new Set());
+  // Usar localStorage para persistir processamentos entre reloads
+  const getProcessedAppointments = (): Set<string> => {
+    try {
+      const saved = localStorage.getItem('lunari_processed_appointments');
+      return new Set(saved ? JSON.parse(saved) : []);
+    } catch {
+      return new Set();
+    }
+  };
+
+  const saveProcessedAppointments = (processed: Set<string>) => {
+    try {
+      localStorage.setItem('lunari_processed_appointments', JSON.stringify([...processed]));
+    } catch (error) {
+      console.error('❌ Erro ao salvar processamentos:', error);
+    }
+  };
   
   useEffect(() => {
     const confirmedAppointments = appointments.filter(app => app.status === 'confirmado');
     
     const newItems: WorkflowItem[] = [];
     const processedIds = new Set<string>();
+    const alreadyProcessed = getProcessedAppointments();
     
     confirmedAppointments.forEach(appointment => {
       const appointmentKey = `agenda-${appointment.id}`;
       
-      // Evitar processamento duplicado
-      if (processConfirmedAppointmentsRef.current.has(appointmentKey)) {
+      // Evitar processamento duplicado usando localStorage persistente
+      if (alreadyProcessed.has(appointmentKey)) {
         return;
       }
       
@@ -1059,8 +1076,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Criar projetos apenas se há novos items e evitar loops
     if (newItems.length > 0) {
-      // Marcar como processados antes de criar projetos
-      processedIds.forEach(id => processConfirmedAppointmentsRef.current.add(id));
+      // Marcar como processados e persistir no localStorage
+      const currentProcessed = getProcessedAppointments();
+      processedIds.forEach(id => currentProcessed.add(id));
+      saveProcessedAppointments(currentProcessed);
       
       // Usar setTimeout para quebrar o loop de dependências
       setTimeout(() => {

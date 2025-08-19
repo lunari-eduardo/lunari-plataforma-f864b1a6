@@ -75,6 +75,18 @@ export class ReceivablesService {
     const plans = this.loadPaymentPlans();
     const installments = this.loadInstallments();
 
+    // Verificar se já existe entrada para este sessionId (prevenir duplicatas)
+    const existingEntry = installments.find(inst => 
+      inst.paymentPlanId && plans.find(p => p.id === inst.paymentPlanId)?.sessionId === sessionId &&
+      inst.numeroParcela === 0 && // Entry payment
+      inst.observacoes === 'Pagamento de entrada'
+    );
+
+    if (existingEntry) {
+      console.log(`⚠️ Entrada já existe para sessionId ${sessionId}, evitando duplicação`);
+      return existingEntry;
+    }
+
     let plan = plans.find(p => p.sessionId === sessionId);
     
     if (!plan) {
