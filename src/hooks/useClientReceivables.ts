@@ -43,29 +43,35 @@ export function useClientReceivables() {
     numeroParcelas: number = 1,
     diaVencimento: number = 10
   ) => {
-    console.log(`🔄 Atualizando plano de pagamento - SessionId: ${sessionId}, Valor já pago: ${valorJaPago}`);
+    console.log(`🔄 Configurando pagamento - SessionId: ${sessionId}, Valor Total: ${valorTotalNegociado}, Valor Já Pago Informado: ${valorJaPago}`);
     
-    // Buscar parcelas pagas EXISTENTES para este sessionId (para preservar)
-    const planoAtual = paymentPlans.find(plan => plan.sessionId === sessionId);
-    const parcelasJaPagas = planoAtual ? installments.filter(installment => 
-      installment.paymentPlanId === planoAtual.id && installment.status === 'pago'
-    ) : [];
+    // 1. Encontrar todas as parcelas pagas EXISTENTES para esta sessão (de todos os planos)
+    const planosExistentesParaSessao = paymentPlans.filter(plan => plan.sessionId === sessionId);
+    const todasParcelasJaPagas: PaymentInstallment[] = [];
     
-    console.log(`📋 Parcelas já pagas encontradas: ${parcelasJaPagas.length}`);
+    planosExistentesParaSessao.forEach(plano => {
+      const parcelasPagasDoPlano = installments.filter(installment => 
+        installment.paymentPlanId === plano.id && installment.status === 'pago'
+      );
+      todasParcelasJaPagas.push(...parcelasPagasDoPlano);
+    });
     
-    // Calcular valor já pago real a partir das parcelas existentes
-    const valorRealmentePago = parcelasJaPagas.reduce((total, parcela) => total + parcela.valor, 0);
+    console.log(`📋 Total de parcelas já pagas encontradas: ${todasParcelasJaPagas.length}`);
     
-    // Remover plano existente se houver, mas preservar parcelas pagas
-    const planosExistentes = paymentPlans.filter(plan => plan.sessionId !== sessionId);
-    const parcelasNaoPagas = installments.filter(installment => {
+    // 2. Calcular valor realmente pago (soma de todas as parcelas pagas)
+    const valorRealmentePago = todasParcelasJaPagas.reduce((total, parcela) => total + parcela.valor, 0);
+    console.log(`💰 Valor realmente pago: ${valorRealmentePago}, Valor informado: ${valorJaPago}`);
+    
+    // 3. Remover TODOS os planos e parcelas desta sessão (vamos recriar do zero)
+    const planosLimpos = paymentPlans.filter(plan => plan.sessionId !== sessionId);
+    const parcelasLimpas = installments.filter(installment => {
       const planoDaParcela = paymentPlans.find(plan => plan.id === installment.paymentPlanId);
-      return planoDaParcela?.sessionId !== sessionId || installment.status === 'pago';
+      return planoDaParcela?.sessionId !== sessionId;
     });
 
     const planId = `plan-${Date.now()}`;
     const valorRestante = Math.max(0, valorTotalNegociado - valorRealmentePago);
-    const valorParcela = formaPagamento === 'avista' ? valorRestante : valorRestante / numeroParcelas;
+    const valorParcela = valorRestante > 0 ? (formaPagamento === 'avista' ? valorRestante : valorRestante / numeroParcelas) : 0;
     
     const novoPlan: ClientPaymentPlan = {
       id: planId,
@@ -80,15 +86,15 @@ export function useClientReceivables() {
       criadoEm: new Date().toISOString()
     };
 
-    // Atualizar parcelas pagas existentes para o novo plano ID
-    const parcelasJaPagasAtualizadas = parcelasJaPagas.map(parcela => ({
+    // 4. Atualizar parcelas pagas existentes para o novo plano ID (preservar histórico)
+    const parcelasJaPagasAtualizadas = todasParcelasJaPagas.map(parcela => ({
       ...parcela,
       paymentPlanId: planId
     }));
 
     console.log(`💰 Parcelas pagas preservadas: ${parcelasJaPagasAtualizadas.length}`);
 
-    // Verificar se há diferença entre valorJaPago informado e valor realmente pago
+    // 5. Verificar se há diferença entre valorJaPago informado e valor realmente pago
     if (valorJaPago > valorRealmentePago) {
       const diferencaValor = valorJaPago - valorRealmentePago;
       console.log(`➕ Criando nova entrada de ${diferencaValor} (diferença entre informado ${valorJaPago} e real ${valorRealmentePago})`);
@@ -139,8 +145,8 @@ export function useClientReceivables() {
     }
 
     // Salvar no localStorage
-    const novosPlanos = [...planosExistentes, novoPlan];
-    const novasInstallments = [...parcelasNaoPagas, ...novasParcelas];
+    const novosPlanos = [...planosLimpos, novoPlan];
+    const novasInstallments = [...parcelasLimpas, ...novasParcelas];
     
     savePaymentPlans(novosPlanos);
     saveInstallments(novasInstallments);
@@ -329,14 +335,18 @@ export function useClientReceivables() {
 
   // Obter valores já pagos de uma sessão
   const obterValorJaPago = useCallback((sessionId: string): number => {
-    const plano = paymentPlans.find(plan => plan.sessionId === sessionId);
-    if (!plano) return 0;
+    // Buscar todos os planos desta sessão
+    const planosParaSessao = paymentPlans.filter(plan => plan.sessionId === sessionId);
+    let totalPago = 0;
     
-    const parcelasPagas = installments.filter(installment => 
-      installment.paymentPlanId === plano.id && installment.status === 'pago'
-    );
+    planosParaSessao.forEach(plano => {
+      const parcelasPagas = installments.filter(installment => 
+        installment.paymentPlanId === plano.id && installment.status === 'pago'
+      );
+      totalPago += parcelasPagas.reduce((total, parcela) => total + parcela.valor, 0);
+    });
     
-    return parcelasPagas.reduce((total, parcela) => total + parcela.valor, 0);
+    return totalPago;
   }, [paymentPlans, installments]);
 
   return {
