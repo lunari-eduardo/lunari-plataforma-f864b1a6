@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { ClientPaymentPlan, PaymentInstallment, ReceivablesMetrics, ReceivablesSummary } from '@/types/receivables';
 import { formatCurrency } from '@/utils/financialUtils';
 import { getCurrentDateString, formatDateForStorage } from '@/utils/dateUtils';
-import { ReceivablesService } from '@/services/ReceivablesService';
+import { ReceivablesServiceV2 } from '@/services/ReceivablesServiceV2';
 import { useToast } from '@/hooks/use-toast';
 
 const STORAGE_KEYS = {
@@ -15,25 +15,32 @@ export function useClientReceivables() {
   const [installments, setInstallments] = useState<PaymentInstallment[]>([]);
   const { toast } = useToast();
 
-  // Carregar dados do localStorage
+  // Carregar dados do localStorage com migração automática
   useEffect(() => {
-    setPaymentPlans(ReceivablesService.loadPaymentPlans());
-    setInstallments(ReceivablesService.loadInstallments());
+    // Migrar dados da V1 se necessário
+    const v2Plans = localStorage.getItem('lunari_payment_plans_v2');
+    if (!v2Plans && localStorage.getItem('lunari_payment_plans')) {
+      console.log('🔄 Migrando dados para V2...');
+      ReceivablesServiceV2.migrateFromV1();
+    }
+    
+    setPaymentPlans(ReceivablesServiceV2.loadPaymentPlans());
+    setInstallments(ReceivablesServiceV2.loadInstallments());
   }, []);
 
   // Salvar planos de pagamento
   const savePaymentPlans = useCallback((plans: ClientPaymentPlan[]) => {
-    ReceivablesService.savePaymentPlans(plans);
+    ReceivablesServiceV2.savePaymentPlans(plans);
     setPaymentPlans(plans);
   }, []);
 
   // Salvar parcelas
   const saveInstallments = useCallback((installmentsList: PaymentInstallment[]) => {
-    ReceivablesService.saveInstallments(installmentsList);
+    ReceivablesServiceV2.saveInstallments(installmentsList);
     setInstallments(installmentsList);
   }, []);
 
-  // Criar ou atualizar plano de pagamento (considerando pagamentos já existentes)
+  // V2: Criar agendamento de pagamento (100% idempotente)
   const criarOuAtualizarPlanoPagamento = useCallback(async (
     sessionId: string,
     clienteId: string,
@@ -41,180 +48,77 @@ export function useClientReceivables() {
     valorJaPago: number,
     formaPagamento: 'avista' | 'parcelado',
     numeroParcelas: number = 1,
-    diaVencimento: number = 10
+    diaVencimento: number = 10,
+    observacoes?: string
   ) => {
-    console.log(`🔄 Configurando pagamento - SessionId: ${sessionId}, Valor Total: ${valorTotalNegociado}, Valor Já Pago Informado: ${valorJaPago}`);
+    console.log(`🔄 [V2] Configurando agendamento - Session: ${sessionId}, Total: ${valorTotalNegociado}, Informado pago: ${valorJaPago}`);
     
-    // 1. Encontrar todas as parcelas pagas EXISTENTES para esta sessão (de todos os planos)
-    const planosExistentesParaSessao = paymentPlans.filter(plan => plan.sessionId === sessionId);
-    const todasParcelasJaPagas: PaymentInstallment[] = [];
-    
-    planosExistentesParaSessao.forEach(plano => {
-      const parcelasPagasDoPlano = installments.filter(installment => 
-        installment.paymentPlanId === plano.id && installment.status === 'pago'
-      );
-      todasParcelasJaPagas.push(...parcelasPagasDoPlano);
-    });
-    
-    console.log(`📋 Total de parcelas já pagas encontradas: ${todasParcelasJaPagas.length}`);
-    
-    // 2. Calcular valor realmente pago (soma de todas as parcelas pagas)
-    const valorRealmentePago = todasParcelasJaPagas.reduce((total, parcela) => total + parcela.valor, 0);
-    console.log(`💰 Valor realmente pago: ${valorRealmentePago}, Valor informado: ${valorJaPago}`);
-    
-    // 3. Remover TODOS os planos e parcelas desta sessão (vamos recriar do zero)
-    const planosLimpos = paymentPlans.filter(plan => plan.sessionId !== sessionId);
-    const parcelasLimpas = installments.filter(installment => {
-      const planoDaParcela = paymentPlans.find(plan => plan.id === installment.paymentPlanId);
-      return planoDaParcela?.sessionId !== sessionId;
-    });
-
-    const planId = `plan-${Date.now()}`;
-    const valorRestante = Math.max(0, valorTotalNegociado - valorRealmentePago);
-    const valorParcela = valorRestante > 0 ? (formaPagamento === 'avista' ? valorRestante : valorRestante / numeroParcelas) : 0;
-    
-    const novoPlan: ClientPaymentPlan = {
-      id: planId,
+    const result = ReceivablesServiceV2.createOrUpdatePaymentSchedule(
       sessionId,
       clienteId,
-      valorTotal: valorTotalNegociado,
+      valorTotalNegociado,
+      valorJaPago,
       formaPagamento,
-      numeroParcelas: formaPagamento === 'avista' ? 1 : numeroParcelas,
-      valorParcela,
+      numeroParcelas,
       diaVencimento,
-      status: valorRestante <= 0 ? 'quitado' : 'ativo',
-      criadoEm: new Date().toISOString()
-    };
-
-    // 4. Atualizar parcelas pagas existentes para o novo plano ID (preservar histórico)
-    const parcelasJaPagasAtualizadas = todasParcelasJaPagas.map(parcela => ({
-      ...parcela,
-      paymentPlanId: planId
-    }));
-
-    console.log(`💰 Parcelas pagas preservadas: ${parcelasJaPagasAtualizadas.length}`);
-
-    // 5. Verificar se há diferença entre valorJaPago informado e valor realmente pago
-    if (valorJaPago > valorRealmentePago) {
-      const diferencaValor = valorJaPago - valorRealmentePago;
-      console.log(`➕ Criando nova entrada de ${diferencaValor} (diferença entre informado ${valorJaPago} e real ${valorRealmentePago})`);
-      
-      const parcelaEntradaAdicional: PaymentInstallment = {
-        id: `installment-${planId}-entrada-${Date.now()}`,
-        paymentPlanId: planId,
-        numeroParcela: 0, // Entrada
-        valor: diferencaValor,
-        dataVencimento: getCurrentDateString(),
-        status: 'pago',
-        dataPagamento: getCurrentDateString(),
-        observacoes: 'Pagamento adicional de entrada'
-      };
-      parcelasJaPagasAtualizadas.push(parcelaEntradaAdicional);
-    }
-
-    const novasParcelas: PaymentInstallment[] = [...parcelasJaPagasAtualizadas];
-
-    // Gerar parcelas futuras apenas se houver valor restante
-    if (valorRestante > 0) {
-      const hoje = new Date();
-      const parcelas = formaPagamento === 'avista' ? 1 : numeroParcelas;
-      
-      for (let i = 1; i <= parcelas; i++) {
-        // Calcular data corretamente para parcelas sequenciais
-        let dataVencimento = new Date(hoje.getFullYear(), hoje.getMonth(), diaVencimento);
-        
-        // Se a data do vencimento já passou no mês atual, começar no próximo mês
-        if (dataVencimento <= hoje) {
-          dataVencimento = new Date(hoje.getFullYear(), hoje.getMonth() + 1, diaVencimento);
-        }
-        
-        // Adicionar i-1 meses para parcelas sequenciais (primeira parcela no próximo mês válido)
-        dataVencimento.setMonth(dataVencimento.getMonth() + (i - 1));
-        
-        const parcela: PaymentInstallment = {
-          id: `installment-${planId}-${i}`,
-          paymentPlanId: planId,
-          numeroParcela: i,
-          valor: valorParcela,
-          dataVencimento: formatDateForStorage(dataVencimento),
-          status: 'pendente'
-        };
-        
-        novasParcelas.push(parcela);
-      }
-    }
-
-    // Salvar no localStorage
-    const novosPlanos = [...planosLimpos, novoPlan];
-    const novasInstallments = [...parcelasLimpas, ...novasParcelas];
+      observacoes
+    );
     
-    savePaymentPlans(novosPlanos);
-    saveInstallments(novasInstallments);
+    // Atualizar estados locais
+    setPaymentPlans(ReceivablesServiceV2.loadPaymentPlans());
+    setInstallments(ReceivablesServiceV2.loadInstallments());
 
-    const descricao = valorJaPago > 0 
-      ? `Entrada: ${formatCurrency(valorJaPago)} + ${formaPagamento === 'avista' ? 1 : numeroParcelas}x de ${formatCurrency(valorParcela)}`
-      : `${formaPagamento === 'avista' ? 1 : numeroParcelas}x de ${formatCurrency(valorParcela)}`;
+    const valorRestante = Math.max(0, valorTotalNegociado - ReceivablesServiceV2.getTotalPaidForSession(sessionId));
+    const descricao = valorRestante > 0
+      ? `${formaPagamento === 'avista' ? '1x' : `${numeroParcelas}x`} de ${formatCurrency(result.plan.valorParcela)} agendado`
+      : 'Totalmente quitado';
 
     toast({
-      title: "Plano de pagamento configurado",
+      title: "Pagamento agendado",
       description: descricao
     });
 
-    return novoPlan;
-  }, [paymentPlans, installments, savePaymentPlans, saveInstallments, toast]);
+    // Dispatch evento para sincronização
+    window.dispatchEvent(new CustomEvent('payment-plan:scheduled', {
+      detail: {
+        sessionId,
+        clienteId,
+        valorTotal: valorTotalNegociado,
+        formaPagamento,
+        numeroParcelas
+      }
+    }));
 
-  // Registrar pagamento rápido (cria parcela paga automaticamente)
+    return result.plan;
+  }, [savePaymentPlans, saveInstallments, toast]);
+
+  // V2: Registrar pagamento rápido
   const registrarPagamentoRapido = useCallback(async (
     sessionId: string,
     clienteId: string,
     valorPago: number,
-    valorTotalSessao: number
+    valorTotalSessao?: number
   ) => {
-    // Verificar se já existe plano para esta sessão
-    let planoExistente = paymentPlans.find(plan => plan.sessionId === sessionId);
+    console.log(`💸 [V2] Pagamento rápido - Session: ${sessionId}, Valor: ${valorPago}`);
     
-    if (!planoExistente) {
-      // Criar plano básico se não existir
-      const planId = `plan-${Date.now()}`;
-      planoExistente = {
-        id: planId,
-        sessionId,
-        clienteId,
-        valorTotal: valorTotalSessao,
-        formaPagamento: 'avista',
-        numeroParcelas: 1,
-        valorParcela: valorTotalSessao,
-        diaVencimento: 10,
-        status: 'ativo',
-        criadoEm: new Date().toISOString()
-      };
+    const quickPayment = ReceivablesServiceV2.addQuickPayment(
+      sessionId,
+      clienteId,
+      valorPago,
+      valorTotalSessao
+    );
 
-      const novosPlanos = [...paymentPlans, planoExistente];
-      savePaymentPlans(novosPlanos);
-    }
-
-    // Criar parcela paga
-    const novaParcela: PaymentInstallment = {
-      id: `installment-${planoExistente.id}-${Date.now()}`,
-      paymentPlanId: planoExistente.id,
-      numeroParcela: 0, // Pagamento avulso
-      valor: valorPago,
-      dataVencimento: getCurrentDateString(),
-      status: 'pago',
-      dataPagamento: getCurrentDateString(),
-      observacoes: 'Pagamento rápido'
-    };
-
-    const novasInstallments = [...installments, novaParcela];
-    saveInstallments(novasInstallments);
+    // Atualizar estados locais
+    setPaymentPlans(ReceivablesServiceV2.loadPaymentPlans());
+    setInstallments(ReceivablesServiceV2.loadInstallments());
 
     toast({
       title: "Pagamento registrado",
       description: formatCurrency(valorPago)
     });
 
-    return novaParcela;
-  }, [paymentPlans, installments, savePaymentPlans, saveInstallments, toast]);
+    return quickPayment;
+  }, [toast]);
 
   // Compatibilidade com nome antigo
   const criarPlanoPagamento = criarOuAtualizarPlanoPagamento;
@@ -333,26 +237,41 @@ export function useClientReceivables() {
     return installments.filter(installment => installment.paymentPlanId === paymentPlanId);
   }, [installments]);
 
-  // Obter valores já pagos de uma sessão
+  // V2: Obter valores já pagos de uma sessão
   const obterValorJaPago = useCallback((sessionId: string): number => {
-    // Buscar todos os planos desta sessão
-    const planosParaSessao = paymentPlans.filter(plan => plan.sessionId === sessionId);
-    let totalPago = 0;
+    return ReceivablesServiceV2.getTotalPaidForSession(sessionId);
+  }, []);
+
+  // V2: Verificar se tem agendamentos
+  const temAgendamentos = useCallback((sessionId: string): boolean => {
+    return ReceivablesServiceV2.hasScheduledPayments(sessionId);
+  }, []);
+
+  // V2: Obter informações do agendamento
+  const obterInfoAgendamento = useCallback((sessionId: string) => {
+    return ReceivablesServiceV2.getPaymentScheduleInfo(sessionId);
+  }, []);
+
+  // V2: Remover dados da sessão com opção de preservar pagamentos
+  const removerDadosSessao = useCallback((sessionId: string, preservarPagamentos: boolean = true) => {
+    console.log(`🗑️ [V2] Removendo dados da sessão ${sessionId}, preservar: ${preservarPagamentos}`);
     
-    planosParaSessao.forEach(plano => {
-      const parcelasPagas = installments.filter(installment => 
-        installment.paymentPlanId === plano.id && installment.status === 'pago'
-      );
-      totalPago += parcelasPagas.reduce((total, parcela) => total + parcela.valor, 0);
+    ReceivablesServiceV2.removeSessionData(sessionId, preservarPagamentos);
+    
+    // Atualizar estados locais
+    setPaymentPlans(ReceivablesServiceV2.loadPaymentPlans());
+    setInstallments(ReceivablesServiceV2.loadInstallments());
+    
+    toast({
+      title: preservarPagamentos ? "Agendamento removido" : "Dados removidos",
+      description: preservarPagamentos ? "Pagamentos preservados" : "Todos os dados foram removidos"
     });
-    
-    return totalPago;
-  }, [paymentPlans, installments]);
+  }, [toast]);
 
   return {
     paymentPlans,
     installments,
-    criarPlanoPagamento,
+    criarPlanoPagamento: criarOuAtualizarPlanoPagamento, // Compatibilidade
     criarOuAtualizarPlanoPagamento,
     registrarPagamentoRapido,
     marcarComoPago,
@@ -361,6 +280,9 @@ export function useClientReceivables() {
     obterPlanosPorCliente,
     obterParcelasPorPlano,
     obterValorJaPago,
+    temAgendamentos,
+    obterInfoAgendamento,
+    removerDadosSessao,
     savePaymentPlans,
     saveInstallments
   };

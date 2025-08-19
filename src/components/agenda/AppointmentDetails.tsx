@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { StatusBadge } from "@/components/workflow/StatusBadge";
 import { toast } from 'sonner';
 import { useOrcamentos } from '@/hooks/useOrcamentos';
+import { AppointmentDeleteConfirmModal } from './AppointmentDeleteConfirmModal';
 
 type Appointment = {
   id: string;
@@ -47,6 +48,7 @@ export default function AppointmentDetails({
   onDelete
 }: AppointmentDetailsProps) {
   const { pacotes } = useOrcamentos();
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     date: appointment.date,
     time: appointment.time,

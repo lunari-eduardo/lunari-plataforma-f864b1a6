@@ -30,9 +30,7 @@ export function PaymentConfigModal({
   valorJaPago,
   clienteNome
 }: PaymentConfigModalProps) {
-  const [valorRestanteEditavel, setValorRestanteEditavel] = useState(Math.max(0, valorTotal - valorJaPago));
-  const [displayValue, setDisplayValue] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
+  const [valorRestanteCalculado] = useState(Math.max(0, valorTotal - valorJaPago));
   const [formaPagamento, setFormaPagamento] = useState<'avista' | 'parcelado'>('avista');
   const [numeroParcelas, setNumeroParcelas] = useState(2);
   const [diaVencimento, setDiaVencimento] = useState('');
@@ -45,7 +43,8 @@ export function PaymentConfigModal({
     criarOuAtualizarPlanoPagamento, 
     paymentPlans, 
     obterParcelasPorPlano,
-    savePaymentPlans 
+    temAgendamentos,
+    obterInfoAgendamento
   } = useClientReceivables();
 
   // Função para calcular datas de vencimento
@@ -71,23 +70,21 @@ export function PaymentConfigModal({
   // Validação se pode salvar
   const canSave = diaVencimento !== '' && parseInt(diaVencimento) >= 1 && parseInt(diaVencimento) <= 31;
 
-  // Carregar plano existente ao abrir modal
+  // Carregar informações do agendamento existente
   useEffect(() => {
     if (isOpen && sessionId) {
-      const plano = paymentPlans.find(p => p.sessionId === sessionId);
-      setExistingPlan(plano);
+      const agendamentoInfo = obterInfoAgendamento(sessionId);
       
-      if (plano) {
-        setFormaPagamento(plano.formaPagamento);
-        setNumeroParcelas(plano.numeroParcelas);
-        setDiaVencimento(plano.diaVencimento.toString());
-        setObservacoes(plano.observacoes || '');
-        
-        // Carregar parcelas do plano
-        const parcelasDoPlan = obterParcelasPorPlano(plano.id);
-        setInstallments(parcelasDoPlan);
+      if (agendamentoInfo?.hasScheduled) {
+        setExistingPlan(agendamentoInfo.plan);
+        setFormaPagamento(agendamentoInfo.plan.formaPagamento);
+        setNumeroParcelas(agendamentoInfo.plan.numeroParcelas);
+        setDiaVencimento(agendamentoInfo.plan.diaVencimento.toString());
+        setObservacoes(agendamentoInfo.plan.observacoes || '');
+        setInstallments(agendamentoInfo.installments);
       } else {
-        // Reset para novo plano
+        // Reset para novo agendamento
+        setExistingPlan(null);
         setFormaPagamento('avista');
         setNumeroParcelas(2);
         setDiaVencimento('');
@@ -95,48 +92,29 @@ export function PaymentConfigModal({
         setInstallments([]);
       }
     }
-  }, [isOpen, sessionId, paymentPlans, obterParcelasPorPlano]);
+  }, [isOpen, sessionId, obterInfoAgendamento]);
 
-  // Sincronizar com mudanças nas props
-  useEffect(() => {
-    const novoValorRestante = Math.max(0, valorTotal - valorJaPago);
-    setValorRestanteEditavel(novoValorRestante);
-    if (!isEditing) {
-      setDisplayValue(formatCurrency(novoValorRestante));
-    }
-  }, [valorTotal, valorJaPago, isEditing]);
-
-  const valorTotalNegociado = valorRestanteEditavel + valorJaPago;
-  const valorParcela = formaPagamento === 'avista' ? valorRestanteEditavel : valorRestanteEditavel / numeroParcelas;
+  const valorTotalNegociado = valorTotal;
+  const valorParcela = formaPagamento === 'avista' ? valorRestanteCalculado : valorRestanteCalculado / numeroParcelas;
 
   const handleSave = async () => {
     if (!canSave) return;
     
     setLoading(true);
     try {
-      // IMPORTANTE: Só criar parcelas com o valor restante (não pago)
-      // Evita duplicação de valores já pagos
+      // V2: Agendar pagamentos apenas do valor restante
       await criarOuAtualizarPlanoPagamento(
         sessionId,
         clienteId,
-        valorJaPago + valorRestanteEditavel, // Total negociado
-        valorJaPago, // Valor já pago (para criar parcela de entrada)
+        valorTotalNegociado, // Total da sessão
+        valorJaPago, // Valor já pago
         formaPagamento,
         formaPagamento === 'avista' ? 1 : numeroParcelas,
-        parseInt(diaVencimento)
+        parseInt(diaVencimento),
+        observacoes
       );
       
-      // Dispatch evento para sincronização global
-      window.dispatchEvent(new CustomEvent('payment-plan:created', {
-        detail: {
-          sessionId,
-          clienteId,
-          valorTotal: valorJaPago + valorRestanteEditavel,
-          valorRestante: valorRestanteEditavel,
-          formaPagamento,
-          numeroParcelas: formaPagamento === 'avista' ? 1 : numeroParcelas
-        }
-      }));
+      // Dispatch evento já é feito pelo hook
       
       onClose();
     } catch (error) {
@@ -152,7 +130,7 @@ export function PaymentConfigModal({
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold text-lunar-text flex items-center gap-2">
             <CreditCard className="h-5 w-5 text-primary" />
-            Configurar Pagamento
+            Agendar Pagamento
           </DialogTitle>
           <p className="text-lunar-textSecondary">
             Cliente: <span className="font-medium text-lunar-text">{clienteNome}</span>
@@ -211,33 +189,9 @@ export function PaymentConfigModal({
             
             <div className="flex items-center justify-between border-t pt-2">
               <span className="text-sm font-medium text-lunar-text">Restante a Pagar:</span>
-              <Input
-                type="text"
-                value={isEditing ? displayValue : formatCurrency(valorRestanteEditavel)}
-                onChange={(e) => {
-                  setDisplayValue(e.target.value);
-                }}
-                onFocus={() => {
-                  setIsEditing(true);
-                  setDisplayValue(valorRestanteEditavel.toFixed(2).replace('.', ','));
-                }}
-                onBlur={() => {
-                  setIsEditing(false);
-                  // Parse the value and update
-                  const cleanValue = displayValue.replace(/[^\d,]/g, '').replace(',', '.');
-                  const numericValue = parseFloat(cleanValue) || 0;
-                  const finalValue = Math.max(0, numericValue);
-                  setValorRestanteEditavel(finalValue);
-                  setDisplayValue(formatCurrency(finalValue));
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.currentTarget.blur();
-                  }
-                }}
-                className="w-32 text-right font-bold text-primary bg-background"
-                placeholder="0,00"
-              />
+              <span className="text-lg font-bold text-primary">
+                {formatCurrency(valorRestanteCalculado)}
+              </span>
             </div>
           </div>
 
@@ -347,7 +301,7 @@ export function PaymentConfigModal({
                     <span className="text-sm font-medium text-lunar-text">Cobrança</span>
                   </div>
                   <div className="text-lg font-semibold text-primary mb-2">
-                    {formatCurrency(valorRestanteEditavel)}
+                    {formatCurrency(valorRestanteCalculado)}
                   </div>
                   
                   {/* Data específica */}
@@ -383,7 +337,7 @@ export function PaymentConfigModal({
             Cancelar
           </Button>
           <Button onClick={handleSave} disabled={loading || !canSave}>
-            {loading ? 'Salvando...' : 'Configurar Pagamento'}
+            {loading ? 'Salvando...' : (existingPlan ? 'Atualizar Agendamento' : 'Agendar Pagamento')}
           </Button>
         </div>
       </DialogContent>

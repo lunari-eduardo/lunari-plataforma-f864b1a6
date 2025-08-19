@@ -159,7 +159,15 @@ export function WorkflowTable({
   const [initialWidth, setInitialWidth] = useState(0);
   const [currentColumnWidths, setCurrentColumnWidths] = useState<Record<string, number>>({});
   const [modeloPrecificacao, setModeloPrecificacao] = useState('fixo');
-  const { registrarPagamentoRapido, paymentPlans, installments, obterParcelasPorPlano, marcarComoPago } = useClientReceivables();
+  const { 
+    registrarPagamentoRapido, 
+    paymentPlans, 
+    installments, 
+    obterParcelasPorPlano, 
+    marcarComoPago,
+    temAgendamentos,
+    obterInfoAgendamento
+  } = useClientReceivables();
 
   // Stable field update callback
   const handleFieldUpdateStable = useCallback((sessionId: string, field: string, value: any) => {
@@ -313,34 +321,25 @@ export function WorkflowTable({
     return restante;
   }, [calculateTotal]);
 
-  // Função para obter informações do plano de pagamento
+  // V2: Função para obter informações do agendamento de pagamento
   const getPaymentPlanInfo = useCallback((sessionId: string) => {
-    const plan = paymentPlans.find(p => p.sessionId === sessionId);
-    if (!plan) return null;
-
-    const sessionInstallments = obterParcelasPorPlano(plan.id);
-    const pendingInstallments = sessionInstallments.filter(i => i.status === 'pendente');
-    const paidInstallments = sessionInstallments.filter(i => i.status === 'pago');
-
-    if (plan.formaPagamento === 'avista') {
-      const nextDue = pendingInstallments[0];
-      return {
-        type: 'avista',
-        text: `À vista`,
-        nextDue: nextDue ? formatDateForDisplay(nextDue.dataVencimento) : null,
-        paid: paidInstallments.length > 0,
-        hasScheduled: true
-      };
-    } else {
-      return {
-        type: 'parcelado',
-        text: `${plan.numeroParcelas}x de ${formatCurrency(plan.valorParcela)}`,
-        nextDue: pendingInstallments[0] ? formatDateForDisplay(pendingInstallments[0].dataVencimento) : null,
-        paid: pendingInstallments.length === 0,
-        hasScheduled: true
-      };
+    const agendamentoInfo = obterInfoAgendamento(sessionId);
+    
+    if (!agendamentoInfo?.hasScheduled) {
+      return { hasScheduled: false };
     }
-  }, [paymentPlans, obterParcelasPorPlano]);
+
+    const { plan, installments: planInstallments } = agendamentoInfo;
+    const pendingInstallments = planInstallments.filter(i => i.status === 'pendente');
+    
+    return {
+      hasScheduled: true,
+      plan,
+      installments: planInstallments,
+      pendingCount: pendingInstallments.length,
+      isComplete: pendingInstallments.length === 0
+    };
+  }, [obterInfoAgendamento]);
 
   const handlePaymentAdd = useCallback((sessionId: string) => {
     const value = paymentInputs[sessionId];
@@ -984,36 +983,23 @@ return <td className={`
                             setSelectedSessionForPayment(session);
                             setPaymentConfigOpen(true);
                           }}
-                          className={`h-6 w-6 p-0 shrink-0 hover:bg-primary/10 ${paymentInfo?.hasScheduled ? 'text-green-600' : 'text-primary'}`}
-                          title={paymentInfo?.hasScheduled ? "Editar Pagamento Agendado" : "Configurar Pagamento"}
+                          className="h-6 w-6 p-0 shrink-0 hover:bg-primary/10 text-primary"
+                          title={paymentInfo?.hasScheduled ? "Editar Agendamento" : "Agendar Pagamento"}
                         >
-                          {paymentInfo?.hasScheduled ? (
-                            <CheckCircle className="h-3 w-3" />
-                          ) : (
-                            <CreditCard className="h-3 w-3" />
-                          )}
+                          <CreditCard className="h-3 w-3" />
                         </Button>
                       </div>
                       
-                      {/* Linha do plano de pagamento */}
-                      {paymentInfo && (
+                      {/* Status do agendamento */}
+                      {paymentInfo?.hasScheduled && (
                         <div className="flex items-center gap-1 mt-1">
                           <Badge 
-                            variant={paymentInfo.paid ? "default" : "secondary"} 
-                            className={`text-[10px] px-1.5 py-0.5 h-4 ${
-                              paymentInfo.paid ? 'bg-green-100 text-green-700 border-green-200' : 'bg-blue-100 text-blue-700 border-blue-200'
-                            }`}
+                            variant="secondary"
+                            className="text-[10px] px-1.5 py-0.5 h-4 bg-green-100 text-green-700 border-green-200"
                           >
-                            {paymentInfo.text}
+                            <CheckCircle className="h-2.5 w-2.5 mr-1" />
+                            Agendado
                           </Badge>
-                          {paymentInfo.nextDue && !paymentInfo.paid && (
-                            <div className="flex items-center gap-1">
-                              <Calendar className="h-2.5 w-2.5 text-orange-600" />
-                              <span className="text-[9px] text-orange-600 font-medium">
-                                {paymentInfo.nextDue}
-                              </span>
-                            </div>
-                          )}
                         </div>
                       )}
                     </div>
