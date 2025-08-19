@@ -69,9 +69,21 @@ export function useClientReceivables() {
       criadoEm: new Date().toISOString()
     };
 
-    // Don't create a single generic entry payment when there's valorJaPago
-    // Instead, keep existing payments (entries + quick payments) and create only future installments
+    // Gerar parcela de entrada se houver valor já pago
     const novasParcelas: PaymentInstallment[] = [];
+    if (valorJaPago > 0) {
+        const parcelaEntrada: PaymentInstallment = {
+        id: `installment-${planId}-entrada`,
+        paymentPlanId: planId,
+        numeroParcela: 0, // Entrada
+        valor: valorJaPago,
+        dataVencimento: getCurrentDateString(),
+        status: 'pago',
+        dataPagamento: getCurrentDateString(),
+        observacoes: 'Pagamento já realizado (entrada/pagamento rápido)'
+      };
+      novasParcelas.push(parcelaEntrada);
+    }
 
     // Gerar parcelas futuras apenas se houver valor restante
     if (valorRestante > 0) {
@@ -129,16 +141,43 @@ export function useClientReceivables() {
     valorPago: number,
     valorTotalSessao: number
   ) => {
-    const novaParcela = ReceivablesService.addPagamentoRapido(
-      sessionId,
-      clienteId,
-      valorPago,
-      getCurrentDateString()
-    );
+    // Verificar se já existe plano para esta sessão
+    let planoExistente = paymentPlans.find(plan => plan.sessionId === sessionId);
+    
+    if (!planoExistente) {
+      // Criar plano básico se não existir
+      const planId = `plan-${Date.now()}`;
+      planoExistente = {
+        id: planId,
+        sessionId,
+        clienteId,
+        valorTotal: valorTotalSessao,
+        formaPagamento: 'avista',
+        numeroParcelas: 1,
+        valorParcela: valorTotalSessao,
+        diaVencimento: 10,
+        status: 'ativo',
+        criadoEm: new Date().toISOString()
+      };
 
-    // Reload data from service
-    setPaymentPlans(ReceivablesService.loadPaymentPlans());
-    setInstallments(ReceivablesService.loadInstallments());
+      const novosPlanos = [...paymentPlans, planoExistente];
+      savePaymentPlans(novosPlanos);
+    }
+
+    // Criar parcela paga
+    const novaParcela: PaymentInstallment = {
+      id: `installment-${planoExistente.id}-${Date.now()}`,
+      paymentPlanId: planoExistente.id,
+      numeroParcela: 0, // Pagamento avulso
+      valor: valorPago,
+      dataVencimento: getCurrentDateString(),
+      status: 'pago',
+      dataPagamento: getCurrentDateString(),
+      observacoes: 'Pagamento rápido'
+    };
+
+    const novasInstallments = [...installments, novaParcela];
+    saveInstallments(novasInstallments);
 
     toast({
       title: "Pagamento registrado",
@@ -146,7 +185,7 @@ export function useClientReceivables() {
     });
 
     return novaParcela;
-  }, [setPaymentPlans, setInstallments, toast]);
+  }, [paymentPlans, installments, savePaymentPlans, saveInstallments, toast]);
 
   // Compatibilidade com nome antigo
   const criarPlanoPagamento = criarOuAtualizarPlanoPagamento;

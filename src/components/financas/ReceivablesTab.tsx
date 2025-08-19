@@ -263,19 +263,8 @@ export default function ReceivablesTab() {
                   </TableCell>
                   <TableCell>
                     <div className="font-medium">
-                      {installment.numeroParcela === 0 ? (
-                        installment.observacoes === 'Entrada do agendamento' ? 'Entrada' :
-                        installment.observacoes === 'Pagamento rápido' ? 'Pagamento' :
-                        'Pagamento'
-                      ) : (
-                        `Parcela ${installment.numeroParcela}`
-                      )}
+                      {installment.numeroParcela === 0 ? 'Entrada' : `Parcela ${installment.numeroParcela}`}
                     </div>
-                    {installment.observacoes && installment.numeroParcela > 0 && (
-                      <div className="text-sm text-lunar-textSecondary">
-                        {installment.observacoes}
-                      </div>
-                    )}
                   </TableCell>
                   <TableCell>
                     <div className="font-semibold">

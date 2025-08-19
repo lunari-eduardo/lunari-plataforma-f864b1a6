@@ -29,11 +29,6 @@ export function ClientPaymentHistory({ clienteId, clienteNome }: ClientPaymentHi
   const parcelasPendentes = todasParcelas.filter(p => p.status === 'pendente');
   const parcelasPagas = todasParcelas.filter(p => p.status === 'pago');
 
-  const getTotalParcelas = (paymentPlanId: string): number => {
-    const plano = planosCliente.find(p => p.id === paymentPlanId);
-    return plano?.numeroParcelas || 1;
-  };
-
   const getStatusBadge = (status: PaymentInstallment['status'], dataVencimento: string) => {
     if (status === 'pago') {
       return <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">Pago</Badge>;
@@ -232,22 +227,11 @@ export function ClientPaymentHistory({ clienteId, clienteNome }: ClientPaymentHi
                 <TableRow key={parcela.id}>
                   <TableCell>
                     <div className="font-medium">
-                      {parcela.numeroParcela === 0 ? (
-                        parcela.observacoes === 'Entrada do agendamento' ? 'Entrada' :
-                        parcela.observacoes === 'Pagamento rápido' ? 'Pagamento' :
-                        'Pagamento'
-                      ) : (
-                        `Parcela ${parcela.numeroParcela}/${getTotalParcelas(parcela.paymentPlanId)}`
-                      )}
+                      {parcela.plano.formaPagamento === 'avista' ? 'À Vista' : `Parcela ${parcela.numeroParcela}/${parcela.plano.numeroParcelas}`}
                     </div>
                     <div className="text-sm text-lunar-textSecondary">
                       {formatCurrency(parcela.plano.valorTotal)} total
                     </div>
-                    {parcela.observacoes && parcela.numeroParcela > 0 && (
-                      <div className="text-sm text-muted-foreground">
-                        {parcela.observacoes}
-                      </div>
-                    )}
                   </TableCell>
                   <TableCell>
                     <div className="font-semibold">
