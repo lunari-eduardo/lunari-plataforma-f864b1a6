@@ -153,9 +153,11 @@ export default function ReceivablesTab() {
                   {resumo.vencimentosHoje.map((installment) => (
                     <div key={installment.id} className="flex items-center justify-between p-2 bg-white rounded border">
                       <div>
-                        <div className="font-medium text-sm text-lunar-text">
-                          Parcela {installment.numeroParcela}
-                        </div>
+                      <div className="font-medium text-sm text-lunar-text">
+                        {installment.numeroParcela === -1 ? 'Entrada' : 
+                         installment.numeroParcela === 0 ? 'À Vista' : 
+                         `Parcela ${installment.numeroParcela}`}
+                      </div>
                         <div className="text-lg font-bold text-red-600">
                           {formatCurrency(installment.valor)}
                         </div>
@@ -187,9 +189,11 @@ export default function ReceivablesTab() {
                   {resumo.vencimentosProximos.slice(0, 3).map((installment) => (
                     <div key={installment.id} className="flex items-center justify-between p-2 bg-white rounded border">
                       <div>
-                        <div className="font-medium text-sm text-lunar-text">
-                          Parcela {installment.numeroParcela}
-                        </div>
+                      <div className="font-medium text-sm text-lunar-text">
+                        {installment.numeroParcela === -1 ? 'Entrada' : 
+                         installment.numeroParcela === 0 ? 'À Vista' : 
+                         `Parcela ${installment.numeroParcela}`}
+                      </div>
                         <div className="text-sm text-lunar-textSecondary">
                           Vence em {convertISODateToBR(installment.dataVencimento)}
                         </div>
@@ -263,7 +267,9 @@ export default function ReceivablesTab() {
                   </TableCell>
                   <TableCell>
                     <div className="font-medium">
-                      {installment.numeroParcela === 0 ? 'Entrada' : `Parcela ${installment.numeroParcela}`}
+                      {installment.numeroParcela === -1 ? 'Entrada' : 
+                       installment.numeroParcela === 0 ? 'À Vista' : 
+                       `Parcela ${installment.numeroParcela}`}
                     </div>
                   </TableCell>
                   <TableCell>

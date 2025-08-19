@@ -179,7 +179,9 @@ export function ClientPaymentHistory({ clienteId, clienteNome }: ClientPaymentHi
                 <div key={parcela.id} className="flex items-center justify-between p-3 bg-white rounded border border-red-200">
                   <div>
                     <div className="font-medium text-sm text-lunar-text">
-                      Parcela {parcela.numeroParcela} - Plano {parcela.plano.formaPagamento}
+                      {parcela.numeroParcela === -1 ? 'Entrada' : 
+                       parcela.numeroParcela === 0 ? 'À Vista' : 
+                       `Parcela ${parcela.numeroParcela}`} - Plano {parcela.plano.formaPagamento}
                     </div>
                     <div className="text-sm text-red-600">
                       Venceu em {formatDateForDisplay(parcela.dataVencimento)}
@@ -227,7 +229,9 @@ export function ClientPaymentHistory({ clienteId, clienteNome }: ClientPaymentHi
                 <TableRow key={parcela.id}>
                   <TableCell>
                     <div className="font-medium">
-                      {parcela.plano.formaPagamento === 'avista' ? 'À Vista' : `Parcela ${parcela.numeroParcela}/${parcela.plano.numeroParcelas}`}
+                      {parcela.numeroParcela === -1 ? 'Entrada' : 
+                       parcela.numeroParcela === 0 ? 'À Vista' : 
+                       `Parcela ${parcela.numeroParcela}/${parcela.plano.numeroParcelas}`}
                     </div>
                     <div className="text-sm text-lunar-textSecondary">
                       {formatCurrency(parcela.plano.valorTotal)} total

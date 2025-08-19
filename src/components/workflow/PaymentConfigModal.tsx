@@ -51,13 +51,14 @@ export function PaymentConfigModal({
     obterInfoAgendamento
   } = useClientReceivables();
 
-  // Calcular valores restantes (apenas considerando entradas -1)
+  // Calcular valores restantes (considerando entradas scheduled + pagamentos quick)
   const getValuesDiff = () => {
     const agendamentoInfo = obterInfoAgendamento(sessionId);
     let valorTotalEntradas = 0;
+    let valorQuickPayments = valorJaPago; // valorJaPago já inclui quick payments
     
     if (agendamentoInfo) {
-      // Somar apenas entradas (numeroParcela === -1)
+      // Somar apenas entradas (numeroParcela === -1) de planos scheduled
       valorTotalEntradas = agendamentoInfo.installments
         .filter(i => i.numeroParcela === -1 && i.status === 'pago')
         .reduce((total, i) => total + i.valor, 0);
@@ -65,11 +66,12 @@ export function PaymentConfigModal({
     
     return {
       valorTotalEntradas,
-      valorRestante: Math.max(0, valorTotal - valorTotalEntradas - valorEntrada)
+      valorQuickPayments,
+      valorRestante: Math.max(0, valorTotal - valorTotalEntradas - valorQuickPayments - valorEntrada)
     };
   };
 
-  const { valorTotalEntradas, valorRestante } = getValuesDiff();
+  const { valorTotalEntradas, valorQuickPayments, valorRestante } = getValuesDiff();
 
   // Função para calcular datas de vencimento
   const calculateDueDates = (startDate: Date, parcelas: number) => {
@@ -109,10 +111,10 @@ export function PaymentConfigModal({
         setInstallments([]);
       }
       
-      // Valor entrada sempre inicia com valorJaPago
-      setValorEntrada(valorJaPago);
+      // Entrada sempre inicia em 0 (evita dupla subtração)
+      setValorEntrada(0);
     }
-  }, [isOpen, sessionId, obterInfoAgendamento, valorJaPago]);
+  }, [isOpen, sessionId, obterInfoAgendamento]);
 
   const valorTotalNegociado = valorTotal;
   const valorParcela = formaPagamento === 'avista' ? valorRestante : valorRestante / numeroParcelas;
@@ -207,17 +209,24 @@ export function PaymentConfigModal({
               </div>
             )}
             
+            {valorQuickPayments > 0 && (
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-lunar-textSecondary">Pagamentos à Vista:</span>
+                <span className="font-medium text-blue-600">- {formatCurrency(valorQuickPayments)}</span>
+              </div>
+            )}
+            
             <div className="flex items-center justify-between">
               <span className="text-sm text-lunar-textSecondary">Entrada (Este Agendamento):</span>
-              <Input
-                type="number"
-                value={valorEntrada}
-                onChange={(e) => setValorEntrada(parseFloat(e.target.value) || 0)}
-                className="w-32 text-right bg-background border-border text-lunar-text"
-                min="0"
-                max={valorTotal - valorTotalEntradas}
-                step="0.01"
-              />
+                <Input
+                  type="number"
+                  value={valorEntrada}
+                  onChange={(e) => setValorEntrada(parseFloat(e.target.value) || 0)}
+                  className="w-32 text-right bg-background border-border text-lunar-text"
+                  min="0"
+                  max={valorTotal - valorTotalEntradas - valorQuickPayments}
+                  step="0.01"
+                />
             </div>
             
             <div className="flex items-center justify-between border-t pt-2">
