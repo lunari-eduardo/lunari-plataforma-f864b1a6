@@ -72,12 +72,26 @@ export class ReceivablesService {
     valor: number,
     data?: string
   ): PaymentInstallment {
+    console.log('🏦 [ReceivablesService] Adding entry payment:', {
+      sessionId,
+      clienteId,
+      valor,
+      data
+    });
+
+    // Input validation
+    if (!sessionId || !clienteId || valor <= 0) {
+      console.error('❌ Invalid input for entry payment:', { sessionId, clienteId, valor });
+      throw new Error('Invalid parameters for entry payment');
+    }
+
     const plans = this.loadPaymentPlans();
     const installments = this.loadInstallments();
 
     let plan = plans.find(p => p.sessionId === sessionId);
     
     if (!plan) {
+      console.log('📋 Creating new payment plan for entry');
       // Create a basic plan if it doesn't exist
       plan = this.upsertPlan(sessionId, clienteId, valor, 'avista', 1, 10);
     }
@@ -91,7 +105,21 @@ export class ReceivablesService {
     );
 
     if (existingEntrada) {
-      console.log('⚠️ Entry payment already exists, skipping duplication:', existingEntrada.id);
+      console.log('⚠️ Entry payment already exists, updating amount if different:', {
+        existing: existingEntrada.valor,
+        new: valor
+      });
+      
+      // Update amount if different
+      if (Math.abs(existingEntrada.valor - valor) > 0.01) {
+        const updatedInstallments = installments.map(i => 
+          i.id === existingEntrada.id ? { ...i, valor } : i
+        );
+        this.saveInstallments(updatedInstallments);
+        console.log('✅ Entry payment amount updated');
+        return { ...existingEntrada, valor };
+      }
+      
       return existingEntrada;
     }
 
@@ -118,6 +146,12 @@ export class ReceivablesService {
     toSessionId: string,
     clienteId: string
   ): void {
+    console.log('🔄 [ReceivablesService] Migrating session receivables:', {
+      from: fromSessionId,
+      to: toSessionId,
+      clienteId
+    });
+
     const plans = this.loadPaymentPlans();
     const installments = this.loadInstallments();
 
@@ -125,6 +159,19 @@ export class ReceivablesService {
     const existingPlan = plans.find(p => p.sessionId === fromSessionId);
     if (!existingPlan) {
       console.log('⚠️ No existing plan found for migration:', fromSessionId);
+      
+      // Try to create entry payment if there are any payments to migrate from appointment
+      const appointmentPayments = installments.filter(i => {
+        const planForInstallment = plans.find(p => p.id === i.paymentPlanId);
+        return planForInstallment?.sessionId === fromSessionId && i.status === 'pago';
+      });
+      
+      if (appointmentPayments.length > 0) {
+        const totalPaid = appointmentPayments.reduce((sum, payment) => sum + payment.valor, 0);
+        console.log('🔧 Creating fallback entry payment during migration:', totalPaid);
+        this.addEntradaPago(toSessionId, clienteId, totalPaid);
+      }
+      
       return;
     }
 
@@ -138,7 +185,7 @@ export class ReceivablesService {
     // Update plan sessionId
     const updatedPlans = plans.map(plan => 
       plan.id === existingPlan.id 
-        ? { ...plan, sessionId: toSessionId }
+        ? { ...plan, sessionId: toSessionId, clienteId } // Also update clienteId for consistency
         : plan
     );
 

@@ -1719,6 +1719,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...appointment,
       id: Date.now().toString(),
       clienteId: appointment.clienteId, // Preservar clienteId
+      paidAmount: appointment.paidAmount, // Preservar paidAmount explicitamente
     };
 
     // **IMMEDIATE ENTRY RECORDING**: Record entry payment immediately when valorPago > 0
