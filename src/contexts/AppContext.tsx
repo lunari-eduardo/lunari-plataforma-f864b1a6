@@ -1702,25 +1702,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const addAppointment = (appointment: Omit<Appointment, 'id'>) => {
-    console.log('🚀 [addAppointment] ENTRY POINT - Full appointment data received:', {
-      appointment,
-      keys: Object.keys(appointment),
-      paidAmount: {
-        value: appointment.paidAmount,
-        type: typeof appointment.paidAmount,
-        stringValue: appointment.paidAmount?.toString(),
-        asNumber: Number(appointment.paidAmount),
-        isValidNumber: !isNaN(Number(appointment.paidAmount)) && Number(appointment.paidAmount) > 0
-      },
-      clienteId: {
-        value: appointment.clienteId,
-        type: typeof appointment.clienteId,
-        exists: !!appointment.clienteId,
-        isString: typeof appointment.clienteId === 'string',
-        notEmpty: appointment.clienteId && appointment.clienteId.trim() !== ''
-      }
-    });
-    
     // Validação de conflitos para agendamentos confirmados
     if (appointment.status === 'confirmado') {
       const existingConfirmed = appointments.find(app => 
@@ -1742,89 +1723,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     // **IMMEDIATE ENTRY RECORDING**: Record entry payment immediately when valorPago > 0
-    console.log('🔍 [addAppointment] DETAILED appointment data analysis:', {
-      appointmentId: newAppointment.id,
-      rawAppointment: appointment,
-      paidAmount: {
-        value: appointment.paidAmount,
-        type: typeof appointment.paidAmount,
-        isNumber: typeof appointment.paidAmount === 'number',
-        isGreaterThanZero: appointment.paidAmount > 0,
-        parsed: parseFloat(appointment.paidAmount?.toString() || '0')
-      },
-      clienteId: {
-        value: appointment.clienteId,
-        type: typeof appointment.clienteId,
-        isString: typeof appointment.clienteId === 'string',
-        length: appointment.clienteId?.length,
-        isEmpty: !appointment.clienteId || appointment.clienteId.trim() === ''
-      },
-      validationChecks: {
-        hasPaidAmount: !!appointment.paidAmount,
-        paidAmountGreaterThanZero: appointment.paidAmount > 0,
-        hasClienteId: !!appointment.clienteId,
-        allConditionsMet: !!(appointment.paidAmount && appointment.paidAmount > 0 && appointment.clienteId)
-      }
+    console.log('🔍 [addAppointment] Checking appointment data:', {
+      id: newAppointment.id,
+      paidAmount: appointment.paidAmount,
+      clienteId: appointment.clienteId,
+      fullAppointment: appointment
     });
     
-    // **ENHANCED VALIDATION**: More robust validation with proper logging
-    const paidAmountNumber = parseFloat(appointment.paidAmount?.toString() || '0');
-    const hasValidPaidAmount = !isNaN(paidAmountNumber) && paidAmountNumber > 0;
-    const hasValidClienteId = appointment.clienteId && appointment.clienteId.trim() !== '';
-    
-    console.log('🧮 [addAppointment] Validation results:', {
-      paidAmountNumber,
-      hasValidPaidAmount,
-      hasValidClienteId,
-      shouldCreateEntry: hasValidPaidAmount && hasValidClienteId
-    });
-    
-    if (hasValidPaidAmount && hasValidClienteId) {
-      console.log('🏦 ✅ Creating immediate entry payment for appointment:', {
+    if (appointment.paidAmount && appointment.paidAmount > 0 && appointment.clienteId) {
+      console.log('🏦 Creating immediate entry payment for appointment:', {
         appointmentId: newAppointment.id,
         sessionId: `appointment-${newAppointment.id}`,
         clienteId: appointment.clienteId,
-        valor: paidAmountNumber
+        valor: appointment.paidAmount
       });
       
       try {
-        const entryPayment = ReceivablesService.addEntradaPago(
+        ReceivablesService.addEntradaPago(
           `appointment-${newAppointment.id}`, // Use appointment ID as temporary sessionId
           appointment.clienteId,
-          paidAmountNumber,
+          appointment.paidAmount,
           getCurrentDateString()
         );
         
-        console.log('✅ Entry payment recorded successfully for appointment:', {
+        console.log('✅ Entry payment recorded immediately for appointment:', {
           appointmentId: newAppointment.id,
-          entryPaymentId: entryPayment.id,
-          valor: paidAmountNumber
-        });
-        
-        // Add success toast
-        toast({
-          title: "✅ Entrada registrada",
-          description: `Valor pago de R$ ${paidAmountNumber.toFixed(2)} foi registrado automaticamente no histórico financeiro.`
+          clienteId: appointment.clienteId,
+          valor: appointment.paidAmount
         });
       } catch (error) {
         console.error('❌ Error recording immediate entry payment:', error);
-        toast({
-          title: "Erro ao registrar entrada",
-          description: "Não foi possível registrar o valor pago. Verifique os dados.",
-          variant: "destructive"
-        });
       }
     } else {
-      console.log('⚠️ Skipping entry payment creation - validation failed:', {
-        hasValidPaidAmount,
-        hasValidClienteId,
-        paidAmountRaw: appointment.paidAmount,
-        paidAmountParsed: paidAmountNumber,
-        clienteIdRaw: appointment.clienteId,
-        reasons: {
-          noPaidAmount: !hasValidPaidAmount ? 'Paid amount is invalid or zero' : null,
-          noClienteId: !hasValidClienteId ? 'ClienteId is missing or empty' : null
-        }
+      console.log('⚠️ Skipping entry payment creation:', {
+        hasPaidAmount: !!appointment.paidAmount,
+        paidAmountValue: appointment.paidAmount,
+        hasClienteId: !!appointment.clienteId
       });
     }
     
