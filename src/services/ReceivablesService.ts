@@ -72,28 +72,52 @@ export class ReceivablesService {
     valor: number,
     data?: string
   ): PaymentInstallment {
-    console.log('🏦 [ReceivablesService] Adding entry payment:', {
+    console.log('🏦 [ReceivablesService] ========== ENTRADA PAGO START ==========');
+    console.log('🏦 [ReceivablesService] Adding entry payment with params:', {
       sessionId,
       clienteId,
       valor,
-      data
+      data,
+      valorType: typeof valor,
+      valorIsNumber: typeof valor === 'number',
+      valorIsValid: !isNaN(valor) && valor > 0
     });
 
     // Input validation
     if (!sessionId || !clienteId || valor <= 0) {
-      console.error('❌ Invalid input for entry payment:', { sessionId, clienteId, valor });
+      console.error('❌ [ReceivablesService] Invalid input for entry payment:', { 
+        sessionId: sessionId || 'MISSING', 
+        clienteId: clienteId || 'MISSING', 
+        valor,
+        issues: {
+          noSessionId: !sessionId,
+          noClienteId: !clienteId,
+          invalidValor: valor <= 0
+        }
+      });
       throw new Error('Invalid parameters for entry payment');
     }
+
+    console.log('✅ [ReceivablesService] Input validation passed');
 
     const plans = this.loadPaymentPlans();
     const installments = this.loadInstallments();
 
+    console.log('📊 [ReceivablesService] Current data loaded:', {
+      plansCount: plans.length,
+      installmentsCount: installments.length,
+      plansWithSessionId: plans.filter(p => p.sessionId === sessionId).length
+    });
+
     let plan = plans.find(p => p.sessionId === sessionId);
     
     if (!plan) {
-      console.log('📋 Creating new payment plan for entry');
+      console.log('📋 [ReceivablesService] No existing plan found, creating new one');
       // Create a basic plan if it doesn't exist
       plan = this.upsertPlan(sessionId, clienteId, valor, 'avista', 1, 10);
+      console.log('📋 [ReceivablesService] New plan created:', plan.id);
+    } else {
+      console.log('📋 [ReceivablesService] Found existing plan:', plan.id);
     }
 
     // **ROBUST NON-DUPLICATION**: Check if appointment entry payment already exists to prevent duplication
@@ -134,10 +158,19 @@ export class ReceivablesService {
       observacoes: 'Entrada do agendamento'
     };
 
+    console.log('🔨 [ReceivablesService] Creating new entry payment installment:', {
+      id: entradaParcela.id,
+      paymentPlanId: plan.id,
+      valor: entradaParcela.valor,
+      dataVencimento: entradaParcela.dataVencimento,
+      status: entradaParcela.status
+    });
+
     const updatedInstallments = [...installments, entradaParcela];
     this.saveInstallments(updatedInstallments);
 
-    console.log('✅ Entry payment created:', entradaParcela.id);
+    console.log('✅ [ReceivablesService] Entry payment created and saved to localStorage:', entradaParcela.id);
+    console.log('🏦 [ReceivablesService] ========== ENTRADA PAGO END ==========');
     return entradaParcela;
   }
 
