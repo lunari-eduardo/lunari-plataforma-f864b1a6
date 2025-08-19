@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useNovoFinancas } from './useNovoFinancas';
 import { FinancialEngine } from '@/services/FinancialEngine';
+import { formatToDayMonth } from '@/utils/dateUtils';
 
 interface CriticalFinancialItem {
   id: string;
@@ -144,8 +145,7 @@ export function useFinancialDashboardData() {
   };
 
   const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr + 'T00:00:00');
-    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    return formatToDayMonth(dateStr);
   };
 
   const getUrgencyColor = (urgency: 'today' | 'tomorrow' | 'soon') => {

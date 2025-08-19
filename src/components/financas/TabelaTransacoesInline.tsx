@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { TransacaoFinanceira, CategoriaFinanceira, StatusParcela, ConfiguracaoParcelamento } from "@/types/financas";
 import { formatCurrency } from "@/utils/financialUtils";
+import { formatDateForDisplay } from "@/utils/dateUtils";
 import { Plus, Trash2, Edit3, Check, X, Calendar, DollarSign } from "lucide-react";
 import ConfiguradorParcelamento from "./ConfiguradorParcelamento";
 import ComboboxDescricao from "./ComboboxDescricao";
@@ -148,7 +149,7 @@ export default function TabelaTransacoesInline({
   };
 
   // Ordenar transações por data (mais antigas primeiro)
-  const transacoesOrdenadas = [...transacoes].sort((a, b) => new Date(a.data + 'T00:00:00Z').getTime() - new Date(b.data + 'T00:00:00Z').getTime());
+  const transacoesOrdenadas = [...transacoes].sort((a, b) => a.data.localeCompare(b.data));
 
   return (
     <div className="space-y-4">
@@ -303,7 +304,7 @@ export default function TabelaTransacoesInline({
                         className="w-32 h-8 text-sm"
                       />
                     ) : (
-                      <span className="text-sm">{new Date(transacao.data + 'T00:00:00Z').toLocaleDateString('pt-BR')}</span>
+                      <span className="text-sm">{formatDateForDisplay(transacao.data)}</span>
                     )}
                   </TableCell>
                   <TableCell className="p-3">
