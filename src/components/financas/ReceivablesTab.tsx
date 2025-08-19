@@ -261,30 +261,34 @@ export default function ReceivablesTab() {
                       ID: {installment.paymentPlanId.slice(-8)}
                     </div>
                   </TableCell>
-                   <TableCell>
-                     <div>
-                       <div className="font-medium">
-                         {installment.numeroParcela === 0 
-                           ? (installment.observacoes === 'Entrada do agendamento' ? 'Entrada' : 'Pagamento')
-                           : `Parcela ${installment.numeroParcela}/${paymentPlans.find(p => p.id === installment.paymentPlanId)?.numeroParcelas || 1}`}
-                       </div>
-                       <div className="text-sm text-muted-foreground">
-                         Plano: {paymentPlans.find(p => p.id === installment.paymentPlanId)?.formaPagamento === 'avista' ? 'À vista' : `${paymentPlans.find(p => p.id === installment.paymentPlanId)?.numeroParcelas}x`}
-                       </div>
-                     </div>
-                   </TableCell>
+                  <TableCell>
+                    <div className="font-medium">
+                      {installment.numeroParcela === 0 ? (
+                        installment.observacoes === 'Entrada do agendamento' ? 'Entrada' :
+                        installment.observacoes === 'Pagamento rápido' ? 'Pagamento' :
+                        'Pagamento'
+                      ) : (
+                        `Parcela ${installment.numeroParcela}`
+                      )}
+                    </div>
+                    {installment.observacoes && installment.numeroParcela > 0 && (
+                      <div className="text-sm text-lunar-textSecondary">
+                        {installment.observacoes}
+                      </div>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <div className="font-semibold">
                       {formatCurrency(installment.valor)}
                     </div>
                   </TableCell>
                   <TableCell>
-                     <div className="flex items-center gap-2">
-                       <span>
-                         {convertISODateToBR(installment.dataVencimento)}
-                       </span>
-                       {getUrgencyBadge(installment.dataVencimento)}
-                     </div>
+                    <div className="flex items-center gap-2">
+                      <span>
+                        {convertISODateToBR(installment.dataVencimento)}
+                      </span>
+                      {getUrgencyBadge(installment.dataVencimento)}
+                    </div>
                   </TableCell>
                   <TableCell>
                     {getStatusBadge(installment.status)}

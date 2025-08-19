@@ -1081,33 +1081,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             agendamentoId: item.id
           });
           
-          // **MIGRATION LOGIC**: Migrate entry payment from appointment ID to session ID
+          // Integrar entrada de agendamento com recebíveis
           if (item.valorPago > 0 && item.clienteId) {
-            try {
-              // Migrate existing entry payment from appointment ID to project session ID
-              ReceivablesService.migrateSessionReceivables(
-                `appointment-${item.id.replace('agenda-', '')}`, // From appointment ID
-                novoProjeto.projectId, // To session ID
-                item.clienteId
-              );
-              
-              console.log('✅ Entry payment migrated from appointment to session:', {
-                from: `appointment-${item.id.replace('agenda-', '')}`,
-                to: novoProjeto.projectId,
-                clienteId: item.clienteId,
-                valor: item.valorPago
-              });
-            } catch (error) {
-              console.error('❌ Error migrating entry payment to session:', error);
-              
-              // Fallback: Create new entry payment if migration fails
-              ReceivablesService.addEntradaPago(
-                novoProjeto.projectId,
-                item.clienteId,
-                item.valorPago,
-                getCurrentDateString()
-              );
-            }
+            // Add entry payment immediately when creating appointment
+            ReceivablesService.addEntradaPago(
+              novoProjeto.projectId,
+              item.clienteId!,
+              item.valorPago,
+              getCurrentDateString()
+            );
           }
         });
       }, 0);
@@ -1720,26 +1702,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: Date.now().toString(),
       clienteId: appointment.clienteId, // Preservar clienteId
     };
-
-    // **IMMEDIATE ENTRY RECORDING**: Record entry payment immediately when valorPago > 0
-    if ((appointment as any).paidAmount > 0 && appointment.clienteId) {
-      try {
-        ReceivablesService.addEntradaPago(
-          `appointment-${newAppointment.id}`, // Use appointment ID as temporary sessionId
-          appointment.clienteId,
-          (appointment as any).paidAmount,
-          getCurrentDateString()
-        );
-        
-        console.log('✅ Entry payment recorded immediately for appointment:', {
-          appointmentId: newAppointment.id,
-          clienteId: appointment.clienteId,
-          valor: (appointment as any).paidAmount
-        });
-      } catch (error) {
-        console.error('❌ Error recording immediate entry payment:', error);
-      }
-    }
     
     // Inserir appointment em ordem cronológica crescente
     setAppointments(prev => {

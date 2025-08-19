@@ -69,7 +69,7 @@ export function useClientReceivables() {
       criadoEm: new Date().toISOString()
     };
 
-    // **PRESERVE EXISTING PAYMENTS**: Don't create a single generic entry payment when there's valorJaPago
+    // Don't create a single generic entry payment when there's valorJaPago
     // Instead, keep existing payments (entries + quick payments) and create only future installments
     const novasParcelas: PaymentInstallment[] = [];
 

@@ -82,7 +82,7 @@ export class ReceivablesService {
       plan = this.upsertPlan(sessionId, clienteId, valor, 'avista', 1, 10);
     }
 
-    // **ROBUST NON-DUPLICATION**: Check if appointment entry payment already exists to prevent duplication
+    // Check if appointment entry payment already exists to prevent duplication
     const existingEntrada = installments.find(i => 
       i.paymentPlanId === plan.id && 
       i.numeroParcela === 0 && 
@@ -91,7 +91,6 @@ export class ReceivablesService {
     );
 
     if (existingEntrada) {
-      console.log('⚠️ Entry payment already exists, skipping duplication:', existingEntrada.id);
       return existingEntrada;
     }
 
@@ -109,41 +108,7 @@ export class ReceivablesService {
     const updatedInstallments = [...installments, entradaParcela];
     this.saveInstallments(updatedInstallments);
 
-    console.log('✅ Entry payment created:', entradaParcela.id);
     return entradaParcela;
-  }
-
-  static migrateSessionReceivables(
-    fromSessionId: string,
-    toSessionId: string,
-    clienteId: string
-  ): void {
-    const plans = this.loadPaymentPlans();
-    const installments = this.loadInstallments();
-
-    // Find existing plan with fromSessionId
-    const existingPlan = plans.find(p => p.sessionId === fromSessionId);
-    if (!existingPlan) {
-      console.log('⚠️ No existing plan found for migration:', fromSessionId);
-      return;
-    }
-
-    // Check if target session already has a plan to prevent duplication
-    const targetPlan = plans.find(p => p.sessionId === toSessionId);
-    if (targetPlan) {
-      console.log('⚠️ Target session already has plan, skipping migration:', toSessionId);
-      return;
-    }
-
-    // Update plan sessionId
-    const updatedPlans = plans.map(plan => 
-      plan.id === existingPlan.id 
-        ? { ...plan, sessionId: toSessionId }
-        : plan
-    );
-
-    this.savePaymentPlans(updatedPlans);
-    console.log('✅ Payment plan migrated:', { from: fromSessionId, to: toSessionId });
   }
 
   static addPagamentoRapido(
