@@ -43,15 +43,28 @@ export function useClientReceivables() {
     numeroParcelas: number = 1,
     diaVencimento: number = 10
   ) => {
-    // Remover plano existente se houver
+    console.log(`🔄 Atualizando plano de pagamento - SessionId: ${sessionId}, Valor já pago: ${valorJaPago}`);
+    
+    // Buscar parcelas pagas EXISTENTES para este sessionId (para preservar)
+    const planoAtual = paymentPlans.find(plan => plan.sessionId === sessionId);
+    const parcelasJaPagas = planoAtual ? installments.filter(installment => 
+      installment.paymentPlanId === planoAtual.id && installment.status === 'pago'
+    ) : [];
+    
+    console.log(`📋 Parcelas já pagas encontradas: ${parcelasJaPagas.length}`);
+    
+    // Calcular valor já pago real a partir das parcelas existentes
+    const valorRealmentePago = parcelasJaPagas.reduce((total, parcela) => total + parcela.valor, 0);
+    
+    // Remover plano existente se houver, mas preservar parcelas pagas
     const planosExistentes = paymentPlans.filter(plan => plan.sessionId !== sessionId);
-    const parcelasExistentes = installments.filter(installment => {
+    const parcelasNaoPagas = installments.filter(installment => {
       const planoDaParcela = paymentPlans.find(plan => plan.id === installment.paymentPlanId);
-      return planoDaParcela?.sessionId !== sessionId;
+      return planoDaParcela?.sessionId !== sessionId || installment.status === 'pago';
     });
 
     const planId = `plan-${Date.now()}`;
-    const valorRestante = Math.max(0, valorTotalNegociado - valorJaPago);
+    const valorRestante = Math.max(0, valorTotalNegociado - valorRealmentePago);
     const valorParcela = formaPagamento === 'avista' ? valorRestante : valorRestante / numeroParcelas;
     
     const novoPlan: ClientPaymentPlan = {
@@ -67,21 +80,33 @@ export function useClientReceivables() {
       criadoEm: new Date().toISOString()
     };
 
-    // Gerar parcela de entrada se houver valor já pago
-    const novasParcelas: PaymentInstallment[] = [];
-    if (valorJaPago > 0) {
-        const parcelaEntrada: PaymentInstallment = {
-        id: `installment-${planId}-entrada`,
+    // Atualizar parcelas pagas existentes para o novo plano ID
+    const parcelasJaPagasAtualizadas = parcelasJaPagas.map(parcela => ({
+      ...parcela,
+      paymentPlanId: planId
+    }));
+
+    console.log(`💰 Parcelas pagas preservadas: ${parcelasJaPagasAtualizadas.length}`);
+
+    // Verificar se há diferença entre valorJaPago informado e valor realmente pago
+    if (valorJaPago > valorRealmentePago) {
+      const diferencaValor = valorJaPago - valorRealmentePago;
+      console.log(`➕ Criando nova entrada de ${diferencaValor} (diferença entre informado ${valorJaPago} e real ${valorRealmentePago})`);
+      
+      const parcelaEntradaAdicional: PaymentInstallment = {
+        id: `installment-${planId}-entrada-${Date.now()}`,
         paymentPlanId: planId,
         numeroParcela: 0, // Entrada
-        valor: valorJaPago,
+        valor: diferencaValor,
         dataVencimento: getCurrentDateString(),
         status: 'pago',
         dataPagamento: getCurrentDateString(),
-        observacoes: 'Pagamento já realizado (entrada/pagamento rápido)'
+        observacoes: 'Pagamento adicional de entrada'
       };
-      novasParcelas.push(parcelaEntrada);
+      parcelasJaPagasAtualizadas.push(parcelaEntradaAdicional);
     }
+
+    const novasParcelas: PaymentInstallment[] = [...parcelasJaPagasAtualizadas];
 
     // Gerar parcelas futuras apenas se houver valor restante
     if (valorRestante > 0) {
@@ -115,7 +140,7 @@ export function useClientReceivables() {
 
     // Salvar no localStorage
     const novosPlanos = [...planosExistentes, novoPlan];
-    const novasInstallments = [...parcelasExistentes, ...novasParcelas];
+    const novasInstallments = [...parcelasNaoPagas, ...novasParcelas];
     
     savePaymentPlans(novosPlanos);
     saveInstallments(novasInstallments);
