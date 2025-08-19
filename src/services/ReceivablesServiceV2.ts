@@ -31,24 +31,23 @@ export class ReceivablesServiceV2 {
     sessionId: string,
     clienteId: string,
     valorTotal: number,
-    valorJaPago: number,
+    valorEntrada: number,
     formaPagamento: 'avista' | 'parcelado',
     numeroParcelas: number,
-    diaVencimento: number,
+    dataPrimeiroPagamento: string,
     observacoes?: string
   ): { plan: ClientPaymentPlan; newInstallments: PaymentInstallment[] } {
-    console.log(`🔄 [V2] Criando agendamento de pagamento - Session: ${sessionId}, Total: ${valorTotal}, Já Pago: ${valorJaPago}`);
+    console.log(`🔄 [V2] Criando agendamento de pagamento - Session: ${sessionId}, Total: ${valorTotal}, Entrada: ${valorEntrada}`);
     
     const plans = this.loadPaymentPlans();
     const installments = this.loadInstallments();
     
-    // 1. Preservar APENAS parcelas PAGAS da sessão
-    const existingPaidInstallments = this.getPaidInstallmentsForSession(sessionId);
-    console.log(`💰 [V2] Parcelas pagas encontradas: ${existingPaidInstallments.length}`);
+    // 1. Separar tipos de pagamentos existentes
+    const existingInstallments = this.getInstallmentsForSession(sessionId);
+    const existingEntradas = existingInstallments.filter(i => i.numeroParcela === -1 && i.status === 'pago'); // Entradas
+    const existingQuickPayments = existingInstallments.filter(i => i.numeroParcela === 0 && i.status === 'pago'); // Pagamentos rápidos
     
-    // 2. Calcular valor real pago (soma das parcelas pagas)
-    const valorRealmentePago = existingPaidInstallments.reduce((total, p) => total + p.valor, 0);
-    console.log(`💰 [V2] Valor realmente pago: ${valorRealmentePago}`);
+    console.log(`💰 [V2] Entradas: ${existingEntradas.length}, Pagamentos rápidos: ${existingQuickPayments.length}`);
     
     // 3. Remover TODOS os dados da sessão (vamos recriar)
     const cleanPlans = plans.filter(p => p.sessionId !== sessionId);
@@ -57,9 +56,10 @@ export class ReceivablesServiceV2 {
       return plan?.sessionId !== sessionId;
     });
     
-    // 4. Criar novo plano
+    // 4. Criar novo plano (valor restante = total - apenas entradas)
     const planId = `plan-v2-${sessionId}-${Date.now()}`;
-    const valorRestante = Math.max(0, valorTotal - valorRealmentePago);
+    const valorTotalEntradas = existingEntradas.reduce((total, e) => total + e.valor, 0) + valorEntrada;
+    const valorRestante = Math.max(0, valorTotal - valorTotalEntradas);
     const valorParcela = valorRestante > 0 ? 
       (formaPagamento === 'avista' ? valorRestante : valorRestante / numeroParcelas) : 0;
     
@@ -71,53 +71,47 @@ export class ReceivablesServiceV2 {
       formaPagamento,
       numeroParcelas: formaPagamento === 'avista' ? 1 : numeroParcelas,
       valorParcela,
-      diaVencimento,
+      diaVencimento: new Date(dataPrimeiroPagamento).getDate(),
       status: valorRestante <= 0 ? 'quitado' : 'ativo',
       observacoes,
       criadoEm: new Date().toISOString()
     };
     
-    // 5. Re-anexar parcelas pagas existentes ao novo plano
-    const reattachedPaidInstallments = existingPaidInstallments.map(p => ({
+    // 5. Re-anexar pagamentos existentes ao novo plano
+    const reattachedInstallments = [...existingEntradas, ...existingQuickPayments].map(p => ({
       ...p,
       paymentPlanId: planId
     }));
     
-    console.log(`🔗 [V2] Re-anexando ${reattachedPaidInstallments.length} parcelas pagas ao plano ${planId}`);
+    console.log(`🔗 [V2] Re-anexando ${reattachedInstallments.length} pagamentos ao plano ${planId}`);
     
-    // 6. Criar diferença como entrada adicional se necessário
-    if (valorJaPago > valorRealmentePago) {
-      const diferenca = valorJaPago - valorRealmentePago;
-      console.log(`➕ [V2] Criando entrada adicional de ${diferenca}`);
+    // 6. Criar entrada se informada
+    if (valorEntrada > 0) {
+      console.log(`➕ [V2] Criando entrada de ${valorEntrada}`);
       
-      const entradaAdicional: PaymentInstallment = {
+      const entrada: PaymentInstallment = {
         id: `installment-v2-${planId}-entrada-${Date.now()}`,
         paymentPlanId: planId,
-        numeroParcela: 0,
-        valor: diferenca,
+        numeroParcela: -1, // Entrada
+        valor: valorEntrada,
         dataVencimento: getCurrentDateString(),
         status: 'pago',
         dataPagamento: getCurrentDateString(),
-        observacoes: 'Entrada adicional via modal de configuração'
+        observacoes: 'Entrada via agendamento de pagamento'
       };
       
-      reattachedPaidInstallments.push(entradaAdicional);
+      reattachedInstallments.push(entrada);
     }
     
     // 7. Criar novas parcelas pendentes (APENAS se há valor restante)
     const newPendingInstallments: PaymentInstallment[] = [];
     
     if (valorRestante > 0) {
-      const hoje = new Date();
+      const dataPrimeiro = new Date(dataPrimeiroPagamento);
       const parcelas = formaPagamento === 'avista' ? 1 : numeroParcelas;
       
       for (let i = 1; i <= parcelas; i++) {
-        let dataVencimento = new Date(hoje.getFullYear(), hoje.getMonth(), diaVencimento);
-        
-        if (dataVencimento <= hoje) {
-          dataVencimento = new Date(hoje.getFullYear(), hoje.getMonth() + 1, diaVencimento);
-        }
-        
+        const dataVencimento = new Date(dataPrimeiro);
         dataVencimento.setMonth(dataVencimento.getMonth() + (i - 1));
         
         const parcela: PaymentInstallment = {
@@ -127,7 +121,7 @@ export class ReceivablesServiceV2 {
           valor: valorParcela,
           dataVencimento: formatDateForStorage(dataVencimento),
           status: 'pendente',
-          observacoes: 'Agendado via modal de configuração'
+          observacoes: formaPagamento === 'avista' ? 'Agendamento à vista' : `Parcela ${i} agendada`
         };
         
         newPendingInstallments.push(parcela);
@@ -135,7 +129,7 @@ export class ReceivablesServiceV2 {
     }
     
     // 8. Salvar tudo
-    const allNewInstallments = [...reattachedPaidInstallments, ...newPendingInstallments];
+    const allNewInstallments = [...reattachedInstallments, ...newPendingInstallments];
     const finalPlans = [...cleanPlans, newPlan];
     const finalInstallments = [...cleanInstallments, ...allNewInstallments];
     
@@ -151,21 +145,23 @@ export class ReceivablesServiceV2 {
   }
 
   // Utility functions
-  static getPaidInstallmentsForSession(sessionId: string): PaymentInstallment[] {
+  static getInstallmentsForSession(sessionId: string): PaymentInstallment[] {
     const plans = this.loadPaymentPlans();
     const installments = this.loadInstallments();
     
     const sessionPlans = plans.filter(p => p.sessionId === sessionId);
-    const paidInstallments: PaymentInstallment[] = [];
+    const sessionInstallments: PaymentInstallment[] = [];
     
     sessionPlans.forEach(plan => {
-      const planInstallments = installments.filter(i => 
-        i.paymentPlanId === plan.id && i.status === 'pago'
-      );
-      paidInstallments.push(...planInstallments);
+      const planInstallments = installments.filter(i => i.paymentPlanId === plan.id);
+      sessionInstallments.push(...planInstallments);
     });
     
-    return paidInstallments;
+    return sessionInstallments;
+  }
+  
+  static getPaidInstallmentsForSession(sessionId: string): PaymentInstallment[] {
+    return this.getInstallmentsForSession(sessionId).filter(i => i.status === 'pago');
   }
   
   static getTotalPaidForSession(sessionId: string): number {
@@ -238,16 +234,16 @@ export class ReceivablesServiceV2 {
     }
     
     // Criar parcela paga
-    const quickPayment: PaymentInstallment = {
-      id: `installment-v2-quick-${plan.id}-${Date.now()}`,
-      paymentPlanId: plan.id,
-      numeroParcela: 0, // Pagamento avulso
-      valor,
-      dataVencimento: getCurrentDateString(),
-      status: 'pago',
-      dataPagamento: getCurrentDateString(),
-      observacoes: 'Pagamento rápido via workflow'
-    };
+      const quickPayment: PaymentInstallment = {
+        id: `installment-v2-quick-${plan.id}-${Date.now()}`,
+        paymentPlanId: plan.id,
+        numeroParcela: 0, // Pagamento à vista (workflow)
+        valor,
+        dataVencimento: getCurrentDateString(),
+        status: 'pago',
+        dataPagamento: getCurrentDateString(),
+        observacoes: 'Pagamento à vista via workflow'
+      };
     
     const updatedInstallments = [...installments, quickPayment];
     this.saveInstallments(updatedInstallments);

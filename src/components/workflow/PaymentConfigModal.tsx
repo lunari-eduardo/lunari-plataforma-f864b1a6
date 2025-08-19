@@ -6,10 +6,14 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, CreditCard, DollarSign, Clock, CheckCircle } from 'lucide-react';
+import { Calendar, CreditCard, DollarSign, CalendarIcon, CheckCircle } from 'lucide-react';
 import { formatCurrency } from '@/utils/financialUtils';
 import { useClientReceivables } from '@/hooks/useClientReceivables';
-import { formatDateForDisplay } from '@/utils/dateUtils';
+import { formatDateForDisplay, getCurrentDateString } from '@/utils/dateUtils';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
 interface PaymentConfigModalProps {
   isOpen: boolean;
@@ -30,10 +34,10 @@ export function PaymentConfigModal({
   valorJaPago,
   clienteNome
 }: PaymentConfigModalProps) {
-  const [valorRestanteCalculado] = useState(Math.max(0, valorTotal - valorJaPago));
+  const [valorEntrada, setValorEntrada] = useState(valorJaPago);
   const [formaPagamento, setFormaPagamento] = useState<'avista' | 'parcelado'>('avista');
   const [numeroParcelas, setNumeroParcelas] = useState(2);
-  const [diaVencimento, setDiaVencimento] = useState('');
+  const [dataPrimeiroPagamento, setDataPrimeiroPagamento] = useState<Date>();
   const [observacoes, setObservacoes] = useState('');
   const [loading, setLoading] = useState(false);
   const [existingPlan, setExistingPlan] = useState<any>(null);
@@ -47,28 +51,41 @@ export function PaymentConfigModal({
     obterInfoAgendamento
   } = useClientReceivables();
 
+  // Calcular valores restantes (apenas considerando entradas -1)
+  const getValuesDiff = () => {
+    const agendamentoInfo = obterInfoAgendamento(sessionId);
+    let valorTotalEntradas = 0;
+    
+    if (agendamentoInfo) {
+      // Somar apenas entradas (numeroParcela === -1)
+      valorTotalEntradas = agendamentoInfo.installments
+        .filter(i => i.numeroParcela === -1 && i.status === 'pago')
+        .reduce((total, i) => total + i.valor, 0);
+    }
+    
+    return {
+      valorTotalEntradas,
+      valorRestante: Math.max(0, valorTotal - valorTotalEntradas - valorEntrada)
+    };
+  };
+
+  const { valorTotalEntradas, valorRestante } = getValuesDiff();
+
   // Função para calcular datas de vencimento
-  const calculateDueDates = (day: number, parcelas: number) => {
+  const calculateDueDates = (startDate: Date, parcelas: number) => {
     const dates: string[] = [];
-    const currentDate = new Date();
     
     for (let i = 0; i < parcelas; i++) {
-      const dueDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + i + 1, day);
+      const dueDate = new Date(startDate);
+      dueDate.setMonth(dueDate.getMonth() + i);
       dates.push(formatDateForDisplay(dueDate.toISOString().split('T')[0]));
     }
     
     return dates;
   };
 
-  // Função para calcular próxima data de vencimento
-  const getNextDueDate = (day: number) => {
-    const currentDate = new Date();
-    const nextMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, day);
-    return formatDateForDisplay(nextMonth.toISOString().split('T')[0]);
-  };
-
   // Validação se pode salvar
-  const canSave = diaVencimento !== '' && parseInt(diaVencimento) >= 1 && parseInt(diaVencimento) <= 31;
+  const canSave = dataPrimeiroPagamento !== undefined;
 
   // Carregar informações do agendamento existente
   useEffect(() => {
@@ -79,7 +96,7 @@ export function PaymentConfigModal({
         setExistingPlan(agendamentoInfo.plan);
         setFormaPagamento(agendamentoInfo.plan.formaPagamento);
         setNumeroParcelas(agendamentoInfo.plan.numeroParcelas);
-        setDiaVencimento(agendamentoInfo.plan.diaVencimento.toString());
+        setDataPrimeiroPagamento(new Date());
         setObservacoes(agendamentoInfo.plan.observacoes || '');
         setInstallments(agendamentoInfo.installments);
       } else {
@@ -87,34 +104,35 @@ export function PaymentConfigModal({
         setExistingPlan(null);
         setFormaPagamento('avista');
         setNumeroParcelas(2);
-        setDiaVencimento('');
+        setDataPrimeiroPagamento(undefined);
         setObservacoes('');
         setInstallments([]);
       }
+      
+      // Valor entrada sempre inicia com valorJaPago
+      setValorEntrada(valorJaPago);
     }
-  }, [isOpen, sessionId, obterInfoAgendamento]);
+  }, [isOpen, sessionId, obterInfoAgendamento, valorJaPago]);
 
   const valorTotalNegociado = valorTotal;
-  const valorParcela = formaPagamento === 'avista' ? valorRestanteCalculado : valorRestanteCalculado / numeroParcelas;
+  const valorParcela = formaPagamento === 'avista' ? valorRestante : valorRestante / numeroParcelas;
 
   const handleSave = async () => {
     if (!canSave) return;
     
     setLoading(true);
     try {
-      // V2: Agendar pagamentos apenas do valor restante
+      // V2: Agendar pagamentos com entrada e data
       await criarOuAtualizarPlanoPagamento(
         sessionId,
         clienteId,
         valorTotalNegociado, // Total da sessão
-        valorJaPago, // Valor já pago
+        valorEntrada, // Entrada informada
         formaPagamento,
         formaPagamento === 'avista' ? 1 : numeroParcelas,
-        parseInt(diaVencimento),
+        dataPrimeiroPagamento!.toISOString().split('T')[0], // Data do primeiro pagamento
         observacoes
       );
-      
-      // Dispatch evento já é feito pelo hook
       
       onClose();
     } catch (error) {
@@ -147,16 +165,18 @@ export function PaymentConfigModal({
               </div>
               
               <div className="space-y-2">
-                {installments.map((installment, index) => (
+                 {installments.map((installment, index) => (
                   <div key={installment.id} className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2">
                       {installment.status === 'pago' ? (
                         <CheckCircle className="h-3 w-3 text-green-600" />
                       ) : (
-                        <Clock className="h-3 w-3 text-orange-600" />
+                        <Calendar className="h-3 w-3 text-orange-600" />
                       )}
                       <span className="text-lunar-textSecondary">
-                        {installment.numeroParcela === 0 ? 'Entrada' : `Parcela ${installment.numeroParcela}`}
+                        {installment.numeroParcela === -1 ? 'Entrada' : 
+                         installment.numeroParcela === 0 ? 'À Vista' : 
+                         `Parcela ${installment.numeroParcela}`}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -180,17 +200,30 @@ export function PaymentConfigModal({
               <span className="text-lg font-bold text-primary">{formatCurrency(valorTotalNegociado)}</span>
             </div>
             
-            {valorJaPago > 0 && (
+            {valorTotalEntradas > 0 && (
               <div className="flex items-center justify-between">
-                <span className="text-sm text-lunar-textSecondary">Já Pago:</span>
-                <span className="font-medium text-green-600">- {formatCurrency(valorJaPago)}</span>
+                <span className="text-sm text-lunar-textSecondary">Entradas Anteriores:</span>
+                <span className="font-medium text-green-600">- {formatCurrency(valorTotalEntradas)}</span>
               </div>
             )}
             
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-lunar-textSecondary">Entrada (Este Agendamento):</span>
+              <Input
+                type="number"
+                value={valorEntrada}
+                onChange={(e) => setValorEntrada(parseFloat(e.target.value) || 0)}
+                className="w-32 text-right bg-background border-border text-lunar-text"
+                min="0"
+                max={valorTotal - valorTotalEntradas}
+                step="0.01"
+              />
+            </div>
+            
             <div className="flex items-center justify-between border-t pt-2">
-              <span className="text-sm font-medium text-lunar-text">Restante a Pagar:</span>
+              <span className="text-sm font-medium text-lunar-text">Restante a Agendar:</span>
               <span className="text-lg font-bold text-primary">
-                {formatCurrency(valorRestanteCalculado)}
+                {formatCurrency(valorRestante)}
               </span>
             </div>
           </div>
@@ -233,25 +266,38 @@ export function PaymentConfigModal({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="diaVencimento" className="text-sm font-medium text-lunar-text">
-                    Dia do Vencimento*
+                  <Label htmlFor="dataPrimeiro" className="text-sm font-medium text-lunar-text">
+                    Data do Primeiro Pagamento*
                   </Label>
-                  <Input
-                    id="diaVencimento"
-                    type="number"
-                    value={diaVencimento}
-                    onChange={(e) => setDiaVencimento(e.target.value)}
-                    placeholder="Ex: 15"
-                    className={`bg-background border-border text-lunar-text ${!canSave && diaVencimento !== '' ? 'border-red-500' : ''}`}
-                  />
-                  {!canSave && diaVencimento !== '' && (
-                    <p className="text-xs text-red-500">Dia deve ser entre 1 e 31</p>
-                  )}
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal bg-background border-border text-lunar-text",
+                          !dataPrimeiroPagamento && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {dataPrimeiroPagamento ? format(dataPrimeiroPagamento, "dd/MM/yyyy") : <span>Selecionar data</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={dataPrimeiroPagamento}
+                        onSelect={setDataPrimeiroPagamento}
+                        disabled={(date) => date < new Date()}
+                        initialFocus
+                        className="p-3 pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
 
-              {/* Preview das Parcelas - Melhorado */}
-              {canSave && (
+              {/* Preview das Parcelas */}
+              {canSave && valorRestante > 0 && (
                 <div className="bg-background border border-border rounded-lg p-3">
                   <div className="flex items-center gap-2 mb-2">
                     <DollarSign className="h-4 w-4 text-primary" />
@@ -265,7 +311,7 @@ export function PaymentConfigModal({
                   <div className="space-y-1">
                     <div className="text-xs text-lunar-textSecondary">Datas de vencimento:</div>
                     <div className="text-xs text-lunar-text">
-                      {calculateDueDates(parseInt(diaVencimento), numeroParcelas).join(', ')}
+                      {dataPrimeiroPagamento && calculateDueDates(dataPrimeiroPagamento, numeroParcelas).join(', ')}
                     </div>
                   </div>
                 </div>
@@ -273,42 +319,55 @@ export function PaymentConfigModal({
             </div>
           )}
 
-          {/* À Vista - Melhorado */}
+          {/* À Vista */}
           {formaPagamento === 'avista' && (
             <div className="space-y-3 bg-card/50 border border-border rounded-lg p-4">
               <div className="space-y-2">
-                <Label htmlFor="diaVencimentoAvista" className="text-sm font-medium text-lunar-text">
-                  Dia do Vencimento*
+                <Label htmlFor="dataVencimentoAvista" className="text-sm font-medium text-lunar-text">
+                  Data do Pagamento*
                 </Label>
-                <Input
-                  id="diaVencimentoAvista"
-                  type="number"
-                  value={diaVencimento}
-                  onChange={(e) => setDiaVencimento(e.target.value)}
-                  placeholder="Ex: 15"
-                  className={`bg-background border-border text-lunar-text ${!canSave && diaVencimento !== '' ? 'border-red-500' : ''}`}
-                />
-                {!canSave && diaVencimento !== '' && (
-                  <p className="text-xs text-red-500">Dia deve ser entre 1 e 31</p>
-                )}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal bg-background border-border text-lunar-text",
+                        !dataPrimeiroPagamento && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dataPrimeiroPagamento ? format(dataPrimeiroPagamento, "dd/MM/yyyy") : <span>Selecionar data</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={dataPrimeiroPagamento}
+                      onSelect={setDataPrimeiroPagamento}
+                      disabled={(date) => date < new Date()}
+                      initialFocus
+                      className="p-3 pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
               
-              {/* Preview de À Vista - Simplificado */}
-              {canSave && (
+              {/* Preview de À Vista */}
+              {canSave && valorRestante > 0 && (
                 <div className="bg-background border border-border rounded-lg p-3">
                   <div className="flex items-center gap-2 mb-2">
                     <Calendar className="h-4 w-4 text-primary" />
                     <span className="text-sm font-medium text-lunar-text">Cobrança</span>
                   </div>
                   <div className="text-lg font-semibold text-primary mb-2">
-                    {formatCurrency(valorRestanteCalculado)}
+                    {formatCurrency(valorRestante)}
                   </div>
                   
                   {/* Data específica */}
                   <div className="space-y-1">
                     <div className="text-xs text-lunar-textSecondary">Data de vencimento:</div>
                     <div className="text-xs text-lunar-text">
-                      {getNextDueDate(parseInt(diaVencimento))}
+                      {dataPrimeiroPagamento && formatDateForDisplay(dataPrimeiroPagamento.toISOString().split('T')[0])}
                     </div>
                   </div>
                 </div>

@@ -44,23 +44,23 @@ export function useClientReceivables() {
   const criarOuAtualizarPlanoPagamento = useCallback(async (
     sessionId: string,
     clienteId: string,
-    valorTotalNegociado: number,
-    valorJaPago: number,
+    valorTotal: number,
+    valorEntrada: number,
     formaPagamento: 'avista' | 'parcelado',
-    numeroParcelas: number = 1,
-    diaVencimento: number = 10,
+    numeroParcelas: number,
+    dataPrimeiroPagamento: string,
     observacoes?: string
   ) => {
-    console.log(`🔄 [V2] Configurando agendamento - Session: ${sessionId}, Total: ${valorTotalNegociado}, Informado pago: ${valorJaPago}`);
+    console.log(`🔄 [V2] Configurando agendamento - Session: ${sessionId}, Total: ${valorTotal}, Entrada: ${valorEntrada}`);
     
     const result = ReceivablesServiceV2.createOrUpdatePaymentSchedule(
       sessionId,
       clienteId,
-      valorTotalNegociado,
-      valorJaPago,
+      valorTotal,
+      valorEntrada,
       formaPagamento,
       numeroParcelas,
-      diaVencimento,
+      dataPrimeiroPagamento,
       observacoes
     );
     
@@ -68,7 +68,7 @@ export function useClientReceivables() {
     setPaymentPlans(ReceivablesServiceV2.loadPaymentPlans());
     setInstallments(ReceivablesServiceV2.loadInstallments());
 
-    const valorRestante = Math.max(0, valorTotalNegociado - ReceivablesServiceV2.getTotalPaidForSession(sessionId));
+    const valorRestante = Math.max(0, valorTotal - ReceivablesServiceV2.getTotalPaidForSession(sessionId));
     const descricao = valorRestante > 0
       ? `${formaPagamento === 'avista' ? '1x' : `${numeroParcelas}x`} de ${formatCurrency(result.plan.valorParcela)} agendado`
       : 'Totalmente quitado';
@@ -83,7 +83,7 @@ export function useClientReceivables() {
       detail: {
         sessionId,
         clienteId,
-        valorTotal: valorTotalNegociado,
+        valorTotal: valorTotal,
         formaPagamento,
         numeroParcelas
       }
