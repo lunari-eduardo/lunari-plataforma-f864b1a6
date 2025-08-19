@@ -5,7 +5,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { CreditCard, Calendar, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
 import { useClientReceivables } from '@/hooks/useClientReceivables';
 import { formatCurrency } from '@/utils/financialUtils';
-import { getCurrentDateString, formatDateForDisplay } from '@/utils/dateUtils';
 import { PaymentInstallment } from '@/types/receivables';
 
 interface ClientPaymentHistoryProps {
@@ -24,7 +23,7 @@ export function ClientPaymentHistory({ clienteId, clienteNome }: ClientPaymentHi
     }))
   );
 
-  const hoje = getCurrentDateString();
+  const hoje = new Date().toISOString().split('T')[0];
   const parcelasEmAtraso = todasParcelas.filter(p => p.status === 'pendente' && p.dataVencimento < hoje);
   const parcelasPendentes = todasParcelas.filter(p => p.status === 'pendente');
   const parcelasPagas = todasParcelas.filter(p => p.status === 'pago');
@@ -182,7 +181,7 @@ export function ClientPaymentHistory({ clienteId, clienteNome }: ClientPaymentHi
                       Parcela {parcela.numeroParcela} - Plano {parcela.plano.formaPagamento}
                     </div>
                     <div className="text-sm text-red-600">
-                      Venceu em {formatDateForDisplay(parcela.dataVencimento)}
+                      Venceu em {new Date(parcela.dataVencimento).toLocaleDateString('pt-BR')}
                     </div>
                     <div className="text-lg font-bold text-red-600">
                       {formatCurrency(parcela.valor)}
@@ -242,7 +241,7 @@ export function ClientPaymentHistory({ clienteId, clienteNome }: ClientPaymentHi
                     <div className="flex items-center gap-1">
                       <Calendar className="h-4 w-4 text-lunar-textSecondary" />
                       <span>
-                        {formatDateForDisplay(parcela.dataVencimento)}
+                        {new Date(parcela.dataVencimento).toLocaleDateString('pt-BR')}
                       </span>
                     </div>
                   </TableCell>
@@ -261,7 +260,7 @@ export function ClientPaymentHistory({ clienteId, clienteNome }: ClientPaymentHi
                     )}
                     {parcela.status === 'pago' && parcela.dataPagamento && (
                       <div className="text-sm text-green-600">
-                        Pago em {formatDateForDisplay(parcela.dataPagamento)}
+                        Pago em {new Date(parcela.dataPagamento).toLocaleDateString('pt-BR')}
                       </div>
                     )}
                   </TableCell>

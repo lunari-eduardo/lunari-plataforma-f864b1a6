@@ -82,18 +82,6 @@ export class ReceivablesService {
       plan = this.upsertPlan(sessionId, clienteId, valor, 'avista', 1, 10);
     }
 
-    // Check if entry payment already exists to prevent duplication
-    const existingEntrada = installments.find(i => 
-      i.paymentPlanId === plan.id && 
-      i.numeroParcela === 0 && 
-      i.status === 'pago' &&
-      i.observacoes?.includes('entrada')
-    );
-
-    if (existingEntrada) {
-      return existingEntrada;
-    }
-
     const entradaParcela: PaymentInstallment = {
       id: `installment-${plan.id}-entrada-${Date.now()}`,
       paymentPlanId: plan.id,
@@ -157,30 +145,5 @@ export class ReceivablesService {
     );
     
     return parcelasPagas.reduce((total, parcela) => total + parcela.valor, 0);
-  }
-
-  static deduplicate(): void {
-    const plans = this.loadPaymentPlans();
-    const installments = this.loadInstallments();
-
-    // Remove duplicate plans (same sessionId)
-    const uniquePlans = plans.filter((plan, index, self) =>
-      index === self.findIndex(p => p.sessionId === plan.sessionId)
-    );
-
-    // Remove duplicate installments (same paymentPlanId + numeroParcela + status)
-    const uniqueInstallments = installments.filter((installment, index, self) =>
-      index === self.findIndex(i => 
-        i.paymentPlanId === installment.paymentPlanId &&
-        i.numeroParcela === installment.numeroParcela &&
-        i.status === installment.status &&
-        Math.abs(i.valor - installment.valor) < 0.01
-      )
-    );
-
-    if (plans.length !== uniquePlans.length || installments.length !== uniqueInstallments.length) {
-      this.savePaymentPlans(uniquePlans);
-      this.saveInstallments(uniqueInstallments);
-    }
   }
 }

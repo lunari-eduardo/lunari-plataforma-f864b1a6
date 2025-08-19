@@ -17,8 +17,6 @@ export function useClientReceivables() {
 
   // Carregar dados do localStorage
   useEffect(() => {
-    // Clean up duplicates on load
-    ReceivablesService.deduplicate();
     setPaymentPlans(ReceivablesService.loadPaymentPlans());
     setInstallments(ReceivablesService.loadInstallments());
   }, []);
