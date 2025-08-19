@@ -1086,7 +1086,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             try {
               // Migrate existing entry payment from appointment ID to project session ID
               ReceivablesService.migrateSessionReceivables(
-                `appointment-${item.id.replace('agenda-', '')}`, // From appointment ID
+                `appointment-${item.id}`, // From appointment ID (keep full ID)
                 novoProjeto.projectId, // To session ID
                 item.clienteId
               );
@@ -1722,23 +1722,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     // **IMMEDIATE ENTRY RECORDING**: Record entry payment immediately when valorPago > 0
-    if ((appointment as any).paidAmount > 0 && appointment.clienteId) {
+    console.log('🔍 [addAppointment] Checking appointment data:', {
+      id: newAppointment.id,
+      paidAmount: appointment.paidAmount,
+      clienteId: appointment.clienteId,
+      fullAppointment: appointment
+    });
+    
+    if (appointment.paidAmount && appointment.paidAmount > 0 && appointment.clienteId) {
+      console.log('🏦 Creating immediate entry payment for appointment:', {
+        appointmentId: newAppointment.id,
+        sessionId: `appointment-${newAppointment.id}`,
+        clienteId: appointment.clienteId,
+        valor: appointment.paidAmount
+      });
+      
       try {
         ReceivablesService.addEntradaPago(
           `appointment-${newAppointment.id}`, // Use appointment ID as temporary sessionId
           appointment.clienteId,
-          (appointment as any).paidAmount,
+          appointment.paidAmount,
           getCurrentDateString()
         );
         
         console.log('✅ Entry payment recorded immediately for appointment:', {
           appointmentId: newAppointment.id,
           clienteId: appointment.clienteId,
-          valor: (appointment as any).paidAmount
+          valor: appointment.paidAmount
         });
       } catch (error) {
         console.error('❌ Error recording immediate entry payment:', error);
       }
+    } else {
+      console.log('⚠️ Skipping entry payment creation:', {
+        hasPaidAmount: !!appointment.paidAmount,
+        paidAmountValue: appointment.paidAmount,
+        hasClienteId: !!appointment.clienteId
+      });
     }
     
     // Inserir appointment em ordem cronológica crescente
