@@ -5,7 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
-import { Calendar, CreditCard, DollarSign } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Calendar, CreditCard, DollarSign, Clock, CheckCircle } from 'lucide-react';
 import { formatCurrency } from '@/utils/financialUtils';
 import { useClientReceivables } from '@/hooks/useClientReceivables';
 import { formatDateForDisplay } from '@/utils/dateUtils';
@@ -37,8 +38,15 @@ export function PaymentConfigModal({
   const [diaVencimento, setDiaVencimento] = useState('');
   const [observacoes, setObservacoes] = useState('');
   const [loading, setLoading] = useState(false);
+  const [existingPlan, setExistingPlan] = useState<any>(null);
+  const [installments, setInstallments] = useState<any[]>([]);
 
-  const { criarOuAtualizarPlanoPagamento } = useClientReceivables();
+  const { 
+    criarOuAtualizarPlanoPagamento, 
+    paymentPlans, 
+    obterParcelasPorPlano,
+    savePaymentPlans 
+  } = useClientReceivables();
 
   // Função para calcular datas de vencimento
   const calculateDueDates = (day: number, parcelas: number) => {
@@ -63,6 +71,32 @@ export function PaymentConfigModal({
   // Validação se pode salvar
   const canSave = diaVencimento !== '' && parseInt(diaVencimento) >= 1 && parseInt(diaVencimento) <= 31;
 
+  // Carregar plano existente ao abrir modal
+  useEffect(() => {
+    if (isOpen && sessionId) {
+      const plano = paymentPlans.find(p => p.sessionId === sessionId);
+      setExistingPlan(plano);
+      
+      if (plano) {
+        setFormaPagamento(plano.formaPagamento);
+        setNumeroParcelas(plano.numeroParcelas);
+        setDiaVencimento(plano.diaVencimento.toString());
+        setObservacoes(plano.observacoes || '');
+        
+        // Carregar parcelas do plano
+        const parcelasDoPlan = obterParcelasPorPlano(plano.id);
+        setInstallments(parcelasDoPlan);
+      } else {
+        // Reset para novo plano
+        setFormaPagamento('avista');
+        setNumeroParcelas(2);
+        setDiaVencimento('');
+        setObservacoes('');
+        setInstallments([]);
+      }
+    }
+  }, [isOpen, sessionId, paymentPlans, obterParcelasPorPlano]);
+
   // Sincronizar com mudanças nas props
   useEffect(() => {
     const novoValorRestante = Math.max(0, valorTotal - valorJaPago);
@@ -80,15 +114,30 @@ export function PaymentConfigModal({
     
     setLoading(true);
     try {
+      // IMPORTANTE: Só criar parcelas com o valor restante (não pago)
+      // Evita duplicação de valores já pagos
       await criarOuAtualizarPlanoPagamento(
         sessionId,
         clienteId,
-        valorTotalNegociado,
-        valorJaPago,
+        valorJaPago + valorRestanteEditavel, // Total negociado
+        valorJaPago, // Valor já pago (para criar parcela de entrada)
         formaPagamento,
         formaPagamento === 'avista' ? 1 : numeroParcelas,
         parseInt(diaVencimento)
       );
+      
+      // Dispatch evento para sincronização global
+      window.dispatchEvent(new CustomEvent('payment-plan:created', {
+        detail: {
+          sessionId,
+          clienteId,
+          valorTotal: valorJaPago + valorRestanteEditavel,
+          valorRestante: valorRestanteEditavel,
+          formaPagamento,
+          numeroParcelas: formaPagamento === 'avista' ? 1 : numeroParcelas
+        }
+      }));
+      
       onClose();
     } catch (error) {
       console.error('Erro ao criar plano de pagamento:', error);
@@ -111,6 +160,41 @@ export function PaymentConfigModal({
         </DialogHeader>
 
         <div className="space-y-6">
+          {/* Plano Existente */}
+          {existingPlan && installments.length > 0 && (
+            <div className="bg-card border border-border rounded-lg p-4 space-y-3">
+              <div className="flex items-center gap-2 mb-3">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <span className="text-sm font-medium text-lunar-text">Plano de Pagamento Ativo</span>
+              </div>
+              
+              <div className="space-y-2">
+                {installments.map((installment, index) => (
+                  <div key={installment.id} className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      {installment.status === 'pago' ? (
+                        <CheckCircle className="h-3 w-3 text-green-600" />
+                      ) : (
+                        <Clock className="h-3 w-3 text-orange-600" />
+                      )}
+                      <span className="text-lunar-textSecondary">
+                        {installment.numeroParcela === 0 ? 'Entrada' : `Parcela ${installment.numeroParcela}`}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={installment.status === 'pago' ? 'text-green-600' : 'text-lunar-text'}>
+                        {formatCurrency(installment.valor)}
+                      </span>
+                      <Badge variant={installment.status === 'pago' ? 'default' : 'secondary'} className="text-xs">
+                        {formatDateForDisplay(installment.dataVencimento)}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Resumo Financeiro */}
           <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-3">
             <div className="flex items-center justify-between">

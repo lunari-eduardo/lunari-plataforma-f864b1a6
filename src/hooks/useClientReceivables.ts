@@ -325,6 +325,8 @@ export function useClientReceivables() {
     obterResumo,
     obterPlanosPorCliente,
     obterParcelasPorPlano,
-    obterValorJaPago
+    obterValorJaPago,
+    savePaymentPlans,
+    saveInstallments
   };
 }

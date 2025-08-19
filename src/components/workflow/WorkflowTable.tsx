@@ -6,11 +6,11 @@ import { WorkflowPackageCombobox } from "./WorkflowPackageCombobox";
 import { StatusBadge } from "./StatusBadge";
 import { GerenciarProdutosModal } from "./GerenciarProdutosModal";
 import { PaymentConfigModal } from "./PaymentConfigModal";
-import { MessageCircle, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Package, Plus, CreditCard } from "lucide-react";
+import { MessageCircle, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Package, Plus, CreditCard, Calendar, CheckCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useClientReceivables } from '@/hooks/useClientReceivables';
-import { formatToDayMonth } from "@/utils/dateUtils";
+import { formatToDayMonth, formatDateForDisplay } from "@/utils/dateUtils";
 
 import { calcularTotalFotosExtras, obterConfiguracaoPrecificacao, obterTabelaGlobal, obterTabelaCategoria, calcularValorPorFoto, formatarMoeda, calcularComRegrasProprias, migrarRegrasParaItemAntigo } from '@/utils/precificacaoUtils';
 import { RegrasCongeladasIndicator } from './RegrasCongeladasIndicator';
@@ -159,7 +159,12 @@ export function WorkflowTable({
   const [initialWidth, setInitialWidth] = useState(0);
   const [currentColumnWidths, setCurrentColumnWidths] = useState<Record<string, number>>({});
   const [modeloPrecificacao, setModeloPrecificacao] = useState('fixo');
-  const { registrarPagamentoRapido } = useClientReceivables();
+  const { registrarPagamentoRapido, paymentPlans, installments, obterParcelasPorPlano, marcarComoPago } = useClientReceivables();
+
+  // Stable field update callback
+  const handleFieldUpdateStable = useCallback((sessionId: string, field: string, value: any) => {
+    onFieldUpdate(sessionId, field, value);
+  }, [onFieldUpdate]);
 
   // Atualizar larguras quando columnWidths prop mudar
   useEffect(() => {
@@ -168,6 +173,25 @@ export function WorkflowTable({
       ...columnWidths
     });
   }, [columnWidths, responsiveColumnWidths]);
+
+  // Sincronização bidirecional com recebíveis
+  useEffect(() => {
+    const handleInstallmentPaid = (e: CustomEvent) => {
+      const { sessionId, valor } = e.detail;
+      const session = sessions.find(s => s.id === sessionId);
+      if (session) {
+        const valorPagoStr = typeof session.valorPago === 'string' ? session.valorPago : String(session.valorPago || '0');
+        const currentPaid = parseFloat(valorPagoStr.replace(/[^\d,-]/g, '').replace(',', '.')) || 0;
+        const newPaidValue = currentPaid + valor;
+        
+        // Atualizar valor pago no workflow
+        handleFieldUpdateStable(sessionId, 'valorPago', `R$ ${newPaidValue.toFixed(2).replace('.', ',')}`);
+      }
+    };
+
+    window.addEventListener('receivables:installment-paid', handleInstallmentPaid as EventListener);
+    return () => window.removeEventListener('receivables:installment-paid', handleInstallmentPaid as EventListener);
+  }, [sessions, handleFieldUpdateStable]);
 
   // Escutar mudanças no modelo de precificação
   useEffect(() => {
@@ -185,9 +209,6 @@ export function WorkflowTable({
       window.removeEventListener('precificacao-modelo-changed', handleModeloChange as EventListener);
     };
   }, []);
-  const handleFieldUpdateStable = useCallback((sessionId: string, field: string, value: any) => {
-    onFieldUpdate(sessionId, field, value);
-  }, [onFieldUpdate]);
 
   // Função para calcular valor real por foto baseado nas regras congeladas
   const calcularValorRealPorFoto = useCallback((session: SessionData) => {
@@ -291,6 +312,35 @@ export function WorkflowTable({
     
     return restante;
   }, [calculateTotal]);
+
+  // Função para obter informações do plano de pagamento
+  const getPaymentPlanInfo = useCallback((sessionId: string) => {
+    const plan = paymentPlans.find(p => p.sessionId === sessionId);
+    if (!plan) return null;
+
+    const sessionInstallments = obterParcelasPorPlano(plan.id);
+    const pendingInstallments = sessionInstallments.filter(i => i.status === 'pendente');
+    const paidInstallments = sessionInstallments.filter(i => i.status === 'pago');
+
+    if (plan.formaPagamento === 'avista') {
+      const nextDue = pendingInstallments[0];
+      return {
+        type: 'avista',
+        text: `À vista`,
+        nextDue: nextDue ? formatDateForDisplay(nextDue.dataVencimento) : null,
+        paid: paidInstallments.length > 0,
+        hasScheduled: true
+      };
+    } else {
+      return {
+        type: 'parcelado',
+        text: `${plan.numeroParcelas}x de ${formatCurrency(plan.valorParcela)}`,
+        nextDue: pendingInstallments[0] ? formatDateForDisplay(pendingInstallments[0].dataVencimento) : null,
+        paid: pendingInstallments.length === 0,
+        hasScheduled: true
+      };
+    }
+  }, [paymentPlans, obterParcelasPorPlano]);
 
   const handlePaymentAdd = useCallback((sessionId: string) => {
     const value = paymentInputs[sessionId];
@@ -905,27 +955,70 @@ return <td className={`
 
                 {renderCell('remaining', <span className="font-bold text-orange-600 text-xs">{formatCurrency(calculateRestante(session))}</span>)}
 
-                {renderCell('payment', <div className="flex items-center gap-1 w-full">
-                    <Input type="number" placeholder="0,00" value={paymentInputs[session.id] || ''} onChange={e => setPaymentInputs(prev => ({
-                    ...prev,
-                    [session.id]: e.target.value
-                  }))} onKeyDown={e => handlePaymentKeyDown(e, session.id)} className="h-6 text-xs p-1 flex-1 border-none bg-transparent focus:bg-lunar-accent/10 transition-colors duration-150" autoComplete="off" />
-                    <Button variant="ghost" size="sm" onClick={() => handlePaymentAdd(session.id)} className="h-6 w-6 p-0 shrink-0">
-                      <span className="text-xs font-bold">+</span>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedSessionForPayment(session);
-                        setPaymentConfigOpen(true);
-                      }}
-                      className="h-6 w-6 p-0 shrink-0 hover:bg-primary/10"
-                      title="Configurar Pagamento"
-                    >
-                      <CreditCard className="h-3 w-3 text-primary" />
-                    </Button>
-                  </div>)}
+                {renderCell('payment', (() => {
+                  const paymentInfo = getPaymentPlanInfo(session.id);
+                  
+                  return (
+                    <div className="flex flex-col gap-1 w-full">
+                      {/* Linha principal: Input + Botões */}
+                      <div className="flex items-center gap-1">
+                        <Input 
+                          type="number" 
+                          placeholder="0,00" 
+                          value={paymentInputs[session.id] || ''} 
+                          onChange={e => setPaymentInputs(prev => ({
+                            ...prev,
+                            [session.id]: e.target.value
+                          }))} 
+                          onKeyDown={e => handlePaymentKeyDown(e, session.id)} 
+                          className="h-6 text-xs p-1 flex-1 border-none bg-transparent focus:bg-lunar-accent/10 transition-colors duration-150" 
+                          autoComplete="off" 
+                        />
+                        <Button variant="ghost" size="sm" onClick={() => handlePaymentAdd(session.id)} className="h-6 w-6 p-0 shrink-0">
+                          <span className="text-xs font-bold">+</span>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedSessionForPayment(session);
+                            setPaymentConfigOpen(true);
+                          }}
+                          className={`h-6 w-6 p-0 shrink-0 hover:bg-primary/10 ${paymentInfo?.hasScheduled ? 'text-green-600' : 'text-primary'}`}
+                          title={paymentInfo?.hasScheduled ? "Editar Pagamento Agendado" : "Configurar Pagamento"}
+                        >
+                          {paymentInfo?.hasScheduled ? (
+                            <CheckCircle className="h-3 w-3" />
+                          ) : (
+                            <CreditCard className="h-3 w-3" />
+                          )}
+                        </Button>
+                      </div>
+                      
+                      {/* Linha do plano de pagamento */}
+                      {paymentInfo && (
+                        <div className="flex items-center gap-1 mt-1">
+                          <Badge 
+                            variant={paymentInfo.paid ? "default" : "secondary"} 
+                            className={`text-[10px] px-1.5 py-0.5 h-4 ${
+                              paymentInfo.paid ? 'bg-green-100 text-green-700 border-green-200' : 'bg-blue-100 text-blue-700 border-blue-200'
+                            }`}
+                          >
+                            {paymentInfo.text}
+                          </Badge>
+                          {paymentInfo.nextDue && !paymentInfo.paid && (
+                            <div className="flex items-center gap-1">
+                              <Calendar className="h-2.5 w-2.5 text-orange-600" />
+                              <span className="text-[9px] text-orange-600 font-medium">
+                                {paymentInfo.nextDue}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })())}
                 </tr>
                </>;
           })}
