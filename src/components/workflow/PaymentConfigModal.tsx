@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Calendar, CreditCard, DollarSign } from 'lucide-react';
 import { formatCurrency } from '@/utils/financialUtils';
 import { useClientReceivables } from '@/hooks/useClientReceivables';
+import { formatDateForDisplay } from '@/utils/dateUtils';
 
 interface PaymentConfigModalProps {
   isOpen: boolean;
@@ -33,11 +34,34 @@ export function PaymentConfigModal({
   const [isEditing, setIsEditing] = useState(false);
   const [formaPagamento, setFormaPagamento] = useState<'avista' | 'parcelado'>('avista');
   const [numeroParcelas, setNumeroParcelas] = useState(2);
-  const [diaVencimento, setDiaVencimento] = useState(10);
+  const [diaVencimento, setDiaVencimento] = useState('');
   const [observacoes, setObservacoes] = useState('');
   const [loading, setLoading] = useState(false);
 
   const { criarOuAtualizarPlanoPagamento } = useClientReceivables();
+
+  // Função para calcular datas de vencimento
+  const calculateDueDates = (day: number, parcelas: number) => {
+    const dates: string[] = [];
+    const currentDate = new Date();
+    
+    for (let i = 0; i < parcelas; i++) {
+      const dueDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + i + 1, day);
+      dates.push(formatDateForDisplay(dueDate.toISOString().split('T')[0]));
+    }
+    
+    return dates;
+  };
+
+  // Função para calcular próxima data de vencimento
+  const getNextDueDate = (day: number) => {
+    const currentDate = new Date();
+    const nextMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, day);
+    return formatDateForDisplay(nextMonth.toISOString().split('T')[0]);
+  };
+
+  // Validação se pode salvar
+  const canSave = diaVencimento !== '' && parseInt(diaVencimento) >= 1 && parseInt(diaVencimento) <= 31;
 
   // Sincronizar com mudanças nas props
   useEffect(() => {
@@ -52,6 +76,8 @@ export function PaymentConfigModal({
   const valorParcela = formaPagamento === 'avista' ? valorRestanteEditavel : valorRestanteEditavel / numeroParcelas;
 
   const handleSave = async () => {
+    if (!canSave) return;
+    
     setLoading(true);
     try {
       await criarOuAtualizarPlanoPagamento(
@@ -61,7 +87,7 @@ export function PaymentConfigModal({
         valorJaPago,
         formaPagamento,
         formaPagamento === 'avista' ? 1 : numeroParcelas,
-        diaVencimento
+        parseInt(diaVencimento)
       );
       onClose();
     } catch (error) {
@@ -170,81 +196,85 @@ export function PaymentConfigModal({
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="diaVencimento" className="text-sm font-medium text-lunar-text">
-                    Dia do Vencimento
+                    Dia do Vencimento*
                   </Label>
                   <Input
                     id="diaVencimento"
                     type="number"
-                    min="1"
-                    max="31"
                     value={diaVencimento}
-                    onChange={(e) => setDiaVencimento(parseInt(e.target.value) || 10)}
-                    className="bg-background border-border text-lunar-text"
+                    onChange={(e) => setDiaVencimento(e.target.value)}
+                    placeholder="Ex: 15"
+                    className={`bg-background border-border text-lunar-text ${!canSave && diaVencimento !== '' ? 'border-red-500' : ''}`}
                   />
+                  {!canSave && diaVencimento !== '' && (
+                    <p className="text-xs text-red-500">Dia deve ser entre 1 e 31</p>
+                  )}
                 </div>
               </div>
 
-              {/* Preview das Parcelas */}
-              <div className="bg-background border border-border rounded-lg p-3">
-                <div className="flex items-center gap-2 mb-2">
-                  <DollarSign className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-medium text-lunar-text">Preview das Parcelas</span>
-                </div>
-                <div className="text-lg font-semibold text-primary">
-                  {numeroParcelas}x de {formatCurrency(valorParcela)}
-                </div>
-                {valorJaPago > 0 && (
-                  <div className="text-xs text-green-600 mt-1">
-                    + Entrada: {formatCurrency(valorJaPago)}
+              {/* Preview das Parcelas - Melhorado */}
+              {canSave && (
+                <div className="bg-background border border-border rounded-lg p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <DollarSign className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium text-lunar-text">Cobrança</span>
                   </div>
-                )}
-                <div className="text-xs text-lunar-textSecondary mt-1">
-                  Vencimento todo dia {diaVencimento}
+                  <div className="text-lg font-semibold text-primary mb-2">
+                    {numeroParcelas}x de {formatCurrency(valorParcela)}
+                  </div>
+                  
+                  {/* Datas específicas */}
+                  <div className="space-y-1">
+                    <div className="text-xs text-lunar-textSecondary">Datas de vencimento:</div>
+                    <div className="text-xs text-lunar-text">
+                      {calculateDueDates(parseInt(diaVencimento), numeroParcelas).join(', ')}
+                    </div>
+                  </div>
                 </div>
-                <div className="text-xs text-primary font-medium mt-1">
-                  Total: {formatCurrency(valorTotalNegociado)}
-                </div>
-              </div>
+              )}
             </div>
           )}
 
-          {/* À Vista */}
+          {/* À Vista - Melhorado */}
           {formaPagamento === 'avista' && (
             <div className="space-y-3 bg-card/50 border border-border rounded-lg p-4">
               <div className="space-y-2">
                 <Label htmlFor="diaVencimentoAvista" className="text-sm font-medium text-lunar-text">
-                  Dia do Vencimento
+                  Dia do Vencimento*
                 </Label>
                 <Input
                   id="diaVencimentoAvista"
                   type="number"
-                  min="1"
-                  max="31"
                   value={diaVencimento}
-                  onChange={(e) => setDiaVencimento(parseInt(e.target.value) || 10)}
-                  className="bg-background border-border text-lunar-text"
+                  onChange={(e) => setDiaVencimento(e.target.value)}
+                  placeholder="Ex: 15"
+                  className={`bg-background border-border text-lunar-text ${!canSave && diaVencimento !== '' ? 'border-red-500' : ''}`}
                 />
-              </div>
-              <div className="bg-background border border-border rounded-lg p-3">
-                <div className="flex items-center gap-2 mb-1">
-                  <Calendar className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-medium text-lunar-text">Vencimento</span>
-                </div>
-                <div className="text-lg font-semibold text-primary">
-                  {formatCurrency(valorRestanteEditavel)}
-                </div>
-                {valorJaPago > 0 && (
-                  <div className="text-xs text-green-600 mt-1">
-                    + Entrada: {formatCurrency(valorJaPago)}
-                  </div>
+                {!canSave && diaVencimento !== '' && (
+                  <p className="text-xs text-red-500">Dia deve ser entre 1 e 31</p>
                 )}
-                <div className="text-xs text-lunar-textSecondary">
-                  Vencimento no dia {diaVencimento}
-                </div>
-                <div className="text-xs text-primary font-medium mt-1">
-                  Total: {formatCurrency(valorTotalNegociado)}
-                </div>
               </div>
+              
+              {/* Preview de À Vista - Simplificado */}
+              {canSave && (
+                <div className="bg-background border border-border rounded-lg p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Calendar className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium text-lunar-text">Cobrança</span>
+                  </div>
+                  <div className="text-lg font-semibold text-primary mb-2">
+                    {formatCurrency(valorRestanteEditavel)}
+                  </div>
+                  
+                  {/* Data específica */}
+                  <div className="space-y-1">
+                    <div className="text-xs text-lunar-textSecondary">Data de vencimento:</div>
+                    <div className="text-xs text-lunar-text">
+                      {getNextDueDate(parseInt(diaVencimento))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -268,7 +298,7 @@ export function PaymentConfigModal({
           <Button variant="outline" onClick={onClose} disabled={loading}>
             Cancelar
           </Button>
-          <Button onClick={handleSave} disabled={loading}>
+          <Button onClick={handleSave} disabled={loading || !canSave}>
             {loading ? 'Salvando...' : 'Configurar Pagamento'}
           </Button>
         </div>
