@@ -26,133 +26,87 @@ export class ReceivablesServiceV2 {
     localStorage.setItem(STORAGE_KEYS.INSTALLMENTS, JSON.stringify(installments));
   }
 
-  // Idempotent operations - safe to call multiple times
+  // Simplified payment schedule creation
   static createOrUpdatePaymentSchedule(
     sessionId: string,
     clienteId: string,
-    valorTotal: number,
-    valorEntrada: number,
+    valorAgendar: number, // Valor direto a ser agendado
+    valorEntrada: number, // Ignorado na V3
     formaPagamento: 'avista' | 'parcelado',
     numeroParcelas: number,
     dataPrimeiroPagamento: string,
     observacoes?: string
   ): { plan: ClientPaymentPlan; newInstallments: PaymentInstallment[] } {
-    console.log(`🔄 [V2] Criando agendamento de pagamento - Session: ${sessionId}, Total: ${valorTotal}, Entrada: ${valorEntrada}`);
+    console.log(`🔄 [V3] Agendamento simplificado - Session: ${sessionId}, Valor a agendar: ${valorAgendar}`);
     
     const plans = this.loadPaymentPlans();
     const installments = this.loadInstallments();
     
-    // 1. Separar planos quick (preservar) dos scheduled (remover)
+    // 1. Separar e preservar quick plans/payments
     const quickPlans = plans.filter(p => p.sessionId === sessionId && p.id.includes('plan-v2-quick-'));
-    const scheduledPlans = plans.filter(p => p.sessionId === sessionId && !p.id.includes('plan-v2-quick-'));
     const otherPlans = plans.filter(p => p.sessionId !== sessionId);
     
-    // 2. Separar installments: preservar quick payments, remover scheduled
     const quickInstallments = installments.filter(i => {
       const plan = quickPlans.find(p => p.id === i.paymentPlanId);
       return plan !== undefined;
     });
-    const scheduledInstallments = installments.filter(i => {
-      const plan = scheduledPlans.find(p => p.id === i.paymentPlanId);
-      return plan !== undefined;
-    });
     const otherInstallments = installments.filter(i => {
       const plan = plans.find(p => p.id === i.paymentPlanId);
-      return !plan || plan.sessionId !== sessionId;
+      return !plan || plan.sessionId !== sessionId || quickPlans.some(qp => qp.id === plan.id);
     });
     
-    // 3. Calcular valores considerando: entradas anteriores + pagamentos rápidos + entrada do modal
-    const existingEntradas = scheduledInstallments.filter(i => i.numeroParcela === -1 && i.status === 'pago'); // Entradas de scheduled plans
-    const totalQuickPayments = quickInstallments.filter(i => i.status === 'pago').reduce((total, i) => total + i.valor, 0);
-    const totalEntradasAnteriores = existingEntradas.reduce((total, e) => total + e.valor, 0);
-    
-    console.log(`💰 [V2] Total quick payments: ${totalQuickPayments}, Entradas anteriores: ${totalEntradasAnteriores}, Entrada modal: ${valorEntrada}`);
-    
-    // 4. Criar novo plano scheduled (valor restante = total - entradas - quick payments - entrada modal)
+    // 2. Criar novo plano apenas com o valor a agendar
     const planId = `plan-v2-scheduled-${sessionId}-${Date.now()}`;
-    const valorJaPago = totalEntradasAnteriores + totalQuickPayments + valorEntrada;
-    const valorRestante = Math.max(0, valorTotal - valorJaPago);
-    const valorParcela = valorRestante > 0 ? 
-      (formaPagamento === 'avista' ? valorRestante : valorRestante / numeroParcelas) : 0;
+    const valorParcela = formaPagamento === 'avista' ? valorAgendar : valorAgendar / numeroParcelas;
     
     const newPlan: ClientPaymentPlan = {
       id: planId,
       sessionId,
       clienteId,
-      valorTotal,
+      valorTotal: valorAgendar,
       formaPagamento,
       numeroParcelas: formaPagamento === 'avista' ? 1 : numeroParcelas,
       valorParcela,
       diaVencimento: new Date(dataPrimeiroPagamento).getDate(),
-      status: valorRestante <= 0 ? 'quitado' : 'ativo',
+      status: 'ativo',
       observacoes,
       criadoEm: new Date().toISOString()
     };
     
-    // 5. Apenas re-anexar entradas existentes do plano anterior (não quick payments)
-    const reattachedInstallments = existingEntradas.map(e => ({
-      ...e,
-      paymentPlanId: planId
-    }));
+    // 3. Criar apenas parcelas agendadas (numeroParcela sequencial: 1, 2, 3...)
+    const newScheduledInstallments: PaymentInstallment[] = [];
+    const dataPrimeiro = new Date(dataPrimeiroPagamento);
+    const qtdParcelas = formaPagamento === 'avista' ? 1 : numeroParcelas;
     
-    console.log(`🔗 [V2] Re-anexando ${reattachedInstallments.length} entradas ao novo plano ${planId}`);
-    
-    // 6. Criar entrada se informada no modal
-    if (valorEntrada > 0) {
-      console.log(`➕ [V2] Criando entrada de ${valorEntrada}`);
+    for (let i = 1; i <= qtdParcelas; i++) {
+      const dataVencimento = new Date(dataPrimeiro);
+      dataVencimento.setMonth(dataVencimento.getMonth() + (i - 1));
       
-      const entrada: PaymentInstallment = {
-        id: `installment-v2-${planId}-entrada-${Date.now()}`,
+      const parcela: PaymentInstallment = {
+        id: `installment-v2-${planId}-${i}-${Date.now()}`,
         paymentPlanId: planId,
-        numeroParcela: -1, // Entrada
-        valor: valorEntrada,
-        dataVencimento: getCurrentDateString(),
-        status: 'pago',
-        dataPagamento: getCurrentDateString(),
-        observacoes: 'Entrada via agendamento de pagamento'
+        numeroParcela: i,
+        valor: valorParcela,
+        dataVencimento: formatDateForStorage(dataVencimento),
+        status: 'pendente',
+        observacoes: formaPagamento === 'avista' ? 'Pagamento à vista agendado' : `Parcela ${i}/${qtdParcelas} agendada`
       };
       
-      reattachedInstallments.push(entrada);
+      newScheduledInstallments.push(parcela);
     }
     
-    // 7. Criar novas parcelas pendentes (APENAS se há valor restante)
-    const newPendingInstallments: PaymentInstallment[] = [];
-    
-    if (valorRestante > 0) {
-      const dataPrimeiro = new Date(dataPrimeiroPagamento);
-      const parcelas = formaPagamento === 'avista' ? 1 : numeroParcelas;
-      
-      for (let i = 1; i <= parcelas; i++) {
-        const dataVencimento = new Date(dataPrimeiro);
-        dataVencimento.setMonth(dataVencimento.getMonth() + (i - 1));
-        
-        const parcela: PaymentInstallment = {
-          id: `installment-v2-${planId}-${i}-${Date.now()}`,
-          paymentPlanId: planId,
-          numeroParcela: i,
-          valor: valorParcela,
-          dataVencimento: formatDateForStorage(dataVencimento),
-          status: 'pendente',
-          observacoes: formaPagamento === 'avista' ? 'Agendamento à vista' : `Parcela ${i} agendada via modal`
-        };
-        
-        newPendingInstallments.push(parcela);
-      }
-    }
-    
-    // 8. Salvar tudo: preservar quick plans e quick installments
-    const allNewInstallments = [...reattachedInstallments, ...newPendingInstallments];
+    // 4. Salvar preservando quick plans e payments
     const finalPlans = [...otherPlans, ...quickPlans, newPlan];
-    const finalInstallments = [...otherInstallments, ...quickInstallments, ...allNewInstallments];
+    const finalInstallments = [...otherInstallments, ...quickInstallments, ...newScheduledInstallments];
     
     this.savePaymentPlans(finalPlans);
     this.saveInstallments(finalInstallments);
     
-    console.log(`✅ [V2] Agendamento criado - Plano: ${planId}, Parcelas pendentes: ${newPendingInstallments.length}, Quick plans preservados: ${quickPlans.length}`);
+    console.log(`✅ [V3] Agendamento criado - ${qtdParcelas} parcela(s) de ${valorParcela.toFixed(2)} cada`);
     
     return {
       plan: newPlan,
-      newInstallments: allNewInstallments
+      newInstallments: newScheduledInstallments
     };
   }
 

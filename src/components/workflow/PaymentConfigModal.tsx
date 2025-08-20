@@ -34,7 +34,7 @@ export function PaymentConfigModal({
   valorJaPago,
   clienteNome
 }: PaymentConfigModalProps) {
-  const [valorEntrada, setValorEntrada] = useState(valorJaPago);
+  const [valorAgendar, setValorAgendar] = useState(valorTotal - valorJaPago);
   const [formaPagamento, setFormaPagamento] = useState<'avista' | 'parcelado'>('avista');
   const [numeroParcelas, setNumeroParcelas] = useState(2);
   const [dataPrimeiroPagamento, setDataPrimeiroPagamento] = useState<Date>();
@@ -51,43 +51,43 @@ export function PaymentConfigModal({
     obterInfoAgendamento
   } = useClientReceivables();
 
-  // Calcular valores restantes (considerando entradas scheduled + pagamentos quick)
-  const getValuesDiff = () => {
+  // Calcular valores das entradas programadas existentes
+  const getEntradasProgramadas = () => {
     const agendamentoInfo = obterInfoAgendamento(sessionId);
-    let valorTotalEntradas = 0;
-    let valorQuickPayments = valorJaPago; // valorJaPago já inclui quick payments
-    
     if (agendamentoInfo) {
-      // Somar apenas entradas (numeroParcela === -1) de planos scheduled
-      valorTotalEntradas = agendamentoInfo.installments
+      return agendamentoInfo.installments
         .filter(i => i.numeroParcela === -1 && i.status === 'pago')
         .reduce((total, i) => total + i.valor, 0);
     }
-    
-    return {
-      valorTotalEntradas,
-      valorQuickPayments,
-      valorRestante: Math.max(0, valorTotal - valorTotalEntradas - valorQuickPayments - valorEntrada)
-    };
+    return 0;
   };
 
-  const { valorTotalEntradas, valorQuickPayments, valorRestante } = getValuesDiff();
+  const valorEntradasProgramadas = getEntradasProgramadas();
 
-  // Função para calcular datas de vencimento
-  const calculateDueDates = (startDate: Date, parcelas: number) => {
-    const dates: string[] = [];
+  // Função para calcular preview das parcelas
+  const calculateInstallmentPreview = () => {
+    if (!dataPrimeiroPagamento || valorAgendar <= 0) return [];
     
-    for (let i = 0; i < parcelas; i++) {
-      const dueDate = new Date(startDate);
-      dueDate.setMonth(dueDate.getMonth() + i);
-      dates.push(formatDateForDisplay(dueDate.toISOString().split('T')[0]));
+    const valorParcela = formaPagamento === 'avista' ? valorAgendar : valorAgendar / numeroParcelas;
+    const qtdParcelas = formaPagamento === 'avista' ? 1 : numeroParcelas;
+    const preview = [];
+    
+    for (let i = 1; i <= qtdParcelas; i++) {
+      const dataVencimento = new Date(dataPrimeiroPagamento);
+      dataVencimento.setMonth(dataVencimento.getMonth() + (i - 1));
+      
+      preview.push({
+        numero: i,
+        valor: valorParcela,
+        dataVencimento: formatDateForDisplay(dataVencimento.toISOString().split('T')[0])
+      });
     }
     
-    return dates;
+    return preview;
   };
 
   // Validação se pode salvar
-  const canSave = dataPrimeiroPagamento !== undefined;
+  const canSave = dataPrimeiroPagamento !== undefined && valorAgendar > 0;
 
   // Carregar informações do agendamento existente
   useEffect(() => {
@@ -111,28 +111,27 @@ export function PaymentConfigModal({
         setInstallments([]);
       }
       
-      // Entrada sempre inicia em 0 (evita dupla subtração)
-      setValorEntrada(0);
+        // Valor a agendar sempre inicia com o restante (total - já pago)
+        setValorAgendar(valorTotal - valorJaPago);
     }
   }, [isOpen, sessionId, obterInfoAgendamento]);
 
-  const valorTotalNegociado = valorTotal;
-  const valorParcela = formaPagamento === 'avista' ? valorRestante : valorRestante / numeroParcelas;
+  const installmentPreview = calculateInstallmentPreview();
 
   const handleSave = async () => {
     if (!canSave) return;
     
     setLoading(true);
     try {
-      // V2: Agendar pagamentos com entrada e data
+      // V2: Agendar pagamentos sem entrada automática
       await criarOuAtualizarPlanoPagamento(
         sessionId,
         clienteId,
-        valorTotalNegociado, // Total da sessão
-        valorEntrada, // Entrada informada
+        valorAgendar, // Valor a ser agendado pelo usuário
+        0, // Sem entrada automática
         formaPagamento,
         formaPagamento === 'avista' ? 1 : numeroParcelas,
-        dataPrimeiroPagamento!.toISOString().split('T')[0], // Data do primeiro pagamento
+        dataPrimeiroPagamento!.toISOString().split('T')[0],
         observacoes
       );
       
@@ -199,41 +198,34 @@ export function PaymentConfigModal({
           <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-sm text-lunar-textSecondary">Valor Total Negociado:</span>
-              <span className="text-lg font-bold text-primary">{formatCurrency(valorTotalNegociado)}</span>
+              <span className="text-lg font-bold text-primary">{formatCurrency(valorTotal)}</span>
             </div>
             
-            {valorTotalEntradas > 0 && (
+            {valorJaPago > 0 && (
               <div className="flex items-center justify-between">
-                <span className="text-sm text-lunar-textSecondary">Entradas Anteriores:</span>
-                <span className="font-medium text-green-600">- {formatCurrency(valorTotalEntradas)}</span>
+                <span className="text-sm text-lunar-textSecondary">Valor Pago (tabela):</span>
+                <span className="font-medium text-green-600">- {formatCurrency(valorJaPago)}</span>
               </div>
             )}
             
-            {valorQuickPayments > 0 && (
+            {valorEntradasProgramadas > 0 && (
               <div className="flex items-center justify-between">
-                <span className="text-sm text-lunar-textSecondary">Pagamentos à Vista:</span>
-                <span className="font-medium text-blue-600">- {formatCurrency(valorQuickPayments)}</span>
+                <span className="text-sm text-lunar-textSecondary">Entradas Programadas:</span>
+                <span className="font-medium text-blue-600">- {formatCurrency(valorEntradasProgramadas)}</span>
               </div>
             )}
-            
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-lunar-textSecondary">Entrada (Este Agendamento):</span>
-                <Input
-                  type="number"
-                  value={valorEntrada}
-                  onChange={(e) => setValorEntrada(parseFloat(e.target.value) || 0)}
-                  className="w-32 text-right bg-background border-border text-lunar-text"
-                  min="0"
-                  max={valorTotal - valorTotalEntradas - valorQuickPayments}
-                  step="0.01"
-                />
-            </div>
             
             <div className="flex items-center justify-between border-t pt-2">
-              <span className="text-sm font-medium text-lunar-text">Restante a Agendar:</span>
-              <span className="text-lg font-bold text-primary">
-                {formatCurrency(valorRestante)}
-              </span>
+              <span className="text-sm font-medium text-lunar-text">Valor a Agendar:</span>
+              <Input
+                type="number"
+                value={valorAgendar}
+                onChange={(e) => setValorAgendar(parseFloat(e.target.value) || 0)}
+                className="w-40 text-right bg-background border-border text-lunar-text text-lg font-bold"
+                min="0"
+                step="0.01"
+                placeholder="0,00"
+              />
             </div>
           </div>
 
@@ -306,22 +298,32 @@ export function PaymentConfigModal({
               </div>
 
               {/* Preview das Parcelas */}
-              {canSave && valorRestante > 0 && (
+              {installmentPreview.length > 0 && (
                 <div className="bg-background border border-border rounded-lg p-3">
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center gap-2 mb-3">
                     <DollarSign className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-medium text-lunar-text">Cobrança</span>
-                  </div>
-                  <div className="text-lg font-semibold text-primary mb-2">
-                    {numeroParcelas}x de {formatCurrency(valorParcela)}
+                    <span className="text-sm font-medium text-lunar-text">Preview das Parcelas</span>
                   </div>
                   
-                  {/* Datas específicas */}
-                  <div className="space-y-1">
-                    <div className="text-xs text-lunar-textSecondary">Datas de vencimento:</div>
-                    <div className="text-xs text-lunar-text">
-                      {dataPrimeiroPagamento && calculateDueDates(dataPrimeiroPagamento, numeroParcelas).join(', ')}
-                    </div>
+                  <div className="space-y-2">
+                    {installmentPreview.map((installment, index) => (
+                      <div key={index} className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-3 w-3 text-primary" />
+                          <span className="text-lunar-text">
+                            Parcela {installment.numero}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-primary">
+                            {formatCurrency(installment.valor)}
+                          </span>
+                          <Badge variant="secondary" className="text-xs">
+                            {installment.dataVencimento}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
@@ -362,21 +364,25 @@ export function PaymentConfigModal({
               </div>
               
               {/* Preview de À Vista */}
-              {canSave && valorRestante > 0 && (
+              {installmentPreview.length > 0 && (
                 <div className="bg-background border border-border rounded-lg p-3">
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center gap-2 mb-3">
                     <Calendar className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-medium text-lunar-text">Cobrança</span>
-                  </div>
-                  <div className="text-lg font-semibold text-primary mb-2">
-                    {formatCurrency(valorRestante)}
+                    <span className="text-sm font-medium text-lunar-text">Preview do Pagamento</span>
                   </div>
                   
-                  {/* Data específica */}
-                  <div className="space-y-1">
-                    <div className="text-xs text-lunar-textSecondary">Data de vencimento:</div>
-                    <div className="text-xs text-lunar-text">
-                      {dataPrimeiroPagamento && formatDateForDisplay(dataPrimeiroPagamento.toISOString().split('T')[0])}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-3 w-3 text-primary" />
+                      <span className="text-lunar-text text-sm">Pagamento à vista</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-primary text-lg">
+                        {formatCurrency(valorAgendar)}
+                      </span>
+                      <Badge variant="secondary" className="text-xs">
+                        {installmentPreview[0].dataVencimento}
+                      </Badge>
                     </div>
                   </div>
                 </div>
