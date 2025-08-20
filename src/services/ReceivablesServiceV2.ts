@@ -177,12 +177,12 @@ export class ReceivablesServiceV2 {
     const plans = this.loadPaymentPlans();
     const installments = this.loadInstallments();
     
-    // Encontrar ou criar plano básico
-    let plan = plans.find(p => p.sessionId === sessionId);
+    // Buscar especificamente por plano quick da sessão (evita duplicação)
+    let quickPlan = plans.find(p => p.sessionId === sessionId && p.id.includes('plan-v2-quick-'));
     
-    if (!plan) {
+    if (!quickPlan) {
       const planId = `plan-v2-quick-${sessionId}-${Date.now()}`;
-      plan = {
+      quickPlan = {
         id: planId,
         sessionId,
         clienteId,
@@ -195,14 +195,17 @@ export class ReceivablesServiceV2 {
         criadoEm: new Date().toISOString()
       };
       
-      const updatedPlans = [...plans, plan];
+      const updatedPlans = [...plans, quickPlan];
       this.savePaymentPlans(updatedPlans);
+      console.log(`✅ [V2] Novo plano quick criado: ${planId}`);
+    } else {
+      console.log(`🔄 [V2] Usando plano quick existente: ${quickPlan.id}`);
     }
     
     // Criar parcela paga
       const quickPayment: PaymentInstallment = {
-        id: `installment-v2-quick-${plan.id}-${Date.now()}`,
-        paymentPlanId: plan.id,
+        id: `installment-v2-quick-${quickPlan.id}-${Date.now()}`,
+        paymentPlanId: quickPlan.id,
         numeroParcela: 0, // Pagamento à vista (workflow)
         valor,
         dataVencimento: getCurrentDateString(),
