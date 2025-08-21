@@ -89,7 +89,7 @@ export default function FluxoTrabalho({
         <h3 className="font-medium text-sm">Nova Etapa de Fluxo</h3>
         <p className="text-muted-foreground mt-1 mb-3 text-xs">Configure as etapas personalizadas para o fluxo de trabalho dos seus projetos.</p>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-2 gap-3">
           <div>
             <label htmlFor="etapa-nome" className="block text-sm font-medium mb-1">
               Nome<span className="text-red-500">*</span>
