@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { WorkflowPackageCombobox } from "./WorkflowPackageCombobox";
 import { StatusBadge } from "./StatusBadge";
 import { GerenciarProdutosModal } from "./GerenciarProdutosModal";
-import { PaymentConfigModal } from "./PaymentConfigModal";
+import { WorkflowPaymentsModal } from "./WorkflowPaymentsModal";
 import { MessageCircle, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Package, Plus, CreditCard, Calendar, CheckCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -143,7 +143,7 @@ export function WorkflowTable({
   const [editingValues, setEditingValues] = useState<Record<string, string>>({});
   const [modalAberto, setModalAberto] = useState(false);
   const [sessionSelecionada, setSessionSelecionada] = useState<SessionData | null>(null);
-  const [paymentConfigOpen, setPaymentConfigOpen] = useState(false);
+  const [workflowPaymentsOpen, setWorkflowPaymentsOpen] = useState(false);
   const [selectedSessionForPayment, setSelectedSessionForPayment] = useState<SessionData | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [scrollPercent, setScrollPercent] = useState(0);
@@ -964,7 +964,7 @@ return <td className={`
                           size="sm"
                           onClick={() => {
                             setSelectedSessionForPayment(session);
-                            setPaymentConfigOpen(true);
+                            setWorkflowPaymentsOpen(true);
                           }}
                           className="h-6 w-6 p-0 shrink-0 hover:bg-primary/10 text-primary"
                           title={paymentInfo?.hasScheduled ? "Editar Agendamento" : "Agendar Pagamento"}
@@ -1050,26 +1050,21 @@ return <td className={`
           />
         )}
 
-        {/* Modal de Configuração de Pagamento */}
+        {/* Modal de Pagamentos do Workflow */}
         {selectedSessionForPayment && (
-          <PaymentConfigModal
-            isOpen={paymentConfigOpen}
+          <WorkflowPaymentsModal
+            isOpen={workflowPaymentsOpen}
             onClose={() => {
-              setPaymentConfigOpen(false);
+              setWorkflowPaymentsOpen(false);
               setSelectedSessionForPayment(null);
             }}
-            sessionId={selectedSessionForPayment.id}
-            clienteId={selectedSessionForPayment.clienteId || selectedSessionForPayment.id}
-            valorTotal={calculateTotal(selectedSessionForPayment)}
-            valorJaPago={(() => {
-              const valorPagoStr = typeof selectedSessionForPayment.valorPago === 'string' 
-                ? selectedSessionForPayment.valorPago 
-                : String(selectedSessionForPayment.valorPago || '0');
-              return parseFloat(valorPagoStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-            })()}
-            clienteNome={selectedSessionForPayment.nome}
-            onAddPayment={(sessionId: string, valor: number) => {
-              addPayment(sessionId, valor);
+            sessionData={selectedSessionForPayment}
+            onPaymentUpdate={(sessionId, totalPaid, fullPaymentsArray) => {
+              // Atualizar contexto com novos pagamentos
+              handleFieldUpdateStable(sessionId, 'valorPago', `R$ ${totalPaid.toFixed(2).replace('.', ',')}`);
+              if (fullPaymentsArray) {
+                handleFieldUpdateStable(sessionId, 'pagamentos', fullPaymentsArray);
+              }
             }}
           />
         )}
