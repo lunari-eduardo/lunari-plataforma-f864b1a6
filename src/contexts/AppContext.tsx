@@ -2137,6 +2137,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const addPayment = (id: string, valor: number) => {
+    console.log('🚀 [AddPayment] Iniciando adição de pagamento:', { id, valor });
+    
     const pagamento = {
       id: `pay-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       valor,
@@ -2147,64 +2149,144 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       editavel: true
     };
 
-    // NOVA ARQUITETURA: Adicionar pagamento ao projeto
-    const projeto = projetos.find(p => p.projectId === id);
-    if (projeto) {
-      const novosPagamentos = [...projeto.pagamentos, pagamento];
-      const novoValorPago = novosPagamentos.reduce((sum, p) => sum + p.valor, 0);
-      
-      atualizarProjeto(id, {
-        pagamentos: novosPagamentos.map(p => ({
-          id: p.id,
-          data: p.data,
-          valor: p.valor,
-          metodo: 'dinheiro',
-          observacoes: ''
-        })),
-        valorPago: novoValorPago,
-        restante: projeto.total - novoValorPago
-      });
-    } else {
-      // COMPATIBILIDADE LEGADA
-      const item = workflowItems.find(w => w.id === id);
-      if (item) {
-        const updatedPagamentos = [...item.pagamentos, pagamento];
-        const novoValorPago = updatedPagamentos.reduce((sum, p) => sum + p.valor, 0);
+    // 1. BUSCAR PROJETO EXISTENTE
+    let projeto = projetos.find(p => p.projectId === id);
+    console.log('🔍 [AddPayment] Projeto encontrado:', !!projeto);
+    
+    if (!projeto) {
+      // 2. SE NÃO EXISTIR, CRIAR A PARTIR DE WORKFLOW_SESSIONS
+      try {
+        const workflowSessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
+        const session = workflowSessions.find((s: any) => s.id === id);
         
-        const updatedItem = {
-          ...item,
-          pagamentos: updatedPagamentos,
-          valorPago: novoValorPago,
-          restante: item.total - novoValorPago
-        };
-        
-        // ===== SINCRONIZAÇÃO BIDIRECIONAL =====
-        // Também salvar em workflow_sessions para garantir persistência
-        try {
-          const workflowSessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
-          const sessionIndex = workflowSessions.findIndex((s: any) => s.id === id);
+        if (session) {
+          console.log('📦 [AddPayment] Criando projeto temporário a partir da sessão');
+          const parseMonetaryValue = (value: string | number): number => {
+            if (typeof value === 'number') return value;
+            if (!value || typeof value !== 'string') return 0;
+            return parseFloat(value.replace(/R\$\s*/g, '').replace(/\./g, '').replace(',', '.').trim()) || 0;
+          };
+
+          const now = new Date();
+          const sessionDate = session.data ? new Date(session.data.split('/').reverse().join('-')) : now;
+
+          projeto = {
+            projectId: id,
+            clienteId: `temp-${id}`,
+            nome: session.nome || '',
+            categoria: session.categoria || '',
+            pacote: session.pacote || '',
+            descricao: session.descricao || '',
+            detalhes: session.detalhes || '',
+            whatsapp: session.whatsapp || '',
+            email: session.email || '',
+            dataAgendada: sessionDate,
+            horaAgendada: session.hora || '',
+            status: session.status || 'agendado',
+            valorPacote: parseMonetaryValue(session.valorPacote || session.valor),
+            valorFotosExtra: parseMonetaryValue(session.valorFotoExtra),
+            qtdFotosExtra: session.qtdFotosExtra || 0,
+            valorTotalFotosExtra: parseMonetaryValue(session.valorTotalFotoExtra),
+            valorProdutos: parseMonetaryValue(session.valorTotalProduto),
+            valorAdicional: parseMonetaryValue(session.valorAdicional),
+            desconto: session.desconto || 0,
+            total: parseMonetaryValue(session.total || session.valor),
+            valorPago: parseMonetaryValue(session.valorPago),
+            restante: parseMonetaryValue(session.restante),
+            valorFotoExtra: parseMonetaryValue(session.valorFotoExtra),
+            produto: session.produto || '',
+            qtdProduto: session.qtdProduto || 0,
+            valorTotalProduto: parseMonetaryValue(session.valorTotalProduto),
+            produtosList: (session.produtosList || []).map((p: any) => ({
+              nome: p.nome,
+              quantidade: p.quantidade,
+              valorUnitario: p.valorUnitario,
+              tipo: (p.tipo === 'incluso' || p.tipo === 'manual') ? p.tipo : 'manual' as const
+            })),
+            pagamentos: (session.pagamentos || []).map((p: any) => ({
+              id: p.id,
+              data: p.data,
+              valor: p.valor,
+              metodo: 'dinheiro',
+              observacoes: ''
+            })),
+            criadoEm: now,
+            atualizadoEm: now,
+            fonte: 'agenda' as const
+          };
           
-          if (sessionIndex >= 0) {
-            workflowSessions[sessionIndex] = {
-              ...workflowSessions[sessionIndex],
-              valorPago: formatCurrency(updatedItem.valorPago),
-              restante: formatCurrency(updatedItem.restante),
-              pagamentos: updatedItem.pagamentos
-            };
-            
-            localStorage.setItem('workflow_sessions', JSON.stringify(workflowSessions));
-            
-            // Disparar evento para sincronização com SessionPaymentHistory
-            window.dispatchEvent(new CustomEvent('workflowSessionsUpdated'));
-            console.log('✅ Sincronizado addPayment:', { id, valor, novoValorPago });
-          }
-        } catch (error) {
-          console.error('❌ Erro ao sincronizar addPayment:', error);
+          // Adicionar o projeto temporário ao estado
+          setProjetos(prev => [...prev, projeto!]);
+          console.log('✅ [AddPayment] Projeto temporário criado e adicionado');
         }
-        
-        return updatedItem;
+      } catch (error) {
+        console.error('❌ [AddPayment] Erro ao criar projeto temporário:', error);
+        return;
       }
     }
+
+    if (projeto) {
+      // 3. ATUALIZAR PROJETO COM NOVO PAGAMENTO
+      const novosPagamentos = [...projeto.pagamentos, {
+        id: pagamento.id,
+        data: pagamento.data,
+        valor: pagamento.valor,
+        metodo: 'dinheiro',
+        observacoes: ''
+      }];
+      const novoValorPago = novosPagamentos.reduce((sum, p) => sum + p.valor, 0);
+      const novoRestante = projeto.total - novoValorPago;
+      
+      console.log('💰 [AddPayment] Calculando novos valores:', { 
+        total: projeto.total, 
+        novoValorPago, 
+        novoRestante 
+      });
+      
+      // 4. ATUALIZAR NO ESTADO PROJETOS
+      setProjetos(prev => prev.map(p => 
+        p.projectId === id ? {
+          ...p,
+          pagamentos: novosPagamentos,
+          valorPago: novoValorPago,
+          restante: novoRestante,
+          atualizadoEm: new Date()
+        } : p
+      ));
+      
+      // 5. SINCRONIZAR COM WORKFLOW_SESSIONS
+      try {
+        const workflowSessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
+        const sessionIndex = workflowSessions.findIndex((s: any) => s.id === id);
+        
+        if (sessionIndex >= 0) {
+          workflowSessions[sessionIndex] = {
+            ...workflowSessions[sessionIndex],
+            valorPago: formatCurrency(novoValorPago),
+            restante: formatCurrency(novoRestante),
+            pagamentos: [...(workflowSessions[sessionIndex].pagamentos || []), pagamento]
+          };
+          
+          localStorage.setItem('workflow_sessions', JSON.stringify(workflowSessions));
+          console.log('💾 [AddPayment] Sincronizado com localStorage');
+        }
+      } catch (error) {
+        console.error('❌ [AddPayment] Erro ao sincronizar com localStorage:', error);
+      }
+      
+      // 6. DISPARAR EVENTO PARA COMPONENTS
+      window.dispatchEvent(new CustomEvent('workflowSessionsUpdated'));
+      console.log('📡 [AddPayment] Evento disparado para sincronização');
+      
+      return {
+        ...projeto,
+        pagamentos: novosPagamentos,
+        valorPago: novoValorPago,
+        restante: novoRestante
+      };
+    }
+    
+    console.warn('⚠️ [AddPayment] Não foi possível encontrar ou criar projeto para:', id);
   };
 
   const toggleColumnVisibility = (column: string) => {
