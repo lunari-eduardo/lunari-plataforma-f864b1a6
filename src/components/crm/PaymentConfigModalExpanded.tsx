@@ -15,8 +15,8 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { formatCurrency } from '@/utils/financialUtils';
-import { formatDateForStorage } from '@/utils/dateUtils';
 import { toast } from '@/hooks/use-toast';
+import { formatDateForStorage, safeParseInputDate } from '@/utils/dateUtils';
 import { SessionPaymentExtended } from '@/types/sessionPayments';
 
 interface PaymentConfigModalExpandedProps {
@@ -126,10 +126,22 @@ export function PaymentConfigModalExpanded({
 
     setLoading(true);
     try {
+      // Corrigir conversão de data para evitar problema de timezone
+      const startDateForInstallments = safeParseInputDate(dataInicioParcelas);
+      if (!startDateForInstallments) {
+        toast({
+          title: "Erro",
+          description: "Data inválida para início das parcelas",
+          variant: "destructive"
+        });
+        setLoading(false);
+        return;
+      }
+
       onCreateInstallments(
         valorParcelar,
         quantidadeParcelas,
-        new Date(dataInicioParcelas),
+        startDateForInstallments,
         intervaloParcelas
       );
 
@@ -162,15 +174,30 @@ export function PaymentConfigModalExpanded({
 
     setLoading(true);
     try {
+      // Corrigir conversão de data para evitar problema de timezone
+      const dateForScheduling = safeParseInputDate(dataAgendamento);
+      if (!dateForScheduling) {
+        toast({
+          title: "Erro",
+          description: "Data inválida para agendamento",
+          variant: "destructive"
+        });
+        setLoading(false);
+        return;
+      }
+
+      console.log('🗓️ [Agendamento] Data selecionada:', dataAgendamento);
+      console.log('🗓️ [Agendamento] Data processada:', dateForScheduling.toISOString());
+      
       onSchedulePayment(
         valorAgendado,
-        new Date(dataAgendamento),
+        dateForScheduling,
         observacoesAgendamento
       );
 
       toast({
         title: "Pagamento agendado",
-        description: `${formatCurrency(valorAgendado)} agendado para ${new Date(dataAgendamento).toLocaleDateString()}`
+        description: `${formatCurrency(valorAgendado)} agendado para ${dateForScheduling.toLocaleDateString()}`
       });
 
       onClose();

@@ -48,20 +48,50 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
       
       if (currentSession && currentSession.pagamentos) {
         // Converter pagamentos legados para formato estendido
-        const extendedPayments: SessionPaymentExtended[] = currentSession.pagamentos.map((p: any) => ({
-          id: p.id,
-          valor: p.valor,
-          data: p.data,
-          tipo: p.tipo || 'pago',
-          statusPagamento: p.statusPagamento || 'pago',
-          origem: p.origem || 'manual',
-          editavel: p.editavel !== false,
-          forma_pagamento: p.forma_pagamento,
-          observacoes: p.observacoes,
-          dataVencimento: p.dataVencimento,
-          numeroParcela: p.numeroParcela,
-          totalParcelas: p.totalParcelas
-        }));
+        const extendedPayments: SessionPaymentExtended[] = currentSession.pagamentos.map((p: any) => {
+          // Determinar tipo baseado em dados existentes
+          let tipo = p.tipo || 'pago';
+          let statusPagamento = p.statusPagamento || 'pago';
+          
+          // Se tem dataVencimento mas não tem data de pagamento, é agendado/pendente
+          if (p.dataVencimento && !p.data) {
+            tipo = 'agendado';
+            statusPagamento = 'pendente';
+          }
+          
+          // Se tem numeroParcela, é parcelado
+          if (p.numeroParcela && p.totalParcelas) {
+            tipo = 'parcelado';
+            if (!p.data) {
+              statusPagamento = 'pendente';
+            }
+          }
+          
+          console.log('💰 [useSessionPayments] Convertendo pagamento:', {
+            id: p.id,
+            originalTipo: p.tipo,
+            originalStatus: p.statusPagamento,
+            finalTipo: tipo,
+            finalStatus: statusPagamento,
+            data: p.data,
+            dataVencimento: p.dataVencimento
+          });
+          
+          return {
+            id: p.id,
+            valor: p.valor,
+            data: p.data,
+            tipo: tipo as 'pago' | 'agendado' | 'parcelado',
+            statusPagamento: statusPagamento as 'pendente' | 'pago' | 'atrasado' | 'cancelado',
+            origem: p.origem || 'manual',
+            editavel: p.editavel !== false,
+            forma_pagamento: p.forma_pagamento,
+            observacoes: p.observacoes,
+            dataVencimento: p.dataVencimento,
+            numeroParcela: p.numeroParcela,
+            totalParcelas: p.totalParcelas
+          };
+        });
         
         setPayments(extendedPayments);
       }
@@ -168,11 +198,19 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
     dueDate: Date,
     observacoes?: string
   ) => {
+    const dataVencimento = formatDateForStorage(dueDate);
+    console.log('📅 [schedulePayment] Dados do agendamento:', {
+      valor: value,
+      dataOriginal: dueDate.toISOString(),
+      dataFormatada: dataVencimento,
+      observacoes
+    });
+    
     const newPayment: SessionPaymentExtended = {
       id: `scheduled-${Date.now()}`,
       valor: value,
-      data: '',
-      dataVencimento: formatDateForStorage(dueDate),
+      data: '', // Vazio pois ainda não foi pago
+      dataVencimento: dataVencimento,
       tipo: 'agendado',
       statusPagamento: 'pendente',
       origem: 'manual',
