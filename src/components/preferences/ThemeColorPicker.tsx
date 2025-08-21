@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
 export type ThemeColorKey = 'verde' | 'terracota' | 'rosa' | 'cinza' | 'azul' | 'lilas' | 'bege' | 'marrom'
 
 const COLORS: { key: ThemeColorKey; label: string; hex: `#${string}` }[] = [
-  { key: 'marrom', label: 'Marrom (padrão)', hex: '#5F3624' },
+  { key: 'marrom', label: 'Marrom (padrão)', hex: '#6a4433' },
   { key: 'verde', label: 'Verde', hex: '#98b281' },
   { key: 'terracota', label: 'Terracota', hex: '#893806' },
   { key: 'rosa', label: 'Rosa', hex: '#d8a4ce' },
@@ -23,7 +23,7 @@ interface ThemeColorPickerProps {
 
 export default function ThemeColorPicker({ valueKey, valueHex, onChange }: ThemeColorPickerProps) {
   const activeKey = valueKey || 'marrom'
-  const activeHex = valueHex || COLORS.find(c => c.key === activeKey)?.hex || '#5F3624'
+  const activeHex = valueHex || COLORS.find(c => c.key === activeKey)?.hex || '#6a4433'
 
   return (
     <div className="space-y-4">

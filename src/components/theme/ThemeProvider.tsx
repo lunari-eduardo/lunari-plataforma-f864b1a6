@@ -71,7 +71,7 @@ function toHslStr(hsl: { h: number; s: number; l: number }) {
 }
 
 const COLOR_MAP: Record<string, string> = {
-  marrom: '#5F3624',
+  marrom: '#6a4433',
   azul: '#1c4274',
   verde: '#98b281',
   terracota: '#893806',
@@ -89,7 +89,7 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
   useEffect(() => {
     const root = document.documentElement
 
-    const baseHex = effective.temaCorHex || COLOR_MAP[effective.temaCor] || COLOR_MAP.marrom
+    const baseHex = effective.temaCorHex || COLOR_MAP[effective.temaCor] || '#6a4433'
     const baseHsl = hexToHsl(baseHex)
     const hoverHsl = darkenHsl(baseHsl, 8)
     const foregroundHsl = readableForegroundHslFromHex(baseHex)
@@ -110,7 +110,7 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
 
     // Gráficos (paleta fixa com cores marrons)
     const chartPalette = [
-      '#5F3624', // Principal
+      '#6a4433', // Principal
       '#784A2B', // Secundária
       '#442F21', // Terciária
       '#7A4430', // Quaternária
