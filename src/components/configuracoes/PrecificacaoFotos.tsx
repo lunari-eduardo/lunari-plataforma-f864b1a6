@@ -190,8 +190,7 @@ export default function PrecificacaoFotos({
                   Valor Fixo por Pacote
                 </Label>
                 <p className="text-muted-foreground text-xs">
-                  Cada pacote tem seu próprio valor para fotos extras (modelo atual).
-                  O valor é configurado individualmente na página de Pacotes.
+                  Cada pacote tem seu próprio valor para fotos extras. O valor é configurado individualmente na página de Pacotes.
                 </p>
               </div>
             </div>
