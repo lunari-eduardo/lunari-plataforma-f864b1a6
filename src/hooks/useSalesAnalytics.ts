@@ -3,12 +3,18 @@ import { SalesMetrics, MonthlyData, CategoryData, PackageDistributionData, Origi
 import { normalizeWorkflowItems, generateAllMonthsData } from '@/utils/salesDataNormalizer';
 import { ORIGENS_PADRAO } from '@/utils/defaultOrigens';
 import { revenueAnalyticsService, MonthlyOriginData } from '@/services/RevenueAnalyticsService';
+import { useLeadMetrics } from '@/hooks/useLeadMetrics';
 
 // Re-export types for backward compatibility
 export type { SalesMetrics, MonthlyData, CategoryData, PackageDistributionData, OriginData };
 
 export function useSalesAnalytics(selectedYear: number, selectedCategory: string) {
   console.log(`🔍 [useSalesAnalytics] Iniciando análise para ano ${selectedYear}, categoria: ${selectedCategory}`);
+
+  // Get real conversion rate from leads data for the selected year
+  const { metrics: leadMetrics } = useLeadMetrics({
+    periodType: selectedYear === new Date().getFullYear() ? 'current_year' : 'all_time'
+  });
 
   // Carregar e normalizar dados diretamente do localStorage
   const normalizedData = useMemo(() => {
@@ -49,8 +55,8 @@ export function useSalesAnalytics(selectedYear: number, selectedCategory: string
     const monthlyGoal = 50000;
     const monthlyGoalProgress = (currentMonthRevenue / monthlyGoal) * 100;
     
-    // Simple conversion rate estimate (70% average)
-    const conversionRate = 68;
+    // Use real conversion rate from leads data
+    const conversionRate = leadMetrics.taxaConversao;
 
     console.log(`💰 [useSalesAnalytics] Métricas calculadas: R$ ${totalRevenue.toLocaleString()}, ${totalSessions} sessões, ${uniqueClients} clientes únicos`);
 
