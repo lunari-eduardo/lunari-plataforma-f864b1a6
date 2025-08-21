@@ -1,15 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
-import { Edit3, Trash2, Calendar, FileText } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Edit3, Trash2, Calendar, FileText, ChevronDown, CheckSquare } from 'lucide-react';
 import type { Task } from '@/types/tasks';
 import { formatDateForDisplay } from '@/utils/dateUtils';
 import TaskFormModal from './TaskFormModal';
 import TaskAttachmentsSection from './TaskAttachmentsSection';
 import RichTextPreview from '@/components/ui/rich-text-preview';
+import RichTextEditor from '@/components/ui/rich-text-editor';
+import ChecklistEditor from './ChecklistEditor';
 
 
 interface TaskDetailsModalProps {
@@ -31,6 +34,13 @@ export default function TaskDetailsModal({
 }: TaskDetailsModalProps) {
   const [editOpen, setEditOpen] = useState(false);
   const [notes, setNotes] = useState(task?.notes || '');
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [editedDescription, setEditedDescription] = useState('');
+
+  // Update notes when task changes
+  useEffect(() => {
+    setNotes(task?.notes || '');
+  }, [task?.id, task?.notes]);
 
   if (!task) return null;
 
@@ -120,27 +130,92 @@ export default function TaskDetailsModal({
             <Separator className="bg-lunar-border/60" />
 
             {/* Description */}
-            {task.description && (
-              <div className="space-y-2">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
                 <h3 className="font-medium text-lunar-text">Descrição</h3>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setIsEditingDescription(!isEditingDescription);
+                    setEditedDescription(task.description || '');
+                  }}
+                  className="text-xs"
+                >
+                  {isEditingDescription ? 'Cancelar' : 'Editar'}
+                </Button>
+              </div>
+              
+              {isEditingDescription ? (
+                <div className="space-y-2">
+                  <RichTextEditor
+                    value={editedDescription}
+                    onChange={setEditedDescription}
+                    placeholder="Adicione uma descrição..."
+                    minHeight="120px"
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        onUpdate(task.id, { description: editedDescription });
+                        setIsEditingDescription(false);
+                      }}
+                    >
+                      Salvar
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setIsEditingDescription(false);
+                        setEditedDescription('');
+                      }}
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
+              ) : (
                 <RichTextPreview 
                   content={task.description} 
-                  className="text-sm"
+                  className="text-sm cursor-pointer hover:bg-lunar-background/50 p-2 rounded border border-transparent hover:border-lunar-border transition-colors"
+                  placeholder="Clique em Editar para adicionar uma descrição"
+                />
+              )}
+            </div>
+
+            {/* Checklist */}
+            {(task.activeSections?.includes('checklist') || task.checklistItems?.length) && (
+              <div className="space-y-2">
+                <h3 className="font-medium text-lunar-text flex items-center gap-2">
+                  <CheckSquare className="w-4 h-4" />
+                  Checklist
+                </h3>
+                <ChecklistEditor
+                  checklistItems={task.checklistItems || []}
+                  onChange={(items) => onUpdate(task.id, { checklistItems: items })}
+                  compact
                 />
               </div>
             )}
 
-            {/* Notes */}
-            <div className="space-y-2">
-              <h3 className="font-medium text-lunar-text">Notas</h3>
-              <Textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                onBlur={handleNotesUpdate}
-                placeholder="Adicione suas notas aqui..."
-                className="min-h-[100px] bg-lunar-background border-lunar-border"
-              />
-            </div>
+            {/* Notes - Collapsible */}
+            <Collapsible defaultOpen={false}>
+              <CollapsibleTrigger className="flex items-center gap-2 font-medium text-lunar-text hover:text-lunar-accent transition-colors">
+                <ChevronDown className="w-4 h-4 transition-transform data-[state=open]:rotate-180" />
+                Notas
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-2">
+                <Textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  onBlur={handleNotesUpdate}
+                  placeholder="Adicione suas notas aqui..."
+                  className="min-h-[100px] bg-lunar-background border-lunar-border"
+                />
+              </CollapsibleContent>
+            </Collapsible>
 
             {/* Attachments Section */}
             <div className="space-y-2">
