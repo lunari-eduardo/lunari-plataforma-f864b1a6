@@ -83,21 +83,42 @@ export default function ClienteDetalhe() {
       totalSessoes: 0,
       totalFaturado: 0,
       totalPago: 0,
-      aReceber: 0
+      aReceber: 0,
+      agendado: 0
     };
+    
+    // Buscar sessões do workflow para calcular valor agendado
+    const workflowSessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
+    const clientSessions = workflowSessions.filter((session: any) => {
+      const matchByClienteId = session.clienteId === cliente.id;
+      const matchByName = !session.clienteId && session.nome?.toLowerCase().trim() === cliente.nome.toLowerCase().trim();
+      return matchByClienteId || matchByName;
+    });
+    
+    // Calcular valor total das sessões agendadas
+    const valorAgendado = clientSessions
+      .filter((session: any) => session.status === 'Agendado')
+      .reduce((total: number, session: any) => {
+        const valorTotal = typeof session.total === 'number' ? session.total : 
+                          parseFloat(String(session.total || '0').replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(/,/g, '.')) || 0;
+        return total + valorTotal;
+      }, 0);
+
     const clientMetrics = getSimplifiedClientMetrics([cliente]);
     const metrics = clientMetrics[0];
     if (!metrics) return {
       totalSessoes: 0,
       totalFaturado: 0,
       totalPago: 0,
-      aReceber: 0
+      aReceber: 0,
+      agendado: valorAgendado
     };
     return {
       totalSessoes: metrics.totalSessoes,
       totalFaturado: metrics.totalFaturado,
       totalPago: metrics.totalPago,
-      aReceber: metrics.aReceber
+      aReceber: metrics.aReceber,
+      agendado: valorAgendado
     };
   }, [cliente]);
   if (!cliente) {
@@ -224,6 +245,12 @@ export default function ClienteDetalhe() {
                 <div className="text-center">
                   <div className="text-sm md:text-lg font-bold text-green-600">{formatCurrency(metricas.totalFaturado)}</div>
                   <div className="text-xs text-muted-foreground">Total</div>
+                </div>
+              </Card>
+              <Card className="p-2 md:p-3">
+                <div className="text-center">
+                  <div className="text-sm md:text-lg font-bold text-blue-600">{formatCurrency(metricas.agendado)}</div>
+                  <div className="text-xs text-muted-foreground">Agendado</div>
                 </div>
               </Card>
               <Card className="p-2 md:p-3">
