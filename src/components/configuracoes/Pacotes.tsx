@@ -144,7 +144,6 @@ export default function Pacotes({
     setFiltroNome('');
     setFiltroValor('');
   }, []);
-
   const isMobile = useIsMobile();
   const ProdutoDropdown = useCallback(({
     pacote
@@ -278,30 +277,21 @@ export default function Pacotes({
               <Input placeholder="Digite o nome do pacote..." value={filtroNome} onChange={e => setFiltroNome(e.target.value)} className="h-8 text-sm" />
             </div>
             
-            <div>
-              <label className="block text-xs font-medium mb-1">Filtrar por Valor Base</label>
-              <Input type="number" placeholder="Digite o valor..." value={filtroValor} onChange={e => setFiltroValor(e.target.value)} className="h-8 text-sm" />
-            </div>
+            
           </div>
           
           {filtroCategoria !== 'all' || debouncedFiltroNome || debouncedFiltroValor}
         </div>
 
-        {isMobile ? (
-          // Layout em cards para mobile
-          <div className="space-y-3">
-            {pacotesFiltrados.map(pacote => (
-              <Card key={pacote.id} className="overflow-hidden">
+        {isMobile ?
+      // Layout em cards para mobile
+      <div className="space-y-3">
+            {pacotesFiltrados.map(pacote => <Card key={pacote.id} className="overflow-hidden">
                 <CardContent className="p-4">
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <h4 className="text-sm font-semibold">{pacote.nome}</h4>
-                      <Button 
-                        variant="outline" 
-                        size="icon" 
-                        className="h-8 w-8 text-red-500 hover:text-red-600 hover:border-red-200" 
-                        onClick={() => removerPacote(pacote.id)}
-                      >
+                      <Button variant="outline" size="icon" className="h-8 w-8 text-red-500 hover:text-red-600 hover:border-red-200" onClick={() => removerPacote(pacote.id)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -314,36 +304,22 @@ export default function Pacotes({
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {categorias.map(categoria => (
-                              <SelectItem key={categoria.id} value={categoria.id} className="text-xs">
+                            {categorias.map(categoria => <SelectItem key={categoria.id} value={categoria.id} className="text-xs">
                                 {categoria.nome}
-                              </SelectItem>
-                            ))}
+                              </SelectItem>)}
                           </SelectContent>
                         </Select>
                       </div>
                       <div>
                         <span className="text-muted-foreground block text-xs">Valor Base</span>
-                        <Input 
-                          type="number" 
-                          value={pacote.valor_base} 
-                          onChange={e => atualizarPacote(pacote.id, 'valor_base', parseFloat(e.target.value) || 0)} 
-                          className="h-8 text-xs" 
-                        />
+                        <Input type="number" value={pacote.valor_base} onChange={e => atualizarPacote(pacote.id, 'valor_base', parseFloat(e.target.value) || 0)} className="h-8 text-xs" />
                       </div>
                     </div>
                     
-                    {isFixedPricing && (
-                      <div>
+                    {isFixedPricing && <div>
                         <span className="text-muted-foreground block text-xs mb-1">Valor Foto Extra</span>
-                        <Input 
-                          type="number" 
-                          value={pacote.valor_foto_extra} 
-                          onChange={e => atualizarPacote(pacote.id, 'valor_foto_extra', parseFloat(e.target.value) || 0)} 
-                          className="h-8 text-xs" 
-                        />
-                      </div>
-                    )}
+                        <Input type="number" value={pacote.valor_foto_extra} onChange={e => atualizarPacote(pacote.id, 'valor_foto_extra', parseFloat(e.target.value) || 0)} className="h-8 text-xs" />
+                      </div>}
                     
                     <div>
                       <span className="text-muted-foreground block text-xs mb-2">Produtos Incluídos</span>
@@ -351,11 +327,9 @@ export default function Pacotes({
                     </div>
                   </div>
                 </CardContent>
-              </Card>
-            ))}
+              </Card>)}
             
-            {pacotesFiltrados.length === 0 && (
-              <Card className="border-dashed border-2">
+            {pacotesFiltrados.length === 0 && <Card className="border-dashed border-2">
                 <CardContent className="flex flex-col items-center justify-center py-8 text-center">
                   <div className="rounded-full bg-muted p-3 mb-3">
                     <Plus className="h-6 w-6 text-muted-foreground" />
@@ -364,12 +338,10 @@ export default function Pacotes({
                     {pacotes.length === 0 ? "Nenhum pacote cadastrado. Adicione seu primeiro pacote acima." : "Nenhum pacote encontrado com os filtros aplicados."}
                   </p>
                 </CardContent>
-              </Card>
-            )}
-          </div>
-        ) : (
-          // Layout em tabela para desktop
-          <div className="overflow-x-auto scrollbar-elegant">
+              </Card>}
+          </div> :
+      // Layout em tabela para desktop
+      <div className="overflow-x-auto scrollbar-elegant">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -382,15 +354,10 @@ export default function Pacotes({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {pacotesFiltrados.map(pacote => (
-                  <TableRow key={pacote.id} className="hover:bg-muted/60">
+                {pacotesFiltrados.map(pacote => <TableRow key={pacote.id} className="hover:bg-muted/60">
                     {/* Nome - Editável */}
                     <TableCell className="p-2">
-                      <Input 
-                        value={pacote.nome} 
-                        onChange={e => atualizarPacote(pacote.id, 'nome', e.target.value)} 
-                        className="h-7 text-xs border-0 bg-transparent hover:bg-muted/50 focus:bg-card focus:border-border" 
-                      />
+                      <Input value={pacote.nome} onChange={e => atualizarPacote(pacote.id, 'nome', e.target.value)} className="h-7 text-xs border-0 bg-transparent hover:bg-muted/50 focus:bg-card focus:border-border" />
                     </TableCell>
                     
                     {/* Categoria - Seletor */}
@@ -400,39 +367,23 @@ export default function Pacotes({
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {categorias.map(categoria => (
-                            <SelectItem key={categoria.id} value={categoria.id} className="text-xs">
+                          {categorias.map(categoria => <SelectItem key={categoria.id} value={categoria.id} className="text-xs">
                               {categoria.nome}
-                            </SelectItem>
-                          ))}
+                            </SelectItem>)}
                         </SelectContent>
                       </Select>
                     </TableCell>
                     
                     {/* Valor Base - Editável */}
                     <TableCell className="p-2">
-                      <Input 
-                        type="number" 
-                        value={pacote.valor_base} 
-                        onChange={e => atualizarPacote(pacote.id, 'valor_base', parseFloat(e.target.value) || 0)} 
-                        className="h-7 text-xs border-0 bg-transparent hover:bg-muted/50 focus:bg-card focus:border-border" 
-                      />
+                      <Input type="number" value={pacote.valor_base} onChange={e => atualizarPacote(pacote.id, 'valor_base', parseFloat(e.target.value) || 0)} className="h-7 text-xs border-0 bg-transparent hover:bg-muted/50 focus:bg-card focus:border-border" />
                     </TableCell>
                     
                     {/* Valor Foto Extra - Editável apenas no modelo fixo */}
                     <TableCell className="p-2">
-                      {isFixedPricing ? (
-                        <Input 
-                          type="number" 
-                          value={pacote.valor_foto_extra} 
-                          onChange={e => atualizarPacote(pacote.id, 'valor_foto_extra', parseFloat(e.target.value) || 0)} 
-                          className="h-7 text-xs border-0 bg-transparent hover:bg-muted/50 focus:bg-card focus:border-border" 
-                        />
-                      ) : (
-                        <div className="h-7 flex items-center text-xs text-muted-foreground px-2">
+                      {isFixedPricing ? <Input type="number" value={pacote.valor_foto_extra} onChange={e => atualizarPacote(pacote.id, 'valor_foto_extra', parseFloat(e.target.value) || 0)} className="h-7 text-xs border-0 bg-transparent hover:bg-muted/50 focus:bg-card focus:border-border" /> : <div className="h-7 flex items-center text-xs text-muted-foreground px-2">
                           {configPrecificacao.modelo === 'global' ? 'Tabela Global' : 'Por Categoria'}
-                        </div>
-                      )}
+                        </div>}
                     </TableCell>
                     
                     {/* Produtos Incluídos - Dropdown para edição */}
@@ -442,29 +393,20 @@ export default function Pacotes({
                     
                     {/* Ações */}
                     <TableCell className="p-2 text-right">
-                      <Button 
-                        variant="outline" 
-                        size="icon" 
-                        className="h-6 w-6 text-red-500 hover:text-red-600 hover:border-red-200" 
-                        onClick={() => removerPacote(pacote.id)}
-                      >
+                      <Button variant="outline" size="icon" className="h-6 w-6 text-red-500 hover:text-red-600 hover:border-red-200" onClick={() => removerPacote(pacote.id)}>
                         <Trash2 className="h-3 w-3" />
                       </Button>
                     </TableCell>
-                  </TableRow>
-                ))}
+                  </TableRow>)}
                 
-                {pacotesFiltrados.length === 0 && (
-                  <TableRow>
+                {pacotesFiltrados.length === 0 && <TableRow>
                     <TableCell colSpan={6} className="px-4 py-8 text-center text-sm text-muted-foreground">
                       {pacotes.length === 0 ? "Nenhum pacote cadastrado. Adicione seu primeiro pacote acima." : "Nenhum pacote encontrado com os filtros aplicados."}
                     </TableCell>
-                  </TableRow>
-                )}
+                  </TableRow>}
               </TableBody>
             </Table>
-          </div>
-        )}
+          </div>}
       </div>
 
     </div>;
