@@ -178,10 +178,8 @@ export default function PrecificacaoFotos({
       {/* Seletor de Modelo */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Modelo de Precificação</CardTitle>
-          <CardDescription>
-            Escolha como os preços de fotos extras serão determinados
-          </CardDescription>
+          <CardTitle className="text-sm">Modelo de Precificação</CardTitle>
+          
         </CardHeader>
         <CardContent>
           <RadioGroup value={config.modelo} onValueChange={handleModeloChange} className="space-y-4">
@@ -337,7 +335,7 @@ export default function PrecificacaoFotos({
       {/* Preview de Cálculo */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-sm">
             <Info className="h-4 w-4" />
             Preview de Cálculo
           </CardTitle>
@@ -364,7 +362,7 @@ export default function PrecificacaoFotos({
       {/* Informações Importantes */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base text-orange-600">
+          <CardTitle className="text-orange-600 text-sm">
             Informações Importantes
           </CardTitle>
         </CardHeader>
