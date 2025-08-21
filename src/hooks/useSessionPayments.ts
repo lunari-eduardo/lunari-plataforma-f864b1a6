@@ -129,9 +129,14 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
     .filter(p => p.statusPagamento === 'pago')
     .reduce((acc, p) => acc + p.valor, 0);
 
-  // Calcular total agendado/pendente
+  // Calcular total agendado (com data de vencimento definida)
+  const totalAgendado = payments
+    .filter(p => p.statusPagamento === 'pendente' && p.dataVencimento)
+    .reduce((acc, p) => acc + p.valor, 0);
+
+  // Calcular total pendente (sem data de vencimento específica)
   const totalPendente = payments
-    .filter(p => p.statusPagamento === 'pendente')
+    .filter(p => p.statusPagamento === 'pendente' && !p.dataVencimento)
     .reduce((acc, p) => acc + p.valor, 0);
 
   // Adicionar novo pagamento
@@ -237,6 +242,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
   return {
     payments,
     totalPago,
+    totalAgendado,
     totalPendente,
     setPayments,
     addPayment,

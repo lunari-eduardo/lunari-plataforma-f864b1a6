@@ -80,6 +80,7 @@ export function SessionPaymentHistory({ sessionData, onPaymentUpdate }: SessionP
   const {
     payments,
     totalPago,
+    totalAgendado,
     totalPendente,
     addPayment,
     editPayment,
@@ -162,6 +163,44 @@ export function SessionPaymentHistory({ sessionData, onPaymentUpdate }: SessionP
 
   return (
     <div className="space-y-6">
+      {/* Métricas Financeiras da Sessão */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card className="bg-lunar-surface border-lunar-border/50">
+          <CardContent className="p-3 text-center">
+            <div className="space-y-1">
+              <span className="text-xs text-lunar-textSecondary uppercase tracking-wide">Total</span>
+              <p className="font-bold text-lg text-chart-blue-1">{formatCurrency(valorTotal)}</p>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-lunar-surface border-lunar-border/50">
+          <CardContent className="p-3 text-center">
+            <div className="space-y-1">
+              <span className="text-xs text-lunar-textSecondary">Pago</span>
+              <p className="font-bold text-lg text-chart-green-1">{formatCurrency(totalPago)}</p>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-lunar-surface border-lunar-border/50">
+          <CardContent className="p-3 text-center">
+            <div className="space-y-1">
+              <span className="text-xs text-lunar-textSecondary">Agendado</span>
+              <p className="font-bold text-lg text-chart-orange-1">{formatCurrency(totalAgendado)}</p>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-lunar-surface border-lunar-border/50">
+          <CardContent className="p-3 text-center">
+            <div className="space-y-1">
+              <span className="text-xs text-lunar-textSecondary">Pendente</span>
+              <p className="font-bold text-lg text-chart-yellow-1">{formatCurrency(totalPendente)}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
       {/* Histórico de Movimentações */}
       <Card>
         <CardHeader>

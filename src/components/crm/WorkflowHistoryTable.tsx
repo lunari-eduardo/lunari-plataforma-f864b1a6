@@ -140,22 +140,26 @@ export function WorkflowHistoryTable({
                   </div>
                 </div>
 
-                {/* Valores Financeiros - Cards Compactos */}
-                <div className="flex flex-row md:flex-col gap-4 md:gap-1 md:text-right">
-                  <div className="flex flex-col items-start md:items-end">
+                {/* Métricas Financeiras - Layout Horizontal */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 text-center md:text-right">
+                  <div className="flex flex-col items-center md:items-end">
                     <span className="text-xs text-lunar-textSecondary uppercase tracking-wide">Total</span>
-                    <span className="font-bold text-sm text-blue-700">{formatCurrency(item.total || 0)}</span>
+                    <span className="font-bold text-sm text-chart-blue-1">{formatCurrency(item.total || 0)}</span>
                   </div>
                   
-                  <div className="flex gap-4 md:gap-2 md:flex-col">
-                    <div className="flex flex-col items-start md:items-end">
-                      <span className="text-xs text-lunar-textSecondary">Pago</span>
-                      <span className="font-semibold text-xs text-success text-lunar-success">{formatCurrency(item.valorPago || 0)}</span>
-                    </div>
-                    <div className="flex flex-col items-start md:items-end">
-                      <span className="text-xs text-lunar-textSecondary">Pendente</span>
-                      <span className="font-semibold text-xs text-warning text-chart-expense">{formatCurrency(item.restante || 0)}</span>
-                    </div>
+                  <div className="flex flex-col items-center md:items-end">
+                    <span className="text-xs text-lunar-textSecondary">Pago</span>
+                    <span className="font-semibold text-sm text-chart-green-1">{formatCurrency(item.valorPago || 0)}</span>
+                  </div>
+                  
+                  <div className="flex flex-col items-center md:items-end">
+                    <span className="text-xs text-lunar-textSecondary">Agendado</span>
+                    <span className="font-semibold text-sm text-chart-orange-1">{formatCurrency(0)}</span>
+                  </div>
+                  
+                  <div className="flex flex-col items-center md:items-end">
+                    <span className="text-xs text-lunar-textSecondary">Pendente</span>
+                    <span className="font-semibold text-sm text-chart-yellow-1">{formatCurrency(item.restante || 0)}</span>
                   </div>
                 </div>
               </div>
