@@ -5,6 +5,7 @@ import { History, Calendar, DollarSign, Package, CreditCard } from "lucide-react
 import { formatCurrency } from '@/utils/financialUtils';
 import { formatDateForDisplay } from '@/utils/dateUtils';
 import { Cliente } from '@/types/orcamentos';
+import { SessionPaymentHistory } from './SessionPaymentHistory';
 interface WorkflowHistoryTableProps {
   cliente: Cliente;
 }
@@ -161,8 +162,23 @@ export function WorkflowHistoryTable({
             </AccordionTrigger>
             
             <AccordionContent className="px-4 md:px-6 pb-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-8 py-0">
-                
+              {/* HISTÓRICO DE PAGAMENTOS - COMPONENTE NOVO */}
+              <SessionPaymentHistory 
+                sessionData={item} 
+                onPaymentUpdate={(sessionId, totalPaid) => {
+                  // Atualizar o localStorage com o novo valor pago
+                  const sessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
+                  const updatedSessions = sessions.map((s: any) => 
+                    s.id === sessionId ? { ...s, valorPago: totalPaid } : s
+                  );
+                  localStorage.setItem('workflow_sessions', JSON.stringify(updatedSessions));
+                  
+                  // Disparar evento para sincronização
+                  window.dispatchEvent(new CustomEvent('workflowSessionsUpdated'));
+                }}
+              />
+
+              <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-8">
                 {/* COMPOSIÇÃO DO VALOR */}
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 mb-4">
@@ -202,48 +218,6 @@ export function WorkflowHistoryTable({
                       <div className="flex justify-between items-center">
                         <span className="font-bold text-sm text-lunar-text">Total</span>
                         <span className="font-bold text-sm text-lunar-text">{formatCurrency(item.total || 0)}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* SITUAÇÃO FINANCEIRA */}
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2 mb-4">
-                    <CreditCard className="h-4 w-4 text-lunar-accent" />
-                    <h3 className="font-semibold text-sm text-lunar-text uppercase tracking-wide">
-                      Situação Financeira
-                    </h3>
-                  </div>
-                  
-                  <div className="space-y-4 rounded-lg bg-lunar-surface py-0 my-px">
-                    <div className="border border-chart-revenue rounded-lg p-4 bg-muted py-[6px]">
-                      <div className="flex justify-between items-center">
-                        <span className="flex items-center gap-2 text-sm text-lunar-text">
-                          <span className="w-2 h-2 bg-success rounded-full"></span>
-                          Valor Pago
-                        </span>
-                        <span className="font-bold text-success text-chart-revenue">{formatCurrency(item.valorPago || 0)}</span>
-                      </div>
-                    </div>
-                    
-                    <div className="border border-chart-expense rounded-lg p-4 bg-muted py-[6px]">
-                      <div className="flex justify-between items-center">
-                        <span className="flex items-center gap-2 text-sm text-lunar-text">
-                          <span className="w-2 h-2 bg-warning rounded-full"></span>
-                          A Receber
-                        </span>
-                        <span className="font-bold text-warning text-lunar-error">{formatCurrency(item.restante || 0)}</span>
-                      </div>
-                    </div>
-                    
-                    {/* Indicador de Status de Pagamento */}
-                    <div className="mt-4 p-3 border border-lunar-border/30 rounded-lg bg-muted py-[6px]">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-lunar-textSecondary">Status do Pagamento</span>
-                        <Badge className={`text-xs ${item.restante === 0 ? 'bg-success/20 text-success' : 'bg-warning/20 text-warning'}`}>
-                          {item.restante === 0 ? 'Quitado' : 'Pendente'}
-                        </Badge>
                       </div>
                     </div>
                   </div>
