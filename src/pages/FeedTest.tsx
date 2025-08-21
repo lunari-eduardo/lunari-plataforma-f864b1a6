@@ -13,7 +13,6 @@ export default function FeedTest() {
   const [images, setImages] = useState<FeedImage[]>(() => FeedStorage.load());
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [swapSourceId, setSwapSourceId] = useState<string | null>(null);
-
   const [dragId, setDragId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
 
@@ -23,10 +22,11 @@ export default function FeedTest() {
   const [device, setDevice] = useState<'mobile' | 'tablet' | 'desktop'>('mobile');
   const [zoom, setZoom] = useState<number>(1);
   const pressTimer = useRef<number | null>(null);
-
   const inputRef = useRef<HTMLInputElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [igUsername, setIgUsername] = useState<string>('');
   const [isLoadingIg, setIsLoadingIg] = useState(false);
@@ -51,7 +51,7 @@ export default function FeedTest() {
   // Auto-load Instagram on first visit if username is saved
   useEffect(() => {
     if (!igUsername) return;
-    if (!images.some((i) => i.origem === 'instagram')) {
+    if (!images.some(i => i.origem === 'instagram')) {
       handleReloadInstagram();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -70,7 +70,6 @@ export default function FeedTest() {
     window.addEventListener('resize', compute);
     return () => window.removeEventListener('resize', compute);
   }, []);
-
   useEffect(() => {
     if (!deviceStateReady) return;
     if (device === 'mobile') {
@@ -82,13 +81,23 @@ export default function FeedTest() {
     const saved = storage.load<number>(key, defaults);
     setZoom(saved);
   }, [device, deviceStateReady]);
-
   const zoomRange = useMemo(() => {
-    if (device === 'desktop') return { min: 0.5, max: 1.3, step: 0.05 } as const;
-    if (device === 'tablet') return { min: 0.5, max: 1.0, step: 0.05 } as const;
-    return { min: 1, max: 1, step: 1 } as const;
+    if (device === 'desktop') return {
+      min: 0.5,
+      max: 1.3,
+      step: 0.05
+    } as const;
+    if (device === 'tablet') return {
+      min: 0.5,
+      max: 1.0,
+      step: 0.05
+    } as const;
+    return {
+      min: 1,
+      max: 1,
+      step: 1
+    } as const;
   }, [device]);
-
   const setZoomPersist = (val: number) => {
     setZoom(val);
     if (device !== 'mobile') {
@@ -96,10 +105,13 @@ export default function FeedTest() {
       storage.save(key, val);
     }
   };
-
   const gridWidthStyle = useMemo(() => {
-    if (device === 'desktop') return { width: `calc(min(33vw, 400px) * ${zoom})` } as React.CSSProperties;
-    if (device === 'tablet') return { width: `calc(100% * ${zoom})` } as React.CSSProperties;
+    if (device === 'desktop') return {
+      width: `calc(min(33vw, 400px) * ${zoom})`
+    } as React.CSSProperties;
+    if (device === 'tablet') return {
+      width: `calc(100% * ${zoom})`
+    } as React.CSSProperties;
     return undefined;
   }, [device, zoom]);
 
@@ -125,29 +137,24 @@ export default function FeedTest() {
       document.removeEventListener('keydown', onKey);
     };
   }, []);
-
   const openFilePicker = () => inputRef.current?.click();
-
   const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
     try {
-      const dataUrls = await Promise.all(
-        files.map(async (file) => {
-          const img = await loadImageFromFile(file);
-          return await compressToJpeg(img, 1080, 0.7);
-        })
-      );
-
-      setImages((prev) => {
-        const uploads = prev.filter((i) => i.origem !== 'instagram');
-        const instagram = prev.filter((i) => i.origem === 'instagram');
-        const newItems: FeedImage[] = dataUrls.map((du) => ({
+      const dataUrls = await Promise.all(files.map(async file => {
+        const img = await loadImageFromFile(file);
+        return await compressToJpeg(img, 1080, 0.7);
+      }));
+      setImages(prev => {
+        const uploads = prev.filter(i => i.origem !== 'instagram');
+        const instagram = prev.filter(i => i.origem === 'instagram');
+        const newItems: FeedImage[] = dataUrls.map(du => ({
           id: crypto.randomUUID(),
           url: du,
           ordem: 0,
           origem: 'upload',
-          criadoEm: Date.now(),
+          criadoEm: Date.now()
         }));
         const uploadsNext = [...newItems, ...uploads];
         const combined = composeAndClamp([...uploadsNext, ...instagram]);
@@ -161,51 +168,61 @@ export default function FeedTest() {
 
   // Composition: uploads first (max 30), instagram after (max 9)
   function composeAndClamp(arr: FeedImage[]): FeedImage[] {
-    const uploads = arr.filter((i) => i.origem !== 'instagram');
-    const instagram = arr.filter((i) => i.origem === 'instagram');
+    const uploads = arr.filter(i => i.origem !== 'instagram');
+    const instagram = arr.filter(i => i.origem === 'instagram');
     const uploadsLimited = uploads.slice(0, 30);
     const instagramLimited = instagram.slice(0, 9);
-    return [...uploadsLimited, ...instagramLimited].map((img, idx) => ({ ...img, ordem: idx }));
+    return [...uploadsLimited, ...instagramLimited].map((img, idx) => ({
+      ...img,
+      ordem: idx
+    }));
   }
-
   async function imageUrlToDataUrl(url: string): Promise<string> {
-    const res = await fetch(url, { cache: 'no-store' });
+    const res = await fetch(url, {
+      cache: 'no-store'
+    });
     const blob = await res.blob();
-    return await new Promise((resolve) => {
+    return await new Promise(resolve => {
       const reader = new FileReader();
       reader.onloadend = () => resolve(reader.result as string);
       reader.readAsDataURL(blob);
     });
   }
-
   const loadInstagram = async (username: string) => {
     setIsLoadingIg(true);
     try {
       const clean = username.replace(/^@+/, '');
-      const urls = Array.from({ length: 9 }).map((_, i) => `https://picsum.photos/seed/${encodeURIComponent(clean)}-${i}/1080/1350.jpg`);
+      const urls = Array.from({
+        length: 9
+      }).map((_, i) => `https://picsum.photos/seed/${encodeURIComponent(clean)}-${i}/1080/1350.jpg`);
       const newIgItems: FeedImage[] = urls.map((url, idx) => ({
         id: crypto.randomUUID(),
         url,
         ordem: 0,
         origem: 'instagram',
-        criadoEm: Date.now() - idx,
+        criadoEm: Date.now() - idx
       }));
-      setImages((prev) => {
-        const withoutIg = prev.filter((i) => i.origem !== 'instagram');
+      setImages(prev => {
+        const withoutIg = prev.filter(i => i.origem !== 'instagram');
         const next = composeAndClamp([...withoutIg, ...newIgItems]);
         FeedStorage.save(next);
         return next;
       });
       storage.save(STORAGE_KEYS.FEED_INSTAGRAM_USERNAME, username);
-      toast({ title: 'Instagram carregado', description: 'Últimas 9 fotos atualizadas.' });
+      toast({
+        title: 'Instagram carregado',
+        description: 'Últimas 9 fotos atualizadas.'
+      });
     } catch (error) {
       console.error(error);
-      toast({ title: 'Falha ao carregar', description: 'Não foi possível buscar as fotos.' });
+      toast({
+        title: 'Falha ao carregar',
+        description: 'Não foi possível buscar as fotos.'
+      });
     } finally {
       setIsLoadingIg(false);
     }
   };
-
   const handleReloadInstagram = async () => {
     if (!igUsername) {
       setIsSettingsOpen(true);
@@ -213,32 +230,36 @@ export default function FeedTest() {
     }
     await loadInstagram(igUsername);
   };
-
   const handleStartSwap = (id: string) => {
     setSelectedId(null);
     if (reorderMode) {
       setReorderMode(false);
       FeedStorage.save(composeAndClamp(images));
     }
-    setSwapSourceId((cur) => {
+    setSwapSourceId(cur => {
       if (cur === id) return null;
-      toast({ title: 'Modo de troca', description: 'Selecione outra foto para trocar de posição.' });
+      toast({
+        title: 'Modo de troca',
+        description: 'Selecione outra foto para trocar de posição.'
+      });
       return id;
     });
   };
-
   const performSwap = (aId: string, bId: string) => {
     if (aId === bId) {
       setSwapSourceId(null);
       return;
     }
-    setImages((prev) => {
+    setImages(prev => {
       const arr = [...prev];
-      const iA = arr.findIndex((i) => i.id === aId);
-      const iB = arr.findIndex((i) => i.id === bId);
+      const iA = arr.findIndex(i => i.id === aId);
+      const iB = arr.findIndex(i => i.id === bId);
       if (iA < 0 || iB < 0) return prev;
       if (arr[iA].origem !== arr[iB].origem) {
-        toast({ title: 'Troca não permitida', description: 'Troque apenas dentro do mesmo grupo (Uploads ou Instagram).' });
+        toast({
+          title: 'Troca não permitida',
+          description: 'Troque apenas dentro do mesmo grupo (Uploads ou Instagram).'
+        });
         return prev;
       }
       [arr[iA], arr[iB]] = [arr[iB], arr[iA]];
@@ -248,24 +269,27 @@ export default function FeedTest() {
     });
     setSwapSourceId(null);
     setSelectedId(null);
-    toast({ title: 'Posições trocadas' });
+    toast({
+      title: 'Posições trocadas'
+    });
   };
-
   const handleDelete = (id: string) => {
-    setImages((prev) => {
-      const filtered = prev.filter((i) => i.id !== id);
+    setImages(prev => {
+      const filtered = prev.filter(i => i.id !== id);
       const next = composeAndClamp(filtered);
       FeedStorage.save(next);
       if (selectedId === id) setSelectedId(null);
       return next;
     });
   };
-
   const handleSaveSequence = () => {
     const recomposed = composeAndClamp(images);
     setImages(recomposed);
     FeedStorage.save(recomposed);
-    toast({ title: 'Sequência salva', description: 'A ordem atual foi salva.' });
+    toast({
+      title: 'Sequência salva',
+      description: 'A ordem atual foi salva.'
+    });
   };
 
   // Desktop DnD
@@ -292,12 +316,11 @@ export default function FeedTest() {
     setSwapSourceId(null);
     setSelectedId(null);
   };
-
   const reorderByIds = (fromId: string, toId: string) => {
-    setImages((prev) => {
+    setImages(prev => {
       const arr = [...prev];
-      const fromIdx = arr.findIndex((i) => i.id === fromId);
-      const toIdx = arr.findIndex((i) => i.id === toId);
+      const fromIdx = arr.findIndex(i => i.id === fromId);
+      const toIdx = arr.findIndex(i => i.id === toId);
       if (fromIdx < 0 || toIdx < 0) return prev;
       const [moved] = arr.splice(fromIdx, 1);
       arr.splice(toIdx, 0, moved);
@@ -345,23 +368,19 @@ export default function FeedTest() {
     setSwapSourceId(null);
     setSelectedId(null);
   };
-
   const handleItemClick = (id: string) => {
-    setSelectedId((cur) => (cur === id ? null : id));
+    setSelectedId(cur => cur === id ? null : id);
   };
-
   const handleKeyDown = (id: string, e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       handleItemClick(id);
     }
   };
-
-  return (
-    <main className="w-full">
+  return <main className="w-full">
       <header className="sticky top-0 z-10 bg-background border-b border-lunar-border">
         <div className="mx-auto w-full max-w-[680px] px-[2px] py-2 flex items-center justify-between">
-          <h1 className="text-base font-semibold">Feed Test</h1>
+          
           <div className="flex items-center gap-2">
             <input ref={inputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileSelected} />
             <Button size="sm" onClick={openFilePicker} title="Adicionar fotos">
@@ -371,33 +390,27 @@ export default function FeedTest() {
               <Save className="h-4 w-4" />
               <span className="ml-2">Salvar Sequência</span>
             </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => { if (igUsername) handleReloadInstagram(); else setIsSettingsOpen(true); }}
-              disabled={isLoadingIg}
-              title="Recarregar Instagram"
-            >
+            <Button size="sm" variant="outline" onClick={() => {
+            if (igUsername) handleReloadInstagram();else setIsSettingsOpen(true);
+          }} disabled={isLoadingIg} title="Recarregar Instagram">
               {isLoadingIg ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
             </Button>
             <Button size="sm" variant="outline" onClick={() => setIsSettingsOpen(true)} title="Configurações do Instagram">
               <Settings className="h-4 w-4" />
             </Button>
-            <Button
-              size="sm"
-              variant={reorderMode ? 'destructive' : 'outline'}
-              className="md:hidden"
-              onClick={() => {
-                setReorderMode((prev) => {
-                  const next = !prev;
-                  if (prev) {
-                    FeedStorage.save(composeAndClamp(images));
-                    toast({ title: 'Ordem salva', description: 'Reorganização desativada.' });
-                  }
-                  return next;
+            <Button size="sm" variant={reorderMode ? 'destructive' : 'outline'} className="md:hidden" onClick={() => {
+            setReorderMode(prev => {
+              const next = !prev;
+              if (prev) {
+                FeedStorage.save(composeAndClamp(images));
+                toast({
+                  title: 'Ordem salva',
+                  description: 'Reorganização desativada.'
                 });
-              }}
-            >
+              }
+              return next;
+            });
+          }}>
               {reorderMode ? 'Concluir' : 'Reorganizar'}
             </Button>
           </div>
@@ -407,89 +420,62 @@ export default function FeedTest() {
       <section ref={containerRef} className="w-full px-[2px] bg-background overflow-x-hidden">
         <div className="mx-auto" style={gridWidthStyle as React.CSSProperties}>
           <div className="grid grid-cols-3 gap-[1px]">
-            {images.map((item) => (
-              <div
-                key={item.id}
-                data-feed-id={item.id}
-                className={`relative transition-transform ${mobileDragId === item.id ? 'ring-2 ring-primary shadow-md scale-[0.98]' : ''} ${swapSourceId === item.id ? 'ring-2 ring-primary' : ''}`}
-                draggable={!swapSourceId}
-                onDragStart={(e) => onDragStart(item.id, e)}
-                onDragOver={(e) => onDragOver(item.id, e)}
-                onDrop={(e) => onDrop(item.id, e)}
-                onPointerDown={(e) => { if (swapSourceId) return; onItemPointerDown(item.id, e); }}
-                onPointerMove={(e) => { if (swapSourceId) return; onItemPointerMove(item.id, e); }}
-                onPointerUp={(e) => { if (swapSourceId) return; onItemPointerUp(item.id, e); }}
-                onClick={(e) => { e.stopPropagation(); if (swapSourceId) { if (swapSourceId === item.id) { setSwapSourceId(null); } else { performSwap(swapSourceId, item.id); } return; } handleItemClick(item.id); }}
-                onKeyDown={(e) => handleKeyDown(item.id, e)}
-                onContextMenu={(e) => { if (reorderMode) e.preventDefault(); }}
-                tabIndex={0}
-              >
-                <AspectRatio ratio={4/5}>
+            {images.map(item => <div key={item.id} data-feed-id={item.id} className={`relative transition-transform ${mobileDragId === item.id ? 'ring-2 ring-primary shadow-md scale-[0.98]' : ''} ${swapSourceId === item.id ? 'ring-2 ring-primary' : ''}`} draggable={!swapSourceId} onDragStart={e => onDragStart(item.id, e)} onDragOver={e => onDragOver(item.id, e)} onDrop={e => onDrop(item.id, e)} onPointerDown={e => {
+            if (swapSourceId) return;
+            onItemPointerDown(item.id, e);
+          }} onPointerMove={e => {
+            if (swapSourceId) return;
+            onItemPointerMove(item.id, e);
+          }} onPointerUp={e => {
+            if (swapSourceId) return;
+            onItemPointerUp(item.id, e);
+          }} onClick={e => {
+            e.stopPropagation();
+            if (swapSourceId) {
+              if (swapSourceId === item.id) {
+                setSwapSourceId(null);
+              } else {
+                performSwap(swapSourceId, item.id);
+              }
+              return;
+            }
+            handleItemClick(item.id);
+          }} onKeyDown={e => handleKeyDown(item.id, e)} onContextMenu={e => {
+            if (reorderMode) e.preventDefault();
+          }} tabIndex={0}>
+                <AspectRatio ratio={4 / 5}>
                   <img src={item.url} alt={`Imagem do feed ${item.ordem + 1}`} className="w-full h-full object-cover" loading="lazy" draggable={false} />
                 </AspectRatio>
 
-                {selectedId === item.id && !reorderMode && (
-                  <div className="absolute top-1 right-1 flex gap-1 z-10">
-                    <button
-                      aria-label="Excluir"
-                      className="h-7 w-7 rounded bg-foreground/70 text-background grid place-items-center"
-                      draggable={false}
-                      onDragStart={(e) => e.preventDefault()}
-                      onPointerDown={(e) => e.stopPropagation()}
-                      onPointerUp={(e) => e.stopPropagation()}
-                      onPointerMove={(e) => e.stopPropagation()}
-                      onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }}
-                    >
+                {selectedId === item.id && !reorderMode && <div className="absolute top-1 right-1 flex gap-1 z-10">
+                    <button aria-label="Excluir" className="h-7 w-7 rounded bg-foreground/70 text-background grid place-items-center" draggable={false} onDragStart={e => e.preventDefault()} onPointerDown={e => e.stopPropagation()} onPointerUp={e => e.stopPropagation()} onPointerMove={e => e.stopPropagation()} onClick={e => {
+                e.stopPropagation();
+                handleDelete(item.id);
+              }}>
                       <Trash className="h-4 w-4" />
                     </button>
-                    <button
-                      aria-label="Trocar posição"
-                      className="h-7 w-7 rounded bg-foreground/70 text-background grid place-items-center"
-                      draggable={false}
-                      onDragStart={(e) => e.preventDefault()}
-                      onPointerDown={(e) => e.stopPropagation()}
-                      onPointerUp={(e) => e.stopPropagation()}
-                      onPointerMove={(e) => e.stopPropagation()}
-                      onClick={(e) => { e.stopPropagation(); handleStartSwap(item.id); }}
-                      title={swapSourceId === item.id ? 'Cancelar troca' : 'Trocar posição'}
-                    >
+                    <button aria-label="Trocar posição" className="h-7 w-7 rounded bg-foreground/70 text-background grid place-items-center" draggable={false} onDragStart={e => e.preventDefault()} onPointerDown={e => e.stopPropagation()} onPointerUp={e => e.stopPropagation()} onPointerMove={e => e.stopPropagation()} onClick={e => {
+                e.stopPropagation();
+                handleStartSwap(item.id);
+              }} title={swapSourceId === item.id ? 'Cancelar troca' : 'Trocar posição'}>
                       <ArrowLeftRight className="h-4 w-4" />
                     </button>
-                  </div>
-                )}
+                  </div>}
 
-                {dragOverId === item.id && (
-                  <div className="absolute inset-0 ring-2 ring-primary pointer-events-none" />
-                )}
-              </div>
-            ))}
+                {dragOverId === item.id && <div className="absolute inset-0 ring-2 ring-primary pointer-events-none" />}
+              </div>)}
           </div>
         </div>
       </section>
         {/* Zoom Controls (md+) */}
         <div className="hidden md:flex fixed bottom-3 left-3 z-20 items-center gap-2 rounded-full bg-foreground/70 text-background px-3 py-2 shadow-md">
-          <button
-            aria-label="Diminuir zoom"
-            className="h-7 w-7 grid place-items-center rounded-full bg-background/20"
-            onClick={() => setZoomPersist(Math.max(zoomRange.min, Math.round((zoom - zoomRange.step) * 100) / 100))}
-          >
+          <button aria-label="Diminuir zoom" className="h-7 w-7 grid place-items-center rounded-full bg-background/20" onClick={() => setZoomPersist(Math.max(zoomRange.min, Math.round((zoom - zoomRange.step) * 100) / 100))}>
             −
           </button>
-          <input
-            type="range"
-            min={zoomRange.min}
-            max={zoomRange.max}
-            step={zoomRange.step}
-            value={zoom}
-            onChange={(e) => setZoomPersist(parseFloat(e.currentTarget.value))}
-            className="w-32 accent-background"
-            style={{ accentColor: 'hsl(var(--background))' }}
-          />
-          <button
-            aria-label="Aumentar zoom"
-            className="h-7 w-7 grid place-items-center rounded-full bg-background/20"
-            onClick={() => setZoomPersist(Math.min(zoomRange.max, Math.round((zoom + zoomRange.step) * 100) / 100))}
-          >
+          <input type="range" min={zoomRange.min} max={zoomRange.max} step={zoomRange.step} value={zoom} onChange={e => setZoomPersist(parseFloat(e.currentTarget.value))} className="w-32 accent-background" style={{
+        accentColor: 'hsl(var(--background))'
+      }} />
+          <button aria-label="Aumentar zoom" className="h-7 w-7 grid place-items-center rounded-full bg-background/20" onClick={() => setZoomPersist(Math.min(zoomRange.max, Math.round((zoom + zoomRange.step) * 100) / 100))}>
             +
           </button>
         </div>
@@ -501,14 +487,13 @@ export default function FeedTest() {
           </DialogHeader>
           <div className="space-y-3">
             <label className="text-sm font-medium">Usuário do Instagram</label>
-            <Input
-              value={igUsername}
-              onChange={(e) => setIgUsername(e.currentTarget.value)}
-              placeholder="@usuario"
-            />
+            <Input value={igUsername} onChange={e => setIgUsername(e.currentTarget.value)} placeholder="@usuario" />
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="outline" onClick={() => setIsSettingsOpen(false)}>Fechar</Button>
-              <Button onClick={() => { storage.save(STORAGE_KEYS.FEED_INSTAGRAM_USERNAME, igUsername); handleReloadInstagram(); }}>
+              <Button onClick={() => {
+              storage.save(STORAGE_KEYS.FEED_INSTAGRAM_USERNAME, igUsername);
+              handleReloadInstagram();
+            }}>
                 {isLoadingIg ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
                 Carregar do Instagram
               </Button>
@@ -517,6 +502,5 @@ export default function FeedTest() {
         </DialogContent>
       </Dialog>
 
-    </main>
-  );
+    </main>;
 }
