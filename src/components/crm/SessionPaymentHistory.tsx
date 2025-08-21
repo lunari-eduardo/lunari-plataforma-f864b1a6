@@ -159,9 +159,70 @@ export function SessionPaymentHistory({ sessionData, onPaymentUpdate }: SessionP
 
   const valorTotal = sessionData.total || 0;
   const valorRestante = Math.max(0, valorTotal - totalPago);
+  
+  // Calcular total agendado (pagamentos pendentes com data de vencimento)
+  const totalAgendado = payments
+    .filter(p => p.statusPagamento === 'pendente' && p.dataVencimento)
+    .reduce((acc, p) => acc + p.valor, 0);
 
   return (
     <div className="space-y-6">
+      {/* Métricas de Pagamento */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-center">
+              <div className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                TOTAL
+              </div>
+              <div className="text-xl font-bold text-foreground">
+                {formatCurrency(valorTotal)}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-center">
+              <div className="text-sm font-medium text-green-600 uppercase tracking-wide flex items-center justify-center gap-1">
+                Pago
+                <div className="w-0 h-0 border-l-2 border-r-2 border-b-3 border-l-transparent border-r-transparent border-b-green-600"></div>
+              </div>
+              <div className="text-xl font-bold text-green-600">
+                {formatCurrency(totalPago)}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-center">
+              <div className="text-sm font-medium text-blue-600 uppercase tracking-wide">
+                Agendado
+              </div>
+              <div className="text-xl font-bold text-blue-600">
+                {formatCurrency(totalAgendado)}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-center">
+              <div className="text-sm font-medium text-orange-600 uppercase tracking-wide">
+                Pendente
+              </div>
+              <div className="text-xl font-bold text-orange-600">
+                {formatCurrency(totalPendente)}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Histórico de Movimentações */}
       <Card>
         <CardHeader>
