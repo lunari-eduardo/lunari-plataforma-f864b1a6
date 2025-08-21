@@ -36,9 +36,11 @@ export default function ChecklistEditor({
   };
 
   const updateItem = (id: string, updates: Partial<ChecklistItem>) => {
+    console.log('🔄 ChecklistEditor: Atualizando item', { id, updates });
     const updatedItems = checklistItems.map(item => 
       item.id === id ? { ...item, ...updates } : item
     );
+    console.log('📋 ChecklistEditor: Items atualizados', updatedItems);
     onChange(updatedItems);
   };
 
@@ -52,8 +54,10 @@ export default function ChecklistEditor({
   };
 
   const saveEdit = () => {
-    if (editingId && editText.trim()) {
+    console.log('💾 ChecklistEditor: Salvando edição', { editingId, editText });
+    if (editingId && editText.trim() && editText.trim() !== '') {
       updateItem(editingId, { text: editText.trim() });
+      console.log('✅ ChecklistEditor: Texto salvo:', editText.trim());
     }
     setEditingId(null);
     setEditText('');
@@ -81,31 +85,35 @@ export default function ChecklistEditor({
     <div className={cn("space-y-2", compact && "space-y-1")}>
       {/* Existing items */}
       {checklistItems.map((item) => (
-        <div key={item.id} className={cn(
+        <div key={`${item.id}-${item.completed}-${item.text}`} className={cn(
           "flex items-center gap-2 group",
           compact ? "py-1" : "py-2"
         )}>
           <Checkbox
             checked={item.completed}
-            onCheckedChange={(checked) => 
-              updateItem(item.id, { completed: !!checked })
-            }
+            onCheckedChange={(checked) => {
+              console.log('☑️ ChecklistEditor: Checkbox clicado', { itemId: item.id, checked, currentState: item.completed });
+              updateItem(item.id, { completed: !!checked });
+            }}
             className="flex-shrink-0"
           />
           
           {editingId === item.id ? (
             <div className="flex-1 flex items-center gap-2">
-              <Input
-                value={editText}
-                onChange={(e) => setEditText(e.target.value)}
-                onKeyDown={(e) => handleKeyPress(e, 'edit')}
-                onBlur={saveEdit}
-                className={cn(
-                  "text-sm bg-lunar-background border-lunar-border",
-                  compact && "h-8"
-                )}
-                autoFocus
-              />
+                <Input
+                  value={editText}
+                  onChange={(e) => setEditText(e.target.value)}
+                  onKeyDown={(e) => handleKeyPress(e, 'edit')}
+                  onBlur={() => {
+                    console.log('🔍 ChecklistEditor: Campo perdeu foco, salvando');
+                    saveEdit();
+                  }}
+                  className={cn(
+                    "text-sm bg-lunar-background border-lunar-border",
+                    compact && "h-8"
+                  )}
+                  autoFocus
+                />
             </div>
           ) : (
             <span
