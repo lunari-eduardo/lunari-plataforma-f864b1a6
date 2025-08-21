@@ -4,7 +4,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, User } from 'lucide-react';
+import { Calendar, User, FileText, CheckSquare, Megaphone, File } from 'lucide-react';
 
 import { 
   SelectModal as Select, 
@@ -17,10 +17,10 @@ import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMe
 import { useTaskPeople } from '@/hooks/useTaskPeople';
 import { useTaskTags } from '@/hooks/useTaskTags';
 import { formatDateForInput, formatDateForStorage } from '@/utils/dateUtils';
-import type { Task, TaskPriority, TaskStatus, TaskType, ChecklistItem } from '@/types/tasks';
+import type { Task, TaskPriority, TaskStatus, TaskType, TaskSection, ChecklistItem } from '@/types/tasks';
 
 // Import form components
-import TaskTypeSelector from './forms/TaskTypeSelector';
+import TaskSectionSelector from './forms/TaskSectionSelector';
 import TaskSimpleForm from './forms/TaskSimpleForm';
 import TaskChecklistForm from './forms/TaskChecklistForm';
 import TaskContentForm from './forms/TaskContentForm';
@@ -36,7 +36,16 @@ interface UnifiedTaskModalProps {
 
 export default function UnifiedTaskModal({ open, onOpenChange, onSubmit, initial, mode = 'create' }: UnifiedTaskModalProps) {
   // Basic form state
-  const [taskType, setTaskType] = useState<TaskType>(initial?.type ?? 'simple');
+  const [activeSections, setActiveSections] = useState<TaskSection[]>(() => {
+    if (initial?.activeSections) return initial.activeSections;
+    // Migrate from old type system
+    const sections: TaskSection[] = ['basic'];
+    if (initial?.checklistItems?.length) sections.push('checklist');
+    if (initial?.callToAction || initial?.socialPlatforms?.length) sections.push('content');
+    if (initial?.attachments?.length) sections.push('document');
+    return sections.length > 1 ? sections : ['basic'];
+  });
+  
   const [title, setTitle] = useState(initial?.title ?? '');
   const [description, setDescription] = useState(initial?.description ?? '');
   const [dueDate, setDueDate] = useState<string>(() => initial?.dueDate ? formatDateForInput(initial.dueDate) : '');
@@ -45,7 +54,7 @@ export default function UnifiedTaskModal({ open, onOpenChange, onSubmit, initial
   const [assigneeName, setAssigneeName] = useState<string>(initial?.assigneeName ?? '');
   const [selectedTags, setSelectedTags] = useState<string[]>(initial?.tags ?? []);
   
-  // Type-specific state
+  // Section-specific state
   const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>(initial?.checklistItems ?? []);
   const [callToAction, setCallToAction] = useState(initial?.callToAction ?? '');
   const [socialPlatforms, setSocialPlatforms] = useState<string[]>(initial?.socialPlatforms ?? []);
@@ -57,7 +66,17 @@ export default function UnifiedTaskModal({ open, onOpenChange, onSubmit, initial
 
   useEffect(() => {
     if (open) {
-      setTaskType(initial?.type ?? 'simple');
+      const sections: TaskSection[] = ['basic'];
+      if (initial?.activeSections) {
+        setActiveSections(initial.activeSections);
+      } else {
+        // Migrate from old type system
+        if (initial?.checklistItems?.length) sections.push('checklist');
+        if (initial?.callToAction || initial?.socialPlatforms?.length) sections.push('content');
+        if (initial?.attachments?.length) sections.push('document');
+        setActiveSections(sections);
+      }
+      
       setTitle(initial?.title ?? '');
       setDescription(initial?.description ?? '');
       setDueDate(initial?.dueDate ? formatDateForInput(initial.dueDate) : '');
@@ -71,7 +90,7 @@ export default function UnifiedTaskModal({ open, onOpenChange, onSubmit, initial
       setOpenDropdowns({});
     } else {
       // Reset form when modal closes
-      setTaskType('simple');
+      setActiveSections(['basic']);
       setTitle('');
       setDescription('');
       setDueDate('');
@@ -108,8 +127,14 @@ export default function UnifiedTaskModal({ open, onOpenChange, onSubmit, initial
     e.preventDefault();
     const dueIso = dueDate ? formatDateForStorage(dueDate) : undefined;
     
+    // Determine primary type based on active sections
+    const primaryType: TaskType = activeSections.includes('checklist') ? 'checklist' :
+                                 activeSections.includes('content') ? 'content' :
+                                 activeSections.includes('document') ? 'document' : 'simple';
+    
     const baseData = {
-      type: taskType,
+      type: primaryType,
+      activeSections,
       title: title.trim(),
       description: description.trim() || undefined,
       dueDate: dueIso,
@@ -120,17 +145,21 @@ export default function UnifiedTaskModal({ open, onOpenChange, onSubmit, initial
       source: (initial?.source ?? 'manual') as any,
     };
 
-    // Add type-specific fields
-    const typeSpecificData: any = {};
+    // Add section-specific fields
+    const sectionData: any = {};
     
-    if (taskType === 'checklist') {
-      typeSpecificData.checklistItems = checklistItems.length ? checklistItems : undefined;
-    } else if (taskType === 'content') {
-      typeSpecificData.callToAction = callToAction.trim() || undefined;
-      typeSpecificData.socialPlatforms = socialPlatforms.length ? socialPlatforms : undefined;
+    if (activeSections.includes('checklist')) {
+      sectionData.checklistItems = checklistItems.length ? checklistItems : undefined;
+    }
+    if (activeSections.includes('content')) {
+      sectionData.callToAction = callToAction.trim() || undefined;
+      sectionData.socialPlatforms = socialPlatforms.length ? socialPlatforms : undefined;
+    }
+    if (activeSections.includes('document')) {
+      sectionData.attachments = attachments.length ? attachments : undefined;
     }
     
-    const formData = { ...baseData, ...typeSpecificData };
+    const formData = { ...baseData, ...sectionData };
     
     onSubmit(formData as any);
     onOpenChange(false);
@@ -161,55 +190,81 @@ export default function UnifiedTaskModal({ open, onOpenChange, onSubmit, initial
     }
   };
 
-  const renderTypeSpecificForm = () => {
-    switch (taskType) {
-      case 'simple':
-        return (
-          <TaskSimpleForm 
-            title={title}
-            setTitle={setTitle}
-            description={description}
-            setDescription={setDescription}
-          />
-        );
-      case 'checklist':
-        return (
-          <TaskChecklistForm 
-            title={title}
-            setTitle={setTitle}
-            checklistItems={checklistItems}
-            setChecklistItems={setChecklistItems}
-          />
-        );
-      case 'content':
-        return (
-          <TaskContentForm 
-            title={title}
-            setTitle={setTitle}
-            description={description}
-            setDescription={setDescription}
-            callToAction={callToAction}
-            setCallToAction={setCallToAction}
-            hashtags={hashtags}
-            setHashtags={setHashtags}
-            socialPlatforms={socialPlatforms}
-            setSocialPlatforms={setSocialPlatforms}
-          />
-        );
-      case 'document':
-        return (
-          <TaskDocumentForm 
-            title={title}
-            setTitle={setTitle}
-            description={description}
-            setDescription={setDescription}
-            attachments={attachments}
-            setAttachments={setAttachments}
-          />
-        );
-      default:
-        return null;
-    }
+  const renderActiveSections = () => {
+    return activeSections.map((section) => {
+      switch (section) {
+        case 'basic':
+          return (
+            <div key="basic" className="space-y-4 p-4 border border-lunar-border rounded-lg bg-lunar-background/30">
+              <h3 className="text-sm font-medium text-lunar-text flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Descrição Básica
+              </h3>
+              <TaskSimpleForm 
+                title={title}
+                setTitle={setTitle}
+                description={description}
+                setDescription={setDescription}
+              />
+            </div>
+          );
+        case 'checklist':
+          return (
+            <div key="checklist" className="space-y-4 p-4 border border-lunar-border rounded-lg bg-lunar-background/30">
+              <h3 className="text-sm font-medium text-lunar-text flex items-center gap-2">
+                <CheckSquare className="h-4 w-4" />
+                Checklist
+              </h3>
+              <TaskChecklistForm 
+                title={title}
+                setTitle={setTitle}
+                checklistItems={checklistItems}
+                setChecklistItems={setChecklistItems}
+              />
+            </div>
+          );
+        case 'content':
+          return (
+            <div key="content" className="space-y-4 p-4 border border-lunar-border rounded-lg bg-lunar-background/30">
+              <h3 className="text-sm font-medium text-lunar-text flex items-center gap-2">
+                <Megaphone className="h-4 w-4" />
+                Conteúdo/Social
+              </h3>
+              <TaskContentForm 
+                title={title}
+                setTitle={setTitle}
+                description={description}
+                setDescription={setDescription}
+                callToAction={callToAction}
+                setCallToAction={setCallToAction}
+                hashtags={hashtags}
+                setHashtags={setHashtags}
+                socialPlatforms={socialPlatforms}
+                setSocialPlatforms={setSocialPlatforms}
+              />
+            </div>
+          );
+        case 'document':
+          return (
+            <div key="document" className="space-y-4 p-4 border border-lunar-border rounded-lg bg-lunar-background/30">
+              <h3 className="text-sm font-medium text-lunar-text flex items-center gap-2">
+                <File className="h-4 w-4" />
+                Documentos
+              </h3>
+              <TaskDocumentForm 
+                title={title}
+                setTitle={setTitle}
+                description={description}
+                setDescription={setDescription}
+                attachments={attachments}
+                setAttachments={setAttachments}
+              />
+            </div>
+          );
+        default:
+          return null;
+      }
+    }).filter(Boolean);
   };
 
   return (
@@ -225,11 +280,16 @@ export default function UnifiedTaskModal({ open, onOpenChange, onSubmit, initial
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Task Type Selector */}
-          <TaskTypeSelector value={taskType} onChange={setTaskType} />
+          {/* Task Section Selector */}
+          <TaskSectionSelector 
+            activeSections={activeSections} 
+            onChange={setActiveSections} 
+          />
           
-          {/* Type-specific form */}
-          {renderTypeSpecificForm()}
+          {/* Active sections */}
+          <div className="space-y-4">
+            {renderActiveSections()}
+          </div>
 
           {/* Common fields: Due Date, Priority, Status, Assignee, Tags */}
           <div className="grid grid-cols-2 gap-4">

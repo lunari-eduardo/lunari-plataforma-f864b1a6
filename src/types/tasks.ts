@@ -1,6 +1,7 @@
 export type TaskStatus = string;
 export type TaskPriority = 'low' | 'medium' | 'high';
 export type TaskType = 'simple' | 'content' | 'checklist' | 'document';
+export type TaskSection = 'basic' | 'checklist' | 'content' | 'document';
 
 export interface Task {
   id: string;
@@ -22,6 +23,7 @@ export interface Task {
   completedAt?: string; // ISO
   // Task type and specialized fields
   type: TaskType;
+  activeSections?: TaskSection[]; // New multi-section support
   checked?: boolean; // For checklist items
   checklistItems?: ChecklistItem[];
   callToAction?: string; // For content tasks
