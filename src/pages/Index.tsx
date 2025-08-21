@@ -44,7 +44,7 @@ export default function Index() {
   const {
     monthlyData,
     categoryData
-  } = useSalesAnalytics(year, "all");
+  } = useSalesAnalytics(null, "all");
   const {
     appointments
   } = useAgenda();

@@ -8,8 +8,12 @@ import { useLeadMetrics } from '@/hooks/useLeadMetrics';
 // Re-export types for backward compatibility
 export type { SalesMetrics, MonthlyData, CategoryData, PackageDistributionData, OriginData };
 
-export function useSalesAnalytics(selectedYear: number, selectedCategory: string) {
-  console.log(`🔍 [useSalesAnalytics] Iniciando análise para ano ${selectedYear}, categoria: ${selectedCategory}`);
+export function useSalesAnalytics(selectedMonth: Date | null, selectedCategory: string) {
+  const selectedYear = selectedMonth ? selectedMonth.getFullYear() : new Date().getFullYear();
+  const filterByMonth = selectedMonth !== null;
+  const targetMonth = selectedMonth ? selectedMonth.getMonth() : null; // 0-11
+  
+  console.log(`🔍 [useSalesAnalytics] Iniciando análise para ${filterByMonth ? `mês ${targetMonth! + 1}/${selectedYear}` : `ano ${selectedYear}`}, categoria: ${selectedCategory}`);
 
   // Get real conversion rate from leads data for the selected year
   const { metrics: leadMetrics } = useLeadMetrics({
@@ -22,18 +26,20 @@ export function useSalesAnalytics(selectedYear: number, selectedCategory: string
     return normalizeWorkflowItems();
   }, []);
 
-  // Filter data by year and category
+  // Filter data by year/month and category
   const filteredData = useMemo(() => {
     const filtered = normalizedData.filter(item => {
       const yearMatch = item.year === selectedYear;
+      const monthMatch = !filterByMonth || item.month === targetMonth;
       const categoryMatch = selectedCategory === 'all' || item.categoria === selectedCategory;
       
-      return yearMatch && categoryMatch;
+      return yearMatch && monthMatch && categoryMatch;
     });
     
-    console.log(`🔍 [useSalesAnalytics] ${filtered.length} sessões filtradas para ${selectedYear}/${selectedCategory}`);
+    const period = filterByMonth ? `${targetMonth! + 1}/${selectedYear}` : `${selectedYear}`;
+    console.log(`🔍 [useSalesAnalytics] ${filtered.length} sessões filtradas para ${period}/${selectedCategory}`);
     return filtered;
-  }, [normalizedData, selectedYear, selectedCategory]);
+  }, [normalizedData, selectedYear, targetMonth, filterByMonth, selectedCategory]);
 
   // Calculate main metrics
   const salesMetrics = useMemo((): SalesMetrics => {
@@ -47,13 +53,20 @@ export function useSalesAnalytics(selectedYear: number, selectedCategory: string
     ).size;
     
     // Calculate goal progress (assuming monthly goal of R$ 50k)
-    const currentMonth = new Date().getMonth();
-    const currentMonthRevenue = filteredData
-      .filter(item => item.month === currentMonth)
-      .reduce((sum, item) => sum + item.valorPago, 0);
-    
     const monthlyGoal = 50000;
-    const monthlyGoalProgress = (currentMonthRevenue / monthlyGoal) * 100;
+    let monthlyGoalProgress = 0;
+    
+    if (filterByMonth) {
+      // For specific month, use filtered data total
+      monthlyGoalProgress = (totalRevenue / monthlyGoal) * 100;
+    } else {
+      // For yearly view, use current month
+      const currentMonth = new Date().getMonth();
+      const currentMonthRevenue = filteredData
+        .filter(item => item.month === currentMonth)
+        .reduce((sum, item) => sum + item.valorPago, 0);
+      monthlyGoalProgress = (currentMonthRevenue / monthlyGoal) * 100;
+    }
     
     // Use real conversion rate from leads data
     const conversionRate = leadMetrics.taxaConversao;

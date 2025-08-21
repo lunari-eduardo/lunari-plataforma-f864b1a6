@@ -1,16 +1,16 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, Target, Download } from 'lucide-react';
+import { TrendingUp, Target } from 'lucide-react';
 import { SalesMetricsCards } from '@/components/analise-vendas/SalesMetricsCards';
 import { SalesChartsGrid } from '@/components/analise-vendas/SalesChartsGrid';
-import { SalesFilterBar } from '@/components/analise-vendas/SalesFilterBar';
+import SalesMonthYearFilter from '@/components/analise-vendas/SalesMonthYearFilter';
 import { LeadLossReasonsChart } from '@/components/analise-vendas/LeadLossReasonsChart';
 import { useSalesAnalytics } from '@/hooks/useSalesAnalytics';
 export default function AnaliseVendas() {
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState<Date | null>(null);
   const [selectedCategory, setSelectedCategory] = useState('all');
+  
   const {
     salesMetrics,
     monthlyData,
@@ -20,26 +20,23 @@ export default function AnaliseVendas() {
     monthlyOriginData,
     availableYears,
     availableCategories
-  } = useSalesAnalytics(selectedYear, selectedCategory);
-  return <div className="min-h-screen overflow-y-auto overflow-x-hidden bg-lunar-bg p-1 md:p-4 space-y-4 scrollbar-elegant py-0 my-px">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          
-          <p className="text-xs text-lunar-textSecondary">
-            Acompanhe o desempenho das suas vendas e alcance suas metas
-          </p>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          
-        </div>
-      </div>
+  } = useSalesAnalytics(selectedMonth, selectedCategory);
+  return (
+    <div className="min-h-screen bg-lunar-bg">
+      {/* Sticky Header */}
+      <SalesMonthYearFilter
+        selectedMonth={selectedMonth}
+        selectedCategory={selectedCategory}
+        availableYears={availableYears}
+        availableCategories={availableCategories}
+        onMonthChange={setSelectedMonth}
+        onCategoryChange={setSelectedCategory}
+      />
 
-      {/* Filter Bar */}
-      <SalesFilterBar selectedYear={selectedYear} selectedCategory={selectedCategory} availableYears={availableYears} availableCategories={availableCategories} onYearChange={setSelectedYear} onCategoryChange={setSelectedCategory} />
+      {/* Scrollable Content */}
+      <div className="overflow-y-auto overflow-x-hidden p-1 md:p-4 space-y-4 scrollbar-elegant">
 
-      {/* Quick Metrics Cards */}
+        {/* Quick Metrics Cards */}
       <SalesMetricsCards metrics={salesMetrics} />
 
       {/* Charts Grid */}
@@ -114,5 +111,7 @@ export default function AnaliseVendas() {
           </CardContent>
         </Card>
       </div>
-    </div>;
+      </div>
+    </div>
+  );
 }
