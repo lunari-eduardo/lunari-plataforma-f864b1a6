@@ -40,6 +40,41 @@ const savePaymentsToStorage = (sessionId: string, payments: SessionPaymentExtend
 export function useSessionPayments(sessionId: string, initialPayments: SessionPaymentExtended[] = []) {
   const [payments, setPayments] = useState<SessionPaymentExtended[]>(initialPayments);
 
+  // Listener para eventos do AppContext (pagamentos rápidos)
+  useEffect(() => {
+    const handleWorkflowUpdate = () => {
+      const sessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
+      const currentSession = sessions.find((s: any) => s.id === sessionId);
+      
+      if (currentSession && currentSession.pagamentos) {
+        // Converter pagamentos legados para formato estendido
+        const extendedPayments: SessionPaymentExtended[] = currentSession.pagamentos.map((p: any) => ({
+          id: p.id,
+          valor: p.valor,
+          data: p.data,
+          tipo: p.tipo || 'pago',
+          statusPagamento: p.statusPagamento || 'pago',
+          origem: p.origem || 'manual',
+          editavel: p.editavel !== false,
+          forma_pagamento: p.forma_pagamento,
+          observacoes: p.observacoes,
+          dataVencimento: p.dataVencimento,
+          numeroParcela: p.numeroParcela,
+          totalParcelas: p.totalParcelas
+        }));
+        
+        setPayments(extendedPayments);
+      }
+    };
+
+    window.addEventListener('workflowSessionsUpdated', handleWorkflowUpdate);
+    
+    // Carregar dados iniciais
+    handleWorkflowUpdate();
+
+    return () => window.removeEventListener('workflowSessionsUpdated', handleWorkflowUpdate);
+  }, [sessionId]);
+
   // Auto-save quando pagamentos mudarem
   useEffect(() => {
     if (payments.length > 0 || initialPayments.length > 0) {

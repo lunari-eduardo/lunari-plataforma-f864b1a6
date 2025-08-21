@@ -2138,9 +2138,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const addPayment = (id: string, valor: number) => {
     const pagamento = {
-      id: Date.now().toString(),
+      id: `pay-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       valor,
-      data: getCurrentDateString()
+      data: getCurrentDateString(),
+      tipo: 'pago',
+      statusPagamento: 'pago',
+      origem: 'workflow_rapido',
+      editavel: true
     };
 
     // NOVA ARQUITETURA: Adicionar pagamento ao projeto
@@ -2189,6 +2193,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             };
             
             localStorage.setItem('workflow_sessions', JSON.stringify(workflowSessions));
+            
+            // Disparar evento para sincronização com SessionPaymentHistory
+            window.dispatchEvent(new CustomEvent('workflowSessionsUpdated'));
             console.log('✅ Sincronizado addPayment:', { id, valor, novoValorPago });
           }
         } catch (error) {
