@@ -9,7 +9,7 @@ import { PaymentConfigModal } from "./PaymentConfigModal";
 import { MessageCircle, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Package, Plus, CreditCard, Calendar, CheckCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useClientReceivables } from '@/hooks/useClientReceivables';
+import { useAppContext } from '@/contexts/AppContext';
 import { formatToDayMonth, formatDateForDisplay } from "@/utils/dateUtils";
 
 import { calcularTotalFotosExtras, obterConfiguracaoPrecificacao, obterTabelaGlobal, obterTabelaCategoria, calcularValorPorFoto, formatarMoeda, calcularComRegrasProprias, migrarRegrasParaItemAntigo } from '@/utils/precificacaoUtils';
@@ -159,15 +159,7 @@ export function WorkflowTable({
   const [initialWidth, setInitialWidth] = useState(0);
   const [currentColumnWidths, setCurrentColumnWidths] = useState<Record<string, number>>({});
   const [modeloPrecificacao, setModeloPrecificacao] = useState('fixo');
-  const { 
-    registrarPagamentoRapido, 
-    paymentPlans, 
-    installments, 
-    obterParcelasPorPlano, 
-    marcarComoPago,
-    temAgendamentos,
-    obterInfoAgendamento
-  } = useClientReceivables();
+  const { addPayment } = useAppContext();
 
   // Stable field update callback
   const handleFieldUpdateStable = useCallback((sessionId: string, field: string, value: any) => {
@@ -182,24 +174,6 @@ export function WorkflowTable({
     });
   }, [columnWidths, responsiveColumnWidths]);
 
-  // Sincronização bidirecional com recebíveis
-  useEffect(() => {
-    const handleInstallmentPaid = (e: CustomEvent) => {
-      const { sessionId, valor } = e.detail;
-      const session = sessions.find(s => s.id === sessionId);
-      if (session) {
-        const valorPagoStr = typeof session.valorPago === 'string' ? session.valorPago : String(session.valorPago || '0');
-        const currentPaid = parseFloat(valorPagoStr.replace(/[^\d,-]/g, '').replace(',', '.')) || 0;
-        const newPaidValue = currentPaid + valor;
-        
-        // Atualizar valor pago no workflow
-        handleFieldUpdateStable(sessionId, 'valorPago', `R$ ${newPaidValue.toFixed(2).replace('.', ',')}`);
-      }
-    };
-
-    window.addEventListener('receivables:installment-paid', handleInstallmentPaid as EventListener);
-    return () => window.removeEventListener('receivables:installment-paid', handleInstallmentPaid as EventListener);
-  }, [sessions, handleFieldUpdateStable]);
 
   // Escutar mudanças no modelo de precificação
   useEffect(() => {
@@ -321,51 +295,18 @@ export function WorkflowTable({
     return restante;
   }, [calculateTotal]);
 
-  // V2: Função para obter informações do agendamento de pagamento
+  // Função simplificada para pagamentos (sem agendamento)
   const getPaymentPlanInfo = useCallback((sessionId: string) => {
-    const agendamentoInfo = obterInfoAgendamento(sessionId);
-    
-    if (!agendamentoInfo?.hasScheduled) {
-      return { hasScheduled: false };
-    }
-
-    const { plan, installments: planInstallments } = agendamentoInfo;
-    const pendingInstallments = planInstallments.filter(i => i.status === 'pendente');
-    
-    return {
-      hasScheduled: true,
-      plan,
-      installments: planInstallments,
-      pendingCount: pendingInstallments.length,
-      isComplete: pendingInstallments.length === 0
-    };
-  }, [obterInfoAgendamento]);
+    return { hasScheduled: false };
+  }, []);
 
   const handlePaymentAdd = useCallback((sessionId: string) => {
     const value = paymentInputs[sessionId];
     if (value && !isNaN(parseFloat(value))) {
       const paymentValue = parseFloat(value);
-
-      // Atualizar o valor pago diretamente
-      const session = sessions.find(s => s.id === sessionId);
-      if (session) {
-        const valorPagoStr = typeof session.valorPago === 'string' ? session.valorPago : String(session.valorPago || '0');
-        const currentPaid = parseFloat(valorPagoStr.replace(/[^\d,-]/g, '').replace(',', '.')) || 0;
-        const newPaidValue = currentPaid + paymentValue;
-
-        // Formatar o novo valor pago
-        const formattedValue = `R$ ${newPaidValue.toFixed(2).replace('.', ',')}`;
-        handleFieldUpdateStable(sessionId, 'valorPago', formattedValue);
-
-        // Registrar no sistema de recebíveis estruturado
-        const totalSession = calculateTotal(session);
-        registrarPagamentoRapido(
-          sessionId,
-          session.clienteId || sessionId,
-          paymentValue,
-          totalSession
-        );
-      }
+      
+      // Usar a função addPayment do contexto
+      addPayment(sessionId, paymentValue);
 
       // Limpar o campo após adicionar
       setPaymentInputs(prev => ({
@@ -373,7 +314,7 @@ export function WorkflowTable({
         [sessionId]: ''
       }));
     }
-  }, [paymentInputs, sessions, handleFieldUpdateStable, calculateTotal, registrarPagamentoRapido]);
+  }, [paymentInputs, addPayment]);
   const handlePaymentKeyDown = useCallback((e: React.KeyboardEvent, sessionId: string) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -1085,6 +1026,9 @@ return <td className={`
               return parseFloat(valorPagoStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
             })()}
             clienteNome={selectedSessionForPayment.nome}
+            onAddPayment={(sessionId: string, valor: number) => {
+              addPayment(sessionId, valor);
+            }}
           />
         )}
     </div>;

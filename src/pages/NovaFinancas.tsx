@@ -7,7 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import LancamentosTab from '@/components/financas/LancamentosTab';
 import ConfiguracoesFinanceirasTab from '@/components/financas/ConfiguracoesFinanceirasTab';
 import DashboardFinanceiro from '@/components/financas/DashboardFinanceiro';
-import ReceivablesTab from '@/components/financas/ReceivablesTab';
+
 export default function NovaFinancas() {
   const {
     filtroMesAno,
@@ -40,12 +40,9 @@ export default function NovaFinancas() {
         
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4 h-10 p-1 text-sm bg-card border border-border py-0">
+          <TabsList className="grid w-full grid-cols-3 h-10 p-1 text-sm bg-card border border-border py-0">
             <TabsTrigger value="lancamentos" className="text-sm py-2 data-[state=active]:bg-primary/10 text-foreground">
               Lançamentos
-            </TabsTrigger>
-            <TabsTrigger value="recebiveis" className="text-sm py-2 data-[state=active]:bg-primary/10 data-[state=active]:text-foreground">
-              Recebíveis
             </TabsTrigger>
             <TabsTrigger value="dashboard" className="text-sm py-2 data-[state=active]:bg-primary/10 data-[state=active]:text-foreground">
               Dashboard
@@ -59,9 +56,6 @@ export default function NovaFinancas() {
             <LancamentosTab filtroMesAno={filtroMesAno} setFiltroMesAno={setFiltroMesAno} transacoesPorGrupo={transacoesPorGrupo} resumoFinanceiro={resumoFinanceiro} calcularMetricasPorGrupo={calcularMetricasPorGrupo} obterItensPorGrupo={obterItensPorGrupo} adicionarTransacao={adicionarTransacao} atualizarTransacao={atualizarTransacaoCompativel} removerTransacao={removerTransacao} marcarComoPago={marcarComoPago} createTransactionEngine={createTransactionEngine} />
           </TabsContent>
 
-          <TabsContent value="recebiveis" className="mt-6">
-            <ReceivablesTab />
-          </TabsContent>
 
           <TabsContent value="dashboard" className="mt-6">
             <DashboardFinanceiro />

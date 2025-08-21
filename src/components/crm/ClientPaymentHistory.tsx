@@ -3,10 +3,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { CreditCard, Calendar, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
-import { useClientReceivables } from '@/hooks/useClientReceivables';
 import { formatCurrency } from '@/utils/financialUtils';
 import { formatDateForDisplay } from '@/utils/dateUtils';
-import { PaymentInstallment } from '@/types/receivables';
+import { useAppContext } from '@/contexts/AppContext';
 
 interface ClientPaymentHistoryProps {
   clienteId: string;
@@ -14,45 +13,69 @@ interface ClientPaymentHistoryProps {
 }
 
 export function ClientPaymentHistory({ clienteId, clienteNome }: ClientPaymentHistoryProps) {
-  const { obterPlanosPorCliente, obterParcelasPorPlano, marcarComoPago } = useClientReceivables();
+  const { workflowItemsAll } = useAppContext();
   
-  const planosCliente = obterPlanosPorCliente(clienteId);
-  const todasParcelas = planosCliente.flatMap(plano => 
-    obterParcelasPorPlano(plano.id).map(parcela => ({
-      ...parcela,
-      plano
-    }))
-  );
-
-  const hoje = new Date().toISOString().split('T')[0];
-  const parcelasEmAtraso = todasParcelas.filter(p => p.status === 'pendente' && p.dataVencimento < hoje);
-  const parcelasPendentes = todasParcelas.filter(p => p.status === 'pendente');
-  const parcelasPagas = todasParcelas.filter(p => p.status === 'pago');
-
-  const getStatusBadge = (status: PaymentInstallment['status'], dataVencimento: string) => {
-    if (status === 'pago') {
-      return <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">Pago</Badge>;
-    }
+  // Buscar sessões do workflow relacionadas ao cliente
+  const sessionesCliente = workflowItemsAll.filter(session => session.clienteId === clienteId);
+  
+  // Calcular dados dos pagamentos a partir do workflow
+  const calcularDadosFinanceiros = () => {
+    let totalContratado = 0;
+    let totalPago = 0;
+    let totalPendente = 0;
+    let pagamentosHistorico: any[] = [];
     
-    if (dataVencimento < hoje) {
-      return <Badge variant="destructive">Em Atraso</Badge>;
-    }
+    sessionesCliente.forEach(session => {
+      const valorTotal = session.total || 0;
+      const valorPagoStr = typeof session.valorPago === 'string' ? session.valorPago : String(session.valorPago || '0');
+      const valorPago = parseFloat(valorPagoStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+      const valorPendente = Math.max(0, valorTotal - valorPago);
+      
+      totalContratado += valorTotal;
+      totalPago += valorPago;
+      totalPendente += valorPendente;
+      
+      // Adicionar pagamentos do histórico da sessão
+      if (session.pagamentos && session.pagamentos.length > 0) {
+        session.pagamentos.forEach(pagamento => {
+          pagamentosHistorico.push({
+            id: pagamento.id,
+            sessionId: session.id,
+            sessionData: session.data,
+            sessionDescricao: session.descricao,
+            valor: pagamento.valor,
+            dataPagamento: pagamento.data,
+            status: 'pago' as const
+          });
+        });
+      }
+    });
     
-    if (dataVencimento === hoje) {
-      return <Badge variant="secondary" className="bg-red-100 text-red-800 border-red-200">Vence Hoje</Badge>;
-    }
-    
-    return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 border-yellow-200">Pendente</Badge>;
+    return {
+      totalContratado,
+      totalPago,
+      totalPendente,
+      pagamentosHistorico: pagamentosHistorico.sort((a, b) => 
+        new Date(b.dataPagamento).getTime() - new Date(a.dataPagamento).getTime()
+      )
+    };
   };
 
+  const dadosFinanceiros = calcularDadosFinanceiros();
+
   const calcularScorePagamento = () => {
-    if (todasParcelas.length === 0) return 'Novo Cliente';
+    if (sessionesCliente.length === 0) return 'Novo Cliente';
     
-    const percentualPagas = (parcelasPagas.length / todasParcelas.length) * 100;
-    const temAtraso = parcelasEmAtraso.length > 0;
+    const sessoesPagas = sessionesCliente.filter(s => {
+      const valorPagoStr = typeof s.valorPago === 'string' ? s.valorPago : String(s.valorPago || '0');
+      const valorPago = parseFloat(valorPagoStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+      return valorPago > 0;
+    });
+    
+    const percentualPagas = (sessoesPagas.length / sessionesCliente.length) * 100;
     
     if (percentualPagas === 100) return 'Excelente';
-    if (percentualPagas >= 80 && !temAtraso) return 'Bom';
+    if (percentualPagas >= 80) return 'Bom';
     if (percentualPagas >= 60) return 'Regular';
     return 'Ruim';
   };
@@ -67,7 +90,7 @@ export function ClientPaymentHistory({ clienteId, clienteNome }: ClientPaymentHi
     }
   };
 
-  if (planosCliente.length === 0) {
+  if (sessionesCliente.length === 0) {
     return (
       <Card className="bg-card border border-border">
         <CardHeader>
@@ -79,17 +102,13 @@ export function ClientPaymentHistory({ clienteId, clienteNome }: ClientPaymentHi
         <CardContent>
           <div className="text-center py-8 text-lunar-textSecondary">
             <CreditCard className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>Nenhum plano de pagamento configurado</p>
-            <p className="text-sm">Configure pagamentos no Workflow para começar o controle</p>
+            <p>Nenhuma sessão encontrada</p>
+            <p className="text-sm">Crie sessões no Workflow para começar o controle financeiro</p>
           </div>
         </CardContent>
       </Card>
     );
   }
-
-  const totalValorPlanos = planosCliente.reduce((sum, plano) => sum + plano.valorTotal, 0);
-  const totalPago = parcelasPagas.reduce((sum, parcela) => sum + parcela.valor, 0);
-  const totalPendente = parcelasPendentes.reduce((sum, parcela) => sum + parcela.valor, 0);
 
   return (
     <div className="space-y-6">
@@ -104,10 +123,10 @@ export function ClientPaymentHistory({ clienteId, clienteNome }: ClientPaymentHi
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-primary">
-              {formatCurrency(totalValorPlanos)}
+              {formatCurrency(dadosFinanceiros.totalContratado)}
             </div>
             <p className="text-xs text-lunar-textSecondary">
-              {planosCliente.length} plano(s)
+              {sessionesCliente.length} sessão(ões)
             </p>
           </CardContent>
         </Card>
@@ -121,10 +140,10 @@ export function ClientPaymentHistory({ clienteId, clienteNome }: ClientPaymentHi
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {formatCurrency(totalPago)}
+              {formatCurrency(dadosFinanceiros.totalPago)}
             </div>
             <p className="text-xs text-lunar-textSecondary">
-              {parcelasPagas.length} parcela(s)
+              {dadosFinanceiros.pagamentosHistorico.length} pagamento(s)
             </p>
           </CardContent>
         </Card>
@@ -138,10 +157,10 @@ export function ClientPaymentHistory({ clienteId, clienteNome }: ClientPaymentHi
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-600">
-              {formatCurrency(totalPendente)}
+              {formatCurrency(dadosFinanceiros.totalPendente)}
             </div>
             <p className="text-xs text-lunar-textSecondary">
-              {parcelasPendentes.length} parcela(s)
+              A receber
             </p>
           </CardContent>
         </Card>
@@ -164,115 +183,64 @@ export function ClientPaymentHistory({ clienteId, clienteNome }: ClientPaymentHi
         </Card>
       </div>
 
-      {/* Alerta de Pagamentos em Atraso */}
-      {parcelasEmAtraso.length > 0 && (
-        <Card className="bg-red-50 border border-red-200">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold text-red-800 flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5" />
-              Pagamentos em Atraso ({parcelasEmAtraso.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {parcelasEmAtraso.map((parcela) => (
-                <div key={parcela.id} className="flex items-center justify-between p-3 bg-white rounded border border-red-200">
-                  <div>
-                    <div className="font-medium text-sm text-lunar-text">
-                      {parcela.numeroParcela === -1 ? 'Entrada' : 
-                       parcela.numeroParcela === 0 ? 'À Vista' : 
-                       `Parcela ${parcela.numeroParcela}`} - Plano {parcela.plano.formaPagamento}
-                    </div>
-                    <div className="text-sm text-red-600">
-                      Venceu em {formatDateForDisplay(parcela.dataVencimento)}
-                    </div>
-                    <div className="text-lg font-bold text-red-600">
-                      {formatCurrency(parcela.valor)}
-                    </div>
-                  </div>
-                  <Button 
-                    size="sm" 
-                    onClick={() => marcarComoPago(parcela.id)}
-                    className="bg-green-600 hover:bg-green-700"
-                  >
-                    Marcar como Pago
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Tabela de Histórico */}
       <Card className="bg-card border border-border">
         <CardHeader>
           <CardTitle className="text-xl font-semibold text-lunar-text">
-            Histórico de Parcelas
+            Histórico de Pagamentos
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Plano/Parcela</TableHead>
-                <TableHead>Valor</TableHead>
-                <TableHead>Vencimento</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {todasParcelas
-                .sort((a, b) => new Date(b.dataVencimento).getTime() - new Date(a.dataVencimento).getTime())
-                .map((parcela) => (
-                <TableRow key={parcela.id}>
-                  <TableCell>
-                    <div className="font-medium">
-                      {parcela.numeroParcela === -1 ? 'Entrada' : 
-                       parcela.numeroParcela === 0 ? 'À Vista' : 
-                       `Parcela ${parcela.numeroParcela}/${parcela.plano.numeroParcelas}`}
-                    </div>
-                    <div className="text-sm text-lunar-textSecondary">
-                      {formatCurrency(parcela.plano.valorTotal)} total
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="font-semibold">
-                      {formatCurrency(parcela.valor)}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-4 w-4 text-lunar-textSecondary" />
-                      <span>
-                        {formatDateForDisplay(parcela.dataVencimento)}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {getStatusBadge(parcela.status, parcela.dataVencimento)}
-                  </TableCell>
-                  <TableCell>
-                    {parcela.status === 'pendente' && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => marcarComoPago(parcela.id)}
-                      >
-                        Marcar como Pago
-                      </Button>
-                    )}
-                    {parcela.status === 'pago' && parcela.dataPagamento && (
-                      <div className="text-sm text-green-600">
-                        Pago em {formatDateForDisplay(parcela.dataPagamento)}
-                      </div>
-                    )}
-                  </TableCell>
+          {dadosFinanceiros.pagamentosHistorico.length === 0 ? (
+            <div className="text-center py-8 text-lunar-textSecondary">
+              <CheckCircle2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>Nenhum pagamento registrado</p>
+              <p className="text-sm">Os pagamentos aparecerão aqui quando forem adicionados no Workflow</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Sessão</TableHead>
+                  <TableHead>Valor</TableHead>
+                  <TableHead>Data Pagamento</TableHead>
+                  <TableHead>Status</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {dadosFinanceiros.pagamentosHistorico.map((pagamento) => (
+                  <TableRow key={pagamento.id}>
+                    <TableCell>
+                      <div className="font-medium">
+                        {pagamento.sessionDescricao || 'Sessão sem descrição'}
+                      </div>
+                      <div className="text-sm text-lunar-textSecondary">
+                        {formatDateForDisplay(pagamento.sessionData)}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="font-semibold text-green-600">
+                        {formatCurrency(pagamento.valor)}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-4 w-4 text-lunar-textSecondary" />
+                        <span>
+                          {formatDateForDisplay(pagamento.dataPagamento)}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
+                        Pago
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>
