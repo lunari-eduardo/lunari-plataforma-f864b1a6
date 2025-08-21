@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { X, Plus } from 'lucide-react';
+import RichTextEditor from '@/components/ui/rich-text-editor';
 
 interface TaskContentFormProps {
   title: string;
@@ -69,16 +69,14 @@ export default function TaskContentForm({
 
       <div className="space-y-1.5">
         <Label htmlFor="description">Conteúdo da Legenda</Label>
-        <Textarea 
-          id="description" 
+        <RichTextEditor 
           value={description} 
-          onChange={e => setDescription(e.target.value)} 
+          onChange={setDescription} 
           placeholder="Escreva a legenda para o post..."
-          rows={4}
-          className="resize-none"
+          minHeight="120px"
         />
         <div className="text-xs text-lunar-textSecondary text-right">
-          {description.length}/2200 caracteres
+          {description.replace(/<[^>]*>/g, '').length}/2200 caracteres
         </div>
       </div>
 

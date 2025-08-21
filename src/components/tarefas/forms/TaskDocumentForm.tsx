@@ -1,10 +1,10 @@
 import React from 'react';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { FileUploadZone } from '@/components/shared/FileUploadZone';
 import { FileText, Image, Video, File } from 'lucide-react';
+import RichTextEditor from '@/components/ui/rich-text-editor';
 
 interface TaskDocumentFormProps {
   title: string;
@@ -64,12 +64,11 @@ export default function TaskDocumentForm({
 
       <div className="space-y-1.5">
         <Label htmlFor="description">Descrição dos Documentos</Label>
-        <Textarea 
-          id="description" 
+        <RichTextEditor 
           value={description} 
-          onChange={e => setDescription(e.target.value)} 
+          onChange={setDescription} 
           placeholder="Descreva os documentos ou instruções especiais..."
-          rows={3}
+          minHeight="100px"
         />
       </div>
 

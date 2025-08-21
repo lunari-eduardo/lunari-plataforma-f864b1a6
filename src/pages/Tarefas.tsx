@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useTasks } from '@/hooks/useTasks';
 import { useTaskPeople } from '@/hooks/useTaskPeople';
 import type { Task, TaskStatus } from '@/types/tasks';
-import TaskFormModal from '@/components/tarefas/TaskFormModal';
+import UnifiedTaskModal from '@/components/tarefas/UnifiedTaskModal';
 import TaskCard from '@/components/tarefas/TaskCard';
 import PriorityLegend from '@/components/tarefas/PriorityLegend';
 import { cn } from '@/lib/utils';
@@ -297,7 +297,7 @@ const sensors = useSensors(pointerSensor);
         <ListView />)
       }
 
-      <TaskFormModal
+      <UnifiedTaskModal
         open={createOpen}
         onOpenChange={setCreateOpen}
         mode="create"

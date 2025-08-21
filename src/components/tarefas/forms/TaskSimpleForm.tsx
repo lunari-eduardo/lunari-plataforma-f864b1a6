@@ -1,7 +1,7 @@
 import React from 'react';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import RichTextEditor from '@/components/ui/rich-text-editor';
 
 interface TaskSimpleFormProps {
   title: string;
@@ -25,12 +25,11 @@ export default function TaskSimpleForm({ title, setTitle, description, setDescri
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="description">Descrição</Label>
-        <Textarea 
-          id="description" 
+        <RichTextEditor 
           value={description} 
-          onChange={e => setDescription(e.target.value)} 
+          onChange={setDescription} 
           placeholder="Detalhes do que deve ser feito"
-          rows={3}
+          minHeight="120px"
         />
       </div>
     </>
