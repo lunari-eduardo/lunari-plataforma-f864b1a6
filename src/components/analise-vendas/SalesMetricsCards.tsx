@@ -72,7 +72,9 @@ export function SalesMetricsCards({ metrics }: SalesMetricsCardsProps) {
           <Card key={index} className="rounded-lg ring-1 ring-lunar-border/60 shadow-brand bg-lunar-surface hover:shadow-xl transition-all duration-200">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <Icon className={`h-4 w-4 ${isPositive ? 'text-green-500' : isNegative ? 'text-red-500' : 'text-lunar-accent'}`} />
+                <div className="p-2 rounded-lg bg-brand-gradient shadow-brand flex items-center justify-center">
+                  <Icon className="h-4 w-4 text-white" />
+                </div>
                 {metric.trend !== 'neutral' && (
                   <Badge variant={isPositive ? 'default' : 'destructive'} className="text-2xs h-5">
                     {isPositive ? <TrendingUp className="h-2 w-2 mr-1" /> : <TrendingDown className="h-2 w-2 mr-1" />}
