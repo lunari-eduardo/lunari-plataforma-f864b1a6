@@ -295,10 +295,26 @@ export function WorkflowTable({
     return restante;
   }, [calculateTotal]);
 
-  // Função simplificada para pagamentos (sem agendamento)
+  // Função para detectar pagamentos agendados/parcelados
   const getPaymentPlanInfo = useCallback((sessionId: string) => {
-    return { hasScheduled: false };
-  }, []);
+    const session = sessions.find(s => s.id === sessionId);
+    if (!session || !session.pagamentos || !Array.isArray(session.pagamentos)) {
+      return { hasScheduled: false, hasPaid: false };
+    }
+    
+    const hasPendingPayments = session.pagamentos.some(p => p.statusPagamento === 'pendente');
+    const hasPaidPayments = session.pagamentos.some(p => p.statusPagamento === 'pago');
+    const hasInstallments = session.pagamentos.some(p => p.tipo === 'parcelado');
+    
+    return { 
+      hasScheduled: hasPendingPayments,
+      hasPaid: hasPaidPayments,
+      hasInstallments,
+      totalPending: session.pagamentos
+        .filter(p => p.statusPagamento === 'pendente')
+        .reduce((acc, p) => acc + (p.valor || 0), 0)
+    };
+  }, [sessions]);
 
   const handlePaymentAdd = useCallback((sessionId: string) => {
     const value = paymentInputs[sessionId];
@@ -893,7 +909,33 @@ return <td className={`
 
                 {renderCell('paid', <span className="font-bold text-green-600 text-xs">{session.valorPago || 'R$ 0,00'}</span>)}
 
-                {renderCell('remaining', <span className="font-bold text-orange-600 text-xs">{formatCurrency(calculateRestante(session))}</span>)}
+                {renderCell('remaining', (() => {
+                  const restante = calculateRestante(session);
+                  const paymentInfo = getPaymentPlanInfo(session.id);
+                  
+                  return (
+                    <div className="flex items-center gap-1">
+                      <span className="font-bold text-orange-600 text-xs">{formatCurrency(restante)}</span>
+                      {restante > 0 && paymentInfo.hasScheduled && (
+                        <div className="flex items-center gap-1">
+                          <div title="Tem pagamentos agendados">
+                            <Calendar className="h-3 w-3 text-yellow-500" />
+                          </div>
+                          {paymentInfo.hasInstallments && (
+                            <div title="Parcelado">
+                              <CreditCard className="h-3 w-3 text-blue-500" />
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {restante === 0 && (
+                        <div title="Totalmente pago">
+                          <CheckCircle className="h-3 w-3 text-green-500" />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })())}
 
                 {renderCell('payment', (() => {
                   const paymentInfo = getPaymentPlanInfo(session.id);

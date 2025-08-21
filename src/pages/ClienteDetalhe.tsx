@@ -95,13 +95,20 @@ export default function ClienteDetalhe() {
       return matchByClienteId || matchByName;
     });
     
-    // Calcular valor total das sessões agendadas
+    // Calcular valor agendado baseado em pagamentos pendentes
     const valorAgendado = clientSessions
-      .filter((session: any) => session.status === 'Agendado')
       .reduce((total: number, session: any) => {
-        const valorTotal = typeof session.total === 'number' ? session.total : 
-                          parseFloat(String(session.total || '0').replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(/,/g, '.')) || 0;
-        return total + valorTotal;
+        if (!session.pagamentos || !Array.isArray(session.pagamentos)) return total;
+        
+        const pagamentosPendentes = session.pagamentos
+          .filter((pagamento: any) => pagamento.statusPagamento === 'pendente')
+          .reduce((subtotal: number, pagamento: any) => {
+            const valor = typeof pagamento.valor === 'number' ? pagamento.valor : 
+                         parseFloat(String(pagamento.valor || '0').replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(/,/g, '.')) || 0;
+            return subtotal + valor;
+          }, 0);
+        
+        return total + pagamentosPendentes;
       }, 0);
 
     const clientMetrics = getSimplifiedClientMetrics([cliente]);
