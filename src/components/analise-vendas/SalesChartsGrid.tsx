@@ -45,12 +45,14 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
   ];
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Monthly Revenue Chart */}
-      <Card className="rounded-lg ring-1 ring-lunar-border/60 shadow-brand bg-lunar-surface">
+      <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-lunar-text flex items-center gap-2">
-            <DollarSign className="h-4 w-4 text-green-500" />
+            <div className="p-2 rounded-lg bg-brand-gradient">
+              <DollarSign className="h-4 w-4 text-white" />
+            </div>
             Receita Mensal
           </CardTitle>
         </CardHeader>
@@ -94,10 +96,12 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
       </Card>
 
       {/* Sessions per Month Chart */}
-      <Card className="rounded-lg ring-1 ring-lunar-border/60 shadow-brand bg-lunar-surface">
+      <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-lunar-text flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-blue-500" />
+            <div className="p-2 rounded-lg bg-brand-gradient">
+              <Calendar className="h-4 w-4 text-white" />
+            </div>
             Sessões por Mês
           </CardTitle>
         </CardHeader>
@@ -140,10 +144,12 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
       </Card>
 
       {/* Average Ticket Chart */}
-      <Card className="rounded-lg ring-1 ring-lunar-border/60 shadow-brand bg-lunar-surface">
+      <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-lunar-text flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-purple-500" />
+            <div className="p-2 rounded-lg bg-brand-gradient">
+              <TrendingUp className="h-4 w-4 text-white" />
+            </div>
             Ticket Médio por Mês
           </CardTitle>
         </CardHeader>
@@ -189,10 +195,12 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
       </Card>
 
       {/* Extra Photos Revenue Chart */}
-      <Card className="rounded-lg ring-1 ring-lunar-border/60 shadow-brand bg-lunar-surface">
+      <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-lunar-text flex items-center gap-2">
-            <Camera className="h-4 w-4 text-orange-500" />
+            <div className="p-2 rounded-lg bg-brand-gradient">
+              <Camera className="h-4 w-4 text-white" />
+            </div>
             Receita Fotos Extras
           </CardTitle>
         </CardHeader>
@@ -239,12 +247,14 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
       </Card>
 
       {/* Donut Charts: Category, Origin, Package */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-stretch lg:col-span-2">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch lg:col-span-2">
         {/* Category Distribution */}
-        <Card className="rounded-lg ring-1 ring-lunar-border/60 shadow-brand bg-lunar-surface">
+        <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-lunar-text flex items-center gap-2">
-              <PieChartIcon className="h-4 w-4 text-blue-500" />
+              <div className="p-2 rounded-lg bg-brand-gradient">
+                <PieChartIcon className="h-4 w-4 text-white" />
+              </div>
               Distribuição por Categoria
             </CardTitle>
           </CardHeader>
@@ -286,10 +296,12 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
         <OriginDonutCard originData={originData} />
 
         {/* Package Distribution */}
-        <Card className="rounded-lg ring-1 ring-lunar-border/60 shadow-brand bg-lunar-surface">
+        <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-lunar-text flex items-center gap-2">
-              <Package className="h-4 w-4 text-indigo-500" />
+              <div className="p-2 rounded-lg bg-brand-gradient">
+                <Package className="h-4 w-4 text-white" />
+              </div>
               {selectedCategory === 'all' ? 'Distribuição por Pacote' : `Pacotes em ${selectedCategory}`}
             </CardTitle>
           </CardHeader>
