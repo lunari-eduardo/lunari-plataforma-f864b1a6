@@ -144,22 +144,22 @@ export function WorkflowHistoryTable({
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 text-center md:text-right">
                   <div className="flex flex-col items-center md:items-end">
                     <span className="text-xs text-lunar-textSecondary uppercase tracking-wide">Total</span>
-                    <span className="font-bold text-sm text-chart-blue-1">{formatCurrency(item.total || 0)}</span>
+                    <span className="font-bold text-chart-blue-1 text-xs">{formatCurrency(item.total || 0)}</span>
                   </div>
                   
                   <div className="flex flex-col items-center md:items-end">
                     <span className="text-xs text-lunar-textSecondary">Pago</span>
-                    <span className="font-semibold text-sm text-chart-green-1">{formatCurrency(item.valorPago || 0)}</span>
+                    <span className="font-semibold text-chart-green-1 text-xs text-green-600">{formatCurrency(item.valorPago || 0)}</span>
                   </div>
                   
                   <div className="flex flex-col items-center md:items-end">
                     <span className="text-xs text-lunar-textSecondary">Agendado</span>
-                    <span className="font-semibold text-sm text-chart-orange-1">{formatCurrency(0)}</span>
+                    <span className="font-semibold text-chart-orange-1 text-xs text-orange-400">{formatCurrency(0)}</span>
                   </div>
                   
                   <div className="flex flex-col items-center md:items-end">
                     <span className="text-xs text-lunar-textSecondary">Pendente</span>
-                    <span className="font-semibold text-sm text-chart-yellow-1">{formatCurrency(item.restante || 0)}</span>
+                    <span className="font-semibold text-chart-yellow-1 text-xs text-red-500">{formatCurrency(item.restante || 0)}</span>
                   </div>
                 </div>
               </div>
@@ -167,24 +167,19 @@ export function WorkflowHistoryTable({
             
             <AccordionContent className="px-4 md:px-6 pb-6">
               {/* HISTÓRICO DE PAGAMENTOS - COMPONENTE NOVO */}
-              <SessionPaymentHistory 
-                sessionData={item} 
-                onPaymentUpdate={(sessionId, totalPaid, fullPaymentsArray) => {
-                  // Atualizar o localStorage com pagamentos completos
-                  const sessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
-                  const updatedSessions = sessions.map((s: any) => 
-                    s.id === sessionId ? { 
-                      ...s, 
-                      valorPago: totalPaid,
-                      pagamentos: fullPaymentsArray || s.pagamentos
-                    } : s
-                  );
-                  localStorage.setItem('workflow_sessions', JSON.stringify(updatedSessions));
-                  
-                  // Disparar evento para sincronização
-                  window.dispatchEvent(new CustomEvent('workflowSessionsUpdated'));
-                }}
-              />
+              <SessionPaymentHistory sessionData={item} onPaymentUpdate={(sessionId, totalPaid, fullPaymentsArray) => {
+            // Atualizar o localStorage com pagamentos completos
+            const sessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
+            const updatedSessions = sessions.map((s: any) => s.id === sessionId ? {
+              ...s,
+              valorPago: totalPaid,
+              pagamentos: fullPaymentsArray || s.pagamentos
+            } : s);
+            localStorage.setItem('workflow_sessions', JSON.stringify(updatedSessions));
+
+            // Disparar evento para sincronização
+            window.dispatchEvent(new CustomEvent('workflowSessionsUpdated'));
+          }} />
 
               <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-8">
                 {/* COMPOSIÇÃO DO VALOR */}
