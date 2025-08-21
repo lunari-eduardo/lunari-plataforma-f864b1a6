@@ -49,20 +49,32 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
       if (currentSession && currentSession.pagamentos) {
         // Converter pagamentos legados para formato estendido
         const extendedPayments: SessionPaymentExtended[] = currentSession.pagamentos.map((p: any) => {
-          // Determinar tipo baseado em dados existentes
-          let tipo = p.tipo || 'pago';
-          let statusPagamento = p.statusPagamento || 'pago';
+          // Determinar tipo e status com lógica mais robusta
+          let tipo = p.tipo;
+          let statusPagamento = p.statusPagamento;
           
-          // Se tem dataVencimento mas não tem data de pagamento, é agendado/pendente
-          if (p.dataVencimento && !p.data) {
-            tipo = 'agendado';
-            statusPagamento = 'pendente';
-          }
-          
-          // Se tem numeroParcela, é parcelado
-          if (p.numeroParcela && p.totalParcelas) {
-            tipo = 'parcelado';
-            if (!p.data) {
+          // Se tipo/status já existem e são válidos, confiar neles
+          if (!tipo || !statusPagamento) {
+            // Inferir baseado em dados disponíveis
+            if (p.numeroParcela && p.totalParcelas) {
+              tipo = 'parcelado';
+              statusPagamento = p.data ? 'pago' : 'pendente';
+            } else if (p.dataVencimento && !p.data) {
+              tipo = 'agendado';
+              statusPagamento = 'pendente';
+              
+              // Verificar se está atrasado
+              const hoje = new Date();
+              const vencimento = new Date(p.dataVencimento);
+              if (vencimento < hoje) {
+                statusPagamento = 'atrasado';
+              }
+            } else if (p.data) {
+              tipo = 'pago';
+              statusPagamento = 'pago';
+            } else {
+              // Fallback: se não tem data nem vencimento, assumir pendente
+              tipo = 'agendado';
               statusPagamento = 'pendente';
             }
           }

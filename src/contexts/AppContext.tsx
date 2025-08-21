@@ -2115,7 +2115,44 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               total: updatedItem.total,
               valorPago: updatedItem.valorPago,
               restante: updatedItem.restante,
-              pagamentos: updatedItem.pagamentos || existingSession.pagamentos || [],
+              // PRESERVAR PAGAMENTOS COMPLETOS - não sobrescrever com formato simplificado
+              pagamentos: (() => {
+                // Se updatedItem.pagamentos existe, é porque veio um pagamento novo/simplificado do projeto
+                if (updatedItem.pagamentos && updatedItem.pagamentos.length > 0) {
+                  const existingPayments = existingSession.pagamentos || [];
+                  const newPayments = [...existingPayments];
+                  
+                  // Para cada pagamento do projeto, verificar se já existe na sessão
+                  updatedItem.pagamentos.forEach((projectPayment: any) => {
+                    const existingIndex = newPayments.findIndex(p => p.id === projectPayment.id);
+                    
+                    if (existingIndex >= 0) {
+                      // Pagamento existe: preservar campos estendidos, atualizar apenas básicos
+                      newPayments[existingIndex] = {
+                        ...newPayments[existingIndex],
+                        valor: projectPayment.valor,
+                        data: projectPayment.data
+                      };
+                    } else {
+                      // Pagamento novo: adicionar com campos básicos (será um pagamento "pago" simples)
+                      newPayments.push({
+                        id: projectPayment.id,
+                        valor: projectPayment.valor,
+                        data: projectPayment.data,
+                        tipo: 'pago',
+                        statusPagamento: 'pago',
+                        origem: 'workflow_rapido',
+                        editavel: true
+                      });
+                    }
+                  });
+                  
+                  return newPayments;
+                } else {
+                  // Sem novos pagamentos do projeto: manter pagamentos da sessão intactos
+                  return existingSession.pagamentos || [];
+                }
+              })(),
               produtosList: updatedItem.produtosList || existingSession.produtosList || [],
               dataUltimaAtualizacao: new Date().toISOString()
             };
