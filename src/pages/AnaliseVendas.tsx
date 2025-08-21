@@ -8,63 +8,42 @@ import { SalesChartsGrid } from '@/components/analise-vendas/SalesChartsGrid';
 import { SalesFilterBar } from '@/components/analise-vendas/SalesFilterBar';
 import { LeadLossReasonsChart } from '@/components/analise-vendas/LeadLossReasonsChart';
 import { useSalesAnalytics } from '@/hooks/useSalesAnalytics';
-
 export default function AnaliseVendas() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedCategory, setSelectedCategory] = useState('all');
-  
-  const { 
-    salesMetrics, 
-    monthlyData, 
-    categoryData, 
+  const {
+    salesMetrics,
+    monthlyData,
+    categoryData,
     packageDistributionData,
     originData,
     monthlyOriginData,
-    availableYears, 
-    availableCategories 
+    availableYears,
+    availableCategories
   } = useSalesAnalytics(selectedYear, selectedCategory);
-
-  return (
-    <div className="min-h-screen overflow-y-auto overflow-x-hidden bg-lunar-bg p-1 md:p-4 space-y-4 scrollbar-elegant">
+  return <div className="min-h-screen overflow-y-auto overflow-x-hidden bg-lunar-bg p-1 md:p-4 space-y-4 scrollbar-elegant py-0 my-px">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-lg font-semibold text-lunar-text">Análise de Vendas</h1>
+          
           <p className="text-xs text-lunar-textSecondary">
             Acompanhe o desempenho das suas vendas e alcance suas metas
           </p>
         </div>
         
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="text-xs">
-            <Download className="h-3 w-3 mr-1" />
-            Exportar
-          </Button>
+          
         </div>
       </div>
 
       {/* Filter Bar */}
-      <SalesFilterBar 
-        selectedYear={selectedYear}
-        selectedCategory={selectedCategory}
-        availableYears={availableYears}
-        availableCategories={availableCategories}
-        onYearChange={setSelectedYear}
-        onCategoryChange={setSelectedCategory}
-      />
+      <SalesFilterBar selectedYear={selectedYear} selectedCategory={selectedCategory} availableYears={availableYears} availableCategories={availableCategories} onYearChange={setSelectedYear} onCategoryChange={setSelectedCategory} />
 
       {/* Quick Metrics Cards */}
       <SalesMetricsCards metrics={salesMetrics} />
 
       {/* Charts Grid */}
-      <SalesChartsGrid 
-        monthlyData={monthlyData} 
-        categoryData={categoryData} 
-        packageDistributionData={packageDistributionData}
-        originData={originData}
-        monthlyOriginData={monthlyOriginData}
-        selectedCategory={selectedCategory}
-      />
+      <SalesChartsGrid monthlyData={monthlyData} categoryData={categoryData} packageDistributionData={packageDistributionData} originData={originData} monthlyOriginData={monthlyOriginData} selectedCategory={selectedCategory} />
 
       {/* Lead Loss Reasons Chart */}
       <LeadLossReasonsChart />
@@ -135,6 +114,5 @@ export default function AnaliseVendas() {
           </CardContent>
         </Card>
       </div>
-    </div>
-  );
+    </div>;
 }
