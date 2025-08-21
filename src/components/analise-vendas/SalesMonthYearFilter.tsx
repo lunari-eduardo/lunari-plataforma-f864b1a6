@@ -1,7 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { X } from 'lucide-react';
-
 interface SalesMonthYearFilterProps {
   selectedYear: number;
   selectedMonth: number | null; // null means "all months", 0-11 for specific months
@@ -12,12 +11,7 @@ interface SalesMonthYearFilterProps {
   onMonthChange: (month: number | null) => void;
   onCategoryChange: (category: string) => void;
 }
-
-const months = [
-  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-];
-
+const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 export default function SalesMonthYearFilter({
   selectedYear,
   selectedMonth,
@@ -32,53 +26,40 @@ export default function SalesMonthYearFilter({
     onMonthChange(null);
     onCategoryChange('all');
   };
-
   const hasFilters = selectedMonth !== null || selectedCategory !== 'all';
-
-  return (
-    <div className="sticky top-0 z-50 bg-lunar-bg border-b border-lunar-border shadow-sm">
-      <div className="p-4 space-y-4 py-[10px]">
+  return <div className="sticky top-0 z-50 bg-lunar-bg border-b border-lunar-border shadow-sm">
+      <div className="p-4 space-y-4 my-0 py-[6px]">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <p className="text-xs text-lunar-textSecondary py-0 my-0">
-              {selectedMonth !== null 
-                ? `Análise detalhada de ${months[selectedMonth]} de ${selectedYear}`
-                : "Acompanhe o desempenho das suas vendas e alcance suas metas"
-              }
+              {selectedMonth !== null ? `Análise detalhada de ${months[selectedMonth]} de ${selectedYear}` : "Acompanhe o desempenho das suas vendas e alcance suas metas"}
             </p>
           </div>
         </div>
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
           {/* Year Selector */}
-          <Select value={selectedYear.toString()} onValueChange={(value) => onYearChange(parseInt(value))}>
+          <Select value={selectedYear.toString()} onValueChange={value => onYearChange(parseInt(value))}>
             <SelectTrigger className="w-[120px] h-8">
               <SelectValue placeholder="Selecionar ano" />
             </SelectTrigger>
             <SelectContent>
-              {availableYears.map(year => (
-                <SelectItem key={year} value={year.toString()}>
+              {availableYears.map(year => <SelectItem key={year} value={year.toString()}>
                   {year}
-                </SelectItem>
-              ))}
+                </SelectItem>)}
             </SelectContent>
           </Select>
 
           {/* Month Selector */}
-          <Select 
-            value={selectedMonth === null ? 'all' : selectedMonth.toString()} 
-            onValueChange={(value) => onMonthChange(value === 'all' ? null : parseInt(value))}
-          >
+          <Select value={selectedMonth === null ? 'all' : selectedMonth.toString()} onValueChange={value => onMonthChange(value === 'all' ? null : parseInt(value))}>
             <SelectTrigger className="w-[140px] h-8">
               <SelectValue placeholder="Todos os meses" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os meses</SelectItem>
-              {months.map((month, index) => (
-                <SelectItem key={index} value={index.toString()}>
+              {months.map((month, index) => <SelectItem key={index} value={index.toString()}>
                   {month}
-                </SelectItem>
-              ))}
+                </SelectItem>)}
             </SelectContent>
           </Select>
 
@@ -89,23 +70,18 @@ export default function SalesMonthYearFilter({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas categorias</SelectItem>
-              {availableCategories.map(category => (
-                <SelectItem key={category} value={category}>
+              {availableCategories.map(category => <SelectItem key={category} value={category}>
                   {category}
-                </SelectItem>
-              ))}
+                </SelectItem>)}
             </SelectContent>
           </Select>
 
           {/* Reset Filters */}
-          {hasFilters && (
-            <Button variant="outline" size="sm" onClick={clearFilters} className="h-8 text-xs flex items-center gap-1">
+          {hasFilters && <Button variant="outline" size="sm" onClick={clearFilters} className="h-8 text-xs flex items-center gap-1">
               <X className="h-3 w-3" />
               Limpar filtros
-            </Button>
-          )}
+            </Button>}
         </div>
       </div>
-    </div>
-  );
+    </div>;
 }
