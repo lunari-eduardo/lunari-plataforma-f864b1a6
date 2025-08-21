@@ -35,17 +35,46 @@ export function SessionPaymentHistory({ sessionData, onPaymentUpdate }: SessionP
   const convertExistingPayments = (payments: any[]): SessionPaymentExtended[] => {
     if (!payments || !Array.isArray(payments)) return [];
     
-    return payments.map(p => ({
-      id: p.id || `legacy-${Date.now()}-${Math.random()}`,
-      valor: typeof p.valor === 'number' ? p.valor : parseFloat(String(p.valor || '0')),
-      data: p.data || '',
-      tipo: 'pago' as const,
-      statusPagamento: 'pago' as const,
-      origem: (p.origem || 'manual') as 'agenda' | 'workflow_rapido' | 'manual' | 'parcelado',
-      editavel: p.origem !== 'agenda',
-      forma_pagamento: p.forma_pagamento,
-      observacoes: p.observacoes
-    }));
+    return payments.map(p => {
+      // Determinar tipo e status baseado nos dados existentes
+      let tipo = p.tipo || 'pago';
+      let statusPagamento = p.statusPagamento || 'pago';
+      
+      // Se tem dataVencimento mas não tem data de pagamento, é agendado/pendente
+      if (p.dataVencimento && !p.data) {
+        tipo = 'agendado';
+        statusPagamento = 'pendente';
+      }
+      
+      // Se tem numeroParcela, é parcelado
+      if (p.numeroParcela && p.totalParcelas) {
+        tipo = 'parcelado';
+        if (!p.data) {
+          statusPagamento = 'pendente';
+        }
+      }
+      
+      // Ajustar origem para parcelado quando necessário
+      let origem = p.origem || 'manual';
+      if (p.numeroParcela && p.totalParcelas && origem !== 'parcelado') {
+        origem = 'parcelado';
+      }
+      
+      return {
+        id: p.id || `legacy-${Date.now()}-${Math.random()}`,
+        valor: typeof p.valor === 'number' ? p.valor : parseFloat(String(p.valor || '0')),
+        data: p.data || '',
+        dataVencimento: p.dataVencimento,
+        tipo: tipo as 'pago' | 'agendado' | 'parcelado',
+        statusPagamento: statusPagamento as 'pendente' | 'pago' | 'atrasado' | 'cancelado',
+        numeroParcela: p.numeroParcela,
+        totalParcelas: p.totalParcelas,
+        origem: origem as 'agenda' | 'workflow_rapido' | 'manual' | 'parcelado',
+        editavel: p.origem !== 'agenda' && p.editavel !== false,
+        forma_pagamento: p.forma_pagamento,
+        observacoes: p.observacoes
+      };
+    });
   };
 
   const {
@@ -100,12 +129,31 @@ export function SessionPaymentHistory({ sessionData, onPaymentUpdate }: SessionP
     return <Badge variant="outline">{statusPagamento}</Badge>;
   };
 
-  const getOriginIcon = (origem: string) => {
+  const getOriginIcon = (origem: string, observacoes?: string) => {
+    // Se observações incluir "entrada", mostrar ícone de dinheiro
+    if (observacoes && observacoes.toLowerCase().includes('entrada')) {
+      return <DollarSign className="h-3 w-3" />;
+    }
+    
     switch (origem) {
       case 'agenda': return <Calendar className="h-3 w-3" />;
       case 'workflow_rapido': return <CreditCard className="h-3 w-3" />;
       case 'parcelado': return <Package className="h-3 w-3" />;
       default: return <DollarSign className="h-3 w-3" />;
+    }
+  };
+
+  const getOriginLabel = (origem: string, observacoes?: string) => {
+    // Se observações incluir "entrada", mostrar "Entrada"
+    if (observacoes && observacoes.toLowerCase().includes('entrada')) {
+      return 'Entrada';
+    }
+    
+    switch (origem) {
+      case 'agenda': return 'Agenda';
+      case 'workflow_rapido': return 'Workflow Rápido';
+      case 'parcelado': return 'Parcelado';
+      default: return 'Manual';
     }
   };
 
@@ -203,9 +251,9 @@ export function SessionPaymentHistory({ sessionData, onPaymentUpdate }: SessionP
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
-                          {getOriginIcon(payment.origem)}
-                          <span className="text-xs capitalize">
-                            {payment.origem.replace('_', ' ')}
+                          {getOriginIcon(payment.origem, payment.observacoes)}
+                          <span className="text-xs">
+                            {getOriginLabel(payment.origem, payment.observacoes)}
                           </span>
                         </div>
                       </TableCell>

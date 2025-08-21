@@ -75,6 +75,7 @@ export function PaymentConfigModalExpanded({
     formatDateForStorage(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000))
   );
   const [observacoesAgendamento, setObservacoesAgendamento] = useState('');
+  const [entradaAgora, setEntradaAgora] = useState(0);
 
   const handlePagamentoRapido = async () => {
     if (valorRapido <= 0 || valorRapido > valorRestante) {
@@ -172,8 +173,30 @@ export function PaymentConfigModalExpanded({
       return;
     }
 
+    if (entradaAgora < 0 || (entradaAgora + valorAgendado) > valorRestante) {
+      toast({
+        title: "Erro",
+        description: "Valores de entrada e agendamento excedem o valor restante",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setLoading(true);
     try {
+      // Se há entrada, registrar pagamento imediato primeiro
+      if (entradaAgora > 0) {
+        onAddPayment({
+          valor: entradaAgora,
+          data: formatDateForStorage(new Date()),
+          tipo: 'pago',
+          statusPagamento: 'pago',
+          origem: 'workflow_rapido',
+          editavel: true,
+          observacoes: 'Entrada'
+        });
+      }
+
       // Corrigir conversão de data para evitar problema de timezone
       const dateForScheduling = safeParseInputDate(dataAgendamento);
       if (!dateForScheduling) {
@@ -195,16 +218,20 @@ export function PaymentConfigModalExpanded({
         observacoesAgendamento
       );
 
+      const totalMessage = entradaAgora > 0 
+        ? `${formatCurrency(entradaAgora)} entrada + ${formatCurrency(valorAgendado)} agendado`
+        : `${formatCurrency(valorAgendado)} agendado`;
+
       toast({
-        title: "Pagamento agendado",
-        description: `${formatCurrency(valorAgendado)} agendado para ${dateForScheduling.toLocaleDateString()}`
+        title: "Pagamento configurado",
+        description: `${totalMessage} para ${dateForScheduling.toLocaleDateString()}`
       });
 
       onClose();
     } catch (error) {
       toast({
         title: "Erro",
-        description: "Erro ao agendar pagamento",
+        description: "Erro ao configurar pagamento",
         variant: "destructive"
       });
     } finally {
@@ -397,37 +424,90 @@ export function PaymentConfigModalExpanded({
                 <CardTitle className="text-lg">Agendar Pagamento</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="valorAgendado">Valor do Pagamento</Label>
+                    <Label htmlFor="entradaAgora">Entrada Agora (opcional)</Label>
                     <div className="relative">
                       <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
-                        id="valorAgendado"
+                        id="entradaAgora"
                         type="number"
-                        value={valorAgendado}
-                        onChange={(e) => setValorAgendado(parseFloat(e.target.value) || 0)}
+                        value={entradaAgora}
+                        onChange={(e) => {
+                          const entrada = parseFloat(e.target.value) || 0;
+                          setEntradaAgora(entrada);
+                          // Ajustar valor agendado automaticamente
+                          if (entrada >= 0 && (entrada + valorAgendado) <= valorRestante) {
+                            // OK, manter valores
+                          } else if (entrada >= 0) {
+                            setValorAgendado(Math.max(0, valorRestante - entrada));
+                          }
+                        }}
                         className="pl-10"
                         min="0"
                         max={valorRestante}
                         step="0.01"
+                        placeholder="0,00"
                       />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Será registrado como pago hoje
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="valorAgendado">Valor a Agendar</Label>
+                      <div className="relative">
+                        <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="valorAgendado"
+                          type="number"
+                          value={valorAgendado}
+                          onChange={(e) => setValorAgendado(parseFloat(e.target.value) || 0)}
+                          className="pl-10"
+                          min="0"
+                          max={valorRestante - entradaAgora}
+                          step="0.01"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="dataAgendamento">Data de Vencimento</Label>
+                      <div className="relative">
+                        <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="dataAgendamento"
+                          type="date"
+                          value={dataAgendamento}
+                          onChange={(e) => setDataAgendamento(e.target.value)}
+                          className="pl-10"
+                        />
+                      </div>
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="dataAgendamento">Data de Vencimento</Label>
-                    <div className="relative">
-                      <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="dataAgendamento"
-                        type="date"
-                        value={dataAgendamento}
-                        onChange={(e) => setDataAgendamento(e.target.value)}
-                        className="pl-10"
-                      />
-                    </div>
-                  </div>
+                  {(entradaAgora + valorAgendado) > 0 && (
+                    <Card className="bg-blue-50 border-blue-200">
+                      <CardContent className="p-4">
+                        <h4 className="font-medium text-blue-900 mb-2">Resumo</h4>
+                        {entradaAgora > 0 && (
+                          <p className="text-sm text-blue-800">
+                            Entrada hoje: {formatCurrency(entradaAgora)}
+                          </p>
+                        )}
+                        {valorAgendado > 0 && (
+                          <p className="text-sm text-blue-800">
+                            Agendado: {formatCurrency(valorAgendado)} para {new Date(dataAgendamento).toLocaleDateString()}
+                          </p>
+                        )}
+                        <p className="text-xs text-blue-600 mt-1">
+                          Total: {formatCurrency(entradaAgora + valorAgendado)}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -443,10 +523,14 @@ export function PaymentConfigModalExpanded({
 
                 <Button 
                   onClick={handleAgendamento}
-                  disabled={loading || valorAgendado <= 0 || !dataAgendamento}
+                  disabled={loading || (valorAgendado <= 0 && entradaAgora <= 0) || !dataAgendamento || (entradaAgora + valorAgendado) > valorRestante}
                   className="w-full"
                 >
-                  {loading ? 'Agendando...' : `Agendar ${formatCurrency(valorAgendado)}`}
+                  {loading ? 'Configurando...' : (
+                    entradaAgora > 0 
+                      ? `Entrada ${formatCurrency(entradaAgora)} + Agendar ${formatCurrency(valorAgendado)}`
+                      : `Agendar ${formatCurrency(valorAgendado)}`
+                  )}
                 </Button>
               </CardContent>
             </Card>
