@@ -22,12 +22,10 @@ export default function AnaliseVendas() {
     }
     meta.setAttribute("content", desc);
   }, []);
-
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null); // null = all months, 0-11 = specific month
   const [selectedCategory, setSelectedCategory] = useState('all');
-  
   const {
     salesMetrics,
     monthlyData,
@@ -38,33 +36,15 @@ export default function AnaliseVendas() {
     availableYears,
     availableCategories
   } = useSalesAnalytics(selectedYear, selectedMonth, selectedCategory);
-  return (
-    <div className="min-h-screen bg-lunar-bg">
+  return <div className="min-h-screen bg-lunar-bg">
       {/* Sticky Header */}
-      <SalesMonthYearFilter
-        selectedYear={selectedYear}
-        selectedMonth={selectedMonth}
-        selectedCategory={selectedCategory}
-        availableYears={availableYears}
-        availableCategories={availableCategories}
-        onYearChange={setSelectedYear}
-        onMonthChange={setSelectedMonth}
-        onCategoryChange={setSelectedCategory}
-      />
+      <SalesMonthYearFilter selectedYear={selectedYear} selectedMonth={selectedMonth} selectedCategory={selectedCategory} availableYears={availableYears} availableCategories={availableCategories} onYearChange={setSelectedYear} onMonthChange={setSelectedMonth} onCategoryChange={setSelectedCategory} />
 
       {/* Main Content */}
-      <main className="space-y-6 p-4 md:p-6">
+      <main className="space-y-6 p-4 md:p-6 py-0 my-0">
         {/* Hero Section */}
         <section aria-label="Visão geral da análise de vendas" className="animate-fade-in">
-          <SalesAnalysisHero
-            selectedYear={selectedYear}
-            selectedMonth={selectedMonth}
-            selectedCategory={selectedCategory}
-            totalRevenue={salesMetrics.totalRevenue}
-            totalSessions={salesMetrics.totalSessions}
-            conversionRate={salesMetrics.conversionRate}
-            availableCategories={availableCategories}
-          />
+          <SalesAnalysisHero selectedYear={selectedYear} selectedMonth={selectedMonth} selectedCategory={selectedCategory} totalRevenue={salesMetrics.totalRevenue} totalSessions={salesMetrics.totalSessions} conversionRate={salesMetrics.conversionRate} availableCategories={availableCategories} />
         </section>
 
         {/* Metrics Cards */}
@@ -74,14 +54,7 @@ export default function AnaliseVendas() {
 
         {/* Charts Grid */}
         <section aria-label="Gráficos de análise" className="animate-fade-in">
-          <SalesChartsGrid 
-            monthlyData={monthlyData} 
-            categoryData={categoryData} 
-            packageDistributionData={packageDistributionData} 
-            originData={originData} 
-            monthlyOriginData={monthlyOriginData} 
-            selectedCategory={selectedCategory} 
-          />
+          <SalesChartsGrid monthlyData={monthlyData} categoryData={categoryData} packageDistributionData={packageDistributionData} originData={originData} monthlyOriginData={monthlyOriginData} selectedCategory={selectedCategory} />
         </section>
 
         {/* Lead Loss Reasons */}
@@ -160,6 +133,5 @@ export default function AnaliseVendas() {
           </Card>
         </section>
       </main>
-    </div>
-  );
+    </div>;
 }
