@@ -165,11 +165,15 @@ export function WorkflowHistoryTable({
               {/* HISTÓRICO DE PAGAMENTOS - COMPONENTE NOVO */}
               <SessionPaymentHistory 
                 sessionData={item} 
-                onPaymentUpdate={(sessionId, totalPaid) => {
-                  // Atualizar o localStorage com o novo valor pago
+                onPaymentUpdate={(sessionId, totalPaid, fullPaymentsArray) => {
+                  // Atualizar o localStorage com pagamentos completos
                   const sessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
                   const updatedSessions = sessions.map((s: any) => 
-                    s.id === sessionId ? { ...s, valorPago: totalPaid } : s
+                    s.id === sessionId ? { 
+                      ...s, 
+                      valorPago: totalPaid,
+                      pagamentos: fullPaymentsArray || s.pagamentos
+                    } : s
                   );
                   localStorage.setItem('workflow_sessions', JSON.stringify(updatedSessions));
                   

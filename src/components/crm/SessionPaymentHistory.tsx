@@ -24,7 +24,7 @@ import { EditPaymentModal } from './EditPaymentModal';
 
 interface SessionPaymentHistoryProps {
   sessionData: any;
-  onPaymentUpdate: (sessionId: string, totalPaid: number) => void;
+  onPaymentUpdate: (sessionId: string, totalPaid: number, fullPaymentsArray?: any[]) => void;
 }
 
 export function SessionPaymentHistory({ sessionData, onPaymentUpdate }: SessionPaymentHistoryProps) {
@@ -60,10 +60,29 @@ export function SessionPaymentHistory({ sessionData, onPaymentUpdate }: SessionP
     schedulePayment
   } = useSessionPayments(sessionData.id, convertExistingPayments(sessionData.pagamentos || []));
 
+  // Converter de volta para formato legado para sincronização
+  const convertToLegacyPayments = (extendedPayments: SessionPaymentExtended[]) => {
+    return extendedPayments.map(p => ({
+      id: p.id,
+      valor: p.valor,
+      data: p.data,
+      forma_pagamento: p.forma_pagamento,
+      observacoes: p.observacoes,
+      tipo: p.tipo,
+      statusPagamento: p.statusPagamento,
+      dataVencimento: p.dataVencimento,
+      numeroParcela: p.numeroParcela,
+      totalParcelas: p.totalParcelas,
+      origem: p.origem,
+      editavel: p.editavel
+    }));
+  };
+
   // Atualizar workflow quando pagamentos mudarem
   useEffect(() => {
-    onPaymentUpdate(sessionData.id, totalPago);
-  }, [totalPago, sessionData.id, onPaymentUpdate]);
+    const legacyPayments = convertToLegacyPayments(payments);
+    onPaymentUpdate(sessionData.id, totalPago, legacyPayments);
+  }, [payments, totalPago, sessionData.id, onPaymentUpdate]);
 
   const getStatusBadge = (payment: SessionPaymentExtended) => {
     const { statusPagamento, tipo } = payment;
