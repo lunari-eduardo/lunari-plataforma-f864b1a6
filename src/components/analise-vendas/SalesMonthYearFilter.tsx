@@ -41,7 +41,7 @@ export default function SalesMonthYearFilter({
       <div className="p-4 space-y-4 py-[10px]">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-xl font-semibold text-lunar-text">Análise de Vendas</h1>
+            
             <p className="text-xs text-lunar-textSecondary">
               {selectedMonth ? `Análise detalhada de ${format(selectedMonth, "MMMM 'de' yyyy", {
               locale: ptBR
