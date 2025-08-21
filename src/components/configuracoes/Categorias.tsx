@@ -68,23 +68,20 @@ export default function Categorias({
           </p>
         </div>
         
-        <div className="flex flex-col sm:flex-row items-end gap-3 mt-3">
-          <div className="w-full sm:flex-1">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+          <div>
             <label htmlFor="nome" className="block text-sm font-medium mb-1">
               Nome<span className="text-red-500">*</span>
             </label>
-            <Input id="nome" placeholder="Nome da categoria" value={novaCategoria} onChange={e => setNovaCategoria(e.target.value)} className="w-full bg-lunar-surface" />
+            <Input id="nome" placeholder="Nome da categoria" value={novaCategoria} onChange={e => setNovaCategoria(e.target.value)} className="bg-lunar-surface" />
           </div>
-          <div className="w-full sm:w-40">
+          <div>
             <label htmlFor="cor" className="block text-sm font-medium mb-1">
               Cor<span className="text-red-500">*</span>
             </label>
-            <div className="flex items-center gap-2">
-              
-              <Input id="cor" type="color" value={novaCor} onChange={e => setNovaCor(e.target.value)} className="w-20 h-7 bg-muted" />
-            </div>
+            <Input id="cor" type="color" value={novaCor} onChange={e => setNovaCor(e.target.value)} className="w-20 h-7 bg-muted" />
           </div>
-          <div className="w-full sm:w-auto mt-3 sm:mt-0">
+          <div className="flex items-end">
             <Button onClick={adicionarCategoria} className="flex items-center gap-1 w-full bg-lunar-accent">
               <Plus className="h-4 w-4" />
               <span>Adicionar Categoria</span>

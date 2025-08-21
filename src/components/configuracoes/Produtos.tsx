@@ -32,6 +32,14 @@ export default function Produtos({
     }).format(valor);
   };
   const calcularMargemLucro = (custoProduto: number, vendaProduto: number) => {
+    if (!vendaProduto || vendaProduto <= 0) {
+      return {
+        valor: 0,
+        porcentagem: 'N/A',
+        classe: 'text-muted-foreground'
+      };
+    }
+    
     const margem = vendaProduto - custoProduto;
     const porcentagem = margem / vendaProduto * 100;
     let corClasse = '';
@@ -45,10 +53,6 @@ export default function Produtos({
   const adicionarProduto = () => {
     if (novoProduto.nome.trim() === '') {
       toast.error('O nome do produto não pode estar vazio');
-      return;
-    }
-    if (novoProduto.preco_venda <= 0) {
-      toast.error('O preço de venda deve ser maior que zero');
       return;
     }
     const newId = String(Date.now());
@@ -109,7 +113,7 @@ export default function Produtos({
           
           <div>
             <label htmlFor="produto-venda" className="block text-sm font-medium mb-1">
-              Preço de Venda (R$)<span className="text-red-500">*</span>
+              Preço de Venda (R$)
             </label>
             <Input id="produto-venda" type="number" placeholder="0,00" value={novoProduto.preco_venda || ''} onChange={e => setNovoProduto({
             ...novoProduto,
@@ -213,7 +217,9 @@ export default function Produtos({
                           </div>
                           <div>
                             <span className="text-muted-foreground block text-xs">Venda</span>
-                            <span className="font-medium">{formatarMoeda(produto.preco_venda)}</span>
+                            <span className="font-medium">
+                              {produto.preco_venda ? formatarMoeda(produto.preco_venda) : 'Não definido'}
+                            </span>
                           </div>
                         </div>
                         
@@ -221,7 +227,7 @@ export default function Produtos({
                           <div className="flex items-center justify-between text-sm">
                             <span className="text-muted-foreground text-xs">Margem de Lucro</span>
                             <span className={`font-medium ${margem.classe}`}>
-                              {formatarMoeda(margem.valor)} ({margem.porcentagem})
+                              {margem.porcentagem === 'N/A' ? 'N/A' : `${formatarMoeda(margem.valor)} (${margem.porcentagem})`}
                             </span>
                           </div>
                         </div>
@@ -286,9 +292,11 @@ export default function Produtos({
                       </> : <>
                         <div className="col-span-5 font-medium">{produto.nome}</div>
                         <div className="col-span-2">{formatarMoeda(produto.preco_custo)}</div>
-                        <div className="col-span-2">{formatarMoeda(produto.preco_venda)}</div>
+                        <div className="col-span-2">
+                          {produto.preco_venda ? formatarMoeda(produto.preco_venda) : 'Não definido'}
+                        </div>
                         <div className={`col-span-2 ${margem.classe} font-medium`}>
-                          {formatarMoeda(margem.valor)} ({margem.porcentagem})
+                          {margem.porcentagem === 'N/A' ? 'N/A' : `${formatarMoeda(margem.valor)} (${margem.porcentagem})`}
                         </div>
                         <div className="flex justify-end gap-1 col-span-1">
                           <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => iniciarEdicaoProduto(produto.id)}>
