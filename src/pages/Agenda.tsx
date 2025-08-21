@@ -259,11 +259,11 @@ export default function Agenda() {
   };
 
   // Handle appointment deletion
-  const handleDeleteAppointment = (id: string) => {
-    deleteAppointment(id);
+  const handleDeleteAppointment = (id: string, preservePayments?: boolean) => {
+    deleteAppointment(id, preservePayments);
     setIsDetailsOpen(false);
     setIsBudgetAppointmentModalOpen(false);
-    toast.success("Agendamento excluído com sucesso");
+    // Toast será mostrado pelo componente que chama esta função
   };
 
   // Handle budget appointment save (reschedule)

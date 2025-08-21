@@ -69,11 +69,36 @@ export function AppointmentDeleteConfirmModal({
             </div>
           </div>
 
-          <div className="bg-muted/50 rounded-lg p-4">
-            <p className="text-sm text-lunar-textSecondary">
-              Esta ação removerá o agendamento permanentemente. 
-              Os dados do workflow relacionados serão preservados.
+          <div className="space-y-4">
+            <p className="text-sm font-medium text-lunar-text">
+              O que deseja fazer com os dados financeiros desta sessão?
             </p>
+            
+            <RadioGroup value={preservePayments} onValueChange={(value) => setPreservePayments(value as 'preserve' | 'remove')}>
+              <div className="flex items-center space-x-2 p-3 rounded-lg border border-lunar-border bg-lunar-surface/50">
+                <RadioGroupItem value="preserve" id="preserve" />
+                <Label htmlFor="preserve" className="flex-1 cursor-pointer">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-lunar-text">Preservar histórico de pagamentos</p>
+                    <p className="text-xs text-lunar-textSecondary">
+                      Remove o agendamento mas mantém os pagamentos registrados como "agendamento cancelado"
+                    </p>
+                  </div>
+                </Label>
+              </div>
+              
+              <div className="flex items-center space-x-2 p-3 rounded-lg border border-destructive/20 bg-destructive/5">
+                <RadioGroupItem value="remove" id="remove" />
+                <Label htmlFor="remove" className="flex-1 cursor-pointer">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-lunar-text">Excluir completamente</p>
+                    <p className="text-xs text-lunar-textSecondary">
+                      Remove o agendamento e todos os dados financeiros permanentemente
+                    </p>
+                  </div>
+                </Label>
+              </div>
+            </RadioGroup>
           </div>
         </div>
 
@@ -88,11 +113,11 @@ export function AppointmentDeleteConfirmModal({
             className="flex items-center gap-2"
           >
             {loading ? (
-              'Excluindo...'
+              'Processando...'
             ) : (
               <>
                 <Trash2 className="h-4 w-4" />
-                Confirmar Exclusão
+                {preservePayments === 'preserve' ? 'Cancelar Agendamento' : 'Excluir Completamente'}
               </>
             )}
           </Button>

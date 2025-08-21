@@ -152,7 +152,7 @@ interface AppContextType {
   // Agenda Actions
   addAppointment: (appointment: Omit<Appointment, 'id'>) => Appointment;
   updateAppointment: (id: string, appointment: Partial<Appointment>) => void;
-  deleteAppointment: (id: string) => void;
+  deleteAppointment: (id: string, preservePayments?: boolean) => void;
   // Disponibilidades Actions
   addAvailabilitySlots: (slots: AvailabilitySlot[]) => void;
   clearAvailabilityForDate: (date: string) => void;
@@ -1810,24 +1810,59 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
-  const deleteAppointment = (id: string) => {
+  const deleteAppointment = (id: string, preservePayments: boolean = false) => {
+    const appointment = appointments.find(app => app.id === id);
+    
+    // Sempre remover o agendamento da lista
     setAppointments(prev => prev.filter(app => app.id !== id));
     
-    // Remover projeto associado se existir
-    const projeto = projetos.find(p => p.agendamentoId === id);
-    if (projeto) {
-      excluirProjeto(projeto.projectId);
-    }
-    
-    // Remover do workflow_sessions no localStorage
-    try {
-      const workflowSessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
-      const matchIds = new Set([id, generateSessionId(id)]);
-      const updatedSessions = workflowSessions.filter((session: any) => !(matchIds.has(session.id) || matchIds.has(session.sessionId)));
-      localStorage.setItem('workflow_sessions', JSON.stringify(updatedSessions));
-      console.log('✅ Agendamento removido do workflow:', id);
-    } catch (error) {
-      console.error('❌ Erro ao remover do workflow_sessions:', error);
+    if (preservePayments) {
+      // Preservar histórico: marcar projeto como "agendamento cancelado" se existir
+      const projeto = projetos.find(p => p.agendamentoId === id);
+      if (projeto) {
+        atualizarProjeto(projeto.projectId, {
+          status: 'cancelado',
+          descricao: `${projeto.descricao || ''} [CANCELADO EM ${new Date().toLocaleDateString()}]`
+        });
+      }
+      
+      // Atualizar workflow_sessions marcando como cancelado
+      try {
+        const workflowSessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
+        const matchIds = new Set([id, generateSessionId(id)]);
+        const updatedSessions = workflowSessions.map((session: any) => {
+          if (matchIds.has(session.id) || matchIds.has(session.sessionId)) {
+            return {
+              ...session,
+              status: 'Agendamento Cancelado',
+              nome: `${session.nome} [CANCELADO]`,
+              descricao: `${session.descricao || ''} [CANCELADO EM ${new Date().toLocaleDateString()}]`
+            };
+          }
+          return session;
+        });
+        localStorage.setItem('workflow_sessions', JSON.stringify(updatedSessions));
+        console.log('✅ Agendamento marcado como cancelado no workflow:', id);
+      } catch (error) {
+        console.error('❌ Erro ao atualizar workflow_sessions:', error);
+      }
+    } else {
+      // Excluir completamente: remover projeto associado se existir
+      const projeto = projetos.find(p => p.agendamentoId === id);
+      if (projeto) {
+        excluirProjeto(projeto.projectId);
+      }
+      
+      // Remover do workflow_sessions no localStorage
+      try {
+        const workflowSessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
+        const matchIds = new Set([id, generateSessionId(id)]);
+        const updatedSessions = workflowSessions.filter((session: any) => !(matchIds.has(session.id) || matchIds.has(session.sessionId)));
+        localStorage.setItem('workflow_sessions', JSON.stringify(updatedSessions));
+        console.log('✅ Agendamento removido do workflow:', id);
+      } catch (error) {
+        console.error('❌ Erro ao remover do workflow_sessions:', error);
+      }
     }
   };
 

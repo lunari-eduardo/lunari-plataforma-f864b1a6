@@ -11,24 +11,13 @@ import { StatusBadge } from "@/components/workflow/StatusBadge";
 import { toast } from 'sonner';
 import { useOrcamentos } from '@/hooks/useOrcamentos';
 import { AppointmentDeleteConfirmModal } from './AppointmentDeleteConfirmModal';
-
-type Appointment = {
-  id: string;
-  title: string;
-  date: Date;
-  time: string;
-  type: string;
-  status: 'confirmado' | 'a confirmar';
-  description?: string;
-  packageId?: string;
-  paidAmount?: number;
-};
+import { Appointment } from '@/hooks/useAgenda';
 
 interface AppointmentDetailsProps {
   appointment: Appointment;
   onSave: (appointmentData: any) => void;
   onCancel: () => void;
-  onDelete: (id: string) => void;
+  onDelete: (id: string, preservePayments?: boolean) => void;
 }
 
 
@@ -139,6 +128,11 @@ export default function AppointmentDetails({
     toast.success('Agendamento atualizado com sucesso');
   };
 
+  const handleDeleteConfirm = (preservePayments: boolean) => {
+    onDelete(appointment.id, preservePayments);
+    toast.success(preservePayments ? 'Agendamento cancelado - histórico preservado' : 'Agendamento excluído completamente');
+  };
+
   const selectedPackage = pacotes.find(p => p.id === formData.packageId);
   return <div className="space-y-4">
       <div className="text-center mb-4">
@@ -234,7 +228,7 @@ export default function AppointmentDetails({
       </div>
       
       <div className="flex justify-between pt-4">
-        <Button variant="destructive" onClick={() => onDelete(appointment.id)} className="text-xs">
+        <Button variant="destructive" onClick={() => setDeleteModalOpen(true)} className="text-xs">
           Excluir
         </Button>
         <div className="space-x-2">
@@ -246,5 +240,18 @@ export default function AppointmentDetails({
           </Button>
         </div>
       </div>
+
+      <AppointmentDeleteConfirmModal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={handleDeleteConfirm}
+        appointmentData={{
+          id: appointment.id,
+          sessionId: appointment.sessionId,
+          title: appointment.title,
+          clientName: appointment.client,
+          date: format(appointment.date, "dd/MM/yyyy", { locale: ptBR })
+        }}
+      />
     </div>;
 }
