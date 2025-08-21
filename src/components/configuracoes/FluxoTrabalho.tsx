@@ -124,7 +124,7 @@ export default function FluxoTrabalho({
       
       <div>
         <div className="space-y-2 mb-4">
-          <h3 className="font-medium text-sm">Etapas do Fluxo de Trabalho</h3>
+          
           <p className="text-muted-foreground text-xs">Lista de todas as etapas do fluxo de trabalho em ordem de execução. </p>
         </div>
         
