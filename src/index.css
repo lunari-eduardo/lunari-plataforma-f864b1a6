@@ -12,8 +12,8 @@
     --lunar-text: 0 0% 23%;
     --lunar-textSecondary: 0 0% 49%;
     --lunar-border: 60 3% 94%;    /* #efefee */
-    --lunar-accent: 210 84% 56%;
-    --lunar-accentHover: 210 84% 48%;
+    --lunar-accent: 15 54% 28%;
+    --lunar-accentHover: 15 54% 24%;
     --lunar-error: 12 74% 61%;
     --lunar-success: 150 53% 55%;
     --lunar-warning: 42 35% 62%;
@@ -40,7 +40,7 @@
     --card-foreground: 0 0% 23%;
     --border: 60 3% 94%;           /* #efefee */
     --input: 0 0% 100%;
-    --primary: 210 84% 56%;
+    --primary: 15 54% 28%;
     --primary-foreground: 0 0% 100%;
     --lunar-accent-foreground: 0 0% 100%;
     --secondary: 60 4% 97%;        /* #f8f8f7 */
@@ -49,19 +49,19 @@
     --accent-foreground: 0 0% 23%;
     --destructive: 12 74% 61%;
     --destructive-foreground: 0 0% 100%;
-    --ring: 210 84% 56%;
+    --ring: 15 54% 28%;
 
-    /* Paleta monocromática baseada no tema lunar */
-    --chart-primary: 210 84% 56%;      /* Azul principal (lunar-accent) */
-    --chart-secondary: 210 70% 48%;    /* Azul mais escuro */
-    --chart-tertiary: 210 60% 40%;     /* Azul escuro */
-    --chart-quaternary: 210 84% 65%;   /* Azul mais claro */
-    --chart-quinary: 210 70% 72%;      /* Azul claro */
-    --chart-senary: 210 50% 60%;       /* Azul médio */
-    --chart-revenue: 210 84% 56%;      /* Receitas - cor principal */
-    --chart-expense: 210 40% 45%;      /* Despesas - tom mais neutro */
-    --chart-profit: 210 90% 50%;       /* Lucro - tom mais vibrante */
-    --chart-neutral: 210 15% 60%;      /* Neutro - tom acinzentado */
+    /* Paleta fixa baseada no tema marrom */
+    --chart-primary: 15 54% 28%;       /* Marrom principal */
+    --chart-secondary: 16 48% 35%;     /* Marrom médio */
+    --chart-tertiary: 15 37% 20%;      /* Marrom escuro */
+    --chart-quaternary: 17 43% 39%;    /* Marrom claro */
+    --chart-quinary: 16 47% 38%;       /* Marrom médio escuro */
+    --chart-senary: 18 48% 41%;        /* Marrom claro médio */
+    --chart-revenue: 15 54% 28%;       /* Receitas - cor principal */
+    --chart-expense: 15 37% 20%;       /* Despesas - tom mais escuro */
+    --chart-profit: 15 54% 28%;        /* Lucro - cor principal */
+    --chart-neutral: 19 23% 74%;       /* Neutro - tom claro */
 }
 }
 
@@ -112,17 +112,17 @@
     --gradient-card: linear-gradient(135deg, hsl(var(--lunar-surface)), hsl(var(--lunar-bg)));
     --gradient-subtle: linear-gradient(180deg, hsl(var(--lunar-surface) / 0.5), transparent);
 
-    /* Paleta monocromática para modo escuro */
-    --chart-primary: 210 84% 65%;      /* Azul claro para contraste */
-    --chart-secondary: 210 70% 58%;    /* Azul médio */
-    --chart-tertiary: 210 60% 50%;     /* Azul médio-escuro */
-    --chart-quaternary: 210 84% 75%;   /* Azul bem claro */
-    --chart-quinary: 210 70% 80%;      /* Azul muito claro */
-    --chart-senary: 210 50% 70%;       /* Azul claro médio */
-    --chart-revenue: 210 84% 65%;      /* Receitas */
-    --chart-expense: 210 40% 55%;      /* Despesas */
-    --chart-profit: 210 90% 60%;       /* Lucro */
-    --chart-neutral: 210 25% 70%;      /* Neutro */
+    /* Paleta fixa para modo escuro - tons mais claros */
+    --chart-primary: 15 45% 50%;       /* Marrom claro para contraste */
+    --chart-secondary: 16 40% 55%;     /* Marrom médio claro */
+    --chart-tertiary: 15 30% 45%;      /* Marrom médio */
+    --chart-quaternary: 17 35% 60%;    /* Marrom bem claro */
+    --chart-quinary: 16 38% 58%;       /* Marrom claro */
+    --chart-senary: 18 40% 62%;        /* Marrom muito claro */
+    --chart-revenue: 15 45% 50%;       /* Receitas */
+    --chart-expense: 15 30% 45%;       /* Despesas */
+    --chart-profit: 15 45% 50%;        /* Lucro */
+    --chart-neutral: 19 15% 80%;       /* Neutro */
   }
 }
 

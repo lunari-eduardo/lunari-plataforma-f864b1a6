@@ -29,7 +29,7 @@ export interface UserPreferences {
   formatoData: 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'YYYY-MM-DD';
   // Aparência
   tema: 'claro' | 'escuro' | 'sistema';
-  temaCor: 'azul' | 'verde' | 'terracota' | 'rosa' | 'cinza' | 'lilas' | 'bege';
+  temaCor: 'azul' | 'verde' | 'terracota' | 'rosa' | 'cinza' | 'lilas' | 'bege' | 'marrom';
   temaCorHex: string;
   // Notificações
   notificacoesEmail: boolean;
@@ -66,8 +66,8 @@ export const DEFAULT_USER_PREFERENCES: Omit<UserPreferences, 'id' | 'createdAt' 
   moedaPadrao: 'BRL',
   formatoData: 'DD/MM/YYYY',
   tema: 'sistema',
-  temaCor: 'azul',
-  temaCorHex: '#1c4274',
+  temaCor: 'marrom',
+  temaCorHex: '#5F3624',
   notificacoesEmail: true,
   notificacoesWhatsapp: true,
   habilitarAutomacoesWorkflow: true,

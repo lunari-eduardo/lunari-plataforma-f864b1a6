@@ -71,6 +71,7 @@ function toHslStr(hsl: { h: number; s: number; l: number }) {
 }
 
 const COLOR_MAP: Record<string, string> = {
+  marrom: '#5F3624',
   azul: '#1c4274',
   verde: '#98b281',
   terracota: '#893806',
@@ -88,7 +89,7 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
   useEffect(() => {
     const root = document.documentElement
 
-    const baseHex = effective.temaCorHex || COLOR_MAP[effective.temaCor] || COLOR_MAP.azul
+    const baseHex = effective.temaCorHex || COLOR_MAP[effective.temaCor] || COLOR_MAP.marrom
     const baseHsl = hexToHsl(baseHex)
     const hoverHsl = darkenHsl(baseHsl, 8)
     const foregroundHsl = readableForegroundHslFromHex(baseHex)
@@ -107,21 +108,33 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
     // Foreground específico para o accent (botões customizados)
     root.style.setProperty('--lunar-accent-foreground', foregroundHsl)
 
-    // Gráficos (paleta dinâmica)
-    const palette = [
-      baseHsl,
-      { h: shiftHue(baseHsl.h, 16), s: clamp(baseHsl.s + 6, 20, 95), l: clamp(baseHsl.l - 4, 10, 90) },
-      { h: shiftHue(baseHsl.h, -12), s: clamp(baseHsl.s - 4, 20, 95), l: clamp(baseHsl.l + 6, 10, 90) },
-      { h: shiftHue(baseHsl.h, 28), s: clamp(baseHsl.s - 8, 20, 95), l: clamp(baseHsl.l - 8, 10, 90) },
-      { h: shiftHue(baseHsl.h, -24), s: clamp(baseHsl.s + 8, 20, 95), l: clamp(baseHsl.l - 2, 10, 90) },
-    ]
+    // Gráficos (paleta fixa com cores marrons)
+    const chartPalette = [
+      '#5F3624', // Principal
+      '#784A2B', // Secundária
+      '#442F21', // Terciária
+      '#7A4430', // Quaternária
+      '#834A2F', // Quinária
+      '#965D38', // Senária
+      '#B48260', // Sétima
+      '#E1C7AC', // Oitava
+      '#D0C8B8', // Nona
+      '#F6F0EC'  // Décima
+    ].map(hex => {
+      const hsl = hexToHsl(hex)
+      return toHslStr(hsl)
+    })
 
-    root.style.setProperty('--chart-primary', toHslStr(palette[0]))
-    root.style.setProperty('--chart-secondary', toHslStr(palette[1]))
-    root.style.setProperty('--chart-tertiary', toHslStr(palette[2]))
-    root.style.setProperty('--chart-quaternary', toHslStr(palette[3]))
-    root.style.setProperty('--chart-quinary', toHslStr(palette[4]))
-    root.style.setProperty('--chart-revenue', toHslStr(palette[0]))
+    root.style.setProperty('--chart-primary', chartPalette[0])
+    root.style.setProperty('--chart-secondary', chartPalette[1])
+    root.style.setProperty('--chart-tertiary', chartPalette[2])
+    root.style.setProperty('--chart-quaternary', chartPalette[3])
+    root.style.setProperty('--chart-quinary', chartPalette[4])
+    root.style.setProperty('--chart-senary', chartPalette[5])
+    root.style.setProperty('--chart-revenue', chartPalette[0])
+    root.style.setProperty('--chart-expense', chartPalette[2])
+    root.style.setProperty('--chart-profit', chartPalette[0])
+    root.style.setProperty('--chart-neutral', chartPalette[7])
   }, [effective.temaCor, effective.temaCorHex])
 
   // Apply dark mode class based on preferences.tema ('claro' | 'escuro' | 'sistema')

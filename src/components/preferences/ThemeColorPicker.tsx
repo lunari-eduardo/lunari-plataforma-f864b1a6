@@ -2,14 +2,15 @@ import React from 'react'
 import { Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-export type ThemeColorKey = 'verde' | 'terracota' | 'rosa' | 'cinza' | 'azul' | 'lilas' | 'bege'
+export type ThemeColorKey = 'verde' | 'terracota' | 'rosa' | 'cinza' | 'azul' | 'lilas' | 'bege' | 'marrom'
 
 const COLORS: { key: ThemeColorKey; label: string; hex: `#${string}` }[] = [
+  { key: 'marrom', label: 'Marrom (padrão)', hex: '#5F3624' },
   { key: 'verde', label: 'Verde', hex: '#98b281' },
   { key: 'terracota', label: 'Terracota', hex: '#893806' },
   { key: 'rosa', label: 'Rosa', hex: '#d8a4ce' },
   { key: 'cinza', label: 'Cinza', hex: '#494949' },
-  { key: 'azul', label: 'Azul (padrão)', hex: '#1c4274' },
+  { key: 'azul', label: 'Azul', hex: '#1c4274' },
   { key: 'lilas', label: 'Lilás', hex: '#beb7fb' },
   { key: 'bege', label: 'Bege', hex: '#dbbd96' },
 ]
@@ -21,8 +22,8 @@ interface ThemeColorPickerProps {
 }
 
 export default function ThemeColorPicker({ valueKey, valueHex, onChange }: ThemeColorPickerProps) {
-  const activeKey = valueKey || 'azul'
-  const activeHex = valueHex || COLORS.find(c => c.key === activeKey)?.hex || '#1c4274'
+  const activeKey = valueKey || 'marrom'
+  const activeHex = valueHex || COLORS.find(c => c.key === activeKey)?.hex || '#5F3624'
 
   return (
     <div className="space-y-4">
