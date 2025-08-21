@@ -112,6 +112,16 @@ const [activeId, setActiveId] = useState<string | null>(null);
 const pointerSensor = useSensor(PointerSensor, { activationConstraint: { distance: 4 } });
 const sensors = useSensors(pointerSensor);
 
+// Sync selectedTask with tasks array changes for real-time updates
+useEffect(() => {
+  if (selectedTask) {
+    const updatedTask = tasks.find(t => t.id === selectedTask.id);
+    if (updatedTask && JSON.stringify(updatedTask) !== JSON.stringify(selectedTask)) {
+      setSelectedTask(updatedTask);
+    }
+  }
+}, [tasks, selectedTask]);
+
   const checklistItems = useMemo(() => tasks.filter(t => t.type === 'checklist'), [tasks]);
   const filtered = useMemo(() => filterTasks(tasks, filters), [tasks, filters]);
 
