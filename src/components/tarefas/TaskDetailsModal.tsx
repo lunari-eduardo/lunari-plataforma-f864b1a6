@@ -9,6 +9,7 @@ import type { Task } from '@/types/tasks';
 import { formatDateForDisplay } from '@/utils/dateUtils';
 import TaskFormModal from './TaskFormModal';
 import TaskAttachmentsSection from './TaskAttachmentsSection';
+import RichTextPreview from '@/components/ui/rich-text-preview';
 
 
 interface TaskDetailsModalProps {
@@ -122,9 +123,10 @@ export default function TaskDetailsModal({
             {task.description && (
               <div className="space-y-2">
                 <h3 className="font-medium text-lunar-text">Descrição</h3>
-                <p className="text-sm text-lunar-textSecondary leading-relaxed">
-                  {task.description}
-                </p>
+                <RichTextPreview 
+                  content={task.description} 
+                  className="text-sm"
+                />
               </div>
             )}
 

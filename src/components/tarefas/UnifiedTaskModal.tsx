@@ -128,7 +128,9 @@ export default function UnifiedTaskModal({ open, onOpenChange, onSubmit, initial
     const dueIso = dueDate ? formatDateForStorage(dueDate) : undefined;
     
     // Determine primary type based on active sections
-    const primaryType: TaskType = activeSections.includes('checklist') ? 'checklist' :
+    // Only set type to 'checklist' if ONLY checklist section is active (simple checklist item)
+    // Otherwise, use the primary section type for full tasks
+    const primaryType: TaskType = activeSections.length === 1 && activeSections[0] === 'checklist' ? 'checklist' :
                                  activeSections.includes('content') ? 'content' :
                                  activeSections.includes('document') ? 'document' : 'simple';
     

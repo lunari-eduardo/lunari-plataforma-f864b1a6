@@ -25,8 +25,10 @@ import DraggableTaskCard from '@/components/tarefas/dnd/DraggableTaskCard';
 // Filter tasks based on filters
 function filterTasks(tasks: Task[], filters: TaskFilters): Task[] {
   return tasks.filter(task => {
-    // Skip checklist items in main filters
-    if (task.type === 'checklist') return false;
+    // Skip ONLY simple checklist items (single section checklist) in main filters
+    // Full tasks with checklist sections should appear in status columns
+    if (task.type === 'checklist' && 
+        (!task.activeSections || task.activeSections.length === 1)) return false;
 
     // Text search
     if (filters.search) {
