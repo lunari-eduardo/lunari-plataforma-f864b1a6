@@ -445,4 +445,23 @@
   .page-tarefas .table-lunar tr:hover td {
     @apply bg-transparent;
   }
+
+  /* Custom scrollbar styles for kanban view */
+  .overflow-x-auto::-webkit-scrollbar {
+    height: 8px;
+  }
+  
+  .overflow-x-auto::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+    border-radius: 4px;
+  }
+  
+  .overflow-x-auto::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 4px;
+  }
+  
+  .overflow-x-auto::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--accent-foreground) / 0.5);
+  }
 }

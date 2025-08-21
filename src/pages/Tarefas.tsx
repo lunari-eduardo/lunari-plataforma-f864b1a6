@@ -276,8 +276,8 @@ export default function Tarefas() {
       }
       setActiveId(null);
     }} onDragCancel={() => setActiveId(null)}>
-          <div className="overflow-x-auto scrollbar-kanban">
-            <div className="flex gap-4 min-w-max pr-2">
+          <div className="overflow-x-auto overflow-y-hidden relative" style={{ scrollbarGutter: 'stable' }}>
+            <div className="flex gap-4 min-w-max pr-2 pb-1">
               <ChecklistPanel items={checklistItems} addTask={addTask} updateTask={updateTask} deleteTask={deleteTask} doneKey={doneKey} defaultOpenKey={defaultOpenKey} variant="column" />
               {statuses.map(col => <StatusColumn key={col.id} title={col.name} statusKey={col.key as any} color={col.color} />)}
             </div>
