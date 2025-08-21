@@ -36,9 +36,10 @@ export default function ChecklistEditor({
   };
 
   const updateItem = (id: string, updates: Partial<ChecklistItem>) => {
-    onChange(checklistItems.map(item => 
+    const updatedItems = checklistItems.map(item => 
       item.id === id ? { ...item, ...updates } : item
-    ));
+    );
+    onChange(updatedItems);
   };
 
   const removeItem = (id: string) => {

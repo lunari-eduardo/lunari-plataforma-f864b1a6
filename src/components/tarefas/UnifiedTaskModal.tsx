@@ -22,7 +22,7 @@ import type { Task, TaskPriority, TaskStatus, TaskType, TaskSection, ChecklistIt
 // Import form components
 import TaskSectionSelector from './forms/TaskSectionSelector';
 import TaskSimpleForm from './forms/TaskSimpleForm';
-import TaskChecklistForm from './forms/TaskChecklistForm';
+import ChecklistEditor from './ChecklistEditor';
 import TaskContentForm from './forms/TaskContentForm';
 import TaskDocumentForm from './forms/TaskDocumentForm';
 
@@ -217,11 +217,20 @@ export default function UnifiedTaskModal({ open, onOpenChange, onSubmit, initial
                 <CheckSquare className="h-4 w-4" />
                 Checklist
               </h3>
-              <TaskChecklistForm 
-                title={title}
-                setTitle={setTitle}
+              <div className="space-y-1.5">
+                <Label htmlFor="checklist-title">Título *</Label>
+                <Input 
+                  id="checklist-title" 
+                  value={title} 
+                  onChange={e => setTitle(e.target.value)} 
+                  required 
+                  placeholder="Ex.: Checklist edição ensaio Maria"
+                  className="bg-lunar-background border-lunar-border"
+                />
+              </div>
+              <ChecklistEditor
                 checklistItems={checklistItems}
-                setChecklistItems={setChecklistItems}
+                onChange={setChecklistItems}
               />
             </div>
           );
