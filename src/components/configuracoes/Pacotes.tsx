@@ -243,7 +243,7 @@ export default function Pacotes({
       <div>
         <div className="space-y-2 mb-4 rounded-lg px-[15px] bg-muted">
           <h3 className="font-medium text-sm text-inherit">Pacotes Cadastrados</h3>
-          <p className="text-muted-foreground text-xs">Lista de todos os pacotes disponíveis.</p>
+          
         </div>
         
         {/* Barra de Filtros */}
