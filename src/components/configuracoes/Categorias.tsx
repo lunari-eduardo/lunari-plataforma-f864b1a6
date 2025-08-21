@@ -96,9 +96,7 @@ export default function Categorias({
       <div>
         <div className="space-y-2 mb-4">
           <h3 className="font-medium text-sm">Categorias Cadastradas</h3>
-          <p className="text-muted-foreground text-xs">
-            Lista de todas as categorias de sessão fotográfica.
-          </p>
+          
         </div>
         
         <div className="bg-card rounded-lg border border-border overflow-hidden shadow-sm">
@@ -109,7 +107,7 @@ export default function Categorias({
           </div>
           
           <div className="divide-y divide-border">
-            {categorias.map((categoria, index) => <div key={categoria.id} className={`grid grid-cols-6 px-4 py-2 ${index % 2 === 0 ? 'bg-card' : 'bg-muted/30'} hover:bg-accent/50 transition-colors`}>
+            {categorias.map((categoria, index) => <div key={categoria.id} className={`grid grid-cols-6 px-4 py-3 ${index % 2 === 0 ? 'bg-card' : 'bg-muted/30'} hover:bg-accent/50 transition-colors`}>
                 {editandoCategoria === categoria.id ? <>
                     <div className="col-span-3 sm:col-span-2 pr-2">
                       <Input defaultValue={categoria.nome} onChange={e => {
