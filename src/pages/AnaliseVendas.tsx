@@ -8,7 +8,9 @@ import SalesMonthYearFilter from '@/components/analise-vendas/SalesMonthYearFilt
 import { LeadLossReasonsChart } from '@/components/analise-vendas/LeadLossReasonsChart';
 import { useSalesAnalytics } from '@/hooks/useSalesAnalytics';
 export default function AnaliseVendas() {
-  const [selectedMonth, setSelectedMonth] = useState<Date | null>(null);
+  const currentYear = new Date().getFullYear();
+  const [selectedYear, setSelectedYear] = useState(currentYear);
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(null); // null = all months, 0-11 = specific month
   const [selectedCategory, setSelectedCategory] = useState('all');
   
   const {
@@ -20,15 +22,17 @@ export default function AnaliseVendas() {
     monthlyOriginData,
     availableYears,
     availableCategories
-  } = useSalesAnalytics(selectedMonth, selectedCategory);
+  } = useSalesAnalytics(selectedYear, selectedMonth, selectedCategory);
   return (
     <div className="min-h-screen bg-lunar-bg">
       {/* Sticky Header */}
       <SalesMonthYearFilter
+        selectedYear={selectedYear}
         selectedMonth={selectedMonth}
         selectedCategory={selectedCategory}
         availableYears={availableYears}
         availableCategories={availableCategories}
+        onYearChange={setSelectedYear}
         onMonthChange={setSelectedMonth}
         onCategoryChange={setSelectedCategory}
       />

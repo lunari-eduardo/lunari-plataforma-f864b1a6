@@ -8,10 +8,13 @@ import { useLeadMetrics } from '@/hooks/useLeadMetrics';
 // Re-export types for backward compatibility
 export type { SalesMetrics, MonthlyData, CategoryData, PackageDistributionData, OriginData };
 
-export function useSalesAnalytics(selectedMonth: Date | null, selectedCategory: string) {
-  const selectedYear = selectedMonth ? selectedMonth.getFullYear() : new Date().getFullYear();
+export function useSalesAnalytics(
+  selectedYear: number,
+  selectedMonth: number | null, // null = all months, 0-11 = specific months  
+  selectedCategory: string
+) {
   const filterByMonth = selectedMonth !== null;
-  const targetMonth = selectedMonth ? selectedMonth.getMonth() : null; // 0-11
+  const targetMonth = selectedMonth; // 0-11 or null
   
   console.log(`🔍 [useSalesAnalytics] Iniciando análise para ${filterByMonth ? `mês ${targetMonth! + 1}/${selectedYear}` : `ano ${selectedYear}`}, categoria: ${selectedCategory}`);
 
