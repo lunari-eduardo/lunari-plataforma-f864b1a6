@@ -64,10 +64,7 @@ export function SalesMetricsCards({
                 </div>
                 <div className="mt-1 flex items-baseline justify-between">
                   <p className="text-lg font-semibold">{metric.value}</p>
-                  {metric.trend !== 'neutral' && <Badge variant={isPositive ? 'default' : 'destructive'} className="text-2xs h-5">
-                      {isPositive ? <TrendingUp className="h-2 w-2 mr-1" /> : <TrendingDown className="h-2 w-2 mr-1" />}
-                      {Math.abs(metric.change).toFixed(1)}%
-                    </Badge>}
+                  {metric.trend !== 'neutral'}
                 </div>
                 <p className="text-2xs text-lunar-textSecondary mt-1">{metric.description}</p>
               </div>;
