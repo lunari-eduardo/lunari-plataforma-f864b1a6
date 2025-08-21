@@ -68,24 +68,26 @@ export default function Categorias({
           </p>
         </div>
         
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
-          <div>
-            <label htmlFor="nome" className="block text-sm font-medium mb-1">
-              Nome<span className="text-red-500">*</span>
-            </label>
-            <Input id="nome" placeholder="Nome da categoria" value={novaCategoria} onChange={e => setNovaCategoria(e.target.value)} className="bg-lunar-surface" />
-          </div>
-          <div>
-            <label htmlFor="cor" className="block text-sm font-medium mb-1">
-              Cor<span className="text-red-500">*</span>
-            </label>
-            <Input id="cor" type="color" value={novaCor} onChange={e => setNovaCor(e.target.value)} className="w-20 h-7 bg-muted" />
-          </div>
-          <div className="flex items-end">
-            <Button onClick={adicionarCategoria} className="flex items-center gap-1 w-full bg-lunar-accent">
-              <Plus className="h-4 w-4" />
-              <span>Adicionar Categoria</span>
-            </Button>
+        <div className="space-y-3 mt-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div>
+              <label htmlFor="nome" className="block text-sm font-medium mb-1">
+                Nome<span className="text-red-500">*</span>
+              </label>
+              <Input id="nome" placeholder="Nome da categoria" value={novaCategoria} onChange={e => setNovaCategoria(e.target.value)} className="bg-lunar-surface" />
+            </div>
+            <div>
+              <label htmlFor="cor" className="block text-sm font-medium mb-1">
+                Cor<span className="text-red-500">*</span>
+              </label>
+              <Input id="cor" type="color" value={novaCor} onChange={e => setNovaCor(e.target.value)} className="w-full h-10 sm:w-20 sm:h-7 bg-muted" />
+            </div>
+            <div className="sm:flex sm:items-end col-span-2 sm:col-span-1">
+              <Button onClick={adicionarCategoria} className="flex items-center gap-1 w-full bg-lunar-accent">
+                <Plus className="h-4 w-4" />
+                <span>Adicionar Categoria</span>
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -97,14 +99,14 @@ export default function Categorias({
         </div>
         
         <div className="bg-card rounded-lg border border-border overflow-hidden shadow-sm">
-          <div className="grid grid-cols-6 px-4 border-b border-border py-[10px] bg-muted">
+          <div className="grid grid-cols-6 px-4 border-b border-border py-2 bg-muted">
             <div className="font-medium text-sm col-span-3 sm:col-span-2 text-card-foreground">Nome</div>
             <div className="font-medium text-sm hidden sm:block text-card-foreground">Cor</div>
             <div className="font-medium text-sm col-span-3 text-card-foreground">Ações</div>
           </div>
           
           <div className="divide-y divide-border">
-            {categorias.map((categoria, index) => <div key={categoria.id} className={`grid grid-cols-6 px-4 py-3 ${index % 2 === 0 ? 'bg-card' : 'bg-muted/30'} hover:bg-accent/50 transition-colors`}>
+            {categorias.map((categoria, index) => <div key={categoria.id} className={`grid grid-cols-6 px-4 py-2 ${index % 2 === 0 ? 'bg-card' : 'bg-muted/30'} hover:bg-accent/50 transition-colors`}>
                 {editandoCategoria === categoria.id ? <>
                     <div className="col-span-3 sm:col-span-2 pr-2">
                       <Input defaultValue={categoria.nome} onChange={e => {
