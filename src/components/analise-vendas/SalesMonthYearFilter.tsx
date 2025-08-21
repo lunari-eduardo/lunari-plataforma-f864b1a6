@@ -42,7 +42,7 @@ export default function SalesMonthYearFilter({
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             
-            <p className="text-xs text-lunar-textSecondary">
+            <p className="text-xs text-lunar-textSecondary py-0 my-0">
               {selectedMonth ? `Análise detalhada de ${format(selectedMonth, "MMMM 'de' yyyy", {
               locale: ptBR
             })}` : "Acompanhe o desempenho das suas vendas e alcance suas metas"}
