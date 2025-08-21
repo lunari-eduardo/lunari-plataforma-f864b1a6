@@ -23,7 +23,7 @@ import { useOrcamentos } from '@/hooks/useOrcamentos';
 import { ORIGENS_PADRAO } from '@/utils/defaultOrigens';
 import { getOriginInfo, getOriginDisplayName } from '@/utils/originUtils';
 import { OriginBadge } from '@/components/shared/OriginBadge';
-import { ClientPaymentHistory } from '@/components/crm/ClientPaymentHistory';
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 export default function ClienteDetalhe() {
   const {
@@ -272,7 +272,7 @@ export default function ClienteDetalhe() {
 
         {/* Tabs */}
         <Tabs defaultValue="contacto" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="contacto" className="flex items-center gap-2">
               <User className="h-4 w-4" />
               Contacto
@@ -280,10 +280,6 @@ export default function ClienteDetalhe() {
             <TabsTrigger value="historico" className="flex items-center gap-2">
               <History className="h-4 w-4" />
               Histórico
-            </TabsTrigger>
-            <TabsTrigger value="financeiro" className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Financeiro
             </TabsTrigger>
             <TabsTrigger value="documentos" className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
@@ -452,15 +448,8 @@ export default function ClienteDetalhe() {
             </Card>
           </TabsContent>
 
-          {/* Aba 3: Informações Financeiras */}
-          <TabsContent value="financeiro" className="space-y-6">
-            <ClientPaymentHistory 
-              clienteId={cliente.id} 
-              clienteNome={cliente.nome} 
-            />
-          </TabsContent>
 
-          {/* Aba 4: Documentos */}
+          {/* Aba 3: Documentos */}
           <TabsContent value="documentos" className="space-y-6">
             <Card>
               <CardHeader>
