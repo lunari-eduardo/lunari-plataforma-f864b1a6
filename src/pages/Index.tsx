@@ -231,23 +231,23 @@ export default function Index() {
     </section>
 
     {/* Critical Cards - Otimizado para tablets */}
-    <section className={`grid gap-6 animate-fade-in ${
+    <section className={`grid gap-6 animate-fade-in auto-rows-fr ${
       isTablet 
         ? 'grid-cols-3' 
         : 'grid-cols-1 lg:grid-cols-3'
     }`}>
-      <FinancialRemindersCard />
-      <ProductionRemindersCard lembretes={lembretesProducao} />
-      <HighPriorityDueSoonCard />
+      <div className="h-full"><FinancialRemindersCard /></div>
+      <div className="h-full"><ProductionRemindersCard lembretes={lembretesProducao} /></div>
+      <div className="h-full"><HighPriorityDueSoonCard /></div>
     </section>
 
       {/* Orçamentos e Agenda - Otimizado para tablets */}
-      <section className={`grid gap-6 ${
+      <section className={`grid gap-6 auto-rows-fr ${
         isTablet 
           ? 'grid-cols-2' 
           : 'grid-cols-1 lg:grid-cols-2'
       }`}>
-      <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300 animate-fade-in">
+        <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300 animate-fade-in h-full flex flex-col">
           <CardHeader className="pb-3 flex flex-row items-center justify-between">
             <div className="flex items-center gap-3">
                <div className="p-2 rounded-xl bg-brand-gradient">
@@ -259,7 +259,7 @@ export default function Index() {
               <Button variant="ghost" size="sm">Ver todos</Button>
             </Link>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex-1 flex flex-col">
             <div className="flex flex-wrap gap-2">
               <Badge variant="secondary">Enviados: {resumoOrcamentos.contagem.enviado}</Badge>
               <Badge variant="secondary">Pendentes: {resumoOrcamentos.contagem.pendente}</Badge>
@@ -267,11 +267,13 @@ export default function Index() {
               <Badge variant="secondary">Fechados: {resumoOrcamentos.contagem.fechado}</Badge>
               <Badge variant="secondary">Cancelados: {resumoOrcamentos.contagem.cancelado}</Badge>
             </div>
-            <p className="text-2xs text-lunar-textSecondary mt-3">Taxa de conversão do mês: {resumoOrcamentos.conversao.toFixed(1)}%</p>
+            <div className="flex-1 flex items-end">
+              <p className="text-2xs text-lunar-textSecondary">Taxa de conversão do mês: {resumoOrcamentos.conversao.toFixed(1)}%</p>
+            </div>
           </CardContent>
         </Card>
 
-        <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300 animate-fade-in">
+        <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300 animate-fade-in h-full flex flex-col">
           <CardHeader className="pb-3 flex flex-row items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-xl bg-brand-gradient">
@@ -283,11 +285,11 @@ export default function Index() {
               <Button variant="ghost" size="sm">Ver todos</Button>
             </Link>
           </CardHeader>
-          <CardContent>
-            {proximosAgendamentos.length === 0 ? <div className="flex flex-col items-center justify-center h-36 border border-dashed rounded-md">
+          <CardContent className="flex-1 flex flex-col">
+            {proximosAgendamentos.length === 0 ? <div className="flex flex-col items-center justify-center flex-1 border border-dashed rounded-md">
                 <Calendar className="h-6 w-6 text-lunar-textSecondary mb-2" />
                 <p className="text-2xs text-lunar-textSecondary">Nenhum agendamento confirmado futuro</p>
-              </div> : <div className="space-y-3">
+              </div> : <div className="space-y-3 flex-1">
                 {proximosAgendamentos.map(ev => <div key={ev.id} className="border-b pb-3 last:border-b-0 last:pb-0">
                     <div className="flex items-start justify-between">
                       <div>

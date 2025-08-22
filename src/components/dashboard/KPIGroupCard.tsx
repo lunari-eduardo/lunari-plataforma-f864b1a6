@@ -30,89 +30,97 @@ export function KPIGroupCard({
 
   // Definir os cards como componentes reutilizáveis
   const revenueCard = (
-    <div className="dashboard-card-inner relative rounded-xl border border-lunar-border/30 bg-card-gradient shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 p-4">
+    <div className={`dashboard-card-inner relative rounded-xl border border-lunar-border/30 bg-card-gradient shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 h-full ${isTablet ? 'p-6' : 'p-4'}`}>
       <div className="flex items-center justify-between">
         <span className="text-xs text-lunar-textSecondary font-medium">Receita do mês</span>
         <div className="p-2 rounded-lg bg-brand-gradient">
           <DollarSign className="h-4 w-4 text-white" />
         </div>
       </div>
-      <div className="mt-1 flex items-baseline justify-between">
-        <p className="text-lg font-semibold">{formatCurrency(receitaMes)}</p>
-        <span className="text-2xs text-lunar-textSecondary">Meta: {formatCurrency(metaMes)}</span>
+      <div className="mt-2 flex items-baseline justify-between">
+        <p className={`font-semibold ${isTablet ? 'text-2xl' : 'text-lg'}`}>{formatCurrency(receitaMes)}</p>
+        <span className="text-xs text-lunar-textSecondary">Meta: {formatCurrency(metaMes)}</span>
       </div>
-      <div className="mt-2">
-        <Progress value={progressoMeta} />
-        <span className="text-2xs text-lunar-textSecondary">{progressoMeta.toFixed(0)}%</span>
+      <div className="mt-3">
+        <Progress value={progressoMeta} className="h-2" />
+        <span className="text-xs text-lunar-textSecondary mt-1 block">{progressoMeta.toFixed(0)}% da meta</span>
       </div>
     </div>
   );
 
   const categoryCard = (
-    <div className="dashboard-card-inner relative rounded-xl border border-lunar-border/30 bg-card-gradient shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 p-4">
-      <div className="flex items-center justify-between">
+    <div className="dashboard-card-inner relative rounded-xl border border-lunar-border/30 bg-card-gradient shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 p-4 h-full flex flex-col">
+      <div className="flex items-center justify-between mb-2">
         <span className="text-xs text-lunar-textSecondary font-medium">Categoria mais rentável</span>
         <div className="p-2 rounded-lg bg-brand-gradient">
           <BarChart3 className="h-4 w-4 text-white" />
         </div>
       </div>
-      {topCategoria ? (
-        <div className="mt-1">
-          <p className="text-lg font-semibold">{topCategoria.name}</p>
-          <p className="text-2xs text-lunar-textSecondary mt-1">
-            Receita: {formatCurrency(topCategoria.revenue)} • {topCategoria.sessions} sessões
-          </p>
-        </div>
-      ) : (
-        <p className="mt-1 text-2xs text-lunar-textSecondary">Sem dados</p>
-      )}
+      <div className="flex-1 flex flex-col justify-center">
+        {topCategoria ? (
+          <div>
+            <p className="text-lg font-semibold">{topCategoria.name}</p>
+            <p className="text-2xs text-lunar-textSecondary mt-1">
+              Receita: {formatCurrency(topCategoria.revenue)} • {topCategoria.sessions} sessões
+            </p>
+          </div>
+        ) : (
+          <p className="text-2xs text-lunar-textSecondary">Sem dados</p>
+        )}
+      </div>
     </div>
   );
 
   const clientsCard = (
-    <div className="dashboard-card-inner relative rounded-xl border border-lunar-border/30 bg-card-gradient shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 p-4">
-      <div className="flex items-center justify-between">
+    <div className="dashboard-card-inner relative rounded-xl border border-lunar-border/30 bg-card-gradient shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 p-4 h-full flex flex-col">
+      <div className="flex items-center justify-between mb-2">
         <span className="text-xs text-lunar-textSecondary font-medium">Novos clientes (60 dias)</span>
         <div className="p-2 rounded-lg bg-brand-gradient">
           <Users className="h-4 w-4 text-white" />
         </div>
       </div>
-      <p className="mt-1 text-lg font-semibold">{novosClientes60d}</p>
-      <p className="text-2xs text-lunar-textSecondary mt-1">Primeira sessão registrada</p>
+      <div className="flex-1 flex flex-col justify-center">
+        <p className="text-lg font-semibold">{novosClientes60d}</p>
+        <p className="text-2xs text-lunar-textSecondary mt-1">Primeira sessão registrada</p>
+      </div>
     </div>
   );
 
   const availabilityCard = (
-    <div className="dashboard-card-inner relative rounded-xl border border-lunar-border/30 bg-card-gradient shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 p-4">
-      <div className="flex items-center justify-between">
+    <div className="dashboard-card-inner relative rounded-xl border border-lunar-border/30 bg-card-gradient shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 p-4 h-full flex flex-col">
+      <div className="flex items-center justify-between mb-2">
         <span className="text-xs text-lunar-textSecondary font-medium">Horários livres (7 dias)</span>
         <div className="p-2 rounded-lg bg-brand-gradient">
           <Clock className="h-4 w-4 text-white" />
         </div>
       </div>
-      <p className="mt-1 text-lg font-semibold">{livresSemana}</p>
-      <p className="text-2xs text-lunar-textSecondary mt-1">
-        {proximoLivre ? (
-          <>Próximo: {proximoLivre.toLocaleDateString("pt-BR")} • {proximoLivre.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</>
-        ) : (
-          <>
-            Sem horários livres. <Link to="/agenda" className="underline">Configurar disponibilidade</Link>
-          </>
-        )}
-      </p>
+      <div className="flex-1 flex flex-col justify-center">
+        <p className="text-lg font-semibold">{livresSemana}</p>
+        <p className="text-2xs text-lunar-textSecondary mt-1">
+          {proximoLivre ? (
+            <>Próximo: {proximoLivre.toLocaleDateString("pt-BR")} • {proximoLivre.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</>
+          ) : (
+            <>
+              Sem horários livres. <Link to="/agenda" className="underline">Configurar disponibilidade</Link>
+            </>
+          )}
+        </p>
+      </div>
     </div>
   );
 
   const forecastCard = (
-    <div className="dashboard-card-inner relative rounded-xl border border-lunar-border/30 bg-card-gradient shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 p-4">
-      <div className="flex items-center justify-between">
+    <div className="dashboard-card-inner relative rounded-xl border border-lunar-border/30 bg-card-gradient shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 p-4 h-full flex flex-col">
+      <div className="flex items-center justify-between mb-2">
         <span className="text-xs text-lunar-textSecondary font-medium">Total Previsto</span>
         <div className="p-2 rounded-lg bg-brand-gradient">
           <DollarSign className="h-4 w-4 text-white" />
         </div>
       </div>
-      <div className="text-2xl font-bold text-lunar-text mt-2">
-        {formatCurrency(valorPrevisto)}
+      <div className="flex-1 flex items-center">
+        <div className="text-2xl font-bold text-lunar-text">
+          {formatCurrency(valorPrevisto)}
+        </div>
       </div>
     </div>
   );
@@ -124,16 +132,18 @@ export function KPIGroupCard({
       </CardHeader>
       <CardContent>
         {isTablet ? (
-          // Layout otimizado para tablets: Grid 3x2 mais eficiente
-          <div className="grid grid-cols-3 gap-4">
-            {/* Primeira linha: Receita (2 cols) + Categoria (1 col) */}
-            <div className="col-span-2">{revenueCard}</div>
-            <div className="col-span-1">{categoryCard}</div>
+          // Layout otimizado para tablets: Receita em destaque + grid 2x2
+          <div className="space-y-4">
+            {/* Primeira linha: Receita do mês em destaque */}
+            <div className="w-full">{revenueCard}</div>
             
-            {/* Segunda linha: 3 cards menores */}
-            <div className="col-span-1">{clientsCard}</div>
-            <div className="col-span-1">{availabilityCard}</div>
-            <div className="col-span-1">{forecastCard}</div>
+            {/* Segunda seção: Grid 2x2 com altura uniforme */}
+            <div className="grid grid-cols-2 gap-4 auto-rows-fr">
+              <div className="h-full">{categoryCard}</div>
+              <div className="h-full">{clientsCard}</div>
+              <div className="h-full">{availabilityCard}</div>
+              <div className="h-full">{forecastCard}</div>
+            </div>
           </div>
         ) : (
           // Layout padrão: Mobile (1 col) e Desktop (5 cols)
