@@ -84,7 +84,7 @@ export default function DashboardFinanceiro() {
   return <div className="min-h-screen bg-lunar-bg">
       <div className="p-6 space-y-6 bg-lunar-bg">
         {/* Barra de Filtros de Período - Design elegante */}
-        <Card className="border-0 bg-card rounded-lg">
+        <Card className="border-0 shadow-lg bg-card rounded-lg">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg font-semibold text-primary">Filtros de Período</CardTitle>
           </CardHeader>
@@ -133,64 +133,64 @@ export default function DashboardFinanceiro() {
 
         {/* KPIs Cards - Design elegante */}
         <div className="grid grid-cols-2 lg:grid-cols-6 gap-6">
-          <Card className="border-0 transition-all duration-300 bg-card rounded-lg">
+          <Card className="border-0 shadow-none hover:shadow-card-elevated transition-all duration-300 bg-card rounded-lg">
             <CardHeader className="pb-2">
               <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">RECEITA</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-xl font-bold text-lunar-success">
-                {formatCurrency(kpisData.totalReceita)}
+              <div className="flex items-center space-x-2">
+                <div className="text-2xl font-bold text-lunar-text">
+                  {formatCurrency(kpisData.totalReceita)}
+                </div>
               </div>
-              <div className="text-xs mt-1 text-muted-foreground">↗ 12% em comparação ao mês anterior</div>
             </CardContent>
           </Card>
 
-          <Card className="border-0 transition-all duration-300 bg-card rounded-lg">
+          <Card className="border-0 shadow-none hover:shadow-card-elevated transition-all duration-300 bg-card rounded-lg">
             <CardHeader className="pb-2">
               <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">PREVISTO</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-xl font-bold text-primary">
+              <div className="text-2xl font-bold text-lunar-text">
                 {formatCurrency(kpisData.valorPrevisto)}
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-0 transition-all duration-300 bg-card rounded-lg">
+          <Card className="border-0 shadow-none hover:shadow-card-elevated transition-all duration-300 bg-card rounded-lg">
             <CardHeader className="pb-2">
               <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">A RECEBER</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-xl font-bold text-chart-primary">
+              <div className="text-2xl font-bold text-lunar-text">
                 {formatCurrency(kpisData.aReceber)}
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-0 transition-all duration-300 bg-card rounded-lg">
+          <Card className="border-0 shadow-none hover:shadow-card-elevated transition-all duration-300 bg-card rounded-lg">
             <CardHeader className="pb-2">
               <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">DESPESAS</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-xl font-bold text-destructive">
-                -{formatCurrency(kpisData.totalDespesas)}
+              <div className="text-2xl font-bold text-lunar-text">
+                {formatCurrency(kpisData.totalDespesas)}
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-0 transition-all duration-300 bg-card rounded-lg">
+          <Card className="border-0 shadow-none hover:shadow-card-elevated transition-all duration-300 bg-card rounded-lg">
             <CardHeader className="pb-2">
               <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">LUCRO</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-xl font-bold text-lunar-success">
+              <div className="text-2xl font-bold text-green-600">
                 {formatCurrency(kpisData.totalLucro)}
               </div>
-              <div className="text-xs mt-1 text-muted-foreground">↗ 18% em comparação ao mês anterior</div>
             </CardContent>
           </Card>
 
-          <Card className="border-0 transition-all duration-300 bg-card rounded-lg">
+          <Card className="border-0 shadow-none hover:shadow-card-elevated transition-all duration-300 bg-card rounded-lg">
             <CardHeader className="pb-2">
               <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">SALDO</CardTitle>
             </CardHeader>
@@ -205,7 +205,7 @@ export default function DashboardFinanceiro() {
         {/* Gráficos Circulares de Metas */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Meta de Receita */}
-          <Card className="border-0 bg-card rounded-lg">
+          <Card className="border-0 shadow-lg bg-card rounded-lg">
             <CardHeader className="text-center pb-2">
                 <CardTitle className="text-sm font-medium uppercase tracking-wide text-primary">META DE RECEITA</CardTitle>
             </CardHeader>
@@ -259,7 +259,7 @@ export default function DashboardFinanceiro() {
           </Card>
 
           {/* Meta de Lucro */}
-          <Card className="border-0 bg-card rounded-lg">
+          <Card className="border-0 shadow-lg bg-card rounded-lg">
             <CardHeader className="text-center pb-2">
                 <CardTitle className="text-sm font-medium uppercase tracking-wide text-primary">META DE LUCRO</CardTitle>
             </CardHeader>
@@ -313,7 +313,7 @@ export default function DashboardFinanceiro() {
           </Card>
 
           {/* Lucratividade */}
-          <Card className="border-0 bg-card rounded-lg">
+          <Card className="border-0 shadow-lg bg-card rounded-lg">
             <CardHeader className="text-center pb-2">
                 <CardTitle className="text-sm font-medium uppercase tracking-wide text-primary">LUCRATIVIDADE</CardTitle>
             </CardHeader>
@@ -365,7 +365,7 @@ export default function DashboardFinanceiro() {
         </div>
 
         {/* Gráfico Principal - Receita vs Lucro */}
-        <Card className="border-0 bg-card rounded-lg">
+        <Card className="border-0 shadow-lg bg-card rounded-lg">
           <CardHeader>
             <CardTitle className="text-lg font-semibold flex items-center gap-2 text-primary">
               <div className="w-3 h-3 rounded-full bg-chart-primary"></div>
@@ -427,6 +427,7 @@ export default function DashboardFinanceiro() {
                     border: '1px solid hsl(var(--border))',
                     borderRadius: '12px',
                     fontSize: '12px',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
                     transition: 'all 0.2s ease'
                   }}
                   cursor={{ fill: 'hsl(var(--primary) / 0.1)' }}
@@ -456,7 +457,7 @@ export default function DashboardFinanceiro() {
         </Card>
 
         {/* Fluxo de Caixa - Gráfico de Área */}
-        <Card className="border-0 bg-card rounded-lg">
+        <Card className="border-0 shadow-lg bg-card rounded-lg">
           <CardHeader>
             <CardTitle className="text-lg font-semibold text-primary">FLUXO DE CAIXA</CardTitle>
             <p className="text-sm text-muted-foreground">Análise mensal do ano selecionado</p>
@@ -505,7 +506,8 @@ export default function DashboardFinanceiro() {
                 backgroundColor: 'hsl(var(--card))',
                 border: '1px solid hsl(var(--border))',
                 borderRadius: '12px',
-                fontSize: '12px'
+                fontSize: '12px',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
               }} />
                 <Area type="monotone" dataKey="receita" stroke="hsl(var(--chart-primary))" fillOpacity={1} fill="url(#colorArea)" strokeWidth={3} />
               </AreaChart>
@@ -514,7 +516,7 @@ export default function DashboardFinanceiro() {
         </Card>
 
         {/* Despesas por Categoria */}
-        <Card className="border-0 bg-card rounded-lg">
+        <Card className="border-0 shadow-lg bg-card rounded-lg">
           <CardHeader>
             <CardTitle className="text-lg font-semibold text-center text-primary">DESPESAS POR CATEGORIA</CardTitle>
           </CardHeader>
@@ -532,7 +534,8 @@ export default function DashboardFinanceiro() {
                 backgroundColor: 'hsl(var(--card))',
                 border: '1px solid hsl(var(--border))',
                 borderRadius: '12px',
-                fontSize: '12px'
+                fontSize: '12px',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
               }} />
                 <Legend verticalAlign="bottom" height={36} wrapperStyle={{
                 fontSize: '12px',
@@ -549,7 +552,7 @@ export default function DashboardFinanceiro() {
 
         {/* ROI Section - Cálculo correto: Lucro / Investimentos */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Card className="border-0 bg-card rounded-lg">
+          <Card className="border-0 shadow-lg bg-card rounded-lg">
             <CardHeader className="text-center">
               <CardTitle className="text-sm font-medium text-primary">ROI</CardTitle>
             </CardHeader>
@@ -561,7 +564,7 @@ export default function DashboardFinanceiro() {
             </CardContent>
           </Card>
 
-          <Card className="border-0 bg-card rounded-lg">
+          <Card className="border-0 shadow-lg bg-card rounded-lg">
             <CardHeader className="text-center">
               <CardTitle className="text-sm font-medium text-primary">RETORNO SOBRE INVESTIMENTO</CardTitle>
             </CardHeader>
