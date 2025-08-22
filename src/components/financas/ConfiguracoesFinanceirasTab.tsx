@@ -128,13 +128,13 @@ export default function ConfiguracoesFinanceirasTab({
         <TabsList className="grid w-full grid-cols-2 bg-gradient-to-r from-lunar-accent/10 to-lunar-accent/5 backdrop-blur-sm border border-lunar-border/20 rounded-xl p-1">
           <TabsTrigger 
             value="itens" 
-            className="text-xs font-medium transition-all duration-300 ease-out rounded-lg data-[state=active]:bg-lunar-accent data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-lunar-accent/25 data-[state=inactive]:text-lunar-text data-[state=inactive]:hover:bg-lunar-accent/10 data-[state=inactive]:hover:text-lunar-accent"
+            className="text-xs font-medium transition-all duration-300 ease-out rounded-lg data-[state=active]:bg-white/90 data-[state=active]:text-lunar-accent data-[state=active]:shadow-lg data-[state=active]:shadow-lunar-accent/15 data-[state=active]:border data-[state=active]:border-lunar-accent/20 data-[state=inactive]:text-lunar-text data-[state=inactive]:hover:bg-lunar-accent/10 data-[state=inactive]:hover:text-lunar-accent"
           >
             Itens Financeiros
           </TabsTrigger>
           <TabsTrigger 
             value="cartoes" 
-            className="text-xs font-medium transition-all duration-300 ease-out rounded-lg data-[state=active]:bg-lunar-accent data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-lunar-accent/25 data-[state=inactive]:text-lunar-text data-[state=inactive]:hover:bg-lunar-accent/10 data-[state=inactive]:hover:text-lunar-accent"
+            className="text-xs font-medium transition-all duration-300 ease-out rounded-lg data-[state=active]:bg-white/90 data-[state=active]:text-lunar-accent data-[state=active]:shadow-lg data-[state=active]:shadow-lunar-accent/15 data-[state=active]:border data-[state=active]:border-lunar-accent/20 data-[state=inactive]:text-lunar-text data-[state=inactive]:hover:bg-lunar-accent/10 data-[state=inactive]:hover:text-lunar-accent"
           >
             Cartões de Crédito
           </TabsTrigger>
