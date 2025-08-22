@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { KPIGroupCard } from "@/components/dashboard/KPIGroupCard";
 import { ProductionRemindersCard } from "@/components/dashboard/ProductionRemindersCard";
 import { HighPriorityDueSoonCard } from "@/components/tarefas/HighPriorityDueSoonCard";
+import { useIsTablet } from "@/hooks/useIsTablet";
 
 import { FinancialRemindersCard } from "@/components/dashboard/FinancialRemindersCard";
 import DailyHero from "@/components/dashboard/DailyHero";
@@ -21,6 +22,8 @@ import { formatDateForStorage, parseDateFromStorage } from "@/utils/dateUtils";
 import { normalizeWorkflowItems } from "@/utils/salesDataNormalizer";
 import { useWorkflowMetrics } from "@/hooks/useWorkflowMetrics";
 export default function Index() {
+  const isTablet = useIsTablet();
+  
   // SEO basics
   useEffect(() => {
     const title = "Dashboard de Negócios | Início";
@@ -227,15 +230,23 @@ export default function Index() {
       <FollowUpNotificationCard />
     </section>
 
-    {/* Critical Cards - Side by side on large screens */}
-    <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
+    {/* Critical Cards - Otimizado para tablets */}
+    <section className={`grid gap-6 animate-fade-in ${
+      isTablet 
+        ? 'grid-cols-3' 
+        : 'grid-cols-1 lg:grid-cols-3'
+    }`}>
       <FinancialRemindersCard />
       <ProductionRemindersCard lembretes={lembretesProducao} />
       <HighPriorityDueSoonCard />
     </section>
 
-      {/* Orçamentos e Agenda */}
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Orçamentos e Agenda - Otimizado para tablets */}
+      <section className={`grid gap-6 ${
+        isTablet 
+          ? 'grid-cols-2' 
+          : 'grid-cols-1 lg:grid-cols-2'
+      }`}>
       <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300 animate-fade-in">
           <CardHeader className="pb-3 flex flex-row items-center justify-between">
             <div className="flex items-center gap-3">

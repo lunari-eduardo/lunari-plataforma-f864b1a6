@@ -124,15 +124,16 @@ export function KPIGroupCard({
       </CardHeader>
       <CardContent>
         {isTablet ? (
-          // Layout para tablets: Receita em cima (full width) e outros 4 em grid 2x2
-          <div className="space-y-4">
-            {revenueCard}
-            <div className="grid grid-cols-2 gap-4">
-              {categoryCard}
-              {clientsCard}
-              {availabilityCard}
-              {forecastCard}
-            </div>
+          // Layout otimizado para tablets: Grid 3x2 mais eficiente
+          <div className="grid grid-cols-3 gap-4">
+            {/* Primeira linha: Receita (2 cols) + Categoria (1 col) */}
+            <div className="col-span-2">{revenueCard}</div>
+            <div className="col-span-1">{categoryCard}</div>
+            
+            {/* Segunda linha: 3 cards menores */}
+            <div className="col-span-1">{clientsCard}</div>
+            <div className="col-span-1">{availabilityCard}</div>
+            <div className="col-span-1">{forecastCard}</div>
           </div>
         ) : (
           // Layout padrão: Mobile (1 col) e Desktop (5 cols)
