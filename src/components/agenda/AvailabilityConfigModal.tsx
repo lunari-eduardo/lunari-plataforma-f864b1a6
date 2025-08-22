@@ -35,7 +35,7 @@ export default function AvailabilityConfigModal({
   const [clearExisting, setClearExisting] = useState<boolean>(true);
   const [selectedWeekdays, setSelectedWeekdays] = useState<number[]>([]);
   const weekDaysLabels = useMemo(() => ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'], []);
-  const allWeekdays = useMemo(() => [0,1,2,3,4,5,6], []);
+  const allWeekdays = useMemo(() => [0, 1, 2, 3, 4, 5, 6], []);
   const allSelected = selectedWeekdays.length === 7;
   const toggleWeekday = (idx: number) => {
     setSelectedWeekdays(prev => prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]);
@@ -257,7 +257,7 @@ export default function AvailabilityConfigModal({
         </div>
 
         <div className="flex justify-between gap-2 pt-2">
-          <Button variant="secondary" onClick={handleClearDay} className="text-xs text-chart-expense">Remover todos do dia</Button>
+          <Button variant="secondary" onClick={handleClearDay} className="text-xs text-chart-expense">Remover horários do dia</Button>
           <div className="flex gap-2">
             <Button variant="outline" onClick={onClose}>Cancelar</Button>
             <Button onClick={handleSave}>Salvar</Button>
