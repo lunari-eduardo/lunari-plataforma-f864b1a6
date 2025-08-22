@@ -26,8 +26,8 @@ export function ProductionRemindersCard({
         </Link>
       </CardHeader>
       <CardContent>
-        {lembretes.length === 0 ? <p className="text-2xs text-lunar-textSecondary">Sem pendências de produção.</p> : <div className="space-y-2">
-            {lembretes.slice(0, 8).map(r => <div key={r.id} className="flex items-start gap-3 text-sm p-3 rounded-xl bg-card-gradient shadow-none hover:shadow-card-subtle transition-shadow duration-300">
+        {lembretes.length === 0 ? <p className="text-2xs text-lunar-textSecondary">Sem pendências de produção.</p> : <div className="max-h-64 overflow-y-auto space-y-2">
+            {lembretes.map(r => <div key={r.id} className="flex items-start gap-3 text-sm p-3 rounded-xl bg-card-gradient shadow-none hover:shadow-card-subtle transition-shadow duration-300">
                 <div className="p-1.5 rounded-lg bg-brand-gradient">
                   <Cog className="h-4 w-4 text-white" />
                 </div>
@@ -35,7 +35,6 @@ export function ProductionRemindersCard({
                   <span className="font-semibold">{r.produto}</span> de <span className="font-semibold">{r.cliente}</span> ainda não foi para produção!
                 </div>
               </div>)}
-            {lembretes.length > 8 && <p className="text-2xs text-lunar-textSecondary mt-1">+{lembretes.length - 8} lembretes adicionais</p>}
           </div>}
       </CardContent>
     </Card>;

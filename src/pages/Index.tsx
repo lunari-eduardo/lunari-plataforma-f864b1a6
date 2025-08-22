@@ -231,7 +231,7 @@ export default function Index() {
     </section>
 
     {/* Critical Cards - Empilhados em tablets */}
-    <section className="grid gap-6 animate-fade-in auto-rows-fr grid-cols-1 lg:grid-cols-3">
+    <section className="grid gap-6 animate-fade-in auto-rows-auto lg:auto-rows-fr grid-cols-1 lg:grid-cols-3">
       <div className="h-full"><FinancialRemindersCard /></div>
       <div className="h-full"><ProductionRemindersCard lembretes={lembretesProducao} /></div>
       <div className="h-full"><HighPriorityDueSoonCard /></div>

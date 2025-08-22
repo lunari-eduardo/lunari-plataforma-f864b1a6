@@ -58,7 +58,7 @@ export function HighPriorityDueSoonCard() {
         </Link>
       </CardHeader>
       <CardContent>
-        {count === 0 ? <p className="text-2xs text-lunar-textSecondary">Nenhuma tarefa vence nos próximos 5 dias.</p> : <ul className="space-y-3">
+        {count === 0 ? <p className="text-2xs text-lunar-textSecondary">Nenhuma tarefa vence nos próximos 5 dias.</p> : <ul className="max-h-64 overflow-y-auto space-y-3">
              {items.map(({
           t,
           due,
