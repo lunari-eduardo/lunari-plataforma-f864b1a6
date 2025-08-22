@@ -133,64 +133,64 @@ export default function DashboardFinanceiro() {
 
         {/* KPIs Cards - Design elegante */}
         <div className="grid grid-cols-2 lg:grid-cols-6 gap-6">
-          <Card className="border-0 shadow-none hover:shadow-card-elevated transition-all duration-300 bg-card rounded-lg">
+          <Card className="border-0 shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 bg-card rounded-lg">
             <CardHeader className="pb-2">
               <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">RECEITA</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center space-x-2">
-                <div className="text-2xl font-bold text-lunar-text">
-                  {formatCurrency(kpisData.totalReceita)}
-                </div>
+              <div className="text-xl font-bold text-lunar-success">
+                {formatCurrency(kpisData.totalReceita)}
               </div>
+              <div className="text-xs mt-1 text-muted-foreground">↗ 12% em comparação ao mês anterior</div>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-none hover:shadow-card-elevated transition-all duration-300 bg-card rounded-lg">
+          <Card className="border-0 shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 bg-card rounded-lg">
             <CardHeader className="pb-2">
               <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">PREVISTO</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-lunar-text">
+              <div className="text-xl font-bold text-primary">
                 {formatCurrency(kpisData.valorPrevisto)}
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-none hover:shadow-card-elevated transition-all duration-300 bg-card rounded-lg">
+          <Card className="border-0 shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 bg-card rounded-lg">
             <CardHeader className="pb-2">
               <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">A RECEBER</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-lunar-text">
+              <div className="text-xl font-bold text-chart-primary">
                 {formatCurrency(kpisData.aReceber)}
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-none hover:shadow-card-elevated transition-all duration-300 bg-card rounded-lg">
+          <Card className="border-0 shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 bg-card rounded-lg">
             <CardHeader className="pb-2">
               <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">DESPESAS</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-lunar-text">
-                {formatCurrency(kpisData.totalDespesas)}
+              <div className="text-xl font-bold text-destructive">
+                -{formatCurrency(kpisData.totalDespesas)}
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-none hover:shadow-card-elevated transition-all duration-300 bg-card rounded-lg">
+          <Card className="border-0 shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 bg-card rounded-lg">
             <CardHeader className="pb-2">
               <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">LUCRO</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">
+              <div className="text-xl font-bold text-lunar-success">
                 {formatCurrency(kpisData.totalLucro)}
               </div>
+              <div className="text-xs mt-1 text-muted-foreground">↗ 18% em comparação ao mês anterior</div>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-none hover:shadow-card-elevated transition-all duration-300 bg-card rounded-lg">
+          <Card className="border-0 shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 bg-card rounded-lg">
             <CardHeader className="pb-2">
               <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">SALDO</CardTitle>
             </CardHeader>
