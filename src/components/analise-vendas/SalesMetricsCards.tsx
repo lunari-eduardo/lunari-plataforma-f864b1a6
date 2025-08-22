@@ -2,16 +2,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { TrendingUp, TrendingDown, DollarSign, Users, Target, Calendar, Camera } from 'lucide-react';
 import { SalesMetrics } from '@/hooks/useSalesAnalytics';
-import { useIsTablet } from '@/hooks/useIsTablet';
-import { cn } from '@/lib/utils';
 interface SalesMetricsCardsProps {
   metrics: SalesMetrics;
 }
 export function SalesMetricsCards({
   metrics
 }: SalesMetricsCardsProps) {
-  const isTablet = useIsTablet();
-  
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -54,17 +50,12 @@ export function SalesMetricsCards({
         <CardTitle className="text-lg font-semibold">Métricas principais</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className={cn(
-          "grid gap-4",
-          isTablet 
-            ? "grid-cols-2" 
-            : "grid-cols-1 lg:grid-cols-4"
-        )}>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {metricsCards.map((metric, index) => {
           const Icon = metric.icon;
           const isPositive = metric.trend === 'up';
           const isNegative = metric.trend === 'down';
-          return <div key={index} className="dashboard-card-inner relative rounded-xl border border-lunar-border/30 bg-card-gradient shadow-card-subtle hover:shadow-card-elevated hover:shadow-lg transition-all duration-300 p-4 cursor-pointer transform hover:scale-[1.02]">
+          return <div key={index} className="dashboard-card-inner relative rounded-xl border border-lunar-border/30 bg-card-gradient shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 p-4">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-lunar-textSecondary font-medium">{metric.title}</span>
                   <div className="p-2 rounded-lg bg-brand-gradient">
@@ -73,6 +64,7 @@ export function SalesMetricsCards({
                 </div>
                 <div className="mt-1 flex items-baseline justify-between">
                   <p className="text-lg font-semibold">{metric.value}</p>
+                  {metric.trend !== 'neutral'}
                 </div>
                 <p className="text-2xs text-lunar-textSecondary mt-1">{metric.description}</p>
               </div>;
