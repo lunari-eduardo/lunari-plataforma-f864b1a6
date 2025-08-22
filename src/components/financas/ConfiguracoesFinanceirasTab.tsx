@@ -125,9 +125,19 @@ export default function ConfiguracoesFinanceirasTab({
   }, {} as Record<GrupoPrincipal, ItemFinanceiro[]>);
   return <div className="space-y-6">
       <Tabs defaultValue="itens" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 bg-lunar-accent">
-          <TabsTrigger value="itens" className="text-xs text-primary-foreground font-bold">Itens Financeiros</TabsTrigger>
-          <TabsTrigger value="cartoes" className="text-xs font-bold text-primary-foreground">Cartões de Crédito</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 bg-gradient-to-r from-lunar-accent/10 to-lunar-accent/5 backdrop-blur-sm border border-lunar-border/20 rounded-xl p-1">
+          <TabsTrigger 
+            value="itens" 
+            className="text-xs font-medium transition-all duration-300 ease-out rounded-lg data-[state=active]:bg-lunar-accent data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-lunar-accent/25 data-[state=inactive]:text-lunar-text data-[state=inactive]:hover:bg-lunar-accent/10 data-[state=inactive]:hover:text-lunar-accent"
+          >
+            Itens Financeiros
+          </TabsTrigger>
+          <TabsTrigger 
+            value="cartoes" 
+            className="text-xs font-medium transition-all duration-300 ease-out rounded-lg data-[state=active]:bg-lunar-accent data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-lunar-accent/25 data-[state=inactive]:text-lunar-text data-[state=inactive]:hover:bg-lunar-accent/10 data-[state=inactive]:hover:text-lunar-accent"
+          >
+            Cartões de Crédito
+          </TabsTrigger>
         </TabsList>
         
         <TabsContent value="itens" className="mt-6">
