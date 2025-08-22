@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { KPIGroupCard } from "@/components/dashboard/KPIGroupCard";
 import { ProductionRemindersCard } from "@/components/dashboard/ProductionRemindersCard";
 import { HighPriorityDueSoonCard } from "@/components/tarefas/HighPriorityDueSoonCard";
-import { ReceitaPrevistaCard } from "@/components/dashboard/ReceitaPrevistaCard";
+
 import { FinancialRemindersCard } from "@/components/dashboard/FinancialRemindersCard";
 import DailyHero from "@/components/dashboard/DailyHero";
 import DailyKPIs from "@/components/dashboard/DailyKPIs";
@@ -19,6 +19,7 @@ import { useAvailability } from "@/hooks/useAvailability";
 import { useAppContext } from "@/contexts/AppContext";
 import { formatDateForStorage, parseDateFromStorage } from "@/utils/dateUtils";
 import { normalizeWorkflowItems } from "@/utils/salesDataNormalizer";
+import { useWorkflowMetrics } from "@/hooks/useWorkflowMetrics";
 export default function Index() {
   // SEO basics
   useEffect(() => {
@@ -57,6 +58,7 @@ export default function Index() {
   const {
     workflowItemsAll
   } = useAppContext();
+  const { getMonthlyMetrics } = useWorkflowMetrics();
   // Receita do mês atual vs meta
   const currentMonthIndex = new Date().getMonth();
   const currentMonthData = monthlyData.find(m => m.monthIndex === currentMonthIndex);
@@ -66,6 +68,27 @@ export default function Index() {
 
   // Categoria mais rentável
   const topCategoria = categoryData[0] || null;
+
+  // Total Previsto (movido do ReceitaPrevistaCard)
+  const valorPrevisto = useMemo(() => {
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1;
+    const currentYear = now.getFullYear();
+
+    // Tentar obter do cache primeiro (mesma fonte do Workflow e Finanças)
+    const cachedMetrics = getMonthlyMetrics(currentYear, currentMonth);
+    if (cachedMetrics) {
+      return cachedMetrics.previsto;
+    }
+
+    // Fallback para cálculo manual (primeira execução)
+    const itemsDoMes = workflowItemsAll.filter(item => {
+      if (!item.data) return false;
+      const itemDate = new Date(item.data);
+      return itemDate.getMonth() + 1 === currentMonth && itemDate.getFullYear() === currentYear;
+    });
+    return itemsDoMes.reduce((acc, item) => acc + (item.total || 0), 0);
+  }, [workflowItemsAll, getMonthlyMetrics]);
 
   // Novos clientes nos últimos 60 dias (primeira sessão registrada)
   const novosClientes60d = useMemo(() => {
@@ -195,13 +218,9 @@ export default function Index() {
 
     {/* KPIs modernizados (mensal) */}
     <section aria-label="Indicadores principais" className="animate-fade-in">
-      <KPIGroupCard receitaMes={receitaMes} metaMes={metaMes} progressoMeta={progressoMeta} topCategoria={topCategoria} novosClientes60d={novosClientes60d} livresSemana={livresSemana} proximoLivre={proximoLivre} />
+      <KPIGroupCard receitaMes={receitaMes} metaMes={metaMes} progressoMeta={progressoMeta} topCategoria={topCategoria} novosClientes60d={novosClientes60d} livresSemana={livresSemana} proximoLivre={proximoLivre} valorPrevisto={valorPrevisto} />
     </section>
 
-    {/* Receita Prevista do Mês */}
-    <section aria-label="Receita prevista" className="animate-fade-in">
-      <ReceitaPrevistaCard />
-    </section>
 
     {/* Follow-up Notifications */}
     <section aria-label="Follow-up de leads" className="animate-fade-in">

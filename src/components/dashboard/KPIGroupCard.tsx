@@ -12,6 +12,7 @@ interface KPIGroupCardProps {
   novosClientes60d: number;
   livresSemana: number;
   proximoLivre: Date | null;
+  valorPrevisto: number;
 }
 
 export function KPIGroupCard({
@@ -22,6 +23,7 @@ export function KPIGroupCard({
   novosClientes60d,
   livresSemana,
   proximoLivre,
+  valorPrevisto,
 }: KPIGroupCardProps) {
   return (
     <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300 animate-fade-in">
@@ -29,7 +31,7 @@ export function KPIGroupCard({
         <CardTitle className="text-lg font-semibold">Indicadores principais</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           {/* Receita vs Meta */}
             <div className="dashboard-card-inner relative rounded-xl border border-lunar-border/30 bg-card-gradient shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 p-4">
             <div className="flex items-center justify-between">
@@ -98,6 +100,19 @@ export function KPIGroupCard({
                 </>
               )}
             </p>
+          </div>
+
+          {/* Total Previsto */}
+          <div className="dashboard-card-inner relative rounded-xl border border-lunar-border/30 bg-card-gradient shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-lunar-textSecondary font-medium">Total Previsto</span>
+              <div className="p-2 rounded-lg bg-brand-gradient">
+                <DollarSign className="h-4 w-4 text-white" />
+              </div>
+            </div>
+            <div className="text-2xl font-bold text-lunar-text mt-2">
+              {formatCurrency(valorPrevisto)}
+            </div>
           </div>
         </div>
       </CardContent>
