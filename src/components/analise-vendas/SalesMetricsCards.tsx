@@ -2,12 +2,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { TrendingUp, TrendingDown, DollarSign, Users, Target, Calendar, Camera } from 'lucide-react';
 import { SalesMetrics } from '@/hooks/useSalesAnalytics';
+import { useIsTablet } from '@/hooks/useIsTablet';
+import { cn } from '@/lib/utils';
 interface SalesMetricsCardsProps {
   metrics: SalesMetrics;
 }
 export function SalesMetricsCards({
   metrics
 }: SalesMetricsCardsProps) {
+  const isTablet = useIsTablet();
+  
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -50,7 +54,10 @@ export function SalesMetricsCards({
         <CardTitle className="text-lg font-semibold">Métricas principais</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className={cn(
+          "grid gap-4",
+          isTablet ? "grid-cols-2" : "grid-cols-1 lg:grid-cols-4"
+        )}>
           {metricsCards.map((metric, index) => {
           const Icon = metric.icon;
           const isPositive = metric.trend === 'up';
