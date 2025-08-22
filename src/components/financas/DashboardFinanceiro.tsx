@@ -133,7 +133,7 @@ export default function DashboardFinanceiro() {
 
         {/* KPIs Cards - Design elegante */}
         <div className="grid grid-cols-2 lg:grid-cols-6 gap-6">
-          <Card className="border-0 shadow-lg hover:shadow-card-elevated transition-all duration-300 bg-card rounded-lg">
+          <Card className="border-0 shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 bg-card rounded-lg">
             <CardHeader className="pb-2">
               <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">RECEITA</CardTitle>
             </CardHeader>
@@ -145,7 +145,7 @@ export default function DashboardFinanceiro() {
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-lg hover:shadow-card-elevated transition-all duration-300 bg-card rounded-lg">
+          <Card className="border-0 shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 bg-card rounded-lg">
             <CardHeader className="pb-2">
               <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">PREVISTO</CardTitle>
             </CardHeader>
@@ -156,7 +156,7 @@ export default function DashboardFinanceiro() {
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-lg hover:shadow-card-elevated transition-all duration-300 bg-card rounded-lg">
+          <Card className="border-0 shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 bg-card rounded-lg">
             <CardHeader className="pb-2">
               <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">A RECEBER</CardTitle>
             </CardHeader>
@@ -167,7 +167,7 @@ export default function DashboardFinanceiro() {
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-lg hover:shadow-card-elevated transition-all duration-300 bg-card rounded-lg">
+          <Card className="border-0 shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 bg-card rounded-lg">
             <CardHeader className="pb-2">
               <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">DESPESAS</CardTitle>
             </CardHeader>
@@ -178,7 +178,7 @@ export default function DashboardFinanceiro() {
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-lg hover:shadow-card-elevated transition-all duration-300 bg-card rounded-lg">
+          <Card className="border-0 shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 bg-card rounded-lg">
             <CardHeader className="pb-2">
               <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">LUCRO</CardTitle>
             </CardHeader>
@@ -190,7 +190,7 @@ export default function DashboardFinanceiro() {
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-lg hover:shadow-card-elevated transition-all duration-300 bg-card rounded-lg">
+          <Card className="border-0 shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 bg-card rounded-lg">
             <CardHeader className="pb-2">
               <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">SALDO</CardTitle>
             </CardHeader>
