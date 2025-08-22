@@ -135,7 +135,7 @@ export default function DashboardFinanceiro() {
         <div className="grid grid-cols-2 lg:grid-cols-6 gap-6">
           <Card className="border-0 shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 bg-card rounded-lg">
             <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">RECEITA</CardTitle>
+              <CardTitle className="text-xs font-medium uppercase tracking-wide text-foreground">RECEITA</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-xl font-bold text-lunar-success">
@@ -147,7 +147,7 @@ export default function DashboardFinanceiro() {
 
           <Card className="border-0 shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 bg-card rounded-lg">
             <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">PREVISTO</CardTitle>
+              <CardTitle className="text-xs font-medium uppercase tracking-wide text-foreground">PREVISTO</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-xl font-bold text-primary">
@@ -158,7 +158,7 @@ export default function DashboardFinanceiro() {
 
           <Card className="border-0 shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 bg-card rounded-lg">
             <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">A RECEBER</CardTitle>
+              <CardTitle className="text-xs font-medium uppercase tracking-wide text-foreground">A RECEBER</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-xl font-bold text-chart-primary">
@@ -169,7 +169,7 @@ export default function DashboardFinanceiro() {
 
           <Card className="border-0 shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 bg-card rounded-lg">
             <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">DESPESAS</CardTitle>
+              <CardTitle className="text-xs font-medium uppercase tracking-wide text-foreground">DESPESAS</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-xl font-bold text-destructive">
@@ -180,7 +180,7 @@ export default function DashboardFinanceiro() {
 
           <Card className="border-0 shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 bg-card rounded-lg">
             <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">LUCRO</CardTitle>
+              <CardTitle className="text-xs font-medium uppercase tracking-wide text-foreground">LUCRO</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-xl font-bold text-lunar-success">
@@ -192,7 +192,7 @@ export default function DashboardFinanceiro() {
 
           <Card className="border-0 shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 bg-card rounded-lg">
             <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">SALDO</CardTitle>
+              <CardTitle className="text-xs font-medium uppercase tracking-wide text-foreground">SALDO</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-xl font-bold text-chart-primary">
@@ -207,7 +207,7 @@ export default function DashboardFinanceiro() {
           {/* Meta de Receita */}
           <Card className="border-0 shadow-lg bg-card rounded-lg">
             <CardHeader className="text-center pb-2">
-                <CardTitle className="text-sm font-medium uppercase tracking-wide text-primary">META DE RECEITA</CardTitle>
+                <CardTitle className="text-sm font-medium uppercase tracking-wide text-foreground">META DE RECEITA</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col items-center">
               <div className="relative">
@@ -239,7 +239,7 @@ export default function DashboardFinanceiro() {
                         style={{
                           fontSize: '18px',
                           fontWeight: 'bold',
-                          fill: 'hsl(var(--primary))'
+                          fill: 'hsl(var(--foreground))'
                         }}
                     >
                       {metasData.metaReceita > 0 ? 
@@ -261,7 +261,7 @@ export default function DashboardFinanceiro() {
           {/* Meta de Lucro */}
           <Card className="border-0 shadow-lg bg-card rounded-lg">
             <CardHeader className="text-center pb-2">
-                <CardTitle className="text-sm font-medium uppercase tracking-wide text-primary">META DE LUCRO</CardTitle>
+                <CardTitle className="text-sm font-medium uppercase tracking-wide text-foreground">META DE LUCRO</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col items-center">
               <div className="relative">
@@ -293,7 +293,7 @@ export default function DashboardFinanceiro() {
                         style={{
                           fontSize: '18px',
                           fontWeight: 'bold',
-                          fill: 'hsl(var(--primary))'
+                          fill: 'hsl(var(--foreground))'
                         }}
                     >
                       {metasData.metaLucro > 0 ? 
@@ -315,7 +315,7 @@ export default function DashboardFinanceiro() {
           {/* Lucratividade */}
           <Card className="border-0 shadow-lg bg-card rounded-lg">
             <CardHeader className="text-center pb-2">
-                <CardTitle className="text-sm font-medium uppercase tracking-wide text-primary">LUCRATIVIDADE</CardTitle>
+                <CardTitle className="text-sm font-medium uppercase tracking-wide text-foreground">LUCRATIVIDADE</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col items-center">
               <div className="relative">
@@ -347,7 +347,7 @@ export default function DashboardFinanceiro() {
                         style={{
                           fontSize: '18px',
                           fontWeight: 'bold',
-                          fill: 'hsl(var(--primary))'
+                          fill: 'hsl(var(--foreground))'
                         }}
                     >
                       {lucratividade.toFixed(1)}%
@@ -367,7 +367,7 @@ export default function DashboardFinanceiro() {
         {/* Gráfico Principal - Receita vs Lucro */}
         <Card className="border-0 shadow-lg bg-card rounded-lg">
           <CardHeader>
-            <CardTitle className="text-lg font-semibold flex items-center gap-2 text-primary">
+            <CardTitle className="text-lg font-semibold flex items-center gap-2 text-foreground">
               <div className="w-3 h-3 rounded-full bg-chart-primary"></div>
               RECEITA
               <div className="w-3 h-3 rounded-full ml-4 bg-muted"></div>
@@ -385,7 +385,7 @@ export default function DashboardFinanceiro() {
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.6} />
                 <XAxis dataKey="mes" tick={{
                 fontSize: 12,
-                fill: 'hsl(var(--muted-foreground))',
+                fill: 'hsl(var(--foreground))',
                 fontWeight: 500
               }} tickLine={{
                 stroke: 'hsl(var(--border))'
@@ -396,7 +396,7 @@ export default function DashboardFinanceiro() {
                   domain={[0, 'dataMax']}
                   tick={{
                     fontSize: 12,
-                    fill: 'hsl(var(--muted-foreground))',
+                    fill: 'hsl(var(--foreground))',
                     fontWeight: 500
                   }} 
                   tickLine={{
@@ -418,7 +418,7 @@ export default function DashboardFinanceiro() {
                     return [formatCurrency(value), label];
                   }}
                   labelStyle={{
-                    color: 'hsl(var(--muted-foreground))',
+                    color: 'hsl(var(--foreground))',
                     fontSize: '12px',
                     fontWeight: 500
                   }} 
@@ -459,7 +459,7 @@ export default function DashboardFinanceiro() {
         {/* Fluxo de Caixa - Gráfico de Área */}
         <Card className="border-0 shadow-lg bg-card rounded-lg">
           <CardHeader>
-            <CardTitle className="text-lg font-semibold text-primary">FLUXO DE CAIXA</CardTitle>
+            <CardTitle className="text-lg font-semibold text-foreground">FLUXO DE CAIXA</CardTitle>
             <p className="text-sm text-muted-foreground">Análise mensal do ano selecionado</p>
           </CardHeader>
           <CardContent>
@@ -479,7 +479,7 @@ export default function DashboardFinanceiro() {
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} />
                 <XAxis dataKey="mes" tick={{
                 fontSize: 11,
-                fill: 'hsl(var(--muted-foreground))',
+                fill: 'hsl(var(--foreground))',
                 fontWeight: 500
               }} tickLine={{
                 stroke: 'hsl(var(--border))'
@@ -488,7 +488,7 @@ export default function DashboardFinanceiro() {
               }} />
                 <YAxis tick={{
                 fontSize: 11,
-                fill: 'hsl(var(--muted-foreground))',
+                fill: 'hsl(var(--foreground))',
                 fontWeight: 500
               }} tickLine={{
                 stroke: 'hsl(var(--border))'
@@ -499,7 +499,7 @@ export default function DashboardFinanceiro() {
                 maximumFractionDigits: 0
               })}`} />
                 <Tooltip formatter={(value: number) => formatCurrency(value)} labelStyle={{
-                color: 'hsl(var(--muted-foreground))',
+                color: 'hsl(var(--foreground))',
                 fontSize: '12px',
                 fontWeight: 500
               }} contentStyle={{
@@ -518,7 +518,7 @@ export default function DashboardFinanceiro() {
         {/* Despesas por Categoria */}
         <Card className="border-0 shadow-lg bg-card rounded-lg">
           <CardHeader>
-            <CardTitle className="text-lg font-semibold text-center text-primary">DESPESAS POR CATEGORIA</CardTitle>
+            <CardTitle className="text-lg font-semibold text-center text-foreground">DESPESAS POR CATEGORIA</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={400}>
@@ -527,7 +527,7 @@ export default function DashboardFinanceiro() {
                   {composicaoDespesas.map((entry, index) => <Cell key={`cell-${index}`} fill={EXPENSE_COLORS[index % EXPENSE_COLORS.length]} opacity={0.85} />)}
                 </Pie>
                 <Tooltip formatter={(value: number, name: string, props: any) => [formatCurrency(value), `${props.payload.grupo} (${props.payload.percentual.toFixed(1)}%)`]} labelStyle={{
-                color: 'hsl(var(--muted-foreground))',
+                color: 'hsl(var(--foreground))',
                 fontSize: '12px',
                 fontWeight: 500
               }} contentStyle={{
@@ -554,7 +554,7 @@ export default function DashboardFinanceiro() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <Card className="border-0 shadow-lg bg-card rounded-lg">
             <CardHeader className="text-center">
-              <CardTitle className="text-sm font-medium text-primary">ROI</CardTitle>
+              <CardTitle className="text-sm font-medium text-foreground">ROI</CardTitle>
             </CardHeader>
             <CardContent className="text-center">
               <div className="text-sm text-muted-foreground">VALOR INVESTIDO</div>
@@ -566,7 +566,7 @@ export default function DashboardFinanceiro() {
 
           <Card className="border-0 shadow-lg bg-card rounded-lg">
             <CardHeader className="text-center">
-              <CardTitle className="text-sm font-medium text-primary">RETORNO SOBRE INVESTIMENTO</CardTitle>
+              <CardTitle className="text-sm font-medium text-foreground">RETORNO SOBRE INVESTIMENTO</CardTitle>
             </CardHeader>
             <CardContent className="text-center">
               <div className="text-4xl font-bold text-chart-primary">
