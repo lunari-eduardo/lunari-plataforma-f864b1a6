@@ -1,8 +1,11 @@
 import { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Calendar, Users, Settings, FileText, DollarSign, Menu, X, User, TrendingUp, Workflow, ChevronRight, ChevronLeft, BarChart3, Home, CheckSquare, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { useUserProfile, useUserBranding } from '@/hooks/useUserProfile';
 import { cn } from '@/lib/utils';
 interface NavItemProps {
   to: string;
@@ -26,8 +29,67 @@ const NavItem = ({
 };
 export default function Sidebar() {
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [isDesktopExpanded, setIsDesktopExpanded] = useState(false);
+  const { profile, getProfileOrDefault } = useUserProfile();
+  const { branding, getBrandingOrDefault } = useUserBranding();
+  
+  const currentProfile = getProfileOrDefault();
+  const currentBranding = getBrandingOrDefault();
+  
+  // Get user initials for fallback
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(word => word.charAt(0))
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+  
+  const userInitials = getInitials(currentProfile.nomeCompleto || currentProfile.nomeEmpresa || 'Usuario');
+  
+  const UserAvatar = ({ className }: { className?: string }) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" className={cn("rounded-full hover:bg-lunar-surface/50", className)} size="icon">
+          <Avatar className="h-8 w-8">
+            <AvatarImage src={currentBranding.logoUrl} />
+            <AvatarFallback className="bg-lunar-accent text-lunar-text text-xs font-medium">
+              {userInitials}
+            </AvatarFallback>
+          </Avatar>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-48 bg-lunar-bg shadow-lunar-md border border-lunar-border/50">
+        <DropdownMenuLabel className="text-xs text-lunar-text">
+          {currentProfile.nomeCompleto || currentProfile.nomeEmpresa || 'Minha Conta'}
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator className="bg-lunar-border/30" />
+        <DropdownMenuItem 
+          className="text-xs text-lunar-text hover:bg-lunar-surface/50 rounded cursor-pointer"
+          onClick={() => navigate('/minha-conta')}
+        >
+          <User className="mr-2 h-3 w-3" />
+          <span>Minha Conta</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem 
+          className="text-xs text-lunar-text hover:bg-lunar-surface/50 rounded cursor-pointer"
+          onClick={() => navigate('/preferencias')}
+        >
+          Preferências
+        </DropdownMenuItem>
+        <DropdownMenuItem className="text-xs text-lunar-text hover:bg-lunar-surface/50 rounded">
+          Plano de Assinatura
+        </DropdownMenuItem>
+        <DropdownMenuSeparator className="bg-lunar-border/30" />
+        <DropdownMenuItem className="text-xs text-lunar-text hover:bg-lunar-surface/50 rounded">
+          Sair
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
   const navItems = [{
     to: "/",
     icon: <Home size={14} />,
@@ -108,7 +170,7 @@ export default function Sidebar() {
           <div className={cn("absolute right-0 top-0 bottom-0 w-64 bg-lunar-bg shadow-lunar-md transition-transform transform duration-200", isOpen ? "translate-x-0" : "translate-x-full")} onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center p-4 border-b border-lunar-border/50">
               <div className="flex items-center">
-                <User className="h-4 w-4 text-lunar-accent" />
+                <UserAvatar />
                 <div className="ml-2">
                   <span className="font-semibold text-sm text-lunar-text">Lunari</span>
                   <div className="text-2xs text-lunar-textSecondary">
@@ -134,12 +196,14 @@ export default function Sidebar() {
   // Desktop sidebar - colapsável
   return <div className={cn("flex flex-col h-screen p-2 bg-lunar-bg border-r border-lunar-border/50 transition-all duration-300", isDesktopExpanded ? "w-48" : "w-16")}>
       
-      {/* Minha Conta no topo do desktop */}
+      {/* Avatar do usuário no topo do desktop */}
       <div className="pt-4 pb-2 border-b border-lunar-border/50 mb-4">
         <div className={cn("flex items-center transition-all duration-200", isDesktopExpanded ? "gap-3 px-3 py-2" : "w-12 h-12 rounded-lg justify-center")}>
-          <User className="h-4 w-4 text-lunar-accent flex-shrink-0" />
+          <UserAvatar className="flex-shrink-0" />
           {isDesktopExpanded && <div>
-              <span className="font-semibold text-sm text-lunar-text">Minha Conta</span>
+              <span className="font-semibold text-sm text-lunar-text">
+                {currentProfile.nomeCompleto || currentProfile.nomeEmpresa || 'Minha Conta'}
+              </span>
               <div className="text-2xs text-lunar-textSecondary">
                 Lunari
               </div>

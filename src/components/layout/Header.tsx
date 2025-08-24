@@ -1,10 +1,8 @@
 
 import { useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { Bell, User, Sun, Moon, Laptop } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
+import { Bell, Sun, Moon, Laptop } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useUserPreferences } from '@/hooks/useUserProfile';
 
@@ -47,7 +45,6 @@ const getPageTitleFromPath = (pathname: string): string => {
 
 export default function Header() {
   const location = useLocation();
-  const navigate = useNavigate();
   const [notificationCount] = useState(2);
   const { preferences, savePreferences, getPreferencesOrDefault } = useUserPreferences();
   const mode = preferences?.tema || getPreferencesOrDefault().tema;
@@ -92,37 +89,6 @@ export default function Header() {
             </span>
           )}
         </Button>
-        
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="relative h-8 w-8 rounded-full hover:bg-lunar-surface/50" size="icon">
-              <Avatar className="h-8 w-8">
-                <AvatarImage src="" />
-                <AvatarFallback className="bg-lunar-accent text-lunar-text text-2xs font-medium">LP</AvatarFallback>
-              </Avatar>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48 bg-lunar-bg shadow-lunar-md border border-lunar-border/50">
-            <DropdownMenuLabel className="text-xs text-lunar-text">Minha Conta</DropdownMenuLabel>
-            <DropdownMenuSeparator className="bg-lunar-border/30" />
-            <DropdownMenuItem 
-              className="text-xs text-lunar-text hover:bg-lunar-surface/50 rounded cursor-pointer"
-              onClick={() => navigate('/minha-conta')}
-            >
-              <User className="mr-2 h-3 w-3" />
-              <span>Minha Conta</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              className="text-xs text-lunar-text hover:bg-lunar-surface/50 rounded cursor-pointer"
-              onClick={() => navigate('/preferencias')}
-            >
-              Preferências
-            </DropdownMenuItem>
-            <DropdownMenuItem className="text-xs text-lunar-text hover:bg-lunar-surface/50 rounded">Plano de Assinatura</DropdownMenuItem>
-            <DropdownMenuSeparator className="bg-lunar-border/30" />
-            <DropdownMenuItem className="text-xs text-lunar-text hover:bg-lunar-surface/50 rounded">Sair</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
     </header>
   );
