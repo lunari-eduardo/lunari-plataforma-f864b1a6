@@ -6,36 +6,57 @@ import { Sun, Sunset, Moon, Calendar, CheckCircle } from "lucide-react";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import useTodayOverview from "@/hooks/useTodayOverview";
 import { useIsTablet } from "@/hooks/useIsTablet";
-
-function getGreeting(): { label: string; Icon: React.ComponentType<any> } {
+function getGreeting(): {
+  label: string;
+  Icon: React.ComponentType<any>;
+} {
   const h = new Date().getHours();
-  if (h < 12) return { label: "Bom dia", Icon: Sun };
-  if (h < 18) return { label: "Boa tarde", Icon: Sunset };
-  return { label: "Boa noite", Icon: Moon };
+  if (h < 12) return {
+    label: "Bom dia",
+    Icon: Sun
+  };
+  if (h < 18) return {
+    label: "Boa tarde",
+    Icon: Sunset
+  };
+  return {
+    label: "Boa noite",
+    Icon: Moon
+  };
 }
-
 export default function DailyHero() {
-  const { profile } = useUserProfile();
+  const {
+    profile
+  } = useUserProfile();
   const name = profile?.nomeCompleto?.split(" ")[0] || "";
-  const { sessionsToday, tasksToday, nextAppointment } = useTodayOverview();
-  const { label, Icon } = getGreeting();
+  const {
+    sessionsToday,
+    tasksToday,
+    nextAppointment
+  } = useTodayOverview();
+  const {
+    label,
+    Icon
+  } = getGreeting();
   const isTablet = useIsTablet();
-
-  const weekdayFmt = new Intl.DateTimeFormat("pt-BR", { weekday: "long" });
-  const dayFmt = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "long" });
+  const weekdayFmt = new Intl.DateTimeFormat("pt-BR", {
+    weekday: "long"
+  });
+  const dayFmt = new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "long"
+  });
   const now = new Date();
   const weekday = weekdayFmt.format(now);
   const dayMonth = dayFmt.format(now);
-
-  return (
-    <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300 overflow-hidden">
+  return <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300 overflow-hidden">
       <div className="relative">
         {/* decorative accents */}
         <div className="pointer-events-none absolute inset-0 bg-brand-gradient opacity-[0.12]" />
         <CardContent className={`relative ${isTablet ? 'py-4 px-6' : 'py-6 px-6 md:px-8'}`}>
-          {isTablet ? (
-            // Layout compacto para tablets
-            <div className="flex items-center justify-between gap-6">
+          {isTablet ?
+        // Layout compacto para tablets
+        <div className="flex items-center justify-between gap-6">
               <div className="flex items-center gap-4">
                 <div className="p-2 rounded-xl bg-brand-gradient">
                   <Icon className="h-5 w-5 text-white" />
@@ -70,20 +91,22 @@ export default function DailyHero() {
                 <div className="text-right">
                   <span className="text-2xs text-lunar-textSecondary">Próximo</span>
                   <div className="text-sm font-medium text-lunar-text">
-                    {nextAppointment ? new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(nextAppointment) : '--:--'}
+                    {nextAppointment ? new Intl.DateTimeFormat('pt-BR', {
+                  hour: '2-digit',
+                  minute: '2-digit'
+                }).format(nextAppointment) : '--:--'}
                   </div>
                 </div>
               </div>
-            </div>
-          ) : (
-            // Layout original para mobile e desktop
-            <div className="flex items-start justify-between gap-4">
+            </div> :
+        // Layout original para mobile e desktop
+        <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="flex items-center gap-3">
                   <div className="p-2.5 rounded-xl bg-brand-gradient">
                     <Icon className="h-6 w-6 text-white" />
                   </div>
-                  <h1 className="text-xl font-bold text-lunar-text">
+                  <h1 className="font-bold text-lunar-text text-lg">
                     {label}
                     {name ? `, ${name}` : ''}
                   </h1>
@@ -112,13 +135,14 @@ export default function DailyHero() {
               <div className="hidden md:flex flex-col items-end gap-1 text-right">
                 <span className="text-2xs text-lunar-textSecondary">Próximo compromisso</span>
                 <span className="text-sm font-medium text-lunar-text">
-                  {nextAppointment ? new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(nextAppointment) : 'Nenhum hoje'}
+                  {nextAppointment ? new Intl.DateTimeFormat('pt-BR', {
+                hour: '2-digit',
+                minute: '2-digit'
+              }).format(nextAppointment) : 'Nenhum hoje'}
                 </span>
               </div>
-            </div>
-          )}
+            </div>}
         </CardContent>
       </div>
-    </Card>
-  );
+    </Card>;
 }
