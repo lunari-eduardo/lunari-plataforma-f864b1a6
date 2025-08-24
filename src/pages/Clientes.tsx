@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAppContext } from '@/contexts/AppContext';
 import { Cliente } from '@/types/orcamentos';
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,7 @@ export default function Clientes() {
   } = useAppContext();
   
   const dropdownContext = useDialogDropdownContext();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [filtro, setFiltro] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
   const [faturadoFilter, setFaturadoFilter] = useState('todos');
@@ -49,6 +50,16 @@ export default function Clientes() {
   });
   const [openDropdowns, setOpenDropdowns] = useState<Record<string, boolean>>({});
   const [showAniversariantesModal, setShowAniversariantesModal] = useState(false);
+
+  // Check for openBirthdays parameter and auto-open modal
+  useEffect(() => {
+    if (searchParams.get('openBirthdays') === 'true') {
+      setShowAniversariantesModal(true);
+      // Remove the parameter from URL
+      searchParams.delete('openBirthdays');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   // Obter métricas dos clientes
   const clientMetrics = useClientMetrics(clientes);
