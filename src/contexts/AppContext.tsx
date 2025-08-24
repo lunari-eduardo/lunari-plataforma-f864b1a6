@@ -298,7 +298,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const workflowItems: WorkflowItem[] = projetos.map(projeto => ({
     id: projeto.projectId,
     sessionId: projeto.projectId,
-    data: formatDateForStorage(projeto.dataAgendada),
+    data: projeto.dataAgendada.toISOString().split('T')[0],
     hora: projeto.horaAgendada,
     nome: projeto.nome,
     whatsapp: projeto.whatsapp,
