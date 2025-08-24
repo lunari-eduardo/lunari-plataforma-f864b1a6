@@ -6,6 +6,7 @@ import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, R
 import { useDashboardFinanceiro } from '@/hooks/useDashboardFinanceiro';
 import { Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import ExportFinancialPDF from './ExportFinancialPDF';
 
 // Paleta de cores beige/marrom elegantes
 const COLORS = ['hsl(var(--finance-primary))', 'hsl(var(--finance-secondary))'];
@@ -83,6 +84,17 @@ export default function DashboardFinanceiro() {
   }];
   return <div className="min-h-screen bg-lunar-bg py-0">
       <div className="p-6 space-y-6 bg-lunar-bg">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-xl font-semibold text-foreground">Dashboard Financeiro</h2>
+            <p className="text-sm text-muted-foreground">
+              Visão geral das suas finanças
+            </p>
+          </div>
+          <ExportFinancialPDF variant="button" />
+        </div>
+
         {/* Barra de Filtros de Período - Design elegante */}
         <Card className="border-0 shadow-lg bg-card rounded-lg">
           

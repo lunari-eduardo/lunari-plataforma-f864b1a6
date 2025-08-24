@@ -7,6 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import LancamentosTab from '@/components/financas/LancamentosTab';
 import ConfiguracoesFinanceirasTab from '@/components/financas/ConfiguracoesFinanceirasTab';
 import DashboardFinanceiro from '@/components/financas/DashboardFinanceiro';
+import ExportFinancialPDF from '@/components/financas/ExportFinancialPDF';
 
 export default function NovaFinancas() {
   const {
@@ -38,6 +39,11 @@ export default function NovaFinancas() {
         <div className="p-2 sm:p-4 lg:p-6 space-y-2 sm:space-y-6 bg-lunar-bg py-0">
         {/* Header */}
         
+
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold text-foreground">Finanças</h1>
+          <ExportFinancialPDF variant="dropdown" />
+        </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-3 h-10 p-1 text-sm bg-card border border-border py-0">
