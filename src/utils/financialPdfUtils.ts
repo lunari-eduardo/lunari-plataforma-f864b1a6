@@ -21,6 +21,8 @@ export interface FinancialExportData {
     transacoesFaturadas: number;
     transacoesAgendadas: number;
   };
+  // Opcional: mapa de receitas operacionais (Workflow) por mês quando anual
+  workflowMonthlyReceita?: Record<number, number>;
 }
 
 export interface ExportOptions {

@@ -5,11 +5,14 @@ import { useNovoFinancas } from './useNovoFinancas';
 import { generateFinancialPDF, FinancialExportData, ExportOptions } from '@/utils/financialPdfUtils';
 import { FinancialSummary, ExportConfigState } from '@/types/financialExport';
 import { TransacaoComItem, StatusTransacao } from '@/types/financas';
+import { RecurringBlueprintEngine } from '@/services/RecurringBlueprintEngine';
+import { useAppContext } from '@/contexts/AppContext';
 
 export function useFinancialExport() {
   const { getProfileOrDefault } = useUserProfile();
   const { getBrandingOrDefault } = useUserBranding();
-  const { transacoesPorGrupo } = useNovoFinancas();
+  const { itensFinanceiros } = useNovoFinancas();
+  const { workflowItems } = useAppContext();
 
   const [config, setConfig] = useState<ExportConfigState>({
     isOpen: false,
@@ -42,25 +45,47 @@ export function useFinancialExport() {
     setConfig(prev => ({ ...prev, ...updates }));
   };
 
-  const getFilteredTransactions = (type: 'monthly' | 'annual', month: number, year: number): TransacaoComItem[] => {
-    const allTransactions: TransacaoComItem[] = [];
-    
-    // Flatten all transactions from all groups
-    Object.values(transacoesPorGrupo).forEach(group => {
-      allTransactions.push(...group);
-    });
+  // Carrega TODAS as transações do motor e anexa os dados do item
+  const allTransactions = useMemo<TransacaoComItem[]>(() => {
+    const raw = RecurringBlueprintEngine.loadTransactions();
+    return raw.map((t) => {
+      const item = itensFinanceiros.find((i) => i.id === t.itemId) || ({
+        id: t.itemId,
+        nome: 'Item',
+        grupo_principal: 'Despesa Variável',
+        userId: t.userId,
+        ativo: true,
+        criadoEm: t.criadoEm,
+      } as any);
 
+      return {
+        id: t.id,
+        item_id: t.itemId,
+        valor: t.valor,
+        data_vencimento: t.dataVencimento,
+        status: t.status as StatusTransacao,
+        parcelaInfo: null,
+        parcelas: null,
+        observacoes: t.observacoes,
+        userId: t.userId,
+        criadoEm: t.criadoEm,
+        item,
+      } as TransacaoComItem;
+    });
+  }, [itensFinanceiros]);
+
+  const getFilteredTransactions = (type: 'monthly' | 'annual', month: number, year: number): TransacaoComItem[] => {
     if (type === 'annual') {
-      return allTransactions.filter(transaction => {
-        const transactionDate = new Date(transaction.data_vencimento);
-        return transactionDate.getFullYear() === year;
-      });
-    } else {
-      return allTransactions.filter(transaction => {
-        const transactionDate = new Date(transaction.data_vencimento);
-        return transactionDate.getMonth() + 1 === month && transactionDate.getFullYear() === year;
+      return allTransactions.filter((transaction) => {
+        const [y] = (transaction.data_vencimento || '').split('-').map(Number);
+        return y === year;
       });
     }
+
+    return allTransactions.filter((transaction) => {
+      const [y, m] = (transaction.data_vencimento || '').split('-').map(Number);
+      return m === month && y === year;
+    });
   };
 
   const calculateSummary = (transactions: TransacaoComItem[]): FinancialSummary => {
@@ -96,7 +121,47 @@ export function useFinancialExport() {
     }
 
     const transactions = getFilteredTransactions(config.type, config.selectedMonth, config.selectedYear);
-    const summary = calculateSummary(transactions);
+    const baseSummary = calculateSummary(transactions);
+
+    // Calcular receitas do Workflow (operacionais)
+    const selectedMonth = config.selectedMonth;
+    const selectedYear = config.selectedYear;
+
+    const buildWorkflowMonthlyMap = (): Record<number, number> => {
+      const map: Record<number, number> = { 1:0, 2:0, 3:0, 4:0, 5:0, 6:0, 7:0, 8:0, 9:0, 10:0, 11:0, 12:0 };
+      workflowItems.forEach((item) => {
+        const parts = (item.data || '').split('-');
+        if (parts.length < 2) return;
+        const y = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10);
+        if (y === selectedYear && m >= 1 && m <= 12) {
+          map[m] += Number(item.valorPago || 0);
+        }
+      });
+      return map;
+    };
+
+    let workflowMonthlyReceita: Record<number, number> | undefined;
+    let workflowReceitaPeriodo = 0;
+
+    if (config.type === 'annual') {
+      workflowMonthlyReceita = buildWorkflowMonthlyMap();
+      workflowReceitaPeriodo = Object.values(workflowMonthlyReceita).reduce((a, b) => a + b, 0);
+    } else {
+      workflowReceitaPeriodo = workflowItems.reduce((sum, item) => {
+        const parts = (item.data || '').split('-');
+        if (parts.length < 2) return sum;
+        const y = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10);
+        return sum + (y === selectedYear && m === selectedMonth ? Number(item.valorPago || 0) : 0);
+      }, 0);
+    }
+
+    const combinedSummary: FinancialSummary = {
+      ...baseSummary,
+      totalReceitas: baseSummary.totalReceitas + workflowReceitaPeriodo,
+      saldoFinal: (baseSummary.totalReceitas + workflowReceitaPeriodo) - baseSummary.totalDespesas,
+    };
 
     return {
       profile,
@@ -107,9 +172,10 @@ export function useFinancialExport() {
         year: config.selectedYear,
         isAnnual: config.type === 'annual'
       },
-      summary
-    };
-  }, [config, getProfileOrDefault, getBrandingOrDefault, transacoesPorGrupo]);
+      summary: combinedSummary,
+      ...(config.type === 'annual' && workflowMonthlyReceita ? { workflowMonthlyReceita } : {})
+    } as FinancialExportData;
+  }, [config, getProfileOrDefault, getBrandingOrDefault, allTransactions, workflowItems]);
 
   const generatePDF = async () => {
     if (!exportData) {
