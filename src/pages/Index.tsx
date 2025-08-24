@@ -7,14 +7,12 @@ import { KPIGroupCard } from "@/components/dashboard/KPIGroupCard";
 import { ProductionRemindersCard } from "@/components/dashboard/ProductionRemindersCard";
 import { HighPriorityDueSoonCard } from "@/components/tarefas/HighPriorityDueSoonCard";
 import { useIsTablet } from "@/hooks/useIsTablet";
-
 import { FinancialRemindersCard } from "@/components/dashboard/FinancialRemindersCard";
 import { BirthdayAlertCard } from "@/components/dashboard/BirthdayAlertCard";
 import DailyHero from "@/components/dashboard/DailyHero";
 import DailyKPIs from "@/components/dashboard/DailyKPIs";
 import FollowUpNotificationCard from "@/components/leads/FollowUpNotificationCard";
 import { useSalesAnalytics } from "@/hooks/useSalesAnalytics";
-
 import { useAgenda } from "@/hooks/useAgenda";
 import { useAvailability } from "@/hooks/useAvailability";
 import { useAppContext } from "@/contexts/AppContext";
@@ -23,7 +21,7 @@ import { normalizeWorkflowItems } from "@/utils/salesDataNormalizer";
 import { useWorkflowMetrics } from "@/hooks/useWorkflowMetrics";
 export default function Index() {
   const isTablet = useIsTablet();
-  
+
   // SEO basics
   useEffect(() => {
     const title = "Dashboard de Negócios | Início";
@@ -58,7 +56,9 @@ export default function Index() {
   const {
     workflowItemsAll
   } = useAppContext();
-  const { getMonthlyMetrics } = useWorkflowMetrics();
+  const {
+    getMonthlyMetrics
+  } = useWorkflowMetrics();
   // Receita do mês atual vs meta
   const currentMonthIndex = new Date().getMonth();
   const currentMonthData = monthlyData.find(m => m.monthIndex === currentMonthIndex);
@@ -151,7 +151,6 @@ export default function Index() {
     };
   }, [appointments, availability]);
 
-
   // Lembretes de Produção
   const lembretesProducao = useMemo(() => {
     const reminders: Array<{
@@ -195,7 +194,7 @@ export default function Index() {
     {/* Próximos Agendamentos */}
     <section>
       <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300 animate-fade-in">
-        <CardHeader className="pb-3 flex flex-row items-center justify-between">
+        <CardHeader className="pb-3 flex flex-row items-center justify-between py-[6px]">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-brand-gradient">
               <Calendar className="h-5 w-5 text-white" />
@@ -207,14 +206,10 @@ export default function Index() {
           </Link>
         </CardHeader>
         <CardContent>
-          {proximosAgendamentos.length === 0 ? (
-            <div className="flex items-center justify-center py-4">
-              <p className="text-sm text-lunar-textSecondary">Nenhum agendamento confirmado</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {proximosAgendamentos.map(ev => (
-                <div key={ev.id} className="border-b pb-3 last:border-b-0 last:pb-0">
+          {proximosAgendamentos.length === 0 ? <div className="flex items-center justify-center py-[7px]">
+              <p className="text-lunar-textSecondary text-xs">Nenhum agendamento confirmado</p>
+            </div> : <div className="space-y-3">
+              {proximosAgendamentos.map(ev => <div key={ev.id} className="border-b pb-3 last:border-b-0 last:pb-0">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="font-medium text-sm">{ev.cliente}</p>
@@ -225,10 +220,8 @@ export default function Index() {
                       <div className="mt-0.5">{ev.hora}</div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
+                </div>)}
+            </div>}
         </CardContent>
       </Card>
     </section>
