@@ -150,16 +150,9 @@ export default function MinhaConta() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="tipoFotografia">Tipo de Fotografia Principal</Label>
-                        <Input id="tipoFotografia" value={formData.tipoFotografia} onChange={e => handleInputChange('tipoFotografia', e.target.value)} placeholder="Ex: Casamentos, Retratos, Eventos" />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="cpfCnpj">CPF/CNPJ</Label>
-                        <Input id="cpfCnpj" value={formData.cpfCnpj} onChange={e => handleCpfCnpjChange(e.target.value)} placeholder="000.000.000-00 ou 00.000.000/0000-00" maxLength={18} />
-                      </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="cpfCnpj">CPF/CNPJ</Label>
+                      <Input id="cpfCnpj" value={formData.cpfCnpj} onChange={e => handleCpfCnpjChange(e.target.value)} placeholder="000.000.000-00 ou 00.000.000/0000-00" maxLength={18} />
                     </div>
 
                     <div className="space-y-2">

@@ -2,7 +2,6 @@ export interface UserProfile {
   id: string;
   nomeCompleto: string;
   nomeEmpresa: string;
-  tipoFotografia: string;
   cpfCnpj: string;
   emailPrincipal: string;
   enderecoComercial: string;
@@ -38,7 +37,6 @@ export interface UserPreferences {
 export const DEFAULT_USER_PROFILE: Omit<UserProfile, 'id' | 'createdAt' | 'updatedAt'> = {
   nomeCompleto: '',
   nomeEmpresa: '',
-  tipoFotografia: '',
   cpfCnpj: '',
   emailPrincipal: '',
   enderecoComercial: '',
