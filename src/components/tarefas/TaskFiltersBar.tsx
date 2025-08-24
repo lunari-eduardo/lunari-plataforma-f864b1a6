@@ -36,14 +36,12 @@ export default function TaskFiltersBar({
   const isTablet = useIsTablet();
   const isCompactDevice = isMobile || isTablet;
   const [isExpanded, setIsExpanded] = useState(!isCompactDevice);
-
   const updateFilter = <K extends keyof TaskFilters,>(key: K, value: TaskFilters[K]) => {
     onFiltersChange({
       ...filters,
       [key]: value
     });
   };
-
   const clearFilters = () => {
     onFiltersChange({
       search: '',
@@ -53,9 +51,7 @@ export default function TaskFiltersBar({
       dateRange: 'all'
     });
   };
-
   const hasActiveFilters = filters.search || filters.status !== 'all' || filters.priority !== 'all' || filters.assignee !== 'all' || filters.dateRange !== 'all';
-
   const dateRangeLabels = {
     all: 'Todos os prazos',
     today: 'Hoje',
@@ -63,25 +59,17 @@ export default function TaskFiltersBar({
     month: 'Este mês',
     overdue: 'Em atraso'
   };
-
   const priorityLabels = {
     all: 'Todas prioridades',
     high: 'Alta prioridade',
     medium: 'Média prioridade',
     low: 'Baixa prioridade'
   };
-
-  return (
-    <div className="bg-card border border-border rounded-lg space-y-2">
+  return <div className="bg-card border border-border rounded-lg space-y-2">
       {/* Desktop Layout - Single line with all filters */}
       <div className="hidden md:flex items-center gap-3 p-2">
         {/* Search */}
-        <Input 
-          placeholder="Buscar tarefas..." 
-          value={filters.search} 
-          onChange={e => updateFilter('search', e.target.value)} 
-          className="h-8 w-64 text-sm" 
-        />
+        
 
         {/* Status Filter */}
         <Select value={filters.status} onValueChange={v => updateFilter('status', v as any)}>
@@ -90,9 +78,7 @@ export default function TaskFiltersBar({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
-            {statusOptions.map(opt => (
-              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-            ))}
+            {statusOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
           </SelectContent>
         </Select>
 
@@ -103,9 +89,7 @@ export default function TaskFiltersBar({
             <SelectValue placeholder="Prioridade" />
           </SelectTrigger>
           <SelectContent>
-            {Object.entries(priorityLabels).map(([key, label]) => (
-              <SelectItem key={key} value={key}>{label}</SelectItem>
-            ))}
+            {Object.entries(priorityLabels).map(([key, label]) => <SelectItem key={key} value={key}>{label}</SelectItem>)}
           </SelectContent>
         </Select>
 
@@ -117,9 +101,7 @@ export default function TaskFiltersBar({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
-            {assigneeOptions.map(opt => (
-              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-            ))}
+            {assigneeOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
           </SelectContent>
         </Select>
 
@@ -130,67 +112,43 @@ export default function TaskFiltersBar({
             <SelectValue placeholder="Prazo" />
           </SelectTrigger>
           <SelectContent>
-            {Object.entries(dateRangeLabels).map(([key, label]) => (
-              <SelectItem key={key} value={key}>{label}</SelectItem>
-            ))}
+            {Object.entries(dateRangeLabels).map(([key, label]) => <SelectItem key={key} value={key}>{label}</SelectItem>)}
           </SelectContent>
         </Select>
 
         {/* Clear button */}
-        {hasActiveFilters && (
-          <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8 text-sm">
+        {hasActiveFilters && <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8 text-sm">
             <X className="w-3 h-3 mr-1" />
             Limpar
-          </Button>
-        )}
+          </Button>}
       </div>
 
       {/* Mobile Layout - Ultra compact when collapsed */}
       <div className="md:hidden">
-        {!isExpanded ? (
-          // Collapsed state - ultra minimal
-          <div className="flex items-center justify-between p-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => setIsExpanded(true)}
-              className="h-8 text-sm flex items-center gap-2"
-            >
+        {!isExpanded ?
+      // Collapsed state - ultra minimal
+      <div className="flex items-center justify-between p-2">
+            <Button variant="outline" size="sm" onClick={() => setIsExpanded(true)} className="h-8 text-sm flex items-center gap-2">
               <Calendar className="w-4 h-4" />
               Filtros
-              {hasActiveFilters && (
-                <Badge variant="secondary" className="text-xs px-1.5 py-0 ml-1">
+              {hasActiveFilters && <Badge variant="secondary" className="text-xs px-1.5 py-0 ml-1">
                   {Object.values(filters).filter(v => v && v !== 'all').length}
-                </Badge>
-              )}
+                </Badge>}
             </Button>
-            {hasActiveFilters && (
-              <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8 text-sm">
+            {hasActiveFilters && <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8 text-sm">
                 <X className="w-4 h-4" />
-              </Button>
-            )}
-          </div>
-        ) : (
-          // Expanded state
-          <>
+              </Button>}
+          </div> :
+      // Expanded state
+      <>
             <div className="flex items-center justify-between p-2 border-b border-border/30">
               <span className="text-sm font-medium">Filtros</span>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setIsExpanded(false)} 
-                className="h-7 w-7 p-0"
-              >
+              <Button variant="ghost" size="sm" onClick={() => setIsExpanded(false)} className="h-7 w-7 p-0">
                 <ChevronUp className="w-4 h-4" />
               </Button>
             </div>
-            <div className="p-2 space-y-2">
-              <Input 
-                placeholder="Buscar tarefas..." 
-                value={filters.search} 
-                onChange={e => updateFilter('search', e.target.value)} 
-                className="h-8 text-sm" 
-              />
+            <div className="p-0 space-y-1">
+              
               <div className="grid grid-cols-2 gap-2">
                 <Select value={filters.status} onValueChange={v => updateFilter('status', v as any)}>
                   <SelectTrigger className="h-8 text-sm">
@@ -198,9 +156,7 @@ export default function TaskFiltersBar({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos</SelectItem>
-                    {statusOptions.map(opt => (
-                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                    ))}
+                    {statusOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
 
@@ -210,9 +166,7 @@ export default function TaskFiltersBar({
                     <SelectValue placeholder="Prioridade" />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.entries(priorityLabels).map(([key, label]) => (
-                      <SelectItem key={key} value={key}>{label}</SelectItem>
-                    ))}
+                    {Object.entries(priorityLabels).map(([key, label]) => <SelectItem key={key} value={key}>{label}</SelectItem>)}
                   </SelectContent>
                 </Select>
 
@@ -223,9 +177,7 @@ export default function TaskFiltersBar({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos</SelectItem>
-                    {assigneeOptions.map(opt => (
-                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                    ))}
+                    {assigneeOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
 
@@ -235,58 +187,40 @@ export default function TaskFiltersBar({
                     <SelectValue placeholder="Prazo" />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.entries(dateRangeLabels).map(([key, label]) => (
-                      <SelectItem key={key} value={key}>{label}</SelectItem>
-                    ))}
+                    {Object.entries(dateRangeLabels).map(([key, label]) => <SelectItem key={key} value={key}>{label}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
-              {hasActiveFilters && (
-                <Button variant="outline" size="sm" onClick={clearFilters} className="w-full h-8 text-sm">
+              {hasActiveFilters && <Button variant="outline" size="sm" onClick={clearFilters} className="w-full h-8 text-sm">
                   <X className="w-3 h-3 mr-1" />
                   Limpar Filtros
-                </Button>
-              )}
+                </Button>}
             </div>
-          </>
-        )}
+          </>}
       </div>
 
       {/* Active filters display - only on desktop or mobile when expanded */}
-      {hasActiveFilters && (!isCompactDevice || isExpanded) && (
-        <div className="flex flex-wrap gap-1 p-2 pt-1 border-t border-border/30">
-          {filters.search && (
-            <Badge variant="secondary" className="gap-1 text-xs px-2 py-0.5">
+      {hasActiveFilters && (!isCompactDevice || isExpanded) && <div className="flex flex-wrap gap-1 p-2 pt-1 border-t border-border/30">
+          {filters.search && <Badge variant="secondary" className="gap-1 text-xs px-2 py-0.5">
               "{filters.search}"
               <X className="w-3 h-3 cursor-pointer" onClick={() => updateFilter('search', '')} />
-            </Badge>
-          )}
-          {filters.status !== 'all' && (
-            <Badge variant="secondary" className="gap-1 text-xs px-2 py-0.5">
+            </Badge>}
+          {filters.status !== 'all' && <Badge variant="secondary" className="gap-1 text-xs px-2 py-0.5">
               {statusOptions.find(s => s.value === filters.status)?.label}
               <X className="w-3 h-3 cursor-pointer" onClick={() => updateFilter('status', 'all')} />
-            </Badge>
-          )}
-          {filters.priority !== 'all' && (
-            <Badge variant="secondary" className="gap-1 text-xs px-2 py-0.5">
+            </Badge>}
+          {filters.priority !== 'all' && <Badge variant="secondary" className="gap-1 text-xs px-2 py-0.5">
               {priorityLabels[filters.priority]}
               <X className="w-3 h-3 cursor-pointer" onClick={() => updateFilter('priority', 'all')} />
-            </Badge>
-          )}
-          {filters.assignee !== 'all' && (
-            <Badge variant="secondary" className="gap-1 text-xs px-2 py-0.5">
+            </Badge>}
+          {filters.assignee !== 'all' && <Badge variant="secondary" className="gap-1 text-xs px-2 py-0.5">
               {assigneeOptions.find(a => a.value === filters.assignee)?.label}
               <X className="w-3 h-3 cursor-pointer" onClick={() => updateFilter('assignee', 'all')} />
-            </Badge>
-          )}
-          {filters.dateRange !== 'all' && (
-            <Badge variant="secondary" className="gap-1 text-xs px-2 py-0.5">
+            </Badge>}
+          {filters.dateRange !== 'all' && <Badge variant="secondary" className="gap-1 text-xs px-2 py-0.5">
               {dateRangeLabels[filters.dateRange]}
               <X className="w-3 h-3 cursor-pointer" onClick={() => updateFilter('dateRange', 'all')} />
-            </Badge>
-          )}
-        </div>
-      )}
-    </div>
-  );
+            </Badge>}
+        </div>}
+    </div>;
 }
