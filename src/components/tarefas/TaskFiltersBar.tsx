@@ -65,7 +65,7 @@ export default function TaskFiltersBar({
     medium: 'Média prioridade',
     low: 'Baixa prioridade'
   };
-  return <div className="bg-card border border-border rounded-lg p-1.5 md:p-3 space-y-1.5 md:space-y-3">
+  return <div className="bg-card border border-border rounded-lg p-1 md:p-2 space-y-1 md:space-y-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           
