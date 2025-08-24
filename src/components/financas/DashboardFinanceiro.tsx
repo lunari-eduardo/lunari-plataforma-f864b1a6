@@ -80,7 +80,7 @@ export default function DashboardFinanceiro() {
     value: '12',
     label: 'Dezembro'
   }];
-  return <div className="min-h-screen bg-lunar-bg">
+  return <div className="min-h-screen bg-lunar-bg py-0">
       <div className="p-6 space-y-6 bg-lunar-bg">
         {/* Barra de Filtros de Período - Design elegante */}
         <Card className="border-0 shadow-lg bg-card rounded-lg">
