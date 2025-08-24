@@ -9,12 +9,6 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { useUserPreferences } from '@/hooks/useUserProfile';
-import { 
-  IDIOMAS_OPCOES, 
-  FUSOS_HORARIOS_OPCOES, 
-  MOEDAS_OPCOES, 
-  FORMATOS_DATA_OPCOES 
-} from '@/utils/userUtils';
 import { UserPreferences } from '@/types/userProfile';
 import ThemeColorPicker from '@/components/preferences/ThemeColorPicker';
 import { Button } from '@/components/ui/button';
@@ -29,11 +23,6 @@ useEffect(() => {
   }
 }, [preferences]);
 
-  const handleSelectChange = (field: keyof UserPreferences, value: string) => {
-    const updatedData = { ...formData, [field]: value };
-    setFormData(updatedData);
-    savePreferences({ [field]: value });
-  };
 
   const handleSwitchChange = (field: keyof UserPreferences, checked: boolean) => {
     const updatedData = { ...formData, [field]: checked };
@@ -52,102 +41,12 @@ useEffect(() => {
 
           <Card className="mb-6">
             <CardContent className="p-6">
-              <Tabs defaultValue="gerais" className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="gerais">Preferências Gerais</TabsTrigger>
+              <Tabs defaultValue="notificacoes" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="notificacoes">Notificações</TabsTrigger>
                   <TabsTrigger value="aparencia">Aparência</TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="gerais" className="space-y-6 mt-6">
-                  {/* Seção Preferências da Conta */}
-                  <div className="space-y-4">
-                    <div>
-                      <h3 className="text-lg font-medium mb-4">Preferências da Conta</h3>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label htmlFor="idioma">Idioma</Label>
-                        <Select 
-                          value={formData.idioma} 
-                          onValueChange={(value: 'pt' | 'en' | 'es') => handleSelectChange('idioma', value)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione o idioma" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {IDIOMAS_OPCOES.map((opcao) => (
-                              <SelectItem key={opcao.value} value={opcao.value}>
-                                {opcao.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="fusoHorario">Fuso Horário</Label>
-                        <Select 
-                          value={formData.fusoHorario} 
-                          onValueChange={(value) => handleSelectChange('fusoHorario', value)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione o fuso horário" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {FUSOS_HORARIOS_OPCOES.map((opcao) => (
-                              <SelectItem key={opcao.value} value={opcao.value}>
-                                {opcao.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="moedaPadrao">Moeda Padrão</Label>
-                        <Select 
-                          value={formData.moedaPadrao} 
-                          onValueChange={(value: 'BRL' | 'USD' | 'EUR') => handleSelectChange('moedaPadrao', value)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione a moeda" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {MOEDAS_OPCOES.map((opcao) => (
-                              <SelectItem key={opcao.value} value={opcao.value}>
-                                {opcao.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="formatoData">Formato de Data</Label>
-                        <Select 
-                          value={formData.formatoData} 
-                          onValueChange={(value: 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'YYYY-MM-DD') => handleSelectChange('formatoData', value)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione o formato" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {FORMATOS_DATA_OPCOES.map((opcao) => (
-                              <SelectItem key={opcao.value} value={opcao.value}>
-                                {opcao.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                </TabsContent>
 
                 <TabsContent value="notificacoes" className="space-y-6 mt-6">
                   <div className="space-y-6">

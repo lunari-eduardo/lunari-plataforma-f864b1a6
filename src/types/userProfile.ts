@@ -22,11 +22,6 @@ export interface UserBranding {
 
 export interface UserPreferences {
   id: string;
-  // Preferências da Conta
-  idioma: 'pt' | 'en' | 'es';
-  fusoHorario: string;
-  moedaPadrao: 'BRL' | 'USD' | 'EUR';
-  formatoData: 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'YYYY-MM-DD';
   // Aparência
   tema: 'claro' | 'escuro' | 'sistema';
   temaCor: 'azul' | 'verde' | 'terracota' | 'rosa' | 'cinza' | 'lilas' | 'bege' | 'marrom';
@@ -61,10 +56,6 @@ export const DEFAULT_USER_BRANDING: Omit<UserBranding, 'id' | 'createdAt' | 'upd
 };
 
 export const DEFAULT_USER_PREFERENCES: Omit<UserPreferences, 'id' | 'createdAt' | 'updatedAt'> = {
-  idioma: 'pt',
-  fusoHorario: 'America/Sao_Paulo',
-  moedaPadrao: 'BRL',
-  formatoData: 'DD/MM/YYYY',
   tema: 'sistema',
   temaCor: 'marrom',
   temaCorHex: '#5F3624',

@@ -110,28 +110,3 @@ export const formatPhone = (value: string): string => {
       .replace(/(\d{5})(\d{1,4})/, '$1-$2');
   }
 };
-
-export const IDIOMAS_OPCOES = [
-  { value: 'pt', label: 'Português' },
-  { value: 'en', label: 'English' },
-  { value: 'es', label: 'Español' }
-];
-
-export const FUSOS_HORARIOS_OPCOES = [
-  { value: 'America/Sao_Paulo', label: 'Brasília (GMT-3)' },
-  { value: 'America/Manaus', label: 'Manaus (GMT-4)' },
-  { value: 'America/Rio_Branco', label: 'Rio Branco (GMT-5)' },
-  { value: 'America/Noronha', label: 'Fernando de Noronha (GMT-2)' }
-];
-
-export const MOEDAS_OPCOES = [
-  { value: 'BRL', label: 'Real Brasileiro (R$)' },
-  { value: 'USD', label: 'Dólar Americano (US$)' },
-  { value: 'EUR', label: 'Euro (€)' }
-];
-
-export const FORMATOS_DATA_OPCOES = [
-  { value: 'DD/MM/YYYY', label: 'DD/MM/AAAA (31/12/2024)' },
-  { value: 'MM/DD/YYYY', label: 'MM/DD/AAAA (12/31/2024)' },
-  { value: 'YYYY-MM-DD', label: 'AAAA-MM-DD (2024-12-31)' }
-];
