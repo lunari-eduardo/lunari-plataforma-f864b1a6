@@ -8,7 +8,7 @@ import { ProductionRemindersCard } from "@/components/dashboard/ProductionRemind
 import { HighPriorityDueSoonCard } from "@/components/tarefas/HighPriorityDueSoonCard";
 import { useIsTablet } from "@/hooks/useIsTablet";
 import { FinancialRemindersCard } from "@/components/dashboard/FinancialRemindersCard";
-import { BirthdayAlertCard } from "@/components/dashboard/BirthdayAlertCard";
+
 import DailyHero from "@/components/dashboard/DailyHero";
 import DailyKPIs from "@/components/dashboard/DailyKPIs";
 import FollowUpNotificationCard from "@/components/leads/FollowUpNotificationCard";
@@ -238,10 +238,9 @@ export default function Index() {
     </section>
 
       {/* Critical Cards - Empilhados em tablets */}
-    <section className="grid gap-6 animate-fade-in auto-rows-auto lg:auto-rows-fr grid-cols-1 lg:grid-cols-4">
+    <section className="grid gap-6 animate-fade-in auto-rows-auto lg:auto-rows-fr grid-cols-1 lg:grid-cols-3">
       <div className="h-full"><FinancialRemindersCard /></div>
       <div className="h-full"><ProductionRemindersCard lembretes={lembretesProducao} /></div>
-      <div className="h-full"><BirthdayAlertCard /></div>
       <div className="h-full"><HighPriorityDueSoonCard /></div>
     </section>
     </main>;

@@ -7,7 +7,7 @@ import { useAppContext } from "@/contexts/AppContext";
 
 export function BirthdayAlertCard() {
   const { clientes } = useAppContext();
-  const { totalAniversariantes, mesAtual, nomesMeses } = useBirthdayAlert(clientes);
+  const { totalAniversariantes } = useBirthdayAlert(clientes);
 
   // Only render if there are birthdays
   if (totalAniversariantes === 0) {

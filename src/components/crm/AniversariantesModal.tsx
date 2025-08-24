@@ -41,19 +41,28 @@ function calcularIdade(dataNascimento: string): number {
   return idade;
 }
 
-function isAniversarioNoMes(dataNascimento: string, mes: number): boolean {
+function isWithinNext30Days(dataNascimento: string): boolean {
   if (!dataNascimento) return false;
-  const [ano, mesNasc] = dataNascimento.split('-').map(Number);
-  return mesNasc === mes;
+  
+  const today = new Date();
+  const [ano, mes, dia] = dataNascimento.split('-').map(Number);
+  
+  // Create birthday date for this year
+  let birthdayThisYear = new Date(today.getFullYear(), mes - 1, dia);
+  
+  // If birthday already passed this year, check next year's birthday
+  if (birthdayThisYear < today) {
+    birthdayThisYear = new Date(today.getFullYear() + 1, mes - 1, dia);
+  }
+  
+  // Check if birthday is within next 30 days
+  const thirtyDaysFromNow = new Date(today);
+  thirtyDaysFromNow.setDate(today.getDate() + 30);
+  
+  return birthdayThisYear <= thirtyDaysFromNow;
 }
 
 export function AniversariantesModal({ open, onOpenChange, clientes }: AniversariantesModalProps) {
-  const mesAtual = new Date().getMonth() + 1;
-  const nomesMeses = [
-    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-  ];
-
   const aniversariantes = useMemo(() => {
     const result = {
       clientes: [] as Aniversariante[],
@@ -63,7 +72,7 @@ export function AniversariantesModal({ open, onOpenChange, clientes }: Aniversar
 
     clientes.forEach(cliente => {
       // Cliente
-      if (cliente.dataNascimento && isAniversarioNoMes(cliente.dataNascimento, mesAtual)) {
+      if (cliente.dataNascimento && isWithinNext30Days(cliente.dataNascimento)) {
         result.clientes.push({
           nome: cliente.nome,
           dataNascimento: cliente.dataNascimento,
@@ -75,7 +84,7 @@ export function AniversariantesModal({ open, onOpenChange, clientes }: Aniversar
       }
 
       // Cônjuge
-      if (cliente.conjuge?.dataNascimento && isAniversarioNoMes(cliente.conjuge.dataNascimento, mesAtual)) {
+      if (cliente.conjuge?.dataNascimento && isWithinNext30Days(cliente.conjuge.dataNascimento)) {
         result.conjuges.push({
           nome: cliente.conjuge.nome || 'Cônjuge',
           dataNascimento: cliente.conjuge.dataNascimento,
@@ -89,7 +98,7 @@ export function AniversariantesModal({ open, onOpenChange, clientes }: Aniversar
 
       // Filhos
       cliente.filhos?.forEach(filho => {
-        if (filho.dataNascimento && isAniversarioNoMes(filho.dataNascimento, mesAtual)) {
+        if (filho.dataNascimento && isWithinNext30Days(filho.dataNascimento)) {
           result.filhos.push({
             nome: filho.nome || 'Filho(a)',
             dataNascimento: filho.dataNascimento,
@@ -103,19 +112,27 @@ export function AniversariantesModal({ open, onOpenChange, clientes }: Aniversar
       });
     });
 
-    // Ordenar por data de aniversário
-    const ordenarPorData = (a: Aniversariante, b: Aniversariante) => {
-      const diaA = parseInt(a.dataNascimento.split('-')[2]);
-      const diaB = parseInt(b.dataNascimento.split('-')[2]);
-      return diaA - diaB;
+    // Ordenar por proximidade da data (aniversários mais próximos primeiro)
+    const ordenarPorProximidade = (a: Aniversariante, b: Aniversariante) => {
+      const today = new Date();
+      const [anoA, mesA, diaA] = a.dataNascimento.split('-').map(Number);
+      const [anoB, mesB, diaB] = b.dataNascimento.split('-').map(Number);
+      
+      let birthdayA = new Date(today.getFullYear(), mesA - 1, diaA);
+      let birthdayB = new Date(today.getFullYear(), mesB - 1, diaB);
+      
+      if (birthdayA < today) birthdayA = new Date(today.getFullYear() + 1, mesA - 1, diaA);
+      if (birthdayB < today) birthdayB = new Date(today.getFullYear() + 1, mesB - 1, diaB);
+      
+      return birthdayA.getTime() - birthdayB.getTime();
     };
 
-    result.clientes.sort(ordenarPorData);
-    result.conjuges.sort(ordenarPorData);
-    result.filhos.sort(ordenarPorData);
+    result.clientes.sort(ordenarPorProximidade);
+    result.conjuges.sort(ordenarPorProximidade);
+    result.filhos.sort(ordenarPorProximidade);
 
     return result;
-  }, [clientes, mesAtual]);
+  }, [clientes]);
 
   const totalAniversariantes = aniversariantes.clientes.length + aniversariantes.conjuges.length + aniversariantes.filhos.length;
 
@@ -193,7 +210,7 @@ export function AniversariantesModal({ open, onOpenChange, clientes }: Aniversar
           <div className="flex items-center justify-between">
             <DialogTitle className="flex items-center gap-2">
               <Cake className="h-5 w-5 text-amber-500" />
-              Aniversariantes de {nomesMeses[mesAtual - 1]}
+              Aniversariantes dos Próximos 30 Dias
               {totalAniversariantes > 0 && (
                 <Badge variant="secondary" className="ml-2">
                   {totalAniversariantes}
@@ -214,9 +231,9 @@ export function AniversariantesModal({ open, onOpenChange, clientes }: Aniversar
         {totalAniversariantes === 0 ? (
           <div className="flex flex-col items-center justify-center p-8 text-center">
             <Cake className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium mb-2">Nenhum aniversariante este mês</h3>
+            <h3 className="text-lg font-medium mb-2">Nenhum aniversariante próximo</h3>
             <p className="text-sm text-muted-foreground">
-              Não há aniversários cadastrados para {nomesMeses[mesAtual - 1].toLowerCase()}.
+              Não há aniversários nos próximos 30 dias.
             </p>
           </div>
         ) : (
@@ -252,7 +269,7 @@ export function AniversariantesModal({ open, onOpenChange, clientes }: Aniversar
               <TabsContent value="clientes" className="mt-0">
                 {aniversariantes.clientes.length === 0 ? (
                   <p className="text-center text-muted-foreground py-8">
-                    Nenhum cliente aniversariante este mês
+                    Nenhum cliente aniversariante nos próximos 30 dias
                   </p>
                 ) : (
                   aniversariantes.clientes.map((aniversariante, index) => (
@@ -264,7 +281,7 @@ export function AniversariantesModal({ open, onOpenChange, clientes }: Aniversar
               <TabsContent value="conjuges" className="mt-0">
                 {aniversariantes.conjuges.length === 0 ? (
                   <p className="text-center text-muted-foreground py-8">
-                    Nenhum cônjuge aniversariante este mês
+                    Nenhum cônjuge aniversariante nos próximos 30 dias
                   </p>
                 ) : (
                   aniversariantes.conjuges.map((aniversariante, index) => (
@@ -276,7 +293,7 @@ export function AniversariantesModal({ open, onOpenChange, clientes }: Aniversar
               <TabsContent value="filhos" className="mt-0">
                 {aniversariantes.filhos.length === 0 ? (
                   <p className="text-center text-muted-foreground py-8">
-                    Nenhum filho aniversariante este mês
+                    Nenhum filho aniversariante nos próximos 30 dias
                   </p>
                 ) : (
                   aniversariantes.filhos.map((aniversariante, index) => (
