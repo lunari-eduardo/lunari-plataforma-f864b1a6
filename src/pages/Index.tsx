@@ -208,8 +208,8 @@ export default function Index() {
     <section className="grid gap-6 animate-fade-in auto-rows-auto lg:auto-rows-fr grid-cols-1 lg:grid-cols-4">
       <div className="h-full"><FinancialRemindersCard /></div>
       <div className="h-full"><ProductionRemindersCard lembretes={lembretesProducao} /></div>
-      <div className="h-full"><HighPriorityDueSoonCard /></div>
       <div className="h-full"><BirthdayAlertCard /></div>
+      <div className="h-full"><HighPriorityDueSoonCard /></div>
     </section>
 
       {/* Próximos Agendamentos */}
