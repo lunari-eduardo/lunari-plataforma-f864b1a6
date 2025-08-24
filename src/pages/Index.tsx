@@ -192,6 +192,46 @@ export default function Index() {
       <DailyHero />
     </section>
 
+    {/* Próximos Agendamentos */}
+    <section>
+      <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300 animate-fade-in">
+        <CardHeader className="pb-3 flex flex-row items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-brand-gradient">
+              <Calendar className="h-5 w-5 text-white" />
+            </div>
+            <CardTitle className="font-semibold text-base">Próximos Agendamentos</CardTitle>
+          </div>
+          <Link to="/agenda">
+            <Button variant="ghost" size="sm">Ver todos</Button>
+          </Link>
+        </CardHeader>
+        <CardContent>
+          {proximosAgendamentos.length === 0 ? (
+            <div className="flex items-center justify-center py-4">
+              <p className="text-sm text-lunar-textSecondary">Nenhum agendamento confirmado</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {proximosAgendamentos.map(ev => (
+                <div key={ev.id} className="border-b pb-3 last:border-b-0 last:pb-0">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="font-medium text-sm">{ev.cliente}</p>
+                      <p className="text-2xs text-lunar-textSecondary mt-0.5">{ev.tipo}</p>
+                    </div>
+                    <div className="text-right text-2xs text-lunar-textSecondary">
+                      <div>{ev.data.toLocaleDateString("pt-BR")}</div>
+                      <div className="mt-0.5">{ev.hora}</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </section>
 
     {/* KPIs modernizados (mensal) */}
     <section aria-label="Indicadores principais" className="animate-fade-in">
@@ -204,48 +244,12 @@ export default function Index() {
       <FollowUpNotificationCard />
     </section>
 
-{/* Critical Cards - Empilhados em tablets */}
+      {/* Critical Cards - Empilhados em tablets */}
     <section className="grid gap-6 animate-fade-in auto-rows-auto lg:auto-rows-fr grid-cols-1 lg:grid-cols-4">
       <div className="h-full"><FinancialRemindersCard /></div>
       <div className="h-full"><ProductionRemindersCard lembretes={lembretesProducao} /></div>
       <div className="h-full"><BirthdayAlertCard /></div>
       <div className="h-full"><HighPriorityDueSoonCard /></div>
     </section>
-
-      {/* Próximos Agendamentos */}
-      <section>
-        <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300 animate-fade-in">
-          <CardHeader className="pb-3 flex flex-row items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-brand-gradient">
-                <Calendar className="h-5 w-5 text-white" />
-              </div>
-              <CardTitle className="font-semibold text-base">Próximos Agendamentos</CardTitle>
-            </div>
-            <Link to="/agenda">
-              <Button variant="ghost" size="sm">Ver todos</Button>
-            </Link>
-          </CardHeader>
-          <CardContent>
-            {proximosAgendamentos.length === 0 ? <div className="flex flex-col items-center justify-center py-8 border border-dashed rounded-md">
-                <Calendar className="h-6 w-6 text-lunar-textSecondary mb-2" />
-                <p className="text-2xs text-lunar-textSecondary">Nenhum agendamento confirmado futuro</p>
-              </div> : <div className="space-y-3">
-                {proximosAgendamentos.map(ev => <div key={ev.id} className="border-b pb-3 last:border-b-0 last:pb-0">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="font-medium text-sm">{ev.cliente}</p>
-                        <p className="text-2xs text-lunar-textSecondary mt-0.5">{ev.tipo}</p>
-                      </div>
-                      <div className="text-right text-2xs text-lunar-textSecondary">
-                        <div>{ev.data.toLocaleDateString("pt-BR")}</div>
-                        <div className="mt-0.5">{ev.hora}</div>
-                      </div>
-                    </div>
-                  </div>)}
-              </div>}
-          </CardContent>
-        </Card>
-      </section>
     </main>;
 }
