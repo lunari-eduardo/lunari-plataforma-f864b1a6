@@ -177,13 +177,37 @@ export default function Index() {
   // Próximos agendamentos confirmados (top 5)
   const proximosAgendamentos = useMemo(() => {
     const now = new Date();
-    const items = appointments.filter(a => a.date >= new Date(now.getFullYear(), now.getMonth(), now.getDate())).filter(a => a.status === "confirmado").map(a => ({
-      id: a.id,
-      cliente: a.client,
-      tipo: a.type,
-      data: a.date,
-      hora: a.time
-    })).sort((a, b) => a.data.getTime() - b.data.getTime()).slice(0, 5);
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    const items = appointments
+      .filter(a => a.status === "confirmado")
+      .filter(a => {
+        const appointmentDate = a.date instanceof Date ? a.date : new Date(a.date);
+        const appointmentDay = new Date(appointmentDate.getFullYear(), appointmentDate.getMonth(), appointmentDate.getDate());
+        
+        // If appointment is on a future date, include it
+        if (appointmentDay > today) return true;
+        
+        // If appointment is today, check if time hasn't passed
+        if (appointmentDay.getTime() === today.getTime()) {
+          const [hh, mm] = a.time.split(":").map(Number);
+          const appointmentDateTime = new Date(appointmentDate);
+          appointmentDateTime.setHours(hh || 0, mm || 0, 0, 0);
+          return appointmentDateTime >= now;
+        }
+        
+        return false;
+      })
+      .map(a => ({
+        id: a.id,
+        cliente: a.client,
+        tipo: a.type,
+        data: a.date,
+        hora: a.time
+      }))
+      .sort((a, b) => a.data.getTime() - b.data.getTime())
+      .slice(0, 5);
+    
     return items;
   }, [appointments]);
   return <main className="space-y-6">
