@@ -1,9 +1,8 @@
 import { useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { Calendar, Camera } from "lucide-react";
+import { Calendar } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { KPIGroupCard } from "@/components/dashboard/KPIGroupCard";
 import { ProductionRemindersCard } from "@/components/dashboard/ProductionRemindersCard";
 import { HighPriorityDueSoonCard } from "@/components/tarefas/HighPriorityDueSoonCard";
@@ -15,7 +14,7 @@ import DailyHero from "@/components/dashboard/DailyHero";
 import DailyKPIs from "@/components/dashboard/DailyKPIs";
 import FollowUpNotificationCard from "@/components/leads/FollowUpNotificationCard";
 import { useSalesAnalytics } from "@/hooks/useSalesAnalytics";
-import { useOrcamentos } from "@/hooks/useOrcamentos";
+
 import { useAgenda } from "@/hooks/useAgenda";
 import { useAvailability } from "@/hooks/useAvailability";
 import { useAppContext } from "@/contexts/AppContext";
@@ -29,7 +28,7 @@ export default function Index() {
   useEffect(() => {
     const title = "Dashboard de Negócios | Início";
     document.title = title;
-    const desc = "Dashboard: receita do mês vs metas, categoria mais rentável, novos clientes, horários livres, orçamentos e próximos agendamentos.";
+    const desc = "Dashboard: receita do mês vs metas, categoria mais rentável, novos clientes, horários livres e próximos agendamentos.";
     let meta = document.querySelector('meta[name="description"]');
     if (!meta) {
       meta = document.createElement("meta");
@@ -53,9 +52,6 @@ export default function Index() {
   const {
     appointments
   } = useAgenda();
-  const {
-    orcamentos
-  } = useOrcamentos();
   const {
     availability
   } = useAvailability();
@@ -155,29 +151,6 @@ export default function Index() {
     };
   }, [appointments, availability]);
 
-  // Resumo de orçamentos do mês atual
-  const resumoOrcamentos = useMemo(() => {
-    const now = new Date();
-    const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-    const desteMes = orcamentos.filter(o => (o.criadoEm || o.data || "").startsWith(ym));
-    const contagem = {
-      enviado: 0,
-      pendente: 0,
-      followup: 0,
-      fechado: 0,
-      cancelado: 0
-    } as Record<string, number>;
-    desteMes.forEach(o => {
-      const st = (o.status || "").toLowerCase();
-      if (st === "enviado") contagem.enviado++;else if (st === "pendente") contagem.pendente++;else if (st === "follow-up" || st === "followup") contagem.followup++;else if (st === "fechado") contagem.fechado++;else if (st === "cancelado") contagem.cancelado++;
-    });
-    const base = contagem.enviado + contagem.pendente + contagem.followup;
-    const conversao = base > 0 ? contagem.fechado / base * 100 : 0;
-    return {
-      contagem,
-      conversao
-    };
-  }, [orcamentos]);
 
   // Lembretes de Produção
   const lembretesProducao = useMemo(() => {
@@ -239,39 +212,9 @@ export default function Index() {
       <div className="h-full"><BirthdayAlertCard /></div>
     </section>
 
-      {/* Orçamentos e Agenda - Otimizado para tablets */}
-      <section className={`grid gap-6 auto-rows-fr ${
-        isTablet 
-          ? 'grid-cols-2' 
-          : 'grid-cols-1 lg:grid-cols-2'
-      }`}>
-        <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300 animate-fade-in h-full flex flex-col">
-          <CardHeader className="pb-3 flex flex-row items-center justify-between">
-            <div className="flex items-center gap-3">
-               <div className="p-2 rounded-xl bg-brand-gradient">
-                <Camera className="h-5 w-5 text-white" />
-              </div>
-              <CardTitle className="font-semibold text-base">Resumo de Orçamentos (mês)</CardTitle>
-            </div>
-            <Link to="/orcamentos">
-              <Button variant="ghost" size="sm">Ver todos</Button>
-            </Link>
-          </CardHeader>
-          <CardContent className="flex-1 flex flex-col">
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="secondary">Enviados: {resumoOrcamentos.contagem.enviado}</Badge>
-              <Badge variant="secondary">Pendentes: {resumoOrcamentos.contagem.pendente}</Badge>
-              <Badge variant="secondary">Follow-up: {resumoOrcamentos.contagem.followup}</Badge>
-              <Badge variant="secondary">Fechados: {resumoOrcamentos.contagem.fechado}</Badge>
-              <Badge variant="secondary">Cancelados: {resumoOrcamentos.contagem.cancelado}</Badge>
-            </div>
-            <div className="flex-1 flex items-end">
-              <p className="text-2xs text-lunar-textSecondary">Taxa de conversão do mês: {resumoOrcamentos.conversao.toFixed(1)}%</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300 animate-fade-in h-full flex flex-col">
+      {/* Próximos Agendamentos */}
+      <section>
+        <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300 animate-fade-in">
           <CardHeader className="pb-3 flex flex-row items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-xl bg-brand-gradient">
@@ -283,11 +226,11 @@ export default function Index() {
               <Button variant="ghost" size="sm">Ver todos</Button>
             </Link>
           </CardHeader>
-          <CardContent className="flex-1 flex flex-col">
-            {proximosAgendamentos.length === 0 ? <div className="flex flex-col items-center justify-center flex-1 border border-dashed rounded-md">
+          <CardContent>
+            {proximosAgendamentos.length === 0 ? <div className="flex flex-col items-center justify-center py-8 border border-dashed rounded-md">
                 <Calendar className="h-6 w-6 text-lunar-textSecondary mb-2" />
                 <p className="text-2xs text-lunar-textSecondary">Nenhum agendamento confirmado futuro</p>
-              </div> : <div className="space-y-3 flex-1">
+              </div> : <div className="space-y-3">
                 {proximosAgendamentos.map(ev => <div key={ev.id} className="border-b pb-3 last:border-b-0 last:pb-0">
                     <div className="flex items-start justify-between">
                       <div>
