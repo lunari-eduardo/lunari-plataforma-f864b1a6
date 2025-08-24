@@ -72,9 +72,9 @@ export default function TaskFiltersBar({
   };
 
   return (
-    <div className="bg-card border border-border rounded-lg p-2 space-y-2">
+    <div className="bg-card border border-border rounded-lg space-y-2">
       {/* Desktop Layout - Single line with all filters */}
-      <div className="hidden md:flex items-center gap-3">
+      <div className="hidden md:flex items-center gap-3 p-2">
         {/* Search */}
         <Input 
           placeholder="Buscar tarefas..." 
@@ -145,100 +145,116 @@ export default function TaskFiltersBar({
         )}
       </div>
 
-      {/* Mobile Layout */}
+      {/* Mobile Layout - Ultra compact when collapsed */}
       <div className="md:hidden">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        {!isExpanded ? (
+          // Collapsed state - ultra minimal
+          <div className="flex items-center justify-between p-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setIsExpanded(true)}
+              className="h-8 text-sm flex items-center gap-2"
+            >
+              <Calendar className="w-4 h-4" />
+              Filtros
+              {hasActiveFilters && (
+                <Badge variant="secondary" className="text-xs px-1.5 py-0 ml-1">
+                  {Object.values(filters).filter(v => v && v !== 'all').length}
+                </Badge>
+              )}
+            </Button>
             {hasActiveFilters && (
-              <Badge variant="secondary" className="text-xs">
-                {Object.values(filters).filter(v => v && v !== 'all').length}
-              </Badge>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            {hasActiveFilters && (
-              <Button variant="ghost" size="sm" onClick={clearFilters} className="h-7 text-xs">
-                <X className="w-3 h-3 mr-1" />
-                Limpar
+              <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8 text-sm">
+                <X className="w-4 h-4" />
               </Button>
             )}
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => setIsExpanded(!isExpanded)} 
-              className="h-7 w-7 p-0"
-            >
-              {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-            </Button>
           </div>
-        </div>
-
-        {isExpanded && (
-          <div className="grid grid-cols-2 gap-2 mt-2">
-            <div className="col-span-2">
+        ) : (
+          // Expanded state
+          <>
+            <div className="flex items-center justify-between p-2 border-b border-border/30">
+              <span className="text-sm font-medium">Filtros</span>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setIsExpanded(false)} 
+                className="h-7 w-7 p-0"
+              >
+                <ChevronUp className="w-4 h-4" />
+              </Button>
+            </div>
+            <div className="p-2 space-y-2">
               <Input 
                 placeholder="Buscar tarefas..." 
                 value={filters.search} 
                 onChange={e => updateFilter('search', e.target.value)} 
                 className="h-8 text-sm" 
               />
+              <div className="grid grid-cols-2 gap-2">
+                <Select value={filters.status} onValueChange={v => updateFilter('status', v as any)}>
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {statusOptions.map(opt => (
+                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={filters.priority} onValueChange={v => updateFilter('priority', v as any)}>
+                  <SelectTrigger className="h-8 text-sm">
+                    <Flag className="w-3 h-3 mr-1" />
+                    <SelectValue placeholder="Prioridade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(priorityLabels).map(([key, label]) => (
+                      <SelectItem key={key} value={key}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={filters.assignee} onValueChange={v => updateFilter('assignee', v as any)}>
+                  <SelectTrigger className="h-8 text-sm">
+                    <User className="w-3 h-3 mr-1" />
+                    <SelectValue placeholder="Responsável" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {assigneeOptions.map(opt => (
+                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={filters.dateRange} onValueChange={v => updateFilter('dateRange', v as any)}>
+                  <SelectTrigger className="h-8 text-sm">
+                    <Calendar className="w-3 h-3 mr-1" />
+                    <SelectValue placeholder="Prazo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(dateRangeLabels).map(([key, label]) => (
+                      <SelectItem key={key} value={key}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {hasActiveFilters && (
+                <Button variant="outline" size="sm" onClick={clearFilters} className="w-full h-8 text-sm">
+                  <X className="w-3 h-3 mr-1" />
+                  Limpar Filtros
+                </Button>
+              )}
             </div>
-
-            <Select value={filters.status} onValueChange={v => updateFilter('status', v as any)}>
-              <SelectTrigger className="h-8 text-sm">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                {statusOptions.map(opt => (
-                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={filters.priority} onValueChange={v => updateFilter('priority', v as any)}>
-              <SelectTrigger className="h-8 text-sm">
-                <Flag className="w-3 h-3 mr-1" />
-                <SelectValue placeholder="Prioridade" />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(priorityLabels).map(([key, label]) => (
-                  <SelectItem key={key} value={key}>{label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={filters.assignee} onValueChange={v => updateFilter('assignee', v as any)}>
-              <SelectTrigger className="h-8 text-sm">
-                <User className="w-3 h-3 mr-1" />
-                <SelectValue placeholder="Responsável" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                {assigneeOptions.map(opt => (
-                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={filters.dateRange} onValueChange={v => updateFilter('dateRange', v as any)}>
-              <SelectTrigger className="h-8 text-sm">
-                <Calendar className="w-3 h-3 mr-1" />
-                <SelectValue placeholder="Prazo" />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(dateRangeLabels).map(([key, label]) => (
-                  <SelectItem key={key} value={key}>{label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          </>
         )}
       </div>
 
-      {/* Active filters display - more compact */}
-      {hasActiveFilters && (
-        <div className="flex flex-wrap gap-1 pt-1 border-t border-border/30">
+      {/* Active filters display - only on desktop or mobile when expanded */}
+      {hasActiveFilters && (!isCompactDevice || isExpanded) && (
+        <div className="flex flex-wrap gap-1 p-2 pt-1 border-t border-border/30">
           {filters.search && (
             <Badge variant="secondary" className="gap-1 text-xs px-2 py-0.5">
               "{filters.search}"
