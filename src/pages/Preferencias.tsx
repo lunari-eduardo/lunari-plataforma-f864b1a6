@@ -62,24 +62,6 @@ useEffect(() => {
                         <CardContent className="p-6">
                           <div className="flex items-center justify-between">
                             <div className="space-y-1">
-                              <Label htmlFor="notificacoes-email">Notificações por E-mail</Label>
-                              <p className="text-sm text-lunar-textSecondary">
-                                Receba atualizações sobre orçamentos, agendamentos e lembretes importantes
-                              </p>
-                            </div>
-                            <Switch
-                              id="notificacoes-email"
-                              checked={formData.notificacoesEmail}
-                              onCheckedChange={(checked) => handleSwitchChange('notificacoesEmail', checked)}
-                            />
-                          </div>
-                        </CardContent>
-                      </Card>
-
-                      <Card>
-                        <CardContent className="p-6">
-                          <div className="flex items-center justify-between">
-                            <div className="space-y-1">
                               <Label htmlFor="notificacoes-whatsapp">Notificações por WhatsApp</Label>
                               <p className="text-sm text-lunar-textSecondary">
                                 Receba notificações rápidas através do WhatsApp Business
@@ -115,18 +97,6 @@ useEffect(() => {
 
                           <div className="flex items-center justify-between">
                             <div className="space-y-1">
-                              <Label htmlFor="habilitarAvisosApenasAgendamentosFuturos">Avisar apenas para agendamentos futuros</Label>
-                              <p className="text-sm text-lunar-textSecondary">Ignora sessões passadas para evitar spam</p>
-                            </div>
-                            <Switch
-                              id="habilitarAvisosApenasAgendamentosFuturos"
-                              checked={formData.habilitarAvisosApenasAgendamentosFuturos}
-                              onCheckedChange={(checked) => handleSwitchChange('habilitarAvisosApenasAgendamentosFuturos', checked)}
-                            />
-                          </div>
-
-                          <div className="flex items-center justify-between">
-                            <div className="space-y-1">
                               <Label htmlFor="habilitarAlertaProdutosDoCliente">Alertar sobre produtos do cliente</Label>
                               <p className="text-sm text-lunar-textSecondary">Mostra um aviso quando o cliente possui produtos vinculados</p>
                             </div>
@@ -135,36 +105,6 @@ useEffect(() => {
                               checked={formData.habilitarAlertaProdutosDoCliente}
                               onCheckedChange={(checked) => handleSwitchChange('habilitarAlertaProdutosDoCliente', checked)}
                             />
-                          </div>
-
-                          <Separator />
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="flex items-center justify-between">
-                              <div className="space-y-1">
-                                <Label htmlFor="habilitarFollowUpOrcamentosEnviados">Follow-up automático de orçamentos enviados</Label>
-                                <p className="text-sm text-lunar-textSecondary">Cria uma tarefa após X dias</p>
-                              </div>
-                              <Switch
-                                id="habilitarFollowUpOrcamentosEnviados"
-                                checked={formData.habilitarFollowUpOrcamentosEnviados}
-                                onCheckedChange={(checked) => handleSwitchChange('habilitarFollowUpOrcamentosEnviados', checked)}
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="diasParaFollowUpOrcamento">Dias para follow-up</Label>
-                              <Input
-                                id="diasParaFollowUpOrcamento"
-                                type="number"
-                                min={1}
-                                max={30}
-                                value={formData.diasParaFollowUpOrcamento}
-                                onChange={(e) => {
-                                  const v = Math.max(1, Math.min(30, Number(e.target.value) || 1));
-                                  setFormData(prev => ({ ...prev, diasParaFollowUpOrcamento: v }));
-                                  savePreferences({ diasParaFollowUpOrcamento: v });
-                                }}
-                              />
-                            </div>
                           </div>
                         </CardContent>
                       </Card>

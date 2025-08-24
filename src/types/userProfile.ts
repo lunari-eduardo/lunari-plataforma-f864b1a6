@@ -27,14 +27,10 @@ export interface UserPreferences {
   temaCor: 'azul' | 'verde' | 'terracota' | 'rosa' | 'cinza' | 'lilas' | 'bege' | 'marrom';
   temaCorHex: string;
   // Notificações
-  notificacoesEmail: boolean;
   notificacoesWhatsapp: boolean;
   // Automações
   habilitarAutomacoesWorkflow: boolean;
-  habilitarAvisosApenasAgendamentosFuturos: boolean;
   habilitarAlertaProdutosDoCliente: boolean;
-  habilitarFollowUpOrcamentosEnviados: boolean;
-  diasParaFollowUpOrcamento: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -59,11 +55,7 @@ export const DEFAULT_USER_PREFERENCES: Omit<UserPreferences, 'id' | 'createdAt' 
   tema: 'sistema',
   temaCor: 'marrom',
   temaCorHex: '#5F3624',
-  notificacoesEmail: true,
   notificacoesWhatsapp: true,
   habilitarAutomacoesWorkflow: true,
-  habilitarAvisosApenasAgendamentosFuturos: true,
-  habilitarAlertaProdutosDoCliente: true,
-  habilitarFollowUpOrcamentosEnviados: true,
-  diasParaFollowUpOrcamento: 3
+  habilitarAlertaProdutosDoCliente: true
 };

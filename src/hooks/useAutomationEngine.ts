@@ -28,41 +28,11 @@ export function useAutomationEngine() {
         const automationFlags: Record<string, boolean> = storage.load(STORAGE_KEYS.AUTOMATION_FLAGS, {} as Record<string, boolean>);
         const followupFlags: Record<string, boolean> = storage.load(STORAGE_KEYS.FOLLOWUP_FLAGS, {} as Record<string, boolean>);
 
-        // 1) Follow-up de orçamentos 'enviado' há N dias
-        if (prefs.habilitarFollowUpOrcamentosEnviados) {
-          orcamentos
-            .filter(orc => orc.status === 'enviado')
-            .forEach(orc => {
-              const baseDate = new Date(orc.criadoEm);
-              const days = diffInDays(now, baseDate);
-              const key = `followup:${orc.id}`;
-              if (days >= prefs.diasParaFollowUpOrcamento && !followupFlags[key]) {
-                addTask({
-                  title: `Follow-up orçamento – ${orc.cliente.nome}`,
-                  description: `Entre em contato com ${orc.cliente.nome} sobre o orçamento enviado.`,
-                  status: 'todo',
-                  priority: 'medium',
-                  type: 'simple',
-                  relatedBudgetId: orc.id,
-                  tags: ['follow-up'],
-                  source: 'automation',
-                  dueDate: now.toISOString(),
-                });
-                followupFlags[key] = true;
-                storage.save(STORAGE_KEYS.FOLLOWUP_FLAGS, followupFlags);
-                toast({
-                  title: 'Follow-up de orçamento',
-                  description: `Criei uma tarefa para acompanhar o orçamento de ${orc.cliente.nome}.`,
-                });
-              }
-            });
-        }
-
-        // 2) Automações por status no Workflow (via appointments)
-        const onlyFuture = prefs.habilitarAvisosApenasAgendamentosFuturos;
+        // Automações por status no Workflow (via appointments) - sempre considera apenas futuros
         appointments.forEach(app => {
           const appDate = app.date instanceof Date ? app.date : new Date(app.date);
-          if (onlyFuture && appDate <= now) return;
+          // Ignora sessões passadas para evitar spam
+          if (appDate <= now) return;
 
           // Regra: A confirmar -> Confirmar com cliente (D-2)
           if (app.status === 'a confirmar') {
