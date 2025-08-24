@@ -24,6 +24,7 @@ import { abrirWhatsApp } from '@/utils/whatsappUtils';
 import { ORIGENS_PADRAO } from '@/utils/defaultOrigens';
 import { OriginBadge } from '@/components/shared/OriginBadge';
 import { AniversariantesModal } from '@/components/crm/AniversariantesModal';
+import { ClientFiltersBar, ClientFilters } from '@/components/crm/ClientFiltersBar';
 export default function Clientes() {
   const {
     clientes,
@@ -35,11 +36,13 @@ export default function Clientes() {
   
   const dropdownContext = useDialogDropdownContext();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [filtro, setFiltro] = useState('');
-  const [statusFilter, setStatusFilter] = useState('todos');
-  const [faturadoFilter, setFaturadoFilter] = useState('todos');
-  const [pagoFilter, setPagoFilter] = useState('todos');
-  const [receberFilter, setReceberFilter] = useState('todos');
+  const [filters, setFilters] = useState<ClientFilters>({
+    filtro: '',
+    statusFilter: 'todos',
+    faturadoFilter: 'todos',
+    pagoFilter: 'todos',
+    receberFilter: 'todos'
+  });
   const [showClientForm, setShowClientForm] = useState(false);
   const [editingClient, setEditingClient] = useState<Cliente | null>(null);
   const [formData, setFormData] = useState({
@@ -116,13 +119,24 @@ export default function Clientes() {
   // Filtrar clientes
   const clientesFiltrados = useMemo(() => {
     return clientMetrics.filter(cliente => {
-      const nomeMatch = cliente.nome.toLowerCase().includes(filtro.toLowerCase()) || cliente.email.toLowerCase().includes(filtro.toLowerCase()) || cliente.telefone.includes(filtro);
-      const faturadoMatch = !faturadoFilter || faturadoFilter === 'todos' || faturadoFilter === 'baixo' && cliente.totalFaturado < 1000 || faturadoFilter === 'medio' && cliente.totalFaturado >= 1000 && cliente.totalFaturado < 5000 || faturadoFilter === 'alto' && cliente.totalFaturado >= 5000;
-      const pagoMatch = !pagoFilter || pagoFilter === 'todos' || pagoFilter === 'baixo' && cliente.totalPago < 1000 || pagoFilter === 'medio' && cliente.totalPago >= 1000 && cliente.totalPago < 5000 || pagoFilter === 'alto' && cliente.totalPago >= 5000;
-      const receberMatch = !receberFilter || receberFilter === 'todos' || receberFilter === 'baixo' && cliente.aReceber < 1000 || receberFilter === 'medio' && cliente.aReceber >= 1000 && cliente.aReceber < 5000 || receberFilter === 'alto' && cliente.aReceber >= 5000;
+      const nomeMatch = cliente.nome.toLowerCase().includes(filters.filtro.toLowerCase()) || 
+                       cliente.email.toLowerCase().includes(filters.filtro.toLowerCase()) || 
+                       cliente.telefone.includes(filters.filtro);
+      const faturadoMatch = !filters.faturadoFilter || filters.faturadoFilter === 'todos' || 
+                           (filters.faturadoFilter === 'baixo' && cliente.totalFaturado < 1000) || 
+                           (filters.faturadoFilter === 'medio' && cliente.totalFaturado >= 1000 && cliente.totalFaturado < 5000) || 
+                           (filters.faturadoFilter === 'alto' && cliente.totalFaturado >= 5000);
+      const pagoMatch = !filters.pagoFilter || filters.pagoFilter === 'todos' || 
+                       (filters.pagoFilter === 'baixo' && cliente.totalPago < 1000) || 
+                       (filters.pagoFilter === 'medio' && cliente.totalPago >= 1000 && cliente.totalPago < 5000) || 
+                       (filters.pagoFilter === 'alto' && cliente.totalPago >= 5000);
+      const receberMatch = !filters.receberFilter || filters.receberFilter === 'todos' || 
+                          (filters.receberFilter === 'baixo' && cliente.aReceber < 1000) || 
+                          (filters.receberFilter === 'medio' && cliente.aReceber >= 1000 && cliente.aReceber < 5000) || 
+                          (filters.receberFilter === 'alto' && cliente.aReceber >= 5000);
       return nomeMatch && faturadoMatch && pagoMatch && receberMatch;
     });
-  }, [clientMetrics, filtro, faturadoFilter, pagoFilter, receberFilter]);
+  }, [clientMetrics, filters]);
   const handleAddClient = () => {
     setEditingClient(null);
     setFormData({
@@ -171,11 +185,13 @@ export default function Clientes() {
     window.open(link, '_blank');
   };
   const limparFiltros = () => {
-    setFiltro('');
-    setStatusFilter('todos');
-    setFaturadoFilter('todos');
-    setPagoFilter('todos');
-    setReceberFilter('todos');
+    setFilters({
+      filtro: '',
+      statusFilter: 'todos',
+      faturadoFilter: 'todos',
+      pagoFilter: 'todos',
+      receberFilter: 'todos'
+    });
   };
   return <ScrollArea className="h-[calc(100vh-120px)]">
       <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 space-y-6">
@@ -199,63 +215,12 @@ export default function Clientes() {
         </div>
         
         {/* Filtros */}
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Buscar clientes..." className="pl-8" value={filtro} onChange={e => setFiltro(e.target.value)} />
-          </div>
-
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos</SelectItem>
-              <SelectItem value="ativo">Ativo</SelectItem>
-              <SelectItem value="inativo">Inativo</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Select value={faturadoFilter} onValueChange={setFaturadoFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="Total" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos</SelectItem>
-              <SelectItem value="baixo">Até R$ 1.000</SelectItem>
-              <SelectItem value="medio">R$ 1.000 - R$ 5.000</SelectItem>
-              <SelectItem value="alto">Acima de R$ 5.000</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Select value={pagoFilter} onValueChange={setPagoFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="Pago" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos</SelectItem>
-              <SelectItem value="baixo">Até R$ 1.000</SelectItem>
-              <SelectItem value="medio">R$ 1.000 - R$ 5.000</SelectItem>
-              <SelectItem value="alto">Acima de R$ 5.000</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Select value={receberFilter} onValueChange={setReceberFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="A Receber" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos</SelectItem>
-              <SelectItem value="baixo">Até R$ 1.000</SelectItem>
-              <SelectItem value="medio">R$ 1.000 - R$ 5.000</SelectItem>
-              <SelectItem value="alto">Acima de R$ 5.000</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Button variant="outline" onClick={limparFiltros}>
-            Limpar
-          </Button>
-        </div>
+        <ClientFiltersBar
+          filters={filters}
+          onFiltersChange={setFilters}
+          totalClients={clientMetrics.length}
+          filteredClients={clientesFiltrados.length}
+        />
 
         {/* Grid de Clientes */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -331,14 +296,26 @@ export default function Clientes() {
             <User className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium mb-2">Nenhum cliente encontrado</h3>
             <p className="text-sm text-muted-foreground mb-4 text-center">
-              {filtro || statusFilter && statusFilter !== 'todos' || faturadoFilter && faturadoFilter !== 'todos' || pagoFilter && pagoFilter !== 'todos' || receberFilter && receberFilter !== 'todos' ? 'Não encontramos clientes com os critérios de busca informados.' : 'Adicione seus primeiros clientes para começar.'}
+              {filters.filtro || (filters.statusFilter && filters.statusFilter !== 'todos') || 
+               (filters.faturadoFilter && filters.faturadoFilter !== 'todos') || 
+               (filters.pagoFilter && filters.pagoFilter !== 'todos') || 
+               (filters.receberFilter && filters.receberFilter !== 'todos') 
+                ? 'Não encontramos clientes com os critérios de busca informados.' 
+                : 'Adicione seus primeiros clientes para começar.'}
             </p>
-            {filtro || statusFilter && statusFilter !== 'todos' || faturadoFilter && faturadoFilter !== 'todos' || pagoFilter && pagoFilter !== 'todos' || receberFilter && receberFilter !== 'todos' ? <Button onClick={limparFiltros} variant="outline">
+            {filters.filtro || (filters.statusFilter && filters.statusFilter !== 'todos') || 
+             (filters.faturadoFilter && filters.faturadoFilter !== 'todos') || 
+             (filters.pagoFilter && filters.pagoFilter !== 'todos') || 
+             (filters.receberFilter && filters.receberFilter !== 'todos') ? (
+              <Button onClick={limparFiltros} variant="outline">
                 Limpar filtros
-              </Button> : <Button onClick={handleAddClient} className="flex items-center gap-2">
+              </Button>
+            ) : (
+              <Button onClick={handleAddClient} className="flex items-center gap-2">
                 <UserPlus className="h-4 w-4" />
                 Adicionar Cliente
-              </Button>}
+              </Button>
+            )}
           </div>}
 
         {/* Modal do Formulário de Cliente */}
