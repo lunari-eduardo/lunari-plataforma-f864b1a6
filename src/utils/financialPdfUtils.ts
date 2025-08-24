@@ -2,7 +2,7 @@ import html2pdf from 'html2pdf.js';
 import { UserProfile, UserBranding } from '@/types/userProfile';
 import { NovaTransacaoFinanceira, TransacaoComItem, GrupoPrincipal } from '@/types/financas';
 import { formatCurrency } from './financialUtils';
-import { formatDateForDisplay } from './dateUtils';
+import { formatDateForDisplay, formatDateForStorage } from './dateUtils';
 
 export interface FinancialExportData {
   profile: UserProfile;
@@ -21,7 +21,6 @@ export interface FinancialExportData {
     transacoesFaturadas: number;
     transacoesAgendadas: number;
   };
-  // Opcional: mapa de receitas operacionais (Workflow) por mês quando anual
   workflowMonthlyReceita?: Record<number, number>;
 }
 
@@ -80,6 +79,13 @@ const getMonthlyHTML = (data: FinancialExportData): string => {
   const { profile, branding, transactions, period, summary } = data;
   const monthName = MONTH_NAMES[period.month - 1];
   const transactionsByGroup = getTransactionsByGroup(transactions);
+  
+  // Calcular receitas separadamente
+  const receitasExtras = transactions
+    .filter(t => t.item.grupo_principal === 'Receita Não Operacional')
+    .reduce((sum, t) => sum + t.valor, 0);
+  
+  const receitasWorkflow = summary.totalReceitas - receitasExtras;
 
   return `
     <!DOCTYPE html>
@@ -131,13 +137,19 @@ const getMonthlyHTML = (data: FinancialExportData): string => {
       <div class="report-title">
         <h1>Extrato Financeiro</h1>
         <p>${monthName} de ${period.year}</p>
-        <p style="font-size: 0.9em; color: #888;">Gerado em ${formatDateForDisplay(new Date().toISOString())}</p>
+        <p style="font-size: 0.9em; color: #888;">Gerado em ${formatDateForDisplay(formatDateForStorage(new Date()))}</p>
       </div>
 
       <div class="summary-cards">
         <div class="summary-card positive">
-          <h3>Receitas</h3>
-          <p class="value">${formatCurrency(summary.totalReceitas)}</p>
+          <h3>Receitas Operacionais</h3>
+          <p class="value">${formatCurrency(receitasWorkflow)}</p>
+          <small style="font-size: 0.8em; color: #666;">Projetos/Sessões</small>
+        </div>
+        <div class="summary-card positive">
+          <h3>Receitas Extras</h3>
+          <p class="value">${formatCurrency(receitasExtras)}</p>
+          <small style="font-size: 0.8em; color: #666;">Transações financeiras</small>
         </div>
         <div class="summary-card negative">
           <h3>Despesas</h3>
@@ -147,21 +159,29 @@ const getMonthlyHTML = (data: FinancialExportData): string => {
           <h3>Saldo Final</h3>
           <p class="value">${formatCurrency(summary.saldoFinal)}</p>
         </div>
-        <div class="summary-card neutral">
-          <h3>Total de Transações</h3>
-          <p class="value">${transactions.length}</p>
-        </div>
       </div>
+
+      ${receitasWorkflow > 0 ? `
+        <div class="section">
+          <h2>Receitas Operacionais (Workflow)</h2>
+          <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center;">
+            <p style="margin: 0; font-size: 1.1em; color: #333;">
+              Total de receitas dos projetos e sessões: <strong>${formatCurrency(receitasWorkflow)}</strong>
+            </p>
+          </div>
+        </div>
+      ` : ''}
 
       ${Object.entries(transactionsByGroup).map(([group, groupTransactions]) => {
         if (groupTransactions.length === 0) return '';
         
         const groupTotal = groupTransactions.reduce((sum, t) => sum + t.valor, 0);
         const isExpense = group.includes('Despesa') || group === 'Investimento';
+        const groupTitle = group === 'Receita Não Operacional' ? 'Receitas Extras' : group;
         
         return `
           <div class="section">
-            <h2>${group}</h2>
+            <h2>${groupTitle}</h2>
             <table class="transactions-table">
               <thead>
                 <tr>
@@ -183,7 +203,7 @@ const getMonthlyHTML = (data: FinancialExportData): string => {
                   </tr>
                 `).join('')}
                 <tr class="group-total">
-                  <td colspan="2">Total ${group}</td>
+                  <td colspan="2">Total ${groupTitle}</td>
                   <td style="text-align: right;">${formatCurrency(groupTotal)}</td>
                   <td colspan="2"></td>
                 </tr>
@@ -212,9 +232,10 @@ const getAnnualHTML = (data: FinancialExportData): string => {
   }
   
   transactions.forEach(transaction => {
-    const month = new Date(transaction.data_vencimento).getMonth() + 1;
-    if (transactionsByMonth[month]) {
-      transactionsByMonth[month].push(transaction);
+    // Use string splitting to avoid timezone issues
+    const [, m] = (transaction.data_vencimento || '').split('-').map(Number);
+    if (m >= 1 && m <= 12 && transactionsByMonth[m]) {
+      transactionsByMonth[m].push(transaction);
     }
   });
 
@@ -283,8 +304,30 @@ const getAnnualHTML = (data: FinancialExportData): string => {
       <div class="report-title">
         <h1>Relatório Anual</h1>
         <p>Exercício ${period.year}</p>
-        <p style="font-size: 0.9em; color: #888;">Gerado em ${formatDateForDisplay(new Date().toISOString())}</p>
+        <p style="font-size: 0.9em; color: #888;">Gerado em ${formatDateForDisplay(formatDateForStorage(new Date()))}</p>
       </div>
+
+      ${data.workflowMonthlyReceita ? `
+        <div class="section" style="margin: 40px 0;">
+          <h2 style="font-size: 1.4em; color: hsl(var(--primary)); border-bottom: 1px solid hsl(var(--border)); padding-bottom: 10px; margin-bottom: 20px;">Receitas Operacionais por Mês (Workflow)</h2>
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr style="background: hsl(var(--muted));">
+                <th style="border: 1px solid hsl(var(--border)); padding: 12px; text-align: left; font-weight: 600;">Mês</th>
+                <th style="border: 1px solid hsl(var(--border)); padding: 12px; text-align: right; font-weight: 600;">Receitas Operacionais</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${Object.entries(data.workflowMonthlyReceita).map(([monthNum, value]) => `
+                <tr style="background: ${parseInt(monthNum) % 2 === 0 ? 'hsl(var(--muted)/0.3)' : 'transparent'};">
+                  <td style="border: 1px solid hsl(var(--border)); padding: 12px;">${MONTH_NAMES[parseInt(monthNum) - 1]}</td>
+                  <td style="border: 1px solid hsl(var(--border)); padding: 12px; text-align: right; font-weight: 500;">${formatCurrency(value)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      ` : ''}
 
       <div class="annual-summary">
         <h2>Resumo do Exercício ${period.year}</h2>
@@ -317,12 +360,12 @@ const getAnnualHTML = (data: FinancialExportData): string => {
       </div>
 
       <div class="monthly-breakdown">
-        <h2>Evolução Mensal</h2>
+        <h2>Evolução Mensal (Receitas Extras e Despesas)</h2>
         <table class="monthly-table">
           <thead>
             <tr>
               <th>Mês</th>
-              <th>Receitas</th>
+              <th>Receitas Extras</th>
               <th>Despesas</th>
               <th>Saldo</th>
               <th>Transações</th>
