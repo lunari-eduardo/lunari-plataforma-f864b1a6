@@ -13,6 +13,7 @@ import { UserPreferences } from '@/types/userProfile';
 import ThemeColorPicker from '@/components/preferences/ThemeColorPicker';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { AutomationDebugger } from '@/components/debug/AutomationDebugger';
 
 export default function Preferencias() {
   const { preferences, savePreferences, getPreferencesOrDefault } = useUserPreferences();
@@ -42,9 +43,10 @@ useEffect(() => {
           <Card className="mb-6">
             <CardContent className="p-6">
               <Tabs defaultValue="notificacoes" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
+                <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="notificacoes">Notificações</TabsTrigger>
                   <TabsTrigger value="aparencia">Aparência</TabsTrigger>
+                  <TabsTrigger value="debug">Debug</TabsTrigger>
                 </TabsList>
 
 
@@ -182,6 +184,10 @@ useEffect(() => {
                       Salvar e recarregar
                     </Button>
                   </div>
+                </TabsContent>
+
+                <TabsContent value="debug" className="space-y-6 mt-6">
+                  <AutomationDebugger />
                 </TabsContent>
               </Tabs>
             </CardContent>
