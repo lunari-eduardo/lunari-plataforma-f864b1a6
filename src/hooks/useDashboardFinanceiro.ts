@@ -227,6 +227,91 @@ export function useDashboardFinanceiro() {
     };
   }, [transacoesFiltradas, kpisData.totalLucro]);
 
+  // ============= COMPARAÇÕES PERÍODO ANTERIOR =============
+  
+  const comparisonData = useMemo(() => {
+    const ano = parseInt(anoSelecionado);
+    
+    // Definir período anterior baseado no filtro atual
+    let periodoAnterior = { ano: ano, mes: null as number | null };
+    let labelComparacao = '';
+    
+    if (mesSelecionado && mesSelecionado !== 'ano-completo') {
+      // Comparação mês a mês
+      const mesAtual = parseInt(mesSelecionado);
+      if (mesAtual === 1) {
+        // Janeiro -> Dezembro do ano anterior
+        periodoAnterior = { ano: ano - 1, mes: 12 };
+      } else {
+        // Mês anterior do mesmo ano
+        periodoAnterior = { ano, mes: mesAtual - 1 };
+      }
+      labelComparacao = 'em comparação ao mês anterior';
+    } else {
+      // Comparação ano a ano
+      periodoAnterior = { ano: ano - 1, mes: null };
+      labelComparacao = 'em comparação ao ano anterior';
+    }
+    
+    // Buscar dados do período anterior
+    let receitaAnterior = 0;
+    let despesasAnterior = 0;
+    
+    // Receita operacional do período anterior
+    if (periodoAnterior.mes) {
+      // Período anterior específico (mês)
+      const metricasAnterior = getMonthlyMetrics(periodoAnterior.ano, periodoAnterior.mes);
+      if (metricasAnterior) {
+        receitaAnterior += metricasAnterior.receita;
+      }
+    } else {
+      // Período anterior anual
+      const metricasAnterior = getAnnualMetrics(periodoAnterior.ano);
+      receitaAnterior += metricasAnterior.receita;
+    }
+    
+    // Transações do período anterior
+    const transacoesAnterior = transacoesComItens.filter(transacao => {
+      if (!transacao.dataVencimento || typeof transacao.dataVencimento !== 'string') {
+        return false;
+      }
+      const [anoTransacao, mesTransacao] = transacao.dataVencimento.split('-').map(Number);
+      
+      if (periodoAnterior.mes) {
+        return anoTransacao === periodoAnterior.ano && mesTransacao === periodoAnterior.mes;
+      } else {
+        return anoTransacao === periodoAnterior.ano;
+      }
+    });
+    
+    // Receitas extras do período anterior
+    const receitasExtrasAnterior = transacoesAnterior
+      .filter(t => t.status === 'Pago' && t.item?.grupo_principal === 'Receita Não Operacional')
+      .reduce((sum, t) => sum + t.valor, 0);
+    
+    receitaAnterior += receitasExtrasAnterior;
+    
+    // Despesas do período anterior  
+    despesasAnterior = transacoesAnterior
+      .filter(t => t.status === 'Pago' && t.item && ['Despesa Fixa', 'Despesa Variável', 'Investimento'].includes(t.item.grupo_principal))
+      .reduce((sum, t) => sum + t.valor, 0);
+    
+    const lucroAnterior = receitaAnterior - despesasAnterior;
+    
+    // Calcular variações percentuais
+    const calcularVariacao = (atual: number, anterior: number): number | null => {
+      if (anterior === 0) return atual > 0 ? 100 : null;
+      return ((atual - anterior) / anterior) * 100;
+    };
+    
+    return {
+      labelComparacao,
+      variacaoReceita: calcularVariacao(kpisData.totalReceita, receitaAnterior),
+      variacaoLucro: calcularVariacao(kpisData.totalLucro, lucroAnterior),
+      variacaoDespesas: calcularVariacao(kpisData.totalDespesas, despesasAnterior)
+    };
+  }, [anoSelecionado, mesSelecionado, kpisData, transacoesComItens, getMonthlyMetrics, getAnnualMetrics]);
+
   // ============= METAS HISTÓRICAS =============
   
   const metasData = useMemo((): MetasData => {
@@ -512,6 +597,7 @@ export function useDashboardFinanceiro() {
     evolucaoCategoria,
     composicaoDespesas,
     roiData,
+    comparisonData,
     
     // Funções auxiliares
     getNomeMes,

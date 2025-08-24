@@ -5,7 +5,7 @@ import { TrendingUp, TrendingDown, DollarSign, Target, Wallet, CreditCard } from
 interface MetricaProps {
   title: string;
   value: string;
-  change?: number;
+  change?: number | null;
   icon: React.ReactNode;
   color: string;
 }
@@ -22,7 +22,7 @@ function MetricaCard({ title, value, change, icon, color }: MetricaProps) {
       <CardContent className="pt-0 px-3 pb-2">
         <div className="flex items-center justify-between">
           <p className={`text-lg font-bold ${color}`}>{value}</p>
-          {change && (
+          {change !== null && change !== undefined && (
             <div className={`flex items-center text-xs ${change > 0 ? 'text-lunar-success' : 'text-lunar-error'}`}>
               {change > 0 ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
               {Math.abs(change).toFixed(1)}%
@@ -42,6 +42,9 @@ interface DashboardFinanceiroCompactoProps {
   metaReceita: number;
   metaLucro: number;
   lucratividade: number;
+  variacaoReceita?: number | null;
+  variacaoLucro?: number | null;
+  variacaoDespesas?: number | null;
 }
 
 export default function DashboardFinanceiroCompacto({
@@ -51,7 +54,10 @@ export default function DashboardFinanceiroCompacto({
   saldoCaixa,
   metaReceita,
   metaLucro,
-  lucratividade
+  lucratividade,
+  variacaoReceita,
+  variacaoLucro,
+  variacaoDespesas
 }: DashboardFinanceiroCompactoProps) {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -67,21 +73,21 @@ export default function DashboardFinanceiroCompacto({
         <MetricaCard
           title="Total Receita"
           value={formatCurrency(totalReceita)}
-          change={8.5}
+          change={variacaoReceita}
           icon={<DollarSign className="h-3 w-3 text-[hsl(var(--chart-revenue))]" />}
           color="text-[hsl(var(--chart-revenue))]"
         />
         <MetricaCard
           title="Total Despesas"
           value={formatCurrency(totalDespesas)}
-          change={-2.1}
+          change={variacaoDespesas}
           icon={<CreditCard className="h-3 w-3 text-lunar-error" />}
           color="text-lunar-error"
         />
         <MetricaCard
           title="Lucro Líquido"
           value={formatCurrency(lucroLiquido)}
-          change={12.3}
+          change={variacaoLucro}
           icon={<TrendingUp className="h-3 w-3 text-primary" />}
           color="text-primary"
         />

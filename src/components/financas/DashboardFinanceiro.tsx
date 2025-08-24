@@ -26,6 +26,7 @@ export default function DashboardFinanceiro() {
     composicaoDespesas,
     evolucaoCategoria,
     roiData,
+    comparisonData,
     getNomeMes,
     excluirMetaAnual
   } = useDashboardFinanceiro();
@@ -138,7 +139,13 @@ export default function DashboardFinanceiro() {
               <div className="text-xl font-bold text-lunar-success">
                 {formatCurrency(kpisData.totalReceita)}
               </div>
-              <div className="text-xs mt-1 text-muted-foreground">↗ 12% em comparação ao mês anterior</div>
+              {comparisonData.variacaoReceita !== null && (
+                <div className={`text-xs mt-1 flex items-center ${
+                  comparisonData.variacaoReceita > 0 ? 'text-lunar-success' : 'text-destructive'
+                }`}>
+                  {comparisonData.variacaoReceita > 0 ? '↗' : '↘'} {Math.abs(comparisonData.variacaoReceita).toFixed(1)}% {comparisonData.labelComparacao}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -183,7 +190,13 @@ export default function DashboardFinanceiro() {
               <div className="text-xl font-bold text-lunar-success">
                 {formatCurrency(kpisData.totalLucro)}
               </div>
-              <div className="text-xs mt-1 text-muted-foreground">↗ 18% em comparação ao mês anterior</div>
+              {comparisonData.variacaoLucro !== null && (
+                <div className={`text-xs mt-1 flex items-center ${
+                  comparisonData.variacaoLucro > 0 ? 'text-lunar-success' : 'text-destructive'
+                }`}>
+                  {comparisonData.variacaoLucro > 0 ? '↗' : '↘'} {Math.abs(comparisonData.variacaoLucro).toFixed(1)}% {comparisonData.labelComparacao}
+                </div>
+              )}
             </CardContent>
           </Card>
 
