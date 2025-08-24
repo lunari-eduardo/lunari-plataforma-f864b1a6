@@ -14,7 +14,7 @@ import {
   SelectModalTrigger as SelectTrigger, 
   SelectModalValue as SelectValue 
 } from '@/components/ui/select-in-modal';
-import { Search, UserPlus, User, Phone, Mail, Edit, Trash2, MessageCircle } from "lucide-react";
+import { Search, UserPlus, User, Phone, Mail, Edit, Trash2, MessageCircle, Cake } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from 'sonner';
 import { useClientMetrics, ClientMetrics } from '@/hooks/useClientMetrics';
@@ -23,6 +23,7 @@ import { formatDateForDisplay } from '@/utils/dateUtils';
 import { abrirWhatsApp } from '@/utils/whatsappUtils';
 import { ORIGENS_PADRAO } from '@/utils/defaultOrigens';
 import { OriginBadge } from '@/components/shared/OriginBadge';
+import { AniversariantesModal } from '@/components/crm/AniversariantesModal';
 export default function Clientes() {
   const {
     clientes,
@@ -47,6 +48,7 @@ export default function Clientes() {
     origem: ''
   });
   const [openDropdowns, setOpenDropdowns] = useState<Record<string, boolean>>({});
+  const [showAniversariantesModal, setShowAniversariantesModal] = useState(false);
 
   // Obter métricas dos clientes
   const clientMetrics = useClientMetrics(clientes);
@@ -169,10 +171,20 @@ export default function Clientes() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-primary">Clientes</h1>
-          <Button onClick={handleAddClient} className="flex items-center gap-2">
-            <UserPlus className="h-4 w-4" />
-            Novo Cliente
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowAniversariantesModal(true)}
+              className="flex items-center gap-2"
+            >
+              <Cake className="h-4 w-4" />
+              Aniversariantes
+            </Button>
+            <Button onClick={handleAddClient} className="flex items-center gap-2">
+              <UserPlus className="h-4 w-4" />
+              Novo Cliente
+            </Button>
+          </div>
         </div>
         
         {/* Filtros */}
@@ -392,6 +404,13 @@ export default function Clientes() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Modal de Aniversariantes */}
+        <AniversariantesModal
+          open={showAniversariantesModal}
+          onOpenChange={setShowAniversariantesModal}
+          clientes={clientes}
+        />
       </div>
     </ScrollArea>;
 }
