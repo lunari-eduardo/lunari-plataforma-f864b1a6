@@ -20,6 +20,7 @@ import CleanTaskCard from '@/components/tarefas/CleanTaskCard';
 import { DndContext, rectIntersection, useSensor, useSensors, PointerSensor, DragOverlay, useDroppable } from '@dnd-kit/core';
 import { restrictToFirstScrollableAncestor } from '@dnd-kit/modifiers';
 import DraggableTaskCard from '@/components/tarefas/dnd/DraggableTaskCard';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 // Filter tasks based on filters
 function filterTasks(tasks: Task[], filters: TaskFilters): Task[] {
@@ -157,7 +158,7 @@ export default function Tarefas() {
     } = useDroppable({
       id: statusKey
     });
-    return <section className="flex-1 min-w-[260px]">
+    return <section className="flex-shrink-0 w-[280px] max-w-[280px] min-w-[260px]">
         <header className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full" style={{
@@ -276,12 +277,12 @@ export default function Tarefas() {
       }
       setActiveId(null);
     }} onDragCancel={() => setActiveId(null)}>
-          <div className="overflow-x-auto overflow-y-hidden relative" style={{ scrollbarGutter: 'stable' }}>
-            <div className="flex gap-4 min-w-max pr-2 pb-1">
+          <ScrollArea className="w-full">
+            <div className="flex gap-3 pb-4 pr-4" style={{ width: 'fit-content', minWidth: '100%' }}>
               <ChecklistPanel items={checklistItems} addTask={addTask} updateTask={updateTask} deleteTask={deleteTask} doneKey={doneKey} defaultOpenKey={defaultOpenKey} variant="column" />
               {statuses.map(col => <StatusColumn key={col.id} title={col.name} statusKey={col.key as any} color={col.color} />)}
             </div>
-          </div>
+          </ScrollArea>
           <DragOverlay>
             <div className="pointer-events-none">
               {activeId ? (() => {
