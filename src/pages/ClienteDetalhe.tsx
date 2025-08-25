@@ -197,92 +197,94 @@ export default function ClienteDetalhe() {
       return colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-800';
     }
   };
-  return <ScrollArea className="h-[calc(100vh-120px)]">
-      <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button onClick={() => navigate('/clientes')} variant="outline" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
+  return <ScrollArea className="min-h-[calc(100vh-100px)] md:h-[calc(100vh-120px)]">
+      <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 space-y-4 md:space-y-6">
+        {/* Header - Mobile First Layout */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
+          {/* Linha 1: Botão Voltar */}
+          <div className="flex items-center">
+            <Button onClick={() => navigate('/clientes')} variant="outline" size="sm" className="h-8 text-xs">
+              <ArrowLeft className="h-3 w-3 mr-1" />
               Voltar
             </Button>
-            <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10">
-                <AvatarFallback>{getInitials(cliente.nome)}</AvatarFallback>
-              </Avatar>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="font-bold text-base">{cliente.nome}</h1>
-                  <OriginBadge originId={cliente.origem} />
-                </div>
-                <p className="text-muted-foreground text-xs">Perfil completo do cliente</p>
+          </div>
+
+          {/* Linha 2: Avatar + Nome + Origem */}
+          <div className="flex items-center gap-3">
+            <Avatar className="h-8 w-8 md:h-10 md:w-10">
+              <AvatarFallback className="text-xs md:text-sm">{getInitials(cliente.nome)}</AvatarFallback>
+            </Avatar>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="font-bold text-sm md:text-base">{cliente.nome}</h1>
+                <OriginBadge originId={cliente.origem} />
               </div>
+              <p className="text-muted-foreground text-[11px] md:text-xs">Perfil completo do cliente</p>
             </div>
           </div>
 
-          <div className="flex flex-col items-end gap-2">
-            <div className="flex items-center gap-2">
-              {cliente.telefone && (
-                <Button asChild variant="outline" size="sm">
-                  <a href={`https://wa.me/${cliente.telefone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
-                    <MessageCircle className="h-4 w-4 mr-1" />
-                    WhatsApp
-                  </a>
-                </Button>
-              )}
-              {cliente.email && (
-                <Button asChild variant="outline" size="sm">
-                  <a href={`mailto:${cliente.email}`}>
-                    <Mail className="h-4 w-4 mr-1" />
-                    E-mail
-                  </a>
-                </Button>
-              )}
-            </div>
-
-            {/* Métricas Rápidas */}
-            <div className="flex gap-1 md:gap-2">
-              <Card className="p-2 md:p-3">
-                <div className="text-center">
-                  <div className="text-sm md:text-lg font-bold text-primary">{metricas.totalSessoes}</div>
-                  <div className="text-xs text-muted-foreground">Sessões</div>
-                </div>
-              </Card>
-              <Card className="p-2 md:p-3">
-                <div className="text-center">
-                  <div className="text-sm md:text-lg font-bold text-green-600">{formatCurrency(metricas.totalFaturado)}</div>
-                  <div className="text-xs text-muted-foreground">Total</div>
-                </div>
-              </Card>
-              <Card className="p-2 md:p-3">
-                <div className="text-center">
-                  <div className="text-sm md:text-lg font-bold text-blue-600">{formatCurrency(metricas.agendado)}</div>
-                  <div className="text-xs text-muted-foreground">Agendado</div>
-                </div>
-              </Card>
-              <Card className="p-2 md:p-3">
-                <div className="text-center">
-                  <div className="text-sm md:text-lg font-bold text-orange-600">{formatCurrency(metricas.aReceber)}</div>
-                  <div className="text-xs text-muted-foreground">A Receber</div>
-                </div>
-              </Card>
-            </div>
+          {/* Linha 3: Ações com scroll horizontal em mobile */}
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+            {cliente.telefone && (
+              <Button asChild variant="outline" size="sm" className="h-8 text-xs whitespace-nowrap flex-shrink-0">
+                <a href={`https://wa.me/${cliente.telefone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
+                  <MessageCircle className="h-3 w-3 mr-1" />
+                  WhatsApp
+                </a>
+              </Button>
+            )}
+            {cliente.email && (
+              <Button asChild variant="outline" size="sm" className="h-8 text-xs whitespace-nowrap flex-shrink-0">
+                <a href={`mailto:${cliente.email}`}>
+                  <Mail className="h-3 w-3 mr-1" />
+                  E-mail
+                </a>
+              </Button>
+            )}
           </div>
         </div>
 
-        {/* Tabs */}
+        {/* Métricas Rápidas - Grid 2x2 em mobile */}
+        <div className="grid grid-cols-2 gap-2 md:flex md:gap-2 md:justify-end">
+          <Card className="p-2">
+            <div className="text-center">
+              <div className="text-sm md:text-lg font-bold text-primary">{metricas.totalSessoes}</div>
+              <div className="text-[11px] md:text-xs text-muted-foreground">Sessões</div>
+            </div>
+          </Card>
+          <Card className="p-2">
+            <div className="text-center">
+              <div className="text-sm md:text-lg font-bold text-green-600">{formatCurrency(metricas.totalFaturado)}</div>
+              <div className="text-[11px] md:text-xs text-muted-foreground">Total</div>
+            </div>
+          </Card>
+          <Card className="p-2">
+            <div className="text-center">
+              <div className="text-sm md:text-lg font-bold text-blue-600">{formatCurrency(metricas.agendado)}</div>
+              <div className="text-[11px] md:text-xs text-muted-foreground">Agendado</div>
+            </div>
+          </Card>
+          <Card className="p-2">
+            <div className="text-center">
+              <div className="text-sm md:text-lg font-bold text-orange-600">{formatCurrency(metricas.aReceber)}</div>
+              <div className="text-[11px] md:text-xs text-muted-foreground">A Receber</div>
+            </div>
+          </Card>
+        </div>
+
+        {/* Tabs - Responsivo com scroll em mobile */}
         <Tabs defaultValue="contacto" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="contacto" className="flex items-center gap-2">
-              <User className="h-4 w-4" />
+          <TabsList className="overflow-x-auto whitespace-nowrap px-1 gap-2 sm:grid sm:grid-cols-3 w-full">
+            <TabsTrigger value="contacto" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm">
+              <User className="h-3 w-3 md:h-4 md:w-4" />
               Contacto
             </TabsTrigger>
-            <TabsTrigger value="historico" className="flex items-center gap-2">
-              <History className="h-4 w-4" />
+            <TabsTrigger value="historico" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm">
+              <History className="h-3 w-3 md:h-4 md:w-4" />
               Histórico
             </TabsTrigger>
-            <TabsTrigger value="documentos" className="flex items-center gap-2">
-              <FileText className="h-4 w-4" />
+            <TabsTrigger value="documentos" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm">
+              <FileText className="h-3 w-3 md:h-4 md:w-4" />
               Documentos
             </TabsTrigger>
           </TabsList>

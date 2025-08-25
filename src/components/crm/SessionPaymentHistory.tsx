@@ -157,13 +157,13 @@ export function SessionPaymentHistory({
       {/* Histórico de Movimentações */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg font-semibold flex items-center gap-2">
-              <CreditCard className="h-5 w-5 text-primary" />
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+            <CardTitle className="text-sm md:text-lg font-semibold flex items-center gap-2">
+              <CreditCard className="h-4 w-4 md:h-5 md:w-5 text-primary" />
               Histórico de Movimentações
             </CardTitle>
-            <Button onClick={() => setShowPaymentModal(true)} className="gap-2" size="sm">
-              <Plus className="h-4 w-4" />
+            <Button onClick={() => setShowPaymentModal(true)} className="gap-2 w-full sm:w-auto h-8 text-xs" size="sm">
+              <Plus className="h-3 w-3 md:h-4 md:w-4" />
               Adicionar Pagamento
             </Button>
           </div>
@@ -173,16 +173,17 @@ export function SessionPaymentHistory({
               <CreditCard className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>Nenhum pagamento registrado</p>
               <p className="text-sm">Clique em "Adicionar Pagamento" para começar</p>
-            </div> : <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Data / Vencimento</TableHead>
-                  <TableHead>Valor</TableHead>
-                  <TableHead>Tipo / Status</TableHead>
-                  <TableHead>Origem</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
+            </div> : <div className="-mx-2 px-2 overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs md:text-sm">Data / Vencimento</TableHead>
+                    <TableHead className="text-xs md:text-sm">Valor</TableHead>
+                    <TableHead className="text-xs md:text-sm">Tipo / Status</TableHead>
+                    <TableHead className="text-xs md:text-sm">Origem</TableHead>
+                    <TableHead className="text-right text-xs md:text-sm">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
               <TableBody>
                 {payments.sort((a, b) => {
               const dateA = new Date(a.dataVencimento || a.data || '1970-01-01');
@@ -232,21 +233,22 @@ export function SessionPaymentHistory({
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
                           {payment.statusPagamento === 'pendente' && <Button size="sm" variant="ghost" onClick={() => markAsPaid(payment.id)} className="h-8 w-8 p-0">
-                              <CheckCircle2 className="h-4 w-4 text-green-600" />
+                              <CheckCircle2 className="h-3 w-3 md:h-4 md:w-4 text-green-600" />
                             </Button>}
                           {payment.editavel && <>
                               <Button size="sm" variant="ghost" onClick={() => setEditingPayment(payment)} className="h-8 w-8 p-0">
-                                <Edit className="h-4 w-4" />
+                                <Edit className="h-3 w-3 md:h-4 md:w-4" />
                               </Button>
                               <Button size="sm" variant="ghost" onClick={() => deletePayment(payment.id)} className="h-8 w-8 p-0 text-destructive hover:text-destructive">
-                                <Trash2 className="h-4 w-4" />
+                                <Trash2 className="h-3 w-3 md:h-4 md:w-4" />
                               </Button>
                             </>}
                         </div>
                       </TableCell>
                     </TableRow>)}
               </TableBody>
-            </Table>}
+            </Table>
+            </div>}
         </CardContent>
       </Card>
 

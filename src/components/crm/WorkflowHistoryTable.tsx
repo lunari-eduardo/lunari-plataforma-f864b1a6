@@ -115,15 +115,15 @@ export function WorkflowHistoryTable({
   return <div className="space-y-4">
       <Accordion type="single" collapsible className="w-full">
         {workflowData.map((item: any) => <AccordionItem key={item.id} value={item.id} className="border border-lunar-border rounded-lg mb-4 bg-lunar-surface shadow-lunar-sm hover:shadow-lunar-md transition-all duration-200">
-            <AccordionTrigger className="px-4 md:px-6 hover:no-underline py-4 bg-lunar-accent/5 rounded-lg">
-              <div className="flex flex-col md:flex-row md:items-center justify-between w-full gap-4">
+            <AccordionTrigger className="px-3 md:px-6 hover:no-underline py-3 bg-lunar-accent/5 rounded-lg">
+              <div className="flex flex-col md:flex-row md:items-center justify-between w-full gap-3 md:gap-4">
                 {/* Data e Status - Mobile First */}
                 <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
                   <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-lunar-textSecondary" />
-                    <span className="font-medium text-sm text-lunar-text">{formatDateForDisplay(item.data)}</span>
+                    <Calendar className="h-3 w-3 md:h-4 md:w-4 text-lunar-textSecondary" />
+                    <span className="font-medium text-xs md:text-sm text-lunar-text">{formatDateForDisplay(item.data)}</span>
                   </div>
-                  {item.status && <Badge className={`text-xs ${getStatusBadge(item.status)}`}>
+                  {item.status && <Badge className={`text-[11px] md:text-xs ${getStatusBadge(item.status)}`}>
                       {item.status}
                     </Badge>}
                 </div>
@@ -131,35 +131,35 @@ export function WorkflowHistoryTable({
                 {/* Informações do Pacote - Responsivo */}
                 <div className="flex-1 md:mx-8">
                   <div className="text-left space-y-1">
-                    <div className="font-medium text-sm text-lunar-text">
+                    <div className="font-medium text-xs md:text-sm text-lunar-text break-words">
                       {item.pacote || 'Pacote não especificado'}
                     </div>
-                    <div className="text-xs text-lunar-textSecondary">
+                    <div className="text-[11px] md:text-xs text-lunar-textSecondary break-words text-ellipsis overflow-hidden">
                       {item.categoria || ''} {item.categoria && item.descricao && '•'} {item.descricao || ''}
                     </div>
                   </div>
                 </div>
 
-                {/* Métricas Financeiras - Layout Horizontal */}
+                {/* Métricas Financeiras - Grid 2x2 em mobile */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 text-center md:text-right">
                   <div className="flex flex-col items-center md:items-end">
-                    <span className="text-xs text-lunar-textSecondary uppercase tracking-wide">Total</span>
-                    <span className="font-bold text-chart-blue-1 text-xs">{formatCurrency(item.total || 0)}</span>
+                    <span className="text-[11px] md:text-xs text-lunar-textSecondary uppercase tracking-wide">Total</span>
+                    <span className="font-bold text-chart-blue-1 text-[11px] md:text-xs">{formatCurrency(item.total || 0)}</span>
                   </div>
                   
                   <div className="flex flex-col items-center md:items-end">
-                    <span className="text-xs text-lunar-textSecondary">Pago</span>
-                    <span className="font-semibold text-chart-green-1 text-xs text-green-600">{formatCurrency(item.valorPago || 0)}</span>
+                    <span className="text-[11px] md:text-xs text-lunar-textSecondary">Pago</span>
+                    <span className="font-semibold text-chart-green-1 text-[11px] md:text-xs text-green-600">{formatCurrency(item.valorPago || 0)}</span>
                   </div>
                   
                   <div className="flex flex-col items-center md:items-end">
-                    <span className="text-xs text-lunar-textSecondary">Agendado</span>
-                    <span className="font-semibold text-chart-orange-1 text-xs text-orange-400">{formatCurrency(0)}</span>
+                    <span className="text-[11px] md:text-xs text-lunar-textSecondary">Agendado</span>
+                    <span className="font-semibold text-chart-orange-1 text-[11px] md:text-xs text-orange-400">{formatCurrency(0)}</span>
                   </div>
                   
                   <div className="flex flex-col items-center md:items-end">
-                    <span className="text-xs text-lunar-textSecondary">Pendente</span>
-                    <span className="font-semibold text-chart-yellow-1 text-xs text-red-500">{formatCurrency(item.restante || 0)}</span>
+                    <span className="text-[11px] md:text-xs text-lunar-textSecondary">Pendente</span>
+                    <span className="font-semibold text-chart-yellow-1 text-[11px] md:text-xs text-red-500">{formatCurrency(item.restante || 0)}</span>
                   </div>
                 </div>
               </div>
