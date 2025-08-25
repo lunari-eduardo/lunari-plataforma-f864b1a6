@@ -13,6 +13,7 @@ import {
 import { useDialogDropdownContext } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
+import { useNumberInput } from '@/hooks/useNumberInput';
 import ClientSearchCombobox from './ClientSearchCombobox';
 import PackageSearchCombobox from './PackageSearchCombobox';
 import { useContext } from 'react';
@@ -106,6 +107,12 @@ export default function AppointmentForm({
     newClientPhone: '',
     newClientEmail: '',
     newClientOrigem: ''
+  });
+
+  // Enhanced number input for paid amount
+  const paidAmountInput = useNumberInput({
+    value: formData.paidAmount,
+    onChange: (value) => setFormData(prev => ({ ...prev, paidAmount: parseFloat(value) || 0 }))
   });
 
   // Se estiver editando, preencher com dados existentes
@@ -427,16 +434,17 @@ export default function AppointmentForm({
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="appointment-paid-amount" className="text-sm font-medium">Valor pago</Label>
-                <Input 
-                  id="appointment-paid-amount" 
-                  name="paidAmount" 
-                  type="number" 
-                  min="0" 
-                  step="0.01" 
-                  value={formData.paidAmount} 
-                  onChange={handleChange} 
-                  placeholder="0,00" 
-                />
+                 <Input 
+                   id="appointment-paid-amount" 
+                   name="paidAmount" 
+                   type="number" 
+                   min="0" 
+                   step="0.01" 
+                   value={paidAmountInput.displayValue} 
+                   onChange={paidAmountInput.handleChange} 
+                   onFocus={paidAmountInput.handleFocus}
+                   placeholder="" 
+                 />
               </div>
               
               <div className="space-y-2">

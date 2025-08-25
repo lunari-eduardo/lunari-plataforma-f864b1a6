@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatusBadge } from "@/components/workflow/StatusBadge";
 import { toast } from 'sonner';
+import { useNumberInput } from '@/hooks/useNumberInput';
 import { useOrcamentos } from '@/hooks/useOrcamentos';
 import { AppointmentDeleteConfirmModal } from './AppointmentDeleteConfirmModal';
 import { Appointment } from '@/hooks/useAgenda';
@@ -56,6 +57,12 @@ export default function AppointmentDetails({
 
   // Determinar se os campos podem ser editados
   const isEditable = formData.status === 'a confirmar';
+
+  // Enhanced number input for paid amount
+  const paidAmountInput = useNumberInput({
+    value: formData.paidAmount,
+    onChange: (value) => setFormData(prev => ({ ...prev, paidAmount: parseFloat(value) || 0 }))
+  });
 
   // Manipular mudanças nos campos
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -216,7 +223,19 @@ export default function AppointmentDetails({
           
           <div>
             <Label htmlFor="paidAmount" className="text-xs font-medium text-lunar-text">Valor Pago</Label>
-            <Input id="paidAmount" name="paidAmount" type="number" min="0" step="0.01" value={formData.paidAmount} onChange={handleChange} className={`mt-1 ${!isEditable ? 'bg-muted cursor-not-allowed' : ''}`} placeholder="0" disabled={!isEditable} />
+             <Input 
+               id="paidAmount" 
+               name="paidAmount" 
+               type="number" 
+               min="0" 
+               step="0.01" 
+               value={paidAmountInput.displayValue} 
+               onChange={paidAmountInput.handleChange} 
+               onFocus={paidAmountInput.handleFocus}
+               className={`mt-1 ${!isEditable ? 'bg-muted cursor-not-allowed' : ''}`} 
+               placeholder="" 
+               disabled={!isEditable} 
+             />
             {!isEditable}
           </div>
         </div>
