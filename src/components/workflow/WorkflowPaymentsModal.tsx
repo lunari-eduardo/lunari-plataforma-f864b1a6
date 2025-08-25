@@ -167,7 +167,7 @@ export function WorkflowPaymentsModal({
   const valorRestante = Math.max(0, valorTotal - totalPago);
   return <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-3xl lg:max-w-4xl max-w-[95vw] max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-xl lg:max-w-4xl max-w-[95vw] max-h-[95vh] overflow-y-auto px-[11px] mx-[3px]">
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle className="text-lg lg:text-xl font-semibold flex items-center gap-2">
@@ -209,7 +209,7 @@ export function WorkflowPaymentsModal({
             </Card>
 
             {/* Histórico de Movimentações */}
-            <Card>
+            <Card className="px-0">
               <CardHeader className="pb-3">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <CardTitle className="text-base lg:text-lg font-semibold flex items-center gap-2">
@@ -241,10 +241,10 @@ export function WorkflowPaymentsModal({
                       </TableHeader>
                     <TableBody>
                       {payments.sort((a, b) => {
-                    const dateA = new Date(a.dataVencimento || a.data || '1970-01-01');
-                    const dateB = new Date(b.dataVencimento || b.data || '1970-01-01');
-                    return dateB.getTime() - dateA.getTime();
-                  }).map(payment => <TableRow key={payment.id}>
+                      const dateA = new Date(a.dataVencimento || a.data || '1970-01-01');
+                      const dateB = new Date(b.dataVencimento || b.data || '1970-01-01');
+                      return dateB.getTime() - dateA.getTime();
+                    }).map(payment => <TableRow key={payment.id}>
                             <TableCell>
                               <div className="space-y-1">
                                 {payment.statusPagamento === 'pago' && payment.data && <div className="flex items-center gap-1 text-sm">
