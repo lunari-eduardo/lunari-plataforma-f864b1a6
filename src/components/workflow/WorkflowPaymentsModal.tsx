@@ -167,7 +167,7 @@ export function WorkflowPaymentsModal({
   const valorRestante = Math.max(0, valorTotal - totalPago);
   return <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-sm sm:max-w-md lg:max-w-4xl max-w-[95vw] max-h-[90vh] overflow-y-auto px-2 sm:px-4 mx-1 sm:mx-[3px]">
+        <DialogContent className="max-w-sm sm:max-w-md lg:max-w-4xl max-w-[95vw] max-h-[90vh] overflow-y-auto sm:px-4 sm:mx-[3px] mx-[8px] px-[7px]">
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle className="text-sm sm:text-lg lg:text-xl font-semibold flex items-center gap-1 sm:gap-2">
