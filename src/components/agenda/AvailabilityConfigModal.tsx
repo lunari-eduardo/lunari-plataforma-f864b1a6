@@ -5,14 +5,17 @@ import { Switch } from '@/components/ui/switch';
 import { TimeInput } from '@/components/ui/time-input';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 import { format, addDays } from 'date-fns';
 import { useEffect, useMemo, useState } from 'react';
 import { useAvailability } from '@/hooks/useAvailability';
-import type { AvailabilitySlot } from '@/types/availability';
+import type { AvailabilitySlot, AvailabilityType } from '@/types/availability';
 import { toast } from 'sonner';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { useAgenda } from '@/hooks/useAgenda';
+import { Settings, Plus, Trash2 } from 'lucide-react';
 interface AvailabilityConfigModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -27,13 +30,21 @@ export default function AvailabilityConfigModal({
 }: AvailabilityConfigModalProps) {
   const {
     availability,
+    availabilityTypes,
     addAvailabilitySlots,
     deleteAvailabilitySlot,
-    clearAvailabilityForDate
+    clearAvailabilityForDate,
+    addAvailabilityType,
+    updateAvailabilityType,
+    deleteAvailabilityType
   } = useAvailability();
   const [timesList, setTimesList] = useState<string[]>([]);
   const [clearExisting, setClearExisting] = useState<boolean>(true);
   const [selectedWeekdays, setSelectedWeekdays] = useState<number[]>([]);
+  const [selectedTypeId, setSelectedTypeId] = useState<string>('');
+  const [showTypeManager, setShowTypeManager] = useState(false);
+  const [newTypeName, setNewTypeName] = useState('');
+  const [newTypeColor, setNewTypeColor] = useState('#3b82f6');
   const weekDaysLabels = useMemo(() => ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'], []);
   const allWeekdays = useMemo(() => [0, 1, 2, 3, 4, 5, 6], []);
   const allSelected = selectedWeekdays.length === 7;
@@ -45,7 +56,11 @@ export default function AvailabilityConfigModal({
     setTimesList(initialTime ? [initialTime] : []);
     setStartDate(date);
     setEndDate(date);
-  }, [initialTime, isOpen, date]);
+    // Select first available type or default
+    if (availabilityTypes.length > 0 && !selectedTypeId) {
+      setSelectedTypeId(availabilityTypes[0].id);
+    }
+  }, [initialTime, isOpen, date, availabilityTypes, selectedTypeId]);
   const [startDate, setStartDate] = useState<Date>(date);
   const [endDate, setEndDate] = useState<Date>(date);
   const [manualTimesText, setManualTimesText] = useState<string>('');
@@ -116,11 +131,15 @@ export default function AvailabilityConfigModal({
           availability.filter(a => a.date === ds && a.time === t).forEach(a => deleteAvailabilitySlot(a.id));
         }
         if (!existingAvailabilitySet.has(key) && !addedKeys.has(key)) {
+          const selectedType = availabilityTypes.find(type => type.id === selectedTypeId);
           toAdd.push({
             id: '',
             date: ds,
             time: t,
-            duration: 60
+            duration: 60,
+            typeId: selectedTypeId,
+            label: selectedType?.name,
+            color: selectedType?.color
           });
           addedKeys.add(key);
         } else {
@@ -179,6 +198,42 @@ export default function AvailabilityConfigModal({
     clearAvailabilityForDate(dateStr);
     onClose();
   };
+
+  const handleAddType = () => {
+    if (!newTypeName.trim()) {
+      toast.error('Nome do tipo é obrigatório');
+      return;
+    }
+    
+    const newType: AvailabilityType = {
+      id: crypto.randomUUID(),
+      name: newTypeName.trim(),
+      color: newTypeColor
+    };
+    
+    addAvailabilityType(newType);
+    setSelectedTypeId(newType.id);
+    setNewTypeName('');
+    setNewTypeColor('#3b82f6');
+    setShowTypeManager(false);
+    toast.success('Tipo de disponibilidade criado');
+  };
+
+  const handleDeleteType = (typeId: string) => {
+    if (availabilityTypes.length <= 1) {
+      toast.error('Não é possível excluir o último tipo');
+      return;
+    }
+    
+    deleteAvailabilityType(typeId);
+    if (selectedTypeId === typeId) {
+      const remainingTypes = availabilityTypes.filter(t => t.id !== typeId);
+      setSelectedTypeId(remainingTypes[0]?.id || '');
+    }
+    toast.success('Tipo de disponibilidade excluído');
+  };
+
+  const selectedType = availabilityTypes.find(type => type.id === selectedTypeId);
   return <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[520px]">
         <DialogHeader>
@@ -189,6 +244,102 @@ export default function AvailabilityConfigModal({
         </DialogHeader>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="col-span-1 md:col-span-2 space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>Tipo de disponibilidade</Label>
+              <Popover open={showTypeManager} onOpenChange={setShowTypeManager}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 px-2">
+                    <Settings className="h-4 w-4 mr-1" />
+                    Gerenciar
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 bg-background border shadow-lg" align="end">
+                  <div className="space-y-4 p-1">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Criar novo tipo</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Nome do tipo"
+                          value={newTypeName}
+                          onChange={(e) => setNewTypeName(e.target.value)}
+                          className="flex-1"
+                        />
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="color"
+                            value={newTypeColor}
+                            onChange={(e) => setNewTypeColor(e.target.value)}
+                            className="w-8 h-8 rounded border cursor-pointer"
+                          />
+                          <Button onClick={handleAddType} size="sm">
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Tipos existentes</Label>
+                      <div className="space-y-1 max-h-32 overflow-y-auto">
+                        {availabilityTypes.map(type => (
+                          <div key={type.id} className="flex items-center justify-between p-2 bg-muted rounded">
+                            <div className="flex items-center gap-2">
+                              <div 
+                                className="w-3 h-3 rounded-full border"
+                                style={{ backgroundColor: type.color }}
+                              />
+                              <span className="text-sm">{type.name}</span>
+                            </div>
+                            {availabilityTypes.length > 1 && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteType(type.id)}
+                                className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+            
+            <Select value={selectedTypeId} onValueChange={setSelectedTypeId}>
+              <SelectTrigger className="bg-background">
+                <SelectValue placeholder="Selecione um tipo">
+                  {selectedType && (
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-3 h-3 rounded-full border"
+                        style={{ backgroundColor: selectedType.color }}
+                      />
+                      {selectedType.name}
+                    </div>
+                  )}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent className="bg-background border shadow-lg">
+                {availabilityTypes.map(type => (
+                  <SelectItem key={type.id} value={type.id}>
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-3 h-3 rounded-full border"
+                        style={{ backgroundColor: type.color }}
+                      />
+                      {type.name}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="space-y-2">
             <Label>Data inicial</Label>
             <Popover>
