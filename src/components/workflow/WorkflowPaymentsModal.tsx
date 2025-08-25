@@ -176,9 +176,7 @@ export function WorkflowPaymentsModal({
                 <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-primary" />
                 <span className="truncate text-base">Gerenciar Pagamentos - {sessionData.nome}</span>
               </DialogTitle>
-              <Button variant="ghost" size="sm" onClick={onClose}>
-                <X className="h-4 w-4" />
-              </Button>
+              
             </div>
             
           </DialogHeader>
