@@ -826,15 +826,18 @@ return <td className={`
                 {renderCell('extraPhotoQty', (() => {
                   const ExtraPhotoQtyInput = () => {
                     const [localValue, setLocalValue] = useState(String(session.qtdFotosExtra || ''));
-                    const debouncedValue = useDebounce(localValue, 500);
+                    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
                     
                     const { displayValue, handleFocus, handleChange } = useNumberInput({
                       value: localValue,
-                      onChange: setLocalValue
+                      onChange: (value) => {
+                        setLocalValue(value);
+                        setHasUnsavedChanges(value !== String(session.qtdFotosExtra || ''));
+                      }
                     });
 
-                    useEffect(() => {
-                      const qtd = parseInt(debouncedValue) || 0;
+                    const saveValue = () => {
+                      const qtd = parseInt(localValue) || 0;
                       if (qtd !== session.qtdFotosExtra) {
                         handleFieldUpdateStable(session.id, 'qtdFotosExtra', qtd);
 
@@ -862,12 +865,22 @@ return <td className={`
                         
                         handleFieldUpdateStable(session.id, 'valorTotalFotoExtra', formatCurrency(total));
                       }
-                    }, [debouncedValue]);
+                      setHasUnsavedChanges(false);
+                    };
 
-                    // Update local value when session value changes externally
-                    useEffect(() => {
-                      setLocalValue(String(session.qtdFotosExtra || ''));
-                    }, [session.qtdFotosExtra]);
+                    const handleKeyDown = (e: React.KeyboardEvent) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        saveValue();
+                        (e.target as HTMLInputElement).blur();
+                      }
+                    };
+
+                    const handleBlur = () => {
+                      if (hasUnsavedChanges) {
+                        saveValue();
+                      }
+                    };
 
                     return (
                       <Input 
@@ -876,7 +889,9 @@ return <td className={`
                         value={displayValue}
                         onChange={handleChange}
                         onFocus={handleFocus}
-                        className="h-6 text-xs p-1 w-full border-none bg-transparent focus:bg-lunar-accent/10 transition-colors duration-150 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
+                        onKeyDown={handleKeyDown}
+                        onBlur={handleBlur}
+                        className={`h-6 text-xs p-1 w-full border-none bg-transparent focus:bg-lunar-accent/10 transition-colors duration-150 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${hasUnsavedChanges ? 'bg-yellow-50' : ''}`}
                         placeholder="" 
                         autoComplete="off" 
                       />
