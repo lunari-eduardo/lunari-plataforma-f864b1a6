@@ -312,13 +312,13 @@ export default function Pacotes({
                       </div>
                       <div>
                         <span className="text-muted-foreground block text-xs">Valor Base</span>
-                        <Input type="number" value={pacote.valor_base} onChange={e => atualizarPacote(pacote.id, 'valor_base', parseFloat(e.target.value) || 0)} className="h-8 text-xs" />
+                        <Input type="number" value={pacote.valor_base} onChange={e => atualizarPacote(pacote.id, 'valor_base', parseFloat(e.target.value) || 0)} className="h-8 text-xs [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                       </div>
                     </div>
                     
                     {isFixedPricing && <div>
                         <span className="text-muted-foreground block text-xs mb-1">Valor Foto Extra</span>
-                        <Input type="number" value={pacote.valor_foto_extra} onChange={e => atualizarPacote(pacote.id, 'valor_foto_extra', parseFloat(e.target.value) || 0)} className="h-8 text-xs" />
+                        <Input type="number" value={pacote.valor_foto_extra} onChange={e => atualizarPacote(pacote.id, 'valor_foto_extra', parseFloat(e.target.value) || 0)} className="h-8 text-xs [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                       </div>}
                     
                     <div>
@@ -376,12 +376,12 @@ export default function Pacotes({
                     
                     {/* Valor Base - Editável */}
                     <TableCell className="p-2">
-                      <Input type="number" value={pacote.valor_base} onChange={e => atualizarPacote(pacote.id, 'valor_base', parseFloat(e.target.value) || 0)} className="h-7 text-xs border-0 bg-transparent hover:bg-muted/50 focus:bg-card focus:border-border" />
+                      <Input type="number" value={pacote.valor_base} onChange={e => atualizarPacote(pacote.id, 'valor_base', parseFloat(e.target.value) || 0)} className="h-7 text-xs border-0 bg-transparent hover:bg-muted/50 focus:bg-card focus:border-border [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                     </TableCell>
                     
                     {/* Valor Foto Extra - Editável apenas no modelo fixo */}
                     <TableCell className="p-2">
-                      {isFixedPricing ? <Input type="number" value={pacote.valor_foto_extra} onChange={e => atualizarPacote(pacote.id, 'valor_foto_extra', parseFloat(e.target.value) || 0)} className="h-7 text-xs border-0 bg-transparent hover:bg-muted/50 focus:bg-card focus:border-border" /> : <div className="h-7 flex items-center text-xs text-muted-foreground px-2">
+                      {isFixedPricing ? <Input type="number" value={pacote.valor_foto_extra} onChange={e => atualizarPacote(pacote.id, 'valor_foto_extra', parseFloat(e.target.value) || 0)} className="h-7 text-xs border-0 bg-transparent hover:bg-muted/50 focus:bg-card focus:border-border [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" /> : <div className="h-7 flex items-center text-xs text-muted-foreground px-2">
                           {configPrecificacao.modelo === 'global' ? 'Tabela Global' : 'Por Categoria'}
                         </div>}
                     </TableCell>

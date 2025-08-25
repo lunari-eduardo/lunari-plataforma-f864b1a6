@@ -145,7 +145,7 @@ export default function PacoteForm({
           <Input id="pacote-valor-base" type="number" placeholder="0,00" value={formData.valor_base || ''} onChange={e => setFormData({
           ...formData,
           valor_base: Number(e.target.value)
-        })} className="bg-muted" />
+        })} className="bg-muted [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
         </div>
         
         <div>
@@ -155,7 +155,7 @@ export default function PacoteForm({
           <Input id="pacote-valor-foto" type="number" placeholder="0,00" value={formData.valor_foto_extra || ''} onChange={e => setFormData({
           ...formData,
           valor_foto_extra: Number(e.target.value)
-        })} className="bg-muted" />
+        })} className="bg-muted [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
         </div>
       </div>
       
@@ -168,7 +168,7 @@ export default function PacoteForm({
               <span className="flex-1 text-sm">{getNomeProduto(produtoIncluido.produtoId)}</span>
               <div className="flex items-center gap-2">
                 <label className="text-xs text-muted-foreground">Qtd:</label>
-                <Input type="number" min="1" value={produtoIncluido.quantidade} onChange={e => atualizarQuantidadeProduto(produtoIncluido.produtoId, Number(e.target.value))} className="w-16 h-7 text-xs" />
+                <Input type="number" min="1" value={produtoIncluido.quantidade} onChange={e => atualizarQuantidadeProduto(produtoIncluido.produtoId, Number(e.target.value))} className="w-16 h-7 text-xs [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                 <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => removerProdutoIncluido(produtoIncluido.produtoId)}>
                   <X className="h-3 w-3" />
                 </Button>
