@@ -13,7 +13,6 @@ import { useAppContext } from '@/contexts/AppContext';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useNumberInput } from '@/hooks/useNumberInput';
 import { formatToDayMonth, formatDateForDisplay } from "@/utils/dateUtils";
-
 import { calcularTotalFotosExtras, obterConfiguracaoPrecificacao, obterTabelaGlobal, obterTabelaCategoria, calcularValorPorFoto, formatarMoeda, calcularComRegrasProprias, migrarRegrasParaItemAntigo } from '@/utils/precificacaoUtils';
 import { RegrasCongeladasIndicator } from './RegrasCongeladasIndicator';
 import type { SessionData } from '@/types/workflow';
@@ -161,7 +160,9 @@ export function WorkflowTable({
   const [initialWidth, setInitialWidth] = useState(0);
   const [currentColumnWidths, setCurrentColumnWidths] = useState<Record<string, number>>({});
   const [modeloPrecificacao, setModeloPrecificacao] = useState('fixo');
-  const { addPayment } = useAppContext();
+  const {
+    addPayment
+  } = useAppContext();
 
   // Stable field update callback
   const handleFieldUpdateStable = useCallback((sessionId: string, field: string, value: any) => {
@@ -175,7 +176,6 @@ export function WorkflowTable({
       ...columnWidths
     });
   }, [columnWidths, responsiveColumnWidths]);
-
 
   // Escutar mudanças no modelo de precificação
   useEffect(() => {
@@ -198,31 +198,27 @@ export function WorkflowTable({
   const calcularValorRealPorFoto = useCallback((session: SessionData) => {
     if (session.regrasDePrecoFotoExtraCongeladas) {
       const regras = session.regrasDePrecoFotoExtraCongeladas;
-      
       switch (regras.modelo) {
         case 'fixo':
           return regras.valorFixo || 0;
-        
         case 'global':
         case 'categoria':
           const tabela = regras.modelo === 'global' ? regras.tabelaGlobal : regras.tabelaCategoria;
           if (!tabela || !tabela.faixas || tabela.faixas.length === 0) {
             return 0;
           }
-          
+
           // Para tabelas progressivas, mostrar o valor da faixa atual baseado na quantidade
           const quantidade = session.qtdFotosExtra || 1;
           const faixasOrdenadas = [...tabela.faixas].sort((a, b) => a.min - b.min);
-          
           for (const faixa of faixasOrdenadas) {
             if (quantidade >= faixa.min && (faixa.max === null || quantidade <= faixa.max)) {
               return faixa.valor;
             }
           }
-          
+
           // Se não encontrou faixa, usar a última faixa
           return faixasOrdenadas[faixasOrdenadas.length - 1]?.valor || 0;
-        
         default:
           return 0;
       }
@@ -232,7 +228,6 @@ export function WorkflowTable({
       return parseFloat(valorStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
     }
   }, []);
-
   const calculateTotal = useCallback((session: SessionData) => {
     try {
       // LÓGICA SIMPLIFICADA: Calcular baseado nos componentes - desconto
@@ -251,15 +246,14 @@ export function WorkflowTable({
         valorProdutosManuais = produtosManuais.reduce((total, p) => {
           const valorUnit = parseFloat(String(p.valorUnitario || 0)) || 0;
           const quantidade = parseFloat(String(p.quantidade || 0)) || 0;
-          return total + (valorUnit * quantidade);
+          return total + valorUnit * quantidade;
         }, 0);
       } else if (session.valorTotalProduto) {
         const valorProdutoStr = typeof session.valorTotalProduto === 'string' ? session.valorTotalProduto : String(session.valorTotalProduto || '0');
         valorProdutosManuais = parseFloat(valorProdutoStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
       }
-      
       const totalCalculado = valorPacote + valorFotoExtra + valorProdutosManuais + valorAdicional - desconto;
-      
+
       // Garantir que o resultado é um número válido
       if (isNaN(totalCalculado) || !isFinite(totalCalculado)) {
         console.warn('❌ Total calculado é NaN para sessão:', session.id, {
@@ -271,20 +265,18 @@ export function WorkflowTable({
         });
         return 0;
       }
-      
       return Math.max(0, totalCalculado); // Garantir que não seja negativo
     } catch (error) {
       console.error('❌ Erro no cálculo de total para sessão:', session.id, error);
       return 0;
     }
   }, []);
-  
   const calculateRestante = useCallback((session: SessionData) => {
     const total = calculateTotal(session);
     const valorPagoStr = typeof session.valorPago === 'string' ? session.valorPago : String(session.valorPago || '0');
     const valorPago = parseFloat(valorPagoStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
     const restante = total - valorPago;
-    
+
     // Garantir que o resultado é um número válido
     if (isNaN(restante) || !isFinite(restante)) {
       console.warn('❌ Restante calculado é NaN para sessão:', session.id, {
@@ -293,7 +285,6 @@ export function WorkflowTable({
       });
       return 0;
     }
-    
     return restante;
   }, [calculateTotal]);
 
@@ -301,28 +292,26 @@ export function WorkflowTable({
   const getPaymentPlanInfo = useCallback((sessionId: string) => {
     const session = sessions.find(s => s.id === sessionId);
     if (!session || !session.pagamentos || !Array.isArray(session.pagamentos)) {
-      return { hasScheduled: false, hasPaid: false };
+      return {
+        hasScheduled: false,
+        hasPaid: false
+      };
     }
-    
     const hasPendingPayments = session.pagamentos.some(p => p.statusPagamento === 'pendente');
     const hasPaidPayments = session.pagamentos.some(p => p.statusPagamento === 'pago');
     const hasInstallments = session.pagamentos.some(p => p.tipo === 'parcelado');
-    
-    return { 
+    return {
       hasScheduled: hasPendingPayments,
       hasPaid: hasPaidPayments,
       hasInstallments,
-      totalPending: session.pagamentos
-        .filter(p => p.statusPagamento === 'pendente')
-        .reduce((acc, p) => acc + (p.valor || 0), 0)
+      totalPending: session.pagamentos.filter(p => p.statusPagamento === 'pendente').reduce((acc, p) => acc + (p.valor || 0), 0)
     };
   }, [sessions]);
-
   const handlePaymentAdd = useCallback((sessionId: string) => {
     const value = paymentInputs[sessionId];
     if (value && !isNaN(parseFloat(value))) {
       const paymentValue = parseFloat(value);
-      
+
       // Usar a função addPayment do contexto
       addPayment(sessionId, paymentValue);
 
@@ -394,7 +383,6 @@ export function WorkflowTable({
       stopContinuousScroll();
     };
   }, [stopContinuousScroll]);
-  
   const formatCurrency = useCallback((value: number) => {
     return `R$ ${value.toFixed(2).replace('.', ',')}`;
   }, []);
@@ -434,8 +422,7 @@ export function WorkflowTable({
         const session = sessions.find(s => s.id === sessionId);
         if (session) {
           const novaQuantidade = parseInt(newValue) || 0;
-          
-          
+
           // Como não temos acesso direto às regras congeladas aqui, 
           // vamos disparar o recálculo através do contexto
           setTimeout(() => {
@@ -463,78 +450,63 @@ export function WorkflowTable({
     const key = getEditingKey(session.id, field);
     const editingValue = editingValues[key];
     const displayValue = editingValue !== undefined ? editingValue : value || '';
-    
+
     // Campos que precisam de formatação monetária
     const isMoneyField = ['desconto', 'valorTotalFotoExtra', 'valorAdicional'].includes(field);
-    
-    return <Input 
-      type={type} 
-      value={displayValue} 
-      readOnly={readonly}
-      onFocus={(e) => {
-        if (!readonly) {
-          if (isMoneyField) {
-            // Para campos monetários, mostrar apenas o número para edição
-            const numericValue = displayValue.replace(/[^\d,]/g, '');
-            handleEditStart(session.id, field, numericValue || '0');
-            // Selecionar todo o texto para facilitar edição
-            setTimeout(() => e.target.select(), 0);
+    return <Input type={type} value={displayValue} readOnly={readonly} onFocus={e => {
+      if (!readonly) {
+        if (isMoneyField) {
+          // Para campos monetários, mostrar apenas o número para edição
+          const numericValue = displayValue.replace(/[^\d,]/g, '');
+          handleEditStart(session.id, field, numericValue || '0');
+          // Selecionar todo o texto para facilitar edição
+          setTimeout(() => e.target.select(), 0);
+        } else {
+          handleEditStart(session.id, field, value || '');
+        }
+      }
+    }} onChange={e => {
+      if (!readonly) {
+        let newValue = e.target.value;
+
+        // Para campos monetários, permitir apenas números e vírgula durante a digitação
+        if (isMoneyField) {
+          // Permitir apenas números, vírgula e ponto
+          newValue = newValue.replace(/[^\d,\.]/g, '');
+          // Substituir ponto por vírgula para padronização brasileira
+          newValue = newValue.replace('.', ',');
+          // Permitir apenas uma vírgula
+          const parts = newValue.split(',');
+          if (parts.length > 2) {
+            newValue = parts[0] + ',' + parts.slice(1).join('');
+          }
+          // Limitar casas decimais a 2
+          if (parts[1] && parts[1].length > 2) {
+            newValue = parts[0] + ',' + parts[1].substring(0, 2);
+          }
+        }
+        handleEditChange(session.id, field, newValue);
+      }
+    }} onBlur={() => {
+      if (!readonly) {
+        // Na saída do campo (blur), aplicar formatação final para campos monetários
+        if (isMoneyField) {
+          const currentValue = editingValues[key] || '';
+          if (currentValue) {
+            const numericValue = parseFloat(currentValue.replace(',', '.')) || 0;
+            const formattedValue = `R$ ${numericValue.toFixed(2).replace('.', ',')}`;
+            handleEditChange(session.id, field, formattedValue);
           } else {
-            handleEditStart(session.id, field, value || '');
+            handleEditChange(session.id, field, 'R$ 0,00');
           }
         }
-      }} 
-      onChange={e => {
-        if (!readonly) {
-          let newValue = e.target.value;
-          
-          // Para campos monetários, permitir apenas números e vírgula durante a digitação
-          if (isMoneyField) {
-            // Permitir apenas números, vírgula e ponto
-            newValue = newValue.replace(/[^\d,\.]/g, '');
-            // Substituir ponto por vírgula para padronização brasileira
-            newValue = newValue.replace('.', ',');
-            // Permitir apenas uma vírgula
-            const parts = newValue.split(',');
-            if (parts.length > 2) {
-              newValue = parts[0] + ',' + parts.slice(1).join('');
-            }
-            // Limitar casas decimais a 2
-            if (parts[1] && parts[1].length > 2) {
-              newValue = parts[0] + ',' + parts[1].substring(0, 2);
-            }
-          }
-          
-          handleEditChange(session.id, field, newValue);
-        }
-      }} 
-      onBlur={() => {
-        if (!readonly) {
-          // Na saída do campo (blur), aplicar formatação final para campos monetários
-          if (isMoneyField) {
-            const currentValue = editingValues[key] || '';
-            if (currentValue) {
-              const numericValue = parseFloat(currentValue.replace(',', '.')) || 0;
-              const formattedValue = `R$ ${numericValue.toFixed(2).replace('.', ',')}`;
-              handleEditChange(session.id, field, formattedValue);
-            } else {
-              handleEditChange(session.id, field, 'R$ 0,00');
-            }
-          }
-          handleEditFinish(session.id, field);
-        }
-      }} 
-      onKeyPress={e => {
-        if (!readonly) {
-          handleKeyPress(e, session.id, field);
-        }
-      }} 
-      className={`h-6 text-xs p-1 w-full border-none bg-transparent transition-colors duration-150 ${
-        readonly ? 'cursor-default' : 'focus:bg-lunar-accent/10'
-      }`} 
-      placeholder={placeholder} 
-      autoComplete="off" 
-    />;
+        handleEditFinish(session.id, field);
+      }
+    }} onKeyPress={e => {
+      if (!readonly) {
+        handleKeyPress(e, session.id, field);
+      }
+    }} className={`h-6 text-xs p-1 w-full border-none bg-transparent transition-colors duration-150 ${readonly ? 'cursor-default' : 'focus:bg-lunar-accent/10'}`} placeholder={placeholder} autoComplete="off" />;
   }, [editingValues, handleFieldUpdateStable]);
   const handleStatusChangeStable = useCallback((sessionId: string, newStatus: string) => {
     onStatusChange(sessionId, newStatus);
@@ -606,11 +578,9 @@ export function WorkflowTable({
   const renderCell = useCallback((key: string, content: React.ReactNode, isFixed = false) => {
     if (!visibleColumns[key]) return null;
     const width = currentColumnWidths[key] || responsiveColumnWidths[key];
-return <td className={`
+    return <td className={`
           p-2 border-r border-lunar-border min-h-[40px] text-xs transition-colors duration-150 ease-in-out
-          ${isFixed 
-            ? 'sticky z-20 bg-lunar-surface shadow-sm' 
-            : 'group-hover:bg-lunar-accent/5 group-focus-within:bg-lunar-accent/10'}
+          ${isFixed ? 'sticky z-20 bg-lunar-surface shadow-sm' : 'group-hover:bg-lunar-accent/5 group-focus-within:bg-lunar-accent/10'}
           ${key === 'date' ? 'border-l-2 border-l-transparent group-hover:border-l-lunar-accent/40 group-focus-within:border-l-lunar-accent' : ''}
         `} style={{
       width: `${width}px`,
@@ -665,20 +635,11 @@ return <td className={`
                 <tr key={session.id} className="group transition-colors duration-150 ease-in-out focus-within:ring-1 focus-within:ring-lunar-accent/30">
                 {renderCell('date', <div className="font-medium">{formatToDayMonth(session.data)}</div>, true)}
                 
-{renderCell('client', <div className="flex items-center gap-2">
-                    {session.clienteId ? (
-                      <Link 
-                        to={`/clientes/${session.clienteId}`}
-                        className="font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
-                      >
+                {renderCell('client', <div className="flex items-center gap-2">
+                    {session.clienteId ? <Link to={`/clientes/${session.clienteId}`} className="font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer">
                         {session.nome}
-                      </Link>
-                    ) : (
-                      <span className="font-medium text-gray-600">{session.nome}</span>
-                    )}
-                    {session.produtosList && session.produtosList.length > 0 && (
-                      <Badge variant="secondary" className="h-5 text-[10px] px-1.5">Produtos</Badge>
-                    )}
+                      </Link> : <span className="font-medium text-gray-600">{session.nome}</span>}
+                    {session.produtosList && session.produtosList.length > 0 && <Badge variant="secondary" className="h-5 text-[10px] px-1.5">Prod.</Badge>}
                     {session.whatsapp && <a href={`https://wa.me/${session.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
                         <MessageCircle className="h-3 w-3 text-green-600 hover:text-green-700 cursor-pointer" />
                       </a>}
@@ -700,11 +661,9 @@ return <td className={`
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent className="z-50 bg-lunar-surface text-foreground border border-lunar-border shadow-lg">
-                      {statusOptions.map(status => (
-                        <SelectItem key={status} value={status} className="text-xs p-2">
+                      {statusOptions.map(status => <SelectItem key={status} value={status} className="text-xs p-2">
                           <StatusBadge status={status} />
-                        </SelectItem>
-                      ))}
+                        </SelectItem>)}
                     </SelectContent>
                   </Select>)}
 
@@ -726,21 +685,15 @@ return <td className={`
 
                 {renderCell('packageValue', renderEditableInput(session, 'valorPacote', session.valorPacote || '', 'text', 'R$ 0,00', true))}
 
-                {renderCell('discount', renderEditableInput(session, 'desconto', 
-                  session.desconto ? 
-                    `R$ ${(typeof session.desconto === 'number' ? session.desconto : parseFloat(String(session.desconto).replace(/[^\d,.-]/g, '').replace(',', '.')) || 0).toFixed(2).replace('.', ',')}` : 
-                    'R$ 0,00', 
-                  'text', 'R$ 0,00'))}
+                {renderCell('discount', renderEditableInput(session, 'desconto', session.desconto ? `R$ ${(typeof session.desconto === 'number' ? session.desconto : parseFloat(String(session.desconto).replace(/[^\d,.-]/g, '').replace(',', '.')) || 0).toFixed(2).replace('.', ',')}` : 'R$ 0,00', 'text', 'R$ 0,00'))}
 
                 {renderCell('extraPhotoValue', (() => {
                   if (session.regrasDePrecoFotoExtraCongeladas) {
                     // Item com regras congeladas: mostrar valor e modelo aplicado
                     const regras = session.regrasDePrecoFotoExtraCongeladas;
                     const valorExibido = calcularValorRealPorFoto(session);
-                    
                     let labelModelo = '';
                     let tooltipInfo = '';
-                    
                     switch (regras.modelo) {
                       case 'fixo':
                         labelModelo = 'Fixo';
@@ -758,14 +711,9 @@ return <td className={`
                         labelModelo = 'Congelado';
                         tooltipInfo = 'Regras congeladas';
                     }
-                    
-                    return (
-                      <div className="flex flex-col gap-1" title={tooltipInfo}>
+                    return <div className="flex flex-col gap-1" title={tooltipInfo}>
                         <div className="flex items-center gap-1">
-                          <RegrasCongeladasIndicator 
-                            regras={session.regrasDePrecoFotoExtraCongeladas} 
-                            compact={true}
-                          />
+                          <RegrasCongeladasIndicator regras={session.regrasDePrecoFotoExtraCongeladas} compact={true} />
                           <span className="text-xs text-muted-foreground">
                             ({labelModelo})
                           </span>
@@ -773,14 +721,11 @@ return <td className={`
                         <span className="text-xs font-medium text-blue-600">
                           {formatCurrency(valorExibido)}
                         </span>
-                      </div>
-                    );
+                      </div>;
                   } else {
                     // Item sem regras congeladas: calcular valor unitário atual baseado no modelo global
                     const config = obterConfiguracaoPrecificacao();
-                    
                     let valorUnitario = 0;
-                    
                     if (config.modelo === 'fixo') {
                       // Modelo fixo por pacote - usar valor já armazenado na sessão
                       const valorStr = typeof session.valorFotoExtra === 'string' ? session.valorFotoExtra : String(session.valorFotoExtra || '0');
@@ -798,7 +743,6 @@ return <td className={`
                       const categorias = JSON.parse(localStorage.getItem('configuracoes_categorias') || '[]');
                       const categoriaObj = categorias.find((cat: any) => cat.nome === session.categoria);
                       const categoriaId = categoriaObj?.id || session.categoria;
-                      
                       if (categoriaId) {
                         const tabelaCategoria = obterTabelaCategoria(categoriaId);
                         if (tabelaCategoria && session.qtdFotosExtra && session.qtdFotosExtra > 0) {
@@ -808,9 +752,7 @@ return <td className={`
                         }
                       }
                     }
-                    
-                    return (
-                      <div className="flex flex-col gap-1">
+                    return <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-1">
                           <div className="w-2 h-2 bg-orange-400 rounded-full" title="Migração necessária" />
                           <span className="text-xs text-orange-600">Migração</span>
@@ -818,8 +760,7 @@ return <td className={`
                         <span className="text-xs font-medium text-blue-600">
                           {formatCurrency(valorUnitario)}
                         </span>
-                      </div>
-                    );
+                      </div>;
                   }
                 })())}
 
@@ -827,15 +768,17 @@ return <td className={`
                   const ExtraPhotoQtyInput = () => {
                     const [localValue, setLocalValue] = useState(String(session.qtdFotosExtra || ''));
                     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-                    
-                    const { displayValue, handleFocus, handleChange } = useNumberInput({
+                    const {
+                      displayValue,
+                      handleFocus,
+                      handleChange
+                    } = useNumberInput({
                       value: localValue,
-                      onChange: (value) => {
+                      onChange: value => {
                         setLocalValue(value);
                         setHasUnsavedChanges(value !== String(session.qtdFotosExtra || ''));
                       }
                     });
-
                     const saveValue = () => {
                       const qtd = parseInt(localValue) || 0;
                       if (qtd !== session.qtdFotosExtra) {
@@ -843,31 +786,27 @@ return <td className={`
 
                         // CORREÇÃO: Usar regras congeladas quando disponíveis
                         let total = 0;
-                        
                         if (session.regrasDePrecoFotoExtraCongeladas) {
                           // Item com regras congeladas - usar motor de cálculo específico
                           total = calcularComRegrasProprias(qtd, session.regrasDePrecoFotoExtraCongeladas);
                         } else {
                           // Item sem regras congeladas - usar motor global (para compatibilidade)
                           const valorFotoExtra = parseFloat((session.valorFotoExtra || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-                          
+
                           // Buscar ID da categoria pelo nome
                           const categorias = JSON.parse(localStorage.getItem('configuracoes_categorias') || '[]');
                           const categoriaObj = categorias.find((cat: any) => cat.nome === session.categoria);
                           const categoriaId = categoriaObj?.id || session.categoria;
-                          
                           total = calcularTotalFotosExtras(qtd, {
                             valorFotoExtra,
                             categoria: session.categoria,
                             categoriaId
                           });
                         }
-                        
                         handleFieldUpdateStable(session.id, 'valorTotalFotoExtra', formatCurrency(total));
                       }
                       setHasUnsavedChanges(false);
                     };
-
                     const handleKeyDown = (e: React.KeyboardEvent) => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
@@ -875,58 +814,39 @@ return <td className={`
                         (e.target as HTMLInputElement).blur();
                       }
                     };
-
                     const handleBlur = () => {
                       if (hasUnsavedChanges) {
                         saveValue();
                       }
                     };
-
-                    return (
-                      <Input 
-                        key={`photoQty-${session.id}`}
-                        type="number" 
-                        value={displayValue}
-                        onChange={handleChange}
-                        onFocus={handleFocus}
-                        onKeyDown={handleKeyDown}
-                        onBlur={handleBlur}
-                        className={`h-6 text-xs p-1 w-full border-none bg-transparent focus:bg-lunar-accent/10 transition-colors duration-150 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${hasUnsavedChanges ? 'bg-yellow-50' : ''}`}
-                        placeholder="" 
-                        autoComplete="off" 
-                      />
-                    );
+                    return <Input key={`photoQty-${session.id}`} type="number" value={displayValue} onChange={handleChange} onFocus={handleFocus} onKeyDown={handleKeyDown} onBlur={handleBlur} className={`h-6 text-xs p-1 w-full border-none bg-transparent focus:bg-lunar-accent/10 transition-colors duration-150 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${hasUnsavedChanges ? 'bg-yellow-50' : ''}`} placeholder="" autoComplete="off" />;
                   };
-                  
                   return <ExtraPhotoQtyInput />;
                 })())}
 
                 {renderCell('extraPhotoTotal', (() => {
                   // Calcular o valor real baseado nas regras
                   let valorCalculado = 0;
-                  
                   if (session.regrasDePrecoFotoExtraCongeladas) {
                     // Item com regras congeladas - usar motor de cálculo específico
                     valorCalculado = calcularComRegrasProprias(session.qtdFotosExtra || 0, session.regrasDePrecoFotoExtraCongeladas);
                   } else {
                     // Item sem regras congeladas - usar motor global
                     const valorFotoExtra = parseFloat((session.valorFotoExtra || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-                    
+
                     // Buscar ID da categoria pelo nome
                     const categorias = JSON.parse(localStorage.getItem('configuracoes_categorias') || '[]');
                     const categoriaObj = categorias.find((cat: any) => cat.nome === session.categoria);
                     const categoriaId = categoriaObj?.id || session.categoria;
-                    
                     valorCalculado = calcularTotalFotosExtras(session.qtdFotosExtra || 0, {
                       valorFotoExtra,
                       categoria: session.categoria,
                       categoriaId
                     });
                   }
-                  
+
                   // Mostrar como campo editável com o valor calculado como fallback
                   const valorAtual = session.valorTotalFotoExtra || formatCurrency(valorCalculado);
-                  
                   return renderEditableInput(session, 'valorTotalFotoExtra', valorAtual, 'text', 'R$ 0,00');
                 })())}
 
@@ -961,81 +881,50 @@ return <td className={`
                 {renderCell('remaining', (() => {
                   const restante = calculateRestante(session);
                   const paymentInfo = getPaymentPlanInfo(session.id);
-                  
-                  return (
-                    <div className="flex items-center gap-1">
+                  return <div className="flex items-center gap-1">
                       <span className="font-bold text-orange-600 text-xs">{formatCurrency(restante)}</span>
-                      {restante > 0 && paymentInfo.hasScheduled && (
-                        <div className="flex items-center gap-1">
+                      {restante > 0 && paymentInfo.hasScheduled && <div className="flex items-center gap-1">
                           <div title="Tem pagamentos agendados">
                             <Calendar className="h-3 w-3 text-yellow-500" />
                           </div>
-                          {paymentInfo.hasInstallments && (
-                            <div title="Parcelado">
+                          {paymentInfo.hasInstallments && <div title="Parcelado">
                               <CreditCard className="h-3 w-3 text-blue-500" />
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      {restante === 0 && (
-                        <div title="Totalmente pago">
+                            </div>}
+                        </div>}
+                      {restante === 0 && <div title="Totalmente pago">
                           <CheckCircle className="h-3 w-3 text-green-500" />
-                        </div>
-                      )}
-                    </div>
-                  );
+                        </div>}
+                    </div>;
                 })())}
 
                 {renderCell('payment', (() => {
                   const paymentInfo = getPaymentPlanInfo(session.id);
-                  
-                  return (
-                    <div className="flex flex-col gap-1 w-full">
+                  return <div className="flex flex-col gap-1 w-full">
                       {/* Linha principal: Input + Botões */}
                       <div className="flex items-center gap-1">
-                        <Input 
-                          type="number" 
-                          placeholder="0,00" 
-                          value={paymentInputs[session.id] || ''} 
-                          onChange={e => setPaymentInputs(prev => ({
-                            ...prev,
-                            [session.id]: e.target.value
-                          }))} 
-                          onKeyDown={e => handlePaymentKeyDown(e, session.id)} 
-                          className="h-6 text-xs p-1 flex-1 border-none bg-transparent focus:bg-lunar-accent/10 transition-colors duration-150 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
-                          autoComplete="off" 
-                        />
+                        <Input type="number" placeholder="0,00" value={paymentInputs[session.id] || ''} onChange={e => setPaymentInputs(prev => ({
+                        ...prev,
+                        [session.id]: e.target.value
+                      }))} onKeyDown={e => handlePaymentKeyDown(e, session.id)} className="h-6 text-xs p-1 flex-1 border-none bg-transparent focus:bg-lunar-accent/10 transition-colors duration-150 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" autoComplete="off" />
                         <Button variant="ghost" size="sm" onClick={() => handlePaymentAdd(session.id)} className="h-6 w-6 p-0 shrink-0">
                           <span className="text-xs font-bold">+</span>
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedSessionForPayment(session);
-                            setWorkflowPaymentsOpen(true);
-                          }}
-                          className="h-6 w-6 p-0 shrink-0 hover:bg-primary/10 text-primary"
-                          title={paymentInfo?.hasScheduled ? "Editar Agendamento" : "Agendar Pagamento"}
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => {
+                        setSelectedSessionForPayment(session);
+                        setWorkflowPaymentsOpen(true);
+                      }} className="h-6 w-6 p-0 shrink-0 hover:bg-primary/10 text-primary" title={paymentInfo?.hasScheduled ? "Editar Agendamento" : "Agendar Pagamento"}>
                           <CreditCard className="h-3 w-3" />
                         </Button>
                       </div>
                       
                       {/* Status do agendamento */}
-                      {paymentInfo?.hasScheduled && (
-                        <div className="flex items-center gap-1 mt-1">
-                          <Badge 
-                            variant="secondary"
-                            className="text-[10px] px-1.5 py-0.5 h-4 bg-green-100 text-green-700 border-green-200"
-                          >
+                      {paymentInfo?.hasScheduled && <div className="flex items-center gap-1 mt-1">
+                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0.5 h-4 bg-green-100 text-green-700 border-green-200">
                             <CheckCircle className="h-2.5 w-2.5 mr-1" />
                             Agendado
                           </Badge>
-                        </div>
-                      )}
-                    </div>
-                  );
+                        </div>}
+                    </div>;
                 })())}
                 </tr>
                </>;
@@ -1056,66 +945,47 @@ return <td className={`
         </div>}
         
         {/* Modal de Gerenciamento de Produtos */}
-        {sessionSelecionada && (
-          <GerenciarProdutosModal 
-            open={modalAberto} 
-            onOpenChange={setModalAberto} 
-            sessionId={sessionSelecionada.id} 
-            clienteName={sessionSelecionada.nome} 
-            produtos={sessionSelecionada.produtosList || []} 
-            productOptions={productOptions} 
-            onSave={(novosProdutos) => {
-              // Atualizar a lista de produtos e recalcular totais
-              handleFieldUpdateStable(sessionSelecionada.id, 'produtosList', novosProdutos);
+        {sessionSelecionada && <GerenciarProdutosModal open={modalAberto} onOpenChange={setModalAberto} sessionId={sessionSelecionada.id} clienteName={sessionSelecionada.nome} produtos={sessionSelecionada.produtosList || []} productOptions={productOptions} onSave={novosProdutos => {
+      // Atualizar a lista de produtos e recalcular totais
+      handleFieldUpdateStable(sessionSelecionada.id, 'produtosList', novosProdutos);
 
-              // Garantir que produtos inclusos sempre tenham valor 0
-              const produtosCorrigidos = novosProdutos.map(p => ({
-                ...p,
-                valorUnitario: p.tipo === 'incluso' ? 0 : p.valorUnitario
-              }));
+      // Garantir que produtos inclusos sempre tenham valor 0
+      const produtosCorrigidos = novosProdutos.map(p => ({
+        ...p,
+        valorUnitario: p.tipo === 'incluso' ? 0 : p.valorUnitario
+      }));
 
-              // Atualizar campos de compatibilidade
-              const produtosManuais = produtosCorrigidos.filter(p => p.tipo === 'manual');
-              const valorTotalManuais = produtosManuais.reduce((total, p) => total + p.valorUnitario * p.quantidade, 0);
-              
-              if (produtosManuais.length > 0) {
-                const nomesProdutos = produtosManuais.map(p => p.nome).join(', ');
-                const nomesInclusos = produtosCorrigidos.filter(p => p.tipo === 'incluso').map(p => p.nome);
-                const nomeCompleto = nomesInclusos.length > 0 ? `${nomesProdutos} + ${nomesInclusos.length} incluso(s)` : nomesProdutos;
-                handleFieldUpdateStable(sessionSelecionada.id, 'produto', nomeCompleto);
-                handleFieldUpdateStable(sessionSelecionada.id, 'qtdProduto', produtosManuais.reduce((total, p) => total + p.quantidade, 0));
-              } else if (produtosCorrigidos.filter(p => p.tipo === 'incluso').length > 0) {
-                const produtosInclusos = produtosCorrigidos.filter(p => p.tipo === 'incluso');
-                handleFieldUpdateStable(sessionSelecionada.id, 'produto', `${produtosInclusos.length} produto(s) incluso(s)`);
-                handleFieldUpdateStable(sessionSelecionada.id, 'qtdProduto', 0);
-              } else {
-                handleFieldUpdateStable(sessionSelecionada.id, 'produto', '');
-                handleFieldUpdateStable(sessionSelecionada.id, 'qtdProduto', 0);
-              }
-              
-              handleFieldUpdateStable(sessionSelecionada.id, 'valorTotalProduto', formatCurrency(valorTotalManuais));
-              setSessionSelecionada(null);
-            }} 
-          />
-        )}
+      // Atualizar campos de compatibilidade
+      const produtosManuais = produtosCorrigidos.filter(p => p.tipo === 'manual');
+      const valorTotalManuais = produtosManuais.reduce((total, p) => total + p.valorUnitario * p.quantidade, 0);
+      if (produtosManuais.length > 0) {
+        const nomesProdutos = produtosManuais.map(p => p.nome).join(', ');
+        const nomesInclusos = produtosCorrigidos.filter(p => p.tipo === 'incluso').map(p => p.nome);
+        const nomeCompleto = nomesInclusos.length > 0 ? `${nomesProdutos} + ${nomesInclusos.length} incluso(s)` : nomesProdutos;
+        handleFieldUpdateStable(sessionSelecionada.id, 'produto', nomeCompleto);
+        handleFieldUpdateStable(sessionSelecionada.id, 'qtdProduto', produtosManuais.reduce((total, p) => total + p.quantidade, 0));
+      } else if (produtosCorrigidos.filter(p => p.tipo === 'incluso').length > 0) {
+        const produtosInclusos = produtosCorrigidos.filter(p => p.tipo === 'incluso');
+        handleFieldUpdateStable(sessionSelecionada.id, 'produto', `${produtosInclusos.length} produto(s) incluso(s)`);
+        handleFieldUpdateStable(sessionSelecionada.id, 'qtdProduto', 0);
+      } else {
+        handleFieldUpdateStable(sessionSelecionada.id, 'produto', '');
+        handleFieldUpdateStable(sessionSelecionada.id, 'qtdProduto', 0);
+      }
+      handleFieldUpdateStable(sessionSelecionada.id, 'valorTotalProduto', formatCurrency(valorTotalManuais));
+      setSessionSelecionada(null);
+    }} />}
 
         {/* Modal de Pagamentos do Workflow */}
-        {selectedSessionForPayment && (
-          <WorkflowPaymentsModal
-            isOpen={workflowPaymentsOpen}
-            onClose={() => {
-              setWorkflowPaymentsOpen(false);
-              setSelectedSessionForPayment(null);
-            }}
-            sessionData={selectedSessionForPayment}
-            onPaymentUpdate={(sessionId, totalPaid, fullPaymentsArray) => {
-              // Atualizar contexto com novos pagamentos
-              handleFieldUpdateStable(sessionId, 'valorPago', `R$ ${totalPaid.toFixed(2).replace('.', ',')}`);
-              if (fullPaymentsArray) {
-                handleFieldUpdateStable(sessionId, 'pagamentos', fullPaymentsArray);
-              }
-            }}
-          />
-        )}
+        {selectedSessionForPayment && <WorkflowPaymentsModal isOpen={workflowPaymentsOpen} onClose={() => {
+      setWorkflowPaymentsOpen(false);
+      setSelectedSessionForPayment(null);
+    }} sessionData={selectedSessionForPayment} onPaymentUpdate={(sessionId, totalPaid, fullPaymentsArray) => {
+      // Atualizar contexto com novos pagamentos
+      handleFieldUpdateStable(sessionId, 'valorPago', `R$ ${totalPaid.toFixed(2).replace('.', ',')}`);
+      if (fullPaymentsArray) {
+        handleFieldUpdateStable(sessionId, 'pagamentos', fullPaymentsArray);
+      }
+    }} />}
     </div>;
 }
