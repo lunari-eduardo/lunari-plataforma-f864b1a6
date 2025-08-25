@@ -198,19 +198,16 @@ export default function AvailabilityConfigModal({
     clearAvailabilityForDate(dateStr);
     onClose();
   };
-
   const handleAddType = () => {
     if (!newTypeName.trim()) {
       toast.error('Nome do tipo é obrigatório');
       return;
     }
-    
     const newType: AvailabilityType = {
       id: crypto.randomUUID(),
       name: newTypeName.trim(),
       color: newTypeColor
     };
-    
     addAvailabilityType(newType);
     setSelectedTypeId(newType.id);
     setNewTypeName('');
@@ -218,13 +215,11 @@ export default function AvailabilityConfigModal({
     setShowTypeManager(false);
     toast.success('Tipo de disponibilidade criado');
   };
-
   const handleDeleteType = (typeId: string) => {
     if (availabilityTypes.length <= 1) {
       toast.error('Não é possível excluir o último tipo');
       return;
     }
-    
     deleteAvailabilityType(typeId);
     if (selectedTypeId === typeId) {
       const remainingTypes = availabilityTypes.filter(t => t.id !== typeId);
@@ -232,15 +227,12 @@ export default function AvailabilityConfigModal({
     }
     toast.success('Tipo de disponibilidade excluído');
   };
-
   const selectedType = availabilityTypes.find(type => type.id === selectedTypeId);
   return <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[520px]">
         <DialogHeader>
           <DialogTitle className="text-sm">Configurar disponibilidade</DialogTitle>
-          <DialogDescription className="mb-4">
-            Defina horários disponíveis para {format(date, "d 'de' MMMM, yyyy")}.
-          </DialogDescription>
+          
         </DialogHeader>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -259,19 +251,9 @@ export default function AvailabilityConfigModal({
                     <div className="space-y-2">
                       <Label className="text-sm font-medium">Criar novo tipo</Label>
                       <div className="flex gap-2">
-                        <Input
-                          placeholder="Nome do tipo"
-                          value={newTypeName}
-                          onChange={(e) => setNewTypeName(e.target.value)}
-                          className="flex-1"
-                        />
+                        <Input placeholder="Nome do tipo" value={newTypeName} onChange={e => setNewTypeName(e.target.value)} className="flex-1" />
                         <div className="flex items-center gap-2">
-                          <input
-                            type="color"
-                            value={newTypeColor}
-                            onChange={(e) => setNewTypeColor(e.target.value)}
-                            className="w-8 h-8 rounded border cursor-pointer"
-                          />
+                          <input type="color" value={newTypeColor} onChange={e => setNewTypeColor(e.target.value)} className="w-8 h-8 rounded border cursor-pointer" />
                           <Button onClick={handleAddType} size="sm">
                             <Plus className="h-4 w-4" />
                           </Button>
@@ -282,27 +264,17 @@ export default function AvailabilityConfigModal({
                     <div className="space-y-2">
                       <Label className="text-sm font-medium">Tipos existentes</Label>
                       <div className="space-y-1 max-h-32 overflow-y-auto">
-                        {availabilityTypes.map(type => (
-                          <div key={type.id} className="flex items-center justify-between p-2 bg-muted rounded">
+                        {availabilityTypes.map(type => <div key={type.id} className="flex items-center justify-between p-2 bg-muted rounded">
                             <div className="flex items-center gap-2">
-                              <div 
-                                className="w-3 h-3 rounded-full border"
-                                style={{ backgroundColor: type.color }}
-                              />
+                              <div className="w-3 h-3 rounded-full border" style={{
+                            backgroundColor: type.color
+                          }} />
                               <span className="text-sm">{type.name}</span>
                             </div>
-                            {availabilityTypes.length > 1 && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDeleteType(type.id)}
-                                className="h-6 w-6 p-0 text-destructive hover:text-destructive"
-                              >
+                            {availabilityTypes.length > 1 && <Button variant="ghost" size="sm" onClick={() => handleDeleteType(type.id)} className="h-6 w-6 p-0 text-destructive hover:text-destructive">
                                 <Trash2 className="h-3 w-3" />
-                              </Button>
-                            )}
-                          </div>
-                        ))}
+                              </Button>}
+                          </div>)}
                       </div>
                     </div>
                   </div>
@@ -313,35 +285,29 @@ export default function AvailabilityConfigModal({
             <Select value={selectedTypeId} onValueChange={setSelectedTypeId}>
               <SelectTrigger className="bg-background">
                 <SelectValue placeholder="Selecione um tipo">
-                  {selectedType && (
-                    <div className="flex items-center gap-2">
-                      <div 
-                        className="w-3 h-3 rounded-full border"
-                        style={{ backgroundColor: selectedType.color }}
-                      />
+                  {selectedType && <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full border" style={{
+                    backgroundColor: selectedType.color
+                  }} />
                       {selectedType.name}
-                    </div>
-                  )}
+                    </div>}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent className="bg-background border shadow-lg">
-                {availabilityTypes.map(type => (
-                  <SelectItem key={type.id} value={type.id}>
+                {availabilityTypes.map(type => <SelectItem key={type.id} value={type.id}>
                     <div className="flex items-center gap-2">
-                      <div 
-                        className="w-3 h-3 rounded-full border"
-                        style={{ backgroundColor: type.color }}
-                      />
+                      <div className="w-3 h-3 rounded-full border" style={{
+                    backgroundColor: type.color
+                  }} />
                       {type.name}
                     </div>
-                  </SelectItem>
-                ))}
+                  </SelectItem>)}
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
-            <Label>Data inicial</Label>
+            <Label className="px-[8px]">Data inicial</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" className={cn("justify-start font-normal", !startDate && "text-muted-foreground")}> 
@@ -354,7 +320,7 @@ export default function AvailabilityConfigModal({
             </Popover>
           </div>
           <div className="space-y-2">
-            <Label>Data final</Label>
+            <Label className="px-[8px]">Data final</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" className={cn("justify-start font-normal", !endDate && "text-muted-foreground")}> 
@@ -380,13 +346,13 @@ export default function AvailabilityConfigModal({
                   <span>{d}</span>
                 </label>)}
             </div>
-            <p className="text-[11px] text-muted-foreground">Deixe em branco para aplicar em todos os dias do intervalo.</p>
+            
           </div>
 
           <div className="col-span-1 md:col-span-2 space-y-2">
             <Label>Horários a liberar</Label>
             <div className="space-y-2">
-              {timesList.length === 0 && <p className="text-xs text-muted-foreground">Nenhum horário adicionado ainda.</p>}
+              {timesList.length === 0}
               {timesList.map((t, idx) => <div key={idx} className="flex items-center gap-2">
                   <div className="w-28">
                     <TimeInput value={t} onChange={v => updateTimeAt(idx, v)} />
