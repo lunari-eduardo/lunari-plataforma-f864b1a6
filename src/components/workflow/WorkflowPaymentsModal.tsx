@@ -172,15 +172,13 @@ export function WorkflowPaymentsModal({
             <div className="flex items-center justify-between">
               <DialogTitle className="text-sm sm:text-lg lg:text-xl font-semibold flex items-center gap-1 sm:gap-2">
                 <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-primary" />
-                <span className="truncate">Gerenciar Pagamentos - {sessionData.nome}</span>
+                <span className="truncate text-base">Gerenciar Pagamentos - {sessionData.nome}</span>
               </DialogTitle>
               <Button variant="ghost" size="sm" onClick={onClose}>
                 <X className="h-4 w-4" />
               </Button>
             </div>
-            <div className="text-xs sm:text-sm text-muted-foreground truncate">
-              {sessionData.email} • {formatDateForDisplay(sessionData.data)}
-            </div>
+            
           </DialogHeader>
 
           <div className="space-y-2 sm:space-y-4 lg:space-y-6">
