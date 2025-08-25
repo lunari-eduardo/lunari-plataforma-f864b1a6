@@ -167,27 +167,27 @@ export function WorkflowPaymentsModal({
   const valorRestante = Math.max(0, valorTotal - totalPago);
   return <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl lg:max-w-4xl max-w-[95vw] max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center justify-between">
-              <DialogTitle className="text-xl font-semibold flex items-center gap-2">
-                <CreditCard className="h-6 w-6 text-primary" />
-                Gerenciar Pagamentos - {sessionData.nome}
+              <DialogTitle className="text-lg lg:text-xl font-semibold flex items-center gap-2">
+                <CreditCard className="h-5 w-5 lg:h-6 lg:w-6 text-primary" />
+                <span className="truncate">Gerenciar Pagamentos - {sessionData.nome}</span>
               </DialogTitle>
               <Button variant="ghost" size="sm" onClick={onClose}>
                 <X className="h-4 w-4" />
               </Button>
             </div>
-            <div className="text-sm text-muted-foreground">
+            <div className="text-sm text-muted-foreground truncate">
               {sessionData.email} • {formatDateForDisplay(sessionData.data)}
             </div>
           </DialogHeader>
 
-          <div className="space-y-6">
+          <div className="space-y-4 lg:space-y-6">
             {/* Resumo Financeiro */}
             <Card className="bg-muted/30">
-              <CardContent className="p-4 px-[9px] py-[9px]">
-                <div className="grid grid-cols-4 gap-4 text-center">
+              <CardContent className="p-3 lg:p-4">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 text-center">
                   <div>
                     <p className="text-xs text-muted-foreground uppercase tracking-wide">Total</p>
                     <p className="font-bold text-primary text-sm">{formatCurrency(valorTotal)}</p>
@@ -196,7 +196,7 @@ export function WorkflowPaymentsModal({
                     <p className="text-xs text-muted-foreground uppercase tracking-wide">Pago</p>
                     <p className="font-bold text-green-600 text-sm">{formatCurrency(totalPago)}</p>
                   </div>
-                  <div className="text-sm">
+                  <div>
                     <p className="text-xs text-muted-foreground uppercase tracking-wide">Pendente</p>
                     <p className="font-bold text-yellow-600 text-sm">{formatCurrency(totalPendente)}</p>
                   </div>
@@ -210,33 +210,35 @@ export function WorkflowPaymentsModal({
 
             {/* Histórico de Movimentações */}
             <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                    <Clock className="h-5 w-5 text-primary" />
+              <CardHeader className="pb-3">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <CardTitle className="text-base lg:text-lg font-semibold flex items-center gap-2">
+                    <Clock className="h-4 w-4 lg:h-5 lg:w-5 text-primary" />
                     Histórico de Movimentações
                   </CardTitle>
                   <Button onClick={() => setShowPaymentModal(true)} className="gap-2" size="sm">
                     <Plus className="h-4 w-4" />
-                    Gerenciar Pagamentos
+                    <span className="hidden sm:inline">Gerenciar Pagamentos</span>
+                    <span className="sm:hidden">Adicionar</span>
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-3 lg:p-6">
                 {payments.length === 0 ? <div className="text-center py-8 text-muted-foreground">
                     <CreditCard className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p className="font-medium">Nenhum pagamento registrado</p>
                     <p className="text-sm">Clique em "Gerenciar Pagamentos" para começar</p>
-                  </div> : <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Data / Vencimento</TableHead>
-                        <TableHead>Valor</TableHead>
-                        <TableHead>Tipo / Status</TableHead>
-                        <TableHead>Origem</TableHead>
-                        <TableHead className="text-right">Ações</TableHead>
-                      </TableRow>
-                    </TableHeader>
+                  </div> : <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="min-w-[120px]">Data / Vencimento</TableHead>
+                          <TableHead className="min-w-[80px]">Valor</TableHead>
+                          <TableHead className="min-w-[100px] hidden sm:table-cell">Tipo / Status</TableHead>
+                          <TableHead className="min-w-[80px] hidden md:table-cell">Origem</TableHead>
+                          <TableHead className="text-right min-w-[80px]">Ações</TableHead>
+                        </TableRow>
+                      </TableHeader>
                     <TableBody>
                       {payments.sort((a, b) => {
                     const dateA = new Date(a.dataVencimento || a.data || '1970-01-01');
@@ -267,7 +269,7 @@ export function WorkflowPaymentsModal({
                                 {formatCurrency(payment.valor)}
                               </span>
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="hidden sm:table-cell">
                               <div className="space-y-1">
                                 <div className="text-xs text-muted-foreground uppercase tracking-wide">
                                   {payment.tipo}
@@ -275,7 +277,7 @@ export function WorkflowPaymentsModal({
                                 {getStatusBadge(payment)}
                               </div>
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="hidden md:table-cell">
                               <div className="flex items-center gap-1 text-xs">
                                 {getOriginIcon(payment.origem, payment.observacoes)}
                                 <span>
@@ -300,7 +302,8 @@ export function WorkflowPaymentsModal({
                             </TableCell>
                           </TableRow>)}
                     </TableBody>
-                  </Table>}
+                    </Table>
+                  </div>}
               </CardContent>
             </Card>
           </div>

@@ -38,11 +38,8 @@ export function PaymentConfigModalExpanded({
   onCreateInstallments,
   onSchedulePayment
 }: PaymentConfigModalExpandedProps) {
-  const [activeTab, setActiveTab] = useState('rapido');
+  const [activeTab, setActiveTab] = useState('parcelamento');
   const [loading, setLoading] = useState(false);
-
-  // Estados para pagamento rápido
-  const [valorRapido, setValorRapido] = useState<number | string>(valorRestante);
 
   // Estados para parcelamento
   const [valorParcelar, setValorParcelar] = useState<number | string>(valorRestante);
@@ -57,10 +54,6 @@ export function PaymentConfigModalExpanded({
   const [entradaAgora, setEntradaAgora] = useState<number | string>('');
 
   // Hooks para inputs numéricos
-  const valorRapidoInput = useNumberInput({
-    value: valorRapido,
-    onChange: setValorRapido
-  });
   const valorParcelarInput = useNumberInput({
     value: valorParcelar,
     onChange: setValorParcelar
@@ -73,41 +66,6 @@ export function PaymentConfigModalExpanded({
     value: valorAgendado,
     onChange: setValorAgendado
   });
-  const handlePagamentoRapido = async () => {
-    const valor = parseFloat(String(valorRapido)) || 0;
-    if (valor <= 0 || valor > valorRestante) {
-      toast({
-        title: "Erro",
-        description: "Valor inválido para pagamento",
-        variant: "destructive"
-      });
-      return;
-    }
-    setLoading(true);
-    try {
-      onAddPayment({
-        valor,
-        data: formatDateForStorage(new Date()),
-        tipo: 'pago',
-        statusPagamento: 'pago',
-        origem: 'workflow_rapido',
-        editavel: true
-      });
-      toast({
-        title: "Pagamento registrado",
-        description: `${formatCurrency(valor)} registrado com sucesso`
-      });
-      onClose();
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Erro ao registrar pagamento",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
   const handleParcelamento = async () => {
     const valor = parseFloat(String(valorParcelar)) || 0;
     if (valor <= 0 || quantidadeParcelas <= 0) {
@@ -212,21 +170,21 @@ export function PaymentConfigModalExpanded({
     }
   };
   return <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-lg lg:max-w-xl max-w-[95vw] max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-2 text-lg">
             <CreditCard className="h-5 w-5 text-primary" />
             Gerenciar Pagamentos
           </DialogTitle>
-          <p className="text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Cliente: <span className="font-medium">{clienteNome}</span>
           </p>
         </DialogHeader>
 
         {/* Resumo Financeiro */}
         <Card className="bg-muted/30">
-          <CardContent className="p-4">
-            <div className="grid grid-cols-3 gap-4 text-center">
+          <CardContent className="p-3 lg:p-4">
+            <div className="grid grid-cols-3 gap-3 lg:gap-4 text-center">
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wide">Total</p>
                 <p className="font-bold text-primary text-sm">{formatCurrency(valorTotal)}</p>
@@ -244,11 +202,7 @@ export function PaymentConfigModalExpanded({
         </Card>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="rapido" className="gap-2">
-              <CheckCircle2 className="h-4 w-4" />
-              Pagamento Rápido
-            </TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="parcelamento" className="gap-2">
               <Package className="h-4 w-4" />
               Parcelamento
@@ -259,39 +213,14 @@ export function PaymentConfigModalExpanded({
             </TabsTrigger>
           </TabsList>
 
-          {/* Tab Pagamento Rápido */}
-          <TabsContent value="rapido" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm">Registrar Pagamento Imediato</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="valorRapido">Valor do Pagamento</Label>
-                  <div className="relative">
-                    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input id="valorRapido" type="number" value={valorRapidoInput.displayValue} onChange={valorRapidoInput.handleChange} onFocus={valorRapidoInput.handleFocus} className="pl-10" min="0" max={valorRestante} step="0.01" />
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Máximo disponível: {formatCurrency(valorRestante)}
-                  </p>
-                </div>
-
-                <Button onClick={handlePagamentoRapido} disabled={loading || (parseFloat(String(valorRapido)) || 0) <= 0 || (parseFloat(String(valorRapido)) || 0) > valorRestante} className="w-full">
-                  {loading ? 'Registrando...' : `Registrar ${formatCurrency(parseFloat(String(valorRapido)) || 0)}`}
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
           {/* Tab Parcelamento */}
           <TabsContent value="parcelamento" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Configurar Parcelamento</CardTitle>
+                <CardTitle className="text-base lg:text-lg">Configurar Parcelamento</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="valorParcelar">Valor Total a Parcelar</Label>
                     <div className="relative">
@@ -306,7 +235,7 @@ export function PaymentConfigModalExpanded({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="dataInicioParcelas">Data da Primeira Parcela</Label>
                     <div className="relative">
@@ -344,7 +273,7 @@ export function PaymentConfigModalExpanded({
           <TabsContent value="agendamento" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Agendar Pagamento</CardTitle>
+                <CardTitle className="text-base lg:text-lg">Agendar Pagamento</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-4">
@@ -369,7 +298,7 @@ export function PaymentConfigModalExpanded({
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="valorAgendado">Valor a Agendar</Label>
                       <div className="relative">
