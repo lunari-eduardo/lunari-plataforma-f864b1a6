@@ -1704,14 +1704,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addAppointment = (appointment: Omit<Appointment, 'id'>) => {
     // Validação de conflitos para agendamentos confirmados
     if (appointment.status === 'confirmado') {
-      const existingConfirmed = appointments.find(app => 
-        app.date instanceof Date ? 
-          (app.date.toDateString() === (appointment.date instanceof Date ? appointment.date : new Date(appointment.date)).toDateString() && app.time === appointment.time && app.status === 'confirmado') :
-          (new Date(app.date).toDateString() === (appointment.date instanceof Date ? appointment.date : new Date(appointment.date)).toDateString() && app.time === appointment.time && app.status === 'confirmado')
-      );
+      const appointmentDate = appointment.date instanceof Date ? appointment.date : new Date(appointment.date);
+      
+      const existingConfirmed = appointments.find(app => {
+        const appDate = app.date instanceof Date ? app.date : new Date(app.date);
+        
+        return app.status === 'confirmado' &&
+               appDate.toDateString() === appointmentDate.toDateString() &&
+               app.time === appointment.time;
+      });
       
       if (existingConfirmed) {
-        throw new Error('Já existe um agendamento confirmado neste horário');
+        console.warn('Tentativa de criar agendamento conflitante:', {
+          novo: appointment,
+          existente: existingConfirmed
+        });
+        throw new Error(`Já existe um agendamento confirmado para ${existingConfirmed.client} às ${appointment.time} neste dia.`);
       }
     }
 

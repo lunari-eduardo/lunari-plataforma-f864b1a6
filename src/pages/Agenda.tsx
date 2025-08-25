@@ -245,17 +245,26 @@ export default function Agenda() {
 
   // Handle appointment save
   const handleSaveAppointment = (appointmentData: any) => {
-    if (editingAppointment) {
-      updateAppointment(editingAppointment.id, appointmentData);
-      toast.success("Agendamento atualizado com sucesso");
-    } else if (viewingAppointment) {
-      updateAppointment(viewingAppointment.id, appointmentData);
-      setIsDetailsOpen(false);
-    } else {
-      addAppointment(appointmentData);
-      toast.success("Novo agendamento criado");
+    try {
+      if (editingAppointment) {
+        updateAppointment(editingAppointment.id, appointmentData);
+        toast.success("Agendamento atualizado com sucesso");
+      } else if (viewingAppointment) {
+        updateAppointment(viewingAppointment.id, appointmentData);
+        setIsDetailsOpen(false);
+      } else {
+        addAppointment(appointmentData);
+        toast.success("Novo agendamento criado");
+      }
+      setIsAppointmentDialogOpen(false);
+    } catch (error: any) {
+      if (error.message.includes('agendamento confirmado neste horário')) {
+        toast.error('Não é possível criar agendamento: já existe um agendamento confirmado neste horário.');
+      } else {
+        toast.error('Erro ao salvar agendamento: ' + error.message);
+      }
+      // Não fechar o modal para permitir correção
     }
-    setIsAppointmentDialogOpen(false);
   };
 
   // Handle appointment deletion

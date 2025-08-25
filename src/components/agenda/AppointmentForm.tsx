@@ -74,7 +74,8 @@ export default function AppointmentForm({
     clientes,
     adicionarCliente,
     selectedClientForScheduling,
-    clearSelectedClientForScheduling
+    clearSelectedClientForScheduling,
+    appointments
   } = useContext(AppContext);
   const {
     isFromBudget
@@ -199,6 +200,24 @@ export default function AppointmentForm({
     }));
   };
 
+  // Função para verificar conflitos de horário
+  const checkForConflicts = () => {
+    if (formData.status === 'confirmado') {
+      // Buscar agendamentos confirmados existentes no mesmo horário
+      const existingConfirmed = appointments.find(app => 
+        app.id !== appointment?.id && // Excluir o próprio agendamento na edição
+        app.status === 'confirmado' &&
+        app.date.toDateString() === formData.date.toDateString() &&
+        app.time === formData.time
+      );
+      
+      if (existingConfirmed) {
+        return `Já existe um agendamento confirmado para ${existingConfirmed.client} às ${formData.time} neste dia.`;
+      }
+    }
+    return null;
+  };
+
   // Manipular envio do formulário
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -210,6 +229,13 @@ export default function AppointmentForm({
     }
     if (activeTab === 'existing' && !formData.clientId) {
       toast.error('Selecione um cliente');
+      return;
+    }
+
+    // Verificar conflitos de horário
+    const conflictError = checkForConflicts();
+    if (conflictError) {
+      toast.error(conflictError);
       return;
     }
     let clientInfo;
