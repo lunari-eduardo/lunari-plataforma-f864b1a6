@@ -15,6 +15,7 @@ interface PackageSearchComboboxProps {
   value?: string;
   onSelect: (packageId: string, packageData?: any) => void;
   placeholder?: string;
+  filtrarPorCategoria?: string;
 }
 
 import { useOrcamentos } from '@/hooks/useOrcamentos';
@@ -22,7 +23,8 @@ import { useOrcamentos } from '@/hooks/useOrcamentos';
 export default function PackageSearchCombobox({
   value,
   onSelect,
-  placeholder = "Buscar pacote..."
+  placeholder = "Buscar pacote...",
+  filtrarPorCategoria
 }: PackageSearchComboboxProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -46,16 +48,23 @@ export default function PackageSearchCombobox({
   const selectedPackage = availablePackages.find(pkg => pkg.id === value);
 
   useEffect(() => {
+    let filtered = availablePackages;
+    
+    // Filtrar por categoria se especificada
+    if (filtrarPorCategoria) {
+      filtered = filtered.filter(pkg => pkg.category === filtrarPorCategoria);
+    }
+    
+    // Filtrar por termo de busca
     if (searchTerm) {
-      const filtered = availablePackages.filter(pkg =>
+      filtered = filtered.filter(pkg =>
         pkg.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         pkg.category.toLowerCase().includes(searchTerm.toLowerCase())
       );
-      setFilteredPackages(filtered);
-    } else {
-      setFilteredPackages(availablePackages);
     }
-  }, [searchTerm, availablePackages.length]); // Dependência otimizada
+    
+    setFilteredPackages(filtered);
+  }, [searchTerm, availablePackages.length, filtrarPorCategoria]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

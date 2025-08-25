@@ -21,6 +21,7 @@ import { AppContext } from '@/contexts/AppContext';
 import { useIntegration } from '@/hooks/useIntegration';
 import { useOrcamentos } from '@/hooks/useOrcamentos';
 import { ORIGENS_PADRAO } from '@/utils/defaultOrigens';
+import { CategorySelector } from '@/components/orcamentos/CategorySelector';
 
 // Tipo de agendamento
 type Appointment = {
@@ -82,7 +83,8 @@ export default function AppointmentForm({
   } = useIntegration();
   const {
     pacotes,
-    produtos
+    produtos,
+    categorias
   } = useOrcamentos();
   
   const { origens } = useOrcamentos();
@@ -102,6 +104,7 @@ export default function AppointmentForm({
     status: 'a confirmar',
     description: '',
     packageId: '',
+    categoria: '',
     paidAmount: 0,
     // Campos para novo cliente
     newClientName: '',
@@ -120,6 +123,24 @@ export default function AppointmentForm({
   useEffect(() => {
     if (appointment) {
       const client = clientes.find(c => c.nome === appointment.client);
+      
+      // Carregar categoria do pacote existente
+      let categoria = '';
+      if (appointment.packageId) {
+        const selectedPackage = pacotes.find(p => p.id === appointment.packageId);
+        if (selectedPackage?.categoria_id) {
+          try {
+            const configCategorias = JSON.parse(localStorage.getItem('configuracoes_categorias') || '[]');
+            const categoriaObj = configCategorias.find((cat: any) => 
+              cat.id === selectedPackage.categoria_id || cat.id === String(selectedPackage.categoria_id)
+            );
+            categoria = categoriaObj?.nome || '';
+          } catch {
+            categoria = '';
+          }
+        }
+      }
+      
       setFormData({
         date: appointment.date,
         time: appointment.time,
@@ -127,6 +148,7 @@ export default function AppointmentForm({
         status: appointment.status,
         description: appointment.description || '',
         packageId: appointment.packageId || '',
+        categoria,
         paidAmount: appointment.paidAmount || 0,
         newClientName: '',
         newClientPhone: '',
@@ -143,7 +165,7 @@ export default function AppointmentForm({
       // Limpar após usar
       clearSelectedClientForScheduling();
     }
-  }, [appointment, clientes, selectedClientForScheduling, clearSelectedClientForScheduling]);
+  }, [appointment, clientes, selectedClientForScheduling, clearSelectedClientForScheduling, pacotes]);
 
   // Manipular mudanças nos campos
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -165,11 +187,37 @@ export default function AppointmentForm({
     }));
   };
 
-  // Manipular seleção de pacote
-  const handlePackageSelect = (packageId: string) => {
+  // Manipular seleção de categoria
+  const handleCategorySelect = (categoria: string) => {
     setFormData(prev => ({
       ...prev,
-      packageId
+      categoria,
+      packageId: '' // Limpar pacote ao mudar categoria
+    }));
+  };
+
+  // Manipular seleção de pacote
+  const handlePackageSelect = (packageId: string) => {
+    const selectedPackage = pacotes.find(p => p.id === packageId);
+    let categoria = '';
+    
+    if (selectedPackage?.categoria_id) {
+      // Buscar nome da categoria baseado no categoria_id
+      try {
+        const configCategorias = JSON.parse(localStorage.getItem('configuracoes_categorias') || '[]');
+        const categoriaObj = configCategorias.find((cat: any) => 
+          cat.id === selectedPackage.categoria_id || cat.id === String(selectedPackage.categoria_id)
+        );
+        categoria = categoriaObj?.nome || '';
+      } catch {
+        categoria = '';
+      }
+    }
+    
+    setFormData(prev => ({
+      ...prev,
+      packageId,
+      categoria // Auto-preencher categoria
     }));
   };
 
@@ -432,12 +480,25 @@ export default function AppointmentForm({
             </div>
             
             <div className="space-y-3">
-              <Label htmlFor="package-search-input" className="text-sm font-medium">Pacote</Label>
-              <PackageSearchCombobox 
-                value={formData.packageId} 
-                onSelect={handlePackageSelect} 
-                placeholder="Buscar pacote por nome ou categoria..." 
-              />
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Categoria (Opcional)</Label>
+                <CategorySelector
+                  categorias={categorias}
+                  value={formData.categoria}
+                  onValueChange={handleCategorySelect}
+                  placeholder="Selecionar categoria para filtrar pacotes..."
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="package-search-input" className="text-sm font-medium">Pacote</Label>
+                <PackageSearchCombobox 
+                  value={formData.packageId} 
+                  onSelect={handlePackageSelect} 
+                  placeholder="Buscar pacote por nome ou categoria..." 
+                  filtrarPorCategoria={formData.categoria}
+                />
+              </div>
               
               {formData.packageId && getIncludedProducts().length > 0 && (
                 <div className="p-4 bg-muted border border-border rounded-lg">
