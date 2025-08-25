@@ -127,8 +127,8 @@ export function GerenciarProdutosModal({
     onOpenChange(false);
   };
 
-  return <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col py-[17px]" style={{
+    return <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-[92vw] sm:max-w-2xl max-h-[90vh] flex flex-col py-[17px] px-3 sm:px-6 text-xs sm:text-sm" style={{
       overflow: 'visible'
     }} onPointerDownOutside={e => {
       // Prevenir fechamento do modal quando clicar no popover
@@ -152,22 +152,22 @@ export function GerenciarProdutosModal({
           {localProdutos.length > 0 ? <div className="space-y-3 py-0">
               <Label className="text-sm font-normal ">Produtos Associados</Label>
               <div className="space-y-2">
-                {localProdutos.map((produto, index) => <div key={index} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border py-[6px]">
-                    <div className="flex-1 min-w-0">
+                {localProdutos.map((produto, index) => <div key={index} className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 bg-muted/50 rounded-lg border">
+                    <div className="flex-1 min-w-0 w-full">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium truncate text-xs">{produto.nome}</span>
+                        <span className="font-medium truncate text-xs sm:text-sm" title={produto.nome}>{produto.nome}</span>
                         {produto.tipo === 'incluso' && <Badge variant="secondary" className="text-xs">
                             Incluso no pacote
                           </Badge>}
                       </div>
-                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px] sm:text-xs text-muted-foreground">
                         <span>Preço unit.: {produto.tipo === 'incluso' ? 'R$ 0,00 (incluso)' : formatCurrency(produto.valorUnitario)}</span>
                         <span>Subtotal: {produto.tipo === 'incluso' ? 'R$ 0,00 (incluso)' : formatCurrency(produto.valorUnitario * produto.quantidade)}</span>
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-3 mr-2">
+                    <div className="w-full sm:w-auto flex flex-wrap items-center justify-between sm:justify-end gap-2 pt-2 sm:pt-0 border-t sm:border-0">
+                      <div className="flex items-center gap-3">
                         <div className="flex items-center gap-1">
                           <Checkbox
                             id={`prod-${index}`}
@@ -175,7 +175,7 @@ export function GerenciarProdutosModal({
                             onCheckedChange={(checked) => handleSetFlag(index, 'produzido', !!checked)}
                             className="h-4 w-4"
                           />
-                          <Label htmlFor={`prod-${index}`} className="text-xs">Produção</Label>
+                          <Label htmlFor={`prod-${index}`} className="text-[11px]">Produção</Label>
                         </div>
                         <div className="flex items-center gap-1">
                           <Checkbox
@@ -184,17 +184,19 @@ export function GerenciarProdutosModal({
                             onCheckedChange={(checked) => handleSetFlag(index, 'entregue', !!checked)}
                             className="h-4 w-4"
                           />
-                          <Label htmlFor={`ent-${index}`} className="text-xs">Entrega</Label>
+                          <Label htmlFor={`ent-${index}`} className="text-[11px]">Entrega</Label>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Label className="text-xs">Qtd:</Label>
-                        <Input type="number" value={produto.quantidade} onChange={e => handleQuantidadeChange(index, parseInt(e.target.value) || 0)} className="w-16 h-8 text-xs" min="0" />
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
+                          <Label className="text-[11px]">Qtd:</Label>
+                          <Input type="number" value={produto.quantidade} onChange={e => handleQuantidadeChange(index, parseInt(e.target.value) || 0)} className="w-14 h-8 text-xs" min="0" />
+                        </div>
+                        
+                        <Button variant="ghost" size="sm" onClick={() => handleRemoverProduto(index)} className="h-8 w-8 p-0 text-destructive hover:text-destructive">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
-                      
-                      <Button variant="ghost" size="sm" onClick={() => handleRemoverProduto(index)} className="h-8 w-8 p-0 text-destructive hover:text-destructive">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
                     </div>
                   </div>)}
               </div>
@@ -283,10 +285,10 @@ export function GerenciarProdutosModal({
           </div>}
 
         <DialogFooter className="py-0 my-0">
-          <Button variant="outline" onClick={handleCancel} className="text-xs">
+          <Button variant="outline" onClick={handleCancel} className="h-9 text-xs">
             Cancelar
           </Button>
-          <Button onClick={handleSave} className="text-xs">
+          <Button onClick={handleSave} className="h-9 text-xs">
             Salvar Alterações
           </Button>
         </DialogFooter>
