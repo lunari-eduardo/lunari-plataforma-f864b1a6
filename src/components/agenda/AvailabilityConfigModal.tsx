@@ -228,59 +228,29 @@ export default function AvailabilityConfigModal({
     toast.success('Tipo de disponibilidade excluído');
   };
   const selectedType = availabilityTypes.find(type => type.id === selectedTypeId);
-  return <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[520px]">
-        <DialogHeader>
-          <DialogTitle className="text-sm">Configurar disponibilidade</DialogTitle>
-          
-        </DialogHeader>
+  
+  return (
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className={cn("sm:max-w-[520px]", showTypeManager && "blur-sm opacity-50 pointer-events-none")}>
+          <DialogHeader>
+            <DialogTitle className="text-sm">Configurar disponibilidade</DialogTitle>
+          </DialogHeader>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div className="col-span-1 md:col-span-2 space-y-2">
-            <div className="flex items-center justify-between">
-              <Label>Tipo de disponibilidade</Label>
-              <Popover open={showTypeManager} onOpenChange={setShowTypeManager}>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-8 px-2">
-                    <Settings className="h-4 w-4 mr-1" />
-                    Gerenciar
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-80 bg-background border shadow-lg z-[10000]" align="end">
-                  <div className="space-y-4 p-1">
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">Criar novo tipo</Label>
-                      <div className="flex gap-2">
-                        <Input placeholder="Nome do tipo" value={newTypeName} onChange={e => setNewTypeName(e.target.value)} className="flex-1" />
-                        <div className="flex items-center gap-2">
-                          <input type="color" value={newTypeColor} onChange={e => setNewTypeColor(e.target.value)} className="w-8 h-8 rounded border cursor-pointer" />
-                          <Button onClick={handleAddType} size="sm">
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">Tipos existentes</Label>
-                      <div className="space-y-1 max-h-32 overflow-y-auto">
-                        {availabilityTypes.map(type => <div key={type.id} className="flex items-center justify-between p-2 bg-muted rounded">
-                            <div className="flex items-center gap-2">
-                              <div className="w-3 h-3 rounded-full border" style={{
-                            backgroundColor: type.color
-                          }} />
-                              <span className="text-sm">{type.name}</span>
-                            </div>
-                            {availabilityTypes.length > 1 && <Button variant="ghost" size="sm" onClick={() => handleDeleteType(type.id)} className="h-6 w-6 p-0 text-destructive hover:text-destructive">
-                                <Trash2 className="h-3 w-3" />
-                              </Button>}
-                          </div>)}
-                      </div>
-                    </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="col-span-1 md:col-span-2 space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Tipo de disponibilidade</Label>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-8 px-2"
+                  onClick={() => setShowTypeManager(true)}
+                >
+                  <Settings className="h-4 w-4 mr-1" />
+                  Gerenciar
+                </Button>
+              </div>
             
             <Select value={selectedTypeId} onValueChange={setSelectedTypeId}>
               <SelectTrigger className="bg-background">
@@ -381,5 +351,71 @@ export default function AvailabilityConfigModal({
           </div>
         </div>
       </DialogContent>
-    </Dialog>;
+    </Dialog>
+
+    <Dialog open={showTypeManager} onOpenChange={setShowTypeManager}>
+      <DialogContent className="sm:max-w-[400px] z-[60]">
+        <DialogHeader>
+          <DialogTitle className="text-sm">Gerenciar Tipos de Disponibilidade</DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Criar novo tipo</Label>
+            <div className="flex gap-2">
+              <Input 
+                placeholder="Nome do tipo" 
+                value={newTypeName} 
+                onChange={e => setNewTypeName(e.target.value)} 
+                className="flex-1" 
+              />
+              <div className="flex items-center gap-2">
+                <input 
+                  type="color" 
+                  value={newTypeColor} 
+                  onChange={e => setNewTypeColor(e.target.value)} 
+                  className="w-8 h-8 rounded border cursor-pointer" 
+                />
+                <Button onClick={handleAddType} size="sm">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Tipos existentes</Label>
+            <div className="space-y-1 max-h-32 overflow-y-auto">
+              {availabilityTypes.map(type => (
+                <div key={type.id} className="flex items-center justify-between p-2 bg-muted rounded">
+                  <div className="flex items-center gap-2">
+                    <div 
+                      className="w-3 h-3 rounded-full border" 
+                      style={{ backgroundColor: type.color }} 
+                    />
+                    <span className="text-sm">{type.name}</span>
+                  </div>
+                  {availabilityTypes.length > 1 && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => handleDeleteType(type.id)} 
+                      className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        
+        <div className="flex justify-end">
+          <Button onClick={() => setShowTypeManager(false)}>Fechar</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  </>
+  );
 }
