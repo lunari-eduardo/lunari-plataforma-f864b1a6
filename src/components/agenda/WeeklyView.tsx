@@ -1,5 +1,5 @@
 import React from 'react';
-import { startOfWeek, addDays, format, isSameDay } from 'date-fns';
+import { format, isSameDay, startOfWeek, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { UnifiedEvent } from '@/hooks/useUnifiedCalendar';
 import UnifiedEventCard from './UnifiedEventCard';

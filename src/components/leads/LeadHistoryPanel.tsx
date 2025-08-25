@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNowStrict } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -146,7 +146,7 @@ export default function LeadHistoryPanel({ lead }: LeadHistoryPanelProps) {
                         automatica={interaction.automatica} 
                       />
                       <span className="text-xs text-lunar-textSecondary">
-                        {formatDistanceToNow(new Date(interaction.timestamp), {
+                        {formatDistanceToNowStrict(new Date(interaction.timestamp), {
                           addSuffix: true,
                           locale: ptBR
                         })}

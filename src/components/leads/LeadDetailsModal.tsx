@@ -2,7 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Calendar, Mail, Phone, MessageSquare, Clock } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNowStrict } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useMemo } from 'react';
 import type { Lead } from '@/types/leads';
@@ -25,7 +25,7 @@ export default function LeadDetailsModal({
 }: LeadDetailsModalProps) {
   const timeAgo = useMemo(() => {
     try {
-      return formatDistanceToNow(new Date(lead.dataCriacao), { 
+      return formatDistanceToNowStrict(new Date(lead.dataCriacao), { 
         addSuffix: true, 
         locale: ptBR 
       });

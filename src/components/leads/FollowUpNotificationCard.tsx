@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Clock, Eye, X } from 'lucide-react';
 import { useFollowUpSystem } from '@/hooks/useFollowUpSystem';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNowStrict } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 export default function FollowUpNotificationCard() {
@@ -52,7 +52,7 @@ export default function FollowUpNotificationCard() {
                 </p>
                 {notification && (
                   <p className="text-xs text-red-600">
-                    {formatDistanceToNow(new Date(notification.timestamp), {
+                    {formatDistanceToNowStrict(new Date(notification.timestamp), {
                       addSuffix: true,
                       locale: ptBR
                     })}

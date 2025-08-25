@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { MoreVertical, MessageCircle, Calendar } from 'lucide-react';
 import type { Lead } from '@/types/leads';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNowStrict } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import LeadActionsPopover from './LeadActionsPopover';
 import LeadStatusSelector from './LeadStatusSelector';
@@ -83,7 +83,7 @@ export default function LeadCard({
 
   const timeAgo = useMemo(() => {
     try {
-      return formatDistanceToNow(new Date(lastUpdateIso), {
+      return formatDistanceToNowStrict(new Date(lastUpdateIso), {
         addSuffix: true,
         locale: ptBR
       });
@@ -94,7 +94,7 @@ export default function LeadCard({
 
   const createdAgo = useMemo(() => {
     try {
-      return formatDistanceToNow(new Date(lead.dataCriacao), {
+      return formatDistanceToNowStrict(new Date(lead.dataCriacao), {
         addSuffix: true,
         locale: ptBR
       });
