@@ -10,6 +10,8 @@ import { MessageCircle, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Packa
 import { Link } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAppContext } from '@/contexts/AppContext';
+import { useDebounce } from '@/hooks/useDebounce';
+import { useNumberInput } from '@/hooks/useNumberInput';
 import { formatToDayMonth, formatDateForDisplay } from "@/utils/dateUtils";
 
 import { calcularTotalFotosExtras, obterConfiguracaoPrecificacao, obterTabelaGlobal, obterTabelaCategoria, calcularValorPorFoto, formatarMoeda, calcularComRegrasProprias, migrarRegrasParaItemAntigo } from '@/utils/precificacaoUtils';
@@ -821,36 +823,68 @@ return <td className={`
                   }
                 })())}
 
-                {renderCell('extraPhotoQty', <Input key={`photoQty-${session.id}-${session.qtdFotosExtra}`} type="number" value={session.qtdFotosExtra || 0} onChange={e => {
-                  const qtd = parseInt(e.target.value) || 0;
-                  handleFieldUpdateStable(session.id, 'qtdFotosExtra', qtd);
-
-                  // CORREÇÃO: Usar regras congeladas quando disponíveis
-                  let total = 0;
-                  
-                  if (session.regrasDePrecoFotoExtraCongeladas) {
-                    // Item com regras congeladas - usar motor de cálculo específico
-                    // Log removido para evitar spam no console
-                    total = calcularComRegrasProprias(qtd, session.regrasDePrecoFotoExtraCongeladas);
-                  } else {
-                    // Item sem regras congeladas - usar motor global (para compatibilidade)
-                    // Log removido para evitar spam no console
-                    const valorFotoExtra = parseFloat((session.valorFotoExtra || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+                {renderCell('extraPhotoQty', (() => {
+                  const ExtraPhotoQtyInput = () => {
+                    const [localValue, setLocalValue] = useState(String(session.qtdFotosExtra || ''));
+                    const debouncedValue = useDebounce(localValue, 500);
                     
-                    // Buscar ID da categoria pelo nome
-                    const categorias = JSON.parse(localStorage.getItem('configuracoes_categorias') || '[]');
-                    const categoriaObj = categorias.find((cat: any) => cat.nome === session.categoria);
-                    const categoriaId = categoriaObj?.id || session.categoria;
-                    
-                    total = calcularTotalFotosExtras(qtd, {
-                      valorFotoExtra,
-                      categoria: session.categoria,
-                      categoriaId
+                    const { displayValue, handleFocus, handleChange } = useNumberInput({
+                      value: localValue,
+                      onChange: setLocalValue
                     });
-                  }
+
+                    useEffect(() => {
+                      const qtd = parseInt(debouncedValue) || 0;
+                      if (qtd !== session.qtdFotosExtra) {
+                        handleFieldUpdateStable(session.id, 'qtdFotosExtra', qtd);
+
+                        // CORREÇÃO: Usar regras congeladas quando disponíveis
+                        let total = 0;
+                        
+                        if (session.regrasDePrecoFotoExtraCongeladas) {
+                          // Item com regras congeladas - usar motor de cálculo específico
+                          total = calcularComRegrasProprias(qtd, session.regrasDePrecoFotoExtraCongeladas);
+                        } else {
+                          // Item sem regras congeladas - usar motor global (para compatibilidade)
+                          const valorFotoExtra = parseFloat((session.valorFotoExtra || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+                          
+                          // Buscar ID da categoria pelo nome
+                          const categorias = JSON.parse(localStorage.getItem('configuracoes_categorias') || '[]');
+                          const categoriaObj = categorias.find((cat: any) => cat.nome === session.categoria);
+                          const categoriaId = categoriaObj?.id || session.categoria;
+                          
+                          total = calcularTotalFotosExtras(qtd, {
+                            valorFotoExtra,
+                            categoria: session.categoria,
+                            categoriaId
+                          });
+                        }
+                        
+                        handleFieldUpdateStable(session.id, 'valorTotalFotoExtra', formatCurrency(total));
+                      }
+                    }, [debouncedValue]);
+
+                    // Update local value when session value changes externally
+                    useEffect(() => {
+                      setLocalValue(String(session.qtdFotosExtra || ''));
+                    }, [session.qtdFotosExtra]);
+
+                    return (
+                      <Input 
+                        key={`photoQty-${session.id}`}
+                        type="number" 
+                        value={displayValue}
+                        onChange={handleChange}
+                        onFocus={handleFocus}
+                        className="h-6 text-xs p-1 w-full border-none bg-transparent focus:bg-lunar-accent/10 transition-colors duration-150 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
+                        placeholder="" 
+                        autoComplete="off" 
+                      />
+                    );
+                  };
                   
-                  handleFieldUpdateStable(session.id, 'valorTotalFotoExtra', formatCurrency(total));
-                }} className="h-6 text-xs p-1 w-full border-none bg-transparent focus:bg-lunar-accent/10 transition-colors duration-150" placeholder="0" autoComplete="off" />)}
+                  return <ExtraPhotoQtyInput />;
+                })())}
 
                 {renderCell('extraPhotoTotal', (() => {
                   // Calcular o valor real baseado nas regras
