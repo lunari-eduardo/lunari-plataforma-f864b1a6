@@ -208,7 +208,7 @@ export function WorkflowPaymentsModal({
 
             {/* Histórico de Movimentações */}
             <Card className="px-0 mx-0">
-              <CardHeader className="pb-2 sm:pb-3">
+              <CardHeader className="pb-2 sm:pb-3 text-sm">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <CardTitle className="text-sm sm:text-base lg:text-lg font-semibold flex items-center gap-1 sm:gap-2">
                     <Clock className="h-3 w-3 sm:h-4 sm:w-4 lg:h-5 lg:w-5 text-primary" />
