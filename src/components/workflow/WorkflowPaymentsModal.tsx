@@ -167,42 +167,42 @@ export function WorkflowPaymentsModal({
   const valorRestante = Math.max(0, valorTotal - totalPago);
   return <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-xl lg:max-w-4xl max-w-[95vw] max-h-[95vh] overflow-y-auto px-[11px] mx-[3px]">
+        <DialogContent className="max-w-sm sm:max-w-md lg:max-w-4xl max-w-[95vw] max-h-[90vh] overflow-y-auto px-2 sm:px-4 mx-1 sm:mx-[3px]">
           <DialogHeader>
             <div className="flex items-center justify-between">
-              <DialogTitle className="text-lg lg:text-xl font-semibold flex items-center gap-2">
-                <CreditCard className="h-5 w-5 lg:h-6 lg:w-6 text-primary" />
+              <DialogTitle className="text-sm sm:text-lg lg:text-xl font-semibold flex items-center gap-1 sm:gap-2">
+                <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-primary" />
                 <span className="truncate">Gerenciar Pagamentos - {sessionData.nome}</span>
               </DialogTitle>
               <Button variant="ghost" size="sm" onClick={onClose}>
                 <X className="h-4 w-4" />
               </Button>
             </div>
-            <div className="text-sm text-muted-foreground truncate">
+            <div className="text-xs sm:text-sm text-muted-foreground truncate">
               {sessionData.email} • {formatDateForDisplay(sessionData.data)}
             </div>
           </DialogHeader>
 
-          <div className="space-y-4 lg:space-y-6">
+          <div className="space-y-2 sm:space-y-4 lg:space-y-6">
             {/* Resumo Financeiro */}
             <Card className="bg-muted/30">
-              <CardContent className="p-3 lg:p-4">
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 text-center">
+              <CardContent className="p-2 sm:p-3 lg:p-4">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4 text-center">
                   <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Total</p>
-                    <p className="font-bold text-primary text-sm">{formatCurrency(valorTotal)}</p>
+                    <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Total</p>
+                    <p className="font-bold text-primary text-xs sm:text-sm">{formatCurrency(valorTotal)}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Pago</p>
-                    <p className="font-bold text-green-600 text-sm">{formatCurrency(totalPago)}</p>
+                    <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Pago</p>
+                    <p className="font-bold text-green-600 text-xs sm:text-sm">{formatCurrency(totalPago)}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Pendente</p>
-                    <p className="font-bold text-yellow-600 text-sm">{formatCurrency(totalPendente)}</p>
+                    <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Pendente</p>
+                    <p className="font-bold text-yellow-600 text-xs sm:text-sm">{formatCurrency(totalPendente)}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Restante</p>
-                    <p className="font-bold text-red-600 text-sm">{formatCurrency(valorRestante)}</p>
+                    <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Restante</p>
+                    <p className="font-bold text-red-600 text-xs sm:text-sm">{formatCurrency(valorRestante)}</p>
                   </div>
                 </div>
               </CardContent>
@@ -210,20 +210,20 @@ export function WorkflowPaymentsModal({
 
             {/* Histórico de Movimentações */}
             <Card className="px-0">
-              <CardHeader className="pb-3">
+              <CardHeader className="pb-2 sm:pb-3">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <CardTitle className="text-base lg:text-lg font-semibold flex items-center gap-2">
-                    <Clock className="h-4 w-4 lg:h-5 lg:w-5 text-primary" />
+                  <CardTitle className="text-sm sm:text-base lg:text-lg font-semibold flex items-center gap-1 sm:gap-2">
+                    <Clock className="h-3 w-3 sm:h-4 sm:w-4 lg:h-5 lg:w-5 text-primary" />
                     Histórico de Movimentações
                   </CardTitle>
-                  <Button onClick={() => setShowPaymentModal(true)} className="gap-2" size="sm">
-                    <Plus className="h-4 w-4" />
-                    <span className="hidden sm:inline">Gerenciar Pagamentos</span>
-                    <span className="sm:hidden">Adicionar</span>
+                  <Button onClick={() => setShowPaymentModal(true)} className="gap-1 sm:gap-2 h-8 sm:h-10" size="sm">
+                    <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="hidden sm:inline text-xs sm:text-sm">Gerenciar Pagamentos</span>
+                    <span className="sm:hidden text-xs">Adicionar</span>
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent className="p-3 lg:p-6">
+              <CardContent className="p-2 sm:p-3 lg:p-6">
                 {payments.length === 0 ? <div className="text-center py-8 text-muted-foreground">
                     <CreditCard className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p className="font-medium">Nenhum pagamento registrado</p>

@@ -170,56 +170,58 @@ export function PaymentConfigModalExpanded({
     }
   };
   return <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg lg:max-w-xl max-w-[95vw] max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-sm sm:max-w-lg lg:max-w-xl max-w-[95vw] max-h-[80vh] overflow-y-auto px-2 sm:px-6">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-lg">
-            <CreditCard className="h-5 w-5 text-primary" />
+          <DialogTitle className="flex items-center gap-1 sm:gap-2 text-sm sm:text-lg">
+            <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
             Gerenciar Pagamentos
           </DialogTitle>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-xs sm:text-sm text-muted-foreground">
             Cliente: <span className="font-medium">{clienteNome}</span>
           </p>
         </DialogHeader>
 
         {/* Resumo Financeiro */}
         <Card className="bg-muted/30">
-          <CardContent className="p-3 lg:p-4">
-            <div className="grid grid-cols-3 gap-3 lg:gap-4 text-center">
+          <CardContent className="p-2 sm:p-3 lg:p-4">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3 lg:gap-4 text-center">
               <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Total</p>
-                <p className="font-bold text-primary text-sm">{formatCurrency(valorTotal)}</p>
+                <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Total</p>
+                <p className="font-bold text-primary text-xs sm:text-sm">{formatCurrency(valorTotal)}</p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Pago</p>
-                <p className="font-bold text-green-600 text-sm">{formatCurrency(valorJaPago)}</p>
+                <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Pago</p>
+                <p className="font-bold text-green-600 text-xs sm:text-sm">{formatCurrency(valorJaPago)}</p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Restante</p>
-                <p className="font-bold text-red-600 text-sm">{formatCurrency(valorRestante)}</p>
+                <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Restante</p>
+                <p className="font-bold text-red-600 text-xs sm:text-sm">{formatCurrency(valorRestante)}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="parcelamento" className="gap-2">
-              <Package className="h-4 w-4" />
-              Parcelamento
+          <TabsList className="grid w-full grid-cols-2 h-8 sm:h-10">
+            <TabsTrigger value="parcelamento" className="gap-1 sm:gap-2 text-xs sm:text-sm">
+              <Package className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Parcelamento</span>
+              <span className="sm:hidden">Parcelas</span>
             </TabsTrigger>
-            <TabsTrigger value="agendamento" className="gap-2">
-              <Clock className="h-4 w-4" />
-              Agendamento
+            <TabsTrigger value="agendamento" className="gap-1 sm:gap-2 text-xs sm:text-sm">
+              <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Agendamento</span>
+              <span className="sm:hidden">Agendar</span>
             </TabsTrigger>
           </TabsList>
 
           {/* Tab Parcelamento */}
-          <TabsContent value="parcelamento" className="space-y-4">
+          <TabsContent value="parcelamento" className="space-y-3 sm:space-y-4">
             <Card>
-              <CardHeader>
-                <CardTitle className="text-base lg:text-lg">Configurar Parcelamento</CardTitle>
+              <CardHeader className="pb-2 sm:pb-6">
+                <CardTitle className="text-sm sm:text-base lg:text-lg">Configurar Parcelamento</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3 sm:space-y-4 p-3 sm:p-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="valorParcelar">Valor Total a Parcelar</Label>
@@ -270,12 +272,12 @@ export function PaymentConfigModalExpanded({
           </TabsContent>
 
           {/* Tab Agendamento */}
-          <TabsContent value="agendamento" className="space-y-4">
+          <TabsContent value="agendamento" className="space-y-3 sm:space-y-4">
             <Card>
-              <CardHeader>
-                <CardTitle className="text-base lg:text-lg">Agendar Pagamento</CardTitle>
+              <CardHeader className="pb-2 sm:pb-6">
+                <CardTitle className="text-sm sm:text-base lg:text-lg">Agendar Pagamento</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3 sm:space-y-4 p-3 sm:p-6">
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="entradaAgora">Entrada Agora (opcional)</Label>
