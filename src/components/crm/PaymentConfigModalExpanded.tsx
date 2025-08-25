@@ -18,6 +18,7 @@ import { formatCurrency } from '@/utils/financialUtils';
 import { toast } from '@/hooks/use-toast';
 import { formatDateForStorage, safeParseInputDate } from '@/utils/dateUtils';
 import { SessionPaymentExtended } from '@/types/sessionPayments';
+import { useNumberInput } from '@/hooks/useNumberInput';
 
 interface PaymentConfigModalExpandedProps {
   isOpen: boolean;
@@ -59,10 +60,10 @@ export function PaymentConfigModalExpanded({
   const [loading, setLoading] = useState(false);
 
   // Estados para pagamento rápido
-  const [valorRapido, setValorRapido] = useState(valorRestante);
+  const [valorRapido, setValorRapido] = useState<number | string>(valorRestante);
 
   // Estados para parcelamento
-  const [valorParcelar, setValorParcelar] = useState(valorRestante);
+  const [valorParcelar, setValorParcelar] = useState<number | string>(valorRestante);
   const [quantidadeParcelas, setQuantidadeParcelas] = useState(2);
   const [dataInicioParcelas, setDataInicioParcelas] = useState(
     formatDateForStorage(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000))
@@ -70,15 +71,37 @@ export function PaymentConfigModalExpanded({
   const [intervaloParcelas, setIntervaloParcelas] = useState(30);
 
   // Estados para agendamento
-  const [valorAgendado, setValorAgendado] = useState(valorRestante);
+  const [valorAgendado, setValorAgendado] = useState<number | string>(valorRestante);
   const [dataAgendamento, setDataAgendamento] = useState(
     formatDateForStorage(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000))
   );
   const [observacoesAgendamento, setObservacoesAgendamento] = useState('');
-  const [entradaAgora, setEntradaAgora] = useState(0);
+  const [entradaAgora, setEntradaAgora] = useState<number | string>('');
+
+  // Hooks para inputs numéricos
+  const valorRapidoInput = useNumberInput({
+    value: valorRapido,
+    onChange: setValorRapido
+  });
+
+  const valorParcelarInput = useNumberInput({
+    value: valorParcelar,
+    onChange: setValorParcelar
+  });
+
+  const entradaAgoraInput = useNumberInput({
+    value: entradaAgora,
+    onChange: setEntradaAgora
+  });
+
+  const valorAgendadoInput = useNumberInput({
+    value: valorAgendado,
+    onChange: setValorAgendado
+  });
 
   const handlePagamentoRapido = async () => {
-    if (valorRapido <= 0 || valorRapido > valorRestante) {
+    const valor = parseFloat(String(valorRapido)) || 0;
+    if (valor <= 0 || valor > valorRestante) {
       toast({
         title: "Erro",
         description: "Valor inválido para pagamento",
@@ -90,7 +113,7 @@ export function PaymentConfigModalExpanded({
     setLoading(true);
     try {
       onAddPayment({
-        valor: valorRapido,
+        valor,
         data: formatDateForStorage(new Date()),
         tipo: 'pago',
         statusPagamento: 'pago',
@@ -100,7 +123,7 @@ export function PaymentConfigModalExpanded({
 
       toast({
         title: "Pagamento registrado",
-        description: `${formatCurrency(valorRapido)} registrado com sucesso`
+        description: `${formatCurrency(valor)} registrado com sucesso`
       });
 
       onClose();
@@ -116,7 +139,8 @@ export function PaymentConfigModalExpanded({
   };
 
   const handleParcelamento = async () => {
-    if (valorParcelar <= 0 || quantidadeParcelas <= 0) {
+    const valor = parseFloat(String(valorParcelar)) || 0;
+    if (valor <= 0 || quantidadeParcelas <= 0) {
       toast({
         title: "Erro",
         description: "Valores inválidos para parcelamento",
@@ -140,7 +164,7 @@ export function PaymentConfigModalExpanded({
       }
 
       onCreateInstallments(
-        valorParcelar,
+        valor,
         quantidadeParcelas,
         startDateForInstallments,
         intervaloParcelas
@@ -148,7 +172,7 @@ export function PaymentConfigModalExpanded({
 
       toast({
         title: "Parcelas criadas",
-        description: `${quantidadeParcelas} parcelas de ${formatCurrency(valorParcelar / quantidadeParcelas)} criadas`
+        description: `${quantidadeParcelas} parcelas de ${formatCurrency(valor / quantidadeParcelas)} criadas`
       });
 
       onClose();
@@ -164,7 +188,10 @@ export function PaymentConfigModalExpanded({
   };
 
   const handleAgendamento = async () => {
-    if (valorAgendado <= 0 || !dataAgendamento) {
+    const valorAgendadoParsed = parseFloat(String(valorAgendado)) || 0;
+    const entradaAgoraParsed = parseFloat(String(entradaAgora)) || 0;
+    
+    if (valorAgendadoParsed <= 0 || !dataAgendamento) {
       toast({
         title: "Erro",
         description: "Valores inválidos para agendamento",
@@ -173,7 +200,7 @@ export function PaymentConfigModalExpanded({
       return;
     }
 
-    if (entradaAgora < 0 || (entradaAgora + valorAgendado) > valorRestante) {
+    if (entradaAgoraParsed < 0 || (entradaAgoraParsed + valorAgendadoParsed) > valorRestante) {
       toast({
         title: "Erro",
         description: "Valores de entrada e agendamento excedem o valor restante",
@@ -185,9 +212,9 @@ export function PaymentConfigModalExpanded({
     setLoading(true);
     try {
       // Se há entrada, registrar pagamento imediato primeiro
-      if (entradaAgora > 0) {
+      if (entradaAgoraParsed > 0) {
         onAddPayment({
-          valor: entradaAgora,
+          valor: entradaAgoraParsed,
           data: formatDateForStorage(new Date()),
           tipo: 'pago',
           statusPagamento: 'pago',
@@ -213,14 +240,14 @@ export function PaymentConfigModalExpanded({
       console.log('🗓️ [Agendamento] Data processada:', dateForScheduling.toISOString());
       
       onSchedulePayment(
-        valorAgendado,
+        valorAgendadoParsed,
         dateForScheduling,
         observacoesAgendamento
       );
 
-      const totalMessage = entradaAgora > 0 
-        ? `${formatCurrency(entradaAgora)} entrada + ${formatCurrency(valorAgendado)} agendado`
-        : `${formatCurrency(valorAgendado)} agendado`;
+      const totalMessage = entradaAgoraParsed > 0 
+        ? `${formatCurrency(entradaAgoraParsed)} entrada + ${formatCurrency(valorAgendadoParsed)} agendado`
+        : `${formatCurrency(valorAgendadoParsed)} agendado`;
 
       toast({
         title: "Pagamento configurado",
@@ -302,8 +329,9 @@ export function PaymentConfigModalExpanded({
                     <Input
                       id="valorRapido"
                       type="number"
-                      value={valorRapido}
-                      onChange={(e) => setValorRapido(parseFloat(e.target.value) || 0)}
+                      value={valorRapidoInput.displayValue}
+                      onChange={valorRapidoInput.handleChange}
+                      onFocus={valorRapidoInput.handleFocus}
                       className="pl-10"
                       min="0"
                       max={valorRestante}
@@ -317,10 +345,10 @@ export function PaymentConfigModalExpanded({
 
                 <Button 
                   onClick={handlePagamentoRapido}
-                  disabled={loading || valorRapido <= 0 || valorRapido > valorRestante}
+                  disabled={loading || (parseFloat(String(valorRapido)) || 0) <= 0 || (parseFloat(String(valorRapido)) || 0) > valorRestante}
                   className="w-full"
                 >
-                  {loading ? 'Registrando...' : `Registrar ${formatCurrency(valorRapido)}`}
+                  {loading ? 'Registrando...' : `Registrar ${formatCurrency(parseFloat(String(valorRapido)) || 0)}`}
                 </Button>
               </CardContent>
             </Card>
@@ -341,8 +369,9 @@ export function PaymentConfigModalExpanded({
                       <Input
                         id="valorParcelar"
                         type="number"
-                        value={valorParcelar}
-                        onChange={(e) => setValorParcelar(parseFloat(e.target.value) || 0)}
+                        value={valorParcelarInput.displayValue}
+                        onChange={valorParcelarInput.handleChange}
+                        onFocus={valorParcelarInput.handleFocus}
                         className="pl-10"
                         min="0"
                         max={valorRestante}
@@ -392,12 +421,12 @@ export function PaymentConfigModalExpanded({
                   </div>
                 </div>
 
-                {valorParcelar > 0 && quantidadeParcelas > 0 && (
+                {(parseFloat(String(valorParcelar)) || 0) > 0 && quantidadeParcelas > 0 && (
                   <Card className="bg-blue-50 border-blue-200">
                     <CardContent className="p-4">
                       <h4 className="font-medium text-blue-900 mb-2">Preview das Parcelas</h4>
                       <p className="text-sm text-blue-800">
-                        {quantidadeParcelas} parcelas de {formatCurrency(valorParcelar / quantidadeParcelas)}
+                        {quantidadeParcelas} parcelas de {formatCurrency((parseFloat(String(valorParcelar)) || 0) / quantidadeParcelas)}
                       </p>
                       <p className="text-xs text-blue-600">
                         Primeira parcela: {new Date(dataInicioParcelas).toLocaleDateString()}
@@ -408,7 +437,7 @@ export function PaymentConfigModalExpanded({
 
                 <Button 
                   onClick={handleParcelamento}
-                  disabled={loading || valorParcelar <= 0 || quantidadeParcelas <= 0}
+                  disabled={loading || (parseFloat(String(valorParcelar)) || 0) <= 0 || quantidadeParcelas <= 0}
                   className="w-full"
                 >
                   {loading ? 'Criando...' : `Criar ${quantidadeParcelas} Parcelas`}
@@ -432,17 +461,19 @@ export function PaymentConfigModalExpanded({
                       <Input
                         id="entradaAgora"
                         type="number"
-                        value={entradaAgora}
+                        value={entradaAgoraInput.displayValue}
                         onChange={(e) => {
+                          entradaAgoraInput.handleChange(e);
                           const entrada = parseFloat(e.target.value) || 0;
-                          setEntradaAgora(entrada);
+                          const valorAgendadoParsed = parseFloat(String(valorAgendado)) || 0;
                           // Ajustar valor agendado automaticamente
-                          if (entrada >= 0 && (entrada + valorAgendado) <= valorRestante) {
+                          if (entrada >= 0 && (entrada + valorAgendadoParsed) <= valorRestante) {
                             // OK, manter valores
                           } else if (entrada >= 0) {
                             setValorAgendado(Math.max(0, valorRestante - entrada));
                           }
                         }}
+                        onFocus={entradaAgoraInput.handleFocus}
                         className="pl-10"
                         min="0"
                         max={valorRestante}
@@ -463,11 +494,12 @@ export function PaymentConfigModalExpanded({
                         <Input
                           id="valorAgendado"
                           type="number"
-                          value={valorAgendado}
-                          onChange={(e) => setValorAgendado(parseFloat(e.target.value) || 0)}
+                          value={valorAgendadoInput.displayValue}
+                          onChange={valorAgendadoInput.handleChange}
+                          onFocus={valorAgendadoInput.handleFocus}
                           className="pl-10"
                           min="0"
-                          max={valorRestante - entradaAgora}
+                          max={valorRestante - (parseFloat(String(entradaAgora)) || 0)}
                           step="0.01"
                         />
                       </div>
@@ -488,22 +520,22 @@ export function PaymentConfigModalExpanded({
                     </div>
                   </div>
 
-                  {(entradaAgora + valorAgendado) > 0 && (
+                  {((parseFloat(String(entradaAgora)) || 0) + (parseFloat(String(valorAgendado)) || 0)) > 0 && (
                     <Card className="bg-blue-50 border-blue-200">
                       <CardContent className="p-4">
                         <h4 className="font-medium text-blue-900 mb-2">Resumo</h4>
-                        {entradaAgora > 0 && (
+                        {(parseFloat(String(entradaAgora)) || 0) > 0 && (
                           <p className="text-sm text-blue-800">
-                            Entrada hoje: {formatCurrency(entradaAgora)}
+                            Entrada hoje: {formatCurrency(parseFloat(String(entradaAgora)) || 0)}
                           </p>
                         )}
-                        {valorAgendado > 0 && (
+                        {(parseFloat(String(valorAgendado)) || 0) > 0 && (
                           <p className="text-sm text-blue-800">
-                            Agendado: {formatCurrency(valorAgendado)} para {new Date(dataAgendamento).toLocaleDateString()}
+                            Agendado: {formatCurrency(parseFloat(String(valorAgendado)) || 0)} para {new Date(dataAgendamento).toLocaleDateString()}
                           </p>
                         )}
                         <p className="text-xs text-blue-600 mt-1">
-                          Total: {formatCurrency(entradaAgora + valorAgendado)}
+                          Total: {formatCurrency((parseFloat(String(entradaAgora)) || 0) + (parseFloat(String(valorAgendado)) || 0))}
                         </p>
                       </CardContent>
                     </Card>
@@ -523,13 +555,13 @@ export function PaymentConfigModalExpanded({
 
                 <Button 
                   onClick={handleAgendamento}
-                  disabled={loading || (valorAgendado <= 0 && entradaAgora <= 0) || !dataAgendamento || (entradaAgora + valorAgendado) > valorRestante}
+                  disabled={loading || ((parseFloat(String(valorAgendado)) || 0) <= 0 && (parseFloat(String(entradaAgora)) || 0) <= 0) || !dataAgendamento || ((parseFloat(String(entradaAgora)) || 0) + (parseFloat(String(valorAgendado)) || 0)) > valorRestante}
                   className="w-full"
                 >
                   {loading ? 'Configurando...' : (
-                    entradaAgora > 0 
-                      ? `Entrada ${formatCurrency(entradaAgora)} + Agendar ${formatCurrency(valorAgendado)}`
-                      : `Agendar ${formatCurrency(valorAgendado)}`
+                    (parseFloat(String(entradaAgora)) || 0) > 0 
+                      ? `Entrada ${formatCurrency(parseFloat(String(entradaAgora)) || 0)} + Agendar ${formatCurrency(parseFloat(String(valorAgendado)) || 0)}`
+                      : `Agendar ${formatCurrency(parseFloat(String(valorAgendado)) || 0)}`
                   )}
                 </Button>
               </CardContent>
