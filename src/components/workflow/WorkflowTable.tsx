@@ -648,7 +648,7 @@ export function WorkflowTable({
                 {renderCell('description', renderEditableInput(session, 'descricao', session.descricao || '', 'text', 'Descrição...'))}
                 
                 {renderCell('email', <div className="flex items-center gap-1 max-w-full">
-                    <span className="text-xs select-all cursor-text truncate">{session.email || 'N/A'}</span>
+                    <span className="text-xs select-all cursor-text truncate font-thin">{session.email || 'N/A'}</span>
                     {session.email && <a href={`mailto:${session.email}`}>
                         
                       </a>}
@@ -667,7 +667,7 @@ export function WorkflowTable({
                     </SelectContent>
                   </Select>)}
 
-                {renderCell('category', <span className="text-xs font-medium">{session.categoria || 'N/A'}</span>)}
+                {renderCell('category', <span className="text-xs text-center font-light">{session.categoria || 'N/A'}</span>)}
 
                 {renderCell('package', <WorkflowPackageCombobox key={`package-${session.id}-${session.pacote}`} value={session.pacote} onValueChange={packageData => {
                   // Atualizar dados do pacote (congelamento)
