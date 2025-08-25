@@ -980,7 +980,7 @@ export function WorkflowTable({
         {selectedSessionForPayment && <WorkflowPaymentsModal isOpen={workflowPaymentsOpen} onClose={() => {
       setWorkflowPaymentsOpen(false);
       setSelectedSessionForPayment(null);
-    }} sessionData={selectedSessionForPayment} onPaymentUpdate={(sessionId, totalPaid, fullPaymentsArray) => {
+    }} sessionData={selectedSessionForPayment} valorTotalCalculado={calculateTotal(selectedSessionForPayment)} onPaymentUpdate={(sessionId, totalPaid, fullPaymentsArray) => {
       // Atualizar contexto com novos pagamentos
       handleFieldUpdateStable(sessionId, 'valorPago', `R$ ${totalPaid.toFixed(2).replace('.', ',')}`);
       if (fullPaymentsArray) {

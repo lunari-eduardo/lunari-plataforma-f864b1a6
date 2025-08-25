@@ -16,12 +16,14 @@ interface WorkflowPaymentsModalProps {
   isOpen: boolean;
   onClose: () => void;
   sessionData: SessionData;
+  valorTotalCalculado?: number;
   onPaymentUpdate: (sessionId: string, totalPaid: number, fullPaymentsArray?: any[]) => void;
 }
 export function WorkflowPaymentsModal({
   isOpen,
   onClose,
   sessionData,
+  valorTotalCalculado,
   onPaymentUpdate
 }: WorkflowPaymentsModalProps) {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -163,7 +165,7 @@ export function WorkflowPaymentsModal({
         return 'Manual';
     }
   };
-  const valorTotal = parseFloat(String(sessionData.total || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+  const valorTotal = valorTotalCalculado ?? (parseFloat(String(sessionData.total || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0);
   const valorRestante = Math.max(0, valorTotal - totalPago);
   return <>
       <Dialog open={isOpen} onOpenChange={onClose}>
