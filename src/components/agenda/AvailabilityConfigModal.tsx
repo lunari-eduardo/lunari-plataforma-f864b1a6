@@ -246,7 +246,7 @@ export default function AvailabilityConfigModal({
                     Gerenciar
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-80 bg-background border shadow-lg" align="end">
+                <PopoverContent className="w-80 bg-background border shadow-lg z-[10000]" align="end">
                   <div className="space-y-4 p-1">
                     <div className="space-y-2">
                       <Label className="text-sm font-medium">Criar novo tipo</Label>
