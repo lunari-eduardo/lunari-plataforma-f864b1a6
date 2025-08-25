@@ -146,7 +146,7 @@ export default function Index() {
       dt
     }) => dt >= now).sort((a, b) => a.dt.getTime() - b.dt.getTime());
     return {
-      livresSemana: freeSlots.length,
+      livresSemana: freeWithDate.length,
       proximoLivre: freeWithDate.length > 0 ? freeWithDate[0].dt : null
     };
   }, [appointments, availability]);
