@@ -158,7 +158,7 @@ export default function WeeklyView({
               date: day,
               time
             })} className={`relative cursor-pointer bg-card hover:bg-muted ${isTablet ? 'h-10 p-0.5' : 'h-12 md:h-16 p-0.5 md:p-1'}`}>
-                      {event ? !isMobile && <div onClick={e => e.stopPropagation()}>
+                    {event ? !isMobile && <div onClick={e => e.stopPropagation()}>
                           <UnifiedEventCard event={event} onClick={onEventClick} variant="weekly" />
                         </div> : !isMobile && (() => {
                           const slot = getAvailabilityForSlot(day, time);
@@ -172,14 +172,15 @@ export default function WeeklyView({
                             >
                               {slot.label || 'Disponível'}
                             </span>
-                          <button type="button" onClick={e => {
-                  e.stopPropagation();
-                  handleRemoveAvailability(day, time);
-                }} className={`text-muted-foreground hover:text-foreground items-center gap-1 ${isTablet ? 'text-[8px] inline-flex' : 'text-[10px] hidden lg:inline-flex'}`} aria-label="Remover disponibilidade" title="Remover disponibilidade">
-                            <Trash2 className={isTablet ? 'h-2.5 w-2.5' : 'h-3 w-3'} /> {!isTablet && 'Remover'}
-                          </button>
-                        </div> : null}
-                  </div>;
+                            <button type="button" onClick={e => {
+                              e.stopPropagation();
+                              handleRemoveAvailability(day, time);
+                            }} className={`text-muted-foreground hover:text-foreground items-center gap-1 ${isTablet ? 'text-[8px] inline-flex' : 'text-[10px] hidden lg:inline-flex'}`} aria-label="Remover disponibilidade" title="Remover disponibilidade">
+                              <Trash2 className={isTablet ? 'h-2.5 w-2.5' : 'h-3 w-3'} /> {!isTablet && 'Remover'}
+                            </button>
+                          </div> : null;
+                        })()}
+                  </div>
           })}
             </React.Fragment>)}
         </div>
