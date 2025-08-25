@@ -43,12 +43,12 @@ export default function WeeklyView({
   const getEventForSlot = (day: Date, time: string) => {
     return unifiedEvents.find(event => isSameDay(event.date, day) && event.time === time && event.type === 'appointment');
   };
-  const hasAvailabilityForSlot = (day: Date, time: string) => {
+  const getAvailabilityForSlot = (day: Date, time: string) => {
     const ds = format(day, 'yyyy-MM-dd');
     // Não considerar disponibilidade se houver agendamento no mesmo horário
     const hasAppointment = unifiedEvents.some(e => isSameDay(e.date, day) && e.time === time && e.type === 'appointment');
-    if (hasAppointment) return false;
-    return availability.some(a => a.date === ds && a.time === time);
+    if (hasAppointment) return null;
+    return availability.find(a => a.date === ds && a.time === time);
   };
   const formatTimeBr = (t: string) => {
     const [hh, mm] = t.split(':');
@@ -158,10 +158,20 @@ export default function WeeklyView({
               date: day,
               time
             })} className={`relative cursor-pointer bg-card hover:bg-muted ${isTablet ? 'h-10 p-0.5' : 'h-12 md:h-16 p-0.5 md:p-1'}`}>
-                    {event ? !isMobile && <div onClick={e => e.stopPropagation()}>
+                      {event ? !isMobile && <div onClick={e => e.stopPropagation()}>
                           <UnifiedEventCard event={event} onClick={onEventClick} variant="weekly" />
-                        </div> : !isMobile && hasAvailabilityForSlot(day, time) ? <div className={`absolute inset-0 flex items-center justify-center ${isTablet ? 'gap-1' : 'gap-2'}`}>
-                          <span className={`rounded bg-availability/20 border border-availability/50 text-lunar-text ${isTablet ? 'text-[8px] px-1 py-0.5' : 'text-[10px] px-1.5 py-0.5'}`}>Disponível</span>
+                        </div> : !isMobile && (() => {
+                          const slot = getAvailabilityForSlot(day, time);
+                          return slot ? <div className={`absolute inset-0 flex items-center justify-center ${isTablet ? 'gap-1' : 'gap-2'}`}>
+                            <span 
+                              className={`rounded text-lunar-text border ${isTablet ? 'text-[8px] px-1 py-0.5' : 'text-[10px] px-1.5 py-0.5'}`}
+                              style={{ 
+                                backgroundColor: slot.color ? `${slot.color}20` : 'hsl(var(--availability) / 0.2)',
+                                borderColor: slot.color ? `${slot.color}80` : 'hsl(var(--availability) / 0.5)'
+                              }}
+                            >
+                              {slot.label || 'Disponível'}
+                            </span>
                           <button type="button" onClick={e => {
                   e.stopPropagation();
                   handleRemoveAvailability(day, time);

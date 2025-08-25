@@ -20,7 +20,7 @@ import { syncLeadsWithClientUpdate } from '@/utils/leadClientSync';
 // Types
 import { Orcamento, Template, OrigemCliente, MetricasOrcamento, Cliente } from '@/types/orcamentos';
 import { Appointment, AppointmentStatus } from '@/hooks/useAgenda';
-import { AvailabilitySlot } from '@/types/availability';
+import { AvailabilitySlot, AvailabilityType } from '@/types/availability';
 
 export interface ProdutoWorkflow {
   nome: string;
@@ -115,6 +115,7 @@ interface AppContextType {
   appointments: Appointment[];
   // Disponibilidades da Agenda
   availability: AvailabilitySlot[];
+  availabilityTypes: AvailabilityType[];
   
   // Workflow
   workflowItems: WorkflowItem[];
@@ -157,6 +158,10 @@ interface AppContextType {
   addAvailabilitySlots: (slots: AvailabilitySlot[]) => void;
   clearAvailabilityForDate: (date: string) => void;
   deleteAvailabilitySlot: (id: string) => void;
+  // Tipos de Disponibilidade Actions
+  addAvailabilityType: (input: { name: string; color: string }) => AvailabilityType;
+  updateAvailabilityType: (id: string, updates: Partial<AvailabilityType>) => void;
+  deleteAvailabilityType: (id: string) => void;
   
   // Workflow Actions
   updateWorkflowItem: (id: string, updates: Partial<WorkflowItem>) => void;
@@ -279,6 +284,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Disponibilidades da Agenda
   const [availability, setAvailability] = useState<AvailabilitySlot[]>(() => {
     return storage.load(STORAGE_KEYS.AVAILABILITY, [] as AvailabilitySlot[]);
+  });
+
+  // Tipos de Disponibilidade
+  const [availabilityTypes, setAvailabilityTypes] = useState<AvailabilityType[]>(() => {
+    const defaultTypes: AvailabilityType[] = [
+      { id: 'default', name: 'Padrão', color: '#10b981' }
+    ];
+    return storage.load(STORAGE_KEYS.AVAILABILITY_TYPES, defaultTypes);
   });
 
   // NOVA ARQUITETURA: Estado baseado em Projetos
@@ -1891,6 +1904,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAvailability(prev => prev.filter(s => s.id !== id));
   };
 
+  // Tipos de Disponibilidade - Actions
+  const addAvailabilityType = (input: { name: string; color: string }): AvailabilityType => {
+    const newType: AvailabilityType = {
+      id: `type-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      name: input.name,
+      color: input.color
+    };
+    setAvailabilityTypes(prev => [...prev, newType]);
+    return newType;
+  };
+
+  const updateAvailabilityType = (id: string, updates: Partial<AvailabilityType>) => {
+    setAvailabilityTypes(prev => 
+      prev.map(type => type.id === id ? { ...type, ...updates } : type)
+    );
+  };
+
+  const deleteAvailabilityType = (id: string) => {
+    // Não permitir excluir o tipo padrão
+    if (id === 'default') return;
+    
+    setAvailabilityTypes(prev => prev.filter(type => type.id !== id));
+    // Limpar typeId dos slots que usavam este tipo
+    setAvailability(prev => prev.map(slot => 
+      slot.typeId === id 
+        ? { ...slot, typeId: undefined, label: undefined, color: undefined }
+        : slot
+    ));
+  };
+
+  // Persistir tipos de disponibilidade no localStorage
+  useEffect(() => {
+    storage.save(STORAGE_KEYS.AVAILABILITY_TYPES, availabilityTypes);
+  }, [availabilityTypes]);
+
   const updateWorkflowItem = (id: string, updates: Partial<WorkflowItem>) => {
     // NOVA ARQUITETURA: Atualizar projeto diretamente
     const projeto = projetos.find(p => p.projectId === id);
@@ -2493,6 +2541,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     metricas,
     appointments,
     availability,
+    availabilityTypes,
     workflowItemsAll: workflowItems,
     workflowItems: workflowItems.filter(item => {
       // Handle ISO date format (YYYY-MM-DD) from new Projeto structure
@@ -2546,6 +2595,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addAvailabilitySlots,
     clearAvailabilityForDate,
     deleteAvailabilitySlot,
+    addAvailabilityType,
+    updateAvailabilityType,
+    deleteAvailabilityType,
     updateWorkflowItem,
     addPayment,
     toggleColumnVisibility,

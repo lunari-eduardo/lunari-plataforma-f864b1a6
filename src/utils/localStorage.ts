@@ -26,6 +26,7 @@ export const STORAGE_KEYS = {
   USER_BRANDING: 'lunari_user_branding',
   // Agenda - Disponibilidades
   AVAILABILITY: 'lunari_availability_slots',
+  AVAILABILITY_TYPES: 'lunari_availability_types',
   AVAILABILITY_PRESETS: 'lunari_availability_presets',
   // Tarefas e Automações
   TASKS: 'lunari_tasks',

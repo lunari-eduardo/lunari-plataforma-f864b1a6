@@ -45,6 +45,7 @@ export default function ActionChoiceModal({
     onClose();
   };
   const handleShareDay = async () => {
+    // TODO: Open ShareAvailabilityModal for type selection
     const ds = formatDateForStorage(date);
     const slots = availability.filter(a => a.date === ds).map(a => a.time).sort();
     if (slots.length === 0) {

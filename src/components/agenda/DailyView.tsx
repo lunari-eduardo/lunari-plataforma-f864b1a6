@@ -73,8 +73,8 @@ export default function DailyView({
   const getEventsForSlot = (time: string) => {
     return dayEvents.filter(event => event.time === time);
   };
-  const hasAvailabilityForTime = (time: string) => {
-    return availability.some(s => s.date === dateKey && s.time === time);
+  const getAvailabilityForTime = (time: string) => {
+    return availability.find(s => s.date === dateKey && s.time === time);
   };
   const handleRemoveAvailability = (time: string) => {
     const matches = availability.filter(s => s.date === dateKey && s.time === time);
@@ -147,17 +147,26 @@ export default function DailyView({
                           </button>}
                       </div>)}
                   </div> : <div className="flex items-center justify-between">
-                     {hasAvailabilityForTime(time) ? <div className="inline-flex items-center gap-2">
-                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-availability/20 border border-availability/50 text-lunar-text">
-                           Disponível
-                         </span>
+                     {(() => {
+                       const slot = getAvailabilityForTime(time);
+                       return slot ? <div className="inline-flex items-center gap-2">
+                          <span 
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-lunar-text border"
+                            style={{ 
+                              backgroundColor: slot.color ? `${slot.color}20` : 'hsl(var(--availability) / 0.2)',
+                              borderColor: slot.color ? `${slot.color}80` : 'hsl(var(--availability) / 0.5)'
+                            }}
+                          >
+                            {slot.label || 'Disponível'}
+                          </span>
                          <button type="button" onClick={e => {
                   e.stopPropagation();
                   handleRemoveAvailability(time);
                 }} className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1" aria-label="Remover disponibilidade" title="Remover disponibilidade">
                            <Trash2 className="h-3.5 w-3.5" /> Remover
                          </button>
-                       </div> : <span className="text-muted-foreground">Disponível</span>}
+                        </div> : <span className="text-muted-foreground">Disponível</span>;
+                     })()}
                      <ConflictIndicator date={date} time={time} />
                    </div>}
               </div>
