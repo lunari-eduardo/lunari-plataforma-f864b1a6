@@ -167,7 +167,7 @@ export function WorkflowPaymentsModal({
   const valorRestante = Math.max(0, valorTotal - totalPago);
   return <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-sm sm:max-w-md lg:max-w-4xl max-w-[95vw] max-h-[90vh] overflow-y-auto sm:px-4 sm:mx-[3px] mx-[8px] px-[7px]">
+        <DialogContent className="max-w-sm sm:max-w-md lg:max-w-4xl max-w-[95vw] max-h-[90vh] overflow-y-auto sm:px-4 sm:mx-[3px] px-0 mx-0">
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle className="text-sm sm:text-lg lg:text-xl font-semibold flex items-center gap-1 sm:gap-2">
@@ -209,14 +209,14 @@ export function WorkflowPaymentsModal({
             </Card>
 
             {/* Histórico de Movimentações */}
-            <Card className="px-0">
+            <Card className="px-0 mx-0">
               <CardHeader className="pb-2 sm:pb-3">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <CardTitle className="text-sm sm:text-base lg:text-lg font-semibold flex items-center gap-1 sm:gap-2">
                     <Clock className="h-3 w-3 sm:h-4 sm:w-4 lg:h-5 lg:w-5 text-primary" />
                     Histórico de Movimentações
                   </CardTitle>
-                  <Button onClick={() => setShowPaymentModal(true)} className="gap-1 sm:gap-2 h-8 sm:h-10" size="sm">
+                  <Button onClick={() => setShowPaymentModal(true)} size="sm" className="gap-1 sm:gap-2 h-6 sm:h-8">
                     <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
                     <span className="hidden sm:inline text-xs sm:text-sm">Gerenciar Pagamentos</span>
                     <span className="sm:hidden text-xs">Adicionar</span>
@@ -245,7 +245,7 @@ export function WorkflowPaymentsModal({
                       const dateB = new Date(b.dataVencimento || b.data || '1970-01-01');
                       return dateB.getTime() - dateA.getTime();
                     }).map(payment => <TableRow key={payment.id}>
-                            <TableCell>
+                            <TableCell className="px-0 mx-0">
                               <div className="space-y-1">
                                 {payment.statusPagamento === 'pago' && payment.data && <div className="flex items-center gap-1 text-sm">
                                     <CheckCircle2 className="h-3 w-3 text-green-600" />
@@ -264,7 +264,7 @@ export function WorkflowPaymentsModal({
                                   </div>}
                               </div>
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="px-0 mx-0">
                               <span className={`font-semibold ${payment.statusPagamento === 'pago' ? 'text-green-600' : payment.statusPagamento === 'atrasado' ? 'text-red-600' : 'text-yellow-600'}`}>
                                 {formatCurrency(payment.valor)}
                               </span>
@@ -285,7 +285,7 @@ export function WorkflowPaymentsModal({
                                 </span>
                               </div>
                             </TableCell>
-                            <TableCell className="text-right">
+                            <TableCell className="text-right mx-0 px-0">
                               <div className="flex justify-end gap-1">
                                 {payment.statusPagamento === 'pendente' && <Button size="sm" variant="ghost" onClick={() => markAsPaid(payment.id)} className="h-8 w-8 p-0" title="Marcar como pago">
                                     <CheckCircle2 className="h-4 w-4 text-green-600" />
