@@ -1002,7 +1002,7 @@ return <td className={`
                             [session.id]: e.target.value
                           }))} 
                           onKeyDown={e => handlePaymentKeyDown(e, session.id)} 
-                          className="h-6 text-xs p-1 flex-1 border-none bg-transparent focus:bg-lunar-accent/10 transition-colors duration-150" 
+                          className="h-6 text-xs p-1 flex-1 border-none bg-transparent focus:bg-lunar-accent/10 transition-colors duration-150 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
                           autoComplete="off" 
                         />
                         <Button variant="ghost" size="sm" onClick={() => handlePaymentAdd(session.id)} className="h-6 w-6 p-0 shrink-0">
