@@ -196,7 +196,7 @@ export function WorkflowPaymentsModal({
                     <p className="text-xs text-muted-foreground uppercase tracking-wide">Pago</p>
                     <p className="font-bold text-green-600 text-sm">{formatCurrency(totalPago)}</p>
                   </div>
-                  <div>
+                  <div className="text-sm">
                     <p className="text-xs text-muted-foreground uppercase tracking-wide">Pendente</p>
                     <p className="font-bold text-yellow-600 text-sm">{formatCurrency(totalPendente)}</p>
                   </div>
