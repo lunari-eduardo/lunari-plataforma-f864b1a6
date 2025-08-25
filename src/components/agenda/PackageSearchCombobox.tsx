@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Check, ChevronDown, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { storage } from '@/utils/localStorage';
 
 interface Package {
   id: string;
@@ -33,9 +34,20 @@ export default function PackageSearchCombobox({
   
   const { pacotes, categorias } = useOrcamentos();
   
-  // Converter pacotes para o formato Package local
+  // Carregar configurações de categorias do storage
+  const configCategorias = storage.load('configuracoes_categorias', []);
+  
+  // Converter pacotes para o formato Package local com conversão correta de categoria
   const availablePackages: Package[] = pacotes.map(pacote => {
-    const categoria = categorias.find(cat => cat === pacote.categoria_id) || 'Sem categoria';
+    // Converter categoria_id para nome da categoria usando configCategorias
+    let categoria = 'Sem categoria';
+    if (pacote.categoria_id) {
+      const categoriaConfig = configCategorias.find((cat: any) => cat.id === pacote.categoria_id);
+      categoria = categoriaConfig?.nome || pacote.categoria_id;
+    } else if (pacote.categoria) {
+      categoria = pacote.categoria;
+    }
+    
     return {
       id: pacote.id,
       name: pacote.nome,
