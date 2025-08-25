@@ -15,7 +15,8 @@ import { toast } from 'sonner';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { useAgenda } from '@/hooks/useAgenda';
-import { Settings, Plus, Trash2 } from 'lucide-react';
+import { Settings, Plus, Trash2, Edit2, Check, X } from 'lucide-react';
+
 interface AvailabilityConfigModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -45,6 +46,9 @@ export default function AvailabilityConfigModal({
   const [showTypeManager, setShowTypeManager] = useState(false);
   const [newTypeName, setNewTypeName] = useState('');
   const [newTypeColor, setNewTypeColor] = useState('#3b82f6');
+  const [editingTypeId, setEditingTypeId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
+  const [editingColor, setEditingColor] = useState('');
   const weekDaysLabels = useMemo(() => ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'], []);
   const allWeekdays = useMemo(() => [0, 1, 2, 3, 4, 5, 6], []);
   const allSelected = selectedWeekdays.length === 7;
@@ -227,6 +231,39 @@ export default function AvailabilityConfigModal({
     }
     toast.success('Tipo de disponibilidade excluído');
   };
+
+  const handleStartEdit = (typeId: string) => {
+    const type = availabilityTypes.find(t => t.id === typeId);
+    if (type) {
+      setEditingTypeId(typeId);
+      setEditingName(type.name);
+      setEditingColor(type.color);
+    }
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingName.trim()) {
+      toast.error('Nome do tipo é obrigatório');
+      return;
+    }
+    if (editingTypeId) {
+      updateAvailabilityType(editingTypeId, {
+        name: editingName.trim(),
+        color: editingColor
+      });
+      setEditingTypeId(null);
+      setEditingName('');
+      setEditingColor('');
+      toast.success('Tipo de disponibilidade atualizado');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingTypeId(null);
+    setEditingName('');
+    setEditingColor('');
+  };
+
   const selectedType = availabilityTypes.find(type => type.id === selectedTypeId);
   
   return (
@@ -388,22 +425,70 @@ export default function AvailabilityConfigModal({
             <div className="space-y-1 max-h-32 overflow-y-auto">
               {availabilityTypes.map(type => (
                 <div key={type.id} className="flex items-center justify-between p-2 bg-muted rounded">
-                  <div className="flex items-center gap-2">
-                    <div 
-                      className="w-3 h-3 rounded-full border" 
-                      style={{ backgroundColor: type.color }} 
-                    />
-                    <span className="text-sm">{type.name}</span>
-                  </div>
-                  {availabilityTypes.length > 1 && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => handleDeleteType(type.id)} 
-                      className="h-6 w-6 p-0 text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
+                  {editingTypeId === type.id ? (
+                    <>
+                      <div className="flex items-center gap-2 flex-1">
+                        <input 
+                          type="color" 
+                          value={editingColor} 
+                          onChange={e => setEditingColor(e.target.value)} 
+                          className="w-6 h-6 rounded border cursor-pointer" 
+                        />
+                        <Input 
+                          value={editingName} 
+                          onChange={e => setEditingName(e.target.value)} 
+                          className="flex-1 h-8" 
+                        />
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={handleSaveEdit} 
+                          className="h-6 w-6 p-0 text-green-600 hover:text-green-700"
+                        >
+                          <Check className="h-3 w-3" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={handleCancelEdit} 
+                          className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-3 h-3 rounded-full border" 
+                          style={{ backgroundColor: type.color }} 
+                        />
+                        <span className="text-sm">{type.name}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => handleStartEdit(type.id)} 
+                          className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                        >
+                          <Edit2 className="h-3 w-3" />
+                        </Button>
+                        {availabilityTypes.length > 1 && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => handleDeleteType(type.id)} 
+                            className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
+                    </>
                   )}
                 </div>
               ))}
