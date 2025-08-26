@@ -45,7 +45,7 @@ export default function Agenda() {
   } = useOrcamentos();
   const isMobile = useIsMobile();
   const isTablet = useIsTablet();
-  
+
   // Transition state for smooth navigation
   const [isTransitioning, setIsTransitioning] = useState(false);
 
@@ -53,24 +53,31 @@ export default function Agenda() {
   const capitalizeFirst = (str: string): string => {
     return str.charAt(0).toUpperCase() + str.slice(1);
   };
-
   const formatWeekTitle = (date: Date): string => {
     const endOfWeek = addDays(date, 6);
-    const startDay = format(date, "d", { locale: ptBR });
-    const endDayMonth = format(endOfWeek, "d 'de' MMMM", { locale: ptBR });
-    const monthName = format(endOfWeek, "MMMM", { locale: ptBR });
+    const startDay = format(date, "d", {
+      locale: ptBR
+    });
+    const endDayMonth = format(endOfWeek, "d 'de' MMMM", {
+      locale: ptBR
+    });
+    const monthName = format(endOfWeek, "MMMM", {
+      locale: ptBR
+    });
     const capitalizedMonth = capitalizeFirst(monthName);
     return `${startDay} a ${format(endOfWeek, "d")} de ${capitalizedMonth}`;
   };
-
   const formatDayHeaderTitle = (date: Date): string => {
-    const monthName = format(date, "MMMM", { locale: ptBR });
+    const monthName = format(date, "MMMM", {
+      locale: ptBR
+    });
     const capitalizedMonth = capitalizeFirst(monthName);
     return `${format(date, "d")} de ${capitalizedMonth}`;
   };
-
   const formatMonthTitle = (date: Date): string => {
-    const monthName = format(date, "MMMM", { locale: ptBR });
+    const monthName = format(date, "MMMM", {
+      locale: ptBR
+    });
     const capitalizedMonth = capitalizeFirst(monthName);
     return `${capitalizedMonth} ${format(date, "yyyy")}`;
   };
@@ -111,7 +118,9 @@ export default function Agenda() {
   const formatDateTitle = () => {
     switch (view) {
       case 'year':
-        return format(date, "yyyy", { locale: ptBR });
+        return format(date, "yyyy", {
+          locale: ptBR
+        });
       case 'month':
         return formatMonthTitle(date);
       case 'week':
@@ -126,7 +135,9 @@ export default function Agenda() {
   // Format day title for daily view
   const formatDayTitle = () => {
     if (view === 'day') {
-      const dayName = format(date, "EEEE", { locale: ptBR });
+      const dayName = format(date, "EEEE", {
+        locale: ptBR
+      });
       return capitalizeFirst(dayName);
     }
     return '';
@@ -158,7 +169,6 @@ export default function Agenda() {
         break;
     }
   };
-  
   const navigateNextDirect = () => {
     switch (view) {
       case 'year':
@@ -175,16 +185,14 @@ export default function Agenda() {
         break;
     }
   };
-  
+
   // Button navigation functions (with transitions)
   const navigatePrevious = () => {
     navigateWithTransition(navigatePreviousDirect);
   };
-  
   const navigateNext = () => {
     navigateWithTransition(navigateNextDirect);
   };
-  
   const navigateToday = () => {
     navigateWithTransition(() => {
       setDate(new Date());
@@ -456,16 +464,9 @@ export default function Agenda() {
         </div>
           
         {/* Touch event container (no transitions) */}
-        <div 
-          className="mt-4"
-          {...((isMobile || isTablet) && view !== 'year' ? swipeHandlers : {})}
-        >
+        <div className="mt-4" {...(isMobile || isTablet) && view !== 'year' ? swipeHandlers : {}}>
           {/* Visual content container (with transitions) */}
-          <div 
-            className={`transition-opacity duration-200 ${
-              isTransitioning ? 'opacity-70' : 'opacity-100'
-            }`}
-          >
+          <div className={`transition-opacity duration-200 ${isTransitioning ? 'opacity-70' : 'opacity-100'}`}>
             {view === 'year' && <AnnualView date={date} unifiedEvents={unifiedEvents} onDayClick={handleDayClick} onEventClick={handleEventClick} />}
             {view === 'month' && <MonthlyView date={date} unifiedEvents={unifiedEvents} onCreateSlot={handleCreateSlot} onEventClick={handleEventClick} onDayClick={handleDayClick} />}
             {view === 'week' && <WeeklyView date={date} unifiedEvents={unifiedEvents} onCreateSlot={handleCreateSlot} onEventClick={handleEventClick} />}
@@ -482,9 +483,7 @@ export default function Agenda() {
             <DialogTitle className="text-lg font-semibold text-foreground">
               {editingAppointment ? 'Editar Agendamento' : 'Novo Agendamento'}
             </DialogTitle>
-            <DialogDescription className="text-sm text-muted-foreground">
-              Complete os detalhes do agendamento abaixo.
-            </DialogDescription>
+            
           </DialogHeader>
 
           <AppointmentForm initialDate={selectedSlot?.date || editingAppointment?.date} initialTime={selectedSlot?.time || editingAppointment?.time} appointment={editingAppointment} onSave={handleSaveAppointment} onCancel={() => setIsAppointmentDialogOpen(false)} />
