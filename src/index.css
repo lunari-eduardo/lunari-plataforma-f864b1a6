@@ -494,4 +494,47 @@
   .delay-1000 {
     animation-delay: 1000ms;
   }
+  
+  .delay-200 {
+    animation-delay: 200ms;
+  }
+  .delay-400 {
+    animation-delay: 400ms;
+  }
+  .delay-600 {
+    animation-delay: 600ms;
+  }
+  .delay-800 {
+    animation-delay: 800ms;
+  }
+  
+  /* Landing page specific styles */
+  .animate-title-gradient {
+    background: linear-gradient(-45deg, hsl(var(--landing-text)), hsl(var(--landing-accent)), hsl(var(--landing-brand)), hsl(var(--landing-text)));
+    background-size: 400% 400%;
+    animation: gradient-shift 4s ease-in-out infinite;
+  }
+  
+  .hover-lift {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Reduced motion support */
+  @media (prefers-reduced-motion: reduce) {
+    .animate-fade-up,
+    .animate-gradient-shift,
+    .animate-float,
+    .animate-title-gradient {
+      animation: none;
+    }
+    
+    .hover-lift {
+      transition: none;
+    }
+  }
 }
