@@ -61,26 +61,21 @@ export default function LandingFeatures() {
         <div className="grid lg:grid-cols-2 gap-12 max-w-6xl mx-auto">
           {features.map((feature, index) => (
             <div key={index} className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all border border-landing-brand/10">
-              <div className="flex items-start space-x-6">
-                <div className="w-16 h-16 bg-gradient-to-br from-landing-brand to-landing-brand/80 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <feature.icon className="w-8 h-8 text-white" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-2xl font-bold text-landing-text mb-2">
-                    {feature.title}
-                  </h3>
-                  <p className="text-landing-text/70 italic mb-6">
-                    "{feature.subtitle}"
-                  </p>
-                  <ul className="space-y-3">
-                    {feature.items.map((item, itemIndex) => (
-                      <li key={itemIndex} className="flex items-start space-x-3">
-                        <CheckCircle className="w-5 h-5 text-landing-accent mt-0.5 flex-shrink-0" />
-                        <span className="text-landing-text/80">{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+              <div>
+                <h3 className="text-2xl font-bold text-landing-text mb-2">
+                  {feature.title}
+                </h3>
+                <p className="text-landing-text/70 italic mb-6">
+                  "{feature.subtitle}"
+                </p>
+                <ul className="space-y-3">
+                  {feature.items.map((item, itemIndex) => (
+                    <li key={itemIndex} className="flex items-start space-x-3">
+                      <CheckCircle className="w-5 h-5 text-landing-accent mt-0.5 flex-shrink-0" />
+                      <span className="text-landing-text/80">{item}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             </div>
           ))}
