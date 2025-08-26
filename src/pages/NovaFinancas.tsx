@@ -8,6 +8,7 @@ import LancamentosTab from '@/components/financas/LancamentosTab';
 import ConfiguracoesFinanceirasTab from '@/components/financas/ConfiguracoesFinanceirasTab';
 import DashboardFinanceiro from '@/components/financas/DashboardFinanceiro';
 import ExportFinancialPDF from '@/components/financas/ExportFinancialPDF';
+import ExtratoTab from '@/components/financas/ExtratoTab';
 
 export default function NovaFinancas() {
   const {
@@ -33,7 +34,7 @@ export default function NovaFinancas() {
     atualizarCartao,
     removerCartao
   } = useNovoFinancas();
-  const [activeTab, setActiveTab] = useState('lancamentos');
+  const [activeTab, setActiveTab] = useState('extrato');
   return <ScrollArea className="h-[calc(100vh-120px)]">
       <div className="min-h-screen bg-lunar-bg pr-4">
         <div className="p-2 sm:p-4 lg:p-6 space-y-2 sm:space-y-6 bg-lunar-bg py-0">
@@ -46,7 +47,10 @@ export default function NovaFinancas() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3 h-10 p-1 text-sm bg-card border border-border py-0">
+          <TabsList className="grid w-full grid-cols-4 h-10 p-1 text-sm bg-card border border-border py-0">
+            <TabsTrigger value="extrato" className="text-sm py-2 data-[state=active]:bg-primary/10 text-foreground">
+              Extrato
+            </TabsTrigger>
             <TabsTrigger value="lancamentos" className="text-sm py-2 data-[state=active]:bg-primary/10 text-foreground">
               Lançamentos
             </TabsTrigger>
@@ -57,6 +61,10 @@ export default function NovaFinancas() {
               Configurações
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="extrato" className="mt-6">
+            <ExtratoTab />
+          </TabsContent>
 
           <TabsContent value="lancamentos" className="mt-6">
             <LancamentosTab filtroMesAno={filtroMesAno} setFiltroMesAno={setFiltroMesAno} transacoesPorGrupo={transacoesPorGrupo} resumoFinanceiro={resumoFinanceiro} calcularMetricasPorGrupo={calcularMetricasPorGrupo} obterItensPorGrupo={obterItensPorGrupo} adicionarTransacao={adicionarTransacao} atualizarTransacao={atualizarTransacaoCompativel} removerTransacao={removerTransacao} marcarComoPago={marcarComoPago} createTransactionEngine={createTransactionEngine} />
