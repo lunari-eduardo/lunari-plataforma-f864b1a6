@@ -47,6 +47,15 @@ export function HeroSection({
     >
       <div className="mx-auto flex max-w-6xl flex-col gap-12 pt-16 sm:gap-24">
         <div className="flex flex-col items-center gap-6 text-center sm:gap-12">
+          {/* Logo */}
+          <div className="animate-appear opacity-0">
+            <img 
+              src="/lovable-uploads/ad17340d-9f1f-41dc-ad2b-31099ceefd35.png" 
+              alt="Lunari Logo" 
+              className="h-20 w-auto sm:h-24"
+            />
+          </div>
+
           {/* Badge */}
           {badge && (
             <Badge variant="outline" className="animate-appear gap-2">
