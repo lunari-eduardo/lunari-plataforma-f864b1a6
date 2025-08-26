@@ -122,17 +122,8 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
     root.style.setProperty('--chart-profit', chartPalette[0])
     root.style.setProperty('--chart-neutral', chartPalette[7])
 
-    // Always use system theme preference (no user override)
-    const mql = window.matchMedia?.('(prefers-color-scheme: dark)')
-    const apply = () => {
-      root.classList.toggle('dark', !!mql?.matches)
-    }
-    apply()
-    if (mql) {
-      const listener = () => apply()
-      mql.addEventListener?.('change', listener)
-      return () => mql.removeEventListener?.('change', listener)
-    }
+    // Theme is now managed by useTheme hook
+    // Initial theme will be applied by the hook
   }, [])
 
   return <>{children}</>

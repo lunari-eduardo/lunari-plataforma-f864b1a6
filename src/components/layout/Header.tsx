@@ -1,8 +1,9 @@
 
 import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Bell } from 'lucide-react';
+import { Bell, Moon, Sun } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useTheme } from '@/hooks/useTheme';
 
 const pageTitles: Record<string, string> = {
   "/": "Dashboard",
@@ -44,6 +45,7 @@ const getPageTitleFromPath = (pathname: string): string => {
 export default function Header() {
   const location = useLocation();
   const [notificationCount] = useState(2);
+  const { toggleTheme, currentTheme } = useTheme();
 
   // Get current page title
   const currentTitle = getPageTitleFromPath(location.pathname);
@@ -55,6 +57,18 @@ export default function Header() {
       </div>
       
       <div className="flex items-center space-x-2">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="h-8 w-8 hover:bg-lunar-surface/50"
+          onClick={toggleTheme}
+        >
+          {currentTheme === 'dark' ? (
+            <Sun className="h-3.5 w-3.5" />
+          ) : (
+            <Moon className="h-3.5 w-3.5" />
+          )}
+        </Button>
         <Button variant="ghost" size="icon" className="relative h-8 w-8 hover:bg-lunar-surface/50">
           <Bell className="h-3.5 w-3.5" />
           {notificationCount > 0 && (
