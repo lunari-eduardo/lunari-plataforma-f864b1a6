@@ -3,13 +3,6 @@ import { HeroSection } from "./HeroSection";
 export default function LandingHero() {
   return (
     <HeroSection
-      badge={{
-        text: "Gestão completa para fotógrafos",
-        action: {
-          text: "Saiba mais",
-          href: "#features",
-        },
-      }}
       title="CHEGA DE PLANILHAS!"
       description="Se você ainda esquece clientes, horários ou não sabe pra onde foi o dinheiro do mês… o Lunari resolve. Aqui a bagunça não entra."
       actions={[
