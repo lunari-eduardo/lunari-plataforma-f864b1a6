@@ -24,6 +24,10 @@
     --landing-accent: 177 51% 40%; /* #2fa6a0 - verde petróleo */
     --landing-brand: 17 48% 46%;  /* #ac5e3a - cor da marca */
 
+    /* Brand colors */
+    --brand: 27 96% 61%;
+    --brand-foreground: 31 97% 72%;
+
     /* Task priorities (HSL) */
     --task-priority-high: 0 100% 67%;    /* #ff5757 */
     --task-priority-medium: 48 100% 75%; /* #ffe67f */
@@ -83,6 +87,10 @@
     --lunar-error: 12 74% 55%;
     --lunar-success: 150 53% 55%;
     --lunar-warning: 42 35% 62%;
+
+    /* Brand colors for dark mode */
+    --brand: 31 97% 72%;
+    --brand-foreground: 27 96% 61%;
 
     /* Shadcn-compatible variables for dark mode */
     --background: 0 0% 9%;
@@ -469,5 +477,21 @@
   
   .overflow-x-auto::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--accent-foreground) / 0.5);
+  }
+}
+
+/* Utility classes for animations */
+@layer utilities {
+  .delay-100 {
+    animation-delay: 100ms;
+  }
+  .delay-300 {
+    animation-delay: 300ms;
+  }
+  .delay-700 {
+    animation-delay: 700ms;
+  }
+  .delay-1000 {
+    animation-delay: 1000ms;
   }
 }
