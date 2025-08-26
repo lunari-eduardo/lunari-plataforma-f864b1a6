@@ -113,8 +113,8 @@ export function HeroSection({
               >
                 <Mockup type="responsive">
                   <img
-                    src={image.src}
-                    alt={image.alt}
+                    src="/lovable-uploads/d00afad7-bf0d-405b-b02e-1b48424f9ccd.png"
+                    alt="Interface do Lunari - Dashboard completo para fotógrafos"
                     className="w-full h-auto"
                   />
                 </Mockup>
