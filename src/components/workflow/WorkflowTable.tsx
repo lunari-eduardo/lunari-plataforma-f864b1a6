@@ -854,12 +854,24 @@ export function WorkflowTable({
                   setSessionSelecionada(session);
                   setModalAberto(true);
                 }} className="h-6 p-2 text-xs justify-start hover:bg-lunar-accent/10 w-full">
-                    {session.produtosList && session.produtosList.length > 0 ? <div className="flex items-center gap-1">
+                    {session.produtosList && session.produtosList.length > 0 ? (() => {
+                      const produtosProduzidos = session.produtosList.filter(p => p.produzido);
+                      const todosCompletos = session.produtosList.length > 0 && produtosProduzidos.length === session.produtosList.length;
+                      const parcialmenteCompletos = produtosProduzidos.length > 0 && produtosProduzidos.length < session.produtosList.length;
+                      
+                      return <div className="flex items-center gap-1">
                         <Package className="h-3 w-3 text-blue-600" />
                         <span className="text-blue-700 font-medium">
                           {session.produtosList.length} produtos
                         </span>
-                      </div> : <div className="flex items-center gap-1 text-muted-foreground">
+                        {todosCompletos && (
+                          <div className="w-2 h-2 bg-green-500 rounded-full" title="Todos os produtos foram produzidos" />
+                        )}
+                        {parcialmenteCompletos && (
+                          <div className="w-2 h-2 bg-yellow-500 rounded-full" title={`${produtosProduzidos.length} de ${session.produtosList.length} produtos produzidos`} />
+                        )}
+                      </div>;
+                    })() : <div className="flex items-center gap-1 text-muted-foreground">
                         <Plus className="h-3 w-3" />
                         <span>Adicionar</span>
                       </div>}
