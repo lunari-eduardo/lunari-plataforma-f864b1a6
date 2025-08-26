@@ -22,6 +22,7 @@ import MinhaConta from "./pages/MinhaConta";
 import Preferencias from "./pages/Preferencias";
 import Tarefas from "./pages/Tarefas";
 import FeedTest from "./pages/FeedTest";
+import LandingPage from "./pages/LandingPage";
 import NotFound from "./pages/NotFound";
 import { AppProvider } from "./contexts/AppContext";
 import { useIntegration } from "./hooks/useIntegration";
@@ -113,6 +114,9 @@ function App() {
               <Toaster />
               <Sonner />
               <Routes>
+                {/* Landing page sem layout */}
+                <Route path="/landing" element={<LandingPage />} />
+                
                 <Route path="/" element={<Layout />}>
                   <Route path="/" element={<Index />} />
                   <Route path="/agenda" element={<Agenda />} />

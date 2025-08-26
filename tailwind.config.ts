@@ -38,18 +38,26 @@ export default {
 				background: 'hsl(var(--background))',
 				foreground: 'hsl(var(--foreground))',
 				
-				// Cores lunares específicas
-				lunar: {
-					bg: 'hsl(var(--lunar-bg) / <alpha-value>)',
-					surface: 'hsl(var(--lunar-surface) / <alpha-value>)',
-					text: 'hsl(var(--lunar-text) / <alpha-value>)',
-					textSecondary: 'hsl(var(--lunar-textSecondary) / <alpha-value>)',
+        // Cores lunares específicas
+        lunar: {
+          bg: 'hsl(var(--lunar-bg) / <alpha-value>)',
+          surface: 'hsl(var(--lunar-surface) / <alpha-value>)',
+          text: 'hsl(var(--lunar-text) / <alpha-value>)',
+          textSecondary: 'hsl(var(--lunar-textSecondary) / <alpha-value>)',
           border: 'hsl(var(--lunar-border) / <alpha-value>)',
           accent: 'hsl(var(--lunar-accent) / <alpha-value>)',
           accentHover: 'hsl(var(--lunar-accentHover) / <alpha-value>)',
           error: 'hsl(var(--lunar-error) / <alpha-value>)',
           success: 'hsl(var(--lunar-success) / <alpha-value>)',
           warning: 'hsl(var(--lunar-warning) / <alpha-value>)',
+        },
+
+        // Landing page colors
+        landing: {
+          bg: 'hsl(var(--landing-bg) / <alpha-value>)',
+          text: 'hsl(var(--landing-text) / <alpha-value>)',
+          accent: 'hsl(var(--landing-accent) / <alpha-value>)',
+          brand: 'hsl(var(--landing-brand) / <alpha-value>)',
         },
 
         // Cores específicas para tarefas (prioridades)
