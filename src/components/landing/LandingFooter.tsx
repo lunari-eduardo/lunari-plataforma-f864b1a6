@@ -1,9 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Shield, Lock, Headphones } from "lucide-react";
-
 export default function LandingFooter() {
-  return (
-    <footer className="bg-landing-text text-white">
+  return <footer className="bg-landing-text text-white">
       {/* Selos de confiança */}
       <div className="py-12 border-b border-white/10">
         <div className="container mx-auto px-4">
@@ -33,13 +31,8 @@ export default function LandingFooter() {
           <h2 className="text-2xl md:text-3xl font-bold mb-4">
             30 dias grátis. O máximo que pode acontecer é você se organizar.
           </h2>
-          <p className="text-white/70 mb-8 max-w-2xl mx-auto">
-            Junte-se a centenas de fotógrafos que já descobriram como é ter um negócio organizado de verdade.
-          </p>
-          <Button 
-            size="lg" 
-            className="bg-landing-brand hover:bg-landing-brand/90 text-white px-8 py-4 text-lg rounded-full shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
-          >
+          
+          <Button size="lg" className="bg-landing-brand hover:bg-landing-brand/90 text-white px-8 py-4 text-lg rounded-full shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
             👉 COMEÇAR AGORA
           </Button>
         </div>
@@ -62,6 +55,5 @@ export default function LandingFooter() {
           </div>
         </div>
       </div>
-    </footer>
-  );
+    </footer>;
 }
