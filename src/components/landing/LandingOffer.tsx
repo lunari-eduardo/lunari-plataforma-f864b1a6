@@ -1,13 +1,9 @@
 import { Button } from "@/components/ui/button";
-
 export default function LandingOffer() {
-  return (
-    <section className="py-20 bg-gradient-to-br from-landing-brand/10 to-landing-accent/10">
+  return <section className="py-20 bg-gradient-to-br from-landing-brand/10 to-landing-accent/10">
       <div className="container mx-auto px-4 text-center">
         <div className="max-w-3xl mx-auto space-y-8">
-          <h2 className="text-3xl md:text-5xl font-bold text-landing-text">
-            Chega de bagunça?
-          </h2>
+          <h2 className="text-3xl md:text-5xl font-bold text-landing-text">Por menos post-it grudados no monitor</h2>
           
           <p className="text-xl md:text-2xl text-landing-text/80 leading-relaxed">
             Comece hoje com 30 dias grátis. Não pedimos cartão, não mandamos spam, 
@@ -15,10 +11,7 @@ export default function LandingOffer() {
           </p>
 
           <div className="pt-8">
-            <Button 
-              size="lg" 
-              className="bg-landing-brand hover:bg-landing-brand/90 text-white px-12 py-6 text-xl rounded-full shadow-2xl hover:shadow-3xl transition-all transform hover:scale-105"
-            >
+            <Button size="lg" className="bg-landing-brand hover:bg-landing-brand/90 text-white px-12 py-6 text-xl rounded-full shadow-2xl hover:shadow-3xl transition-all transform hover:scale-105">
               👉 TESTAR O LUNARI AGORA
             </Button>
           </div>
@@ -39,6 +32,5 @@ export default function LandingOffer() {
           </div>
         </div>
       </div>
-    </section>
-  );
+    </section>;
 }
