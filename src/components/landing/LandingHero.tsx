@@ -10,7 +10,7 @@ export default function LandingHero() {
           href: "#features",
         },
       }}
-      title="👉 Mais fotos, menos planilhas."
+      title="CHEGA DE PLANILHAS!"
       description="Se você ainda esquece clientes, horários ou não sabe pra onde foi o dinheiro do mês… o Lunari resolve. Aqui a bagunça não entra."
       actions={[
         {
