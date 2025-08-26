@@ -139,12 +139,18 @@ export function useExtrato() {
         dataEfetiva = pagamento.dataVencimento;
       }
 
-      // Converter status para formato do extrato
+      // Converter status para formato do extrato  
       let status: ExtratoStatus = 'Agendado';
-      if (pagamento.statusPagamento === 'pago') {
+      
+      // Verificar múltiplos campos para determinar se está pago
+      if (pagamento.statusPagamento === 'pago' || 
+          (pagamento.data && pagamento.data !== '') ||
+          (pagamento.tipo === 'pago')) {
         status = 'Pago';
       } else if (pagamento.dataVencimento && pagamento.dataVencimento <= getCurrentDateString()) {
         status = 'Faturado';
+      } else if (pagamento.statusPagamento === 'atrasado') {
+        status = 'Faturado'; // Tratamos como faturado mas vencido
       }
 
       linhas.push({
