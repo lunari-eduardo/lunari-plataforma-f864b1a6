@@ -70,29 +70,15 @@ function toHslStr(hsl: { h: number; s: number; l: number }) {
   return `${hsl.h} ${hsl.s}% ${hsl.l}%`
 }
 
-const COLOR_MAP: Record<string, string> = {
-  marrom: '#6a4433',
-  azul: '#1c4274',
-  verde: '#98b281',
-  terracota: '#893806',
-  rosa: '#d8a4ce',
-  cinza: '#494949',
-  lilas: '#beb7fb',
-  bege: '#dbbd96',
-}
+const FIXED_COLOR = '#ac5e3a';
 
 export default function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const { preferences, getPreferencesOrDefault } = useUserPreferences()
-
-  const effective = useMemo(() => preferences ?? getPreferencesOrDefault(), [preferences, getPreferencesOrDefault])
-
   useEffect(() => {
     const root = document.documentElement
 
-    const baseHex = effective.temaCorHex || COLOR_MAP[effective.temaCor] || '#6a4433'
-    const baseHsl = hexToHsl(baseHex)
+    const baseHsl = hexToHsl(FIXED_COLOR)
     const hoverHsl = darkenHsl(baseHsl, 8)
-    const foregroundHsl = readableForegroundHslFromHex(baseHex)
+    const foregroundHsl = readableForegroundHslFromHex(FIXED_COLOR)
 
     const hslStr = `${baseHsl.h} ${baseHsl.s}% ${baseHsl.l}%`
     const hoverStr = `${hoverHsl.h} ${hoverHsl.s}% ${hoverHsl.l}%`
@@ -108,18 +94,18 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
     // Foreground específico para o accent (botões customizados)
     root.style.setProperty('--lunar-accent-foreground', foregroundHsl)
 
-    // Gráficos (paleta fixa com cores marrons)
+    // Gráficos (paleta baseada na nova cor fixa)
     const chartPalette = [
-      '#6a4433', // Principal
-      '#784A2B', // Secundária
-      '#442F21', // Terciária
-      '#7A4430', // Quaternária
-      '#834A2F', // Quinária
-      '#965D38', // Senária
-      '#B48260', // Sétima
-      '#E1C7AC', // Oitava
-      '#D0C8B8', // Nona
-      '#F6F0EC'  // Décima
+      '#ac5e3a', // Principal (nova cor)
+      '#bd6b42', // Secundária
+      '#8b5232', // Terciária
+      '#c17249', // Quaternária
+      '#d47e51', // Quinária
+      '#e68a59', // Senária
+      '#f29661', // Sétima
+      '#ffa269', // Oitava
+      '#ffae71', // Nona
+      '#ffba79'  // Décima
     ].map(hex => {
       const hsl = hexToHsl(hex)
       return toHslStr(hsl)
@@ -135,23 +121,19 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
     root.style.setProperty('--chart-expense', chartPalette[2])
     root.style.setProperty('--chart-profit', chartPalette[0])
     root.style.setProperty('--chart-neutral', chartPalette[7])
-  }, [effective.temaCor, effective.temaCorHex])
 
-  // Apply dark mode class based on preferences.tema ('claro' | 'escuro' | 'sistema')
-  useEffect(() => {
-    const root = document.documentElement
+    // Always use system theme preference (no user override)
     const mql = window.matchMedia?.('(prefers-color-scheme: dark)')
     const apply = () => {
-      const isDark = effective.tema === 'escuro' || (effective.tema === 'sistema' && !!mql?.matches)
-      root.classList.toggle('dark', isDark)
+      root.classList.toggle('dark', !!mql?.matches)
     }
     apply()
-    if (effective.tema === 'sistema' && mql) {
+    if (mql) {
       const listener = () => apply()
       mql.addEventListener?.('change', listener)
       return () => mql.removeEventListener?.('change', listener)
     }
-  }, [effective.tema])
+  }, [])
 
   return <>{children}</>
 }

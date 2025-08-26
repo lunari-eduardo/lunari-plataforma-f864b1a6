@@ -21,10 +21,6 @@ export interface UserBranding {
 
 export interface UserPreferences {
   id: string;
-  // Aparência
-  tema: 'claro' | 'escuro' | 'sistema';
-  temaCor: 'azul' | 'verde' | 'terracota' | 'rosa' | 'cinza' | 'lilas' | 'bege' | 'marrom';
-  temaCorHex: string;
   // Notificações
   notificacoesWhatsapp: boolean;
   // Automações
@@ -50,9 +46,6 @@ export const DEFAULT_USER_BRANDING: Omit<UserBranding, 'id' | 'createdAt' | 'upd
 };
 
 export const DEFAULT_USER_PREFERENCES: Omit<UserPreferences, 'id' | 'createdAt' | 'updatedAt'> = {
-  tema: 'sistema',
-  temaCor: 'marrom',
-  temaCorHex: '#5F3624',
   notificacoesWhatsapp: true,
   habilitarAutomacoesWorkflow: true,
   habilitarAlertaProdutosDoCliente: true

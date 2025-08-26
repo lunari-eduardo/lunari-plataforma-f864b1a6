@@ -1,29 +1,20 @@
 import { useState, useEffect } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Separator } from '@/components/ui/separator';
-import { Input } from '@/components/ui/input';
 import { useUserPreferences } from '@/hooks/useUserProfile';
 import { UserPreferences } from '@/types/userProfile';
-import ThemeColorPicker from '@/components/preferences/ThemeColorPicker';
-import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
-
 
 export default function Preferencias() {
   const { preferences, savePreferences, getPreferencesOrDefault } = useUserPreferences();
   const [formData, setFormData] = useState<UserPreferences>(getPreferencesOrDefault());
-useEffect(() => {
-  if (preferences) {
-    setFormData(prev => ({ ...prev, ...preferences }));
-  }
-}, [preferences]);
-
+  
+  useEffect(() => {
+    if (preferences) {
+      setFormData(prev => ({ ...prev, ...preferences }));
+    }
+  }, [preferences]);
 
   const handleSwitchChange = (field: keyof UserPreferences, checked: boolean) => {
     const updatedData = { ...formData, [field]: checked };
@@ -42,150 +33,81 @@ useEffect(() => {
 
           <Card className="mb-6">
             <CardContent className="p-6">
-              <Tabs defaultValue="notificacoes" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="notificacoes">Notificações</TabsTrigger>
-                  <TabsTrigger value="aparencia">Aparência</TabsTrigger>
-                </TabsList>
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-medium mb-2">Configurações de Notificação</h3>
+                  <p className="text-lunar-textSecondary">
+                    Escolha como você deseja receber notificações sobre atividades importantes
+                  </p>
+                </div>
 
-
-                <TabsContent value="notificacoes" className="space-y-6 mt-6">
-                  <div className="space-y-6">
-                    <div>
-                      <h3 className="text-lg font-medium mb-2">Configurações de Notificação</h3>
-                      <p className="text-lunar-textSecondary">
-                        Escolha como você deseja receber notificações sobre atividades importantes
-                      </p>
-                    </div>
-
-                    <div className="space-y-6">
-                      <Card>
-                        <CardContent className="p-6">
-                          <div className="flex items-center justify-between">
-                            <div className="space-y-1">
-                              <Label htmlFor="notificacoes-whatsapp">Notificações por WhatsApp</Label>
-                              <p className="text-sm text-lunar-textSecondary">
-                                Receba notificações rápidas através do WhatsApp Business
-                              </p>
-                            </div>
-                            <Switch
-                              id="notificacoes-whatsapp"
-                              checked={formData.notificacoesWhatsapp}
-                              onCheckedChange={(checked) => handleSwitchChange('notificacoesWhatsapp', checked)}
-                            />
-                          </div>
-                        </CardContent>
-                      </Card>
-
-                      {/* Automações */}
-                      <Card>
-                        <CardHeader>
-                          <CardTitle>Automações</CardTitle>
-                          <CardDescription>Controle regras automáticas do Workflow e Orçamentos</CardDescription>
-                        </CardHeader>
-                        <CardContent className="p-6 space-y-6">
-                          <div className="flex items-center justify-between">
-                            <div className="space-y-1">
-                              <Label htmlFor="habilitarAutomacoesWorkflow">Habilitar automações do Workflow</Label>
-                              <p className="text-sm text-lunar-textSecondary">Cria tarefas e avisos automaticamente</p>
-                            </div>
-                            <Switch
-                              id="habilitarAutomacoesWorkflow"
-                              checked={formData.habilitarAutomacoesWorkflow}
-                              onCheckedChange={(checked) => handleSwitchChange('habilitarAutomacoesWorkflow', checked)}
-                            />
-                          </div>
-
-                          <div className="flex items-center justify-between">
-                            <div className="space-y-1">
-                              <Label htmlFor="habilitarAlertaProdutosDoCliente">Alertar sobre produtos do cliente</Label>
-                              <p className="text-sm text-lunar-textSecondary">Mostra um aviso quando o cliente possui produtos vinculados</p>
-                            </div>
-                            <Switch
-                              id="habilitarAlertaProdutosDoCliente"
-                              checked={formData.habilitarAlertaProdutosDoCliente}
-                              onCheckedChange={(checked) => handleSwitchChange('habilitarAlertaProdutosDoCliente', checked)}
-                            />
-                          </div>
-                        </CardContent>
-                      </Card>
-
-                      <div className="bg-lunar-surface/50 p-4 rounded-lg">
-                        <div className="flex items-start gap-3">
-                          <div className="w-2 h-2 bg-lunar-accent rounded-full mt-2 flex-shrink-0"></div>
-                          <div className="text-sm text-lunar-textSecondary">
-                            <p className="font-medium mb-1">Sobre as notificações:</p>
-                            <ul className="space-y-1">
-                              <li>• As configurações são salvas automaticamente</li>
-                              <li>• Você pode alterar suas preferências a qualquer momento</li>
-                              <li>• Notificações importantes de sistema sempre serão enviadas</li>
-                            </ul>
-                          </div>
+                <div className="space-y-6">
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                          <Label htmlFor="notificacoes-whatsapp">Notificações por WhatsApp</Label>
+                          <p className="text-sm text-lunar-textSecondary">
+                            Receba notificações rápidas através do WhatsApp Business
+                          </p>
                         </div>
+                        <Switch
+                          id="notificacoes-whatsapp"
+                          checked={formData.notificacoesWhatsapp}
+                          onCheckedChange={(checked) => handleSwitchChange('notificacoesWhatsapp', checked)}
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Automações */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Automações</CardTitle>
+                      <CardDescription>Controle regras automáticas do Workflow e Orçamentos</CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-6 space-y-6">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                          <Label htmlFor="habilitarAutomacoesWorkflow">Habilitar automações do Workflow</Label>
+                          <p className="text-sm text-lunar-textSecondary">Cria tarefas e avisos automaticamente</p>
+                        </div>
+                        <Switch
+                          id="habilitarAutomacoesWorkflow"
+                          checked={formData.habilitarAutomacoesWorkflow}
+                          onCheckedChange={(checked) => handleSwitchChange('habilitarAutomacoesWorkflow', checked)}
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                          <Label htmlFor="habilitarAlertaProdutosDoCliente">Alertar sobre produtos do cliente</Label>
+                          <p className="text-sm text-lunar-textSecondary">Mostra um aviso quando o cliente possui produtos vinculados</p>
+                        </div>
+                        <Switch
+                          id="habilitarAlertaProdutosDoCliente"
+                          checked={formData.habilitarAlertaProdutosDoCliente}
+                          onCheckedChange={(checked) => handleSwitchChange('habilitarAlertaProdutosDoCliente', checked)}
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <div className="bg-lunar-surface/50 p-4 rounded-lg">
+                    <div className="flex items-start gap-3">
+                      <div className="w-2 h-2 bg-lunar-accent rounded-full mt-2 flex-shrink-0"></div>
+                      <div className="text-sm text-lunar-textSecondary">
+                        <p className="font-medium mb-1">Sobre as notificações:</p>
+                        <ul className="space-y-1">
+                          <li>• As configurações são salvas automaticamente</li>
+                          <li>• Você pode alterar suas preferências a qualquer momento</li>
+                          <li>• Notificações importantes de sistema sempre serão enviadas</li>
+                        </ul>
                       </div>
                     </div>
                   </div>
-                </TabsContent>
-
-                <TabsContent value="aparencia" className="space-y-6 mt-6">
-                  <div className="space-y-2">
-                    <h3 className="text-lg font-medium">Aparência</h3>
-                    <p className="text-lunar-textSecondary text-sm">Escolha a cor do sistema para botões, bordas e gráficos</p>
-                    <p className="text-[11px] text-lunar-textSecondary">Selecione uma cor e clique em “Salvar e recarregar” para aplicar.</p>
-                  </div>
-
-                  <div className="space-y-3">
-                    <h4 className="text-sm font-medium">Tema</h4>
-                    <p className="text-lunar-textSecondary text-[11px]">Escolha claro, escuro ou seguir o sistema. Aplica imediatamente.</p>
-                    <RadioGroup
-                      value={formData.tema}
-                      onValueChange={(v: 'claro' | 'escuro' | 'sistema') => {
-                        setFormData(prev => ({ ...prev, tema: v }));
-                        savePreferences({ tema: v });
-                      }}
-                      className="grid grid-cols-1 sm:grid-cols-3 gap-3"
-                    >
-                      <div className="flex items-center gap-2">
-                        <RadioGroupItem id="tema-claro" value="claro" />
-                        <Label htmlFor="tema-claro">Claro</Label>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <RadioGroupItem id="tema-escuro" value="escuro" />
-                        <Label htmlFor="tema-escuro">Escuro</Label>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <RadioGroupItem id="tema-sistema" value="sistema" />
-                        <Label htmlFor="tema-sistema">Seguir o sistema</Label>
-                      </div>
-                    </RadioGroup>
-                  </div>
-
-                  <ThemeColorPicker
-                    valueKey={formData.temaCor as any}
-                    valueHex={formData.temaCorHex}
-                    onChange={({ temaCor, temaCorHex }) => {
-                      setFormData(prev => ({ ...prev, temaCor, temaCorHex }));
-                    }}
-                  />
-
-                  <div className="flex items-center justify-end">
-                    <Button
-                      onClick={async () => {
-                        const ok = await savePreferences({ temaCor: formData.temaCor, temaCorHex: formData.temaCorHex });
-                        if (ok) {
-                          toast.success('Tema salvo. Recarregando...');
-                          window.location.reload();
-                        } else {
-                          toast.error('Não foi possível salvar o tema. Tente novamente.');
-                        }
-                      }}
-                    >
-                      Salvar e recarregar
-                    </Button>
-                  </div>
-                </TabsContent>
-
-              </Tabs>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
