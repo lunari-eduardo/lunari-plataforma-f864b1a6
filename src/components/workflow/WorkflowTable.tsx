@@ -850,20 +850,65 @@ export function WorkflowTable({
                   return renderEditableInput(session, 'valorTotalFotoExtra', valorAtual, 'text', 'R$ 0,00');
                 })())}
 
-                {renderCell('product', <Button variant="ghost" size="sm" onClick={() => {
-                  setSessionSelecionada(session);
-                  setModalAberto(true);
-                }} className="h-6 p-2 text-xs justify-start hover:bg-lunar-accent/10 w-full">
-                    {session.produtosList && session.produtosList.length > 0 ? <div className="flex items-center gap-1">
-                        <Package className="h-3 w-3 text-blue-600" />
-                        <span className="text-blue-700 font-medium">
-                          {session.produtosList.length} produtos
-                        </span>
-                      </div> : <div className="flex items-center gap-1 text-muted-foreground">
-                        <Plus className="h-3 w-3" />
-                        <span>Adicionar</span>
-                      </div>}
-                  </Button>)}
+                {renderCell('product', (() => {
+                  // Calcular indicadores de status dos produtos
+                  const getProductStatus = () => {
+                    if (!session.produtosList || session.produtosList.length === 0) {
+                      return { hasProduced: false, hasDelivered: false, total: 0 };
+                    }
+                    
+                    const totalProdutos = session.produtosList.length;
+                    const produzidos = session.produtosList.filter(p => p.produzido).length;
+                    const entregues = session.produtosList.filter(p => p.entregue).length;
+                    
+                    return {
+                      hasProduced: produzidos > 0,
+                      hasDelivered: entregues > 0,
+                      allProduced: produzidos === totalProdutos,
+                      allDelivered: entregues === totalProdutos,
+                      total: totalProdutos,
+                      produced: produzidos,
+                      delivered: entregues
+                    };
+                  };
+                  
+                  const status = getProductStatus();
+                  
+                  return <Button variant="ghost" size="sm" onClick={() => {
+                    setSessionSelecionada(session);
+                    setModalAberto(true);
+                  }} className="h-6 p-2 text-xs justify-start hover:bg-lunar-accent/10 w-full">
+                      {session.produtosList && session.produtosList.length > 0 ? <div className="flex items-center gap-2 w-full">
+                          <div className="flex items-center gap-1">
+                            <Package className="h-3 w-3 text-blue-600" />
+                            <span className="text-blue-700 font-medium">
+                              {session.produtosList.length} produtos
+                            </span>
+                          </div>
+                          
+                          {/* Indicadores de status */}
+                          <div className="flex items-center gap-1 ml-auto">
+                            {status.hasProduced && (
+                              <div className="flex items-center gap-0.5">
+                                <div className={`w-2 h-2 rounded-full ${status.allProduced ? 'bg-green-500' : 'bg-yellow-500'}`} 
+                                     title={`Produção: ${status.produced}/${status.total}`} />
+                                <span className="text-[10px] text-muted-foreground">P</span>
+                              </div>
+                            )}
+                            {status.hasDelivered && (
+                              <div className="flex items-center gap-0.5">
+                                <div className={`w-2 h-2 rounded-full ${status.allDelivered ? 'bg-green-500' : 'bg-yellow-500'}`}
+                                     title={`Entrega: ${status.delivered}/${status.total}`} />
+                                <span className="text-[10px] text-muted-foreground">E</span>
+                              </div>
+                            )}
+                          </div>
+                        </div> : <div className="flex items-center gap-1 text-muted-foreground">
+                          <Plus className="h-3 w-3" />
+                          <span>Adicionar</span>
+                        </div>}
+                    </Button>;
+                })())}
 
 
                 {renderCell('productTotal', <span className="text-xs font-medium text-green-600">
