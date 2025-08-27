@@ -13,6 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
+import { DepreciationSyncNotification } from '@/components/equipments/DepreciationSyncNotification';
 // Tipos movidos para src/types/precificacao.ts
 interface EstruturaCustosFixosProps {
   onTotalChange: (total: number) => void;
@@ -714,6 +715,10 @@ export function EstruturaCustosFixos({
               </div>
             </div>
             
+            {/* Depreciação Sync Notification */}
+            {totalDepreciacaoMensal > 0 && (
+              <DepreciationSyncNotification />
+            )}
             
             {/* Formulário de adição rápida */}
             <div className="bg-muted border border-border rounded-lg p-3 mb-4">
