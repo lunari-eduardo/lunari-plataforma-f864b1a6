@@ -17,7 +17,7 @@ export function DepreciationSyncNotification() {
   }, [syncStatus]);
 
   // Não mostrar se não há equipamentos
-  if (!depreciationData || !depreciationData.equipamentos || depreciationData.equipamentos.length === 0 || depreciationData.totalMensal <= 0) {
+  if (!depreciationData || depreciationData.totalMensal <= 0) {
     return null;
   }
 
@@ -54,7 +54,7 @@ export function DepreciationSyncNotification() {
                 <span>R$ {depreciationData.totalMensal.toFixed(2)}/mês</span>
               </div>
               <div className="flex items-center gap-1">
-                <span>{(depreciationData.equipamentos || []).length} equipamentos</span>
+                <span>{depreciationData.equipamentos.length} equipamentos</span>
               </div>
             </div>
 
@@ -108,7 +108,7 @@ export function DepreciationSyncNotification() {
             <div className="space-y-2">
               <h5 className="font-medium text-xs text-muted-foreground">Equipamentos:</h5>
               <div className="grid gap-2 max-h-32 overflow-y-auto">
-                {(depreciationData.equipamentos || []).map((eq: any) => (
+                {depreciationData.equipamentos.map((eq: any) => (
                   <div key={eq.id} className="flex justify-between items-center text-xs">
                     <span className="flex-1 truncate">{eq.nome}</span>
                     <span className="text-muted-foreground">
