@@ -29,8 +29,32 @@ const MONTHS = [
 ];
 
 export default function DRETab() {
-  const { itensFinanceiros } = useNovoFinancas();
+  // Dados reais do sistema
+  const novoFinancasData = useNovoFinancas();
   const { workflowItems } = useAppContext();
+  
+  // Obter transações do hook
+  const transacoesComItens = novoFinancasData.transacoesPorGrupo ? 
+    Object.values(novoFinancasData.transacoesPorGrupo).flat() : [];
+  
+  console.log('🔍 DRETab: Dados disponíveis:', {
+    transacoes: transacoesComItens.length,
+    workflow: workflowItems.length,
+    novoFinancasKeys: Object.keys(novoFinancasData),
+    amostrasTransacoes: transacoesComItens.slice(0, 2).map(t => ({
+      id: t.id,
+      data: t.dataVencimento,
+      valor: t.valor,
+      status: t.status,
+      item: t.item?.nome
+    })),
+    amostrasWorkflow: workflowItems.slice(0, 2).map(w => ({
+      id: w.id,
+      data: w.data,
+      valorPago: w.valorPago,
+      nome: w.nome
+    }))
+  });
 
   // Estados do componente
   const [periodType, setPeriodType] = useState<'monthly' | 'annual'>('monthly');
@@ -53,14 +77,6 @@ export default function DRETab() {
     return DRE_CONFIG_FOTOGRAFOS as DREConfig;
   }, []);
 
-  // Dados reais das transações financeiras
-  const novoFinancasData = useNovoFinancas();
-  
-  const transacoesFinanceiras = useMemo(() => {
-    // Usar transacoes do useNovoFinancas que é compatível
-    console.log('🔍 DRE: Transações disponíveis:', novoFinancasData.transacoes.length);
-    return novoFinancasData.transacoes;
-  }, [novoFinancasData.transacoes]);
 
   // Período atual
   const currentPeriod: DREPeriod = {
@@ -69,24 +85,38 @@ export default function DRETab() {
     year: selectedYear
   };
 
-  // Calcular DRE com dados reais
+  // Computar DRE com dados reais
   const dreResult = useMemo(() => {
-    console.log('🧮 DRE: Calculando com dados reais...', {
+    console.log('🔄 DRE: Iniciando computação...', {
       period: currentPeriod,
       mode,
-      transacoesCount: transacoesFinanceiras.length,
-      workflowCount: workflowItems.length
+      temTransacoes: transacoesComItens.length > 0,
+      temWorkflow: workflowItems.length > 0
     });
 
-    const deps = { transacoesFinanceiras, workflowItems };
-    const baseResult = DreEngine.computeDRE(currentPeriod, mode, dreConfig, deps);
-    
-    console.log('📊 DRE: Resultado calculado:', baseResult.kpis);
-    
-    return showComparative 
-      ? DreEngine.computeComparative(baseResult, dreConfig, deps)
-      : baseResult;
-  }, [currentPeriod, mode, dreConfig, transacoesFinanceiras, workflowItems, showComparative]);
+    if (!transacoesComItens.length && !workflowItems.length) {
+      console.log('⚠️ DRE: Sem dados para processar');
+      return null;
+    }
+
+    try {
+      const deps = { transacoesFinanceiras: transacoesComItens, workflowItems };
+      const baseResult = DreEngine.computeDRE(currentPeriod, mode, dreConfig, deps);
+      
+      console.log('✅ DRE: Resultado computado:', {
+        receitaBruta: baseResult.kpis.receitaLiquida,
+        lucroLiquido: baseResult.kpis.lucroLiquido,
+        linhasCount: baseResult.lines.length
+      });
+      
+      return showComparative 
+        ? DreEngine.computeComparative(baseResult, dreConfig, deps)
+        : baseResult;
+    } catch (error) {
+      console.error('❌ DRE: Erro na computação:', error);
+      return null;
+    }
+  }, [currentPeriod, mode, dreConfig, transacoesComItens, workflowItems, showComparative]);
 
   // Navegação para extrato com filtros
   const openExtratoWithFilters = (groupKey: string, value: number) => {
@@ -318,49 +348,68 @@ export default function DRETab() {
       </Card>
 
       {/* KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {renderKPICard(
-          'Receita Líquida',
-          dreResult.kpis.receitaLiquida,
-          dreResult.previousPeriod?.kpis.receitaLiquida,
-          <TrendingUp className="h-4 w-4" />
-        )}
-        {renderKPICard(
-          'Lucro Bruto',
-          dreResult.kpis.lucroBruto,
-          dreResult.previousPeriod?.kpis.lucroBruto,
-          <Activity className="h-4 w-4" />
-        )}
-        {renderKPICard(
-          'EBITDA',
-          dreResult.kpis.ebitda,
-          dreResult.previousPeriod?.kpis.ebitda,
-          <TrendingUp className="h-4 w-4" />
-        )}
-        {renderKPICard(
-          'Lucro Líquido',
-          dreResult.kpis.lucroLiquido,
-          dreResult.previousPeriod?.kpis.lucroLiquido,
-          <TrendingDown className="h-4 w-4" />
-        )}
-      </div>
+      {dreResult ? (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {renderKPICard(
+            'Receita Líquida',
+            dreResult.kpis.receitaLiquida,
+            dreResult.previousPeriod?.kpis.receitaLiquida,
+            <TrendingUp className="h-4 w-4" />
+          )}
+          {renderKPICard(
+            'Lucro Bruto',
+            dreResult.kpis.lucroBruto,
+            dreResult.previousPeriod?.kpis.lucroBruto,
+            <Activity className="h-4 w-4" />
+          )}
+          {renderKPICard(
+            'EBITDA',
+            dreResult.kpis.ebitda,
+            dreResult.previousPeriod?.kpis.ebitda,
+            <TrendingUp className="h-4 w-4" />
+          )}
+          {renderKPICard(
+            'Lucro Líquido',
+            dreResult.kpis.lucroLiquido,
+            dreResult.previousPeriod?.kpis.lucroLiquido,
+            <TrendingDown className="h-4 w-4" />
+          )}
+        </div>
+      ) : (
+        <Card className="bg-muted/50">
+          <CardContent className="p-8 text-center">
+            <div className="text-muted-foreground">
+              <Activity className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <h3 className="text-lg font-medium mb-2">Sem dados para o período</h3>
+              <p className="text-sm">
+                Não há transações financeiras ou itens do workflow para {periodType === 'monthly' 
+                  ? `${MONTHS[selectedMonth - 1].label}/${selectedYear}`
+                  : selectedYear
+                }.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* DRE Detalhado */}
-      <Card className="bg-card">
-        <CardHeader>
-          <CardTitle className="text-lg">
-            Demonstrativo Detalhado - {periodType === 'monthly' 
-              ? `${MONTHS[selectedMonth - 1].label}/${selectedYear}`
-              : selectedYear
-            } ({mode === 'competencia' ? 'Competência' : 'Caixa'})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            {dreResult.lines.map(line => renderDRELine(line))}
-          </div>
-        </CardContent>
-      </Card>
+      {dreResult && (
+        <Card className="bg-card">
+          <CardHeader>
+            <CardTitle className="text-lg">
+              Demonstrativo Detalhado - {periodType === 'monthly' 
+                ? `${MONTHS[selectedMonth - 1].label}/${selectedYear}`
+                : selectedYear
+              } ({mode === 'competencia' ? 'Competência' : 'Caixa'})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {dreResult.lines.map(line => renderDRELine(line))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

@@ -26,7 +26,17 @@ export class DreEngine {
 
     // Filtrar transações financeiras por período
     const filteredTransacoes = this.filterTransactionsByPeriod(transacoesFinanceiras, period);
-    console.log('📊 Transações filtradas:', filteredTransacoes.length);
+    console.log('📊 Transações filtradas por período:', {
+      total: filteredTransacoes.length,
+      periodo: period,
+      amostras: filteredTransacoes.slice(0, 3).map(t => ({
+        id: t.id,
+        data: t.dataVencimento || t.data_vencimento,
+        valor: t.valor,
+        status: t.status,
+        item: t.item?.nome
+      }))
+    });
     
     // Processar transações financeiras
     filteredTransacoes.forEach(transacao => {
@@ -41,13 +51,15 @@ export class DreEngine {
 
       if (!shouldInclude) return;
 
-      const isReceita = transacao.item?.grupo_principal === 'Receita Não Operacional';
+      // Categorizar corretamente receitas operacionais vs não operacionais
+      const isReceitaNaoOperacional = transacao.item?.grupo_principal === 'Receita Não Operacional' || 
+                                      transacao.item?.grupoPrincipal === 'Receita Não Operacional';
       
       movements.push({
-        tipo: isReceita ? 'entrada' : 'saida',
+        tipo: isReceitaNaoOperacional ? 'entrada' : 'saida',
         valor: Number(transacao.valor) || 0,
         origem: 'financeiro',
-        categoria: transacao.item?.grupo_principal || 'Despesa Variável',
+        categoria: isReceitaNaoOperacional ? 'receita_nao_operacional' : (transacao.item?.grupo_principal || transacao.item?.grupoPrincipal || 'Despesa Variável'),
         item: transacao.item,
         dataCompetencia: transacao.dataVencimento || transacao.data_vencimento,
         dataCaixa: transacao.status === 'Pago' ? (transacao.dataVencimento || transacao.data_vencimento) : undefined,
@@ -62,7 +74,17 @@ export class DreEngine {
 
     // Filtrar itens do workflow por período
     const filteredWorkflow = this.filterWorkflowByPeriod(workflowItems, period);
-    console.log('📊 Workflow items filtrados:', filteredWorkflow.length);
+    console.log('📊 Workflow items filtrados por período:', {
+      total: filteredWorkflow.length,
+      periodo: period,
+      amostras: filteredWorkflow.slice(0, 3).map(item => ({
+        id: item.id,
+        data: item.data,
+        valorPago: item.valorPago,
+        nome: item.nome,
+        pacote: item.pacote
+      }))
+    });
     
     // Processar itens do workflow (receitas operacionais)
     filteredWorkflow.forEach(item => {
@@ -113,7 +135,18 @@ export class DreEngine {
       });
     });
 
-    console.log('📈 Movimentos processados:', movements.length);
+    console.log('📈 Movimentos DRE processados:', {
+      total: movements.length,
+      entradas: movements.filter(m => m.tipo === 'entrada').length,
+      saidas: movements.filter(m => m.tipo === 'saida').length,
+      workflow: movements.filter(m => m.origem === 'workflow').length,
+      financeiro: movements.filter(m => m.origem === 'financeiro').length,
+      amostrasEntradas: movements.filter(m => m.tipo === 'entrada').slice(0, 2).map(m => ({
+        origem: m.origem,
+        valor: m.valor,
+        categoria: m.categoria
+      }))
+    });
     return movements;
   }
 
@@ -146,13 +179,11 @@ export class DreEngine {
     // Processar movimentos
     movements.forEach(movement => {
       if (movement.tipo === 'entrada') {
+        grupos.receita_bruta += movement.valor;
+        
+        // Apenas receitas operacionais (workflow) contam para cálculo de impostos
         if (movement.origem === 'workflow') {
-          // Receitas operacionais
-          grupos.receita_bruta += movement.valor;
           receitaBrutaOperacional += movement.valor;
-        } else {
-          // Receitas não operacionais
-          grupos.receita_bruta += movement.valor;
         }
       } else {
         // Saídas - mapear para grupos corretos
@@ -240,29 +271,81 @@ export class DreEngine {
   private static filterTransactionsByPeriod(transactions: any[], period: DREPeriod): any[] {
     return transactions.filter(t => {
       const dataVencimento = t.dataVencimento || t.data_vencimento;
-      if (!dataVencimento) return false;
+      if (!dataVencimento || typeof dataVencimento !== 'string') {
+        console.warn('Transação sem data válida:', { id: t.id, dataVencimento });
+        return false;
+      }
       
-      const [year, month] = dataVencimento.split('-').map(Number);
-      
-      if (period.type === 'annual') {
-        return year === period.year;
-      } else {
-        return year === period.year && month === period.month;
+      try {
+        // Lidar com diferentes formatos de data
+        let dateParts: number[];
+        if (dataVencimento.includes('-')) {
+          // Formato YYYY-MM-DD ou YYYY-MM
+          dateParts = dataVencimento.split('-').map(Number);
+        } else if (dataVencimento.includes('/')) {
+          // Formato DD/MM/YYYY
+          const [day, month, year] = dataVencimento.split('/').map(Number);
+          dateParts = [year, month, day];
+        } else {
+          console.warn('Formato de data não reconhecido:', dataVencimento);
+          return false;
+        }
+        
+        const [year, month] = dateParts;
+        
+        if (period.type === 'annual') {
+          return year === period.year;
+        } else {
+          return year === period.year && month === period.month;
+        }
+      } catch (error) {
+        console.error('Erro ao processar data da transação:', { dataVencimento, error });
+        return false;
       }
     });
   }
 
   private static filterWorkflowByPeriod(workflowItems: any[], period: DREPeriod): any[] {
     return workflowItems.filter(item => {
-      const date = item.dataVencimento || item.data;
-      if (!date) return false;
+      // Para workflow items, usar sempre 'data' (formato YYYY-MM-DD)
+      const date = item.data;
+      if (!date || typeof date !== 'string') {
+        console.warn('Workflow item sem data válida:', { id: item.id, data: date });
+        return false;
+      }
       
-      const [year, month] = date.split('-').map(Number);
+      // Validar se tem valor pago válido
+      const valorPago = Number(item.valorPago) || 0;
+      if (valorPago <= 0) {
+        console.debug('Workflow item sem valor pago:', { id: item.id, valorPago });
+        return false;
+      }
       
-      if (period.type === 'annual') {
-        return year === period.year;
-      } else {
-        return year === period.year && month === period.month;
+      try {
+        // Lidar com diferentes formatos de data
+        let dateParts: number[];
+        if (date.includes('-')) {
+          // Formato YYYY-MM-DD
+          dateParts = date.split('-').map(Number);
+        } else if (date.includes('/')) {
+          // Formato DD/MM/YYYY
+          const [day, month, year] = date.split('/').map(Number);
+          dateParts = [year, month, day];
+        } else {
+          console.warn('Formato de data não reconhecido no workflow:', date);
+          return false;
+        }
+        
+        const [year, month] = dateParts;
+        
+        if (period.type === 'annual') {
+          return year === period.year;
+        } else {
+          return year === period.year && month === period.month;
+        }
+      } catch (error) {
+        console.error('Erro ao processar data do workflow item:', { date, error });
+        return false;
       }
     });
   }
