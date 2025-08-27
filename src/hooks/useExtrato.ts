@@ -35,7 +35,7 @@ const PREFERENCIAS_DEFAULT: PreferenciasExtrato = {
 export function useExtrato() {
   // ============= HOOKS E DADOS =============
   const { itensFinanceiros, cartoes } = useNovoFinancas();
-  const { } = useAppContext();
+  const { clientes } = useAppContext();
 
   // Estados
   const [preferencias, setPreferencias] = useState<PreferenciasExtrato>(() => {
@@ -63,6 +63,35 @@ export function useExtrato() {
 
   // ============= CARREGAMENTO DE DADOS =============
 
+  // Função para resolver nome do cliente com fallbacks robustos
+  const resolveClienteNome = useCallback((session: any): string => {
+    // 1. Tentar session.cliente?.nome
+    if (session.cliente?.nome) {
+      return session.cliente.nome;
+    }
+    
+    // 2. Tentar buscar por clienteId na lista de clientes
+    if (session.clienteId && clientes) {
+      const cliente = clientes.find(c => c.id === session.clienteId);
+      if (cliente?.nome) {
+        return cliente.nome;
+      }
+    }
+    
+    // 3. Tentar session.clienteNome
+    if (session.clienteNome) {
+      return session.clienteNome;
+    }
+    
+    // 4. Tentar session.nome (pode ser nome do cliente em alguns casos)
+    if (session.nome && !session.nome.includes('Projeto') && !session.nome.includes('Sessão')) {
+      return session.nome;
+    }
+    
+    // 5. Retornar string vazia se não encontrar nada
+    return '';
+  }, [clientes]);
+
   // Carregar transações financeiras
   const transacoesFinanceiras = useMemo(() => {
     return FinancialEngine.loadTransactions();
@@ -79,7 +108,7 @@ export function useExtrato() {
           pagamentos.push({
             ...pagamento,
             sessionId: session.id,
-            clienteNome: session.cliente?.nome || 'Cliente não identificado',
+            clienteNome: resolveClienteNome(session),
             projetoNome: session.nome || 'Projeto sem nome',
             categoriaId: session.categoriaId,
             origem: 'workflow'
@@ -89,7 +118,7 @@ export function useExtrato() {
     });
     
     return pagamentos;
-  }, []);
+  }, [resolveClienteNome]);
 
   // ============= CONVERSÃO PARA LINHAS DO EXTRATO =============
 
