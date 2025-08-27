@@ -6,13 +6,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Trash2, Edit2, Save, X } from 'lucide-react';
+import { Plus, Trash2, Edit2, Save, X, RefreshCw } from 'lucide-react';
 import { ItemFinanceiro, GrupoPrincipal } from '@/types/financas';
 import { FinancialEngine, CreditCard } from '@/services/FinancialEngine';
 import { useToast } from '@/hooks/use-toast';
 import ConfiguracaoCartoes from './ConfiguracaoCartoes';
 import DREConfigSection from './DREConfigSection';
 import { useRegimeTributario } from '@/hooks/useRegimeTributario';
+import SyncFromPricingModal from './SyncFromPricingModal';
+import { pricingFinancialIntegrationService } from '@/services/PricingFinancialIntegrationService';
 interface ConfiguracoesFinanceirasTabProps {
   itensFinanceiros: ItemFinanceiro[];
   adicionarItemFinanceiro: (nome: string, grupo: GrupoPrincipal) => void;
@@ -29,8 +31,16 @@ export default function ConfiguracoesFinanceirasTab({
   const [novoItemGrupo, setNovoItemGrupo] = useState<GrupoPrincipal>('Despesa Fixa');
   const [itemEditando, setItemEditando] = useState<string | null>(null);
   const [nomeEditando, setNomeEditando] = useState('');
+  const [syncModalOpen, setSyncModalOpen] = useState(false);
+  const [custosDisponiveis, setCustosDisponiveis] = useState(0);
   const { toast } = useToast();
   const { isDREVisible } = useRegimeTributario();
+
+  // Verificar custos disponíveis na precificação
+  useState(() => {
+    const custos = pricingFinancialIntegrationService.getCustosEstudioFromPricingForSync();
+    setCustosDisponiveis(custos.length);
+  });
   const grupos: GrupoPrincipal[] = ['Despesa Fixa', 'Despesa Variável', 'Investimento', 'Receita Não Operacional'];
   const handleAdicionarItem = () => {
     if (!novoItemNome.trim()) {
@@ -124,6 +134,17 @@ export default function ConfiguracoesFinanceirasTab({
     acc[grupo] = itensFinanceiros.filter(item => item.grupo_principal === grupo && item.ativo);
     return acc;
   }, {} as Record<GrupoPrincipal, ItemFinanceiro[]>);
+
+  const handleSyncComplete = () => {
+    // Atualizar contador de custos
+    const custos = pricingFinancialIntegrationService.getCustosEstudioFromPricingForSync();
+    setCustosDisponiveis(custos.length);
+    
+    toast({
+      title: "Sincronização Concluída",
+      description: "Os itens foram importados da precificação com sucesso!"
+    });
+  };
   return <div className="space-y-6">
       <Tabs defaultValue="itens" className="w-full">
         <TabsList className={`grid w-full bg-gradient-to-r from-lunar-accent/10 to-lunar-accent/5 backdrop-blur-sm border border-lunar-border/20 rounded-xl p-1 ${isDREVisible() ? 'grid-cols-3' : 'grid-cols-2'}`}>
@@ -195,9 +216,22 @@ export default function ConfiguracoesFinanceirasTab({
               {grupos.map(grupo => <Card key={grupo} className="h-fit rounded-lg bg-card">
                   <CardHeader className="pb-2 bg-card rounded-lg">
                     <CardTitle className="text-sm">
-                      <Badge className={`${getCorGrupo(grupo)} text-xs font-medium`}>
-                        {grupo}
-                      </Badge>
+                      <div className="flex items-center justify-between">
+                        <Badge className={`${getCorGrupo(grupo)} text-xs font-medium`}>
+                          {grupo}
+                        </Badge>
+                        {grupo === 'Despesa Fixa' && custosDisponiveis > 0 && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setSyncModalOpen(true)}
+                            className="h-6 px-2 text-xs"
+                          >
+                            <RefreshCw className="h-3 w-3 mr-1" />
+                            Sincronizar
+                          </Button>
+                        )}
+                      </div>
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="pt-0 bg-card rounded-lg">
@@ -242,5 +276,11 @@ export default function ConfiguracoesFinanceirasTab({
           </TabsContent>
         )}
       </Tabs>
+
+      <SyncFromPricingModal
+        open={syncModalOpen}
+        onOpenChange={setSyncModalOpen}
+        onSyncComplete={handleSyncComplete}
+      />
     </div>;
 }

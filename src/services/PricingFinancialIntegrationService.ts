@@ -234,6 +234,104 @@ class PricingFinancialIntegrationService {
     }
   }
 
+  // ============= SINCRONIZAÇÃO REVERSA (PRECIFICAÇÃO → FINANÇAS) =============
+
+  /**
+   * Busca custos da precificação para sincronizar com finanças
+   */
+  getCustosEstudioFromPricingForSync(): CustoEstudioPrecificacao[] {
+    const dados = storage.load(this.STORAGE_KEYS.PRICING_COSTS, {});
+    return (dados as any).custosEstudio || [];
+  }
+
+  /**
+   * Gera preview da sincronização reversa (Precificação → Finanças)
+   */
+  generateReverseSyncPreview(): {
+    custo: CustoEstudioPrecificacao;
+    itemFinanceiroExistente?: ItemFinanceiro;
+    acao: 'adicionar' | 'atualizar' | 'existe';
+  }[] {
+    const custosEstudio = this.getCustosEstudioFromPricingForSync();
+    const itensFinanceiros = storage.load(this.STORAGE_KEYS.FINANCIAL_ITEMS, []);
+
+    return custosEstudio.map(custo => {
+      // Buscar se já existe item financeiro correspondente
+      const itemExistente = itensFinanceiros.find((item: ItemFinanceiro) => 
+        item.nome.toLowerCase() === custo.descricao.toLowerCase() && 
+        item.grupo_principal === 'Despesa Fixa'
+      );
+
+      return {
+        custo,
+        itemFinanceiroExistente: itemExistente,
+        acao: itemExistente ? 'existe' as const : 'adicionar' as const
+      };
+    });
+  }
+
+  /**
+   * Executa sincronização reversa (Precificação → Finanças)
+   */
+  executeReverseSyncronization(selectedCustos: string[]): {
+    success: boolean;
+    created: number;
+    errors: string[];
+  } {
+    try {
+      const custosEstudio = this.getCustosEstudioFromPricingForSync();
+      const itensFinanceiros = storage.load(this.STORAGE_KEYS.FINANCIAL_ITEMS, []);
+      const errors: string[] = [];
+      let created = 0;
+
+      selectedCustos.forEach(custoId => {
+        const custo = custosEstudio.find(c => c.id === custoId);
+        if (!custo) {
+          errors.push(`Custo ${custoId} não encontrado`);
+          return;
+        }
+
+        // Verificar se já existe item financeiro correspondente
+        const jaExiste = itensFinanceiros.some((item: ItemFinanceiro) => 
+          item.nome.toLowerCase() === custo.descricao.toLowerCase() && 
+          item.grupo_principal === 'Despesa Fixa'
+        );
+
+        if (!jaExiste) {
+          const novoItem: ItemFinanceiro = {
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+            nome: custo.descricao,
+            grupo_principal: 'Despesa Fixa',
+            userId: 'user1',
+            ativo: true,
+            criadoEm: getCurrentDateString()
+          };
+
+          itensFinanceiros.push(novoItem);
+          created++;
+        }
+      });
+
+      if (created > 0) {
+        storage.save(this.STORAGE_KEYS.FINANCIAL_ITEMS, itensFinanceiros);
+      }
+
+      return {
+        success: true,
+        created,
+        errors
+      };
+
+    } catch (error) {
+      console.error('Erro na sincronização reversa:', error);
+      return {
+        success: false,
+        created: 0,
+        errors: [error instanceof Error ? error.message : 'Erro desconhecido']
+      };
+    }
+  }
+
   // ============= EXPORTAÇÃO PARA O FINANCEIRO =============
 
   /**
