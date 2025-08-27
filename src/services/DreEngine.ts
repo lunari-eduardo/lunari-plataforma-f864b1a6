@@ -1,27 +1,56 @@
 import { TransacaoComItem, StatusTransacao } from '@/types/financas';
 import { DREMode, DREPeriod, DREConfig, DREResult, DRELine, DREGroupKey, DREMovement } from '@/types/dre';
 import { RecurringBlueprintEngine } from './RecurringBlueprintEngine';
+import { normalizeWorkflowItems, generateAllMonthsData } from '@/utils/salesDataNormalizer';
+import { NormalizedWorkflowData } from '@/types/salesAnalytics';
 
 export class DreEngine {
   
   /**
-   * Constrói movimentos base a partir dos dados financeiros e workflow reais
+   * Constrói movimentos base usando a lógica robusta da Análise de Vendas
    */
   static buildBaseMovements(args: {
     transacoesFinanceiras: any[]; // Transações do useNovoFinancas()
-    workflowItems: any[]; // WorkflowItems do AppContext
+    workflowItems?: any[]; // WorkflowItems do AppContext (opcional, usa normalizer)
     mode: DREMode;
     period: DREPeriod;
   }): DREMovement[] {
-    const { transacoesFinanceiras, workflowItems, mode, period } = args;
+    const { transacoesFinanceiras, mode, period } = args;
     const movements: DREMovement[] = [];
     const processedIds = new Set<string>(); // Para evitar duplicações
 
-    console.log('🔍 DRE: Processando dados:', {
+    console.log('🔍 DRE: Processando dados com normalizer:', {
       transacoesCount: transacoesFinanceiras.length,
-      workflowCount: workflowItems.length,
       period,
       mode
+    });
+
+    // NOVO: Usar normalizer da Análise de Vendas para dados do workflow
+    const normalizedWorkflowData = normalizeWorkflowItems();
+    console.log('📊 DRE: Dados normalizados carregados:', {
+      totalWorkflowItems: normalizedWorkflowData.length,
+      amostras: normalizedWorkflowData.slice(0, 2).map(item => ({
+        id: item.id,
+        data: item.data,
+        year: item.year,
+        month: item.month,
+        valorPago: item.valorPago,
+        categoria: item.categoria
+      }))
+    });
+
+    // Filtrar dados do workflow pelo período usando a estrutura normalizada
+    const filteredWorkflowData = this.filterNormalizedWorkflowByPeriod(normalizedWorkflowData, period);
+    console.log('📊 DRE: Workflow filtrado por período:', {
+      total: filteredWorkflowData.length,
+      periodo: period,
+      amostras: filteredWorkflowData.slice(0, 3).map(item => ({
+        id: item.id,
+        data: item.data,
+        valorPago: item.valorPago,
+        nome: item.nome,
+        categoria: item.categoria
+      }))
     });
 
     // Filtrar transações financeiras por período
@@ -72,65 +101,41 @@ export class DreEngine {
       });
     });
 
-    // Filtrar itens do workflow por período
-    const filteredWorkflow = this.filterWorkflowByPeriod(workflowItems, period);
-    console.log('📊 Workflow items filtrados por período:', {
-      total: filteredWorkflow.length,
-      periodo: period,
-      amostras: filteredWorkflow.slice(0, 3).map(item => ({
-        id: item.id,
-        data: item.data,
-        valorPago: item.valorPago,
-        nome: item.nome,
-        pacote: item.pacote
-      }))
-    });
-    
-    // Processar itens do workflow (receitas operacionais)
-    filteredWorkflow.forEach(item => {
-      if (!item.valorPago || Number(item.valorPago) <= 0) return;
-
+    // Processar dados normalizados do workflow (receitas operacionais)
+    filteredWorkflowData.forEach(item => {
       const key = `wf_${item.id}`;
       if (processedIds.has(key)) return;
       processedIds.add(key);
 
-      // Para workflow, usar data do item
-      const dataCompetencia = item.data; // Data do agendamento/projeto
-      
-      // Para caixa, verificar se há pagamentos efetivos
-      const temPagamentoEfetivo = item.pagamentos && item.pagamentos.length > 0;
-      const dataCaixa = temPagamentoEfetivo ? item.data : undefined;
-
       // Determinar se deve incluir baseado no modo
       const shouldInclude = mode === 'caixa' 
-        ? temPagamentoEfetivo
-        : true; // Para competência, incluir todos com valor pago > 0
+        ? item.valorPago > 0 // Para caixa, se tem valor pago > 0 assumimos que foi recebido
+        : item.valorPago > 0; // Para competência, incluir todos com valor pago > 0
 
       if (!shouldInclude) return;
 
-      // Determinar meio de pagamento baseado nos pagamentos ou campo específico
-      let meioPagamento = 'não_informado';
-      if (item.meioPagamento) {
-        meioPagamento = item.meioPagamento;
-      } else if (item.pagamentos && item.pagamentos.length > 0) {
-        // Se não tem meio específico, assumir baseado na existência de pagamentos
-        meioPagamento = 'outros';
-      }
+      // Data já está padronizada no normalizer
+      const dataCompetencia = item.data; // YYYY-MM-DD format
+      const dataCaixa = mode === 'caixa' ? item.data : undefined;
+
+      // Determinar meio de pagamento (placeholder - pode ser expandido futuramente)
+      const meioPagamento = 'não_informado';
 
       movements.push({
         tipo: 'entrada',
-        valor: Number(item.valorPago) || 0,
+        valor: item.valorPago,
         origem: 'workflow',
         categoria: 'receita_operacional',
         meioPagamento,
         dataCompetencia,
         dataCaixa,
         meta: {
-          sessionId: item.sessionId || item.id,
+          sessionId: item.sessionId,
           clienteNome: item.nome || 'Cliente não identificado',
           projetoNome: item.descricao || item.pacote || 'Projeto sem nome',
           categoria: item.categoria,
-          pacote: item.pacote
+          pacote: item.pacote,
+          origem: item.origem
         }
       });
     });
@@ -208,7 +213,7 @@ export class DreEngine {
     period: DREPeriod,
     mode: DREMode,
     config: DREConfig,
-    deps: { transacoesFinanceiras: TransacaoComItem[]; workflowItems: any[] }
+    deps: { transacoesFinanceiras: TransacaoComItem[]; workflowItems?: any[] }
   ): DREResult {
     const movements = this.buildBaseMovements({ ...deps, mode, period });
     const grupos = this.mapMovementsToDRE(movements, config);
@@ -305,7 +310,37 @@ export class DreEngine {
     });
   }
 
+  /**
+   * Filtra dados normalizados do workflow por período (usa estrutura da Análise de Vendas)
+   */
+  private static filterNormalizedWorkflowByPeriod(normalizedData: NormalizedWorkflowData[], period: DREPeriod): NormalizedWorkflowData[] {
+    const filtered = normalizedData.filter(item => {
+      // Dados já estão normalizados com year/month calculados
+      if (period.type === 'annual') {
+        return item.year === period.year;
+      } else {
+        // month está em formato 0-11, period.month em 1-12
+        return item.year === period.year && item.month === (period.month! - 1);
+      }
+    });
+    
+    console.log('🔍 DRE: Filtro de período aplicado:', {
+      total: normalizedData.length,
+      filtrados: filtered.length,
+      periodo: period,
+      amostraFiltrados: filtered.slice(0, 2).map(item => ({
+        data: item.data,
+        year: item.year,
+        month: item.month,
+        valorPago: item.valorPago
+      }))
+    });
+    
+    return filtered;
+  }
+
   private static filterWorkflowByPeriod(workflowItems: any[], period: DREPeriod): any[] {
+    // Método legado mantido para compatibilidade
     return workflowItems.filter(item => {
       // Para workflow items, usar sempre 'data' (formato YYYY-MM-DD)
       const date = item.data;
