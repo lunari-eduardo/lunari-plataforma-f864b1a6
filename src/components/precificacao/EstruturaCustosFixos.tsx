@@ -72,10 +72,10 @@ export function EstruturaCustosFixos({
   }, []);
 
   // Cálculos (definidos antes dos useEffects)
-  const totalGastosPessoais = gastosPessoais.reduce((total, item) => total + item.valor, 0);
+  const totalGastosPessoais = (gastosPessoais || []).reduce((total, item) => total + item.valor, 0);
   const proLaboreCalculado = totalGastosPessoais * (1 + percentualProLabore / 100);
-  const totalCustosEstudio = custosEstudio.reduce((total, item) => total + item.valor, 0);
-  const totalDepreciacaoMensal = equipamentos.reduce((total, eq) => {
+  const totalCustosEstudio = (custosEstudio || []).reduce((total, item) => total + item.valor, 0);
+  const totalDepreciacaoMensal = (equipamentos || []).reduce((total, eq) => {
     const depreciacaoMensal = eq.valorPago / (eq.vidaUtil * 12);
     return total + depreciacaoMensal;
   }, 0);

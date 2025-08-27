@@ -46,13 +46,14 @@ export function useSalesAnalytics(
 
   // Calculate main metrics
   const salesMetrics = useMemo((): SalesMetrics => {
-    const totalRevenue = filteredData.reduce((sum, item) => sum + item.valorPago, 0);
-    const totalSessions = filteredData.length;
+    const safeFilteredData = filteredData || [];
+    const totalRevenue = safeFilteredData.reduce((sum, item) => sum + item.valorPago, 0);
+    const totalSessions = safeFilteredData.length;
     const averageTicket = totalSessions > 0 ? totalRevenue / totalSessions : 0;
     
     // Count unique clients (by email/phone)
     const uniqueClients = new Set(
-      filteredData.map(item => item.email || item.whatsapp).filter(Boolean)
+      safeFilteredData.map(item => item.email || item.whatsapp).filter(Boolean)
     ).size;
     
     // Calculate goal progress (assuming monthly goal of R$ 50k)
@@ -65,7 +66,7 @@ export function useSalesAnalytics(
     } else {
       // For yearly view, use current month
       const currentMonth = new Date().getMonth();
-      const currentMonthRevenue = filteredData
+      const currentMonthRevenue = safeFilteredData
         .filter(item => item.month === currentMonth)
         .reduce((sum, item) => sum + item.valorPago, 0);
       monthlyGoalProgress = (currentMonthRevenue / monthlyGoal) * 100;
@@ -93,9 +94,10 @@ export function useSalesAnalytics(
     const allMonthsData = generateAllMonthsData(selectedYear, filteredData);
     
     // Debug: Log resumo dos dados mensais
-    const totalRevenue = allMonthsData.reduce((sum, month) => sum + month.revenue, 0);
-    const totalSessions = allMonthsData.reduce((sum, month) => sum + month.sessions, 0);
-    const monthsWithData = allMonthsData.filter(month => month.sessions > 0).length;
+    const allMonthsDataSafe = allMonthsData || [];
+    const totalRevenue = allMonthsDataSafe.reduce((sum, month) => sum + month.revenue, 0);
+    const totalSessions = allMonthsDataSafe.reduce((sum, month) => sum + month.sessions, 0);
+    const monthsWithData = allMonthsDataSafe.filter(month => month.sessions > 0).length;
     
     console.log(`📊 [useSalesAnalytics] Dados mensais: ${monthsWithData}/12 meses com dados, Total: R$ ${totalRevenue.toLocaleString()}, ${totalSessions} sessões`);
     
@@ -106,6 +108,7 @@ export function useSalesAnalytics(
   const categoryData = useMemo((): CategoryData[] => {
     console.log(`🏷️ [useSalesAnalytics] Calculando distribuição por categoria`);
     
+    const safeFilteredData = filteredData || [];
     const categoryStats = new Map<string, { 
       sessions: number; 
       revenue: number; 
@@ -113,7 +116,7 @@ export function useSalesAnalytics(
       packages: Map<string, number>;
     }>();
 
-    filteredData.forEach(item => {
+    safeFilteredData.forEach(item => {
       const category = item.categoria || 'Não categorizado';
       const current = categoryStats.get(category) || { 
         sessions: 0, 
@@ -135,12 +138,13 @@ export function useSalesAnalytics(
     });
 
     const totalRevenue = Array.from(categoryStats.values())
-      .reduce((sum, cat) => sum + cat.revenue, 0);
+      .reduce((sum, cat) => sum + (cat?.revenue || 0), 0);
 
     const categories = Array.from(categoryStats.entries()).map(([name, stats]) => {
       // Calcular distribuição de pacotes
-      const totalPackages = Array.from(stats.packages.values()).reduce((sum, count) => sum + count, 0);
-      const packageDistribution = Array.from(stats.packages.entries()).map(([packageName, count]) => ({
+      const packageValues = Array.from(stats?.packages?.values() || []);
+      const totalPackages = packageValues.reduce((sum, count) => sum + (count || 0), 0);
+      const packageDistribution = Array.from(stats?.packages?.entries() || []).map(([packageName, count]) => ({
         packageName,
         count,
         percentage: totalPackages > 0 ? (count / totalPackages) * 100 : 0
@@ -162,8 +166,9 @@ export function useSalesAnalytics(
 
   // Get available years from data
   const availableYears = useMemo(() => {
+    const safeNormalizedData = normalizedData || [];
     const years = new Set<number>();
-    normalizedData.forEach(item => {
+    safeNormalizedData.forEach(item => {
       years.add(item.year);
     });
     
@@ -180,9 +185,10 @@ export function useSalesAnalytics(
   const packageDistributionData = useMemo((): PackageDistributionData[] => {
     console.log(`📦 [useSalesAnalytics] Calculando distribuição de pacotes para categoria: ${selectedCategory}`);
     
+    const safeFilteredData = filteredData || [];
     const packageStats = new Map<string, { sessions: number; revenue: number }>();
     
-    filteredData.forEach(item => {
+    safeFilteredData.forEach(item => {
       const packageName = item.pacote || 'Sem pacote';
       const current = packageStats.get(packageName) || { sessions: 0, revenue: 0 };
       packageStats.set(packageName, {
@@ -191,7 +197,7 @@ export function useSalesAnalytics(
       });
     });
 
-    const totalSessions = filteredData.length;
+    const totalSessions = safeFilteredData.length;
     const packages = Array.from(packageStats.entries()).map(([name, stats]) => ({
       name,
       sessions: stats.sessions,
@@ -218,9 +224,10 @@ export function useSalesAnalytics(
     }
 
     // Cálculo manual (fallback + dados consistentes)
+    const safeFilteredData = filteredData || [];
     const originStats = new Map<string, { sessions: number; revenue: number }>();
     
-    filteredData.forEach(item => {
+    safeFilteredData.forEach(item => {
       const originKey = item.origem || 'nao-especificado';
       const current = originStats.get(originKey) || { sessions: 0, revenue: 0 };
       originStats.set(originKey, {
@@ -229,7 +236,7 @@ export function useSalesAnalytics(
       });
     });
 
-    const totalSessions = filteredData.length;
+    const totalSessions = safeFilteredData.length;
     const origins = Array.from(originStats.entries()).map(([originKey, stats]) => {
       // Find matching origin from defaults or create fallback
       const matchingOrigin = ORIGENS_PADRAO.find(o => o.id === originKey);
@@ -266,8 +273,9 @@ export function useSalesAnalytics(
 
   // Get available categories
   const availableCategories = useMemo(() => {
+    const safeNormalizedData = normalizedData || [];
     const categories = new Set<string>();
-    normalizedData.forEach(item => {
+    safeNormalizedData.forEach(item => {
       if (item.categoria) {
         categories.add(item.categoria);
       }

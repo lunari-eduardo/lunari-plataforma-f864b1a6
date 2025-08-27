@@ -69,8 +69,8 @@ export function CalculadoraServicos({
   const horasMensais = horasDisponiveis * diasTrabalhados * 4; // 4 semanas por mês
   const custoHora = horasMensais > 0 ? custosFixosTotal / horasMensais : 0;
   const custoHorasServico = horasEstimadas * custoHora;
-  const valorProdutos = produtos.reduce((total, p) => total + p.valorVenda * p.quantidade, 0);
-  const valorCustosExtras = custosExtras.reduce((total, c) => total + c.valorUnitario * c.quantidade, 0);
+  const valorProdutos = (produtos || []).reduce((total, p) => total + p.valorVenda * p.quantidade, 0);
+  const valorCustosExtras = (custosExtras || []).reduce((total, c) => total + c.valorUnitario * c.quantidade, 0);
   const custoTotalServico = custoHorasServico + valorProdutos + valorCustosExtras;
   const precoFinal = custoTotalServico * markup;
   const lucroLiquido = precoFinal - custoTotalServico;
