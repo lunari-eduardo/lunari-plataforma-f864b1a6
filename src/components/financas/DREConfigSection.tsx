@@ -29,7 +29,7 @@ export default function DREConfigSection() {
         console.error('Erro ao carregar configuração DRE:', error);
       }
     }
-    return DRE_CONFIG_MEI as DREConfig; // Padrão MEI
+    return DRE_CONFIG_FOTOGRAFOS as DREConfig;
   });
 
   const salvarConfig = () => {
@@ -48,12 +48,20 @@ export default function DREConfigSection() {
     }
   };
 
-  const selecionarMEI = () => {
-    setConfig(DRE_CONFIG_MEI as DREConfig);
+  const aplicarPadroesFotografos = () => {
+    setConfig(DRE_CONFIG_FOTOGRAFOS as DREConfig);
+    toast({
+      title: "Padrões Aplicados",
+      description: "Configurações padrão para fotógrafos aplicadas com sucesso!"
+    });
   };
 
-  const selecionarSimplesNacional = () => {
-    setConfig(DRE_CONFIG_FOTOGRAFOS as DREConfig);
+  const aplicarPadroesMEI = () => {
+    setConfig(DRE_CONFIG_MEI as DREConfig);
+    toast({
+      title: "Padrões MEI Aplicados",
+      description: "Configurações padrão para MEI aplicadas com sucesso!"
+    });
   };
 
   const updateConfig = (updates: Partial<DREConfig>) => {
@@ -84,53 +92,44 @@ export default function DREConfigSection() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={aplicarPadroesFotografos}>
+            Padrões Fotógrafo
+          </Button>
+          <Button variant="outline" onClick={aplicarPadroesMEI}>
+            Padrões MEI
+          </Button>
           <Button onClick={salvarConfig}>
             Salvar Configurações
           </Button>
         </div>
       </div>
 
-      {/* Seleção de Regime Tributário */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Building className="h-4 w-4" />
-            Regime Tributário
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Selecione seu regime tributário para configurar corretamente os impostos
-          </p>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-4">
-            <Button
-              variant={config.regimeTributario === 'MEI' ? 'default' : 'outline'}
-              onClick={selecionarMEI}
-              className="flex-1"
-            >
-              MEI
-            </Button>
-            <Button
-              variant={config.regimeTributario === 'Simples' ? 'default' : 'outline'}
-              onClick={selecionarSimplesNacional}
-              className="flex-1"
-            >
-              Simples Nacional
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Configurações Específicas do Regime */}
+        {/* Regime Tributário */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <Building className="h-4 w-4" />
-              Configuração {config.regimeTributario}
+              Regime Tributário
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label>Regime</Label>
+              <Select 
+                value={config.regimeTributario} 
+                onValueChange={(value) => updateConfig({ regimeTributario: value as any })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="MEI">MEI</SelectItem>
+                  <SelectItem value="Simples">Simples Nacional</SelectItem>
+                  <SelectItem value="Outro">Outro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
             {config.regimeTributario === 'MEI' ? (
               <div className="space-y-4">

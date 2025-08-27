@@ -10,7 +10,6 @@ import DashboardFinanceiro from '@/components/financas/DashboardFinanceiro';
 import ExportFinancialPDF from '@/components/financas/ExportFinancialPDF';
 import ExtratoTab from '@/components/financas/ExtratoTab';
 import DRETab from '@/components/financas/DRETab';
-import { DREConfig } from '@/types/dre';
 
 export default function NovaFinancas() {
   const {
@@ -41,37 +40,6 @@ export default function NovaFinancas() {
     return params.get('tab') || 'extrato';
   });
 
-  // Verificar se é MEI para ocultar aba DRE
-  const [dreConfig, setDreConfig] = useState<DREConfig | null>(null);
-  
-  useEffect(() => {
-    const loadDREConfig = () => {
-      try {
-        const saved = localStorage.getItem('dre_config_v1');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          setDreConfig(parsed);
-        } else {
-          // Padrão MEI
-          setDreConfig({ regimeTributario: 'MEI' } as DREConfig);
-        }
-      } catch (error) {
-        console.error('Erro ao carregar config DRE:', error);
-        setDreConfig({ regimeTributario: 'MEI' } as DREConfig);
-      }
-    };
-
-    loadDREConfig();
-    
-    // Escutar mudanças na configuração DRE
-    const handleStorageChange = () => loadDREConfig();
-    window.addEventListener('storage', handleStorageChange);
-    
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
-
-  const isMEI = dreConfig?.regimeTributario === 'MEI';
-
   // Escutar eventos de drill-down do DRE
   useEffect(() => {
     const handleDrillDown = (event: CustomEvent) => {
@@ -97,25 +65,16 @@ export default function NovaFinancas() {
           <ExportFinancialPDF variant="dropdown" />
         </div>
 
-        <Tabs value={activeTab} onValueChange={(value) => {
-          // Se tentar acessar DRE sendo MEI, redirecionar para extrato
-          if (value === 'dre' && isMEI) {
-            setActiveTab('extrato');
-            return;
-          }
-          setActiveTab(value);
-        }}>
-          <TabsList className={`grid w-full h-10 p-1 text-sm bg-card border border-border py-0 ${isMEI ? 'grid-cols-4' : 'grid-cols-5'}`}>
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-5 h-10 p-1 text-sm bg-card border border-border py-0">
             <TabsTrigger value="extrato" className="text-sm py-2 data-[state=active]:bg-primary/10 text-foreground flex items-center gap-2">
               <FileText className="h-4 w-4" />
               Extrato
             </TabsTrigger>
-            {!isMEI && (
-              <TabsTrigger value="dre" className="text-sm py-2 data-[state=active]:bg-primary/10 text-foreground flex items-center gap-2">
-                <TrendingUp className="h-4 w-4" />
-                DRE
-              </TabsTrigger>
-            )}
+            <TabsTrigger value="dre" className="text-sm py-2 data-[state=active]:bg-primary/10 text-foreground flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
+              DRE
+            </TabsTrigger>
             <TabsTrigger value="lancamentos" className="text-sm py-2 data-[state=active]:bg-primary/10 text-foreground flex items-center gap-2">
               <Receipt className="h-4 w-4" />
               Lançamentos
@@ -134,11 +93,9 @@ export default function NovaFinancas() {
             <ExtratoTab />
           </TabsContent>
 
-          {!isMEI && (
-            <TabsContent value="dre" className="mt-6">
-              <DRETab />
-            </TabsContent>
-          )}
+          <TabsContent value="dre" className="mt-6">
+            <DRETab />
+          </TabsContent>
 
           <TabsContent value="lancamentos" className="mt-6">
             <LancamentosTab filtroMesAno={filtroMesAno} setFiltroMesAno={setFiltroMesAno} transacoesPorGrupo={transacoesPorGrupo} resumoFinanceiro={resumoFinanceiro} calcularMetricasPorGrupo={calcularMetricasPorGrupo} obterItensPorGrupo={obterItensPorGrupo} adicionarTransacao={adicionarTransacao} atualizarTransacao={atualizarTransacaoCompativel} removerTransacao={removerTransacao} marcarComoPago={marcarComoPago} createTransactionEngine={createTransactionEngine} />
