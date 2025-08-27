@@ -4,9 +4,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Trash2, Save, CheckCircle, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, Save, CheckCircle, AlertCircle, RefreshCw, ArrowLeftRight } from 'lucide-react';
 import { EstruturaCustosService, ValidacaoService, IndicadoresService } from '@/services/PricingService';
 import type { GastoItem, Equipamento, StatusSalvamento } from '@/types/precificacao';
+import { pricingFinancialIntegrationService, type SyncPreview } from '@/services/PricingFinancialIntegrationService';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { useToast } from '@/hooks/use-toast';
 // Tipos movidos para src/types/precificacao.ts
 interface EstruturaCustosFixosProps {
   onTotalChange: (total: number) => void;
@@ -15,11 +21,19 @@ interface EstruturaCustosFixosProps {
 export function EstruturaCustosFixos({
   onTotalChange
 }: EstruturaCustosFixosProps) {
+  const { toast } = useToast();
+  
   const [gastosPessoais, setGastosPessoais] = useState<GastoItem[]>([]);
   const [percentualProLabore, setPercentualProLabore] = useState(30);
   const [custosEstudio, setCustosEstudio] = useState<GastoItem[]>([]);
   const [equipamentos, setEquipamentos] = useState<Equipamento[]>([]);
   const [statusSalvamento, setStatusSalvamento] = useState<StatusSalvamento>('nao_salvo');
+  
+  // Estados para sincronização com finanças
+  const [syncDialogOpen, setSyncDialogOpen] = useState(false);
+  const [syncPreview, setSyncPreview] = useState<SyncPreview[]>([]);
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const [isLoadingSync, setIsLoadingSync] = useState(false);
 
   // Estados para linhas de adição rápida
   const [novoGastoPessoal, setNovoGastoPessoal] = useState({
@@ -270,6 +284,75 @@ export function EstruturaCustosFixos({
   };
 
   // Renderizar indicador de status
+  // ============= FUNÇÕES DE SINCRONIZAÇÃO =============
+  
+  const openSyncDialog = async () => {
+    setIsLoadingSync(true);
+    try {
+      const preview = pricingFinancialIntegrationService.generateSyncPreview();
+      setSyncPreview(preview);
+      setSelectedItems(preview.filter(p => p.acao !== 'manter').map(p => p.item.id));
+      setSyncDialogOpen(true);
+    } catch (error) {
+      console.error('Erro ao gerar preview:', error);
+      toast({
+        title: "Erro",
+        description: "Falha ao carregar dados do financeiro.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingSync(false);
+    }
+  };
+
+  const executeSyncronization = async () => {
+    if (selectedItems.length === 0) {
+      toast({
+        title: "Nenhum item selecionado",
+        description: "Selecione pelo menos um item para sincronizar.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsLoadingSync(true);
+    try {
+      const result = pricingFinancialIntegrationService.executeSyncronization(selectedItems, true);
+      
+      if (result.success) {
+        // Recarregar custos atualizados
+        const custosAtualizados = pricingFinancialIntegrationService.getCustosEstudioFromPricing();
+        setCustosEstudio(custosAtualizados.map(custo => ({
+          id: custo.id,
+          descricao: custo.descricao,
+          valor: custo.valor
+        })));
+
+        toast({
+          title: "Sincronização concluída",
+          description: `${result.imported} itens importados, ${result.updated} itens atualizados.`,
+        });
+
+        setSyncDialogOpen(false);
+      } else {
+        toast({
+          title: "Erro na sincronização",
+          description: result.errors.join(', '),
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Erro durante sincronização:', error);
+      toast({
+        title: "Erro",
+        description: "Falha durante a sincronização.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingSync(false);
+    }
+  };
+
   const renderStatusIndicator = () => {
     switch (statusSalvamento) {
       case 'salvando':
@@ -431,10 +514,141 @@ export function EstruturaCustosFixos({
           <TabsContent value="custos-estudio" className="space-y-4">
             <div className="flex justify-between items-center">
               <h3 className="font-medium">Custos do Estúdio</h3>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
                 <span className="text-sm text-green-600 font-medium">
                   Total: R$ {totalCustosEstudio.toFixed(2)}
                 </span>
+                <Dialog open={syncDialogOpen} onOpenChange={setSyncDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button 
+                      onClick={openSyncDialog}
+                      variant="outline" 
+                      size="sm" 
+                      disabled={isLoadingSync}
+                    >
+                      {isLoadingSync ? (
+                        <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full mr-1" />
+                      ) : (
+                        <RefreshCw className="h-3 w-3 mr-1" />
+                      )}
+                      Sincronizar
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2">
+                        <ArrowLeftRight className="h-4 w-4" />
+                        Sincronizar com Finanças
+                      </DialogTitle>
+                    </DialogHeader>
+                    
+                    <div className="space-y-4">
+                      <div className="bg-muted p-3 rounded-lg">
+                        <p className="text-sm text-muted-foreground">
+                          Importe despesas fixas do sistema financeiro para a precificação. 
+                          Os valores serão baseados na média dos últimos 6 meses.
+                        </p>
+                      </div>
+
+                      {syncPreview.length === 0 ? (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <p>Nenhuma despesa fixa encontrada no sistema financeiro.</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Checkbox
+                              checked={selectedItems.length === syncPreview.length}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedItems(syncPreview.map(p => p.item.id));
+                                } else {
+                                  setSelectedItems([]);
+                                }
+                              }}
+                            />
+                            <Label className="text-sm font-medium">
+                              Selecionar todos ({syncPreview.length} itens)
+                            </Label>
+                          </div>
+
+                          {syncPreview.map(preview => (
+                            <div key={preview.item.id} className="border rounded-lg p-3 space-y-2">
+                              <div className="flex items-center gap-3">
+                                <Checkbox
+                                  checked={selectedItems.includes(preview.item.id)}
+                                  onCheckedChange={(checked) => {
+                                    if (checked) {
+                                      setSelectedItems(prev => [...prev, preview.item.id]);
+                                    } else {
+                                      setSelectedItems(prev => prev.filter(id => id !== preview.item.id));
+                                    }
+                                  }}
+                                />
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium">{preview.item.nome}</span>
+                                    <Badge variant={
+                                      preview.acao === 'adicionar' ? 'default' :
+                                      preview.acao === 'atualizar' ? 'secondary' : 'outline'
+                                    }>
+                                      {preview.acao === 'adicionar' ? 'Novo' :
+                                       preview.acao === 'atualizar' ? 'Atualizar' : 'Manter'}
+                                    </Badge>
+                                  </div>
+                                  
+                                  <div className="text-sm text-muted-foreground flex items-center gap-4 mt-1">
+                                    <span>Valor médio (financeiro): R$ {preview.valorFinanceiro.toFixed(2)}</span>
+                                    {preview.valorPrecificacao !== undefined && (
+                                      <>
+                                        <span>•</span>
+                                        <span>Atual (precificação): R$ {preview.valorPrecificacao.toFixed(2)}</span>
+                                      </>
+                                    )}
+                                    {preview.diferenca !== undefined && Math.abs(preview.diferenca) > 0.01 && (
+                                      <>
+                                        <span>•</span>
+                                        <span className={preview.diferenca > 0 ? 'text-red-600' : 'text-green-600'}>
+                                          {preview.diferenca > 0 ? '+' : ''}R$ {preview.diferenca.toFixed(2)}
+                                        </span>
+                                      </>
+                                    )}
+                                  </div>
+                                  
+                                  {preview.item.transacoesCount && preview.item.transacoesCount > 0 && (
+                                    <div className="text-xs text-muted-foreground mt-1">
+                                      Baseado em {preview.item.transacoesCount} transações dos últimos 6 meses
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <Separator />
+
+                      <div className="flex justify-end gap-2">
+                        <Button 
+                          variant="outline" 
+                          onClick={() => setSyncDialogOpen(false)}
+                        >
+                          Cancelar
+                        </Button>
+                        <Button 
+                          onClick={executeSyncronization}
+                          disabled={selectedItems.length === 0 || isLoadingSync}
+                        >
+                          {isLoadingSync ? (
+                            <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full mr-2" />
+                          ) : null}
+                          Sincronizar ({selectedItems.length})
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
                 <Button onClick={adicionarCustoEstudio} size="sm">
                   <Plus className="h-4 w-4" />
                 </Button>
