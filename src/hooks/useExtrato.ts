@@ -101,18 +101,26 @@ export function useExtrato() {
   const pagamentosWorkflow = useMemo(() => {
     const sessions = storage.load(STORAGE_KEYS.WORKFLOW_ITEMS, []);
     const pagamentos: any[] = [];
+    const processedPayments = new Set(); // Para evitar duplicações
     
     sessions.forEach((session: any) => {
       if (session.pagamentos && Array.isArray(session.pagamentos)) {
         session.pagamentos.forEach((pagamento: any) => {
-          pagamentos.push({
-            ...pagamento,
-            sessionId: session.id,
-            clienteNome: resolveClienteNome(session),
-            projetoNome: session.nome || 'Projeto sem nome',
-            categoriaId: session.categoriaId,
-            origem: 'workflow'
-          });
+          // Criar chave única para o pagamento
+          const paymentKey = `${session.id}_${pagamento.id || pagamento.valor}_${pagamento.dataVencimento || pagamento.data}`;
+          
+          // Só adicionar se não foi processado antes
+          if (!processedPayments.has(paymentKey)) {
+            processedPayments.add(paymentKey);
+            pagamentos.push({
+              ...pagamento,
+              sessionId: session.id,
+              clienteNome: resolveClienteNome(session),
+              projetoNome: session.nome || 'Projeto sem nome',
+              categoriaId: session.categoriaId,
+              origem: 'workflow'
+            });
+          }
         });
       }
     });
