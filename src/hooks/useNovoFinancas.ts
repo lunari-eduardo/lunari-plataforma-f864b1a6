@@ -380,8 +380,10 @@ export function useNovoFinancas() {
     };
 
     transacoesFiltradas.forEach(transacao => {
-      const grupo = transacao.item.grupoPrincipal;
-      grupos[grupo].push(transacao);
+      const grupo = transacao.item?.grupoPrincipal;
+      if (grupo && grupos[grupo]) {
+        grupos[grupo].push(transacao);
+      }
     });
 
     return grupos;
