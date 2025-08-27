@@ -12,6 +12,7 @@ import { FinancialEngine, CreditCard } from '@/services/FinancialEngine';
 import { useToast } from '@/hooks/use-toast';
 import ConfiguracaoCartoes from './ConfiguracaoCartoes';
 import DREConfigSection from './DREConfigSection';
+import { useRegimeTributario } from '@/hooks/useRegimeTributario';
 interface ConfiguracoesFinanceirasTabProps {
   itensFinanceiros: ItemFinanceiro[];
   adicionarItemFinanceiro: (nome: string, grupo: GrupoPrincipal) => void;
@@ -28,9 +29,8 @@ export default function ConfiguracoesFinanceirasTab({
   const [novoItemGrupo, setNovoItemGrupo] = useState<GrupoPrincipal>('Despesa Fixa');
   const [itemEditando, setItemEditando] = useState<string | null>(null);
   const [nomeEditando, setNomeEditando] = useState('');
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
+  const { isDREVisible } = useRegimeTributario();
   const grupos: GrupoPrincipal[] = ['Despesa Fixa', 'Despesa Variável', 'Investimento', 'Receita Não Operacional'];
   const handleAdicionarItem = () => {
     if (!novoItemNome.trim()) {
@@ -126,7 +126,7 @@ export default function ConfiguracoesFinanceirasTab({
   }, {} as Record<GrupoPrincipal, ItemFinanceiro[]>);
   return <div className="space-y-6">
       <Tabs defaultValue="itens" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 bg-gradient-to-r from-lunar-accent/10 to-lunar-accent/5 backdrop-blur-sm border border-lunar-border/20 rounded-xl p-1">
+        <TabsList className={`grid w-full bg-gradient-to-r from-lunar-accent/10 to-lunar-accent/5 backdrop-blur-sm border border-lunar-border/20 rounded-xl p-1 ${isDREVisible() ? 'grid-cols-3' : 'grid-cols-2'}`}>
           <TabsTrigger 
             value="itens" 
             className="text-xs font-medium transition-all duration-300 ease-out rounded-lg data-[state=active]:bg-white/90 data-[state=active]:text-lunar-accent data-[state=active]:shadow-lg data-[state=active]:shadow-lunar-accent/15 data-[state=active]:border data-[state=active]:border-lunar-accent/20 data-[state=inactive]:text-lunar-text data-[state=inactive]:hover:bg-lunar-accent/10 data-[state=inactive]:hover:text-lunar-accent"
@@ -139,12 +139,14 @@ export default function ConfiguracoesFinanceirasTab({
           >
             Cartões de Crédito
           </TabsTrigger>
-          <TabsTrigger 
-            value="dre" 
-            className="text-xs font-medium transition-all duration-300 ease-out rounded-lg data-[state=active]:bg-white/90 data-[state=active]:text-lunar-accent data-[state=active]:shadow-lg data-[state=active]:shadow-lunar-accent/15 data-[state=active]:border data-[state=active]:border-lunar-accent/20 data-[state=inactive]:text-lunar-text data-[state=inactive]:hover:bg-lunar-accent/10 data-[state=inactive]:hover:text-lunar-accent"
-          >
-            DRE & Impostos
-          </TabsTrigger>
+          {isDREVisible() && (
+            <TabsTrigger 
+              value="dre" 
+              className="text-xs font-medium transition-all duration-300 ease-out rounded-lg data-[state=active]:bg-white/90 data-[state=active]:text-lunar-accent data-[state=active]:shadow-lg data-[state=active]:shadow-lunar-accent/15 data-[state=active]:border data-[state=active]:border-lunar-accent/20 data-[state=inactive]:text-lunar-text data-[state=inactive]:hover:bg-lunar-accent/10 data-[state=inactive]:hover:text-lunar-accent"
+            >
+              DRE & Impostos
+            </TabsTrigger>
+          )}
         </TabsList>
         
         <TabsContent value="itens" className="mt-6">
@@ -234,9 +236,11 @@ export default function ConfiguracoesFinanceirasTab({
           <ConfiguracaoCartoes />
         </TabsContent>
 
-        <TabsContent value="dre" className="mt-6">
-          <DREConfigSection />
-        </TabsContent>
+        {isDREVisible() && (
+          <TabsContent value="dre" className="mt-6">
+            <DREConfigSection />
+          </TabsContent>
+        )}
       </Tabs>
     </div>;
 }

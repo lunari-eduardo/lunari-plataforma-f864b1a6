@@ -10,6 +10,7 @@ import DashboardFinanceiro from '@/components/financas/DashboardFinanceiro';
 import ExportFinancialPDF from '@/components/financas/ExportFinancialPDF';
 import ExtratoTab from '@/components/financas/ExtratoTab';
 import DRETab from '@/components/financas/DRETab';
+import { useRegimeTributario } from '@/hooks/useRegimeTributario';
 
 export default function NovaFinancas() {
   const {
@@ -35,10 +36,24 @@ export default function NovaFinancas() {
     atualizarCartao,
     removerCartao
   } = useNovoFinancas();
+  
+  const { isDREVisible } = useRegimeTributario();
   const [activeTab, setActiveTab] = useState(() => {
     const params = new URLSearchParams(window.location.search);
-    return params.get('tab') || 'extrato';
+    const tab = params.get('tab') || 'extrato';
+    // Se for MEI e tentar acessar DRE, redirecionar para extrato
+    if (tab === 'dre' && !isDREVisible()) {
+      return 'extrato';
+    }
+    return tab;
   });
+
+  // Monitorar mudanças no regime e redirecionar se necessário
+  useEffect(() => {
+    if (activeTab === 'dre' && !isDREVisible()) {
+      setActiveTab('extrato');
+    }
+  }, [isDREVisible, activeTab]);
 
   // Escutar eventos de drill-down do DRE
   useEffect(() => {
@@ -66,15 +81,17 @@ export default function NovaFinancas() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-5 h-10 p-1 text-sm bg-card border border-border py-0">
+          <TabsList className={`grid w-full h-10 p-1 text-sm bg-card border border-border py-0 ${isDREVisible() ? 'grid-cols-5' : 'grid-cols-4'}`}>
             <TabsTrigger value="extrato" className="text-sm py-2 data-[state=active]:bg-primary/10 text-foreground flex items-center gap-2">
               <FileText className="h-4 w-4" />
               Extrato
             </TabsTrigger>
-            <TabsTrigger value="dre" className="text-sm py-2 data-[state=active]:bg-primary/10 text-foreground flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              DRE
-            </TabsTrigger>
+            {isDREVisible() && (
+              <TabsTrigger value="dre" className="text-sm py-2 data-[state=active]:bg-primary/10 text-foreground flex items-center gap-2">
+                <TrendingUp className="h-4 w-4" />
+                DRE
+              </TabsTrigger>
+            )}
             <TabsTrigger value="lancamentos" className="text-sm py-2 data-[state=active]:bg-primary/10 text-foreground flex items-center gap-2">
               <Receipt className="h-4 w-4" />
               Lançamentos
@@ -93,9 +110,11 @@ export default function NovaFinancas() {
             <ExtratoTab />
           </TabsContent>
 
-          <TabsContent value="dre" className="mt-6">
-            <DRETab />
-          </TabsContent>
+          {isDREVisible() && (
+            <TabsContent value="dre" className="mt-6">
+              <DRETab />
+            </TabsContent>
+          )}
 
           <TabsContent value="lancamentos" className="mt-6">
             <LancamentosTab filtroMesAno={filtroMesAno} setFiltroMesAno={setFiltroMesAno} transacoesPorGrupo={transacoesPorGrupo} resumoFinanceiro={resumoFinanceiro} calcularMetricasPorGrupo={calcularMetricasPorGrupo} obterItensPorGrupo={obterItensPorGrupo} adicionarTransacao={adicionarTransacao} atualizarTransacao={atualizarTransacaoCompativel} removerTransacao={removerTransacao} marcarComoPago={marcarComoPago} createTransactionEngine={createTransactionEngine} />

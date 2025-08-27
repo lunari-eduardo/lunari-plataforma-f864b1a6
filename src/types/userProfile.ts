@@ -19,6 +19,8 @@ export interface UserBranding {
   updatedAt: string;
 }
 
+export type RegimeTributario = 'mei' | 'simples';
+
 export interface UserPreferences {
   id: string;
   // Notificações
@@ -26,6 +28,8 @@ export interface UserPreferences {
   // Automações
   habilitarAutomacoesWorkflow: boolean;
   habilitarAlertaProdutosDoCliente: boolean;
+  // Regime Tributário
+  regimeTributario: RegimeTributario;
   createdAt: string;
   updatedAt: string;
 }
@@ -48,5 +52,6 @@ export const DEFAULT_USER_BRANDING: Omit<UserBranding, 'id' | 'createdAt' | 'upd
 export const DEFAULT_USER_PREFERENCES: Omit<UserPreferences, 'id' | 'createdAt' | 'updatedAt'> = {
   notificacoesWhatsapp: true,
   habilitarAutomacoesWorkflow: true,
-  habilitarAlertaProdutosDoCliente: true
+  habilitarAlertaProdutosDoCliente: true,
+  regimeTributario: 'mei'
 };

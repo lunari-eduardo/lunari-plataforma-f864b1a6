@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Plus, X, Upload, Trash2 } from 'lucide-react';
 import { useUserProfile, useUserBranding } from '@/hooks/useUserProfile';
+import { useRegimeTributario } from '@/hooks/useRegimeTributario';
 import { formatCpfCnpj, validateEmail, validateCpfCnpj, formatPhone } from '@/utils/userUtils';
 import { toast } from 'sonner';
 export default function MinhaConta() {
@@ -23,6 +24,12 @@ export default function MinhaConta() {
     removeLogo,
     getBrandingOrDefault
   } = useUserBranding();
+  const {
+    regime,
+    isMEI,
+    isSimples,
+    updateRegime
+  } = useRegimeTributario();
 
   // Estados do formulário
   const [formData, setFormData] = useState(getProfileOrDefault());
@@ -131,9 +138,10 @@ export default function MinhaConta() {
           <Card className="mb-6">
             <CardContent className="p-6">
               <Tabs defaultValue="perfil" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
+                <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="perfil">Perfil</TabsTrigger>
                   <TabsTrigger value="marca">Marca</TabsTrigger>
+                  <TabsTrigger value="regime">Regime Tributário</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="perfil" className="space-y-6 mt-6">
@@ -267,6 +275,71 @@ export default function MinhaConta() {
                         <p>• Tamanho máximo: 5MB</p>
                         <p>• Recomendado: 512x512px ou superior</p>
                       </div>
+                    </div>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="regime" className="space-y-6 mt-6">
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-medium mb-2">Regime Tributário</h3>
+                      <p className="text-sm text-lunar-textSecondary mb-4">
+                        Selecione o regime tributário da sua empresa. Esta configuração determina quais funcionalidades financeiras estarão disponíveis.
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <Card className={`cursor-pointer transition-all duration-200 border-2 ${isMEI() ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
+                            onClick={() => updateRegime('mei')}>
+                        <CardContent className="p-6">
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-4 h-4 rounded-full border-2 ${isMEI() ? 'bg-primary border-primary' : 'border-border'}`} />
+                              <h4 className="font-semibold">MEI</h4>
+                            </div>
+                            <p className="text-sm text-lunar-textSecondary">
+                              Microempreendedor Individual. Ideal para fotógrafos autônomos com faturamento até R$ 81.000/ano.
+                            </p>
+                            <div className="text-xs text-lunar-textSecondary space-y-1">
+                              <p>• Tributos simplificados</p>
+                              <p>• Controle financeiro básico</p>
+                              <p>• Sem necessidade de DRE complexo</p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      <Card className={`cursor-pointer transition-all duration-200 border-2 ${isSimples() ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
+                            onClick={() => updateRegime('simples')}>
+                        <CardContent className="p-6">
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-4 h-4 rounded-full border-2 ${isSimples() ? 'bg-primary border-primary' : 'border-border'}`} />
+                              <h4 className="font-semibold">Simples Nacional</h4>
+                            </div>
+                            <p className="text-sm text-lunar-textSecondary">
+                              Para empresas com faturamento até R$ 4.8 milhões/ano. Permite gestão financeira completa.
+                            </p>
+                            <div className="text-xs text-lunar-textSecondary space-y-1">
+                              <p>• DRE detalhado disponível</p>
+                              <p>• Análises financeiras avançadas</p>
+                              <p>• Controle de impostos completo</p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    <div className="bg-lunar-surface/50 rounded-lg p-4">
+                      <p className="text-sm text-lunar-text">
+                        <strong>Regime atual:</strong> {isMEI() ? 'MEI (Microempreendedor Individual)' : 'Simples Nacional'}
+                      </p>
+                      <p className="text-xs text-lunar-textSecondary mt-1">
+                        {isMEI() 
+                          ? 'As funcionalidades de DRE estão ocultas para simplificar sua experiência.'
+                          : 'Todas as funcionalidades financeiras estão disponíveis, incluindo DRE detalhado.'
+                        }
+                      </p>
                     </div>
                   </div>
                 </TabsContent>
