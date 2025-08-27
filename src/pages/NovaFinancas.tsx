@@ -9,6 +9,7 @@ import ConfiguracoesFinanceirasTab from '@/components/financas/ConfiguracoesFina
 import DashboardFinanceiro from '@/components/financas/DashboardFinanceiro';
 import ExportFinancialPDF from '@/components/financas/ExportFinancialPDF';
 import ExtratoTab from '@/components/financas/ExtratoTab';
+import DRETab from '@/components/financas/DRETab';
 
 export default function NovaFinancas() {
   const {
@@ -47,9 +48,12 @@ export default function NovaFinancas() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4 h-10 p-1 text-sm bg-card border border-border py-0">
+          <TabsList className="grid w-full grid-cols-5 h-10 p-1 text-sm bg-card border border-border py-0">
             <TabsTrigger value="extrato" className="text-sm py-2 data-[state=active]:bg-primary/10 text-foreground">
               Extrato
+            </TabsTrigger>
+            <TabsTrigger value="dre" className="text-sm py-2 data-[state=active]:bg-primary/10 text-foreground">
+              DRE
             </TabsTrigger>
             <TabsTrigger value="lancamentos" className="text-sm py-2 data-[state=active]:bg-primary/10 text-foreground">
               Lançamentos
@@ -64,6 +68,10 @@ export default function NovaFinancas() {
 
           <TabsContent value="extrato" className="mt-6">
             <ExtratoTab />
+          </TabsContent>
+
+          <TabsContent value="dre" className="mt-6">
+            <DRETab />
           </TabsContent>
 
           <TabsContent value="lancamentos" className="mt-6">
