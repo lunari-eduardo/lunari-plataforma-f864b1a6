@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -37,10 +37,20 @@ export default function ConfiguracoesFinanceirasTab({
   const { isDREVisible } = useRegimeTributario();
 
   // Verificar custos disponíveis na precificação
-  useState(() => {
-    const custos = pricingFinancialIntegrationService.getCustosEstudioFromPricingForSync();
-    setCustosDisponiveis(custos.length);
-  });
+  useEffect(() => {
+    const checkAvailableCosts = () => {
+      const custos = pricingFinancialIntegrationService.getCustosEstudioFromPricingForSync();
+      setCustosDisponiveis(custos.length);
+      console.log(`🔄 Custos disponíveis na precificação: ${custos.length}`);
+    };
+
+    checkAvailableCosts();
+
+    // Verificar novamente a cada 2 segundos para sincronização em tempo real
+    const interval = setInterval(checkAvailableCosts, 2000);
+    
+    return () => clearInterval(interval);
+  }, []);
   const grupos: GrupoPrincipal[] = ['Despesa Fixa', 'Despesa Variável', 'Investimento', 'Receita Não Operacional'];
   const handleAdicionarItem = () => {
     if (!novoItemNome.trim()) {
@@ -136,9 +146,10 @@ export default function ConfiguracoesFinanceirasTab({
   }, {} as Record<GrupoPrincipal, ItemFinanceiro[]>);
 
   const handleSyncComplete = () => {
-    // Atualizar contador de custos
+    // Forçar atualização imediata dos custos disponíveis
     const custos = pricingFinancialIntegrationService.getCustosEstudioFromPricingForSync();
     setCustosDisponiveis(custos.length);
+    console.log(`✅ Sincronização concluída. Custos atualizados: ${custos.length}`);
     
     toast({
       title: "Sincronização Concluída",
@@ -220,16 +231,25 @@ export default function ConfiguracoesFinanceirasTab({
                         <Badge className={`${getCorGrupo(grupo)} text-xs font-medium`}>
                           {grupo}
                         </Badge>
-                        {grupo === 'Despesa Fixa' && custosDisponiveis > 0 && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setSyncModalOpen(true)}
-                            className="h-6 px-2 text-xs"
-                          >
-                            <RefreshCw className="h-3 w-3 mr-1" />
-                            Sincronizar
-                          </Button>
+                        {grupo === 'Despesa Fixa' && (
+                          <div className="flex items-center gap-2">
+                            {custosDisponiveis > 0 && (
+                              <Badge variant="secondary" className="text-xs">
+                                {custosDisponiveis} na Precificação
+                              </Badge>
+                            )}
+                            {custosDisponiveis > 0 && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setSyncModalOpen(true)}
+                                className="h-6 px-2 text-xs"
+                              >
+                                <RefreshCw className="h-3 w-3 mr-1" />
+                                Sincronizar
+                              </Button>
+                            )}
+                          </div>
                         )}
                       </div>
                     </CardTitle>
