@@ -201,6 +201,11 @@ export class DreEngine {
     const taxasGateway = this.calculateGatewayFees(movements, config);
     const impostosSobreReceita = this.calculateTaxes(receitaBrutaOperacional, config);
     
+    // Para MEI, adicionar DAS mensal como despesa administrativa
+    if (config.regimeTributario === 'MEI') {
+      grupos.opex_adm += config.valorDasMensal || 0;
+    }
+    
     grupos.deducoes = taxasGateway + impostosSobreReceita;
 
     return grupos;
@@ -444,7 +449,14 @@ export class DreEngine {
   private static calculateTaxes(receitaBruta: number, config: DREConfig): number {
     let totalTaxes = 0;
 
-    // Impostos sobre receita
+    // Lógica específica para MEI
+    if (config.regimeTributario === 'MEI') {
+      // MEI não paga impostos sobre receita
+      // DAS é tratado como despesa fixa administrativa
+      return 0;
+    }
+
+    // Impostos sobre receita para Simples e outros regimes
     totalTaxes += receitaBruta * (config.aliquotaTributariaSobreReceita / 100);
 
     // ISS se aplicável

@@ -8,7 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Calculator, Percent, CreditCard, Users, Building, MapPin } from 'lucide-react';
-import { DREConfig, DRE_CONFIG_FOTOGRAFOS, DREGroupKey } from '@/types/dre';
+import { DREConfig, DRE_CONFIG_FOTOGRAFOS, DRE_CONFIG_MEI, DREGroupKey } from '@/types/dre';
 import { useToast } from '@/hooks/use-toast';
 import { useNovoFinancas } from '@/hooks/useNovoFinancas';
 
@@ -22,7 +22,9 @@ export default function DREConfigSection() {
     const saved = localStorage.getItem(DRE_CONFIG_KEY);
     if (saved) {
       try {
-        return { ...DRE_CONFIG_FOTOGRAFOS, ...JSON.parse(saved) } as DREConfig;
+        const parsed = JSON.parse(saved);
+        const baseConfig = parsed.regimeTributario === 'MEI' ? DRE_CONFIG_MEI : DRE_CONFIG_FOTOGRAFOS;
+        return { ...baseConfig, ...parsed } as DREConfig;
       } catch (error) {
         console.error('Erro ao carregar configuração DRE:', error);
       }
@@ -51,6 +53,14 @@ export default function DREConfigSection() {
     toast({
       title: "Padrões Aplicados",
       description: "Configurações padrão para fotógrafos aplicadas com sucesso!"
+    });
+  };
+
+  const aplicarPadroesMEI = () => {
+    setConfig(DRE_CONFIG_MEI as DREConfig);
+    toast({
+      title: "Padrões MEI Aplicados",
+      description: "Configurações padrão para MEI aplicadas com sucesso!"
     });
   };
 
@@ -85,6 +95,9 @@ export default function DREConfigSection() {
           <Button variant="outline" onClick={aplicarPadroesFotografos}>
             Padrões Fotógrafo
           </Button>
+          <Button variant="outline" onClick={aplicarPadroesMEI}>
+            Padrões MEI
+          </Button>
           <Button onClick={salvarConfig}>
             Salvar Configurações
           </Button>
@@ -118,36 +131,82 @@ export default function DREConfigSection() {
               </Select>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Alíquota sobre Receita (%)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={config.aliquotaTributariaSobreReceita}
-                  onChange={(e) => updateConfig({ aliquotaTributariaSobreReceita: parseFloat(e.target.value) || 0 })}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label>ISS sobre Receita (%)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={config.issSobreReceita}
-                  onChange={(e) => updateConfig({ issSobreReceita: parseFloat(e.target.value) || 0 })}
-                />
-              </div>
-            </div>
+            {config.regimeTributario === 'MEI' ? (
+              <div className="space-y-4">
+                <div className="p-4 bg-muted rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Percent className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">Tributação MEI</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    MEI não paga impostos sobre receita. Apenas a DAS mensal fixa.
+                  </p>
+                  
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <Label>Valor DAS Mensal (R$)</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={config.valorDasMensal || 75}
+                        onChange={(e) => updateConfig({ valorDasMensal: parseFloat(e.target.value) || 75 })}
+                      />
+                      <p className="text-2xs text-muted-foreground">
+                        Valor fixo mensal da DAS (aprox. R$ 70-90 em 2024)
+                      </p>
+                    </div>
 
-            <div className="flex items-center space-x-2">
-              <Switch 
-                id="incluir-iss"
-                checked={config.incluirIssRetido}
-                onCheckedChange={(checked) => updateConfig({ incluirIssRetido: checked })}
-              />
-              <Label htmlFor="incluir-iss">Incluir ISS retido na fonte</Label>
-            </div>
+                    <div className="flex items-center space-x-2">
+                      <Switch 
+                        id="tem-funcionarios"
+                        checked={config.temFuncionarios}
+                        onCheckedChange={(checked) => updateConfig({ temFuncionarios: checked })}
+                      />
+                      <Label htmlFor="tem-funcionarios">Possui funcionários com carteira assinada</Label>
+                    </div>
+                    
+                    {config.temFuncionarios && (
+                      <p className="text-2xs text-muted-foreground">
+                        Encargos trabalhistas serão aplicados sobre salários cadastrados
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Alíquota sobre Receita (%)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={config.aliquotaTributariaSobreReceita}
+                      onChange={(e) => updateConfig({ aliquotaTributariaSobreReceita: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>ISS sobre Receita (%)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={config.issSobreReceita}
+                      onChange={(e) => updateConfig({ issSobreReceita: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Switch 
+                    id="incluir-iss"
+                    checked={config.incluirIssRetido}
+                    onCheckedChange={(checked) => updateConfig({ incluirIssRetido: checked })}
+                  />
+                  <Label htmlFor="incluir-iss">Incluir ISS retido na fonte</Label>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 

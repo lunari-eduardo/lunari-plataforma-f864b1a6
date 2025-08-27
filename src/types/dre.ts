@@ -45,6 +45,10 @@ export interface DREConfig {
   depreciacaoMesesDefault: number; // p/ equipamentos
   mapeamentoItens: { [itemIdOuGrupo: string]: DREGroupKey }; // exceções
   opexPessoalCargaEncargos: number; // % adicional sobre salários para encargos
+  
+  // MEI específico
+  valorDasMensal: number; // Valor fixo mensal da DAS
+  temFuncionarios: boolean; // Se tem funcionários com carteira assinada
 }
 
 export interface DREResult {
@@ -104,6 +108,8 @@ export const DRE_CONFIG_FOTOGRAFOS: Partial<DREConfig> = {
   pddPercentual: 1.0, // 1% sobre receitas
   depreciacaoMesesDefault: 24, // 2 anos para equipamentos
   opexPessoalCargaEncargos: 35.0, // 35% de encargos sobre salários
+  valorDasMensal: 0, // Não aplicável para Simples
+  temFuncionarios: false,
   mapeamentoItens: {
     // Padrões para fotógrafos
     'terceiros': 'cogs',
@@ -126,5 +132,34 @@ export const DRE_CONFIG_FOTOGRAFOS: Partial<DREConfig> = {
     'camera': 'depreciacao',
     'lente': 'depreciacao',
     'computador': 'depreciacao'
+  }
+};
+
+// Configuração específica para MEI
+export const DRE_CONFIG_MEI: Partial<DREConfig> = {
+  regimeTributario: 'MEI',
+  aliquotaTributariaSobreReceita: 0, // MEI não tem alíquota sobre receita
+  issSobreReceita: 0, // MEI não paga ISS sobre receita
+  incluirIssRetido: false,
+  gatewayFees: {
+    credito: 3.79,
+    debito: 2.39,
+    pix: 1.0,
+    boleto: 1.5
+  },
+  proLaboreComoOpex: false, // MEI não tem pró-labore formal
+  pddPercentual: 0.5, // Reduzido para MEI
+  depreciacaoMesesDefault: 24,
+  opexPessoalCargaEncargos: 35.0, // Só se tiver funcionários
+  valorDasMensal: 75, // Valor médio DAS MEI 2024
+  temFuncionarios: false,
+  mapeamentoItens: {
+    // Mapeamento simplificado para MEI
+    'das': 'opex_adm',
+    'terceiros': 'cogs',
+    'equipamento': 'depreciacao',
+    'camera': 'depreciacao',
+    'salario': 'opex_pessoal',
+    'funcionario': 'opex_pessoal'
   }
 };
