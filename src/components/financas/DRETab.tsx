@@ -53,23 +53,14 @@ export default function DRETab() {
     return DRE_CONFIG_FOTOGRAFOS as DREConfig;
   }, []);
 
-  // Preparar dados das transações financeiras
+  // Dados reais das transações financeiras
+  const novoFinancasData = useNovoFinancas();
+  
   const transacoesFinanceiras = useMemo(() => {
-    const raw = itensFinanceiros.map(item => {
-      // Simular transações a partir dos itens - na implementação real viria do RecurringBlueprintEngine
-      return {
-        id: `sim_${item.id}`,
-        item_id: item.id,
-        valor: 1000, // Valor simulado
-        data_vencimento: `${selectedYear}-${selectedMonth.toString().padStart(2, '0')}-15`,
-        status: 'Pago' as const,
-        item,
-        userId: item.userId,
-        criadoEm: item.criadoEm
-      };
-    });
-    return raw;
-  }, [itensFinanceiros, selectedMonth, selectedYear]);
+    // Usar transacoes do useNovoFinancas que é compatível
+    console.log('🔍 DRE: Transações disponíveis:', novoFinancasData.transacoes.length);
+    return novoFinancasData.transacoes;
+  }, [novoFinancasData.transacoes]);
 
   // Período atual
   const currentPeriod: DREPeriod = {
@@ -78,10 +69,19 @@ export default function DRETab() {
     year: selectedYear
   };
 
-  // Calcular DRE
+  // Calcular DRE com dados reais
   const dreResult = useMemo(() => {
+    console.log('🧮 DRE: Calculando com dados reais...', {
+      period: currentPeriod,
+      mode,
+      transacoesCount: transacoesFinanceiras.length,
+      workflowCount: workflowItems.length
+    });
+
     const deps = { transacoesFinanceiras, workflowItems };
     const baseResult = DreEngine.computeDRE(currentPeriod, mode, dreConfig, deps);
+    
+    console.log('📊 DRE: Resultado calculado:', baseResult.kpis);
     
     return showComparative 
       ? DreEngine.computeComparative(baseResult, dreConfig, deps)
@@ -92,9 +92,28 @@ export default function DRETab() {
   const openExtratoWithFilters = (groupKey: string, value: number) => {
     if (value === 0) return;
     
-    // Implementar navegação com query string - por ora apenas log
-    console.log(`Navegar para extrato com filtro: ${groupKey}, valor: ${value}`);
-    // TODO: Implementar navegação real com filtros
+    // Construir query string para filtros
+    const params = new URLSearchParams();
+    params.set('tab', 'extrato');
+    params.set('dreGroup', groupKey);
+    params.set('period', `${selectedYear}-${selectedMonth.toString().padStart(2, '0')}`);
+    params.set('mode', mode);
+    
+    // Navegar para página com filtros
+    const newUrl = `${window.location.pathname}?${params.toString()}`;
+    window.history.pushState({}, '', newUrl);
+    
+    // Disparar evento para componente pai atualizar a aba
+    window.dispatchEvent(new CustomEvent('dre-drill-down', { 
+      detail: { 
+        tab: 'extrato', 
+        filters: { 
+          dreGroup: groupKey, 
+          period: `${selectedYear}-${selectedMonth.toString().padStart(2, '0')}`,
+          mode 
+        } 
+      } 
+    }));
   };
 
   const renderKPICard = (title: string, value: number, previousValue?: number, icon?: React.ReactNode) => {

@@ -5,11 +5,11 @@ import { RecurringBlueprintEngine } from './RecurringBlueprintEngine';
 export class DreEngine {
   
   /**
-   * Constrói movimentos base a partir dos dados financeiros e workflow
+   * Constrói movimentos base a partir dos dados financeiros e workflow reais
    */
   static buildBaseMovements(args: {
-    transacoesFinanceiras: TransacaoComItem[];
-    workflowItems: any[];
+    transacoesFinanceiras: any[]; // Transações do useNovoFinancas()
+    workflowItems: any[]; // WorkflowItems do AppContext
     mode: DREMode;
     period: DREPeriod;
   }): DREMovement[] {
@@ -17,8 +17,16 @@ export class DreEngine {
     const movements: DREMovement[] = [];
     const processedIds = new Set<string>(); // Para evitar duplicações
 
-    // Filtrar transações por período
+    console.log('🔍 DRE: Processando dados:', {
+      transacoesCount: transacoesFinanceiras.length,
+      workflowCount: workflowItems.length,
+      period,
+      mode
+    });
+
+    // Filtrar transações financeiras por período
     const filteredTransacoes = this.filterTransactionsByPeriod(transacoesFinanceiras, period);
+    console.log('📊 Transações filtradas:', filteredTransacoes.length);
     
     // Processar transações financeiras
     filteredTransacoes.forEach(transacao => {
@@ -26,69 +34,86 @@ export class DreEngine {
       if (processedIds.has(key)) return;
       processedIds.add(key);
 
-      // Determinar se deve incluir baseado no modo
+      // Determinar se deve incluir baseado no modo e status
       const shouldInclude = mode === 'caixa' 
         ? transacao.status === 'Pago'
         : ['Pago', 'Faturado', 'Agendado'].includes(transacao.status);
 
       if (!shouldInclude) return;
 
-      const isReceita = transacao.item.grupo_principal === 'Receita Não Operacional';
+      const isReceita = transacao.item?.grupo_principal === 'Receita Não Operacional';
       
       movements.push({
         tipo: isReceita ? 'entrada' : 'saida',
-        valor: transacao.valor,
+        valor: Number(transacao.valor) || 0,
         origem: 'financeiro',
-        categoria: transacao.item.grupo_principal,
+        categoria: transacao.item?.grupo_principal || 'Despesa Variável',
         item: transacao.item,
-        dataCompetencia: transacao.data_vencimento,
-        dataCaixa: transacao.status === 'Pago' ? transacao.data_vencimento : undefined,
+        dataCompetencia: transacao.dataVencimento || transacao.data_vencimento,
+        dataCaixa: transacao.status === 'Pago' ? (transacao.dataVencimento || transacao.data_vencimento) : undefined,
         status: transacao.status,
         meta: {
           transacaoId: transacao.id,
-          itemId: transacao.item_id,
-          itemNome: transacao.item.nome
+          itemId: transacao.itemId || transacao.item_id,
+          itemNome: transacao.item?.nome || 'Item sem nome'
         }
       });
     });
 
-    // Processar itens do workflow (receitas operacionais)
+    // Filtrar itens do workflow por período
     const filteredWorkflow = this.filterWorkflowByPeriod(workflowItems, period);
+    console.log('📊 Workflow items filtrados:', filteredWorkflow.length);
     
+    // Processar itens do workflow (receitas operacionais)
     filteredWorkflow.forEach(item => {
-      if (!item.valorPago || item.valorPago <= 0) return;
+      if (!item.valorPago || Number(item.valorPago) <= 0) return;
 
       const key = `wf_${item.id}`;
       if (processedIds.has(key)) return;
       processedIds.add(key);
 
-      // Para workflow, usar sempre a data de pagamento se disponível
-      const dataCompetencia = item.dataVencimento || item.data;
-      const dataCaixa = item.dataPagamento || (item.status === 'pago' ? item.data : undefined);
+      // Para workflow, usar data do item
+      const dataCompetencia = item.data; // Data do agendamento/projeto
+      
+      // Para caixa, verificar se há pagamentos efetivos
+      const temPagamentoEfetivo = item.pagamentos && item.pagamentos.length > 0;
+      const dataCaixa = temPagamentoEfetivo ? item.data : undefined;
 
       // Determinar se deve incluir baseado no modo
       const shouldInclude = mode === 'caixa' 
-        ? !!dataCaixa
-        : !!dataCompetencia;
+        ? temPagamentoEfetivo
+        : true; // Para competência, incluir todos com valor pago > 0
 
       if (!shouldInclude) return;
 
+      // Determinar meio de pagamento baseado nos pagamentos ou campo específico
+      let meioPagamento = 'não_informado';
+      if (item.meioPagamento) {
+        meioPagamento = item.meioPagamento;
+      } else if (item.pagamentos && item.pagamentos.length > 0) {
+        // Se não tem meio específico, assumir baseado na existência de pagamentos
+        meioPagamento = 'outros';
+      }
+
       movements.push({
         tipo: 'entrada',
-        valor: parseFloat(item.valorPago.toString()),
+        valor: Number(item.valorPago) || 0,
         origem: 'workflow',
         categoria: 'receita_operacional',
-        meioPagamento: item.meioPagamento || 'não_informado',
+        meioPagamento,
         dataCompetencia,
         dataCaixa,
         meta: {
-          sessionId: item.id,
-          clienteNome: item.clienteNome || 'Cliente não identificado',
-          projetoNome: item.nome || 'Projeto sem nome'
+          sessionId: item.sessionId || item.id,
+          clienteNome: item.nome || 'Cliente não identificado',
+          projetoNome: item.descricao || item.pacote || 'Projeto sem nome',
+          categoria: item.categoria,
+          pacote: item.pacote
         }
       });
     });
 
+    console.log('📈 Movimentos processados:', movements.length);
     return movements;
   }
 
@@ -212,9 +237,12 @@ export class DreEngine {
 
   // === Funções auxiliares ===
 
-  private static filterTransactionsByPeriod(transactions: TransacaoComItem[], period: DREPeriod): TransacaoComItem[] {
+  private static filterTransactionsByPeriod(transactions: any[], period: DREPeriod): any[] {
     return transactions.filter(t => {
-      const [year, month] = t.data_vencimento.split('-').map(Number);
+      const dataVencimento = t.dataVencimento || t.data_vencimento;
+      if (!dataVencimento) return false;
+      
+      const [year, month] = dataVencimento.split('-').map(Number);
       
       if (period.type === 'annual') {
         return year === period.year;

@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Receipt, CreditCard, PiggyBank, TrendingUp } from 'lucide-react';
+import { Receipt, CreditCard, PiggyBank, TrendingUp, FileText } from 'lucide-react';
 import { useNovoFinancas } from '@/hooks/useNovoFinancas';
 import { formatCurrency } from '@/utils/financialUtils';
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -35,7 +35,25 @@ export default function NovaFinancas() {
     atualizarCartao,
     removerCartao
   } = useNovoFinancas();
-  const [activeTab, setActiveTab] = useState('extrato');
+  const [activeTab, setActiveTab] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('tab') || 'extrato';
+  });
+
+  // Escutar eventos de drill-down do DRE
+  useEffect(() => {
+    const handleDrillDown = (event: CustomEvent) => {
+      const { tab, filters } = event.detail;
+      if (tab) {
+        setActiveTab(tab);
+        // TODO: Aplicar filtros no Extrato quando implementado
+        console.log('DRE Drill-down:', { tab, filters });
+      }
+    };
+
+    window.addEventListener('dre-drill-down', handleDrillDown as EventListener);
+    return () => window.removeEventListener('dre-drill-down', handleDrillDown as EventListener);
+  }, []);
   return <ScrollArea className="h-[calc(100vh-120px)]">
       <div className="min-h-screen bg-lunar-bg pr-4">
         <div className="p-2 sm:p-4 lg:p-6 space-y-2 sm:space-y-6 bg-lunar-bg py-0">
@@ -49,19 +67,24 @@ export default function NovaFinancas() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-5 h-10 p-1 text-sm bg-card border border-border py-0">
-            <TabsTrigger value="extrato" className="text-sm py-2 data-[state=active]:bg-primary/10 text-foreground">
+            <TabsTrigger value="extrato" className="text-sm py-2 data-[state=active]:bg-primary/10 text-foreground flex items-center gap-2">
+              <FileText className="h-4 w-4" />
               Extrato
             </TabsTrigger>
-            <TabsTrigger value="dre" className="text-sm py-2 data-[state=active]:bg-primary/10 text-foreground">
+            <TabsTrigger value="dre" className="text-sm py-2 data-[state=active]:bg-primary/10 text-foreground flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
               DRE
             </TabsTrigger>
-            <TabsTrigger value="lancamentos" className="text-sm py-2 data-[state=active]:bg-primary/10 text-foreground">
+            <TabsTrigger value="lancamentos" className="text-sm py-2 data-[state=active]:bg-primary/10 text-foreground flex items-center gap-2">
+              <Receipt className="h-4 w-4" />
               Lançamentos
             </TabsTrigger>
-            <TabsTrigger value="dashboard" className="text-sm py-2 data-[state=active]:bg-primary/10 data-[state=active]:text-foreground">
+            <TabsTrigger value="dashboard" className="text-sm py-2 data-[state=active]:bg-primary/10 data-[state=active]:text-foreground flex items-center gap-2">
+              <PiggyBank className="h-4 w-4" />
               Dashboard
             </TabsTrigger>
-            <TabsTrigger value="configuracoes" className="text-sm py-2 data-[state=active]:bg-primary/10 data-[state=active]:text-foreground">
+            <TabsTrigger value="configuracoes" className="text-sm py-2 data-[state=active]:bg-primary/10 data-[state=active]:text-foreground flex items-center gap-2">
+              <CreditCard className="h-4 w-4" />
               Configurações
             </TabsTrigger>
           </TabsList>
