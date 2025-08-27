@@ -11,12 +11,14 @@ import { Calculator, Percent, CreditCard, Users, Building, MapPin } from 'lucide
 import { DREConfig, DRE_CONFIG_FOTOGRAFOS, DRE_CONFIG_MEI, DREGroupKey } from '@/types/dre';
 import { useToast } from '@/hooks/use-toast';
 import { useNovoFinancas } from '@/hooks/useNovoFinancas';
+import { useRegimeTributario } from '@/hooks/useRegimeTributario';
 
 const DRE_CONFIG_KEY = 'dre_config_v1';
 
 export default function DREConfigSection() {
   const { toast } = useToast();
   const { itensFinanceiros } = useNovoFinancas();
+  const { regime, isSimples } = useRegimeTributario();
   
   const [config, setConfig] = useState<DREConfig>(() => {
     const saved = localStorage.getItem(DRE_CONFIG_KEY);
@@ -115,23 +117,22 @@ export default function DREConfigSection() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label>Regime</Label>
-              <Select 
-                value={config.regimeTributario} 
-                onValueChange={(value) => updateConfig({ regimeTributario: value as any })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="MEI">MEI</SelectItem>
-                  <SelectItem value="Simples">Simples Nacional</SelectItem>
-                  <SelectItem value="Outro">Outro</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>Regime Ativo</Label>
+              <div className="p-3 bg-muted rounded-lg flex items-center gap-2">
+                <Building className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium">
+                  {regime === 'mei' ? 'MEI' : 'Simples Nacional'}
+                </span>
+                <Badge variant="outline" className="text-xs">
+                  Configurado no perfil
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Para alterar o regime tributário, acesse Minha Conta → Regime Tributário
+              </p>
             </div>
 
-            {config.regimeTributario === 'MEI' ? (
+            {!isSimples() ? (
               <div className="space-y-4">
                 <div className="p-4 bg-muted rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
