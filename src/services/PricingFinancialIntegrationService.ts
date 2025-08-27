@@ -2,6 +2,7 @@ import { storage } from '@/utils/localStorage';
 import { getCurrentDateString } from '@/utils/dateUtils';
 import { ItemFinanceiro, GrupoPrincipal } from '@/types/financas';
 import { GastoItem } from '@/types/precificacao';
+import { RecurringBlueprintEngine } from '@/services/RecurringBlueprintEngine';
 
 // ============= SERVIÇO DE INTEGRAÇÃO PRECIFICAÇÃO-FINANCEIRO =============
 
@@ -37,7 +38,7 @@ class PricingFinancialIntegrationService {
   private readonly STORAGE_KEYS = {
     FINANCIAL_ITEMS: 'lunari_fin_items',
     PRICING_COSTS: 'lunari_pricing_fixed_costs',
-    TRANSACTIONS: 'lunari_fin_transactions_v2'
+    TRANSACTIONS: 'lunari_fin_transactions' // Use same key as RecurringBlueprintEngine
   };
 
   // ============= IMPORTAÇÃO DE DESPESAS FIXAS =============
@@ -450,17 +451,25 @@ class PricingFinancialIntegrationService {
     data: string;
     observacoes?: string;
   }[] {
-    const transacoes = storage.load(this.STORAGE_KEYS.TRANSACTIONS, []);
+    const transacoes = RecurringBlueprintEngine.loadTransactions();
     const itensFinanceiros = storage.load(this.STORAGE_KEYS.FINANCIAL_ITEMS, []);
     const equipamentosExistentes = this.getEquipmentFromPricing();
     const processedIds = this.getProcessedEquipmentTransactionIds();
+
+    console.log('🔧 [DetectEquipment] Total transações:', transacoes.length);
+    console.log('🔧 [DetectEquipment] Processed IDs:', processedIds);
 
     // Encontrar item "Equipamentos" no grupo "Investimento"
     const itemEquipamentos = itensFinanceiros.find((item: ItemFinanceiro) => 
       item.nome === 'Equipamentos' && item.grupo_principal === 'Investimento'
     );
 
-    if (!itemEquipamentos) return [];
+    if (!itemEquipamentos) {
+      console.log('🔧 [DetectEquipment] Item "Equipamentos" não encontrado');
+      return [];
+    }
+
+    console.log('🔧 [DetectEquipment] Item Equipamentos ID:', itemEquipamentos.id);
 
     // Filtrar transações de equipamentos não processadas
     const transacoesEquipamentos = transacoes.filter((t: any) => {
@@ -478,6 +487,8 @@ class PricingFinancialIntegrationService {
       
       return !jaExiste;
     });
+
+    console.log('🔧 [DetectEquipment] Transações de equipamentos encontradas:', transacoesEquipamentos.length);
 
     return transacoesEquipamentos.map((transacao: any) => ({
       transacao,
@@ -543,8 +554,12 @@ class PricingFinancialIntegrationService {
     error?: string;
   } {
     try {
-      const transacoes = storage.load(this.STORAGE_KEYS.TRANSACTIONS, []);
+      const transacoes = RecurringBlueprintEngine.loadTransactions();
       const transacao = transacoes.find((t: any) => t.id === transacaoId);
+
+      console.log('🔧 [CreateEquipment] Procurando transação ID:', transacaoId);
+      console.log('🔧 [CreateEquipment] Total transações disponíveis:', transacoes.length);
+      console.log('🔧 [CreateEquipment] Transação encontrada:', !!transacao);
 
       if (!transacao) {
         return { success: false, error: 'Transação não encontrada' };

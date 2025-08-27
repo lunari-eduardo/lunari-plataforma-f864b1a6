@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Wrench, Calculator, Calendar, DollarSign } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { pricingFinancialIntegrationService } from '@/services/PricingFinancialIntegrationService';
+import { formatDateForDisplay } from '@/utils/dateUtils';
 
 interface EquipmentSyncModalProps {
   equipment: {
@@ -138,7 +139,7 @@ export function EquipmentSyncModal({
                   <Calendar className="h-4 w-4 text-blue-600" />
                   <span className="font-medium">Data:</span>
                   <Badge variant="secondary">
-                    {new Date(equipment.data).toLocaleDateString('pt-BR')}
+                    {formatDateForDisplay(equipment.data)}
                   </Badge>
                   <span className="text-muted-foreground text-xs">(automático)</span>
                 </div>
