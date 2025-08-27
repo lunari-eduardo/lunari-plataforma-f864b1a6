@@ -27,7 +27,9 @@ import NotFound from "./pages/NotFound";
 import { AppProvider } from "./contexts/AppContext";
 import { useIntegration } from "./hooks/useIntegration";
 import { useAutomationEngine } from "./hooks/useAutomationEngine";
+import { useEquipmentSync } from "./hooks/useEquipmentSync";
 import ThemeProvider from "./components/theme/ThemeProvider";
+import { EquipmentSyncNotification } from "./components/equipments/EquipmentSyncNotification";
 
 // Create a stable QueryClient instance
 const queryClient = new QueryClient({
@@ -55,6 +57,17 @@ function AutomationIntegration() {
     useAutomationEngine();
   } catch (error) {
     console.error('Automation engine error:', error);
+  }
+  
+  return null;
+}
+
+// Equipment sync integration mounting point
+function EquipmentSyncIntegration() {
+  try {
+    useEquipmentSync();
+  } catch (error) {
+    console.error('Equipment sync error:', error);
   }
   
   return null;
@@ -111,6 +124,8 @@ function App() {
             <TooltipProvider>
               <AppIntegration />
               <AutomationIntegration />
+              <EquipmentSyncIntegration />
+              <EquipmentSyncNotification />
               <Toaster />
               <Sonner />
               <Routes>

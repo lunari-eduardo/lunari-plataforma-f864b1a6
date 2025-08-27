@@ -203,6 +203,31 @@ export function useNovoFinancas() {
       
       setTransacoes(prev => [...prev, novaTransacao]);
       console.log('Transação única criada com sucesso:', novaTransacao);
+
+      // ============= DETECÇÃO AUTOMÁTICA DE EQUIPAMENTOS =============
+      // Verificar se é transação de equipamentos para notificar sobre sincronização
+      const item = itensFinanceiros.find(item => item.id === itemId);
+      if (item && item.nome === 'Equipamentos' && item.grupo_principal === 'Investimento') {
+        console.log('🔧 [EquipmentSync] Transação de equipamento detectada:', {
+          transacaoId: novaTransacao.id,
+          valor: valorTotal,
+          observacoes
+        });
+
+        // Disparar evento para notificação de equipamento
+        setTimeout(() => {
+          const event = new CustomEvent('equipment-sync:candidate', {
+            detail: {
+              transacaoId: novaTransacao.id,
+              nome: observacoes || `Equipamento R$ ${valorTotal.toFixed(2)}`,
+              valor: valorTotal,
+              data: dataPrimeiraOcorrencia,
+              observacoes
+            }
+          });
+          window.dispatchEvent(event);
+        }, 500); // Pequeno delay para garantir que a transação foi persistida
+      }
       
     } catch (error) {
       console.error('Erro ao criar transação:', error);

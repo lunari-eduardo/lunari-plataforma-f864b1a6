@@ -438,6 +438,198 @@ class PricingFinancialIntegrationService {
     };
   }
 
+  // ============= INTEGRAÇÃO DE EQUIPAMENTOS =============
+
+  /**
+   * Detecta novas transações de equipamentos que ainda não foram processadas
+   */
+  detectNewEquipmentTransactions(): {
+    transacao: any;
+    item: ItemFinanceiro;
+    valor: number;
+    data: string;
+    observacoes?: string;
+  }[] {
+    const transacoes = storage.load(this.STORAGE_KEYS.TRANSACTIONS, []);
+    const itensFinanceiros = storage.load(this.STORAGE_KEYS.FINANCIAL_ITEMS, []);
+    const equipamentosExistentes = this.getEquipmentFromPricing();
+    const processedIds = this.getProcessedEquipmentTransactionIds();
+
+    // Encontrar item "Equipamentos" no grupo "Investimento"
+    const itemEquipamentos = itensFinanceiros.find((item: ItemFinanceiro) => 
+      item.nome === 'Equipamentos' && item.grupo_principal === 'Investimento'
+    );
+
+    if (!itemEquipamentos) return [];
+
+    // Filtrar transações de equipamentos não processadas
+    const transacoesEquipamentos = transacoes.filter((t: any) => {
+      // Deve ser do item "Equipamentos"
+      if (t.itemId !== itemEquipamentos.id) return false;
+      
+      // Não deve estar processada
+      if (processedIds.includes(t.id)) return false;
+      
+      // Não deve já existir equipamento com mesmo valor e data
+      const jaExiste = equipamentosExistentes.some(eq => 
+        Math.abs(eq.valorPago - t.valor) < 0.01 && 
+        eq.dataCompra === t.dataVencimento
+      );
+      
+      return !jaExiste;
+    });
+
+    return transacoesEquipamentos.map((transacao: any) => ({
+      transacao,
+      item: itemEquipamentos,
+      valor: transacao.valor,
+      data: transacao.dataVencimento,
+      observacoes: transacao.observacoes || ''
+    }));
+  }
+
+  /**
+   * Busca equipamentos da precificação
+   */
+  getEquipmentFromPricing(): Array<{
+    id: string;
+    nome: string;
+    valorPago: number;
+    dataCompra: string;
+    vidaUtil: number;
+    transacaoId?: string;
+  }> {
+    const dados = storage.load(this.STORAGE_KEYS.PRICING_COSTS, {});
+    return (dados as any).equipamentos || [];
+  }
+
+  /**
+   * Salva equipamentos na precificação
+   */
+  saveEquipmentToPricing(equipamentos: any[]): void {
+    const dados = storage.load(this.STORAGE_KEYS.PRICING_COSTS, {});
+    const dadosAtualizados = { ...dados, equipamentos };
+    storage.save(this.STORAGE_KEYS.PRICING_COSTS, dadosAtualizados);
+  }
+
+  /**
+   * Obtém IDs de transações de equipamentos já processadas
+   */
+  private getProcessedEquipmentTransactionIds(): string[] {
+    const processedIds = JSON.parse(localStorage.getItem('lunari_processed_equipment_transactions') || '[]');
+    return processedIds;
+  }
+
+  /**
+   * Marca transação de equipamento como processada
+   */
+  private markEquipmentTransactionAsProcessed(transacaoId: string): void {
+    const processedIds = this.getProcessedEquipmentTransactionIds();
+    if (!processedIds.includes(transacaoId)) {
+      processedIds.push(transacaoId);
+      localStorage.setItem('lunari_processed_equipment_transactions', JSON.stringify(processedIds));
+    }
+  }
+
+  /**
+   * Cria equipamento na precificação baseado na transação financeira
+   */
+  createEquipmentFromTransaction(transacaoId: string, dadosEquipamento: {
+    nome: string;
+    vidaUtil: number;
+  }): {
+    success: boolean;
+    equipamentoId?: string;
+    error?: string;
+  } {
+    try {
+      const transacoes = storage.load(this.STORAGE_KEYS.TRANSACTIONS, []);
+      const transacao = transacoes.find((t: any) => t.id === transacaoId);
+
+      if (!transacao) {
+        return { success: false, error: 'Transação não encontrada' };
+      }
+
+      const equipamentosExistentes = this.getEquipmentFromPricing();
+      
+      // Verificar se já existe equipamento para esta transação
+      const jaExiste = equipamentosExistentes.some(eq => eq.transacaoId === transacaoId);
+      if (jaExiste) {
+        return { success: false, error: 'Equipamento já criado para esta transação' };
+      }
+
+      const novoEquipamento = {
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        nome: dadosEquipamento.nome,
+        valorPago: transacao.valor,
+        dataCompra: transacao.dataVencimento,
+        vidaUtil: dadosEquipamento.vidaUtil,
+        transacaoId: transacaoId
+      };
+
+      const equipamentosAtualizados = [...equipamentosExistentes, novoEquipamento];
+      this.saveEquipmentToPricing(equipamentosAtualizados);
+      
+      // Marcar transação como processada
+      this.markEquipmentTransactionAsProcessed(transacaoId);
+
+      console.log('🔧 Equipamento criado na precificação:', novoEquipamento);
+      
+      return { 
+        success: true, 
+        equipamentoId: novoEquipamento.id 
+      };
+
+    } catch (error) {
+      console.error('Erro ao criar equipamento na precificação:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Erro desconhecido' 
+      };
+    }
+  }
+
+  /**
+   * Gera preview da sincronização reversa (Equipamentos da Precificação → Finanças)
+   */
+  generateEquipmentReverseSyncPreview(): {
+    equipamento: any;
+    acao: 'adicionar';
+    valorTotal: number;
+    criarRecorrencia: boolean;
+  }[] {
+    const equipamentos = this.getEquipmentFromPricing();
+    const transacoes = storage.load(this.STORAGE_KEYS.TRANSACTIONS, []);
+    const itensFinanceiros = storage.load(this.STORAGE_KEYS.FINANCIAL_ITEMS, []);
+
+    // Encontrar item "Equipamentos"
+    const itemEquipamentos = itensFinanceiros.find((item: ItemFinanceiro) => 
+      item.nome === 'Equipamentos' && item.grupo_principal === 'Investimento'
+    );
+
+    if (!itemEquipamentos) return [];
+
+    return equipamentos
+      .filter(equipamento => !equipamento.transacaoId) // Apenas equipamentos sem origem financeira
+      .map(equipamento => {
+        // Verificar se já existe transação para este equipamento
+        const jaExisteTransacao = transacoes.some((t: any) => 
+          t.itemId === itemEquipamentos.id &&
+          Math.abs(t.valor - equipamento.valorPago) < 0.01 &&
+          t.dataVencimento === equipamento.dataCompra
+        );
+
+        return {
+          equipamento,
+          acao: 'adicionar' as const,
+          valorTotal: equipamento.valorPago,
+          criarRecorrencia: false,
+          jaExiste: jaExisteTransacao
+        };
+      })
+      .filter(item => !item.jaExiste);
+  }
+
   // ============= UTILITÁRIOS =============
 
   /**
