@@ -246,37 +246,6 @@ export function CalculadoraServicos({
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      {/* Indicador de status */}
-                      <div className="flex items-center gap-1 text-xs">
-                        {statusCalculadora === 'salvando' && (
-                          <>
-                            <div className="animate-spin h-3 w-3 border border-blue-600 border-t-transparent rounded-full" />
-                            <span className="text-blue-600">Salvando...</span>
-                          </>
-                        )}
-                        {statusCalculadora === 'salvo' && (
-                          <>
-                            <CheckCircle className="h-3 w-3 text-green-600" />
-                            <span className="text-green-600">Auto-salvo</span>
-                          </>
-                        )}
-                        {statusCalculadora === 'erro' && (
-                          <>
-                            <AlertCircle className="h-3 w-3 text-red-600" />
-                            <span className="text-red-600">Erro</span>
-                          </>
-                        )}
-                      </div>
-                      
-                      {/* Botões de controle */}
-                      <Button onClick={salvarEstadoManualmente} variant="outline" size="sm" className="h-7 text-xs">
-                        <Save className="h-3 w-3 mr-1" />
-                        Salvar
-                      </Button>
-                      <Button onClick={limparCalculadora} variant="outline" size="sm" className="h-7 text-xs">
-                        <RotateCcw className="h-3 w-3 mr-1" />
-                        Limpar
-                      </Button>
                     </div>
                   </div>
                   
@@ -308,9 +277,6 @@ export function CalculadoraServicos({
                           </div>
                         </div>
                         
-                        <Button onClick={salvarPadraoHoras} variant="outline" size="sm" className="w-full">
-                          ⚙️ Salvar Padrão de Horas
-                        </Button>
                         
                         <div>
                           <Label htmlFor="horas-estimadas" className="text-sm">Horas estimadas para o serviço</Label>

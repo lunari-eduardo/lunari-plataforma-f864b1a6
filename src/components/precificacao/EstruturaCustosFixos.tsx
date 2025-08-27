@@ -388,13 +388,6 @@ export function EstruturaCustosFixos({
             </p>
           </div>
           <div className="text-right space-y-1">
-            <div className="flex items-center gap-2">
-              {renderStatusIndicator()}
-              <Button onClick={salvarManualmente} variant="outline" size="sm" className="h-6 text-xs">
-                <Save className="h-3 w-3 mr-1" />
-                Salvar
-              </Button>
-            </div>
             <p className="text-sm text-muted-foreground">Total:</p>
             <p className="font-bold text-green-600 text-base">R$ {totalPrincipal.toFixed(2)}</p>
           </div>

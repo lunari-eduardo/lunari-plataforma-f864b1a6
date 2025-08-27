@@ -189,17 +189,6 @@ export function MetasIndicadores({
               Defina suas metas financeiras e acompanhe os indicadores de lucro.
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            {renderStatusIndicator()}
-            <Button onClick={salvarManualmente} variant="outline" size="sm" className="h-7 text-xs">
-              <Save className="h-3 w-3 mr-1" />
-              Salvar
-            </Button>
-            <Button onClick={fazerBackup} variant="outline" size="sm" className="h-7 text-xs">
-              <Download className="h-3 w-3 mr-1" />
-              Backup
-            </Button>
-          </div>
         </div>
       </CardHeader>
       <CardContent>

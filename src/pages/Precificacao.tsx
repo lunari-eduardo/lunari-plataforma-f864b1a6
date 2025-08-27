@@ -54,28 +54,6 @@ export default function Precificacao() {
               Sistema aprimorado com salvamento automático e compatibilidade multi-usuário
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            {sistemaInicializado ? (
-              <div className="flex items-center gap-1 text-xs text-green-600">
-                <CheckCircle2 className="h-4 w-4" />
-                <span>Sistema OK</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-1 text-xs text-yellow-600">
-                <AlertTriangle className="h-4 w-4" />
-                <span>Inicializando...</span>
-              </div>
-            )}
-            <Button 
-              onClick={() => BackupService.downloadBackup()} 
-              variant="outline" 
-              size="sm" 
-              className="h-7 text-xs"
-            >
-              <Database className="h-3 w-3 mr-1" />
-              Backup Geral
-            </Button>
-          </div>
         </div>
       </div>
 
