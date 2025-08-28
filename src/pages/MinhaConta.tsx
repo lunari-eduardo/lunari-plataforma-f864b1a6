@@ -25,8 +25,21 @@ export default function MinhaConta() {
   } = useUserBranding();
 
   // Estados do formulário
-  const [formData, setFormData] = useState(getProfileOrDefault());
+  const [formData, setFormData] = useState(() => {
+    // Inicializa com dados vazios enquanto carrega
+    return profile || {
+      nomeCompleto: '',
+      nomeEmpresa: '',
+      cpfCnpj: '',
+      emailPrincipal: '',
+      enderecoComercial: '',
+      telefones: [],
+      siteRedesSociais: []
+    };
+  });
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  
+  // Atualiza formData quando profile é carregado
   useEffect(() => {
     if (profile) {
       setFormData(profile);
@@ -66,7 +79,7 @@ export default function MinhaConta() {
       [field]: prev[field].filter((_, i) => i !== index)
     }));
   };
-  const handleSaveProfile = () => {
+  const handleSaveProfile = async () => {
     // Validações básicas
     if (!formData.nomeCompleto.trim()) {
       toast.error('Nome completo é obrigatório');
@@ -87,7 +100,14 @@ export default function MinhaConta() {
       telefones: formData.telefones.filter(tel => tel.trim() !== ''),
       siteRedesSociais: formData.siteRedesSociais.filter(site => site.trim() !== '')
     };
-    saveProfile(cleanedData);
+    
+    const success = await saveProfile(cleanedData);
+    if (success) {
+      // Força recarregamento para garantir sincronização
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    }
   };
   const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];

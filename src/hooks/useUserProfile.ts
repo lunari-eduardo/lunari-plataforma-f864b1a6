@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { storage, STORAGE_KEYS } from '@/utils/localStorage';
 import { UserProfile, UserBranding, UserPreferences, DEFAULT_USER_PROFILE, DEFAULT_USER_BRANDING, DEFAULT_USER_PREFERENCES } from '@/types/userProfile';
+import { UserDataService } from '@/services/UserDataService';
 
 export function useUserProfile() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -13,31 +13,23 @@ export function useUserProfile() {
 
   const loadProfile = () => {
     try {
-      const savedProfile = storage.load<UserProfile | null>(STORAGE_KEYS.USER_PROFILE, null);
+      const savedProfile = UserDataService.loadProfile();
       setProfile(savedProfile);
     } catch (error) {
-      console.error('Erro ao carregar perfil:', error);
+      console.error('❌ Erro ao carregar perfil:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const saveProfile = (profileData: Omit<UserProfile, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const saveProfile = async (profileData: Omit<UserProfile, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
-      const now = new Date().toISOString();
-      const updatedProfile: UserProfile = {
-        ...profileData,
-        id: profile?.id || `profile_${Date.now()}`,
-        createdAt: profile?.createdAt || now,
-        updatedAt: now
-      };
-
-      storage.save(STORAGE_KEYS.USER_PROFILE, updatedProfile);
+      const updatedProfile = await UserDataService.saveProfile(profileData);
       setProfile(updatedProfile);
       toast.success('Perfil salvo com sucesso!');
       return true;
     } catch (error) {
-      console.error('Erro ao salvar perfil:', error);
+      console.error('❌ Erro ao salvar perfil:', error);
       toast.error('Erro ao salvar perfil');
       return false;
     }
@@ -74,7 +66,7 @@ export function useUserBranding() {
 
   const loadBranding = () => {
     try {
-      const savedBranding = storage.load<UserBranding | null>(STORAGE_KEYS.USER_BRANDING, null);
+      const savedBranding = UserDataService.loadBranding();
       setBranding(savedBranding);
     } catch (error) {
       console.error('Erro ao carregar branding:', error);
@@ -83,19 +75,9 @@ export function useUserBranding() {
     }
   };
 
-  const saveBranding = (brandingData: Partial<Omit<UserBranding, 'id' | 'createdAt' | 'updatedAt'>>) => {
+  const saveBranding = async (brandingData: Partial<Omit<UserBranding, 'id' | 'createdAt' | 'updatedAt'>>) => {
     try {
-      const now = new Date().toISOString();
-      const updatedBranding: UserBranding = {
-        ...DEFAULT_USER_BRANDING,
-        ...branding,
-        ...brandingData,
-        id: branding?.id || `branding_${Date.now()}`,
-        createdAt: branding?.createdAt || now,
-        updatedAt: now
-      };
-
-      storage.save(STORAGE_KEYS.USER_BRANDING, updatedBranding);
+      const updatedBranding = await UserDataService.saveBranding(brandingData);
       setBranding(updatedBranding);
       return true;
     } catch (error) {
@@ -144,7 +126,7 @@ export function useUserPreferences() {
 
   const loadPreferences = () => {
     try {
-      const savedPrefs = storage.load<UserPreferences | null>(STORAGE_KEYS.USER_PREFERENCES, null);
+      const savedPrefs = UserDataService.loadPreferences();
       setPreferences(savedPrefs);
     } catch (error) {
       console.error('Erro ao carregar preferências:', error);
@@ -153,20 +135,9 @@ export function useUserPreferences() {
     }
   };
 
-  const savePreferences = (preferencesData: Partial<Omit<UserPreferences, 'id' | 'createdAt' | 'updatedAt'>>) => {
+  const savePreferences = async (preferencesData: Partial<Omit<UserPreferences, 'id' | 'createdAt' | 'updatedAt'>>) => {
     try {
-      const now = new Date().toISOString();
-      const base = preferences ?? (storage.load<UserPreferences | null>(STORAGE_KEYS.USER_PREFERENCES, null) ?? null);
-      const updatedPreferences: UserPreferences = {
-        ...DEFAULT_USER_PREFERENCES,
-        ...(base ? base : {}),
-        ...preferencesData,
-        id: base?.id || preferences?.id || `preferences_${Date.now()}`,
-        createdAt: base?.createdAt || preferences?.createdAt || now,
-        updatedAt: now
-      };
-
-      storage.save(STORAGE_KEYS.USER_PREFERENCES, updatedPreferences);
+      const updatedPreferences = await UserDataService.savePreferences(preferencesData);
       setPreferences(updatedPreferences);
       return true;
     } catch (error) {
