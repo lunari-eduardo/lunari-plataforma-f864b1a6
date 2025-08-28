@@ -705,8 +705,8 @@ export function EstruturaCustosFixos({
             </div>
 
             <div className="space-y-3">
-              {/* Desktop - Tabela */}
-              <div className="hidden md:block">
+              {/* Desktop - Tabela (lg and up) */}
+              <div className="hidden lg:block">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -749,16 +749,92 @@ export function EstruturaCustosFixos({
                 </Table>
               </div>
               
-              {/* Mobile - Cards */}
+              {/* Tablet - 2 Column Grid (md to lg) */}
+              <div className="hidden md:grid lg:hidden grid-cols-2 gap-3">
+                {equipamentos.map(equipamento => (
+                  <Card key={equipamento.id} className="p-3">
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-start">
+                        <h4 className="font-medium text-sm truncate flex-1 pr-2">{equipamento.nome || 'Sem nome'}</h4>
+                        <Button 
+                          onClick={() => removerEquipamento(equipamento.id)} 
+                          variant="outline" 
+                          size="icon"
+                          className="h-7 w-7"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Valor Pago</Label>
+                          <Input 
+                            type="number" 
+                            min="0" 
+                            step="0.01" 
+                            value={equipamento.valorPago} 
+                            onChange={e => atualizarEquipamento(equipamento.id, 'valorPago', parseFloat(e.target.value) || 0)} 
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Vida Útil</Label>
+                          <div className="flex items-center gap-1">
+                            <Input 
+                              type="number" 
+                              min="1" 
+                              value={equipamento.vidaUtil} 
+                              onChange={e => atualizarEquipamento(equipamento.id, 'vidaUtil', parseInt(e.target.value) || 1)} 
+                              className="h-8 text-sm"
+                            />
+                            <span className="text-xs text-muted-foreground">anos</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Data da Compra</Label>
+                        <Input 
+                          type="date" 
+                          value={equipamento.dataCompra} 
+                          onChange={e => atualizarEquipamento(equipamento.id, 'dataCompra', e.target.value)} 
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      
+                      <div className="flex items-center justify-between bg-muted/50 p-2 rounded">
+                        <span className="text-xs text-muted-foreground">Depreciação/mês:</span>
+                        <span className="text-sm font-medium text-green-600">
+                          R$ {(equipamento.valorPago / (equipamento.vidaUtil * 12)).toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+              
+              {/* Mobile - Single Column Cards (sm and below) */}
               <div className="md:hidden space-y-3">
-                {equipamentos.map(equipamento => <Card key={equipamento.id} className="p-2 px-[8px] py-1">
+                {equipamentos.map(equipamento => (
+                  <Card key={equipamento.id} className="p-2 px-[8px] py-1">
                     <div className="space-y-2">
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
                           <Label className="text-xs">Nome</Label>
-                          <Input placeholder="Ex: Câmera Canon..." value={equipamento.nome} onChange={e => atualizarEquipamento(equipamento.id, 'nome', e.target.value)} className="h-8" />
+                          <Input 
+                            placeholder="Ex: Câmera Canon..." 
+                            value={equipamento.nome} 
+                            onChange={e => atualizarEquipamento(equipamento.id, 'nome', e.target.value)} 
+                            className="h-8"
+                          />
                         </div>
-                        <Button onClick={() => removerEquipamento(equipamento.id)} variant="outline" size="sm" className="ml-2 h-8">
+                        <Button 
+                          onClick={() => removerEquipamento(equipamento.id)} 
+                          variant="outline" 
+                          size="sm" 
+                          className="ml-2 h-8"
+                        >
                           <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
@@ -766,17 +842,35 @@ export function EstruturaCustosFixos({
                       <div className="grid grid-cols-2 gap-2">
                         <div>
                           <Label className="text-xs">Valor Pago</Label>
-                          <Input type="number" min="0" step="0.01" value={equipamento.valorPago} onChange={e => atualizarEquipamento(equipamento.id, 'valorPago', parseFloat(e.target.value) || 0)} className="bg-card h-8" />
+                          <Input 
+                            type="number" 
+                            min="0" 
+                            step="0.01" 
+                            value={equipamento.valorPago} 
+                            onChange={e => atualizarEquipamento(equipamento.id, 'valorPago', parseFloat(e.target.value) || 0)} 
+                            className="bg-card h-8"
+                          />
                         </div>
                         <div>
                           <Label className="text-xs">Vida Útil (Anos)</Label>
-                          <Input type="number" min="1" value={equipamento.vidaUtil} onChange={e => atualizarEquipamento(equipamento.id, 'vidaUtil', parseInt(e.target.value) || 1)} className="bg-card h-8" />
+                          <Input 
+                            type="number" 
+                            min="1" 
+                            value={equipamento.vidaUtil} 
+                            onChange={e => atualizarEquipamento(equipamento.id, 'vidaUtil', parseInt(e.target.value) || 1)} 
+                            className="bg-card h-8"
+                          />
                         </div>
                       </div>
                       
                       <div>
                         <Label className="text-xs">Data da Compra</Label>
-                        <Input type="date" value={equipamento.dataCompra} onChange={e => atualizarEquipamento(equipamento.id, 'dataCompra', e.target.value)} className="bg-card h-8" />
+                        <Input 
+                          type="date" 
+                          value={equipamento.dataCompra} 
+                          onChange={e => atualizarEquipamento(equipamento.id, 'dataCompra', e.target.value)} 
+                          className="bg-card h-8"
+                        />
                       </div>
                       
                       <div className="bg-muted p-2 rounded-lg">
@@ -788,7 +882,8 @@ export function EstruturaCustosFixos({
                         </div>
                       </div>
                     </div>
-                  </Card>)}
+                  </Card>
+                ))}
               </div>
             </div>
           </TabsContent>
