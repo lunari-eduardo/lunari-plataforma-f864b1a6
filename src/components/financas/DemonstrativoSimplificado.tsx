@@ -4,7 +4,6 @@ import { Separator } from '@/components/ui/separator';
 import { Download, TrendingUp, TrendingDown, DollarSign, Percent } from 'lucide-react';
 import { formatCurrency } from '@/utils/financialUtils';
 import { DemonstrativoSimplificado as DemonstrativoType } from '@/types/extrato';
-
 interface DemonstrativoSimplificadoProps {
   demonstrativo: DemonstrativoType;
   periodo: {
@@ -13,16 +12,17 @@ interface DemonstrativoSimplificadoProps {
   };
   onExportarPDF: () => void;
 }
-
 export default function DemonstrativoSimplificado({
   demonstrativo,
   periodo,
   onExportarPDF
 }: DemonstrativoSimplificadoProps) {
-  const { receitas, despesas, resumoFinal } = demonstrativo;
-
-  const renderSecaoReceitas = () => (
-    <Card>
+  const {
+    receitas,
+    despesas,
+    resumoFinal
+  } = demonstrativo;
+  const renderSecaoReceitas = () => <Card>
       <CardHeader>
         <CardTitle className="text-lg flex items-center">
           <TrendingUp className="h-5 w-5 mr-2 text-green-600" />
@@ -60,11 +60,8 @@ export default function DemonstrativoSimplificado({
           </span>
         </div>
       </CardContent>
-    </Card>
-  );
-
-  const renderSecaoDespesas = () => (
-    <Card>
+    </Card>;
+  const renderSecaoDespesas = () => <Card>
       <CardHeader>
         <CardTitle className="text-lg flex items-center">
           <TrendingDown className="h-5 w-5 mr-2 text-red-600" />
@@ -72,20 +69,17 @@ export default function DemonstrativoSimplificado({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {despesas.categorias.map((categoria, index) => (
-          <div key={index} className="space-y-2">
+        {despesas.categorias.map((categoria, index) => <div key={index} className="space-y-2">
             <div className="font-medium text-sm text-muted-foreground border-b pb-1">
               {categoria.grupo}
             </div>
             
-            {categoria.itens.map((item, itemIndex) => (
-              <div key={itemIndex} className="flex justify-between items-center pl-4">
+            {categoria.itens.map((item, itemIndex) => <div key={itemIndex} className="flex justify-between items-center pl-4">
                 <span className="text-xs text-muted-foreground">{item.nome}</span>
                 <span className="text-sm font-medium text-red-600">
                   {formatCurrency(item.valor)}
                 </span>
-              </div>
-            ))}
+              </div>)}
             
             <div className="flex justify-between items-center pl-4 border-t pt-1">
               <span className="text-sm font-medium">Total {categoria.grupo}</span>
@@ -95,8 +89,7 @@ export default function DemonstrativoSimplificado({
             </div>
             
             {index < despesas.categorias.length - 1 && <Separator className="mt-3" />}
-          </div>
-        ))}
+          </div>)}
         
         <Separator />
         
@@ -107,11 +100,8 @@ export default function DemonstrativoSimplificado({
           </span>
         </div>
       </CardContent>
-    </Card>
-  );
-
-  const renderResumoFinal = () => (
-    <Card className="bg-gradient-to-r from-background to-muted/30">
+    </Card>;
+  const renderResumoFinal = () => <Card className="bg-gradient-to-r from-background to-muted/30">
       <CardHeader>
         <CardTitle className="text-lg flex items-center">
           <DollarSign className="h-5 w-5 mr-2" />
@@ -162,15 +152,12 @@ export default function DemonstrativoSimplificado({
           </span>
         </div>
       </CardContent>
-    </Card>
-  );
-
-  return (
-    <div className="space-y-6">
+    </Card>;
+  return <div className="space-y-6">
       {/* Header com botão de exportação */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Demonstrativo Financeiro</h2>
+          <h2 className="font-bold text-xl">Demonstrativo Financeiro</h2>
           <p className="text-muted-foreground">
             Resumo categorizado para análise contábil
           </p>
@@ -190,6 +177,5 @@ export default function DemonstrativoSimplificado({
 
       {/* Resumo final */}
       {renderResumoFinal()}
-    </div>
-  );
+    </div>;
 }

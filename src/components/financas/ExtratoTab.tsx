@@ -40,43 +40,33 @@ export default function ExtratoTab() {
     abrirOrigem,
     prepararDadosExportacao
   } = useExtrato();
-
   const handleExportarDemonstrativo = () => {
     // TODO: Implementar exportação do demonstrativo em PDF
     console.log('Exportar demonstrativo:', demonstrativo);
   };
 
-
   // ============= RENDERIZAÇÃO DE FILTROS SIMPLIFICADOS =============
 
-  const renderFiltros = () => (
-    <div className="flex flex-wrap items-end gap-4 mb-6 p-4 bg-lunar-surface/50 rounded-lg border border-lunar-border/30">
+  const renderFiltros = () => <div className="flex flex-wrap items-end gap-4 mb-6 p-4 bg-lunar-surface/50 rounded-lg border border-lunar-border/30 py-[3px]">
       <div className="space-y-2">
         <Label>Data Início</Label>
-        <Input 
-          type="date" 
-          value={filtros.dataInicio} 
-          onChange={e => atualizarFiltros({ dataInicio: e.target.value })} 
-          className="w-40"
-        />
+        <Input type="date" value={filtros.dataInicio} onChange={e => atualizarFiltros({
+        dataInicio: e.target.value
+      })} className="w-40" />
       </div>
       
       <div className="space-y-2">
         <Label>Data Fim</Label>
-        <Input 
-          type="date" 
-          value={filtros.dataFim} 
-          onChange={e => atualizarFiltros({ dataFim: e.target.value })} 
-          className="w-40"
-        />
+        <Input type="date" value={filtros.dataFim} onChange={e => atualizarFiltros({
+        dataFim: e.target.value
+      })} className="w-40" />
       </div>
 
       <div className="space-y-2">
         <Label>Tipo</Label>
-        <Select 
-          value={filtros.tipo || 'todos'} 
-          onValueChange={value => atualizarFiltros({ tipo: value as ExtratoTipo | 'todos' })}
-        >
+        <Select value={filtros.tipo || 'todos'} onValueChange={value => atualizarFiltros({
+        tipo: value as ExtratoTipo | 'todos'
+      })}>
           <SelectTrigger className="w-32">
             <SelectValue />
           </SelectTrigger>
@@ -91,8 +81,7 @@ export default function ExtratoTab() {
       <Button variant="outline" onClick={limparFiltros} className="h-9">
         Limpar Filtros
       </Button>
-    </div>
-  );
+    </div>;
 
   // ============= RENDERIZAÇÃO DA TABELA =============
 
@@ -222,7 +211,7 @@ export default function ExtratoTab() {
   return <div className="space-y-6">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold">Extrato Financeiro</h1>
+        
         <p className="text-muted-foreground">
           Visão unificada de todas as movimentações financeiras
         </p>
@@ -249,14 +238,10 @@ export default function ExtratoTab() {
         </TabsContent>
         
         <TabsContent value="demonstrativo" className="mt-6">
-          <DemonstrativoSimplificado
-            demonstrativo={demonstrativo}
-            periodo={{
-              inicio: filtros.dataInicio,
-              fim: filtros.dataFim
-            }}
-            onExportarPDF={handleExportarDemonstrativo}
-          />
+          <DemonstrativoSimplificado demonstrativo={demonstrativo} periodo={{
+          inicio: filtros.dataInicio,
+          fim: filtros.dataFim
+        }} onExportarPDF={handleExportarDemonstrativo} />
         </TabsContent>
       </Tabs>
     </div>;
