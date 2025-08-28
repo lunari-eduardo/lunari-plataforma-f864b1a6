@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Wrench, Plus, X } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+
 import { EQUIPMENT_SYNC_EVENT, type EquipmentCandidate } from '@/hooks/useEquipmentSync';
 import { EquipmentSyncModal } from './EquipmentSyncModal';
 
@@ -13,7 +13,6 @@ interface QueuedEquipment extends EquipmentCandidate {
 }
 
 export function EquipmentSyncNotification() {
-  const { toast } = useToast();
   const [queuedEquipments, setQueuedEquipments] = useState<QueuedEquipment[]>([]);
   const [selectedEquipment, setSelectedEquipment] = useState<QueuedEquipment | null>(null);
   const [showModal, setShowModal] = useState(false);
@@ -36,23 +35,6 @@ export function EquipmentSyncNotification() {
         return [queuedEquipment, ...prev];
       });
 
-      // Toast de notificação
-      toast({
-        title: "🔧 Equipamento Detectado",
-        description: `${candidate.nome} - R$ ${candidate.valor.toFixed(2)}`,
-        action: (
-          <Button 
-            size="sm" 
-            onClick={() => handleAddToPricing(queuedEquipment)}
-            className="h-8"
-          >
-            <Plus className="h-3 w-3 mr-1" />
-            Adicionar
-          </Button>
-        ),
-        duration: 8000
-      });
-
       console.log('🔧 [EquipmentNotification] Novo equipamento na fila:', queuedEquipment);
     };
 
@@ -61,7 +43,7 @@ export function EquipmentSyncNotification() {
     return () => {
       window.removeEventListener(EQUIPMENT_SYNC_EVENT, handleEquipmentCandidate);
     };
-  }, [toast]);
+  }, []);
 
   const handleAddToPricing = (equipment: QueuedEquipment) => {
     setSelectedEquipment(equipment);

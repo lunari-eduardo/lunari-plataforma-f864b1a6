@@ -17,8 +17,6 @@ export function useEquipmentSync() {
 
   useEffect(() => {
     if (!isMonitoring) return;
-
-    let lastCheckTime = Date.now();
     
     const checkForNewEquipment = () => {
       try {
@@ -36,7 +34,7 @@ export function useEquipmentSync() {
               observacoes
             };
 
-            // Disparar evento customizado
+            // Disparar evento customizado apenas uma vez por transação
             const event = new CustomEvent(EQUIPMENT_SYNC_EVENT, {
               detail: candidate
             });
@@ -45,8 +43,6 @@ export function useEquipmentSync() {
             console.log('🔧 [EquipmentSync] Evento disparado:', candidate);
           });
         }
-        
-        lastCheckTime = Date.now();
       } catch (error) {
         console.error('🔧 [EquipmentSync] Erro ao verificar equipamentos:', error);
       }
@@ -55,8 +51,8 @@ export function useEquipmentSync() {
     // Verificação inicial
     checkForNewEquipment();
 
-    // Verificar a cada 3 segundos para detectar novas transações
-    const interval = setInterval(checkForNewEquipment, 3000);
+    // Verificar a cada 5 segundos para detectar novas transações (reduzido a frequência)
+    const interval = setInterval(checkForNewEquipment, 5000);
 
     return () => {
       clearInterval(interval);
