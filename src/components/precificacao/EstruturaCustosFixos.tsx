@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Trash2, Save, CheckCircle, AlertCircle, RefreshCw, ArrowLeftRight } from 'lucide-react';
 import { EstruturaCustosService, ValidacaoService, IndicadoresService } from '@/services/PricingService';
 import type { GastoItem, Equipamento, StatusSalvamento } from '@/types/precificacao';
@@ -706,33 +707,46 @@ export function EstruturaCustosFixos({
             <div className="space-y-3">
               {/* Desktop - Tabela */}
               <div className="hidden md:block">
-                {equipamentos.map(equipamento => <div key={equipamento.id} className="grid grid-cols-6 gap-3 items-end">
-                    <div>
-                      <Label className="text-xs">Nome</Label>
-                      <Input placeholder="Ex: Câmera Canon..." value={equipamento.nome} onChange={e => atualizarEquipamento(equipamento.id, 'nome', e.target.value)} className="bg-card" />
-                    </div>
-                    <div>
-                      <Label className="text-xs">Valor Pago</Label>
-                      <Input type="number" min="0" step="0.01" value={equipamento.valorPago} onChange={e => atualizarEquipamento(equipamento.id, 'valorPago', parseFloat(e.target.value) || 0)} className="bg-card" />
-                    </div>
-                    <div>
-                      <Label className="text-xs">Data da Compra</Label>
-                      <Input type="date" value={equipamento.dataCompra} onChange={e => atualizarEquipamento(equipamento.id, 'dataCompra', e.target.value)} className="bg-card" />
-                    </div>
-                    <div>
-                      <Label className="text-xs">Vida Útil (Anos)</Label>
-                      <Input type="number" min="1" value={equipamento.vidaUtil} onChange={e => atualizarEquipamento(equipamento.id, 'vidaUtil', parseInt(e.target.value) || 1)} className="bg-card" />
-                    </div>
-                    <div>
-                      <Label className="text-xs">Depreciação Mensal</Label>
-                      <div className="text-xs text-green-600 font-medium p-2">
-                        R$ {(equipamento.valorPago / (equipamento.vidaUtil * 12)).toFixed(2)}
-                      </div>
-                    </div>
-                    <Button onClick={() => removerEquipamento(equipamento.id)} variant="outline" size="sm">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>)}
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Valor Pago</TableHead>
+                      <TableHead>Data da Compra</TableHead>
+                      <TableHead>Vida Útil (Anos)</TableHead>
+                      <TableHead>Depreciação Mensal</TableHead>
+                      <TableHead className="w-[80px]">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {equipamentos.map(equipamento => (
+                      <TableRow key={equipamento.id}>
+                        <TableCell>
+                          <Input placeholder="Ex: Câmera Canon..." value={equipamento.nome} onChange={e => atualizarEquipamento(equipamento.id, 'nome', e.target.value)} className="bg-card" />
+                        </TableCell>
+                        <TableCell>
+                          <Input type="number" min="0" step="0.01" value={equipamento.valorPago} onChange={e => atualizarEquipamento(equipamento.id, 'valorPago', parseFloat(e.target.value) || 0)} className="bg-card" />
+                        </TableCell>
+                        <TableCell>
+                          <Input type="date" value={equipamento.dataCompra} onChange={e => atualizarEquipamento(equipamento.id, 'dataCompra', e.target.value)} className="bg-card" />
+                        </TableCell>
+                        <TableCell>
+                          <Input type="number" min="1" value={equipamento.vidaUtil} onChange={e => atualizarEquipamento(equipamento.id, 'vidaUtil', parseInt(e.target.value) || 1)} className="bg-card" />
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm text-green-600 font-medium">
+                            R$ {(equipamento.valorPago / (equipamento.vidaUtil * 12)).toFixed(2)}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Button onClick={() => removerEquipamento(equipamento.id)} variant="outline" size="sm">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
               
               {/* Mobile - Cards */}
