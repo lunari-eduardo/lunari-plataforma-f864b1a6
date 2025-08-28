@@ -385,18 +385,27 @@ export function useDashboardFinanceiro() {
       dadosPorMes[i] = { receita: 0, despesas: 0 };
     }
 
-    // Dados apenas para o ano selecionado (ignorar filtro de mês aqui)
     const ano = parseInt(anoSelecionado);
     
-    // Buscar receitas operacionais por mês usando cache de métricas
-    for (let mes = 1; mes <= 12; mes++) {
-      const metricas = getMonthlyMetrics(ano, mes);
+    // Se um mês específico está selecionado, mostrar apenas esse mês
+    if (mesSelecionado && mesSelecionado !== 'ano-completo') {
+      const mesNumero = parseInt(mesSelecionado);
+      const metricas = getMonthlyMetrics(ano, mesNumero);
       if (metricas) {
-        dadosPorMes[mes].receita += metricas.receita;
+        dadosPorMes[mesNumero].receita += metricas.receita;
+      }
+    } else {
+      // Mostrar todos os meses do ano (comportamento original)
+      for (let mes = 1; mes <= 12; mes++) {
+        const metricas = getMonthlyMetrics(ano, mes);
+        if (metricas) {
+          dadosPorMes[mes].receita += metricas.receita;
+        }
       }
     }
     
-    const transacoesDoAno = transacoesComItens.filter(transacao => {
+    // Filtrar transações baseado na seleção de mês/ano
+    let transacoesFiltradas = transacoesComItens.filter(transacao => {
       if (!transacao.dataVencimento || typeof transacao.dataVencimento !== 'string') {
         return false;
       }
@@ -404,8 +413,17 @@ export function useDashboardFinanceiro() {
       return anoTransacao === ano;
     });
 
+    // Se um mês específico está selecionado, filtrar também por mês
+    if (mesSelecionado && mesSelecionado !== 'ano-completo') {
+      const mesNumero = parseInt(mesSelecionado);
+      transacoesFiltradas = transacoesFiltradas.filter(transacao => {
+        const mesTransacao = parseInt(transacao.dataVencimento.split('-')[1]);
+        return mesTransacao === mesNumero;
+      });
+    }
+
     // Agregar transações por mês
-    transacoesDoAno.filter(t => t.status === 'Pago').forEach(transacao => {
+    transacoesFiltradas.filter(t => t.status === 'Pago').forEach(transacao => {
       if (!transacao.dataVencimento || typeof transacao.dataVencimento !== 'string') {
         return;
       }
@@ -418,6 +436,17 @@ export function useDashboardFinanceiro() {
       }
     });
 
+    // Se mês específico selecionado, mostrar apenas esse mês no gráfico
+    if (mesSelecionado && mesSelecionado !== 'ano-completo') {
+      const mesNumero = parseInt(mesSelecionado);
+      const dadosMes = dadosPorMes[mesNumero];
+      return [{
+        mes: meses[mesNumero - 1],
+        receita: dadosMes.receita,
+        lucro: dadosMes.receita - dadosMes.despesas
+      }];
+    }
+
     return meses.map((nome, index) => {
       const dadosMes = dadosPorMes[index + 1];
       return {
@@ -426,7 +455,7 @@ export function useDashboardFinanceiro() {
         lucro: dadosMes.receita - dadosMes.despesas
       };
     });
-  }, [anoSelecionado, transacoesComItens, getMonthlyMetrics]);
+  }, [anoSelecionado, mesSelecionado, transacoesComItens, getMonthlyMetrics]);
 
   // ============= COMPOSIÇÃO DE DESPESAS =============
   

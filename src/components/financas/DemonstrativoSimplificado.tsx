@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { formatCurrency } from '@/utils/financialUtils';
 import { DemonstrativoSimplificado as DemonstrativoType } from '@/types/extrato';
 import { useUserProfile, useUserBranding } from '@/hooks/useUserProfile';
-import { generateFinancialPDF, FinancialExportData } from '@/utils/financialPdfUtils';
+import { generateDemonstrativePDF, DemonstrativeExportData } from '@/utils/financialPdfUtils';
 import { TransacaoComItem } from '@/types/financas';
 import PeriodSelectionModal from './PeriodSelectionModal';
 import { useExtrato } from '@/hooks/useExtrato';
@@ -68,130 +68,19 @@ export default function DemonstrativoSimplificado({
       // Calculate demonstrative for the selected period
       const demonstrativoPeriodo = calcularDemonstrativoParaPeriodo(startDate, endDate);
       
-      const startDateObj = new Date(startDate);
-      const month = startDateObj.getMonth() + 1;
-      const year = startDateObj.getFullYear();
-
-      // Converter dados do demonstrativo para transações detalhadas
-      const transacoesDetalhadas: TransacaoComItem[] = [
-        // Receitas - sessões
-        ...(demonstrativoPeriodo.receitas.sessoes > 0 ? [{
-          id: 'receita-sessoes',
-          item_id: 'receita-sessoes',
-          valor: demonstrativoPeriodo.receitas.sessoes,
-          data_vencimento: startDate,
-          status: 'Pago' as const,
-          parcelaInfo: null,
-          parcelas: null,
-          observacoes: 'Receita com sessões do período',
-          userId: 'current-user',
-          criadoEm: new Date().toISOString(),
-          item: {
-            id: 'receita-sessoes',
-            nome: 'Receita com Sessões',
-            grupo_principal: 'Receita Não Operacional',
-            userId: 'current-user',
-            ativo: true,
-            criadoEm: new Date().toISOString(),
-          }
-        }] : []),
-        
-        // Receitas - produtos
-        ...(demonstrativoPeriodo.receitas.produtos > 0 ? [{
-          id: 'receita-produtos',
-          item_id: 'receita-produtos',
-          valor: demonstrativoPeriodo.receitas.produtos,
-          data_vencimento: startDate,
-          status: 'Pago' as const,
-          parcelaInfo: null,
-          parcelas: null,
-          observacoes: 'Receita com produtos do período',
-          userId: 'current-user',
-          criadoEm: new Date().toISOString(),
-          item: {
-            id: 'receita-produtos',
-            nome: 'Receita com Produtos',
-            grupo_principal: 'Receita Não Operacional',
-            userId: 'current-user',
-            ativo: true,
-            criadoEm: new Date().toISOString(),
-          }
-        }] : []),
-        
-        // Receitas não operacionais
-        ...(demonstrativoPeriodo.receitas.naoOperacionais > 0 ? [{
-          id: 'receita-nao-operacional',
-          item_id: 'receita-nao-operacional',
-          valor: demonstrativoPeriodo.receitas.naoOperacionais,
-          data_vencimento: startDate,
-          status: 'Pago' as const,
-          parcelaInfo: null,
-          parcelas: null,
-          observacoes: 'Receitas não operacionais do período',
-          userId: 'current-user',
-          criadoEm: new Date().toISOString(),
-          item: {
-            id: 'receita-nao-operacional',
-            nome: 'Receitas Não Operacionais',
-            grupo_principal: 'Receita Não Operacional',
-            userId: 'current-user',
-            ativo: true,
-            criadoEm: new Date().toISOString(),
-          }
-        }] : []),
-        
-        // Despesas por categoria
-        ...demonstrativoPeriodo.despesas.categorias.flatMap(categoria =>
-          categoria.itens.map(item => ({
-            id: `despesa-${categoria.grupo}-${item.nome}`,
-            item_id: `despesa-${categoria.grupo}-${item.nome}`,
-            valor: item.valor,
-            data_vencimento: startDate,
-            status: 'Pago' as const,
-            parcelaInfo: null,
-            parcelas: null,
-            observacoes: `${categoria.grupo} - ${item.nome}`,
-            userId: 'current-user',
-            criadoEm: new Date().toISOString(),
-            item: {
-              id: `despesa-${categoria.grupo}-${item.nome}`,
-              nome: item.nome,
-              grupo_principal: categoria.grupo as any,
-              userId: 'current-user',
-              ativo: true,
-              criadoEm: new Date().toISOString(),
-            }
-          }))
-        )
-      ];
-
-      const exportData: FinancialExportData = {
+      // Preparar dados para o PDF do demonstrativo
+      const exportData: DemonstrativeExportData = {
         profile,
         branding,
-        transactions: transacoesDetalhadas,
-        period: { 
-          month, 
-          year, 
-          isAnnual: false,
+        period: {
           startDate,
           endDate
         },
-        summary: {
-          totalReceitas: demonstrativoPeriodo.receitas.totalReceitas,
-          totalDespesas: demonstrativoPeriodo.despesas.totalDespesas,
-          saldoFinal: demonstrativoPeriodo.resumoFinal.resultadoLiquido,
-          transacoesPagas: transacoesDetalhadas.length,
-          transacoesFaturadas: 0,
-          transacoesAgendadas: 0
-        }
+        demonstrativo: demonstrativoPeriodo
       };
 
-      await generateFinancialPDF(exportData, {
-        type: 'monthly',
-        period: { month, year },
-        includeDetails: true,
-        includeGraphics: false
-      });
+      // Usar a nova função específica para demonstrativo
+      await generateDemonstrativePDF(exportData);
 
       const periodText = `${new Date(startDate).toLocaleDateString('pt-BR')} a ${new Date(endDate).toLocaleDateString('pt-BR')}`;
       toast.success(`PDF do demonstrativo gerado com sucesso para o período ${periodText}!`);
