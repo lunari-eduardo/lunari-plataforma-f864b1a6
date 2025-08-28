@@ -65,29 +65,22 @@ export function EquipmentSyncModal({
 
     setIsLoading(true);
     try {
-      const result = pricingFinancialIntegrationService.createEquipmentFromTransaction(
-        equipment.transacaoId,
-        {
-          nome: formData.nome.trim(),
-          vidaUtil: vidaUtilAnos
-        }
-      );
+      const novoEquipamento = pricingFinancialIntegrationService.createEquipmentFromTransaction({
+        transacaoId: equipment.transacaoId,
+        nome: formData.nome.trim(),
+        valor: equipment.valor,
+        data: equipment.data,
+        observacoes: equipment.observacoes,
+        vidaUtil: vidaUtilAnos
+      });
 
-      if (result.success) {
-        toast({
-          title: "✅ Equipamento Adicionado",
-          description: `${formData.nome} foi adicionado à precificação com depreciação de R$ ${depreciacaoMensal.toFixed(2)}/mês.`
-        });
-        
-        console.log('🔧 [EquipmentModal] Equipamento criado com sucesso:', result.equipamentoId);
-        onSuccess();
-      } else {
-        toast({
-          title: "Erro ao adicionar",
-          description: result.error || "Falha ao criar equipamento na precificação.",
-          variant: "destructive"
-        });
-      }
+      toast({
+        title: "✅ Equipamento Adicionado",
+        description: `${formData.nome} foi adicionado à precificação com depreciação de R$ ${depreciacaoMensal.toFixed(2)}/mês.`
+      });
+      
+      console.log('🔧 [EquipmentModal] Equipamento criado com sucesso:', novoEquipamento.id);
+      onSuccess();
     } catch (error) {
       console.error('Erro ao criar equipamento:', error);
       toast({
