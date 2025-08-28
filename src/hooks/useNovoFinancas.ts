@@ -329,7 +329,10 @@ export function useNovoFinancas() {
   const transacoesComItens = useMemo((): TransacaoCompativel[] => {
     return transacoes.map(transacao => {
       const item = itensFinanceiros.find(item => item.id === transacao.itemId);
-      const itemCompativel = item || { 
+      const itemCompativel = item ? {
+        ...item,
+        grupoPrincipal: item.grupo_principal
+      } : { 
         id: transacao.itemId, 
         nome: 'Item Removido', 
         grupo_principal: 'Despesa Variável' as GrupoPrincipal,
