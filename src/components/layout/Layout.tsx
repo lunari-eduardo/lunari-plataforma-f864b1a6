@@ -2,14 +2,8 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { EquipmentSyncNotification } from '@/components/equipments/EquipmentSyncNotification';
-import { useEquipmentSync } from '@/hooks/useEquipmentSync';
 export default function Layout() {
   const isMobile = useIsMobile();
-  
-  // Ativar monitoramento de equipamentos
-  useEquipmentSync();
-  
   return <div className="flex h-screen bg-lunar-bg">
       <Sidebar />
       
@@ -22,8 +16,5 @@ export default function Layout() {
           </div>
         </main>
       </div>
-      
-      {/* Sistema de notificações de equipamentos */}
-      <EquipmentSyncNotification />
     </div>;
 }
