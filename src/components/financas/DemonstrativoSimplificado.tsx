@@ -55,16 +55,109 @@ export default function DemonstrativoSimplificado({
       const month = startDate.getMonth() + 1;
       const year = startDate.getFullYear();
 
+      // Converter dados do demonstrativo para transações detalhadas
+      const transacoesDetalhadas: TransacaoComItem[] = [
+        // Receitas - sessões
+        ...(receitas.sessoes > 0 ? [{
+          id: 'receita-sessoes',
+          item_id: 'receita-sessoes',
+          valor: receitas.sessoes,
+          data_vencimento: periodo.inicio,
+          status: 'Pago' as const,
+          parcelaInfo: null,
+          parcelas: null,
+          observacoes: 'Receita com sessões do período',
+          userId: 'current-user',
+          criadoEm: new Date().toISOString(),
+          item: {
+            id: 'receita-sessoes',
+            nome: 'Receita com Sessões',
+            grupo_principal: 'Receita Não Operacional',
+            userId: 'current-user',
+            ativo: true,
+            criadoEm: new Date().toISOString(),
+          }
+        }] : []),
+        
+        // Receitas - produtos
+        ...(receitas.produtos > 0 ? [{
+          id: 'receita-produtos',
+          item_id: 'receita-produtos',
+          valor: receitas.produtos,
+          data_vencimento: periodo.inicio,
+          status: 'Pago' as const,
+          parcelaInfo: null,
+          parcelas: null,
+          observacoes: 'Receita com produtos do período',
+          userId: 'current-user',
+          criadoEm: new Date().toISOString(),
+          item: {
+            id: 'receita-produtos',
+            nome: 'Receita com Produtos',
+            grupo_principal: 'Receita Não Operacional',
+            userId: 'current-user',
+            ativo: true,
+            criadoEm: new Date().toISOString(),
+          }
+        }] : []),
+        
+        // Receitas não operacionais
+        ...(receitas.naoOperacionais > 0 ? [{
+          id: 'receita-nao-operacional',
+          item_id: 'receita-nao-operacional',
+          valor: receitas.naoOperacionais,
+          data_vencimento: periodo.inicio,
+          status: 'Pago' as const,
+          parcelaInfo: null,
+          parcelas: null,
+          observacoes: 'Receitas não operacionais do período',
+          userId: 'current-user',
+          criadoEm: new Date().toISOString(),
+          item: {
+            id: 'receita-nao-operacional',
+            nome: 'Receitas Não Operacionais',
+            grupo_principal: 'Receita Não Operacional',
+            userId: 'current-user',
+            ativo: true,
+            criadoEm: new Date().toISOString(),
+          }
+        }] : []),
+        
+        // Despesas por categoria
+        ...despesas.categorias.flatMap(categoria =>
+          categoria.itens.map(item => ({
+            id: `despesa-${categoria.grupo}-${item.nome}`,
+            item_id: `despesa-${categoria.grupo}-${item.nome}`,
+            valor: item.valor,
+            data_vencimento: periodo.inicio,
+            status: 'Pago' as const,
+            parcelaInfo: null,
+            parcelas: null,
+            observacoes: `${categoria.grupo} - ${item.nome}`,
+            userId: 'current-user',
+            criadoEm: new Date().toISOString(),
+            item: {
+              id: `despesa-${categoria.grupo}-${item.nome}`,
+              nome: item.nome,
+              grupo_principal: categoria.grupo as any,
+              userId: 'current-user',
+              ativo: true,
+              criadoEm: new Date().toISOString(),
+            }
+          }))
+        )
+      ];
+
       const exportData: FinancialExportData = {
         profile,
         branding,
-        transactions,
+        transactions: transacoesDetalhadas,
         period: { month, year, isAnnual: false },
         summary: {
           totalReceitas: receitas.totalReceitas,
           totalDespesas: despesas.totalDespesas,
           saldoFinal: resumoFinal.resultadoLiquido,
-          transacoesPagas: 0,
+          transacoesPagas: transacoesDetalhadas.length,
           transacoesFaturadas: 0,
           transacoesAgendadas: 0
         }

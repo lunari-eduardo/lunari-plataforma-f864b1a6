@@ -9,7 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Download, ToggleLeft, ToggleRight, Clock, CheckCircle, AlertCircle, ExternalLink, FileText, List } from 'lucide-react';
+import { ToggleLeft, ToggleRight, Clock, CheckCircle, AlertCircle, ExternalLink, FileText, List } from 'lucide-react';
+import ExportDetalhado from './ExportDetalhado';
 import { formatCurrency } from '@/utils/financialUtils';
 import { ExtratoTipo, ExtratoOrigem, ExtratoStatus } from '@/types/extrato';
 const ORIGEM_COLORS = {
@@ -106,14 +107,7 @@ export default function ExtratoTab() {
             </Button>
 
             {/* Exportar */}
-            <Button variant="outline" size="sm" onClick={() => {
-            const dados = prepararDadosExportacao();
-            console.log('Dados para exportação:', dados);
-            // TODO: Implementar exportação CSV/PDF
-          }}>
-              <Download className="h-4 w-4 mr-2" />
-              Exportar
-            </Button>
+            <ExportDetalhado dados={prepararDadosExportacao()} />
           </div>
         </div>
       </CardHeader>
@@ -240,6 +234,7 @@ export default function ExtratoTab() {
               inicio: filtros.dataInicio,
               fim: filtros.dataFim
             }}
+            transactions={[]}
           />
         </TabsContent>
       </Tabs>
