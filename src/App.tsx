@@ -1,6 +1,5 @@
 
 import * as React from "react";
-import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -11,7 +10,6 @@ import Index from "./pages/Index";
 import Agenda from "./pages/Agenda";
 import Clientes from "./pages/Clientes";
 import Leads from "./pages/Leads";
-import Orcamentos from "./pages/Orcamentos";
 import NovaFinancas from "./pages/NovaFinancas";
 import Precificacao from "./pages/Precificacao";
 import Configuracoes from "./pages/Configuracoes";
@@ -25,12 +23,7 @@ import FeedTest from "./pages/FeedTest";
 import LandingPage from "./pages/LandingPage";
 import NotFound from "./pages/NotFound";
 import { AppProvider } from "./contexts/AppContext";
-import { useIntegration } from "./hooks/useIntegration";
-import { useAutomationEngine } from "./hooks/useAutomationEngine";
-import { useEquipmentSync } from "./hooks/useEquipmentSync";
 import ThemeProvider from "./components/theme/ThemeProvider";
-import { EquipmentSyncNotification } from "./components/equipments/EquipmentSyncNotification";
-import { initializeAppWithFix } from "./utils/initializeAppFixed";
 
 // Create a stable QueryClient instance
 const queryClient = new QueryClient({
@@ -42,48 +35,8 @@ const queryClient = new QueryClient({
   },
 });
 
-// Integration component that safely uses hooks within providers
-function AppIntegration() {
-  try {
-    useIntegration();
-  } catch (error) {
-    console.error('Integration hook error:', error);
-  }
-  return null;
-}
-
-// Automation integration mounting point
-function AutomationIntegration() {
-  try {
-    useAutomationEngine();
-  } catch (error) {
-    console.error('Automation engine error:', error);
-  }
-  
-  return null;
-}
-
-// Equipment sync integration mounting point
-function EquipmentSyncIntegration() {
-  try {
-    useEquipmentSync();
-  } catch (error) {
-    console.error('Equipment sync error:', error);
-  }
-  
-  return null;
-}
-
 // Define App as a proper function component
 function App() {
-  useEffect(() => {
-    try {
-      initializeAppWithFix();
-      console.log('✅ App successfully initialized');
-    } catch (error) {
-      console.error('❌ App initialization error:', error);
-    }
-  }, []);
 
   
   return (
@@ -92,10 +45,6 @@ function App() {
         <ThemeProvider>
           <AppProvider>
             <TooltipProvider>
-              <AppIntegration />
-              <AutomationIntegration />
-              <EquipmentSyncIntegration />
-              <EquipmentSyncNotification />
               <Toaster />
               <Sonner />
               <Routes>
@@ -108,7 +57,6 @@ function App() {
                   <Route path="/clientes" element={<Clientes />} />
                   <Route path="/clientes/:id" element={<ClienteDetalhe />} />
                   <Route path="/leads" element={<Leads />} />
-                  {/* <Route path="/orcamentos" element={<Orcamentos />} /> */}
                   <Route path="/financas" element={<NovaFinancas />} />
                   <Route path="/precificacao" element={<Precificacao />} />
                   <Route path="/workflow" element={<Workflow />} />
