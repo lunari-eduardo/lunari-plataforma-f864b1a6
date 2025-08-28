@@ -2,6 +2,8 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { EquipmentSyncNotification } from '@/components/equipments/EquipmentSyncNotification';
+
 export default function Layout() {
   const isMobile = useIsMobile();
   return <div className="flex h-screen bg-lunar-bg">
@@ -16,5 +18,8 @@ export default function Layout() {
           </div>
         </main>
       </div>
+      
+      {/* Equipment sync notifications */}
+      <EquipmentSyncNotification />
     </div>;
 }

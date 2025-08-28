@@ -543,6 +543,33 @@ class PricingFinancialIntegrationService {
   }
 
   /**
+   * Garante que o item "Equipamentos" existe no sistema financeiro
+   */
+  private ensureEquipamentosItemExists(): void {
+    const itensFinanceiros = storage.load(this.STORAGE_KEYS.FINANCIAL_ITEMS, []);
+    
+    const itemEquipamentos = itensFinanceiros.find((item: ItemFinanceiro) => 
+      item.nome === 'Equipamentos' && item.grupo_principal === 'Investimento'
+    );
+
+    if (!itemEquipamentos) {
+      console.log('🔧 [CreateEquipment] Criando item "Equipamentos" automaticamente');
+      
+      const novoItem: ItemFinanceiro = {
+        id: '9', // ID fixo para compatibilidade
+        nome: 'Equipamentos',
+        grupo_principal: 'Investimento',
+        userId: 'user1',
+        ativo: true,
+        criadoEm: getCurrentDateString()
+      };
+
+      itensFinanceiros.push(novoItem);
+      storage.save(this.STORAGE_KEYS.FINANCIAL_ITEMS, itensFinanceiros);
+    }
+  }
+
+  /**
    * Cria equipamento na precificação baseado na transação financeira
    */
   createEquipmentFromTransaction(transacaoId: string, dadosEquipamento: {
@@ -554,6 +581,9 @@ class PricingFinancialIntegrationService {
     error?: string;
   } {
     try {
+      // Garantir que o item "Equipamentos" existe
+      this.ensureEquipamentosItemExists();
+      
       const transacoes = RecurringBlueprintEngine.loadTransactions();
       const transacao = transacoes.find((t: any) => t.id === transacaoId);
 

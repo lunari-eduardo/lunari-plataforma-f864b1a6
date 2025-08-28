@@ -118,10 +118,17 @@ export function useNovoFinancas() {
       // Nova abordagem: criar todas as transações do ano
       const novasTransacoes = RecurringBlueprintEngine.createYearlyRecurringTransactions(input);
       
-      // Atualizar estado local apenas com as novas transações
-      setTransacoes(prev => [...prev, ...novasTransacoes]);
-      
-      console.log(`${novasTransacoes.length} transações recorrentes criadas com sucesso`);
+        // Atualizar estado local apenas com as novas transações
+        setTransacoes(prev => [...prev, ...novasTransacoes]);
+        
+        console.log(`${novasTransacoes.length} transações recorrentes criadas com sucesso`);
+        
+        // Force scan para equipamentos (transações recorrentes)
+        setTimeout(() => {
+          const forceScanEvent = new CustomEvent('equipment-sync:force-scan');
+          window.dispatchEvent(forceScanEvent);
+          console.log('🔧 [EquipmentSync] Force scan disparado após criação de transações recorrentes');
+        }, 100);
       
     } catch (error) {
       console.error('Erro ao criar transações recorrentes:', error);
@@ -185,6 +192,14 @@ export function useNovoFinancas() {
         
         setTransacoes(prev => [...prev, ...transacoesConvertidas]);
         console.log(`${transacoesConvertidas.length} transações parceladas criadas com sucesso`);
+        
+        // Force scan para equipamentos (transações parceladas)
+        setTimeout(() => {
+          const forceScanEvent = new CustomEvent('equipment-sync:force-scan');
+          window.dispatchEvent(forceScanEvent);
+          console.log('🔧 [EquipmentSync] Force scan disparado após criação de transações parceladas');
+        }, 100);
+        
         return;
       }
       
@@ -204,30 +219,13 @@ export function useNovoFinancas() {
       setTransacoes(prev => [...prev, novaTransacao]);
       console.log('Transação única criada com sucesso:', novaTransacao);
 
-      // ============= DETECÇÃO AUTOMÁTICA DE EQUIPAMENTOS =============
-      // Verificar se é transação de equipamentos para notificar sobre sincronização
-      const item = itensFinanceiros.find(item => item.id === itemId);
-      if (item && item.nome === 'Equipamentos' && item.grupo_principal === 'Investimento') {
-        console.log('🔧 [EquipmentSync] Transação de equipamento detectada:', {
-          transacaoId: novaTransacao.id,
-          valor: valorTotal,
-          observacoes
-        });
-
-        // Disparar evento para notificação de equipamento
-        setTimeout(() => {
-          const event = new CustomEvent('equipment-sync:candidate', {
-            detail: {
-              transacaoId: novaTransacao.id,
-              nome: observacoes || `Equipamento R$ ${valorTotal.toFixed(2)}`,
-              valor: valorTotal,
-              data: dataPrimeiraOcorrencia,
-              observacoes
-            }
-          });
-          window.dispatchEvent(event);
-        }, 500); // Pequeno delay para garantir que a transação foi persistida
-      }
+      // ============= FORCE SCAN PARA EQUIPAMENTOS =============
+      // Disparar force-scan imediatamente após qualquer transação para detectar equipamentos
+      setTimeout(() => {
+        const forceScanEvent = new CustomEvent('equipment-sync:force-scan');
+        window.dispatchEvent(forceScanEvent);
+        console.log('🔧 [EquipmentSync] Force scan disparado após criação de transação');
+      }, 100); // Delay mínimo para garantir persistência
       
     } catch (error) {
       console.error('Erro ao criar transação:', error);
