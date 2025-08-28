@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useExtrato } from '@/hooks/useExtrato';
+import DemonstrativoSimplificado from './DemonstrativoSimplificado';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Calendar, Download, Filter, Search, ToggleLeft, ToggleRight, TrendingUp, TrendingDown, DollarSign, Clock, CheckCircle, AlertCircle, ExternalLink } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Calendar, Download, Filter, Search, ToggleLeft, ToggleRight, TrendingUp, TrendingDown, DollarSign, Clock, CheckCircle, AlertCircle, ExternalLink, FileText, List } from 'lucide-react';
 import { formatCurrency } from '@/utils/financialUtils';
 import { ExtratoTipo, ExtratoOrigem, ExtratoStatus } from '@/types/extrato';
 const ORIGEM_COLORS = {
@@ -30,6 +32,7 @@ export default function ExtratoTab() {
   const {
     linhas,
     resumo,
+    demonstrativo,
     filtros,
     preferencias,
     atualizarFiltros,
@@ -39,6 +42,11 @@ export default function ExtratoTab() {
     prepararDadosExportacao
   } = useExtrato();
   const [filtrosVisiveis, setFiltrosVisiveis] = useState(false);
+
+  const handleExportarDemonstrativo = () => {
+    // TODO: Implementar exportação do demonstrativo em PDF
+    console.log('Exportar demonstrativo:', demonstrativo);
+  };
 
   // ============= RENDERIZAÇÃO DE CARDS RESUMO =============
 
@@ -330,7 +338,7 @@ export default function ExtratoTab() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          
+          <h1 className="text-3xl font-bold">Extrato Financeiro</h1>
           <p className="text-muted-foreground">
             Visão unificada de todas as movimentações financeiras
           </p>
@@ -350,7 +358,33 @@ export default function ExtratoTab() {
       {/* Filtros */}
       {renderFiltros()}
 
-      {/* Tabela */}
-      {renderTabela()}
+      {/* Tabs para alternar entre vista detalhada e demonstrativo */}
+      <Tabs defaultValue="detalhado" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="detalhado" className="flex items-center space-x-2">
+            <List className="h-4 w-4" />
+            <span>Vista Detalhada</span>
+          </TabsTrigger>
+          <TabsTrigger value="demonstrativo" className="flex items-center space-x-2">
+            <FileText className="h-4 w-4" />
+            <span>Demonstrativo</span>
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="detalhado" className="mt-6">
+          {renderTabela()}
+        </TabsContent>
+        
+        <TabsContent value="demonstrativo" className="mt-6">
+          <DemonstrativoSimplificado
+            demonstrativo={demonstrativo}
+            periodo={{
+              inicio: filtros.dataInicio,
+              fim: filtros.dataFim
+            }}
+            onExportarPDF={handleExportarDemonstrativo}
+          />
+        </TabsContent>
+      </Tabs>
     </div>;
 }

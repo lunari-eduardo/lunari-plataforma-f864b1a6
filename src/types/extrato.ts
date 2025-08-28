@@ -72,3 +72,30 @@ export interface DadosExportacaoExtrato {
   filtrosAplicados: FiltrosExtrato;
   modoData: ExtratoModoData;
 }
+
+// Demonstrativo Financeiro Simplificado
+export interface DemonstrativoSimplificado {
+  receitas: {
+    sessoes: number;
+    produtos: number;
+    naoOperacionais: number;
+    totalReceitas: number;
+  };
+  despesas: {
+    categorias: Array<{
+      grupo: string; // 'Despesa Fixa', 'Despesa Variável', etc.
+      itens: Array<{
+        nome: string;
+        valor: number;
+      }>;
+      total: number;
+    }>;
+    totalDespesas: number;
+  };
+  resumoFinal: {
+    receitaTotal: number;
+    despesaTotal: number;
+    resultadoLiquido: number;
+    margemLiquida: number; // (resultado / receita) * 100
+  };
+}
