@@ -11,6 +11,8 @@ import { DemonstrativoSimplificado as DemonstrativoType } from '@/types/extrato'
 import { useUserProfile, useUserBranding } from '@/hooks/useUserProfile';
 import { generateFinancialPDF, FinancialExportData } from '@/utils/financialPdfUtils';
 import { TransacaoComItem } from '@/types/financas';
+import PeriodSelectionModal from './PeriodSelectionModal';
+import { useExtrato } from '@/hooks/useExtrato';
 interface DemonstrativoSimplificadoProps {
   demonstrativo: DemonstrativoType;
   periodo: {
@@ -26,9 +28,10 @@ export default function DemonstrativoSimplificado({
 }: DemonstrativoSimplificadoProps) {
   const { getProfileOrDefault } = useUserProfile();
   const { getBrandingOrDefault } = useUserBranding();
+  const { prepararDadosExportacao, calcularDemonstrativoParaPeriodo } = useExtrato();
   const navigate = useNavigate();
   const [showProfileModal, setShowProfileModal] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [showPeriodModal, setShowPeriodModal] = useState(false);
   const {
     receitas,
     despesas,
@@ -40,29 +43,43 @@ export default function DemonstrativoSimplificado({
     return !!(profile.nomeEmpresa || profile.nomeCompleto);
   };
 
-  const handleExportarPDF = async () => {
+  const handleExportRequest = () => {
     if (!validateProfileData()) {
       setShowProfileModal(true);
       return;
     }
+    setShowPeriodModal(true);
+  };
 
-    setIsGenerating(true);
+  const handleExportWithPeriod = async ({ startDate, endDate, format }: {
+    startDate: string;
+    endDate: string;
+    format: 'csv' | 'pdf';
+  }) => {
+    if (format === 'csv') {
+      toast.error('Exportação CSV não disponível para demonstrativo. Use a Vista Detalhada.');
+      return;
+    }
+
     try {
       const profile = getProfileOrDefault();
       const branding = getBrandingOrDefault();
       
-      const startDate = new Date(periodo.inicio);
-      const month = startDate.getMonth() + 1;
-      const year = startDate.getFullYear();
+      // Calculate demonstrative for the selected period
+      const demonstrativoPeriodo = calcularDemonstrativoParaPeriodo(startDate, endDate);
+      
+      const startDateObj = new Date(startDate);
+      const month = startDateObj.getMonth() + 1;
+      const year = startDateObj.getFullYear();
 
       // Converter dados do demonstrativo para transações detalhadas
       const transacoesDetalhadas: TransacaoComItem[] = [
         // Receitas - sessões
-        ...(receitas.sessoes > 0 ? [{
+        ...(demonstrativoPeriodo.receitas.sessoes > 0 ? [{
           id: 'receita-sessoes',
           item_id: 'receita-sessoes',
-          valor: receitas.sessoes,
-          data_vencimento: periodo.inicio,
+          valor: demonstrativoPeriodo.receitas.sessoes,
+          data_vencimento: startDate,
           status: 'Pago' as const,
           parcelaInfo: null,
           parcelas: null,
@@ -80,11 +97,11 @@ export default function DemonstrativoSimplificado({
         }] : []),
         
         // Receitas - produtos
-        ...(receitas.produtos > 0 ? [{
+        ...(demonstrativoPeriodo.receitas.produtos > 0 ? [{
           id: 'receita-produtos',
           item_id: 'receita-produtos',
-          valor: receitas.produtos,
-          data_vencimento: periodo.inicio,
+          valor: demonstrativoPeriodo.receitas.produtos,
+          data_vencimento: startDate,
           status: 'Pago' as const,
           parcelaInfo: null,
           parcelas: null,
@@ -102,11 +119,11 @@ export default function DemonstrativoSimplificado({
         }] : []),
         
         // Receitas não operacionais
-        ...(receitas.naoOperacionais > 0 ? [{
+        ...(demonstrativoPeriodo.receitas.naoOperacionais > 0 ? [{
           id: 'receita-nao-operacional',
           item_id: 'receita-nao-operacional',
-          valor: receitas.naoOperacionais,
-          data_vencimento: periodo.inicio,
+          valor: demonstrativoPeriodo.receitas.naoOperacionais,
+          data_vencimento: startDate,
           status: 'Pago' as const,
           parcelaInfo: null,
           parcelas: null,
@@ -124,12 +141,12 @@ export default function DemonstrativoSimplificado({
         }] : []),
         
         // Despesas por categoria
-        ...despesas.categorias.flatMap(categoria =>
+        ...demonstrativoPeriodo.despesas.categorias.flatMap(categoria =>
           categoria.itens.map(item => ({
             id: `despesa-${categoria.grupo}-${item.nome}`,
             item_id: `despesa-${categoria.grupo}-${item.nome}`,
             valor: item.valor,
-            data_vencimento: periodo.inicio,
+            data_vencimento: startDate,
             status: 'Pago' as const,
             parcelaInfo: null,
             parcelas: null,
@@ -152,11 +169,17 @@ export default function DemonstrativoSimplificado({
         profile,
         branding,
         transactions: transacoesDetalhadas,
-        period: { month, year, isAnnual: false },
+        period: { 
+          month, 
+          year, 
+          isAnnual: false,
+          startDate,
+          endDate
+        },
         summary: {
-          totalReceitas: receitas.totalReceitas,
-          totalDespesas: despesas.totalDespesas,
-          saldoFinal: resumoFinal.resultadoLiquido,
+          totalReceitas: demonstrativoPeriodo.receitas.totalReceitas,
+          totalDespesas: demonstrativoPeriodo.despesas.totalDespesas,
+          saldoFinal: demonstrativoPeriodo.resumoFinal.resultadoLiquido,
           transacoesPagas: transacoesDetalhadas.length,
           transacoesFaturadas: 0,
           transacoesAgendadas: 0
@@ -170,12 +193,11 @@ export default function DemonstrativoSimplificado({
         includeGraphics: false
       });
 
-      toast.success('PDF gerado com sucesso!');
+      const periodText = `${new Date(startDate).toLocaleDateString('pt-BR')} a ${new Date(endDate).toLocaleDateString('pt-BR')}`;
+      toast.success(`PDF do demonstrativo gerado com sucesso para o período ${periodText}!`);
     } catch (error) {
       console.error('Erro ao gerar PDF:', error);
       toast.error('Erro ao gerar o PDF. Tente novamente.');
-    } finally {
-      setIsGenerating(false);
     }
   };
 
@@ -325,21 +347,11 @@ export default function DemonstrativoSimplificado({
         </div>
         
         <Button 
-          onClick={handleExportarPDF} 
-          disabled={isGenerating}
+          onClick={handleExportRequest}
           className="flex items-center space-x-2"
         >
-          {isGenerating ? (
-            <>
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              <span>Gerando...</span>
-            </>
-          ) : (
-            <>
-              <Download className="h-4 w-4" />
-              <span>Exportar PDF</span>
-            </>
-          )}
+          <Download className="h-4 w-4" />
+          <span>Exportar PDF</span>
         </Button>
       </div>
 
@@ -351,6 +363,16 @@ export default function DemonstrativoSimplificado({
 
       {/* Resumo final */}
       {renderResumoFinal()}
+
+      {/* Modal de seleção de período */}
+      <PeriodSelectionModal
+        isOpen={showPeriodModal}
+        onClose={() => setShowPeriodModal(false)}
+        onExport={handleExportWithPeriod}
+        dadosExtrato={prepararDadosExportacao()}
+        title="Exportar Demonstrativo"
+        description="Selecione o período que deseja incluir no demonstrativo"
+      />
 
       {/* Modal de redirecionamento para perfil */}
       <Dialog open={showProfileModal} onOpenChange={setShowProfileModal}>

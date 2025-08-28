@@ -13,6 +13,8 @@ export interface FinancialExportData {
     month: number;
     year: number;
     isAnnual?: boolean;
+    startDate?: string;
+    endDate?: string;
   };
   summary: {
     totalReceitas: number;
@@ -278,7 +280,9 @@ const getMonthlyHTML = (data: FinancialExportData): string => {
 
       <div class="report-title">
         <h1>Extrato Financeiro</h1>
-        <p>${monthName} de ${period.year}</p>
+        <p>${period.startDate && period.endDate ? 
+          `${new Date(period.startDate).toLocaleDateString('pt-BR')} a ${new Date(period.endDate).toLocaleDateString('pt-BR')}` : 
+          `${monthName} de ${period.year}`}</p>
         <p style="font-size: 0.9em; color: #888;">Gerado em ${formatDateForDisplay(new Date().toISOString())}</p>
       </div>
 

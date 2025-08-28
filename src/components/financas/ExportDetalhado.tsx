@@ -8,6 +8,7 @@ import { useUserProfile, useUserBranding } from '@/hooks/useUserProfile';
 import { generateFinancialPDF, FinancialExportData } from '@/utils/financialPdfUtils';
 import { DadosExportacaoExtrato } from '@/types/extrato';
 import { TransacaoComItem } from '@/types/financas';
+import PeriodSelectionModal from './PeriodSelectionModal';
 
 interface ExportDetalhadoProps {
   dados: DadosExportacaoExtrato;
@@ -18,30 +19,46 @@ export default function ExportDetalhado({ dados }: ExportDetalhadoProps) {
   const { getBrandingOrDefault } = useUserBranding();
   const navigate = useNavigate();
   const [showProfileModal, setShowProfileModal] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [showPeriodModal, setShowPeriodModal] = useState(false);
 
   const validateProfileData = () => {
     const profile = getProfileOrDefault();
     return !!(profile.nomeEmpresa || profile.nomeCompleto);
   };
 
-  const handleExportarPDF = async () => {
+  const handleExportRequest = () => {
     if (!validateProfileData()) {
       setShowProfileModal(true);
       return;
     }
+    setShowPeriodModal(true);
+  };
 
-    setIsGenerating(true);
+  const handleExportWithPeriod = async ({ startDate, endDate, format }: {
+    startDate: string;
+    endDate: string;
+    format: 'csv' | 'pdf';
+  }) => {
     try {
+      // Filter data by selected period
+      const filteredLinhas = dados.linhas.filter(linha => 
+        linha.data >= startDate && linha.data <= endDate
+      );
+
+      if (format === 'csv') {
+        handleExportarCSV(filteredLinhas, startDate, endDate);
+        return;
+      }
+
       const profile = getProfileOrDefault();
       const branding = getBrandingOrDefault();
       
-      const startDate = new Date(dados.periodo.inicio);
-      const month = startDate.getMonth() + 1;
-      const year = startDate.getFullYear();
+      const startDateObj = new Date(startDate);
+      const month = startDateObj.getMonth() + 1;
+      const year = startDateObj.getFullYear();
 
       // Converter linhas do extrato para formato de transações
-      const transactions: TransacaoComItem[] = dados.linhas.map(linha => ({
+      const transactions: TransacaoComItem[] = filteredLinhas.map(linha => ({
         id: linha.id,
         item_id: linha.referenciaId,
         valor: linha.valor,
@@ -62,19 +79,29 @@ export default function ExportDetalhado({ dados }: ExportDetalhadoProps) {
         }
       } as TransacaoComItem));
 
+      // Recalculate summary for filtered data
+      const filteredSummary = {
+        totalReceitas: filteredLinhas.filter(l => l.tipo === 'entrada').reduce((sum, l) => sum + l.valor, 0),
+        totalDespesas: filteredLinhas.filter(l => l.tipo === 'saida').reduce((sum, l) => sum + l.valor, 0),
+        saldoFinal: 0,
+        transacoesPagas: filteredLinhas.filter(l => l.status === 'Pago').length,
+        transacoesFaturadas: filteredLinhas.filter(l => l.status === 'Faturado').length,
+        transacoesAgendadas: filteredLinhas.filter(l => l.status === 'Agendado').length
+      };
+      filteredSummary.saldoFinal = filteredSummary.totalReceitas - filteredSummary.totalDespesas;
+
       const exportData: FinancialExportData = {
         profile,
         branding,
         transactions,
-        period: { month, year, isAnnual: false },
-        summary: {
-          totalReceitas: dados.resumo.totalEntradas,
-          totalDespesas: dados.resumo.totalSaidas,
-          saldoFinal: dados.resumo.saldoPeriodo,
-          transacoesPagas: dados.linhas.filter(l => l.status === 'Pago').length,
-          transacoesFaturadas: dados.linhas.filter(l => l.status === 'Faturado').length,
-          transacoesAgendadas: dados.linhas.filter(l => l.status === 'Agendado').length
-        }
+        period: { 
+          month, 
+          year, 
+          isAnnual: false,
+          startDate,
+          endDate
+        },
+        summary: filteredSummary
       };
 
       await generateFinancialPDF(exportData, {
@@ -84,19 +111,18 @@ export default function ExportDetalhado({ dados }: ExportDetalhadoProps) {
         includeGraphics: false
       });
 
-      toast.success('PDF gerado com sucesso!');
+      const periodText = `${new Date(startDate).toLocaleDateString('pt-BR')} a ${new Date(endDate).toLocaleDateString('pt-BR')}`;
+      toast.success(`PDF gerado com sucesso para o período ${periodText}!`);
     } catch (error) {
       console.error('Erro ao gerar PDF:', error);
       toast.error('Erro ao gerar o PDF. Tente novamente.');
-    } finally {
-      setIsGenerating(false);
     }
   };
 
-  const handleExportarCSV = () => {
+  const handleExportarCSV = (linhas: typeof dados.linhas, startDate: string, endDate: string) => {
     const csvContent = [
       ['Data', 'Tipo', 'Descrição', 'Origem', 'Categoria/Cliente', 'Parcela', 'Valor', 'Status'].join(';'),
-      ...dados.linhas.map(linha => [
+      ...linhas.map(linha => [
         new Date(linha.data).toLocaleDateString('pt-BR'),
         linha.tipo === 'entrada' ? 'Entrada' : 'Saída',
         linha.descricao,
@@ -112,13 +138,14 @@ export default function ExportDetalhado({ dados }: ExportDetalhadoProps) {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `extrato_${dados.periodo.inicio}_${dados.periodo.fim}.csv`);
+    link.setAttribute('download', `extrato_${startDate}_${endDate}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     
-    toast.success('CSV exportado com sucesso!');
+    const periodText = `${new Date(startDate).toLocaleDateString('pt-BR')} a ${new Date(endDate).toLocaleDateString('pt-BR')}`;
+    toast.success(`CSV exportado com sucesso para o período ${periodText}!`);
   };
 
   const handleGoToProfile = () => {
@@ -132,31 +159,22 @@ export default function ExportDetalhado({ dados }: ExportDetalhadoProps) {
         <Button 
           variant="outline" 
           size="sm" 
-          onClick={handleExportarCSV}
+          onClick={handleExportRequest}
         >
-          <List className="h-4 w-4 mr-2" />
-          CSV
-        </Button>
-        
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={handleExportarPDF}
-          disabled={isGenerating}
-        >
-          {isGenerating ? (
-            <>
-              <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
-              Gerando...
-            </>
-          ) : (
-            <>
-              <FileText className="h-4 w-4 mr-2" />
-              PDF
-            </>
-          )}
+          <Download className="h-4 w-4 mr-2" />
+          Exportar
         </Button>
       </div>
+
+      {/* Modal de seleção de período */}
+      <PeriodSelectionModal
+        isOpen={showPeriodModal}
+        onClose={() => setShowPeriodModal(false)}
+        onExport={handleExportWithPeriod}
+        dadosExtrato={dados}
+        title="Exportar Vista Detalhada"
+        description="Selecione o período que deseja exportar"
+      />
 
       {/* Modal de redirecionamento para perfil */}
       <Dialog open={showProfileModal} onOpenChange={setShowProfileModal}>

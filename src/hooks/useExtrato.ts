@@ -498,11 +498,112 @@ export function useExtrato() {
     };
   }, [pagamentosWorkflow, transacoesFinanceiras, itensFinanceiros, filtros]);
 
+  const demonstrativo = calcularDemonstrativoSimplificado();
+
+  // ============= NOVO MÉTODO: CALCULAR DEMONSTRATIVO PARA PERÍODO ESPECÍFICO =============
+  
+  const calcularDemonstrativoParaPeriodo = useCallback((dataInicio: string, dataFim: string): DemonstrativoSimplificado => {
+    // Filtrar pagamentos do workflow para o período
+    const pagamentosPeriodo = pagamentosWorkflow.filter(p => {
+      const data = p.dataVencimento || p.data;
+      return data >= dataInicio && data <= dataFim && 
+             (p.statusPagamento === 'pago' || p.data);
+    });
+
+    // Filtrar transações financeiras para o período
+    const transacoesPeriodo = transacoesFinanceiras.filter(t => {
+      return t.dataVencimento >= dataInicio && 
+             t.dataVencimento <= dataFim &&
+             t.status === 'Pago';
+    });
+
+    // 1. CALCULAR RECEITAS
+    const receitaSessoes = pagamentosPeriodo.reduce((sum, p) => {
+      const valorSessao = p.valor - (p.valorProdutoExtra || 0);
+      return sum + Math.max(0, valorSessao);
+    }, 0);
+
+    const receitaProdutos = pagamentosPeriodo.reduce((sum, p) => sum + (p.valorProdutoExtra || 0), 0);
+
+    const receitaNaoOperacional = transacoesPeriodo
+      .filter(t => {
+        const item = itensFinanceiros.find(i => i.id === t.itemId);
+        return item?.grupo_principal === 'Receita Não Operacional';
+      })
+      .reduce((sum, t) => sum + t.valor, 0);
+
+    const totalReceitas = receitaSessoes + receitaProdutos + receitaNaoOperacional;
+
+    // 2. CALCULAR DESPESAS POR CATEGORIA
+    const categorias: Array<{
+      grupo: string;
+      itens: Array<{ nome: string; valor: number; }>;
+      total: number;
+    }> = [];
+
+    const gruposDespesas = ['Despesa Fixa', 'Despesa Variável', 'Investimento'];
+    
+    gruposDespesas.forEach(grupo => {
+      const transacoesGrupo = transacoesPeriodo.filter(t => {
+        const item = itensFinanceiros.find(i => i.id === t.itemId);
+        return item?.grupo_principal === grupo;
+      });
+
+      if (transacoesGrupo.length > 0) {
+        const itensPorNome: Record<string, number> = {};
+        
+        transacoesGrupo.forEach(t => {
+          const item = itensFinanceiros.find(i => i.id === t.itemId);
+          const nome = item?.nome || 'Item removido';
+          itensPorNome[nome] = (itensPorNome[nome] || 0) + t.valor;
+        });
+
+        const itens = Object.entries(itensPorNome).map(([nome, valor]) => ({
+          nome,
+          valor
+        }));
+
+        const total = itens.reduce((sum, item) => sum + item.valor, 0);
+
+        categorias.push({
+          grupo,
+          itens,
+          total
+        });
+      }
+    });
+
+    const totalDespesas = categorias.reduce((sum, cat) => sum + cat.total, 0);
+
+    // 3. CALCULAR RESUMO FINAL
+    const resultadoLiquido = totalReceitas - totalDespesas;
+    const margemLiquida = totalReceitas > 0 ? (resultadoLiquido / totalReceitas) * 100 : 0;
+
+    return {
+      receitas: {
+        sessoes: receitaSessoes,
+        produtos: receitaProdutos,
+        naoOperacionais: receitaNaoOperacional,
+        totalReceitas
+      },
+      despesas: {
+        categorias,
+        totalDespesas
+      },
+      resumoFinal: {
+        receitaTotal: totalReceitas,
+        despesaTotal: totalDespesas,
+        resultadoLiquido,
+        margemLiquida
+      }
+    };
+  }, [pagamentosWorkflow, transacoesFinanceiras, itensFinanceiros]);
+
   return {
     // Dados
     linhas: linhasComSaldo,
     resumo,
-    demonstrativo: calcularDemonstrativoSimplificado(),
+    demonstrativo,
     
     // Estados
     filtros,
@@ -514,6 +615,7 @@ export function useExtrato() {
     alternarModoData,
     limparFiltros,
     abrirOrigem,
-    prepararDadosExportacao
+    prepararDadosExportacao,
+    calcularDemonstrativoParaPeriodo
   };
 }
