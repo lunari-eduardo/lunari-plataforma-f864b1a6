@@ -46,6 +46,9 @@ export interface DREConfig {
   mapeamentoItens: { [itemIdOuGrupo: string]: DREGroupKey }; // exceções
   opexPessoalCargaEncargos: number; // % adicional sobre salários para encargos
   
+  // Depreciação automática de equipamentos
+  usarDepreciacaoEquipamentos: boolean; // Calcular depreciação automaticamente dos equipamentos
+  
   // MEI específico
   valorDasMensal: number; // Valor fixo mensal da DAS
   temFuncionarios: boolean; // Se tem funcionários com carteira assinada
@@ -107,6 +110,7 @@ export const DRE_CONFIG_FOTOGRAFOS: Partial<DREConfig> = {
   proLaboreComoOpex: false, // Não incluir no EBITDA por padrão
   pddPercentual: 1.0, // 1% sobre receitas
   depreciacaoMesesDefault: 24, // 2 anos para equipamentos
+  usarDepreciacaoEquipamentos: true, // Usar depreciação automática por padrão
   opexPessoalCargaEncargos: 35.0, // 35% de encargos sobre salários
   valorDasMensal: 0, // Não aplicável para Simples
   temFuncionarios: false,
@@ -150,6 +154,7 @@ export const DRE_CONFIG_MEI: Partial<DREConfig> = {
   proLaboreComoOpex: false, // MEI não tem pró-labore formal
   pddPercentual: 0.5, // Reduzido para MEI
   depreciacaoMesesDefault: 24,
+  usarDepreciacaoEquipamentos: true, // Usar depreciação automática por padrão
   opexPessoalCargaEncargos: 35.0, // Só se tiver funcionários
   valorDasMensal: 75, // Valor médio DAS MEI 2024
   temFuncionarios: false,
