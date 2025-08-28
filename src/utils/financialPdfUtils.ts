@@ -89,36 +89,183 @@ const getMonthlyHTML = (data: FinancialExportData): string => {
       <meta charset="UTF-8">
       <title>Extrato Financeiro - ${monthName}/${period.year}</title>
       <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; color: #333; background: #fff; }
-        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid hsl(var(--primary)); padding-bottom: 20px; margin-bottom: 30px; }
+        body { 
+          font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+          margin: 0; 
+          padding: 24px; 
+          color: #1a1a1a; 
+          background: #ffffff; 
+          line-height: 1.5;
+          font-size: 14px;
+        }
+        .header { 
+          display: flex; 
+          justify-content: space-between; 
+          align-items: center; 
+          border-bottom: 3px solid #2563eb; 
+          padding-bottom: 24px; 
+          margin-bottom: 36px; 
+          background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+          padding: 24px;
+          border-radius: 12px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
         .company-info { flex: 1; }
-        .company-name { font-size: 1.8em; font-weight: bold; color: hsl(var(--primary)); margin: 0 0 5px 0; }
-        .company-doc, .company-address, .company-email { margin: 2px 0; color: #666; font-size: 0.9em; }
-        .logo-container { flex: 0 0 auto; margin-left: 20px; }
-        .report-title { text-align: center; margin: 30px 0; }
-        .report-title h1 { font-size: 2em; color: hsl(var(--primary)); margin: 0; }
-        .report-title p { font-size: 1.1em; color: #666; margin: 5px 0; }
-        .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 30px 0; }
-        .summary-card { background: hsl(var(--card)); border: 1px solid hsl(var(--border)); border-radius: 8px; padding: 20px; text-align: center; }
-        .summary-card h3 { font-size: 0.9em; color: #666; margin: 0 0 10px 0; text-transform: uppercase; }
-        .summary-card .value { font-size: 1.5em; font-weight: bold; margin: 0; }
-        .summary-card.positive .value { color: #16a34a; }
+        .company-name { 
+          font-size: 2.2em; 
+          font-weight: 700; 
+          color: #1e40af; 
+          margin: 0 0 8px 0; 
+          letter-spacing: -0.025em;
+        }
+        .company-doc, .company-address, .company-email { 
+          margin: 4px 0; 
+          color: #64748b; 
+          font-size: 0.95em; 
+          font-weight: 500;
+        }
+        .logo-container { flex: 0 0 auto; margin-left: 24px; }
+        .report-title { 
+          text-align: center; 
+          margin: 36px 0; 
+          padding: 24px;
+          background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+          border-radius: 16px;
+          border: 1px solid #bfdbfe;
+        }
+        .report-title h1 { 
+          font-size: 2.4em; 
+          color: #1e40af; 
+          margin: 0; 
+          font-weight: 800;
+          letter-spacing: -0.025em;
+        }
+        .report-title p { 
+          font-size: 1.2em; 
+          color: #475569; 
+          margin: 8px 0; 
+          font-weight: 600;
+        }
+        .summary-cards { 
+          display: grid; 
+          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); 
+          gap: 24px; 
+          margin: 36px 0; 
+        }
+        .summary-card { 
+          background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); 
+          border: 2px solid #e2e8f0; 
+          border-radius: 16px; 
+          padding: 24px; 
+          text-align: center; 
+          box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+          transition: all 0.2s ease;
+        }
+        .summary-card h3 { 
+          font-size: 0.85em; 
+          color: #64748b; 
+          margin: 0 0 12px 0; 
+          text-transform: uppercase; 
+          font-weight: 700;
+          letter-spacing: 0.05em;
+        }
+        .summary-card .value { 
+          font-size: 1.8em; 
+          font-weight: 800; 
+          margin: 0; 
+          letter-spacing: -0.025em;
+        }
+        .summary-card.positive .value { color: #059669; }
         .summary-card.negative .value { color: #dc2626; }
-        .summary-card.neutral .value { color: hsl(var(--primary)); }
-        .section { margin: 40px 0; }
-        .section h2 { font-size: 1.4em; color: hsl(var(--primary)); border-bottom: 1px solid hsl(var(--border)); padding-bottom: 10px; margin-bottom: 20px; }
-        .transactions-table { width: 100%; border-collapse: collapse; margin: 15px 0; }
-        .transactions-table th, .transactions-table td { border: 1px solid hsl(var(--border)); padding: 12px 8px; text-align: left; font-size: 0.9em; }
-        .transactions-table th { background: hsl(var(--muted)); font-weight: 600; color: hsl(var(--muted-foreground)); }
-        .transactions-table tbody tr:nth-child(even) { background: hsl(var(--muted)/0.3); }
-        .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: 500; }
-        .status-pago { background: #dcfce7; color: #16a34a; }
-        .status-faturado { background: #fef3c7; color: #d97706; }
-        .status-agendado { background: #e0e7ff; color: #4f46e5; }
-        .group-total { font-weight: bold; background: hsl(var(--muted)); }
-        .footer { margin-top: 50px; padding-top: 20px; border-top: 1px solid hsl(var(--border)); text-align: center; color: #666; font-size: 0.8em; }
-        .no-transactions { text-align: center; color: #666; font-style: italic; padding: 20px; }
-        @media print { body { margin: 0; } .summary-cards { grid-template-columns: repeat(2, 1fr); } }
+        .summary-card.neutral .value { color: #2563eb; }
+        .section { 
+          margin: 48px 0; 
+          background: #ffffff;
+          border-radius: 12px;
+          overflow: hidden;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+          border: 1px solid #f1f5f9;
+        }
+        .section h2 { 
+          font-size: 1.5em; 
+          color: #1e40af; 
+          background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+          padding: 20px 24px; 
+          margin: 0 0 0 0; 
+          font-weight: 700;
+          border-bottom: 2px solid #e2e8f0;
+        }
+        .transactions-table { 
+          width: 100%; 
+          border-collapse: collapse; 
+          margin: 0;
+          font-size: 0.9em;
+        }
+        .transactions-table th, .transactions-table td { 
+          border-bottom: 1px solid #e2e8f0; 
+          padding: 16px 20px; 
+          text-align: left; 
+          border-left: none;
+          border-right: none;
+        }
+        .transactions-table th { 
+          background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%); 
+          font-weight: 700; 
+          color: #374151;
+          font-size: 0.85em;
+          text-transform: uppercase;
+          letter-spacing: 0.025em;
+        }
+        .transactions-table tbody tr:nth-child(even) { 
+          background: linear-gradient(135deg, #fafbfc 0%, #f8fafc 100%); 
+        }
+        .transactions-table tbody tr:hover { 
+          background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); 
+        }
+        .status-badge { 
+          padding: 6px 12px; 
+          border-radius: 8px; 
+          font-size: 0.8em; 
+          font-weight: 600; 
+          text-transform: uppercase;
+          letter-spacing: 0.025em;
+        }
+        .status-pago { background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); color: #166534; border: 1px solid #86efac; }
+        .status-faturado { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); color: #92400e; border: 1px solid #fbbf24; }
+        .status-agendado { background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%); color: #3730a3; border: 1px solid #a5b4fc; }
+        .group-total { 
+          font-weight: 700; 
+          background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%); 
+          border-top: 2px solid #cbd5e1;
+          font-size: 1.05em;
+        }
+        .footer { 
+          margin-top: 60px; 
+          padding-top: 24px; 
+          border-top: 2px solid #e2e8f0; 
+          text-align: center; 
+          color: #64748b; 
+          font-size: 0.85em; 
+          background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+          padding: 24px;
+          border-radius: 12px;
+        }
+        .no-transactions { 
+          text-align: center; 
+          color: #64748b; 
+          font-style: italic; 
+          padding: 40px; 
+          background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+          border-radius: 12px;
+          margin: 24px 0;
+        }
+        @media print { 
+          body { margin: 0; padding: 16px; } 
+          .summary-cards { grid-template-columns: repeat(2, 1fr); gap: 16px; } 
+          .section { margin: 32px 0; }
+          .header { padding: 16px; }
+          .report-title { padding: 16px; }
+        }
       </style>
     </head>
     <body>
@@ -363,19 +510,24 @@ export const generateFinancialPDF = async (data: FinancialExportData, options: E
   const filename = `${periodText}-${data.profile.nomeEmpresa || 'financeiro'}.pdf`.replace(/[^a-zA-Z0-9-_]/g, '-');
 
   const pdfOptions = {
-    margin: 10,
+    margin: 8,
     filename: filename,
-    image: { type: 'jpeg', quality: 0.98 },
+    image: { type: 'jpeg', quality: 1.0 },
     html2canvas: { 
-      scale: 2,
+      scale: 3,
       useCORS: true,
       letterRendering: true,
-      allowTaint: false
+      allowTaint: false,
+      backgroundColor: '#ffffff',
+      logging: false,
+      width: 794,
+      height: 1123
     },
     jsPDF: { 
       unit: 'mm', 
       format: 'a4', 
-      orientation: 'portrait' 
+      orientation: 'portrait',
+      compress: true
     }
   };
 

@@ -40,10 +40,6 @@ export default function ExtratoTab() {
     abrirOrigem,
     prepararDadosExportacao
   } = useExtrato();
-  const handleExportarDemonstrativo = () => {
-    // TODO: Implementar exportação do demonstrativo em PDF
-    console.log('Exportar demonstrativo:', demonstrativo);
-  };
 
   // ============= RENDERIZAÇÃO DE FILTROS SIMPLIFICADOS =============
 
@@ -238,10 +234,13 @@ export default function ExtratoTab() {
         </TabsContent>
         
         <TabsContent value="demonstrativo" className="mt-6">
-          <DemonstrativoSimplificado demonstrativo={demonstrativo} periodo={{
-          inicio: filtros.dataInicio,
-          fim: filtros.dataFim
-        }} onExportarPDF={handleExportarDemonstrativo} />
+          <DemonstrativoSimplificado 
+            demonstrativo={demonstrativo} 
+            periodo={{
+              inicio: filtros.dataInicio,
+              fim: filtros.dataFim
+            }}
+          />
         </TabsContent>
       </Tabs>
     </div>;

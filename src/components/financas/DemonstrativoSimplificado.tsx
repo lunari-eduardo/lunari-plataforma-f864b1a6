@@ -1,27 +1,95 @@
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Download, TrendingUp, TrendingDown, DollarSign, Percent } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Download, TrendingUp, TrendingDown, DollarSign, Percent, User, AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 import { formatCurrency } from '@/utils/financialUtils';
 import { DemonstrativoSimplificado as DemonstrativoType } from '@/types/extrato';
+import { useUserProfile, useUserBranding } from '@/hooks/useUserProfile';
+import { generateFinancialPDF, FinancialExportData } from '@/utils/financialPdfUtils';
+import { TransacaoComItem } from '@/types/financas';
 interface DemonstrativoSimplificadoProps {
   demonstrativo: DemonstrativoType;
   periodo: {
     inicio: string;
     fim: string;
   };
-  onExportarPDF: () => void;
+  transactions?: TransacaoComItem[];
 }
 export default function DemonstrativoSimplificado({
   demonstrativo,
   periodo,
-  onExportarPDF
+  transactions = []
 }: DemonstrativoSimplificadoProps) {
+  const { getProfileOrDefault } = useUserProfile();
+  const { getBrandingOrDefault } = useUserBranding();
+  const navigate = useNavigate();
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const {
     receitas,
     despesas,
     resumoFinal
   } = demonstrativo;
+
+  const validateProfileData = () => {
+    const profile = getProfileOrDefault();
+    return !!(profile.nomeEmpresa || profile.nomeCompleto);
+  };
+
+  const handleExportarPDF = async () => {
+    if (!validateProfileData()) {
+      setShowProfileModal(true);
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const profile = getProfileOrDefault();
+      const branding = getBrandingOrDefault();
+      
+      const startDate = new Date(periodo.inicio);
+      const month = startDate.getMonth() + 1;
+      const year = startDate.getFullYear();
+
+      const exportData: FinancialExportData = {
+        profile,
+        branding,
+        transactions,
+        period: { month, year, isAnnual: false },
+        summary: {
+          totalReceitas: receitas.totalReceitas,
+          totalDespesas: despesas.totalDespesas,
+          saldoFinal: resumoFinal.resultadoLiquido,
+          transacoesPagas: 0,
+          transacoesFaturadas: 0,
+          transacoesAgendadas: 0
+        }
+      };
+
+      await generateFinancialPDF(exportData, {
+        type: 'monthly',
+        period: { month, year },
+        includeDetails: true,
+        includeGraphics: false
+      });
+
+      toast.success('PDF gerado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao gerar PDF:', error);
+      toast.error('Erro ao gerar o PDF. Tente novamente.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleGoToProfile = () => {
+    setShowProfileModal(false);
+    navigate('/minha-conta');
+  };
   const renderSecaoReceitas = () => <Card>
       <CardHeader>
         <CardTitle className="text-lg flex items-center">
@@ -163,9 +231,22 @@ export default function DemonstrativoSimplificado({
           </p>
         </div>
         
-        <Button onClick={onExportarPDF} className="flex items-center space-x-2">
-          <Download className="h-4 w-4" />
-          <span>Exportar PDF</span>
+        <Button 
+          onClick={handleExportarPDF} 
+          disabled={isGenerating}
+          className="flex items-center space-x-2"
+        >
+          {isGenerating ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <span>Gerando...</span>
+            </>
+          ) : (
+            <>
+              <Download className="h-4 w-4" />
+              <span>Exportar PDF</span>
+            </>
+          )}
         </Button>
       </div>
 
@@ -177,5 +258,48 @@ export default function DemonstrativoSimplificado({
 
       {/* Resumo final */}
       {renderResumoFinal()}
+
+      {/* Modal de redirecionamento para perfil */}
+      <Dialog open={showProfileModal} onOpenChange={setShowProfileModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-amber-500" />
+              Dados da Empresa Necessários
+            </DialogTitle>
+            <DialogDescription>
+              Para gerar o PDF é necessário preencher as informações da empresa no seu perfil.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="bg-muted/50 p-4 rounded-lg">
+              <h4 className="font-medium text-sm mb-2">Dados obrigatórios:</h4>
+              <ul className="text-sm text-muted-foreground space-y-1">
+                <li>• Nome da empresa ou nome completo</li>
+                <li>• CNPJ ou CPF (opcional mas recomendado)</li>
+                <li>• Endereço comercial (opcional)</li>
+              </ul>
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => setShowProfileModal(false)}
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleGoToProfile}
+                className="flex-1 gap-2"
+              >
+                <User className="w-4 h-4" />
+                Ir para Minha Conta
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>;
 }
