@@ -17,18 +17,18 @@ import { useToast } from '@/hooks/use-toast';
 interface EstruturaCustosFixosProps {
   onTotalChange: (total: number) => void;
 }
-
 export function EstruturaCustosFixos({
   onTotalChange
 }: EstruturaCustosFixosProps) {
-  const { toast } = useToast();
-  
+  const {
+    toast
+  } = useToast();
   const [gastosPessoais, setGastosPessoais] = useState<GastoItem[]>([]);
   const [percentualProLabore, setPercentualProLabore] = useState(30);
   const [custosEstudio, setCustosEstudio] = useState<GastoItem[]>([]);
   const [equipamentos, setEquipamentos] = useState<Equipamento[]>([]);
   const [statusSalvamento, setStatusSalvamento] = useState<StatusSalvamento>('nao_salvo');
-  
+
   // Estados para sincronização com finanças
   const [syncDialogOpen, setSyncDialogOpen] = useState(false);
   const [syncPreview, setSyncPreview] = useState<SyncPreview[]>([]);
@@ -56,12 +56,10 @@ export function EstruturaCustosFixos({
     try {
       setStatusSalvamento('salvando');
       const dados = EstruturaCustosService.carregar();
-      
       setGastosPessoais(dados.gastosPessoais);
       setPercentualProLabore(dados.percentualProLabore);
       setCustosEstudio(dados.custosEstudio);
       setEquipamentos(dados.equipamentos);
-      
       setStatusSalvamento('salvo');
       IndicadoresService.atualizarIndicador('estrutura_custos', 'salvo', 'Dados carregados');
     } catch (error) {
@@ -88,7 +86,6 @@ export function EstruturaCustosFixos({
     const timeoutId = setTimeout(() => {
       try {
         setStatusSalvamento('salvando');
-        
         const dadosParaSalvar = {
           gastosPessoais,
           percentualProLabore,
@@ -96,9 +93,7 @@ export function EstruturaCustosFixos({
           equipamentos,
           totalCalculado: totalPrincipal
         };
-        
         const sucesso = EstruturaCustosService.salvar(dadosParaSalvar);
-        
         if (sucesso) {
           setStatusSalvamento('salvo');
           IndicadoresService.atualizarIndicador('estrutura_custos', 'salvo', 'Salvo automaticamente');
@@ -112,7 +107,7 @@ export function EstruturaCustosFixos({
         IndicadoresService.atualizarIndicador('estrutura_custos', 'erro', 'Erro no salvamento automático');
       }
     }, 1000); // Debounce de 1 segundo
-    
+
     return () => clearTimeout(timeoutId);
   }, [gastosPessoais, percentualProLabore, custosEstudio, equipamentos, totalPrincipal]);
 
@@ -225,7 +220,6 @@ export function EstruturaCustosFixos({
   const salvarManualmente = () => {
     try {
       setStatusSalvamento('salvando');
-      
       const dadosParaSalvar = {
         gastosPessoais,
         percentualProLabore,
@@ -233,15 +227,13 @@ export function EstruturaCustosFixos({
         equipamentos,
         totalCalculado: totalPrincipal
       };
-      
+
       // Validar antes de salvar
       const erros = EstruturaCustosService.validar(dadosParaSalvar);
       if (erros.length > 0) {
         console.warn('Dados com avisos:', erros);
       }
-      
       const sucesso = EstruturaCustosService.salvar(dadosParaSalvar);
-      
       if (sucesso) {
         setStatusSalvamento('salvo');
         IndicadoresService.atualizarIndicador('estrutura_custos', 'salvo', 'Salvo manualmente');
@@ -265,18 +257,17 @@ export function EstruturaCustosFixos({
         totalCalculado: totalPrincipal,
         dataExport: new Date().toISOString()
       };
-      
       const dataStr = JSON.stringify(dados, null, 2);
-      const blob = new Blob([dataStr], { type: 'application/json' });
+      const blob = new Blob([dataStr], {
+        type: 'application/json'
+      });
       const url = URL.createObjectURL(blob);
-      
       const link = document.createElement('a');
       link.href = url;
       link.download = `estrutura-custos-${new Date().toISOString().split('T')[0]}.json`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Erro ao exportar:', error);
@@ -285,7 +276,7 @@ export function EstruturaCustosFixos({
 
   // Renderizar indicador de status
   // ============= FUNÇÕES DE SINCRONIZAÇÃO =============
-  
+
   const openSyncDialog = async () => {
     setIsLoadingSync(true);
     try {
@@ -304,7 +295,6 @@ export function EstruturaCustosFixos({
       setIsLoadingSync(false);
     }
   };
-
   const executeSyncronization = async () => {
     if (selectedItems.length === 0) {
       toast({
@@ -314,11 +304,9 @@ export function EstruturaCustosFixos({
       });
       return;
     }
-
     setIsLoadingSync(true);
     try {
       const result = pricingFinancialIntegrationService.executeSyncronization(selectedItems, true);
-      
       if (result.success) {
         // Recarregar custos atualizados
         const custosAtualizados = pricingFinancialIntegrationService.getCustosEstudioFromPricing();
@@ -327,12 +315,10 @@ export function EstruturaCustosFixos({
           descricao: custo.descricao,
           valor: custo.valor
         })));
-
         toast({
           title: "Sincronização concluída",
-          description: `${result.imported} itens importados, ${result.updated} itens atualizados.`,
+          description: `${result.imported} itens importados, ${result.updated} itens atualizados.`
         });
-
         setSyncDialogOpen(false);
       } else {
         toast({
@@ -352,7 +338,6 @@ export function EstruturaCustosFixos({
       setIsLoadingSync(false);
     }
   };
-
   const renderStatusIndicator = () => {
     switch (statusSalvamento) {
       case 'salvando':
@@ -377,7 +362,6 @@ export function EstruturaCustosFixos({
         </div>;
     }
   };
-
   return <Card>
       <CardHeader>
         <div className="flex justify-between items-center">
@@ -510,17 +494,8 @@ export function EstruturaCustosFixos({
               
               <Dialog open={syncDialogOpen} onOpenChange={setSyncDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button 
-                    onClick={openSyncDialog}
-                    variant="outline" 
-                    size="sm" 
-                    disabled={isLoadingSync}
-                  >
-                    {isLoadingSync ? (
-                      <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full mr-1" />
-                    ) : (
-                      <RefreshCw className="h-3 w-3 mr-1" />
-                    )}
+                  <Button onClick={openSyncDialog} variant="outline" size="sm" disabled={isLoadingSync} className="text-orange-400 text-sm font-thin px-[4px] mx-[23px]">
+                    {isLoadingSync ? <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full mr-1" /> : <RefreshCw className="h-3 w-3 mr-1" />}
                     Sincronizar
                   </Button>
                 </DialogTrigger>
@@ -540,99 +515,69 @@ export function EstruturaCustosFixos({
                       </p>
                     </div>
 
-                    {syncPreview.length === 0 ? (
-                      <div className="text-center py-8 text-muted-foreground">
+                    {syncPreview.length === 0 ? <div className="text-center py-8 text-muted-foreground">
                         <p>Nenhuma despesa fixa encontrada no sistema financeiro.</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
+                      </div> : <div className="space-y-3">
                         <div className="flex items-center gap-2 mb-3">
-                          <Checkbox
-                            checked={selectedItems.length === syncPreview.length}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setSelectedItems(syncPreview.map(p => p.item.id));
-                              } else {
-                                setSelectedItems([]);
-                              }
-                            }}
-                          />
+                          <Checkbox checked={selectedItems.length === syncPreview.length} onCheckedChange={checked => {
+                        if (checked) {
+                          setSelectedItems(syncPreview.map(p => p.item.id));
+                        } else {
+                          setSelectedItems([]);
+                        }
+                      }} />
                           <Label className="text-sm font-medium">
                             Selecionar todos ({syncPreview.length} itens)
                           </Label>
                         </div>
 
-                        {syncPreview.map(preview => (
-                          <div key={preview.item.id} className="border rounded-lg p-3 space-y-2">
+                        {syncPreview.map(preview => <div key={preview.item.id} className="border rounded-lg p-3 space-y-2">
                             <div className="flex items-center gap-3">
-                              <Checkbox
-                                checked={selectedItems.includes(preview.item.id)}
-                                onCheckedChange={(checked) => {
-                                  if (checked) {
-                                    setSelectedItems(prev => [...prev, preview.item.id]);
-                                  } else {
-                                    setSelectedItems(prev => prev.filter(id => id !== preview.item.id));
-                                  }
-                                }}
-                              />
+                              <Checkbox checked={selectedItems.includes(preview.item.id)} onCheckedChange={checked => {
+                          if (checked) {
+                            setSelectedItems(prev => [...prev, preview.item.id]);
+                          } else {
+                            setSelectedItems(prev => prev.filter(id => id !== preview.item.id));
+                          }
+                        }} />
                               <div className="flex-1">
                                 <div className="flex items-center gap-2">
                                   <span className="font-medium">{preview.item.nome}</span>
-                                  <Badge variant={
-                                    preview.acao === 'adicionar' ? 'default' :
-                                    preview.acao === 'atualizar' ? 'secondary' : 'outline'
-                                  }>
-                                    {preview.acao === 'adicionar' ? 'Novo' :
-                                     preview.acao === 'atualizar' ? 'Atualizar' : 'Manter'}
+                                  <Badge variant={preview.acao === 'adicionar' ? 'default' : preview.acao === 'atualizar' ? 'secondary' : 'outline'}>
+                                    {preview.acao === 'adicionar' ? 'Novo' : preview.acao === 'atualizar' ? 'Atualizar' : 'Manter'}
                                   </Badge>
                                 </div>
                                 
                                 <div className="text-sm text-muted-foreground flex items-center gap-4 mt-1">
                                   <span>Valor médio (financeiro): R$ {preview.valorFinanceiro.toFixed(2)}</span>
-                                  {preview.valorPrecificacao !== undefined && (
-                                    <>
+                                  {preview.valorPrecificacao !== undefined && <>
                                       <span>•</span>
                                       <span>Atual (precificação): R$ {preview.valorPrecificacao.toFixed(2)}</span>
-                                    </>
-                                  )}
-                                  {preview.diferenca !== undefined && Math.abs(preview.diferenca) > 0.01 && (
-                                    <>
+                                    </>}
+                                  {preview.diferenca !== undefined && Math.abs(preview.diferenca) > 0.01 && <>
                                       <span>•</span>
                                       <span className={preview.diferenca > 0 ? 'text-red-600' : 'text-green-600'}>
                                         {preview.diferenca > 0 ? '+' : ''}R$ {preview.diferenca.toFixed(2)}
                                       </span>
-                                    </>
-                                  )}
+                                    </>}
                                 </div>
                                 
-                                {preview.item.transacoesCount && preview.item.transacoesCount > 0 && (
-                                  <div className="text-xs text-muted-foreground mt-1">
+                                {preview.item.transacoesCount && preview.item.transacoesCount > 0 && <div className="text-xs text-muted-foreground mt-1">
                                     Baseado em {preview.item.transacoesCount} transações dos últimos 6 meses
-                                  </div>
-                                )}
+                                  </div>}
                               </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                          </div>)}
+                      </div>}
 
                     <Separator />
 
                     <div className="flex justify-end gap-2">
-                      <Button 
-                        variant="outline" 
-                        onClick={() => setSyncDialogOpen(false)}
-                      >
+                      <Button variant="outline" onClick={() => setSyncDialogOpen(false)}>
                         Cancelar
                       </Button>
-                      <Button 
-                        onClick={executeSyncronization}
-                        disabled={selectedItems.length === 0 || isLoadingSync}
-                      >
-                        {isLoadingSync ? (
-                          <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full mr-2" />
-                        ) : null}
+                      <Button onClick={executeSyncronization} disabled={selectedItems.length === 0 || isLoadingSync}>
+                        {isLoadingSync ? <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full mr-2" /> : null}
                         Sincronizar ({selectedItems.length})
                       </Button>
                     </div>
@@ -640,7 +585,7 @@ export function EstruturaCustosFixos({
                 </DialogContent>
               </Dialog>
 
-              <span className="text-sm text-green-600 font-medium">
+              <span className="text-green-600 font-medium text-xs">
                 Total: R$ {totalCustosEstudio.toFixed(2)}
               </span>
             </div>
