@@ -30,50 +30,21 @@ export function useEquipmentSync() {
           novosEquipamentos.forEach(({ transacao, valor, data, observacoes }) => {
             const nomeEquipamento = observacoes?.trim() || `Equipamento R$ ${valor.toFixed(2)}`;
             
-            // Auto-criar equipamento com vida útil padrão de 5 anos
-            const resultado = pricingFinancialIntegrationService.createEquipmentFromTransaction(
-              transacao.id,
-              {
-                nome: nomeEquipamento,
-                vidaUtil: 5 // Padrão: 5 anos
-              }
-            );
-            
-            if (resultado.success) {
-              console.log('🔧 [EquipmentSync] Equipamento criado automaticamente:', resultado.equipamentoId);
-              
-              // Disparar evento de sucesso
-              const successEvent = new CustomEvent(EQUIPMENT_CREATED_EVENT, {
-                detail: {
-                  transacaoId: transacao.id,
-                  equipamentoId: resultado.equipamentoId,
-                  nome: nomeEquipamento,
-                  valor,
-                  data,
-                  vidaUtil: 5,
-                  depreciacaoMensal: valor / (5 * 12)
-                }
-              });
-              
-              window.dispatchEvent(successEvent);
-            } else {
-              console.warn('🔧 [EquipmentSync] Falha ao criar equipamento:', resultado.error);
-              
-              // Se falhou, ainda assim notificar para que usuário possa tentar manualmente
-              const candidate: EquipmentCandidate = {
-                transacaoId: transacao.id,
-                nome: nomeEquipamento,
-                valor,
-                data,
-                observacoes
-              };
+            // Emitir evento para notificação manual (sem auto-criar)
+            const candidate: EquipmentCandidate = {
+              transacaoId: transacao.id,
+              nome: nomeEquipamento,
+              valor,
+              data,
+              observacoes
+            };
 
-              const event = new CustomEvent(EQUIPMENT_SYNC_EVENT, {
-                detail: candidate
-              });
-              
-              window.dispatchEvent(event);
-            }
+            const event = new CustomEvent(EQUIPMENT_SYNC_EVENT, {
+              detail: candidate
+            });
+            
+            window.dispatchEvent(event);
+            console.log('🔧 [EquipmentSync] Candidato a equipamento emitido para configuração manual:', candidate);
           });
         }
       } catch (error) {

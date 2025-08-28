@@ -128,7 +128,7 @@ export function useNovoFinancas() {
           const forceScanEvent = new CustomEvent('equipment-sync:force-scan');
           window.dispatchEvent(forceScanEvent);
           console.log('🔧 [EquipmentSync] Force scan disparado após criação de transações recorrentes');
-        }, 100);
+        }, 500);
       
     } catch (error) {
       console.error('Erro ao criar transações recorrentes:', error);
@@ -198,7 +198,7 @@ export function useNovoFinancas() {
           const forceScanEvent = new CustomEvent('equipment-sync:force-scan');
           window.dispatchEvent(forceScanEvent);
           console.log('🔧 [EquipmentSync] Force scan disparado após criação de transações parceladas');
-        }, 100);
+        }, 500);
         
         return;
       }
@@ -220,12 +220,12 @@ export function useNovoFinancas() {
       console.log('Transação única criada com sucesso:', novaTransacao);
 
       // ============= FORCE SCAN PARA EQUIPAMENTOS =============
-      // Disparar force-scan imediatamente após qualquer transação para detectar equipamentos
+      // Disparar force-scan após transação para detectar equipamentos
       setTimeout(() => {
         const forceScanEvent = new CustomEvent('equipment-sync:force-scan');
         window.dispatchEvent(forceScanEvent);
         console.log('🔧 [EquipmentSync] Force scan disparado após criação de transação');
-      }, 100); // Delay mínimo para garantir persistência
+      }, 500); // Delay aumentado para garantir persistência
       
     } catch (error) {
       console.error('Erro ao criar transação:', error);

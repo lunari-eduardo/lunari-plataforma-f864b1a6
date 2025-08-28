@@ -100,6 +100,21 @@ export function EquipmentSyncNotification() {
     if (selectedEquipment) {
       // Remover da fila após sucesso
       setQueuedEquipments(prev => prev.filter(eq => eq.id !== selectedEquipment.id));
+      
+      // Adicionar na lista de criados para mostrar toast de sucesso
+      const createdEquipment: CreatedEquipment = {
+        id: `created_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        transacaoId: selectedEquipment.transacaoId,
+        equipamentoId: `eq_${Date.now()}`,
+        nome: selectedEquipment.nome,
+        valor: selectedEquipment.valor,
+        data: selectedEquipment.data,
+        vidaUtil: 5, // Valor padrão
+        depreciacaoMensal: selectedEquipment.valor / (5 * 12),
+        timestamp: Date.now()
+      };
+      
+      setCreatedEquipments(prev => [createdEquipment, ...prev]);
       setSelectedEquipment(null);
     }
     setShowModal(false);
@@ -229,8 +244,10 @@ export function EquipmentSyncNotification() {
         ))}
         
         {queuedEquipments.length > 3 && (
-          <Card className="p-2 text-center text-xs text-muted-foreground bg-card">
-            +{queuedEquipments.length - 3} equipamentos na fila
+          <Card className="p-3 text-center text-xs text-muted-foreground bg-muted/50 border-dashed">
+            <Wrench className="h-4 w-4 mx-auto mb-1 opacity-60" />
+            <div>+{queuedEquipments.length - 3} equipamentos na fila</div>
+            <div className="text-[10px] mt-1">Clique em "Configurar" nos itens acima</div>
           </Card>
         )}
       </div>

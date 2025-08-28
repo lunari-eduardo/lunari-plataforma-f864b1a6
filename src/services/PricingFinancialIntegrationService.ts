@@ -451,52 +451,76 @@ class PricingFinancialIntegrationService {
     data: string;
     observacoes?: string;
   }[] {
+    // Garantir que o item "Equipamentos" existe antes de detectar
+    this.ensureEquipamentosItemExists();
+    
     const transacoes = RecurringBlueprintEngine.loadTransactions();
     const itensFinanceiros = storage.load(this.STORAGE_KEYS.FINANCIAL_ITEMS, []);
     const equipamentosExistentes = this.getEquipmentFromPricing();
     const processedIds = this.getProcessedEquipmentTransactionIds();
 
     console.log('🔧 [DetectEquipment] Total transações:', transacoes.length);
+    console.log('🔧 [DetectEquipment] Equipamentos existentes:', equipamentosExistentes.length);
     console.log('🔧 [DetectEquipment] Processed IDs:', processedIds);
 
     // Encontrar item "Equipamentos" no grupo "Investimento"
-    const itemEquipamentos = itensFinanceiros.find((item: ItemFinanceiro) => 
+    let itemEquipamentos = itensFinanceiros.find((item: ItemFinanceiro) => 
       item.nome === 'Equipamentos' && item.grupo_principal === 'Investimento'
     );
 
     if (!itemEquipamentos) {
-      console.log('🔧 [DetectEquipment] Item "Equipamentos" não encontrado');
-      return [];
+      console.log('🔧 [DetectEquipment] Item "Equipamentos" não encontrado, criando automaticamente...');
+      this.ensureEquipamentosItemExists();
+      
+      // Recarregar itens após criação
+      const itensAtualizados = storage.load(this.STORAGE_KEYS.FINANCIAL_ITEMS, []);
+      itemEquipamentos = itensAtualizados.find((item: ItemFinanceiro) => 
+        item.nome === 'Equipamentos' && item.grupo_principal === 'Investimento'
+      );
+      
+      if (!itemEquipamentos) {
+        console.error('🔧 [DetectEquipment] Falha ao criar/encontrar item "Equipamentos"');
+        return [];
+      }
     }
 
-    console.log('🔧 [DetectEquipment] Item Equipamentos ID:', itemEquipamentos.id);
+    console.log('🔧 [DetectEquipment] Item Equipamentos encontrado - ID:', itemEquipamentos.id, 'Nome:', itemEquipamentos.nome);
 
     // Filtrar transações de equipamentos não processadas
     const transacoesEquipamentos = transacoes.filter((t: any) => {
-      // Deve ser do item "Equipamentos"
-      if (t.itemId !== itemEquipamentos.id) return false;
+      const isEquipamento = t.itemId === itemEquipamentos.id;
+      const isNotProcessed = !processedIds.includes(t.id);
       
-      // Não deve estar processada
-      if (processedIds.includes(t.id)) return false;
-      
-      // Não deve já existir equipamento com mesmo valor e data
+      // Verificar se já existe equipamento com mesmo valor e data
       const jaExiste = equipamentosExistentes.some(eq => 
         Math.abs(eq.valorPago - t.valor) < 0.01 && 
         eq.dataCompra === t.dataVencimento
       );
       
-      return !jaExiste;
+      console.log(`🔧 [DetectEquipment] Transação ${t.id}:`, {
+        itemId: t.itemId,
+        valor: t.valor,
+        data: t.dataVencimento,
+        isEquipamento,
+        isNotProcessed,
+        jaExiste
+      });
+      
+      return isEquipamento && isNotProcessed && !jaExiste;
     });
 
-    console.log('🔧 [DetectEquipment] Transações de equipamentos encontradas:', transacoesEquipamentos.length);
+    console.log('🔧 [DetectEquipment] Transações de equipamentos candidatas:', transacoesEquipamentos.length);
 
-    return transacoesEquipamentos.map((transacao: any) => ({
+    const resultado = transacoesEquipamentos.map((transacao: any) => ({
       transacao,
-      item: itemEquipamentos,
+      item: itemEquipamentos!,
       valor: transacao.valor,
       data: transacao.dataVencimento,
       observacoes: transacao.observacoes || ''
     }));
+    
+    console.log('🔧 [DetectEquipment] Retornando candidatos:', resultado.length);
+    return resultado;
   }
 
   /**
