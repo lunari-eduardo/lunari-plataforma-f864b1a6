@@ -658,8 +658,8 @@ export function EstruturaCustosFixos({
             </div>
             
             
-            {/* Formulário de adição rápida */}
-            <div className="bg-muted border border-border rounded-lg p-2 mb-4">
+            {/* Formulário de adição rápida - Desktop */}
+            <div className="hidden lg:block bg-muted border border-border rounded-lg p-2 mb-4">
               <div className="grid grid-cols-1 md:grid-cols-6 gap-2 items-end">
                 <div>
                   <Label className="text-xs text-foreground">Nome</Label>
@@ -697,6 +697,80 @@ export function EstruturaCustosFixos({
                 </div>
                 <div>
                   <Button onClick={adicionarNovoEquipamento} disabled={!novoEquipamento.nome || !novoEquipamento.valorPago} className="h-8 w-full text-xs">
+                    <Plus className="h-3 w-3 mr-1" />
+                    Adicionar
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* Formulário de adição rápida - Tablet/Mobile */}
+            <div className="lg:hidden bg-muted border border-border rounded-lg p-2 mb-4">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="col-span-2">
+                  <Label className="text-xs text-foreground">Nome</Label>
+                  <Input 
+                    placeholder="Ex: Câmera Canon..." 
+                    value={novoEquipamento.nome} 
+                    onChange={e => setNovoEquipamento(prev => ({
+                      ...prev,
+                      nome: e.target.value
+                    }))} 
+                    className="bg-card h-8 text-xs" 
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-foreground">Valor Pago</Label>
+                  <Input 
+                    type="number" 
+                    min="0" 
+                    step="0.01" 
+                    placeholder="0,00" 
+                    value={novoEquipamento.valorPago} 
+                    onChange={e => setNovoEquipamento(prev => ({
+                      ...prev,
+                      valorPago: e.target.value
+                    }))} 
+                    className="bg-card h-8 text-xs" 
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-foreground">Data da Compra</Label>
+                  <Input 
+                    type="date" 
+                    value={novoEquipamento.dataCompra} 
+                    onChange={e => setNovoEquipamento(prev => ({
+                      ...prev,
+                      dataCompra: e.target.value
+                    }))} 
+                    className="bg-card h-8 text-xs" 
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-foreground">Vida Útil (Anos)</Label>
+                  <Input 
+                    type="number" 
+                    min="1" 
+                    value={novoEquipamento.vidaUtil} 
+                    onChange={e => setNovoEquipamento(prev => ({
+                      ...prev,
+                      vidaUtil: e.target.value
+                    }))} 
+                    className="bg-card h-8 text-xs" 
+                  />
+                </div>
+                <div className="flex flex-col">
+                  <Label className="text-xs text-chart-expense">Depreciação/mês</Label>
+                  <div className="text-xs text-green-600 font-medium p-1 bg-background rounded border border-border h-8 flex items-center justify-center">
+                    R$ {novoEquipamento.valorPago && novoEquipamento.vidaUtil ? (parseFloat(novoEquipamento.valorPago) / (parseInt(novoEquipamento.vidaUtil) * 12)).toFixed(2) : '0,00'}
+                  </div>
+                </div>
+                <div className="col-span-2">
+                  <Button 
+                    onClick={adicionarNovoEquipamento} 
+                    disabled={!novoEquipamento.nome || !novoEquipamento.valorPago} 
+                    className="h-8 w-full text-xs"
+                  >
                     <Plus className="h-3 w-3 mr-1" />
                     Adicionar
                   </Button>
@@ -815,67 +889,67 @@ export function EstruturaCustosFixos({
               </div>
               
               {/* Mobile - Single Column Cards (sm and below) */}
-              <div className="md:hidden space-y-3">
+              <div className="md:hidden space-y-2">
                 {equipamentos.map(equipamento => (
-                  <Card key={equipamento.id} className="p-2 px-[8px] py-1">
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-start">
+                  <Card key={equipamento.id} className="p-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      {/* Nome no topo com botão de deletar */}
+                      <div className="col-span-2 flex items-start gap-1">
                         <div className="flex-1">
-                          <Label className="text-xs">Nome</Label>
+                          <Label className="text-xs text-muted-foreground">Nome</Label>
                           <Input 
                             placeholder="Ex: Câmera Canon..." 
                             value={equipamento.nome} 
                             onChange={e => atualizarEquipamento(equipamento.id, 'nome', e.target.value)} 
-                            className="h-8"
+                            className="h-7 text-xs"
                           />
                         </div>
                         <Button 
                           onClick={() => removerEquipamento(equipamento.id)} 
                           variant="outline" 
-                          size="sm" 
-                          className="ml-2 h-8"
+                          size="icon"
+                          className="h-7 w-7 mt-[18px]"
                         >
                           <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
                       
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <Label className="text-xs">Valor Pago</Label>
-                          <Input 
-                            type="number" 
-                            min="0" 
-                            step="0.01" 
-                            value={equipamento.valorPago} 
-                            onChange={e => atualizarEquipamento(equipamento.id, 'valorPago', parseFloat(e.target.value) || 0)} 
-                            className="bg-card h-8"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs">Vida Útil (Anos)</Label>
-                          <Input 
-                            type="number" 
-                            min="1" 
-                            value={equipamento.vidaUtil} 
-                            onChange={e => atualizarEquipamento(equipamento.id, 'vidaUtil', parseInt(e.target.value) || 1)} 
-                            className="bg-card h-8"
-                          />
-                        </div>
-                      </div>
-                      
+                      {/* Valor e Data */}
                       <div>
-                        <Label className="text-xs">Data da Compra</Label>
+                        <Label className="text-xs text-muted-foreground">Valor Pago</Label>
+                        <Input 
+                          type="number" 
+                          min="0" 
+                          step="0.01" 
+                          value={equipamento.valorPago} 
+                          onChange={e => atualizarEquipamento(equipamento.id, 'valorPago', parseFloat(e.target.value) || 0)} 
+                          className="h-7 text-xs"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Data da Compra</Label>
                         <Input 
                           type="date" 
                           value={equipamento.dataCompra} 
                           onChange={e => atualizarEquipamento(equipamento.id, 'dataCompra', e.target.value)} 
-                          className="bg-card h-8"
+                          className="h-7 text-xs"
                         />
                       </div>
                       
-                      <div className="bg-muted p-2 rounded-lg">
-                        <div className="flex justify-between items-center">
-                          <span className="text-xs text-muted-foreground">Depreciação Mensal:</span>
+                      {/* Vida útil e Depreciação */}
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Vida Útil (Anos)</Label>
+                        <Input 
+                          type="number" 
+                          min="1" 
+                          value={equipamento.vidaUtil} 
+                          onChange={e => atualizarEquipamento(equipamento.id, 'vidaUtil', parseInt(e.target.value) || 1)} 
+                          className="h-7 text-xs"
+                        />
+                      </div>
+                      <div className="flex flex-col justify-end">
+                        <Label className="text-xs text-muted-foreground">Depreciação/mês</Label>
+                        <div className="h-7 px-2 bg-muted rounded border border-border flex items-center justify-center">
                           <span className="text-xs text-green-600 font-medium">
                             R$ {(equipamento.valorPago / (equipamento.vidaUtil * 12)).toFixed(2)}
                           </span>
