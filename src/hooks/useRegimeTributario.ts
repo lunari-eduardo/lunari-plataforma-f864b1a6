@@ -8,7 +8,7 @@ export function useRegimeTributario() {
 
   const isMEI = () => regime === 'mei';
   const isSimples = () => regime === 'simples';
-  const isDREVisible = () => isSimples();
+  
 
   const updateRegime = (novoRegime: RegimeTributario) => {
     return savePreferences({ regimeTributario: novoRegime });
@@ -18,7 +18,7 @@ export function useRegimeTributario() {
     regime,
     isMEI,
     isSimples,
-    isDREVisible,
+    
     updateRegime
   };
 }
