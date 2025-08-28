@@ -799,7 +799,17 @@ export function EstruturaCustosFixos({
                           <Input placeholder="Ex: Câmera Canon..." value={equipamento.nome} onChange={e => atualizarEquipamento(equipamento.id, 'nome', e.target.value)} className="bg-card" />
                         </TableCell>
                         <TableCell>
-                          <Input type="number" min="0" step="0.01" value={equipamento.valorPago} onChange={e => atualizarEquipamento(equipamento.id, 'valorPago', parseFloat(e.target.value) || 0)} className="bg-card" />
+                          <div className="relative">
+                            <span className="absolute left-2 top-1/2 transform -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                            <Input 
+                              type="number" 
+                              min="0" 
+                              step="0.01" 
+                              value={equipamento.valorPago} 
+                              onChange={e => atualizarEquipamento(equipamento.id, 'valorPago', parseFloat(e.target.value) || 0)} 
+                              className="bg-card pl-8" 
+                            />
+                          </div>
                         </TableCell>
                         <TableCell>
                           <Input type="date" value={equipamento.dataCompra} onChange={e => atualizarEquipamento(equipamento.id, 'dataCompra', e.target.value)} className="bg-card" />
@@ -843,14 +853,17 @@ export function EstruturaCustosFixos({
                       <div className="grid grid-cols-2 gap-2">
                         <div>
                           <Label className="text-xs text-muted-foreground">Valor Pago</Label>
-                          <Input 
-                            type="number" 
-                            min="0" 
-                            step="0.01" 
-                            value={equipamento.valorPago} 
-                            onChange={e => atualizarEquipamento(equipamento.id, 'valorPago', parseFloat(e.target.value) || 0)} 
-                            className="h-8 text-sm"
-                          />
+                          <div className="relative">
+                            <span className="absolute left-2 top-1/2 transform -translate-y-1/2 text-muted-foreground text-xs">R$</span>
+                            <Input 
+                              type="number" 
+                              min="0" 
+                              step="0.01" 
+                              value={equipamento.valorPago} 
+                              onChange={e => atualizarEquipamento(equipamento.id, 'valorPago', parseFloat(e.target.value) || 0)} 
+                              className="h-8 text-sm pl-8"
+                            />
+                          </div>
                         </div>
                         <div>
                           <Label className="text-xs text-muted-foreground">Vida Útil</Label>
@@ -917,14 +930,17 @@ export function EstruturaCustosFixos({
                       {/* Valor e Data */}
                       <div>
                         <Label className="text-xs text-muted-foreground">Valor Pago</Label>
-                        <Input 
-                          type="number" 
-                          min="0" 
-                          step="0.01" 
-                          value={equipamento.valorPago} 
-                          onChange={e => atualizarEquipamento(equipamento.id, 'valorPago', parseFloat(e.target.value) || 0)} 
-                          className="h-7 text-xs"
-                        />
+                        <div className="relative">
+                          <span className="absolute left-2 top-1/2 transform -translate-y-1/2 text-muted-foreground text-xs">R$</span>
+                          <Input 
+                            type="number" 
+                            min="0" 
+                            step="0.01" 
+                            value={equipamento.valorPago} 
+                            onChange={e => atualizarEquipamento(equipamento.id, 'valorPago', parseFloat(e.target.value) || 0)} 
+                            className="h-7 text-xs pl-8"
+                          />
+                        </div>
                       </div>
                       <div>
                         <Label className="text-xs text-muted-foreground">Data da Compra</Label>
