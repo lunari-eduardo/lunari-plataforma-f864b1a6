@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useExtrato } from '@/hooks/useExtrato';
 import DemonstrativoSimplificado from './DemonstrativoSimplificado';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Download, Filter, Search, ToggleLeft, ToggleRight, TrendingUp, TrendingDown, DollarSign, Clock, CheckCircle, AlertCircle, ExternalLink, FileText, List } from 'lucide-react';
+import { Download, ToggleLeft, ToggleRight, Clock, CheckCircle, AlertCircle, ExternalLink, FileText, List } from 'lucide-react';
 import { formatCurrency } from '@/utils/financialUtils';
 import { ExtratoTipo, ExtratoOrigem, ExtratoStatus } from '@/types/extrato';
 const ORIGEM_COLORS = {
@@ -41,173 +40,59 @@ export default function ExtratoTab() {
     abrirOrigem,
     prepararDadosExportacao
   } = useExtrato();
-  const [filtrosVisiveis, setFiltrosVisiveis] = useState(false);
 
   const handleExportarDemonstrativo = () => {
     // TODO: Implementar exportação do demonstrativo em PDF
     console.log('Exportar demonstrativo:', demonstrativo);
   };
 
-  // ============= RENDERIZAÇÃO DE CARDS RESUMO =============
 
-  const renderResumoCards = () => <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
-            <TrendingUp className="h-4 w-4 mr-2" />
-            Entradas
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          
-        </CardContent>
-      </Card>
+  // ============= RENDERIZAÇÃO DE FILTROS SIMPLIFICADOS =============
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
-            <TrendingDown className="h-4 w-4 mr-2" />
-            Saídas
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          
-        </CardContent>
-      </Card>
+  const renderFiltros = () => (
+    <div className="flex flex-wrap items-end gap-4 mb-6 p-4 bg-lunar-surface/50 rounded-lg border border-lunar-border/30">
+      <div className="space-y-2">
+        <Label>Data Início</Label>
+        <Input 
+          type="date" 
+          value={filtros.dataInicio} 
+          onChange={e => atualizarFiltros({ dataInicio: e.target.value })} 
+          className="w-40"
+        />
+      </div>
+      
+      <div className="space-y-2">
+        <Label>Data Fim</Label>
+        <Input 
+          type="date" 
+          value={filtros.dataFim} 
+          onChange={e => atualizarFiltros({ dataFim: e.target.value })} 
+          className="w-40"
+        />
+      </div>
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
-            <DollarSign className="h-4 w-4 mr-2" />
-            Saldo do Período
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className={`text-2xl font-bold ${resumo.saldoPeriodo >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {formatCurrency(resumo.saldoPeriodo)}
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-2">
+        <Label>Tipo</Label>
+        <Select 
+          value={filtros.tipo || 'todos'} 
+          onValueChange={value => atualizarFiltros({ tipo: value as ExtratoTipo | 'todos' })}
+        >
+          <SelectTrigger className="w-32">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todos</SelectItem>
+            <SelectItem value="entrada">Entradas</SelectItem>
+            <SelectItem value="saida">Saídas</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
-            <CheckCircle className="h-4 w-4 mr-2" />
-            % Pago
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-blue-600">
-            {resumo.percentualPago.toFixed(1)}%
-          </div>
-        </CardContent>
-      </Card>
-    </div>;
-
-  // ============= RENDERIZAÇÃO DE FILTROS =============
-
-  const renderFiltros = () => <Card className={`mb-6 transition-all duration-300 ${filtrosVisiveis ? 'visible' : 'hidden'}`}>
-      <CardHeader>
-        <CardTitle className="text-lg flex items-center">
-          <Filter className="h-5 w-5 mr-2" />
-          Filtros
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {/* Período */}
-          <div className="space-y-2">
-            <Label>Data Início</Label>
-            <Input type="date" value={filtros.dataInicio} onChange={e => atualizarFiltros({
-            dataInicio: e.target.value
-          })} />
-          </div>
-          
-          <div className="space-y-2">
-            <Label>Data Fim</Label>
-            <Input type="date" value={filtros.dataFim} onChange={e => atualizarFiltros({
-            dataFim: e.target.value
-          })} />
-          </div>
-
-          {/* Tipo */}
-          <div className="space-y-2">
-            <Label>Tipo</Label>
-            <Select value={filtros.tipo || 'todos'} onValueChange={value => atualizarFiltros({
-            tipo: value as ExtratoTipo | 'todos'
-          })}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos</SelectItem>
-                <SelectItem value="entrada">Entradas</SelectItem>
-                <SelectItem value="saida">Saídas</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Origem */}
-          <div className="space-y-2">
-            <Label>Origem</Label>
-            <Select value={filtros.origem || 'todos'} onValueChange={value => atualizarFiltros({
-            origem: value as ExtratoOrigem | 'todos'
-          })}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todas</SelectItem>
-                <SelectItem value="workflow">Workflow</SelectItem>
-                <SelectItem value="financeiro">Financeiro</SelectItem>
-                <SelectItem value="cartao">Cartão</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Status */}
-          <div className="space-y-2">
-            <Label>Status</Label>
-            <Select value={filtros.status || 'todos'} onValueChange={value => atualizarFiltros({
-            status: value as ExtratoStatus | 'todos'
-          })}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos</SelectItem>
-                <SelectItem value="Pago">Pago</SelectItem>
-                <SelectItem value="Faturado">Faturado</SelectItem>
-                <SelectItem value="Agendado">Agendado</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Cliente */}
-          <div className="space-y-2">
-            <Label>Cliente</Label>
-            <Input placeholder="Filtrar por cliente..." value={filtros.cliente || ''} onChange={e => atualizarFiltros({
-            cliente: e.target.value
-          })} />
-          </div>
-
-          {/* Busca Geral */}
-          <div className="space-y-2">
-            <Label>Busca Geral</Label>
-            <Input placeholder="Buscar..." value={filtros.busca || ''} onChange={e => atualizarFiltros({
-            busca: e.target.value
-          })} />
-          </div>
-
-          {/* Botão Limpar */}
-          <div className="flex items-end">
-            <Button variant="outline" onClick={limparFiltros} className="w-full">
-              Limpar Filtros
-            </Button>
-          </div>
-        </div>
-      </CardContent>
-    </Card>;
+      <Button variant="outline" onClick={limparFiltros} className="h-9">
+        Limpar Filtros
+      </Button>
+    </div>
+  );
 
   // ============= RENDERIZAÇÃO DA TABELA =============
 
@@ -336,24 +221,12 @@ export default function ExtratoTab() {
 
   return <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Extrato Financeiro</h1>
-          <p className="text-muted-foreground">
-            Visão unificada de todas as movimentações financeiras
-          </p>
-        </div>
-        
-        <div className="flex items-center space-x-2">
-          <Button variant="outline" onClick={() => setFiltrosVisiveis(!filtrosVisiveis)}>
-            <Filter className="h-4 w-4 mr-2" />
-            Filtros
-          </Button>
-        </div>
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold">Extrato Financeiro</h1>
+        <p className="text-muted-foreground">
+          Visão unificada de todas as movimentações financeiras
+        </p>
       </div>
-
-      {/* Resumo */}
-      {renderResumoCards()}
 
       {/* Filtros */}
       {renderFiltros()}
