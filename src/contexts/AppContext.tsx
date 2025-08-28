@@ -2520,28 +2520,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         FinancialEngine.saveRecurringTemplates([result.recurringTemplate]);
       }
       
-      // ============= DETECÇÃO AUTOMÁTICA DE EQUIPAMENTOS =============
-      // Verificar se alguma transação criada é de equipamentos
-      const itensFinanceiros = storage.load('lunari_fin_items', []);
-      const itemEquipamentos = itensFinanceiros.find((item: any) => 
-        item.nome === 'Equipamentos' && item.grupo_principal === 'Investimento'
-      );
-
-      if (itemEquipamentos) {
-        const transacoesEquipamentos = result.transactions.filter(t => t.itemId === itemEquipamentos.id);
-        
-        if (transacoesEquipamentos.length > 0) {
-          console.log('🔧 [AppContext] Transação(ões) de equipamento detectada(s):', transacoesEquipamentos.length);
-          
-          // Disparar evento para forçar verificação imediata
-          setTimeout(() => {
-            const forceScanEvent = new CustomEvent('equipment-sync:force-scan');
-            window.dispatchEvent(forceScanEvent);
-            console.log('🔧 [AppContext] Força de verificação de equipamentos disparada');
-          }, 100);
-        }
-      }
-      
       toast({
         title: "Lançamento criado",
         description: `${result.transactions.length} transação(ões) criada(s) com sucesso.`

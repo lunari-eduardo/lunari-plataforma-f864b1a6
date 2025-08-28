@@ -534,7 +534,7 @@ class PricingFinancialIntegrationService {
   /**
    * Marca transação de equipamento como processada
    */
-  markTransactionAsProcessed(transacaoId: string): void {
+  private markEquipmentTransactionAsProcessed(transacaoId: string): void {
     const processedIds = this.getProcessedEquipmentTransactionIds();
     if (!processedIds.includes(transacaoId)) {
       processedIds.push(transacaoId);
@@ -543,78 +543,65 @@ class PricingFinancialIntegrationService {
   }
 
   /**
-   * Garante que o item "Equipamentos" existe no grupo "Investimento"
-   */
-  private ensureEquipmentItemExists(): void {
-    const itensFinanceiros = storage.load(this.STORAGE_KEYS.FINANCIAL_ITEMS, []);
-    
-    const itemEquipamentos = itensFinanceiros.find((item: ItemFinanceiro) => 
-      item.nome === 'Equipamentos' && item.grupo_principal === 'Investimento'
-    );
-
-    if (!itemEquipamentos) {
-      const novoItem: ItemFinanceiro = {
-        id: '9', // ID fixo para "Equipamentos"
-        nome: 'Equipamentos',
-        grupo_principal: 'Investimento',
-        userId: 'user1',
-        ativo: true,
-        criadoEm: getCurrentDateString()
-      };
-
-      itensFinanceiros.push(novoItem);
-      storage.save(this.STORAGE_KEYS.FINANCIAL_ITEMS, itensFinanceiros);
-      console.log('🔧 Item "Equipamentos" criado automaticamente no financeiro');
-    }
-  }
-
-  /**
    * Cria equipamento na precificação baseado na transação financeira
    */
-  createEquipmentFromTransaction(dadosEquipamento: {
-    transacaoId: string;
+  createEquipmentFromTransaction(transacaoId: string, dadosEquipamento: {
     nome: string;
-    valor: number;
-    data: string;
-    observacoes?: string;
     vidaUtil: number;
   }): {
-    id: string;
-    nome: string;
-    valorPago: number;
-    dataCompra: string;
-    vidaUtil: number;
-    transacaoId: string;
+    success: boolean;
+    equipamentoId?: string;
+    error?: string;
   } {
-    const equipamentosExistentes = this.getEquipmentFromPricing();
-    
-    // Verificar se já existe equipamento para esta transação
-    const jaExiste = equipamentosExistentes.some(eq => eq.transacaoId === dadosEquipamento.transacaoId);
-    if (jaExiste) {
-      throw new Error('Equipamento já criado para esta transação');
+    try {
+      const transacoes = RecurringBlueprintEngine.loadTransactions();
+      const transacao = transacoes.find((t: any) => t.id === transacaoId);
+
+      console.log('🔧 [CreateEquipment] Procurando transação ID:', transacaoId);
+      console.log('🔧 [CreateEquipment] Total transações disponíveis:', transacoes.length);
+      console.log('🔧 [CreateEquipment] Transação encontrada:', !!transacao);
+
+      if (!transacao) {
+        return { success: false, error: 'Transação não encontrada' };
+      }
+
+      const equipamentosExistentes = this.getEquipmentFromPricing();
+      
+      // Verificar se já existe equipamento para esta transação
+      const jaExiste = equipamentosExistentes.some(eq => eq.transacaoId === transacaoId);
+      if (jaExiste) {
+        return { success: false, error: 'Equipamento já criado para esta transação' };
+      }
+
+      const novoEquipamento = {
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        nome: dadosEquipamento.nome,
+        valorPago: transacao.valor,
+        dataCompra: transacao.dataVencimento,
+        vidaUtil: dadosEquipamento.vidaUtil,
+        transacaoId: transacaoId
+      };
+
+      const equipamentosAtualizados = [...equipamentosExistentes, novoEquipamento];
+      this.saveEquipmentToPricing(equipamentosAtualizados);
+      
+      // Marcar transação como processada
+      this.markEquipmentTransactionAsProcessed(transacaoId);
+
+      console.log('🔧 Equipamento criado na precificação:', novoEquipamento);
+      
+      return { 
+        success: true, 
+        equipamentoId: novoEquipamento.id 
+      };
+
+    } catch (error) {
+      console.error('Erro ao criar equipamento na precificação:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Erro desconhecido' 
+      };
     }
-
-    // Garantir que item "Equipamentos" existe no financeiro
-    this.ensureEquipmentItemExists();
-
-    const novoEquipamento = {
-      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-      nome: dadosEquipamento.nome,
-      valorPago: dadosEquipamento.valor,
-      dataCompra: dadosEquipamento.data,
-      vidaUtil: dadosEquipamento.vidaUtil,
-      transacaoId: dadosEquipamento.transacaoId
-    };
-
-    const equipamentosAtualizados = [...equipamentosExistentes, novoEquipamento];
-    this.saveEquipmentToPricing(equipamentosAtualizados);
-    
-    // Marcar transação como processada
-    this.markTransactionAsProcessed(dadosEquipamento.transacaoId);
-
-    console.log('🔧 Equipamento criado na precificação:', novoEquipamento);
-    
-    return novoEquipamento;
   }
 
   /**

@@ -205,7 +205,7 @@ export function useNovoFinancas() {
       console.log('Transação única criada com sucesso:', novaTransacao);
 
       // ============= DETECÇÃO AUTOMÁTICA DE EQUIPAMENTOS =============
-      // Verificar se é transação de equipamentos para forçar verificação imediata
+      // Verificar se é transação de equipamentos para notificar sobre sincronização
       const item = itensFinanceiros.find(item => item.id === itemId);
       if (item && item.nome === 'Equipamentos' && item.grupo_principal === 'Investimento') {
         console.log('🔧 [EquipmentSync] Transação de equipamento detectada:', {
@@ -214,12 +214,19 @@ export function useNovoFinancas() {
           observacoes
         });
 
-        // Disparar evento para forçar verificação imediata (sem delay de polling)
+        // Disparar evento para notificação de equipamento
         setTimeout(() => {
-          const forceScanEvent = new CustomEvent('equipment-sync:force-scan');
-          window.dispatchEvent(forceScanEvent);
-          console.log('🔧 [EquipmentSync] Força de verificação disparada');
-        }, 100); // Pequeno delay apenas para garantir persistência
+          const event = new CustomEvent('equipment-sync:candidate', {
+            detail: {
+              transacaoId: novaTransacao.id,
+              nome: observacoes || `Equipamento R$ ${valorTotal.toFixed(2)}`,
+              valor: valorTotal,
+              data: dataPrimeiraOcorrencia,
+              observacoes
+            }
+          });
+          window.dispatchEvent(event);
+        }, 500); // Pequeno delay para garantir que a transação foi persistida
       }
       
     } catch (error) {
