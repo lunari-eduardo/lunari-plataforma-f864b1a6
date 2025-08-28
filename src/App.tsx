@@ -1,6 +1,6 @@
 
 import * as React from "react";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -30,6 +30,7 @@ import { useAutomationEngine } from "./hooks/useAutomationEngine";
 import { useEquipmentSync } from "./hooks/useEquipmentSync";
 import ThemeProvider from "./components/theme/ThemeProvider";
 import { EquipmentSyncNotification } from "./components/equipments/EquipmentSyncNotification";
+import { initializeAppWithFix } from "./utils/initializeAppFixed";
 
 // Create a stable QueryClient instance
 const queryClient = new QueryClient({
@@ -75,46 +76,15 @@ function EquipmentSyncIntegration() {
 
 // Define App as a proper function component
 function App() {
-  const [isInitialized, setIsInitialized] = useState(false);
-
   useEffect(() => {
-    // Initialize app with defensive checks
-    const initializeApp = async () => {
-      try {
-        // Ensure React is properly initialized before importing utils
-        await new Promise(resolve => setTimeout(resolve, 10));
-        
-        const { initializeAppWithFix } = await import('./utils/initializeAppFixed');
-        initializeAppWithFix();
-        
-        setIsInitialized(true);
-        console.log('✅ App successfully initialized');
-      } catch (error) {
-        console.error('❌ App initialization error:', error);
-        // Continue with basic initialization even if fix fails
-        setIsInitialized(true);
-      }
-    };
-
-    initializeApp();
+    try {
+      initializeAppWithFix();
+      console.log('✅ App successfully initialized');
+    } catch (error) {
+      console.error('❌ App initialization error:', error);
+    }
   }, []);
 
-  // Show loading state until initialized
-  if (!isInitialized) {
-    return (
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center', 
-        height: '100vh',
-        backgroundColor: 'hsl(var(--background))',
-        color: 'hsl(var(--foreground))',
-        fontSize: '14px'
-      }}>
-        Carregando...
-      </div>
-    );
-  }
   
   return (
     <BrowserRouter>
