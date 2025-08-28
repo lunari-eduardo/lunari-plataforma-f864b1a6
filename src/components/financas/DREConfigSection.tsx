@@ -307,24 +307,6 @@ export default function DREConfigSection() {
                 Prazo em meses para depreciar equipamentos e investimentos
               </p>
             </div>
-
-            <Separator />
-
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Switch 
-                  id="usar-depreciacao-equipamentos"
-                  checked={config.usarDepreciacaoEquipamentos}
-                  onCheckedChange={(checked) => updateConfig({ usarDepreciacaoEquipamentos: checked })}
-                />
-                <Label htmlFor="usar-depreciacao-equipamentos">Usar depreciação automática de equipamentos</Label>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Quando habilitado, a depreciação será calculada automaticamente com base nos equipamentos 
-                cadastrados na precificação, considerando data de compra e vida útil. Transações de "Investimento" 
-                serão ignoradas para evitar duplicação.
-              </p>
-            </div>
           </CardContent>
         </Card>
       </div>

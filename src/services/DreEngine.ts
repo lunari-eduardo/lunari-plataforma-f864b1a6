@@ -158,7 +158,7 @@ export class DreEngine {
   /**
    * Mapeia movimentos para grupos DRE
    */
-  static mapMovementsToDRE(movements: DREMovement[], config: DREConfig, period: DREPeriod): Record<DREGroupKey, number> {
+  static mapMovementsToDRE(movements: DREMovement[], config: DREConfig): Record<DREGroupKey, number> {
     const grupos: Record<DREGroupKey, number> = {
       receita_bruta: 0,
       deducoes: 0,
@@ -193,23 +193,9 @@ export class DreEngine {
       } else {
         // Saídas - mapear para grupos corretos
         const grupo = this.mapItemToGroup(movement, config);
-        if (grupo) { // Apenas adicionar se o grupo for válido (não ignorado)
-          grupos[grupo] += movement.valor;
-        }
+        grupos[grupo] += movement.valor;
       }
     });
-
-    // Calcular depreciação automática de equipamentos se habilitado
-    if (config.usarDepreciacaoEquipamentos) {
-      const depreciacaoEquipamentos = this.calculateEquipmentDepreciation(period, config);
-      grupos.depreciacao += depreciacaoEquipamentos;
-      
-      console.log('📊 DRE: Depreciação de equipamentos calculada:', {
-        periodo: period,
-        valor: depreciacaoEquipamentos,
-        configuracao: 'automatica'
-      });
-    }
 
     // Calcular deduções (impostos + taxas)
     const taxasGateway = this.calculateGatewayFees(movements, config);
@@ -235,7 +221,7 @@ export class DreEngine {
     deps: { transacoesFinanceiras: TransacaoComItem[]; workflowItems?: any[] }
   ): DREResult {
     const movements = this.buildBaseMovements({ ...deps, mode, period });
-    const grupos = this.mapMovementsToDRE(movements, config, period);
+    const grupos = this.mapMovementsToDRE(movements, config);
 
     // Calcular linhas hierárquicas
     const receitaLiquida = grupos.receita_bruta - grupos.deducoes;
@@ -404,7 +390,7 @@ export class DreEngine {
     });
   }
 
-  private static mapItemToGroup(movement: DREMovement, config: DREConfig): DREGroupKey | null {
+  private static mapItemToGroup(movement: DREMovement, config: DREConfig): DREGroupKey {
     if (!movement.item) return 'opex_outros';
 
     const itemNome = movement.item.nome?.toLowerCase() || '';
@@ -440,15 +426,6 @@ export class DreEngine {
         return 'opex_adm'; // Default para despesa fixa
 
       case 'Investimento':
-        // Se a depreciação automática está habilitada, ignorar investimentos individuais
-        if (config.usarDepreciacaoEquipamentos) {
-          console.log('🔍 DRE: Ignorando investimento individual (depreciação automática habilitada):', {
-            item: itemNome,
-            valor: movement.valor
-          });
-          return null; // Não processar - será calculado automaticamente
-        }
-        // Se não, tratar como depreciação direta (comportamento legado)
         return 'depreciacao';
 
       default:
@@ -467,132 +444,6 @@ export class DreEngine {
     });
 
     return totalFees;
-  }
-
-  /**
-   * Calcula depreciação automática baseada nos equipamentos cadastrados
-   */
-  private static calculateEquipmentDepreciation(period: DREPeriod, config: DREConfig): number {
-    try {
-      // Carregar dados dos equipamentos do sistema de precificação
-      const structureCosts = JSON.parse(localStorage.getItem('pricing_fixed_costs') || '{}');
-      const equipamentos = structureCosts.equipamentos || [];
-      
-      if (equipamentos.length === 0) {
-        console.log('🔍 DRE: Nenhum equipamento encontrado para calcular depreciação');
-        return 0;
-      }
-
-      let depreciacaoTotal = 0;
-      const agora = new Date();
-      
-      console.log('📊 DRE: Calculando depreciação para equipamentos:', {
-        totalEquipamentos: equipamentos.length,
-        periodo: period,
-        amostraEquipamentos: equipamentos.slice(0, 3).map((eq: any) => ({
-          nome: eq.nome,
-          valor: eq.valorPago,
-          dataCompra: eq.dataCompra,
-          vidaUtil: eq.vidaUtil
-        }))
-      });
-
-      equipamentos.forEach((equipamento: any) => {
-        if (!equipamento.nome || !equipamento.valorPago || !equipamento.dataCompra || !equipamento.vidaUtil) {
-          console.warn('🔍 DRE: Equipamento com dados incompletos ignorado:', equipamento);
-          return;
-        }
-
-        try {
-          const dataCompra = new Date(equipamento.dataCompra);
-          const valorPago = Number(equipamento.valorPago) || 0;
-          const vidaUtilMeses = Number(equipamento.vidaUtil) || config.depreciacaoMesesDefault || 24;
-          
-          // Verificar se o equipamento já foi comprado no período analisado
-          const periodoInicio = new Date(period.year, (period.month || 1) - 1, 1);
-          const periodoFim = period.type === 'annual' 
-            ? new Date(period.year, 11, 31, 23, 59, 59)
-            : new Date(period.year, period.month! - 1 + 1, 0, 23, 59, 59);
-
-          // Se o equipamento foi comprado após o período analisado, não incluir
-          if (dataCompra > periodoFim) {
-            console.log('🔍 DRE: Equipamento comprado após período analisado:', {
-              nome: equipamento.nome,
-              dataCompra: equipamento.dataCompra,
-              periodoFim: periodoFim.toISOString()
-            });
-            return;
-          }
-
-          // Calcular depreciação mensal
-          const depreciacaoMensal = valorPago / vidaUtilMeses;
-          
-          if (period.type === 'annual') {
-            // Para período anual, calcular quantos meses o equipamento esteve ativo no ano
-            const inicioAno = new Date(period.year, 0, 1);
-            const fimAno = new Date(period.year, 11, 31, 23, 59, 59);
-            
-            const inicioDepreciacao = dataCompra > inicioAno ? dataCompra : inicioAno;
-            const fimDepreciacao = agora < fimAno ? agora : fimAno;
-            
-            // Verificar se ainda está dentro da vida útil
-            const fimVidaUtil = new Date(dataCompra);
-            fimVidaUtil.setMonth(fimVidaUtil.getMonth() + vidaUtilMeses);
-            
-            if (inicioDepreciacao <= fimDepreciacao && inicioDepreciacao <= fimVidaUtil) {
-              const mesesAtivos = Math.min(
-                Math.ceil((fimDepreciacao.getTime() - inicioDepreciacao.getTime()) / (1000 * 60 * 60 * 24 * 30.44)),
-                Math.ceil((fimVidaUtil.getTime() - inicioDepreciacao.getTime()) / (1000 * 60 * 60 * 24 * 30.44))
-              );
-              
-              const depreciacaoEquipamento = depreciacaoMensal * Math.max(0, mesesAtivos);
-              depreciacaoTotal += depreciacaoEquipamento;
-              
-              console.log('📊 DRE: Depreciação anual calculada:', {
-                equipamento: equipamento.nome,
-                valorPago,
-                vidaUtilMeses,
-                depreciacaoMensal,
-                mesesAtivos,
-                depreciacaoEquipamento
-              });
-            }
-          } else {
-            // Para período mensal, verificar se o equipamento estava ativo no mês
-            const mesAnalisado = new Date(period.year, period.month! - 1, 1);
-            const fimVidaUtil = new Date(dataCompra);
-            fimVidaUtil.setMonth(fimVidaUtil.getMonth() + vidaUtilMeses);
-            
-            if (dataCompra <= periodoFim && mesAnalisado <= fimVidaUtil) {
-              depreciacaoTotal += depreciacaoMensal;
-              
-              console.log('📊 DRE: Depreciação mensal calculada:', {
-                equipamento: equipamento.nome,
-                valorPago,
-                vidaUtilMeses,
-                depreciacaoMensal
-              });
-            }
-          }
-        } catch (error) {
-          console.error('❌ DRE: Erro ao calcular depreciação do equipamento:', {
-            equipamento: equipamento.nome,
-            error
-          });
-        }
-      });
-
-      console.log('📊 DRE: Depreciação total calculada:', {
-        valor: depreciacaoTotal,
-        periodo: period,
-        equipamentosProcessados: equipamentos.length
-      });
-
-      return depreciacaoTotal;
-    } catch (error) {
-      console.error('❌ DRE: Erro ao calcular depreciação de equipamentos:', error);
-      return 0;
-    }
   }
 
   private static calculateTaxes(receitaBruta: number, config: DREConfig): number {
