@@ -51,7 +51,9 @@ export default function ExtratoTab() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          
+          <div className="text-2xl font-bold text-green-600">
+            {formatCurrency(resumo.totalEntradas)}
+          </div>
         </CardContent>
       </Card>
 
@@ -63,7 +65,9 @@ export default function ExtratoTab() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          
+          <div className="text-2xl font-bold text-red-600">
+            {formatCurrency(resumo.totalSaidas)}
+          </div>
         </CardContent>
       </Card>
 
