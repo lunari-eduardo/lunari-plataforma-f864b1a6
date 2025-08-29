@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Check, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -22,72 +22,38 @@ interface ProductSelectorProps {
   className?: string;
 }
 
-// Função utilitária para normalizar produtos
-const normalizeProducts = (savedProducts: any[]): Product[] => {
-  return savedProducts.map((produto: any) => ({
-    id: produto.id || produto.uuid || `produto_${Date.now()}_${Math.random()}`,
-    nome: produto.nome || produto.name || '',
-    custo: Number(produto.preco_custo || produto.precocusto || produto.custo || 0),
-    valorVenda: Number(produto.preco_venda || produto.precovenda || produto.valorVenda || produto.valor || 0)
-  })).filter(produto => produto.nome.trim() !== '');
-};
-
 export function ProductSelector({ value, onSelect, className }: ProductSelectorProps) {
   const [open, setOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
 
   useEffect(() => {
-    const loadProducts = () => {
-      try {
-        const savedProducts = storage.load('configuracoes_produtos', []);
-        console.log('🔍 [ProductSelector] Produtos salvos:', savedProducts);
-        
-        const convertedProducts = normalizeProducts(savedProducts);
-        console.log('🔄 [ProductSelector] Produtos convertidos:', convertedProducts);
-        console.log('🎯 [ProductSelector] Value atual:', value);
-        
-        setProducts(convertedProducts);
-      } catch (error) {
-        console.error('❌ [ProductSelector] Erro ao carregar produtos:', error);
-        setProducts([]);
-      }
-    };
-
-    loadProducts();
+    const savedProducts = storage.load('configuracoes_produtos', []);
+    
+    const normalizedProducts = savedProducts.map((produto: any) => ({
+      id: produto.id || produto.uuid || `produto_${Date.now()}_${Math.random()}`,
+      nome: produto.nome || produto.name || '',
+      custo: Number(produto.preco_custo || produto.precocusto || produto.custo || 0),
+      valorVenda: Number(produto.preco_venda || produto.precovenda || produto.valorVenda || produto.valor || 0)
+    })).filter((produto: Product) => produto.nome.trim() !== '');
+    
+    setProducts(normalizedProducts);
   }, []);
 
-  // Encontrar o produto selecionado de forma mais robusta
-  const selectedProduct = products.find(product => 
-    product.nome === value || 
-    product.id === value
-  );
+  const selectedProduct = products.find(product => product.nome === value);
 
-  console.log('🔍 [ProductSelector] Render:', {
-    value,
-    selectedProduct,
-    productsCount: products.length,
-    productNames: products.map(p => p.nome)
-  });
-
-  const handleSelect = useCallback((selectedProductName: string) => {
-    console.log('🎯 [ProductSelector] handleSelect chamado:', selectedProductName);
-    
+  const handleSelect = (selectedProductName: string) => {
     const product = products.find(p => p.nome === selectedProductName);
-    console.log('🔍 [ProductSelector] Produto encontrado:', product);
     
     if (product) {
-      // Se é o mesmo produto já selecionado, limpar
       if (value === product.nome) {
-        console.log('🔄 [ProductSelector] Limpando seleção');
         onSelect(null);
       } else {
-        console.log('🔄 [ProductSelector] Selecionando produto:', product);
         onSelect(product);
       }
     }
     
     setOpen(false);
-  }, [products, value, onSelect]);
+  };
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -99,7 +65,7 @@ export function ProductSelector({ value, onSelect, className }: ProductSelectorP
           className={cn("w-full justify-between text-xs h-7", className)}
         >
           <span className="truncate">
-            {selectedProduct ? selectedProduct.nome : "Selecionar produto"}
+            {value || "Selecionar produto"}
           </span>
           <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
         </Button>
