@@ -242,64 +242,71 @@ export function CalculadoraServicos({
                     {/* Produtos Adicionais */}
                     <Card className="bg-card border border-border shadow-sm">
                       <CardHeader>
-                        <div className="flex justify-between items-center">
-                          <CardTitle>Produtos Adicionais</CardTitle>
-                          <Button onClick={adicionarProduto} size="sm" variant="outline">
-                            <Plus className="h-3 w-3 mr-1" />
-                            Adicionar Produto
+                        <CardTitle>Produtos Adicionais</CardTitle>
+                        {/* Inline product addition */}
+                        <div className="flex gap-2 mt-3">
+                          <div className="flex-1">
+                            <SimpleProductSelector 
+                              value=""
+                              onSelect={(product: NormalizedProduct | null) => {
+                                console.log('🎯 [CalculadoraServicos] Novo produto selecionado:', product);
+                                
+                                if (product) {
+                                  const novoProduto: ProdutoAdicional = {
+                                    id: Date.now().toString(),
+                                    nome: product.nome,
+                                    custo: product.custo || 0,
+                                    valorVenda: product.valorVenda || 0,
+                                    quantidade: 1
+                                  };
+                                  
+                                  setProdutos([...produtos, novoProduto]);
+                                  console.log('✅ [CalculadoraServicos] Novo produto adicionado:', novoProduto);
+                                }
+                              }}
+                            />
+                          </div>
+                          <Button onClick={adicionarProduto} size="sm" variant="outline" className="h-8 px-2">
+                            <Plus className="h-4 w-4" />
                           </Button>
                         </div>
                       </CardHeader>
                       <CardContent>
-                        <div className="space-y-3">
-                          {produtos.length === 0 && <p className="text-sm text-lunar-textSecondary text-center py-4">
+                        <div className="space-y-2">
+                          {produtos.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">
                               Nenhum produto adicionado
                             </p>}
-                          {produtos.map(produto => <div key={produto.id} className="grid grid-cols-1 md:grid-cols-4 gap-2 md:gap-3 items-end bg-lunar-surface/50 p-2 md:p-3 rounded border border-lunar-border/20 space-y-2 md:space-y-0">
-                              <div className="col-span-1 md:col-span-1">
-                                <Label className="text-xs mb-1 block">Produto</Label>
-                                <SimpleProductSelector 
-                                  value={produto.nome} 
-                                  onSelect={(product: NormalizedProduct | null) => {
-                                    console.log('🎯 [CalculadoraServicos] Produto selecionado:', product);
-                                    
-                                    if (product) {
-                                      atualizarProduto(produto.id, 'nome', product.nome);
-                                      atualizarProduto(produto.id, 'custo', product.custo || 0);
-                                      atualizarProduto(produto.id, 'valorVenda', product.valorVenda || 0);
-                                      console.log('✅ [CalculadoraServicos] Produto atualizado com sucesso');
-                                    } else {
-                                      atualizarProduto(produto.id, 'nome', '');
-                                      atualizarProduto(produto.id, 'custo', 0);
-                                      atualizarProduto(produto.id, 'valorVenda', 0);
-                                      console.log('🗑️ [CalculadoraServicos] Produto removido');
-                                    }
-                                  }} 
+                          {produtos.map(produto => (
+                            <div key={produto.id} className="grid grid-cols-1 md:grid-cols-4 gap-2 items-center p-2 rounded border border-border/50 bg-muted/20">
+                              <div>
+                                <span className="text-sm font-medium">{produto.nome || 'Produto sem nome'}</span>
+                              </div>
+                              <div>
+                                <Input 
+                                  type="number" 
+                                  value={produto.quantidade} 
+                                  onChange={e => atualizarProduto(produto.id, 'quantidade', parseInt(e.target.value) || 1)}
+                                  className="h-8 text-sm" 
+                                  min="1"
                                 />
                               </div>
-                              <div className="grid grid-cols-2 md:grid-cols-1 gap-2 md:gap-0">
-                                <div>
-                                  <Label className="text-xs mb-1 block">Quantidade</Label>
-                                  <Input type="text" inputMode="numeric" pattern="[0-9]*" value={produto.quantidade} onChange={e => {
-                                    const value = parseInt(e.target.value) || 1;
-                                    if (value >= 1) {
-                                      atualizarProduto(produto.id, 'quantidade', value);
-                                    }
-                                  }} className="h-8 text-sm" />
-                                </div>
+                              <div>
+                                <Input 
+                                  type="number" 
+                                  value={produto.valorVenda} 
+                                  onChange={e => atualizarProduto(produto.id, 'valorVenda', parseFloat(e.target.value) || 0)}
+                                  className="h-8 text-sm" 
+                                  min="0"
+                                  step="0.01"
+                                />
                               </div>
-                              <div className="grid grid-cols-2 md:grid-cols-1 gap-2 md:gap-0">
-                                <div>
-                                  <Label className="text-xs mb-1 block">Valor Venda</Label>
-                                  <Input type="text" inputMode="decimal" min="0" step="0.01" value={produto.valorVenda} onChange={e => atualizarProduto(produto.id, 'valorVenda', parseFloat(e.target.value) || 0)} className="h-8 text-sm [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
-                                </div>
-                              </div>
-                              <div className="flex justify-center md:justify-start">
-                                <Button onClick={() => removerProduto(produto.id)} variant="outline" size="sm" className="h-8 px-3">
+                              <div className="flex justify-end">
+                                <Button onClick={() => removerProduto(produto.id)} variant="outline" size="sm" className="h-8 px-2">
                                   <Trash2 className="h-3 w-3" />
                                 </Button>
                               </div>
-                            </div>)}
+                            </div>
+                          ))}
                         </div>
                       </CardContent>
                     </Card>
