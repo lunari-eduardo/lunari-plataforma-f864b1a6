@@ -46,26 +46,38 @@ const STORAGE_KEYS = {
   ITEMS: 'lunari_fin_items'
 };
 
-// Dados iniciais padrão
+// Import do novo service
+import { financialItemsService, ItemFinanceiroSupabase } from '@/services/FinancialItemsService';
+
+// Dados iniciais padrão expandidos baseados na imagem fornecida
 const ITENS_INICIAIS: ItemFinanceiroCompativel[] = [
   // Despesas Fixas
-  { id: '1', nome: 'Aluguel', grupo_principal: 'Despesa Fixa', grupoPrincipal: 'Despesa Fixa', userId: 'user1', ativo: true, criadoEm: getCurrentDateString() },
-  { id: '2', nome: 'Adobe', grupo_principal: 'Despesa Fixa', grupoPrincipal: 'Despesa Fixa', userId: 'user1', ativo: true, criadoEm: getCurrentDateString() },
-  { id: '3', nome: 'Internet', grupo_principal: 'Despesa Fixa', grupoPrincipal: 'Despesa Fixa', userId: 'user1', ativo: true, criadoEm: getCurrentDateString() },
-  { id: '4', nome: 'Energia Elétrica', grupo_principal: 'Despesa Fixa', grupoPrincipal: 'Despesa Fixa', userId: 'user1', ativo: true, criadoEm: getCurrentDateString() },
+  { id: 'default_1', nome: 'DAS', grupo_principal: 'Despesa Fixa', grupoPrincipal: 'Despesa Fixa', userId: 'default', ativo: true, criadoEm: getCurrentDateString() },
+  { id: 'default_2', nome: 'Aluguel', grupo_principal: 'Despesa Fixa', grupoPrincipal: 'Despesa Fixa', userId: 'default', ativo: true, criadoEm: getCurrentDateString() },
+  { id: 'default_3', nome: 'Água', grupo_principal: 'Despesa Fixa', grupoPrincipal: 'Despesa Fixa', userId: 'default', ativo: true, criadoEm: getCurrentDateString() },
+  { id: 'default_4', nome: 'Adobe', grupo_principal: 'Despesa Fixa', grupoPrincipal: 'Despesa Fixa', userId: 'default', ativo: true, criadoEm: getCurrentDateString() },
+  { id: 'default_5', nome: 'Internet', grupo_principal: 'Despesa Fixa', grupoPrincipal: 'Despesa Fixa', userId: 'default', ativo: true, criadoEm: getCurrentDateString() },
+  { id: 'default_6', nome: 'Energia Elétrica', grupo_principal: 'Despesa Fixa', grupoPrincipal: 'Despesa Fixa', userId: 'default', ativo: true, criadoEm: getCurrentDateString() },
+  { id: 'default_7', nome: 'Pró-labore', grupo_principal: 'Despesa Fixa', grupoPrincipal: 'Despesa Fixa', userId: 'default', ativo: true, criadoEm: getCurrentDateString() },
+  { id: 'default_8', nome: 'Colaborador', grupo_principal: 'Despesa Fixa', grupoPrincipal: 'Despesa Fixa', userId: 'default', ativo: true, criadoEm: getCurrentDateString() },
+  { id: 'default_9', nome: 'Assinatura', grupo_principal: 'Despesa Fixa', grupoPrincipal: 'Despesa Fixa', userId: 'default', ativo: true, criadoEm: getCurrentDateString() },
+  { id: 'default_10', nome: 'Canva', grupo_principal: 'Despesa Fixa', grupoPrincipal: 'Despesa Fixa', userId: 'default', ativo: true, criadoEm: getCurrentDateString() },
   
   // Despesas Variáveis
-  { id: '5', nome: 'Combustível', grupo_principal: 'Despesa Variável', grupoPrincipal: 'Despesa Variável', userId: 'user1', ativo: true, criadoEm: getCurrentDateString() },
-  { id: '6', nome: 'Alimentação', grupo_principal: 'Despesa Variável', grupoPrincipal: 'Despesa Variável', userId: 'user1', ativo: true, criadoEm: getCurrentDateString() },
-  { id: '7', nome: 'Marketing', grupo_principal: 'Despesa Variável', grupoPrincipal: 'Despesa Variável', userId: 'user1', ativo: true, criadoEm: getCurrentDateString() },
+  { id: 'default_11', nome: 'Combustível', grupo_principal: 'Despesa Variável', grupoPrincipal: 'Despesa Variável', userId: 'default', ativo: true, criadoEm: getCurrentDateString() },
+  { id: 'default_12', nome: 'Alimentação', grupo_principal: 'Despesa Variável', grupoPrincipal: 'Despesa Variável', userId: 'default', ativo: true, criadoEm: getCurrentDateString() },
+  { id: 'default_13', nome: 'Marketing', grupo_principal: 'Despesa Variável', grupoPrincipal: 'Despesa Variável', userId: 'default', ativo: true, criadoEm: getCurrentDateString() },
+  { id: 'default_14', nome: 'Fornecedor 1', grupo_principal: 'Despesa Variável', grupoPrincipal: 'Despesa Variável', userId: 'default', ativo: true, criadoEm: getCurrentDateString() },
+  { id: 'default_15', nome: 'Fornecedor 2', grupo_principal: 'Despesa Variável', grupoPrincipal: 'Despesa Variável', userId: 'default', ativo: true, criadoEm: getCurrentDateString() },
+  { id: 'default_16', nome: 'Cursos e treinamentos', grupo_principal: 'Despesa Variável', grupoPrincipal: 'Despesa Variável', userId: 'default', ativo: true, criadoEm: getCurrentDateString() },
   
   // Investimentos
-  { id: '8', nome: 'Acervo/Cenário', grupo_principal: 'Investimento', grupoPrincipal: 'Investimento', userId: 'user1', ativo: true, criadoEm: getCurrentDateString() },
-  { id: '9', nome: 'Equipamentos', grupo_principal: 'Investimento', grupoPrincipal: 'Investimento', userId: 'user1', ativo: true, criadoEm: getCurrentDateString() },
+  { id: 'default_17', nome: 'Acervo/Cenário', grupo_principal: 'Investimento', grupoPrincipal: 'Investimento', userId: 'default', ativo: true, criadoEm: getCurrentDateString() },
+  { id: 'default_18', nome: 'Equipamentos', grupo_principal: 'Investimento', grupoPrincipal: 'Investimento', userId: 'default', ativo: true, criadoEm: getCurrentDateString() },
   
   // Receitas Não Operacionais
-  { id: '10', nome: 'Receita Extra', grupo_principal: 'Receita Não Operacional', grupoPrincipal: 'Receita Não Operacional', userId: 'user1', ativo: true, criadoEm: getCurrentDateString() },
-  { id: '11', nome: 'Vendas de Equipamentos', grupo_principal: 'Receita Não Operacional', grupoPrincipal: 'Receita Não Operacional', userId: 'user1', ativo: true, criadoEm: getCurrentDateString() }
+  { id: 'default_19', nome: 'Receita Extra', grupo_principal: 'Receita Não Operacional', grupoPrincipal: 'Receita Não Operacional', userId: 'default', ativo: true, criadoEm: getCurrentDateString() },
+  { id: 'default_20', nome: 'Vendas de Equipamentos', grupo_principal: 'Receita Não Operacional', grupoPrincipal: 'Receita Não Operacional', userId: 'default', ativo: true, criadoEm: getCurrentDateString() }
 ];
 
 export function useNovoFinancas() {
@@ -78,6 +90,55 @@ export function useNovoFinancas() {
     const saved = storage.load(STORAGE_KEYS.ITEMS, []);
     return saved.length > 0 ? saved : ITENS_INICIAIS;
   });
+
+  // Service methods for financial items
+  const adicionarItemFinanceiro = async (nome: string, grupo: GrupoPrincipal) => {
+    try {
+      const novoItem = await financialItemsService.createItem({
+        nome,
+        grupo_principal: grupo,
+        userId: 'user1',
+        ativo: true
+      });
+      
+      const itemCompativel: ItemFinanceiroCompativel = {
+        ...novoItem,
+        grupoPrincipal: novoItem.grupo_principal
+      };
+      
+      setItensFinanceiros(prev => [...prev, itemCompativel]);
+      return novoItem;
+    } catch (error) {
+      console.error('Erro ao adicionar item financeiro:', error);
+      throw error;
+    }
+  };
+
+  const atualizarItemFinanceiro = async (id: string, updates: Partial<ItemFinanceiroCompativel>) => {
+    try {
+      const itemAtualizado = await financialItemsService.updateItem(id, updates);
+      const itemCompativel: ItemFinanceiroCompativel = {
+        ...itemAtualizado,
+        grupoPrincipal: itemAtualizado.grupo_principal
+      };
+      
+      setItensFinanceiros(prev => prev.map(item => item.id === id ? itemCompativel : item));
+      return itemCompativel;
+    } catch (error) {
+      console.error('Erro ao atualizar item financeiro:', error);
+      throw error;
+    }
+  };
+
+  const removerItemFinanceiro = async (id: string) => {
+    try {
+      await financialItemsService.deleteItem(id);
+      setItensFinanceiros(prev => prev.filter(item => item.id !== id));
+    } catch (error) {
+      console.error('Erro ao remover item financeiro:', error);
+      throw error;
+    }
+  };
   
   const [transacoes, setTransacoes] = useState<NovaTransacao[]>(() => {
     return RecurringBlueprintEngine.loadTransactions();
@@ -451,33 +512,7 @@ export function useNovoFinancas() {
   }, [transacoesFiltradas]);
 
   // ============= FUNÇÕES DE GERENCIAMENTO =============
-  
-  // Funções para gerenciar itens financeiros
-  const adicionarItemFinanceiro = (nome: string, grupoPrincipal: GrupoPrincipal) => {
-    const novoItem: ItemFinanceiroCompativel = {
-      id: Date.now().toString(),
-      nome,
-      grupo_principal: grupoPrincipal,
-      grupoPrincipal,
-      userId: 'user1',
-      ativo: true,
-      criadoEm: getCurrentDateString()
-    };
-    setItensFinanceiros(prev => [...prev, novoItem]);
-  };
-
-  const removerItemFinanceiro = (id: string) => {
-    setItensFinanceiros(prev => prev.filter(item => item.id !== id));
-    // Remove também transações e blueprints relacionados
-    setTransacoes(prev => prev.filter(t => t.itemId !== id));
-    setBlueprintsRecorrentes(prev => prev.filter(b => b.itemId !== id));
-  };
-
-  const atualizarItemFinanceiro = (id: string, dadosAtualizados: Partial<ItemFinanceiroCompativel>) => {
-    setItensFinanceiros(prev => 
-      prev.map(item => item.id === id ? { ...item, ...dadosAtualizados } : item)
-    );
-  };
+  // Funções de gerenciamento de itens já declaradas acima no useState
 
   // Funções para gerenciar transações individuais
   const atualizarTransacao = (id: string, dadosAtualizados: Partial<NovaTransacao>) => {

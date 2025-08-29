@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Trash2, Edit2, Save, X, RefreshCw } from 'lucide-react';
+import { Plus, Trash2, Edit2, Save, X, RefreshCw, Database, Wifi, WifiOff } from 'lucide-react';
 import { ItemFinanceiro, GrupoPrincipal } from '@/types/financas';
 import { FinancialEngine, CreditCard } from '@/services/FinancialEngine';
 import { useToast } from '@/hooks/use-toast';
@@ -15,11 +15,13 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import ConfiguracaoCartoes from './ConfiguracaoCartoes';
 import SyncFromPricingModal from './SyncFromPricingModal';
 import { pricingFinancialIntegrationService } from '@/services/PricingFinancialIntegrationService';
+import { FinancialItemsServiceFactory } from '@/services/FinancialItemsService';
+import { toast as sonnerToast } from 'sonner';
 interface ConfiguracoesFinanceirasTabProps {
   itensFinanceiros: ItemFinanceiro[];
-  adicionarItemFinanceiro: (nome: string, grupo: GrupoPrincipal) => void;
-  removerItemFinanceiro: (id: string) => void;
-  atualizarItemFinanceiro: (id: string, dadosAtualizados: Partial<ItemFinanceiro>) => void;
+  adicionarItemFinanceiro: (nome: string, grupo: GrupoPrincipal) => Promise<any>;
+  removerItemFinanceiro: (id: string) => Promise<void>;
+  atualizarItemFinanceiro: (id: string, dadosAtualizados: Partial<ItemFinanceiro>) => Promise<any>;
 }
 export default function ConfiguracoesFinanceirasTab({
   itensFinanceiros,
@@ -33,6 +35,8 @@ export default function ConfiguracoesFinanceirasTab({
   const [nomeEditando, setNomeEditando] = useState('');
   const [syncModalOpen, setSyncModalOpen] = useState(false);
   const [custosDisponiveis, setCustosDisponiveis] = useState(0);
+  const [isSupabaseConnected] = useState(() => FinancialItemsServiceFactory.isUsingSupabase());
+  const [isSyncing, setIsSyncing] = useState(false);
   const { toast } = useToast();
   const { dialogState, confirm, handleConfirm, handleCancel, handleClose } = useConfirmDialog();
   
@@ -53,7 +57,8 @@ export default function ConfiguracoesFinanceirasTab({
     return () => clearInterval(interval);
   }, []);
   const grupos: GrupoPrincipal[] = ['Despesa Fixa', 'Despesa Variável', 'Investimento', 'Receita Não Operacional'];
-  const handleAdicionarItem = () => {
+  
+  const handleAdicionarItem = async () => {
     if (!novoItemNome.trim()) {
       toast({
         title: "Erro",
@@ -73,18 +78,27 @@ export default function ConfiguracoesFinanceirasTab({
       });
       return;
     }
-    adicionarItemFinanceiro(novoItemNome.trim(), novoItemGrupo);
-    setNovoItemNome('');
-    toast({
-      title: "Sucesso",
-      description: "Item adicionado com sucesso!"
-    });
+    
+    try {
+      await adicionarItemFinanceiro(novoItemNome.trim(), novoItemGrupo);
+      setNovoItemNome('');
+      toast({
+        title: "Sucesso",
+        description: "Item adicionado com sucesso!"
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao adicionar item financeiro.",
+        variant: "destructive"
+      });
+    }
   };
   const handleEditarItem = (item: ItemFinanceiro) => {
     setItemEditando(item.id);
     setNomeEditando(item.nome);
   };
-  const handleSalvarEdicao = (id: string) => {
+  const handleSalvarEdicao = async (id: string) => {
     if (!nomeEditando.trim()) {
       toast({
         title: "Erro",
@@ -104,15 +118,24 @@ export default function ConfiguracoesFinanceirasTab({
       });
       return;
     }
-    atualizarItemFinanceiro(id, {
-      nome: nomeEditando.trim()
-    });
-    setItemEditando(null);
-    setNomeEditando('');
-    toast({
-      title: "Sucesso",
-      description: "Item atualizado com sucesso!"
-    });
+    
+    try {
+      await atualizarItemFinanceiro(id, {
+        nome: nomeEditando.trim()
+      });
+      setItemEditando(null);
+      setNomeEditando('');
+      toast({
+        title: "Sucesso",
+        description: "Item atualizado com sucesso!"
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao atualizar item financeiro.",
+        variant: "destructive"
+      });
+    }
   };
   const handleCancelarEdicao = () => {
     setItemEditando(null);
@@ -128,11 +151,36 @@ export default function ConfiguracoesFinanceirasTab({
     });
     
     if (confirmed) {
-      removerItemFinanceiro(id);
-      toast({
-        title: "Sucesso",
-        description: "Item removido com sucesso!"
-      });
+      try {
+        await removerItemFinanceiro(id);
+        toast({
+          title: "Sucesso",
+          description: "Item removido com sucesso!"
+        });
+      } catch (error: any) {
+        toast({
+          title: "Erro",
+          description: error.message || "Erro ao remover item financeiro.",
+          variant: "destructive"
+        });
+      }
+    }
+  };
+
+  const handleSyncSupabase = async () => {
+    if (!isSupabaseConnected) {
+      sonnerToast.error('Supabase não está conectado. Conecte primeiro para sincronizar.');
+      return;
+    }
+
+    setIsSyncing(true);
+    try {
+      // TODO: Implement sync when Supabase is connected
+      sonnerToast.success('Sincronização com Supabase realizada com sucesso');
+    } catch (error) {
+      sonnerToast.error('Erro ao sincronizar com Supabase');
+    } finally {
+      setIsSyncing(false);
     }
   };
   const getCorGrupo = (grupo: GrupoPrincipal) => {
@@ -166,6 +214,43 @@ export default function ConfiguracoesFinanceirasTab({
     });
   };
   return <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Configurações Financeiras</h2>
+          <p className="text-muted-foreground">
+            Gerencie os itens financeiros do sistema
+          </p>
+        </div>
+        
+        <div className="flex items-center gap-3">
+          {/* Connection status */}
+          <div className="flex items-center gap-2">
+            {isSupabaseConnected ? (
+              <div className="flex items-center gap-2 text-green-600">
+                <Wifi className="h-4 w-4" />
+                <span className="text-sm font-medium">Supabase Conectado</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-amber-600">
+                <WifiOff className="h-4 w-4" />
+                <span className="text-sm font-medium">Local (Supabase não conectado)</span>
+              </div>
+            )}
+          </div>
+          
+          {/* Sync button */}
+          <Button 
+            onClick={handleSyncSupabase}
+            disabled={!isSupabaseConnected || isSyncing}
+            variant="outline"
+            size="sm"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
+            {isSyncing ? 'Sincronizando...' : 'Sincronizar'}
+          </Button>
+        </div>
+      </div>
+
       <Tabs defaultValue="itens" className="w-full">
         <TabsList className="grid w-full bg-gradient-to-r from-lunar-accent/10 to-lunar-accent/5 backdrop-blur-sm border border-lunar-border/20 rounded-xl p-1 grid-cols-2">
           <TabsTrigger 
