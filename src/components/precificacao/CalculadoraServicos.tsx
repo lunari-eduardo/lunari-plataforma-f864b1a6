@@ -9,7 +9,7 @@ import { SimpleProductSelector } from './SimpleProductSelector';
 import { SalvarPacoteModal } from './SalvarPacoteModal';
 import { PadraoHorasService, CalculadoraService, IndicadoresService } from '@/services/PricingService';
 import type { ProdutoAdicional, CustoExtra, StatusSalvamento } from '@/types/precificacao';
-// Tipos movidos para src/types/precificacao.ts
+// Tipos movidos para src/types/precificacao.ts - ProductSelector removed
 interface CalculadoraServicosProps {
   custosFixosTotal: number;
 }
