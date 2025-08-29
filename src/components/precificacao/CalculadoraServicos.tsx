@@ -46,24 +46,6 @@ export function CalculadoraServicos({
     }
   }, []);
 
-  // Carregar estado da calculadora salvo - NOVO RECURSO
-  useEffect(() => {
-    try {
-      const estadoSalvo = CalculadoraService.carregar();
-      if (estadoSalvo) {
-        setHorasEstimadas(estadoSalvo.horasEstimadas);
-        setMarkup(estadoSalvo.markup);
-        setProdutos(estadoSalvo.produtos);
-        setCustosExtras(estadoSalvo.custosExtras);
-        setStatusCalculadora('salvo');
-        setTemEstadoSalvo(true);
-        IndicadoresService.atualizarIndicador('calculadora', 'salvo', 'Estado anterior carregado');
-        console.log('✅ Estado da calculadora carregado');
-      }
-    } catch (error) {
-      console.error('Erro ao carregar estado da calculadora:', error);
-    }
-  }, []);
 
   // Cálculos (movidos para cima para evitar erro de declaração)
   const horasMensais = horasDisponiveis * diasTrabalhados * 4; // 4 semanas por mês
@@ -76,45 +58,6 @@ export function CalculadoraServicos({
   const lucroLiquido = precoFinal - custoTotalServico;
   const lucratividade = custoTotalServico > 0 ? lucroLiquido / precoFinal * 100 : 0;
 
-  // Auto-save do estado da calculadora - NOVO RECURSO
-  useEffect(() => {
-    // Só salvar se houver algum conteúdo significativo
-    const temConteudo = horasEstimadas > 0 || produtos.length > 0 || custosExtras.length > 0;
-    
-    if (temConteudo) {
-      const timeoutId = setTimeout(() => {
-        try {
-          setStatusCalculadora('salvando');
-          
-          const estadoAtual = {
-            horasEstimadas,
-            markup,
-            produtos,
-            custosExtras,
-            custoTotalCalculado: custoTotalServico,
-            precoFinalCalculado: precoFinal,
-            lucratividade,
-            salvo_automaticamente: true
-          };
-          
-          const sucesso = CalculadoraService.salvar(estadoAtual, true);
-          
-          if (sucesso) {
-            setStatusCalculadora('salvo');
-            setTemEstadoSalvo(true);
-            IndicadoresService.atualizarIndicador('calculadora', 'salvo', 'Auto-salvamento');
-          } else {
-            setStatusCalculadora('erro');
-          }
-        } catch (error) {
-          console.error('Erro no auto-save da calculadora:', error);
-          setStatusCalculadora('erro');
-        }
-      }, 2000); // Debounce de 2 segundos para calculadora
-      
-      return () => clearTimeout(timeoutId);
-    }
-  }, [horasEstimadas, markup, produtos, custosExtras, custoTotalServico, precoFinal, lucratividade]);
   const salvarPadraoHoras = () => {
     try {
       const sucesso = PadraoHorasService.salvar({
@@ -249,11 +192,6 @@ export function CalculadoraServicos({
                     </div>
                   </div>
                   
-                  {temEstadoSalvo && (
-                    <div className="text-xs text-blue-600 bg-blue-50 dark:bg-blue-900/20 p-2 rounded border border-blue-200 dark:border-blue-800">
-                      💾 Cálculo anterior carregado automaticamente. Use "Limpar" para começar novo cálculo.
-                    </div>
-                  )}
                 </div>
                 
                 {/* Layout principal - duas colunas */}
