@@ -26,9 +26,10 @@ export interface LeadsKanbanProps {
   periodFilter?: PeriodFilter;
   searchTerm?: string;
   originFilter?: string;
+  isMobile?: boolean;
 }
 
-export default function LeadsKanban({ periodFilter, searchTerm = '', originFilter = 'all' }: LeadsKanbanProps) {
+export default function LeadsKanban({ periodFilter, searchTerm = '', originFilter = 'all', isMobile = false }: LeadsKanbanProps) {
   const navigate = useNavigate();
   const {
     leads,
@@ -296,25 +297,50 @@ export default function LeadsKanban({ periodFilter, searchTerm = '', originFilte
 
     // Buscar cor do status
     const statusColor = statuses.find(s => s.key === statusKey)?.color || '#6b7280';
-    return <section className="flex-1 min-w-[280px] h-full flex flex-col">
-        <header className="flex items-center justify-between mb-3 px-1">
+    return <section className={cn(
+      "h-full flex flex-col",
+      isMobile ? "flex-1 min-w-[240px]" : "flex-1 min-w-[280px]"
+    )}>
+        <header className={cn(
+          "flex items-center justify-between px-1",
+          isMobile ? "mb-1.5" : "mb-3"
+        )}>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full" style={{
-            backgroundColor: statusColor
-          }} />
-            <h2 className="text-sm font-semibold text-lunar-text">{title}</h2>
+            <div className={cn(
+              "rounded-full",
+              isMobile ? "w-2 h-2" : "w-3 h-3"
+            )} style={{
+              backgroundColor: statusColor
+            }} />
+            <h2 className={cn(
+              "font-semibold text-lunar-text",
+              isMobile ? "text-xs" : "text-sm"
+            )}>{title}</h2>
           </div>
-          <Badge variant="outline" className="text-2xs">
+          <Badge variant="outline" className={cn(
+            isMobile ? "text-[10px] px-1 py-0" : "text-2xs"
+          )}>
             {leadsInColumn.length}
           </Badge>
         </header>
         
-        <Card ref={setNodeRef} className={cn("flex-1 p-2 border-lunar-border/60 transition-colors overflow-hidden flex flex-col", isOver ? "ring-2 ring-lunar-accent/60" : "")} style={{
-        backgroundColor: `${statusColor}08`,
-        borderColor: `${statusColor}40`
-      }}>
+        <Card 
+          ref={setNodeRef} 
+          className={cn(
+            "flex-1 border-lunar-border/60 transition-colors overflow-hidden flex flex-col",
+            isMobile ? "p-1" : "p-2",
+            isOver ? "ring-2 ring-lunar-accent/60" : ""
+          )} 
+          style={{
+            backgroundColor: `${statusColor}08`,
+            borderColor: `${statusColor}40`
+          }}
+        >
           <div className="flex-1 overflow-y-auto scrollbar-kanban">
-            <ul className="space-y-2 pb-2">
+            <ul className={cn(
+              "pb-2",
+              isMobile ? "space-y-1" : "space-y-2"
+            )}>
               {leadsInColumn.map(lead => <DraggableLeadCard key={lead.id} lead={lead} onDelete={() => {
               deleteLead(lead.id);
               toast({
@@ -324,7 +350,10 @@ export default function LeadsKanban({ periodFilter, searchTerm = '', originFilte
               handleStatusChange(lead, status);
             }} statusOptions={statusOptions} activeId={activeId} onScheduleClient={() => handleScheduleClient(lead)} onMarkAsScheduled={() => handleMarkAsScheduled(lead.id)} onViewAppointment={() => handleViewAppointment(lead)} onDirectScheduling={() => handleDirectScheduling(lead)} />)}
               
-              {leadsInColumn.length === 0 && <li className="text-center text-sm text-lunar-textSecondary py-8">
+              {leadsInColumn.length === 0 && <li className={cn(
+                "text-center text-lunar-textSecondary",
+                isMobile ? "text-xs py-4" : "text-sm py-8"
+              )}>
                   Nenhum lead neste status
                 </li>}
             </ul>
@@ -333,21 +362,34 @@ export default function LeadsKanban({ periodFilter, searchTerm = '', originFilte
       </section>;
   };
   return <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="flex items-center justify-between px-2 py-3">
+      {/* Header - More compact on mobile */}
+      <div className={cn(
+        "flex items-center justify-between",
+        isMobile ? "px-2 py-1.5" : "px-2 py-3"
+      )}>
         <div className="flex gap-2">
-          <Button variant="outline" size="icon" onClick={() => setConfigModalOpen(true)} title="Configurar Follow-up">
+          <Button 
+            variant="outline" 
+            size={isMobile ? "sm" : "icon"} 
+            onClick={() => setConfigModalOpen(true)} 
+            title="Configurar Follow-up"
+            className={cn(isMobile && "h-8")}
+          >
             <Settings className="h-4 w-4" />
+            {isMobile && <span className="ml-1 text-xs">Config</span>}
           </Button>
-          <Button onClick={() => setCreateModalOpen(true)}>
-            Novo Lead
+          <Button 
+            onClick={() => setCreateModalOpen(true)}
+            size={isMobile ? "sm" : "default"}
+            className={cn(isMobile && "h-8 text-xs")}
+          >
+            {isMobile ? "Novo" : "Novo Lead"}
           </Button>
         </div>
       </div>
 
-
-      {/* Kanban Board Container */}
-      <div className="flex-1 relative">
+      {/* Kanban Board Container - Optimized for mobile scroll */}
+      <div className="flex-1 relative overflow-hidden">
         <DndContext sensors={sensors} collisionDetection={rectIntersection} onDragStart={e => {
         setActiveId(String(e.active.id));
       }} onDragEnd={e => {
@@ -361,9 +403,12 @@ export default function LeadsKanban({ periodFilter, searchTerm = '', originFilte
         setActiveId(null);
       }} onDragCancel={() => setActiveId(null)}>
           
-          {/* Kanban Columns - Scrollable horizontally */}
+          {/* Kanban Columns - Enhanced mobile scrolling */}
           <div className="absolute inset-0 overflow-x-auto overflow-y-hidden scrollbar-kanban">
-            <div className="flex h-full gap-2 min-w-max px-2">
+            <div className={cn(
+              "flex h-full min-w-max",
+              isMobile ? "gap-1 px-1" : "gap-2 px-2"
+            )}>
               {statuses.map(status => <StatusColumn key={status.id} title={status.name} statusKey={status.key} />)}
             </div>
           </div>
