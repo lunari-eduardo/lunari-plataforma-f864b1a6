@@ -56,7 +56,7 @@ export function ProductSelector({ value, onSelect, className }: ProductSelectorP
           aria-expanded={open}
           className={cn("w-full justify-between text-xs h-7", className)}
         >
-          {selectedProduct ? selectedProduct.nome : "Selecionar produto..."}
+          {selectedProduct ? selectedProduct.nome : "Selecionar"}
           <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -73,7 +73,7 @@ export function ProductSelector({ value, onSelect, className }: ProductSelectorP
                   key={product.id}
                   value={product.nome}
                   onSelect={() => {
-                    onSelect(selectedProduct?.nome === product.nome ? null : product);
+                    onSelect(value === product.nome ? null : product);
                     setOpen(false);
                   }}
                   className="text-xs cursor-pointer"

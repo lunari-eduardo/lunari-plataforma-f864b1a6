@@ -207,18 +207,18 @@ export function CalculadoraServicos({
                         <div className="grid grid-cols-2 gap-3">
                           <div>
                             <Label htmlFor="horas-disponiveis" className="text-sm">Horas disponíveis/dia</Label>
-                            <Input id="horas-disponiveis" type="number" min="1" value={horasDisponiveis} onChange={e => setHorasDisponiveis(Number(e.target.value))} className="h-8" />
+                            <Input id="horas-disponiveis" type="text" inputMode="numeric" min="1" value={horasDisponiveis} onChange={e => setHorasDisponiveis(Number(e.target.value))} className="h-8 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                           </div>
                           <div>
                             <Label htmlFor="dias-trabalhados" className="text-sm">Dias trabalhados/semana</Label>
-                            <Input id="dias-trabalhados" type="number" min="1" max="7" value={diasTrabalhados} onChange={e => setDiasTrabalhados(Number(e.target.value))} className="h-8" />
+                            <Input id="dias-trabalhados" type="text" inputMode="numeric" min="1" max="7" value={diasTrabalhados} onChange={e => setDiasTrabalhados(Number(e.target.value))} className="h-8 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                           </div>
                         </div>
                         
                         
                         <div>
                           <Label htmlFor="horas-estimadas" className="text-sm">Horas estimadas para o serviço</Label>
-                          <Input id="horas-estimadas" type="number" min="0" step="0.5" value={horasEstimadas} onChange={e => setHorasEstimadas(Number(e.target.value))} className="h-8" />
+                          <Input id="horas-estimadas" type="text" inputMode="decimal" min="0" step="0.5" value={horasEstimadas} onChange={e => setHorasEstimadas(Number(e.target.value))} className="h-8 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                         </div>
                         
                         <div className="space-y-2 pt-3 border-t border-lunar-border/30">
@@ -285,7 +285,7 @@ export function CalculadoraServicos({
                               <div className="grid grid-cols-2 md:grid-cols-1 gap-2 md:gap-0">
                                 <div>
                                   <Label className="text-xs mb-1 block">Valor Venda</Label>
-                                  <Input type="number" min="0" step="0.01" value={produto.valorVenda} onChange={e => atualizarProduto(produto.id, 'valorVenda', parseFloat(e.target.value) || 0)} className="h-8 text-sm" />
+                                  <Input type="text" inputMode="decimal" min="0" step="0.01" value={produto.valorVenda} onChange={e => atualizarProduto(produto.id, 'valorVenda', parseFloat(e.target.value) || 0)} className="h-8 text-sm [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                                 </div>
                               </div>
                               <div className="flex justify-center md:justify-start">
@@ -322,7 +322,7 @@ export function CalculadoraServicos({
                               <div className="grid grid-cols-2 md:grid-cols-1 gap-2 md:gap-0">
                                 <div>
                                   <Label className="text-xs mb-1 block">Valor Unitário</Label>
-                                  <Input type="number" min="0" step="0.01" value={custo.valorUnitario} onChange={e => atualizarCustoExtra(custo.id, 'valorUnitario', parseFloat(e.target.value) || 0)} className="h-8 text-sm" />
+                                  <Input type="text" inputMode="decimal" min="0" step="0.01" value={custo.valorUnitario} onChange={e => atualizarCustoExtra(custo.id, 'valorUnitario', parseFloat(e.target.value) || 0)} className="h-8 text-sm [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                                 </div>
                               </div>
                               <div className="grid grid-cols-2 md:grid-cols-1 gap-2 md:gap-0">
