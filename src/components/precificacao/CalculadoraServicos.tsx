@@ -253,33 +253,46 @@ export function CalculadoraServicos({
                           {produtos.length === 0 && <p className="text-sm text-lunar-textSecondary text-center py-4">
                               Nenhum produto adicionado
                             </p>}
-                          {produtos.map(produto => <div key={produto.id} className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-end bg-lunar-surface/50 p-3 rounded border border-lunar-border/20">
-                              <div>
-                                <Label className="text-xs">Produto</Label>
-                                <ProductSelector value={produto.nome} onSelect={product => {
-                              if (product) {
-                                atualizarProduto(produto.id, 'nome', product.nome);
-                                atualizarProduto(produto.id, 'custo', product.custo);
-                                atualizarProduto(produto.id, 'valorVenda', product.valorVenda);
-                              }
-                            }} />
+                          {produtos.map(produto => <div key={produto.id} className="grid grid-cols-1 md:grid-cols-4 gap-2 md:gap-3 items-end bg-lunar-surface/50 p-2 md:p-3 rounded border border-lunar-border/20 space-y-2 md:space-y-0">
+                              <div className="col-span-1 md:col-span-1">
+                                <Label className="text-xs mb-1 block">Produto</Label>
+                                <ProductSelector 
+                                  value={produto.nome} 
+                                  onSelect={product => {
+                                    if (product) {
+                                      atualizarProduto(produto.id, 'nome', product.nome);
+                                      atualizarProduto(produto.id, 'custo', product.custo || 0);
+                                      atualizarProduto(produto.id, 'valorVenda', product.valorVenda || 0);
+                                    } else {
+                                      atualizarProduto(produto.id, 'nome', '');
+                                      atualizarProduto(produto.id, 'custo', 0);
+                                      atualizarProduto(produto.id, 'valorVenda', 0);
+                                    }
+                                  }} 
+                                />
                               </div>
-                              <div>
-                                <Label className="text-xs">Quantidade</Label>
-                                <Input type="text" inputMode="numeric" pattern="[0-9]*" value={produto.quantidade} onChange={e => {
-                                  const value = parseInt(e.target.value) || 1;
-                                  if (value >= 1) {
-                                    atualizarProduto(produto.id, 'quantidade', value);
-                                  }
-                                }} className="h-8" />
+                              <div className="grid grid-cols-2 md:grid-cols-1 gap-2 md:gap-0">
+                                <div>
+                                  <Label className="text-xs mb-1 block">Quantidade</Label>
+                                  <Input type="text" inputMode="numeric" pattern="[0-9]*" value={produto.quantidade} onChange={e => {
+                                    const value = parseInt(e.target.value) || 1;
+                                    if (value >= 1) {
+                                      atualizarProduto(produto.id, 'quantidade', value);
+                                    }
+                                  }} className="h-8 text-sm" />
+                                </div>
                               </div>
-                              <div>
-                                <Label className="text-xs">Valor Venda</Label>
-                                <Input type="number" min="0" step="0.01" value={produto.valorVenda} onChange={e => atualizarProduto(produto.id, 'valorVenda', parseFloat(e.target.value) || 0)} className="h-8" />
+                              <div className="grid grid-cols-2 md:grid-cols-1 gap-2 md:gap-0">
+                                <div>
+                                  <Label className="text-xs mb-1 block">Valor Venda</Label>
+                                  <Input type="number" min="0" step="0.01" value={produto.valorVenda} onChange={e => atualizarProduto(produto.id, 'valorVenda', parseFloat(e.target.value) || 0)} className="h-8 text-sm" />
+                                </div>
                               </div>
-                              <Button onClick={() => removerProduto(produto.id)} variant="outline" size="sm" className="h-8">
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
+                              <div className="flex justify-center md:justify-start">
+                                <Button onClick={() => removerProduto(produto.id)} variant="outline" size="sm" className="h-8 px-3">
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
                             </div>)}
                         </div>
                       </CardContent>
@@ -301,27 +314,33 @@ export function CalculadoraServicos({
                           {custosExtras.length === 0 && <p className="text-sm text-lunar-textSecondary text-center py-4">
                               Nenhum custo extra adicionado
                             </p>}
-                          {custosExtras.map(custo => <div key={custo.id} className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-end bg-lunar-surface/50 p-3 rounded border border-lunar-border/20">
-                              <div>
-                                <Label className="text-xs">Descrição</Label>
-                                <Input placeholder="Descrição do custo" value={custo.descricao} onChange={e => atualizarCustoExtra(custo.id, 'descricao', e.target.value)} className="h-8" />
+                          {custosExtras.map(custo => <div key={custo.id} className="grid grid-cols-1 md:grid-cols-4 gap-2 md:gap-3 items-end bg-lunar-surface/50 p-2 md:p-3 rounded border border-lunar-border/20 space-y-2 md:space-y-0">
+                              <div className="col-span-1 md:col-span-1">
+                                <Label className="text-xs mb-1 block">Descrição</Label>
+                                <Input placeholder="Descrição do custo" value={custo.descricao} onChange={e => atualizarCustoExtra(custo.id, 'descricao', e.target.value)} className="h-8 text-sm" />
                               </div>
-                              <div>
-                                <Label className="text-xs">Valor Unitário</Label>
-                                <Input type="number" min="0" step="0.01" value={custo.valorUnitario} onChange={e => atualizarCustoExtra(custo.id, 'valorUnitario', parseFloat(e.target.value) || 0)} className="h-8" />
+                              <div className="grid grid-cols-2 md:grid-cols-1 gap-2 md:gap-0">
+                                <div>
+                                  <Label className="text-xs mb-1 block">Valor Unitário</Label>
+                                  <Input type="number" min="0" step="0.01" value={custo.valorUnitario} onChange={e => atualizarCustoExtra(custo.id, 'valorUnitario', parseFloat(e.target.value) || 0)} className="h-8 text-sm" />
+                                </div>
                               </div>
-                              <div>
-                                <Label className="text-xs">Quantidade</Label>
-                                <Input type="text" inputMode="numeric" pattern="[0-9]*" value={custo.quantidade} onChange={e => {
-                                  const value = parseInt(e.target.value) || 1;
-                                  if (value >= 1) {
-                                    atualizarCustoExtra(custo.id, 'quantidade', value);
-                                  }
-                                }} className="h-8" />
+                              <div className="grid grid-cols-2 md:grid-cols-1 gap-2 md:gap-0">
+                                <div>
+                                  <Label className="text-xs mb-1 block">Quantidade</Label>
+                                  <Input type="text" inputMode="numeric" pattern="[0-9]*" value={custo.quantidade} onChange={e => {
+                                    const value = parseInt(e.target.value) || 1;
+                                    if (value >= 1) {
+                                      atualizarCustoExtra(custo.id, 'quantidade', value);
+                                    }
+                                  }} className="h-8 text-sm" />
+                                </div>
                               </div>
-                              <Button onClick={() => removerCustoExtra(custo.id)} variant="outline" size="sm" className="h-8">
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
+                              <div className="flex justify-center md:justify-start">
+                                <Button onClick={() => removerCustoExtra(custo.id)} variant="outline" size="sm" className="h-8 px-3">
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
                             </div>)}
                         </div>
                       </CardContent>

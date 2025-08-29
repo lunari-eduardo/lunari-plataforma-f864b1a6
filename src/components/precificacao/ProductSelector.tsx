@@ -43,8 +43,8 @@ export function ProductSelector({ value, onSelect, className }: ProductSelectorP
     const convertedProducts: Product[] = savedProducts.map((produto: any) => ({
       id: produto.id,
       nome: produto.nome,
-      custo: produto.preco_custo,
-      valorVenda: produto.preco_venda
+      custo: produto.preco_custo || produto.custo || 0,
+      valorVenda: produto.preco_venda || produto.valorVenda || 0
     }));
     
     // Se não há produtos salvos, usar os mock como fallback
@@ -66,7 +66,7 @@ export function ProductSelector({ value, onSelect, className }: ProductSelectorP
           <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[300px] p-0">
+      <PopoverContent className="w-[300px] p-0 bg-popover border-border z-50">
         <Command>
           <CommandInput placeholder="Buscar produto..." className="h-8 text-xs" />
           <CommandList>
