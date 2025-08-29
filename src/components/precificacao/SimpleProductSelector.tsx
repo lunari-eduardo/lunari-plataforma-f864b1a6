@@ -5,49 +5,63 @@ import { Button } from '@/components/ui/button';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { storage } from '@/utils/localStorage';
-
-interface Product {
-  id: string;
-  nome: string;
-  custo?: number;
-  valorVenda?: number;
-  preco_custo?: number;
-  preco_venda?: number;
-}
+import { processProductList, debugProductData, type NormalizedProduct } from '@/utils/productUtils';
 
 interface SimpleProductSelectorProps {
   value?: string;
-  onSelect: (product: Product | null) => void;
+  onSelect: (product: NormalizedProduct | null) => void;
   className?: string;
 }
 
 export function SimpleProductSelector({ value, onSelect, className }: SimpleProductSelectorProps) {
   const [open, setOpen] = useState(false);
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<NormalizedProduct[]>([]);
+  const [selectedValue, setSelectedValue] = useState(""); // Add internal state like ProductSearchCombobox
 
   useEffect(() => {
-    const savedProducts = storage.load('configuracoes_produtos', []);
+    console.log('📦 [SimpleProductSelector] Carregando produtos...');
     
-    const normalizedProducts = savedProducts.map((produto: any) => ({
-      id: produto.id || produto.uuid || `produto_${Date.now()}_${Math.random()}`,
-      nome: produto.nome || produto.name || '',
-      custo: Number(produto.preco_custo || produto.precocusto || produto.custo || 0),
-      valorVenda: Number(produto.preco_venda || produto.precovenda || produto.valorVenda || produto.valor || 0)
-    })).filter((produto: Product) => produto.nome.trim() !== '');
-    
-    setProducts(normalizedProducts);
+    try {
+      const savedProducts = storage.load('configuracoes_produtos', []);
+      console.log('📊 [SimpleProductSelector] Produtos salvos encontrados:', savedProducts.length);
+      
+      // Debug raw data
+      debugProductData(savedProducts, 'SimpleProductSelector');
+      
+      // Process using utility function
+      const processedProducts = processProductList(savedProducts);
+      
+      console.log('✅ [SimpleProductSelector] Produtos processados:', processedProducts.length);
+      setProducts(processedProducts);
+    } catch (error) {
+      console.error('❌ [SimpleProductSelector] Erro ao carregar produtos:', error);
+      setProducts([]);
+    }
   }, []);
 
   const selectedProduct = products.find(product => product.nome === value);
 
   const handleSelect = (selectedProductName: string) => {
-    const product = products.find(p => p.nome === selectedProductName);
+    console.log('🎯 SimpleProductSelector: handleSelect chamado', { selectedProductName });
     
-    if (product) {
-      onSelect(product);
+    try {
+      const product = products.find(p => p.nome === selectedProductName);
+      console.log('📦 Produto encontrado:', product);
+      
+      if (product) {
+        console.log('✅ Enviando produto selecionado:', product);
+        onSelect(product);
+        setSelectedValue(""); // Reset after selection like ProductSearchCombobox
+      } else {
+        console.log('⚠️ Produto não encontrado, enviando null');
+        onSelect(null);
+      }
+      
+      setOpen(false);
+    } catch (error) {
+      console.error('❌ Erro na seleção de produto:', error);
+      setOpen(false);
     }
-    
-    setOpen(false);
   };
 
   return (
@@ -65,7 +79,7 @@ export function SimpleProductSelector({ value, onSelect, className }: SimpleProd
           <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[300px] p-0 bg-popover border-border z-50">
+      <PopoverContent className="w-[300px] p-0 z-[9999] bg-popover border shadow-lg">
         <Command>
           <CommandInput placeholder="Buscar produto..." className="h-8 text-xs" />
           <CommandList>

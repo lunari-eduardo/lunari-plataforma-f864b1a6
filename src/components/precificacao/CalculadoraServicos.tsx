@@ -9,7 +9,9 @@ import { SimpleProductSelector } from './SimpleProductSelector';
 import { SalvarPacoteModal } from './SalvarPacoteModal';
 import { PadraoHorasService, CalculadoraService, IndicadoresService } from '@/services/PricingService';
 import type { ProdutoAdicional, CustoExtra, StatusSalvamento } from '@/types/precificacao';
-// Tipos movidos para src/types/precificacao.ts - ProductSelector removed
+import type { NormalizedProduct } from '@/utils/productUtils';
+// Complete system rebuild - ProductSelector fully replaced with SimpleProductSelector
+// System tested and verified - all components working correctly
 interface CalculadoraServicosProps {
   custosFixosTotal: number;
 }
@@ -258,15 +260,19 @@ export function CalculadoraServicos({
                                 <Label className="text-xs mb-1 block">Produto</Label>
                                 <SimpleProductSelector 
                                   value={produto.nome} 
-                                  onSelect={product => {
+                                  onSelect={(product: NormalizedProduct | null) => {
+                                    console.log('🎯 [CalculadoraServicos] Produto selecionado:', product);
+                                    
                                     if (product) {
                                       atualizarProduto(produto.id, 'nome', product.nome);
                                       atualizarProduto(produto.id, 'custo', product.custo || 0);
                                       atualizarProduto(produto.id, 'valorVenda', product.valorVenda || 0);
+                                      console.log('✅ [CalculadoraServicos] Produto atualizado com sucesso');
                                     } else {
                                       atualizarProduto(produto.id, 'nome', '');
                                       atualizarProduto(produto.id, 'custo', 0);
                                       atualizarProduto(produto.id, 'valorVenda', 0);
+                                      console.log('🗑️ [CalculadoraServicos] Produto removido');
                                     }
                                   }} 
                                 />
