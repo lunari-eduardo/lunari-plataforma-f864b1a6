@@ -392,15 +392,53 @@ export function useExtrato() {
     };
   }, [filtros, resumo, linhasComSaldo, preferencias.modoData]);
 
+  // ============= HELPER FUNCTIONS PARA DATA =============
+
+  const normalizeDate = useCallback((dateString: string): string => {
+    if (!dateString) return '';
+    // Garantir formato YYYY-MM-DD
+    if (dateString.includes('T')) {
+      return dateString.split('T')[0];
+    }
+    return dateString;
+  }, []);
+
+  const getPagamentoEffectiveDate = useCallback((pagamento: any): string => {
+    if (preferencias.modoData === 'caixa') {
+      // Modo caixa: usar data de pagamento se estiver pago
+      if (pagamento.statusPagamento === 'pago' && pagamento.data) {
+        return normalizeDate(pagamento.data);
+      }
+      // Se não pago, retornar vazio para não incluir
+      return '';
+    } else {
+      // Modo competência: usar data de vencimento
+      return normalizeDate(pagamento.dataVencimento || pagamento.data || '');
+    }
+  }, [preferencias.modoData, normalizeDate]);
+
+  const getTransacaoEffectiveDate = useCallback((transacao: any): string => {
+    if (preferencias.modoData === 'caixa') {
+      // Modo caixa: só incluir se estiver pago
+      if (transacao.status === 'Pago') {
+        // TODO: usar dataPagamento quando disponível
+        return normalizeDate(transacao.dataVencimento);
+      }
+      return '';
+    } else {
+      // Modo competência: sempre usar data de vencimento
+      return normalizeDate(transacao.dataVencimento);
+    }
+  }, [preferencias.modoData, normalizeDate]);
+
   // ============= DEMONSTRATIVO SIMPLIFICADO =============
 
   const calcularDemonstrativoSimplificado = useCallback((): DemonstrativoSimplificado => {
     // 1. CALCULAR RECEITAS
     const receitaSessoes = pagamentosWorkflow
       .filter(p => {
-        const data = p.dataVencimento || p.data;
-        return data >= filtros.dataInicio && data <= filtros.dataFim && 
-               (p.statusPagamento === 'pago' || p.data);
+        const dataEfetiva = getPagamentoEffectiveDate(p);
+        return dataEfetiva && dataEfetiva >= filtros.dataInicio && dataEfetiva <= filtros.dataFim;
       })
       .reduce((sum, p) => {
         // Receita de sessão = valor total menos produtos extras
@@ -410,19 +448,17 @@ export function useExtrato() {
 
     const receitaProdutos = pagamentosWorkflow
       .filter(p => {
-        const data = p.dataVencimento || p.data;
-        return data >= filtros.dataInicio && data <= filtros.dataFim && 
-               (p.statusPagamento === 'pago' || p.data);
+        const dataEfetiva = getPagamentoEffectiveDate(p);
+        return dataEfetiva && dataEfetiva >= filtros.dataInicio && dataEfetiva <= filtros.dataFim;
       })
       .reduce((sum, p) => sum + (p.valorProdutoExtra || 0), 0);
 
     const receitaNaoOperacional = transacoesFinanceiras
       .filter(t => {
         const item = itensFinanceiros.find(i => i.id === t.itemId);
+        const dataEfetiva = getTransacaoEffectiveDate(t);
         return item?.grupo_principal === 'Receita Não Operacional' &&
-               t.dataVencimento >= filtros.dataInicio && 
-               t.dataVencimento <= filtros.dataFim &&
-               t.status === 'Pago';
+               dataEfetiva && dataEfetiva >= filtros.dataInicio && dataEfetiva <= filtros.dataFim;
       })
       .reduce((sum, t) => sum + t.valor, 0);
 
@@ -441,10 +477,9 @@ export function useExtrato() {
     gruposDespesas.forEach(grupo => {
       const transacoesGrupo = transacoesFinanceiras.filter(t => {
         const item = itensFinanceiros.find(i => i.id === t.itemId);
+        const dataEfetiva = getTransacaoEffectiveDate(t);
         return item?.grupo_principal === grupo &&
-               t.dataVencimento >= filtros.dataInicio && 
-               t.dataVencimento <= filtros.dataFim &&
-               t.status === 'Pago';
+               dataEfetiva && dataEfetiva >= filtros.dataInicio && dataEfetiva <= filtros.dataFim;
       });
 
       if (transacoesGrupo.length > 0) {
@@ -496,25 +531,27 @@ export function useExtrato() {
         margemLiquida
       }
     };
-  }, [pagamentosWorkflow, transacoesFinanceiras, itensFinanceiros, filtros]);
+  }, [pagamentosWorkflow, transacoesFinanceiras, itensFinanceiros, filtros, getPagamentoEffectiveDate, getTransacaoEffectiveDate]);
 
   const demonstrativo = calcularDemonstrativoSimplificado();
 
   // ============= NOVO MÉTODO: CALCULAR DEMONSTRATIVO PARA PERÍODO ESPECÍFICO =============
   
   const calcularDemonstrativoParaPeriodo = useCallback((dataInicio: string, dataFim: string): DemonstrativoSimplificado => {
-    // Filtrar pagamentos do workflow para o período
+    // Normalizar datas de entrada
+    const dataInicioNorm = normalizeDate(dataInicio);
+    const dataFimNorm = normalizeDate(dataFim);
+
+    // Filtrar pagamentos do workflow para o período usando lógica de data efetiva
     const pagamentosPeriodo = pagamentosWorkflow.filter(p => {
-      const data = p.dataVencimento || p.data;
-      return data >= dataInicio && data <= dataFim && 
-             (p.statusPagamento === 'pago' || p.data);
+      const dataEfetiva = getPagamentoEffectiveDate(p);
+      return dataEfetiva && dataEfetiva >= dataInicioNorm && dataEfetiva <= dataFimNorm;
     });
 
-    // Filtrar transações financeiras para o período
+    // Filtrar transações financeiras para o período usando lógica de data efetiva
     const transacoesPeriodo = transacoesFinanceiras.filter(t => {
-      return t.dataVencimento >= dataInicio && 
-             t.dataVencimento <= dataFim &&
-             t.status === 'Pago';
+      const dataEfetiva = getTransacaoEffectiveDate(t);
+      return dataEfetiva && dataEfetiva >= dataInicioNorm && dataEfetiva <= dataFimNorm;
     });
 
     // 1. CALCULAR RECEITAS
@@ -597,7 +634,7 @@ export function useExtrato() {
         margemLiquida
       }
     };
-  }, [pagamentosWorkflow, transacoesFinanceiras, itensFinanceiros]);
+  }, [pagamentosWorkflow, transacoesFinanceiras, itensFinanceiros, normalizeDate, getPagamentoEffectiveDate, getTransacaoEffectiveDate]);
 
   return {
     // Dados

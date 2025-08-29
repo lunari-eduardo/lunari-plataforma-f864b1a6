@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { formatCurrency } from '@/utils/financialUtils';
 import { DemonstrativoSimplificado as DemonstrativoType } from '@/types/extrato';
 import { useUserProfile, useUserBranding } from '@/hooks/useUserProfile';
-import { generateDemonstrativePDF, DemonstrativeExportData } from '@/utils/financialPdfUtils';
+import { generateDemonstrativePDF, DemonstrativeExportData } from '@/utils/newDemonstrativePdfUtils';
 import { TransacaoComItem } from '@/types/financas';
 import PeriodSelectionModal from './PeriodSelectionModal';
 import { useExtrato } from '@/hooks/useExtrato';
