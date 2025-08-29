@@ -50,6 +50,9 @@ const STORAGE_KEYS = {
 import { financialItemsService, ItemFinanceiroSupabase } from '@/services/FinancialItemsService';
 
 // Dados iniciais padrão expandidos baseados na imagem fornecida
+// Versão dos itens padrão - incremente para forçar atualização
+const ITEMS_VERSION = '2024-12-01';
+
 const ITENS_INICIAIS: ItemFinanceiroCompativel[] = [
   // Despesas Fixas
   { id: 'default_1', nome: 'DAS', grupo_principal: 'Despesa Fixa', grupoPrincipal: 'Despesa Fixa', userId: 'default', ativo: true, criadoEm: getCurrentDateString() },
@@ -87,6 +90,16 @@ export function useNovoFinancas() {
   // ============= ESTADOS PRINCIPAIS =============
   
   const [itensFinanceiros, setItensFinanceiros] = useState<ItemFinanceiroCompativel[]>(() => {
+    const currentVersion = localStorage.getItem('financial_items_version');
+    
+    // Se a versão mudou ou não existe, usar itens padrão
+    if (currentVersion !== ITEMS_VERSION) {
+      console.log('Atualizando itens financeiros padrão para versão:', ITEMS_VERSION);
+      localStorage.setItem('financial_items_version', ITEMS_VERSION);
+      storage.save(STORAGE_KEYS.ITEMS, ITENS_INICIAIS);
+      return ITENS_INICIAIS;
+    }
+    
     const saved = storage.load(STORAGE_KEYS.ITEMS, []);
     return saved.length > 0 ? saved : ITENS_INICIAIS;
   });

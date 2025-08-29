@@ -222,33 +222,28 @@ export default function ConfiguracoesFinanceirasTab({
           </p>
         </div>
         
-        <div className="flex items-center gap-3">
-          {/* Connection status */}
-          <div className="flex items-center gap-2">
-            {isSupabaseConnected ? (
+        {isSupabaseConnected && (
+          <div className="flex items-center gap-3">
+            {/* Connection status - only shown when connected */}
+            <div className="flex items-center gap-2">
               <div className="flex items-center gap-2 text-green-600">
                 <Wifi className="h-4 w-4" />
                 <span className="text-sm font-medium">Supabase Conectado</span>
               </div>
-            ) : (
-              <div className="flex items-center gap-2 text-amber-600">
-                <WifiOff className="h-4 w-4" />
-                <span className="text-sm font-medium">Local (Supabase não conectado)</span>
-              </div>
-            )}
+            </div>
+            
+            {/* Sync button */}
+            <Button 
+              onClick={handleSyncSupabase}
+              disabled={isSyncing}
+              variant="outline"
+              size="sm"
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
+              {isSyncing ? 'Sincronizando...' : 'Sincronizar'}
+            </Button>
           </div>
-          
-          {/* Sync button */}
-          <Button 
-            onClick={handleSyncSupabase}
-            disabled={!isSupabaseConnected || isSyncing}
-            variant="outline"
-            size="sm"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
-            {isSyncing ? 'Sincronizando...' : 'Sincronizar'}
-          </Button>
-        </div>
+        )}
       </div>
 
       <Tabs defaultValue="itens" className="w-full">
