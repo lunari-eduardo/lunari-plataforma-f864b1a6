@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Clock, CheckCircle, AlertCircle, ExternalLink, FileText, List } from 'lucide-react';
+import { Clock, CheckCircle, AlertCircle, ExternalLink, TrendingUp, Search } from 'lucide-react';
 import ExportDetalhado from './ExportDetalhado';
 import { formatCurrency } from '@/utils/financialUtils';
 import { formatDateForDisplay } from '@/utils/dateUtils';
@@ -203,11 +203,11 @@ export default function ExtratoTab() {
       <Tabs defaultValue="detalhado" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="detalhado" className="flex items-center space-x-2">
-            <List className="h-4 w-4" />
+            <Search className="h-4 w-4" />
             <span>Vista Detalhada</span>
           </TabsTrigger>
           <TabsTrigger value="demonstrativo" className="flex items-center space-x-2">
-            <FileText className="h-4 w-4" />
+            <TrendingUp className="h-4 w-4" />
             <span>Demonstrativo</span>
           </TabsTrigger>
         </TabsList>
