@@ -5,6 +5,7 @@ import { useNovoFinancas } from '@/hooks/useNovoFinancas';
 import { formatCurrency } from '@/utils/financialUtils';
 import '@/utils/cleanupDREData';
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useIsMobile } from '@/hooks/use-mobile';
 import LancamentosTab from '@/components/financas/LancamentosTab';
 import ConfiguracoesFinanceirasTab from '@/components/financas/ConfiguracoesFinanceirasTab';
 import DashboardFinanceiro from '@/components/financas/DashboardFinanceiro';
@@ -34,6 +35,9 @@ export default function NovaFinancas() {
     atualizarCartao,
     removerCartao
   } = useNovoFinancas();
+  
+  const isMobile = useIsMobile();
+  
   const [activeTab, setActiveTab] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get('tab') || 'extrato';
@@ -50,19 +54,19 @@ export default function NovaFinancas() {
           <TabsList className="grid w-full h-10 p-1 text-sm bg-card border border-border py-0 grid-cols-4">
             <TabsTrigger value="extrato" className="text-sm py-2 data-[state=active]:bg-primary/10 text-foreground flex items-center gap-2">
               <FileText className="h-4 w-4" />
-              Extrato
+              {!isMobile && "Extrato"}
             </TabsTrigger>
             <TabsTrigger value="lancamentos" className="text-sm py-2 data-[state=active]:bg-primary/10 text-foreground flex items-center gap-2">
               <Receipt className="h-4 w-4" />
-              Lançamentos
+              {!isMobile && "Lançamentos"}
             </TabsTrigger>
             <TabsTrigger value="dashboard" className="text-sm py-2 data-[state=active]:bg-primary/10 data-[state=active]:text-foreground flex items-center gap-2">
               <PiggyBank className="h-4 w-4" />
-              Dashboard
+              {!isMobile && "Dashboard"}
             </TabsTrigger>
             <TabsTrigger value="configuracoes" className="text-sm py-2 data-[state=active]:bg-primary/10 data-[state=active]:text-foreground flex items-center gap-2">
               <CreditCard className="h-4 w-4" />
-              Configurações
+              {!isMobile && "Configurações"}
             </TabsTrigger>
           </TabsList>
 
