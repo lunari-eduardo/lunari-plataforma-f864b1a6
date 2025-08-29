@@ -44,23 +44,23 @@ export default function ExtratoTab() {
 
   // ============= RENDERIZAÇÃO DE FILTROS SIMPLIFICADOS =============
 
-  const renderFiltros = () => <div className="flex flex-wrap items-end gap-4 mb-6 p-4 bg-lunar-surface/50 rounded-lg border border-lunar-border/30 py-[3px]">
+  const renderFiltros = () => <div className="flex flex-wrap items-end gap-4 mb-6 p-4 bg-lunar-surface/50 rounded-lg border border-lunar-border/30 py-[2px]">
       <div className="space-y-2">
-        <Label>Data Início</Label>
+        
         <Input type="date" value={filtros.dataInicio} onChange={e => atualizarFiltros({
         dataInicio: e.target.value
       })} className="w-40" />
       </div>
       
       <div className="space-y-2">
-        <Label>Data Fim</Label>
+        
         <Input type="date" value={filtros.dataFim} onChange={e => atualizarFiltros({
         dataFim: e.target.value
       })} className="w-40" />
       </div>
 
       <div className="space-y-2">
-        <Label>Tipo</Label>
+        
         <Select value={filtros.tipo || 'todos'} onValueChange={value => atualizarFiltros({
         tipo: value as ExtratoTipo | 'todos'
       })}>
@@ -191,7 +191,7 @@ export default function ExtratoTab() {
       {/* Header */}
       <div className="mb-6">
         
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground py-0 my-0">
           Visão unificada de todas as movimentações financeiras
         </p>
       </div>
@@ -217,14 +217,10 @@ export default function ExtratoTab() {
         </TabsContent>
         
         <TabsContent value="demonstrativo" className="mt-6">
-          <DemonstrativoSimplificado 
-            demonstrativo={demonstrativo} 
-            periodo={{
-              inicio: filtros.dataInicio,
-              fim: filtros.dataFim
-            }}
-            transactions={[]}
-          />
+          <DemonstrativoSimplificado demonstrativo={demonstrativo} periodo={{
+          inicio: filtros.dataInicio,
+          fim: filtros.dataFim
+        }} transactions={[]} />
         </TabsContent>
       </Tabs>
     </div>;
