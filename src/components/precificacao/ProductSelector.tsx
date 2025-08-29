@@ -72,8 +72,21 @@ export function ProductSelector({ value, onSelect, className }: ProductSelectorP
                 <CommandItem
                   key={product.id}
                   value={product.nome}
-                  onSelect={() => {
-                    onSelect(value === product.nome ? null : product);
+                  onSelect={(currentValue) => {
+                    console.log('🔍 ProductSelector - onSelect chamado:', { 
+                      currentValue, 
+                      value, 
+                      productNome: product.nome,
+                      isCurrentlySelected: value === product.nome 
+                    });
+                    
+                    // Se o produto atualmente selecionado for clicado novamente, limpar seleção
+                    if (value === product.nome) {
+                      onSelect(null);
+                    } else {
+                      // Caso contrário, selecionar o novo produto
+                      onSelect(product);
+                    }
                     setOpen(false);
                   }}
                   className="text-xs cursor-pointer"
