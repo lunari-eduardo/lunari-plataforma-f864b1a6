@@ -25,6 +25,8 @@ import { ORIGENS_PADRAO } from '@/utils/defaultOrigens';
 import { OriginBadge } from '@/components/shared/OriginBadge';
 import { AniversariantesModal } from '@/components/crm/AniversariantesModal';
 import { ClientFiltersBar, ClientFilters } from '@/components/crm/ClientFiltersBar';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 export default function Clientes() {
   const {
     clientes,
@@ -53,6 +55,7 @@ export default function Clientes() {
   });
   const [openDropdowns, setOpenDropdowns] = useState<Record<string, boolean>>({});
   const [showAniversariantesModal, setShowAniversariantesModal] = useState(false);
+  const { dialogState, confirm, handleConfirm, handleCancel, handleClose } = useConfirmDialog();
 
   // Check for openBirthdays parameter and auto-open modal
   useEffect(() => {
@@ -157,8 +160,16 @@ export default function Clientes() {
     });
     setShowClientForm(true);
   };
-  const handleDeleteClient = (clientId: string) => {
-    if (confirm('Tem certeza que deseja excluir este cliente?')) {
+  const handleDeleteClient = async (clientId: string) => {
+    const confirmed = await confirm({
+      title: "Excluir Cliente",
+      description: "Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita.",
+      confirmText: "Excluir",
+      cancelText: "Cancelar",
+      variant: "destructive"
+    });
+    
+    if (confirmed) {
       removerCliente(clientId);
       toast.success('Cliente excluído com sucesso');
     }
@@ -398,6 +409,14 @@ export default function Clientes() {
           open={showAniversariantesModal}
           onOpenChange={setShowAniversariantesModal}
           clientes={clientes}
+        />
+
+        {/* Confirm Dialog */}
+        <ConfirmDialog
+          state={dialogState}
+          onConfirm={handleConfirm}
+          onCancel={handleCancel}
+          onClose={handleClose}
         />
       </div>
     </ScrollArea>;

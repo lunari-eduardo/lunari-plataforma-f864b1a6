@@ -12,6 +12,8 @@ import { Trash2, Edit, Plus, Eye, Copy } from 'lucide-react';
 import { useTaskTemplates, type TaskTemplate } from '@/hooks/useTaskTemplates';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 interface TemplateManagerModalProps {
   open: boolean;
@@ -43,6 +45,7 @@ const PRIORITY_LABELS = {
 export default function TemplateManagerModal({ open, onOpenChange }: TemplateManagerModalProps) {
   const { templates, addTemplate, updateTemplate, deleteTemplate } = useTaskTemplates();
   const { toast } = useToast();
+  const { dialogState, confirm, handleConfirm, handleCancel, handleClose } = useConfirmDialog();
   const [activeTab, setActiveTab] = useState('list');
   const [editingTemplate, setEditingTemplate] = useState<TaskTemplate | null>(null);
   const [viewingTemplate, setViewingTemplate] = useState<TaskTemplate | null>(null);
@@ -101,8 +104,16 @@ export default function TemplateManagerModal({ open, onOpenChange }: TemplateMan
     });
   };
 
-  const handleDeleteTemplate = (template: TaskTemplate) => {
-    if (confirm(`Tem certeza que deseja excluir o template "${template.name}"?`)) {
+  const handleDeleteTemplate = async (template: TaskTemplate) => {
+    const confirmed = await confirm({
+      title: "Excluir Template",
+      description: `Tem certeza que deseja excluir o template "${template.name}"? Esta ação não pode ser desfeita.`,
+      confirmText: "Excluir",
+      cancelText: "Cancelar",
+      variant: "destructive"
+    });
+    
+    if (confirmed) {
       deleteTemplate(template.id);
       toast({
         title: "Template excluído",
@@ -504,6 +515,14 @@ export default function TemplateManagerModal({ open, onOpenChange }: TemplateMan
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        state={dialogState}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
+        onClose={handleClose}
+      />
     </>
   );
 }

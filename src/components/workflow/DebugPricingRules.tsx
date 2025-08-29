@@ -5,6 +5,8 @@ import { Separator } from "@/components/ui/separator";
 import { Bug, RefreshCw, Eye, Calculator } from "lucide-react";
 import { debugWorkflowItems, obterConfiguracaoPrecificacao, calcularTotalFotosExtras } from "@/utils/precificacaoUtils";
 import { useState } from "react";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface DebugInfo {
   configAtual: any;
@@ -17,6 +19,7 @@ interface DebugInfo {
 export function DebugPricingRules() {
   const [debugInfo, setDebugInfo] = useState<DebugInfo | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const { dialogState, confirm, handleConfirm, handleCancel, handleClose } = useConfirmDialog();
 
   const executarDebug = async () => {
     setIsLoading(true);
@@ -62,8 +65,16 @@ export function DebugPricingRules() {
     console.log('🧮 =================== FIM TESTE ===================');
   };
 
-  const forcarLimpeza = () => {
-    if (confirm('⚠️ Isso irá remover TODAS as regras congeladas dos items. Tem certeza?')) {
+  const forcarLimpeza = async () => {
+    const confirmed = await confirm({
+      title: "Limpar Regras Congeladas",
+      description: "⚠️ Isso irá remover TODAS as regras congeladas dos items. Tem certeza que deseja continuar?",
+      confirmText: "Limpar Regras",
+      cancelText: "Cancelar",
+      variant: "destructive"
+    });
+    
+    if (confirmed) {
       try {
         const items = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
         const itemsLimpos = items.map((item: any) => {
@@ -165,6 +176,13 @@ export function DebugPricingRules() {
           💡 Use o console do navegador (F12) para ver logs detalhados
         </div>
       </CardContent>
+
+      <ConfirmDialog
+        state={dialogState}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
+        onClose={handleClose}
+      />
     </Card>
   );
 }

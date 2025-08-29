@@ -10,6 +10,8 @@ import { Plus, Trash2, Edit2, Save, X, RefreshCw } from 'lucide-react';
 import { ItemFinanceiro, GrupoPrincipal } from '@/types/financas';
 import { FinancialEngine, CreditCard } from '@/services/FinancialEngine';
 import { useToast } from '@/hooks/use-toast';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import ConfiguracaoCartoes from './ConfiguracaoCartoes';
 import SyncFromPricingModal from './SyncFromPricingModal';
 import { pricingFinancialIntegrationService } from '@/services/PricingFinancialIntegrationService';
@@ -32,6 +34,7 @@ export default function ConfiguracoesFinanceirasTab({
   const [syncModalOpen, setSyncModalOpen] = useState(false);
   const [custosDisponiveis, setCustosDisponiveis] = useState(0);
   const { toast } = useToast();
+  const { dialogState, confirm, handleConfirm, handleCancel, handleClose } = useConfirmDialog();
   
 
   // Verificar custos disponíveis na precificação
@@ -115,8 +118,16 @@ export default function ConfiguracoesFinanceirasTab({
     setItemEditando(null);
     setNomeEditando('');
   };
-  const handleRemoverItem = (id: string, nome: string) => {
-    if (confirm(`Tem certeza que deseja remover "${nome}"? Esta ação também removerá todas as transações relacionadas.`)) {
+  const handleRemoverItem = async (id: string, nome: string) => {
+    const confirmed = await confirm({
+      title: "Remover Item Financeiro",
+      description: `Tem certeza que deseja remover "${nome}"? Esta ação também removerá todas as transações relacionadas.`,
+      confirmText: "Remover",
+      cancelText: "Cancelar",
+      variant: "destructive"
+    });
+    
+    if (confirmed) {
       removerItemFinanceiro(id);
       toast({
         title: "Sucesso",
@@ -286,6 +297,13 @@ export default function ConfiguracoesFinanceirasTab({
         open={syncModalOpen}
         onOpenChange={setSyncModalOpen}
         onSyncComplete={handleSyncComplete}
+      />
+
+      <ConfirmDialog
+        state={dialogState}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
+        onClose={handleClose}
       />
     </div>;
 }
