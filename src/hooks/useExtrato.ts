@@ -93,6 +93,60 @@ export function useExtrato() {
     return '';
   }, [clientes]);
 
+  // ============= HELPER FUNCTIONS PARA DATA =============
+
+  const normalizeDate = useCallback((dateString: string): string => {
+    if (!dateString) return '';
+    // Garantir formato YYYY-MM-DD
+    if (dateString.includes('T')) {
+      return dateString.split('T')[0];
+    }
+    return dateString;
+  }, []);
+
+  const getPagamentoEffectiveDate = useCallback((pagamento: any): string => {
+    if (preferencias.modoData === 'caixa') {
+      // Modo caixa: usar data de pagamento se estiver pago
+      if (pagamento.statusPagamento === 'pago' && pagamento.data) {
+        return normalizeDate(pagamento.data);
+      }
+      // Se não pago, retornar vazio para não incluir
+      return '';
+    } else {
+      // Modo competência: priorizar data da sessão/vencimento
+      // 1. Data de vencimento (se definida)
+      if (pagamento.dataVencimento) {
+        return normalizeDate(pagamento.dataVencimento);
+      }
+      // 2. Data da sessão (sessionDate, sessionDataCompleta, sessionDataInicio)
+      if (pagamento.sessionDate) {
+        return normalizeDate(pagamento.sessionDate);
+      }
+      if (pagamento.sessionDataCompleta) {
+        return normalizeDate(pagamento.sessionDataCompleta);
+      }
+      if (pagamento.sessionDataInicio) {
+        return normalizeDate(pagamento.sessionDataInicio);
+      }
+      // 3. Fallback para data do pagamento
+      return normalizeDate(pagamento.data || '');
+    }
+  }, [preferencias.modoData, normalizeDate]);
+
+  const getTransacaoEffectiveDate = useCallback((transacao: any): string => {
+    if (preferencias.modoData === 'caixa') {
+      // Modo caixa: só incluir se estiver pago
+      if (transacao.status === 'Pago') {
+        // TODO: usar dataPagamento quando disponível
+        return normalizeDate(transacao.dataVencimento);
+      }
+      return '';
+    } else {
+      // Modo competência: sempre usar data de vencimento
+      return normalizeDate(transacao.dataVencimento);
+    }
+  }, [preferencias.modoData, normalizeDate]);
+
   // Carregar transações financeiras
   const transacoesFinanceiras = useMemo(() => {
     return FinancialEngine.loadTransactions();
@@ -119,7 +173,11 @@ export function useExtrato() {
               clienteNome: resolveClienteNome(session),
               projetoNome: session.nome || 'Projeto sem nome',
               categoriaId: session.categoriaId,
-              origem: 'workflow'
+              origem: 'workflow',
+              // ENRIQUECER COM DADOS DA SESSÃO
+              sessionDate: session.data, // Data da sessão
+              sessionDataCompleta: session.dataCompleta, // Data completa da sessão se existir
+              sessionDataInicio: session.dataInicio // Data de início da sessão se existir
             });
           }
         });
@@ -169,13 +227,11 @@ export function useExtrato() {
 
     // 2. PAGAMENTOS DO WORKFLOW (RECEITAS OPERACIONAIS)
     pagamentosWorkflow.forEach(pagamento => {
-      // Determinar data baseada no modo selecionado
-      let dataEfetiva = pagamento.dataVencimento || pagamento.data;
-      if (preferencias.modoData === 'caixa' && pagamento.statusPagamento === 'pago' && pagamento.data) {
-        dataEfetiva = pagamento.data;
-      } else if (preferencias.modoData === 'competencia' && pagamento.dataVencimento) {
-        dataEfetiva = pagamento.dataVencimento;
-      }
+      // Usar a nova lógica de data efetiva
+      const dataEfetiva = getPagamentoEffectiveDate(pagamento);
+      
+      // Pular se não há data efetiva (modo caixa e não pago)
+      if (!dataEfetiva) return;
 
       // Converter status para formato do extrato  
       let status: ExtratoStatus = 'Agendado';
@@ -212,7 +268,7 @@ export function useExtrato() {
     });
 
     return linhas;
-  }, [transacoesFinanceiras, pagamentosWorkflow, itensFinanceiros, cartoes, preferencias.modoData]);
+  }, [transacoesFinanceiras, pagamentosWorkflow, itensFinanceiros, cartoes, preferencias.modoData, getPagamentoEffectiveDate]);
 
   // ============= APLICAÇÃO DE FILTROS =============
 
@@ -392,44 +448,6 @@ export function useExtrato() {
     };
   }, [filtros, resumo, linhasComSaldo, preferencias.modoData]);
 
-  // ============= HELPER FUNCTIONS PARA DATA =============
-
-  const normalizeDate = useCallback((dateString: string): string => {
-    if (!dateString) return '';
-    // Garantir formato YYYY-MM-DD
-    if (dateString.includes('T')) {
-      return dateString.split('T')[0];
-    }
-    return dateString;
-  }, []);
-
-  const getPagamentoEffectiveDate = useCallback((pagamento: any): string => {
-    if (preferencias.modoData === 'caixa') {
-      // Modo caixa: usar data de pagamento se estiver pago
-      if (pagamento.statusPagamento === 'pago' && pagamento.data) {
-        return normalizeDate(pagamento.data);
-      }
-      // Se não pago, retornar vazio para não incluir
-      return '';
-    } else {
-      // Modo competência: usar data de vencimento
-      return normalizeDate(pagamento.dataVencimento || pagamento.data || '');
-    }
-  }, [preferencias.modoData, normalizeDate]);
-
-  const getTransacaoEffectiveDate = useCallback((transacao: any): string => {
-    if (preferencias.modoData === 'caixa') {
-      // Modo caixa: só incluir se estiver pago
-      if (transacao.status === 'Pago') {
-        // TODO: usar dataPagamento quando disponível
-        return normalizeDate(transacao.dataVencimento);
-      }
-      return '';
-    } else {
-      // Modo competência: sempre usar data de vencimento
-      return normalizeDate(transacao.dataVencimento);
-    }
-  }, [preferencias.modoData, normalizeDate]);
 
   // ============= DEMONSTRATIVO SIMPLIFICADO =============
 
