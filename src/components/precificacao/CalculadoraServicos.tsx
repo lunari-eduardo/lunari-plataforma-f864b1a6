@@ -311,53 +311,69 @@ export function CalculadoraServicos({
                       </CardContent>
                     </Card>
 
-                    {/* Custos Adicionais do Projeto */}
-                    <Card className="bg-card border border-border shadow-sm">
-                      <CardHeader>
-                        <div className="flex justify-between items-center">
-                          <CardTitle>Custos Adicionais do Projeto</CardTitle>
-                          <Button onClick={adicionarCustoExtra} size="sm" variant="outline">
-                            <Plus className="h-3 w-3 mr-1" />
-                            Adicionar Custo Extra
-                          </Button>
+                  {/* Custos Adicionais do Projeto */}
+                  <Card className="bg-card border border-border shadow-sm">
+                    <CardHeader>
+                      <CardTitle>Custos Adicionais do Projeto</CardTitle>
+                      {/* Inline cost addition - matching products style */}
+                      <div className="flex gap-2 mt-3">
+                        <div className="flex-1">
+                          <Input 
+                            placeholder="Descrição do custo..." 
+                            className="h-8"
+                          />
                         </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          {custosExtras.length === 0 && <p className="text-sm text-lunar-textSecondary text-center py-4">
-                              Nenhum custo extra adicionado
-                            </p>}
-                          {custosExtras.map(custo => <div key={custo.id} className="grid grid-cols-1 md:grid-cols-4 gap-2 md:gap-3 items-end bg-lunar-surface/50 p-2 md:p-3 rounded border border-lunar-border/20 space-y-2 md:space-y-0">
-                              <div className="col-span-1 md:col-span-1">
-                                <Label className="text-xs mb-1 block">Descrição</Label>
-                                <Input placeholder="Descrição do custo" value={custo.descricao} onChange={e => atualizarCustoExtra(custo.id, 'descricao', e.target.value)} className="h-8 text-sm" />
-                              </div>
-                              <div className="grid grid-cols-2 md:grid-cols-1 gap-2 md:gap-0">
-                                <div>
-                                  <Label className="text-xs mb-1 block">Valor Unitário</Label>
-                                  <Input type="text" inputMode="decimal" min="0" step="0.01" value={custo.valorUnitario} onChange={e => atualizarCustoExtra(custo.id, 'valorUnitario', parseFloat(e.target.value) || 0)} className="h-8 text-sm [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
-                                </div>
-                              </div>
-                              <div className="grid grid-cols-2 md:grid-cols-1 gap-2 md:gap-0">
-                                <div>
-                                  <Label className="text-xs mb-1 block">Quantidade</Label>
-                                  <Input type="text" inputMode="numeric" pattern="[0-9]*" value={custo.quantidade} onChange={e => {
-                                    const value = parseInt(e.target.value) || 1;
-                                    if (value >= 1) {
-                                      atualizarCustoExtra(custo.id, 'quantidade', value);
-                                    }
-                                  }} className="h-8 text-sm" />
-                                </div>
-                              </div>
-                              <div className="flex justify-center md:justify-start">
-                                <Button onClick={() => removerCustoExtra(custo.id)} variant="outline" size="sm" className="h-8 px-3">
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            </div>)}
-                        </div>
-                      </CardContent>
-                    </Card>
+                        <Button onClick={adicionarCustoExtra} size="sm" variant="outline" className="h-8 px-2">
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        {custosExtras.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">
+                            Nenhum custo extra adicionado
+                          </p>}
+                        {custosExtras.map(custo => (
+                          <div key={custo.id} className="grid grid-cols-1 md:grid-cols-4 gap-2 items-center p-2 rounded border border-border/50 bg-muted/20">
+                            <div>
+                              <Input 
+                                placeholder="Descrição" 
+                                value={custo.descricao} 
+                                onChange={e => atualizarCustoExtra(custo.id, 'descricao', e.target.value)} 
+                                className="h-8 text-sm" 
+                              />
+                            </div>
+                            <div>
+                              <Input 
+                                type="number" 
+                                placeholder="Valor" 
+                                value={custo.valorUnitario} 
+                                onChange={e => atualizarCustoExtra(custo.id, 'valorUnitario', parseFloat(e.target.value) || 0)} 
+                                className="h-8 text-sm" 
+                                min="0"
+                                step="0.01"
+                              />
+                            </div>
+                            <div>
+                              <Input 
+                                type="number" 
+                                placeholder="Qtd" 
+                                value={custo.quantidade} 
+                                onChange={e => atualizarCustoExtra(custo.id, 'quantidade', parseInt(e.target.value) || 1)} 
+                                className="h-8 text-sm" 
+                                min="1"
+                              />
+                            </div>
+                            <div className="flex justify-end">
+                              <Button onClick={() => removerCustoExtra(custo.id)} variant="outline" size="sm" className="h-8 px-2">
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
                   </div>
                   
                   {/* Resumo e Precificação Final - Aparece por último em mobile */}

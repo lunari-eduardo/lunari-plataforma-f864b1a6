@@ -62,7 +62,18 @@ export function SimpleProductSelector({
   };
   return <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className={cn(
+            "w-full justify-between h-8 text-xs bg-background border border-input hover:bg-accent hover:text-accent-foreground",
+            className
+          )}
+        >
+          {selectedValue || value || "Selecionar produto..."}
+          <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+        </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[300px] p-0 z-[9999] bg-popover border shadow-lg">
         <Command>
