@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Check, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -16,13 +15,13 @@ interface Product {
   preco_venda?: number;
 }
 
-interface ProductSelectorProps {
+interface SimpleProductSelectorProps {
   value?: string;
   onSelect: (product: Product | null) => void;
   className?: string;
 }
 
-export function ProductSelector({ value, onSelect, className }: ProductSelectorProps) {
+export function SimpleProductSelector({ value, onSelect, className }: SimpleProductSelectorProps) {
   const [open, setOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
 
@@ -45,11 +44,7 @@ export function ProductSelector({ value, onSelect, className }: ProductSelectorP
     const product = products.find(p => p.nome === selectedProductName);
     
     if (product) {
-      if (value === product.nome) {
-        onSelect(null);
-      } else {
-        onSelect(product);
-      }
+      onSelect(product);
     }
     
     setOpen(false);
@@ -65,7 +60,7 @@ export function ProductSelector({ value, onSelect, className }: ProductSelectorP
           className={cn("w-full justify-between text-xs h-7", className)}
         >
           <span className="truncate">
-            {value || "Selecionar produto"}
+            {selectedProduct ? selectedProduct.nome : "Selecionar produto"}
           </span>
           <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
         </Button>

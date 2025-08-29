@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Plus, Trash2, ChevronDown, ChevronUp, Save, RotateCcw, CheckCircle, AlertCircle } from 'lucide-react';
-import { ProductSelector } from './ProductSelector';
+import { SimpleProductSelector } from './SimpleProductSelector';
 import { SalvarPacoteModal } from './SalvarPacoteModal';
 import { PadraoHorasService, CalculadoraService, IndicadoresService } from '@/services/PricingService';
 import type { ProdutoAdicional, CustoExtra, StatusSalvamento } from '@/types/precificacao';
@@ -256,7 +256,7 @@ export function CalculadoraServicos({
                           {produtos.map(produto => <div key={produto.id} className="grid grid-cols-1 md:grid-cols-4 gap-2 md:gap-3 items-end bg-lunar-surface/50 p-2 md:p-3 rounded border border-lunar-border/20 space-y-2 md:space-y-0">
                               <div className="col-span-1 md:col-span-1">
                                 <Label className="text-xs mb-1 block">Produto</Label>
-                                <ProductSelector 
+                                <SimpleProductSelector 
                                   value={produto.nome} 
                                   onSelect={product => {
                                     if (product) {
