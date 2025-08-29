@@ -22,15 +22,6 @@ interface ProductSelectorProps {
   className?: string;
 }
 
-// Mock data - in real app, this would come from the database
-const mockProducts: Product[] = [
-  { id: '1', nome: 'Álbum Premium 20x30', custo: 45.00, valorVenda: 120.00 },
-  { id: '2', nome: 'Pen Drive Personalizado', custo: 25.00, valorVenda: 80.00 },
-  { id: '3', nome: 'Impressão 15x21 (kit 50)', custo: 35.00, valorVenda: 90.00 },
-  { id: '4', nome: 'Moldura Digital', custo: 120.00, valorVenda: 280.00 },
-  { id: '5', nome: 'Canvas 40x60cm', custo: 85.00, valorVenda: 220.00 },
-];
-
 export function ProductSelector({ value, onSelect, className }: ProductSelectorProps) {
   const [open, setOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
@@ -38,17 +29,20 @@ export function ProductSelector({ value, onSelect, className }: ProductSelectorP
   useEffect(() => {
     // Carregar produtos reais das configurações
     const savedProducts = storage.load('configuracoes_produtos', []);
+    console.log('🔍 Produtos salvos carregados:', savedProducts);
     
     // Converter formato das configurações para o formato da calculadora
     const convertedProducts: Product[] = savedProducts.map((produto: any) => ({
-      id: produto.id,
-      nome: produto.nome,
-      custo: produto.preco_custo || produto.custo || 0,
-      valorVenda: produto.preco_venda || produto.valorVenda || 0
+      id: produto.id || produto.uuid || Date.now().toString(),
+      nome: produto.nome || produto.name || '',
+      custo: produto.preco_custo || produto.precocusto || produto.custo || 0,
+      valorVenda: produto.preco_venda || produto.precovenda || produto.valorVenda || produto.valor || 0
     }));
     
-    // Se não há produtos salvos, usar os mock como fallback
-    setProducts(convertedProducts.length > 0 ? convertedProducts : mockProducts);
+    console.log('🔄 Produtos convertidos:', convertedProducts);
+    
+    // Usar apenas produtos das configurações
+    setProducts(convertedProducts);
   }, []);
 
   const selectedProduct = products.find(product => product.nome === value);
