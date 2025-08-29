@@ -188,8 +188,6 @@ export default function Sidebar() {
           </div>
         </div>
 
-        {/* Content padding to avoid overlap with bottom nav */}
-        <div className="pb-16"></div>
       </>;
   }
 
