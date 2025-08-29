@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Clock, CheckCircle, AlertCircle, ExternalLink, FileText, List } from 'lucide-react';
 import ExportDetalhado from './ExportDetalhado';
 import { formatCurrency } from '@/utils/financialUtils';
+import { formatDateForDisplay } from '@/utils/dateUtils';
 import { ExtratoTipo, ExtratoOrigem, ExtratoStatus } from '@/types/extrato';
 const ORIGEM_COLORS = {
   workflow: 'bg-blue-500/10 text-blue-700 border-blue-200',
@@ -121,7 +122,7 @@ export default function ExtratoTab() {
               const StatusIcon = STATUS_ICONS[linha.status];
               return <TableRow key={linha.id} className="hover:bg-muted/50">
                     <TableCell>
-                      {new Date(linha.data).toLocaleDateString('pt-BR')}
+                      {formatDateForDisplay(linha.data)}
                     </TableCell>
                     
                     <TableCell>
