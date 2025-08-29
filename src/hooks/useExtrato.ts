@@ -4,7 +4,6 @@ import {
   ResumoExtrato, 
   FiltrosExtrato, 
   PreferenciasExtrato,
-  ExtratoModoData,
   ExtratoTipo,
   ExtratoOrigem,
   ExtratoStatus,
@@ -20,7 +19,6 @@ const PREFERENCIAS_KEY = 'lunari_extrato_preferencias';
 
 // Preferências padrão
 const PREFERENCIAS_DEFAULT: PreferenciasExtrato = {
-  modoData: 'competencia',
   filtrosDefault: {
     tipo: 'todos',
     origem: 'todos',
@@ -105,47 +103,29 @@ export function useExtrato() {
   }, []);
 
   const getPagamentoEffectiveDate = useCallback((pagamento: any): string => {
-    if (preferencias.modoData === 'caixa') {
-      // Modo caixa: usar data de pagamento se estiver pago
-      if (pagamento.statusPagamento === 'pago' && pagamento.data) {
-        return normalizeDate(pagamento.data);
-      }
-      // Se não pago, retornar vazio para não incluir
-      return '';
-    } else {
-      // Modo competência: priorizar data da sessão/vencimento
-      // 1. Data de vencimento (se definida)
-      if (pagamento.dataVencimento) {
-        return normalizeDate(pagamento.dataVencimento);
-      }
-      // 2. Data da sessão (sessionDate, sessionDataCompleta, sessionDataInicio)
-      if (pagamento.sessionDate) {
-        return normalizeDate(pagamento.sessionDate);
-      }
-      if (pagamento.sessionDataCompleta) {
-        return normalizeDate(pagamento.sessionDataCompleta);
-      }
-      if (pagamento.sessionDataInicio) {
-        return normalizeDate(pagamento.sessionDataInicio);
-      }
-      // 3. Fallback para data do pagamento
-      return normalizeDate(pagamento.data || '');
+    // Priorizar data da sessão para pagamentos do workflow
+    // 1. Data de vencimento (se definida)
+    if (pagamento.dataVencimento) {
+      return normalizeDate(pagamento.dataVencimento);
     }
-  }, [preferencias.modoData, normalizeDate]);
+    // 2. Data da sessão (sessionDate, sessionDataCompleta, sessionDataInicio)
+    if (pagamento.sessionDate) {
+      return normalizeDate(pagamento.sessionDate);
+    }
+    if (pagamento.sessionDataCompleta) {
+      return normalizeDate(pagamento.sessionDataCompleta);
+    }
+    if (pagamento.sessionDataInicio) {
+      return normalizeDate(pagamento.sessionDataInicio);
+    }
+    // 3. Fallback para data do pagamento
+    return normalizeDate(pagamento.data || '');
+  }, [normalizeDate]);
 
   const getTransacaoEffectiveDate = useCallback((transacao: any): string => {
-    if (preferencias.modoData === 'caixa') {
-      // Modo caixa: só incluir se estiver pago
-      if (transacao.status === 'Pago') {
-        // TODO: usar dataPagamento quando disponível
-        return normalizeDate(transacao.dataVencimento);
-      }
-      return '';
-    } else {
-      // Modo competência: sempre usar data de vencimento
-      return normalizeDate(transacao.dataVencimento);
-    }
-  }, [preferencias.modoData, normalizeDate]);
+    // Usar sempre data de vencimento para transações financeiras
+    return normalizeDate(transacao.dataVencimento);
+  }, [normalizeDate]);
 
   // Carregar transações financeiras
   const transacoesFinanceiras = useMemo(() => {
@@ -197,13 +177,8 @@ export function useExtrato() {
       const item = itensFinanceiros.find(i => i.id === transacao.itemId);
       const cartao = transacao.cartaoCreditoId ? cartoes.find(c => c.id === transacao.cartaoCreditoId) : null;
       
-      // Determinar data baseada no modo selecionado
-      let dataEfetiva = transacao.dataVencimento;
-      if (preferencias.modoData === 'caixa' && transacao.status === 'Pago') {
-        // Para modo caixa, usar data de pagamento (por enquanto usamos vencimento)
-        // TODO: adicionar campo dataPagamento nas transações futuras
-        dataEfetiva = transacao.dataVencimento;
-      }
+      // Usar data efetiva simplificada
+      const dataEfetiva = getTransacaoEffectiveDate(transacao);
 
       // Determinar tipo (entrada/saída) baseado no grupo
       const tipo: ExtratoTipo = item?.grupo_principal === 'Receita Não Operacional' ? 'entrada' : 'saida';
@@ -230,7 +205,7 @@ export function useExtrato() {
       // Usar a nova lógica de data efetiva
       const dataEfetiva = getPagamentoEffectiveDate(pagamento);
       
-      // Pular se não há data efetiva (modo caixa e não pago)
+      // Pular se não há data efetiva
       if (!dataEfetiva) return;
 
       // Converter status para formato do extrato  
@@ -268,7 +243,7 @@ export function useExtrato() {
     });
 
     return linhas;
-  }, [transacoesFinanceiras, pagamentosWorkflow, itensFinanceiros, cartoes, preferencias.modoData, getPagamentoEffectiveDate]);
+  }, [transacoesFinanceiras, pagamentosWorkflow, itensFinanceiros, cartoes, getPagamentoEffectiveDate, getTransacaoEffectiveDate]);
 
   // ============= APLICAÇÃO DE FILTROS =============
 
@@ -407,10 +382,6 @@ export function useExtrato() {
     setPreferencias(prev => ({ ...prev, ...novasPreferencias }));
   }, []);
 
-  const alternarModoData = useCallback(() => {
-    const novoModo: ExtratoModoData = preferencias.modoData === 'caixa' ? 'competencia' : 'caixa';
-    atualizarPreferencias({ modoData: novoModo });
-  }, [preferencias.modoData, atualizarPreferencias]);
 
   const limparFiltros = useCallback(() => {
     const hoje = getCurrentDateString();
@@ -443,10 +414,9 @@ export function useExtrato() {
       },
       resumo,
       linhas: linhasComSaldo,
-      filtrosAplicados: filtros,
-      modoData: preferencias.modoData
+      filtrosAplicados: filtros
     };
-  }, [filtros, resumo, linhasComSaldo, preferencias.modoData]);
+  }, [filtros, resumo, linhasComSaldo]);
 
 
   // ============= DEMONSTRATIVO SIMPLIFICADO =============
@@ -667,7 +637,6 @@ export function useExtrato() {
     // Funções
     atualizarFiltros,
     atualizarPreferencias,
-    alternarModoData,
     limparFiltros,
     abrirOrigem,
     prepararDadosExportacao,

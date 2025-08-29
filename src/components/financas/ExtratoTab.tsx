@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ToggleLeft, ToggleRight, Clock, CheckCircle, AlertCircle, ExternalLink, FileText, List } from 'lucide-react';
+import { Clock, CheckCircle, AlertCircle, ExternalLink, FileText, List } from 'lucide-react';
 import ExportDetalhado from './ExportDetalhado';
 import { formatCurrency } from '@/utils/financialUtils';
 import { ExtratoTipo, ExtratoOrigem, ExtratoStatus } from '@/types/extrato';
@@ -36,7 +36,6 @@ export default function ExtratoTab() {
     filtros,
     preferencias,
     atualizarFiltros,
-    alternarModoData,
     limparFiltros,
     abrirOrigem,
     prepararDadosExportacao
@@ -95,17 +94,6 @@ export default function ExtratoTab() {
           </div>
           
           <div className="flex items-center space-x-2">
-            {/* Toggle Modo Data */}
-            <Button variant="outline" size="sm" onClick={alternarModoData} className="flex items-center space-x-2">
-              {preferencias.modoData === 'caixa' ? <>
-                  <ToggleLeft className="h-4 w-4" />
-                  <span>Caixa</span>
-                </> : <>
-                  <ToggleRight className="h-4 w-4" />
-                  <span>Competência</span>
-                </>}
-            </Button>
-
             {/* Exportar */}
             <ExportDetalhado dados={prepararDadosExportacao()} />
           </div>

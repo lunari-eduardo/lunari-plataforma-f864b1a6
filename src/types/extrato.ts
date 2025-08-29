@@ -1,7 +1,6 @@
 export type ExtratoTipo = 'entrada' | 'saida';
 export type ExtratoOrigem = 'workflow' | 'financeiro' | 'cartao';
 export type ExtratoStatus = 'Pago' | 'Faturado' | 'Agendado';
-export type ExtratoModoData = 'caixa' | 'competencia';
 
 // Linha unificada do extrato
 export interface LinhaExtrato {
@@ -52,7 +51,6 @@ export interface FiltrosExtrato {
 
 // Preferências do usuário
 export interface PreferenciasExtrato {
-  modoData: ExtratoModoData;
   filtrosDefault: Partial<FiltrosExtrato>;
   colunasSelecionadas: string[];
   ordenacao: {
@@ -70,7 +68,6 @@ export interface DadosExportacaoExtrato {
   resumo: ResumoExtrato;
   linhas: LinhaExtrato[];
   filtrosAplicados: FiltrosExtrato;
-  modoData: ExtratoModoData;
 }
 
 // Demonstrativo Financeiro Simplificado
