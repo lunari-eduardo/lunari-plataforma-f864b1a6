@@ -1,9 +1,11 @@
-import { DollarSign, BarChart3, Users, Clock } from "lucide-react";
+import { DollarSign, BarChart3, Users, Clock, Settings } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Link, useNavigate } from "react-router-dom";
 import { formatCurrency } from "@/utils/financialUtils";
 import { useIsTablet } from "@/hooks/useIsTablet";
+import { GoalsIntegrationService } from "@/services/GoalsIntegrationService";
 
 interface KPIGroupCardProps {
   receitaMes: number;
@@ -27,6 +29,14 @@ export function KPIGroupCard({
   valorPrevisto,
 }: KPIGroupCardProps) {
   const isTablet = useIsTablet();
+  const navigate = useNavigate();
+  
+  // Verificar se há metas configuradas
+  const hasConfiguredGoals = GoalsIntegrationService.hasConfiguredGoals();
+  
+  const handleConfigureGoals = () => {
+    navigate('/precificacao');
+  };
 
   // Definir os cards como componentes reutilizáveis
   const revenueCard = (
@@ -39,12 +49,26 @@ export function KPIGroupCard({
       </div>
       <div className="mt-2 flex items-baseline justify-between">
         <p className={`font-semibold ${isTablet ? 'text-2xl' : 'text-lg'}`}>{formatCurrency(receitaMes)}</p>
-        <span className="text-xs text-lunar-textSecondary">Meta: {formatCurrency(metaMes)}</span>
+        {hasConfiguredGoals ? (
+          <span className="text-xs text-lunar-textSecondary">Meta: {formatCurrency(metaMes)}</span>
+        ) : (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleConfigureGoals}
+            className="text-xs h-auto p-1 text-lunar-textSecondary hover:text-lunar-text"
+          >
+            <Settings className="h-3 w-3 mr-1" />
+            Configurar Meta
+          </Button>
+        )}
       </div>
-      <div className="mt-3">
-        <Progress value={progressoMeta} className="h-2" />
-        <span className="text-xs text-lunar-textSecondary mt-1 block">{progressoMeta.toFixed(0)}% da meta</span>
-      </div>
+      {hasConfiguredGoals && (
+        <div className="mt-3">
+          <Progress value={progressoMeta} className="h-2" />
+          <span className="text-xs text-lunar-textSecondary mt-1 block">{progressoMeta.toFixed(0)}% da meta</span>
+        </div>
+      )}
     </div>
   );
 
@@ -128,7 +152,20 @@ export function KPIGroupCard({
   return (
     <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300 animate-fade-in">
       <CardHeader className="pb-4">
-        <CardTitle className="text-lg font-semibold">Indicadores principais</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg font-semibold">Indicadores principais</CardTitle>
+          {!hasConfiguredGoals && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleConfigureGoals}
+              className="text-xs"
+            >
+              <Settings className="h-3 w-3 mr-1" />
+              Configurar Metas
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         {isTablet ? (

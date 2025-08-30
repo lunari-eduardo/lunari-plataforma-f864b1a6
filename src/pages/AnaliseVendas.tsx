@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { TrendingUp, Target } from 'lucide-react';
 import { SalesMetricsCards } from '@/components/analise-vendas/SalesMetricsCards';
 import { SalesChartsGrid } from '@/components/analise-vendas/SalesChartsGrid';
+import { SalesGoalsCard } from '@/components/analise-vendas/SalesGoalsCard';
 import SalesMonthYearFilter from '@/components/analise-vendas/SalesMonthYearFilter';
 import { LeadLossReasonsChart } from '@/components/analise-vendas/LeadLossReasonsChart';
 import SalesAnalysisHero from '@/components/analise-vendas/SalesAnalysisHero';
@@ -50,6 +51,11 @@ export default function AnaliseVendas() {
         {/* Metrics Cards */}
         <section aria-label="Métricas principais" className="animate-fade-in">
           <SalesMetricsCards metrics={salesMetrics} />
+        </section>
+
+        {/* Goals and Targets */}
+        <section aria-label="Metas e objetivos" className="animate-fade-in">
+          <SalesGoalsCard />
         </section>
 
         {/* Charts Grid */}

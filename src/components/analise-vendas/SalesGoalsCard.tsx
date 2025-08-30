@@ -3,32 +3,85 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Target, Calendar, TrendingUp, Settings } from 'lucide-react';
+import { GoalsIntegrationService } from '@/services/GoalsIntegrationService';
+import { EmptyGoalsState } from '@/components/shared/EmptyGoalsState';
+import { useNavigate } from 'react-router-dom';
+import { useMemo } from 'react';
 
 export function SalesGoalsCard() {
+  const navigate = useNavigate();
+  
+  // Verificar se as metas estão configuradas
+  const configStatus = useMemo(() => 
+    GoalsIntegrationService.getConfigurationStatus(), 
+    []
+  );
+
+  // Se não há metas configuradas, mostrar estado vazio
+  if (!configStatus.hasConfiguredGoals) {
+    return (
+      <EmptyGoalsState 
+        title="Metas de Vendas"
+        description="Configure suas metas anuais na página de precificação para acompanhar o progresso de vendas"
+        className="h-full"
+      />
+    );
+  }
+
+  // Obter metas reais da precificação
+  const annualGoals = useMemo(() => 
+    GoalsIntegrationService.getAnnualGoals(), 
+    []
+  );
+  
+  const monthlyGoals = useMemo(() => 
+    GoalsIntegrationService.getMonthlyGoals(), 
+    []
+  );
+
+  // Calcular dados baseados em métricas reais (placeholder por enquanto)
+  // TODO: Integrar com dados reais de vendas
+  const currentDate = new Date();
+  const currentMonth = currentDate.getMonth() + 1;
+  const currentYear = currentDate.getFullYear();
+  const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
+  const daysLeft = daysInMonth - currentDate.getDate();
+  
+  // Simulação de dados atuais (substituir por dados reais)
+  const currentMonthRevenue = monthlyGoals.revenue * 0.85; // 85% da meta mensal
+  const currentQuarterRevenue = monthlyGoals.revenue * 2.8; // ~3 meses
+  const currentAnnualRevenue = annualGoals.revenue * 0.75; // 75% da meta anual
+  
   const goals = [
     {
       title: 'Meta Mensal',
-      current: 45280,
-      target: 50000,
-      period: 'Dezembro 2024',
-      daysLeft: 12,
-      status: 'on-track'
+      current: currentMonthRevenue,
+      target: monthlyGoals.revenue,
+      period: currentDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }),
+      daysLeft: daysLeft,
+      status: GoalsIntegrationService.getProgressStatus(
+        GoalsIntegrationService.calculateProgress(currentMonthRevenue, monthlyGoals.revenue)
+      )
     },
     {
       title: 'Meta Trimestral',
-      current: 142800,
-      target: 150000,
-      period: 'Q4 2024',
-      daysLeft: 12,
-      status: 'on-track'
+      current: currentQuarterRevenue,
+      target: monthlyGoals.revenue * 3,
+      period: `Q${Math.ceil(currentMonth / 3)} ${currentYear}`,
+      daysLeft: daysLeft,
+      status: GoalsIntegrationService.getProgressStatus(
+        GoalsIntegrationService.calculateProgress(currentQuarterRevenue, monthlyGoals.revenue * 3)
+      )
     },
     {
       title: 'Meta Anual',
-      current: 485200,
-      target: 600000,
-      period: '2024',
-      daysLeft: 12,
-      status: 'behind'
+      current: currentAnnualRevenue,
+      target: annualGoals.revenue,
+      period: currentYear.toString(),
+      daysLeft: Math.floor((new Date(currentYear, 11, 31).getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24)),
+      status: GoalsIntegrationService.getProgressStatus(
+        GoalsIntegrationService.calculateProgress(currentAnnualRevenue, annualGoals.revenue)
+      )
     }
   ];
 
@@ -71,7 +124,12 @@ export function SalesGoalsCard() {
             <Target className="h-4 w-4 text-blue-500" />
             Metas e Objetivos
           </CardTitle>
-          <Button variant="ghost" size="sm" className="text-xs">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="text-xs"
+            onClick={() => navigate('/precificacao')}
+          >
             <Settings className="h-3 w-3 mr-1" />
             Configurar
           </Button>
@@ -125,9 +183,14 @@ export function SalesGoalsCard() {
         {/* Quick Actions */}
         <div className="pt-2 border-t border-lunar-border/50">
           <div className="grid grid-cols-2 gap-2">
-            <Button variant="outline" size="sm" className="text-xs">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="text-xs"
+              onClick={() => navigate('/precificacao')}
+            >
               <Target className="h-3 w-3 mr-1" />
-              Definir Meta
+              Editar Metas
             </Button>
             <Button variant="outline" size="sm" className="text-xs">
               <TrendingUp className="h-3 w-3 mr-1" />

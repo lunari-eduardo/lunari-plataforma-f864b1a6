@@ -5,6 +5,7 @@ import { useNovoFinancas } from '@/hooks/useNovoFinancas';
 import { useWorkflowMetrics } from '@/hooks/useWorkflowMetrics';
 import { getCurrentDateString, parseDateFromStorage } from '@/utils/dateUtils';
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
+import { GoalsIntegrationService } from '@/services/GoalsIntegrationService';
 
 // Interfaces específicas para o Dashboard
 interface KPIsData {
@@ -312,51 +313,33 @@ export function useDashboardFinanceiro() {
     };
   }, [anoSelecionado, mesSelecionado, kpisData, transacoesComItens, getMonthlyMetrics, getAnnualMetrics]);
 
-  // ============= METAS HISTÓRICAS =============
+  // ============= METAS INTEGRADAS COM PRECIFICAÇÃO =============
   
   const metasData = useMemo((): MetasData => {
     const anoSelecionadoNum = parseInt(anoSelecionado);
     
-    // Carregar metas históricas
+    // Carregar metas históricas primeiro
     const historicalGoals: HistoricalGoal[] = storage.load(STORAGE_KEYS.HISTORICAL_GOALS, []);
-    
-    // Buscar meta específica para o ano selecionado
     const metaDoAno = historicalGoals.find(goal => goal.ano === anoSelecionadoNum);
     
-    let metaReceita = 100000; // Meta padrão
-    let metaLucro = 30000; // Meta padrão
+    let metaReceita = 0;
+    let metaLucro = 0;
     
     if (metaDoAno) {
+      // Usar meta histórica se disponível
       metaReceita = metaDoAno.metaFaturamento;
       metaLucro = metaDoAno.metaLucro;
     } else {
-      // Fallback: usar cálculo atual da precificação se não há meta histórica
-      const metasPrecificacao = storage.load('precificacao_metas', {
-        margemLucroDesejada: 30
-      });
-      
-      const custosFixosData = storage.load('precificacao_custos_fixos', {
-        gastosPessoais: [],
-        percentualProLabore: 30,
-        custosEstudio: [],
-        equipamentos: []
-      });
-      
-      // Calcular custos fixos totais mensais
-      const totalGastosPessoais = custosFixosData.gastosPessoais.reduce((sum: number, item: any) => sum + (item.valor || 0), 0);
-      const proLaboreCalculado = totalGastosPessoais * (1 + custosFixosData.percentualProLabore / 100);
-      const totalCustosEstudio = custosFixosData.custosEstudio.reduce((sum: number, item: any) => sum + (item.valor || 0), 0);
-      const totalDepreciacaoMensal = custosFixosData.equipamentos.reduce((sum: number, eq: any) => {
-        const depreciacaoMensal = eq.valorPago / (eq.vidaUtil * 12);
-        return sum + depreciacaoMensal;
-      }, 0);
-      
-      const custosFixosMensais = proLaboreCalculado + totalCustosEstudio + totalDepreciacaoMensal;
-      
-      if (custosFixosMensais > 0) {
-        const faturamentoMinimoAnual = custosFixosMensais * 12;
-        metaReceita = faturamentoMinimoAnual / (1 - metasPrecificacao.margemLucroDesejada / 100);
-        metaLucro = metaReceita - faturamentoMinimoAnual;
+      // Usar dados da precificação como fallback
+      try {
+        const goalsData = GoalsIntegrationService.getAnnualGoals();
+        metaReceita = goalsData.revenue;
+        metaLucro = goalsData.profit;
+      } catch (error) {
+        console.warn('Erro ao carregar metas da precificação:', error);
+        // Valores padrão apenas se não conseguir carregar
+        metaReceita = 100000;
+        metaLucro = 30000;
       }
     }
     
