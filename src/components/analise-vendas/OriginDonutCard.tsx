@@ -46,17 +46,21 @@ export function OriginDonutCard({ originData }: OriginDonutCardProps) {
               fontSize={10}
             >
               {originData.map((entry, index) => {
-                // Usar paleta monocromática em vez das cores personalizadas
-                const monochromaticColors = [
+                // Usar paleta personalizada completa para gráficos de pizza/donut
+                const pieColors = [
                   'hsl(var(--chart-primary))',
                   'hsl(var(--chart-secondary))',
                   'hsl(var(--chart-tertiary))',
                   'hsl(var(--chart-quaternary))',
                   'hsl(var(--chart-quinary))',
-                  'hsl(var(--chart-senary))'
+                  'hsl(var(--chart-senary))',
+                  'hsl(var(--chart-7))',
+                  'hsl(var(--chart-8))',
+                  'hsl(var(--chart-9))',
+                  'hsl(var(--chart-10))'
                 ];
                 return (
-                  <Cell key={`cell-${index}`} fill={monochromaticColors[index % monochromaticColors.length]} />
+                  <Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />
                 );
               })}
             </Pie>

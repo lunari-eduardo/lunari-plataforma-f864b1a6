@@ -34,14 +34,18 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
     crescimento: { label: 'Crescimento %', color: 'hsl(var(--chart-revenue))' }
   };
 
-  // Paleta monocromática sequencial baseada no tema lunar
-  const COLORS = [
+  // Paleta personalizada para gráficos de pizza/donut (10 cores)
+  const PIE_COLORS = [
     'hsl(var(--chart-primary))',
     'hsl(var(--chart-secondary))',
     'hsl(var(--chart-tertiary))',
     'hsl(var(--chart-quaternary))',
     'hsl(var(--chart-quinary))',
-    'hsl(var(--chart-senary))'
+    'hsl(var(--chart-senary))',
+    'hsl(var(--chart-7))',
+    'hsl(var(--chart-8))',
+    'hsl(var(--chart-9))',
+    'hsl(var(--chart-10))'
   ];
 
   return (
@@ -277,7 +281,7 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
                   fontSize={10}
                 >
                   {categoryData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
                   ))}
                 </Pie>
                 <ChartTooltip 
@@ -324,7 +328,7 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
                   fontSize={10}
                 >
                   {packageDistributionData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
                   ))}
                 </Pie>
                 <ChartTooltip 

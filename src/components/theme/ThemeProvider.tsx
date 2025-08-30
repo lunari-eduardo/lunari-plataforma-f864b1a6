@@ -94,33 +94,40 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
     // Foreground específico para o accent (botões customizados)
     root.style.setProperty('--lunar-accent-foreground', foregroundHsl)
 
-    // Gráficos (paleta baseada na nova cor fixa)
+    // Paleta de cores personalizada (10 cores específicas para gráficos)
     const chartPalette = [
-      '#ac5e3a', // Principal (nova cor)
-      '#bd6b42', // Secundária
-      '#8b5232', // Terciária
-      '#c17249', // Quaternária
-      '#d47e51', // Quinária
-      '#e68a59', // Senária
-      '#f29661', // Sétima
-      '#ffa269', // Oitava
-      '#ffae71', // Nona
-      '#ffba79'  // Décima
+      '#ac5e39', // Principal (cor exata)
+      '#804022', // Escura complementar
+      '#6a361d', // Mais escura
+      '#7a4d30', // Tom médio-escuro
+      '#995c45', // Tom intermediário
+      '#9e6d52', // Tom médio-claro
+      '#cc9978', // Claro
+      '#e1c7ac', // Mais claro
+      '#b7a192', // Tom neutro
+      '#f6f0ec'  // Mais claro/neutro
     ].map(hex => {
       const hsl = hexToHsl(hex)
       return toHslStr(hsl)
     })
 
+    // Aplicar a paleta completa (10 cores)
     root.style.setProperty('--chart-primary', chartPalette[0])
     root.style.setProperty('--chart-secondary', chartPalette[1])
     root.style.setProperty('--chart-tertiary', chartPalette[2])
     root.style.setProperty('--chart-quaternary', chartPalette[3])
     root.style.setProperty('--chart-quinary', chartPalette[4])
     root.style.setProperty('--chart-senary', chartPalette[5])
+    root.style.setProperty('--chart-7', chartPalette[6])
+    root.style.setProperty('--chart-8', chartPalette[7])
+    root.style.setProperty('--chart-9', chartPalette[8])
+    root.style.setProperty('--chart-10', chartPalette[9])
+    
+    // Mapeamentos específicos para contextos
     root.style.setProperty('--chart-revenue', chartPalette[0])
     root.style.setProperty('--chart-expense', chartPalette[2])
     root.style.setProperty('--chart-profit', chartPalette[0])
-    root.style.setProperty('--chart-neutral', chartPalette[7])
+    root.style.setProperty('--chart-neutral', chartPalette[8])
 
     // Theme is now managed by useTheme hook
     // Initial theme will be applied by the hook

@@ -4,14 +4,18 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recha
 import { TrendingDown, AlertTriangle } from 'lucide-react';
 import { useLeadLossReasons } from '@/hooks/useLeadLossReasons';
 
-// Paleta monocromática baseada no tema lunar (do mais escuro ao mais claro)
+// Paleta personalizada para gráficos de pizza/donut (10 cores sequenciais)
 const COLORS = [
-  'hsl(var(--chart-tertiary))',    // Tom mais escuro
-  'hsl(var(--chart-secondary))',   // Tom médio-escuro
-  'hsl(var(--chart-primary))',     // Tom principal
-  'hsl(var(--chart-quaternary))',  // Tom claro
-  'hsl(var(--chart-quinary))',     // Tom mais claro
-  'hsl(var(--chart-neutral))',     // Neutro para "sem motivo"
+  'hsl(var(--chart-primary))',
+  'hsl(var(--chart-secondary))',
+  'hsl(var(--chart-tertiary))',
+  'hsl(var(--chart-quaternary))',
+  'hsl(var(--chart-quinary))',
+  'hsl(var(--chart-senary))',
+  'hsl(var(--chart-7))',
+  'hsl(var(--chart-8))',
+  'hsl(var(--chart-9))',
+  'hsl(var(--chart-10))'
 ];
 
 export function LeadLossReasonsChart() {

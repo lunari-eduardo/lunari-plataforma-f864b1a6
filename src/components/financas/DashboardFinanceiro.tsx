@@ -7,9 +7,22 @@ import { useDashboardFinanceiro } from '@/hooks/useDashboardFinanceiro';
 import { Trash2, DollarSign, Calendar, HandCoins, ArrowDown, TrendingUp, Landmark } from 'lucide-react';
 import { toast } from 'sonner';
 
-// Paleta de cores beige/marrom elegantes
-const COLORS = ['hsl(var(--finance-primary))', 'hsl(var(--finance-secondary))'];
-const EXPENSE_COLORS = ['hsl(var(--finance-primary))', 'hsl(var(--chart-secondary))', 'hsl(var(--chart-tertiary))', 'hsl(var(--chart-quaternary))', 'hsl(var(--chart-quinary))', 'hsl(var(--chart-senary))'];
+// Paleta para gráficos de barras/linhas (apenas cor principal)
+const BAR_LINE_COLORS = ['hsl(var(--chart-primary))'];
+
+// Paleta personalizada para gráficos de pizza/donut (10 cores sequenciais)
+const PIE_COLORS = [
+  'hsl(var(--chart-primary))',
+  'hsl(var(--chart-secondary))',
+  'hsl(var(--chart-tertiary))',
+  'hsl(var(--chart-quaternary))',
+  'hsl(var(--chart-quinary))',
+  'hsl(var(--chart-senary))',
+  'hsl(var(--chart-7))',
+  'hsl(var(--chart-8))',
+  'hsl(var(--chart-9))',
+  'hsl(var(--chart-10))'
+];
 export default function DashboardFinanceiro() {
   const {
     anoSelecionado,
@@ -499,7 +512,7 @@ export default function DashboardFinanceiro() {
             <ResponsiveContainer width="100%" height={400}>
               <PieChart>
                 <Pie data={composicaoDespesas} cx="50%" cy="50%" innerRadius={80} outerRadius={150} dataKey="valor" strokeWidth={3} stroke="hsl(var(--card))">
-                  {composicaoDespesas.map((entry, index) => <Cell key={`cell-${index}`} fill={EXPENSE_COLORS[index % EXPENSE_COLORS.length]} opacity={0.85} />)}
+                  {composicaoDespesas.map((entry, index) => <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} opacity={0.85} />)}
                 </Pie>
                 <Tooltip formatter={(value: number, name: string, props: any) => [formatCurrency(value), `${props.payload.grupo} (${props.payload.percentual.toFixed(1)}%)`]} labelStyle={{
                   color: 'hsl(var(--foreground))',
