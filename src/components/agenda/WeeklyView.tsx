@@ -139,7 +139,7 @@ export default function WeeklyView({
             >
               <p className={`text-muted-foreground font-medium ${isTablet ? 'text-[10px]' : 'text-xs'}`}>{formatDayName(day)}</p>
               <p className={`font-semibold ${isTablet ? 'text-xs' : 'text-xs md:text-sm'}`}>{format(day, 'd')}</p>
-              {/* Mobile: dots with counts */}
+              {/* Mobile: dots without counts */}
               {(() => {
             if (!isMobile) return null;
             const {
@@ -147,14 +147,8 @@ export default function WeeklyView({
               availCount
             } = getDayCounts(day);
             return <div className="mt-0.5 flex items-center justify-center gap-2 md:hidden">
-                    {sessionsCount > 0 && <span className="inline-flex items-center gap-1 text-[10px]">
-                        <span className="h-2.5 w-2.5 rounded-full bg-primary" aria-hidden></span>
-                        {sessionsCount}
-                      </span>}
-                    {availCount > 0 && <span className="inline-flex items-center gap-1 text-[10px]">
-                        <span className="h-2.5 w-2.5 rounded-full bg-availability" aria-hidden></span>
-                        {availCount}
-                      </span>}
+                    {sessionsCount > 0 && <span className="h-2.5 w-2.5 rounded-full bg-primary" aria-hidden></span>}
+                    {availCount > 0 && <span className="h-2.5 w-2.5 rounded-full bg-availability" aria-hidden></span>}
                   </div>;
           })()}
             </div>)}
@@ -173,11 +167,27 @@ export default function WeeklyView({
               date: day,
               time
             })} className={`relative cursor-pointer bg-card hover:bg-muted ${isTablet ? 'h-10 p-0.5' : 'h-12 md:h-16 p-0.5 md:p-1'}`}>
-                    {event ? !isMobile && <div onClick={e => e.stopPropagation()}>
+                    {event ? <div onClick={e => e.stopPropagation()}>
                           <UnifiedEventCard event={event} onClick={onEventClick} variant="weekly" />
-                        </div> : !isMobile && (() => {
+                        </div> : (() => {
                           const slot = getAvailabilityForSlot(day, time);
-                          return slot ? <div className={`absolute inset-0 flex items-center justify-center ${isTablet ? 'gap-1' : 'gap-2'}`}>
+                          if (!slot) return null;
+                          
+                          if (isMobile) {
+                            // Mobile: apenas ponto colorido
+                            return <div className="absolute inset-0 flex items-center justify-center">
+                              <span 
+                                className="h-3 w-3 rounded-full"
+                                style={{ 
+                                  backgroundColor: slot.color || 'hsl(var(--availability))'
+                                }}
+                                aria-label="Horário disponível"
+                              />
+                            </div>;
+                          }
+                          
+                          // Desktop/Tablet: label com botão remover
+                          return <div className={`absolute inset-0 flex items-center justify-center ${isTablet ? 'gap-1' : 'gap-2'}`}>
                             <span 
                               className={`rounded text-lunar-text border ${isTablet ? 'text-[8px] px-1 py-0.5' : 'text-[10px] px-1.5 py-0.5'}`}
                               style={{ 
@@ -193,7 +203,7 @@ export default function WeeklyView({
                             }} className={`text-muted-foreground hover:text-foreground items-center gap-1 ${isTablet ? 'text-[8px] inline-flex' : 'text-[10px] hidden lg:inline-flex'}`} aria-label="Remover disponibilidade" title="Remover disponibilidade">
                               <Trash2 className={isTablet ? 'h-2.5 w-2.5' : 'h-3 w-3'} /> {!isTablet && 'Remover'}
                             </button>
-                          </div> : null;
+                          </div>;
                         })()}
                   </div>
           })}
