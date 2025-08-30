@@ -423,21 +423,14 @@
   }
 
   /* Global: neutralize heavy hover visuals without affecting layout transforms (EXCEPT for dashboard cards) */
-  *:hover {
+  *:not(.dashboard-card):not(.dashboard-card *):not(.dashboard-card-inner):not(.dashboard-card-inner *):not(.dashboard-badge):not(.dashboard-badge *):hover {
     box-shadow: none !important;
     filter: none !important;
     text-decoration: none !important;
   }
-  *:hover::before,
-  *:hover::after {
+  *:not(.dashboard-card):not(.dashboard-card *):not(.dashboard-card-inner):not(.dashboard-card-inner *):not(.dashboard-badge):not(.dashboard-badge *):hover::before,
+  *:not(.dashboard-card):not(.dashboard-card *):not(.dashboard-card-inner):not(.dashboard-card-inner *):not(.dashboard-badge):not(.dashboard-badge *):hover::after {
     opacity: inherit !important;
-  }
-  
-  /* Allow dashboard cards to have proper shadow hover effects */
-  .dashboard-card:hover,
-  .dashboard-card-inner:hover,
-  .dashboard-badge:hover {
-    box-shadow: var(--tw-shadow) !important;
   }
   /* Disable hover background highlight on tables ONLY on Tasks page */
   .page-tarefas table tr:hover td,
