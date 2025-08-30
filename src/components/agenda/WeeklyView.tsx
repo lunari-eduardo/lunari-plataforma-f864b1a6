@@ -85,14 +85,14 @@ export default function WeeklyView({
           locale: ptBR
         });
         const times = slots.map(formatTimeBr).join('\n');
-        sections.push(`No dia ${dateStr}, ${weekdayStr}, tenho os seguintes horários:\n\n${times}`);
+        sections.push(`Dia ${dateStr}, ${weekdayStr}:\n${times}`);
       }
     }
     if (sections.length === 0) {
       toast.error('Não há disponibilidades nesta semana.');
       return;
     }
-    const text = sections.join('\n\n') + '\n\nQual fica melhor para você?';
+    const text = 'Tenho os seguintes horários:\n\n' + sections.join('\n\n');
     try {
       if (navigator.share) {
         await navigator.share({
