@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/utils/financialUtils';
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { useDashboardFinanceiro } from '@/hooks/useDashboardFinanceiro';
-import { Trash2 } from 'lucide-react';
+import { Trash2, DollarSign, Calendar, Clock, TrendingDown, TrendingUp, Target } from 'lucide-react';
 import { toast } from 'sonner';
 
 
@@ -82,154 +82,193 @@ export default function DashboardFinanceiro() {
     value: '12',
     label: 'Dezembro'
   }];
-  return <div className="min-h-screen bg-lunar-bg py-0">
-      <div className="p-6 space-y-6 bg-lunar-bg">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-xl font-semibold text-foreground">Dashboard Financeiro</h2>
-            <p className="text-sm text-muted-foreground">
-              Visão geral das suas finanças
-            </p>
-          </div>
-        </div>
-
-        {/* Barra de Filtros de Período - Design elegante */}
-        <Card className="border-0 shadow-lg bg-card rounded-lg">
-          
-          <CardContent>
-            <div className="flex flex-col-2 sm:flex-row gap-4 my- py-[3px]">
-              <div className="flex-1">
-                <label className="text-sm font-medium text-muted-foreground block mb-2 py-0">
-                  Ano
-                </label>
-                <Select value={anoSelecionado} onValueChange={setAnoSelecionado}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Selecione o ano" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {anosDisponiveis.map(ano => <SelectItem key={ano} value={ano.toString()}>
-                        {ano}
-                      </SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex-1">
-                <label className="text-sm font-medium text-muted-foreground block mb-2">
-                  Período
-                </label>
-                <Select value={mesSelecionado} onValueChange={setMesSelecionado}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Selecione o período" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {opcoesmes.map(opcao => <SelectItem key={opcao.value} value={opcao.value}>
-                        {opcao.label}
-                      </SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {mesSelecionado && mesSelecionado !== 'ano-completo' && <div className="flex items-end">
-                  <div className="px-3 py-2 bg-primary/10 rounded-lg text-sm font-medium">
-                    Período: {getNomeMes(mesSelecionado)} {anoSelecionado}
+  return <div className="min-h-screen bg-lunar-bg">
+      <div className="p-6 space-y-6">
+        {/* Hero Section */}
+        <section aria-label="Dashboard Header" className="animate-fade-in">
+          <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300 overflow-hidden">
+            <div className="relative">
+              {/* decorative accents */}
+              <div className="pointer-events-none absolute inset-0 bg-brand-gradient opacity-[0.12]" />
+              <CardContent className="relative p-6">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 rounded-xl bg-brand-gradient">
+                    <TrendingUp className="h-6 w-6 text-white" />
                   </div>
-                </div>}
+                  <div>
+                    <h1 className="text-2xl font-bold text-lunar-text">Dashboard Financeiro</h1>
+                    <p className="text-sm text-lunar-textSecondary">
+                      Visão geral completa das suas finanças
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
             </div>
-          </CardContent>
-        </Card>
+          </Card>
+        </section>
 
-        {/* KPIs Cards - Design elegante */}
-        <div className="grid grid-cols-2 lg:grid-cols-6 gap-6">
-          <Card className="border-0 shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 bg-card rounded-lg">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-medium uppercase tracking-wide text-foreground">RECEITA</CardTitle>
+        {/* Filtros - Barra moderna */}
+        <section aria-label="Filtros" className="animate-fade-in">
+          <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg font-semibold">Filtros de período</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-xl font-bold text-lunar-success">
-                {formatCurrency(kpisData.totalReceita)}
-              </div>
-              {comparisonData.variacaoReceita !== null && (
-                <div className={`text-xs mt-1 flex items-center ${
-                  comparisonData.variacaoReceita > 0 ? 'text-lunar-success' : 'text-destructive'
-                }`}>
-                  {comparisonData.variacaoReceita > 0 ? '↗' : '↘'} {Math.abs(comparisonData.variacaoReceita).toFixed(1)}% {comparisonData.labelComparacao}
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1">
+                  <label className="text-xs text-lunar-textSecondary font-medium block mb-2">
+                    Ano
+                  </label>
+                  <Select value={anoSelecionado} onValueChange={setAnoSelecionado}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Selecione o ano" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {anosDisponiveis.map(ano => <SelectItem key={ano} value={ano.toString()}>
+                          {ano}
+                        </SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
-              )}
-            </CardContent>
-          </Card>
 
-          <Card className="border-0 shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 bg-card rounded-lg">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-medium uppercase tracking-wide text-foreground">PREVISTO</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl font-bold text-primary">
-                {formatCurrency(kpisData.valorPrevisto)}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-0 shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 bg-card rounded-lg">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-medium uppercase tracking-wide text-foreground">A RECEBER</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl font-bold text-chart-primary">
-                {formatCurrency(kpisData.aReceber)}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-0 shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 bg-card rounded-lg">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-medium uppercase tracking-wide text-foreground">DESPESAS</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl font-bold text-destructive">
-                -{formatCurrency(kpisData.totalDespesas)}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-0 shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 bg-card rounded-lg">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-medium uppercase tracking-wide text-foreground">LUCRO</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl font-bold text-lunar-success">
-                {formatCurrency(kpisData.totalLucro)}
-              </div>
-              {comparisonData.variacaoLucro !== null && (
-                <div className={`text-xs mt-1 flex items-center ${
-                  comparisonData.variacaoLucro > 0 ? 'text-lunar-success' : 'text-destructive'
-                }`}>
-                  {comparisonData.variacaoLucro > 0 ? '↗' : '↘'} {Math.abs(comparisonData.variacaoLucro).toFixed(1)}% {comparisonData.labelComparacao}
+                <div className="flex-1">
+                  <label className="text-xs text-lunar-textSecondary font-medium block mb-2">
+                    Período
+                  </label>
+                  <Select value={mesSelecionado} onValueChange={setMesSelecionado}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Selecione o período" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {opcoesmes.map(opcao => <SelectItem key={opcao.value} value={opcao.value}>
+                          {opcao.label}
+                        </SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
-              )}
-            </CardContent>
-          </Card>
 
-          <Card className="border-0 shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 bg-card rounded-lg">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-medium uppercase tracking-wide text-foreground">SALDO</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl font-bold text-chart-primary">
-                {formatCurrency(kpisData.saldoTotal)}
+                {mesSelecionado && mesSelecionado !== 'ano-completo' && <div className="flex items-end">
+                    <div className="px-3 py-2 bg-brand-gradient/10 rounded-lg text-sm font-medium text-lunar-text border border-lunar-border/30">
+                      {getNomeMes(mesSelecionado)} {anoSelecionado}
+                    </div>
+                  </div>}
               </div>
             </CardContent>
           </Card>
-        </div>
+        </section>
+
+        {/* KPIs Cards - Design moderno */}
+        <section aria-label="Métricas Financeiras" className="animate-fade-in">
+          <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg font-semibold">Métricas principais</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+                {/* Receita */}
+                <div className="dashboard-card-inner relative rounded-xl border border-lunar-border/30 bg-card-gradient shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-lunar-textSecondary font-medium">Receita</span>
+                    <div className="p-2 rounded-lg bg-brand-gradient">
+                      <DollarSign className="h-4 w-4 text-white" />
+                    </div>
+                  </div>
+                  <div className="text-xl font-bold text-lunar-success mt-2">
+                    {formatCurrency(kpisData.totalReceita)}
+                  </div>
+                  {comparisonData.variacaoReceita !== null && (
+                    <div className={`text-xs mt-1 flex items-center ${
+                      comparisonData.variacaoReceita > 0 ? 'text-lunar-success' : 'text-destructive'
+                    }`}>
+                      {comparisonData.variacaoReceita > 0 ? '↗' : '↘'} {Math.abs(comparisonData.variacaoReceita).toFixed(1)}% {comparisonData.labelComparacao}
+                    </div>
+                  )}
+                </div>
+
+                {/* Previsto */}
+                <div className="dashboard-card-inner relative rounded-xl border border-lunar-border/30 bg-card-gradient shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-lunar-textSecondary font-medium">Previsto</span>
+                    <div className="p-2 rounded-lg bg-brand-gradient">
+                      <Calendar className="h-4 w-4 text-white" />
+                    </div>
+                  </div>
+                  <div className="text-xl font-bold text-primary mt-2">
+                    {formatCurrency(kpisData.valorPrevisto)}
+                  </div>
+                </div>
+
+                {/* A Receber */}
+                <div className="dashboard-card-inner relative rounded-xl border border-lunar-border/30 bg-card-gradient shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-lunar-textSecondary font-medium">A Receber</span>
+                    <div className="p-2 rounded-lg bg-brand-gradient">
+                      <Clock className="h-4 w-4 text-white" />
+                    </div>
+                  </div>
+                  <div className="text-xl font-bold text-chart-primary mt-2">
+                    {formatCurrency(kpisData.aReceber)}
+                  </div>
+                </div>
+
+                {/* Despesas */}
+                <div className="dashboard-card-inner relative rounded-xl border border-lunar-border/30 bg-card-gradient shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-lunar-textSecondary font-medium">Despesas</span>
+                    <div className="p-2 rounded-lg bg-brand-gradient">
+                      <TrendingDown className="h-4 w-4 text-white" />
+                    </div>
+                  </div>
+                  <div className="text-xl font-bold text-destructive mt-2">
+                    -{formatCurrency(kpisData.totalDespesas)}
+                  </div>
+                </div>
+
+                {/* Lucro */}
+                <div className="dashboard-card-inner relative rounded-xl border border-lunar-border/30 bg-card-gradient shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-lunar-textSecondary font-medium">Lucro</span>
+                    <div className="p-2 rounded-lg bg-brand-gradient">
+                      <TrendingUp className="h-4 w-4 text-white" />
+                    </div>
+                  </div>
+                  <div className="text-xl font-bold text-lunar-success mt-2">
+                    {formatCurrency(kpisData.totalLucro)}
+                  </div>
+                  {comparisonData.variacaoLucro !== null && (
+                    <div className={`text-xs mt-1 flex items-center ${
+                      comparisonData.variacaoLucro > 0 ? 'text-lunar-success' : 'text-destructive'
+                    }`}>
+                      {comparisonData.variacaoLucro > 0 ? '↗' : '↘'} {Math.abs(comparisonData.variacaoLucro).toFixed(1)}% {comparisonData.labelComparacao}
+                    </div>
+                  )}
+                </div>
+
+                {/* Saldo */}
+                <div className="dashboard-card-inner relative rounded-xl border border-lunar-border/30 bg-card-gradient shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-lunar-textSecondary font-medium">Saldo</span>
+                    <div className="p-2 rounded-lg bg-brand-gradient">
+                      <Target className="h-4 w-4 text-white" />
+                    </div>
+                  </div>
+                  <div className="text-xl font-bold text-chart-primary mt-2">
+                    {formatCurrency(kpisData.saldoTotal)}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
 
         {/* Gráficos Circulares de Metas */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Meta de Receita */}
-          <Card className="border-0 shadow-lg bg-card rounded-lg">
-            <CardHeader className="text-center pb-2">
-                <CardTitle className="text-sm font-medium uppercase tracking-wide text-foreground">META DE RECEITA</CardTitle>
-            </CardHeader>
+        <section aria-label="Metas" className="animate-fade-in">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Meta de Receita */}
+            <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300">
+              <CardHeader className="text-center pb-2">
+                  <CardTitle className="text-sm font-medium uppercase tracking-wide text-foreground">META DE RECEITA</CardTitle>
+              </CardHeader>
             <CardContent className="flex flex-col items-center">
               <div className="relative">
                 <ResponsiveContainer width={200} height={200}>
@@ -262,11 +301,11 @@ export default function DashboardFinanceiro() {
             </CardContent>
           </Card>
 
-          {/* Meta de Lucro */}
-          <Card className="border-0 shadow-lg bg-card rounded-lg">
-            <CardHeader className="text-center pb-2">
-                <CardTitle className="text-sm font-medium uppercase tracking-wide text-foreground">META DE LUCRO</CardTitle>
-            </CardHeader>
+            {/* Meta de Lucro */}
+            <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300">
+              <CardHeader className="text-center pb-2">
+                  <CardTitle className="text-sm font-medium uppercase tracking-wide text-foreground">META DE LUCRO</CardTitle>
+              </CardHeader>
             <CardContent className="flex flex-col items-center">
               <div className="relative">
                 <ResponsiveContainer width={200} height={200}>
@@ -299,11 +338,11 @@ export default function DashboardFinanceiro() {
             </CardContent>
           </Card>
 
-          {/* Lucratividade */}
-          <Card className="border-0 shadow-lg bg-card rounded-lg">
-            <CardHeader className="text-center pb-2">
-                <CardTitle className="text-sm font-medium uppercase tracking-wide text-foreground">LUCRATIVIDADE</CardTitle>
-            </CardHeader>
+            {/* Lucratividade */}
+            <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300">
+              <CardHeader className="text-center pb-2">
+                  <CardTitle className="text-sm font-medium uppercase tracking-wide text-foreground">LUCRATIVIDADE</CardTitle>
+              </CardHeader>
             <CardContent className="flex flex-col items-center">
               <div className="relative">
                 <ResponsiveContainer width={200} height={200}>
@@ -333,20 +372,22 @@ export default function DashboardFinanceiro() {
                   Margem de Lucro Atual
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
 
         {/* Gráfico Principal - Receita vs Lucro */}
-        <Card className="border-0 shadow-lg bg-card rounded-lg">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold flex items-center gap-2 text-foreground">
-              <div className="w-3 h-3 rounded-full bg-chart-primary"></div>
-              RECEITA
-              <div className="w-3 h-3 rounded-full ml-4 bg-muted"></div>
-              LUCRO
-            </CardTitle>
-          </CardHeader>
+        <section aria-label="Gráfico Principal" className="animate-fade-in">
+          <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold flex items-center gap-2 text-foreground">
+                <div className="w-3 h-3 rounded-full bg-chart-primary"></div>
+                RECEITA
+                <div className="w-3 h-3 rounded-full ml-4 bg-muted"></div>
+                LUCRO
+              </CardTitle>
+            </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={350}>
               <BarChart data={dadosMensais} margin={{
@@ -403,16 +444,18 @@ export default function DashboardFinanceiro() {
                 <Bar dataKey="receita" fill="hsl(var(--chart-primary))" name="Receita" radius={[6, 6, 0, 0]} opacity={0.9} />
                 <Bar dataKey="lucro" fill="hsl(var(--muted))" name="Lucro" radius={[6, 6, 0, 0]} opacity={0.9} />
               </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </section>
 
         {/* Fluxo de Caixa - Gráfico de Área */}
-        <Card className="border-0 shadow-lg bg-card rounded-lg">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold text-foreground">FLUXO DE CAIXA</CardTitle>
-            <p className="text-sm text-muted-foreground">Análise mensal do ano selecionado</p>
-          </CardHeader>
+        <section aria-label="Fluxo de Caixa" className="animate-fade-in">
+          <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold text-foreground">FLUXO DE CAIXA</CardTitle>
+              <p className="text-sm text-lunar-textSecondary">Análise mensal do ano selecionado</p>
+            </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={280}>
               <AreaChart data={dadosMensais} margin={{
@@ -462,15 +505,17 @@ export default function DashboardFinanceiro() {
               }} />
                 <Area type="monotone" dataKey="receita" stroke="hsl(var(--chart-primary))" fillOpacity={1} fill="url(#colorArea)" strokeWidth={3} />
               </AreaChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </section>
 
         {/* Despesas por Categoria */}
-        <Card className="border-0 shadow-lg bg-card rounded-lg">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold text-center text-foreground">DESPESAS POR CATEGORIA</CardTitle>
-          </CardHeader>
+        <section aria-label="Despesas por Categoria" className="animate-fade-in">
+          <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold text-center text-foreground">DESPESAS POR CATEGORIA</CardTitle>
+            </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={400}>
               <PieChart>
@@ -497,36 +542,39 @@ export default function DashboardFinanceiro() {
                       {value} ({composicaoDespesas.find(item => item.grupo === value)?.percentual.toFixed(1)}%)
                     </span>} />
               </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        {/* ROI Section - Cálculo correto: Lucro / Investimentos */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Card className="border-0 shadow-lg bg-card rounded-lg">
-            <CardHeader className="text-center">
-              <CardTitle className="text-sm font-medium text-foreground">ROI</CardTitle>
-            </CardHeader>
-            <CardContent className="text-center">
-              <div className="text-sm text-muted-foreground">VALOR INVESTIDO</div>
-              <div className="text-2xl font-bold text-primary">
-                {formatCurrency(roiData.totalInvestimento)}
-              </div>
+              </ResponsiveContainer>
             </CardContent>
           </Card>
+        </section>
 
-          <Card className="border-0 shadow-lg bg-card rounded-lg">
-            <CardHeader className="text-center">
-              <CardTitle className="text-sm font-medium text-foreground">RETORNO SOBRE INVESTIMENTO</CardTitle>
-            </CardHeader>
-            <CardContent className="text-center">
-              <div className="text-4xl font-bold text-chart-primary">
-                {roiData.roi.toFixed(1)}%
-              </div>
-            </CardContent>
-          </Card>
+        {/* ROI Section - Modernizado */}
+        <section aria-label="ROI" className="animate-fade-in">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300">
+              <CardHeader className="text-center">
+                <CardTitle className="text-sm font-medium text-foreground">VALOR INVESTIDO</CardTitle>
+              </CardHeader>
+              <CardContent className="text-center">
+                <div className="text-3xl font-bold text-primary">
+                  {formatCurrency(roiData.totalInvestimento)}
+                </div>
+                <div className="text-xs text-lunar-textSecondary mt-1">Total investido no período</div>
+              </CardContent>
+            </Card>
 
-        </div>
+            <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300">
+              <CardHeader className="text-center">
+                <CardTitle className="text-sm font-medium text-foreground">RETORNO SOBRE INVESTIMENTO</CardTitle>
+              </CardHeader>
+              <CardContent className="text-center">
+                <div className="text-4xl font-bold text-chart-primary">
+                  {roiData.roi.toFixed(1)}%
+                </div>
+                <div className="text-xs text-lunar-textSecondary mt-1">ROI calculado</div>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
       </div>
     </div>;
 }
