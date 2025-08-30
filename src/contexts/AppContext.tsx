@@ -289,7 +289,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Tipos de Disponibilidade
   const [availabilityTypes, setAvailabilityTypes] = useState<AvailabilityType[]>(() => {
     const defaultTypes: AvailabilityType[] = [
-      { id: 'default', name: 'Padrão', color: '#10b981' }
+      { id: 'default', name: 'Disponível', color: '#10b981' }
     ];
     return storage.load(STORAGE_KEYS.AVAILABILITY_TYPES, defaultTypes);
   });

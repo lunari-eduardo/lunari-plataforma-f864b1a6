@@ -90,7 +90,7 @@ export default function ShareAvailabilityModal({
       const times = slots.map(formatTimeBr).join('\n');
       
       const typeNames = selectedTypes.map(t => t.name).join(', ');
-      const typePrefix = selectedTypes.length > 1 || selectedTypes[0].name !== 'Padrão' 
+      const typePrefix = selectedTypes.length > 1 || selectedTypes[0].name !== 'Disponível' 
         ? ` (${typeNames})` 
         : '';
 
@@ -120,7 +120,7 @@ export default function ShareAvailabilityModal({
       if (sections.length === 0) return '';
 
       const typeNames = selectedTypes.map(t => t.name).join(', ');
-      const typeHeader = selectedTypes.length > 1 || selectedTypes[0].name !== 'Padrão'
+      const typeHeader = selectedTypes.length > 1 || selectedTypes[0].name !== 'Disponível'
         ? `Horários disponíveis (${typeNames}):\n\n`
         : 'Horários disponíveis:\n\n';
 
