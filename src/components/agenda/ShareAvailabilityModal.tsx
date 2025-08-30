@@ -111,7 +111,7 @@ export default function ShareAvailabilityModal({
           const dateStr = format(current, "dd 'de' MMMM", { locale: ptBR });
           const weekdayStr = format(current, 'eeee', { locale: ptBR });
           const times = slots.map(formatTimeBr).join('\n');
-          sections.push(`No dia ${dateStr}, ${weekdayStr}, tenho os seguintes horários:\n\n${times}`);
+          sections.push(`Dia ${dateStr}, ${weekdayStr}:\n${times}`);
         }
         
         current.setDate(current.getDate() + 1);
@@ -121,8 +121,8 @@ export default function ShareAvailabilityModal({
 
       const typeNames = selectedTypes.map(t => t.name).join(', ');
       const typeHeader = selectedTypes.length > 1 || selectedTypes[0].name !== 'Disponível'
-        ? `Horários disponíveis (${typeNames}):\n\n`
-        : 'Horários disponíveis:\n\n';
+        ? `Tenho os seguintes horários (${typeNames}):\n\n`
+        : 'Tenho os seguintes horários:\n\n';
 
       return typeHeader + sections.join('\n\n') + '\n\nQual fica melhor para você?';
     }
