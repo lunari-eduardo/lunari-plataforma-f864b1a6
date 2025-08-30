@@ -15,6 +15,7 @@ import AppointmentDetails from "@/components/agenda/AppointmentDetails";
 import EditOrcamentoModal from "@/components/orcamentos/EditOrcamentoModal";
 import BudgetAppointmentDetails from "@/components/agenda/BudgetAppointmentDetails";
 import AvailabilityConfigModal from "@/components/agenda/AvailabilityConfigModal";
+import ShareAvailabilityModal from "@/components/agenda/ShareAvailabilityModal";
 import { useUnifiedCalendar, UnifiedEvent } from "@/hooks/useUnifiedCalendar";
 import { useAgenda, Appointment } from "@/hooks/useAgenda";
 import { useIntegration } from "@/hooks/useIntegration";
@@ -95,6 +96,7 @@ export default function Agenda() {
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
   const [isBudgetAppointmentModalOpen, setIsBudgetAppointmentModalOpen] = useState(false);
   const [isAvailabilityModalOpen, setIsAvailabilityModalOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   // Selection states
   const [selectedSlot, setSelectedSlot] = useState<{
@@ -458,8 +460,19 @@ export default function Agenda() {
             </div>}
 
           {/* Day Title for Daily View */}
-          {view === 'day' && formatDayTitle() && <div className="text-lg font-medium text-lunar-textSecondary">
-              {formatDayTitle()}
+          {view === 'day' && formatDayTitle() && <div className="flex items-center justify-between">
+              <div className="text-lg font-medium text-lunar-textSecondary">
+                {formatDayTitle()}
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setIsShareModalOpen(true)}
+                className="bg-lunar-surface hover:bg-lunar-border border-lunar-border h-8 px-3 text-xs"
+              >
+                <Share2 className="h-4 w-4 mr-2" />
+                Compartilhar
+              </Button>
             </div>}
         </div>
           
@@ -509,5 +522,13 @@ export default function Agenda() {
 
       {/* Availability Config Modal */}
       <AvailabilityConfigModal isOpen={isAvailabilityModalOpen} onClose={() => setIsAvailabilityModalOpen(false)} date={selectedSlot?.date || new Date()} initialTime={selectedSlot?.time} />
+
+      {/* Share Availability Modal */}
+      <ShareAvailabilityModal 
+        isOpen={isShareModalOpen} 
+        onClose={() => setIsShareModalOpen(false)} 
+        period={{ day: date }} 
+        mode="day" 
+      />
     </div>;
 }
