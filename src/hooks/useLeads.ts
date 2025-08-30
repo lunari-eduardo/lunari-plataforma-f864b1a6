@@ -1,46 +1,64 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
 import { useAppContext } from '@/contexts/AppContext';
 import { useLeadStorage } from './useLeadStorage';
+import { getValidTimestamp } from '@/utils/leadFilters';
 import type { Lead } from '@/types/leads';
 
 export function useLeads() {
   const { loadLeads, atomicUpdate } = useLeadStorage();
   const [leads, setLeads] = useState<Lead[]>(() => loadLeads());
   const { adicionarCliente, clientes } = useAppContext();
+  const autoArchiveExecuted = useRef(false);
 
-  // Auto-arquivamento de leads finalizados há mais de 30 dias
+  // Auto-arquivamento de leads finalizados há mais de 30 dias - com validação robusta
   const autoArchiveLeads = useCallback(() => {
+    if (autoArchiveExecuted.current) {
+      console.log('🔄 [LEADS] Auto-archive já executado nesta sessão');
+      return leads;
+    }
+
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    let archivedCount = 0;
     
     const updatedLeads = atomicUpdate(prev => prev.map(lead => {
       // Verificar se deve ser arquivado automaticamente
-      if (
-        !lead.arquivado && 
-        (lead.status === 'fechado' || lead.status === 'perdido') &&
-        lead.statusTimestamp &&
-        new Date(lead.statusTimestamp) < thirtyDaysAgo
-      ) {
-        console.log(`🗄️ [LEADS] Auto-arquivando lead ${lead.nome} - ${lead.status} há mais de 30 dias`);
-        return {
-          ...lead,
-          arquivado: true,
-          dataArquivamento: now.toISOString(),
-          motivoArquivamento: 'automatico' as const
-        };
+      if (!lead.arquivado && (lead.status === 'fechado' || lead.status === 'perdido')) {
+        // Usar timestamp validado com fallback
+        const validTimestamp = getValidTimestamp(lead);
+        
+        if (validTimestamp < thirtyDaysAgo) {
+          archivedCount++;
+          console.log(`🗄️ [LEADS] Auto-arquivando lead ${lead.nome} - ${lead.status} desde ${validTimestamp.toLocaleDateString()}`);
+          return {
+            ...lead,
+            arquivado: true,
+            dataArquivamento: now.toISOString(),
+            motivoArquivamento: 'automatico' as const
+          };
+        }
       }
       return lead;
     }));
     
+    if (archivedCount > 0) {
+      console.log(`✅ [LEADS] Auto-arquivamento concluído: ${archivedCount} leads arquivados`);
+    } else {
+      console.log('ℹ️ [LEADS] Nenhum lead precisa ser arquivado automaticamente');
+    }
+    
+    autoArchiveExecuted.current = true;
     setLeads(updatedLeads);
     return updatedLeads;
-  }, [atomicUpdate]);
+  }, [atomicUpdate, leads]);
 
-  // Executar auto-arquivamento ao carregar
+  // Executar auto-arquivamento ao carregar - apenas uma vez
   useEffect(() => {
-    autoArchiveLeads();
-  }, [autoArchiveLeads]);
+    if (!autoArchiveExecuted.current) {
+      autoArchiveLeads();
+    }
+  }, []); // Dependências vazias para executar apenas uma vez
 
   // Listen for external changes only
   useEffect(() => {

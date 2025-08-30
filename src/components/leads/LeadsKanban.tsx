@@ -12,6 +12,7 @@ import { useLeads } from '@/hooks/useLeads';
 import { useLeadStatuses } from '@/hooks/useLeadStatuses';
 import { useLeadInteractions } from '@/hooks/useLeadInteractions';
 import { useAppContext } from '@/contexts/AppContext';
+import { convertPeriodTypeToFilter, filterLeadsByPeriod } from '@/utils/leadFilters';
 import LeadCard from './LeadCard';
 import LeadFormModal from './LeadFormModal';
 import DraggableLeadCard from './DraggableLeadCard';
@@ -71,7 +72,19 @@ export default function LeadsKanban({ periodFilter, searchTerm = '', originFilte
     label: s.name
   })), [statuses]);
   const filteredLeads = useMemo(() => {
-    return leads.filter(lead => {
+    let baseLeads = leads;
+    
+    // Apply period filter first using centralized utility
+    if (periodFilter) {
+      const filter = convertPeriodTypeToFilter(periodFilter.periodType);
+      baseLeads = filterLeadsByPeriod(leads, filter);
+    } else {
+      // Default to non-archived leads
+      baseLeads = leads.filter(lead => !lead.arquivado);
+    }
+    
+    // Then apply search and origin filters
+    return baseLeads.filter(lead => {
       const matchesSearch = !searchTerm.trim() || 
         lead.nome.toLowerCase().includes(searchTerm.toLowerCase()) || 
         lead.email.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -79,79 +92,7 @@ export default function LeadsKanban({ periodFilter, searchTerm = '', originFilte
       
       const matchesOrigem = originFilter === 'all' || lead.origem === originFilter;
       
-      // Apply period filter if provided
-      let matchesPeriod = true;
-      if (periodFilter) {
-        const convertPeriodTypeToFilter = (periodType: string) => {
-          const currentYear = new Date().getFullYear();
-          const now = new Date();
-          
-          switch (periodType) {
-            case 'current_year':
-              return { year: currentYear, month: undefined, type: 'year' };
-            case 'last_7_days':
-              const last7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-              return { dateFrom: last7Days, type: 'range' };
-            case 'last_30_days':
-              const last30Days = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-              return { dateFrom: last30Days, type: 'range' };
-            case 'last_90_days':
-              const last90Days = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-              return { dateFrom: last90Days, type: 'range' };
-            case 'january_2025': return { year: 2025, month: 1, type: 'month' };
-            case 'february_2025': return { year: 2025, month: 2, type: 'month' };
-            case 'march_2025': return { year: 2025, month: 3, type: 'month' };
-            case 'april_2025': return { year: 2025, month: 4, type: 'month' };
-            case 'may_2025': return { year: 2025, month: 5, type: 'month' };
-            case 'june_2025': return { year: 2025, month: 6, type: 'month' };
-            case 'july_2025': return { year: 2025, month: 7, type: 'month' };
-            case 'august_2025': return { year: 2025, month: 8, type: 'month' };
-            case 'september_2025': return { year: 2025, month: 9, type: 'month' };
-            case 'october_2025': return { year: 2025, month: 10, type: 'month' };
-            case 'november_2025': return { year: 2025, month: 11, type: 'month' };
-            case 'december_2025': return { year: 2025, month: 12, type: 'month' };
-            case 'previous_year':
-              return { year: currentYear - 1, month: undefined, type: 'year' };
-            case 'archived':
-              return { type: 'archived' };
-            case 'all_active':
-              return { type: 'active' };
-            case 'all_time':
-            default:
-              return { type: 'all' };
-          }
-        };
-
-        const filter = convertPeriodTypeToFilter(periodFilter.periodType);
-        const leadDate = new Date(lead.dataCriacao);
-        
-        switch (filter.type) {
-          case 'range':
-            matchesPeriod = !lead.arquivado && leadDate >= filter.dateFrom!;
-            break;
-          case 'year':
-            const leadYear = leadDate.getFullYear();
-            matchesPeriod = !lead.arquivado && (filter.year ? leadYear === filter.year : true);
-            break;
-          case 'month':
-            const leadMonth = leadDate.getMonth() + 1;
-            const leadYear2 = leadDate.getFullYear();
-            matchesPeriod = !lead.arquivado && leadMonth === filter.month && leadYear2 === filter.year;
-            break;
-          case 'archived':
-            matchesPeriod = lead.arquivado === true;
-            break;
-          case 'active':
-            matchesPeriod = !lead.arquivado;
-            break;
-          case 'all':
-          default:
-            matchesPeriod = true; // all_time includes archived
-            break;
-        }
-      }
-      
-      return matchesSearch && matchesOrigem && matchesPeriod;
+      return matchesSearch && matchesOrigem;
     });
   }, [leads, searchTerm, originFilter, periodFilter]);
   const groupedLeads = useMemo(() => {
