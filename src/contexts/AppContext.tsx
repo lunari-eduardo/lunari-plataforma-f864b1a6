@@ -294,6 +294,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return storage.load(STORAGE_KEYS.AVAILABILITY_TYPES, defaultTypes);
   });
 
+  // Migração: Atualizar tipo "Padrão" para "Disponível"
+  useEffect(() => {
+    const needsMigration = availabilityTypes.some(type => 
+      type.id === 'default' && type.name === 'Padrão'
+    );
+    
+    if (needsMigration) {
+      setAvailabilityTypes(prev => prev.map(type => 
+        type.id === 'default' && type.name === 'Padrão'
+          ? { ...type, name: 'Disponível' }
+          : type
+      ));
+    }
+  }, []);
+
   // NOVA ARQUITETURA: Estado baseado em Projetos
   const [projetos, setProjetos] = useState<Projeto[]>(() => {
     try {
