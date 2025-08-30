@@ -465,13 +465,13 @@ export default function Agenda() {
                 {formatDayTitle()}
               </div>
               <Button 
-                variant="outline" 
-                size="sm"
+                variant="ghost" 
+                size="icon"
                 onClick={() => setIsShareModalOpen(true)}
-                className="bg-lunar-surface hover:bg-lunar-border border-lunar-border h-8 px-3 text-xs"
+                aria-label="Compartilhar horários do dia"
+                title="Compartilhar horários do dia"
               >
-                <Share2 className="h-4 w-4 mr-2" />
-                Compartilhar
+                <Share2 className="h-4 w-4" />
               </Button>
             </div>}
         </div>
