@@ -80,7 +80,7 @@ export default function ChecklistPanel({
             placeholder="Adicionar item"
             className="h-8"
           />
-          <Button className="h-8" onClick={handleAdd}>Adicionar</Button>
+          <Button size="icon" className="h-8 w-8" onClick={handleAdd}>+</Button>
         </div>
         <ul className="space-y-1">
           {list.map(item => (

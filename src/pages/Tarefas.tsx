@@ -253,8 +253,7 @@ export default function Tarefas() {
               <span className="md:hidden">Config</span>
             </Button>
             <Button size="sm" onClick={() => setCreateOpen(true)} className="text-xs md:text-sm">
-              <span className="hidden sm:inline">Nova tarefa</span>
-              <span className="sm:hidden">+ Tarefa</span>
+              Nova tarefa
             </Button>
           </div>
         </header>
