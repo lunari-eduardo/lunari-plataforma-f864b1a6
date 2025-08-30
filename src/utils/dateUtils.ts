@@ -138,6 +138,29 @@ export function formatToDayMonth(dateString: string): string {
 }
 
 /**
+ * Calcula quantos dias se passaram desde uma data e retorna um label amigável
+ */
+export function daysAgoLabel(dateString: string): string {
+  try {
+    const date = new Date(dateString);
+    const now = new Date();
+    
+    // Resetar horas para comparar apenas datas
+    const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const nowOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    const diffTime = nowOnly.getTime() - dateOnly.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return 'Hoje';
+    if (diffDays === 1) return 'há 1 dia';
+    return `há ${diffDays} dias`;
+  } catch {
+    return 'Data inválida';
+  }
+}
+
+/**
  * Formata uma data para o formato de input HTML (yyyy-MM-dd)
  */
 export function formatDateForInput(date: Date | string): string {

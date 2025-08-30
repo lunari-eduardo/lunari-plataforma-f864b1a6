@@ -3,8 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { MoreVertical, MessageCircle, Calendar } from 'lucide-react';
 import type { Lead } from '@/types/leads';
-import { formatDistanceToNowStrict } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { daysAgoLabel } from '@/utils/dateUtils';
 import LeadActionsPopover from './LeadActionsPopover';
 import LeadStatusSelector from './LeadStatusSelector';
 import LeadDetailsModal from './LeadDetailsModal';
@@ -82,25 +81,11 @@ export default function LeadCard({
   }, [lead.statusTimestamp, lead.ultimaInteracao, lead.dataCriacao]);
 
   const timeAgo = useMemo(() => {
-    try {
-      return formatDistanceToNowStrict(new Date(lastUpdateIso), {
-        addSuffix: true,
-        locale: ptBR
-      });
-    } catch {
-      return 'Data inválida';
-    }
+    return daysAgoLabel(lastUpdateIso);
   }, [lastUpdateIso]);
 
   const createdAgo = useMemo(() => {
-    try {
-      return formatDistanceToNowStrict(new Date(lead.dataCriacao), {
-        addSuffix: true,
-        locale: ptBR
-      });
-    } catch {
-      return 'Data inválida';
-    }
+    return daysAgoLabel(lead.dataCriacao);
   }, [lead.dataCriacao]);
   const isConverted = lead.status === 'fechado';
   const isLost = lead.status === 'perdido';
