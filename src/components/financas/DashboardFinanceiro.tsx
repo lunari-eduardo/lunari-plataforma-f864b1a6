@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/utils/financialUtils';
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { useDashboardFinanceiro } from '@/hooks/useDashboardFinanceiro';
-import { Trash2, DollarSign, Calendar, Clock, TrendingDown, TrendingUp, Target } from 'lucide-react';
+import { Trash2, DollarSign, Calendar, HandCoins, WalletCards, TrendingUp, Landmark } from 'lucide-react';
 import { toast } from 'sonner';
 
 // Paleta de cores beige/marrom elegantes
@@ -186,7 +186,7 @@ export default function DashboardFinanceiro() {
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-lunar-textSecondary font-medium">A Receber</span>
                     <div className="p-2 rounded-lg bg-brand-gradient">
-                      <Clock className="h-4 w-4 text-white" />
+                      <HandCoins className="h-4 w-4 text-white" />
                     </div>
                   </div>
                   <div className="text-xl font-bold text-chart-primary mt-2">
@@ -199,7 +199,7 @@ export default function DashboardFinanceiro() {
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-lunar-textSecondary font-medium">Despesas</span>
                     <div className="p-2 rounded-lg bg-brand-gradient">
-                      <TrendingDown className="h-4 w-4 text-white" />
+                      <WalletCards className="h-4 w-4 text-white" />
                     </div>
                   </div>
                   <div className="text-xl font-bold text-destructive mt-2">
@@ -228,7 +228,7 @@ export default function DashboardFinanceiro() {
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-lunar-textSecondary font-medium">Saldo</span>
                     <div className="p-2 rounded-lg bg-brand-gradient">
-                      <Target className="h-4 w-4 text-white" />
+                      <Landmark className="h-4 w-4 text-white" />
                     </div>
                   </div>
                   <div className="text-xl font-bold text-chart-primary mt-2">
