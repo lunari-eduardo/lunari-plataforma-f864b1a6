@@ -9,6 +9,39 @@ export function useLeads() {
   const [leads, setLeads] = useState<Lead[]>(() => loadLeads());
   const { adicionarCliente, clientes } = useAppContext();
 
+  // Auto-arquivamento de leads finalizados há mais de 30 dias
+  const autoArchiveLeads = useCallback(() => {
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    
+    const updatedLeads = atomicUpdate(prev => prev.map(lead => {
+      // Verificar se deve ser arquivado automaticamente
+      if (
+        !lead.arquivado && 
+        (lead.status === 'fechado' || lead.status === 'perdido') &&
+        lead.statusTimestamp &&
+        new Date(lead.statusTimestamp) < thirtyDaysAgo
+      ) {
+        console.log(`🗄️ [LEADS] Auto-arquivando lead ${lead.nome} - ${lead.status} há mais de 30 dias`);
+        return {
+          ...lead,
+          arquivado: true,
+          dataArquivamento: now.toISOString(),
+          motivoArquivamento: 'automatico' as const
+        };
+      }
+      return lead;
+    }));
+    
+    setLeads(updatedLeads);
+    return updatedLeads;
+  }, [atomicUpdate]);
+
+  // Executar auto-arquivamento ao carregar
+  useEffect(() => {
+    autoArchiveLeads();
+  }, [autoArchiveLeads]);
+
   // Listen for external changes only
   useEffect(() => {
     const handleLeadsChanged = (e: CustomEvent) => {
@@ -169,11 +202,23 @@ export function useLeads() {
   }, [leads, clientes, updateLead, adicionarCliente]);
 
 
+  // Função para arquivar/desarquivar manualmente
+  const toggleArchive = useCallback((leadId: string, archive: boolean) => {
+    const now = new Date().toISOString();
+    updateLead(leadId, {
+      arquivado: archive,
+      dataArquivamento: archive ? now : undefined,
+      motivoArquivamento: archive ? 'manual' : undefined
+    });
+  }, [updateLead]);
+
   return { 
     leads, 
     addLead, 
     updateLead, 
     deleteLead, 
-    convertToClient
+    convertToClient,
+    autoArchiveLeads,
+    toggleArchive
   };
 }

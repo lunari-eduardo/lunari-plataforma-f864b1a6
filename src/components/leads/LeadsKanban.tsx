@@ -84,42 +84,70 @@ export default function LeadsKanban({ periodFilter, searchTerm = '', originFilte
       if (periodFilter) {
         const convertPeriodTypeToFilter = (periodType: string) => {
           const currentYear = new Date().getFullYear();
+          const now = new Date();
           
           switch (periodType) {
             case 'current_year':
-              return { year: currentYear, month: undefined };
-            case 'january_2025': return { year: 2025, month: 1 };
-            case 'february_2025': return { year: 2025, month: 2 };
-            case 'march_2025': return { year: 2025, month: 3 };
-            case 'april_2025': return { year: 2025, month: 4 };
-            case 'may_2025': return { year: 2025, month: 5 };
-            case 'june_2025': return { year: 2025, month: 6 };
-            case 'july_2025': return { year: 2025, month: 7 };
-            case 'august_2025': return { year: 2025, month: 8 };
-            case 'september_2025': return { year: 2025, month: 9 };
-            case 'october_2025': return { year: 2025, month: 10 };
-            case 'november_2025': return { year: 2025, month: 11 };
-            case 'december_2025': return { year: 2025, month: 12 };
+              return { year: currentYear, month: undefined, type: 'year' };
+            case 'last_7_days':
+              const last7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+              return { dateFrom: last7Days, type: 'range' };
+            case 'last_30_days':
+              const last30Days = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+              return { dateFrom: last30Days, type: 'range' };
+            case 'last_90_days':
+              const last90Days = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+              return { dateFrom: last90Days, type: 'range' };
+            case 'january_2025': return { year: 2025, month: 1, type: 'month' };
+            case 'february_2025': return { year: 2025, month: 2, type: 'month' };
+            case 'march_2025': return { year: 2025, month: 3, type: 'month' };
+            case 'april_2025': return { year: 2025, month: 4, type: 'month' };
+            case 'may_2025': return { year: 2025, month: 5, type: 'month' };
+            case 'june_2025': return { year: 2025, month: 6, type: 'month' };
+            case 'july_2025': return { year: 2025, month: 7, type: 'month' };
+            case 'august_2025': return { year: 2025, month: 8, type: 'month' };
+            case 'september_2025': return { year: 2025, month: 9, type: 'month' };
+            case 'october_2025': return { year: 2025, month: 10, type: 'month' };
+            case 'november_2025': return { year: 2025, month: 11, type: 'month' };
+            case 'december_2025': return { year: 2025, month: 12, type: 'month' };
             case 'previous_year':
-              return { year: currentYear - 1, month: undefined };
+              return { year: currentYear - 1, month: undefined, type: 'year' };
+            case 'archived':
+              return { type: 'archived' };
+            case 'all_active':
+              return { type: 'active' };
             case 'all_time':
             default:
-              return { year: undefined, month: undefined };
+              return { type: 'all' };
           }
         };
 
-        const { year, month } = convertPeriodTypeToFilter(periodFilter.periodType);
+        const filter = convertPeriodTypeToFilter(periodFilter.periodType);
+        const leadDate = new Date(lead.dataCriacao);
         
-        if (year || month) {
-          const date = new Date(lead.dataCriacao);
-          const leadMonth = date.getMonth() + 1;
-          const leadYear = date.getFullYear();
-          
-          if (year && month) {
-            matchesPeriod = leadMonth === month && leadYear === year;
-          } else if (year) {
-            matchesPeriod = leadYear === year;
-          }
+        switch (filter.type) {
+          case 'range':
+            matchesPeriod = !lead.arquivado && leadDate >= filter.dateFrom!;
+            break;
+          case 'year':
+            const leadYear = leadDate.getFullYear();
+            matchesPeriod = !lead.arquivado && (filter.year ? leadYear === filter.year : true);
+            break;
+          case 'month':
+            const leadMonth = leadDate.getMonth() + 1;
+            const leadYear2 = leadDate.getFullYear();
+            matchesPeriod = !lead.arquivado && leadMonth === filter.month && leadYear2 === filter.year;
+            break;
+          case 'archived':
+            matchesPeriod = lead.arquivado === true;
+            break;
+          case 'active':
+            matchesPeriod = !lead.arquivado;
+            break;
+          case 'all':
+          default:
+            matchesPeriod = true; // all_time includes archived
+            break;
         }
       }
       
@@ -386,6 +414,19 @@ export default function LeadsKanban({ periodFilter, searchTerm = '', originFilte
             {isMobile ? "Novo" : "Novo Lead"}
           </Button>
         </div>
+        
+        {/* Indicador de visualização arquivados */}
+        {periodFilter?.periodType === 'archived' && (
+          <div className="flex items-center gap-2 px-3 py-1 bg-chart-orange-1/10 border border-chart-orange-1/20 rounded-lg">
+            <div className="w-2 h-2 bg-chart-orange-1 rounded-full animate-pulse" />
+            <span className={cn(
+              "text-chart-orange-1 font-medium",
+              isMobile ? "text-xs" : "text-sm"
+            )}>
+              Visualizando Arquivados
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Kanban Board Container - Optimized for mobile scroll */}
