@@ -482,7 +482,7 @@ export default function Agenda() {
           <div className={`transition-opacity duration-200 ${isTransitioning ? 'opacity-70' : 'opacity-100'}`}>
             {view === 'year' && <AnnualView date={date} unifiedEvents={unifiedEvents} onDayClick={handleDayClick} onEventClick={handleEventClick} />}
             {view === 'month' && <MonthlyView date={date} unifiedEvents={unifiedEvents} onCreateSlot={handleCreateSlot} onEventClick={handleEventClick} onDayClick={handleDayClick} />}
-            {view === 'week' && <WeeklyView date={date} unifiedEvents={unifiedEvents} onCreateSlot={handleCreateSlot} onEventClick={handleEventClick} />}
+            {view === 'week' && <WeeklyView date={date} unifiedEvents={unifiedEvents} onCreateSlot={handleCreateSlot} onEventClick={handleEventClick} onDayClick={handleDayClick} />}
             {view === 'day' && <DailyView date={date} unifiedEvents={unifiedEvents} onCreateSlot={handleCreateSlot} onEventClick={handleEventClick} />}
           </div>
         </div>

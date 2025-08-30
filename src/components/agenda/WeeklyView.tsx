@@ -17,12 +17,14 @@ interface WeeklyViewProps {
     time: string;
   }) => void;
   onEventClick: (event: UnifiedEvent) => void;
+  onDayClick?: (date: Date) => void;
 }
 export default function WeeklyView({
   date,
   unifiedEvents,
   onCreateSlot,
-  onEventClick
+  onEventClick,
+  onDayClick
 }: WeeklyViewProps) {
   const {
     availability,
@@ -121,7 +123,20 @@ export default function WeeklyView({
           <div className="bg-muted"></div>
           
           {/* Day headers */}
-          {weekDays.map((day, index) => <div key={index} className={`text-center bg-muted ${isTablet ? 'p-1' : 'p-1 md:p-2'}`}>
+          {weekDays.map((day, index) => <div 
+              key={index} 
+              className={`text-center bg-muted cursor-pointer hover:bg-muted/80 transition-colors ${isTablet ? 'p-1' : 'p-1 md:p-2'}`}
+              onClick={() => onDayClick?.(day)}
+              role="button"
+              tabIndex={0}
+              title={`Ver agenda do dia ${format(day, 'd')}`}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onDayClick?.(day);
+                }
+              }}
+            >
               <p className={`text-muted-foreground font-medium ${isTablet ? 'text-[10px]' : 'text-xs'}`}>{formatDayName(day)}</p>
               <p className={`font-semibold ${isTablet ? 'text-xs' : 'text-xs md:text-sm'}`}>{format(day, 'd')}</p>
               {/* Mobile: dots with counts */}
