@@ -139,18 +139,6 @@ export default function WeeklyView({
             >
               <p className={`text-muted-foreground font-medium ${isTablet ? 'text-[10px]' : 'text-xs'}`}>{formatDayName(day)}</p>
               <p className={`font-semibold ${isTablet ? 'text-xs' : 'text-xs md:text-sm'}`}>{format(day, 'd')}</p>
-              {/* Mobile: dots without counts */}
-              {(() => {
-            if (!isMobile) return null;
-            const {
-              sessionsCount,
-              availCount
-            } = getDayCounts(day);
-            return <div className="mt-0.5 flex items-center justify-center gap-2 md:hidden">
-                    {sessionsCount > 0 && <span className="h-2.5 w-2.5 rounded-full bg-primary" aria-hidden></span>}
-                    {availCount > 0 && <span className="h-2.5 w-2.5 rounded-full bg-availability" aria-hidden></span>}
-                  </div>;
-          })()}
             </div>)}
           
           {/* Time slots */}

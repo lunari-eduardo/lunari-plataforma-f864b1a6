@@ -128,15 +128,10 @@ export default function UnifiedEventCard({ event, onClick, compact = false, vari
         </div>
       );
     } else if (variant === 'weekly') {
-      // Weekly view: Compact with essential info
+      // Weekly view: Only client name, no time
       return (
-        <div className="space-y-0.5">
-          <div className="font-medium text-xs truncate">
-            {event.client}
-          </div>
-          <div className="text-xs opacity-70">
-            {event.time}
-          </div>
+        <div className="font-medium text-xs truncate">
+          {event.client}
         </div>
       );
     } else if (variant === 'monthly') {
