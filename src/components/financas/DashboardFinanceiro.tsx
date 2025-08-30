@@ -7,7 +7,6 @@ import { useDashboardFinanceiro } from '@/hooks/useDashboardFinanceiro';
 import { Trash2, DollarSign, Calendar, Clock, TrendingDown, TrendingUp, Target } from 'lucide-react';
 import { toast } from 'sonner';
 
-
 // Paleta de cores beige/marrom elegantes
 const COLORS = ['hsl(var(--finance-primary))', 'hsl(var(--finance-secondary))'];
 const EXPENSE_COLORS = ['hsl(var(--finance-primary))', 'hsl(var(--chart-secondary))', 'hsl(var(--chart-tertiary))', 'hsl(var(--chart-quaternary))', 'hsl(var(--chart-quinary))', 'hsl(var(--chart-senary))'];
@@ -83,26 +82,14 @@ export default function DashboardFinanceiro() {
     label: 'Dezembro'
   }];
   return <div className="min-h-screen bg-lunar-bg">
-      <div className="p-6 space-y-6">
+      <div className="p-6 space-y-6 py-0 my-0">
         {/* Hero Section */}
         <section aria-label="Dashboard Header" className="animate-fade-in">
           <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300 overflow-hidden">
             <div className="relative">
               {/* decorative accents */}
               <div className="pointer-events-none absolute inset-0 bg-brand-gradient opacity-[0.12]" />
-              <CardContent className="relative p-6">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 rounded-xl bg-brand-gradient">
-                    <TrendingUp className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <h1 className="text-2xl font-bold text-lunar-text">Dashboard Financeiro</h1>
-                    <p className="text-sm text-lunar-textSecondary">
-                      Visão geral completa das suas finanças
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
+              
             </div>
           </Card>
         </section>
@@ -176,13 +163,9 @@ export default function DashboardFinanceiro() {
                   <div className="text-xl font-bold text-lunar-success mt-2">
                     {formatCurrency(kpisData.totalReceita)}
                   </div>
-                  {comparisonData.variacaoReceita !== null && (
-                    <div className={`text-xs mt-1 flex items-center ${
-                      comparisonData.variacaoReceita > 0 ? 'text-lunar-success' : 'text-destructive'
-                    }`}>
+                  {comparisonData.variacaoReceita !== null && <div className={`text-xs mt-1 flex items-center ${comparisonData.variacaoReceita > 0 ? 'text-lunar-success' : 'text-destructive'}`}>
                       {comparisonData.variacaoReceita > 0 ? '↗' : '↘'} {Math.abs(comparisonData.variacaoReceita).toFixed(1)}% {comparisonData.labelComparacao}
-                    </div>
-                  )}
+                    </div>}
                 </div>
 
                 {/* Previsto */}
@@ -235,13 +218,9 @@ export default function DashboardFinanceiro() {
                   <div className="text-xl font-bold text-lunar-success mt-2">
                     {formatCurrency(kpisData.totalLucro)}
                   </div>
-                  {comparisonData.variacaoLucro !== null && (
-                    <div className={`text-xs mt-1 flex items-center ${
-                      comparisonData.variacaoLucro > 0 ? 'text-lunar-success' : 'text-destructive'
-                    }`}>
+                  {comparisonData.variacaoLucro !== null && <div className={`text-xs mt-1 flex items-center ${comparisonData.variacaoLucro > 0 ? 'text-lunar-success' : 'text-destructive'}`}>
                       {comparisonData.variacaoLucro > 0 ? '↗' : '↘'} {Math.abs(comparisonData.variacaoLucro).toFixed(1)}% {comparisonData.labelComparacao}
-                    </div>
-                  )}
+                    </div>}
                 </div>
 
                 {/* Saldo */}
@@ -274,20 +253,20 @@ export default function DashboardFinanceiro() {
                 <ResponsiveContainer width={200} height={200}>
                   <PieChart>
                     <Pie data={[{
-                    name: 'Atingido',
-                    value: Math.max(0, metasData.receitaAtual)
-                  }, {
-                    name: 'Restante',
-                    value: Math.max(0, metasData.metaReceita - metasData.receitaAtual)
-                  }]} cx="50%" cy="50%" innerRadius={60} outerRadius={80} startAngle={90} endAngle={450} dataKey="value" strokeWidth={2} stroke="hsl(var(--card))">
+                      name: 'Atingido',
+                      value: Math.max(0, metasData.receitaAtual)
+                    }, {
+                      name: 'Restante',
+                      value: Math.max(0, metasData.metaReceita - metasData.receitaAtual)
+                    }]} cx="50%" cy="50%" innerRadius={60} outerRadius={80} startAngle={90} endAngle={450} dataKey="value" strokeWidth={2} stroke="hsl(var(--card))">
                       <Cell fill="hsl(var(--chart-revenue))" />
                       <Cell fill="hsl(var(--muted))" opacity={0.3} />
                     </Pie>
                     <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" style={{
-                    fontSize: '18px',
-                    fontWeight: 'bold',
-                    fill: 'hsl(var(--foreground))'
-                  }}>
+                      fontSize: '18px',
+                      fontWeight: 'bold',
+                      fill: 'hsl(var(--foreground))'
+                    }}>
                       {metasData.metaReceita > 0 ? `${(metasData.receitaAtual / metasData.metaReceita * 100).toFixed(1)}%` : '0%'}
                     </text>
                   </PieChart>
@@ -311,20 +290,20 @@ export default function DashboardFinanceiro() {
                 <ResponsiveContainer width={200} height={200}>
                   <PieChart>
                     <Pie data={[{
-                    name: 'Atingido',
-                    value: Math.max(0, metasData.lucroAtual)
-                  }, {
-                    name: 'Restante',
-                    value: Math.max(0, metasData.metaLucro - metasData.lucroAtual)
-                  }]} cx="50%" cy="50%" innerRadius={60} outerRadius={80} startAngle={90} endAngle={450} dataKey="value" strokeWidth={2} stroke="hsl(var(--card))">
+                      name: 'Atingido',
+                      value: Math.max(0, metasData.lucroAtual)
+                    }, {
+                      name: 'Restante',
+                      value: Math.max(0, metasData.metaLucro - metasData.lucroAtual)
+                    }]} cx="50%" cy="50%" innerRadius={60} outerRadius={80} startAngle={90} endAngle={450} dataKey="value" strokeWidth={2} stroke="hsl(var(--card))">
                       <Cell fill="hsl(var(--chart-secondary))" />
                       <Cell fill="hsl(var(--muted))" opacity={0.3} />
                     </Pie>
                     <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" style={{
-                    fontSize: '18px',
-                    fontWeight: 'bold',
-                    fill: 'hsl(var(--foreground))'
-                  }}>
+                      fontSize: '18px',
+                      fontWeight: 'bold',
+                      fill: 'hsl(var(--foreground))'
+                    }}>
                       {metasData.metaLucro > 0 ? `${(metasData.lucroAtual / metasData.metaLucro * 100).toFixed(1)}%` : '0%'}
                     </text>
                   </PieChart>
@@ -348,20 +327,20 @@ export default function DashboardFinanceiro() {
                 <ResponsiveContainer width={200} height={200}>
                   <PieChart>
                     <Pie data={[{
-                    name: 'Lucratividade',
-                    value: Math.max(0, Math.min(100, lucratividade))
-                  }, {
-                    name: 'Restante',
-                    value: Math.max(0, 100 - lucratividade)
-                  }]} cx="50%" cy="50%" innerRadius={60} outerRadius={80} startAngle={90} endAngle={450} dataKey="value" strokeWidth={2} stroke="hsl(var(--card))">
+                      name: 'Lucratividade',
+                      value: Math.max(0, Math.min(100, lucratividade))
+                    }, {
+                      name: 'Restante',
+                      value: Math.max(0, 100 - lucratividade)
+                    }]} cx="50%" cy="50%" innerRadius={60} outerRadius={80} startAngle={90} endAngle={450} dataKey="value" strokeWidth={2} stroke="hsl(var(--card))">
                       <Cell fill="hsl(var(--chart-primary))" />
                       <Cell fill="hsl(var(--muted))" opacity={0.3} />
                     </Pie>
                     <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" style={{
-                    fontSize: '18px',
-                    fontWeight: 'bold',
-                    fill: 'hsl(var(--foreground))'
-                  }}>
+                      fontSize: '18px',
+                      fontWeight: 'bold',
+                      fill: 'hsl(var(--foreground))'
+                    }}>
                       {lucratividade.toFixed(1)}%
                     </text>
                   </PieChart>
@@ -391,56 +370,56 @@ export default function DashboardFinanceiro() {
           <CardContent>
             <ResponsiveContainer width="100%" height={350}>
               <BarChart data={dadosMensais} margin={{
-              top: 20,
-              right: 30,
-              left: 20,
-              bottom: 20
-            }} barCategoryGap="20%">
+                top: 20,
+                right: 30,
+                left: 20,
+                bottom: 20
+              }} barCategoryGap="20%">
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.6} />
                 <XAxis dataKey="mes" tick={{
-                fontSize: 12,
-                fill: 'hsl(var(--foreground))',
-                fontWeight: 500
-              }} tickLine={{
-                stroke: 'hsl(var(--border))'
-              }} axisLine={{
-                stroke: 'hsl(var(--border))'
-              }} />
+                  fontSize: 12,
+                  fill: 'hsl(var(--foreground))',
+                  fontWeight: 500
+                }} tickLine={{
+                  stroke: 'hsl(var(--border))'
+                }} axisLine={{
+                  stroke: 'hsl(var(--border))'
+                }} />
                 <YAxis domain={[0, 'dataMax']} tick={{
-                fontSize: 12,
-                fill: 'hsl(var(--foreground))',
-                fontWeight: 500
-              }} tickLine={{
-                stroke: 'hsl(var(--border))'
-              }} axisLine={{
-                stroke: 'hsl(var(--border))'
-              }} tickFormatter={value => `R$ ${Number(value).toLocaleString('pt-BR', {
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 0
-              })}`} />
+                  fontSize: 12,
+                  fill: 'hsl(var(--foreground))',
+                  fontWeight: 500
+                }} tickLine={{
+                  stroke: 'hsl(var(--border))'
+                }} axisLine={{
+                  stroke: 'hsl(var(--border))'
+                }} tickFormatter={value => `R$ ${Number(value).toLocaleString('pt-BR', {
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 0
+                })}`} />
                 <Tooltip formatter={(value: number, name: string, props: any) => {
-                // Force correct labels based on dataKey
-                const label = props.dataKey === 'lucro' ? 'Lucro' : props.dataKey === 'receita' ? 'Receita' : name;
-                return [formatCurrency(value), label];
-              }} labelStyle={{
-                color: 'hsl(var(--foreground))',
-                fontSize: '12px',
-                fontWeight: 500
-              }} contentStyle={{
-                backgroundColor: 'hsl(var(--card))',
-                border: '1px solid hsl(var(--border))',
-                borderRadius: '12px',
-                fontSize: '12px',
-                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
-                transition: 'all 0.2s ease'
-              }} cursor={{
-                fill: 'hsl(var(--primary) / 0.1)'
-              }} />
+                  // Force correct labels based on dataKey
+                  const label = props.dataKey === 'lucro' ? 'Lucro' : props.dataKey === 'receita' ? 'Receita' : name;
+                  return [formatCurrency(value), label];
+                }} labelStyle={{
+                  color: 'hsl(var(--foreground))',
+                  fontSize: '12px',
+                  fontWeight: 500
+                }} contentStyle={{
+                  backgroundColor: 'hsl(var(--card))',
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '12px',
+                  fontSize: '12px',
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+                  transition: 'all 0.2s ease'
+                }} cursor={{
+                  fill: 'hsl(var(--primary) / 0.1)'
+                }} />
                 <Legend wrapperStyle={{
-                fontSize: '12px',
-                color: 'hsl(var(--muted-foreground))',
-                fontWeight: 500
-              }} />
+                  fontSize: '12px',
+                  color: 'hsl(var(--muted-foreground))',
+                  fontWeight: 500
+                }} />
                 <Bar dataKey="receita" fill="hsl(var(--chart-primary))" name="Receita" radius={[6, 6, 0, 0]} opacity={0.9} />
                 <Bar dataKey="lucro" fill="hsl(var(--muted))" name="Lucro" radius={[6, 6, 0, 0]} opacity={0.9} />
               </BarChart>
@@ -459,11 +438,11 @@ export default function DashboardFinanceiro() {
           <CardContent>
             <ResponsiveContainer width="100%" height={280}>
               <AreaChart data={dadosMensais} margin={{
-              top: 20,
-              right: 30,
-              left: 20,
-              bottom: 20
-            }}>
+                top: 20,
+                right: 30,
+                left: 20,
+                bottom: 20
+              }}>
                 <defs>
                   <linearGradient id="colorArea" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="hsl(var(--chart-primary))" stopOpacity={0.3} />
@@ -472,37 +451,37 @@ export default function DashboardFinanceiro() {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} />
                 <XAxis dataKey="mes" tick={{
-                fontSize: 11,
-                fill: 'hsl(var(--foreground))',
-                fontWeight: 500
-              }} tickLine={{
-                stroke: 'hsl(var(--border))'
-              }} axisLine={{
-                stroke: 'hsl(var(--border))'
-              }} />
+                  fontSize: 11,
+                  fill: 'hsl(var(--foreground))',
+                  fontWeight: 500
+                }} tickLine={{
+                  stroke: 'hsl(var(--border))'
+                }} axisLine={{
+                  stroke: 'hsl(var(--border))'
+                }} />
                 <YAxis tick={{
-                fontSize: 11,
-                fill: 'hsl(var(--foreground))',
-                fontWeight: 500
-              }} tickLine={{
-                stroke: 'hsl(var(--border))'
-              }} axisLine={{
-                stroke: 'hsl(var(--border))'
-              }} tickFormatter={value => `${Number(value).toLocaleString('pt-BR', {
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 0
-              })}`} />
+                  fontSize: 11,
+                  fill: 'hsl(var(--foreground))',
+                  fontWeight: 500
+                }} tickLine={{
+                  stroke: 'hsl(var(--border))'
+                }} axisLine={{
+                  stroke: 'hsl(var(--border))'
+                }} tickFormatter={value => `${Number(value).toLocaleString('pt-BR', {
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 0
+                })}`} />
                 <Tooltip formatter={(value: number) => formatCurrency(value)} labelStyle={{
-                color: 'hsl(var(--foreground))',
-                fontSize: '12px',
-                fontWeight: 500
-              }} contentStyle={{
-                backgroundColor: 'hsl(var(--card))',
-                border: '1px solid hsl(var(--border))',
-                borderRadius: '12px',
-                fontSize: '12px',
-                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
-              }} />
+                  color: 'hsl(var(--foreground))',
+                  fontSize: '12px',
+                  fontWeight: 500
+                }} contentStyle={{
+                  backgroundColor: 'hsl(var(--card))',
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '12px',
+                  fontSize: '12px',
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
+                }} />
                 <Area type="monotone" dataKey="receita" stroke="hsl(var(--chart-primary))" fillOpacity={1} fill="url(#colorArea)" strokeWidth={3} />
               </AreaChart>
               </ResponsiveContainer>
@@ -523,22 +502,22 @@ export default function DashboardFinanceiro() {
                   {composicaoDespesas.map((entry, index) => <Cell key={`cell-${index}`} fill={EXPENSE_COLORS[index % EXPENSE_COLORS.length]} opacity={0.85} />)}
                 </Pie>
                 <Tooltip formatter={(value: number, name: string, props: any) => [formatCurrency(value), `${props.payload.grupo} (${props.payload.percentual.toFixed(1)}%)`]} labelStyle={{
-                color: 'hsl(var(--foreground))',
-                fontSize: '12px',
-                fontWeight: 500
-              }} contentStyle={{
-                backgroundColor: 'hsl(var(--card))',
-                border: '1px solid hsl(var(--border))',
-                borderRadius: '12px',
-                fontSize: '12px',
-                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
-              }} />
+                  color: 'hsl(var(--foreground))',
+                  fontSize: '12px',
+                  fontWeight: 500
+                }} contentStyle={{
+                  backgroundColor: 'hsl(var(--card))',
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '12px',
+                  fontSize: '12px',
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
+                }} />
                 <Legend verticalAlign="bottom" height={36} wrapperStyle={{
-                fontSize: '12px',
-                fontWeight: 500
-              }} formatter={(value, entry) => <span style={{
-                color: entry.color
-              }}>
+                  fontSize: '12px',
+                  fontWeight: 500
+                }} formatter={(value, entry) => <span style={{
+                  color: entry.color
+                }}>
                       {value} ({composicaoDespesas.find(item => item.grupo === value)?.percentual.toFixed(1)}%)
                     </span>} />
               </PieChart>
