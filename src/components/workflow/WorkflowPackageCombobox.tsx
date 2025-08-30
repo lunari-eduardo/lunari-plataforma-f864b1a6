@@ -44,6 +44,17 @@ export function WorkflowPackageCombobox({
 }: PackageComboboxProps) {
   const [open, setOpen] = useState(false);
   
+  // Função para limpar a seleção
+  const handleClearPackage = () => {
+    onValueChange({
+      nome: '',
+      valor: 'R$ 0,00',
+      valorFotoExtra: 'R$ 0,00',
+      categoria: ''
+    });
+    setOpen(false);
+  };
+  
   // Buscar dados diretamente do localStorage sem usar contexto
   const pacotes = useMemo(() => {
     const storedPacotes = storage.load('configuracoes_pacotes', []);
@@ -77,7 +88,7 @@ export function WorkflowPackageCombobox({
           disabled={disabled}
           className="w-full justify-between h-7 text-xs font-normal shadow-neumorphic hover:shadow-neumorphic-pressed disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {selectedPackage ? selectedPackage.nome : "Selecionar pacote..."}
+          {selectedPackage ? selectedPackage.nome : "Selecione"}
           <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -89,6 +100,15 @@ export function WorkflowPackageCombobox({
               Nenhum pacote encontrado.
             </CommandEmpty>
             <CommandGroup>
+              {/* Opção para limpar seleção */}
+              <CommandItem 
+                value="nenhum-pacote"
+                onSelect={handleClearPackage}
+                className="text-xs hover:bg-neumorphic-base hover:shadow-neumorphic-inset rounded cursor-pointer"
+              >
+                <Check className={cn("mr-2 h-3 w-3", !value ? "opacity-100" : "opacity-0")} />
+                <span className="font-medium">Nenhum pacote</span>
+              </CommandItem>
               {pacotes.map(pkg => (
                 <CommandItem 
                   key={pkg.id} 
