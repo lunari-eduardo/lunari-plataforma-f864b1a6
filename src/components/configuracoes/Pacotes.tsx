@@ -209,13 +209,16 @@ export default function Pacotes({
           <div className="flex justify-center">
             <Collapsible open={novoPacoteAberto} onOpenChange={setNovoPacoteAberto} className="w-full">
               <CollapsibleTrigger asChild>
-                <Button className="bg-primary/20 border border-primary/30 text-primary hover:bg-primary/30 flex items-center justify-center gap-2 px-4 py-2 rounded-lg mx-auto">
-                  <span className="text-sm">📦</span>
+                <Button 
+                  variant="default" 
+                  size={isMobile ? "sm" : "default"}
+                  className="flex items-center gap-2 mx-auto"
+                >
                   {novoPacoteAberto ? <>
                       Fechar Formulário
                       <ChevronUp className="h-4 w-4" />
                     </> : <>
-                      [+] Novo Pacote
+                      Novo Pacote
                       <ChevronDown className="h-4 w-4" />
                     </>}
                 </Button>
@@ -247,21 +250,26 @@ export default function Pacotes({
         </div>
         
         {/* Barra de Filtros */}
-        <div className="bg-muted p-4 rounded-lg mb-4 py-[10px]">
-          <div className="flex items-center gap-2 mb-3">
-            <Filter className="h-3 w-3" />
-            <span className="font-medium text-xs">Filtros</span>
-            <Button variant="outline" size="sm" onClick={limparFiltros} className="ml-auto text-xs">
-              Limpar Filtros
+        <div className={cn("bg-muted rounded-lg mb-4", isMobile ? "p-2" : "p-4")}>
+          <div className={cn("flex items-center gap-2", isMobile ? "mb-2" : "mb-3")}>
+            <Filter className={cn(isMobile ? "h-3 w-3" : "h-4 w-4")} />
+            <span className={cn("font-medium", isMobile ? "text-xs" : "text-sm")}>Filtros</span>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={limparFiltros} 
+              className={cn("ml-auto", isMobile ? "h-6 px-2 text-xs" : "text-xs")}
+            >
+              Limpar
             </Button>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className={cn("grid gap-2", isMobile ? "grid-cols-2" : "grid-cols-1 md:grid-cols-3 gap-3")}>
             <div>
-              <label className="block text-xs font-medium mb-1">Filtrar por Categoria</label>
+              {!isMobile && <label className="block text-xs font-medium mb-1">Filtrar por Categoria</label>}
               <Select value={filtroCategoria} onValueChange={setFiltroCategoria}>
-                <SelectTrigger className="h-8 text-sm">
-                  <SelectValue placeholder="Todas as categorias" />
+                <SelectTrigger className={cn(isMobile ? "h-7 text-xs" : "h-8 text-sm")}>
+                  <SelectValue placeholder={isMobile ? "Categoria" : "Todas as categorias"} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas as categorias</SelectItem>
@@ -273,14 +281,15 @@ export default function Pacotes({
             </div>
             
             <div>
-              <label className="block text-xs font-medium mb-1">Filtrar por Nome</label>
-              <Input placeholder="Digite o nome do pacote..." value={filtroNome} onChange={e => setFiltroNome(e.target.value)} className="h-8 text-sm" />
+              {!isMobile && <label className="block text-xs font-medium mb-1">Filtrar por Nome</label>}
+              <Input 
+                placeholder={isMobile ? "Nome do pacote..." : "Digite o nome do pacote..."} 
+                value={filtroNome} 
+                onChange={e => setFiltroNome(e.target.value)} 
+                className={cn(isMobile ? "h-7 text-xs" : "h-8 text-sm")} 
+              />
             </div>
-            
-            
           </div>
-          
-          {filtroCategoria !== 'all' || debouncedFiltroNome || debouncedFiltroValor}
         </div>
 
         {isMobile ?
