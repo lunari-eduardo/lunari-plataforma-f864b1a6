@@ -124,7 +124,7 @@ export default function ShareAvailabilityModal({
         ? `Tenho os seguintes horários (${typeNames}):\n\n`
         : 'Tenho os seguintes horários:\n\n';
 
-      return typeHeader + sections.join('\n\n') + '\n\nQual fica melhor para você?';
+      return typeHeader + sections.join('\n\n');
     }
 
     return '';
