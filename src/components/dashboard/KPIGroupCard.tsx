@@ -6,18 +6,20 @@ import { Link, useNavigate } from "react-router-dom";
 import { formatCurrency } from "@/utils/financialUtils";
 import { useIsTablet } from "@/hooks/useIsTablet";
 import { GoalsIntegrationService } from "@/services/GoalsIntegrationService";
-
 interface KPIGroupCardProps {
   receitaMes: number;
   metaMes: number;
   progressoMeta: number; // 0-100
-  topCategoria: { name: string; revenue: number; sessions: number } | null;
+  topCategoria: {
+    name: string;
+    revenue: number;
+    sessions: number;
+  } | null;
   novosClientes60d: number;
   livresSemana: number;
   proximoLivre: Date | null;
   valorPrevisto: number;
 }
-
 export function KPIGroupCard({
   receitaMes,
   metaMes,
@@ -26,21 +28,19 @@ export function KPIGroupCard({
   novosClientes60d,
   livresSemana,
   proximoLivre,
-  valorPrevisto,
+  valorPrevisto
 }: KPIGroupCardProps) {
   const isTablet = useIsTablet();
   const navigate = useNavigate();
-  
+
   // Verificar se há metas configuradas
   const hasConfiguredGoals = GoalsIntegrationService.hasConfiguredGoals();
-  
   const handleConfigureGoals = () => {
     navigate('/precificacao');
   };
 
   // Definir os cards como componentes reutilizáveis
-  const revenueCard = (
-    <div className={`dashboard-card-inner relative rounded-xl border border-lunar-border/30 bg-card-gradient shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 h-full ${isTablet ? 'p-6' : 'p-4'}`}>
+  const revenueCard = <div className={`dashboard-card-inner relative rounded-xl border border-lunar-border/30 bg-card-gradient shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 h-full ${isTablet ? 'p-6' : 'p-4'}`}>
       <div className="flex items-center justify-between">
         <span className="text-xs text-lunar-textSecondary font-medium">Receita do mês</span>
         <div className="p-2 rounded-lg bg-brand-gradient">
@@ -49,31 +49,17 @@ export function KPIGroupCard({
       </div>
       <div className="mt-2 flex items-baseline justify-between">
         <p className={`font-semibold ${isTablet ? 'text-2xl' : 'text-lg'}`}>{formatCurrency(receitaMes)}</p>
-        {hasConfiguredGoals ? (
-          <span className="text-xs text-lunar-textSecondary">Meta: {formatCurrency(metaMes)}</span>
-        ) : (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleConfigureGoals}
-            className="text-xs h-auto p-1 text-lunar-textSecondary hover:text-lunar-text"
-          >
+        {hasConfiguredGoals ? <span className="text-xs text-lunar-textSecondary">Meta: {formatCurrency(metaMes)}</span> : <Button variant="ghost" size="sm" onClick={handleConfigureGoals} className="text-xs h-auto p-1 text-lunar-textSecondary hover:text-lunar-text">
             <Settings className="h-3 w-3 mr-1" />
             Configurar Meta
-          </Button>
-        )}
+          </Button>}
       </div>
-      {hasConfiguredGoals && (
-        <div className="mt-3">
+      {hasConfiguredGoals && <div className="mt-3">
           <Progress value={progressoMeta} className="h-2" />
           <span className="text-xs text-lunar-textSecondary mt-1 block">{progressoMeta.toFixed(0)}% da meta</span>
-        </div>
-      )}
-    </div>
-  );
-
-  const categoryCard = (
-    <div className="dashboard-card-inner relative rounded-xl border border-lunar-border/30 bg-card-gradient shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 p-4 h-full flex flex-col">
+        </div>}
+    </div>;
+  const categoryCard = <div className="dashboard-card-inner relative rounded-xl border border-lunar-border/30 bg-card-gradient shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 p-4 h-full flex flex-col">
       <div className="flex items-center justify-between mb-2">
         <span className="text-xs text-lunar-textSecondary font-medium">Categoria mais rentável</span>
         <div className="p-2 rounded-lg bg-brand-gradient">
@@ -81,22 +67,15 @@ export function KPIGroupCard({
         </div>
       </div>
       <div className="flex-1 flex flex-col justify-center">
-        {topCategoria ? (
-          <div>
+        {topCategoria ? <div>
             <p className="text-lg font-semibold">{topCategoria.name}</p>
             <p className="text-2xs text-lunar-textSecondary mt-1">
               Receita: {formatCurrency(topCategoria.revenue)} • {topCategoria.sessions} sessões
             </p>
-          </div>
-        ) : (
-          <p className="text-2xs text-lunar-textSecondary">Sem dados</p>
-        )}
+          </div> : <p className="text-2xs text-lunar-textSecondary">Sem dados</p>}
       </div>
-    </div>
-  );
-
-  const clientsCard = (
-    <div className="dashboard-card-inner relative rounded-xl border border-lunar-border/30 bg-card-gradient shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 p-4 h-full flex flex-col">
+    </div>;
+  const clientsCard = <div className="dashboard-card-inner relative rounded-xl border border-lunar-border/30 bg-card-gradient shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 p-4 h-full flex flex-col">
       <div className="flex items-center justify-between mb-2">
         <span className="text-xs text-lunar-textSecondary font-medium">Novos clientes (60 dias)</span>
         <div className="p-2 rounded-lg bg-brand-gradient">
@@ -107,11 +86,8 @@ export function KPIGroupCard({
         <p className="text-lg font-semibold">{novosClientes60d}</p>
         <p className="text-2xs text-lunar-textSecondary mt-1">Primeira sessão registrada</p>
       </div>
-    </div>
-  );
-
-  const availabilityCard = (
-    <div className="dashboard-card-inner relative rounded-xl border border-lunar-border/30 bg-card-gradient shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 p-4 h-full flex flex-col">
+    </div>;
+  const availabilityCard = <div className="dashboard-card-inner relative rounded-xl border border-lunar-border/30 bg-card-gradient shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 p-4 h-full flex flex-col">
       <div className="flex items-center justify-between mb-2">
         <span className="text-xs text-lunar-textSecondary font-medium">Horários livres (7 dias)</span>
         <div className="p-2 rounded-lg bg-brand-gradient">
@@ -121,20 +97,16 @@ export function KPIGroupCard({
       <div className="flex-1 flex flex-col justify-center">
         <p className="text-lg font-semibold">{livresSemana}</p>
         <p className="text-2xs text-lunar-textSecondary mt-1">
-          {proximoLivre ? (
-            <>Próximo: {proximoLivre.toLocaleDateString("pt-BR")} • {proximoLivre.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</>
-          ) : (
-            <>
+          {proximoLivre ? <>Próximo: {proximoLivre.toLocaleDateString("pt-BR")} • {proximoLivre.toLocaleTimeString("pt-BR", {
+            hour: "2-digit",
+            minute: "2-digit"
+          })}</> : <>
               Sem horários livres. <Link to="/agenda" className="underline">Configurar disponibilidade</Link>
-            </>
-          )}
+            </>}
         </p>
       </div>
-    </div>
-  );
-
-  const forecastCard = (
-    <div className="dashboard-card-inner relative rounded-xl border border-lunar-border/30 bg-card-gradient shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 p-4 h-full flex flex-col">
+    </div>;
+  const forecastCard = <div className="dashboard-card-inner relative rounded-xl border border-lunar-border/30 bg-card-gradient shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 p-4 h-full flex flex-col">
       <div className="flex items-center justify-between mb-2">
         <span className="text-xs text-lunar-textSecondary font-medium">Total Previsto</span>
         <div className="p-2 rounded-lg bg-brand-gradient">
@@ -146,31 +118,18 @@ export function KPIGroupCard({
           {formatCurrency(valorPrevisto)}
         </div>
       </div>
-    </div>
-  );
-
-  return (
-    <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300 animate-fade-in">
+    </div>;
+  return <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300 animate-fade-in">
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg font-semibold">Indicadores principais</CardTitle>
-          {!hasConfiguredGoals && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleConfigureGoals}
-              className="text-xs"
-            >
-              <Settings className="h-3 w-3 mr-1" />
-              Configurar Metas
-            </Button>
-          )}
+          {!hasConfiguredGoals}
         </div>
       </CardHeader>
       <CardContent>
-        {isTablet ? (
-          // Layout otimizado para tablets: Receita em destaque + grid 2x2
-          <div className="space-y-4">
+        {isTablet ?
+      // Layout otimizado para tablets: Receita em destaque + grid 2x2
+      <div className="space-y-4">
             {/* Primeira linha: Receita do mês em destaque */}
             <div className="w-full">{revenueCard}</div>
             
@@ -181,18 +140,15 @@ export function KPIGroupCard({
               <div className="h-full">{availabilityCard}</div>
               <div className="h-full">{forecastCard}</div>
             </div>
-          </div>
-        ) : (
-          // Layout padrão: Mobile (1 col) e Desktop (5 cols)
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          </div> :
+      // Layout padrão: Mobile (1 col) e Desktop (5 cols)
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             {revenueCard}
             {categoryCard}
             {clientsCard}
             {availabilityCard}
             {forecastCard}
-          </div>
-        )}
+          </div>}
       </CardContent>
-    </Card>
-  );
+    </Card>;
 }
