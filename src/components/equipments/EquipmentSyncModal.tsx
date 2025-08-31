@@ -20,6 +20,7 @@ interface EquipmentSyncModalProps {
     valor: number;
     data: string;
     observacoes?: string;
+    allTransactionIds?: string[];
   };
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -80,7 +81,7 @@ export function EquipmentSyncModal({
       if (sucesso) {
         // Marcar transações como processadas para evitar re-notificações
         const processedIds = JSON.parse(localStorage.getItem('equipment_processed_ids') || '[]');
-        const allIds = [equipment.transacaoId];
+        const allIds = equipment.allTransactionIds || [equipment.transacaoId];
         const updatedIds = [...processedIds, ...allIds];
         localStorage.setItem('equipment_processed_ids', JSON.stringify(updatedIds));
         
