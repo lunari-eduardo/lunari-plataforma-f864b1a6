@@ -337,10 +337,13 @@ class PricingFinancialIntegrationService {
           : `Equipamento R$ ${valorTotal.toFixed(2)}`;
       }
       
+      // CORREÇÃO: Usar dataCompra (data original) ao invés de dataVencimento (data da fatura)
+      const dataOriginal = primeiraTransacao.dataCompra || primeiraTransacao.dataVencimento;
+      
       resultados.push({
         transacao: primeiraTransacao,
         valor: valorTotal, // VALOR TOTAL CONSOLIDADO
-        data: primeiraTransacao.dataVencimento, // Data da primeira parcela
+        data: dataOriginal, // USAR DATA ORIGINAL DA COMPRA
         observacoes: nomeEquipamento,
         allTransactionIds: allIds
       });

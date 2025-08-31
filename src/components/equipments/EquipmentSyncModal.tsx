@@ -18,7 +18,7 @@ interface EquipmentSyncModalProps {
     transacaoId: string;
     nome: string;
     valor: number;
-    data: string;
+    data: string; // Data original da compra (corrigida pelo PricingFinancialIntegrationService)
     observacoes?: string;
     allTransactionIds?: string[];
   };

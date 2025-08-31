@@ -23,6 +23,7 @@ export interface FinancialTransaction {
   recurringTemplateId?: string; // ID do modelo que gerou esta transação
   parentId?: string; // Para compatibilidade com sistema existente
   cartaoCreditoId?: string; // ID do cartão de crédito, se aplicável
+  dataCompra?: string; // Data original da compra (para cartão de crédito) - Formato YYYY-MM-DD
 }
 
 export interface RecurringTemplate {
@@ -341,6 +342,7 @@ export class FinancialEngine {
         dataVencimento,
         status: this.determineStatus(dataVencimento),
         cartaoCreditoId,
+        dataCompra: dataPrimeiraOcorrencia, // PRESERVAR data original da compra
         parcelaInfo: parcelas > 1 ? { atual: i + 1, total: parcelas } : null,
         observacoes: observacoes ? `${observacoes} (Cartão: ${cartao.nome})` : `Cartão: ${cartao.nome}`
       };
