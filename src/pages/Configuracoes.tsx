@@ -138,17 +138,15 @@ export default function Configuracoes() {
   useEffect(() => {
     saveConfigWithNotification('configuracoes_categorias', categorias);
   }, [categorias]);
-  
   useEffect(() => {
     saveConfigWithNotification('configuracoes_pacotes', pacotes);
   }, [pacotes]);
-  
   useEffect(() => {
     saveConfigWithNotification('configuracoes_produtos', produtos);
   }, [produtos]);
   return <ScrollArea className="h-[calc(100vh-120px)]">
       <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 space-y-6">
-      <Card className="bg-card border border-border shadow-sm">
+      <Card className="bg-card border border-border shadow-sm my-[17px]">
         <CardHeader className="pb-3">
           <CardDescription>
             Configure os parâmetros principais de funcionamento do seu sistema.
