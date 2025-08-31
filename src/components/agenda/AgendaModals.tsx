@@ -132,7 +132,9 @@ export default function AgendaModals({
       <AvailabilityConfigModal
         isOpen={isAvailabilityModalOpen}
         onClose={() => setIsAvailabilityModalOpen(false)}
-        date={selectedSlot?.date || new Date()}
+        date={selectedSlot?.date && selectedSlot.date instanceof Date && !isNaN(selectedSlot.date.getTime()) 
+          ? selectedSlot.date 
+          : new Date()}
         initialTime={selectedSlot?.time}
       />
 
@@ -140,7 +142,11 @@ export default function AgendaModals({
       <ShareAvailabilityModal 
         isOpen={isShareModalOpen} 
         onClose={() => setIsShareModalOpen(false)} 
-        period={{ day: selectedSlot?.date || new Date() }} 
+        period={{ 
+          day: selectedSlot?.date && selectedSlot.date instanceof Date && !isNaN(selectedSlot.date.getTime()) 
+            ? selectedSlot.date 
+            : new Date() 
+        }} 
         mode="day" 
       />
     </>
