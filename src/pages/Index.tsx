@@ -19,6 +19,8 @@ import { useAppContext } from "@/contexts/AppContext";
 import { formatDateForStorage, parseDateFromStorage } from "@/utils/dateUtils";
 import { normalizeWorkflowItems } from "@/utils/salesDataNormalizer";
 import { useWorkflowMetrics } from "@/hooks/useWorkflowMetrics";
+import { storage, STORAGE_KEYS } from "@/utils/localStorage";
+import { GoalsIntegrationService } from "@/services/GoalsIntegrationService";
 export default function Index() {
   const isTablet = useIsTablet();
 
@@ -69,13 +71,10 @@ export default function Index() {
     return cachedMetrics ? cachedMetrics.receita : 0;
   }, [getMonthlyMetrics, currentYear, currentMonthIndex]);
 
-  // Obter meta mensal usando mesma lógica do dashboard financeiro
+  // Obter meta mensal usando mesma lógica simplificada
   const metaMes = useMemo(() => {
     try {
-      const { storage, STORAGE_KEYS } = require('@/utils/localStorage');
-      const { GoalsIntegrationService } = require('@/services/GoalsIntegrationService');
-      
-      // Carregar metas históricas primeiro (mesma lógica do dashboard financeiro)
+      // Carregar metas históricas primeiro
       const historicalGoals = storage.load(STORAGE_KEYS.HISTORICAL_GOALS, []);
       const metaDoAno = historicalGoals.find((goal: any) => goal.ano === currentYear);
       
