@@ -1,10 +1,9 @@
-import { useState } from 'react';
-import { startOfMonth, endOfMonth, eachDayOfInterval, format, isSameMonth, isToday, isSameDay } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { useMemo } from 'react';
+import { startOfMonth, endOfMonth, eachDayOfInterval, format, isToday, isSameDay } from 'date-fns';
 import { UnifiedEvent } from '@/hooks/useUnifiedCalendar';
 import UnifiedEventCard from './UnifiedEventCard';
 import { useAvailability } from '@/hooks/useAvailability';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 interface MonthlyViewProps {
   date: Date;
   unifiedEvents: UnifiedEvent[];
@@ -14,6 +13,28 @@ interface MonthlyViewProps {
   onEventClick: (event: UnifiedEvent) => void;
   onDayClick: (date: Date) => void;
 }
+// Hook personalizado para contadores de dia
+const useDayMetrics = (day: Date, unifiedEvents: UnifiedEvent[], availability: any[]) => {
+  return useMemo(() => {
+    const dayKey = format(day, 'yyyy-MM-dd');
+    const sessionCount = unifiedEvents.filter(e => 
+      isSameDay(e.date, day) && e.type === 'appointment'
+    ).length;
+    const takenTimes = new Set(
+      unifiedEvents
+        .filter(e => isSameDay(e.date, day) && e.type === 'appointment')
+        .map(e => e.time || '')
+    );
+    const availCount = new Set(
+      availability
+        .filter(a => a.date === dayKey && !takenTimes.has(a.time))
+        .map(a => a.time)
+    ).size;
+    
+    return { sessionCount, availCount, dayKey };
+  }, [day, unifiedEvents, availability]);
+};
+
 export default function MonthlyView({
   date,
   unifiedEvents,
@@ -22,13 +43,11 @@ export default function MonthlyView({
   onDayClick
 }: MonthlyViewProps) {
   const { availability } = useAvailability();
-  const isMobile = useIsMobile();
+  const { isMobile, classes } = useResponsiveLayout();
+  
   const monthStart = startOfMonth(date);
   const monthEnd = endOfMonth(date);
-  const daysInMonth = eachDayOfInterval({
-    start: monthStart,
-    end: monthEnd
-  });
+  const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
   const weekDays = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
   const startWeekday = monthStart.getDay();
   const emptyDaysBefore = Array(startWeekday).fill(null);
@@ -46,92 +65,135 @@ export default function MonthlyView({
       return timeA.localeCompare(timeB);
     });
   };
-  return <div className="w-full h-full overflow-auto">
+  return (
+    <div className="w-full h-full overflow-auto">
       <div className="grid grid-cols-7 gap-px rounded-lg p-1 bg-lunar-border/30">
         {/* Weekday headers */}
-        {weekDays.map((day, index) => <div key={day} className="h-8 md:h-10 p-1 md:p-2 text-center text-xs font-medium text-muted-foreground bg-lunar-surface border border-lunar-border/20">
+        {weekDays.map((day) => (
+          <div 
+            key={day} 
+            className="h-8 md:h-10 p-1 md:p-2 text-center text-xs font-medium text-muted-foreground bg-lunar-surface border border-lunar-border/20"
+          >
             {day}
-          </div>)}
+          </div>
+        ))}
         
         {/* Empty cells before first day */}
-        {emptyDaysBefore.map((_, index) => <div key={`empty-${index}`} className="min-h-[80px] md:min-h-[120px] bg-lunar-bg border border-lunar-border/20"></div>)}
+        {emptyDaysBefore.map((_, index) => (
+          <div 
+            key={`empty-${index}`} 
+            className={classes.calendarCell + " bg-lunar-bg border border-lunar-border/20"}
+          />
+        ))}
         
         {/* Days of the month */}
         {daysInMonth.map(day => {
-        const dayEvents = getEventsForDay(day);
-        const maxDisplayEvents = 1; // Sempre mostrar apenas 1 evento para evitar esticamento
-        const hasMoreEvents = dayEvents.length > maxDisplayEvents;
-        const displayEvents = dayEvents.slice(0, maxDisplayEvents);
-            return <div key={day.toString()} onClick={() => onDayClick(day)} className="min-h-[80px] md:min-h-[120px] p-1 md:p-2 cursor-pointer transition-colors bg-lunar-surface hover:bg-lunar-surface/80 border border-lunar-border/20 hover:border-lunar-border/40">
-              <div className="flex justify-between items-center mb-1 md:mb-2">
-                <span className={`
-                  text-xs md:text-sm font-medium h-5 w-5 md:h-6 md:w-6 flex items-center justify-center rounded-full
-                  ${isToday(day) ? 'bg-primary text-primary-foreground' : 'text-foreground'}
-               `}>
-                  {format(day, 'd')}
-                </span>
-                {/* Availability count badge (desktop only) */}
-                {!isMobile && (() => {
-                  const dayKey = format(day, 'yyyy-MM-dd');
-                  const count = new Set(
-                    availability.filter(a => a.date === dayKey).map(a => a.time)
-                  ).size;
-                  return count > 0 ? (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-availability/20 border border-availability/50 text-lunar-text">
-                      {count}
-                    </span>
-                  ) : null;
-                })()}
-              </div>
-
-              <div className="space-y-px md:space-y-1">
-                {isMobile ? (
-                  <div className="flex items-center gap-2">
-                    {(() => {
-                      const dayKey = format(day, 'yyyy-MM-dd');
-                      const sessionCount = unifiedEvents.filter(e => isSameDay(e.date, day) && e.type === 'appointment').length;
-                      const takenTimes = new Set(
-                        unifiedEvents.filter(e => isSameDay(e.date, day) && e.type === 'appointment').map(e => e.time || '')
-                      );
-                      const availCount = new Set(
-                        availability.filter(a => a.date === dayKey && !takenTimes.has(a.time)).map(a => a.time)
-                      ).size;
-                      return (
-                        <>
-                          {sessionCount > 0 && (
-                            <span className="inline-flex items-center gap-1 text-[10px]">
-                              <span className="h-2.5 w-2.5 rounded-full bg-primary" aria-hidden></span>
-                              {sessionCount}
-                            </span>
-                          )}
-                          {availCount > 0 && (
-                            <span className="inline-flex items-center gap-1 text-[10px]">
-                              <span className="h-2.5 w-2.5 rounded-full bg-availability" aria-hidden></span>
-                              {availCount}
-                            </span>
-                          )}
-                        </>
-                      );
-                    })()}
-                  </div>
-                ) : (
-                  <>
-                    {displayEvents.map(event => (
-                      <div key={event.id} onClick={e => e.stopPropagation()}>
-                        <UnifiedEventCard event={event} onClick={onEventClick} variant="monthly" />
-                      </div>
-                    ))}
-                    {hasMoreEvents && (
-                      <div className="text-xs p-0.5 md:p-1 text-muted-foreground font-medium">
-                        +{dayEvents.length - maxDisplayEvents} mais
-                      </div>
-                    )}
-                    {dayEvents.length === 0}
-                  </>
-                )}
-              </div>
-            </div>;
-      })}
+          const dayEvents = getEventsForDay(day);
+          const maxDisplayEvents = 1;
+          const hasMoreEvents = dayEvents.length > maxDisplayEvents;
+          const displayEvents = dayEvents.slice(0, maxDisplayEvents);
+          
+          return (
+            <DayCell
+              key={day.toString()}
+              day={day}
+              dayEvents={dayEvents}
+              displayEvents={displayEvents}
+              hasMoreEvents={hasMoreEvents}
+              maxDisplayEvents={maxDisplayEvents}
+              availability={availability}
+              unifiedEvents={unifiedEvents}
+              isMobile={isMobile}
+              onDayClick={onDayClick}
+              onEventClick={onEventClick}
+              classes={classes}
+            />
+          );
+        })}
       </div>
-    </div>;
+    </div>
+  );
 }
+
+// Componente extraído para célula do dia
+const DayCell = ({
+  day,
+  dayEvents,
+  displayEvents,
+  hasMoreEvents,
+  maxDisplayEvents,
+  availability,
+  unifiedEvents,
+  isMobile,
+  onDayClick,
+  onEventClick,
+  classes
+}: {
+  day: Date;
+  dayEvents: UnifiedEvent[];
+  displayEvents: UnifiedEvent[];
+  hasMoreEvents: boolean;
+  maxDisplayEvents: number;
+  availability: any[];
+  unifiedEvents: UnifiedEvent[];
+  isMobile: boolean;
+  onDayClick: (date: Date) => void;
+  onEventClick: (event: UnifiedEvent) => void;
+  classes: any;
+}) => {
+  const { sessionCount, availCount, dayKey } = useDayMetrics(day, unifiedEvents, availability);
+
+  return (
+    <div 
+      onClick={() => onDayClick(day)} 
+      className={`${classes.calendarCell} cursor-pointer transition-colors bg-lunar-surface hover:bg-lunar-surface/80 border border-lunar-border/20 hover:border-lunar-border/40`}
+    >
+      <div className="flex justify-between items-center mb-1 md:mb-2">
+        <span className={`
+          text-xs md:text-sm font-medium h-5 w-5 md:h-6 md:w-6 flex items-center justify-center rounded-full
+          ${isToday(day) ? 'bg-primary text-primary-foreground' : 'text-foreground'}
+        `}>
+          {format(day, 'd')}
+        </span>
+        {/* Availability count badge (desktop only) */}
+        {!isMobile && availCount > 0 && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-availability/20 border border-availability/50 text-lunar-text">
+            {availCount}
+          </span>
+        )}
+      </div>
+
+      <div className="space-y-px md:space-y-1">
+        {isMobile ? (
+          <div className="flex items-center gap-2">
+            {sessionCount > 0 && (
+              <span className="inline-flex items-center gap-1 text-[10px]">
+                <span className="h-2.5 w-2.5 rounded-full bg-primary" aria-hidden />
+                {sessionCount}
+              </span>
+            )}
+            {availCount > 0 && (
+              <span className="inline-flex items-center gap-1 text-[10px]">
+                <span className="h-2.5 w-2.5 rounded-full bg-availability" aria-hidden />
+                {availCount}
+              </span>
+            )}
+          </div>
+        ) : (
+          <>
+            {displayEvents.map(event => (
+              <div key={event.id} onClick={e => e.stopPropagation()}>
+                <UnifiedEventCard event={event} onClick={onEventClick} variant="monthly" />
+              </div>
+            ))}
+            {hasMoreEvents && (
+              <div className="text-xs p-0.5 md:p-1 text-muted-foreground font-medium">
+                +{dayEvents.length - maxDisplayEvents} mais
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+};

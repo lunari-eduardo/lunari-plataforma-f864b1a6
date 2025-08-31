@@ -15,7 +15,6 @@ import { useSwipeNavigation } from "@/hooks/useSwipeNavigation";
 import { useAgendaNavigation } from "@/hooks/useAgendaNavigation";
 import { useAgendaModals } from "@/hooks/useAgendaModals";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
-import { ViewType } from '@/utils/dateFormatters';
 import { Orcamento } from "@/types/orcamentos";
 
 export default function Agenda() {
@@ -63,38 +62,24 @@ export default function Agenda() {
     setIsShareModalOpen
   } = useAgendaModals();
 
-  // Transition state for smooth navigation
-  const [isTransitioning, setIsTransitioning] = useState(false);
-
-  // Navigation functions with smooth transitions
-  const navigateWithTransition = useCallback((navFunction: () => void) => {
-    setIsTransitioning(true);
-    setTimeout(() => {
-      navFunction();
-      setTimeout(() => setIsTransitioning(false), 100);
-    }, 100);
-  }, []);
-
-  // Button navigation functions (with transitions)
+  // Navigation functions (simplified)
   const handleNavigatePrevious = useCallback(() => {
-    navigateWithTransition(navigatePrevious);
-  }, [navigateWithTransition, navigatePrevious]);
+    navigatePrevious();
+  }, [navigatePrevious]);
 
   const handleNavigateNext = useCallback(() => {
-    navigateWithTransition(navigateNext);
-  }, [navigateWithTransition, navigateNext]);
+    navigateNext();
+  }, [navigateNext]);
 
   const handleNavigateToday = useCallback(() => {
-    navigateWithTransition(navigateToday);
-  }, [navigateWithTransition, navigateToday]);
+    navigateToday();
+  }, [navigateToday]);
 
   // Handle day click in monthly view
   const handleDayClick = useCallback((selectedDate: Date) => {
     setView('day');
-    // Use direct navigation for day clicks (immediate, no transition)
-    setTimeout(() => {
-      navigateToday(); // Reset to selected date
-    }, 0);
+    // Navigate directly to selected date
+    navigateToday();
   }, [setView, navigateToday]);
 
   // Handle slot click (empty time slot) - directly open appointment form
@@ -167,11 +152,11 @@ export default function Agenda() {
     }
   }, [selectedBudgetAppointment, updateAppointment, setIsBudgetAppointmentModalOpen]);
 
-  // Swipe navigation for mobile and tablet (using direct functions, no transitions)
+  // Swipe navigation for mobile and tablet
   const swipeHandlers = useSwipeNavigation({
     enabled: (isMobile || isTablet) && view !== 'year',
-    onPrev: navigatePrevious, // Direct navigation for gestures
-    onNext: navigateNext, // Direct navigation for gestures
+    onPrev: navigatePrevious,
+    onNext: navigateNext,
     thresholdPx: 38,
     maxVerticalRatio: 0.8
   });
@@ -231,12 +216,9 @@ export default function Agenda() {
           onOpenShare={view === 'day' ? openShareModal : undefined}
         />
           
-        {/* Touch event container (no transitions) */}
+        {/* Content container with swipe support */}
         <div className="mt-4" {...(isMobile || isTablet) && view !== 'year' ? swipeHandlers : {}}>
-          {/* Visual content container (with transitions) */}
-          <div className={`transition-opacity duration-200 ${isTransitioning ? 'opacity-70' : 'opacity-100'}`}>
-            {renderView()}
-          </div>
+          {renderView()}
         </div>
       </Card>
 
