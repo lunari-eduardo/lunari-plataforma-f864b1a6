@@ -45,6 +45,7 @@ const DashboardFinanceiro = memo(function DashboardFinanceiro() {
     evolucaoCategoria,
     roiData,
     comparisonData,
+    categoriasDetalhadas,
     getNomeMes,
     excluirMetaAnual
   } = useDashboardFinanceiro();
@@ -383,6 +384,8 @@ const DashboardFinanceiro = memo(function DashboardFinanceiro() {
             composicaoDespesas={composicaoDespesas}
             evolucaoCategoria={evolucaoCategoria[categoriaSelecionada] || []}
             categoriaSelecionada={categoriaSelecionada}
+            roiData={roiData}
+            categoriasDetalhadas={categoriasDetalhadas}
           />
         </Suspense>
       </div>

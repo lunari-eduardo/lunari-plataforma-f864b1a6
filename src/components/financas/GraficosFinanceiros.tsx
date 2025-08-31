@@ -25,13 +25,20 @@ interface GraficosFinanceirosProps {
   composicaoDespesas: any[];
   evolucaoCategoria: any[];
   categoriaSelecionada: string;
+  roiData: {
+    totalInvestimento: number;
+    roi: number;
+  };
+  categoriasDetalhadas?: any[];
 }
 
 const GraficosFinanceiros = memo(function GraficosFinanceiros({
   dadosMensais,
   composicaoDespesas,
   evolucaoCategoria,
-  categoriaSelecionada
+  categoriaSelecionada,
+  roiData,
+  categoriasDetalhadas = []
 }: GraficosFinanceirosProps) {
   return (
     <>
@@ -72,9 +79,45 @@ const GraficosFinanceiros = memo(function GraficosFinanceiros({
         </Card>
       </section>
 
-      {/* Gráficos Complementares */}
+      {/* Gráficos Complementares - Linha 1 */}
       <section aria-label="Gráficos Complementares" className="animate-fade-in">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* ROI - Retorno sobre Investimento */}
+          <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg font-semibold">ROI - Retorno sobre Investimento</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-64 flex flex-col items-center justify-center space-y-4">
+                <div className="text-center">
+                  <div className="text-4xl font-bold text-chart-primary mb-2">
+                    {roiData.roi.toFixed(1)}%
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-4">Retorno sobre Investimento</p>
+                </div>
+                <div className="w-full space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Investimento Total:</span>
+                    <span className="font-medium">{formatCurrency(roiData.totalInvestimento)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Retorno Calculado:</span>
+                    <span className="font-medium text-chart-primary">
+                      {formatCurrency(roiData.totalInvestimento * (roiData.roi / 100))}
+                    </span>
+                  </div>
+                </div>
+                {/* Indicador Visual do ROI */}
+                <div className="w-full bg-muted rounded-full h-3">
+                  <div 
+                    className="bg-gradient-to-r from-chart-primary to-chart-secondary h-3 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(100, Math.max(5, roiData.roi))}%` }}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Composição de Despesas */}
           <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300">
             <CardHeader className="pb-4">
@@ -84,8 +127,19 @@ const GraficosFinanceiros = memo(function GraficosFinanceiros({
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={composicaoDespesas} cx="50%" cy="50%" labelLine={false} label={({ name, percentual }) => `${name}: ${percentual.toFixed(1)}%`} outerRadius={80} fill="#8884d8" dataKey="valor">
-                      {composicaoDespesas.map((_, index) => <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />)}
+                    <Pie 
+                      data={composicaoDespesas} 
+                      cx="50%" 
+                      cy="50%" 
+                      labelLine={false} 
+                      label={({ grupo, percentual }) => `${grupo}: ${percentual.toFixed(1)}%`} 
+                      outerRadius={80} 
+                      fill="#8884d8" 
+                      dataKey="valor"
+                    >
+                      {composicaoDespesas.map((_, index) => 
+                        <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                      )}
                     </Pie>
                     <Tooltip formatter={(value: any) => [formatCurrency(value), '']} contentStyle={{
                       backgroundColor: 'hsl(var(--card))',
@@ -125,6 +179,80 @@ const GraficosFinanceiros = memo(function GraficosFinanceiros({
           </Card>
         </div>
       </section>
+
+      {/* Gráfico de Fluxo de Caixa - Linha 2 */}
+      <section aria-label="Fluxo de Caixa" className="animate-fade-in">
+        <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg font-semibold">Fluxo de Caixa Mensal</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={dadosMensais} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                  <defs>
+                    <linearGradient id="colorFluxoCaixa" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="hsl(var(--chart-tertiary))" stopOpacity={0.8} />
+                      <stop offset="95%" stopColor="hsl(var(--chart-tertiary))" stopOpacity={0.3} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="mes" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(value) => formatCurrency(value)} />
+                  <Tooltip 
+                    formatter={(value: any, name: string) => [
+                      formatCurrency(value), 
+                      name === 'receita' ? 'Receita' : name === 'lucro' ? 'Lucro' : name
+                    ]} 
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px'
+                    }} 
+                  />
+                  <Bar dataKey="receita" fill="hsl(var(--chart-revenue))" radius={[4, 4, 0, 0]} name="Receita" />
+                  <Bar dataKey="lucro" fill="url(#colorFluxoCaixa)" radius={[4, 4, 0, 0]} name="Lucro" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* Despesas por Categoria Detalhada - Se houver dados */}
+      {categoriasDetalhadas.length > 0 && (
+        <section aria-label="Despesas por Categoria" className="animate-fade-in">
+          <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg font-semibold">Despesas por Categoria</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={categoriasDetalhadas} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis 
+                      dataKey="categoria" 
+                      stroke="hsl(var(--muted-foreground))" 
+                      fontSize={12}
+                      angle={-45}
+                      textAnchor="end"
+                      height={80}
+                    />
+                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(value) => formatCurrency(value)} />
+                    <Tooltip formatter={(value: any) => [formatCurrency(value), 'Valor']} contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px'
+                    }} />
+                    <Bar dataKey="valor" fill="hsl(var(--chart-quaternary))" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+      )}
     </>
   );
 });

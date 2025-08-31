@@ -549,6 +549,25 @@ export function useDashboardFinanceiro() {
     return evolucoes;
   }, [transacoesComItens, categoriasDisponiveis, anoSelecionado]);
 
+  // ============= DESPESAS POR CATEGORIA DETALHADA =============
+  
+  const categoriasDetalhadas = useMemo(() => {
+    const categoriaMap: Record<string, number> = {};
+
+    transacoesFiltradas
+      .filter(t => t.status === 'Pago' && t.item?.nome && 
+        ['Despesa Fixa', 'Despesa Variável', 'Investimento'].includes(t.item.grupo_principal || ''))
+      .forEach(transacao => {
+        const categoria = transacao.item!.nome;
+        categoriaMap[categoria] = (categoriaMap[categoria] || 0) + transacao.valor;
+      });
+
+    return Object.entries(categoriaMap)
+      .map(([categoria, valor]) => ({ categoria, valor }))
+      .sort((a, b) => b.valor - a.valor)
+      .slice(0, 10); // Top 10 categorias
+  }, [transacoesFiltradas]);
+
   // ============= FUNÇÕES AUXILIARES =============
   
   const getNomeMes = (numeroMes: string) => {
@@ -613,6 +632,7 @@ export function useDashboardFinanceiro() {
     composicaoDespesas,
     roiData,
     comparisonData,
+    categoriasDetalhadas,
     
     // Funções auxiliares
     getNomeMes,
