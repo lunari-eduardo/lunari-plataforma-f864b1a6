@@ -518,18 +518,39 @@ class PricingFinancialIntegrationService {
    * Agrupa transações parceladas e retorna apenas uma por equipamento real
    */
   private groupInstallmentTransactions(transacoes: any[], equipamentosExistentes: any[]): any[] {
-    // Separar transações únicas e parceladas
+    // Separar transações únicas e parceladas (compatível com múltiplos formatos)
     const transacoesUnicas: any[] = [];
-    const transacoesParceladas = new Map<string, any[]>();
+    const gruposParcelados = new Map<string, any[]>();
+
+    const getGrupoId = (t: any): string | null => {
+      if (t.lançamentoPaiId) return t.lançamentoPaiId;
+      if (t.parentId) return t.parentId;
+      if (typeof t.id === 'string') {
+        const match = t.id.match(/^(.*)_([0-9]+)$/); // ex: parcela_123456789_1 ou cartao_123_2
+        if (match) return match[1];
+      }
+      return null;
+    };
+
+    const getNumeroParcela = (t: any): number => {
+      if (t.numeroParcela) return Number(t.numeroParcela);
+      if (t.parcelaInfo?.atual) return Number(t.parcelaInfo.atual);
+      if (typeof t.id === 'string') {
+        const match = t.id.match(/_([0-9]+)$/);
+        if (match) return Number(match[1]);
+      }
+      return 0;
+    };
 
     transacoes.forEach(t => {
-      if (t.lançamentoPaiId && t.numeroParcela) {
-        // Transação parcelada
-        const grupoId = t.lançamentoPaiId;
-        if (!transacoesParceladas.has(grupoId)) {
-          transacoesParceladas.set(grupoId, []);
+      const grupoId = getGrupoId(t);
+      const isParcelado = !!(t.lançamentoPaiId || t.parentId || t.parcelaInfo?.total > 1 || (typeof t.id === 'string' && /_([0-9]+)$/.test(t.id)));
+
+      if (isParcelado && grupoId) {
+        if (!gruposParcelados.has(grupoId)) {
+          gruposParcelados.set(grupoId, []);
         }
-        transacoesParceladas.get(grupoId)!.push(t);
+        gruposParcelados.get(grupoId)!.push(t);
       } else {
         // Transação única
         transacoesUnicas.push(t);
@@ -537,44 +558,44 @@ class PricingFinancialIntegrationService {
     });
 
     console.log('🔧 [GroupInstallments] Transações únicas:', transacoesUnicas.length);
-    console.log('🔧 [GroupInstallments] Grupos parcelados:', transacoesParceladas.size);
+    console.log('🔧 [GroupInstallments] Grupos parcelados:', gruposParcelados.size);
 
     const resultado: any[] = [];
 
-    // Adicionar transações únicas diretamente
+    // Adicionar transações únicas diretamente se não já houver equipamento com mesmo valor/data
     transacoesUnicas.forEach(t => {
-      // Verificar se já existe equipamento com mesmo valor e data
-      const jaExiste = equipamentosExistentes.some(eq => 
-        Math.abs(eq.valorPago - t.valor) < 0.01 && 
+      const jaExiste = equipamentosExistentes.some(eq =>
+        Math.abs(eq.valorPago - t.valor) < 0.01 &&
         eq.dataCompra === t.dataVencimento
       );
-      
-      if (!jaExiste) {
-        resultado.push(t);
-      }
+      if (!jaExiste) resultado.push(t);
     });
 
     // Processar grupos parcelados
-    transacoesParceladas.forEach((parcelas, grupoId) => {
-      // Ordenar por número da parcela
-      parcelas.sort((a, b) => (a.numeroParcela || 0) - (b.numeroParcela || 0));
-      
+    gruposParcelados.forEach((parcelas, grupoId) => {
+      // Ordenar por número da parcela (fallback por data)
+      parcelas.sort((a, b) => {
+        const pa = getNumeroParcela(a);
+        const pb = getNumeroParcela(b);
+        if (pa !== pb) return pa - pb;
+        return (a.dataVencimento || '').localeCompare(b.dataVencimento || '');
+      });
+
       const primeiraParcela = parcelas[0];
-      const valorTotal = parcelas.reduce((sum, p) => sum + p.valor, 0);
-      
+      const valorTotal = parcelas.reduce((sum, p) => sum + (Number(p.valor) || 0), 0);
+
       console.log(`🔧 [GroupInstallments] Grupo ${grupoId}: ${parcelas.length} parcelas, valor total: R$ ${valorTotal.toFixed(2)}`);
 
-      // Verificar se já existe equipamento com valor total e data da primeira parcela
-      const jaExiste = equipamentosExistentes.some(eq => 
-        Math.abs(eq.valorPago - valorTotal) < 0.01 && 
+      // Evitar duplicidade com equipamentos já salvos
+      const jaExiste = equipamentosExistentes.some(eq =>
+        Math.abs(eq.valorPago - valorTotal) < 0.01 &&
         eq.dataCompra === primeiraParcela.dataVencimento
       );
 
       if (!jaExiste) {
-        // Criar transação consolidada com valor total
         const transacaoConsolidada = {
           ...primeiraParcela,
-          valor: valorTotal,
+          valor: valorTotal, // usar valor integral da compra
           observacoes: primeiraParcela.observacoes || `Equipamento parcelado (${parcelas.length}x)`,
           grupoParcelado: {
             lançamentoPaiId: grupoId,
@@ -582,7 +603,6 @@ class PricingFinancialIntegrationService {
             parcelaIds: parcelas.map(p => p.id)
           }
         };
-
         resultado.push(transacaoConsolidada);
         console.log(`🔧 [GroupInstallments] Adicionado equipamento consolidado: ${transacaoConsolidada.observacoes}`);
       } else {
