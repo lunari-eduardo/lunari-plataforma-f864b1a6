@@ -117,7 +117,10 @@ export default function AvailabilityConfigModal({
       return;
     }
     const targetDates = computeTargetDatesBetween(startDate, endDate, selectedWeekdays);
-    const appointmentKeys = new Set(appointments.map(a => `${format(a.date, 'yyyy-MM-dd')}|${a.time}`));
+    const appointmentKeys = new Set(appointments.map(a => {
+      const dateStr = typeof a.date === 'string' ? a.date : format(new Date(a.date), 'yyyy-MM-dd');
+      return `${dateStr}|${a.time}`;
+    }));
     const existingAvailabilitySet = new Set(availability.map(a => `${a.date}|${a.time}`));
     const addedKeys = new Set<string>();
     const toAdd: AvailabilitySlot[] = [];

@@ -11,6 +11,8 @@ import { format } from 'date-fns';
  * preservando o dia local, ignorando conversões de fuso horário
  */
 export function formatDateForStorage(date: Date | string): string {
+  if (!date) return '';
+  
   let dateObj: Date;
   
   if (typeof date === 'string') {
@@ -21,6 +23,12 @@ export function formatDateForStorage(date: Date | string): string {
     dateObj = new Date(date);
   } else {
     dateObj = date;
+  }
+
+  // Verificar se a data é válida
+  if (isNaN(dateObj.getTime())) {
+    console.warn('Invalid date passed to formatDateForStorage:', date);
+    return '';
   }
 
   const ano = dateObj.getFullYear();
