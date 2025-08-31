@@ -1,3 +1,5 @@
+import { FinancialEngine, FinancialTransaction } from './FinancialEngine';
+import { autoMigrateCreditCardData } from '@/utils/creditCardDataMigration';
 import { storage } from '@/utils/localStorage';
 import { getCurrentDateString } from '@/utils/dateUtils';
 import { ItemFinanceiro, GrupoPrincipal } from '@/types/financas';
@@ -338,7 +340,34 @@ class PricingFinancialIntegrationService {
       }
       
       // CORREÇÃO: Usar dataCompra (data original) ao invés de dataVencimento (data da fatura)
-      const dataOriginal = primeiraTransacao.dataCompra || primeiraTransacao.dataVencimento;
+      let dataOriginal = primeiraTransacao.dataCompra;
+      
+      // Se não tem dataCompra e é cartão de crédito, calcular data provável da compra
+      if (!dataOriginal && primeiraTransacao.cartaoCreditoId) {
+        const cartoes = FinancialEngine.loadCreditCards();
+        const cartao = cartoes.find(c => c.id === primeiraTransacao.cartaoCreditoId);
+        
+        if (cartao) {
+          // Calcular data provável da compra baseado no vencimento
+          const [ano, mes] = primeiraTransacao.dataVencimento.split('-').map(Number);
+          let mesCompra = mes - 1;
+          let anoCompra = ano;
+          
+          if (mesCompra < 1) {
+            mesCompra = 12;
+            anoCompra--;
+          }
+          
+          // Usar dia de fechamento como estimativa
+          const diaCompra = Math.min(cartao.diaFechamento, new Date(anoCompra, mesCompra, 0).getDate());
+          dataOriginal = `${anoCompra}-${mesCompra.toString().padStart(2, '0')}-${diaCompra.toString().padStart(2, '0')}`;
+        }
+      }
+      
+      // Fallback para dataVencimento se ainda não temos dataOriginal
+      if (!dataOriginal) {
+        dataOriginal = primeiraTransacao.dataVencimento;
+      }
       
       resultados.push({
         transacao: primeiraTransacao,

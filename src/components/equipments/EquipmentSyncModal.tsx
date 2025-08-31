@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 
 import { formatDateForDisplay } from '@/utils/dateUtils';
 import { EstruturaCustosService } from '@/services/PricingService';
+import { autoMigrateCreditCardData } from '@/utils/creditCardDataMigration';
 
 interface EquipmentSyncModalProps {
   equipment: {
@@ -41,6 +42,11 @@ export function EquipmentSyncModal({
     nome: equipment.observacoes || equipment.nome || `Equipamento R$ ${equipment.valor.toFixed(2)}`,
     vidaUtil: '5'
   });
+
+  // Executar migração automática quando modal abre
+  if (open) {
+    autoMigrateCreditCardData();
+  }
 
   // Identificar se é parcelado
   const isInstallment = equipment.observacoes?.includes('parcelado') || false;

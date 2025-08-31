@@ -594,6 +594,59 @@ export class FinancialEngine {
   }
 
   /**
+   * NOVA: Migração para adicionar dataCompra em transações existentes de cartão
+   */
+  static migrateExistingCreditCardTransactions(): void {
+    const transactions = this.loadTransactions();
+    const cards = this.loadCreditCards();
+    let hasChanges = false;
+
+    transactions.forEach(transaction => {
+      // Se é transação de cartão e não tem dataCompra
+      if (transaction.cartaoCreditoId && !transaction.dataCompra) {
+        const cartao = cards.find(c => c.id === transaction.cartaoCreditoId);
+        if (cartao) {
+          // Calcular data provável da compra baseado no vencimento da fatura
+          const dataCompraCalculada = this.calculatePurchaseDateFromDueDate(
+            transaction.dataVencimento, 
+            cartao
+          );
+          
+          transaction.dataCompra = dataCompraCalculada;
+          hasChanges = true;
+        }
+      }
+    });
+
+    if (hasChanges) {
+      localStorage.setItem(FINANCIAL_STORAGE_KEYS.TRANSACTIONS, JSON.stringify(transactions));
+      console.log('Migração de dataCompra concluída para transações existentes');
+    }
+  }
+
+  /**
+   * Calcular data provável da compra baseado na data de vencimento da fatura
+   */
+  private static calculatePurchaseDateFromDueDate(dataVencimento: string, cartao: CreditCard): string {
+    const [ano, mes, dia] = dataVencimento.split('-').map(Number);
+    
+    // Fatura vence no mês seguinte ao período
+    // Então a compra provavelmente foi no mês anterior
+    let mesCompra = mes - 1;
+    let anoCompra = ano;
+    
+    if (mesCompra < 1) {
+      mesCompra = 12;
+      anoCompra--;
+    }
+    
+    // Assumir que a compra foi no dia de fechamento (estimativa conservadora)
+    const diaCompra = Math.min(cartao.diaFechamento, new Date(anoCompra, mesCompra, 0).getDate());
+    
+    return `${anoCompra}-${mesCompra.toString().padStart(2, '0')}-${diaCompra.toString().padStart(2, '0')}`;
+  }
+
+  /**
    * Limpar todos os dados (função de emergência)
    */
   static clearAllData(): void {
