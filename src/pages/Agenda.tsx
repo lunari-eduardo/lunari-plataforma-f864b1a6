@@ -1,260 +1,127 @@
-import { useState, useEffect } from 'react';
-import { format, addMonths, addWeeks, addDays, subMonths, subWeeks, subDays, addYears, subYears } from "date-fns";
-import { ptBR } from 'date-fns/locale';
-import { Button } from "@/components/ui/button";
+import { useState, useCallback } from 'react';
 import { Card } from "@/components/ui/card";
-import { ChevronLeft, ChevronRight, Settings, Share2 } from "lucide-react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import MonthlyView from "@/components/agenda/MonthlyView";
 import WeeklyView from "@/components/agenda/WeeklyView";
 import DailyView from "@/components/agenda/DailyView";
 import AnnualView from "@/components/agenda/AnnualView";
-import AppointmentForm from "@/components/agenda/AppointmentForm";
-import AppointmentDetails from "@/components/agenda/AppointmentDetails";
-import EditOrcamentoModal from "@/components/orcamentos/EditOrcamentoModal";
-import BudgetAppointmentDetails from "@/components/agenda/BudgetAppointmentDetails";
-import AvailabilityConfigModal from "@/components/agenda/AvailabilityConfigModal";
-import ShareAvailabilityModal from "@/components/agenda/ShareAvailabilityModal";
+import AgendaHeader from "@/components/agenda/AgendaHeader";
+import AgendaModals from "@/components/agenda/AgendaModals";
 import { useUnifiedCalendar, UnifiedEvent } from "@/hooks/useUnifiedCalendar";
 import { useAgenda, Appointment } from "@/hooks/useAgenda";
 import { useIntegration } from "@/hooks/useIntegration";
 import { useOrcamentos } from "@/hooks/useOrcamentos";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { useIsTablet } from "@/hooks/useIsTablet";
 import { useSwipeNavigation } from "@/hooks/useSwipeNavigation";
+import { useAgendaNavigation } from "@/hooks/useAgendaNavigation";
+import { useAgendaModals } from "@/hooks/useAgendaModals";
+import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
+import { ViewType } from '@/utils/dateFormatters';
 import { Orcamento } from "@/types/orcamentos";
-type ViewType = 'month' | 'week' | 'day' | 'year';
+
 export default function Agenda() {
+  const { unifiedEvents } = useUnifiedCalendar();
+  const { addAppointment, updateAppointment, deleteAppointment } = useAgenda();
+  const { isFromBudget, getBudgetId } = useIntegration();
+  const { orcamentos } = useOrcamentos();
+  const { isMobile, isTablet, classes } = useResponsiveLayout();
+  
+  // Navigation hook
   const {
-    unifiedEvents,
-    getEventForSlot,
-    appointments
-  } = useUnifiedCalendar();
+    view,
+    date,
+    setView,
+    navigatePrevious,
+    navigateNext,
+    navigateToday
+  } = useAgendaNavigation();
+  
+  // Modal management hook
   const {
-    addAppointment,
-    updateAppointment,
-    deleteAppointment
-  } = useAgenda();
-  const {
-    isFromBudget,
-    getBudgetId,
-    canEditFully
-  } = useIntegration();
-  const {
-    orcamentos
-  } = useOrcamentos();
-  const isMobile = useIsMobile();
-  const isTablet = useIsTablet();
+    isAppointmentDialogOpen,
+    isDetailsOpen,
+    isBudgetModalOpen,
+    isBudgetAppointmentModalOpen,
+    isAvailabilityModalOpen,
+    isShareModalOpen,
+    selectedSlot,
+    editingAppointment,
+    viewingAppointment,
+    selectedBudget,
+    selectedBudgetAppointment,
+    openAppointmentDialog,
+    openAppointmentDetails,
+    openBudgetModal,
+    openBudgetAppointmentModal,
+    openAvailabilityModal,
+    openShareModal,
+    handleViewFullBudget,
+    setIsAppointmentDialogOpen,
+    setIsDetailsOpen,
+    setIsBudgetModalOpen,
+    setIsBudgetAppointmentModalOpen,
+    setIsAvailabilityModalOpen,
+    setIsShareModalOpen
+  } = useAgendaModals();
 
   // Transition state for smooth navigation
   const [isTransitioning, setIsTransitioning] = useState(false);
 
-  // Helper functions for proper date formatting
-  const capitalizeFirst = (str: string): string => {
-    return str.charAt(0).toUpperCase() + str.slice(1);
-  };
-  const formatWeekTitle = (date: Date): string => {
-    const endOfWeek = addDays(date, 6);
-    const startDay = format(date, "d", {
-      locale: ptBR
-    });
-    const endDayMonth = format(endOfWeek, "d 'de' MMMM", {
-      locale: ptBR
-    });
-    const monthName = format(endOfWeek, "MMMM", {
-      locale: ptBR
-    });
-    const capitalizedMonth = capitalizeFirst(monthName);
-    return `${startDay} a ${format(endOfWeek, "d")} de ${capitalizedMonth}`;
-  };
-  const formatDayHeaderTitle = (date: Date): string => {
-    const monthName = format(date, "MMMM", {
-      locale: ptBR
-    });
-    const capitalizedMonth = capitalizeFirst(monthName);
-    return `${format(date, "d")} de ${capitalizedMonth}`;
-  };
-  const formatMonthTitle = (date: Date): string => {
-    const monthName = format(date, "MMMM", {
-      locale: ptBR
-    });
-    const capitalizedMonth = capitalizeFirst(monthName);
-    return `${capitalizedMonth} ${format(date, "yyyy")}`;
-  };
-
-  // View and navigation state
-  const [view, setView] = useState<ViewType>(() => {
-    const savedView = localStorage.getItem('preferredView') as ViewType;
-    return savedView || 'month';
-  });
-  const [date, setDate] = useState<Date>(new Date());
-
-  // Modal states
-  const [isAppointmentDialogOpen, setIsAppointmentDialogOpen] = useState(false);
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
-  const [isBudgetAppointmentModalOpen, setIsBudgetAppointmentModalOpen] = useState(false);
-  const [isAvailabilityModalOpen, setIsAvailabilityModalOpen] = useState(false);
-  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-
-  // Selection states
-  const [selectedSlot, setSelectedSlot] = useState<{
-    date: Date;
-    time?: string;
-  } | null>(null);
-  const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
-  const [viewingAppointment, setViewingAppointment] = useState<Appointment | null>(null);
-  const [selectedBudget, setSelectedBudget] = useState<Orcamento | null>(null);
-  const [selectedBudgetAppointment, setSelectedBudgetAppointment] = useState<{
-    appointment: Appointment;
-    budget: Orcamento | null;
-  } | null>(null);
-
-  // Save view preference
-  useEffect(() => {
-    localStorage.setItem('preferredView', view);
-  }, [view]);
-
-  // Format date for display
-  const formatDateTitle = () => {
-    switch (view) {
-      case 'year':
-        return format(date, "yyyy", {
-          locale: ptBR
-        });
-      case 'month':
-        return formatMonthTitle(date);
-      case 'week':
-        return formatWeekTitle(date);
-      case 'day':
-        return formatDayHeaderTitle(date);
-      default:
-        return '';
-    }
-  };
-
-  // Format day title for daily view
-  const formatDayTitle = () => {
-    if (view === 'day') {
-      const dayName = format(date, "EEEE", {
-        locale: ptBR
-      });
-      return capitalizeFirst(dayName);
-    }
-    return '';
-  };
-
   // Navigation functions with smooth transitions
-  const navigateWithTransition = (navFunction: () => void) => {
+  const navigateWithTransition = useCallback((navFunction: () => void) => {
     setIsTransitioning(true);
     setTimeout(() => {
       navFunction();
       setTimeout(() => setIsTransitioning(false), 100);
     }, 100);
-  };
-
-  // Direct navigation functions (for gestures, without transitions)
-  const navigatePreviousDirect = () => {
-    switch (view) {
-      case 'year':
-        setDate(subYears(date, 1));
-        break;
-      case 'month':
-        setDate(subMonths(date, 1));
-        break;
-      case 'week':
-        setDate(subWeeks(date, 1));
-        break;
-      case 'day':
-        setDate(subDays(date, 1));
-        break;
-    }
-  };
-  const navigateNextDirect = () => {
-    switch (view) {
-      case 'year':
-        setDate(addYears(date, 1));
-        break;
-      case 'month':
-        setDate(addMonths(date, 1));
-        break;
-      case 'week':
-        setDate(addWeeks(date, 1));
-        break;
-      case 'day':
-        setDate(addDays(date, 1));
-        break;
-    }
-  };
+  }, []);
 
   // Button navigation functions (with transitions)
-  const navigatePrevious = () => {
-    navigateWithTransition(navigatePreviousDirect);
-  };
-  const navigateNext = () => {
-    navigateWithTransition(navigateNextDirect);
-  };
-  const navigateToday = () => {
-    navigateWithTransition(() => {
-      setDate(new Date());
-    });
-  };
+  const handleNavigatePrevious = useCallback(() => {
+    navigateWithTransition(navigatePrevious);
+  }, [navigateWithTransition, navigatePrevious]);
+
+  const handleNavigateNext = useCallback(() => {
+    navigateWithTransition(navigateNext);
+  }, [navigateWithTransition, navigateNext]);
+
+  const handleNavigateToday = useCallback(() => {
+    navigateWithTransition(navigateToday);
+  }, [navigateWithTransition, navigateToday]);
 
   // Handle day click in monthly view
-  const handleDayClick = (selectedDate: Date) => {
-    setDate(selectedDate);
+  const handleDayClick = useCallback((selectedDate: Date) => {
     setView('day');
-  };
+    // Use direct navigation for day clicks (immediate, no transition)
+    setTimeout(() => {
+      navigateToday(); // Reset to selected date
+    }, 0);
+  }, [setView, navigateToday]);
 
   // Handle slot click (empty time slot) - directly open appointment form
-  const handleCreateSlot = (slot: {
-    date: Date;
-    time?: string;
-  }) => {
-    setSelectedSlot(slot);
-    setEditingAppointment(null);
-    setViewingAppointment(null);
-    setIsAppointmentDialogOpen(true);
-    setIsDetailsOpen(false);
-  };
+  const handleCreateSlot = useCallback((slot: { date: Date; time?: string }) => {
+    openAppointmentDialog(slot);
+  }, [openAppointmentDialog]);
 
   // Handle event click (existing appointment or budget)
-  const handleEventClick = (event: UnifiedEvent) => {
+  const handleEventClick = useCallback((event: UnifiedEvent) => {
     if (event.type === 'appointment') {
       const appointment = event.originalData as Appointment;
       if (isFromBudget(appointment)) {
         // Buscar o orçamento original
         const budgetId = getBudgetId(appointment);
         const originalBudget = orcamentos.find(orc => orc.id === budgetId);
-        setSelectedBudgetAppointment({
-          appointment,
-          budget: originalBudget || null
-        });
-        setIsBudgetAppointmentModalOpen(true);
-
-        // Limpar outros estados
-        setEditingAppointment(null);
-        setViewingAppointment(null);
-        setSelectedSlot(null);
-        setIsAppointmentDialogOpen(false);
-        setIsDetailsOpen(false);
+        openBudgetAppointmentModal(appointment, originalBudget || null);
       } else {
-        setViewingAppointment(appointment);
-        setEditingAppointment(null);
-        setSelectedSlot(null);
-        setIsAppointmentDialogOpen(false);
-        setIsDetailsOpen(true);
+        openAppointmentDetails(appointment);
       }
     } else if (event.type === 'budget') {
       const budget = event.originalData as Orcamento;
-      setSelectedBudget(budget);
-      setIsBudgetModalOpen(true);
+      openBudgetModal(budget);
     }
-  };
+  }, [isFromBudget, getBudgetId, orcamentos, openBudgetAppointmentModal, openAppointmentDetails, openBudgetModal]);
 
   // Handle appointment save
-  const handleSaveAppointment = (appointmentData: any) => {
+  const handleSaveAppointment = useCallback((appointmentData: any) => {
     try {
       if (editingAppointment) {
         updateAppointment(editingAppointment.id, appointmentData);
@@ -275,18 +142,17 @@ export default function Agenda() {
       }
       // Não fechar o modal para permitir correção
     }
-  };
+  }, [editingAppointment, viewingAppointment, updateAppointment, addAppointment, setIsDetailsOpen, setIsAppointmentDialogOpen]);
 
   // Handle appointment deletion
-  const handleDeleteAppointment = (id: string, preservePayments?: boolean) => {
+  const handleDeleteAppointment = useCallback((id: string, preservePayments?: boolean) => {
     deleteAppointment(id, preservePayments);
     setIsDetailsOpen(false);
     setIsBudgetAppointmentModalOpen(false);
-    // Toast será mostrado pelo componente que chama esta função
-  };
+  }, [deleteAppointment, setIsDetailsOpen, setIsBudgetAppointmentModalOpen]);
 
   // Handle budget appointment save (reschedule)
-  const handleSaveBudgetAppointment = (data: {
+  const handleSaveBudgetAppointment = useCallback((data: {
     date: Date;
     time: string;
     description?: string;
@@ -299,236 +165,112 @@ export default function Agenda() {
       });
       setIsBudgetAppointmentModalOpen(false);
     }
-  };
+  }, [selectedBudgetAppointment, updateAppointment, setIsBudgetAppointmentModalOpen]);
 
   // Swipe navigation for mobile and tablet (using direct functions, no transitions)
   const swipeHandlers = useSwipeNavigation({
     enabled: (isMobile || isTablet) && view !== 'year',
-    onPrev: navigatePreviousDirect,
-    onNext: navigateNextDirect,
+    onPrev: navigatePrevious, // Direct navigation for gestures
+    onNext: navigateNext, // Direct navigation for gestures
     thresholdPx: 38,
     maxVerticalRatio: 0.8
   });
 
-  // Handle view full budget from appointment modal
-  const handleViewFullBudget = () => {
-    if (selectedBudgetAppointment?.budget) {
-      setIsBudgetAppointmentModalOpen(false);
-      setSelectedBudget(selectedBudgetAppointment.budget);
-      setIsBudgetModalOpen(true);
+  const renderView = () => {
+    const commonProps = {
+      date,
+      unifiedEvents,
+      onCreateSlot: handleCreateSlot,
+      onEventClick: handleEventClick
+    };
+
+    switch (view) {
+      case 'year':
+        return (
+          <AnnualView
+            date={date}
+            unifiedEvents={unifiedEvents}
+            onDayClick={handleDayClick}
+            onEventClick={handleEventClick}
+          />
+        );
+      case 'month':
+        return (
+          <MonthlyView
+            {...commonProps}
+            onDayClick={handleDayClick}
+          />
+        );
+      case 'week':
+        return (
+          <WeeklyView
+            {...commonProps}
+            onDayClick={handleDayClick}
+          />
+        );
+      case 'day':
+        return (
+          <DailyView {...commonProps} />
+        );
+      default:
+        return null;
     }
   };
-  return <div className="w-full max-w-7xl mx-auto px-2 md:px-4 lg:px-6 space-y-2 md:space-y-4 pb-20 md:pb-4">
-      <Card className="p-2 md:p-4 bg-lunar-bg mx-0">
-        <div className="flex flex-col items-center justify-center mb-2 md:mb-4 gap-2 md:gap-3">
-          {/* Mobile Layout (unchanged) */}
-          {isMobile && <>
-              {/* Navigation and Date Display */}
-              <div className="flex items-center justify-between w-full gap-1">
-                <Button variant="outline" onClick={navigateToday} className="h-8 px-2 text-xs bg-lunar-surface hover:bg-lunar-border border-lunar-border">
-                  Hoje
-                </Button>
-                
-                <div className="flex items-center gap-1">
-                  <Button variant="outline" size="icon" onClick={navigatePrevious} aria-label="Período anterior" className="bg-lunar-surface hover:bg-lunar-border border-lunar-border h-8 w-8">
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  
-                  <div className="text-sm font-medium min-w-[150px] text-center px-2">
-                    {formatDateTitle()}
-                  </div>
-                  
-                  <Button variant="outline" size="icon" onClick={navigateNext} aria-label="Próximo período" className="bg-lunar-surface hover:bg-lunar-border border-lunar-border h-8 w-8">
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-              
-              {/* Mobile View Toggle Buttons */}
-              <div className="flex items-center gap-2 w-full">
-                <div className="flex bg-lunar-surface border border-lunar-border rounded-lg p-1 flex-1">
-                  <Button variant={view === 'day' ? "default" : "ghost"} size="sm" onClick={() => setView('day')} className={`flex-1 ${view === 'day' ? "bg-lunar-accent text-lunar-text hover:bg-lunar-accentHover" : "text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-bg/50"}`}>
-                    Dia
-                  </Button>
-                  <Button variant={view === 'week' ? "default" : "ghost"} size="sm" onClick={() => setView('week')} className={`flex-1 ${view === 'week' ? "bg-lunar-accent text-lunar-text hover:bg-lunar-accentHover" : "text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-bg/50"}`}>
-                    Semana
-                  </Button>
-                  <Button variant={view === 'month' ? "default" : "ghost"} size="sm" onClick={() => setView('month')} className={`flex-1 ${view === 'month' ? "bg-lunar-accent text-lunar-text hover:bg-lunar-accentHover" : "text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-bg/50"}`}>
-                    Mês
-                  </Button>
-                  <Button variant={view === 'year' ? "default" : "ghost"} size="sm" onClick={() => setView('year')} className={`flex-1 ${view === 'year' ? "bg-lunar-accent text-lunar-text hover:bg-lunar-accentHover" : "text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-bg/50"}`}>
-                    Ano
-                  </Button>
-                </div>
-                
-                {/* Mobile Manage Schedules Button - Only icon */}
-                <Button variant="outline" size="icon" onClick={() => setIsAvailabilityModalOpen(true)} className="bg-lunar-surface hover:bg-lunar-border border-lunar-border h-8 w-8" title="Gerenciar Horários">
-                  <Settings className="h-4 w-4" />
-                </Button>
-              </div>
-            </>}
 
-          {/* Tablet Layout */}
-          {isTablet && <>
-              {/* First Line: Navigation and Date */}
-              <div className="flex items-center justify-center w-full gap-4">
-                <Button variant="outline" onClick={navigateToday} className="h-8 px-3 text-sm bg-lunar-surface hover:bg-lunar-border border-lunar-border">
-                  Hoje
-                </Button>
-                
-                <div className="flex items-center gap-1">
-                  <Button variant="outline" size="icon" onClick={navigatePrevious} aria-label="Período anterior" className="bg-lunar-surface hover:bg-lunar-border border-lunar-border h-8 w-8">
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  
-                  <div className="text-base font-medium min-w-[250px] text-center px-2">
-                    {formatDateTitle()}
-                  </div>
-                  
-                  <Button variant="outline" size="icon" onClick={navigateNext} aria-label="Próximo período" className="bg-lunar-surface hover:bg-lunar-border border-lunar-border h-8 w-8">
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-
-              {/* Second Line: View Toggles and Manage Button */}
-              <div className="flex items-center justify-center w-full gap-4">
-                <div className="bg-lunar-surface border border-lunar-border rounded-lg p-1 py-0">
-                  <Button variant={view === 'day' ? "default" : "ghost"} size="sm" onClick={() => setView('day')} className={view === 'day' ? "bg-lunar-accent text-lunar-text hover:bg-lunar-accentHover" : "text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-bg/50"}>
-                    Dia
-                  </Button>
-                  <Button variant={view === 'week' ? "default" : "ghost"} size="sm" onClick={() => setView('week')} className={view === 'week' ? "bg-lunar-accent text-lunar-text hover:bg-lunar-accentHover" : "text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-bg/50"}>
-                    Semana
-                  </Button>
-                  <Button variant={view === 'month' ? "default" : "ghost"} size="sm" onClick={() => setView('month')} className={view === 'month' ? "bg-lunar-accent text-lunar-text hover:bg-lunar-accentHover" : "text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-bg/50"}>
-                    Mês
-                  </Button>
-                  <Button variant={view === 'year' ? "default" : "ghost"} size="sm" onClick={() => setView('year')} className={view === 'year' ? "bg-lunar-accent text-lunar-text hover:bg-lunar-accentHover" : "text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-bg/50"}>
-                    Ano
-                  </Button>
-                </div>
-                
-                <Button variant="outline" onClick={() => setIsAvailabilityModalOpen(true)} className="bg-lunar-surface hover:bg-lunar-border border-lunar-border h-6 px-3 py-0 my-0 text-xs">
-                  <Settings className="h-4 w-4 mr-2" />
-                  Gerenciar Horários
-                </Button>
-              </div>
-            </>}
-
-          {/* Desktop Layout */}
-          {!isMobile && !isTablet && <div className="flex items-center justify-between w-full">
-              <div className="flex items-center gap-4">
-                <Button variant="outline" onClick={navigateToday} className="h-8 px-3 text-sm bg-lunar-surface hover:bg-lunar-border border-lunar-border">
-                  Hoje
-                </Button>
-                
-                <div className="flex items-center gap-1">
-                  <Button variant="outline" size="icon" onClick={navigatePrevious} aria-label="Período anterior" className="bg-lunar-surface hover:bg-lunar-border border-lunar-border h-8 w-8">
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  
-                  <div className="text-base font-medium min-w-[200px] text-center px-2">
-                    {formatDateTitle()}
-                  </div>
-                  
-                  <Button variant="outline" size="icon" onClick={navigateNext} aria-label="Próximo período" className="bg-lunar-surface hover:bg-lunar-border border-lunar-border h-8 w-8">
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                <div className="bg-lunar-surface border border-lunar-border rounded-lg p-1">
-                  <Button variant={view === 'day' ? "default" : "ghost"} size="sm" onClick={() => setView('day')} className={view === 'day' ? "bg-lunar-accent text-lunar-text hover:bg-lunar-accentHover" : "text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-bg/50"}>
-                    Dia
-                  </Button>
-                  <Button variant={view === 'week' ? "default" : "ghost"} size="sm" onClick={() => setView('week')} className={view === 'week' ? "bg-lunar-accent text-lunar-text hover:bg-lunar-accentHover" : "text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-bg/50"}>
-                    Semana
-                  </Button>
-                  <Button variant={view === 'month' ? "default" : "ghost"} size="sm" onClick={() => setView('month')} className={view === 'month' ? "bg-lunar-accent text-lunar-text hover:bg-lunar-accentHover" : "text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-bg/50"}>
-                    Mês
-                  </Button>
-                  <Button variant={view === 'year' ? "default" : "ghost"} size="sm" onClick={() => setView('year')} className={view === 'year' ? "bg-lunar-accent text-lunar-text hover:bg-lunar-accentHover" : "text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-bg/50"}>
-                    Ano
-                  </Button>
-                </div>
-              </div>
-
-              {/* Manage Schedules Button - Far Right */}
-              <Button variant="outline" onClick={() => setIsAvailabilityModalOpen(true)} className="bg-lunar-surface hover:bg-lunar-border border-lunar-border h-8 px-3 text-sm">
-                <Settings className="h-4 w-4 mr-2" />
-                Gerenciar Horários
-              </Button>
-            </div>}
-
-          {/* Day Title for Daily View */}
-          {view === 'day' && formatDayTitle() && <div className="flex items-center justify-between">
-              <div className="text-lg font-medium text-lunar-textSecondary">
-                {formatDayTitle()}
-              </div>
-              <Button 
-                variant="ghost" 
-                size="icon"
-                onClick={() => setIsShareModalOpen(true)}
-                aria-label="Compartilhar horários do dia"
-                title="Compartilhar horários do dia"
-              >
-                <Share2 className="h-4 w-4" />
-              </Button>
-            </div>}
-        </div>
+  return (
+    <div className={`w-full max-w-7xl mx-auto ${classes.container} pb-20 md:pb-4`}>
+      <Card className={`${classes.card} bg-lunar-bg mx-0`}>
+        <AgendaHeader
+          view={view}
+          date={date}
+          onViewChange={setView}
+          onNavigatePrevious={handleNavigatePrevious}
+          onNavigateNext={handleNavigateNext}
+          onNavigateToday={handleNavigateToday}
+          onOpenAvailability={openAvailabilityModal}
+          onOpenShare={view === 'day' ? openShareModal : undefined}
+        />
           
         {/* Touch event container (no transitions) */}
         <div className="mt-4" {...(isMobile || isTablet) && view !== 'year' ? swipeHandlers : {}}>
           {/* Visual content container (with transitions) */}
           <div className={`transition-opacity duration-200 ${isTransitioning ? 'opacity-70' : 'opacity-100'}`}>
-            {view === 'year' && <AnnualView date={date} unifiedEvents={unifiedEvents} onDayClick={handleDayClick} onEventClick={handleEventClick} />}
-            {view === 'month' && <MonthlyView date={date} unifiedEvents={unifiedEvents} onCreateSlot={handleCreateSlot} onEventClick={handleEventClick} onDayClick={handleDayClick} />}
-            {view === 'week' && <WeeklyView date={date} unifiedEvents={unifiedEvents} onCreateSlot={handleCreateSlot} onEventClick={handleEventClick} onDayClick={handleDayClick} />}
-            {view === 'day' && <DailyView date={date} unifiedEvents={unifiedEvents} onCreateSlot={handleCreateSlot} onEventClick={handleEventClick} />}
+            {renderView()}
           </div>
         </div>
       </Card>
 
-
-      {/* Appointment Form Modal */}
-      <Dialog open={isAppointmentDialogOpen} onOpenChange={setIsAppointmentDialogOpen}>
-        <DialogContent className="sm:max-w-[500px] bg-background border-border">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-semibold text-foreground">
-              {editingAppointment ? 'Editar Agendamento' : 'Novo Agendamento'}
-            </DialogTitle>
-            
-          </DialogHeader>
-
-          <AppointmentForm initialDate={selectedSlot?.date || editingAppointment?.date} initialTime={selectedSlot?.time || editingAppointment?.time} appointment={editingAppointment} onSave={handleSaveAppointment} onCancel={() => setIsAppointmentDialogOpen(false)} />
-        </DialogContent>
-      </Dialog>
-
-      {/* Appointment Details Modal */}
-      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <DialogContent className="sm:max-w-[500px] bg-background border-border">
-          {viewingAppointment && <AppointmentDetails appointment={viewingAppointment} onSave={handleSaveAppointment} onCancel={() => setIsDetailsOpen(false)} onDelete={handleDeleteAppointment} />}
-        </DialogContent>
-      </Dialog>
-
-      {/* Budget Appointment Details Modal */}
-      <Dialog open={isBudgetAppointmentModalOpen} onOpenChange={setIsBudgetAppointmentModalOpen}>
-        <DialogContent className="sm:max-w-[600px] bg-background border-border">
-          {selectedBudgetAppointment && <BudgetAppointmentDetails appointment={selectedBudgetAppointment.appointment} budget={selectedBudgetAppointment.budget} onSave={handleSaveBudgetAppointment} onCancel={() => setIsBudgetAppointmentModalOpen(false)} onViewFullBudget={handleViewFullBudget} onDelete={handleDeleteAppointment} />}
-        </DialogContent>
-      </Dialog>
-
-      {/* Budget Edit Modal */}
-      <EditOrcamentoModal isOpen={isBudgetModalOpen} onClose={() => setIsBudgetModalOpen(false)} orcamento={selectedBudget} />
-
-      {/* Availability Config Modal */}
-      <AvailabilityConfigModal isOpen={isAvailabilityModalOpen} onClose={() => setIsAvailabilityModalOpen(false)} date={selectedSlot?.date || new Date()} initialTime={selectedSlot?.time} />
-
-      {/* Share Availability Modal */}
-      <ShareAvailabilityModal 
-        isOpen={isShareModalOpen} 
-        onClose={() => setIsShareModalOpen(false)} 
-        period={{ day: date }} 
-        mode="day" 
+      <AgendaModals
+        // Modal states
+        isAppointmentDialogOpen={isAppointmentDialogOpen}
+        isDetailsOpen={isDetailsOpen}
+        isBudgetModalOpen={isBudgetModalOpen}
+        isBudgetAppointmentModalOpen={isBudgetAppointmentModalOpen}
+        isAvailabilityModalOpen={isAvailabilityModalOpen}
+        isShareModalOpen={isShareModalOpen}
+        
+        // Selection states
+        selectedSlot={selectedSlot}
+        editingAppointment={editingAppointment}
+        viewingAppointment={viewingAppointment}
+        selectedBudget={selectedBudget}
+        selectedBudgetAppointment={selectedBudgetAppointment}
+        
+        // Modal setters
+        setIsAppointmentDialogOpen={setIsAppointmentDialogOpen}
+        setIsDetailsOpen={setIsDetailsOpen}
+        setIsBudgetModalOpen={setIsBudgetModalOpen}
+        setIsBudgetAppointmentModalOpen={setIsBudgetAppointmentModalOpen}
+        setIsAvailabilityModalOpen={setIsAvailabilityModalOpen}
+        setIsShareModalOpen={setIsShareModalOpen}
+        
+        // Event handlers
+        onSaveAppointment={handleSaveAppointment}
+        onDeleteAppointment={handleDeleteAppointment}
+        onSaveBudgetAppointment={handleSaveBudgetAppointment}
+        onViewFullBudget={handleViewFullBudget}
       />
-    </div>;
+    </div>
+  );
+}
 }
