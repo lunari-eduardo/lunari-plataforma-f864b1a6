@@ -4,20 +4,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { 
-  SelectModal as Select, 
-  SelectModalContent as SelectContent, 
-  SelectModalItem as SelectItem, 
-  SelectModalTrigger as SelectTrigger, 
-  SelectModalValue as SelectValue 
-} from '@/components/ui/select-in-modal';
+import { SelectModal as Select, SelectModalContent as SelectContent, SelectModalItem as SelectItem, SelectModalTrigger as SelectTrigger, SelectModalValue as SelectValue } from '@/components/ui/select-in-modal';
 import { useDialogDropdownContext } from '@/components/ui/dialog';
 import { useAppContext } from '@/contexts/AppContext';
 import { useLeadStatuses } from '@/hooks/useLeadStatuses';
 import { ORIGENS_PADRAO } from '@/utils/defaultOrigens';
 import type { Lead } from '@/types/leads';
 import type { OrigemCliente } from '@/types/orcamentos';
-
 interface LeadFormModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -25,7 +18,6 @@ interface LeadFormModalProps {
   initial?: Lead;
   onSubmit: (data: Omit<Lead, 'id' | 'dataCriacao'>) => void;
 }
-
 interface FormData {
   nome: string;
   email: string;
@@ -35,7 +27,6 @@ interface FormData {
   observacoes: string;
   clienteId: string;
 }
-
 export default function LeadFormModal({
   open,
   onOpenChange,
@@ -43,19 +34,22 @@ export default function LeadFormModal({
   initial,
   onSubmit
 }: LeadFormModalProps) {
-  const { origens: contextOrigens, clientes } = useAppContext();
-  const { statuses, getDefaultOpenKey } = useLeadStatuses();
+  const {
+    origens: contextOrigens,
+    clientes
+  } = useAppContext();
+  const {
+    statuses,
+    getDefaultOpenKey
+  } = useLeadStatuses();
   const dropdownContext = useDialogDropdownContext();
-  
-  // Unified origin source: AppContext + fallback to default origins
-  const origens: OrigemCliente[] = contextOrigens.length > 0 
-    ? contextOrigens 
-    : ORIGENS_PADRAO.map(origem => ({
-        id: origem.id,
-        nome: origem.nome,
-        cor: origem.cor
-      }));
 
+  // Unified origin source: AppContext + fallback to default origins
+  const origens: OrigemCliente[] = contextOrigens.length > 0 ? contextOrigens : ORIGENS_PADRAO.map(origem => ({
+    id: origem.id,
+    nome: origem.nome,
+    cor: origem.cor
+  }));
   const getInitialFormData = useCallback((): FormData => ({
     nome: '',
     email: '',
@@ -65,7 +59,6 @@ export default function LeadFormModal({
     observacoes: '',
     clienteId: ''
   }), [getDefaultOpenKey]);
-
   const [formData, setFormData] = useState<FormData>(getInitialFormData);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -99,27 +92,26 @@ export default function LeadFormModal({
       // Force close any open dropdowns
       setOpenDropdowns({});
       dropdownContext?.setHasOpenDropdown(false);
-      
+
       // Aggressive cleanup of Radix Select portals
       document.querySelectorAll('[data-radix-select-content]').forEach(el => {
         if (el.parentNode) {
           el.parentNode.removeChild(el);
         }
       });
-      
+
       // Reset pointer events on any stuck overlays
       document.querySelectorAll('[data-radix-select-trigger]').forEach(el => {
         (el as HTMLElement).style.pointerEvents = '';
       });
     };
   }, [dropdownContext]);
-
   const handleClose = useCallback((newOpen: boolean) => {
     if (!newOpen) {
       // Force close all dropdowns before closing modal
       setOpenDropdowns({});
       dropdownContext?.setHasOpenDropdown(false);
-      
+
       // Cleanup portal elements immediately
       setTimeout(() => {
         document.querySelectorAll('[data-radix-select-content]').forEach(el => {
@@ -128,7 +120,6 @@ export default function LeadFormModal({
           }
         });
       }, 50);
-      
       if (!isSubmitting) {
         setFormData(getInitialFormData());
         setErrors({});
@@ -136,37 +127,28 @@ export default function LeadFormModal({
     }
     onOpenChange(newOpen);
   }, [onOpenChange, getInitialFormData, isSubmitting, dropdownContext]);
-
   const validateForm = useCallback((): boolean => {
     const newErrors: Record<string, string> = {};
-
     if (!formData.nome.trim()) {
       newErrors.nome = 'Nome é obrigatório';
     }
-
     if (!formData.email.trim()) {
       newErrors.email = 'Email é obrigatório';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = 'Email inválido';
     }
-
     if (!formData.telefone.trim()) {
       newErrors.telefone = 'Telefone é obrigatório';
     }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }, [formData]);
-
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
     if (isSubmitting) return;
     if (!validateForm()) return;
-
     setIsSubmitting(true);
-
     try {
       const leadData = {
         nome: formData.nome.trim(),
@@ -179,12 +161,9 @@ export default function LeadFormModal({
         interacoes: [],
         whatsapp: formData.telefone.trim()
       };
-      
       console.log('📝 [LeadFormModal] Enviando dados do lead:', leadData);
       console.log('📋 [LeadFormModal] Form data original:', formData);
-      
       await onSubmit(leadData);
-
       handleClose(false);
     } catch (error) {
       console.error('❌ [LeadFormModal] Erro ao salvar lead:', error);
@@ -192,19 +171,19 @@ export default function LeadFormModal({
       setIsSubmitting(false);
     }
   }, [formData, validateForm, onSubmit, handleClose, isSubmitting]);
-
   const handleAssociateClient = useCallback((clienteId: string) => {
     if (!clienteId) {
-      setFormData(prev => ({ ...prev, clienteId: '' }));
+      setFormData(prev => ({
+        ...prev,
+        clienteId: ''
+      }));
       return;
     }
-
     const cliente = clientes.find(c => c.id === clienteId);
     if (!cliente) return;
 
     // Smart origin lookup
     let origemEncontrada = '';
-    
     if (cliente.origem) {
       // Try finding by name first
       const origemPorNome = origens.find(o => o.nome === cliente.origem);
@@ -221,8 +200,6 @@ export default function LeadFormModal({
         }
       }
     }
-    
-    
     setFormData(prev => ({
       ...prev,
       clienteId,
@@ -232,12 +209,17 @@ export default function LeadFormModal({
       origem: origemEncontrada
     }));
   }, [clientes, origens]);
-
   const handleInputChange = useCallback((field: keyof FormData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
     // Clear error when user starts typing
     if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
+      setErrors(prev => ({
+        ...prev,
+        [field]: ''
+      }));
     }
   }, [errors]);
 
@@ -247,20 +229,17 @@ export default function LeadFormModal({
       ...prev,
       [selectType]: open
     }));
-    dropdownContext?.setHasOpenDropdown(Object.values({...openDropdowns, [selectType]: open}).some(Boolean));
+    dropdownContext?.setHasOpenDropdown(Object.values({
+      ...openDropdowns,
+      [selectType]: open
+    }).some(Boolean));
   }, [dropdownContext, openDropdowns]);
-
-
-  return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent 
-        className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto scrollbar-elegant"
-        onPointerDownOutside={(e) => {
-          if (isSubmitting) {
-            e.preventDefault();
-          }
-        }}
-      >
+  return <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto scrollbar-elegant" onPointerDownOutside={e => {
+      if (isSubmitting) {
+        e.preventDefault();
+      }
+    }}>
         <DialogHeader>
           <DialogTitle>
             {mode === 'create' ? 'Novo Lead' : 'Editar Lead'}
@@ -274,20 +253,14 @@ export default function LeadFormModal({
           {/* Cliente Existente */}
           <div className="space-y-2">
             <Label>Cliente Existente (Opcional)</Label>
-            <Select 
-              value={formData.clienteId} 
-              onValueChange={handleAssociateClient}
-              onOpenChange={(open) => handleSelectOpenChange(open, 'cliente')}
-            >
+            <Select value={formData.clienteId} onValueChange={handleAssociateClient} onOpenChange={open => handleSelectOpenChange(open, 'cliente')}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Selecionar cliente existente" />
               </SelectTrigger>
               <SelectContent className="max-h-[200px]">
-                {clientes.map(cliente => (
-                  <SelectItem key={cliente.id} value={cliente.id}>
+                {clientes.map(cliente => <SelectItem key={cliente.id} value={cliente.id}>
                     {cliente.nome} - {cliente.email}
-                  </SelectItem>
-                ))}
+                  </SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -295,41 +268,21 @@ export default function LeadFormModal({
           {/* Nome */}
           <div className="space-y-2">
             <Label htmlFor="nome">Nome *</Label>
-            <Input
-              id="nome"
-              value={formData.nome}
-              onChange={(e) => handleInputChange('nome', e.target.value)}
-              className={errors.nome ? 'border-destructive' : ''}
-              disabled={isSubmitting}
-            />
+            <Input id="nome" value={formData.nome} onChange={e => handleInputChange('nome', e.target.value)} className={errors.nome ? 'border-destructive' : ''} disabled={isSubmitting} />
             {errors.nome && <p className="text-sm text-destructive">{errors.nome}</p>}
           </div>
 
           {/* Email */}
           <div className="space-y-2">
             <Label htmlFor="email">Email *</Label>
-            <Input
-              id="email"
-              type="email"
-              value={formData.email}
-              onChange={(e) => handleInputChange('email', e.target.value)}
-              className={errors.email ? 'border-destructive' : ''}
-              disabled={isSubmitting}
-            />
+            <Input id="email" type="email" value={formData.email} onChange={e => handleInputChange('email', e.target.value)} className={errors.email ? 'border-destructive' : ''} disabled={isSubmitting} />
             {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
           </div>
 
           {/* Telefone */}
           <div className="space-y-2">
             <Label htmlFor="telefone">Telefone *</Label>
-            <Input
-              id="telefone"
-              value={formData.telefone}
-              onChange={(e) => handleInputChange('telefone', e.target.value)}
-              className={errors.telefone ? 'border-destructive' : ''}
-              placeholder="(11) 99999-9999"
-              disabled={isSubmitting}
-            />
+            <Input id="telefone" value={formData.telefone} onChange={e => handleInputChange('telefone', e.target.value)} className={errors.telefone ? 'border-destructive' : ''} placeholder="(11) 99999-9999" disabled={isSubmitting} />
             {errors.telefone && <p className="text-sm text-destructive">{errors.telefone}</p>}
           </div>
 
@@ -337,81 +290,51 @@ export default function LeadFormModal({
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-2">
               <Label>Origem</Label>
-              <Select 
-                value={formData.origem} 
-                onValueChange={(value) => handleInputChange('origem', value)}
-                onOpenChange={(open) => handleSelectOpenChange(open, 'origem')}
-              >
+              <Select value={formData.origem} onValueChange={value => handleInputChange('origem', value)} onOpenChange={open => handleSelectOpenChange(open, 'origem')}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Selecionar origem" />
                 </SelectTrigger>
                 <SelectContent className="max-h-[200px]">
-                  {origens.map(origem => (
-                    <SelectItem key={origem.id} value={origem.nome}>
+                  {origens.map(origem => <SelectItem key={origem.id} value={origem.nome}>
                       <div className="flex items-center gap-2">
-                        {origem.cor && (
-                          <div 
-                            className="w-3 h-3 rounded-full"
-                            style={{ backgroundColor: origem.cor }}
-                          />
-                        )}
+                        {origem.cor && <div className="w-3 h-3 rounded-full" style={{
+                      backgroundColor: origem.cor
+                    }} />}
                         {origem.nome}
                       </div>
-                    </SelectItem>
-                  ))}
+                    </SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
               <Label>Status</Label>
-              <Select 
-                value={formData.status} 
-                onValueChange={(value) => handleInputChange('status', value)}
-                onOpenChange={(open) => handleSelectOpenChange(open, 'status')}
-              >
+              <Select value={formData.status} onValueChange={value => handleInputChange('status', value)} onOpenChange={open => handleSelectOpenChange(open, 'status')}>
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="max-h-[200px]">
-                  {statuses.map(status => (
-                    <SelectItem key={status.id} value={status.key}>
+                  {statuses.map(status => <SelectItem key={status.id} value={status.key}>
                       {status.name}
-                    </SelectItem>
-                  ))}
+                    </SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
           </div>
 
           {/* Observações */}
-          <div className="space-y-2">
-            <Label htmlFor="observacoes">Observações</Label>
-            <Textarea
-              id="observacoes"
-              value={formData.observacoes}
-              onChange={(e) => handleInputChange('observacoes', e.target.value)}
-              rows={3}
-              disabled={isSubmitting}
-            />
-          </div>
+          
 
           {/* Botões */}
           <div className="flex justify-end gap-2 pt-4">
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={() => handleClose(false)}
-              disabled={isSubmitting}
-            >
+            <Button type="button" variant="outline" onClick={() => handleClose(false)} disabled={isSubmitting}>
               Cancelar
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Salvando...' : (mode === 'create' ? 'Criar Lead' : 'Salvar Alterações')}
+              {isSubmitting ? 'Salvando...' : mode === 'create' ? 'Criar Lead' : 'Salvar Alterações'}
             </Button>
           </div>
         </form>
       </DialogContent>
-    </Dialog>
-  );
+    </Dialog>;
 }
