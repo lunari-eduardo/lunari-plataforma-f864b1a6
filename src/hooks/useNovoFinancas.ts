@@ -210,11 +210,7 @@ export function useNovoFinancas() {
     }
   };
 
-  // DEPRECATED: Manter para compatibilidade com código antigo
-  const createBlueprintEngine = (input: CreateBlueprintInput) => {
-    console.warn('createBlueprintEngine está depreciado. Use createRecurringTransactionsEngine');
-    return createRecurringTransactionsEngine(input);
-  };
+  // Função de compatibilidade removida - usar createRecurringTransactionsEngine ou createTransactionEngine
   
   const createTransactionEngine = (input: CreateTransactionInput) => {
     console.log('createTransactionEngine chamado com dados:', input);
@@ -328,72 +324,7 @@ export function useNovoFinancas() {
     return () => clearInterval(interval);
   }, []);
   
-  // ============= MIGRAÇÃO PARA NOVA ARQUITETURA (EXECUTADO UMA VEZ) =============
-  
-  useEffect(() => {
-    const migracaoNovaArquitetura = localStorage.getItem('recurring_to_individual_migration_completed');
-    
-    if (!migracaoNovaArquitetura) {
-      console.log('Executando migração para nova arquitetura de transações individuais...');
-      
-      try {
-        // 1. Migrar blueprints existentes para transações individuais
-        const blueprints = RecurringBlueprintEngine.loadBlueprints();
-        const transacoesExistentes = RecurringBlueprintEngine.loadTransactions();
-        
-        blueprints.forEach(blueprint => {
-          console.log(`Migrando blueprint ${blueprint.id} para transações individuais`);
-          
-          // Criar transações para os meses restantes do ano
-          const [anoAtual] = getCurrentDateString().split('-').map(Number);
-          
-          for (let mes = 1; mes <= 12; mes++) {
-            const dataVencimento = RecurringBlueprintEngine['calculateDateForMonth'](blueprint, anoAtual, mes);
-            
-            // Verificar se já existe transação para este mês
-            const jaExiste = transacoesExistentes.some(t => 
-              t.itemId === blueprint.itemId && t.dataVencimento === dataVencimento
-            );
-            
-            if (!jaExiste) {
-              const novaTransacao: NovaTransacao = {
-                id: `migrated_${blueprint.id}_${mes}_${Math.random().toString(36).substr(2, 9)}`,
-                itemId: blueprint.itemId,
-                valor: blueprint.valor || 0,
-                dataVencimento,
-                status: RecurringBlueprintEngine['determineStatus'](dataVencimento) as any,
-                observacoes: blueprint.observacoes || (blueprint.isValorFixo ? 'Valor Fixo' : 'Valor Variável'),
-                userId: 'user1',
-                criadoEm: getCurrentDateString()
-              };
-              
-              RecurringBlueprintEngine.saveTransaction(novaTransacao as any);
-            }
-          }
-        });
-        
-        // 2. Limpar duplicações existentes
-        RecurringBlueprintEngine.cleanDuplicatedTransactions();
-        
-        // 3. Remover blueprints antigos (não são mais necessários)
-        localStorage.removeItem(BLUEPRINT_STORAGE_KEYS.BLUEPRINTS);
-        
-        // 4. Marcar migração como concluída
-        localStorage.setItem('recurring_to_individual_migration_completed', 'true');
-        
-        // 5. Recarregar dados após migração
-        setTransacoes(RecurringBlueprintEngine.loadTransactions());
-        setBlueprintsRecorrentes([]); // Não usar mais blueprints
-        
-        console.log('Migração para nova arquitetura concluída com sucesso');
-        
-      } catch (error) {
-        console.error('Erro durante migração:', error);
-        // Em caso de erro, apenas marcar como concluída para não tentar novamente
-        localStorage.setItem('recurring_to_individual_migration_completed', 'true');
-      }
-    }
-  }, []);
+  // Migração para nova arquitetura já foi executada e removida para otimização
 
   // ============= PROCESSAMENTO DE DADOS PARA EXIBIÇÃO =============
   

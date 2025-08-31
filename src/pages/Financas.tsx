@@ -1,12 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useNovoFinancas } from '@/hooks/useNovoFinancas';
 import DashboardFinanceiro from '@/components/financas/DashboardFinanceiro';
-import IndicadoresFinanceiros from '@/components/financas/IndicadoresFinanceiros';
-import TabelaTransacoesInline from '@/components/financas/TabelaTransacoesInline';
-import GerenciarCategorias from '@/components/financas/GerenciarCategorias';
 import { ChevronLeft, ChevronRight, Receipt, CreditCard, PiggyBank, Filter } from 'lucide-react';
 import { formatCurrency } from '@/utils/financialUtils';
 const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
@@ -26,44 +23,43 @@ export default function Financas() {
   } = useNovoFinancas();
   const [activeTab, setActiveTab] = useState('resumo');
   const [activeSubTab, setActiveSubTab] = useState('fixas');
-  const navegarMes = (direcao: 'anterior' | 'proximo') => {
+  const navegarMes = useCallback((direcao: 'anterior' | 'proximo') => {
     const novoMes = direcao === 'anterior' ? filtroMesAno.mes - 1 : filtroMesAno.mes + 1;
     if (novoMes < 1) {
-      setFiltroMesAno({
-        ...filtroMesAno,
+      setFiltroMesAno(prev => ({
+        ...prev,
         mes: 12,
-        ano: filtroMesAno.ano - 1
-      });
+        ano: prev.ano - 1
+      }));
     } else if (novoMes > 12) {
-      setFiltroMesAno({
-        ...filtroMesAno,
+      setFiltroMesAno(prev => ({
+        ...prev,
         mes: 1,
-        ano: filtroMesAno.ano + 1
-      });
+        ano: prev.ano + 1
+      }));
     } else {
-      setFiltroMesAno({
-        ...filtroMesAno,
+      setFiltroMesAno(prev => ({
+        ...prev,
         mes: novoMes
-      });
+      }));
     }
-  };
-  const mapearTipoParaGrupo = (tipo: string) => {
+  }, [filtroMesAno.mes, filtroMesAno.ano]);
+  const mapearTipoParaGrupo = useCallback((tipo: string) => {
     switch (tipo) {
       case 'fixas': return 'Despesa Fixa';
       case 'variaveis': return 'Despesa Variável';
       case 'receitas': return 'Receita Não Operacional';
       default: return 'Despesa Variável';
     }
-  };
+  }, []);
   
-  const getMetricasAtivas = () => {
+  const metricas = useMemo(() => {
     if (activeTab !== 'despesas-receitas') return null;
     const grupo = mapearTipoParaGrupo(activeSubTab) as any;
     return calcularMetricasPorGrupo(grupo);
-  };
-  const metricas = getMetricasAtivas();
-  const getInfoPorTipo = (tipo: string) => {
-    switch (tipo) {
+  }, [activeTab, activeSubTab, mapearTipoParaGrupo, calcularMetricasPorGrupo]);
+  const infoTipo = useMemo(() => {
+    switch (activeSubTab) {
       case 'fixas':
         return {
           cor: 'red',
@@ -89,8 +85,7 @@ export default function Financas() {
           titulo: 'Geral'
         };
     }
-  };
-  const infoTipo = getInfoPorTipo(activeSubTab);
+  }, [activeSubTab]);
   return <div className="min-h-screen bg-gradient-to-br from-background to-card">
       <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 p-2 sm:p-4 lg:p-6 space-y-4 sm:space-y-6 bg-lunar-bg py-0 my-[3px]">
         {/* Header Simplificado */}

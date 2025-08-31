@@ -2,10 +2,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/utils/financialUtils';
-import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { useDashboardFinanceiro } from '@/hooks/useDashboardFinanceiro';
+import { useResponsiveFinancas } from '@/hooks/useResponsiveFinancas';
 import { Trash2, DollarSign, Calendar, HandCoins, ArrowDown, TrendingUp, Landmark } from 'lucide-react';
 import { toast } from 'sonner';
+import { lazy, Suspense, memo } from 'react';
+import { ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+
+// Lazy loading para gráficos pesados
+const GraficosFinanceiros = lazy(() => import('@/components/financas/GraficosFinanceiros'));
 
 // Paleta para gráficos de barras/linhas (apenas cor principal)
 const BAR_LINE_COLORS = ['hsl(var(--chart-primary))'];
@@ -23,7 +28,7 @@ const PIE_COLORS = [
   'hsl(var(--chart-9))',
   'hsl(var(--chart-10))'
 ];
-export default function DashboardFinanceiro() {
+const DashboardFinanceiro = memo(function DashboardFinanceiro() {
   const {
     anoSelecionado,
     setAnoSelecionado,
@@ -43,6 +48,8 @@ export default function DashboardFinanceiro() {
     getNomeMes,
     excluirMetaAnual
   } = useDashboardFinanceiro();
+  
+  const { classesGrid, classesCarta, isMobile } = useResponsiveFinancas();
   const handleExcluirMeta = () => {
     excluirMetaAnual();
     toast.success(`Meta anual para ${anoSelecionado} foi excluída`);
@@ -369,204 +376,17 @@ export default function DashboardFinanceiro() {
           </div>
         </section>
 
-        {/* Gráfico Principal - Receita vs Lucro */}
-        <section aria-label="Gráfico Principal" className="animate-fade-in">
-          <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold flex items-center gap-2 text-foreground">
-                <div className="w-3 h-3 rounded-full bg-chart-primary"></div>
-                RECEITA
-                <div className="w-3 h-3 rounded-full ml-4 bg-muted"></div>
-                LUCRO
-              </CardTitle>
-            </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={350}>
-              <BarChart data={dadosMensais} margin={{
-                top: 20,
-                right: 30,
-                left: 20,
-                bottom: 20
-              }} barCategoryGap="20%">
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.6} />
-                <XAxis dataKey="mes" tick={{
-                  fontSize: 12,
-                  fill: 'hsl(var(--foreground))',
-                  fontWeight: 500
-                }} tickLine={{
-                  stroke: 'hsl(var(--border))'
-                }} axisLine={{
-                  stroke: 'hsl(var(--border))'
-                }} />
-                <YAxis domain={[0, 'dataMax']} tick={{
-                  fontSize: 12,
-                  fill: 'hsl(var(--foreground))',
-                  fontWeight: 500
-                }} tickLine={{
-                  stroke: 'hsl(var(--border))'
-                }} axisLine={{
-                  stroke: 'hsl(var(--border))'
-                }} tickFormatter={value => `R$ ${Number(value).toLocaleString('pt-BR', {
-                  minimumFractionDigits: 0,
-                  maximumFractionDigits: 0
-                })}`} />
-                <Tooltip formatter={(value: number, name: string, props: any) => {
-                  // Force correct labels based on dataKey
-                  const label = props.dataKey === 'lucro' ? 'Lucro' : props.dataKey === 'receita' ? 'Receita' : name;
-                  return [formatCurrency(value), label];
-                }} labelStyle={{
-                  color: 'hsl(var(--foreground))',
-                  fontSize: '12px',
-                  fontWeight: 500
-                }} contentStyle={{
-                  backgroundColor: 'hsl(var(--card))',
-                  border: '1px solid hsl(var(--border))',
-                  borderRadius: '12px',
-                  fontSize: '12px',
-                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
-                  transition: 'all 0.2s ease'
-                }} cursor={{
-                  fill: 'hsl(var(--primary) / 0.1)'
-                }} />
-                <Legend wrapperStyle={{
-                  fontSize: '12px',
-                  color: 'hsl(var(--muted-foreground))',
-                  fontWeight: 500
-                }} />
-                <Bar dataKey="receita" fill="hsl(var(--chart-primary))" name="Receita" radius={[6, 6, 0, 0]} opacity={0.9} />
-                <Bar dataKey="lucro" fill="hsl(var(--muted))" name="Lucro" radius={[6, 6, 0, 0]} opacity={0.9} />
-              </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </section>
-
-        {/* Fluxo de Caixa - Gráfico de Área */}
-        <section aria-label="Fluxo de Caixa" className="animate-fade-in">
-          <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold text-foreground">FLUXO DE CAIXA</CardTitle>
-              <p className="text-sm text-lunar-textSecondary">Análise mensal do ano selecionado</p>
-            </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={280}>
-              <AreaChart data={dadosMensais} margin={{
-                top: 20,
-                right: 30,
-                left: 20,
-                bottom: 20
-              }}>
-                <defs>
-                  <linearGradient id="colorArea" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(var(--chart-primary))" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="hsl(var(--chart-primary))" stopOpacity={0.05} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} />
-                <XAxis dataKey="mes" tick={{
-                  fontSize: 11,
-                  fill: 'hsl(var(--foreground))',
-                  fontWeight: 500
-                }} tickLine={{
-                  stroke: 'hsl(var(--border))'
-                }} axisLine={{
-                  stroke: 'hsl(var(--border))'
-                }} />
-                <YAxis tick={{
-                  fontSize: 11,
-                  fill: 'hsl(var(--foreground))',
-                  fontWeight: 500
-                }} tickLine={{
-                  stroke: 'hsl(var(--border))'
-                }} axisLine={{
-                  stroke: 'hsl(var(--border))'
-                }} tickFormatter={value => `${Number(value).toLocaleString('pt-BR', {
-                  minimumFractionDigits: 0,
-                  maximumFractionDigits: 0
-                })}`} />
-                <Tooltip formatter={(value: number) => formatCurrency(value)} labelStyle={{
-                  color: 'hsl(var(--foreground))',
-                  fontSize: '12px',
-                  fontWeight: 500
-                }} contentStyle={{
-                  backgroundColor: 'hsl(var(--card))',
-                  border: '1px solid hsl(var(--border))',
-                  borderRadius: '12px',
-                  fontSize: '12px',
-                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
-                }} />
-                <Area type="monotone" dataKey="receita" stroke="hsl(var(--chart-primary))" fillOpacity={1} fill="url(#colorArea)" strokeWidth={3} />
-              </AreaChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </section>
-
-        {/* Despesas por Categoria */}
-        <section aria-label="Despesas por Categoria" className="animate-fade-in">
-          <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold text-center text-foreground">DESPESAS POR CATEGORIA</CardTitle>
-            </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={400}>
-              <PieChart>
-                <Pie data={composicaoDespesas} cx="50%" cy="50%" innerRadius={80} outerRadius={150} dataKey="valor" strokeWidth={3} stroke="hsl(var(--card))">
-                  {composicaoDespesas.map((entry, index) => <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} opacity={0.85} />)}
-                </Pie>
-                <Tooltip formatter={(value: number, name: string, props: any) => [formatCurrency(value), `${props.payload.grupo} (${props.payload.percentual.toFixed(1)}%)`]} labelStyle={{
-                  color: 'hsl(var(--foreground))',
-                  fontSize: '12px',
-                  fontWeight: 500
-                }} contentStyle={{
-                  backgroundColor: 'hsl(var(--card))',
-                  border: '1px solid hsl(var(--border))',
-                  borderRadius: '12px',
-                  fontSize: '12px',
-                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
-                }} />
-                <Legend verticalAlign="bottom" height={36} wrapperStyle={{
-                  fontSize: '12px',
-                  fontWeight: 500
-                }} formatter={(value, entry) => <span style={{
-                  color: entry.color
-                }}>
-                      {value} ({composicaoDespesas.find(item => item.grupo === value)?.percentual.toFixed(1)}%)
-                    </span>} />
-              </PieChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </section>
-
-        {/* ROI Section - Modernizado */}
-        <section aria-label="ROI" className="animate-fade-in">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300">
-              <CardHeader className="text-center">
-                <CardTitle className="text-sm font-medium text-foreground">VALOR INVESTIDO</CardTitle>
-              </CardHeader>
-              <CardContent className="text-center">
-                <div className="text-3xl font-bold text-primary">
-                  {formatCurrency(roiData.totalInvestimento)}
-                </div>
-                <div className="text-xs text-lunar-textSecondary mt-1">Total investido no período</div>
-              </CardContent>
-            </Card>
-
-            <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300">
-              <CardHeader className="text-center">
-                <CardTitle className="text-sm font-medium text-foreground">RETORNO SOBRE INVESTIMENTO</CardTitle>
-              </CardHeader>
-              <CardContent className="text-center">
-                <div className="text-4xl font-bold text-chart-primary">
-                  {roiData.roi.toFixed(1)}%
-                </div>
-                <div className="text-xs text-lunar-textSecondary mt-1">ROI calculado</div>
-              </CardContent>
-            </Card>
-          </div>
-        </section>
+        {/* Gráficos com Lazy Loading */}
+        <Suspense fallback={<div className="flex justify-center py-8">Carregando gráficos...</div>}>
+          <GraficosFinanceiros 
+            dadosMensais={dadosMensais}
+            composicaoDespesas={composicaoDespesas}
+            evolucaoCategoria={evolucaoCategoria[categoriaSelecionada] || []}
+            categoriaSelecionada={categoriaSelecionada}
+          />
+        </Suspense>
       </div>
-    </div>;
-}
+    </div>
+});
+
+export default DashboardFinanceiro;

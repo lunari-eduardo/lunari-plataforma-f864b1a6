@@ -78,23 +78,26 @@ export function useDashboardFinanceiro() {
   // Usar cache de métricas do workflow ao invés de recalcular
   const { getMonthlyMetrics, getAnnualMetrics, getAvailableYears } = useWorkflowMetrics();
 
-  // Carregar transações financeiras do localStorage
+  // Otimizar carregamento de dados com cache
   const { itensFinanceiros } = useNovoFinancas();
+  
   const transacoesFinanceiras = useMemo(() => {
     return FinancialEngine.loadTransactions();
   }, []);
 
-  // Criar mapeamento de transações com dados dos itens financeiros
+  // Criar Maps para lookup O(1) ao invés de find() O(n)
+  const itensMap = useMemo(() => {
+    return new Map(itensFinanceiros.map(item => [item.id, item]));
+  }, [itensFinanceiros]);
+
+  // Memoizar transações com itens usando Map otimizada
   const transacoesComItens = useMemo(() => {
-    return transacoesFinanceiras.map(transacao => {
-      const item = itensFinanceiros.find(item => item.id === transacao.itemId);
-      return {
-        ...transacao,
-        valor: parseMonetaryValue(transacao.valor),
-        item: item || null
-      };
-    });
-  }, [transacoesFinanceiras, itensFinanceiros]);
+    return transacoesFinanceiras.map(transacao => ({
+      ...transacao,
+      valor: parseMonetaryValue(transacao.valor),
+      item: itensMap.get(transacao.itemId) || null
+    }));
+  }, [transacoesFinanceiras, itensMap]);
 
   // ============= NOVO SISTEMA DE FILTROS =============
 
@@ -124,12 +127,12 @@ export function useDashboardFinanceiro() {
     return Array.from(todosAnos).sort((a, b) => b - a);
   }, [getAvailableYears, transacoesFinanceiras]);
 
-  // Estados dos filtros
+  // Estados dos filtros com memoização
   const [anoSelecionado, setAnoSelecionado] = useState(() => {
     return anosDisponiveis[0]?.toString() || new Date().getFullYear().toString();
   });
 
-  const [mesSelecionado, setMesSelecionado] = useState<string>('ano-completo'); // 'ano-completo' = Ano Completo
+  const [mesSelecionado, setMesSelecionado] = useState<string>('ano-completo');
 
   // ============= FILTROS POR PERÍODO =============
 
