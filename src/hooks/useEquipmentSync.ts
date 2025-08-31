@@ -7,6 +7,7 @@ export interface EquipmentCandidate {
   valor: number;
   data: string;
   observacoes?: string;
+  allTransactionIds: string[];
 }
 
 // Eventos customizados para comunicação entre sistemas
@@ -27,7 +28,7 @@ export function useEquipmentSync() {
         if (novosEquipamentos.length > 0) {
           console.log(`🔧 [EquipmentSync] ${novosEquipamentos.length} equipamentos detectados`);
           
-          novosEquipamentos.forEach(({ transacao, valor, data, observacoes }) => {
+          novosEquipamentos.forEach(({ transacao, valor, data, observacoes, allTransactionIds }) => {
             const nomeEquipamento = observacoes?.trim() || `Equipamento R$ ${valor.toFixed(2)}`;
             
             // Emitir evento para notificação manual (sem auto-criar)
@@ -36,7 +37,8 @@ export function useEquipmentSync() {
               nome: nomeEquipamento,
               valor,
               data,
-              observacoes
+              observacoes,
+              allTransactionIds
             };
 
             const event = new CustomEvent(EQUIPMENT_SYNC_EVENT, {

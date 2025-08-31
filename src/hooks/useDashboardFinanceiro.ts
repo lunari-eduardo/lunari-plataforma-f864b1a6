@@ -6,6 +6,8 @@ import { useWorkflowMetrics } from '@/hooks/useWorkflowMetrics';
 import { getCurrentDateString, parseDateFromStorage } from '@/utils/dateUtils';
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
 import { GoalsIntegrationService } from '@/services/GoalsIntegrationService';
+import { pricingFinancialIntegrationService } from '@/services/PricingFinancialIntegrationService';
+import { EQUIPMENT_SYNC_EVENT, EQUIPMENT_FORCE_SCAN_EVENT } from '@/hooks/useEquipmentSync';
 
 // Interfaces específicas para o Dashboard
 interface KPIsData {
@@ -55,6 +57,54 @@ interface HistoricalGoal {
 }
 
 export function useDashboardFinanceiro() {
+  // Estados para modal de equipamentos
+  const [equipmentModalOpen, setEquipmentModalOpen] = useState(false);
+  const [equipmentData, setEquipmentData] = useState<{
+    nome: string;
+    valor: number;
+    data: string;
+    allTransactionIds: string[];
+  } | null>(null);
+
+  // Listener para equipamentos detectados
+  useEffect(() => {
+    const handleEquipmentDetected = (event: CustomEvent) => {
+      const candidate = event.detail;
+      console.log('🔧 [Dashboard] Equipamento detectado:', candidate);
+      
+      setEquipmentData({
+        nome: candidate.observacoes || candidate.nome,
+        valor: candidate.valor,
+        data: candidate.data,
+        allTransactionIds: candidate.allTransactionIds || [candidate.transacaoId]
+      });
+      setEquipmentModalOpen(true);
+    };
+
+    window.addEventListener(EQUIPMENT_SYNC_EVENT, handleEquipmentDetected as EventListener);
+    
+    return () => {
+      window.removeEventListener(EQUIPMENT_SYNC_EVENT, handleEquipmentDetected as EventListener);
+    };
+  }, []);
+
+  const handleEquipmentModalClose = useCallback(() => {
+    if (equipmentData?.allTransactionIds) {
+      // Marcar transações como processadas quando modal é fechado
+      pricingFinancialIntegrationService.markEquipmentTransactionsAsProcessed(
+        equipmentData.allTransactionIds
+      );
+    }
+    setEquipmentModalOpen(false);
+    setEquipmentData(null);
+  }, [equipmentData]);
+
+  // Force scan após criação de nova transação
+  const triggerEquipmentScan = useCallback(() => {
+    const event = new CustomEvent(EQUIPMENT_FORCE_SCAN_EVENT);
+    window.dispatchEvent(event);
+  }, []);
+
   // ============= FUNÇÕES DE TRANSFORMAÇÃO DE DADOS =============
   
   // Função para converter valores monetários formatados para números
@@ -596,21 +646,6 @@ export function useDashboardFinanceiro() {
     storage.save(STORAGE_KEYS.HISTORICAL_GOALS, novasMetasHistoricas);
   }, [anoSelecionado]);
 
-  // ============= DEBUG (OTIMIZADO) =============
-  
-  // ✅ CORREÇÃO: Remover useEffect de debug que causava loop infinito
-  // useEffect(() => {
-  //   console.log('🔍 Dashboard Debug (REFATORADO):', {
-  //     anoSelecionado,
-  //     mesSelecionado,
-  //     anosDisponiveis,
-  //     workflowItemsFiltrados: workflowItemsFiltrados.length,
-  //     transacoesFiltradas: transacoesFiltradas.length,
-  //     kpisData,
-  //     metasData
-  //   });
-  // }, [anoSelecionado, mesSelecionado, anosDisponiveis, workflowItemsFiltrados, transacoesFiltradas, kpisData, metasData]);
-
   // ============= RETORNO DO HOOK =============
   
   return {
@@ -638,8 +673,14 @@ export function useDashboardFinanceiro() {
     getNomeMes,
     getNomeMesCurto,
     excluirMetaAnual,
+    triggerEquipmentScan,
     
     // Dados filtrados
-    transacoesFiltradas
+    transacoesFiltradas,
+    
+    // Estados do modal de equipamentos
+    equipmentModalOpen,
+    equipmentData,
+    handleEquipmentModalClose
   };
 }

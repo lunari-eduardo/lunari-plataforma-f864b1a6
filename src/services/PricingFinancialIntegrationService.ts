@@ -443,14 +443,14 @@ class PricingFinancialIntegrationService {
 
   /**
    * Detecta novas transações de equipamentos que ainda não foram processadas
-   * Inteligente para parcelamentos: agrupa e considera apenas primeira parcela com valor total
+   * Inteligente para parcelamentos: agrupa e considera valor total consolidado
    */
   detectNewEquipmentTransactions(): {
     transacao: any;
-    item: ItemFinanceiro;
     valor: number;
     data: string;
     observacoes?: string;
+    allTransactionIds: string[];
   }[] {
     // Garantir que o item "Equipamentos" existe antes de detectar
     this.ensureEquipamentosItemExists();
@@ -497,21 +497,66 @@ class PricingFinancialIntegrationService {
 
     console.log('🔧 [DetectEquipment] Transações de equipamentos candidatas:', transacoesEquipamentos.length);
 
-    // INTELIGÊNCIA PARA PARCELAMENTOS: Agrupar por lançamentoPaiId
-    const equipamentosInteligentes = this.groupInstallmentTransactions(transacoesEquipamentos, equipamentosExistentes);
+    // INTELIGÊNCIA PARA PARCELAMENTOS: Agrupar por observações similares ou IDs relacionados
+    const gruposEquipamentos = new Map<string, any[]>();
     
-    console.log('🔧 [DetectEquipment] Equipamentos inteligentes após agrupamento:', equipamentosInteligentes.length);
-    
-    const resultado = equipamentosInteligentes.map((transacao: any) => ({
-      transacao,
-      item: itemEquipamentos!,
-      valor: transacao.valor,
-      data: transacao.dataVencimento,
-      observacoes: transacao.observacoes || ''
-    }));
-    
-    console.log('🔧 [DetectEquipment] Retornando candidatos inteligentes:', resultado.length);
-    return resultado;
+    transacoesEquipamentos.forEach(transacao => {
+      const grupoKey = (transacao.observacoes && transacao.observacoes.trim()) || 
+                      `single_${transacao.id}`;
+      
+      if (!gruposEquipamentos.has(grupoKey)) {
+        gruposEquipamentos.set(grupoKey, []);
+      }
+      gruposEquipamentos.get(grupoKey)!.push(transacao);
+    });
+
+    console.log('🔧 [DetectEquipment] Grupos de equipamentos encontrados:', gruposEquipamentos.size);
+
+    const candidatos: {
+      transacao: any;
+      valor: number;
+      data: string;
+      observacoes?: string;
+      allTransactionIds: string[];
+    }[] = [];
+
+    // Processar cada grupo (consolidando parcelamentos)
+    for (const [grupoKey, transacoesGrupo] of gruposEquipamentos) {
+      // Consolidar dados do grupo
+      const valorTotal = transacoesGrupo.reduce((sum, t) => sum + parseFloat(t.valor || 0), 0);
+      const primeiraTransacao = transacoesGrupo.sort((a, b) => 
+        new Date(a.dataVencimento).getTime() - new Date(b.dataVencimento).getTime()
+      )[0];
+      
+      const observacoes = primeiraTransacao.observacoes?.trim();
+      const nomeEquipamento = observacoes || `Equipamento R$ ${valorTotal.toFixed(2)}`;
+      
+      candidatos.push({
+        transacao: primeiraTransacao,
+        valor: valorTotal,
+        data: primeiraTransacao.dataVencimento,
+        observacoes: nomeEquipamento,
+        allTransactionIds: transacoesGrupo.map(t => t.id)
+      });
+      
+      console.log(`🔧 [DetectEquipment] Grupo processado: ${nomeEquipamento} - R$ ${valorTotal.toFixed(2)} (${transacoesGrupo.length} parcelas)`);
+    }
+
+    return candidatos;
+  }
+
+  /**
+   * Marca transações de equipamentos como processadas para evitar re-notificação
+   */
+  markEquipmentTransactionsAsProcessed(transactionIds: string[]): void {
+    const processedIds = this.getProcessedEquipmentTransactionIds();
+    transactionIds.forEach(id => {
+      if (!processedIds.includes(id)) {
+        processedIds.push(id);
+      }
+    });
+    localStorage.setItem('lunari_processed_equipment_transactions', JSON.stringify(processedIds));
+    console.log('🔧 [MarkProcessed] Marcadas como processadas:', transactionIds.length, 'transações');
   }
 
   /**

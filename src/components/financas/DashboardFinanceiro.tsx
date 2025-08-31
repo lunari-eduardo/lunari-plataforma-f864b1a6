@@ -8,6 +8,7 @@ import { Trash2, DollarSign, Calendar, HandCoins, ArrowDown, TrendingUp, Landmar
 import { toast } from 'sonner';
 import { lazy, Suspense, memo } from 'react';
 import { ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { AddEquipmentFromTransactionModal } from '@/components/equipments/AddEquipmentFromTransactionModal';
 
 // Lazy loading para gráficos pesados
 const GraficosFinanceiros = lazy(() => import('@/components/financas/GraficosFinanceiros'));
@@ -47,7 +48,10 @@ const DashboardFinanceiro = memo(function DashboardFinanceiro() {
     comparisonData,
     categoriasDetalhadas,
     getNomeMes,
-    excluirMetaAnual
+    excluirMetaAnual,
+    equipmentModalOpen,
+    equipmentData,
+    handleEquipmentModalClose
   } = useDashboardFinanceiro();
   
   const { classesGrid, classesCarta, isMobile } = useResponsiveFinancas();
@@ -388,6 +392,19 @@ const DashboardFinanceiro = memo(function DashboardFinanceiro() {
             categoriasDetalhadas={categoriasDetalhadas}
           />
         </Suspense>
+        
+        {/* Modal de equipamento */}
+        {equipmentData && (
+          <AddEquipmentFromTransactionModal
+            isOpen={equipmentModalOpen}
+            onClose={handleEquipmentModalClose}
+            equipmentData={{
+              nome: equipmentData.nome,
+              valor: equipmentData.valor,
+              data: equipmentData.data
+            }}
+          />
+        )}
       </div>
     </div>
 });
