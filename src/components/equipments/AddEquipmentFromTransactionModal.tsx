@@ -13,6 +13,7 @@ interface AddEquipmentFromTransactionModalProps {
     nome: string;
     valor: number;
     data: string;
+    allTransactionIds?: string[];
   };
 }
 
@@ -45,30 +46,24 @@ export function AddEquipmentFromTransactionModal({
     setIsSaving(true);
 
     try {
-      // Carregar dados atuais da precificação
-      const dadosAtuais = EstruturaCustosService.carregar();
-      
-      // Criar novo equipamento
-      const novoEquipamento = {
-        id: Date.now().toString(),
+      // Usar a nova função simplificada do EstruturaCustosService
+      const sucesso = EstruturaCustosService.adicionarEquipamento({
         nome: formData.nome,
         valorPago: parseFloat(formData.valorPago) || 0,
         dataCompra: formData.dataCompra || new Date().toISOString().split('T')[0],
         vidaUtil: parseInt(formData.vidaUtil) || 5
-      };
-
-      // Adicionar à lista existente
-      const equipamentosAtualizados = [...dadosAtuais.equipamentos, novoEquipamento];
-
-      // Salvar de volta
-      const dadosAtualizados = {
-        ...dadosAtuais,
-        equipamentos: equipamentosAtualizados
-      };
-
-      const sucesso = EstruturaCustosService.salvar(dadosAtualizados);
+      });
 
       if (sucesso) {
+        // Marcar transações como processadas se os allTransactionIds existirem
+        if (equipmentData.allTransactionIds && equipmentData.allTransactionIds.length > 0) {
+          const processedIds = JSON.parse(localStorage.getItem('equipment_processed_ids') || '[]');
+          const updatedIds = [...processedIds, ...equipmentData.allTransactionIds];
+          localStorage.setItem('equipment_processed_ids', JSON.stringify(updatedIds));
+        }
+        
+        console.log('🔧 [EquipmentModal] Transações marcadas como processadas:', equipmentData.allTransactionIds || []);
+        
         toast({
           title: "Equipamento adicionado",
           description: "Equipamento foi adicionado com sucesso à precificação."

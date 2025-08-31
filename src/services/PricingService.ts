@@ -112,6 +112,66 @@ export class EstruturaCustosService {
     
     return erros;
   }
+
+  /**
+   * NOVA FUNÇÃO: Adiciona um equipamento diretamente à estrutura existente
+   */
+  static adicionarEquipamento(equipamento: {
+    nome: string;
+    valorPago: number;
+    dataCompra: string;
+    vidaUtil: number;
+  }): boolean {
+    try {
+      console.log('🔧 [EstruturaCustos] Adicionando equipamento:', equipamento);
+      
+      // Carregar dados atuais
+      const dadosAtuais = this.carregar();
+      
+      // Criar novo equipamento
+      const novoEquipamento = {
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        nome: equipamento.nome,
+        valorPago: equipamento.valorPago,
+        dataCompra: equipamento.dataCompra || new Date().toISOString().split('T')[0],
+        vidaUtil: equipamento.vidaUtil || 5
+      };
+      
+      // Adicionar à lista
+      const equipamentosAtualizados = [...dadosAtuais.equipamentos, novoEquipamento];
+      
+      // Recalcular total
+      const totalDepreciacaoMensal = equipamentosAtualizados.reduce((total, eq) => {
+        return total + (eq.valorPago / (eq.vidaUtil * 12));
+      }, 0);
+      
+      const totalGastosPessoais = dadosAtuais.gastosPessoais.reduce((total, item) => total + item.valor, 0);
+      const proLaboreCalculado = totalGastosPessoais * (1 + dadosAtuais.percentualProLabore / 100);
+      const totalCustosEstudio = dadosAtuais.custosEstudio.reduce((total, item) => total + item.valor, 0);
+      const novoTotal = proLaboreCalculado + totalCustosEstudio + totalDepreciacaoMensal;
+      
+      // Salvar dados atualizados
+      const dadosAtualizados = {
+        ...dadosAtuais,
+        equipamentos: equipamentosAtualizados,
+        totalCalculado: novoTotal
+      };
+      
+      const sucesso = this.salvar(dadosAtualizados);
+      
+      if (sucesso) {
+        console.log('✅ [EstruturaCustos] Equipamento adicionado com sucesso');
+        return true;
+      } else {
+        console.error('❌ [EstruturaCustos] Falha ao salvar equipamento');
+        return false;
+      }
+      
+    } catch (error) {
+      console.error('❌ [EstruturaCustos] Erro ao adicionar equipamento:', error);
+      return false;
+    }
+  }
 }
 
 // ============= PADRÃO DE HORAS =============

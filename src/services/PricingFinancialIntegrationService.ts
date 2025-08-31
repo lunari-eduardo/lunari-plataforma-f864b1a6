@@ -235,41 +235,170 @@ class PricingFinancialIntegrationService {
     }
   }
 
-  // ============= SINCRONIZAÇÃO REVERSA (PRECIFICAÇÃO → FINANÇAS) =============
+  // ============= INTEGRAÇÃO DE EQUIPAMENTOS SIMPLIFICADA =============
 
   /**
-   * Busca custos da precificação para sincronizar com finanças
+   * Detecta novas transações de equipamentos de forma simplificada
+   * NOVA VERSÃO: agrupa parcelamentos automaticamente
    */
-  getCustosEstudioFromPricingForSync(): CustoEstudioPrecificacao[] {
-    const dados = storage.load(this.STORAGE_KEYS.PRICING_COSTS, {});
-    return (dados as any).custosEstudio || [];
-  }
-
-  /**
-   * Gera preview da sincronização reversa (Precificação → Finanças)
-   */
-  generateReverseSyncPreview(): {
-    custo: CustoEstudioPrecificacao;
-    itemFinanceiroExistente?: ItemFinanceiro;
-    acao: 'adicionar' | 'atualizar' | 'existe';
+  detectNewEquipmentTransactions(): {
+    transacao: any;
+    valor: number;
+    data: string;
+    observacoes?: string;
+    allTransactionIds: string[];
   }[] {
-    const custosEstudio = this.getCustosEstudioFromPricingForSync();
+    // Garantir que o item "Equipamentos" existe
+    this.ensureEquipamentosItemExists();
+    
+    const transacoes = RecurringBlueprintEngine.loadTransactions();
     const itensFinanceiros = storage.load(this.STORAGE_KEYS.FINANCIAL_ITEMS, []);
+    const processedIds = this.getProcessedEquipmentTransactionIds();
 
-    return custosEstudio.map(custo => {
-      // Buscar se já existe item financeiro correspondente
-      const itemExistente = itensFinanceiros.find((item: ItemFinanceiro) => 
-        item.nome.toLowerCase() === custo.descricao.toLowerCase() && 
-        item.grupo_principal === 'Despesa Fixa'
-      );
+    // Encontrar item "Equipamentos"
+    const itemEquipamentos = itensFinanceiros.find((item: ItemFinanceiro) => 
+      item.nome === 'Equipamentos' && item.grupo_principal === 'Investimento'
+    );
 
-      return {
-        custo,
-        itemFinanceiroExistente: itemExistente,
-        acao: itemExistente ? 'existe' as const : 'adicionar' as const
-      };
+    if (!itemEquipamentos) {
+      console.log('🔧 [DetectEquipment] Item "Equipamentos" não encontrado');
+      return [];
+    }
+
+    // Filtrar transações de equipamentos não processadas
+    const transacoesEquipamentos = transacoes.filter((t: any) => {
+      return t.itemId === itemEquipamentos.id && !processedIds.includes(t.id);
     });
+
+    if (transacoesEquipamentos.length === 0) {
+      return [];
+    }
+    
+    // NOVA LÓGICA: Agrupar por observações/descrições para consolidar parcelamentos
+    const grupos = this.agruparTransacoesPorEquipamento(transacoesEquipamentos);
+    
+    console.log(`🔧 [DetectEquipment] ${grupos.length} equipamentos detectados (${transacoesEquipamentos.length} transações)`);
+    
+    return grupos;
   }
+
+  /**
+   * NOVA FUNÇÃO: Agrupa transações por equipamento (baseado em observações ou proximidade temporal)
+   */
+  private agruparTransacoesPorEquipamento(transacoes: any[]): {
+    transacao: any;
+    valor: number;
+    data: string;
+    observacoes?: string;
+    allTransactionIds: string[];
+  }[] {
+    const grupos = new Map<string, any[]>();
+    
+    transacoes.forEach(transacao => {
+      let chaveGrupo = '';
+      
+      // Se tem observação, usar como chave
+      if (transacao.observacoes?.trim()) {
+        chaveGrupo = transacao.observacoes.trim();
+      } else {
+        // Se não tem observação, agrupar por valor + data próxima (assumindo parcelamento)
+        const dataBase = new Date(transacao.dataVencimento);
+        const mesAno = `${dataBase.getFullYear()}-${String(dataBase.getMonth() + 1).padStart(2, '0')}`;
+        chaveGrupo = `valor_${transacao.valor}_mes_${mesAno}`;
+      }
+      
+      if (!grupos.has(chaveGrupo)) {
+        grupos.set(chaveGrupo, []);
+      }
+      grupos.get(chaveGrupo)!.push(transacao);
+    });
+
+    const resultados: {
+      transacao: any;
+      valor: number;
+      data: string;
+      observacoes?: string;
+      allTransactionIds: string[];
+    }[] = [];
+
+    grupos.forEach((transacoesGrupo) => {
+      // Ordenar por data para usar a primeira como referência
+      transacoesGrupo.sort((a, b) => new Date(a.dataVencimento).getTime() - new Date(b.dataVencimento).getTime());
+      
+      const primeiraTransacao = transacoesGrupo[0];
+      const valorTotal = transacoesGrupo.reduce((sum, t) => sum + t.valor, 0);
+      const allIds = transacoesGrupo.map(t => t.id);
+      
+      // Gerar nome do equipamento
+      let nomeEquipamento = primeiraTransacao.observacoes?.trim();
+      if (!nomeEquipamento) {
+        nomeEquipamento = transacoesGrupo.length > 1 
+          ? `Equipamento R$ ${valorTotal.toFixed(2)} (${transacoesGrupo.length} parcelas)`
+          : `Equipamento R$ ${valorTotal.toFixed(2)}`;
+      }
+      
+      resultados.push({
+        transacao: primeiraTransacao,
+        valor: valorTotal, // VALOR TOTAL CONSOLIDADO
+        data: primeiraTransacao.dataVencimento, // Data da primeira parcela
+        observacoes: nomeEquipamento,
+        allTransactionIds: allIds
+      });
+    });
+
+    return resultados;
+  }
+
+  /**
+   * Marca transações de equipamentos como processadas para evitar re-notificação
+   */
+  markEquipmentTransactionsAsProcessed(transactionIds: string[]): void {
+    const processedIds = this.getProcessedEquipmentTransactionIds();
+    transactionIds.forEach(id => {
+      if (!processedIds.includes(id)) {
+        processedIds.push(id);
+      }
+    });
+    localStorage.setItem('equipment_processed_ids', JSON.stringify(processedIds));
+    console.log('🔧 [MarkProcessed] Marcadas como processadas:', transactionIds.length, 'transações');
+  }
+
+  /**
+   * Obtém IDs de transações de equipamentos já processadas
+   */
+  private getProcessedEquipmentTransactionIds(): string[] {
+    const processedIds = JSON.parse(localStorage.getItem('equipment_processed_ids') || '[]');
+    return processedIds;
+  }
+
+  /**
+   * Garante que o item "Equipamentos" existe no sistema financeiro
+   */
+  private ensureEquipamentosItemExists(): void {
+    const itensFinanceiros = storage.load(this.STORAGE_KEYS.FINANCIAL_ITEMS, []);
+    
+    const itemEquipamentos = itensFinanceiros.find((item: ItemFinanceiro) => 
+      item.nome === 'Equipamentos' && item.grupo_principal === 'Investimento'
+    );
+
+    if (!itemEquipamentos) {
+      console.log('🔧 [CreateEquipment] Criando item "Equipamentos" automaticamente');
+      
+      const novoItem: ItemFinanceiro = {
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        nome: 'Equipamentos',
+        grupo_principal: 'Investimento',
+        userId: 'user1',
+        ativo: true,
+        criadoEm: getCurrentDateString()
+      };
+
+      itensFinanceiros.push(novoItem);
+      storage.save(this.STORAGE_KEYS.FINANCIAL_ITEMS, itensFinanceiros);
+    }
+  }
+
+  // ============= UTILITÁRIOS HERDADOS (MANTER COMPATIBILIDADE) =============
 
   /**
    * Executa sincronização reversa (Precificação → Finanças)
@@ -280,7 +409,7 @@ class PricingFinancialIntegrationService {
     errors: string[];
   } {
     try {
-      const custosEstudio = this.getCustosEstudioFromPricingForSync();
+      const custosEstudio = this.getCustosEstudioFromPricing();
       const itensFinanceiros = storage.load(this.STORAGE_KEYS.FINANCIAL_ITEMS, []);
       const errors: string[] = [];
       let created = 0;
@@ -333,64 +462,22 @@ class PricingFinancialIntegrationService {
     }
   }
 
-  // ============= EXPORTAÇÃO PARA O FINANCEIRO =============
-
   /**
-   * Cria itens financeiros baseados nos custos da precificação
+   * Verifica se há integração configurada
    */
-  exportCustosEstudioToFinancial(custos: CustoEstudioPrecificacao[]): {
-    success: boolean;
-    created: number;
-    errors: string[];
-  } {
-    try {
-      const itensFinanceiros = storage.load(this.STORAGE_KEYS.FINANCIAL_ITEMS, []);
-      const errors: string[] = [];
-      let created = 0;
-
-      custos.forEach(custo => {
-        // Verificar se já existe item financeiro correspondente
-        const jaExiste = itensFinanceiros.some((item: ItemFinanceiro) => 
-          item.nome.toLowerCase() === custo.descricao.toLowerCase() && 
-          item.grupo_principal === 'Despesa Fixa'
-        );
-
-        if (!jaExiste) {
-          const novoItem: ItemFinanceiro = {
-            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-            nome: custo.descricao,
-            grupo_principal: 'Despesa Fixa',
-            userId: 'user1',
-            ativo: true,
-            criadoEm: getCurrentDateString()
-          };
-
-          itensFinanceiros.push(novoItem);
-          created++;
-        }
-      });
-
-      if (created > 0) {
-        storage.save(this.STORAGE_KEYS.FINANCIAL_ITEMS, itensFinanceiros);
-      }
-
-      return {
-        success: true,
-        created,
-        errors
-      };
-
-    } catch (error) {
-      console.error('Erro ao exportar para financeiro:', error);
-      return {
-        success: false,
-        created: 0,
-        errors: [error instanceof Error ? error.message : 'Erro desconhecido']
-      };
-    }
+  hasIntegrationSetup(): boolean {
+    const custosEstudio = this.getCustosEstudioFromPricing();
+    return custosEstudio.some(custo => custo.origem === 'financeiro' && custo.itemFinanceiroId);
   }
 
-  // ============= ANÁLISE COMPARATIVA =============
+  /**
+   * Limpa todas as integrações
+   */
+  clearAllIntegrations(): void {
+    const custosEstudio = this.getCustosEstudioFromPricing();
+    const custosLimpos = custosEstudio.filter(custo => custo.origem !== 'financeiro');
+    this.saveCustosEstudioToPricing(custosLimpos);
+  }
 
   /**
    * Compara valores planejados vs gastos reais
@@ -439,427 +526,46 @@ class PricingFinancialIntegrationService {
     };
   }
 
-  // ============= INTEGRAÇÃO DE EQUIPAMENTOS =============
+  // ============= MÉTODOS DE COMPATIBILIDADE =============
 
   /**
-   * Detecta novas transações de equipamentos que ainda não foram processadas
-   * Inteligente para parcelamentos: agrupa e considera valor total consolidado
+   * Alias para compatibilidade
    */
-  detectNewEquipmentTransactions(): {
-    transacao: any;
-    valor: number;
-    data: string;
-    observacoes?: string;
-    allTransactionIds: string[];
+  getCustosEstudioFromPricingForSync(): CustoEstudioPrecificacao[] {
+    return this.getCustosEstudioFromPricing();
+  }
+
+  /**
+   * Gera preview da sincronização reversa (Precificação → Finanças)
+   */
+  generateReverseSyncPreview(): {
+    custo: CustoEstudioPrecificacao;
+    itemFinanceiroExistente?: ItemFinanceiro;
+    acao: 'adicionar' | 'atualizar' | 'existe';
   }[] {
-    // Garantir que o item "Equipamentos" existe antes de detectar
-    this.ensureEquipamentosItemExists();
-    
-    const transacoes = RecurringBlueprintEngine.loadTransactions();
-    const itensFinanceiros = storage.load(this.STORAGE_KEYS.FINANCIAL_ITEMS, []);
-    const equipamentosExistentes = this.getEquipmentFromPricing();
-    const processedIds = this.getProcessedEquipmentTransactionIds();
-
-    console.log('🔧 [DetectEquipment] Total transações:', transacoes.length);
-    console.log('🔧 [DetectEquipment] Equipamentos existentes:', equipamentosExistentes.length);
-    console.log('🔧 [DetectEquipment] Processed IDs:', processedIds);
-
-    // Encontrar item "Equipamentos" no grupo "Investimento"
-    let itemEquipamentos = itensFinanceiros.find((item: ItemFinanceiro) => 
-      item.nome === 'Equipamentos' && item.grupo_principal === 'Investimento'
-    );
-
-    if (!itemEquipamentos) {
-      console.log('🔧 [DetectEquipment] Item "Equipamentos" não encontrado, criando automaticamente...');
-      this.ensureEquipamentosItemExists();
-      
-      // Recarregar itens após criação
-      const itensAtualizados = storage.load(this.STORAGE_KEYS.FINANCIAL_ITEMS, []);
-      itemEquipamentos = itensAtualizados.find((item: ItemFinanceiro) => 
-        item.nome === 'Equipamentos' && item.grupo_principal === 'Investimento'
-      );
-      
-      if (!itemEquipamentos) {
-        console.error('🔧 [DetectEquipment] Falha ao criar/encontrar item "Equipamentos"');
-        return [];
-      }
-    }
-
-    console.log('🔧 [DetectEquipment] Item Equipamentos encontrado - ID:', itemEquipamentos.id, 'Nome:', itemEquipamentos.nome);
-
-    // Filtrar transações de equipamentos não processadas
-    const transacoesEquipamentos = transacoes.filter((t: any) => {
-      const isEquipamento = t.itemId === itemEquipamentos.id;
-      const isNotProcessed = !processedIds.includes(t.id);
-      
-      return isEquipamento && isNotProcessed;
-    });
-
-    console.log('🔧 [DetectEquipment] Transações de equipamentos candidatas:', transacoesEquipamentos.length);
-
-    // INTELIGÊNCIA PARA PARCELAMENTOS: Agrupar por observações similares ou IDs relacionados
-    const gruposEquipamentos = new Map<string, any[]>();
-    
-    transacoesEquipamentos.forEach(transacao => {
-      const grupoKey = (transacao.observacoes && transacao.observacoes.trim()) || 
-                      `single_${transacao.id}`;
-      
-      if (!gruposEquipamentos.has(grupoKey)) {
-        gruposEquipamentos.set(grupoKey, []);
-      }
-      gruposEquipamentos.get(grupoKey)!.push(transacao);
-    });
-
-    console.log('🔧 [DetectEquipment] Grupos de equipamentos encontrados:', gruposEquipamentos.size);
-
-    const candidatos: {
-      transacao: any;
-      valor: number;
-      data: string;
-      observacoes?: string;
-      allTransactionIds: string[];
-    }[] = [];
-
-    // Processar cada grupo (consolidando parcelamentos)
-    for (const [grupoKey, transacoesGrupo] of gruposEquipamentos) {
-      // Consolidar dados do grupo
-      const valorTotal = transacoesGrupo.reduce((sum, t) => sum + parseFloat(t.valor || 0), 0);
-      const primeiraTransacao = transacoesGrupo.sort((a, b) => 
-        new Date(a.dataVencimento).getTime() - new Date(b.dataVencimento).getTime()
-      )[0];
-      
-      const observacoes = primeiraTransacao.observacoes?.trim();
-      const nomeEquipamento = observacoes || `Equipamento R$ ${valorTotal.toFixed(2)}`;
-      
-      candidatos.push({
-        transacao: primeiraTransacao,
-        valor: valorTotal,
-        data: primeiraTransacao.dataVencimento,
-        observacoes: nomeEquipamento,
-        allTransactionIds: transacoesGrupo.map(t => t.id)
-      });
-      
-      console.log(`🔧 [DetectEquipment] Grupo processado: ${nomeEquipamento} - R$ ${valorTotal.toFixed(2)} (${transacoesGrupo.length} parcelas)`);
-    }
-
-    return candidatos;
-  }
-
-  /**
-   * Marca transações de equipamentos como processadas para evitar re-notificação
-   */
-  markEquipmentTransactionsAsProcessed(transactionIds: string[]): void {
-    const processedIds = this.getProcessedEquipmentTransactionIds();
-    transactionIds.forEach(id => {
-      if (!processedIds.includes(id)) {
-        processedIds.push(id);
-      }
-    });
-    localStorage.setItem('lunari_processed_equipment_transactions', JSON.stringify(processedIds));
-    console.log('🔧 [MarkProcessed] Marcadas como processadas:', transactionIds.length, 'transações');
-  }
-
-  /**
-   * Agrupa transações parceladas e retorna apenas uma por equipamento real
-   */
-  private groupInstallmentTransactions(transacoes: any[], equipamentosExistentes: any[]): any[] {
-    // Separar transações únicas e parceladas (compatível com múltiplos formatos)
-    const transacoesUnicas: any[] = [];
-    const gruposParcelados = new Map<string, any[]>();
-
-    const getGrupoId = (t: any): string | null => {
-      if (t.lançamentoPaiId) return t.lançamentoPaiId;
-      if (t.parentId) return t.parentId;
-      if (typeof t.id === 'string') {
-        const match = t.id.match(/^(.*)_([0-9]+)$/); // ex: parcela_123456789_1 ou cartao_123_2
-        if (match) return match[1];
-      }
-      return null;
-    };
-
-    const getNumeroParcela = (t: any): number => {
-      if (t.numeroParcela) return Number(t.numeroParcela);
-      if (t.parcelaInfo?.atual) return Number(t.parcelaInfo.atual);
-      if (typeof t.id === 'string') {
-        const match = t.id.match(/_([0-9]+)$/);
-        if (match) return Number(match[1]);
-      }
-      return 0;
-    };
-
-    transacoes.forEach(t => {
-      const grupoId = getGrupoId(t);
-      const isParcelado = !!(t.lançamentoPaiId || t.parentId || t.parcelaInfo?.total > 1 || (typeof t.id === 'string' && /_([0-9]+)$/.test(t.id)));
-
-      if (isParcelado && grupoId) {
-        if (!gruposParcelados.has(grupoId)) {
-          gruposParcelados.set(grupoId, []);
-        }
-        gruposParcelados.get(grupoId)!.push(t);
-      } else {
-        // Transação única
-        transacoesUnicas.push(t);
-      }
-    });
-
-    console.log('🔧 [GroupInstallments] Transações únicas:', transacoesUnicas.length);
-    console.log('🔧 [GroupInstallments] Grupos parcelados:', gruposParcelados.size);
-
-    const resultado: any[] = [];
-
-    // Adicionar transações únicas diretamente se não já houver equipamento com mesmo valor/data
-    transacoesUnicas.forEach(t => {
-      const jaExiste = equipamentosExistentes.some(eq =>
-        Math.abs(eq.valorPago - t.valor) < 0.01 &&
-        eq.dataCompra === t.dataVencimento
-      );
-      if (!jaExiste) resultado.push(t);
-    });
-
-    // Processar grupos parcelados
-    gruposParcelados.forEach((parcelas, grupoId) => {
-      // Ordenar por número da parcela (fallback por data)
-      parcelas.sort((a, b) => {
-        const pa = getNumeroParcela(a);
-        const pb = getNumeroParcela(b);
-        if (pa !== pb) return pa - pb;
-        return (a.dataVencimento || '').localeCompare(b.dataVencimento || '');
-      });
-
-      const primeiraParcela = parcelas[0];
-      const valorTotal = parcelas.reduce((sum, p) => sum + (Number(p.valor) || 0), 0);
-
-      console.log(`🔧 [GroupInstallments] Grupo ${grupoId}: ${parcelas.length} parcelas, valor total: R$ ${valorTotal.toFixed(2)}`);
-
-      // Evitar duplicidade com equipamentos já salvos
-      const jaExiste = equipamentosExistentes.some(eq =>
-        Math.abs(eq.valorPago - valorTotal) < 0.01 &&
-        eq.dataCompra === primeiraParcela.dataVencimento
-      );
-
-      if (!jaExiste) {
-        const transacaoConsolidada = {
-          ...primeiraParcela,
-          valor: valorTotal, // usar valor integral da compra
-          observacoes: primeiraParcela.observacoes || `Equipamento parcelado (${parcelas.length}x)`,
-          grupoParcelado: {
-            lançamentoPaiId: grupoId,
-            totalParcelas: parcelas.length,
-            parcelaIds: parcelas.map(p => p.id)
-          }
-        };
-        resultado.push(transacaoConsolidada);
-        console.log(`🔧 [GroupInstallments] Adicionado equipamento consolidado: ${transacaoConsolidada.observacoes}`);
-      } else {
-        console.log(`🔧 [GroupInstallments] Equipamento parcelado já existe para grupo ${grupoId}`);
-      }
-    });
-
-    return resultado;
-  }
-
-  /**
-   * Busca equipamentos da precificação
-   */
-  getEquipmentFromPricing(): Array<{
-    id: string;
-    nome: string;
-    valorPago: number;
-    dataCompra: string;
-    vidaUtil: number;
-    transacaoId?: string;
-  }> {
-    const dados = storage.load(this.STORAGE_KEYS.PRICING_COSTS, {});
-    return (dados as any).equipamentos || [];
-  }
-
-  /**
-   * Salva equipamentos na precificação
-   */
-  saveEquipmentToPricing(equipamentos: any[]): void {
-    const dados = storage.load(this.STORAGE_KEYS.PRICING_COSTS, {});
-    const dadosAtualizados = { ...dados, equipamentos };
-    storage.save(this.STORAGE_KEYS.PRICING_COSTS, dadosAtualizados);
-  }
-
-  /**
-   * Obtém IDs de transações de equipamentos já processadas
-   */
-  private getProcessedEquipmentTransactionIds(): string[] {
-    const processedIds = JSON.parse(localStorage.getItem('lunari_processed_equipment_transactions') || '[]');
-    return processedIds;
-  }
-
-  /**
-   * Marca transação de equipamento como processada
-   */
-  private markEquipmentTransactionAsProcessed(transacaoId: string): void {
-    const processedIds = this.getProcessedEquipmentTransactionIds();
-    if (!processedIds.includes(transacaoId)) {
-      processedIds.push(transacaoId);
-      localStorage.setItem('lunari_processed_equipment_transactions', JSON.stringify(processedIds));
-    }
-  }
-
-  /**
-   * Garante que o item "Equipamentos" existe no sistema financeiro
-   */
-  private ensureEquipamentosItemExists(): void {
-    const itensFinanceiros = storage.load(this.STORAGE_KEYS.FINANCIAL_ITEMS, []);
-    
-    const itemEquipamentos = itensFinanceiros.find((item: ItemFinanceiro) => 
-      item.nome === 'Equipamentos' && item.grupo_principal === 'Investimento'
-    );
-
-    if (!itemEquipamentos) {
-      console.log('🔧 [CreateEquipment] Criando item "Equipamentos" automaticamente');
-      
-      const novoItem: ItemFinanceiro = {
-        id: '9', // ID fixo para compatibilidade
-        nome: 'Equipamentos',
-        grupo_principal: 'Investimento',
-        userId: 'user1',
-        ativo: true,
-        criadoEm: getCurrentDateString()
-      };
-
-      itensFinanceiros.push(novoItem);
-      storage.save(this.STORAGE_KEYS.FINANCIAL_ITEMS, itensFinanceiros);
-    }
-  }
-
-  /**
-   * Cria equipamento na precificação baseado na transação financeira
-   * Inteligente para parcelamentos: marca todas as parcelas como processadas
-   */
-  createEquipmentFromTransaction(transacaoId: string, dadosEquipamento: {
-    nome: string;
-    vidaUtil: number;
-  }): {
-    success: boolean;
-    equipamentoId?: string;
-    error?: string;
-  } {
-    try {
-      // Garantir que o item "Equipamentos" existe
-      this.ensureEquipamentosItemExists();
-      
-      const transacoes = RecurringBlueprintEngine.loadTransactions();
-      const transacao = transacoes.find((t: any) => t.id === transacaoId);
-
-      console.log('🔧 [CreateEquipment] Procurando transação ID:', transacaoId);
-      console.log('🔧 [CreateEquipment] Total transações disponíveis:', transacoes.length);
-      console.log('🔧 [CreateEquipment] Transação encontrada:', !!transacao);
-
-      if (!transacao) {
-        return { success: false, error: 'Transação não encontrada' };
-      }
-
-      const equipamentosExistentes = this.getEquipmentFromPricing();
-      
-      // Verificar se já existe equipamento para esta transação
-      const jaExiste = equipamentosExistentes.some(eq => eq.transacaoId === transacaoId);
-      if (jaExiste) {
-        return { success: false, error: 'Equipamento já criado para esta transação' };
-      }
-
-      const novoEquipamento = {
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-        nome: dadosEquipamento.nome,
-        valorPago: transacao.valor,
-        dataCompra: transacao.dataVencimento,
-        vidaUtil: dadosEquipamento.vidaUtil,
-        transacaoId: transacaoId
-      };
-
-      const equipamentosAtualizados = [...equipamentosExistentes, novoEquipamento];
-      this.saveEquipmentToPricing(equipamentosAtualizados);
-      
-      // Marcar transação principal como processada
-      this.markEquipmentTransactionAsProcessed(transacaoId);
-
-      // Se for equipamento parcelado, marcar todas as parcelas como processadas
-      if ((transacao as any).grupoParcelado?.parcelaIds) {
-        console.log('🔧 [CreateEquipment] Marcando parcelas como processadas:', (transacao as any).grupoParcelado.parcelaIds);
-        (transacao as any).grupoParcelado.parcelaIds.forEach((parcelaId: string) => {
-          this.markEquipmentTransactionAsProcessed(parcelaId);
-        });
-      }
-
-      console.log('🔧 Equipamento criado na precificação:', novoEquipamento);
-      
-      return { 
-        success: true, 
-        equipamentoId: novoEquipamento.id 
-      };
-
-    } catch (error) {
-      console.error('Erro ao criar equipamento na precificação:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Erro desconhecido' 
-      };
-    }
-  }
-
-  /**
-   * Gera preview da sincronização reversa (Equipamentos da Precificação → Finanças)
-   */
-  generateEquipmentReverseSyncPreview(): {
-    equipamento: any;
-    acao: 'adicionar';
-    valorTotal: number;
-    criarRecorrencia: boolean;
-  }[] {
-    const equipamentos = this.getEquipmentFromPricing();
-    const transacoes = storage.load(this.STORAGE_KEYS.TRANSACTIONS, []);
-    const itensFinanceiros = storage.load(this.STORAGE_KEYS.FINANCIAL_ITEMS, []);
-
-    // Encontrar item "Equipamentos"
-    const itemEquipamentos = itensFinanceiros.find((item: ItemFinanceiro) => 
-      item.nome === 'Equipamentos' && item.grupo_principal === 'Investimento'
-    );
-
-    if (!itemEquipamentos) return [];
-
-    return equipamentos
-      .filter(equipamento => !equipamento.transacaoId) // Apenas equipamentos sem origem financeira
-      .map(equipamento => {
-        // Verificar se já existe transação para este equipamento
-        const jaExisteTransacao = transacoes.some((t: any) => 
-          t.itemId === itemEquipamentos.id &&
-          Math.abs(t.valor - equipamento.valorPago) < 0.01 &&
-          t.dataVencimento === equipamento.dataCompra
-        );
-
-        return {
-          equipamento,
-          acao: 'adicionar' as const,
-          valorTotal: equipamento.valorPago,
-          criarRecorrencia: false,
-          jaExiste: jaExisteTransacao
-        };
-      })
-      .filter(item => !item.jaExiste);
-  }
-
-  // ============= UTILITÁRIOS =============
-
-  /**
-   * Verifica se há integração configurada
-   */
-  hasIntegrationSetup(): boolean {
     const custosEstudio = this.getCustosEstudioFromPricing();
-    return custosEstudio.some(custo => custo.origem === 'financeiro' && custo.itemFinanceiroId);
+    const itensFinanceiros = storage.load(this.STORAGE_KEYS.FINANCIAL_ITEMS, []);
+
+    return custosEstudio.map(custo => {
+      const itemExistente = itensFinanceiros.find((item: ItemFinanceiro) => 
+        item.nome.toLowerCase() === custo.descricao.toLowerCase() && 
+        item.grupo_principal === 'Despesa Fixa'
+      );
+
+      return {
+        custo,
+        itemFinanceiroExistente: itemExistente,
+        acao: itemExistente ? 'existe' as const : 'adicionar' as const
+      };
+    });
   }
 
   /**
-   * Limpa todas as integrações
+   * Método legado para compatibilidade - agora usa EstruturaCustosService
    */
-  clearAllIntegrations(): void {
-    const custosEstudio = this.getCustosEstudioFromPricing();
-    const custosLimpos = custosEstudio.filter(custo => custo.origem !== 'financeiro');
-    this.saveCustosEstudioToPricing(custosLimpos);
+  createEquipmentFromTransaction(): { success: boolean; message: string } {
+    console.warn('⚠️ createEquipmentFromTransaction é método legado. Use EstruturaCustosService.adicionarEquipamento() diretamente');
+    return { success: false, message: 'Método descontinuado - use o modal simplificado' };
   }
 }
 
