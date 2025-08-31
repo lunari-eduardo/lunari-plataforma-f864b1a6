@@ -39,7 +39,8 @@ export function EquipmentSyncModal({
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
-    nome: equipment.observacoes || equipment.nome || `Equipamento R$ ${equipment.valor.toFixed(2)}`,
+    nome: (equipment.observacoes || equipment.nome || `Equipamento R$ ${equipment.valor.toFixed(2)}`)
+      .replace(/\s*\(Cartão:.*?\)/i, ''), // Remove informações do cartão
     vidaUtil: '5'
   });
 
