@@ -59,12 +59,46 @@ export default function Index() {
   const {
     getMonthlyMetrics
   } = useWorkflowMetrics();
-  // Receita do mês atual vs meta
+  // Receita do mês atual vs meta (usando mesma lógica do dashboard financeiro)
   const currentMonthIndex = new Date().getMonth();
-  const currentMonthData = monthlyData.find(m => m.monthIndex === currentMonthIndex);
-  const receitaMes = currentMonthData?.revenue || 0;
-  const metaMes = currentMonthData?.goal || 0;
-  const progressoMeta = metaMes > 0 ? Math.min(100, receitaMes / metaMes * 100) : 0;
+  const currentYear = new Date().getFullYear();
+  
+  // Obter receita do mês atual usando métricas cacheadas (mesma fonte do Workflow e Finanças)
+  const receitaMes = useMemo(() => {
+    const cachedMetrics = getMonthlyMetrics(currentYear, currentMonthIndex + 1);
+    return cachedMetrics ? cachedMetrics.receita : 0;
+  }, [getMonthlyMetrics, currentYear, currentMonthIndex]);
+
+  // Obter meta mensal usando mesma lógica do dashboard financeiro
+  const metaMes = useMemo(() => {
+    try {
+      const { storage, STORAGE_KEYS } = require('@/utils/localStorage');
+      const { GoalsIntegrationService } = require('@/services/GoalsIntegrationService');
+      
+      // Carregar metas históricas primeiro (mesma lógica do dashboard financeiro)
+      const historicalGoals = storage.load(STORAGE_KEYS.HISTORICAL_GOALS, []);
+      const metaDoAno = historicalGoals.find((goal: any) => goal.ano === currentYear);
+      
+      let metaReceita = 0;
+      
+      if (metaDoAno) {
+        // Usar meta histórica se disponível
+        metaReceita = metaDoAno.metaFaturamento;
+      } else {
+        // Usar dados da precificação como fallback
+        const goalsData = GoalsIntegrationService.getAnnualGoals();
+        metaReceita = goalsData.revenue;
+      }
+      
+      // Meta proporcional do mês
+      return metaReceita / 12;
+    } catch (error) {
+      console.warn('Erro ao carregar meta mensal:', error);
+      return 0;
+    }
+  }, [currentYear]);
+
+  const progressoMeta = metaMes > 0 ? Math.min(100, (receitaMes / metaMes) * 100) : 0;
 
   // Categoria mais rentável
   const topCategoria = categoryData[0] || null;
