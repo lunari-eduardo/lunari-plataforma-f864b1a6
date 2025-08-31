@@ -443,6 +443,7 @@ class PricingFinancialIntegrationService {
 
   /**
    * Detecta novas transações de equipamentos que ainda não foram processadas
+   * Inteligente para parcelamentos: agrupa e considera apenas primeira parcela com valor total
    */
   detectNewEquipmentTransactions(): {
     transacao: any;
@@ -491,27 +492,17 @@ class PricingFinancialIntegrationService {
       const isEquipamento = t.itemId === itemEquipamentos.id;
       const isNotProcessed = !processedIds.includes(t.id);
       
-      // Verificar se já existe equipamento com mesmo valor e data
-      const jaExiste = equipamentosExistentes.some(eq => 
-        Math.abs(eq.valorPago - t.valor) < 0.01 && 
-        eq.dataCompra === t.dataVencimento
-      );
-      
-      console.log(`🔧 [DetectEquipment] Transação ${t.id}:`, {
-        itemId: t.itemId,
-        valor: t.valor,
-        data: t.dataVencimento,
-        isEquipamento,
-        isNotProcessed,
-        jaExiste
-      });
-      
-      return isEquipamento && isNotProcessed && !jaExiste;
+      return isEquipamento && isNotProcessed;
     });
 
     console.log('🔧 [DetectEquipment] Transações de equipamentos candidatas:', transacoesEquipamentos.length);
 
-    const resultado = transacoesEquipamentos.map((transacao: any) => ({
+    // INTELIGÊNCIA PARA PARCELAMENTOS: Agrupar por lançamentoPaiId
+    const equipamentosInteligentes = this.groupInstallmentTransactions(transacoesEquipamentos, equipamentosExistentes);
+    
+    console.log('🔧 [DetectEquipment] Equipamentos inteligentes após agrupamento:', equipamentosInteligentes.length);
+    
+    const resultado = equipamentosInteligentes.map((transacao: any) => ({
       transacao,
       item: itemEquipamentos!,
       valor: transacao.valor,
@@ -519,7 +510,86 @@ class PricingFinancialIntegrationService {
       observacoes: transacao.observacoes || ''
     }));
     
-    console.log('🔧 [DetectEquipment] Retornando candidatos:', resultado.length);
+    console.log('🔧 [DetectEquipment] Retornando candidatos inteligentes:', resultado.length);
+    return resultado;
+  }
+
+  /**
+   * Agrupa transações parceladas e retorna apenas uma por equipamento real
+   */
+  private groupInstallmentTransactions(transacoes: any[], equipamentosExistentes: any[]): any[] {
+    // Separar transações únicas e parceladas
+    const transacoesUnicas: any[] = [];
+    const transacoesParceladas = new Map<string, any[]>();
+
+    transacoes.forEach(t => {
+      if (t.lançamentoPaiId && t.numeroParcela) {
+        // Transação parcelada
+        const grupoId = t.lançamentoPaiId;
+        if (!transacoesParceladas.has(grupoId)) {
+          transacoesParceladas.set(grupoId, []);
+        }
+        transacoesParceladas.get(grupoId)!.push(t);
+      } else {
+        // Transação única
+        transacoesUnicas.push(t);
+      }
+    });
+
+    console.log('🔧 [GroupInstallments] Transações únicas:', transacoesUnicas.length);
+    console.log('🔧 [GroupInstallments] Grupos parcelados:', transacoesParceladas.size);
+
+    const resultado: any[] = [];
+
+    // Adicionar transações únicas diretamente
+    transacoesUnicas.forEach(t => {
+      // Verificar se já existe equipamento com mesmo valor e data
+      const jaExiste = equipamentosExistentes.some(eq => 
+        Math.abs(eq.valorPago - t.valor) < 0.01 && 
+        eq.dataCompra === t.dataVencimento
+      );
+      
+      if (!jaExiste) {
+        resultado.push(t);
+      }
+    });
+
+    // Processar grupos parcelados
+    transacoesParceladas.forEach((parcelas, grupoId) => {
+      // Ordenar por número da parcela
+      parcelas.sort((a, b) => (a.numeroParcela || 0) - (b.numeroParcela || 0));
+      
+      const primeiraParcela = parcelas[0];
+      const valorTotal = parcelas.reduce((sum, p) => sum + p.valor, 0);
+      
+      console.log(`🔧 [GroupInstallments] Grupo ${grupoId}: ${parcelas.length} parcelas, valor total: R$ ${valorTotal.toFixed(2)}`);
+
+      // Verificar se já existe equipamento com valor total e data da primeira parcela
+      const jaExiste = equipamentosExistentes.some(eq => 
+        Math.abs(eq.valorPago - valorTotal) < 0.01 && 
+        eq.dataCompra === primeiraParcela.dataVencimento
+      );
+
+      if (!jaExiste) {
+        // Criar transação consolidada com valor total
+        const transacaoConsolidada = {
+          ...primeiraParcela,
+          valor: valorTotal,
+          observacoes: primeiraParcela.observacoes || `Equipamento parcelado (${parcelas.length}x)`,
+          grupoParcelado: {
+            lançamentoPaiId: grupoId,
+            totalParcelas: parcelas.length,
+            parcelaIds: parcelas.map(p => p.id)
+          }
+        };
+
+        resultado.push(transacaoConsolidada);
+        console.log(`🔧 [GroupInstallments] Adicionado equipamento consolidado: ${transacaoConsolidada.observacoes}`);
+      } else {
+        console.log(`🔧 [GroupInstallments] Equipamento parcelado já existe para grupo ${grupoId}`);
+      }
+    });
+
     return resultado;
   }
 
@@ -595,6 +665,7 @@ class PricingFinancialIntegrationService {
 
   /**
    * Cria equipamento na precificação baseado na transação financeira
+   * Inteligente para parcelamentos: marca todas as parcelas como processadas
    */
   createEquipmentFromTransaction(transacaoId: string, dadosEquipamento: {
     nome: string;
@@ -639,8 +710,16 @@ class PricingFinancialIntegrationService {
       const equipamentosAtualizados = [...equipamentosExistentes, novoEquipamento];
       this.saveEquipmentToPricing(equipamentosAtualizados);
       
-      // Marcar transação como processada
+      // Marcar transação principal como processada
       this.markEquipmentTransactionAsProcessed(transacaoId);
+
+      // Se for equipamento parcelado, marcar todas as parcelas como processadas
+      if ((transacao as any).grupoParcelado?.parcelaIds) {
+        console.log('🔧 [CreateEquipment] Marcando parcelas como processadas:', (transacao as any).grupoParcelado.parcelaIds);
+        (transacao as any).grupoParcelado.parcelaIds.forEach((parcelaId: string) => {
+          this.markEquipmentTransactionAsProcessed(parcelaId);
+        });
+      }
 
       console.log('🔧 Equipamento criado na precificação:', novoEquipamento);
       

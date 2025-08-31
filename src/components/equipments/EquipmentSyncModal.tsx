@@ -40,6 +40,9 @@ export function EquipmentSyncModal({
     vidaUtil: '5'
   });
 
+  // Identificar se é parcelado
+  const isInstallment = equipment.observacoes?.includes('parcelado') || false;
+
   // Cálculos automáticos
   const vidaUtilAnos = parseInt(formData.vidaUtil) || 5;
   const depreciacaoMensal = equipment.valor / (vidaUtilAnos * 12);
@@ -132,6 +135,11 @@ export function EquipmentSyncModal({
                   <Badge variant="secondary">
                     R$ {equipment.valor.toFixed(2)}
                   </Badge>
+                  {isInstallment && (
+                    <Badge variant="outline" className="text-xs">
+                      Total
+                    </Badge>
+                  )}
                   <span className="text-muted-foreground text-xs">(automático)</span>
                 </div>
                 
@@ -141,8 +149,25 @@ export function EquipmentSyncModal({
                   <Badge variant="secondary">
                     {formatDateForDisplay(equipment.data)}
                   </Badge>
+                  {isInstallment && (
+                    <Badge variant="outline" className="text-xs">
+                      Compra
+                    </Badge>
+                  )}
                   <span className="text-muted-foreground text-xs">(automático)</span>
                 </div>
+
+                {isInstallment && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="h-4 w-4 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs">
+                      📋
+                    </div>
+                    <span className="font-medium">Tipo:</span>
+                    <Badge variant="outline" className="text-blue-600">
+                      {equipment.observacoes}
+                    </Badge>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
