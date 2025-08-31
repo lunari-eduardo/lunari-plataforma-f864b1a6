@@ -56,20 +56,30 @@ export function useSalesAnalytics(
       safeFilteredData.map(item => item.email || item.whatsapp).filter(Boolean)
     ).size;
     
-    // Calculate goal progress (assuming monthly goal of R$ 50k)
-    const monthlyGoal = 50000;
+    // Calculate goal progress using real pricing data
+    let monthlyGoal = 0;
+    try {
+      const { GoalsIntegrationService } = require('@/services/GoalsIntegrationService');
+      const monthlyGoals = GoalsIntegrationService.getMonthlyGoals();
+      monthlyGoal = monthlyGoals.revenue;
+    } catch (error) {
+      console.warn('⚠️ [useSalesAnalytics] Erro ao carregar meta mensal:', error);
+    }
+    
     let monthlyGoalProgress = 0;
     
-    if (filterByMonth) {
-      // For specific month, use filtered data total
-      monthlyGoalProgress = (totalRevenue / monthlyGoal) * 100;
-    } else {
-      // For yearly view, use current month
-      const currentMonth = new Date().getMonth();
-      const currentMonthRevenue = safeFilteredData
-        .filter(item => item.month === currentMonth)
-        .reduce((sum, item) => sum + item.valorPago, 0);
-      monthlyGoalProgress = (currentMonthRevenue / monthlyGoal) * 100;
+    if (monthlyGoal > 0) {
+      if (filterByMonth) {
+        // For specific month, use filtered data total
+        monthlyGoalProgress = (totalRevenue / monthlyGoal) * 100;
+      } else {
+        // For yearly view, use current month
+        const currentMonth = new Date().getMonth();
+        const currentMonthRevenue = safeFilteredData
+          .filter(item => item.month === currentMonth)
+          .reduce((sum, item) => sum + item.valorPago, 0);
+        monthlyGoalProgress = (currentMonthRevenue / monthlyGoal) * 100;
+      }
     }
     
     // Use real conversion rate from leads data

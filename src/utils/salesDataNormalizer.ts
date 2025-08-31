@@ -177,6 +177,19 @@ export function generateAllMonthsData(year: number, normalizedData: NormalizedWo
     'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'
   ];
 
+  // Importar o serviço de metas dinâmico
+  let monthlyGoalAmount = 0;
+  try {
+    // Dinamic import para evitar circular dependencies
+    const { GoalsIntegrationService } = require('@/services/GoalsIntegrationService');
+    const monthlyGoals = GoalsIntegrationService.getMonthlyGoals();
+    monthlyGoalAmount = monthlyGoals.revenue;
+    console.log(`📊 [SalesDataNormalizer] Meta mensal da precificação: R$ ${monthlyGoalAmount.toLocaleString()}`);
+  } catch (error) {
+    console.warn('⚠️ [SalesDataNormalizer] Erro ao carregar metas da precificação, usando fallback:', error);
+    monthlyGoalAmount = 0; // Usar 0 se não conseguir carregar
+  }
+
   return months.map((month, index) => {
     const monthData = normalizedData.filter(item => 
       item.year === year && item.month === index
@@ -187,10 +200,6 @@ export function generateAllMonthsData(year: number, normalizedData: NormalizedWo
     const averageTicket = sessions > 0 ? revenue / sessions : 0;
     const extraPhotoRevenue = monthData.reduce((sum, item) => sum + item.valorTotalFotoExtra, 0);
 
-    // Metas progressivas por mês
-    const baseGoal = 30000;
-    const goal = baseGoal + (index * 2000);
-
     return {
       month,
       monthIndex: index,
@@ -198,7 +207,7 @@ export function generateAllMonthsData(year: number, normalizedData: NormalizedWo
       sessions,
       averageTicket,
       extraPhotoRevenue,
-      goal
+      goal: monthlyGoalAmount // Usar meta real da precificação
     };
   });
 }
