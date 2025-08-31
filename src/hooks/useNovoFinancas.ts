@@ -242,9 +242,9 @@ export function useNovoFinancas() {
         });
       }
       
-      // 2. TRANSAÇÕES PARCELADAS (CARTÃO DE CRÉDITO) - USAR FINANCIALENGINE
-      if (isParcelado && numeroDeParcelas && numeroDeParcelas > 1 && cartaoCreditoId) {
-        console.log('Criando transações parceladas no cartão de crédito');
+      // 2. TRANSAÇÕES COM CARTÃO DE CRÉDITO - SEMPRE USAR FINANCIALENGINE
+      if (cartaoCreditoId) {
+        console.log('Criando transações no cartão de crédito via FinancialEngine');
         
         const resultado = FinancialEngine.createTransactions(input);
         
@@ -261,19 +261,19 @@ export function useNovoFinancas() {
         }));
         
         setTransacoes(prev => [...prev, ...transacoesConvertidas]);
-        console.log(`${transacoesConvertidas.length} transações parceladas criadas com sucesso`);
+        console.log(`${transacoesConvertidas.length} transações de cartão criadas com sucesso`);
         
-        // Force scan para equipamentos (transações parceladas)
+        // Force scan para equipamentos (transações de cartão)
         setTimeout(() => {
           const forceScanEvent = new CustomEvent('equipment-sync:force-scan');
           window.dispatchEvent(forceScanEvent);
-          console.log('🔧 [EquipmentSync] Force scan disparado após criação de transações parceladas');
+          console.log('🔧 [EquipmentSync] Force scan disparado após criação de transações de cartão');
         }, 500);
         
         return;
       }
       
-      // 3. TRANSAÇÃO ÚNICA
+      // 3. TRANSAÇÃO ÚNICA (SEM CARTÃO)
       console.log('Criando transação única');
       const novaTransacao: NovaTransacao = {
         id: `single_${Date.now()}`,
