@@ -42,7 +42,7 @@ export class EstruturaCustosService {
 
   static carregar(): EstruturaCustomerFixos {
     try {
-      const dados = storage.load(STORAGE_KEYS.PRICING_FIXED_COSTS, {
+      const defaults = {
         gastosPessoais: [],
         percentualProLabore: 30,
         custosEstudio: [],
@@ -50,7 +50,15 @@ export class EstruturaCustosService {
         totalCalculado: 0,
         user_id: USUARIO_LOCAL,
         created_at: new Date().toISOString()
-      });
+      };
+      const dadosBrutos = storage.load(STORAGE_KEYS.PRICING_FIXED_COSTS, defaults);
+      const dados = {
+        ...defaults,
+        ...dadosBrutos,
+        gastosPessoais: Array.isArray(dadosBrutos?.gastosPessoais) ? dadosBrutos.gastosPessoais : [],
+        custosEstudio: Array.isArray(dadosBrutos?.custosEstudio) ? dadosBrutos.custosEstudio : [],
+        equipamentos: Array.isArray(dadosBrutos?.equipamentos) ? dadosBrutos.equipamentos : []
+      } as EstruturaCustomerFixos;
       
       console.log('✅ Estrutura de custos carregada');
       return dados;
