@@ -9,8 +9,9 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Wrench, Calculator, Calendar, DollarSign } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { pricingFinancialIntegrationService } from '@/services/PricingFinancialIntegrationService';
+
 import { formatDateForDisplay } from '@/utils/dateUtils';
+import { EstruturaCustosService } from '@/services/PricingService';
 
 interface EquipmentSyncModalProps {
   equipment: {
@@ -68,26 +69,32 @@ export function EquipmentSyncModal({
 
     setIsLoading(true);
     try {
-      const result = pricingFinancialIntegrationService.createEquipmentFromTransaction(
-        equipment.transacaoId,
-        {
-          nome: formData.nome.trim(),
-          vidaUtil: vidaUtilAnos
-        }
-      );
+      // Usar diretamente o EstruturaCustosService
+      const sucesso = EstruturaCustosService.adicionarEquipamento({
+        nome: formData.nome.trim(),
+        valorPago: equipment.valor,
+        dataCompra: equipment.data,
+        vidaUtil: vidaUtilAnos
+      });
 
-      if (result.success) {
+      if (sucesso) {
+        // Marcar transações como processadas para evitar re-notificações
+        const processedIds = JSON.parse(localStorage.getItem('equipment_processed_ids') || '[]');
+        const allIds = [equipment.transacaoId];
+        const updatedIds = [...processedIds, ...allIds];
+        localStorage.setItem('equipment_processed_ids', JSON.stringify(updatedIds));
+        
         toast({
           title: "✅ Equipamento Adicionado",
           description: `${formData.nome} foi adicionado à precificação com depreciação de R$ ${depreciacaoMensal.toFixed(2)}/mês.`
         });
         
-        console.log('🔧 [EquipmentModal] Equipamento criado com sucesso:', result.equipamentoId);
+        console.log('🔧 [EquipmentModal] Equipamento criado com sucesso, transações marcadas:', allIds);
         onSuccess();
       } else {
         toast({
           title: "Erro ao adicionar",
-          description: result.error || "Falha ao criar equipamento na precificação.",
+          description: "Falha ao criar equipamento na precificação.",
           variant: "destructive"
         });
       }
