@@ -1,13 +1,13 @@
 import { useState } from 'react';
-import LeadsKanban from '@/components/leads/LeadsKanban';
-import LeadMetricsCards from '@/components/leads/LeadMetricsCards';
-import UnifiedLeadFilters from '@/components/leads/UnifiedLeadFilters';
+import LeadsKanban from '@/features/leads/components/kanban/LeadsKanban';
+import LeadMetricsCards from '@/features/leads/components/metrics/LeadMetricsCards';
+import UnifiedLeadFilters from '@/features/leads/components/filters/UnifiedLeadFilters';
 import { useAppContext } from '@/contexts/AppContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { BarChart3, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { PeriodFilter, PeriodType } from '@/hooks/useLeadMetrics';
+import type { PeriodFilter, PeriodType } from '@/features/leads/hooks/features/useLeadMetrics';
 
 // Novo padrão: últimos 30 dias (foco no trabalho atual)
 const getDefaultPeriodType = (): PeriodType => {
