@@ -62,7 +62,7 @@ export default function LeadActionsPopover({
     setOpen(false);
   };
 
-  const isConverted = lead.status === 'convertido';
+  const isConverted = lead.status === 'fechado';
   const isLost = lead.status === 'perdido';
   const hasScheduledAppointment = !!lead.scheduledAppointmentId;
   const needsScheduling = lead.needsScheduling;
