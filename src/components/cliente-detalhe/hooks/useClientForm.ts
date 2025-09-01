@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useClientValidation } from './useClientValidation';
 
@@ -32,7 +32,7 @@ export function useClientForm(cliente: Cliente | undefined, onUpdate: (id: strin
   });
 
   // Sincronizar formData quando cliente muda
-  useState(() => {
+  useEffect(() => {
     if (cliente) {
       setFormData({
         nome: cliente.nome || '',
@@ -46,7 +46,7 @@ export function useClientForm(cliente: Cliente | undefined, onUpdate: (id: strin
         filhos: (((cliente as any)?.filhos) || []) as { id: string; nome?: string; dataNascimento?: string }[],
       });
     }
-  });
+  }, [cliente]);
 
   const handleSave = () => {
     if (!cliente) return;

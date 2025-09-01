@@ -1,4 +1,4 @@
-import { useState, useContext, useMemo, useEffect } from 'react';
+import { useState, useContext, useMemo, useEffect, useCallback } from 'react';
 import { AppContext } from '@/contexts/AppContext';
 import { autoFixIfNeeded, getSimplifiedClientMetrics } from '@/utils/crmDataFix';
 import { useFileUpload } from '@/hooks/useFileUpload';
@@ -9,20 +9,20 @@ export function useClientDetails(clienteId: string | undefined) {
   const [isLoading, setIsLoading] = useState(true);
 
   // Carregar arquivos e executar correção automática
-  useEffect(() => {
-    const initializeData = async () => {
-      try {
-        await autoFixIfNeeded();
-        await loadFiles();
-      } catch (error) {
-        console.error('Error initializing client data:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    initializeData();
+  const initializeData = useCallback(async () => {
+    try {
+      await autoFixIfNeeded();
+      await loadFiles();
+    } catch (error) {
+      console.error('Error initializing client data:', error);
+    } finally {
+      setIsLoading(false);
+    }
   }, [loadFiles]);
+
+  useEffect(() => {
+    initializeData();
+  }, [initializeData]);
 
   // Encontrar o cliente pelo ID
   const cliente = useMemo(() => {
@@ -39,7 +39,7 @@ export function useClientDetails(clienteId: string | undefined) {
       agendado: 0
     };
     
-    // Buscar sessões do workflow para calcular valor agendado
+    // Buscar sessões do workflow para calcular valor agendado (com memoização)
     const workflowSessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
     const clientSessions = workflowSessions.filter((session: any) => {
       const matchByClienteId = session.clienteId === cliente.id;
