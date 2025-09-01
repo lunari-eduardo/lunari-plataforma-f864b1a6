@@ -51,28 +51,24 @@ const GraficosFinanceiros = memo(function GraficosFinanceiros({
           <CardContent>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={dadosMensais} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorReceita" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--chart-revenue))" stopOpacity={0.8} />
-                      <stop offset="95%" stopColor="hsl(var(--chart-revenue))" stopOpacity={0.1} />
-                    </linearGradient>
-                    <linearGradient id="colorLucro" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--chart-primary))" stopOpacity={0.8} />
-                      <stop offset="95%" stopColor="hsl(var(--chart-primary))" stopOpacity={0.1} />
-                    </linearGradient>
-                  </defs>
+                <BarChart data={dadosMensais} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="mes" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                   <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(value) => formatCurrency(value)} />
-                  <Tooltip contentStyle={{
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px'
-                  }} formatter={(value: any) => [formatCurrency(value), '']} />
-                  <Area type="monotone" dataKey="receita" stroke="hsl(var(--chart-revenue))" fillOpacity={1} fill="url(#colorReceita)" strokeWidth={2} />
-                  <Area type="monotone" dataKey="lucro" stroke="hsl(var(--chart-primary))" fillOpacity={1} fill="url(#colorLucro)" strokeWidth={2} />
-                </AreaChart>
+                  <Tooltip 
+                    formatter={(value: any, name: string) => [
+                      formatCurrency(value), 
+                      name === 'receita' ? 'Receita' : name === 'lucro' ? 'Lucro' : name
+                    ]} 
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px'
+                    }} 
+                  />
+                  <Bar dataKey="receita" fill="hsl(var(--chart-revenue))" radius={[4, 4, 0, 0]} name="Receita" />
+                  <Bar dataKey="lucro" fill="hsl(var(--chart-primary))" radius={[4, 4, 0, 0]} name="Lucro" />
+                </BarChart>
               </ResponsiveContainer>
             </div>
           </CardContent>
@@ -189,30 +185,29 @@ const GraficosFinanceiros = memo(function GraficosFinanceiros({
           <CardContent>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={dadosMensais} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                <AreaChart data={dadosMensais.map((item, index) => ({
+                  ...item,
+                  saldoAcumulado: dadosMensais.slice(0, index + 1).reduce((acc, curr) => acc + curr.lucro, 0)
+                }))} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorFluxoCaixa" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="hsl(var(--chart-tertiary))" stopOpacity={0.8} />
-                      <stop offset="95%" stopColor="hsl(var(--chart-tertiary))" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="hsl(var(--chart-tertiary))" stopOpacity={0.1} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="mes" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                   <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(value) => formatCurrency(value)} />
                   <Tooltip 
-                    formatter={(value: any, name: string) => [
-                      formatCurrency(value), 
-                      name === 'receita' ? 'Receita' : name === 'lucro' ? 'Lucro' : name
-                    ]} 
+                    formatter={(value: any) => [formatCurrency(value), 'Saldo Acumulado']} 
                     contentStyle={{
                       backgroundColor: 'hsl(var(--card))',
                       border: '1px solid hsl(var(--border))',
                       borderRadius: '8px'
                     }} 
                   />
-                  <Bar dataKey="receita" fill="hsl(var(--chart-revenue))" radius={[4, 4, 0, 0]} name="Receita" />
-                  <Bar dataKey="lucro" fill="url(#colorFluxoCaixa)" radius={[4, 4, 0, 0]} name="Lucro" />
-                </BarChart>
+                  <Area type="monotone" dataKey="saldoAcumulado" stroke="hsl(var(--chart-tertiary))" fillOpacity={1} fill="url(#colorFluxoCaixa)" strokeWidth={2} />
+                </AreaChart>
               </ResponsiveContainer>
             </div>
           </CardContent>
