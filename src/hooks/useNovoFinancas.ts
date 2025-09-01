@@ -331,6 +331,12 @@ export function useNovoFinancas() {
   // Transações com informações dos itens - convertendo para formato compatível
   const transacoesComItens = useMemo((): TransacaoCompativel[] => {
     return transacoes.map(transacao => {
+      // Verificação de segurança para transacao.itemId
+      if (!transacao.itemId) {
+        console.warn('Transação sem itemId:', transacao);
+        return null;
+      }
+      
       const item = itensFinanceiros.find(item => item.id === transacao.itemId);
       const itemCompativel = item ? {
         ...item,
@@ -359,7 +365,7 @@ export function useNovoFinancas() {
         parentId: transacao.blueprintId, // blueprintId mapeado para parentId para compatibilidade
         item: itemCompativel
       };
-    });
+    }).filter(Boolean) as TransacaoCompativel[]; // Remove null entries
   }, [transacoes, itensFinanceiros]);
 
   // Filtrar transações por mês/ano

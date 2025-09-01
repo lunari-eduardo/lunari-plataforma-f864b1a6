@@ -126,7 +126,7 @@ export default function TabelaLancamentosMobile({
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-gray-900">{transacao.item.nome}</h3>
+                <h3 className="font-semibold text-gray-900">{transacao.item?.nome || 'Item não encontrado'}</h3>
                 {getStatusBadge(transacao.status, transacao.status === 'Faturado' && onMarcarComoPago ? () => onMarcarComoPago(transacao.id) : undefined)}
               </div>
               <div className="flex items-center gap-1">

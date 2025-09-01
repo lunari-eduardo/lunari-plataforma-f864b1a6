@@ -363,7 +363,7 @@ export default function TabelaLancamentos({
                         {formatarData(transacao.data_vencimento)}
                       </td>
                       <td className="px-4 text-sm font-medium text-foreground py-[2px]">
-                        {transacao.item.nome}
+                        {transacao.item?.nome || 'Item não encontrado'}
                       </td>
                      <td className="px-4 py-[2px]">
                         <div className="flex flex-col">
