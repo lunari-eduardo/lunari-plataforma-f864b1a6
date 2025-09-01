@@ -1,11 +1,13 @@
 import { useState, useMemo, useCallback } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useNovoFinancas } from '@/hooks/useNovoFinancas';
 import DashboardFinanceiro from '@/components/financas/DashboardFinanceiro';
-import { ChevronLeft, ChevronRight, Receipt, CreditCard, PiggyBank, Filter } from 'lucide-react';
+import { Receipt, CreditCard, PiggyBank, Filter } from 'lucide-react';
 import { formatCurrency } from '@/utils/financialUtils';
+import { mapearTipoParaGrupo, getInfoPorGrupo } from '@/utils/financialGroupUtils';
+import MonthYearNavigator from '@/components/shared/MonthYearNavigator';
+
 const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 export default function Financas() {
   const {
@@ -23,68 +25,15 @@ export default function Financas() {
   } = useNovoFinancas();
   const [activeTab, setActiveTab] = useState('resumo');
   const [activeSubTab, setActiveSubTab] = useState('fixas');
-  const navegarMes = useCallback((direcao: 'anterior' | 'proximo') => {
-    const novoMes = direcao === 'anterior' ? filtroMesAno.mes - 1 : filtroMesAno.mes + 1;
-    if (novoMes < 1) {
-      setFiltroMesAno(prev => ({
-        ...prev,
-        mes: 12,
-        ano: prev.ano - 1
-      }));
-    } else if (novoMes > 12) {
-      setFiltroMesAno(prev => ({
-        ...prev,
-        mes: 1,
-        ano: prev.ano + 1
-      }));
-    } else {
-      setFiltroMesAno(prev => ({
-        ...prev,
-        mes: novoMes
-      }));
-    }
-  }, [filtroMesAno.mes, filtroMesAno.ano]);
-  const mapearTipoParaGrupo = useCallback((tipo: string) => {
-    switch (tipo) {
-      case 'fixas': return 'Despesa Fixa';
-      case 'variaveis': return 'Despesa Variável';
-      case 'receitas': return 'Receita Não Operacional';
-      default: return 'Despesa Variável';
-    }
-  }, []);
   
   const metricas = useMemo(() => {
     if (activeTab !== 'despesas-receitas') return null;
     const grupo = mapearTipoParaGrupo(activeSubTab) as any;
     return calcularMetricasPorGrupo(grupo);
-  }, [activeTab, activeSubTab, mapearTipoParaGrupo, calcularMetricasPorGrupo]);
+  }, [activeTab, activeSubTab, calcularMetricasPorGrupo]);
   const infoTipo = useMemo(() => {
-    switch (activeSubTab) {
-      case 'fixas':
-        return {
-          cor: 'red',
-          icone: Receipt,
-          titulo: 'Fixas'
-        };
-      case 'variaveis':
-        return {
-          cor: 'orange',
-          icone: CreditCard,
-          titulo: 'Variáveis'
-        };
-      case 'receitas':
-        return {
-          cor: 'green',
-          icone: PiggyBank,
-          titulo: 'Receitas'
-        };
-      default:
-        return {
-          cor: 'gray',
-          icone: Receipt,
-          titulo: 'Geral'
-        };
-    }
+    const grupo = mapearTipoParaGrupo(activeSubTab);
+    return getInfoPorGrupo(grupo);
   }, [activeSubTab]);
   return <div className="min-h-screen bg-gradient-to-br from-background to-card">
       <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 p-2 sm:p-4 lg:p-6 space-y-4 sm:space-y-6 bg-lunar-bg py-0 my-[3px]">
@@ -93,13 +42,13 @@ export default function Financas() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-3 h-10 p-1 text-sm bg-card border border-border">
-            <TabsTrigger value="resumo" className="text-sm py-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-b-2 data-[state=active]:border-blue-500">
+            <TabsTrigger value="resumo" className="text-sm py-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
               Resumo
             </TabsTrigger>
-            <TabsTrigger value="despesas-receitas" className="text-sm py-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-b-2 data-[state=active]:border-blue-500">
+            <TabsTrigger value="despesas-receitas" className="text-sm py-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
               Despesas
             </TabsTrigger>
-            <TabsTrigger value="categorias" className="text-sm py-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-b-2 data-[state=active]:border-blue-500">
+            <TabsTrigger value="categorias" className="text-sm py-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
               Categorias
             </TabsTrigger>
           </TabsList>
@@ -110,146 +59,66 @@ export default function Financas() {
 
           <TabsContent value="despesas-receitas" className="mt-6">
             <div className="space-y-6">
-              {/* Seletor de Mês - Responsivo */}
+              {/* Navegador de Mês - Mobile */}
               <div className="flex justify-center lg:hidden">
-                <div className="flex items-center bg-card rounded-lg border border-border p-2 shadow-sm">
-                  <Button variant="ghost" size="sm" onClick={() => navegarMes('anterior')} className="h-8 w-8 p-0">
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  
-                  <div className="flex items-center gap-2 px-4">
-                    <Select value={filtroMesAno.mes.toString()} onValueChange={value => setFiltroMesAno({
-                    ...filtroMesAno,
-                    mes: parseInt(value)
-                  })}>
-                      <SelectTrigger className="w-20 h-8 text-sm border-0">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {meses.map((mes, index) => <SelectItem key={index} value={(index + 1).toString()} className="text-sm">
-                            {mes}
-                          </SelectItem>)}
-                      </SelectContent>
-                    </Select>
-
-                    <Select value={filtroMesAno.ano.toString()} onValueChange={value => setFiltroMesAno({
-                    ...filtroMesAno,
-                    ano: parseInt(value)
-                  })}>
-                      <SelectTrigger className="w-20 h-8 text-sm border-0">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {[2023, 2024, 2025, 2026].map(ano => <SelectItem key={ano} value={ano.toString()} className="text-sm">
-                            {ano}
-                          </SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <Button variant="ghost" size="sm" onClick={() => navegarMes('proximo')} className="h-8 w-8 p-0">
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
+                <MonthYearNavigator 
+                  filtroMesAno={filtroMesAno}
+                  setFiltroMesAno={setFiltroMesAno}
+                  size="sm"
+                />
               </div>
 
-              {/* Barra de Totais Atualizada (sem "faturado") */}
-              {metricas && <div className="bg-card rounded-lg border border-border p-4 shadow-sm">
+              {/* Barra de Métricas */}
+              {metricas && (
+                <div className="bg-card rounded-lg border border-border p-4 shadow-sm">
                   <div className="flex flex-wrap items-center gap-6 text-sm">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-gray-700">Total:</span>
-                      <span className="font-bold text-gray-900">{formatCurrency(metricas.total)}</span>
+                      <span className="font-medium text-foreground">Total:</span>
+                      <span className="font-bold text-foreground">{formatCurrency(metricas.total)}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span className="text-gray-600">Pago:</span>
-                      <span className="font-semibold text-green-600">{formatCurrency(metricas.pago)}</span>
+                      <div className="w-2 h-2 bg-lunar-success rounded-full"></div>
+                      <span className="text-muted-foreground">Pago:</span>
+                      <span className="font-semibold text-lunar-success">{formatCurrency(metricas.pago)}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                      <span className="text-gray-600">Agendado:</span>
-                      <span className="font-semibold text-yellow-600">{formatCurrency(metricas.agendado)}</span>
+                      <div className="w-2 h-2 bg-lunar-warning rounded-full"></div>
+                      <span className="text-muted-foreground">Agendado:</span>
+                      <span className="font-semibold text-lunar-warning">{formatCurrency(metricas.agendado)}</span>
                     </div>
                   </div>
-                </div>}
+                </div>
+              )}
 
               {/* Sub-abas Simplificadas */}
               <Tabs value={activeSubTab} onValueChange={setActiveSubTab}>
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                    <TabsList className="flex h-10 p-1 bg-white border border-gray-200 rounded-lg">
-                      <TabsTrigger value="fixas" className="flex items-center gap-2 text-sm py-2 px-4 data-[state=active]:bg-gray-50 data-[state=active]:text-red-600 data-[state=active]:border-b-2 data-[state=active]:border-red-500">
+                    <TabsList className="flex h-10 p-1 bg-card border border-border rounded-lg">
+                      <TabsTrigger value="fixas" className="flex items-center gap-2 text-sm py-2 px-4 data-[state=active]:bg-muted data-[state=active]:text-destructive">
                         <Receipt className="h-4 w-4" />
                         Fixas
                       </TabsTrigger>
-                      <TabsTrigger value="variaveis" className="flex items-center gap-2 text-sm py-2 px-4 data-[state=active]:bg-gray-50 data-[state=active]:text-orange-600 data-[state=active]:border-b-2 data-[state=active]:border-orange-500">
+                      <TabsTrigger value="variaveis" className="flex items-center gap-2 text-sm py-2 px-4 data-[state=active]:bg-muted data-[state=active]:text-lunar-warning">
                         <CreditCard className="h-4 w-4" />
                         Variáveis
                       </TabsTrigger>
-                      <TabsTrigger value="receitas" className="flex items-center gap-2 text-sm py-2 px-4 data-[state=active]:bg-gray-50 data-[state=active]:text-green-600 data-[state=active]:border-b-2 data-[state=active]:border-green-500">
+                      <TabsTrigger value="receitas" className="flex items-center gap-2 text-sm py-2 px-4 data-[state=active]:bg-muted data-[state=active]:text-lunar-success">
                         <PiggyBank className="h-4 w-4" />
                         Receitas
                       </TabsTrigger>
                     </TabsList>
 
-                    {/* Seletor de Mês para Desktop/Tablet */}
-                    <div className="hidden lg:flex items-center bg-card rounded-lg border border-border p-2 shadow-sm">
-                      <Button variant="ghost" size="sm" onClick={() => navegarMes('anterior')} className="h-8 w-8 p-0">
-                        <ChevronLeft className="h-4 w-4" />
-                      </Button>
-                      
-                      <div className="flex items-center gap-2 px-4">
-                        <Select value={filtroMesAno.mes.toString()} onValueChange={value => setFiltroMesAno({
-                        ...filtroMesAno,
-                        mes: parseInt(value)
-                      })}>
-                          <SelectTrigger className="w-20 h-8 text-sm border-0">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {meses.map((mes, index) => <SelectItem key={index} value={(index + 1).toString()} className="text-sm">
-                                {mes}
-                              </SelectItem>)}
-                          </SelectContent>
-                        </Select>
-
-                        <Select value={filtroMesAno.ano.toString()} onValueChange={value => setFiltroMesAno({
-                        ...filtroMesAno,
-                        ano: parseInt(value)
-                      })}>
-                          <SelectTrigger className="w-20 h-8 text-sm border-0">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {[2023, 2024, 2025, 2026].map(ano => <SelectItem key={ano} value={ano.toString()} className="text-sm">
-                                {ano}
-                              </SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <Button variant="ghost" size="sm" onClick={() => navegarMes('proximo')} className="h-8 w-8 p-0">
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
+                    {/* Navegador de Mês para Desktop */}
+                    <div className="hidden lg:flex">
+                      <MonthYearNavigator 
+                        filtroMesAno={filtroMesAno}
+                        setFiltroMesAno={setFiltroMesAno}
+                      />
                     </div>
                   </div>
 
                   <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => createTransactionEngine({
-                        valorTotal: 100,
-                        dataPrimeiraOcorrencia: '2025-07-16',
-                        itemId: '1',
-                        observacoes: 'Teste Motor',
-                        isRecorrente: false,
-                        isParcelado: false
-                      })}
-                      className="flex items-center gap-2"
-                    >
-                      Teste Motor
-                    </Button>
                     <Button variant="outline" size="sm" className="flex items-center gap-2">
                       <Filter className="h-4 w-4" />
                       Filtros
