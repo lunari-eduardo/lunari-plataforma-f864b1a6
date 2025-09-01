@@ -68,7 +68,7 @@ export function KPIGroupCard({
       </div>
       <div className="flex-1 flex flex-col justify-center">
         {topCategoria ? <div>
-            <p className="text-lg font-semibold">{topCategoria.name}</p>
+            <p className="font-semibold text-base">{topCategoria.name}</p>
             <p className="text-2xs text-lunar-textSecondary mt-1">
               Receita: {formatCurrency(topCategoria.revenue)} • {topCategoria.sessions} sessões
             </p>
@@ -83,7 +83,7 @@ export function KPIGroupCard({
         </div>
       </div>
       <div className="flex-1 flex flex-col justify-center">
-        <p className="text-lg font-semibold">{novosClientes60d}</p>
+        <p className="font-semibold text-base">{novosClientes60d}</p>
         <p className="text-2xs text-lunar-textSecondary mt-1">Primeira sessão registrada</p>
       </div>
     </div>;
@@ -95,7 +95,7 @@ export function KPIGroupCard({
         </div>
       </div>
       <div className="flex-1 flex flex-col justify-center">
-        <p className="text-lg font-semibold">{livresSemana}</p>
+        <p className="font-semibold text-base">{livresSemana}</p>
         <p className="text-2xs text-lunar-textSecondary mt-1">
           {proximoLivre ? <>Próximo: {proximoLivre.toLocaleDateString("pt-BR")} • {proximoLivre.toLocaleTimeString("pt-BR", {
             hour: "2-digit",
