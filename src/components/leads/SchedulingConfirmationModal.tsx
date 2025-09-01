@@ -24,6 +24,10 @@ export default function SchedulingConfirmationModal({
   onScheduled,
   onNotScheduled
 }: SchedulingConfirmationModalProps) {
+  // Early return if lead is null/undefined
+  if (!lead) {
+    return null;
+  }
   const [showAppointmentForm, setShowAppointmentForm] = useState(false);
   const [showConflictModal, setShowConflictModal] = useState(false);
   const [pendingAppointment, setPendingAppointment] = useState<any>(null);

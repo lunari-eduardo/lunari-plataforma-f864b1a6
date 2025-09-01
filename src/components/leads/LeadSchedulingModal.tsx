@@ -25,6 +25,10 @@ export default function LeadSchedulingModal({
   onScheduled,
   onSkip
 }: LeadSchedulingModalProps) {
+  // Early return if lead is null/undefined
+  if (!lead) {
+    return null;
+  }
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [time, setTime] = useState('14:00');
   const [notes, setNotes] = useState('');
