@@ -117,9 +117,11 @@ export default function LeadsKanban({
     if (searchTerm) {
       const query = searchTerm.toLowerCase();
       baseLeads = baseLeads.filter(lead => 
-        lead.nome.toLowerCase().includes(query) ||
-        lead.telefone.includes(query) ||
-        (lead.email && lead.email.toLowerCase().includes(query))
+        lead && lead.nome && (
+          lead.nome.toLowerCase().includes(query) ||
+          lead.telefone?.includes(query) ||
+          (lead.email && lead.email.toLowerCase().includes(query))
+        )
       );
     }
 
