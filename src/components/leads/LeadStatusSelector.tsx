@@ -15,13 +15,10 @@ export default function LeadStatusSelector({ lead, onStatusChange }: LeadStatusS
 
   return (
     <Select value={lead.status} onValueChange={onStatusChange}>
-      <SelectTrigger 
-        className="h-8 w-32 text-xs border-lunar-border bg-lunar-surface hover:bg-lunar-bg transition-colors rounded-md shadow-sm" 
-        data-no-drag="true"
-      >
+      <SelectTrigger className="h-8 w-32 text-xs border-lunar-border bg-lunar-surface hover:bg-lunar-bg transition-colors rounded-md shadow-sm">
         <SelectValue />
       </SelectTrigger>
-      <SelectContent className="z-[90] bg-lunar-surface border-lunar-border rounded-md shadow-lg">
+      <SelectContent className="bg-lunar-surface border-lunar-border rounded-md shadow-lg">
         <SelectItem value={lead.status} disabled className="text-xs">
           {currentStatus?.name || lead.status}
         </SelectItem>

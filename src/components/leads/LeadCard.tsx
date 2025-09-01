@@ -10,10 +10,12 @@ import LeadDetailsModal from './LeadDetailsModal';
 import LeadActionButtons from './LeadActionButtons';
 import FollowUpCounter from './FollowUpCounter';
 import { useLeadStatuses } from '@/hooks/useLeadStatuses';
+import { useLeadInteractions } from '@/hooks/useLeadInteractions';
 import { useFollowUpSystem } from '@/hooks/useFollowUpSystem';
 import { useAppContext } from '@/contexts/AppContext';
 import { checkLeadClientDivergence } from '@/utils/leadClientSync';
-import { useLeadCardActions } from './interactions/useLeadCardActions';
+import { toast } from 'sonner';
+
 interface LeadCardProps {
   lead: Lead;
   onDelete: () => void;
@@ -33,6 +35,7 @@ interface LeadCardProps {
   dndStyle?: any;
   isDragging?: boolean;
 }
+
 export default function LeadCard({
   lead,
   onDelete,
@@ -52,9 +55,9 @@ export default function LeadCard({
   const [isPressing, setIsPressing] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const { statuses } = useLeadStatuses();
+  const { addInteraction } = useLeadInteractions();
   const { config } = useFollowUpSystem();
   const { clientes } = useAppContext();
-  const { startConversation, requestMove } = useLeadCardActions();
 
   // Check CRM client status and calculate dot color
   const crmDot = useMemo(() => {
@@ -86,8 +89,10 @@ export default function LeadCard({
   const createdAgo = useMemo(() => {
     return daysAgoLabel(lead.dataCriacao);
   }, [lead.dataCriacao]);
+
   const isConverted = lead.status === 'fechado';
   const isLost = lead.status === 'perdido';
+  
   const statusColor = useMemo(() => {
     const status = statuses.find(s => s.key === lead.status);
     return status?.color || '#6b7280'; // gray fallback
@@ -117,19 +122,46 @@ export default function LeadCard({
   };
 
   const schedulingBadge = getSchedulingBadge();
+
   const handleStartConversation = () => {
-    startConversation(lead, onRequestMove);
+    try {
+      const telefone = lead.telefone.replace(/\D/g, '');
+      const mensagem = `Olá ${lead.nome}! 😊\n\nVi que você demonstrou interesse em nossos serviços. Como posso ajudá-lo(a)?`;
+      const mensagemCodificada = encodeURIComponent(mensagem);
+      const link = `https://wa.me/55${telefone}?text=${mensagemCodificada}`;
+      window.open(link, '_blank');
+      toast.success('WhatsApp aberto para conversa');
+      
+      // Registrar interação de conversa
+      addInteraction(lead.id, 'conversa', 'Conversa iniciada via WhatsApp', false);
+      
+      // Move para "aguardando" se ainda estiver em "novo_interessado"
+      if (lead.status === 'novo_interessado') {
+        onRequestMove?.('aguardando');
+      }
+    } catch (error) {
+      toast.error('Erro ao abrir WhatsApp');
+    }
   };
-  return <li className={`relative overflow-hidden rounded-lg p-2 transition-all select-none touch-pan-y transform-gpu border ${isDragging ? 'opacity-50 scale-95' : ''} ${isPressing ? 'scale-[0.98]' : ''} 
-      bg-gradient-to-br from-gray-100 to-white border-lunar-border shadow-sm
-      dark:from-gray-800 dark:to-gray-700 dark:border-lunar-border
-      `} style={dndStyle} ref={dndRef as any} onMouseDown={() => setIsPressing(true)} onMouseUp={() => setIsPressing(false)} onMouseLeave={() => setIsPressing(false)}>
-      {/* Barra lateral colorida para identificação do status - DRAG HANDLE */}
+
+  return (
+    <li 
+      className={`relative overflow-hidden rounded-lg p-2 transition-all select-none touch-manipulation transform-gpu border ${isDragging ? 'opacity-50 scale-95' : ''} ${isPressing ? 'scale-[0.98]' : ''} 
+        bg-gradient-to-br from-gray-100 to-white border-lunar-border shadow-sm
+        dark:from-gray-800 dark:to-gray-700 dark:border-lunar-border
+        `} 
+      style={dndStyle} 
+      ref={dndRef as any} 
+      {...dndAttributes || {}} 
+      {...dndListeners || {}}
+      onMouseDown={() => setIsPressing(true)} 
+      onMouseUp={() => setIsPressing(false)} 
+      onMouseLeave={() => setIsPressing(false)}
+    >
+      {/* Barra lateral colorida para identificação do status */}
       <div 
-        className="absolute left-0 top-0 bottom-0 w-1 cursor-grab active:cursor-grabbing hover:w-2 transition-all" 
+        className="absolute left-0 top-0 bottom-0 w-1" 
         style={{ backgroundColor: statusColor }}
-        {...dndAttributes || {}} 
-        {...dndListeners || {}}
       />
       
       {/* Layout em Grid: Nome + Menu no topo */}
@@ -146,8 +178,22 @@ export default function LeadCard({
           )}
         </div>
         
-        <LeadActionsPopover lead={lead} onStartConversation={handleStartConversation} onShowDetails={() => setShowDetails(true)} onConvert={onConvertToClient} onDelete={onDelete} onScheduleClient={onScheduleClient} onMarkAsScheduled={onMarkAsScheduled} onViewAppointment={onViewAppointment}>
-          <Button variant="ghost" size="icon" className="h-5 w-5 -mt-1 -mr-1" title="Mais opções" data-no-drag="true">
+        <LeadActionsPopover 
+          lead={lead} 
+          onStartConversation={handleStartConversation} 
+          onShowDetails={() => setShowDetails(true)} 
+          onConvert={onConvertToClient} 
+          onDelete={onDelete} 
+          onScheduleClient={onScheduleClient} 
+          onMarkAsScheduled={onMarkAsScheduled} 
+          onViewAppointment={onViewAppointment}
+        >
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-5 w-5 -mt-1 -mr-1" 
+            title="Mais opções"
+          >
             <MoreVertical className="h-4 w-4" />
           </Button>
         </LeadActionsPopover>
@@ -201,12 +247,17 @@ export default function LeadCard({
             </Badge>
           </div>
         )}
-        
       </div>
 
       {/* Status Selector Centralizado */}
-      <div className="flex justify-center mb-3" data-no-drag="true">
-        <LeadStatusSelector lead={lead} onStatusChange={status => requestMove(lead, status, onRequestMove)} />
+      <div className="flex justify-center mb-3">
+        <LeadStatusSelector 
+          lead={lead} 
+          onStatusChange={status => {
+            onRequestMove?.(status);
+            toast.success('Status alterado');
+          }} 
+        />
       </div>
 
       {/* Datas + WhatsApp */}
@@ -216,16 +267,20 @@ export default function LeadCard({
         </div>
         <div className="flex items-center justify-between text-xs text-lunar-textSecondary">
           <span className="text-xs font-extralight">Criado em: {createdAgo}</span>
-          <Button variant="ghost" size="icon" className="h-6 w-6 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20" onClick={handleStartConversation} title="Conversar no WhatsApp" data-no-drag="true">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-6 w-6 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20" 
+            onClick={handleStartConversation} 
+            title="Conversar no WhatsApp"
+          >
             <MessageCircle className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
       {/* Action buttons for "aguardando" status */}
-      <div data-no-drag="true">
-        <LeadActionButtons lead={lead} />
-      </div>
+      <LeadActionButtons lead={lead} />
 
       {/* Direct scheduling button for converted leads */}
       {isConverted && onDirectScheduling && (
@@ -234,7 +289,6 @@ export default function LeadCard({
             onClick={onDirectScheduling}
             size="sm"
             className="w-full bg-lunar-accent hover:bg-lunar-accent/90 text-white"
-            data-no-drag="true"
           >
             <Calendar className="h-4 w-4 mr-2" />
             Agendar Cliente
@@ -243,6 +297,13 @@ export default function LeadCard({
       )}
 
       {/* Details Modal */}
-      <LeadDetailsModal lead={lead} open={showDetails} onOpenChange={setShowDetails} onConvert={onConvertToClient} onDelete={onDelete} />
-    </li>;
+      <LeadDetailsModal 
+        lead={lead} 
+        open={showDetails} 
+        onOpenChange={setShowDetails} 
+        onConvert={onConvertToClient} 
+        onDelete={onDelete} 
+      />
+    </li>
+  );
 }
