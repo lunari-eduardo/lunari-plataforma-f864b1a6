@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 
 export interface UploadedFile {
@@ -18,7 +18,7 @@ export function useFileUpload() {
   const [files, setFiles] = useState<UploadedFile[]>([]);
 
   // Carregar arquivos do localStorage
-  const loadFiles = () => {
+  const loadFiles = useCallback(() => {
     try {
       const saved = localStorage.getItem('uploaded_files');
       const uploadedFiles = saved ? JSON.parse(saved) : [];
@@ -27,7 +27,7 @@ export function useFileUpload() {
       console.error('❌ Erro ao carregar arquivos:', error);
       setFiles([]);
     }
-  };
+  }, []);
 
   // Salvar arquivos no localStorage
   const saveFiles = (newFiles: UploadedFile[]) => {

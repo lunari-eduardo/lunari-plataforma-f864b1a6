@@ -33,20 +33,26 @@ export function useClientForm(cliente: Cliente | undefined, onUpdate: (id: strin
 
   // Sincronizar formData quando cliente muda
   useEffect(() => {
-    if (cliente) {
-      setFormData({
-        nome: cliente.nome || '',
-        email: cliente.email || '',
-        telefone: cliente.telefone || '',
-        endereco: cliente.endereco || '',
-        observacoes: cliente.observacoes || '',
-        origem: cliente.origem || '',
-        dataNascimento: cliente.dataNascimento || '',
-        conjuge: (cliente as any)?.conjuge || { nome: '', dataNascimento: '' },
-        filhos: (((cliente as any)?.filhos) || []) as { id: string; nome?: string; dataNascimento?: string }[],
-      });
-    }
-  }, [cliente]);
+    if (!cliente || isEditing) return;
+
+    const nextData = {
+      nome: cliente.nome || '',
+      email: cliente.email || '',
+      telefone: cliente.telefone || '',
+      endereco: cliente.endereco || '',
+      observacoes: cliente.observacoes || '',
+      origem: cliente.origem || '',
+      dataNascimento: cliente.dataNascimento || '',
+      conjuge: (cliente as any)?.conjuge || { nome: '', dataNascimento: '' },
+      filhos: (((cliente as any)?.filhos) || []) as { id: string; nome?: string; dataNascimento?: string }[],
+    };
+
+    // Evitar re-render desnecessário e loops quando o objeto cliente muda de referência sem alterar valores
+    const isSame = JSON.stringify(nextData) === JSON.stringify(formData);
+    if (isSame) return;
+
+    setFormData(nextData);
+  }, [cliente, isEditing, formData]);
 
   const handleSave = () => {
     if (!cliente) return;

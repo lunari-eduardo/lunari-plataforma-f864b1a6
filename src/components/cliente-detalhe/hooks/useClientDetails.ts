@@ -1,4 +1,4 @@
-import { useState, useContext, useMemo, useEffect, useCallback } from 'react';
+import { useState, useContext, useMemo, useEffect } from 'react';
 import { AppContext } from '@/contexts/AppContext';
 import { autoFixIfNeeded, getSimplifiedClientMetrics } from '@/utils/crmDataFix';
 import { useFileUpload } from '@/hooks/useFileUpload';
@@ -8,21 +8,23 @@ export function useClientDetails(clienteId: string | undefined) {
   const { loadFiles } = useFileUpload();
   const [isLoading, setIsLoading] = useState(true);
 
-  // Carregar arquivos e executar correção automática
-  const initializeData = useCallback(async () => {
-    try {
-      await autoFixIfNeeded();
-      await loadFiles();
-    } catch (error) {
-      console.error('Error initializing client data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [loadFiles]);
-
+  // Carregar arquivos e executar correção automática (apenas uma vez no mount)
   useEffect(() => {
-    initializeData();
-  }, [initializeData]);
+    let mounted = true;
+    (async () => {
+      try {
+        await autoFixIfNeeded();
+        await loadFiles();
+      } catch (error) {
+        console.error('Error initializing client data:', error);
+      } finally {
+        if (mounted) setIsLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   // Encontrar o cliente pelo ID
   const cliente = useMemo(() => {
