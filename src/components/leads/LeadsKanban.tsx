@@ -298,7 +298,7 @@ export default function LeadsKanban({
                       "pb-2",
                       isMobile ? "space-y-1" : "space-y-2"
                     )}>
-                      {leadsInColumn.map(lead => (
+                      {leadsInColumn.filter(lead => lead != null).map(lead => (
                         <DraggableLeadCard
                           key={lead.id}
                           lead={lead}

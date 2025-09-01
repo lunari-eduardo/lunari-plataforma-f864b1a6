@@ -52,6 +52,10 @@ export default function LeadCard({
   dndStyle,
   isDragging = false
 }: LeadCardProps) {
+  // Early return if lead is null/undefined
+  if (!lead) {
+    return null;
+  }
   const [isPressing, setIsPressing] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const { statuses } = useLeadStatuses();
