@@ -31,7 +31,8 @@ export default function Agenda() {
     setView,
     navigatePrevious,
     navigateNext,
-    navigateToday
+    navigateToday,
+    navigateToDate
   } = useAgendaNavigation();
   
   // Modal management hook
@@ -79,8 +80,8 @@ export default function Agenda() {
   const handleDayClick = useCallback((selectedDate: Date) => {
     setView('day');
     // Navigate directly to selected date
-    navigateToday();
-  }, [setView, navigateToday]);
+    navigateToDate(selectedDate);
+  }, [setView, navigateToDate]);
 
   // Handle slot click (empty time slot) - directly open appointment form
   const handleCreateSlot = useCallback((slot: { date: Date; time?: string }) => {
