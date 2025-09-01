@@ -23,10 +23,24 @@ export function useExtratoCalculations(
     const entradas = linhasFiltradas.filter(l => l.tipo === 'entrada');
     const saidas = linhasFiltradas.filter(l => l.tipo === 'saida');
     
-    const totalEntradas = entradas.reduce((sum, l) => sum + l.valor, 0);
-    const totalSaidas = saidas.reduce((sum, l) => sum + l.valor, 0);
-    const saldoPeriodo = totalEntradas - totalSaidas;
+    // ENTRADAS por status
+    const entradasPagas = entradas.filter(l => l.status === 'Pago').reduce((sum, l) => sum + l.valor, 0);
+    const entradasFaturadas = entradas.filter(l => l.status === 'Faturado').reduce((sum, l) => sum + l.valor, 0);
+    const entradasAgendadas = entradas.filter(l => l.status === 'Agendado').reduce((sum, l) => sum + l.valor, 0);
+    const totalEntradas = entradasPagas + entradasFaturadas + entradasAgendadas;
     
+    // SAÍDAS por status (CORREÇÃO: separar efetivas de futuras)
+    const saidasPagas = saidas.filter(l => l.status === 'Pago').reduce((sum, l) => sum + l.valor, 0);
+    const saidasFaturadas = saidas.filter(l => l.status === 'Faturado').reduce((sum, l) => sum + l.valor, 0);
+    const saidasAgendadas = saidas.filter(l => l.status === 'Agendado').reduce((sum, l) => sum + l.valor, 0);
+    const totalSaidas = saidasPagas + saidasFaturadas + saidasAgendadas;
+    
+    // SALDOS - separando efetivo de projetado
+    const saldoEfetivo = entradasPagas - saidasPagas; // apenas valores realmente movimentados
+    const saldoProjetado = totalEntradas - totalSaidas; // incluindo futuros
+    const saldoPeriodo = saldoProjetado; // manter compatibilidade
+    
+    // MÉTRICAS AUXILIARES
     const totalAReceber = linhasFiltradas.filter(l => l.status === 'Faturado').reduce((sum, l) => sum + l.valor, 0);
     const totalAgendado = linhasFiltradas.filter(l => l.status === 'Agendado').reduce((sum, l) => sum + l.valor, 0);
     const totalPago = linhasFiltradas.filter(l => l.status === 'Pago').reduce((sum, l) => sum + l.valor, 0);
@@ -36,9 +50,24 @@ export function useExtratoCalculations(
     const percentualPago = totalGeral > 0 ? (totalPago / totalGeral) * 100 : 0;
 
     return {
+      // Entradas
       totalEntradas,
+      entradasPagas,
+      entradasFaturadas,
+      entradasAgendadas,
+      
+      // Saídas
       totalSaidas,
+      saidasPagas,
+      saidasFaturadas,
+      saidasAgendadas,
+      
+      // Saldos
       saldoPeriodo,
+      saldoEfetivo,
+      saldoProjetado,
+      
+      // Métricas auxiliares
       totalAReceber,
       totalAgendado,
       totalPago,

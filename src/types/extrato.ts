@@ -27,9 +27,24 @@ export interface LinhaExtrato {
 
 // Resumo do período filtrado
 export interface ResumoExtrato {
+  // Entradas
   totalEntradas: number;
-  totalSaidas: number;
-  saldoPeriodo: number;
+  entradasPagas: number;
+  entradasFaturadas: number;
+  entradasAgendadas: number;
+  
+  // Saídas (separadas por status)
+  totalSaidas: number; // soma total para compatibilidade
+  saidasPagas: number; // valores efetivamente pagos
+  saidasFaturadas: number; // valores faturados mas não pagos
+  saidasAgendadas: number; // valores futuros agendados
+  
+  // Saldos
+  saldoPeriodo: number; // saldo total (compatibilidade)
+  saldoEfetivo: number; // apenas valores pagos (real)
+  saldoProjetado: number; // incluindo valores futuros
+  
+  // Métricas auxiliares
   totalAReceber: number;
   totalAgendado: number;
   totalPago: number;
