@@ -95,7 +95,7 @@ const GraficosFinanceiros = memo(function GraficosFinanceiros({
                     }} 
                   />
                    <Bar dataKey="receita" fill="hsl(var(--chart-revenue))" radius={[4, 4, 0, 0]} name="Receita" />
-                   <Bar dataKey="lucro" fill="hsl(var(--chart-success))" radius={[4, 4, 0, 0]} name="Lucro" />
+                   <Bar dataKey="lucro" fill="hsl(39, 50%, 70%)" radius={[4, 4, 0, 0]} name="Lucro" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
