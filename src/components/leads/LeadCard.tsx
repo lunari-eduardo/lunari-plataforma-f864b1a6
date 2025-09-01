@@ -138,19 +138,22 @@ export default function LeadCard({
       toast.error('Erro ao abrir WhatsApp');
     }
   };
-  return <li className={`relative overflow-hidden rounded-lg p-2 transition-all cursor-grab active:cursor-grabbing select-none touch-none transform-gpu border ${isDragging ? 'opacity-50 scale-95' : ''} ${isPressing ? 'scale-[0.98]' : ''} 
+  return <li className={`relative overflow-hidden rounded-lg p-2 transition-all select-none touch-none transform-gpu border ${isDragging ? 'opacity-50 scale-95' : ''} ${isPressing ? 'scale-[0.98]' : ''} 
       bg-gradient-to-br from-gray-100 to-white border-lunar-border shadow-sm
       dark:from-gray-800 dark:to-gray-700 dark:border-lunar-border
-      `} style={dndStyle} ref={dndRef as any} {...dndAttributes || {}} {...dndListeners || {}} onPointerDownCapture={e => {
+      `} style={dndStyle} ref={dndRef as any} onPointerDownCapture={e => {
     const target = e.target as HTMLElement;
     if (target?.closest('[data-no-drag="true"]')) {
       e.stopPropagation();
     }
   }} onMouseDown={() => setIsPressing(true)} onMouseUp={() => setIsPressing(false)} onMouseLeave={() => setIsPressing(false)}>
-      {/* Barra lateral colorida para identificação do status */}
-      <div className="absolute left-0 top-0 bottom-0 w-1" style={{
-      backgroundColor: statusColor
-    }} />
+      {/* Barra lateral colorida para identificação do status - DRAG HANDLE */}
+      <div 
+        className="absolute left-0 top-0 bottom-0 w-1 cursor-grab active:cursor-grabbing hover:w-2 transition-all" 
+        style={{ backgroundColor: statusColor }}
+        {...dndAttributes || {}} 
+        {...dndListeners || {}}
+      />
       
       {/* Layout em Grid: Nome + Menu no topo */}
       <div className="flex items-start justify-between mb-2">
@@ -225,7 +228,7 @@ export default function LeadCard({
       </div>
 
       {/* Status Selector Centralizado */}
-      <div className="flex justify-center mb-3">
+      <div className="flex justify-center mb-3" data-no-drag="true">
         <LeadStatusSelector lead={lead} onStatusChange={status => {
         onRequestMove?.(status);
         toast.success('Status alterado');
@@ -246,7 +249,9 @@ export default function LeadCard({
       </div>
 
       {/* Action buttons for "aguardando" status */}
-      <LeadActionButtons lead={lead} />
+      <div data-no-drag="true">
+        <LeadActionButtons lead={lead} />
+      </div>
 
       {/* Direct scheduling button for converted leads */}
       {isConverted && onDirectScheduling && (

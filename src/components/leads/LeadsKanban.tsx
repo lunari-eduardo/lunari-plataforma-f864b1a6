@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
 import { DndContext, rectIntersection, useSensor, useSensors, PointerSensor, DragOverlay, useDroppable } from '@dnd-kit/core';
-import { restrictToFirstScrollableAncestor } from '@dnd-kit/modifiers';
 import { Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useLeads } from '@/hooks/useLeads';
@@ -372,11 +371,10 @@ export default function LeadsKanban({ periodFilter, searchTerm = '', originFilte
       </div>
 
       {/* Kanban Board Container - Optimized for mobile scroll */}
-      <div className="flex-1 relative overflow-hidden">
+      <div className="flex-1 relative overflow-hidden overscroll-x-contain">
         <DndContext 
           sensors={sensors} 
           collisionDetection={rectIntersection} 
-          modifiers={[restrictToFirstScrollableAncestor]}
           onDragStart={e => {
         setActiveId(String(e.active.id));
       }} onDragEnd={e => {
