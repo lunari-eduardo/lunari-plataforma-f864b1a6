@@ -132,7 +132,7 @@ export default function ModalNovoLancamentoRefatorado({
                     </div>
                     {itensGrupoAtivo.map(item => (
                       <SelectItem key={item.id} value={item.id}>
-                        {item.nome}
+                        {item?.nome || 'Item sem nome'}
                       </SelectItem>
                     ))}
                     <div className="border-t my-1"></div>
@@ -145,7 +145,7 @@ export default function ModalNovoLancamentoRefatorado({
                 </div>
                 {todosItens.map(item => (
                   <SelectItem key={item.id} value={item.id}>
-                    {item.nome} <span className="text-xs text-muted-foreground">({item.grupo_principal})</span>
+                    {item?.nome || 'Item sem nome'} <span className="text-xs text-muted-foreground">({item?.grupo_principal || 'N/A'})</span>
                   </SelectItem>
                 ))}
               </SelectContent>

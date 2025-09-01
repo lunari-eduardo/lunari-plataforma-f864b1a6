@@ -251,7 +251,7 @@ export default function TabelaLancamentos({
                   </SelectTrigger>
                   <SelectContent>
                     {itensDisponiveis.map(item => <SelectItem key={item.id} value={item.id}>
-                        {item.nome}
+                        {item?.nome || 'Item sem nome'}
                       </SelectItem>)}
                   </SelectContent>
                 </Select>
@@ -321,7 +321,7 @@ export default function TabelaLancamentos({
                           </SelectTrigger>
                           <SelectContent>
                             {itensDisponiveis.map(item => <SelectItem key={item.id} value={item.id}>
-                                {item.nome}
+                                {item?.nome || 'Item sem nome'}
                               </SelectItem>)}
                           </SelectContent>
                         </Select>

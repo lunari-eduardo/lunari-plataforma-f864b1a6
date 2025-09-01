@@ -113,7 +113,7 @@ export function ItemsList({
                     ) : (
                       <>
                         <span className="text-lunar-text text-xs font-medium flex-1 min-w-0 truncate pr-2">
-                          {item.nome}
+                          {item?.nome || 'Item sem nome'}
                         </span>
                         <div className="flex items-center gap-1 flex-shrink-0">
                           <Button 
@@ -127,7 +127,7 @@ export function ItemsList({
                           <Button 
                             size="sm" 
                             variant="ghost" 
-                            onClick={() => onDeleteItem(item.id, item.nome)} 
+                            onClick={() => onDeleteItem(item.id, item?.nome || 'Item sem nome')} 
                             className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
                           >
                             <Trash2 className="h-3.5 w-3.5" />

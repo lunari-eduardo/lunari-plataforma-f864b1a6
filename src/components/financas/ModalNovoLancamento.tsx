@@ -161,9 +161,9 @@ export default function ModalNovoLancamento({
                     <div className="px-2 py-1 text-xs font-medium text-muted-foreground uppercase">
                       {grupoAtivo} (Recomendado)
                     </div>
-                    {itensGrupoAtivo.map(item => (
+                     {itensGrupoAtivo.map(item => (
                       <SelectItem key={item.id} value={item.id}>
-                        {item.nome}
+                        {item?.nome || 'Item sem nome'}
                       </SelectItem>
                     ))}
                     <div className="border-t my-1"></div>
@@ -176,7 +176,7 @@ export default function ModalNovoLancamento({
                 </div>
                 {todosItens.map(item => (
                   <SelectItem key={item.id} value={item.id}>
-                    {item.nome} <span className="text-xs text-muted-foreground">({item.grupo_principal})</span>
+                    {item?.nome || 'Item sem nome'} <span className="text-xs text-muted-foreground">({item?.grupo_principal || 'N/A'})</span>
                   </SelectItem>
                 ))}
               </SelectContent>
