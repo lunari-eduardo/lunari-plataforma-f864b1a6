@@ -24,65 +24,17 @@ const PIE_COLORS = [
 interface GraficosFinanceirosProps {
   dadosMensais: any[];
   composicaoDespesas: any[];
-  evolucaoCategoria: any[];
-  categoriaSelecionada: string;
   roiData: {
     totalInvestimento: number;
     roi: number;
   };
-  categoriasDetalhadas?: any[];
-  despesasPorCategoria?: any[];
-  onCategoriaChange?: (categoria: string) => void;
 }
 
 const GraficosFinanceiros = memo(function GraficosFinanceiros({
   dadosMensais,
   composicaoDespesas,
-  evolucaoCategoria,
-  categoriaSelecionada,
-  roiData,
-  categoriasDetalhadas = [],
-  despesasPorCategoria = [],
-  onCategoriaChange
+  roiData
 }: GraficosFinanceirosProps) {
-  const [categoriaInterativa, setCategoriaInterativa] = useState<string>('');
-  
-  // Lista de categorias disponíveis para o dropdown
-  const categoriasDisponiveis = useMemo(() => {
-    const categorias = new Set<string>();
-    despesasPorCategoria.forEach((item: any) => {
-      if (item.categoria) categorias.add(item.categoria);
-    });
-    return Array.from(categorias).sort();
-  }, [despesasPorCategoria]);
-
-  // Dados filtrados por categoria para o gráfico de linha
-  const dadosEvolucaoCategoria = useMemo(() => {
-    if (!categoriaInterativa || !despesasPorCategoria.length) return [];
-    
-    // Simular dados mensais baseados na categoria selecionada
-    const meses = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
-    const categoriaData = despesasPorCategoria.find((item: any) => item.categoria === categoriaInterativa);
-    
-    if (!categoriaData) return [];
-    
-    // Distribuir o valor anual pelos meses (simulação)
-    const valorMedio = categoriaData.valor / 12;
-    const variacao = 0.3; // 30% de variação
-    
-    return meses.map((mes, index) => {
-      const fator = 1 + (Math.sin(index * Math.PI / 6) * variacao);
-      return {
-        mes,
-        valor: valorMedio * fator
-      };
-    });
-  }, [categoriaInterativa, despesasPorCategoria]);
-
-  const handleCategoriaChange = (categoria: string) => {
-    setCategoriaInterativa(categoria);
-    onCategoriaChange?.(categoria);
-  };
   return (
     <>
       {/* Gráfico Principal - Receita vs Lucro */}
