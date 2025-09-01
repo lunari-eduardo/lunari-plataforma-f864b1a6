@@ -12,11 +12,13 @@ export function DashboardChartsBlock({ dadosMensais, composicaoDespesas, roiData
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
         </div>
       }>
-        <GraficosFinanceiros
-          dadosMensais={dadosMensais}
-          composicaoDespesas={composicaoDespesas}
-          roiData={roiData}
-        />
+        <div className="space-y-6">
+          <GraficosFinanceiros
+            dadosMensais={dadosMensais}
+            composicaoDespesas={composicaoDespesas}
+            roiData={roiData}
+          />
+        </div>
       </Suspense>
     </section>
   );
