@@ -51,9 +51,8 @@ const GraficosFinanceiros = memo(function GraficosFinanceiros({
           <CardContent>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={dadosMensais} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="mes" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                 <BarChart data={dadosMensais} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                   <XAxis dataKey="mes" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                   <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(value) => formatCurrency(value)} />
                   <Tooltip 
                     formatter={(value: any, name: string) => [
@@ -158,9 +157,8 @@ const GraficosFinanceiros = memo(function GraficosFinanceiros({
             <CardContent>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={evolucaoCategoria} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="mes" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                   <BarChart data={evolucaoCategoria} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                     <XAxis dataKey="mes" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                     <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(value) => formatCurrency(value)} />
                     <Tooltip formatter={(value: any) => [formatCurrency(value), '']} contentStyle={{
                       backgroundColor: 'hsl(var(--card))',
@@ -194,9 +192,8 @@ const GraficosFinanceiros = memo(function GraficosFinanceiros({
                       <stop offset="5%" stopColor="hsl(var(--chart-tertiary))" stopOpacity={0.8} />
                       <stop offset="95%" stopColor="hsl(var(--chart-tertiary))" stopOpacity={0.1} />
                     </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="mes" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                   </defs>
+                   <XAxis dataKey="mes" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                   <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(value) => formatCurrency(value)} />
                   <Tooltip 
                     formatter={(value: any) => [formatCurrency(value), 'Saldo Acumulado']} 
@@ -224,9 +221,8 @@ const GraficosFinanceiros = memo(function GraficosFinanceiros({
             <CardContent>
               <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={categoriasDetalhadas} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis 
+                   <BarChart data={categoriasDetalhadas} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                     <XAxis
                       dataKey="categoria" 
                       stroke="hsl(var(--muted-foreground))" 
                       fontSize={12}
