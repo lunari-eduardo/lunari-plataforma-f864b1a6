@@ -5,7 +5,8 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
-import { DndContext, rectIntersection, useSensor, useSensors, PointerSensor, DragOverlay, useDroppable } from '@dnd-kit/core';
+import { DndContext, rectIntersection, DragOverlay, useDroppable } from '@dnd-kit/core';
+import { useLeadDndSensors } from './dnd/useLeadDndSensors';
 import { Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useLeads } from '@/hooks/useLeads';
@@ -61,12 +62,7 @@ export default function LeadsKanban({ periodFilter, searchTerm = '', originFilte
   const [schedulingLead, setSchedulingLead] = useState<Lead | null>(null);
   const [lossReasonModalOpen, setLossReasonModalOpen] = useState(false);
   const [leadForLossReason, setLeadForLossReason] = useState<Lead | null>(null);
-  const pointerSensor = useSensor(PointerSensor, {
-    activationConstraint: {
-      distance: 8
-    }
-  });
-  const sensors = useSensors(pointerSensor);
+  const sensors = useLeadDndSensors();
   const statusOptions = useMemo(() => statuses.map(s => ({
     value: s.key,
     label: s.name
@@ -305,7 +301,7 @@ export default function LeadsKanban({ periodFilter, searchTerm = '', originFilte
             borderColor: `${statusColor}40`
           }}
         >
-          <div className="flex-1 overflow-y-auto scrollbar-kanban">
+          <div className="flex-1 overflow-y-auto scrollbar-kanban overscroll-contain">
             <ul className={cn(
               "pb-2",
               isMobile ? "space-y-1" : "space-y-2"

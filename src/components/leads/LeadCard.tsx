@@ -10,11 +10,10 @@ import LeadDetailsModal from './LeadDetailsModal';
 import LeadActionButtons from './LeadActionButtons';
 import FollowUpCounter from './FollowUpCounter';
 import { useLeadStatuses } from '@/hooks/useLeadStatuses';
-import { useLeadInteractions } from '@/hooks/useLeadInteractions';
 import { useFollowUpSystem } from '@/hooks/useFollowUpSystem';
 import { useAppContext } from '@/contexts/AppContext';
 import { checkLeadClientDivergence } from '@/utils/leadClientSync';
-import { toast } from 'sonner';
+import { useLeadCardActions } from './interactions/useLeadCardActions';
 interface LeadCardProps {
   lead: Lead;
   onDelete: () => void;
@@ -53,9 +52,9 @@ export default function LeadCard({
   const [isPressing, setIsPressing] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const { statuses } = useLeadStatuses();
-  const { addInteraction } = useLeadInteractions();
   const { config } = useFollowUpSystem();
   const { clientes } = useAppContext();
+  const { startConversation, requestMove } = useLeadCardActions();
 
   // Check CRM client status and calculate dot color
   const crmDot = useMemo(() => {
@@ -119,34 +118,12 @@ export default function LeadCard({
 
   const schedulingBadge = getSchedulingBadge();
   const handleStartConversation = () => {
-    try {
-      const telefone = lead.telefone.replace(/\D/g, '');
-      const mensagem = `Olá ${lead.nome}! 😊\n\nVi que você demonstrou interesse em nossos serviços. Como posso ajudá-lo(a)?`;
-      const mensagemCodificada = encodeURIComponent(mensagem);
-      const link = `https://wa.me/55${telefone}?text=${mensagemCodificada}`;
-      window.open(link, '_blank');
-      toast.success('WhatsApp aberto para conversa');
-      
-      // Registrar interação de conversa
-      addInteraction(lead.id, 'conversa', 'Conversa iniciada via WhatsApp', false);
-      
-      // Move para "aguardando" se ainda estiver em "novo_interessado"
-      if (lead.status === 'novo_interessado') {
-        onRequestMove?.('aguardando');
-      }
-    } catch (error) {
-      toast.error('Erro ao abrir WhatsApp');
-    }
+    startConversation(lead, onRequestMove);
   };
-  return <li className={`relative overflow-hidden rounded-lg p-2 transition-all select-none touch-none transform-gpu border ${isDragging ? 'opacity-50 scale-95' : ''} ${isPressing ? 'scale-[0.98]' : ''} 
+  return <li className={`relative overflow-hidden rounded-lg p-2 transition-all select-none touch-pan-y transform-gpu border ${isDragging ? 'opacity-50 scale-95' : ''} ${isPressing ? 'scale-[0.98]' : ''} 
       bg-gradient-to-br from-gray-100 to-white border-lunar-border shadow-sm
       dark:from-gray-800 dark:to-gray-700 dark:border-lunar-border
-      `} style={dndStyle} ref={dndRef as any} onPointerDownCapture={e => {
-    const target = e.target as HTMLElement;
-    if (target?.closest('[data-no-drag="true"]')) {
-      e.stopPropagation();
-    }
-  }} onMouseDown={() => setIsPressing(true)} onMouseUp={() => setIsPressing(false)} onMouseLeave={() => setIsPressing(false)}>
+      `} style={dndStyle} ref={dndRef as any} onMouseDown={() => setIsPressing(true)} onMouseUp={() => setIsPressing(false)} onMouseLeave={() => setIsPressing(false)}>
       {/* Barra lateral colorida para identificação do status - DRAG HANDLE */}
       <div 
         className="absolute left-0 top-0 bottom-0 w-1 cursor-grab active:cursor-grabbing hover:w-2 transition-all" 
@@ -229,10 +206,7 @@ export default function LeadCard({
 
       {/* Status Selector Centralizado */}
       <div className="flex justify-center mb-3" data-no-drag="true">
-        <LeadStatusSelector lead={lead} onStatusChange={status => {
-        onRequestMove?.(status);
-        toast.success('Status alterado');
-      }} />
+        <LeadStatusSelector lead={lead} onStatusChange={status => requestMove(lead, status, onRequestMove)} />
       </div>
 
       {/* Datas + WhatsApp */}

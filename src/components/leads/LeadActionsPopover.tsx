@@ -6,6 +6,7 @@ import type { Lead } from '@/types/leads';
 import { useAppContext } from '@/contexts/AppContext';
 import { linkLeadToClient, getAvailableClientsForLinking } from '@/utils/leadClientSync';
 import { toast } from 'sonner';
+import { useLeadCardActions } from './interactions/useLeadCardActions';
 
 interface LeadActionsPopoverProps {
   lead: Lead;
@@ -72,7 +73,7 @@ export default function LeadActionsPopover({
       <PopoverTrigger asChild>
         {children}
       </PopoverTrigger>
-      <PopoverContent className="w-48 p-2" align="end">
+      <PopoverContent className="w-48 p-2 z-[90] bg-lunar-surface border-lunar-border rounded-md shadow-lg" align="end">
         <div className="space-y-1">
           <Button
             variant="ghost"

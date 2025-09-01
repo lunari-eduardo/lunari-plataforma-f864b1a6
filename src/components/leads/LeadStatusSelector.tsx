@@ -21,7 +21,7 @@ export default function LeadStatusSelector({ lead, onStatusChange }: LeadStatusS
       >
         <SelectValue />
       </SelectTrigger>
-      <SelectContent className="z-[60] bg-lunar-surface border-lunar-border rounded-md shadow-lg">
+      <SelectContent className="z-[90] bg-lunar-surface border-lunar-border rounded-md shadow-lg">
         <SelectItem value={lead.status} disabled className="text-xs">
           {currentStatus?.name || lead.status}
         </SelectItem>
