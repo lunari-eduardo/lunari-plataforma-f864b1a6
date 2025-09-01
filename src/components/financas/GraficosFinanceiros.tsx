@@ -229,65 +229,6 @@ const GraficosFinanceiros = memo(function GraficosFinanceiros({
         </Card>
       </section>
 
-      {/* Evolução de Despesas por Categoria - Gráfico Interativo */}
-      <section aria-label="Evolução de Despesas por Categoria" className="animate-fade-in">
-        <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300">
-          <CardHeader className="pb-4 space-y-4">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-              <CardTitle className="text-lg font-semibold">Evolução de Despesas por Categoria</CardTitle>
-              <div className="lg:w-48">
-                <Select value={categoriaInterativa} onValueChange={handleCategoriaChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione uma categoria" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categoriasDisponiveis.map((categoria) => (
-                      <SelectItem key={categoria} value={categoria}>
-                        {categoria}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="h-80">
-              {categoriaInterativa ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={dadosEvolucaoCategoria} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                    <XAxis dataKey="mes" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(value) => formatCurrency(value)} />
-                    <Tooltip 
-                      formatter={(value: any) => [formatCurrency(value), 'Valor']} 
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px'
-                      }} 
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="valor" 
-                      stroke="hsl(var(--chart-primary))" 
-                      strokeWidth={3}
-                      dot={{ fill: 'hsl(var(--chart-primary))', strokeWidth: 2, r: 4 }}
-                      activeDot={{ r: 6, stroke: 'hsl(var(--chart-primary))', strokeWidth: 2, fill: 'hsl(var(--card))' }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-center text-muted-foreground">
-                    <p className="text-lg mb-2">📊</p>
-                    <p>Selecione uma categoria acima para visualizar sua evolução ao longo do tempo</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </section>
     </>
   );
 });
