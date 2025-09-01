@@ -6,6 +6,11 @@ export function EquipmentModalGateway({
   equipmentData, 
   handleEquipmentModalClose 
 }: EquipmentModalGatewayProps) {
+  // Only render the modal if equipmentData is not null
+  if (!equipmentModalOpen || !equipmentData) {
+    return null;
+  }
+
   return (
     <AddEquipmentFromTransactionModal
       isOpen={equipmentModalOpen}

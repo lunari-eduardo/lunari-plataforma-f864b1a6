@@ -14,7 +14,7 @@ interface AddEquipmentFromTransactionModalProps {
     valor: number;
     data: string;
     allTransactionIds?: string[];
-  };
+  } | null;
 }
 
 export function AddEquipmentFromTransactionModal({
@@ -25,9 +25,9 @@ export function AddEquipmentFromTransactionModal({
   const { toast } = useToast();
   
   const [formData, setFormData] = useState({
-    nome: equipmentData.nome,
-    valorPago: equipmentData.valor.toString(),
-    dataCompra: equipmentData.data,
+    nome: equipmentData?.nome || '',
+    valorPago: equipmentData?.valor?.toString() || '0',
+    dataCompra: equipmentData?.data || new Date().toISOString().split('T')[0],
     vidaUtil: '5'
   });
 
@@ -56,13 +56,13 @@ export function AddEquipmentFromTransactionModal({
 
       if (sucesso) {
         // Marcar transações como processadas se os allTransactionIds existirem
-        if (equipmentData.allTransactionIds && equipmentData.allTransactionIds.length > 0) {
+        if (equipmentData?.allTransactionIds && equipmentData.allTransactionIds.length > 0) {
           const processedIds = JSON.parse(localStorage.getItem('equipment_processed_ids') || '[]');
           const updatedIds = [...processedIds, ...equipmentData.allTransactionIds];
           localStorage.setItem('equipment_processed_ids', JSON.stringify(updatedIds));
         }
         
-        console.log('🔧 [EquipmentModal] Transações marcadas como processadas:', equipmentData.allTransactionIds || []);
+        console.log('🔧 [EquipmentModal] Transações marcadas como processadas:', equipmentData?.allTransactionIds || []);
         
         toast({
           title: "Equipamento adicionado",
