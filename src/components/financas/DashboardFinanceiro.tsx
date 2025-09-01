@@ -390,6 +390,11 @@ const DashboardFinanceiro = memo(function DashboardFinanceiro() {
             categoriaSelecionada={categoriaSelecionada}
             roiData={roiData}
             categoriasDetalhadas={categoriasDetalhadas}
+            despesasPorCategoria={categoriasDetalhadas.map(item => ({
+              categoria: item.categoria,
+              mes: anoSelecionado,
+              valor: item.valor
+            }))}
           />
         </Suspense>
         

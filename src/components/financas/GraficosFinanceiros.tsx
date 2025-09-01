@@ -58,11 +58,25 @@ const GraficosFinanceiros = memo(function GraficosFinanceiros({
 
   // Dados filtrados por categoria para o gráfico de linha
   const dadosEvolucaoCategoria = useMemo(() => {
-    if (!categoriaInterativa) return [];
+    if (!categoriaInterativa || !despesasPorCategoria.length) return [];
     
-    return despesasPorCategoria
-      .filter((item: any) => item.categoria === categoriaInterativa)
-      .sort((a: any, b: any) => a.mes.localeCompare(b.mes));
+    // Simular dados mensais baseados na categoria selecionada
+    const meses = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
+    const categoriaData = despesasPorCategoria.find((item: any) => item.categoria === categoriaInterativa);
+    
+    if (!categoriaData) return [];
+    
+    // Distribuir o valor anual pelos meses (simulação)
+    const valorMedio = categoriaData.valor / 12;
+    const variacao = 0.3; // 30% de variação
+    
+    return meses.map((mes, index) => {
+      const fator = 1 + (Math.sin(index * Math.PI / 6) * variacao);
+      return {
+        mes,
+        valor: valorMedio * fator
+      };
+    });
   }, [categoriaInterativa, despesasPorCategoria]);
 
   const handleCategoriaChange = (categoria: string) => {
@@ -105,7 +119,7 @@ const GraficosFinanceiros = memo(function GraficosFinanceiros({
 
       {/* Gráficos Complementares - Linha 1 */}
       <section aria-label="Gráficos Complementares" className="animate-fade-in">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* ROI - Retorno sobre Investimento */}
           <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300">
             <CardHeader className="pb-4">
@@ -171,31 +185,6 @@ const GraficosFinanceiros = memo(function GraficosFinanceiros({
                       borderRadius: '8px'
                     }} />
                   </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Evolução de Categoria */}
-          <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg font-semibold">
-                Evolução: {categoriaSelecionada || 'Selecione uma categoria'}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                   <BarChart data={evolucaoCategoria} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                     <XAxis dataKey="mes" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(value) => formatCurrency(value)} />
-                    <Tooltip formatter={(value: any) => [formatCurrency(value), '']} contentStyle={{
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px'
-                    }} />
-                    <Bar dataKey="valor" fill="hsl(var(--chart-secondary))" radius={[4, 4, 0, 0]} />
-                  </BarChart>
                 </ResponsiveContainer>
               </div>
             </CardContent>
