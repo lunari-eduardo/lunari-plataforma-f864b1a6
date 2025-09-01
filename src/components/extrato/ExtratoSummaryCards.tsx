@@ -14,26 +14,26 @@ interface ExtratoSummaryCardsProps {
 export default function ExtratoSummaryCards({ resumo }: ExtratoSummaryCardsProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
-      {/* ENTRADAS */}
+      {/* ENTRADAS (PAGAS) */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Entradas</CardTitle>
+          <CardTitle className="text-sm font-medium">Entradas (pagas)</CardTitle>
           <TrendingUp className="h-4 w-4 text-green-600" />
         </CardHeader>
         <CardContent>
           <div className="text-lg font-bold text-green-600">
-            {formatCurrency(resumo.totalEntradas)}
+            {formatCurrency(resumo.entradasPagas)}
           </div>
           <p className="text-xs text-muted-foreground">
-            Pagas: {formatCurrency(resumo.entradasPagas)}
+            Agendadas: {formatCurrency(resumo.entradasAgendadas)}
           </p>
         </CardContent>
       </Card>
 
-      {/* SAÍDAS EFETIVAS (corrigido) */}
+      {/* SAÍDAS EFETIVAS (PAGAS) */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Saídas Efetivas</CardTitle>
+          <CardTitle className="text-sm font-medium">Saídas Efetivas (pagas)</CardTitle>
           <TrendingDown className="h-4 w-4 text-red-600" />
         </CardHeader>
         <CardContent>
@@ -41,7 +41,7 @@ export default function ExtratoSummaryCards({ resumo }: ExtratoSummaryCardsProps
             {formatCurrency(resumo.saidasPagas)}
           </div>
           <p className="text-xs text-muted-foreground">
-            Valores já pagos
+            Futuras: {formatCurrency(resumo.saidasAgendadas)}
           </p>
         </CardContent>
       </Card>
@@ -105,7 +105,7 @@ export default function ExtratoSummaryCards({ resumo }: ExtratoSummaryCardsProps
             {formatCurrency(resumo.totalAReceber)}
           </div>
           <p className="text-xs text-muted-foreground">
-            {resumo.percentualPago.toFixed(1)}% já pago
+            Entradas agendadas
           </p>
         </CardContent>
       </Card>

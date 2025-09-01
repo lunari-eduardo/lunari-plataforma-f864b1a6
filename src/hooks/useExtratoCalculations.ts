@@ -41,7 +41,7 @@ export function useExtratoCalculations(
     const saldoPeriodo = saldoProjetado; // manter compatibilidade
     
     // MÉTRICAS AUXILIARES
-    const totalAReceber = linhasFiltradas.filter(l => l.status === 'Faturado').reduce((sum, l) => sum + l.valor, 0);
+    const totalAReceber = entradasAgendadas; // Apenas entradas agendadas (não incluir saídas)
     const totalAgendado = linhasFiltradas.filter(l => l.status === 'Agendado').reduce((sum, l) => sum + l.valor, 0);
     const totalPago = linhasFiltradas.filter(l => l.status === 'Pago').reduce((sum, l) => sum + l.valor, 0);
     
