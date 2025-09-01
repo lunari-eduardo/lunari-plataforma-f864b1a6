@@ -1,7 +1,8 @@
-import { memo } from 'react';
+import { memo, useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatCurrency } from '@/utils/financialUtils';
-import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import { AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
 // Paleta para gráficos de barras/linhas (apenas cor principal)
 const BAR_LINE_COLORS = ['hsl(var(--chart-primary))'];
@@ -30,6 +31,8 @@ interface GraficosFinanceirosProps {
     roi: number;
   };
   categoriasDetalhadas?: any[];
+  despesasPorCategoria?: any[];
+  onCategoriaChange?: (categoria: string) => void;
 }
 
 const GraficosFinanceiros = memo(function GraficosFinanceiros({
@@ -38,8 +41,34 @@ const GraficosFinanceiros = memo(function GraficosFinanceiros({
   evolucaoCategoria,
   categoriaSelecionada,
   roiData,
-  categoriasDetalhadas = []
+  categoriasDetalhadas = [],
+  despesasPorCategoria = [],
+  onCategoriaChange
 }: GraficosFinanceirosProps) {
+  const [categoriaInterativa, setCategoriaInterativa] = useState<string>('');
+  
+  // Lista de categorias disponíveis para o dropdown
+  const categoriasDisponiveis = useMemo(() => {
+    const categorias = new Set<string>();
+    despesasPorCategoria.forEach((item: any) => {
+      if (item.categoria) categorias.add(item.categoria);
+    });
+    return Array.from(categorias).sort();
+  }, [despesasPorCategoria]);
+
+  // Dados filtrados por categoria para o gráfico de linha
+  const dadosEvolucaoCategoria = useMemo(() => {
+    if (!categoriaInterativa) return [];
+    
+    return despesasPorCategoria
+      .filter((item: any) => item.categoria === categoriaInterativa)
+      .sort((a: any, b: any) => a.mes.localeCompare(b.mes));
+  }, [categoriaInterativa, despesasPorCategoria]);
+
+  const handleCategoriaChange = (categoria: string) => {
+    setCategoriaInterativa(categoria);
+    onCategoriaChange?.(categoria);
+  };
   return (
     <>
       {/* Gráfico Principal - Receita vs Lucro */}
@@ -65,8 +94,8 @@ const GraficosFinanceiros = memo(function GraficosFinanceiros({
                       borderRadius: '8px'
                     }} 
                   />
-                  <Bar dataKey="receita" fill="hsl(var(--chart-revenue))" radius={[4, 4, 0, 0]} name="Receita" />
-                  <Bar dataKey="lucro" fill="hsl(var(--chart-primary))" radius={[4, 4, 0, 0]} name="Lucro" />
+                   <Bar dataKey="receita" fill="hsl(var(--chart-revenue))" radius={[4, 4, 0, 0]} name="Receita" />
+                   <Bar dataKey="lucro" fill="hsl(var(--chart-success))" radius={[4, 4, 0, 0]} name="Lucro" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -211,39 +240,65 @@ const GraficosFinanceiros = memo(function GraficosFinanceiros({
         </Card>
       </section>
 
-      {/* Despesas por Categoria Detalhada - Se houver dados */}
-      {categoriasDetalhadas.length > 0 && (
-        <section aria-label="Despesas por Categoria" className="animate-fade-in">
-          <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg font-semibold">Despesas por Categoria</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                   <BarChart data={categoriasDetalhadas} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                     <XAxis
-                      dataKey="categoria" 
-                      stroke="hsl(var(--muted-foreground))" 
-                      fontSize={12}
-                      angle={-45}
-                      textAnchor="end"
-                      height={80}
-                    />
-                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(value) => formatCurrency(value)} />
-                    <Tooltip formatter={(value: any) => [formatCurrency(value), 'Valor']} contentStyle={{
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px'
-                    }} />
-                    <Bar dataKey="valor" fill="hsl(var(--chart-quaternary))" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+      {/* Evolução de Despesas por Categoria - Gráfico Interativo */}
+      <section aria-label="Evolução de Despesas por Categoria" className="animate-fade-in">
+        <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300">
+          <CardHeader className="pb-4 space-y-4">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              <CardTitle className="text-lg font-semibold">Evolução de Despesas por Categoria</CardTitle>
+              <div className="lg:w-48">
+                <Select value={categoriaInterativa} onValueChange={handleCategoriaChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione uma categoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categoriasDisponiveis.map((categoria) => (
+                      <SelectItem key={categoria} value={categoria}>
+                        {categoria}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            </CardContent>
-          </Card>
-        </section>
-      )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="h-80">
+              {categoriaInterativa ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={dadosEvolucaoCategoria} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                    <XAxis dataKey="mes" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(value) => formatCurrency(value)} />
+                    <Tooltip 
+                      formatter={(value: any) => [formatCurrency(value), 'Valor']} 
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--card))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px'
+                      }} 
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="valor" 
+                      stroke="hsl(var(--chart-primary))" 
+                      strokeWidth={3}
+                      dot={{ fill: 'hsl(var(--chart-primary))', strokeWidth: 2, r: 4 }}
+                      activeDot={{ r: 6, stroke: 'hsl(var(--chart-primary))', strokeWidth: 2, fill: 'hsl(var(--card))' }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center text-muted-foreground">
+                    <p className="text-lg mb-2">📊</p>
+                    <p>Selecione uma categoria acima para visualizar sua evolução ao longo do tempo</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </section>
     </>
   );
 });
