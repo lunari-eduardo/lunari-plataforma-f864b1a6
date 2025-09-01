@@ -37,10 +37,13 @@ const queryClient = new QueryClient({
 
 // Define App as a proper function component
 function App() {
-
+  // Log app version for debugging
+  React.useEffect(() => {
+    console.log(`🚀 Lunari 2.0 v${import.meta.env.VITE_APP_VERSION || '1.0.0'} - Ready`);
+  }, []);
   
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <AppProvider>
