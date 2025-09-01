@@ -49,16 +49,23 @@ export function CalculadoraServicos({
   }, []);
 
 
-  // Cálculos (movidos para cima para evitar erro de declaração)
+  // Cálculos corrigidos - markup não incide sobre produtos adicionais
   const horasMensais = horasDisponiveis * diasTrabalhados * 4; // 4 semanas por mês
   const custoHora = horasMensais > 0 ? custosFixosTotal / horasMensais : 0;
   const custoHorasServico = horasEstimadas * custoHora;
   const valorProdutos = (produtos || []).reduce((total, p) => total + p.valorVenda * p.quantidade, 0);
   const valorCustosExtras = (custosExtras || []).reduce((total, c) => total + c.valorUnitario * c.quantidade, 0);
-  const custoTotalServico = custoHorasServico + valorProdutos + valorCustosExtras;
-  const precoFinal = custoTotalServico * markup;
-  const lucroLiquido = precoFinal - custoTotalServico;
-  const lucratividade = custoTotalServico > 0 ? lucroLiquido / precoFinal * 100 : 0;
+  
+  // CORREÇÃO: Separar custos base (para markup) dos valores de venda finais
+  const custoBaseProjeto = custoHorasServico + valorCustosExtras; // Apenas custos que recebem markup
+  const precoBaseComMarkup = custoBaseProjeto * markup; // Markup apenas sobre custos base
+  const precoFinal = precoBaseComMarkup + valorProdutos; // Adicionar produtos sem markup
+  
+  // Lucro baseado nos custos reais dos produtos
+  const custoProdutos = (produtos || []).reduce((total, p) => total + (p.custo || 0) * p.quantidade, 0);
+  const custoTotalReal = custoHorasServico + custoProdutos + valorCustosExtras;
+  const lucroLiquido = precoFinal - custoTotalReal;
+  const lucratividade = precoFinal > 0 ? lucroLiquido / precoFinal * 100 : 0;
 
   const salvarPadraoHoras = () => {
     try {
@@ -106,7 +113,7 @@ export function CalculadoraServicos({
         markup,
         produtos,
         custosExtras,
-        custoTotalCalculado: custoTotalServico,
+        custoTotalCalculado: custoTotalReal,
         precoFinalCalculado: precoFinal,
         lucratividade,
         salvo_automaticamente: false
@@ -231,6 +238,10 @@ export function CalculadoraServicos({
                           <div className="flex justify-between text-sm">
                             <span className="text-lunar-textSecondary">Custo das Horas do Serviço (R$):</span>
                             <span className="font-medium text-lunar-text">R$ {custoHorasServico.toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-lunar-textSecondary">Custo Base do Projeto (R$):</span>
+                            <span className="font-medium text-lunar-text">R$ {custoBaseProjeto.toFixed(2)}</span>
                           </div>
                         </div>
                       </CardContent>
@@ -388,9 +399,19 @@ export function CalculadoraServicos({
                           <Input id="markup" type="number" min="1" step="0.1" value={markup} onChange={e => setMarkup(Number(e.target.value) || 1)} className="w-20 h-8 text-right" />
                         </div>
                         
-                        <div className="flex justify-between text-sm">
-                          <span className="text-lunar-textSecondary">Custo Total do Serviço:</span>
-                          <span className="font-medium text-lunar-text">R$ {custoTotalServico.toFixed(2)}</span>
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-lunar-textSecondary">Custo Base do Projeto:</span>
+                            <span className="font-medium text-lunar-text">R$ {custoBaseProjeto.toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-lunar-textSecondary">Markup sobre Base ({markup}x):</span>
+                            <span className="font-medium text-lunar-text">R$ {precoBaseComMarkup.toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-lunar-textSecondary">Produtos Adicionais (sem markup):</span>
+                            <span className="font-medium text-lunar-text">R$ {valorProdutos.toFixed(2)}</span>
+                          </div>
                         </div>
                         
                         <div className="border-t border-lunar-border/30 pt-3 space-y-2">
