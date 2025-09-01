@@ -1,3 +1,4 @@
+import React from 'react';
 import { useExtrato } from '@/hooks/useExtrato';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TrendingUp, Search } from 'lucide-react';
