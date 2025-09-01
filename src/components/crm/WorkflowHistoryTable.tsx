@@ -6,6 +6,7 @@ import { formatCurrency } from '@/utils/financialUtils';
 import { formatDateForDisplay } from '@/utils/dateUtils';
 import { Cliente } from '@/types/orcamentos';
 import { SessionPaymentHistory } from './SessionPaymentHistory';
+import { SessionPaymentExtended } from '@/types/sessionPayments';
 interface WorkflowHistoryTableProps {
   cliente: Cliente;
 }
@@ -69,6 +70,12 @@ export function WorkflowHistoryTable({
       const totalFinal = isNaN(totalCalculado) ? 0 : totalCalculado;
       const restante = totalFinal - valorPago;
 
+      // CALCULAR VALOR AGENDADO baseado nos pagamentos da sessão
+      const payments = session.pagamentos || [];
+      const totalAgendado = payments
+        .filter((p: any) => p.statusPagamento === 'pendente' && p.dataVencimento)
+        .reduce((acc: number, p: any) => acc + parseFinancialValue(p.valor), 0);
+
       // Debug log para identificar problemas nos dados
       if (isNaN(totalCalculado)) {
         console.warn('Cálculo de total resultou em NaN:', {
@@ -90,7 +97,8 @@ export function WorkflowHistoryTable({
         desconto,
         valorPago,
         total: totalFinal,
-        restante: isNaN(restante) ? 0 : restante
+        restante: isNaN(restante) ? 0 : restante,
+        totalAgendado
       };
     }).sort((a: any, b: any) => new Date(b.data).getTime() - new Date(a.data).getTime());
   }, [cliente]);
@@ -154,7 +162,7 @@ export function WorkflowHistoryTable({
                   
                   <div className="flex flex-col items-center md:items-end">
                     <span className="text-[11px] md:text-xs text-lunar-textSecondary">Agendado</span>
-                    <span className="font-semibold text-chart-orange-1 text-[11px] md:text-xs text-orange-400">{formatCurrency(0)}</span>
+                    <span className="font-semibold text-chart-orange-1 text-[11px] md:text-xs text-orange-400">{formatCurrency(item.totalAgendado || 0)}</span>
                   </div>
                   
                   <div className="flex flex-col items-center md:items-end">
