@@ -1,9 +1,10 @@
 
 import { useEffect, useCallback, useRef, useState } from 'react';
 import { useOrcamentos } from './useOrcamentos';
-import { useAgenda, Appointment } from './useAgenda';
+import { useAppointments } from './useAppointments';
 import { toast } from '@/hooks/use-toast';
 import { parseDateFromStorage, formatDateForStorage } from '@/utils/dateUtils';
+import { Appointment } from './useAgenda';
 
 export const useIntegration = () => {
   // Defensive hook initialization to prevent conditional calls
@@ -11,11 +12,11 @@ export const useIntegration = () => {
   
   // SEMPRE chamar os hooks no mesmo lugar (regra dos hooks do React)
   const orcamentosHook = useOrcamentos();
-  const agendaHook = useAgenda();
+  const appointmentsHook = useAppointments();
   
   // Extract with null checks
   const { orcamentos = [], atualizarOrcamento } = orcamentosHook || {};
-  const { appointments = [], addAppointment, updateAppointment, deleteAppointment } = agendaHook || {};
+  const { appointments = [], addAppointment, updateAppointment, deleteAppointment } = appointmentsHook || {};
   
   // Controle de sincronização para evitar loops infinitos
   const syncInProgressRef = useRef(false);
@@ -65,7 +66,7 @@ export const useIntegration = () => {
 
     const orcamentosFechados = orcamentos.filter(orc => orc.status === 'fechado');
     
-    orcamentosFechados.forEach(orcamento => {
+    orcamentosFechados.forEach(async orcamento => {
       const currentTime = Date.now();
       if (!shouldSync(`create-${orcamento.id}`, currentTime)) return;
 
@@ -104,8 +105,8 @@ export const useIntegration = () => {
         };
 
         // Criar o agendamento com ID específico
-        const appointment = addAppointment(newAppointment);
-        updateAppointment(appointment.id, { 
+        const appointment = await addAppointment(newAppointment);
+        await updateAppointment(appointment.id, { 
           id: `orcamento-${orcamento.id}`
         });
 
@@ -128,7 +129,7 @@ export const useIntegration = () => {
 
     const orcamentosPerdidos = orcamentos.filter(orc => orc.status === 'perdido');
     
-    orcamentosPerdidos.forEach(orcamento => {
+    orcamentosPerdidos.forEach(async (orcamento) => {
       const currentTime = Date.now();
       if (!shouldSync(`delete-${orcamento.id}`, currentTime)) return;
 
@@ -140,12 +141,16 @@ export const useIntegration = () => {
       if (relatedAppointment) {
         syncInProgressRef.current = true;
         
-        deleteAppointment(relatedAppointment.id);
-        toast({
-          title: "Agendamento removido",
-          description: `Orçamento de ${orcamento.cliente.nome} foi cancelado e removido da agenda.`,
-          variant: "destructive"
-        });
+        try {
+          await deleteAppointment(relatedAppointment.id);
+          toast({
+            title: "Agendamento removido",
+            description: `Orçamento de ${orcamento.cliente.nome} foi cancelado e removido da agenda.`,
+            variant: "destructive"
+          });
+        } catch (error) {
+          console.error('Erro ao remover agendamento:', error);
+        }
         
         // Reset flag após um pequeno delay
         setTimeout(() => {
@@ -172,13 +177,17 @@ export const useIntegration = () => {
       return correspondingBudget && correspondingBudget.status !== 'fechado';
     });
 
-    agendamentosOrfaos.forEach(appointment => {
+    agendamentosOrfaos.forEach(async (appointment) => {
       const currentTime = Date.now();
       if (!shouldSync(`fix-${appointment.id}`, currentTime)) return;
 
       syncInProgressRef.current = true;
       
-      updateAppointment(appointment.id, { status: 'a confirmar' });
+      try {
+        await updateAppointment(appointment.id, { status: 'a confirmar' });
+      } catch (error) {
+        console.error('Erro ao atualizar agendamento:', error);
+      }
       
       // Reset flag após um pequeno delay
       setTimeout(() => {

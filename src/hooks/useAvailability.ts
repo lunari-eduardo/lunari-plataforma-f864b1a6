@@ -1,8 +1,8 @@
-import { useAppContext } from '@/contexts/AppContext';
+import { useAgendaContext } from '@/contexts/AgendaContext';
 import type { AvailabilitySlot } from '@/types/availability';
 
 export const useAvailability = () => {
-  const ctx = useAppContext();
+  const ctx = useAgendaContext();
   return {
     availability: ctx.availability,
     availabilityTypes: ctx.availabilityTypes,

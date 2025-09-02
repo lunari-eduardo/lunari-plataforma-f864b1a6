@@ -1,6 +1,6 @@
 
 import { useMemo } from 'react';
-import { useAppContext } from '@/contexts/AppContext';
+import { useAppointments } from './useAppointments';
 import { formatDateForStorage, getCurrentDateString } from '@/utils/dateUtils';
 
 export type AppointmentStatus = 'confirmado' | 'a confirmar';
@@ -34,7 +34,7 @@ export interface Appointment {
 }
 
 export const useAgenda = () => {
-  const context = useAppContext();
+  const appointmentsHook = useAppointments();
 
   // Otimizada função para converter agendamentos confirmados em sessões do workflow
   const getConfirmedSessionsForWorkflow = useMemo(() => {
@@ -57,7 +57,7 @@ export const useAgenda = () => {
       }
       
       // Filtrar e mapear em uma única passagem
-      return context.appointments
+      return appointmentsHook.appointments
         .filter(appointment => {
           if (appointment.status !== 'confirmado') return false;
           
@@ -146,10 +146,10 @@ export const useAgenda = () => {
   }, []);
 
   return {
-    appointments: context.appointments,
-    addAppointment: context.addAppointment,
-    updateAppointment: context.updateAppointment,
-    deleteAppointment: context.deleteAppointment,
+    appointments: appointmentsHook.appointments,
+    addAppointment: appointmentsHook.addAppointment,
+    updateAppointment: appointmentsHook.updateAppointment,
+    deleteAppointment: appointmentsHook.deleteAppointment,
     getConfirmedSessionsForWorkflow,
   };
 };
