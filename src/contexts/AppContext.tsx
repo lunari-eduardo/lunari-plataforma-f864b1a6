@@ -1430,7 +1430,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     id: produtoIncluido.produtoId,
                     nome: produtoData?.nome || 'Produto não encontrado',
                     quantidade: produtoIncluido.quantidade || 1,
-                    valorUnitario: produtoData?.valorVenda || produtoData?.preco_venda || 0,
+                    valorUnitario: produtoData?.preco_venda || 0,
                     tipo: 'incluso'
                   };
                 }).filter(Boolean);
@@ -2041,8 +2041,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             }
             
             // Atualizar valor do pacote e valor de foto extra
-            updatedItem.valorPacote = pacoteData.valor_base || pacoteData.valorVenda || pacoteData.valor || updatedItem.valorPacote;
-            updatedItem.valorFotoExtra = pacoteData.valor_foto_extra || pacoteData.valorFotoExtra || updatedItem.valorFotoExtra;
+            updatedItem.valorPacote = pacoteData.valor_base || updatedItem.valorPacote;
+            updatedItem.valorFotoExtra = pacoteData.valor_foto_extra || updatedItem.valorFotoExtra;
             
             // Se o pacote tem produtos incluídos, adicionar o primeiro produto
             if (pacoteData.produtosIncluidos && pacoteData.produtosIncluidos.length > 0) {
