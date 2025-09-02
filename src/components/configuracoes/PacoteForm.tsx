@@ -9,17 +9,9 @@ import type {
   Categoria, 
   Produto, 
   ProdutoIncluido, 
-  PacoteFormData 
+  PacoteFormData,
+  PacoteFormProps
 } from '@/types/configuration';
-interface PacoteFormProps {
-  initialData?: PacoteFormData;
-  categorias: Categoria[];
-  produtos: Produto[];
-  onSubmit: (data: PacoteFormData) => void;
-  onCancel?: () => void;
-  submitLabel?: string;
-  isEditing?: boolean;
-}
 export default function PacoteForm({
   initialData,
   categorias,
@@ -181,9 +173,8 @@ export default function PacoteForm({
                     {produtos.filter(produto => !formData.produtosIncluidos.some(p => p.produtoId === produto.id)).map(produto => <CommandItem 
                         key={produto.id} 
                         onSelect={(value) => {
-                          console.log('Produto selecionado:', produto.nome);
                           adicionarProdutoIncluido(produto.id);
-                        }} 
+                        }}
                         className="cursor-pointer hover:bg-accent"
                         onMouseDown={(e) => e.stopPropagation()}
                         onClick={(e) => {

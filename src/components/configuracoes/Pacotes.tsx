@@ -4,7 +4,6 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Trash2, Filter, Check, ChevronsUpDown, ChevronDown, ChevronUp } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
@@ -12,7 +11,7 @@ import { useDebounce } from '@/hooks/useDebounce';
 import PacoteForm from './PacoteForm';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent } from '@/components/ui/card';
-import { obterConfiguracaoPrecificacao } from '@/utils/precificacaoUtils';
+import { obterConfiguracaoPrecificacao, formatarMoeda } from '@/utils/precificacaoUtils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import type { Categoria, Pacote, Produto, PacoteFormData } from '@/types/configuration';
 interface PacotesProps {
@@ -35,8 +34,6 @@ export default function Pacotes({
   // Estados para filtros
   const [filtroCategoria, setFiltroCategoria] = useState<string>('all');
   const [filtroNome, setFiltroNome] = useState<string>('');
-  const [filtroValor, setFiltroValor] = useState<string>('');
-  const [editingPackage, setEditingPackage] = useState<string | null>(null);
   const [novoPacoteAberto, setNovoPacoteAberto] = useState(false);
 
   // Verificar modelo de precificação atual
@@ -45,13 +42,6 @@ export default function Pacotes({
 
   // Debounce para filtro de nome
   const debouncedFiltroNome = useDebounce(filtroNome, 300);
-  const debouncedFiltroValor = useDebounce(filtroValor, 300);
-  const formatarMoeda = useCallback((valor: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(valor);
-  }, []);
   const getNomeCategoria = useCallback((id: string) => {
     const categoria = categorias.find(cat => cat.id === id);
     return categoria ? categoria.nome : 'Categoria não encontrada';
@@ -66,10 +56,9 @@ export default function Pacotes({
     return pacotes.filter(pacote => {
       const matchCategoria = !filtroCategoria || filtroCategoria === 'all' || pacote.categoria_id === filtroCategoria;
       const matchNome = !debouncedFiltroNome || pacote.nome.toLowerCase().includes(debouncedFiltroNome.toLowerCase());
-      const matchValor = !debouncedFiltroValor || pacote.valor_base.toString().includes(debouncedFiltroValor);
-      return matchCategoria && matchNome && matchValor;
+      return matchCategoria && matchNome;
     });
-  }, [pacotes, filtroCategoria, debouncedFiltroNome, debouncedFiltroValor]);
+  }, [pacotes, filtroCategoria, debouncedFiltroNome]);
   const adicionarPacote = useCallback((formData: any) => {
     onAdd(formData);
   }, [onAdd]);
@@ -101,7 +90,6 @@ export default function Pacotes({
   const limparFiltros = useCallback(() => {
     setFiltroCategoria('all');
     setFiltroNome('');
-    setFiltroValor('');
   }, []);
   const isMobile = useIsMobile();
   const ProdutoDropdown = useCallback(({
