@@ -16,6 +16,7 @@ import { formatToDayMonth, formatDateForDisplay } from "@/utils/dateUtils";
 import { calcularTotalFotosExtras, obterConfiguracaoPrecificacao, obterTabelaGlobal, obterTabelaCategoria, calcularValorPorFoto, formatarMoeda, calcularComRegrasProprias, migrarRegrasParaItemAntigo } from '@/utils/precificacaoUtils';
 import { RegrasCongeladasIndicator } from './RegrasCongeladasIndicator';
 import type { SessionData } from '@/types/workflow';
+import { configurationService } from '@/services/ConfigurationService';
 interface WorkflowTableProps {
   sessions: SessionData[];
   statusOptions: string[];
@@ -740,8 +741,8 @@ export function WorkflowTable({
                       }
                     } else if (config.modelo === 'categoria') {
                       // Modelo por categoria - calcular valor baseado na categoria
-                      const categorias = JSON.parse(localStorage.getItem('configuracoes_categorias') || '[]');
-                      const categoriaObj = categorias.find((cat: any) => cat.nome === session.categoria);
+                      const categorias = configurationService.loadCategorias();
+                      const categoriaObj = categorias.find((cat) => cat.nome === session.categoria);
                       const categoriaId = categoriaObj?.id || session.categoria;
                       if (categoriaId) {
                         const tabelaCategoria = obterTabelaCategoria(categoriaId);
@@ -794,8 +795,8 @@ export function WorkflowTable({
                           const valorFotoExtra = parseFloat((session.valorFotoExtra || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0;
 
                           // Buscar ID da categoria pelo nome
-                          const categorias = JSON.parse(localStorage.getItem('configuracoes_categorias') || '[]');
-                          const categoriaObj = categorias.find((cat: any) => cat.nome === session.categoria);
+                          const categorias = configurationService.loadCategorias();
+                          const categoriaObj = categorias.find((cat) => cat.nome === session.categoria);
                           const categoriaId = categoriaObj?.id || session.categoria;
                           total = calcularTotalFotosExtras(qtd, {
                             valorFotoExtra,
@@ -835,8 +836,8 @@ export function WorkflowTable({
                     const valorFotoExtra = parseFloat((session.valorFotoExtra || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0;
 
                     // Buscar ID da categoria pelo nome
-                    const categorias = JSON.parse(localStorage.getItem('configuracoes_categorias') || '[]');
-                    const categoriaObj = categorias.find((cat: any) => cat.nome === session.categoria);
+                    const categorias = configurationService.loadCategorias();
+                    const categoriaObj = categorias.find((cat) => cat.nome === session.categoria);
                     const categoriaId = categoriaObj?.id || session.categoria;
                     valorCalculado = calcularTotalFotosExtras(session.qtdFotosExtra || 0, {
                       valorFotoExtra,

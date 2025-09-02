@@ -114,8 +114,12 @@ export interface ConfigurationActions {
   moverEtapa: (id: string, direcao: 'cima' | 'baixo') => void;
 }
 
-// ============= CONSTANTES DE STORAGE =============
+// ============= CONSTANTES DE STORAGE (LEGACY - usar adapter) =============
 
+/**
+ * @deprecated Use ConfigurationStorageAdapter instead
+ * Mantido apenas para compatibilidade durante migração
+ */
 export const CONFIGURATION_STORAGE_KEYS = {
   CATEGORIAS: 'configuracoes_categorias',
   PACOTES: 'configuracoes_pacotes', 

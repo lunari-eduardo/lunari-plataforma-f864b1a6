@@ -1,94 +1,72 @@
 /**
  * Serviço de Configurações - Abstração para persistência de dados
- * Preparado para migração futura para Supabase
+ * Preparado para migração futura para Supabase usando adapter pattern
  */
 
-import { storage } from '@/utils/localStorage';
-import { saveConfigWithNotification } from '@/utils/configNotification';
+import { LocalStorageConfigurationAdapter } from '@/adapters/LocalStorageConfigurationAdapter';
+import type { ConfigurationStorageAdapter } from '@/adapters/ConfigurationStorageAdapter';
 import type { 
   Categoria, 
   Pacote, 
   Produto, 
-  EtapaTrabalho,
-  CONFIGURATION_STORAGE_KEYS
+  EtapaTrabalho
 } from '@/types/configuration';
-import {
-  DEFAULT_CATEGORIAS,
-  DEFAULT_PACOTES,
-  DEFAULT_PRODUTOS, 
-  DEFAULT_ETAPAS
-} from '@/types/configuration';
-
-// Chaves de storage centralizadas
-const STORAGE_KEYS = {
-  CATEGORIAS: 'configuracoes_categorias',
-  PACOTES: 'configuracoes_pacotes',
-  PRODUTOS: 'configuracoes_produtos', 
-  ETAPAS: 'lunari_workflow_status'
-} as const;
 
 /**
  * ConfigurationService - Abstração para persistência de configurações
  * 
- * Este serviço abstrai a persistência de dados de configuração,
- * facilitando a migração futura para Supabase mantendo a mesma API.
+ * Usa adapter pattern para abstrair a persistência,
+ * facilitando migração futura para Supabase mantendo a mesma API.
  */
 class ConfigurationService {
-  // ============= CATEGORIAS =============
+  private adapter: ConfigurationStorageAdapter;
+  
+  constructor(adapter?: ConfigurationStorageAdapter) {
+    // Por padrão usa LocalStorage, mas pode ser injetado outro adapter
+    this.adapter = adapter || new LocalStorageConfigurationAdapter();
+  }
+  
+  // ============= OPERAÇÕES DE DADOS =============
   
   loadCategorias(): Categoria[] {
-    const saved = storage.load(STORAGE_KEYS.CATEGORIAS, []);
-    return saved.length > 0 ? saved : DEFAULT_CATEGORIAS;
+    return this.adapter.loadCategorias();
   }
 
   saveCategorias(categorias: Categoria[]): void {
-    saveConfigWithNotification(STORAGE_KEYS.CATEGORIAS, categorias);
+    this.adapter.saveCategorias(categorias);
   }
 
-  // ============= PACOTES =============
-  
   loadPacotes(): Pacote[] {
-    const saved = storage.load(STORAGE_KEYS.PACOTES, []);
-    return saved.length > 0 ? saved : DEFAULT_PACOTES;
+    return this.adapter.loadPacotes();
   }
 
   savePacotes(pacotes: Pacote[]): void {
-    saveConfigWithNotification(STORAGE_KEYS.PACOTES, pacotes);
+    this.adapter.savePacotes(pacotes);
   }
 
-  // ============= PRODUTOS =============
-  
   loadProdutos(): Produto[] {
-    const saved = storage.load(STORAGE_KEYS.PRODUTOS, []);
-    return saved.length > 0 ? saved : DEFAULT_PRODUTOS;
+    return this.adapter.loadProdutos();
   }
 
   saveProdutos(produtos: Produto[]): void {
-    saveConfigWithNotification(STORAGE_KEYS.PRODUTOS, produtos);
+    this.adapter.saveProdutos(produtos);
   }
 
-  // ============= ETAPAS DE TRABALHO =============
-  
   loadEtapas(): EtapaTrabalho[] {
-    // Migração silenciosa: verifica se há dados no formato antigo
-    const oldData = storage.load('workflow_status', []);
-    const newData = storage.load(STORAGE_KEYS.ETAPAS, []);
-    
-    // Se há dados antigos mas não há novos, migra
-    if (oldData.length > 0 && newData.length === 0) {
-      storage.save(STORAGE_KEYS.ETAPAS, oldData);
-      return oldData.length > 0 ? oldData : DEFAULT_ETAPAS;
-    }
-    
-    return newData.length > 0 ? newData : DEFAULT_ETAPAS;
+    return this.adapter.loadEtapas();
   }
 
   saveEtapas(etapas: EtapaTrabalho[]): void {
-    storage.save(STORAGE_KEYS.ETAPAS, etapas);
-    // Remove dados antigos após salvar
-    storage.remove('workflow_status');
-    // Dispara evento para notificar outras partes da aplicação
-    window.dispatchEvent(new Event('workflowStatusUpdated'));
+    this.adapter.saveEtapas(etapas);
+  }
+  
+  // ============= MIGRAÇÃO DE ADAPTER =============
+  
+  /**
+   * Permite trocar o adapter em runtime (útil para migração)
+   */
+  setAdapter(newAdapter: ConfigurationStorageAdapter): void {
+    this.adapter = newAdapter;
   }
 
   // ============= OPERAÇÕES UTILITÁRIAS =============

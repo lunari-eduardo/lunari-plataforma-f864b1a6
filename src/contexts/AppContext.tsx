@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
+import { configurationService } from '@/services/ConfigurationService';
 import { parseDateFromStorage, formatDateForStorage, getCurrentDateString } from '@/utils/dateUtils';
 import { formatCurrency } from '@/utils/financialUtils';
 import { normalizeOriginToId } from '@/utils/originUtils';
@@ -219,8 +220,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Orçamentos State com migração automática
   const [orcamentos, setOrcamentos] = useState<Orcamento[]>(() => {
     const orcamentosRaw = storage.load(STORAGE_KEYS.BUDGETS, []);
-    const pacotesConfig = storage.load('configuracoes_pacotes', []);
-    const produtosConfig = storage.load('configuracoes_produtos', []);
+    const pacotesConfig = configurationService.loadPacotes();
+    const produtosConfig = configurationService.loadProdutos();
     
     // Executar migração automática se necessário
     let orcamentosMigrados = autoMigrateIfNeeded(orcamentosRaw, pacotesConfig, produtosConfig);
@@ -254,16 +255,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
   
   const [categorias, setCategorias] = useState<string[]>(() => {
-    const configCategorias = storage.load('configuracoes_categorias', []);
-    return configCategorias.map((cat: any) => cat.nome || cat);
+    const configCategorias = configurationService.loadCategorias();
+    return configCategorias.map((cat) => cat.nome);
   });
 
   const [produtos, setProdutos] = useState(() => {
-    return storage.load('configuracoes_produtos', []);
+    return configurationService.loadProdutos();
   });
 
   const [pacotes, setPacotes] = useState(() => {
-    return storage.load('configuracoes_pacotes', []);
+    return configurationService.loadPacotes();
   });
 
   const [metricas, setMetricas] = useState<MetricasOrcamento>({
@@ -846,12 +847,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let timeoutId: NodeJS.Timeout;
     
     const syncConfigData = () => {
-      const configCategorias = storage.load('configuracoes_categorias', []);
-      const configProdutos = storage.load('configuracoes_produtos', []);
-      const configPacotes = storage.load('configuracoes_pacotes', []);
+      const configCategorias = configurationService.loadCategorias();
+      const configProdutos = configurationService.loadProdutos();
+      const configPacotes = configurationService.loadPacotes();
       
       // Transform categorias from objects to string array
-      const categoriasNomes = configCategorias.map((cat: any) => cat.nome || cat);
+      const categoriasNomes = configCategorias.map((cat) => cat.nome);
       
       // ✅ OTIMIZADO: Só atualizar se dados realmente mudaram
       setCategorias(prev => {
@@ -990,8 +991,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           pacoteData = pacotes.find(p => p.id === appointment.packageId);
           if (pacoteData) {
             if (pacoteData.categoria_id) {
-              const configCategorias = storage.load('configuracoes_categorias', []);
-              const categoria = configCategorias.find((cat: any) => cat.id === pacoteData.categoria_id);
+              const configCategorias = configurationService.loadCategorias();
+              const categoria = configCategorias.find((cat) => cat.id === pacoteData.categoria_id);
               categoriaName = categoria ? categoria.nome : String(pacoteData.categoria_id);
             } else {
               categoriaName = pacoteData.categoria || '';
@@ -1192,8 +1193,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         
         if (pacoteData) {
           if (pacoteData.categoria_id) {
-            const configCategorias = storage.load('configuracoes_categorias', []);
-            const categoria = configCategorias.find((cat: any) => cat.id === pacoteData.categoria_id);
+            const configCategorias = configurationService.loadCategorias();
+            const categoria = configCategorias.find((cat) => cat.id === pacoteData.categoria_id);
             categoriaName = categoria ? categoria.nome : String(pacoteData.categoria_id);
           } else {
             categoriaName = pacoteData.categoria || orc.categoria;
@@ -2032,11 +2033,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (pacoteData) {
             // Atualizar categoria baseado no pacote
             if (pacoteData.categoria_id) {
-              const configCategorias = storage.load('configuracoes_categorias', []);
-              const categoria = configCategorias.find((cat: any) => cat.id === pacoteData.categoria_id);
+              const configCategorias = configurationService.loadCategorias();
+              const categoria = configCategorias.find((cat) => cat.id === pacoteData.categoria_id);
               updatedItem.categoria = categoria ? categoria.nome : String(pacoteData.categoria_id);
             } else {
-              updatedItem.categoria = pacoteData.categoria || updatedItem.categoria;
+              updatedItem.categoria = updatedItem.categoria;
             }
             
             // Atualizar valor do pacote e valor de foto extra

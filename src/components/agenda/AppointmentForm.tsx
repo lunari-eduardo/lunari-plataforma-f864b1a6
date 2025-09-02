@@ -16,6 +16,7 @@ import { useIntegration } from '@/hooks/useIntegration';
 import { useOrcamentos } from '@/hooks/useOrcamentos';
 import { ORIGENS_PADRAO } from '@/utils/defaultOrigens';
 import { CategorySelector } from '@/components/orcamentos/CategorySelector';
+import { configurationService } from '@/services/ConfigurationService';
 
 // Tipo de agendamento
 type Appointment = {
@@ -128,8 +129,8 @@ export default function AppointmentForm({
         const selectedPackage = pacotes.find(p => p.id === appointment.packageId);
         if (selectedPackage?.categoria_id) {
           try {
-            const configCategorias = JSON.parse(localStorage.getItem('configuracoes_categorias') || '[]');
-            const categoriaObj = configCategorias.find((cat: any) => cat.id === selectedPackage.categoria_id || cat.id === String(selectedPackage.categoria_id));
+            const configCategorias = configurationService.loadCategorias();
+            const categoriaObj = configCategorias.find((cat) => cat.id === selectedPackage.categoria_id || cat.id === String(selectedPackage.categoria_id));
             categoria = categoriaObj?.nome || '';
           } catch {
             categoria = '';
@@ -198,8 +199,8 @@ export default function AppointmentForm({
     if (selectedPackage?.categoria_id) {
       // Buscar nome da categoria baseado no categoria_id
       try {
-        const configCategorias = JSON.parse(localStorage.getItem('configuracoes_categorias') || '[]');
-        const categoriaObj = configCategorias.find((cat: any) => cat.id === selectedPackage.categoria_id || cat.id === String(selectedPackage.categoria_id));
+        const configCategorias = configurationService.loadCategorias();
+        const categoriaObj = configCategorias.find((cat) => cat.id === selectedPackage.categoria_id || cat.id === String(selectedPackage.categoria_id));
         categoria = categoriaObj?.nome || '';
       } catch {
         categoria = '';
@@ -310,8 +311,8 @@ export default function AppointmentForm({
       // Buscar nome da categoria baseado no categoria_id
       if (selectedPackage.categoria_id) {
         try {
-          const configCategorias = JSON.parse(localStorage.getItem('configuracoes_categorias') || '[]');
-          const categoria = configCategorias.find((cat: any) => cat.id === selectedPackage.categoria_id || cat.id === String(selectedPackage.categoria_id));
+          const configCategorias = configurationService.loadCategorias();
+          const categoria = configCategorias.find((cat) => cat.id === selectedPackage.categoria_id || cat.id === String(selectedPackage.categoria_id));
           packageCategory = categoria?.nome || '';
         } catch (error) {
           console.error('Erro ao buscar categoria:', error);

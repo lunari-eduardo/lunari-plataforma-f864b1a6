@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { configurationService } from '@/services/ConfigurationService';
 
 interface Pacote {
   id: string;
@@ -39,19 +40,16 @@ export function PackageSearchCombobox({
   const getCategoriaById = (categoriaId: string | number): string => {
     if (!categoriaId) return '';
     
-    // Tentar carregar configurações do localStorage
+    // Tentar carregar configurações do service
     let configCategorias = [];
     try {
-      const stored = localStorage.getItem('configuracoes_categorias');
-      if (stored) {
-        configCategorias = JSON.parse(stored);
-      }
+      configCategorias = configurationService.loadCategorias();
     } catch (error) {
       console.error('Erro ao carregar categorias:', error);
     }
     
     // Buscar categoria por ID
-    const categoria = configCategorias.find((cat: any) => 
+    const categoria = configCategorias.find((cat) => 
       cat.id === categoriaId || cat.id === String(categoriaId)
     );
     

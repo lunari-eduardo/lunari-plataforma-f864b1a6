@@ -8,6 +8,7 @@ import { Package } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import { useToast } from '@/hooks/use-toast';
 import { storage } from '@/utils/localStorage';
+import { configurationService } from '@/services/ConfigurationService';
 
 interface ProdutoAdicional {
   id: string;
@@ -98,10 +99,10 @@ export function SalvarPacoteModal({
       }
     };
 
-    // Salvar no localStorage
-    const pacotesExistentes = storage.load('configuracoes_pacotes', []);
+    // Salvar no service
+    const pacotesExistentes = configurationService.loadPacotes();
     const novosPacotes = [...pacotesExistentes, novoPacote];
-    storage.save('configuracoes_pacotes', novosPacotes);
+    configurationService.savePacotes(novosPacotes);
 
     toast({
       title: "Sucesso",

@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { storage } from "@/utils/localStorage";
+import { configurationService } from '@/services/ConfigurationService';
 
 interface PackageComboboxProps {
   value?: string;
@@ -55,10 +55,10 @@ export function WorkflowPackageCombobox({
     setOpen(false);
   };
   
-  // Buscar dados diretamente do localStorage sem usar contexto
+  // Buscar dados diretamente do service sem usar contexto
   const pacotes = useMemo(() => {
-    const storedPacotes = storage.load('configuracoes_pacotes', []);
-    const configCategorias = storage.load('configuracoes_categorias', []);
+    const storedPacotes = configurationService.loadPacotes();
+    const configCategorias = configurationService.loadCategorias();
     
     return storedPacotes.map((pacote: any) => {
       let categoria = pacote.categoria || '';
