@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { obterConfiguracaoPrecificacao } from '@/utils/precificacaoUtils';
-import { ProductSearchCombobox } from '@/components/orcamentos/ProductSearchCombobox';
+import { DialogProductSelector } from '@/components/configuracoes/DialogProductSelector';
 import { Badge } from '@/components/ui/badge';
 import { X } from 'lucide-react';
 import { 
@@ -210,7 +210,7 @@ export default function PacoteForm({
         <Label className="text-xs font-medium text-muted-foreground">Produtos Incluídos</Label>
         
         {/* Seletor de Produtos */}
-        <ProductSearchCombobox
+        <DialogProductSelector
           products={produtosDisponiveis}
           onSelect={adicionarProduto}
           placeholder="Adicionar produto..."

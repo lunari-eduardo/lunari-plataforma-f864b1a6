@@ -16,47 +16,15 @@ const PopoverContent = React.forwardRef<
   const dialogDropdownContext = useDialogDropdownContext();
 
   return (
-    <PopoverPrimitive.Portal container={dialogDropdownContext ? document.body : undefined}>
+    <PopoverPrimitive.Portal container={document.body}>
       <PopoverPrimitive.Content
         ref={ref}
         align={align}
         sideOffset={sideOffset}
         className={cn(
-          "z-[9999] w-72 rounded-md border bg-popover p-1 text-popover-foreground shadow-md outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+          "z-[60] w-72 rounded-md border bg-popover p-1 text-popover-foreground shadow-md outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
           className
         )}
-        onPointerDownOutside={(event) => {
-          const target = event.target as Element;
-          // Prevenir fechamento se o clique for dentro do próprio popover ou seus elementos
-          if (
-            target.closest('[data-radix-popper-content-wrapper]') ||
-            target.closest('[data-radix-popover-trigger]') ||
-            target.closest('[data-radix-popover-content]') ||
-            target.closest('[role="option"]') ||
-            target.closest('[data-radix-select-content]') ||
-            target.closest('[data-radix-select-trigger]') ||
-            target.closest('[data-radix-select-item]') ||
-            target.closest('[cmdk-item]') ||
-            target.getAttribute('cmdk-item') !== null
-          ) {
-            event.preventDefault();
-            return;
-          }
-          // Para cliques genuinamente fora do popover, permite o comportamento padrão
-        }}
-        onInteractOutside={(event) => {
-          const target = event.target as Element;
-          // Permitir interação com itens do command menu
-          if (
-            target.closest('[cmdk-item]') ||
-            target.getAttribute('cmdk-item') !== null ||
-            target.closest('[data-radix-popover-content]') ||
-            target.closest('[data-radix-command-item]')
-          ) {
-            event.preventDefault();
-            return;
-          }
-        }}
         {...props}
       />
     </PopoverPrimitive.Portal>

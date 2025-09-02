@@ -1,10 +1,11 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useDialogDropdownContext } from "@/components/ui/dialog";
 
 interface Product {
   id: string;
@@ -31,6 +32,14 @@ export function ProductSearchCombobox({
 }: ProductSearchComboboxProps) {
   const [open, setOpen] = useState(false);
   const [selectedValue, setSelectedValue] = useState("");
+  const dialogDropdownContext = useDialogDropdownContext();
+
+  // Register open/closed state with dialog context
+  useEffect(() => {
+    if (dialogDropdownContext) {
+      dialogDropdownContext.setHasOpenDropdown(open);
+    }
+  }, [open, dialogDropdownContext]);
 
   const selectedProduct = products.find(product => product.nome === selectedValue);
 
@@ -54,7 +63,7 @@ export function ProductSearchCombobox({
         </Button>
       </PopoverTrigger>
       <PopoverContent 
-        className="w-[300px] p-0 z-[9999] bg-popover border shadow-lg" 
+        className="w-[300px] p-0 z-[60] bg-popover border shadow-lg" 
         onOpenAutoFocus={(e) => e.preventDefault()}
         sideOffset={4}
       >

@@ -29,62 +29,9 @@ const DialogContent = React.forwardRef<React.ElementRef<typeof DialogPrimitive.C
   // Auto-cleanup when dialog state changes
   React.useEffect(() => {
     return () => {
-      // Force cleanup any lingering dropdown state
-      setHasOpenDropdown(false);
-
-      // Aggressive cleanup of orphaned Radix Select portals
-      setTimeout(() => {
-        const portals = document.querySelectorAll('[data-radix-select-content]');
-        portals.forEach(portal => {
-          if (portal.parentNode) {
-            portal.parentNode.removeChild(portal);
-          }
-        });
-
-        // Reset pointer events on any stuck overlays
-        const overlays = document.querySelectorAll('.radix-select-overlay, [data-radix-select-trigger]');
-        overlays.forEach(overlay => {
-          (overlay as HTMLElement).style.pointerEvents = '';
-        });
-      }, 100);
-    };
-  }, []);
-
-  // Force close dropdowns when dialog closes
-  React.useEffect(() => {
-    // Reset dropdown state when dialog unmounts or props change
-    return () => {
       setHasOpenDropdown(false);
     };
   }, []);
-  const handlePointerDownOutside = React.useCallback((event: CustomEvent<{
-    originalEvent: PointerEvent;
-  }>) => {
-    // Don't close modal if there's an open dropdown inside it
-    if (hasOpenDropdown) {
-      event.preventDefault();
-      return;
-    }
-
-    // Check if the click target is inside a select dropdown or command menu
-    const target = event.detail.originalEvent.target as Element;
-    if (target && (
-      target.closest('[data-radix-select-content]') ||
-      target.closest('[data-radix-popover-content]') ||
-      target.closest('[cmdk-item]') ||
-      target.getAttribute('cmdk-item') !== null ||
-      target.closest('[data-radix-command-item]') ||
-      target.closest('[data-radix-popover-trigger]')
-    )) {
-      event.preventDefault();
-      return;
-    }
-
-    // Delay the outside click handling to allow CommandItem onSelect to execute first
-    setTimeout(() => {
-      props.onPointerDownOutside?.(event);
-    }, 0);
-  }, [hasOpenDropdown, props]);
 
   const handleInteractOutside = React.useCallback((event: any) => {
     // Don't close modal if there's an open dropdown inside it
@@ -100,13 +47,17 @@ const DialogContent = React.forwardRef<React.ElementRef<typeof DialogPrimitive.C
       target.closest('[cmdk-item]') ||
       target.getAttribute('cmdk-item') !== null ||
       target.closest('[data-radix-command-item]') ||
-      target.closest('[data-radix-select-content]')
+      target.closest('[data-radix-select-content]') ||
+      target.closest('[data-radix-popover-trigger]')
     )) {
       event.preventDefault();
       return;
     }
 
-    props.onInteractOutside?.(event);
+    // Longer delay to ensure selection events complete
+    setTimeout(() => {
+      props.onInteractOutside?.(event);
+    }, 200);
   }, [hasOpenDropdown, props]);
 
   // Provide context for tracking dropdown state
@@ -115,7 +66,7 @@ const DialogContent = React.forwardRef<React.ElementRef<typeof DialogPrimitive.C
   }), []);
   return <DialogPortal>
       <DialogOverlay />
-      <DialogPrimitive.Content ref={ref} className={cn("fixed left-1/2 top-1/2 z-40 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 border bg-background p-6 shadow-lg sm:rounded-lg outline-none focus:outline-none max-h-[85vh] overflow-auto scrollbar-elegant will-change-transform data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0", className)} onPointerDownOutside={handlePointerDownOutside} onInteractOutside={handleInteractOutside} {...props}>
+      <DialogPrimitive.Content ref={ref} className={cn("fixed left-1/2 top-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 border bg-background p-6 shadow-lg sm:rounded-lg outline-none focus:outline-none max-h-[85vh] overflow-auto scrollbar-elegant will-change-transform data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0", className)} onInteractOutside={handleInteractOutside} {...props}>
         <DialogDropdownContext.Provider value={contextValue}>
           {children}
         </DialogDropdownContext.Provider>
