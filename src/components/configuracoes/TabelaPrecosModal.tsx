@@ -7,15 +7,14 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Plus, Trash2, Save, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import {
-  TabelaPrecos,
-  FaixaPreco,
   obterTabelaCategoria,
   salvarTabelaCategoria,
   criarTabelaExemplo,
-  validarTabelaPrecos,
-  formatarMoeda,
   calcularTotalFotosExtras
 } from '@/utils/precificacaoUtils';
+import { TabelaPrecos, FaixaPreco } from '@/types/pricing';
+import { PricingValidationService } from '@/services/PricingValidationService';
+import { formatarMoeda } from '@/utils/currencyUtils';
 
 interface TabelaPrecosModalProps {
   categoriaId: string;
@@ -52,9 +51,9 @@ export default function TabelaPrecosModal({ categoriaId, categoriaNome, categori
 
     setLoading(true);
     try {
-      const erros = validarTabelaPrecos(tabela);
-      if (erros.length > 0) {
-        toast.error(`Erro na validação: ${erros[0]}`);
+      const validation = PricingValidationService.validarTabelaPrecos(tabela);
+      if (!validation.valid) {
+        toast.error(`Erro na validação: ${validation.errors[0]}`);
         return;
       }
 
