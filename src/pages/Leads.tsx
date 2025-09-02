@@ -9,9 +9,30 @@ import { BarChart3, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { PeriodFilter, PeriodType } from '@/hooks/useLeadMetrics';
 
-// Novo padrão: últimos 30 dias (foco no trabalho atual)
-const getDefaultPeriodType = (): PeriodType => {
-  return 'last_30_days';
+const getCurrentMonthPeriodType = (): PeriodType => {
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1; // getMonth() returns 0-11
+  const currentYear = now.getFullYear();
+  
+  if (currentYear === 2025) {
+    const monthMap: Record<number, PeriodType> = {
+      1: 'january_2025',
+      2: 'february_2025', 
+      3: 'march_2025',
+      4: 'april_2025',
+      5: 'may_2025',
+      6: 'june_2025',
+      7: 'july_2025',
+      8: 'august_2025',
+      9: 'september_2025',
+      10: 'october_2025',
+      11: 'november_2025',
+      12: 'december_2025'
+    };
+    return monthMap[currentMonth] || 'current_year';
+  }
+  
+  return 'current_year';
 };
 
 export default function Leads() {
@@ -19,7 +40,7 @@ export default function Leads() {
   const isMobile = useIsMobile();
   
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>({
-    periodType: getDefaultPeriodType()
+    periodType: getCurrentMonthPeriodType()
   });
   const [searchTerm, setSearchTerm] = useState('');
   const [originFilter, setOriginFilter] = useState('all');
