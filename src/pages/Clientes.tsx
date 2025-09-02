@@ -199,7 +199,7 @@ export default function Clientes() {
     });
   };
   return <ScrollArea className="h-[calc(100vh-120px)]">
-      <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 space-y-6">
+      <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 space-y-6 py-px">
         {/* Header */}
         <div className="flex items-center justify-between">
           
