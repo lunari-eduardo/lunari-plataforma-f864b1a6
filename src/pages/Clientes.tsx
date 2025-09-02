@@ -7,13 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, useDialogDropdownContext } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { 
-  SelectModal as Select, 
-  SelectModalContent as SelectContent, 
-  SelectModalItem as SelectItem, 
-  SelectModalTrigger as SelectTrigger, 
-  SelectModalValue as SelectValue 
-} from '@/components/ui/select-in-modal';
+import { SelectModal as Select, SelectModalContent as SelectContent, SelectModalItem as SelectItem, SelectModalTrigger as SelectTrigger, SelectModalValue as SelectValue } from '@/components/ui/select-in-modal';
 import { Search, UserPlus, User, Phone, Mail, Edit, Trash2, MessageCircle, Cake } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from 'sonner';
@@ -35,7 +29,6 @@ export default function Clientes() {
     atualizarCliente,
     removerCliente
   } = useAppContext();
-  
   const dropdownContext = useDialogDropdownContext();
   const [searchParams, setSearchParams] = useSearchParams();
   const [filters, setFilters] = useState<ClientFilters>({
@@ -55,7 +48,13 @@ export default function Clientes() {
   });
   const [openDropdowns, setOpenDropdowns] = useState<Record<string, boolean>>({});
   const [showAniversariantesModal, setShowAniversariantesModal] = useState(false);
-  const { dialogState, confirm, handleConfirm, handleCancel, handleClose } = useConfirmDialog();
+  const {
+    dialogState,
+    confirm,
+    handleConfirm,
+    handleCancel,
+    handleClose
+  } = useConfirmDialog();
 
   // Check for openBirthdays parameter and auto-open modal
   useEffect(() => {
@@ -63,7 +62,9 @@ export default function Clientes() {
       setShowAniversariantesModal(true);
       // Remove the parameter from URL
       searchParams.delete('openBirthdays');
-      setSearchParams(searchParams, { replace: true });
+      setSearchParams(searchParams, {
+        replace: true
+      });
     }
   }, [searchParams, setSearchParams]);
 
@@ -76,14 +77,14 @@ export default function Clientes() {
       // Force close any open dropdowns
       setOpenDropdowns({});
       dropdownContext?.setHasOpenDropdown(false);
-      
+
       // Aggressive cleanup of Radix Select portals
       document.querySelectorAll('[data-radix-select-content]').forEach(el => {
         if (el.parentNode) {
           el.parentNode.removeChild(el);
         }
       });
-      
+
       // Reset pointer events on any stuck overlays
       document.querySelectorAll('[data-radix-select-trigger]').forEach(el => {
         (el as HTMLElement).style.pointerEvents = '';
@@ -93,20 +94,25 @@ export default function Clientes() {
 
   // Prevent modal from closing when clicking on dropdowns
   const handleSelectOpenChange = useCallback((open: boolean, selectType: string) => {
-    console.log('🔽 Select open changed:', { selectType, open });
+    console.log('🔽 Select open changed:', {
+      selectType,
+      open
+    });
     setOpenDropdowns(prev => ({
       ...prev,
       [selectType]: open
     }));
-    dropdownContext?.setHasOpenDropdown(Object.values({...openDropdowns, [selectType]: open}).some(Boolean));
+    dropdownContext?.setHasOpenDropdown(Object.values({
+      ...openDropdowns,
+      [selectType]: open
+    }).some(Boolean));
   }, [dropdownContext, openDropdowns]);
-
   const handleModalClose = useCallback((newOpen: boolean) => {
     if (!newOpen) {
       // Force close all dropdowns before closing modal
       setOpenDropdowns({});
       dropdownContext?.setHasOpenDropdown(false);
-      
+
       // Cleanup portal elements immediately
       setTimeout(() => {
         document.querySelectorAll('[data-radix-select-content]').forEach(el => {
@@ -122,21 +128,10 @@ export default function Clientes() {
   // Filtrar clientes
   const clientesFiltrados = useMemo(() => {
     return clientMetrics.filter(cliente => {
-      const nomeMatch = cliente.nome.toLowerCase().includes(filters.filtro.toLowerCase()) || 
-                       cliente.email.toLowerCase().includes(filters.filtro.toLowerCase()) || 
-                       cliente.telefone.includes(filters.filtro);
-      const faturadoMatch = !filters.faturadoFilter || filters.faturadoFilter === 'todos' || 
-                           (filters.faturadoFilter === 'baixo' && cliente.totalFaturado < 1000) || 
-                           (filters.faturadoFilter === 'medio' && cliente.totalFaturado >= 1000 && cliente.totalFaturado < 5000) || 
-                           (filters.faturadoFilter === 'alto' && cliente.totalFaturado >= 5000);
-      const pagoMatch = !filters.pagoFilter || filters.pagoFilter === 'todos' || 
-                       (filters.pagoFilter === 'baixo' && cliente.totalPago < 1000) || 
-                       (filters.pagoFilter === 'medio' && cliente.totalPago >= 1000 && cliente.totalPago < 5000) || 
-                       (filters.pagoFilter === 'alto' && cliente.totalPago >= 5000);
-      const receberMatch = !filters.receberFilter || filters.receberFilter === 'todos' || 
-                          (filters.receberFilter === 'baixo' && cliente.aReceber < 1000) || 
-                          (filters.receberFilter === 'medio' && cliente.aReceber >= 1000 && cliente.aReceber < 5000) || 
-                          (filters.receberFilter === 'alto' && cliente.aReceber >= 5000);
+      const nomeMatch = cliente.nome.toLowerCase().includes(filters.filtro.toLowerCase()) || cliente.email.toLowerCase().includes(filters.filtro.toLowerCase()) || cliente.telefone.includes(filters.filtro);
+      const faturadoMatch = !filters.faturadoFilter || filters.faturadoFilter === 'todos' || filters.faturadoFilter === 'baixo' && cliente.totalFaturado < 1000 || filters.faturadoFilter === 'medio' && cliente.totalFaturado >= 1000 && cliente.totalFaturado < 5000 || filters.faturadoFilter === 'alto' && cliente.totalFaturado >= 5000;
+      const pagoMatch = !filters.pagoFilter || filters.pagoFilter === 'todos' || filters.pagoFilter === 'baixo' && cliente.totalPago < 1000 || filters.pagoFilter === 'medio' && cliente.totalPago >= 1000 && cliente.totalPago < 5000 || filters.pagoFilter === 'alto' && cliente.totalPago >= 5000;
+      const receberMatch = !filters.receberFilter || filters.receberFilter === 'todos' || filters.receberFilter === 'baixo' && cliente.aReceber < 1000 || filters.receberFilter === 'medio' && cliente.aReceber >= 1000 && cliente.aReceber < 5000 || filters.receberFilter === 'alto' && cliente.aReceber >= 5000;
       return nomeMatch && faturadoMatch && pagoMatch && receberMatch;
     });
   }, [clientMetrics, filters]);
@@ -168,7 +163,6 @@ export default function Clientes() {
       cancelText: "Cancelar",
       variant: "destructive"
     });
-    
     if (confirmed) {
       removerCliente(clientId);
       toast.success('Cliente excluído com sucesso');
@@ -208,13 +202,9 @@ export default function Clientes() {
       <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-primary">Clientes</h1>
+          
           <div className="flex items-center gap-2">
-            <Button 
-              variant="outline" 
-              onClick={() => setShowAniversariantesModal(true)}
-              className="flex items-center gap-2"
-            >
+            <Button variant="outline" onClick={() => setShowAniversariantesModal(true)} className="flex items-center gap-2">
               <Cake className="h-4 w-4" />
               Aniversariantes
             </Button>
@@ -226,12 +216,7 @@ export default function Clientes() {
         </div>
         
         {/* Filtros */}
-        <ClientFiltersBar
-          filters={filters}
-          onFiltersChange={setFilters}
-          totalClients={clientMetrics.length}
-          filteredClients={clientesFiltrados.length}
-        />
+        <ClientFiltersBar filters={filters} onFiltersChange={setFilters} totalClients={clientMetrics.length} filteredClients={clientesFiltrados.length} />
 
         {/* Grid de Clientes */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -307,26 +292,14 @@ export default function Clientes() {
             <User className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium mb-2">Nenhum cliente encontrado</h3>
             <p className="text-sm text-muted-foreground mb-4 text-center">
-              {filters.filtro || (filters.statusFilter && filters.statusFilter !== 'todos') || 
-               (filters.faturadoFilter && filters.faturadoFilter !== 'todos') || 
-               (filters.pagoFilter && filters.pagoFilter !== 'todos') || 
-               (filters.receberFilter && filters.receberFilter !== 'todos') 
-                ? 'Não encontramos clientes com os critérios de busca informados.' 
-                : 'Adicione seus primeiros clientes para começar.'}
+              {filters.filtro || filters.statusFilter && filters.statusFilter !== 'todos' || filters.faturadoFilter && filters.faturadoFilter !== 'todos' || filters.pagoFilter && filters.pagoFilter !== 'todos' || filters.receberFilter && filters.receberFilter !== 'todos' ? 'Não encontramos clientes com os critérios de busca informados.' : 'Adicione seus primeiros clientes para começar.'}
             </p>
-            {filters.filtro || (filters.statusFilter && filters.statusFilter !== 'todos') || 
-             (filters.faturadoFilter && filters.faturadoFilter !== 'todos') || 
-             (filters.pagoFilter && filters.pagoFilter !== 'todos') || 
-             (filters.receberFilter && filters.receberFilter !== 'todos') ? (
-              <Button onClick={limparFiltros} variant="outline">
+            {filters.filtro || filters.statusFilter && filters.statusFilter !== 'todos' || filters.faturadoFilter && filters.faturadoFilter !== 'todos' || filters.pagoFilter && filters.pagoFilter !== 'todos' || filters.receberFilter && filters.receberFilter !== 'todos' ? <Button onClick={limparFiltros} variant="outline">
                 Limpar filtros
-              </Button>
-            ) : (
-              <Button onClick={handleAddClient} className="flex items-center gap-2">
+              </Button> : <Button onClick={handleAddClient} className="flex items-center gap-2">
                 <UserPlus className="h-4 w-4" />
                 Adicionar Cliente
-              </Button>
-            )}
+              </Button>}
           </div>}
 
         {/* Modal do Formulário de Cliente */}
@@ -365,29 +338,22 @@ export default function Clientes() {
               
               <div>
                 <Label htmlFor="origem">Origem</Label>
-                <Select 
-                  value={formData.origem} 
-                  onValueChange={value => setFormData(prev => ({
-                    ...prev,
-                    origem: value
-                  }))}
-                  onOpenChange={(open) => handleSelectOpenChange(open, 'origem')}
-                >
+                <Select value={formData.origem} onValueChange={value => setFormData(prev => ({
+                ...prev,
+                origem: value
+              }))} onOpenChange={open => handleSelectOpenChange(open, 'origem')}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione a origem" />
                   </SelectTrigger>
                   <SelectContent>
-                    {ORIGENS_PADRAO.map(origem => (
-                      <SelectItem key={origem.id} value={origem.id}>
+                    {ORIGENS_PADRAO.map(origem => <SelectItem key={origem.id} value={origem.id}>
                         <div className="flex items-center gap-2">
-                          <div 
-                            className="w-3 h-3 rounded-full" 
-                            style={{ backgroundColor: origem.cor }}
-                          />
+                          <div className="w-3 h-3 rounded-full" style={{
+                        backgroundColor: origem.cor
+                      }} />
                           {origem.nome}
                         </div>
-                      </SelectItem>
-                    ))}
+                      </SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -405,19 +371,10 @@ export default function Clientes() {
         </Dialog>
 
         {/* Modal de Aniversariantes */}
-        <AniversariantesModal
-          open={showAniversariantesModal}
-          onOpenChange={setShowAniversariantesModal}
-          clientes={clientes}
-        />
+        <AniversariantesModal open={showAniversariantesModal} onOpenChange={setShowAniversariantesModal} clientes={clientes} />
 
         {/* Confirm Dialog */}
-        <ConfirmDialog
-          state={dialogState}
-          onConfirm={handleConfirm}
-          onCancel={handleCancel}
-          onClose={handleClose}
-        />
+        <ConfirmDialog state={dialogState} onConfirm={handleConfirm} onCancel={handleCancel} onClose={handleClose} />
       </div>
     </ScrollArea>;
 }
