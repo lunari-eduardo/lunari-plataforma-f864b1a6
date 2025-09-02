@@ -148,8 +148,8 @@ export function WorkflowHistoryTable({
                   </div>
                 </div>
 
-                {/* Métricas Financeiras - Grid 2x2 em mobile */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 text-center md:text-right">
+                {/* Métricas Financeiras - Grid responsivo para tablets */}
+                <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3 text-center md:text-right">
                   <div className="flex flex-col items-center md:items-end">
                     <span className="text-[11px] md:text-xs text-lunar-textSecondary uppercase tracking-wide">Total</span>
                     <span className="font-bold text-chart-blue-1 text-[11px] md:text-xs">{formatCurrency(item.total || 0)}</span>

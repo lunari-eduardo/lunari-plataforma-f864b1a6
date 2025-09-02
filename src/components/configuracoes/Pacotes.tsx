@@ -114,81 +114,51 @@ export default function Pacotes({
         </CollapsibleContent>
       </Collapsible>
 
-      {/* Filtros Colapsáveis */}
-      <div className="bg-muted/50 border border-lunar-border rounded-lg">
-        <Collapsible open={filtrosAbertos} onOpenChange={setFiltrosAbertos}>
-          <CollapsibleTrigger asChild>
-            <Button
-              variant="ghost"
-              className="w-full justify-between px-4 py-3 h-auto text-xs hover:bg-transparent"
-            >
-              <div className="flex items-center gap-2">
-                <Search className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="font-medium">Filtros</span>
-                {(filtroCategoria !== 'all' || filtroNome) && (
-                  <span className="text-2xs bg-lunar-accent/10 text-lunar-accent px-1.5 py-0.5 rounded">
-                    {[filtroCategoria !== 'all' ? 1 : 0, filtroNome ? 1 : 0].reduce((a, b) => a + b, 0)} ativo(s)
-                  </span>
-                )}
-              </div>
-              <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform", filtrosAbertos && "rotate-180")} />
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <div className="px-4 pb-3 space-y-3 border-t border-lunar-border pt-3">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-2xs text-muted-foreground">Categoria</Label>
-                  <Select value={filtroCategoria} onValueChange={setFiltroCategoria}>
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue placeholder="Todas as categorias" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all" className="text-xs">Todas as categorias</SelectItem>
-                      {categorias.map(categoria => (
-                        <SelectItem key={categoria.id} value={categoria.id} className="text-xs">
-                          {categoria.nome}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-2xs text-muted-foreground">Nome</Label>
-                  <div className="relative">
-                    <Search className="absolute left-2.5 top-2 h-3.5 w-3.5 text-muted-foreground" />
-                    <Input
-                      placeholder="Buscar por nome..."
-                      value={filtroNome}
-                      onChange={(e) => setFiltroNome(e.target.value)}
-                      className="h-8 text-xs pl-8 pr-8"
-                    />
-                    {filtroNome && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="absolute right-1 top-1 h-6 w-6 text-muted-foreground hover:text-foreground"
-                        onClick={() => setFiltroNome('')}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <div className="flex justify-end">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={limparFiltros}
-                  className="text-2xs h-7 px-3"
-                >
-                  Limpar filtros
-                </Button>
-              </div>
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
+      {/* Filtros Fixos Simplificados */}
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between bg-muted/30 border border-lunar-border rounded-lg p-3">
+        <div className="flex flex-col sm:flex-row gap-3 flex-1">
+          <div className="space-y-1 flex-1 sm:max-w-[200px]">
+            <Label className="text-2xs text-muted-foreground">Categoria</Label>
+            <Select value={filtroCategoria} onValueChange={setFiltroCategoria}>
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue placeholder="Todas as categorias" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all" className="text-xs">Todas as categorias</SelectItem>
+                {categorias.map(categoria => (
+                  <SelectItem key={categoria.id} value={categoria.id} className="text-xs">
+                    {categoria.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="space-y-1 flex-1 sm:max-w-[150px]">
+            <Label className="text-2xs text-muted-foreground">Ordenar</Label>
+            <Select value="alphabetical" onValueChange={() => {}}>
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue placeholder="A-Z" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="alphabetical" className="text-xs">A-Z</SelectItem>
+                <SelectItem value="reverse" className="text-xs">Z-A</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        
+        {filtroCategoria !== 'all' && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setFiltroCategoria('all')}
+            className="text-2xs h-7 px-3 gap-1"
+          >
+            <X className="h-3 w-3" />
+            Limpar
+          </Button>
+        )}
       </div>
 
       {/* Lista de Pacotes - Grid Responsivo */}
