@@ -5,7 +5,6 @@ import { PersonalInfoForm } from '../forms/PersonalInfoForm';
 import { ContactInfoForm } from '../forms/ContactInfoForm';
 import { RelationshipForm } from '../forms/RelationshipForm';
 import { useClientForm } from '../hooks/useClientForm';
-
 interface Cliente {
   id: string;
   nome: string;
@@ -16,13 +15,14 @@ interface Cliente {
   origem?: string;
   dataNascimento?: string;
 }
-
 interface ContactoTabProps {
   cliente: Cliente;
   onUpdate: (id: string, data: any) => void;
 }
-
-export function ContactoTab({ cliente, onUpdate }: ContactoTabProps) {
+export function ContactoTab({
+  cliente,
+  onUpdate
+}: ContactoTabProps) {
   const {
     formData,
     isEditing,
@@ -35,16 +35,11 @@ export function ContactoTab({ cliente, onUpdate }: ContactoTabProps) {
     updateConjuge,
     updateFilho
   } = useClientForm(cliente, onUpdate);
-
-  const ActionButtons = () => (
-    <div className="flex gap-2 flex-wrap">
-      {!isEditing ? (
-        <Button onClick={() => setIsEditing(true)} variant="outline" size="sm" className="min-w-fit">
+  const ActionButtons = () => <div className="flex gap-2 flex-wrap">
+      {!isEditing ? <Button onClick={() => setIsEditing(true)} variant="outline" size="sm" className="min-w-fit">
           <Edit3 className="h-4 w-4 mr-2" />
           <span className="hidden sm:inline">Editar</span>
-        </Button>
-      ) : (
-        <>
+        </Button> : <>
           <Button onClick={handleSave} size="sm" className="min-w-fit">
             <Save className="h-4 w-4 mr-2" />
             <span className="hidden sm:inline">Salvar</span>
@@ -53,13 +48,9 @@ export function ContactoTab({ cliente, onUpdate }: ContactoTabProps) {
             <span className="hidden sm:inline">Cancelar</span>
             <span className="sm:hidden">✕</span>
           </Button>
-        </>
-      )}
-    </div>
-  );
-
-  return (
-    <div className="space-y-4 md:space-y-6">
+        </>}
+    </div>;
+  return <div className="space-y-4 md:space-y-6">
       {/* Header Card */}
       <Card className="transition-all duration-200 hover:shadow-md">
         <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4">
@@ -68,8 +59,8 @@ export function ContactoTab({ cliente, onUpdate }: ContactoTabProps) {
               <User className="h-5 w-5 text-lunar-primary" />
             </div>
             <div>
-              <CardTitle className="text-lg">Informações de Contacto</CardTitle>
-              <CardDescription className="text-sm">
+              <CardTitle className="text-sm">Informações de Contacto</CardTitle>
+              <CardDescription className="text-xs">
                 Gerencie os dados básicos do cliente
               </CardDescription>
             </div>
@@ -83,18 +74,14 @@ export function ContactoTab({ cliente, onUpdate }: ContactoTabProps) {
         <CardHeader className="pb-4">
           <div className="flex items-center gap-2">
             <User className="h-4 w-4 text-lunar-primary" />
-            <CardTitle className="text-base">Informações Pessoais</CardTitle>
+            <CardTitle className="text-sm">Informações Pessoais</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
-          <PersonalInfoForm 
-            formData={{
-              nome: formData.nome,
-              dataNascimento: formData.dataNascimento
-            }}
-            isEditing={isEditing}
-            onUpdate={updateFormData}
-          />
+          <PersonalInfoForm formData={{
+          nome: formData.nome,
+          dataNascimento: formData.dataNascimento
+        }} isEditing={isEditing} onUpdate={updateFormData} />
         </CardContent>
       </Card>
 
@@ -107,16 +94,12 @@ export function ContactoTab({ cliente, onUpdate }: ContactoTabProps) {
           </div>
         </CardHeader>
         <CardContent>
-          <ContactInfoForm 
-            formData={{
-              telefone: formData.telefone,
-              email: formData.email,
-              endereco: formData.endereco,
-              origem: formData.origem
-            }}
-            isEditing={isEditing}
-            onUpdate={updateFormData}
-          />
+          <ContactInfoForm formData={{
+          telefone: formData.telefone,
+          email: formData.email,
+          endereco: formData.endereco,
+          origem: formData.origem
+        }} isEditing={isEditing} onUpdate={updateFormData} />
         </CardContent>
       </Card>
 
@@ -129,21 +112,12 @@ export function ContactoTab({ cliente, onUpdate }: ContactoTabProps) {
           </div>
         </CardHeader>
         <CardContent>
-          <RelationshipForm 
-            formData={{
-              observacoes: formData.observacoes,
-              conjuge: formData.conjuge,
-              filhos: formData.filhos
-            }}
-            isEditing={isEditing}
-            onUpdate={updateFormData}
-            onUpdateConjuge={updateConjuge}
-            onUpdateFilho={updateFilho}
-            onAddFilho={addFilho}
-            onRemoveFilho={removeFilho}
-          />
+          <RelationshipForm formData={{
+          observacoes: formData.observacoes,
+          conjuge: formData.conjuge,
+          filhos: formData.filhos
+        }} isEditing={isEditing} onUpdate={updateFormData} onUpdateConjuge={updateConjuge} onUpdateFilho={updateFilho} onAddFilho={addFilho} onRemoveFilho={removeFilho} />
         </CardContent>
       </Card>
-    </div>
-  );
+    </div>;
 }
