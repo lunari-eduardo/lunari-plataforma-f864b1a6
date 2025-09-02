@@ -2,87 +2,59 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Edit, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
-import { toast } from 'sonner';
-import { storage, STORAGE_KEYS } from '@/utils/localStorage';
-interface EtapaTrabalho {
-  id: string;
-  nome: string;
-  cor: string;
-  ordem: number;
-}
+import type { EtapaTrabalho } from '@/types/configuration';
 interface FluxoTrabalhoProps {
   etapas: EtapaTrabalho[];
-  setEtapas: React.Dispatch<React.SetStateAction<EtapaTrabalho[]>>;
+  onAdd: (etapa: Omit<EtapaTrabalho, 'id' | 'ordem'>) => void;
+  onUpdate: (id: string, dados: Partial<EtapaTrabalho>) => void;
+  onDelete: (id: string) => void;
+  onMove: (id: string, direcao: 'cima' | 'baixo') => void;
 }
+
 export default function FluxoTrabalho({
   etapas,
-  setEtapas
+  onAdd,
+  onUpdate,
+  onDelete,
+  onMove
 }: FluxoTrabalhoProps) {
   const [novaEtapa, setNovaEtapa] = useState({
     nome: '',
     cor: '#7950F2'
   });
   const [editandoEtapa, setEditandoEtapa] = useState<string | null>(null);
-
-  // Persistência das etapas de trabalho
-  useEffect(() => {
-    storage.save(STORAGE_KEYS.WORKFLOW_STATUS, etapas);
-    // Dispara evento personalizado para notificar outras partes da aplicação
-    window.dispatchEvent(new Event('workflowStatusUpdated'));
-  }, [etapas]);
+  const [editData, setEditData] = useState<Partial<EtapaTrabalho>>({});
   const adicionarEtapa = () => {
     if (novaEtapa.nome.trim() === '') {
-      toast.error('O nome da etapa não pode estar vazio');
-      return;
+      return; // Error handled by service
     }
-    const newId = String(Date.now());
-    const novaOrdem = etapas.length > 0 ? Math.max(...etapas.map(e => e.ordem)) + 1 : 1;
-    setEtapas([...etapas, {
-      id: newId,
-      nome: novaEtapa.nome,
-      cor: novaEtapa.cor,
-      ordem: novaOrdem
-    }]);
+    onAdd(novaEtapa);
     setNovaEtapa({
       nome: '',
       cor: '#7950F2'
     });
-    toast.success('Etapa adicionada com sucesso!');
   };
   const iniciarEdicaoEtapa = (id: string) => {
+    const etapa = etapas.find(e => e.id === id);
+    if (etapa) {
+      setEditData({
+        nome: etapa.nome,
+        cor: etapa.cor
+      });
+    }
     setEditandoEtapa(id);
   };
-  const salvarEdicaoEtapa = (id: string, dados: Partial<EtapaTrabalho>) => {
-    setEtapas(etapas.map(etapa => etapa.id === id ? {
-      ...etapa,
-      ...dados
-    } : etapa));
+
+  const salvarEdicaoEtapa = (id: string) => {
+    onUpdate(id, editData);
     setEditandoEtapa(null);
-    toast.success('Etapa atualizada com sucesso!');
+    setEditData({});
   };
   const removerEtapa = (id: string) => {
-    setEtapas(etapas.filter(etapa => etapa.id !== id));
-    toast.success('Etapa removida com sucesso!');
+    onDelete(id);
   };
   const moverEtapa = (id: string, direcao: 'cima' | 'baixo') => {
-    const index = etapas.findIndex(e => e.id === id);
-    if (direcao === 'cima' && index === 0 || direcao === 'baixo' && index === etapas.length - 1) {
-      return;
-    }
-    const etapasAtualizadas = [...etapas];
-    const etapaAtual = etapasAtualizadas[index];
-    const novoIndex = direcao === 'cima' ? index - 1 : index + 1;
-    const etapaTroca = etapasAtualizadas[novoIndex];
-
-    // Troca as ordens
-    const ordemTemp = etapaAtual.ordem;
-    etapaAtual.ordem = etapaTroca.ordem;
-    etapaTroca.ordem = ordemTemp;
-
-    // Reorganiza o array baseado na nova ordem
-    etapasAtualizadas.sort((a, b) => a.ordem - b.ordem);
-    setEtapas(etapasAtualizadas);
-    toast.success('Ordem das etapas atualizada');
+    onMove(id, direcao);
   };
   return <div className="mt-4 space-y-6">
       <div>
@@ -141,25 +113,17 @@ export default function FluxoTrabalho({
                 {editandoEtapa === etapa.id ? <>
                     <div className="col-span-1 hidden sm:block">{etapa.ordem}</div>
                     <div className="col-span-7 sm:col-span-5 pr-2">
-                      <Input defaultValue={etapa.nome} onChange={e => {
-                  const novoNome = e.target.value;
-                  setEtapas(prev => prev.map(et => et.id === etapa.id ? {
-                    ...et,
-                    nome: novoNome
-                  } : et));
+                        <Input defaultValue={etapa.nome} onChange={e => {
+                  setEditData(prev => ({ ...prev, nome: e.target.value }));
                 }} className="h-8 text-sm" />
                     </div>
                     <div className="col-span-4 hidden sm:flex items-center">
                       <Input type="color" defaultValue={etapa.cor} onChange={e => {
-                  const novaCor = e.target.value;
-                  setEtapas(prev => prev.map(et => et.id === etapa.id ? {
-                    ...et,
-                    cor: novaCor
-                  } : et));
+                  setEditData(prev => ({ ...prev, cor: e.target.value }));
                 }} className="w-20 h-8" />
                     </div>
                     <div className="flex justify-end items-center gap-2 col-span-5 sm:col-span-2">
-                      <Button variant="outline" size="sm" onClick={() => salvarEdicaoEtapa(etapa.id, etapas.find(e => e.id === etapa.id) || {})}>
+                      <Button variant="outline" size="sm" onClick={() => salvarEdicaoEtapa(etapa.id)}>
                         Salvar
                       </Button>
                       <Button variant="outline" size="sm" onClick={() => setEditandoEtapa(null)}>

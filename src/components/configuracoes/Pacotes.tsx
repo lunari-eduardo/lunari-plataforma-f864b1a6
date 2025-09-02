@@ -14,38 +14,21 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Card, CardContent } from '@/components/ui/card';
 import { obterConfiguracaoPrecificacao } from '@/utils/precificacaoUtils';
 import { useIsMobile } from '@/hooks/use-mobile';
-interface Categoria {
-  id: string;
-  nome: string;
-  cor: string;
-}
-interface ProdutoIncluido {
-  produtoId: string;
-  quantidade: number;
-}
-interface Pacote {
-  id: string;
-  nome: string;
-  categoria_id: string;
-  valor_base: number;
-  valor_foto_extra: number;
-  produtosIncluidos: ProdutoIncluido[];
-}
-interface Produto {
-  id: string;
-  nome: string;
-  preco_custo: number;
-  preco_venda: number;
-}
+import type { Categoria, Pacote, Produto, PacoteFormData } from '@/types/configuration';
 interface PacotesProps {
   pacotes: Pacote[];
-  setPacotes: React.Dispatch<React.SetStateAction<Pacote[]>>;
+  onAdd: (pacote: Omit<Pacote, 'id'>) => void;
+  onUpdate: (id: string, dados: Partial<Pacote>) => void;
+  onDelete: (id: string) => void;
   categorias: Categoria[];
   produtos: Produto[];
 }
+
 export default function Pacotes({
   pacotes,
-  setPacotes,
+  onAdd,
+  onUpdate,
+  onDelete,
   categorias,
   produtos
 }: PacotesProps) {
@@ -88,57 +71,33 @@ export default function Pacotes({
     });
   }, [pacotes, filtroCategoria, debouncedFiltroNome, debouncedFiltroValor]);
   const adicionarPacote = useCallback((formData: any) => {
-    const newId = String(Date.now());
-    setPacotes(prev => [...prev, {
-      id: newId,
-      ...formData
-    }]);
-  }, [setPacotes]);
+    onAdd(formData);
+  }, [onAdd]);
   const atualizarPacote = useCallback((id: string, campo: keyof Pacote, valor: any) => {
-    setPacotes(prev => prev.map(pacote => pacote.id === id ? {
-      ...pacote,
-      [campo]: valor
-    } : pacote));
-  }, [setPacotes]);
+    onUpdate(id, { [campo]: valor });
+  }, [onUpdate]);
   const adicionarProdutoAoPacote = useCallback((pacoteId: string, produtoId: string) => {
-    setPacotes(prev => prev.map(pacote => {
-      if (pacote.id === pacoteId) {
-        const produtoExistente = pacote.produtosIncluidos.find(p => p.produtoId === produtoId);
-        if (produtoExistente) {
-          return {
-            ...pacote,
-            produtosIncluidos: pacote.produtosIncluidos.map(p => p.produtoId === produtoId ? {
-              ...p,
-              quantidade: p.quantidade + 1
-            } : p)
-          };
-        } else {
-          return {
-            ...pacote,
-            produtosIncluidos: [...pacote.produtosIncluidos, {
-              produtoId,
-              quantidade: 1
-            }]
-          };
-        }
-      }
-      return pacote;
-    }));
-  }, [setPacotes]);
+    const pacote = pacotes.find(p => p.id === pacoteId);
+    if (!pacote) return;
+    
+    const produtoExistente = pacote.produtosIncluidos.find(p => p.produtoId === produtoId);
+    const novosProdutos = produtoExistente
+      ? pacote.produtosIncluidos.map(p => p.produtoId === produtoId ? { ...p, quantidade: p.quantidade + 1 } : p)
+      : [...pacote.produtosIncluidos, { produtoId, quantidade: 1 }];
+    
+    onUpdate(pacoteId, { produtosIncluidos: novosProdutos });
+  }, [pacotes, onUpdate]);
+
   const removerProdutoDoPacote = useCallback((pacoteId: string, produtoId: string) => {
-    setPacotes(prev => prev.map(pacote => {
-      if (pacote.id === pacoteId) {
-        return {
-          ...pacote,
-          produtosIncluidos: pacote.produtosIncluidos.filter(p => p.produtoId !== produtoId)
-        };
-      }
-      return pacote;
-    }));
-  }, [setPacotes]);
+    const pacote = pacotes.find(p => p.id === pacoteId);
+    if (!pacote) return;
+    
+    const novosProdutos = pacote.produtosIncluidos.filter(p => p.produtoId !== produtoId);
+    onUpdate(pacoteId, { produtosIncluidos: novosProdutos });
+  }, [pacotes, onUpdate]);
   const removerPacote = useCallback((id: string) => {
-    setPacotes(prev => prev.filter(pacote => pacote.id !== id));
-  }, [setPacotes]);
+    onDelete(id);
+  }, [onDelete]);
   const limparFiltros = useCallback(() => {
     setFiltroCategoria('all');
     setFiltroNome('');

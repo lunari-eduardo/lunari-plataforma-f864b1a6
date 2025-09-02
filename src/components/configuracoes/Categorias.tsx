@@ -2,22 +2,20 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Edit, Trash2 } from 'lucide-react';
-import { toast } from 'sonner';
-interface Categoria {
-  id: string;
-  nome: string;
-  cor: string;
-}
+import type { Categoria, Pacote } from '@/types/configuration';
 interface CategoriasProps {
   categorias: Categoria[];
-  setCategorias: React.Dispatch<React.SetStateAction<Categoria[]>>;
-  pacotes: {
-    categoria_id: string;
-  }[];
+  onAdd: (categoria: Omit<Categoria, 'id'>) => void;
+  onUpdate: (id: string, dados: Partial<Categoria>) => void;
+  onDelete: (id: string) => boolean;
+  pacotes: Pacote[];
 }
+
 export default function Categorias({
   categorias,
-  setCategorias,
+  onAdd,
+  onUpdate, 
+  onDelete,
   pacotes
 }: CategoriasProps) {
   const [novaCategoria, setNovaCategoria] = useState('');
@@ -25,39 +23,24 @@ export default function Categorias({
   const [editandoCategoria, setEditandoCategoria] = useState<string | null>(null);
   const adicionarCategoria = () => {
     if (novaCategoria.trim() === '') {
-      toast.error('O nome da categoria não pode estar vazio');
-      return;
+      return; // Error handled by service
     }
-    const newId = String(Date.now());
-    setCategorias([...categorias, {
-      id: newId,
+    onAdd({
       nome: novaCategoria,
       cor: novaCor
-    }]);
+    });
     setNovaCategoria('');
     setNovaCor('#7950F2');
-    toast.success('Categoria adicionada com sucesso!');
   };
   const iniciarEdicaoCategoria = (id: string) => {
     setEditandoCategoria(id);
   };
   const salvarEdicaoCategoria = (id: string, nome: string, cor: string) => {
-    setCategorias(categorias.map(cat => cat.id === id ? {
-      ...cat,
-      nome,
-      cor
-    } : cat));
+    onUpdate(id, { nome, cor });
     setEditandoCategoria(null);
-    toast.success('Categoria atualizada com sucesso!');
   };
   const removerCategoria = (id: string) => {
-    const categoriaEmUso = pacotes.some(pacote => pacote.categoria_id === id);
-    if (categoriaEmUso) {
-      toast.error('Esta categoria não pode ser removida pois está sendo usada em pacotes');
-      return;
-    }
-    setCategorias(categorias.filter(cat => cat.id !== id));
-    toast.success('Categoria removida com sucesso!');
+    onDelete(id);
   };
   return <div className="space-y-6 mt-4">
       <div>
@@ -111,19 +94,13 @@ export default function Categorias({
                     <div className="col-span-3 sm:col-span-2 pr-2">
                       <Input defaultValue={categoria.nome} onChange={e => {
                   const novoNome = e.target.value;
-                  setCategorias(prev => prev.map(c => c.id === categoria.id ? {
-                    ...c,
-                    nome: novoNome
-                  } : c));
+                  onUpdate(categoria.id, { nome: novoNome });
                 }} className="h-8 text-sm" />
                     </div>
                     <div className="hidden sm:flex items-center">
                       <Input type="color" defaultValue={categoria.cor} onChange={e => {
                   const novaCor = e.target.value;
-                  setCategorias(prev => prev.map(c => c.id === categoria.id ? {
-                    ...c,
-                    cor: novaCor
-                  } : c));
+                  onUpdate(categoria.id, { cor: novaCor });
                 }} className="w-20 h-8" />
                     </div>
                     <div className="flex justify-end col-span-3 gap-2">

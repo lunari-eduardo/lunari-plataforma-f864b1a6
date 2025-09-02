@@ -3,21 +3,22 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Plus, Edit, Trash2, Save, X } from 'lucide-react';
-import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
-interface Produto {
-  id: string;
-  nome: string;
-  preco_custo: number;
-  preco_venda: number;
-}
+import type { Produto, Pacote } from '@/types/configuration';
 interface ProdutosProps {
   produtos: Produto[];
-  setProdutos: React.Dispatch<React.SetStateAction<Produto[]>>;
+  onAdd: (produto: Omit<Produto, 'id'>) => void;
+  onUpdate: (id: string, dados: Partial<Produto>) => void;
+  onDelete: (id: string) => void;
+  pacotes: Pacote[];
 }
+
 export default function Produtos({
   produtos,
-  setProdutos
+  onAdd,
+  onUpdate,
+  onDelete,
+  pacotes
 }: ProdutosProps) {
   const [novoProduto, setNovoProduto] = useState({
     nome: '',
@@ -25,6 +26,7 @@ export default function Produtos({
     preco_venda: 0
   });
   const [editandoProduto, setEditandoProduto] = useState<string | null>(null);
+  const [editData, setEditData] = useState<Partial<Produto>>({});
   const formatarMoeda = (valor: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -52,35 +54,33 @@ export default function Produtos({
   };
   const adicionarProduto = () => {
     if (novoProduto.nome.trim() === '') {
-      toast.error('O nome do produto não pode estar vazio');
-      return;
+      return; // Error handled by service
     }
-    const newId = String(Date.now());
-    setProdutos([...produtos, {
-      id: newId,
-      ...novoProduto
-    }]);
+    onAdd(novoProduto);
     setNovoProduto({
       nome: '',
       preco_custo: 0,
       preco_venda: 0
     });
-    toast.success('Produto adicionado com sucesso!');
   };
   const iniciarEdicaoProduto = (id: string) => {
+    const produto = produtos.find(p => p.id === id);
+    if (produto) {
+      setEditData({
+        nome: produto.nome,
+        preco_custo: produto.preco_custo,
+        preco_venda: produto.preco_venda
+      });
+    }
     setEditandoProduto(id);
   };
-  const salvarEdicaoProduto = (id: string, dados: Partial<Produto>) => {
-    setProdutos(produtos.map(produto => produto.id === id ? {
-      ...produto,
-      ...dados
-    } : produto));
+  const salvarEdicaoProduto = (id: string) => {
+    onUpdate(id, editData);
     setEditandoProduto(null);
-    toast.success('Produto atualizado com sucesso!');
+    setEditData({});
   };
   const removerProduto = (id: string) => {
-    setProdutos(produtos.filter(produto => produto.id !== id));
-    toast.success('Produto removido com sucesso!');
+    onDelete(id);
   };
   const isMobile = useIsMobile();
   return <div className="mt-4 space-y-6">
@@ -158,37 +158,25 @@ export default function Produtos({
                         <div>
                           <label className="block text-sm font-medium mb-1">Nome</label>
                           <Input defaultValue={produto.nome} onChange={e => {
-                    const novoNome = e.target.value;
-                    setProdutos(prev => prev.map(p => p.id === produto.id ? {
-                      ...p,
-                      nome: novoNome
-                    } : p));
+                    setEditData(prev => ({ ...prev, nome: e.target.value }));
                   }} className="text-sm" />
                         </div>
                         <div className="grid grid-cols-2 gap-3">
                           <div>
                             <label className="block text-sm font-medium mb-1">Custo (R$)</label>
                             <Input type="number" defaultValue={produto.preco_custo} onChange={e => {
-                      const novoPrecoCusto = Number(e.target.value);
-                      setProdutos(prev => prev.map(p => p.id === produto.id ? {
-                        ...p,
-                        preco_custo: novoPrecoCusto
-                      } : p));
+                      setEditData(prev => ({ ...prev, preco_custo: Number(e.target.value) }));
                     }} className="text-sm" />
                           </div>
                           <div>
                             <label className="block text-sm font-medium mb-1">Venda (R$)</label>
                             <Input type="number" defaultValue={produto.preco_venda} onChange={e => {
-                      const novoPrecoVenda = Number(e.target.value);
-                      setProdutos(prev => prev.map(p => p.id === produto.id ? {
-                        ...p,
-                        preco_venda: novoPrecoVenda
-                      } : p));
+                      setEditData(prev => ({ ...prev, preco_venda: Number(e.target.value) }));
                     }} className="text-sm" />
                           </div>
                         </div>
                         <div className="flex gap-2 justify-end">
-                          <Button variant="outline" size="sm" onClick={() => salvarEdicaoProduto(produto.id, produtos.find(p => p.id === produto.id) || {})}>
+                          <Button variant="outline" size="sm" onClick={() => salvarEdicaoProduto(produto.id)}>
                             <Save className="h-4 w-4 mr-1" />
                             Salvar
                           </Button>
@@ -253,36 +241,24 @@ export default function Produtos({
                     {editandoProduto === produto.id ? <>
                         <div className="col-span-5 pr-2">
                           <Input defaultValue={produto.nome} onChange={e => {
-                    const novoNome = e.target.value;
-                    setProdutos(prev => prev.map(p => p.id === produto.id ? {
-                      ...p,
-                      nome: novoNome
-                    } : p));
+                    setEditData(prev => ({ ...prev, nome: e.target.value }));
                   }} className="h-8 text-sm" />
                         </div>
                         <div className="col-span-2 pr-2">
                           <Input type="number" defaultValue={produto.preco_custo} onChange={e => {
-                    const novoPrecoCusto = Number(e.target.value);
-                    setProdutos(prev => prev.map(p => p.id === produto.id ? {
-                      ...p,
-                      preco_custo: novoPrecoCusto
-                    } : p));
+                    setEditData(prev => ({ ...prev, preco_custo: Number(e.target.value) }));
                   }} className="h-8 text-sm" />
                         </div>
                         <div className="col-span-2 pr-2">
                           <Input type="number" defaultValue={produto.preco_venda} onChange={e => {
-                    const novoPrecoVenda = Number(e.target.value);
-                    setProdutos(prev => prev.map(p => p.id === produto.id ? {
-                      ...p,
-                      preco_venda: novoPrecoVenda
-                    } : p));
+                    setEditData(prev => ({ ...prev, preco_venda: Number(e.target.value) }));
                   }} className="h-8 text-sm" />
                         </div>
                         <div className="col-span-2 flex items-center">
-                          {formatarMoeda((produtos.find(p => p.id === produto.id)?.preco_venda || 0) - (produtos.find(p => p.id === produto.id)?.preco_custo || 0))}
+                          {formatarMoeda((editData.preco_venda || produto.preco_venda || 0) - (editData.preco_custo || produto.preco_custo || 0))}
                         </div>
                         <div className="flex justify-end items-center gap-1 col-span-1">
-                          <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => salvarEdicaoProduto(produto.id, produtos.find(p => p.id === produto.id) || {})}>
+                          <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => salvarEdicaoProduto(produto.id)}>
                             <Save className="h-3 w-3" />
                           </Button>
                           <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setEditandoProduto(null)}>
