@@ -1,89 +1,93 @@
-import { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { Plus, Edit, Trash2, Save, X } from 'lucide-react';
+import { Plus, Edit, Trash2 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { useProdutos } from '@/hooks/useProdutos';
+import { formatarMoeda } from '@/utils/precificacaoUtils';
+import ProdutoFormModal from './ProdutoFormModal';
+import ProdutoCard from './ProdutoCard';
 import type { Produto, Pacote } from '@/types/configuration';
 interface ProdutosProps {
-  produtos: Produto[];
-  onAdd: (produto: Omit<Produto, 'id'>) => void;
-  onUpdate: (id: string, dados: Partial<Produto>) => void;
-  onDelete: (id: string) => void;
   pacotes: Pacote[];
 }
 
-export default function Produtos({
-  produtos,
-  onAdd,
-  onUpdate,
-  onDelete,
-  pacotes
-}: ProdutosProps) {
+export default function Produtos({ pacotes }: ProdutosProps) {
+  // ============= HOOKS =============
+  
+  const {
+    produtos,
+    isLoading,
+    adicionarProduto,
+    atualizarProduto,
+    removerProduto,
+    calcularMargemProduto,
+    podeRemoverProduto
+  } = useProdutos(pacotes);
+  
+  const isMobile = useIsMobile();
+  const { confirm } = useConfirmDialog();
+
+  // ============= ESTADO LOCAL =============
+  
   const [novoProduto, setNovoProduto] = useState({
     nome: '',
     preco_custo: 0,
     preco_venda: 0
   });
-  const [editandoProduto, setEditandoProduto] = useState<string | null>(null);
-  const [editData, setEditData] = useState<Partial<Produto>>({});
-  const formatarMoeda = (valor: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(valor);
-  };
-  const calcularMargemLucro = (custoProduto: number, vendaProduto: number) => {
-    if (!vendaProduto || vendaProduto <= 0) {
-      return {
-        valor: 0,
-        porcentagem: 'N/A',
-        classe: 'text-muted-foreground'
-      };
+  
+  const [produtoEditando, setProdutoEditando] = useState<Produto | null>(null);
+  const [modalEditOpen, setModalEditOpen] = useState(false);
+
+  // ============= CÁLCULOS MEMOIZADOS =============
+  
+  const produtosComMargem = useMemo(() => {
+    return produtos.map(produto => ({
+      produto,
+      margem: calcularMargemProduto(produto.preco_custo, produto.preco_venda),
+      canDelete: podeRemoverProduto(produto.id)
+    }));
+  }, [produtos, calcularMargemProduto, podeRemoverProduto]);
+
+  // ============= HANDLERS =============
+  
+  const handleAdicionarProduto = useCallback(() => {
+    if (novoProduto.nome.trim() === '') {
+      return;
     }
     
-    const margem = vendaProduto - custoProduto;
-    const porcentagem = margem / vendaProduto * 100;
-    let corClasse = '';
-    if (porcentagem < 15) corClasse = 'text-red-500';else if (porcentagem < 30) corClasse = 'text-yellow-500';else corClasse = 'text-green-500';
-    return {
-      valor: margem,
-      porcentagem: porcentagem.toFixed(1) + '%',
-      classe: corClasse
-    };
-  };
-  const adicionarProduto = () => {
-    if (novoProduto.nome.trim() === '') {
-      return; // Error handled by service
-    }
-    onAdd(novoProduto);
+    adicionarProduto(novoProduto);
     setNovoProduto({
       nome: '',
       preco_custo: 0,
       preco_venda: 0
     });
-  };
-  const iniciarEdicaoProduto = (id: string) => {
-    const produto = produtos.find(p => p.id === id);
-    if (produto) {
-      setEditData({
-        nome: produto.nome,
-        preco_custo: produto.preco_custo,
-        preco_venda: produto.preco_venda
-      });
+  }, [novoProduto, adicionarProduto]);
+
+  const handleEditarProduto = useCallback((produto: Produto) => {
+    setProdutoEditando(produto);
+    setModalEditOpen(true);
+  }, []);
+
+  const handleRemoverProduto = useCallback(async (id: string) => {
+    const confirmed = await confirm({
+      title: 'Confirmar exclusão',
+      description: 'Tem certeza que deseja remover este produto?',
+      confirmText: 'Sim, remover',
+      cancelText: 'Cancelar'
+    });
+    
+    if (confirmed) {
+      removerProduto(id);
     }
-    setEditandoProduto(id);
-  };
-  const salvarEdicaoProduto = (id: string) => {
-    onUpdate(id, editData);
-    setEditandoProduto(null);
-    setEditData({});
-  };
-  const removerProduto = (id: string) => {
-    onDelete(id);
-  };
-  const isMobile = useIsMobile();
-  return <div className="mt-4 space-y-6">
+  }, [confirm, removerProduto]);
+  
+  // ============= RENDER =============
+  
+  return (
+    <div className="mt-4 space-y-6">
       <div>
         <h3 className="font-medium text-sm">Novo Produto</h3>
         <p className="text-muted-foreground mt-1 mb-3 text-xs">
@@ -123,7 +127,11 @@ export default function Produtos({
         </div>
         
         <div className="mt-3">
-          <Button onClick={adicionarProduto} className="flex items-center gap-2">
+          <Button 
+            onClick={handleAdicionarProduto} 
+            className="flex items-center gap-2"
+            disabled={isLoading}
+          >
             <Plus className="h-4 w-4" />
             <span>Adicionar Produto</span>
           </Button>
@@ -138,7 +146,8 @@ export default function Produtos({
           </p>
         </div>
         
-        {produtos.length === 0 ? <Card className="border-dashed border-2">
+        {produtos.length === 0 ? (
+          <Card className="border-dashed border-2">
             <CardContent className="flex flex-col items-center justify-center py-8 text-center">
               <div className="rounded-full bg-muted p-3 mb-3">
                 <Plus className="h-6 w-6 text-muted-foreground" />
@@ -147,85 +156,24 @@ export default function Produtos({
                 Nenhum produto cadastrado. Adicione seu primeiro produto acima.
               </p>
             </CardContent>
-          </Card> : isMobile ?
-      // Layout em cards para mobile
-      <div className="space-y-3 py-0">
-            {produtos.map(produto => {
-          const margem = calcularMargemLucro(produto.preco_custo, produto.preco_venda);
-          return <Card key={produto.id} className="overflow-hidden">
-                  <CardContent className="p-4 py-[7px] px-[10px]">
-                    {editandoProduto === produto.id ? <div className="space-y-3">
-                        <div>
-                          <label className="block text-sm font-medium mb-1">Nome</label>
-                          <Input defaultValue={produto.nome} onChange={e => {
-                    setEditData(prev => ({ ...prev, nome: e.target.value }));
-                  }} className="text-sm" />
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-sm font-medium mb-1">Custo (R$)</label>
-                            <Input type="number" defaultValue={produto.preco_custo} onChange={e => {
-                      setEditData(prev => ({ ...prev, preco_custo: Number(e.target.value) }));
-                    }} className="text-sm" />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium mb-1">Venda (R$)</label>
-                            <Input type="number" defaultValue={produto.preco_venda} onChange={e => {
-                      setEditData(prev => ({ ...prev, preco_venda: Number(e.target.value) }));
-                    }} className="text-sm" />
-                          </div>
-                        </div>
-                        <div className="flex gap-2 justify-end">
-                          <Button variant="outline" size="sm" onClick={() => salvarEdicaoProduto(produto.id)}>
-                            <Save className="h-4 w-4 mr-1" />
-                            Salvar
-                          </Button>
-                          <Button variant="outline" size="sm" onClick={() => setEditandoProduto(null)}>
-                            <X className="h-4 w-4 mr-1" />
-                            Cancelar
-                          </Button>
-                        </div>
-                      </div> : <div className="space-y-3">
-                        <div className="flex items-center justify-between py-0">
-                          <h4 className="text-sm font-semibold">{produto.nome}</h4>
-                          <div className="flex gap-1">
-                            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => iniciarEdicaoProduto(produto.id)}>
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button variant="outline" size="icon" className="h-8 w-8 text-red-500 hover:text-red-600 hover:border-red-200" onClick={() => removerProduto(produto.id)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <span className="text-muted-foreground block text-xs">Custo</span>
-                            <span className="font-medium">{formatarMoeda(produto.preco_custo)}</span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground block text-xs">Venda</span>
-                            <span className="font-medium">
-                              {produto.preco_venda ? formatarMoeda(produto.preco_venda) : 'Não definido'}
-                            </span>
-                          </div>
-                        </div>
-                        
-                        <div className="pt-2 border-t">
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground text-xs">Margem de Lucro</span>
-                            <span className={`font-medium ${margem.classe}`}>
-                              {margem.porcentagem === 'N/A' ? 'N/A' : `${formatarMoeda(margem.valor)} (${margem.porcentagem})`}
-                            </span>
-                          </div>
-                        </div>
-                      </div>}
-                  </CardContent>
-                </Card>;
-        })}
-          </div> :
-      // Layout em tabela para desktop
-      <div className="bg-card rounded-lg border border-border overflow-hidden shadow-sm">
+          </Card>
+        ) : isMobile ? (
+          // Layout em cards para mobile
+          <div className="space-y-3">
+            {produtosComMargem.map(({ produto, margem, canDelete }) => (
+              <ProdutoCard
+                key={produto.id}
+                produto={produto}
+                margem={margem}
+                onEdit={() => handleEditarProduto(produto)}
+                onDelete={() => handleRemoverProduto(produto.id)}
+                canDelete={canDelete}
+              />
+            ))}
+          </div>
+        ) : (
+          // Layout em tabela para desktop
+          <div className="bg-card rounded-lg border border-border overflow-hidden shadow-sm">
             <div className="grid grid-cols-12 px-4 py-3 border-b text-xs font-medium bg-lunar-surface">
               <div className="col-span-5 text-foreground">Produto</div>
               <div className="col-span-2 text-foreground">Custo</div>
@@ -235,58 +183,58 @@ export default function Produtos({
             </div>
             
             <div className="divide-y divide-border">
-              {produtos.map((produto, index) => {
-            const margem = calcularMargemLucro(produto.preco_custo, produto.preco_venda);
-            return <div key={produto.id} className={`grid grid-cols-12 px-4 py-3 text-xs ${index % 2 === 0 ? 'bg-background' : 'bg-muted/20'} hover:bg-muted/40 transition-colors`}>
-                    {editandoProduto === produto.id ? <>
-                        <div className="col-span-5 pr-2">
-                          <Input defaultValue={produto.nome} onChange={e => {
-                    setEditData(prev => ({ ...prev, nome: e.target.value }));
-                  }} className="h-8 text-sm" />
-                        </div>
-                        <div className="col-span-2 pr-2">
-                          <Input type="number" defaultValue={produto.preco_custo} onChange={e => {
-                    setEditData(prev => ({ ...prev, preco_custo: Number(e.target.value) }));
-                  }} className="h-8 text-sm" />
-                        </div>
-                        <div className="col-span-2 pr-2">
-                          <Input type="number" defaultValue={produto.preco_venda} onChange={e => {
-                    setEditData(prev => ({ ...prev, preco_venda: Number(e.target.value) }));
-                  }} className="h-8 text-sm" />
-                        </div>
-                        <div className="col-span-2 flex items-center">
-                          {formatarMoeda((editData.preco_venda || produto.preco_venda || 0) - (editData.preco_custo || produto.preco_custo || 0))}
-                        </div>
-                        <div className="flex justify-end items-center gap-1 col-span-1">
-                          <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => salvarEdicaoProduto(produto.id)}>
-                            <Save className="h-3 w-3" />
-                          </Button>
-                          <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setEditandoProduto(null)}>
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </> : <>
-                        <div className="col-span-5 font-medium">{produto.nome}</div>
-                        <div className="col-span-2">{formatarMoeda(produto.preco_custo)}</div>
-                        <div className="col-span-2">
-                          {produto.preco_venda ? formatarMoeda(produto.preco_venda) : 'Não definido'}
-                        </div>
-                        <div className={`col-span-2 ${margem.classe} font-medium`}>
-                          {margem.porcentagem === 'N/A' ? 'N/A' : `${formatarMoeda(margem.valor)} (${margem.porcentagem})`}
-                        </div>
-                        <div className="flex justify-end gap-1 col-span-1">
-                          <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => iniciarEdicaoProduto(produto.id)}>
-                            <Edit className="h-3 w-3" />
-                          </Button>
-                          <Button variant="outline" size="icon" className="h-7 w-7 text-red-500 hover:text-red-600 hover:border-red-200" onClick={() => removerProduto(produto.id)}>
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </>}
-                  </div>;
-          })}
+              {produtosComMargem.map(({ produto, margem, canDelete }, index) => (
+                <div 
+                  key={produto.id} 
+                  className={`grid grid-cols-12 px-4 py-3 text-xs ${
+                    index % 2 === 0 ? 'bg-background' : 'bg-muted/20'
+                  } hover:bg-muted/40 transition-colors`}
+                >
+                  <div className="col-span-5 font-medium">{produto.nome}</div>
+                  <div className="col-span-2">{formatarMoeda(produto.preco_custo)}</div>
+                  <div className="col-span-2">
+                    {produto.preco_venda ? formatarMoeda(produto.preco_venda) : 'Não definido'}
+                  </div>
+                  <div className={`col-span-2 ${margem.classe} font-medium`}>
+                    {margem.porcentagem === 'N/A' 
+                      ? 'N/A' 
+                      : `${formatarMoeda(margem.valor)} (${margem.porcentagem})`
+                    }
+                  </div>
+                  <div className="flex justify-end gap-1 col-span-1">
+                    <Button 
+                      variant="outline" 
+                      size="icon" 
+                      className="h-7 w-7" 
+                      onClick={() => handleEditarProduto(produto)}
+                    >
+                      <Edit className="h-3 w-3" />
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="icon" 
+                      className="h-7 w-7 text-red-500 hover:text-red-600 hover:border-red-200" 
+                      onClick={() => handleRemoverProduto(produto.id)}
+                      disabled={!canDelete}
+                      title={!canDelete ? 'Produto usado em pacotes' : 'Remover produto'}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>}
+          </div>
+        )}
       </div>
-    </div>;
+      
+      {/* Modal de edição */}
+      <ProdutoFormModal
+        open={modalEditOpen}
+        onOpenChange={setModalEditOpen}
+        produto={produtoEditando}
+        onSave={atualizarProduto}
+      />
+    </div>
+  );
 }

@@ -3,12 +3,21 @@
  * Handles different product data formats across the system
  */
 
+import { formatarMoeda } from '@/utils/precificacaoUtils';
+import type { Produto } from '@/types/configuration';
+
 export interface NormalizedProduct {
   id: string;
   nome: string;
   custo: number;
   valorVenda: number;
   categoria?: string;
+}
+
+export interface MargemLucro {
+  valor: number;
+  porcentagem: string;
+  classe: string;
 }
 
 /**
@@ -40,6 +49,52 @@ export const isValidProduct = (produto: any): boolean => {
   
   console.log('🔍 [ProductUtils] Validação do produto:', { produto, isValid });
   return isValid;
+};
+
+/**
+ * Enhanced validation for product data with detailed error messages
+ */
+export const validarProduto = (produto: Omit<Produto, 'id'>): { valid: boolean; error?: string } => {
+  if (!produto.nome?.trim()) {
+    return { valid: false, error: 'O nome do produto não pode estar vazio' };
+  }
+  
+  if (produto.preco_custo < 0) {
+    return { valid: false, error: 'O preço de custo não pode ser negativo' };
+  }
+  
+  if (produto.preco_venda < 0) {
+    return { valid: false, error: 'O preço de venda não pode ser negativo' };
+  }
+  
+  return { valid: true };
+};
+
+/**
+ * Calculates profit margin for a product
+ */
+export const calcularMargemLucro = (custoProduto: number, vendaProduto: number): MargemLucro => {
+  if (!vendaProduto || vendaProduto <= 0) {
+    return {
+      valor: 0,
+      porcentagem: 'N/A',
+      classe: 'text-muted-foreground'
+    };
+  }
+  
+  const margem = vendaProduto - custoProduto;
+  const porcentagem = margem / vendaProduto * 100;
+  
+  let corClasse = '';
+  if (porcentagem < 15) corClasse = 'text-red-500';
+  else if (porcentagem < 30) corClasse = 'text-yellow-500';
+  else corClasse = 'text-green-500';
+  
+  return {
+    valor: margem,
+    porcentagem: porcentagem.toFixed(1) + '%',
+    classe: corClasse
+  };
 };
 
 /**

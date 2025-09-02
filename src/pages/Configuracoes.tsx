@@ -71,10 +71,6 @@ export default function Configuracoes() {
             
             <TabsContent value="produtos">
               <Produtos 
-                produtos={configuration.produtos}
-                onAdd={configuration.adicionarProduto}
-                onUpdate={configuration.atualizarProduto}
-                onDelete={configuration.removerProduto}
                 pacotes={configuration.pacotes}
               />
             </TabsContent>
