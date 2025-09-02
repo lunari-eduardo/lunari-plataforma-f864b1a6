@@ -5,7 +5,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { obterConfiguracaoPrecificacao } from '@/utils/precificacaoUtils';
-import ProdutoSelectorImproved from './ProdutoSelectorImproved';
+import { ProductSearchCombobox } from '@/components/orcamentos/ProductSearchCombobox';
+import { Badge } from '@/components/ui/badge';
+import { X } from 'lucide-react';
 import { 
   Categoria, 
   Produto, 
@@ -69,14 +71,13 @@ export default function PacoteForm({
     }
   };
 
-  const adicionarProdutoIncluido = (produtoId: string) => {
-    const produtoExistente = formData.produtosIncluidos.find(p => p.produtoId === produtoId);
-    const novosProdutos = produtoExistente
-      ? formData.produtosIncluidos.map(p => 
-          p.produtoId === produtoId ? { ...p, quantidade: p.quantidade + 1 } : p
-        )
-      : [...formData.produtosIncluidos, { produtoId, quantidade: 1 }];
+  const adicionarProduto = (produto: Produto | null) => {
+    if (!produto) return;
     
+    const produtoExistente = formData.produtosIncluidos.find(p => p.produtoId === produto.id);
+    if (produtoExistente) return; // Evita duplicatas
+    
+    const novosProdutos = [...formData.produtosIncluidos, { produtoId: produto.id, quantidade: 1 }];
     setFormData(prev => ({ ...prev, produtosIncluidos: novosProdutos }));
   };
 
@@ -85,6 +86,20 @@ export default function PacoteForm({
       ...prev,
       produtosIncluidos: prev.produtosIncluidos.filter(p => p.produtoId !== produtoId)
     }));
+  };
+
+  const produtosDisponiveis = produtos.filter(
+    produto => !formData.produtosIncluidos.some(p => p.produtoId === produto.id)
+  );
+
+  const getProdutoNome = (produtoId: string) => {
+    const produto = produtos.find(p => p.id === produtoId);
+    return produto?.nome || 'Produto não encontrado';
+  };
+
+  const getProdutoPreco = (produtoId: string) => {
+    const produto = produtos.find(p => p.id === produtoId);
+    return produto?.preco_venda || 0;
   };
   return (
     <div className="space-y-4">
@@ -190,25 +205,59 @@ export default function PacoteForm({
         </div>
       </div>
 
-      {/* Produtos Incluídos - Componente Aprimorado */}
+      {/* Produtos Incluídos - Interface Simplificada */}
       <div className="space-y-2">
         <Label className="text-xs font-medium text-muted-foreground">Produtos Incluídos</Label>
-        <div className="bg-muted/30 p-3 rounded-lg border border-lunar-border">
-          <ProdutoSelectorImproved
-            produtos={produtos}
-            produtosIncluidos={formData.produtosIncluidos}
-            onAdd={adicionarProdutoIncluido}
-            onRemove={removerProdutoIncluido}
-            onUpdateQuantity={(produtoId, quantidade) => {
-              setFormData(prev => ({
-                ...prev,
-                produtosIncluidos: prev.produtosIncluidos.map(p =>
-                  p.produtoId === produtoId ? { ...p, quantidade } : p
-                )
-              }));
-            }}
-          />
-        </div>
+        
+        {/* Seletor de Produtos */}
+        <ProductSearchCombobox
+          products={produtosDisponiveis}
+          onSelect={adicionarProduto}
+          placeholder="Adicionar produto..."
+          className="h-9"
+        />
+        
+        {/* Lista de Produtos Incluídos */}
+        {formData.produtosIncluidos.length > 0 && (
+          <div className="space-y-1.5 mt-3">
+            {formData.produtosIncluidos.map((item) => (
+              <div 
+                key={item.produtoId} 
+                className="flex items-center justify-between p-2 bg-muted/50 rounded-md border border-lunar-border/50"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-medium text-foreground truncate">
+                    {getProdutoNome(item.produtoId)}
+                  </div>
+                  <div className="text-2xs text-muted-foreground">
+                    R$ {getProdutoPreco(item.produtoId).toFixed(2)}
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-2xs px-1.5 py-0.5">
+                    {item.quantidade}x
+                  </Badge>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                    onClick={() => removerProdutoIncluido(item.produtoId)}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        
+        {/* Estado vazio */}
+        {formData.produtosIncluidos.length === 0 && (
+          <div className="text-center py-3 text-xs text-muted-foreground border border-dashed border-lunar-border rounded-md bg-muted/30">
+            Nenhum produto incluído neste pacote
+          </div>
+        )}
       </div>
 
       {/* Botões de Ação Compactos */}
