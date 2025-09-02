@@ -42,16 +42,6 @@ export default function Categorias({
   const [validationError, setValidationError] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Estatísticas das categorias
-  const stats = useMemo(() => ({
-    total: categorias.length,
-    emUso: categorias.filter(cat => 
-      pacotes.some(pacote => pacote.categoria_id === cat.id)
-    ).length,
-    semUso: categorias.filter(cat => 
-      !pacotes.some(pacote => pacote.categoria_id === cat.id)
-    ).length
-  }), [categorias, pacotes]);
 
   // Validação em tempo real
   const validateCategoria = useCallback((nome: string): string => {
@@ -144,51 +134,12 @@ export default function Categorias({
   // Determinar se pode adicionar
   const canAddNew = novaCategoria.trim().length >= 2 && !validationError && !isLoading;
   return (
-    <div className="space-y-6 mt-4">
-      {/* Estatísticas */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="border-primary/20">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Hash className="h-4 w-4 text-primary" />
-              <div>
-                <p className="text-2xl font-bold text-primary">{stats.total}</p>
-                <p className="text-xs text-muted-foreground">Total</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="border-green-500/20">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <div className="h-4 w-4 bg-green-500 rounded-full" />
-              <div>
-                <p className="text-2xl font-bold text-green-600">{stats.emUso}</p>
-                <p className="text-xs text-muted-foreground">Em uso</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-orange-500/20">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <div className="h-4 w-4 bg-orange-500 rounded-full" />
-              <div>
-                <p className="text-2xl font-bold text-orange-600">{stats.semUso}</p>
-                <p className="text-xs text-muted-foreground">Sem uso</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
+    <div className="space-y-3 mt-2">
       {/* Formulário Nova Categoria */}
       <Card>
-        <CardHeader className="pb-4">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Plus className="h-5 w-5 text-primary" />
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Plus className="h-4 w-4 text-primary" />
             Nova Categoria de Sessão
           </CardTitle>
           <p className="text-sm text-muted-foreground">
@@ -196,9 +147,9 @@ export default function Categorias({
           </p>
         </CardHeader>
         
-        <CardContent>
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <CardContent className="p-3">
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div className="md:col-span-2">
                 <label htmlFor="nome" className="block text-sm font-medium mb-2">
                   Nome da Categoria <span className="text-destructive">*</span>
@@ -260,24 +211,24 @@ export default function Categorias({
       </Card>
       {/* Lista de Categorias */}
       <Card>
-        <CardHeader className="pb-4">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Palette className="h-5 w-5 text-primary" />
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Palette className="h-4 w-4 text-primary" />
             Categorias Cadastradas
           </CardTitle>
         </CardHeader>
         
-        <CardContent>
+        <CardContent className="p-3">
           {categorias.length === 0 ? (
-            <div className="text-center py-12">
-              <Palette className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">Nenhuma categoria encontrada</h3>
-              <p className="text-muted-foreground mb-4">
+            <div className="text-center py-8">
+              <Palette className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
+              <h3 className="text-base font-medium mb-2">Nenhuma categoria encontrada</h3>
+              <p className="text-sm text-muted-foreground mb-3">
                 Comece criando sua primeira categoria de sessão acima.
               </p>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-1">
               {categorias.map((categoria, index) => {
                 const isEditing = editandoCategoria === categoria.id;
                 const categoria_pode_remover = podeRemoverCategoria(categoria.id);
@@ -286,7 +237,7 @@ export default function Categorias({
                   <div 
                     key={categoria.id} 
                     className={cn(
-                      "flex items-center gap-4 p-4 border rounded-lg transition-colors",
+                      "flex items-center gap-3 p-2 border rounded-lg transition-colors",
                       "hover:bg-accent/50",
                       index % 2 === 0 ? "bg-background" : "bg-muted/30"
                     )}
