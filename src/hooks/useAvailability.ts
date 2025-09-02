@@ -1,27 +1,16 @@
-import { useAgendaContext } from '@/contexts/AgendaContext';
+import { useAppContext } from '@/contexts/AppContext';
+import type { AvailabilitySlot } from '@/types/availability';
 
 export const useAvailability = () => {
-  const {
-    availability,
-    availabilityTypes,
-    addAvailabilitySlots,
-    clearAvailabilityForDate,
-    deleteAvailabilitySlot,
-    addAvailabilityType,
-    updateAvailabilityType,
-    deleteAvailabilityType,
-    getAvailabilityForDate
-  } = useAgendaContext();
-  
+  const ctx = useAppContext();
   return {
-    availability,
-    availabilityTypes,
-    addAvailabilitySlots,
-    clearAvailabilityForDate,
-    deleteAvailabilitySlot,
-    addAvailabilityType,
-    updateAvailabilityType,
-    deleteAvailabilityType,
-    getAvailabilityForDate
+    availability: ctx.availability,
+    availabilityTypes: ctx.availabilityTypes,
+    addAvailabilitySlots: ctx.addAvailabilitySlots,
+    clearAvailabilityForDate: ctx.clearAvailabilityForDate,
+    deleteAvailabilitySlot: ctx.deleteAvailabilitySlot,
+    addAvailabilityType: ctx.addAvailabilityType,
+    updateAvailabilityType: ctx.updateAvailabilityType,
+    deleteAvailabilityType: ctx.deleteAvailabilityType,
   } as const;
 };
