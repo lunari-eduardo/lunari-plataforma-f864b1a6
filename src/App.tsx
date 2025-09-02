@@ -23,6 +23,7 @@ import FeedTest from "./pages/FeedTest";
 import LandingPage from "./pages/LandingPage";
 import NotFound from "./pages/NotFound";
 import { AppProvider } from "./contexts/AppContext";
+import { AgendaProvider } from "./contexts/AgendaContext";
 import ThemeProvider from "./components/theme/ThemeProvider";
 
 // Create a stable QueryClient instance
@@ -47,32 +48,34 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <AppProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <Routes>
-                {/* Landing page sem layout */}
-                <Route path="/landing" element={<LandingPage />} />
-                
-                <Route path="/" element={<Layout />}>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/agenda" element={<Agenda />} />
-                  <Route path="/clientes" element={<Clientes />} />
-                  <Route path="/clientes/:id" element={<ClienteDetalhe />} />
-                  <Route path="/leads" element={<Leads />} />
-                  <Route path="/financas" element={<NovaFinancas />} />
-                  <Route path="/precificacao" element={<Precificacao />} />
-                  <Route path="/workflow" element={<Workflow />} />
-                  <Route path="/analise-vendas" element={<AnaliseVendas />} />
-                  <Route path="/configuracoes" element={<Configuracoes />} />
-                  <Route path="/minha-conta" element={<MinhaConta />} />
-                  <Route path="/preferencias" element={<Preferencias />} />
-                  <Route path="/tarefas" element={<Tarefas />} />
-                  <Route path="/feed-test" element={<FeedTest />} />
-                  <Route path="*" element={<NotFound />} />
-                </Route>
-              </Routes>
-            </TooltipProvider>
+            <AgendaProvider>
+              <TooltipProvider>
+                <Toaster />
+                <Sonner />
+                <Routes>
+                  {/* Landing page sem layout */}
+                  <Route path="/landing" element={<LandingPage />} />
+                  
+                  <Route path="/" element={<Layout />}>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/agenda" element={<Agenda />} />
+                    <Route path="/clientes" element={<Clientes />} />
+                    <Route path="/clientes/:id" element={<ClienteDetalhe />} />
+                    <Route path="/leads" element={<Leads />} />
+                    <Route path="/financas" element={<NovaFinancas />} />
+                    <Route path="/precificacao" element={<Precificacao />} />
+                    <Route path="/workflow" element={<Workflow />} />
+                    <Route path="/analise-vendas" element={<AnaliseVendas />} />
+                    <Route path="/configuracoes" element={<Configuracoes />} />
+                    <Route path="/minha-conta" element={<MinhaConta />} />
+                    <Route path="/preferencias" element={<Preferencias />} />
+                    <Route path="/tarefas" element={<Tarefas />} />
+                    <Route path="/feed-test" element={<FeedTest />} />
+                    <Route path="*" element={<NotFound />} />
+                  </Route>
+                </Routes>
+              </TooltipProvider>
+            </AgendaProvider>
           </AppProvider>
         </ThemeProvider>
       </QueryClientProvider>

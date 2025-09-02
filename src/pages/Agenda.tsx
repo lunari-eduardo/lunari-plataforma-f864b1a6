@@ -131,8 +131,8 @@ export default function Agenda() {
   }, [editingAppointment, viewingAppointment, updateAppointment, addAppointment, setIsDetailsOpen, setIsAppointmentDialogOpen]);
 
   // Handle appointment deletion
-  const handleDeleteAppointment = useCallback((id: string, preservePayments?: boolean) => {
-    deleteAppointment(id, preservePayments);
+  const handleDeleteAppointment = useCallback(async (id: string, preservePayments?: boolean) => {
+    await deleteAppointment(id);
     setIsDetailsOpen(false);
     setIsBudgetAppointmentModalOpen(false);
   }, [deleteAppointment, setIsDetailsOpen, setIsBudgetAppointmentModalOpen]);
