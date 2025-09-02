@@ -1,13 +1,7 @@
 
 import { useMemo, useEffect, useState } from 'react';
-import { storage, STORAGE_KEYS } from '@/utils/localStorage';
-
-interface WorkflowStatus {
-  id: string;
-  nome: string;
-  cor: string;
-  ordem: number;
-}
+import { configurationService } from '@/services/ConfigurationService';
+import type { EtapaTrabalho } from '@/types/configuration';
 
 export const useWorkflowStatus = () => {
   const [storageUpdate, setStorageUpdate] = useState(0);
@@ -32,7 +26,7 @@ export const useWorkflowStatus = () => {
   }, []);
 
   const workflowStatuses = useMemo(() => {
-    const configuredStatuses = storage.load<WorkflowStatus[]>(STORAGE_KEYS.WORKFLOW_STATUS, []);
+    const configuredStatuses = configurationService.loadEtapas();
     return configuredStatuses.sort((a, b) => a.ordem - b.ordem);
   }, [storageUpdate]);
 

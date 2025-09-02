@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Edit, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
 import type { EtapaTrabalho } from '@/types/configuration';
+
 interface FluxoTrabalhoProps {
   etapas: EtapaTrabalho[];
   onAdd: (etapa: Omit<EtapaTrabalho, 'id' | 'ordem'>) => void;

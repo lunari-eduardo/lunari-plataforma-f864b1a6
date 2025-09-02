@@ -63,29 +63,6 @@ export interface PacoteFormData {
 
 // ============= TIPOS PARA PROPS DE COMPONENTES =============
 
-export interface CategoriasProps {
-  categorias: Categoria[];
-  setCategorias: React.Dispatch<React.SetStateAction<Categoria[]>>;
-  pacotes: Pacote[];
-}
-
-export interface PacotesProps {
-  pacotes: Pacote[];
-  setPacotes: React.Dispatch<React.SetStateAction<Pacote[]>>;
-  categorias: Categoria[];
-  produtos: Produto[];
-}
-
-export interface ProdutosProps {
-  produtos: Produto[];
-  setProdutos: React.Dispatch<React.SetStateAction<Produto[]>>;
-}
-
-export interface FluxoTrabalhoProps {
-  etapas: EtapaTrabalho[];
-  setEtapas: React.Dispatch<React.SetStateAction<EtapaTrabalho[]>>;
-}
-
 export interface PacoteFormProps {
   initialData?: PacoteFormData;
   categorias: Categoria[];
@@ -143,7 +120,7 @@ export const CONFIGURATION_STORAGE_KEYS = {
   CATEGORIAS: 'configuracoes_categorias',
   PACOTES: 'configuracoes_pacotes', 
   PRODUTOS: 'configuracoes_produtos',
-  ETAPAS: 'workflow_status'
+  ETAPAS: 'lunari_workflow_status'
 } as const;
 
 // ============= DADOS PADRÃO =============

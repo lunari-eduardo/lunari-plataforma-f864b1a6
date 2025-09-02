@@ -24,7 +24,7 @@ const STORAGE_KEYS = {
   CATEGORIAS: 'configuracoes_categorias',
   PACOTES: 'configuracoes_pacotes',
   PRODUTOS: 'configuracoes_produtos', 
-  ETAPAS: 'workflow_status'
+  ETAPAS: 'lunari_workflow_status'
 } as const;
 
 /**
@@ -70,11 +70,23 @@ class ConfigurationService {
   // ============= ETAPAS DE TRABALHO =============
   
   loadEtapas(): EtapaTrabalho[] {
-    return storage.load(STORAGE_KEYS.ETAPAS, DEFAULT_ETAPAS);
+    // Migração silenciosa: verifica se há dados no formato antigo
+    const oldData = storage.load('workflow_status', []);
+    const newData = storage.load(STORAGE_KEYS.ETAPAS, []);
+    
+    // Se há dados antigos mas não há novos, migra
+    if (oldData.length > 0 && newData.length === 0) {
+      storage.save(STORAGE_KEYS.ETAPAS, oldData);
+      return oldData.length > 0 ? oldData : DEFAULT_ETAPAS;
+    }
+    
+    return newData.length > 0 ? newData : DEFAULT_ETAPAS;
   }
 
   saveEtapas(etapas: EtapaTrabalho[]): void {
     storage.save(STORAGE_KEYS.ETAPAS, etapas);
+    // Remove dados antigos após salvar
+    storage.remove('workflow_status');
     // Dispara evento para notificar outras partes da aplicação
     window.dispatchEvent(new Event('workflowStatusUpdated'));
   }
