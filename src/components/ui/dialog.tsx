@@ -73,12 +73,40 @@ const DialogContent = React.forwardRef<React.ElementRef<typeof DialogPrimitive.C
       target.closest('[data-radix-popover-content]') ||
       target.closest('[cmdk-item]') ||
       target.getAttribute('cmdk-item') !== null ||
-      target.closest('[data-radix-command-item]')
+      target.closest('[data-radix-command-item]') ||
+      target.closest('[data-radix-popover-trigger]')
     )) {
       event.preventDefault();
       return;
     }
-    props.onPointerDownOutside?.(event);
+
+    // Delay the outside click handling to allow CommandItem onSelect to execute first
+    setTimeout(() => {
+      props.onPointerDownOutside?.(event);
+    }, 0);
+  }, [hasOpenDropdown, props]);
+
+  const handleInteractOutside = React.useCallback((event: any) => {
+    // Don't close modal if there's an open dropdown inside it
+    if (hasOpenDropdown) {
+      event.preventDefault();
+      return;
+    }
+
+    // Check if interaction is with dropdown/command menu elements
+    const target = event.detail?.originalEvent?.target || event.target as Element;
+    if (target && (
+      target.closest('[data-radix-popover-content]') ||
+      target.closest('[cmdk-item]') ||
+      target.getAttribute('cmdk-item') !== null ||
+      target.closest('[data-radix-command-item]') ||
+      target.closest('[data-radix-select-content]')
+    )) {
+      event.preventDefault();
+      return;
+    }
+
+    props.onInteractOutside?.(event);
   }, [hasOpenDropdown, props]);
 
   // Provide context for tracking dropdown state
@@ -87,7 +115,7 @@ const DialogContent = React.forwardRef<React.ElementRef<typeof DialogPrimitive.C
   }), []);
   return <DialogPortal>
       <DialogOverlay />
-      <DialogPrimitive.Content ref={ref} className={cn("fixed left-1/2 top-1/2 z-40 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 border bg-background p-6 shadow-lg sm:rounded-lg outline-none focus:outline-none max-h-[85vh] overflow-auto scrollbar-elegant will-change-transform data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0", className)} onPointerDownOutside={handlePointerDownOutside} {...props}>
+      <DialogPrimitive.Content ref={ref} className={cn("fixed left-1/2 top-1/2 z-40 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 border bg-background p-6 shadow-lg sm:rounded-lg outline-none focus:outline-none max-h-[85vh] overflow-auto scrollbar-elegant will-change-transform data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0", className)} onPointerDownOutside={handlePointerDownOutside} onInteractOutside={handleInteractOutside} {...props}>
         <DialogDropdownContext.Provider value={contextValue}>
           {children}
         </DialogDropdownContext.Provider>

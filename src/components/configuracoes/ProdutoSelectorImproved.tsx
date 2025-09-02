@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Plus, X, Package } from 'lucide-react';
 import { formatarMoeda } from '@/utils/precificacaoUtils';
+import { useDialogDropdownContext } from '@/components/ui/dialog';
 import type { Produto, ProdutoIncluido } from '@/types/configuration';
 
 interface ProdutoSelectorImprovedProps {
@@ -25,6 +26,14 @@ export default function ProdutoSelectorImproved({
   disabled = false
 }: ProdutoSelectorImprovedProps) {
   const [open, setOpen] = useState(false);
+  const dialogDropdownContext = useDialogDropdownContext();
+
+  // Register dropdown state with dialog context when available
+  useEffect(() => {
+    if (dialogDropdownContext) {
+      dialogDropdownContext.setHasOpenDropdown(open);
+    }
+  }, [open, dialogDropdownContext]);
 
   const produtosDisponiveis = produtos.filter(
     produto => !produtosIncluidos.some(p => p.produtoId === produto.id)
