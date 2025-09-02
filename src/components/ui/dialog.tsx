@@ -66,9 +66,15 @@ const DialogContent = React.forwardRef<React.ElementRef<typeof DialogPrimitive.C
       return;
     }
 
-    // Check if the click target is inside a select dropdown
+    // Check if the click target is inside a select dropdown or command menu
     const target = event.detail.originalEvent.target as Element;
-    if (target && target.closest('[data-radix-select-content]')) {
+    if (target && (
+      target.closest('[data-radix-select-content]') ||
+      target.closest('[data-radix-popover-content]') ||
+      target.closest('[cmdk-item]') ||
+      target.getAttribute('cmdk-item') !== null ||
+      target.closest('[data-radix-command-item]')
+    )) {
       event.preventDefault();
       return;
     }

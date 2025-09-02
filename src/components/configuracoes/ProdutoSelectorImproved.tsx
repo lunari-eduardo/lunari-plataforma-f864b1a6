@@ -138,11 +138,11 @@ export default function ProdutoSelectorImproved({
             }
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-80 p-0" align="start">
+        <PopoverContent className="w-[300px] p-0 z-[9999] bg-popover border shadow-lg" align="start">
           <Command>
             <CommandInput 
               placeholder="Buscar produto..." 
-              className="h-9 text-xs"
+              className="h-8 text-xs"
             />
             <CommandList>
               <CommandEmpty className="py-4 text-center text-xs text-muted-foreground">
@@ -152,13 +152,14 @@ export default function ProdutoSelectorImproved({
                 {produtosDisponiveis.map((produto) => (
                   <CommandItem
                     key={produto.id}
+                    value={produto.nome}
                     onSelect={() => handleAdd(produto.id)}
-                    className="flex items-center justify-between p-3 cursor-pointer hover:bg-lunar-accent/5"
+                    className="text-xs cursor-pointer"
                   >
                     <div className="flex items-center gap-2 flex-1 min-w-0">
                       <Package className="h-4 w-4 text-lunar-accent flex-shrink-0" />
                       <div className="min-w-0 flex-1">
-                        <div className="font-medium text-xs text-foreground truncate">
+                        <div className="font-medium text-foreground truncate">
                           {produto.nome}
                         </div>
                         <div className="text-2xs text-muted-foreground">
