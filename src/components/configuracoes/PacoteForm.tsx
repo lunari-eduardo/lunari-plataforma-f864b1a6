@@ -5,28 +5,12 @@ import { Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-interface Categoria {
-  id: string;
-  nome: string;
-  cor: string;
-}
-interface ProdutoIncluido {
-  produtoId: string;
-  quantidade: number;
-}
-interface PacoteFormData {
-  nome: string;
-  categoria_id: string;
-  valor_base: number;
-  valor_foto_extra: number;
-  produtosIncluidos: ProdutoIncluido[];
-}
-interface Produto {
-  id: string;
-  nome: string;
-  preco_custo: number;
-  preco_venda: number;
-}
+import type { 
+  Categoria, 
+  Produto, 
+  ProdutoIncluido, 
+  PacoteFormData 
+} from '@/types/configuration';
 interface PacoteFormProps {
   initialData?: PacoteFormData;
   categorias: Categoria[];

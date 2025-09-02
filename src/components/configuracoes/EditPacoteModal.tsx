@@ -1,42 +1,13 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import PacoteForm from './PacoteForm';
 import { toast } from 'sonner';
+import type { 
+  Categoria, 
+  Pacote, 
+  Produto, 
+  EditPacoteModalProps 
+} from '@/types/configuration';
 
-interface Categoria {
-  id: string;
-  nome: string;
-  cor: string;
-}
-
-interface ProdutoIncluido {
-  produtoId: string;
-  quantidade: number;
-}
-
-interface Pacote {
-  id: string;
-  nome: string;
-  categoria_id: string;
-  valor_base: number;
-  valor_foto_extra: number;
-  produtosIncluidos: ProdutoIncluido[];
-}
-
-interface Produto {
-  id: string;
-  nome: string;
-  preco_custo: number;
-  preco_venda: number;
-}
-
-interface EditPacoteModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  pacote: Pacote | null;
-  categorias: Categoria[];
-  produtos: Produto[];
-  onSave: (id: string, dados: Partial<Pacote>) => void;
-}
 
 export default function EditPacoteModal({ 
   open, 
