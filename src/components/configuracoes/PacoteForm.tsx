@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, X } from 'lucide-react';
-import { toast } from 'sonner';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import type { 
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
+import { obterConfiguracaoPrecificacao } from '@/utils/precificacaoUtils';
+import ProdutoSelectorImproved from './ProdutoSelectorImproved';
+import { 
   Categoria, 
   Produto, 
   ProdutoIncluido, 
@@ -18,192 +19,220 @@ export default function PacoteForm({
   produtos,
   onSubmit,
   onCancel,
-  submitLabel = "Salvar",
+  submitLabel = "Salvar Pacote",
   isEditing = false
 }: PacoteFormProps) {
-  const [formData, setFormData] = useState<PacoteFormData>(initialData || {
-    nome: '',
-    categoria_id: '',
-    valor_base: 0,
-    valor_foto_extra: 0,
-    produtosIncluidos: []
+  const [formData, setFormData] = useState<PacoteFormData>({
+    nome: initialData?.nome || '',
+    categoria_id: initialData?.categoria_id || categorias[0]?.id || '',
+    valor_base: initialData?.valor_base || 0,
+    valor_foto_extra: initialData?.valor_foto_extra || 0,
+    produtosIncluidos: initialData?.produtosIncluidos || []
   });
-  const [openProductSelector, setOpenProductSelector] = useState(false);
+
+  const [errors, setErrors] = useState<{[key: string]: string}>({});
+  
+  // Verificar modelo de precificação atual
+  const configPrecificacao = obterConfiguracaoPrecificacao();
+  const isFixedPricing = configPrecificacao.modelo === 'fixo';
   const handleSubmit = () => {
-    if (formData.nome.trim() === '') {
-      toast.error('O nome do pacote não pode estar vazio');
-      return;
+    const newErrors: {[key: string]: string} = {};
+
+    if (!formData.nome.trim()) {
+      newErrors.nome = 'Nome é obrigatório';
     }
+
     if (!formData.categoria_id) {
-      toast.error('Selecione uma categoria para o pacote');
-      return;
+      newErrors.categoria_id = 'Categoria é obrigatória';
     }
+
     if (formData.valor_base <= 0) {
-      toast.error('O valor base deve ser maior que zero');
+      newErrors.valor_base = 'Valor base deve ser maior que zero';
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
+
     onSubmit(formData);
+    
     if (!isEditing) {
       setFormData({
         nome: '',
-        categoria_id: '',
+        categoria_id: categorias[0]?.id || '',
         valor_base: 0,
         valor_foto_extra: 0,
         produtosIncluidos: []
       });
+      setErrors({});
     }
   };
+
   const adicionarProdutoIncluido = (produtoId: string) => {
     const produtoExistente = formData.produtosIncluidos.find(p => p.produtoId === produtoId);
-    if (produtoExistente) {
-      toast.error('Produto já está incluído no pacote');
-      return;
-    }
-    setFormData({
-      ...formData,
-      produtosIncluidos: [...formData.produtosIncluidos, {
-        produtoId,
-        quantidade: 1
-      }]
-    });
-    setOpenProductSelector(false);
+    const novosProdutos = produtoExistente
+      ? formData.produtosIncluidos.map(p => 
+          p.produtoId === produtoId ? { ...p, quantidade: p.quantidade + 1 } : p
+        )
+      : [...formData.produtosIncluidos, { produtoId, quantidade: 1 }];
+    
+    setFormData(prev => ({ ...prev, produtosIncluidos: novosProdutos }));
   };
+
   const removerProdutoIncluido = (produtoId: string) => {
-    setFormData({
-      ...formData,
-      produtosIncluidos: formData.produtosIncluidos.filter(p => p.produtoId !== produtoId)
-    });
+    setFormData(prev => ({
+      ...prev,
+      produtosIncluidos: prev.produtosIncluidos.filter(p => p.produtoId !== produtoId)
+    }));
   };
-  const atualizarQuantidadeProduto = (produtoId: string, quantidade: number) => {
-    setFormData({
-      ...formData,
-      produtosIncluidos: formData.produtosIncluidos.map(p => p.produtoId === produtoId ? {
-        ...p,
-        quantidade
-      } : p)
-    });
-  };
-  const getNomeProduto = (produtoId: string) => {
-    const produto = produtos.find(p => p.id === produtoId);
-    return produto ? produto.nome : 'Produto não encontrado';
-  };
-  return <div className="space-y-2 py-0">
+  return (
+    <div className="space-y-4">
+      {/* Grid Compacto */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label htmlFor="pacote-nome" className="block text-sm font-medium mb-1">
-            Nome<span className="text-destructive">*</span>
-          </label>
-          <Input id="pacote-nome" placeholder="Nome do pacote" value={formData.nome} onChange={e => setFormData({
-          ...formData,
-          nome: e.target.value
-        })} className="bg-muted" />
+        {/* Nome do Pacote */}
+        <div className="space-y-1.5">
+          <Label htmlFor="nome" className="text-xs font-medium text-muted-foreground">
+            Nome do Pacote *
+          </Label>
+          <Input
+            id="nome"
+            value={formData.nome}
+            onChange={(e) => {
+              setFormData(prev => ({ ...prev, nome: e.target.value }));
+              if (errors.nome) {
+                setErrors(prev => ({ ...prev, nome: '' }));
+              }
+            }}
+            placeholder="Ex: Ensaio Casal Básico"
+            className={cn(
+              "h-9 text-sm transition-colors",
+              errors.nome && "border-destructive focus:border-destructive"
+            )}
+          />
+          {errors.nome && (
+            <span className="text-2xs text-destructive">{errors.nome}</span>
+          )}
         </div>
-        
-        <div>
-          <label htmlFor="pacote-categoria" className="block text-sm font-medium mb-1">
-            Categoria<span className="text-destructive">*</span>
-          </label>
-          <select id="pacote-categoria" value={formData.categoria_id} onChange={e => setFormData({
-          ...formData,
-          categoria_id: e.target.value
-        })} className="w-full h-7 rounded-md border border-input px-3 text-base ring-0 file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm py-[1px] bg-muted">
-            <option value="">Selecione...</option>
-            {categorias.map(cat => <option key={cat.id} value={cat.id}>{cat.nome}</option>)}
-          </select>
+
+        {/* Categoria */}
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium text-muted-foreground">Categoria *</Label>
+          <Select 
+            value={formData.categoria_id} 
+            onValueChange={(value) => setFormData(prev => ({ ...prev, categoria_id: value }))}
+          >
+            <SelectTrigger className="h-9 text-sm">
+              <SelectValue placeholder="Selecione uma categoria" />
+            </SelectTrigger>
+            <SelectContent>
+              {categorias.map(categoria => (
+                <SelectItem key={categoria.id} value={categoria.id} className="text-sm">
+                  {categoria.nome}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
+      {/* Preços */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label htmlFor="pacote-valor-base" className="block text-sm font-medium mb-1">
-            Valor Base (R$)<span className="text-destructive">*</span>
-          </label>
-          <Input id="pacote-valor-base" type="number" placeholder="0,00" value={formData.valor_base || ''} onChange={e => setFormData({
-          ...formData,
-          valor_base: Number(e.target.value)
-        })} className="bg-muted [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+        {/* Valor Base */}
+        <div className="space-y-1.5">
+          <Label htmlFor="valor_base" className="text-xs font-medium text-muted-foreground">
+            Valor Base (R$) *
+          </Label>
+          <Input
+            id="valor_base"
+            type="number"
+            step="0.01"
+            min="0"
+            value={formData.valor_base}
+            onChange={(e) => {
+              setFormData(prev => ({ ...prev, valor_base: parseFloat(e.target.value) || 0 }));
+              if (errors.valor_base) {
+                setErrors(prev => ({ ...prev, valor_base: '' }));
+              }
+            }}
+            placeholder="0,00"
+            className={cn(
+              "h-9 text-sm transition-colors [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
+              errors.valor_base && "border-destructive focus:border-destructive"
+            )}
+          />
+          {errors.valor_base && (
+            <span className="text-2xs text-destructive">{errors.valor_base}</span>
+          )}
         </div>
-        
-        <div>
-          <label htmlFor="pacote-valor-foto" className="block text-sm font-medium mb-1">
+
+        {/* Valor Foto Extra */}
+        <div className="space-y-1.5">
+          <Label htmlFor="valor_foto_extra" className="text-xs font-medium text-muted-foreground">
             Valor Foto Extra (R$)
-          </label>
-          <Input id="pacote-valor-foto" type="number" placeholder="0,00" value={formData.valor_foto_extra || ''} onChange={e => setFormData({
-          ...formData,
-          valor_foto_extra: Number(e.target.value)
-        })} className="bg-muted [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
-        </div>
-      </div>
-      
-      {/* Seção de Produtos Incluídos */}
-      <div className="p-4 bg-muted rounded-lg">
-        <h4 className="text-sm font-medium mb-3 text-center">Produtos Incluídos no Pacote</h4>
-        
-        <div className="space-y-2">
-          {formData.produtosIncluidos.map(produtoIncluido => <div key={produtoIncluido.produtoId} className="flex items-center gap-2 p-2 bg-card rounded border border-border">
-              <span className="flex-1 text-sm">{getNomeProduto(produtoIncluido.produtoId)}</span>
-              <div className="flex items-center gap-2">
-                <label className="text-xs text-muted-foreground">Qtd:</label>
-                <Input type="number" min="1" value={produtoIncluido.quantidade} onChange={e => atualizarQuantidadeProduto(produtoIncluido.produtoId, Number(e.target.value))} className="w-16 h-7 text-xs [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
-                <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => removerProdutoIncluido(produtoIncluido.produtoId)}>
-                  <X className="h-3 w-3" />
-                </Button>
-              </div>
-            </div>)}
-          
-          {formData.produtosIncluidos.length === 0 && <p className="text-xs text-lunar-textSecondary text-center py-0">
-              Nenhum produto incluído. Adicione produtos abaixo.
-            </p>}
-        </div>
-        
-        <div className="mt-3">
-          <Popover open={openProductSelector} onOpenChange={setOpenProductSelector}>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="w-full">
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar Produto
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-80 p-0 z-[10000] bg-background border shadow-lg">
-              <Command>
-                <CommandInput placeholder="Buscar produto..." />
-                <CommandList>
-                  <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
-                  <CommandGroup>
-                    {produtos.filter(produto => !formData.produtosIncluidos.some(p => p.produtoId === produto.id)).map(produto => <CommandItem 
-                        key={produto.id} 
-                        onSelect={(value) => {
-                          adicionarProdutoIncluido(produto.id);
-                        }}
-                        className="cursor-pointer hover:bg-accent"
-                        onMouseDown={(e) => e.stopPropagation()}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          adicionarProdutoIncluido(produto.id);
-                        }}
-                      >
-                        <div className="flex flex-col">
-                          <span className="font-medium">{produto.nome}</span>
-                          <span className="text-sm text-lunar-textSecondary">
-                            R$ {produto.preco_venda.toFixed(2)}
-                          </span>
-                        </div>
-                      </CommandItem>)}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
+          </Label>
+          {isFixedPricing ? (
+            <Input
+              id="valor_foto_extra"
+              type="number"
+              step="0.01"
+              min="0"
+              value={formData.valor_foto_extra}
+              onChange={(e) => setFormData(prev => ({ ...prev, valor_foto_extra: parseFloat(e.target.value) || 0 }))}
+              placeholder="0,00"
+              className="h-9 text-sm [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            />
+          ) : (
+            <div className="h-9 flex items-center text-sm text-muted-foreground px-3 bg-muted/50 rounded-md border">
+              {configPrecificacao.modelo === 'global' ? 'Tabela Global' : 'Por Categoria'}
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="flex gap-2 pt-1 py-0">
-        <Button onClick={handleSubmit} className="bg-lunar-accent">
+      {/* Produtos Incluídos - Componente Aprimorado */}
+      <div className="space-y-2">
+        <Label className="text-xs font-medium text-muted-foreground">Produtos Incluídos</Label>
+        <div className="bg-muted/30 p-3 rounded-lg border border-lunar-border">
+          <ProdutoSelectorImproved
+            produtos={produtos}
+            produtosIncluidos={formData.produtosIncluidos}
+            onAdd={adicionarProdutoIncluido}
+            onRemove={removerProdutoIncluido}
+            onUpdateQuantity={(produtoId, quantidade) => {
+              setFormData(prev => ({
+                ...prev,
+                produtosIncluidos: prev.produtosIncluidos.map(p =>
+                  p.produtoId === produtoId ? { ...p, quantidade } : p
+                )
+              }));
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Botões de Ação Compactos */}
+      <div className="flex flex-col-reverse sm:flex-row gap-2 pt-2 border-t border-lunar-border">
+        {onCancel && (
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={onCancel}
+            size="sm"
+            className="text-xs"
+          >
+            Cancelar
+          </Button>
+        )}
+        <Button 
+          type="submit" 
+          onClick={handleSubmit}
+          size="sm"
+          className="text-xs sm:ml-auto"
+        >
           {submitLabel}
         </Button>
-        {onCancel && <Button variant="outline" onClick={onCancel}>
-            Cancelar
-          </Button>}
       </div>
-    </div>;
+    </div>
+  );
 }

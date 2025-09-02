@@ -1,18 +1,16 @@
 import { useState, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, Filter, Check, ChevronsUpDown, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Filter, ChevronDown, ChevronUp, Search, Package, X } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
 import { useDebounce } from '@/hooks/useDebounce';
-import PacoteForm from './PacoteForm';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Card, CardContent } from '@/components/ui/card';
-import { obterConfiguracaoPrecificacao, formatarMoeda } from '@/utils/precificacaoUtils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import PacoteForm from './PacoteForm';
+import PacoteCard from './PacoteCard';
+import PacoteEditModal from './PacoteEditModal';
 import type { Categoria, Pacote, Produto, PacoteFormData } from '@/types/configuration';
 interface PacotesProps {
   pacotes: Pacote[];
@@ -31,25 +29,18 @@ export default function Pacotes({
   categorias,
   produtos
 }: PacotesProps) {
-  // Estados para filtros
+  // Estados para filtros e modais
   const [filtroCategoria, setFiltroCategoria] = useState<string>('all');
   const [filtroNome, setFiltroNome] = useState<string>('');
   const [novoPacoteAberto, setNovoPacoteAberto] = useState(false);
-
-  // Verificar modelo de precificação atual
-  const configPrecificacao = obterConfiguracaoPrecificacao();
-  const isFixedPricing = configPrecificacao.modelo === 'fixo';
+  const [pacoteEdicao, setPacoteEdicao] = useState<Pacote | null>(null);
+  const [filtrosAbertos, setFiltrosAbertos] = useState(false);
 
   // Debounce para filtro de nome
   const debouncedFiltroNome = useDebounce(filtroNome, 300);
-  const getNomeCategoria = useCallback((id: string) => {
-    const categoria = categorias.find(cat => cat.id === id);
-    return categoria ? categoria.nome : 'Categoria não encontrada';
+  const getCategoria = useCallback((id: string) => {
+    return categorias.find(cat => cat.id === id);
   }, [categorias]);
-  const getNomeProduto = useCallback((produtoId: string) => {
-    const produto = produtos.find(p => p.id === produtoId);
-    return produto ? produto.nome : 'Produto não encontrado';
-  }, [produtos]);
 
   // Lista filtrada de pacotes
   const pacotesFiltrados = useMemo(() => {
@@ -59,311 +50,197 @@ export default function Pacotes({
       return matchCategoria && matchNome;
     });
   }, [pacotes, filtroCategoria, debouncedFiltroNome]);
-  const adicionarPacote = useCallback((formData: any) => {
+  const adicionarPacote = useCallback((formData: PacoteFormData) => {
     onAdd(formData);
+    setNovoPacoteAberto(false);
   }, [onAdd]);
-  const atualizarPacote = useCallback((id: string, campo: keyof Pacote, valor: any) => {
-    onUpdate(id, { [campo]: valor });
-  }, [onUpdate]);
-  const adicionarProdutoAoPacote = useCallback((pacoteId: string, produtoId: string) => {
-    const pacote = pacotes.find(p => p.id === pacoteId);
-    if (!pacote) return;
-    
-    const produtoExistente = pacote.produtosIncluidos.find(p => p.produtoId === produtoId);
-    const novosProdutos = produtoExistente
-      ? pacote.produtosIncluidos.map(p => p.produtoId === produtoId ? { ...p, quantidade: p.quantidade + 1 } : p)
-      : [...pacote.produtosIncluidos, { produtoId, quantidade: 1 }];
-    
-    onUpdate(pacoteId, { produtosIncluidos: novosProdutos });
-  }, [pacotes, onUpdate]);
 
-  const removerProdutoDoPacote = useCallback((pacoteId: string, produtoId: string) => {
-    const pacote = pacotes.find(p => p.id === pacoteId);
-    if (!pacote) return;
-    
-    const novosProdutos = pacote.produtosIncluidos.filter(p => p.produtoId !== produtoId);
-    onUpdate(pacoteId, { produtosIncluidos: novosProdutos });
-  }, [pacotes, onUpdate]);
+  const editarPacote = useCallback((pacote: Pacote) => {
+    setPacoteEdicao(pacote);
+  }, []);
+
+  const salvarEdicaoPacote = useCallback((id: string, dados: Partial<Pacote>) => {
+    onUpdate(id, dados);
+    setPacoteEdicao(null);
+  }, [onUpdate]);
+
   const removerPacote = useCallback((id: string) => {
     onDelete(id);
   }, [onDelete]);
+
   const limparFiltros = useCallback(() => {
     setFiltroCategoria('all');
     setFiltroNome('');
   }, []);
   const isMobile = useIsMobile();
-  const ProdutoDropdown = useCallback(({
-    pacote
-  }: {
-    pacote: Pacote;
-  }) => {
-    const [open, setOpen] = useState(false);
-    const produtosDisponiveis = produtos.filter(produto => !pacote.produtosIncluidos.some(p => p.produtoId === produto.id));
-    return <div className="space-y-1">
-        {/* Lista de produtos incluídos */}
-        <div className="flex flex-wrap gap-1 mb-2">
-          {pacote.produtosIncluidos.map(produto => {
-          const nomeProduto = getNomeProduto(produto.produtoId);
-          return <div key={produto.produtoId} className="inline-flex items-center gap-1 bg-lunar-accent/10 text-lunar-accent px-2 py-1 rounded text-xs border border-lunar-accent/20">
-                <span>{nomeProduto}</span>
-                {produto.quantidade > 1 && <span className="font-medium">({produto.quantidade}x)</span>}
-                <button onClick={() => removerProdutoDoPacote(pacote.id, produto.produtoId)} className="text-lunar-accent hover:text-lunar-accentHover ml-1">
-                  ×
-                </button>
-              </div>;
-        })}
+  return (
+    <div className="space-y-4 animate-fade-in">
+      {/* Header compacto com ação */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-base font-medium text-foreground">Pacotes Fotográficos</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Gerencie os pacotes disponíveis para venda
+          </p>
         </div>
-        
-        {/* Dropdown para adicionar produtos */}
-        <Popover open={open} onOpenChange={setOpen}>
-          <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="h-6 text-xs w-full justify-between" disabled={produtosDisponiveis.length === 0}>
-              <Plus className="h-3 w-3 mr-1" />
-              Adicionar produto
-              <ChevronsUpDown className="h-3 w-3 ml-1" />
+        <Button
+          onClick={() => setNovoPacoteAberto(!novoPacoteAberto)}
+          size="sm"
+          className="gap-2 text-xs"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          {novoPacoteAberto ? 'Cancelar' : 'Novo Pacote'}
+        </Button>
+      </div>
+
+      {/* Formulário Novo Pacote - Compacto */}
+      <Collapsible open={novoPacoteAberto} onOpenChange={setNovoPacoteAberto}>
+        <CollapsibleContent>
+          <div className="bg-card border border-lunar-border rounded-lg p-4 animate-scale-in">
+            <div className="mb-3">
+              <h4 className="text-sm font-medium text-foreground mb-1">Novo Pacote</h4>
+              <p className="text-2xs text-muted-foreground">
+                Configure um novo pacote fotográfico para oferecer aos clientes
+              </p>
+            </div>
+            <PacoteForm
+              categorias={categorias}
+              produtos={produtos}
+              onSubmit={adicionarPacote}
+              onCancel={() => setNovoPacoteAberto(false)}
+              submitLabel="Criar Pacote"
+            />
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+
+      {/* Filtros Colapsáveis */}
+      <div className="bg-muted/50 border border-lunar-border rounded-lg">
+        <Collapsible open={filtrosAbertos} onOpenChange={setFiltrosAbertos}>
+          <CollapsibleTrigger asChild>
+            <Button
+              variant="ghost"
+              className="w-full justify-between px-4 py-3 h-auto text-xs hover:bg-transparent"
+            >
+              <div className="flex items-center gap-2">
+                <Search className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="font-medium">Filtros</span>
+                {(filtroCategoria !== 'all' || filtroNome) && (
+                  <span className="text-2xs bg-lunar-accent/10 text-lunar-accent px-1.5 py-0.5 rounded">
+                    {[filtroCategoria !== 'all' ? 1 : 0, filtroNome ? 1 : 0].reduce((a, b) => a + b, 0)} ativo(s)
+                  </span>
+                )}
+              </div>
+              <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform", filtrosAbertos && "rotate-180")} />
             </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-64 p-0 z-[10000]" align="start">
-            <Command>
-              <CommandInput placeholder="Buscar produto..." className="h-8 text-xs" />
-              <CommandList>
-                <CommandEmpty className="py-2 text-xs text-muted-foreground">
-                  Nenhum produto encontrado.
-                </CommandEmpty>
-                <CommandGroup>
-                  {produtosDisponiveis.map(produto => <CommandItem key={produto.id} onSelect={() => {
-                  adicionarProdutoAoPacote(pacote.id, produto.id);
-                  setOpen(false);
-                }} className="text-xs cursor-pointer">
-                      <div className="flex flex-col">
-                        <span className="font-medium">{produto.nome}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {formatarMoeda(produto.preco_venda)}
-                        </span>
-                      </div>
-                    </CommandItem>)}
-                </CommandGroup>
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        </Popover>
-      </div>;
-  }, [produtos, getNomeProduto, adicionarProdutoAoPacote, removerProdutoDoPacote, formatarMoeda]);
-  return <div className="mt-4 space-y-6">
-      {/* Formulário Novo Pacote */}
-      <div className="bg-muted rounded-lg border border-border p-4">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex justify-center">
-            <Collapsible open={novoPacoteAberto} onOpenChange={setNovoPacoteAberto} className="w-full">
-              <CollapsibleTrigger asChild>
-                <Button 
-                  variant="default" 
-                  size={isMobile ? "sm" : "default"}
-                  className="flex items-center gap-2 mx-auto"
-                >
-                  {novoPacoteAberto ? <>
-                      Fechar Formulário
-                      <ChevronUp className="h-4 w-4" />
-                    </> : <>
-                      Novo Pacote
-                      <ChevronDown className="h-4 w-4" />
-                    </>}
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <div className="mt-6 border-t border-neutral-300/30 pt-6">
-                  <div className="mb-4 text-center">
-                    <h3 className="font-medium text-sm">Novo Pacote Fotográfico</h3>
-                    <p className="text-muted-foreground mt-1 text-xs">
-                      Configure os pacotes fotográficos disponíveis para venda.
-                    </p>
-                  </div>
-                  
-                  <div className="bg-card rounded-lg border border-border p-4">
-                    <PacoteForm categorias={categorias} produtos={produtos} onSubmit={adicionarPacote} submitLabel="Adicionar Pacote" />
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="px-4 pb-3 space-y-3 border-t border-lunar-border pt-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-2xs text-muted-foreground">Categoria</Label>
+                  <Select value={filtroCategoria} onValueChange={setFiltroCategoria}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue placeholder="Todas as categorias" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all" className="text-xs">Todas as categorias</SelectItem>
+                      {categorias.map(categoria => (
+                        <SelectItem key={categoria.id} value={categoria.id} className="text-xs">
+                          {categoria.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-2xs text-muted-foreground">Nome</Label>
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-2 h-3.5 w-3.5 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar por nome..."
+                      value={filtroNome}
+                      onChange={(e) => setFiltroNome(e.target.value)}
+                      className="h-8 text-xs pl-8 pr-8"
+                    />
+                    {filtroNome && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-1 top-1 h-6 w-6 text-muted-foreground hover:text-foreground"
+                        onClick={() => setFiltroNome('')}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
                   </div>
                 </div>
-              </CollapsibleContent>
-            </Collapsible>
-          </div>
-        </div>
+              </div>
+              <div className="flex justify-end">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={limparFiltros}
+                  className="text-2xs h-7 px-3"
+                >
+                  Limpar filtros
+                </Button>
+              </div>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
       </div>
-      
-      {/* Seção Pacotes Cadastrados */}
-      <div>
-        <div className="space-y-2 mb-4 rounded-lg px-[15px] bg-muted">
-          <h3 className="font-medium text-sm text-inherit">Pacotes Cadastrados</h3>
-          
-        </div>
-        
-        {/* Barra de Filtros */}
-        <div className={cn("bg-muted rounded-lg mb-4", isMobile ? "p-2" : "p-4")}>
-          <div className={cn("flex items-center gap-2", isMobile ? "mb-2" : "mb-3")}>
-            <Filter className={cn(isMobile ? "h-3 w-3" : "h-4 w-4")} />
-            <span className={cn("font-medium", isMobile ? "text-xs" : "text-sm")}>Filtros</span>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={limparFiltros} 
-              className={cn("ml-auto", isMobile ? "h-6 px-2 text-xs" : "text-xs")}
-            >
-              Limpar
-            </Button>
-          </div>
-          
-          <div className={cn("grid gap-2", isMobile ? "grid-cols-2" : "grid-cols-1 md:grid-cols-3 gap-3")}>
-            <div>
-              {!isMobile && <label className="block text-xs font-medium mb-1">Filtrar por Categoria</label>}
-              <Select value={filtroCategoria} onValueChange={setFiltroCategoria}>
-                <SelectTrigger className={cn(isMobile ? "h-7 text-xs" : "h-8 text-sm")}>
-                  <SelectValue placeholder={isMobile ? "Categoria" : "Todas as categorias"} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas as categorias</SelectItem>
-                  {categorias.map(categoria => <SelectItem key={categoria.id} value={categoria.id}>
-                      {categoria.nome}
-                    </SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div>
-              {!isMobile && <label className="block text-xs font-medium mb-1">Filtrar por Nome</label>}
-              <Input 
-                placeholder={isMobile ? "Nome do pacote..." : "Digite o nome do pacote..."} 
-                value={filtroNome} 
-                onChange={e => setFiltroNome(e.target.value)} 
-                className={cn(isMobile ? "h-7 text-xs" : "h-8 text-sm")} 
-              />
-            </div>
-          </div>
-        </div>
 
-        {isMobile ?
-      // Layout em cards para mobile
+      {/* Lista de Pacotes - Grid Responsivo */}
       <div className="space-y-3">
-            {pacotesFiltrados.map(pacote => <Card key={pacote.id} className="overflow-hidden">
-                <CardContent className="p-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-sm font-semibold">{pacote.nome}</h4>
-                      <Button variant="outline" size="icon" className="h-8 w-8 text-red-500 hover:text-red-600 hover:border-red-200" onClick={() => removerPacote(pacote.id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      <div>
-                        <span className="text-muted-foreground block text-xs">Categoria</span>
-                        <Select value={pacote.categoria_id} onValueChange={value => atualizarPacote(pacote.id, 'categoria_id', value)}>
-                          <SelectTrigger className="h-8 text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {categorias.map(categoria => <SelectItem key={categoria.id} value={categoria.id} className="text-xs">
-                                {categoria.nome}
-                              </SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground block text-xs">Valor Base</span>
-                        <Input type="number" value={pacote.valor_base} onChange={e => atualizarPacote(pacote.id, 'valor_base', parseFloat(e.target.value) || 0)} className="h-8 text-xs [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
-                      </div>
-                    </div>
-                    
-                    {isFixedPricing && <div>
-                        <span className="text-muted-foreground block text-xs mb-1">Valor Foto Extra</span>
-                        <Input type="number" value={pacote.valor_foto_extra} onChange={e => atualizarPacote(pacote.id, 'valor_foto_extra', parseFloat(e.target.value) || 0)} className="h-8 text-xs [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
-                      </div>}
-                    
-                    <div>
-                      <span className="text-muted-foreground block text-xs mb-2">Produtos Incluídos</span>
-                      <ProdutoDropdown pacote={pacote} />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>)}
-            
-            {pacotesFiltrados.length === 0 && <Card className="border-dashed border-2">
-                <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-                  <div className="rounded-full bg-muted p-3 mb-3">
-                    <Plus className="h-6 w-6 text-muted-foreground" />
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {pacotes.length === 0 ? "Nenhum pacote cadastrado. Adicione seu primeiro pacote acima." : "Nenhum pacote encontrado com os filtros aplicados."}
-                  </p>
-                </CardContent>
-              </Card>}
-          </div> :
-      // Layout em tabela para desktop
-      <div className="overflow-x-auto scrollbar-elegant">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-xs font-medium w-[120px]">Nome</TableHead>
-                  <TableHead className="text-xs font-medium w-[100px]">Categoria</TableHead>
-                  <TableHead className="text-xs font-medium w-[90px]">Valor Base</TableHead>
-                  <TableHead className="text-xs font-medium w-[90px]">Foto Extra</TableHead>
-                  <TableHead className="text-xs font-medium min-w-[200px]">Produtos Incluídos</TableHead>
-                  <TableHead className="text-xs font-medium w-[60px] text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {pacotesFiltrados.map(pacote => <TableRow key={pacote.id} className="hover:bg-muted/60">
-                    {/* Nome - Editável */}
-                    <TableCell className="p-2">
-                      <Input value={pacote.nome} onChange={e => atualizarPacote(pacote.id, 'nome', e.target.value)} className="h-7 text-xs border-0 bg-transparent hover:bg-muted/50 focus:bg-card focus:border-border" />
-                    </TableCell>
-                    
-                    {/* Categoria - Seletor */}
-                    <TableCell className="p-2">
-                      <Select value={pacote.categoria_id} onValueChange={value => atualizarPacote(pacote.id, 'categoria_id', value)}>
-                        <SelectTrigger className="h-7 text-xs border-0 bg-transparent hover:bg-muted/50 focus:bg-card focus:border-border">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {categorias.map(categoria => <SelectItem key={categoria.id} value={categoria.id} className="text-xs">
-                              {categoria.nome}
-                            </SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                    
-                    {/* Valor Base - Editável */}
-                    <TableCell className="p-2">
-                      <Input type="number" value={pacote.valor_base} onChange={e => atualizarPacote(pacote.id, 'valor_base', parseFloat(e.target.value) || 0)} className="h-7 text-xs border-0 bg-transparent hover:bg-muted/50 focus:bg-card focus:border-border [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
-                    </TableCell>
-                    
-                    {/* Valor Foto Extra - Editável apenas no modelo fixo */}
-                    <TableCell className="p-2">
-                      {isFixedPricing ? <Input type="number" value={pacote.valor_foto_extra} onChange={e => atualizarPacote(pacote.id, 'valor_foto_extra', parseFloat(e.target.value) || 0)} className="h-7 text-xs border-0 bg-transparent hover:bg-muted/50 focus:bg-card focus:border-border [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" /> : <div className="h-7 flex items-center text-xs text-muted-foreground px-2">
-                          {configPrecificacao.modelo === 'global' ? 'Tabela Global' : 'Por Categoria'}
-                        </div>}
-                    </TableCell>
-                    
-                    {/* Produtos Incluídos - Dropdown para edição */}
-                    <TableCell className="p-2">
-                      <ProdutoDropdown pacote={pacote} />
-                    </TableCell>
-                    
-                    {/* Ações */}
-                    <TableCell className="p-2 text-right">
-                      <Button variant="outline" size="icon" className="h-6 w-6 text-red-500 hover:text-red-600 hover:border-red-200" onClick={() => removerPacote(pacote.id)}>
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>)}
-                
-                {pacotesFiltrados.length === 0 && <TableRow>
-                    <TableCell colSpan={6} className="px-4 py-8 text-center text-sm text-muted-foreground">
-                      {pacotes.length === 0 ? "Nenhum pacote cadastrado. Adicione seu primeiro pacote acima." : "Nenhum pacote encontrado com os filtros aplicados."}
-                    </TableCell>
-                  </TableRow>}
-              </TableBody>
-            </Table>
-          </div>}
+        {pacotesFiltrados.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {pacotesFiltrados.map((pacote) => (
+              <PacoteCard
+                key={pacote.id}
+                pacote={pacote}
+                categoria={getCategoria(pacote.categoria_id)}
+                produtos={produtos}
+                onEdit={editarPacote}
+                onDelete={removerPacote}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-12 text-center border border-dashed border-lunar-border rounded-lg bg-muted/20">
+            <div className="rounded-full bg-lunar-accent/10 p-4 mb-4">
+              <Package className="h-8 w-8 text-lunar-accent" />
+            </div>
+            <h4 className="text-sm font-medium text-foreground mb-2">
+              {pacotes.length === 0 ? 'Nenhum pacote cadastrado' : 'Nenhum pacote encontrado'}
+            </h4>
+            <p className="text-xs text-muted-foreground mb-4 max-w-sm">
+              {pacotes.length === 0
+                ? 'Comece criando seu primeiro pacote fotográfico para organizar seus produtos e serviços.'
+                : 'Ajuste os filtros acima para encontrar os pacotes desejados.'}
+            </p>
+            {pacotes.length === 0 && (
+              <Button
+                onClick={() => setNovoPacoteAberto(true)}
+                size="sm"
+                className="gap-2 text-xs"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Criar primeiro pacote
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
-    </div>;
+      {/* Modal de Edição */}
+      <PacoteEditModal
+        pacote={pacoteEdicao}
+        categorias={categorias}
+        produtos={produtos}
+        onSave={salvarEdicaoPacote}
+        onClose={() => setPacoteEdicao(null)}
+      />
+    </div>
+  );
 }
