@@ -47,14 +47,27 @@ export function ProductSearchCombobox({
           role="combobox"
           aria-expanded={open}
           className={cn("w-full justify-between text-xs h-7", className)}
+          onFocus={() => setOpen(true)}
         >
           {selectedProduct ? selectedProduct.nome : placeholder}
           <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[300px] p-0 z-[9999] bg-popover border shadow-lg">
-        <Command>
-          <CommandInput placeholder="Buscar produto..." className="h-8 text-xs" />
+      <PopoverContent 
+        className="w-[300px] p-0 z-[9999] bg-popover border shadow-lg" 
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        sideOffset={4}
+      >
+        <Command shouldFilter={false}>
+          <CommandInput 
+            placeholder="Buscar produto..." 
+            className="h-8 text-xs" 
+            autoFocus
+            onFocus={(e) => {
+              e.stopPropagation();
+              setTimeout(() => e.target.focus(), 0);
+            }}
+          />
           <CommandList>
             <CommandEmpty className="text-xs py-2">
               Nenhum produto encontrado.
