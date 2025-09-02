@@ -1,7 +1,8 @@
 
 import { useMemo } from 'react';
-import { useAgenda, Appointment } from './useAgenda';
+import { useAppointments } from './useAppointments';
 import { useOrcamentos } from './useOrcamentos';
+import { Appointment } from './useAgenda';
 import { Orcamento } from '@/types/orcamentos';
 import { parseDateFromStorage } from '@/utils/dateUtils';
 
@@ -18,7 +19,7 @@ export interface UnifiedEvent {
 }
 
 export const useUnifiedCalendar = () => {
-  const { appointments } = useAgenda();
+  const { appointments } = useAppointments();
   const { orcamentos } = useOrcamentos();
 
   // Create appointment ID Set for O(1) lookups
