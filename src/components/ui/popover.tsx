@@ -27,9 +27,7 @@ const PopoverContent = React.forwardRef<
         if (
           target.closest('[data-radix-popper-content-wrapper]') ||
           target.closest('[data-radix-popover-trigger]') ||
-          target.closest('[cmdk-item]') ||
           target.closest('[data-radix-popover-content]') ||
-          target.getAttribute('cmdk-item') !== null ||
           target.closest('[role="option"]') ||
           target.closest('[data-radix-select-content]') ||
           target.closest('[data-radix-select-trigger]') ||
@@ -39,6 +37,18 @@ const PopoverContent = React.forwardRef<
           return;
         }
         // Para cliques genuinamente fora do popover, permite o comportamento padrão
+      }}
+      onInteractOutside={(event) => {
+        const target = event.target as Element;
+        // Permitir interação com itens do command menu
+        if (
+          target.closest('[cmdk-item]') ||
+          target.getAttribute('cmdk-item') !== null ||
+          target.closest('[data-radix-popover-content]')
+        ) {
+          event.preventDefault();
+          return;
+        }
       }}
       {...props}
     />
