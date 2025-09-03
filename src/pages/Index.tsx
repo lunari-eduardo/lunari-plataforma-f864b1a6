@@ -239,7 +239,7 @@ export default function Index() {
         hora: a.time
       }))
       .sort((a, b) => a.data.getTime() - b.data.getTime())
-      .slice(0, 5);
+      .slice(0, 3);
     
     return items;
   }, [appointments]);
