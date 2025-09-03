@@ -102,7 +102,7 @@ export default function FluxoTrabalho({
           <div className="grid grid-cols-12 bg-muted/50 px-4 py-2 border-b border-border text-sm font-medium">
             <div className="col-span-1 hidden sm:block text-card-foreground">Ordem</div>
             <div className="col-span-7 sm:col-span-5 text-card-foreground">Etapa</div>
-            <div className="col-span-4 hidden sm:block text-card-foreground">Cor</div>
+            
             <div className="col-span-5 sm:col-span-2 text-right text-card-foreground">Ações</div>
           </div>
           
