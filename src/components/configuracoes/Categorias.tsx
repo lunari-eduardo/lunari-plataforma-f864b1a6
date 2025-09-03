@@ -37,7 +37,6 @@ export default function Categorias({
 }: CategoriasProps) {
   // Estados do formulário
   const [novaCategoria, setNovaCategoria] = useState('');
-  const [novaCor, setNovaCor] = useState('#7950F2');
   const [editandoCategoria, setEditandoCategoria] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
@@ -87,15 +86,14 @@ export default function Categorias({
     try {
       onAdd({
         nome: novaCategoria.trim(),
-        cor: novaCor
+        cor: '#7950F2' // Cor padrão
       });
       setNovaCategoria('');
-      setNovaCor('#7950F2');
       setValidationError('');
     } finally {
       setIsLoading(false);
     }
-  }, [novaCategoria, novaCor, onAdd, validateCategoria]);
+  }, [novaCategoria, onAdd, validateCategoria]);
   // Iniciar edição
   const iniciarEdicaoCategoria = useCallback((id: string) => {
     setEditandoCategoria(id);
@@ -149,8 +147,8 @@ export default function Categorias({
         
         <CardContent className="p-3">
           <div className="space-y-3">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div className="md:col-span-2">
+            <div className="flex gap-3">
+              <div className="flex-1">
                 <label htmlFor="nome" className="block text-sm font-medium mb-2">
                   Nome da Categoria <span className="text-destructive">*</span>
                 </label>
@@ -173,37 +171,23 @@ export default function Categorias({
                 )}
               </div>
               
-              <div>
-                <label htmlFor="cor" className="block text-sm font-medium mb-2">
-                  Cor <span className="text-destructive">*</span>
-                </label>
-                <div className="flex gap-2">
-                  <Input
-                    id="cor"
-                    type="color"
-                    value={novaCor}
-                    onChange={(e) => setNovaCor(e.target.value)}
-                    className="w-16 h-10 p-1 rounded cursor-pointer"
-                    disabled={isLoading}
-                  />
-                  <Button
-                    onClick={adicionarCategoria}
-                    disabled={!canAddNew}
-                    className="flex-1 md:flex-none"
-                  >
-                    {isLoading ? (
-                      <div className="flex items-center gap-2">
-                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-background/30 border-t-current" />
-                        Salvando...
-                      </div>
-                    ) : (
-                      <>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Adicionar
-                      </>
-                    )}
-                  </Button>
-                </div>
+              <div className="flex items-end">
+                <Button
+                  onClick={adicionarCategoria}
+                  disabled={!canAddNew}
+                >
+                  {isLoading ? (
+                    <div className="flex items-center gap-2">
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-background/30 border-t-current" />
+                      Salvando...
+                    </div>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Adicionar
+                    </>
+                  )}
+                </Button>
               </div>
             </div>
           </div>
@@ -254,27 +238,11 @@ export default function Categorias({
                     ) : (
                       // Modo de visualização
                       <>
-                        <div
-                          className="w-6 h-6 rounded-full border-2 border-border shadow-sm"
-                          style={{ backgroundColor: categoria.cor }}
-                          title={categoria.cor}
-                        />
-                        
                         <div className="flex-1">
                           <h4 className="font-medium">{categoria.nome}</h4>
-                          <p className="text-xs text-muted-foreground">
-                            Cor: {categoria.cor}
-                          </p>
                         </div>
                         
                         <div className="flex items-center gap-2">
-                          <Badge 
-                            variant={categoria_pode_remover ? "secondary" : "default"}
-                            className={categoria_pode_remover ? "text-orange-600" : "text-green-600"}
-                          >
-                            {categoria_pode_remover ? "Sem uso" : "Em uso"}
-                          </Badge>
-                          
                           <Button
                             size="sm"
                             variant="outline"
@@ -338,14 +306,6 @@ function EditingCategoriaRow({
 
   return (
     <>
-      <Input
-        type="color"
-        value={editData.cor}
-        onChange={(e) => setEditData(prev => ({ ...prev, cor: e.target.value }))}
-        className="w-12 h-10 p-1 rounded cursor-pointer"
-        disabled={isLoading}
-      />
-      
       <div className="flex-1">
         <Input
           value={editData.nome}
