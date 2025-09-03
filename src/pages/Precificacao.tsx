@@ -8,7 +8,7 @@ import { EstruturaCustosFixos } from '@/components/precificacao/EstruturaCustosF
 import { MetasIndicadores } from '@/components/precificacao/MetasIndicadores';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { inicializarSistemaPrecificacao } from '@/utils/pricingMigration';
-import { ValidacaoService, BackupService } from '@/services/PricingService';
+import { PricingServiceFactory } from '@/services/pricing';
 export default function Precificacao() {
   const [calculadoraAberta, setCalculadoraAberta] = useState(false);
   const [custosFixosTotal, setCustosFixosTotal] = useState(0);
@@ -35,8 +35,9 @@ export default function Precificacao() {
   // Validar sistema periodicamente
   useEffect(() => {
     if (sistemaInicializado) {
-      const intervalId = setInterval(() => {
-        const validacao = ValidacaoService.validarTodosSistemas();
+      const services = PricingServiceFactory.createLocalServices();
+      const intervalId = setInterval(async () => {
+        const validacao = await services.validation.validarTodosSistemas();
         console.log('🔍 Validação periódica:', validacao);
       }, 30000); // A cada 30 segundos
 
