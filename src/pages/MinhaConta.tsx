@@ -1,145 +1,75 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
-import { Plus, X, Upload, Trash2 } from 'lucide-react';
 import { useUserProfile, useUserBranding } from '@/hooks/useUserProfile';
-import { formatCpfCnpj, validateEmail, validateCpfCnpj, formatPhone } from '@/utils/userUtils';
+import { useFormValidation } from '@/hooks/user-profile/useFormValidation';
+import { PersonalInfoForm } from '@/components/user-profile/forms/PersonalInfoForm';
+import { ContactInfoSection } from '@/components/user-profile/forms/ContactInfoSection';
+import { LogoUploadSection } from '@/components/user-profile/upload/LogoUploadSection';
+import { UserProfile } from '@/types/userProfile';
 import { toast } from 'sonner';
 export default function MinhaConta() {
-  const {
-    profile,
-    saveProfile,
-    getProfileOrDefault
-  } = useUserProfile();
-  const {
-    branding,
-    saveBranding,
-    removeLogo,
-    getBrandingOrDefault
-  } = useUserBranding();
-
-  // Estados do formulário
-  const [formData, setFormData] = useState(() => {
-    // Inicializa com dados vazios enquanto carrega
-    return profile || {
-      nomeCompleto: '',
-      nomeEmpresa: '',
-      cpfCnpj: '',
-      emailPrincipal: '',
-      enderecoComercial: '',
-      telefones: [],
-      siteRedesSociais: []
-    };
-  });
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const { profile, saveProfile, getProfileOrDefault } = useUserProfile();
+  const { branding, saveBranding, removeLogo, getBrandingOrDefault } = useUserBranding();
   
-  // Atualiza formData quando profile é carregado
+  const [formData, setFormData] = useState<Partial<UserProfile>>(() => getProfileOrDefault());
+  
+  // Validação em tempo real
+  const validation = useFormValidation(formData);
+  
+  // Sincronizar formData quando profile carrega
   useEffect(() => {
     if (profile) {
       setFormData(profile);
     }
   }, [profile]);
-  useEffect(() => {
-    const brandingData = getBrandingOrDefault();
-    if (brandingData.logoUrl) {
-      setLogoPreview(brandingData.logoUrl);
+  const handleInputChange = useCallback((field: keyof UserProfile, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  }, []);
+
+  const handleTelefonesChange = useCallback((telefones: string[]) => {
+    setFormData(prev => ({ ...prev, telefones }));
+  }, []);
+
+  const handleSitesChange = useCallback((siteRedesSociais: string[]) => {
+    setFormData(prev => ({ ...prev, siteRedesSociais }));
+  }, []);
+  const handleSaveProfile = useCallback(async () => {
+    if (!validation.isValid) {
+      const firstError = Object.values(validation.errors)[0];
+      toast.error(firstError);
+      return;
     }
-  }, [branding]);
-  const handleInputChange = (field: string, value: string | string[]) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-  const handleCpfCnpjChange = (value: string) => {
-    const formatted = formatCpfCnpj(value);
-    handleInputChange('cpfCnpj', formatted);
-  };
-  const addToList = (field: 'telefones' | 'siteRedesSociais') => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: [...prev[field], '']
-    }));
-  };
-  const updateListItem = (field: 'telefones' | 'siteRedesSociais', index: number, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: prev[field].map((item, i) => i === index ? value : item)
-    }));
-  };
-  const removeFromList = (field: 'telefones' | 'siteRedesSociais', index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: prev[field].filter((_, i) => i !== index)
-    }));
-  };
-  const handleSaveProfile = async () => {
-    // Validações básicas
-    if (!formData.nomeCompleto.trim()) {
+
+    // Garantir que campos obrigatórios estão presentes
+    if (!formData.nomeCompleto?.trim()) {
       toast.error('Nome completo é obrigatório');
-      return;
-    }
-    if (formData.emailPrincipal && !validateEmail(formData.emailPrincipal)) {
-      toast.error('E-mail inválido');
-      return;
-    }
-    if (formData.cpfCnpj && !validateCpfCnpj(formData.cpfCnpj)) {
-      toast.error('CPF/CNPJ inválido');
       return;
     }
 
     // Filtrar telefones e redes sociais vazios
     const cleanedData = {
-      ...formData,
-      telefones: formData.telefones.filter(tel => tel.trim() !== ''),
-      siteRedesSociais: formData.siteRedesSociais.filter(site => site.trim() !== '')
+      nomeCompleto: formData.nomeCompleto.trim(),
+      nomeEmpresa: formData.nomeEmpresa || '',
+      cpfCnpj: formData.cpfCnpj || '',
+      emailPrincipal: formData.emailPrincipal || '',
+      enderecoComercial: formData.enderecoComercial || '',
+      telefones: (formData.telefones || []).filter(tel => tel.trim() !== ''),
+      siteRedesSociais: (formData.siteRedesSociais || []).filter(site => site.trim() !== '')
     };
     
-    const success = await saveProfile(cleanedData);
-    if (success) {
-      // Força recarregamento para garantir sincronização
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
-    }
-  };
-  const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+    await saveProfile(cleanedData);
+  }, [formData, validation, saveProfile]);
+  const handleLogoSave = useCallback((logoUrl: string, fileName: string) => {
+    saveBranding({ logoUrl, logoFileName: fileName });
+    toast.success('Logo salvo com sucesso!');
+  }, [saveBranding]);
 
-    // Validar tipo de arquivo
-    if (!file.type.startsWith('image/')) {
-      toast.error('Selecione uma imagem válida');
-      return;
-    }
-
-    // Validar tamanho (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Arquivo muito grande. Máximo 5MB');
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = e => {
-      const logoUrl = e.target?.result as string;
-      setLogoPreview(logoUrl);
-      saveBranding({
-        logoUrl,
-        logoFileName: file.name
-      });
-      toast.success('Logo salvo com sucesso!');
-    };
-    reader.readAsDataURL(file);
-  };
-  const handleRemoveLogo = () => {
-    setLogoPreview(null);
+  const handleLogoRemove = useCallback(() => {
     removeLogo();
-  };
+  }, [removeLogo]);
   return <div className="min-h-screen bg-lunar-bg">
       <ScrollArea className="h-screen">
         <div className="container mx-auto p-4 max-w-4xl">
@@ -157,138 +87,36 @@ export default function MinhaConta() {
                 </TabsList>
 
                 <TabsContent value="perfil" className="space-y-6 mt-6">
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="nomeCompleto">Nome Completo *</Label>
-                        <Input id="nomeCompleto" value={formData.nomeCompleto} onChange={e => handleInputChange('nomeCompleto', e.target.value)} placeholder="Seu nome completo" />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="nomeEmpresa">Nome da Empresa (Fantasia)</Label>
-                        <Input id="nomeEmpresa" value={formData.nomeEmpresa} onChange={e => handleInputChange('nomeEmpresa', e.target.value)} placeholder="Nome fantasia da empresa" />
-                      </div>
-                    </div>
+                  <PersonalInfoForm
+                    formData={formData}
+                    onChange={handleInputChange}
+                    errors={validation.errors}
+                  />
+                  
+                  <ContactInfoSection
+                    telefones={formData.telefones || []}
+                    siteRedesSociais={formData.siteRedesSociais || []}
+                    onTelefonesChange={handleTelefonesChange}
+                    onSitesChange={handleSitesChange}
+                  />
 
-                    <div className="space-y-2">
-                      <Label htmlFor="cpfCnpj">CPF/CNPJ</Label>
-                      <Input id="cpfCnpj" value={formData.cpfCnpj} onChange={e => handleCpfCnpjChange(e.target.value)} placeholder="000.000.000-00 ou 00.000.000/0000-00" maxLength={18} />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="emailPrincipal">E-mail Principal de Contato</Label>
-                      <Input id="emailPrincipal" type="email" value={formData.emailPrincipal} onChange={e => handleInputChange('emailPrincipal', e.target.value)} placeholder="seu@email.com" />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="enderecoComercial">Endereço Comercial</Label>
-                      <Textarea id="enderecoComercial" value={formData.enderecoComercial} onChange={e => handleInputChange('enderecoComercial', e.target.value)} placeholder="Endereço completo do estúdio/escritório" rows={3} />
-                    </div>
-
-                    <Separator />
-
-                    {/* Telefones */}
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <Label>WhatsApp</Label>
-                        <Button type="button" variant="outline" size="sm" onClick={() => addToList('telefones')}>
-                          <Plus className="h-4 w-4 mr-1" />
-                          Adicionar
-                        </Button>
-                      </div>
-                      
-                      {formData.telefones.map((telefone, index) => <div key={index} className="flex gap-2">
-                          <Input value={telefone} onChange={e => updateListItem('telefones', index, formatPhone(e.target.value))} placeholder="(00) 00000-0000" maxLength={15} />
-                          <Button type="button" variant="outline" size="icon" onClick={() => removeFromList('telefones', index)}>
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>)}
-                      
-                      {formData.telefones.length === 0 && <p className="text-sm text-lunar-textSecondary">Nenhum telefone adicionado</p>}
-                    </div>
-
-                    <Separator />
-
-                    {/* Site e Redes Sociais */}
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <Label>Site / Redes Sociais</Label>
-                        <Button type="button" variant="outline" size="sm" onClick={() => addToList('siteRedesSociais')}>
-                          <Plus className="h-4 w-4 mr-1" />
-                          Adicionar
-                        </Button>
-                      </div>
-                      
-                      {formData.siteRedesSociais.map((site, index) => <div key={index} className="flex gap-2">
-                          <Input value={site} onChange={e => updateListItem('siteRedesSociais', index, e.target.value)} placeholder="https://www.exemplo.com ou @usuario" />
-                          <Button type="button" variant="outline" size="icon" onClick={() => removeFromList('siteRedesSociais', index)}>
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>)}
-                      
-                      {formData.siteRedesSociais.length === 0 && <p className="text-sm text-lunar-textSecondary">Nenhum link adicionado</p>}
-                    </div>
-
-                    <div className="flex justify-end pt-4">
-                      <Button onClick={handleSaveProfile}>
-                        Salvar Perfil
-                      </Button>
-                    </div>
+                  <div className="flex justify-end pt-4">
+                    <Button 
+                      onClick={handleSaveProfile}
+                      disabled={!validation.isValid}
+                    >
+                      Salvar Perfil
+                    </Button>
                   </div>
                 </TabsContent>
 
                 <TabsContent value="marca" className="space-y-6 mt-6">
-                  <div className="space-y-6">
-                    <div>
-                      <h3 className="text-lg font-medium mb-2">Logotipo da Empresa</h3>
-                      <p className="text-sm text-lunar-textSecondary mb-4">
-                        Adicione o logotipo da sua empresa. Recomendamos imagens em formato PNG ou JPG com fundo transparente.
-                      </p>
-                    </div>
-
-                    <div className="space-y-4">
-                      {logoPreview ? <Card>
-                          <CardContent className="p-6">
-                            <div className="flex items-center gap-4">
-                              <div className="w-20 h-20 bg-lunar-surface rounded-lg flex items-center justify-center overflow-hidden">
-                                <img src={logoPreview} alt="Logo da empresa" className="max-w-full max-h-full object-contain" />
-                              </div>
-                              <div className="flex-1">
-                                <p className="font-medium">Logo atual</p>
-                                <p className="text-sm text-lunar-textSecondary">
-                                  {getBrandingOrDefault().logoFileName || 'Arquivo enviado'}
-                                </p>
-                              </div>
-                              <Button variant="outline" size="sm" onClick={handleRemoveLogo}>
-                                <Trash2 className="h-4 w-4 mr-1" />
-                                Remover
-                              </Button>
-                            </div>
-                          </CardContent>
-                        </Card> : <div className="border-2 border-dashed border-lunar-border rounded-lg p-8 text-center">
-                          <Upload className="h-12 w-12 text-lunar-textSecondary mx-auto mb-4" />
-                          <p className="text-lunar-textSecondary mb-4">Nenhum logo enviado</p>
-                        </div>}
-
-                      <div className="flex justify-center">
-                        <label htmlFor="logo-upload">
-                          <Button variant="outline" asChild>
-                            <span className="cursor-pointer">
-                              <Upload className="h-4 w-4 mr-2" />
-                              {logoPreview ? 'Trocar Logo' : 'Enviar Logo'}
-                            </span>
-                          </Button>
-                        </label>
-                        <input id="logo-upload" type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
-                      </div>
-
-                      <div className="text-xs text-lunar-textSecondary space-y-1">
-                        <p>• Formatos aceitos: PNG, JPG, JPEG</p>
-                        <p>• Tamanho máximo: 5MB</p>
-                        <p>• Recomendado: 512x512px ou superior</p>
-                      </div>
-                    </div>
-                  </div>
+                  <LogoUploadSection
+                    logoUrl={getBrandingOrDefault().logoUrl}
+                    logoFileName={getBrandingOrDefault().logoFileName}
+                    onLogoSave={handleLogoSave}
+                    onLogoRemove={handleLogoRemove}
+                  />
                 </TabsContent>
               </Tabs>
             </CardContent>

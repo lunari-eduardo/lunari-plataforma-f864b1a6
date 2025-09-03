@@ -1,10 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
+import { Card, CardContent } from '@/components/ui/card';
 import { useUserPreferences } from '@/hooks/useUserProfile';
-import { UserPreferences } from '@/types/userProfile';
+import { PreferencesForm } from '@/components/user-profile/forms/PreferencesForm';
+import { UserPreferences, RegimeTributario } from '@/types/userProfile';
 
 export default function Preferencias() {
   const { preferences, savePreferences, getPreferencesOrDefault } = useUserPreferences();
@@ -12,15 +11,16 @@ export default function Preferencias() {
   
   useEffect(() => {
     if (preferences) {
-      setFormData(prev => ({ ...prev, ...preferences }));
+      setFormData(preferences);
     }
   }, [preferences]);
 
-  const handleSwitchChange = (field: keyof UserPreferences, checked: boolean) => {
-    const updatedData = { ...formData, [field]: checked };
+  const handlePreferenceChange = useCallback((field: keyof UserPreferences, value: boolean | RegimeTributario) => {
+    const updatedData = { ...formData, [field]: value };
     setFormData(updatedData);
-    savePreferences({ [field]: checked });
-  };
+    // Auto-save com debounce
+    savePreferences({ [field]: value });
+  }, [formData, savePreferences]);
 
   return (
     <div className="min-h-screen bg-lunar-bg">
@@ -33,81 +33,10 @@ export default function Preferencias() {
 
           <Card className="mb-6">
             <CardContent className="p-6">
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-medium mb-2">Configurações de Notificação</h3>
-                  <p className="text-lunar-textSecondary">
-                    Escolha como você deseja receber notificações sobre atividades importantes
-                  </p>
-                </div>
-
-                <div className="space-y-6">
-                  <Card>
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-1">
-                          <Label htmlFor="notificacoes-whatsapp">Notificações por WhatsApp</Label>
-                          <p className="text-sm text-lunar-textSecondary">
-                            Receba notificações rápidas através do WhatsApp Business
-                          </p>
-                        </div>
-                        <Switch
-                          id="notificacoes-whatsapp"
-                          checked={formData.notificacoesWhatsapp}
-                          onCheckedChange={(checked) => handleSwitchChange('notificacoesWhatsapp', checked)}
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Automações */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Automações</CardTitle>
-                      <CardDescription>Controle regras automáticas do Workflow e Orçamentos</CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-6 space-y-6">
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-1">
-                          <Label htmlFor="habilitarAutomacoesWorkflow">Habilitar automações do Workflow</Label>
-                          <p className="text-sm text-lunar-textSecondary">Cria tarefas e avisos automaticamente</p>
-                        </div>
-                        <Switch
-                          id="habilitarAutomacoesWorkflow"
-                          checked={formData.habilitarAutomacoesWorkflow}
-                          onCheckedChange={(checked) => handleSwitchChange('habilitarAutomacoesWorkflow', checked)}
-                        />
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-1">
-                          <Label htmlFor="habilitarAlertaProdutosDoCliente">Alertar sobre produtos do cliente</Label>
-                          <p className="text-sm text-lunar-textSecondary">Mostra um aviso quando o cliente possui produtos vinculados</p>
-                        </div>
-                        <Switch
-                          id="habilitarAlertaProdutosDoCliente"
-                          checked={formData.habilitarAlertaProdutosDoCliente}
-                          onCheckedChange={(checked) => handleSwitchChange('habilitarAlertaProdutosDoCliente', checked)}
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <div className="bg-lunar-surface/50 p-4 rounded-lg">
-                    <div className="flex items-start gap-3">
-                      <div className="w-2 h-2 bg-lunar-accent rounded-full mt-2 flex-shrink-0"></div>
-                      <div className="text-sm text-lunar-textSecondary">
-                        <p className="font-medium mb-1">Sobre as notificações:</p>
-                        <ul className="space-y-1">
-                          <li>• As configurações são salvas automaticamente</li>
-                          <li>• Você pode alterar suas preferências a qualquer momento</li>
-                          <li>• Notificações importantes de sistema sempre serão enviadas</li>
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <PreferencesForm
+                preferences={formData}
+                onChange={handlePreferenceChange}
+              />
             </CardContent>
           </Card>
         </div>
