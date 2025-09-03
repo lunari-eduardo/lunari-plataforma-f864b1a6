@@ -3,6 +3,12 @@
  * All pricing-related TypeScript definitions in one place
  */
 
+// Import types first for internal use
+import type {
+  ProdutoAdicional,
+  CustoExtra
+} from '@/types/precificacao';
+
 // Re-export existing types from precificacao.ts for backwards compatibility
 export type {
   GastoItem,
