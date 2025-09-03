@@ -58,38 +58,93 @@ export default function ExportDetalhado({ dados }: ExportDetalhadoProps) {
       const month = startDateObj.getMonth() + 1;
       const year = startDateObj.getFullYear();
 
-      // Converter linhas do extrato para formato de transações
-      const transactions: TransacaoComItem[] = filteredLinhas.map(linha => ({
-        id: linha.id,
-        item_id: linha.referenciaId,
-        valor: linha.valor,
-        data_vencimento: linha.data,
-        status: linha.status,
-        parcelaInfo: linha.parcela,
-        parcelas: null,
-        observacoes: linha.observacoes || '',
-        userId: 'current-user',
-        criadoEm: new Date().toISOString(),
-        item: {
-          id: linha.referenciaId,
-          nome: linha.descricao,
-          // Mapear grupos corretamente baseado na origem
-          grupo_principal: (() => {
-            if (linha.tipo === 'entrada') {
-              // Entradas do workflow = Receita Operacional
-              if (linha.origem === 'workflow') return 'Receita Operacional';
-              // Entradas do financeiro = Receita Não Operacional (categoria já definida)
-              return linha.categoria || 'Receita Não Operacional';
-            } else {
-              // Saídas: usar categoria se disponível, senão Despesa Variável
-              return linha.categoria || 'Despesa Variável';
-            }
-          })() as any,
-          userId: 'current-user',
-          ativo: true,
-          criadoEm: new Date().toISOString(),
+      // FASE 1: DEBUG DOS DADOS DE ENTRADA
+      console.log('🔍 [Export Debug] Iniciando conversão para PDF');
+      console.log('📊 [Export Debug] Dados filtrados:', {
+        totalLinhas: filteredLinhas.length,
+        periodo: { startDate, endDate },
+        exemploLinhas: filteredLinhas.slice(0, 3).map(l => ({
+          data: l.data,
+          tipo: l.tipo,
+          origem: l.origem,
+          categoria: l.categoria,
+          descricao: l.descricao,
+          valor: l.valor
+        }))
+      });
+
+      // FASE 2: CONVERSÃO CORRIGIDA DE LINHAS PARA TRANSAÇÕES
+      const transactions: TransacaoComItem[] = filteredLinhas.map(linha => {
+        // FASE 2: CORREÇÃO DO MAPEAMENTO DE GRUPOS
+        let grupo_principal: any;
+        
+        if (linha.tipo === 'entrada') {
+          // Entradas do workflow = Receita Operacional
+          if (linha.origem === 'workflow') {
+            grupo_principal = 'Receita Operacional';
+          } else {
+            // Entradas do financeiro = usar categoria ou Receita Não Operacional
+            grupo_principal = linha.categoria === 'Receita Não Operacional' 
+              ? 'Receita Não Operacional' 
+              : 'Receita Operacional';
+          }
+        } else {
+          // FASE 2: MAPEAMENTO CORRETO PARA DESPESAS
+          if (linha.categoria === 'Despesa Fixa') {
+            grupo_principal = 'Despesa Fixa';
+          } else if (linha.categoria === 'Investimento') {
+            grupo_principal = 'Investimento';
+          } else {
+            grupo_principal = 'Despesa Variável';
+          }
         }
-      } as TransacaoComItem));
+
+        // FASE 2: VALIDAÇÃO DE DATA ANTES DA CONVERSÃO
+        const dataVencimento = linha.data;
+        if (!dataVencimento || !dataVencimento.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          console.warn('⚠️ [Export Debug] Data inválida encontrada:', linha);
+        }
+
+        return {
+          id: linha.id,
+          item_id: linha.referenciaId || linha.id,
+          valor: linha.valor,
+          data_vencimento: dataVencimento,
+          status: linha.status as any,
+          parcelaInfo: linha.parcela,
+          parcelas: linha.parcela ? {
+            atual: linha.parcela.atual,
+            total: linha.parcela.total
+          } : null,
+          observacoes: linha.observacoes || '',
+          userId: 'current-user',
+          criadoEm: new Date().toISOString(),
+          item: {
+            id: linha.referenciaId || linha.id,
+            nome: linha.descricao,
+            grupo_principal,
+            userId: 'current-user',
+            ativo: true,
+            criadoEm: new Date().toISOString(),
+          }
+        } as TransacaoComItem;
+      });
+
+      // FASE 1: DEBUG DAS TRANSAÇÕES CONVERTIDAS
+      console.log('🔄 [Export Debug] Transações convertidas:', {
+        total: transactions.length,
+        porGrupo: transactions.reduce((acc, t) => {
+          const grupo = t.item.grupo_principal;
+          acc[grupo] = (acc[grupo] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>),
+        exemplos: transactions.slice(0, 3).map(t => ({
+          nome: t.item.nome,
+          grupo: t.item.grupo_principal,
+          valor: t.valor,
+          data: t.data_vencimento
+        }))
+      });
 
       // Recalculate summary for filtered data
       const filteredSummary = {

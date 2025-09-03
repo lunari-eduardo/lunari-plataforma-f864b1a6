@@ -35,13 +35,75 @@ interface MonthlyGroup {
 const getExtratoDetalhadoHTML = (data: ExtratoDetalhadoData): string => {
   const { profile, branding, period, transactions, summary } = data;
 
-  // Separar receitas e despesas
-  const receitas = transactions.filter(t => t.item.grupo_principal?.includes('Receita'));
-  const despesas = transactions.filter(t => !t.item.grupo_principal?.includes('Receita'));
+  // FASE 1: DEBUG - Log dos dados recebidos
+  console.log('🔍 [HTML Debug] Gerando HTML para PDF:', {
+    transactionsTotal: transactions.length,
+    profile: profile?.nomeEmpresa || profile?.nomeCompleto,
+    period: period
+  });
 
-  // Agrupar por mês
-  const receitasPorMes = groupTransactionsByMonth(receitas);
-  const despesasPorMes = groupTransactionsByMonth(despesas);
+  // FASE 2: SEPARAÇÃO CORRETA DE RECEITAS E DESPESAS COM DEBUG
+  const receitas = transactions.filter(t => {
+    const isReceita = t.item.grupo_principal === 'Receita Operacional' || 
+                     t.item.grupo_principal === 'Receita Não Operacional';
+    return isReceita;
+  });
+  
+  const despesas = transactions.filter(t => {
+    const isDespesa = t.item.grupo_principal === 'Despesa Fixa' || 
+                     t.item.grupo_principal === 'Despesa Variável' ||
+                     t.item.grupo_principal === 'Investimento';
+    return isDespesa;
+  });
+
+  // FASE 1: LOG DE DEBUG DETALHADO
+  console.log('📊 [HTML Debug] Separação de transações:', {
+    receitas: receitas.length,
+    despesas: despesas.length,
+    receitasExemplo: receitas.slice(0, 2).map(r => ({
+      nome: r.item.nome,
+      grupo: r.item.grupo_principal,
+      valor: r.valor,
+      data: r.data_vencimento
+    })),
+    despesasExemplo: despesas.slice(0, 2).map(d => ({
+      nome: d.item.nome,
+      grupo: d.item.grupo_principal,
+      valor: d.valor,
+      data: d.data_vencimento
+    }))
+  });
+
+  // FASE 2: AGRUPAR POR MÊS COM VALIDAÇÃO DE DADOS
+  console.log('📅 [HTML Debug] Agrupando transações por mês...');
+  
+  // Validar se as transações têm data_vencimento válida
+  const receitasValidas = receitas.filter(r => {
+    const isValid = r.data_vencimento && r.data_vencimento.match(/^\d{4}-\d{2}-\d{2}$/);
+    if (!isValid) {
+      console.warn('⚠️ [HTML Debug] Receita com data inválida:', r);
+    }
+    return isValid;
+  });
+  
+  const despesasValidas = despesas.filter(d => {
+    const isValid = d.data_vencimento && d.data_vencimento.match(/^\d{4}-\d{2}-\d{2}$/);
+    if (!isValid) {
+      console.warn('⚠️ [HTML Debug] Despesa com data inválida:', d);
+    }
+    return isValid;
+  });
+
+  const receitasPorMes = groupTransactionsByMonth(receitasValidas);
+  const despesasPorMes = groupTransactionsByMonth(despesasValidas);
+
+  // FASE 1: DEBUG DO AGRUPAMENTO
+  console.log('📊 [HTML Debug] Agrupamento por mês:', {
+    receitasPorMes: Object.keys(receitasPorMes),
+    despesasPorMes: Object.keys(despesasPorMes),
+    totalReceitasValidas: receitasValidas.length,
+    totalDespesasValidas: despesasValidas.length
+  });
 
   // Obter todos os meses presentes nos dados
   const allMonthKeys = [...new Set([
@@ -49,6 +111,8 @@ const getExtratoDetalhadoHTML = (data: ExtratoDetalhadoData): string => {
     ...Object.keys(despesasPorMes)
   ])];
   const sortedMonthKeys = sortMonthKeys(allMonthKeys);
+  
+  console.log('📅 [HTML Debug] Meses encontrados:', sortedMonthKeys);
 
   // Criar grupos mensais
   const monthlyGroups: MonthlyGroup[] = sortedMonthKeys.map(monthKey => {
@@ -563,7 +627,37 @@ const getExtratoDetalhadoHTML = (data: ExtratoDetalhadoData): string => {
 };
 
 export async function generateExtratoDetalhadoPDF(data: ExtratoDetalhadoData): Promise<void> {
+  // FASE 1: DEBUGGING E VALIDAÇÃO
+  console.log('🔍 [PDF Debug] Iniciando geração do PDF detalhado');
+  console.log('📊 [PDF Debug] Dados de entrada:', {
+    transactionsCount: data.transactions.length,
+    period: data.period,
+    summary: data.summary
+  });
+  
+  // Validar se há transações
+  if (!data.transactions || data.transactions.length === 0) {
+    console.warn('⚠️ [PDF Debug] Nenhuma transação encontrada para o PDF');
+    throw new Error('Nenhuma transação encontrada para gerar o PDF');
+  }
+  
+  // Debug das transações
+  console.log('🔍 [PDF Debug] Primeiras 3 transações:', data.transactions.slice(0, 3));
+  
   const html = getExtratoDetalhadoHTML(data);
+  
+  // FASE 1: LOG DO HTML GERADO (primeiros 2000 caracteres)
+  console.log('📄 [PDF Debug] HTML gerado (início):', html.substring(0, 2000));
+  
+  // FASE 1: CRIAR VERSÃO DEBUG DO HTML PARA INSPEÇÃO
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      localStorage.setItem('debug-pdf-html', html);
+      console.log('💾 [PDF Debug] HTML salvo no localStorage como "debug-pdf-html"');
+    } catch (e) {
+      console.warn('⚠️ [PDF Debug] Não foi possível salvar HTML no localStorage');
+    }
+  }
   
   const opt = {
     margin: [0.5, 0.5, 0.8, 0.5],
@@ -590,9 +684,106 @@ export async function generateExtratoDetalhadoPDF(data: ExtratoDetalhadoData): P
   };
 
   try {
+    // FASE 4: VALIDAÇÃO FINAL ANTES DA GERAÇÃO
+    console.log('🔍 [PDF Debug] Validação final antes da geração...');
+    
+    // Verificar se o HTML não está vazio ou malformado
+    if (!html || html.length < 1000) {
+      console.error('❌ [PDF Debug] HTML muito pequeno ou vazio:', html.length);
+      throw new Error('Erro na geração do HTML - conteúdo insuficiente');
+    }
+    
+    // Verificar se contém elementos essenciais
+    if (!html.includes('<table>') && data.transactions.length > 0) {
+      console.warn('⚠️ [PDF Debug] HTML não contém tabelas mas há transações');
+    }
+    
+    console.log('✅ [PDF Debug] Iniciando geração do PDF com html2pdf...');
     await html2pdf().set(opt).from(html).save();
+    console.log('🎉 [PDF Debug] PDF gerado com sucesso!');
+    
   } catch (error) {
-    console.error('Erro ao gerar PDF do extrato detalhado:', error);
-    throw error;
+    console.error('❌ [PDF Debug] Erro ao gerar PDF do extrato detalhado:', error);
+    
+    // FASE 4: FALLBACK PARA VERSÃO SIMPLIFICADA
+    console.log('🔄 [PDF Debug] Tentando versão simplificada do PDF...');
+    
+    try {
+      const fallbackHtml = generateFallbackHTML(data);
+      console.log('📄 [PDF Debug] HTML de fallback gerado');
+      await html2pdf().set({
+        ...opt,
+        filename: `extrato-detalhado-simplificado-${formatDateForPDF(data.period.startDate).replace(/\//g, '-')}.pdf`
+      }).from(fallbackHtml).save();
+      console.log('✅ [PDF Debug] PDF de fallback gerado com sucesso!');
+    } catch (fallbackError) {
+      console.error('❌ [PDF Debug] Erro mesmo no fallback:', fallbackError);
+      throw new Error(`Erro ao gerar PDF: ${error.message}`);
+    }
   }
+}
+
+// FASE 4: FUNÇÃO DE FALLBACK PARA CASOS DE ERRO
+function generateFallbackHTML(data: ExtratoDetalhadoData): string {
+  const { profile, period, transactions, summary } = data;
+  
+  console.log('🔧 [Fallback] Gerando HTML simplificado');
+  
+  return `
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+      <meta charset="UTF-8">
+      <title>Extrato Financeiro Detalhado - Versão Simplificada</title>
+      <style>
+        body { font-family: Arial, sans-serif; margin: 40px; color: #333; }
+        h1 { text-align: center; color: #333; }
+        .period { text-align: center; margin-bottom: 30px; color: #666; }
+        .summary { background: #f9f9f9; padding: 20px; margin-bottom: 30px; border: 1px solid #ddd; }
+        .transactions { margin-top: 30px; }
+        .transaction { padding: 10px; border-bottom: 1px solid #eee; }
+        .transaction-header { font-weight: bold; margin-bottom: 5px; }
+        .transaction-details { font-size: 14px; color: #666; }
+        .error-notice { background: #fff3cd; color: #856404; padding: 15px; margin-bottom: 20px; border: 1px solid #ffeaa7; }
+      </style>
+    </head>
+    <body>
+      <div class="error-notice">
+        ⚠️ Esta é uma versão simplificada do relatório devido a problemas na geração da versão completa.
+      </div>
+      
+      <h1>Extrato Financeiro Detalhado</h1>
+      <div class="period">
+        Período: ${formatDateForPDF(period.startDate)} a ${formatDateForPDF(period.endDate)}
+      </div>
+      
+      <div class="summary">
+        <h2>Resumo do Período</h2>
+        <p><strong>Total de Receitas:</strong> ${formatCurrency(summary.totalReceitas)}</p>
+        <p><strong>Total de Despesas:</strong> ${formatCurrency(summary.totalDespesas)}</p>
+        <p><strong>Resultado Líquido:</strong> ${formatCurrency(summary.saldoFinal)}</p>
+        <p><strong>Transações Processadas:</strong> ${transactions.length}</p>
+      </div>
+      
+      <div class="transactions">
+        <h2>Transações (${transactions.length})</h2>
+        ${transactions.slice(0, 50).map(t => `
+          <div class="transaction">
+            <div class="transaction-header">
+              ${formatDateForDisplay(t.data_vencimento)} - ${t.item.nome} - ${formatCurrency(t.valor)}
+            </div>
+            <div class="transaction-details">
+              Categoria: ${t.item.grupo_principal} | Status: ${t.status}
+            </div>
+          </div>
+        `).join('')}
+        ${transactions.length > 50 ? `<p><em>... e mais ${transactions.length - 50} transações</em></p>` : ''}
+      </div>
+      
+      <footer style="margin-top: 50px; text-align: center; font-size: 12px; color: #999;">
+        Gerado via Lunari - Versão Simplificada
+      </footer>
+    </body>
+    </html>
+  `;
 }
