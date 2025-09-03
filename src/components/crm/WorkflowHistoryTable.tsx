@@ -7,6 +7,7 @@ import { formatDateForDisplay } from '@/utils/dateUtils';
 import { Cliente } from '@/types/orcamentos';
 import { SessionPaymentHistory } from './SessionPaymentHistory';
 import { SessionPaymentExtended } from '@/types/sessionPayments';
+import { storage, STORAGE_KEYS } from '@/utils/localStorage';
 interface WorkflowHistoryTableProps {
   cliente: Cliente;
 }
@@ -36,7 +37,7 @@ export function WorkflowHistoryTable({
     if (!cliente) return [];
 
     // FONTE ÚNICA: workflow_sessions com dados corrigidos E deduplicados
-    const workflowSessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
+    const workflowSessions = storage.load(STORAGE_KEYS.WORKFLOW_ITEMS, []);
 
     // Filtrar sessões do cliente (by clienteId E nome como fallback)
     const clientSessions = workflowSessions.filter((session: any) => {
@@ -176,14 +177,14 @@ export function WorkflowHistoryTable({
             <AccordionContent className="px-4 md:px-6 pb-6">
               {/* HISTÓRICO DE PAGAMENTOS - COMPONENTE NOVO */}
               <SessionPaymentHistory sessionData={item} onPaymentUpdate={(sessionId, totalPaid, fullPaymentsArray) => {
-            // Atualizar o localStorage com pagamentos completos
-            const sessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
+            // Atualizar o storage com pagamentos completos
+            const sessions = storage.load(STORAGE_KEYS.WORKFLOW_ITEMS, []);
             const updatedSessions = sessions.map((s: any) => s.id === sessionId ? {
               ...s,
               valorPago: totalPaid,
               pagamentos: fullPaymentsArray || s.pagamentos
             } : s);
-            localStorage.setItem('workflow_sessions', JSON.stringify(updatedSessions));
+            storage.save(STORAGE_KEYS.WORKFLOW_ITEMS, updatedSessions);
 
             // Disparar evento para sincronização
             window.dispatchEvent(new CustomEvent('workflowSessionsUpdated'));

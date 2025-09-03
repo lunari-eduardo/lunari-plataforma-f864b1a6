@@ -8,6 +8,7 @@ import { UnifiedEvent } from '@/hooks/useUnifiedCalendar';
 import UnifiedEventCard from './UnifiedEventCard';
 import { useAvailability } from '@/hooks/useAvailability';
 import { toast } from 'sonner';
+import { storage } from '@/utils/localStorage';
 interface DailyViewProps {
   date: Date;
   unifiedEvents: UnifiedEvent[];
@@ -34,21 +35,17 @@ export default function DailyView({
     deleteAvailabilitySlot
   } = useAvailability();
 
-  // Load custom time slots from localStorage
+  // Load custom time slots from storage
   useEffect(() => {
-    const saved = localStorage.getItem('customTimeSlots');
-    if (saved) {
-      try {
-        setCustomTimeSlots(JSON.parse(saved));
-      } catch (error) {
-        console.error('Error loading custom time slots:', error);
-      }
+    const saved = storage.load('customTimeSlots', {});
+    if (Object.keys(saved).length > 0) {
+      setCustomTimeSlots(saved);
     }
   }, []);
 
-  // Save custom time slots to localStorage
+  // Save custom time slots to storage
   useEffect(() => {
-    localStorage.setItem('customTimeSlots', JSON.stringify(customTimeSlots));
+    storage.save('customTimeSlots', customTimeSlots);
   }, [customTimeSlots]);
 
   // Get time slots for the current date (include events and availability times)

@@ -2,30 +2,23 @@ import { AgendaStorageAdapter } from './AgendaStorageAdapter';
 import { Appointment } from '@/hooks/useAgenda';
 import { AvailabilitySlot, AvailabilityType } from '@/types/availability';
 import { AgendaSettings } from '@/types/agenda-supabase';
+import { storage, STORAGE_KEYS } from '@/utils/localStorage';
 
 /**
  * Local Storage implementation of AgendaStorageAdapter
  * Preserves existing localStorage functionality
  */
 export class LocalStorageAgendaAdapter extends AgendaStorageAdapter {
-  private readonly APPOINTMENTS_KEY = 'lunari_appointments';
-  private readonly AVAILABILITY_KEY = 'lunari_availability';
-  private readonly AVAILABILITY_TYPES_KEY = 'lunari_availability_types';
-  private readonly SETTINGS_KEY = 'lunari_agenda_settings';
 
   // Appointments
   async loadAppointments(): Promise<Appointment[]> {
     try {
-      const stored = localStorage.getItem(this.APPOINTMENTS_KEY);
-      if (!stored) return [];
-      
-      const appointments = JSON.parse(stored);
+      const appointments = storage.load(STORAGE_KEYS.APPOINTMENTS, []);
       return appointments.map((app: any) => ({
         ...app,
         date: new Date(app.date),
       }));
     } catch (error) {
-      console.error('❌ Erro ao carregar appointments:', error);
       return [];
     }
   }
@@ -40,10 +33,9 @@ export class LocalStorageAgendaAdapter extends AgendaStorageAdapter {
       };
       
       appointments.push(newAppointment);
-      localStorage.setItem(this.APPOINTMENTS_KEY, JSON.stringify(appointments));
+      storage.save(STORAGE_KEYS.APPOINTMENTS, appointments);
       return newAppointment;
     } catch (error) {
-      console.error('❌ Erro ao salvar appointment:', error);
       throw error;
     }
   }
@@ -59,10 +51,9 @@ export class LocalStorageAgendaAdapter extends AgendaStorageAdapter {
           ...updates,
           date: updates.date instanceof Date ? updates.date : appointments[index].date
         };
-        localStorage.setItem(this.APPOINTMENTS_KEY, JSON.stringify(appointments));
+        storage.save(STORAGE_KEYS.APPOINTMENTS, appointments);
       }
     } catch (error) {
-      console.error('❌ Erro ao atualizar appointment:', error);
       throw error;
     }
   }
@@ -71,9 +62,8 @@ export class LocalStorageAgendaAdapter extends AgendaStorageAdapter {
     try {
       const appointments = await this.loadAppointments();
       const filtered = appointments.filter(app => app.id !== id);
-      localStorage.setItem(this.APPOINTMENTS_KEY, JSON.stringify(filtered));
+      storage.save(STORAGE_KEYS.APPOINTMENTS, filtered);
     } catch (error) {
-      console.error('❌ Erro ao deletar appointment:', error);
       throw error;
     }
   }
@@ -81,19 +71,16 @@ export class LocalStorageAgendaAdapter extends AgendaStorageAdapter {
   // Availability
   async loadAvailabilitySlots(): Promise<AvailabilitySlot[]> {
     try {
-      const stored = localStorage.getItem(this.AVAILABILITY_KEY);
-      return stored ? JSON.parse(stored) : [];
+      return storage.load(STORAGE_KEYS.AVAILABILITY, []);
     } catch (error) {
-      console.error('❌ Erro ao carregar availability slots:', error);
       return [];
     }
   }
 
   async saveAvailabilitySlots(slots: AvailabilitySlot[]): Promise<void> {
     try {
-      localStorage.setItem(this.AVAILABILITY_KEY, JSON.stringify(slots));
+      storage.save(STORAGE_KEYS.AVAILABILITY, slots);
     } catch (error) {
-      console.error('❌ Erro ao salvar availability slots:', error);
       throw error;
     }
   }
@@ -104,7 +91,6 @@ export class LocalStorageAgendaAdapter extends AgendaStorageAdapter {
       const filtered = slots.filter(slot => slot.id !== id);
       await this.saveAvailabilitySlots(filtered);
     } catch (error) {
-      console.error('❌ Erro ao deletar availability slot:', error);
       throw error;
     }
   }
@@ -115,7 +101,6 @@ export class LocalStorageAgendaAdapter extends AgendaStorageAdapter {
       const filtered = slots.filter(slot => slot.date !== date);
       await this.saveAvailabilitySlots(filtered);
     } catch (error) {
-      console.error('❌ Erro ao limpar availability para data:', error);
       throw error;
     }
   }
@@ -123,15 +108,14 @@ export class LocalStorageAgendaAdapter extends AgendaStorageAdapter {
   // Availability Types
   async loadAvailabilityTypes(): Promise<AvailabilityType[]> {
     try {
-      const stored = localStorage.getItem(this.AVAILABILITY_TYPES_KEY);
-      return stored ? JSON.parse(stored) : [
+      const defaultTypes = [
         { id: '1', name: 'Ensaio Gestante', duration: 120, color: '#10b981' },
         { id: '2', name: 'Ensaio Família', duration: 90, color: '#3b82f6' },
         { id: '3', name: 'Ensaio Corporativo', duration: 60, color: '#8b5cf6' },
         { id: '4', name: 'Reunião Cliente', duration: 30, color: '#f59e0b' }
       ];
+      return storage.load(STORAGE_KEYS.AVAILABILITY_TYPES, defaultTypes);
     } catch (error) {
-      console.error('❌ Erro ao carregar availability types:', error);
       return [];
     }
   }
@@ -141,10 +125,9 @@ export class LocalStorageAgendaAdapter extends AgendaStorageAdapter {
       const types = await this.loadAvailabilityTypes();
       const newType = { ...type, id: type.id || this.generateId() };
       types.push(newType);
-      localStorage.setItem(this.AVAILABILITY_TYPES_KEY, JSON.stringify(types));
+      storage.save(STORAGE_KEYS.AVAILABILITY_TYPES, types);
       return newType;
     } catch (error) {
-      console.error('❌ Erro ao salvar availability type:', error);
       throw error;
     }
   }
@@ -156,10 +139,9 @@ export class LocalStorageAgendaAdapter extends AgendaStorageAdapter {
       
       if (index !== -1) {
         types[index] = { ...types[index], ...updates };
-        localStorage.setItem(this.AVAILABILITY_TYPES_KEY, JSON.stringify(types));
+        storage.save(STORAGE_KEYS.AVAILABILITY_TYPES, types);
       }
     } catch (error) {
-      console.error('❌ Erro ao atualizar availability type:', error);
       throw error;
     }
   }
@@ -168,9 +150,8 @@ export class LocalStorageAgendaAdapter extends AgendaStorageAdapter {
     try {
       const types = await this.loadAvailabilityTypes();
       const filtered = types.filter(type => type.id !== id);
-      localStorage.setItem(this.AVAILABILITY_TYPES_KEY, JSON.stringify(filtered));
+      storage.save(STORAGE_KEYS.AVAILABILITY_TYPES, filtered);
     } catch (error) {
-      console.error('❌ Erro ao deletar availability type:', error);
       throw error;
     }
   }
@@ -178,14 +159,13 @@ export class LocalStorageAgendaAdapter extends AgendaStorageAdapter {
   // Settings
   async loadSettings(): Promise<AgendaSettings> {
     try {
-      const stored = localStorage.getItem(this.SETTINGS_KEY);
-      return stored ? JSON.parse(stored) : {
-        defaultView: 'weekly',
+      const defaultSettings = {
+        defaultView: 'weekly' as const,
         workingHours: { start: '08:00', end: '18:00' },
         autoConfirmAppointments: false
       };
+      return storage.load('lunari_agenda_settings', defaultSettings);
     } catch (error) {
-      console.error('❌ Erro ao carregar settings:', error);
       return {
         defaultView: 'weekly',
         workingHours: { start: '08:00', end: '18:00' },
@@ -196,9 +176,8 @@ export class LocalStorageAgendaAdapter extends AgendaStorageAdapter {
 
   async saveSettings(settings: AgendaSettings): Promise<void> {
     try {
-      localStorage.setItem(this.SETTINGS_KEY, JSON.stringify(settings));
+      storage.save('lunari_agenda_settings', settings);
     } catch (error) {
-      console.error('❌ Erro ao salvar settings:', error);
       throw error;
     }
   }

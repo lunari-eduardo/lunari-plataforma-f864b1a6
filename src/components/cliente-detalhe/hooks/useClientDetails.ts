@@ -2,6 +2,7 @@ import { useState, useContext, useMemo, useEffect } from 'react';
 import { AppContext } from '@/contexts/AppContext';
 import { autoFixIfNeeded, getSimplifiedClientMetrics } from '@/utils/crmDataFix';
 import { useFileUpload } from '@/hooks/useFileUpload';
+import { storage, STORAGE_KEYS } from '@/utils/localStorage';
 
 export function useClientDetails(clienteId: string | undefined) {
   const { clientes, atualizarCliente } = useContext(AppContext);
@@ -42,7 +43,7 @@ export function useClientDetails(clienteId: string | undefined) {
     };
     
     // Buscar sessões do workflow para calcular valor agendado (com memoização)
-    const workflowSessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
+    const workflowSessions = storage.load(STORAGE_KEYS.WORKFLOW_ITEMS, []);
     const clientSessions = workflowSessions.filter((session: any) => {
       const matchByClienteId = session.clienteId === cliente.id;
       const matchByName = !session.clienteId && session.nome?.toLowerCase().trim() === cliente.nome.toLowerCase().trim();
