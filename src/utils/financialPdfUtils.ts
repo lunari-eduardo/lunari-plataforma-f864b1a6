@@ -3,7 +3,7 @@ import { UserProfile, UserBranding } from '@/types/userProfile';
 import { NovaTransacaoFinanceira, TransacaoComItem, GrupoPrincipal } from '@/types/financas';
 
 import { formatCurrency } from './financialUtils';
-import { formatDateForDisplay } from './dateUtils';
+import { formatDateForDisplay, formatDateForPDF, getCurrentDateTimeForPDF } from './dateUtils';
 
 export interface FinancialExportData {
   profile: UserProfile;
@@ -281,9 +281,9 @@ const getMonthlyHTML = (data: FinancialExportData): string => {
       <div class="report-title">
         <h1>Extrato Financeiro</h1>
         <p>${period.startDate && period.endDate ? 
-          `${new Date(period.startDate).toLocaleDateString('pt-BR')} a ${new Date(period.endDate).toLocaleDateString('pt-BR')}` : 
+          `${formatDateForPDF(period.startDate)} a ${formatDateForPDF(period.endDate)}` : 
           `${monthName} de ${period.year}`}</p>
-        <p style="font-size: 0.9em; color: #888;">Gerado em ${formatDateForDisplay(new Date().toISOString())}</p>
+        <p style="font-size: 0.9em; color: #888;">Gerado em ${getCurrentDateTimeForPDF()}</p>
       </div>
 
       <div class="summary-cards">
@@ -364,9 +364,13 @@ const getAnnualHTML = (data: FinancialExportData): string => {
   }
   
   transactions.forEach(transaction => {
-    const month = new Date(transaction.data_vencimento).getMonth() + 1;
-    if (transactionsByMonth[month]) {
-      transactionsByMonth[month].push(transaction);
+    // Use parseDateFromStorage to avoid timezone issues
+    const dateString = transaction.data_vencimento;
+    if (dateString && dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      const [year, month] = dateString.split('-').map(Number);
+      if (transactionsByMonth[month]) {
+        transactionsByMonth[month].push(transaction);
+      }
     }
   });
 
@@ -435,7 +439,7 @@ const getAnnualHTML = (data: FinancialExportData): string => {
       <div class="report-title">
         <h1>Relatório Anual</h1>
         <p>Exercício ${period.year}</p>
-        <p style="font-size: 0.9em; color: #888;">Gerado em ${formatDateForDisplay(new Date().toISOString())}</p>
+        <p style="font-size: 0.9em; color: #888;">Gerado em ${getCurrentDateTimeForPDF()}</p>
       </div>
 
       <div class="annual-summary">

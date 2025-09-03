@@ -10,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { DadosExportacaoExtrato } from '@/types/extrato';
+import { formatDateForStorage } from '@/utils/dateUtils';
 
 interface PeriodSelectionModalProps {
   isOpen: boolean;
@@ -107,8 +108,8 @@ export default function PeriodSelectionModal({
     setIsExporting(true);
     try {
       await onExport({
-        startDate: startDate!.toISOString().split('T')[0],
-        endDate: endDate!.toISOString().split('T')[0],
+        startDate: formatDateForStorage(startDate!),
+        endDate: formatDateForStorage(endDate!),
         format
       });
       onClose();

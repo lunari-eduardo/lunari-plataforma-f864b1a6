@@ -147,6 +147,41 @@ export function formatToDayMonth(dateString: string): string {
 }
 
 /**
+ * Formata data para PDF evitando conversões de timezone
+ * Usa apenas as funções seguras de dateUtils
+ */
+export function formatDateForPDF(dateString: string): string {
+  if (!dateString) return '';
+  
+  // Se for uma string YYYY-MM-DD válida, usa formatDateForDisplay
+  if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    return formatDateForDisplay(dateString);
+  }
+  
+  // Se for uma string ISO com timestamp, extrai só a data
+  if (dateString.includes('T')) {
+    const dateOnly = dateString.split('T')[0];
+    return formatDateForDisplay(dateOnly);
+  }
+  
+  return '';
+}
+
+/**
+ * Obtém data/hora atual formatada para PDF sem problemas de timezone
+ */
+export function getCurrentDateTimeForPDF(): string {
+  const now = new Date();
+  const dateStr = formatDateForStorage(now);
+  const displayDate = formatDateForDisplay(dateStr);
+  const timeStr = now.toLocaleTimeString('pt-BR', { 
+    hour: '2-digit', 
+    minute: '2-digit' 
+  });
+  return `${displayDate} às ${timeStr}`;
+}
+
+/**
  * Calcula quantos dias se passaram desde uma data e retorna um label amigável
  */
 export function daysAgoLabel(dateString: string): string {

@@ -9,6 +9,7 @@ import { generateFinancialPDF, FinancialExportData } from '@/utils/financialPdfU
 import { DadosExportacaoExtrato } from '@/types/extrato';
 import { TransacaoComItem } from '@/types/financas';
 import PeriodSelectionModal from './PeriodSelectionModal';
+import { parseDateFromStorage, formatDateForPDF } from '@/utils/dateUtils';
 
 interface ExportDetalhadoProps {
   dados: DadosExportacaoExtrato;
@@ -53,7 +54,7 @@ export default function ExportDetalhado({ dados }: ExportDetalhadoProps) {
       const profile = getProfileOrDefault();
       const branding = getBrandingOrDefault();
       
-      const startDateObj = new Date(startDate);
+      const startDateObj = parseDateFromStorage(startDate);
       const month = startDateObj.getMonth() + 1;
       const year = startDateObj.getFullYear();
 
@@ -111,7 +112,7 @@ export default function ExportDetalhado({ dados }: ExportDetalhadoProps) {
         includeGraphics: false
       });
 
-      const periodText = `${new Date(startDate).toLocaleDateString('pt-BR')} a ${new Date(endDate).toLocaleDateString('pt-BR')}`;
+      const periodText = `${formatDateForPDF(startDate)} a ${formatDateForPDF(endDate)}`;
       toast.success(`PDF gerado com sucesso para o período ${periodText}!`);
     } catch (error) {
       console.error('Erro ao gerar PDF:', error);
@@ -123,7 +124,7 @@ export default function ExportDetalhado({ dados }: ExportDetalhadoProps) {
     const csvContent = [
       ['Data', 'Tipo', 'Descrição', 'Origem', 'Categoria/Cliente', 'Parcela', 'Valor', 'Status'].join(';'),
       ...linhas.map(linha => [
-        new Date(linha.data).toLocaleDateString('pt-BR'),
+        formatDateForPDF(linha.data),
         linha.tipo === 'entrada' ? 'Entrada' : 'Saída',
         linha.descricao,
         linha.origem === 'workflow' ? 'Workflow' : linha.origem === 'financeiro' ? 'Financeiro' : 'Cartão',
@@ -144,7 +145,7 @@ export default function ExportDetalhado({ dados }: ExportDetalhadoProps) {
     link.click();
     document.body.removeChild(link);
     
-    const periodText = `${new Date(startDate).toLocaleDateString('pt-BR')} a ${new Date(endDate).toLocaleDateString('pt-BR')}`;
+    const periodText = `${formatDateForPDF(startDate)} a ${formatDateForPDF(endDate)}`;
     toast.success(`CSV exportado com sucesso para o período ${periodText}!`);
   };
 
