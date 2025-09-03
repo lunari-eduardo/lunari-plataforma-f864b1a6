@@ -44,54 +44,28 @@ export default function Precificacao() {
       return () => clearInterval(intervalId);
     }
   }, [sistemaInicializado]);
-  return (
-    <ScrollArea className="h-[calc(100vh-120px)]">
-      <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-6 space-y-8 bg-background min-h-screen">
-        {/* Header da Página */}
-        <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
-            <div className="space-y-2">
-              <h1 className="text-2xl md:text-3xl font-bold text-foreground tracking-tight">Precificação e Metas</h1>
-              <p className="text-base text-muted-foreground max-w-2xl">
-                Sistema completo para cálculo de preços, gestão de custos fixos e definição de metas financeiras
-              </p>
-            </div>
-            
-            {/* Status global do sistema */}
-            <div className="flex items-center gap-2 p-3 bg-card border rounded-lg">
-              {sistemaInicializado ? (
-                <div className="flex items-center gap-2 text-green-600">
-                  <CheckCircle2 className="h-4 w-4" />
-                  <span className="text-sm font-medium">Sistema Ativo</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 text-orange-500">
-                  <AlertTriangle className="h-4 w-4" />
-                  <span className="text-sm font-medium">Inicializando...</span>
-                </div>
-              )}
-            </div>
+  return <ScrollArea className="h-[calc(100vh-120px)]">
+      <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 p-3 md:p-6 space-y-4 md:space-y-6 bg-lunar-bg min-h-screen">
+      {/* Header da Página */}
+      <div className="px-1 mb-4">
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-lg md:text-xl font-bold text-foreground mb-1">Precificação e Metas</h1>
+            <p className="text-sm text-muted-foreground">
+              Sistema aprimorado com salvamento automático e compatibilidade multi-usuário
+            </p>
           </div>
-        </div>
-
-        {/* Grid responsivo para os componentes principais */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-          {/* Coluna Principal - Calculadora (2/3 da largura em telas grandes) */}
-          <div className="xl:col-span-2 space-y-8">
-            <CalculadoraServicos custosFixosTotal={custosFixosTotal} />
-          </div>
-
-          {/* Coluna Lateral - Metas (1/3 da largura em telas grandes) */}
-          <div className="xl:col-span-1">
-            <MetasIndicadores custosFixosTotal={custosFixosTotal} />
-          </div>
-        </div>
-
-        {/* Estrutura de Custos em largura total */}
-        <div className="space-y-8">
-          <EstruturaCustosFixos onTotalChange={handleCustosFixosChange} />
         </div>
       </div>
-    </ScrollArea>
-  );
+
+      {/* 1. Calculadora de Serviços */}
+      <CalculadoraServicos custosFixosTotal={custosFixosTotal} />
+
+      {/* 2. Estrutura de Custos Fixos */}
+      <EstruturaCustosFixos onTotalChange={handleCustosFixosChange} />
+
+      {/* 3. Metas e Indicadores de Lucro */}
+      <MetasIndicadores custosFixosTotal={custosFixosTotal} />
+      </div>
+    </ScrollArea>;
 }
