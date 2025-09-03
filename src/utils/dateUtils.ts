@@ -27,7 +27,8 @@ export function formatDateForStorage(date: Date | string): string {
 
   // Verificar se a data é válida
   if (isNaN(dateObj.getTime())) {
-    console.warn('Invalid date passed to formatDateForStorage:', date);
+    // Evita passar objeto Date inválido para o console para não disparar toISOString
+    console.warn('Invalid date passed to formatDateForStorage:', String(date));
     return '';
   }
 
