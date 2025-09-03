@@ -205,6 +205,74 @@ export function daysAgoLabel(dateString: string): string {
 }
 
 /**
+ * Obtém o nome do mês em português
+ */
+export function getMonthNameInPortuguese(dateString: string): string {
+  if (!dateString || !dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    return '';
+  }
+  
+  const [ano, mes] = dateString.split('-');
+  const monthNames = [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+  ];
+  
+  return `${monthNames[parseInt(mes) - 1]} ${ano}`;
+}
+
+/**
+ * Obtém a chave de agrupamento por mês (YYYY-MM) de uma data
+ */
+export function getMonthGroupKey(dateString: string): string {
+  if (!dateString || !dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    return '';
+  }
+  
+  const [ano, mes] = dateString.split('-');
+  return `${ano}-${mes}`;
+}
+
+/**
+ * Agrupa uma lista de itens por mês usando data_vencimento
+ */
+export function groupTransactionsByMonth<T extends { data_vencimento: string }>(items: T[]): Record<string, T[]> {
+  return items.reduce((groups, item) => {
+    const monthKey = getMonthGroupKey(item.data_vencimento);
+    if (!monthKey) return groups;
+    
+    if (!groups[monthKey]) {
+      groups[monthKey] = [];
+    }
+    groups[monthKey].push(item);
+    return groups;
+  }, {} as Record<string, T[]>);
+}
+
+/**
+ * Agrupa uma lista de itens por mês
+ */
+export function groupByMonth<T extends { data: string }>(items: T[]): Record<string, T[]> {
+  return items.reduce((groups, item) => {
+    const monthKey = getMonthGroupKey(item.data);
+    if (!monthKey) return groups;
+    
+    if (!groups[monthKey]) {
+      groups[monthKey] = [];
+    }
+    groups[monthKey].push(item);
+    return groups;
+  }, {} as Record<string, T[]>);
+}
+
+/**
+ * Ordena as chaves de mês em ordem cronológica
+ */
+export function sortMonthKeys(monthKeys: string[]): string[] {
+  return monthKeys.sort((a, b) => a.localeCompare(b));
+}
+
+/**
  * Formata uma data para o formato de input HTML (yyyy-MM-dd)
  */
 export function formatDateForInput(date: Date | string): string {

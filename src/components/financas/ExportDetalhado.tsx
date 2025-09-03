@@ -5,7 +5,7 @@ import { Download, AlertCircle, User, FileText, List } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { useUserProfile, useUserBranding } from '@/hooks/useUserProfile';
-import { generateUnifiedExtratoFDF, UnifiedExtratoData } from '@/utils/unifiedPdfUtils';
+import { generateExtratoDetalhadoPDF, ExtratoDetalhadoData } from '@/utils/extratoDemonstrativePdfUtils';
 import { DadosExportacaoExtrato } from '@/types/extrato';
 import { TransacaoComItem } from '@/types/financas';
 import PeriodSelectionModal from './PeriodSelectionModal';
@@ -102,7 +102,7 @@ export default function ExportDetalhado({ dados }: ExportDetalhadoProps) {
       };
       filteredSummary.saldoFinal = filteredSummary.totalReceitas - filteredSummary.totalDespesas;
 
-      const exportData: UnifiedExtratoData = {
+      const exportData: ExtratoDetalhadoData = {
         profile,
         branding,
         transactions,
@@ -113,7 +113,7 @@ export default function ExportDetalhado({ dados }: ExportDetalhadoProps) {
         summary: filteredSummary
       };
 
-      await generateUnifiedExtratoFDF(exportData);
+      await generateExtratoDetalhadoPDF(exportData);
 
       const periodText = `${formatDateForPDF(startDate)} a ${formatDateForPDF(endDate)}`;
       toast.success(`PDF gerado com sucesso para o período ${periodText}!`);
