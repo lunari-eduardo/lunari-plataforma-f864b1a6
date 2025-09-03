@@ -4,7 +4,7 @@
  */
 
 import type { PricingStorageAdapter } from './PricingStorageAdapter';
-import type { EstruturaCustomerFixos, Equipamento, GastoItem } from '@/types/precificacao';
+import type { EstruturaCustosFixos, Equipamento, GastoItem } from '@/types/precificacao';
 
 export class EstruturaCustosService {
   private adapter: PricingStorageAdapter;
@@ -13,7 +13,7 @@ export class EstruturaCustosService {
     this.adapter = adapter;
   }
 
-  async salvar(dados: EstruturaCustomerFixos): Promise<boolean> {
+  async salvar(dados: EstruturaCustosFixos): Promise<boolean> {
     try {
       const success = await this.adapter.saveEstruturaCustos(dados);
       if (success) {
@@ -26,7 +26,7 @@ export class EstruturaCustosService {
     }
   }
 
-  async carregar(): Promise<EstruturaCustomerFixos> {
+  async carregar(): Promise<EstruturaCustosFixos> {
     try {
       const dados = await this.adapter.loadEstruturaCustos();
       console.log('✅ Estrutura de custos carregada');
@@ -62,7 +62,7 @@ export class EstruturaCustosService {
         equipamentos: equipamentosAtualizados
       });
       
-      const dadosAtualizados: EstruturaCustomerFixos = {
+      const dadosAtualizados: EstruturaCustosFixos = {
         ...dadosAtuais,
         equipamentos: equipamentosAtualizados,
         totalCalculado: novoTotal
@@ -96,7 +96,7 @@ export class EstruturaCustosService {
         gastosPessoais: gastosAtualizados
       });
       
-      const dadosAtualizados: EstruturaCustomerFixos = {
+      const dadosAtualizados: EstruturaCustosFixos = {
         ...dadosAtuais,
         gastosPessoais: gastosAtualizados,
         totalCalculado: novoTotal
@@ -124,7 +124,7 @@ export class EstruturaCustosService {
         custosEstudio: custosAtualizados
       });
       
-      const dadosAtualizados: EstruturaCustomerFixos = {
+      const dadosAtualizados: EstruturaCustosFixos = {
         ...dadosAtuais,
         custosEstudio: custosAtualizados,
         totalCalculado: novoTotal
@@ -159,7 +159,7 @@ export class EstruturaCustosService {
     try {
       const dadosAtuais = await this.carregar();
       
-      const dadosAtualizados: EstruturaCustomerFixos = {
+      const dadosAtualizados: EstruturaCustosFixos = {
         ...dadosAtuais,
         percentualProLabore: percentual,
         totalCalculado: this.calcularTotal({
@@ -175,7 +175,7 @@ export class EstruturaCustosService {
     }
   }
 
-  calcularTotal(dados: EstruturaCustomerFixos): number {
+  calcularTotal(dados: EstruturaCustosFixos): number {
     // Gastos pessoais + pró-labore
     const totalGastosPessoais = dados.gastosPessoais.reduce((total, item) => total + item.valor, 0);
     const proLaboreCalculado = totalGastosPessoais * (1 + dados.percentualProLabore / 100);
@@ -191,7 +191,7 @@ export class EstruturaCustosService {
     return proLaboreCalculado + totalCustosEstudio + totalDepreciacaoMensal;
   }
 
-  validar(dados: EstruturaCustomerFixos): string[] {
+  validar(dados: EstruturaCustosFixos): string[] {
     const erros = [];
     
     if (dados.percentualProLabore < 0 || dados.percentualProLabore > 200) {

@@ -5,7 +5,7 @@
 
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
 import type {
-  EstruturaCustomerFixos,
+  EstruturaCustosFixos,
   PadraoHoras,
   MetasPrecificacao,
   EstadoCalculadora,
@@ -23,7 +23,7 @@ const USUARIO_LOCAL = 'local_user'; // Para modo local
 // ============= ESTRUTURA DE CUSTOS FIXOS =============
 
 export class EstruturaCustosService {
-  static salvar(dados: EstruturaCustomerFixos): boolean {
+  static salvar(dados: EstruturaCustosFixos): boolean {
     try {
       const dadosComMetadata = {
         ...dados,
@@ -40,7 +40,7 @@ export class EstruturaCustosService {
     }
   }
 
-  static carregar(): EstruturaCustomerFixos {
+  static carregar(): EstruturaCustosFixos {
     try {
       const defaults = {
         gastosPessoais: [],
@@ -58,7 +58,7 @@ export class EstruturaCustosService {
         gastosPessoais: Array.isArray(dadosBrutos?.gastosPessoais) ? dadosBrutos.gastosPessoais : [],
         custosEstudio: Array.isArray(dadosBrutos?.custosEstudio) ? dadosBrutos.custosEstudio : [],
         equipamentos: Array.isArray(dadosBrutos?.equipamentos) ? dadosBrutos.equipamentos : []
-      } as EstruturaCustomerFixos;
+      } as EstruturaCustosFixos;
       
       console.log('✅ Estrutura de custos carregada');
       return dados;
@@ -68,7 +68,7 @@ export class EstruturaCustosService {
     }
   }
 
-  static criarPadrao(): EstruturaCustomerFixos {
+  static criarPadrao(): EstruturaCustosFixos {
     return {
       gastosPessoais: [],
       percentualProLabore: 30,
@@ -80,7 +80,7 @@ export class EstruturaCustosService {
     };
   }
 
-  static validar(dados: EstruturaCustomerFixos): string[] {
+  static validar(dados: EstruturaCustosFixos): string[] {
     const erros = [];
     
     if (dados.percentualProLabore < 0 || dados.percentualProLabore > 200) {

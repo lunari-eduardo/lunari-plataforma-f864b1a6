@@ -5,7 +5,7 @@
 
 import type { PricingStorageAdapter, StorageConfig } from './PricingStorageAdapter';
 import type {
-  EstruturaCustomerFixos,
+  EstruturaCustosFixos,
   PadraoHoras,
   MetasPrecificacao,
   EstadoCalculadora,
@@ -21,11 +21,11 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
   }
 
   // Estrutura de Custos
-  async saveEstruturaCustos(dados: EstruturaCustomerFixos): Promise<boolean> {
+  async saveEstruturaCustos(dados: EstruturaCustosFixos): Promise<boolean> {
     throw new Error('Supabase integration not activated. Please connect to Supabase first.');
   }
 
-  async loadEstruturaCustos(): Promise<EstruturaCustomerFixos> {
+  async loadEstruturaCustos(): Promise<EstruturaCustosFixos> {
     throw new Error('Supabase integration not activated. Please connect to Supabase first.');
   }
 

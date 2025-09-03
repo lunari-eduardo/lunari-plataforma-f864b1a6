@@ -807,7 +807,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     setAvailability(prev => {
       const appointmentKeys = new Set(
-        appointments.map(a => `${formatDateForStorage(a.date)}|${a.time}`)
+        appointments
+          .filter(a => a.date) // Filtrar appointments sem data
+          .map(a => {
+            try {
+              const dateStr = formatDateForStorage(a.date);
+              return dateStr ? `${dateStr}|${a.time}` : null;
+            } catch (error) {
+              console.warn('⚠️ Erro ao formatar data do appointment:', a.date);
+              return null;
+            }
+          })
+          .filter(Boolean) // Remover valores null
       );
       const cleaned = prev.filter(s => !appointmentKeys.has(`${s.date}|${s.time}`));
       return cleaned;
@@ -1908,7 +1919,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAvailability(prev => {
       const existing = new Set(prev.map(s => `${s.date}|${s.time}`));
       const appointmentKeys = new Set(
-        appointments.map(a => `${formatDateForStorage(a.date)}|${a.time}`)
+        appointments
+          .filter(a => a.date) // Filtrar appointments sem data
+          .map(a => {
+            try {
+              const dateStr = formatDateForStorage(a.date);
+              return dateStr ? `${dateStr}|${a.time}` : null;
+            } catch (error) {
+              console.warn('⚠️ Erro ao formatar data do appointment:', a.date);
+              return null;
+            }
+          })
+          .filter(Boolean) // Remover valores null
       );
       // Evitar duplicados e conflitos com agendamentos
       const filtered = slots.filter(s => {

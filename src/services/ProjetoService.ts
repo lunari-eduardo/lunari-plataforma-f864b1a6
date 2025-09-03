@@ -22,13 +22,35 @@ export class ProjetoService {
   static carregarProjetos(): Projeto[] {
     try {
       const projetos = JSON.parse(localStorage.getItem(this.STORAGE_KEY) || '[]');
-      return projetos.map((p: any) => ({
-        ...p,
-        dataAgendada: new Date(p.dataAgendada),
-        criadoEm: new Date(p.criadoEm),
-        atualizadoEm: new Date(p.atualizadoEm),
-        dataOriginal: p.dataOriginal ? new Date(p.dataOriginal) : undefined
-      }));
+      return projetos.map((p: any) => {
+        // Parse seguro de datas para evitar RangeError
+        const dataAgendada = p.dataAgendada ? new Date(p.dataAgendada) : new Date();
+        const criadoEm = p.criadoEm ? new Date(p.criadoEm) : new Date();
+        const atualizadoEm = p.atualizadoEm ? new Date(p.atualizadoEm) : new Date();
+        const dataOriginal = p.dataOriginal ? new Date(p.dataOriginal) : undefined;
+        
+        // Verificar se as datas são válidas
+        if (isNaN(dataAgendada.getTime())) {
+          console.warn('⚠️ Data agendada inválida detectada:', p.dataAgendada);
+        }
+        if (isNaN(criadoEm.getTime())) {
+          console.warn('⚠️ Data criação inválida detectada:', p.criadoEm);
+        }
+        if (isNaN(atualizadoEm.getTime())) {
+          console.warn('⚠️ Data atualização inválida detectada:', p.atualizadoEm);
+        }
+        if (dataOriginal && isNaN(dataOriginal.getTime())) {
+          console.warn('⚠️ Data original inválida detectada:', p.dataOriginal);
+        }
+        
+        return {
+          ...p,
+          dataAgendada: isNaN(dataAgendada.getTime()) ? new Date() : dataAgendada,
+          criadoEm: isNaN(criadoEm.getTime()) ? new Date() : criadoEm,
+          atualizadoEm: isNaN(atualizadoEm.getTime()) ? new Date() : atualizadoEm,
+          dataOriginal: (dataOriginal && !isNaN(dataOriginal.getTime())) ? dataOriginal : undefined
+        };
+      });
     } catch (error) {
       console.error('❌ Erro ao carregar projetos:', error);
       return [];

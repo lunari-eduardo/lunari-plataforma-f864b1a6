@@ -4,7 +4,7 @@
  */
 
 import type {
-  EstruturaCustomerFixos,
+  EstruturaCustosFixos,
   PadraoHoras,
   MetasPrecificacao,
   EstadoCalculadora,
@@ -13,8 +13,8 @@ import type {
 
 export interface PricingStorageAdapter {
   // Estrutura de Custos
-  saveEstruturaCustos(dados: EstruturaCustomerFixos): Promise<boolean>;
-  loadEstruturaCustos(): Promise<EstruturaCustomerFixos>;
+  saveEstruturaCustos(dados: EstruturaCustosFixos): Promise<boolean>;
+  loadEstruturaCustos(): Promise<EstruturaCustosFixos>;
   
   // Padrão de Horas
   savePadraoHoras(dados: PadraoHoras): Promise<boolean>;

@@ -5,10 +5,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { PricingServiceFactory } from '@/services/pricing';
-import type { EstruturaCustomerFixos, GastoItem, Equipamento, StatusSalvamento } from '@/types/precificacao';
+import type { EstruturaCustosFixos, GastoItem, Equipamento, StatusSalvamento } from '@/types/precificacao';
 
 export function useEstruturaCustos() {
-  const [dados, setDados] = useState<EstruturaCustomerFixos | null>(null);
+  const [dados, setDados] = useState<EstruturaCustosFixos | null>(null);
   const [loading, setLoading] = useState(true);
   const [statusSalvamento, setStatusSalvamento] = useState<StatusSalvamento>('nao_salvo');
   const [erros, setErros] = useState<string[]>([]);
@@ -40,7 +40,7 @@ export function useEstruturaCustos() {
     }
   }, []);
 
-  const salvarDados = useCallback(async (novosDados: EstruturaCustomerFixos) => {
+  const salvarDados = useCallback(async (novosDados: EstruturaCustosFixos) => {
     try {
       setStatusSalvamento('salvando');
       

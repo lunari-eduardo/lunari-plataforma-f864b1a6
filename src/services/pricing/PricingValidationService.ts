@@ -6,7 +6,7 @@
 import type { PricingStorageAdapter } from './PricingStorageAdapter';
 import type { 
   DadosValidacao, 
-  EstruturaCustomerFixos, 
+  EstruturaCustosFixos, 
   PadraoHoras, 
   MetasPrecificacao,
   EstadoCalculadora
@@ -191,7 +191,7 @@ export class PricingValidationService {
   }
 
   // Métodos privados de validação
-  private validarDadosEstrutura(dados: EstruturaCustomerFixos): string[] {
+  private validarDadosEstrutura(dados: EstruturaCustosFixos): string[] {
     const erros = [];
     
     if (dados.percentualProLabore < 0 || dados.percentualProLabore > 200) {

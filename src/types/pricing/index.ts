@@ -15,7 +15,7 @@ export type {
   Equipamento,
   ProdutoAdicional,
   CustoExtra,
-  EstruturaCustomerFixos,
+  EstruturaCustosFixos,
   PadraoHoras,
   MetasPrecificacao,
   EstadoCalculadora,

@@ -180,13 +180,20 @@ export function generateAllMonthsData(year: number, normalizedData: NormalizedWo
   // Importar o serviço de metas dinâmico
   let monthlyGoalAmount = 0;
   try {
-    // Dinamic import para evitar circular dependencies
-    const { GoalsIntegrationService } = require('@/services/GoalsIntegrationService');
-    const monthlyGoals = GoalsIntegrationService.getMonthlyGoals();
-    monthlyGoalAmount = monthlyGoals.revenue;
-    console.log(`📊 [SalesDataNormalizer] Meta mensal da precificação: R$ ${monthlyGoalAmount.toLocaleString()}`);
+    // Use dynamic import without await (fallback to sync loading)
+    import('@/services/GoalsIntegrationService').then(({ GoalsIntegrationService }) => {
+      try {
+        const monthlyGoals = GoalsIntegrationService.getMonthlyGoals();
+        monthlyGoalAmount = monthlyGoals.revenue;
+        console.log(`📊 [SalesDataNormalizer] Meta mensal da precificação: R$ ${monthlyGoalAmount.toLocaleString()}`);
+      } catch (err) {
+        console.warn('⚠️ [SalesDataNormalizer] Erro ao processar metas:', err);
+      }
+    }).catch(error => {
+      console.warn('⚠️ [SalesDataNormalizer] Erro ao carregar metas da precificação:', error);
+    });
   } catch (error) {
-    console.warn('⚠️ [SalesDataNormalizer] Erro ao carregar metas da precificação, usando fallback:', error);
+    console.warn('⚠️ [SalesDataNormalizer] Erro geral:', error);
     monthlyGoalAmount = 0; // Usar 0 se não conseguir carregar
   }
 

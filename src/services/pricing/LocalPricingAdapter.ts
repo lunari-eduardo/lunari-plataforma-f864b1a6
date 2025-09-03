@@ -5,7 +5,7 @@
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
 import type { PricingStorageAdapter, StorageConfig } from './PricingStorageAdapter';
 import type {
-  EstruturaCustomerFixos,
+  EstruturaCustosFixos,
   PadraoHoras,
   MetasPrecificacao,
   EstadoCalculadora,
@@ -28,7 +28,7 @@ export class LocalPricingAdapter implements PricingStorageAdapter {
   }
 
   // Estrutura de Custos
-  async saveEstruturaCustos(dados: EstruturaCustomerFixos): Promise<boolean> {
+  async saveEstruturaCustos(dados: EstruturaCustosFixos): Promise<boolean> {
     try {
       const dadosComMetadata = {
         ...dados,
@@ -44,9 +44,9 @@ export class LocalPricingAdapter implements PricingStorageAdapter {
     }
   }
 
-  async loadEstruturaCustos(): Promise<EstruturaCustomerFixos> {
+  async loadEstruturaCustos(): Promise<EstruturaCustosFixos> {
     try {
-      const defaults: EstruturaCustomerFixos = {
+      const defaults: EstruturaCustosFixos = {
         gastosPessoais: [],
         percentualProLabore: 30,
         custosEstudio: [],
@@ -256,7 +256,7 @@ export class LocalPricingAdapter implements PricingStorageAdapter {
   }
 
   // Métodos privados
-  private createDefaultEstruturaCustos(): EstruturaCustomerFixos {
+  private createDefaultEstruturaCustos(): EstruturaCustosFixos {
     return {
       gastosPessoais: [],
       percentualProLabore: 30,
@@ -289,7 +289,7 @@ export class LocalPricingAdapter implements PricingStorageAdapter {
     };
   }
 
-  private validateEstruturaCustos(dados: EstruturaCustomerFixos): string[] {
+  private validateEstruturaCustos(dados: EstruturaCustosFixos): string[] {
     const erros = [];
     
     if (dados.percentualProLabore < 0 || dados.percentualProLabore > 200) {

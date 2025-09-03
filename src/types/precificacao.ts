@@ -48,7 +48,7 @@ export interface CustoExtra {
 
 // ============= ESTRUTURAS DE DADOS PERSISTENTES =============
 
-export interface EstruturaCustomerFixos {
+export interface EstruturaCustosFixos {
   id?: string;
   user_id?: string;
   gastosPessoais: GastoItem[];
@@ -112,7 +112,7 @@ export interface BackupPrecificacao {
   versao: string;
   dataExport: string;
   user_id?: string;
-  estruturaCustos: EstruturaCustomerFixos;
+  estruturaCustos: EstruturaCustosFixos;
   padraoHoras: PadraoHoras;
   metas: MetasPrecificacao;
   estadosCalculadora: EstadoCalculadora[];

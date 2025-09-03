@@ -59,11 +59,19 @@ export function useSalesAnalytics(
     // Calculate goal progress using real pricing data
     let monthlyGoal = 0;
     try {
-      const { GoalsIntegrationService } = require('@/services/GoalsIntegrationService');
-      const monthlyGoals = GoalsIntegrationService.getMonthlyGoals();
-      monthlyGoal = monthlyGoals.revenue;
+      // Use dynamic import without await (fallback to sync loading)
+      import('@/services/GoalsIntegrationService').then(({ GoalsIntegrationService }) => {
+        try {
+          const monthlyGoals = GoalsIntegrationService.getMonthlyGoals();
+          monthlyGoal = monthlyGoals.revenue;
+        } catch (err) {
+          console.warn('⚠️ [useSalesAnalytics] Erro ao processar metas:', err);
+        }
+      }).catch(error => {
+        console.warn('⚠️ [useSalesAnalytics] Erro ao carregar meta mensal:', error);
+      });
     } catch (error) {
-      console.warn('⚠️ [useSalesAnalytics] Erro ao carregar meta mensal:', error);
+      console.warn('⚠️ [useSalesAnalytics] Erro geral:', error);
     }
     
     let monthlyGoalProgress = 0;
