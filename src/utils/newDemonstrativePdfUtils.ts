@@ -1,5 +1,5 @@
 import { formatCurrency } from './financialUtils';
-import { formatDateForDisplay } from './dateUtils';
+import { formatDateForDisplay, formatDateForPDF, getCurrentDateTimeForPDF } from './dateUtils';
 import { UserProfile, UserBranding } from '@/types/userProfile';
 import { DemonstrativoSimplificado } from '@/types/extrato';
 import html2pdf from 'html2pdf.js';
@@ -230,8 +230,8 @@ const getDemonstrativeHTML = (data: DemonstrativeExportData): string => {
           ${profile.enderecoComercial ? `<p>${profile.enderecoComercial}</p>` : ''}
         </div>
         <div class="period-info">
-          <strong>Período:</strong> ${new Date(period.startDate).toLocaleDateString('pt-BR')} a ${new Date(period.endDate).toLocaleDateString('pt-BR')}<br>
-          <strong>Data da emissão:</strong> ${new Date().toLocaleDateString('pt-BR')}
+          <strong>Período:</strong> ${formatDateForPDF(period.startDate)} a ${formatDateForPDF(period.endDate)}<br>
+          <strong>Data da emissão:</strong> ${getCurrentDateTimeForPDF()}
         </div>
         ${branding.logoUrl ? `<img src="${branding.logoUrl}" alt="Logo da empresa">` : ''}
       </header>
@@ -354,7 +354,7 @@ export async function generateDemonstrativePDF(data: DemonstrativeExportData): P
   
   const opt = {
     margin: [0.5, 0.5, 0.5, 0.5],
-    filename: `demonstrativo-financeiro-${new Date(data.period.startDate).toLocaleDateString('pt-BR').replace(/\//g, '-')}-${new Date(data.period.endDate).toLocaleDateString('pt-BR').replace(/\//g, '-')}.pdf`,
+    filename: `demonstrativo-financeiro-${formatDateForPDF(data.period.startDate).replace(/\//g, '-')}-${formatDateForPDF(data.period.endDate).replace(/\//g, '-')}.pdf`,
     image: { type: 'jpeg', quality: 0.98 },
     html2canvas: { scale: 2, useCORS: true, logging: false },
     jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }

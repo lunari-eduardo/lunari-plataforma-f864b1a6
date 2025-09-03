@@ -7,6 +7,7 @@ import { Download, TrendingUp, TrendingDown, DollarSign, Percent, User, AlertCir
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { formatCurrency } from '@/utils/financialUtils';
+import { formatDateForPDF } from '@/utils/dateUtils';
 import { DemonstrativoSimplificado as DemonstrativoType } from '@/types/extrato';
 import { useUserProfile, useUserBranding } from '@/hooks/useUserProfile';
 import { generateDemonstrativePDF, DemonstrativeExportData } from '@/utils/newDemonstrativePdfUtils';
@@ -82,7 +83,7 @@ export default function DemonstrativoSimplificado({
       // Usar a nova função específica para demonstrativo
       await generateDemonstrativePDF(exportData);
 
-      const periodText = `${new Date(startDate).toLocaleDateString('pt-BR')} a ${new Date(endDate).toLocaleDateString('pt-BR')}`;
+      const periodText = `${formatDateForPDF(startDate)} a ${formatDateForPDF(endDate)}`;
       toast.success(`PDF do demonstrativo gerado com sucesso para o período ${periodText}!`);
     } catch (error) {
       console.error('Erro ao gerar PDF:', error);
@@ -180,8 +181,8 @@ export default function DemonstrativoSimplificado({
           Resumo Final
         </CardTitle>
         <CardDescription>
-          Período: {new Date(periodo.inicio).toLocaleDateString('pt-BR')} a{' '}
-          {new Date(periodo.fim).toLocaleDateString('pt-BR')}
+          Período: {formatDateForPDF(periodo.inicio)} a{' '}
+          {formatDateForPDF(periodo.fim)}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
