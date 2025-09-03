@@ -169,91 +169,187 @@ export function CalculadoraServicos({
   const removerCustoExtra = (id: string) => {
     setCustosExtras(custosExtras.filter(c => c.id !== id));
   };
-  return <div className="w-full">
-      <div className="flex justify-center mb-6">
-        <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-full">
-          <CollapsibleTrigger asChild>
-            <Button variant="default" className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg mx-auto">
-              <span className="text-sm">📋</span>
-              {isOpen ? <>
-                  Fechar Calculadora
-                  <ChevronUp className="h-4 w-4" />
-                </> : <>
-                  {temEstadoSalvo ? '[📊] Continuar Cálculo' : '[+] Calcular Novo Preço'}
-                  <ChevronDown className="h-4 w-4" />
-                </>}
-            </Button>
-          </CollapsibleTrigger>
+
+  // Renderizar indicador de status
+  function renderStatusIndicator() {
+    switch (statusCalculadora) {
+      case 'salvando':
+        return (
+          <div className="flex items-center gap-1 text-xs text-blue-600">
+            <div className="animate-spin h-3 w-3 border border-blue-600 border-t-transparent rounded-full" />
+            Salvando...
+          </div>
+        );
+      case 'salvo':
+        return (
+          <div className="flex items-center gap-1 text-xs text-green-600">
+            <CheckCircle className="h-3 w-3" />
+            Salvo
+          </div>
+        );
+      case 'erro':
+        return (
+          <div className="flex items-center gap-1 text-xs text-red-600">
+            <AlertCircle className="h-3 w-3" />
+            Erro
+          </div>
+        );
+      default:
+        return (
+          <div className="flex items-center gap-1 text-xs text-gray-500">
+            <AlertCircle className="h-3 w-3" />
+            Não salvo
+          </div>
+        );
+    }
+  }
+
+  return (
+    <div className="w-full space-y-6">
+      {/* Header da Calculadora */}
+      <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-full">
+          <div className="flex justify-between items-center">
+            <div className="space-y-1">
+              <h2 className="text-xl font-semibold text-foreground">Calculadora de Serviços</h2>
+              <p className="text-sm text-muted-foreground">
+                Calcule o preço ideal baseado nos seus custos e variáveis do projeto
+              </p>
+            </div>
+            
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" size="sm" className="flex items-center gap-2">
+                {isOpen ? (
+                  <>
+                    <ChevronUp className="h-4 w-4" />
+                    Recolher
+                  </>
+                ) : (
+                  <>
+                    {temEstadoSalvo ? '📊 Continuar' : '🧮 Calcular'}
+                    <ChevronDown className="h-4 w-4" />
+                  </>
+                )}
+              </Button>
+            </CollapsibleTrigger>
+          </div>
           
-          <CollapsibleContent>
-            <Card className="mt-6 bg-lunar-surface border-lunar-border/50">
+          <CollapsibleContent className="mt-6">
+            <Card className="bg-card border shadow-sm">
               <CardContent className="p-6">
-                {/* Título, descrição e controles no topo */}
-                <div className="mb-6">
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <h3 className="font-semibold text-foreground mb-1">Calculadora de Serviços</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Calcule o preço de um serviço específico com base nos seus custos e em variáveis do projeto.
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                    </div>
+                {/* Ações de controle */}
+                <div className="flex justify-between items-center mb-6 pb-4 border-b">
+                  <div className="flex items-center gap-2">
+                    {renderStatusIndicator()}
                   </div>
                   
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      onClick={salvarEstadoManualmente} 
+                      size="sm" 
+                      variant="outline"
+                      className="flex items-center gap-1"
+                    >
+                      <Save className="h-3 w-3" />
+                      Salvar
+                    </Button>
+                    <Button 
+                      onClick={limparCalculadora} 
+                      size="sm" 
+                      variant="outline"
+                      className="flex items-center gap-1"
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                      Limpar
+                    </Button>
+                    <Button 
+                      onClick={() => setSalvarPacoteModalOpen(true)}
+                      size="sm"
+                      className="flex items-center gap-1"
+                    >
+                      <Plus className="h-3 w-3" />
+                      Salvar Pacote
+                    </Button>
+                  </div>
                 </div>
                 
-                {/* Layout principal - duas colunas */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Coluna Esquerda - Base de Cálculo */}
-                  <div className="space-y-4 lg:order-1">
-                    {/* Base de Cálculo - Horas */}
-                    <Card className="bg-card border border-border shadow-sm">
-                      <CardHeader>
-                        <CardTitle>Base de Cálculo - Horas</CardTitle>
+                {/* Layout principal - responsivo */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Coluna 1 - Base de Cálculo */}
+                  <div className="space-y-4">
+                    <Card className="bg-card border shadow-sm">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base">⏰ Base de Cálculo</CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-4">
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 gap-3">
                           <div>
-                            <Label htmlFor="horas-disponiveis" className="text-sm">Horas disponíveis/dia</Label>
-                            <Input id="horas-disponiveis" type="text" inputMode="numeric" min="1" value={horasDisponiveis} onChange={e => setHorasDisponiveis(Number(e.target.value))} className="h-8 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                            <Label htmlFor="horas-disponiveis" className="text-xs text-muted-foreground">Horas/dia</Label>
+                            <Input 
+                              id="horas-disponiveis" 
+                              type="number" 
+                              min="1" 
+                              value={horasDisponiveis} 
+                              onChange={e => setHorasDisponiveis(Number(e.target.value))} 
+                              className="h-9 text-center"
+                            />
                           </div>
                           <div>
-                            <Label htmlFor="dias-trabalhados" className="text-sm">Dias trabalhados/semana</Label>
-                            <Input id="dias-trabalhados" type="text" inputMode="numeric" min="1" max="7" value={diasTrabalhados} onChange={e => setDiasTrabalhados(Number(e.target.value))} className="h-8 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                            <Label htmlFor="dias-trabalhados" className="text-xs text-muted-foreground">Dias/semana</Label>
+                            <Input 
+                              id="dias-trabalhados" 
+                              type="number" 
+                              min="1" 
+                              max="7" 
+                              value={diasTrabalhados} 
+                              onChange={e => setDiasTrabalhados(Number(e.target.value))} 
+                              className="h-9 text-center"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="horas-estimadas" className="text-xs text-muted-foreground">Horas estimadas</Label>
+                            <Input 
+                              id="horas-estimadas" 
+                              type="number" 
+                              min="0" 
+                              step="0.5" 
+                              value={horasEstimadas} 
+                              onChange={e => setHorasEstimadas(Number(e.target.value))} 
+                              className="h-9 text-center font-medium"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="markup" className="text-xs text-muted-foreground">Markup</Label>
+                            <Input 
+                              id="markup" 
+                              type="number" 
+                              min="1" 
+                              step="0.1" 
+                              value={markup} 
+                              onChange={e => setMarkup(Number(e.target.value))} 
+                              className="h-9 text-center font-medium"
+                            />
                           </div>
                         </div>
                         
-                        
-                        <div>
-                          <Label htmlFor="horas-estimadas" className="text-sm">Horas estimadas para o serviço</Label>
-                          <Input id="horas-estimadas" type="text" inputMode="decimal" min="0" step="0.5" value={horasEstimadas} onChange={e => setHorasEstimadas(Number(e.target.value))} className="h-8 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
-                        </div>
-                        
-                        <div className="space-y-2 pt-3 border-t border-lunar-border/30">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-lunar-textSecondary">Custo da Hora (R$):</span>
-                            <span className="font-medium text-lunar-text">R$ {custoHora.toFixed(2)}</span>
+                        <div className="space-y-2 pt-3 border-t">
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">Custo/Hora:</span>
+                            <span className="font-medium">R$ {custoHora.toFixed(2)}</span>
                           </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-lunar-textSecondary">Custo das Horas do Serviço (R$):</span>
-                            <span className="font-medium text-lunar-text">R$ {custoHorasServico.toFixed(2)}</span>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-lunar-textSecondary">Custo Base do Projeto (R$):</span>
-                            <span className="font-medium text-lunar-text">R$ {custoBaseProjeto.toFixed(2)}</span>
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">Custo Horas:</span>
+                            <span className="font-medium">R$ {custoHorasServico.toFixed(2)}</span>
                           </div>
                         </div>
                       </CardContent>
                     </Card>
                   </div>
 
-                  {/* Coluna Direita - Produtos e Custos Extras */}
-                  <div className="space-y-4 lg:order-2">
-                    {/* Produtos Adicionais */}
-                    <Card className="bg-card border border-border shadow-sm">
-                      <CardHeader>
-                        <CardTitle>Produtos Adicionais</CardTitle>
+                  {/* Coluna 2 - Produtos */}
+                  <div className="space-y-4">
+                    <Card className="bg-card border shadow-sm">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base">📦 Produtos</CardTitle>
                         {/* Inline product addition */}
                         <div className="flex gap-2 mt-3">
                           <div className="flex-1">
@@ -322,132 +418,124 @@ export function CalculadoraServicos({
                       </CardContent>
                     </Card>
 
-                  {/* Custos Adicionais do Projeto */}
-                  <Card className="bg-card border border-border shadow-sm">
-                    <CardHeader>
-                      <CardTitle>Custos Adicionais do Projeto</CardTitle>
-                      {/* Inline cost addition - matching products style */}
-                      <div className="flex gap-2 mt-3">
-                        <div className="flex-1">
-                          <Input 
-                            placeholder="Descrição do custo..." 
-                            className="h-8"
-                          />
-                        </div>
-                        <Button onClick={adicionarCustoExtra} size="sm" variant="outline" className="h-8 px-2">
-                          <Plus className="h-4 w-4" />
+                  {/* Coluna 3 - Custos e Resumo */}
+                  <div className="space-y-4">
+                    {/* Custos Extras */}
+                    <Card className="bg-card border shadow-sm">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base">💰 Custos Extras</CardTitle>
+                        <Button onClick={adicionarCustoExtra} size="sm" variant="outline" className="mt-2 w-full">
+                          <Plus className="h-4 w-4 mr-1" />
+                          Adicionar Custo
                         </Button>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        {custosExtras.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">
-                            Nenhum custo extra adicionado
-                          </p>}
-                        {custosExtras.map(custo => (
-                          <div key={custo.id} className="grid grid-cols-1 md:grid-cols-4 gap-2 items-center p-2 rounded border border-border/50 bg-muted/20">
-                            <div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          {custosExtras.length === 0 && (
+                            <p className="text-sm text-muted-foreground text-center py-4">
+                              Nenhum custo extra adicionado
+                            </p>
+                          )}
+                          {custosExtras.map(custo => (
+                            <div key={custo.id} className="space-y-2 p-3 rounded border bg-muted/20">
                               <Input 
                                 placeholder="Descrição" 
                                 value={custo.descricao} 
                                 onChange={e => atualizarCustoExtra(custo.id, 'descricao', e.target.value)} 
                                 className="h-8 text-sm" 
                               />
-                            </div>
-                            <div>
-                              <Input 
-                                type="number" 
-                                placeholder="Valor" 
-                                value={custo.valorUnitario} 
-                                onChange={e => atualizarCustoExtra(custo.id, 'valorUnitario', parseFloat(e.target.value) || 0)} 
-                                className="h-8 text-sm" 
-                                min="0"
-                                step="0.01"
-                              />
-                            </div>
-                            <div>
-                              <Input 
-                                type="number" 
-                                placeholder="Qtd" 
-                                value={custo.quantidade} 
-                                onChange={e => atualizarCustoExtra(custo.id, 'quantidade', parseInt(e.target.value) || 1)} 
-                                className="h-8 text-sm" 
-                                min="1"
-                              />
-                            </div>
-                            <div className="flex justify-end">
-                              <Button onClick={() => removerCustoExtra(custo.id)} variant="outline" size="sm" className="h-8 px-2">
-                                <Trash2 className="h-3 w-3" />
+                              <div className="grid grid-cols-2 gap-2">
+                                <Input 
+                                  type="number" 
+                                  placeholder="Valor" 
+                                  value={custo.valorUnitario} 
+                                  onChange={e => atualizarCustoExtra(custo.id, 'valorUnitario', parseFloat(e.target.value) || 0)} 
+                                  className="h-8 text-sm" 
+                                  min="0"
+                                  step="0.01"
+                                />
+                                <Input 
+                                  type="number" 
+                                  placeholder="Qtd" 
+                                  value={custo.quantidade} 
+                                  onChange={e => atualizarCustoExtra(custo.id, 'quantidade', parseInt(e.target.value) || 1)} 
+                                  className="h-8 text-sm" 
+                                  min="1"
+                                />
+                              </div>
+                              <Button 
+                                onClick={() => removerCustoExtra(custo.id)} 
+                                variant="outline" 
+                                size="sm" 
+                                className="h-7 w-full"
+                              >
+                                <Trash2 className="h-3 w-3 mr-1" />
+                                Remover
                               </Button>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                  </div>
-                  
-                  {/* Resumo e Precificação Final - Aparece por último em mobile */}
-                  <div className="lg:col-span-2 lg:order-3 order-last">
-                    <Card className="bg-card border border-border shadow-sm">
-                      <CardHeader>
-                        <CardTitle>Resumo e Precificação Final</CardTitle>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Resumo Final */}
+                    <Card className="bg-gradient-to-br from-blue-50 to-green-50 border-blue-200">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base text-blue-700">📊 Resumo Final</CardTitle>
                       </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="flex justify-between items-center">
-                          <Label htmlFor="markup" className="text-sm">Markup (Multiplicador):</Label>
-                          <Input id="markup" type="number" min="1" step="0.1" value={markup} onChange={e => setMarkup(Number(e.target.value) || 1)} className="w-20 h-8 text-right" />
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-lunar-textSecondary">Custo Base do Projeto:</span>
-                            <span className="font-medium text-lunar-text">R$ {custoBaseProjeto.toFixed(2)}</span>
+                      <CardContent className="space-y-3">
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Custo Base:</span>
+                            <span className="font-medium">R$ {custoBaseProjeto.toFixed(2)}</span>
                           </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-lunar-textSecondary">Markup sobre Base ({markup}x):</span>
-                            <span className="font-medium text-lunar-text">R$ {precoBaseComMarkup.toFixed(2)}</span>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Com Markup ({markup}x):</span>
+                            <span className="font-medium">R$ {precoBaseComMarkup.toFixed(2)}</span>
                           </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-lunar-textSecondary">Produtos Adicionais (sem markup):</span>
-                            <span className="font-medium text-lunar-text">R$ {valorProdutos.toFixed(2)}</span>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">+ Produtos:</span>
+                            <span className="font-medium">R$ {valorProdutos.toFixed(2)}</span>
                           </div>
                         </div>
                         
-                        <div className="border-t border-lunar-border/30 pt-3 space-y-2">
-                          <div className="flex justify-between text-lg font-bold text-blue-600">
-                            <span>Preço Final do Serviço:</span>
+                        <div className="border-t pt-3 space-y-2">
+                          <div className="flex justify-between font-bold text-blue-600">
+                            <span>Preço Final:</span>
                             <span>R$ {precoFinal.toFixed(2)}</span>
                           </div>
                           
                           <div className="flex justify-between text-sm text-green-600">
-                            <span>Lucro Líquido (R$):</span>
-                            <span>R$ {lucroLiquido.toFixed(2)}</span>
-                          </div>
-                          
-                          <div className="flex justify-between text-sm text-green-600">
-                            <span>Lucratividade (%):</span>
-                            <span>{lucratividade.toFixed(1)}%</span>
-                          </div>
-                          
-                          {/* BOTÃO PARA SALVAR COMO PACOTE */}
-                          <div className="border-t border-lunar-border/30 pt-4 mt-4">
-                            <Button onClick={() => setSalvarPacoteModalOpen(true)} variant="default" className="w-full" disabled={precoFinal <= 0}>
-                              📦 [+] Salvar como Pacote
-                            </Button>
+                            <span>Lucro:</span>
+                            <span>R$ {lucroLiquido.toFixed(2)} ({lucratividade.toFixed(1)}%)</span>
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </CollapsibleContent>
+                        
+                        <Button 
+                          onClick={() => setSalvarPacoteModalOpen(true)} 
+                          className="w-full mt-4" 
+                          disabled={precoFinal <= 0}
+                        >
+                          📦 Salvar como Pacote
+                        </Button>
+                        </CardContent>
+                     </Card>
+                   </div>
+                 </div>
+               </CardContent>
+             </Card>
+           </CollapsibleContent>
         </Collapsible>
-      </div>
-      
+
       {/* Modal para Salvar Pacote */}
-      <SalvarPacoteModal isOpen={salvarPacoteModalOpen} onClose={() => setSalvarPacoteModalOpen(false)} precoFinal={precoFinal} produtos={produtos} horasEstimadas={horasEstimadas} markup={markup} />
-    </div>;
+      <SalvarPacoteModal 
+        isOpen={salvarPacoteModalOpen} 
+        onClose={() => setSalvarPacoteModalOpen(false)} 
+        precoFinal={precoFinal} 
+        produtos={produtos} 
+        horasEstimadas={horasEstimadas} 
+        markup={markup} 
+      />
+    </div>
+  );
 }

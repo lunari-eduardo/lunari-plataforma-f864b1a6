@@ -180,56 +180,94 @@ export function MetasIndicadores({
     }
   };
 
-  return <Card>
-      <CardHeader>
+  return (
+    <Card className="h-fit">
+      <CardHeader className="pb-4">
         <div className="flex justify-between items-start">
-          <div>
-            <CardTitle className="text-lg text-green-600">Metas e Indicadores de Lucro</CardTitle>
+          <div className="space-y-1">
+            <CardTitle className="text-lg text-primary flex items-center gap-2">
+              📊 Metas e Indicadores
+            </CardTitle>
             <p className="text-sm text-muted-foreground">
-              Defina suas metas financeiras e acompanhe os indicadores de lucro.
+              Configure metas e monitore indicadores
             </p>
           </div>
+          {renderStatusIndicator()}
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Coluna Esquerda - Definição de Metas */}
-          <div>
-            <h3 className="font-semibold mb-4">Definição de Metas</h3>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="margem-lucro">Margem de Lucro Desejada (%)</Label>
-                <Input id="margem-lucro" type="number" min="0" max="100" step="1" value={margemLucroDesejada} onChange={e => setMargemLucroDesejada(Number(e.target.value))} className="max-w-32" />
-              </div>
-            </div>
-          </div>
 
-          {/* Coluna Direita - Indicadores Financeiros */}
-          <div>
-            <h3 className="font-semibold mb-4">Indicadores Financeiros</h3>
-            <div className="space-y-4">
-              <div className="flex justify-between">
-                <span className="text-sm">Faturamento Mínimo Anual:</span>
-                <span className="font-medium">R$ {faturamentoMinimoAnual.toFixed(2)}</span>
+      <CardContent className="space-y-6">
+        {/* Configuração de Margem */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="margem-lucro" className="text-sm font-medium">
+              Margem de Lucro Desejada
+            </Label>
+            <span className="text-xs text-muted-foreground">{margemLucroDesejada}%</span>
+          </div>
+          <Input 
+            id="margem-lucro" 
+            type="number" 
+            min="0" 
+            max="100" 
+            step="1" 
+            value={margemLucroDesejada} 
+            onChange={e => setMargemLucroDesejada(Number(e.target.value))} 
+            className="text-center font-medium"
+          />
+        </div>
+
+        {/* Indicadores em Cards */}
+        <div className="space-y-3">
+          <h4 className="text-sm font-semibold text-foreground border-b pb-2">Indicadores Financeiros</h4>
+          
+          <div className="space-y-3">
+            {/* Faturamento Mínimo */}
+            <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+              <div className="space-y-1">
+                <span className="text-xs text-muted-foreground">Faturamento Mínimo</span>
+                <p className="text-sm font-medium">Anual</p>
               </div>
-              
-              <div className="flex justify-between">
-                <span className="text-sm text-blue-600">Meta de Faturamento Anual:</span>
-                <span className="font-medium text-blue-600">R$ {metaFaturamentoAnual.toFixed(2)}</span>
+              <span className="text-sm font-semibold text-foreground">
+                R$ {faturamentoMinimoAnual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </span>
+            </div>
+
+            {/* Meta Anual */}
+            <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="space-y-1">
+                <span className="text-xs text-blue-600">Meta de Faturamento</span>
+                <p className="text-sm font-medium text-blue-700">Anual</p>
               </div>
-              
-              <div className="flex justify-between">
-                <span className="text-sm text-green-600">Meta de Faturamento Mensal:</span>
-                <span className="font-medium text-green-600">R$ {metaFaturamentoMensal.toFixed(2)}</span>
+              <span className="text-sm font-bold text-blue-600">
+                R$ {metaFaturamentoAnual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </span>
+            </div>
+
+            {/* Meta Mensal */}
+            <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+              <div className="space-y-1">
+                <span className="text-xs text-green-600">Meta de Faturamento</span>
+                <p className="text-sm font-medium text-green-700">Mensal</p>
               </div>
-              
-              <div className="flex justify-between">
-                <span className="text-sm text-purple-600">Meta de Lucro Anual:</span>
-                <span className="font-medium text-purple-600">R$ {metaLucroAnual.toFixed(2)}</span>
+              <span className="text-sm font-bold text-green-600">
+                R$ {metaFaturamentoMensal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </span>
+            </div>
+
+            {/* Lucro Anual */}
+            <div className="flex items-center justify-between p-3 bg-purple-50 border border-purple-200 rounded-lg">
+              <div className="space-y-1">
+                <span className="text-xs text-purple-600">Meta de Lucro</span>
+                <p className="text-sm font-medium text-purple-700">Anual</p>
               </div>
+              <span className="text-sm font-bold text-purple-600">
+                R$ {metaLucroAnual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </span>
             </div>
           </div>
         </div>
       </CardContent>
-    </Card>;
+    </Card>
+  );
 }

@@ -363,18 +363,25 @@ export function EstruturaCustosFixos({
         </div>;
     }
   };
-  return <Card>
-      <CardHeader>
-        <div className="flex justify-between items-center">
-          <div>
-            <CardTitle className="text-sm">Estrutura de Custos Fixos</CardTitle>
-            <p className="text-muted-foreground mt-1 text-xs">
-              Defina seus custos fixos mensais para calcular o valor da sua hora de trabalho.
+  return (
+    <Card className="shadow-sm">
+      <CardHeader className="pb-4">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+          <div className="space-y-2">
+            <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-2">
+              💼 Estrutura de Custos Fixos
+            </CardTitle>
+            <p className="text-sm text-muted-foreground max-w-2xl">
+              Configure todos os seus custos fixos mensais para um cálculo preciso do valor da sua hora de trabalho
             </p>
           </div>
-          <div className="text-right space-y-1">
-            <p className="text-sm text-muted-foreground">Total:</p>
-            <p className="font-bold text-green-600 text-base">R$ {totalPrincipal.toFixed(2)}</p>
+          
+          <div className="flex items-center gap-4">
+            {renderStatusIndicator()}
+            <div className="text-right space-y-1 p-3 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg">
+              <p className="text-xs text-green-600 font-medium">Total Mensal</p>
+              <p className="font-bold text-green-700 text-lg">R$ {totalPrincipal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+            </div>
           </div>
         </div>
       </CardHeader>
@@ -979,5 +986,6 @@ export function EstruturaCustosFixos({
           </TabsContent>
         </Tabs>
       </CardContent>
-    </Card>;
+    </Card>
+  );
 }
