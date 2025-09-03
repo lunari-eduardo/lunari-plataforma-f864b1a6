@@ -100,6 +100,7 @@ const getExtratoDetalhadoHTML = (data: ExtratoDetalhadoData): string => {
           border-bottom: 2px solid #eee;
           padding-bottom: 10px;
           margin-bottom: 20px;
+          page-break-after: avoid;
         }
 
         header img {
@@ -132,6 +133,7 @@ const getExtratoDetalhadoHTML = (data: ExtratoDetalhadoData): string => {
           font-size: 20px;
           margin: 20px 0 10px 0;
           color: #333;
+          page-break-after: avoid;
         }
 
         .subtitle {
@@ -140,25 +142,32 @@ const getExtratoDetalhadoHTML = (data: ExtratoDetalhadoData): string => {
           color: #666;
           margin-bottom: 30px;
           font-style: italic;
+          page-break-after: avoid;
         }
 
         .month-section {
-          margin-bottom: 35px;
+          margin-bottom: 30px;
           page-break-inside: avoid;
+          break-inside: avoid;
         }
 
         .month-header {
-          background: #2c3e50;
-          color: white;
+          background: #f8f8f8;
+          color: #333;
           padding: 12px 15px;
-          margin: 0 0 20px 0;
+          margin: 0 0 15px 0;
           font-size: 16px;
           font-weight: bold;
           text-align: center;
+          border-left: 4px solid #333;
+          page-break-after: avoid;
+          page-break-inside: avoid;
         }
 
         .section {
-          margin-bottom: 25px;
+          margin-bottom: 20px;
+          page-break-inside: avoid;
+          break-inside: avoid;
         }
 
         .section h2 {
@@ -168,12 +177,15 @@ const getExtratoDetalhadoHTML = (data: ExtratoDetalhadoData): string => {
           background-color: #f8f8f8;
           border-left: 4px solid #333;
           color: #333;
+          page-break-after: avoid;
         }
 
         table {
           width: 100%;
           border-collapse: collapse;
           margin-bottom: 15px;
+          page-break-inside: avoid;
+          break-inside: avoid;
         }
 
         th, td {
@@ -228,11 +240,12 @@ const getExtratoDetalhadoHTML = (data: ExtratoDetalhadoData): string => {
         }
 
         .month-summary {
-          margin-top: 20px;
+          margin-top: 15px;
           padding: 15px;
           background-color: #f9f9f9;
           border: 1px solid #ddd;
           border-radius: 4px;
+          page-break-inside: avoid;
         }
 
         .month-summary h3 {
@@ -273,6 +286,7 @@ const getExtratoDetalhadoHTML = (data: ExtratoDetalhadoData): string => {
           border: 2px solid #333;
           padding: 20px;
           background-color: #f9f9f9;
+          page-break-inside: avoid;
         }
 
         .resumo-final h2 {
@@ -358,7 +372,24 @@ const getExtratoDetalhadoHTML = (data: ExtratoDetalhadoData): string => {
         @media print {
           body { margin: 20px; }
           footer { position: fixed; }
-          .month-section { page-break-inside: avoid; }
+          .month-section { 
+            page-break-inside: avoid;
+            break-inside: avoid;
+          }
+          .section { 
+            page-break-inside: avoid;
+            break-inside: avoid;
+          }
+          table { 
+            page-break-inside: avoid;
+            break-inside: avoid;
+          }
+          .month-header {
+            page-break-after: avoid;
+          }
+          .section h2 {
+            page-break-after: avoid;
+          }
         }
       </style>
     </head>
@@ -389,7 +420,7 @@ const getExtratoDetalhadoHTML = (data: ExtratoDetalhadoData): string => {
           
           ${month.receitas.length > 0 ? `
             <div class="section">
-              <h2>💰 Receitas</h2>
+              <h2>Receitas</h2>
               <table>
                 <thead>
                   <tr>
@@ -428,7 +459,7 @@ const getExtratoDetalhadoHTML = (data: ExtratoDetalhadoData): string => {
 
           ${month.despesas.length > 0 ? `
             <div class="section">
-              <h2>💸 Despesas</h2>
+              <h2>Despesas</h2>
               <table>
                 <thead>
                   <tr>
@@ -535,11 +566,27 @@ export async function generateExtratoDetalhadoPDF(data: ExtratoDetalhadoData): P
   const html = getExtratoDetalhadoHTML(data);
   
   const opt = {
-    margin: [0.5, 0.5, 0.5, 0.5],
+    margin: [0.5, 0.5, 0.8, 0.5],
     filename: `extrato-detalhado-${formatDateForPDF(data.period.startDate).replace(/\//g, '-')}-${formatDateForPDF(data.period.endDate).replace(/\//g, '-')}.pdf`,
     image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true, logging: false },
-    jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+    html2canvas: { 
+      scale: 2, 
+      useCORS: true, 
+      logging: false,
+      allowTaint: true,
+      foreignObjectRendering: true
+    },
+    jsPDF: { 
+      unit: 'in', 
+      format: 'a4', 
+      orientation: 'portrait',
+      compress: true
+    },
+    pagebreak: { 
+      mode: ['avoid-all', 'css', 'legacy'],
+      before: '.month-section',
+      after: '.resumo-final'
+    }
   };
 
   try {
