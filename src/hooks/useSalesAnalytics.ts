@@ -5,6 +5,9 @@ import { ORIGENS_PADRAO } from '@/utils/defaultOrigens';
 import { revenueAnalyticsService, MonthlyOriginData } from '@/services/RevenueAnalyticsService';
 import { useLeadMetrics } from '@/hooks/useLeadMetrics';
 
+// Safe import for GoalsIntegrationService
+import { GoalsIntegrationService } from '@/services/GoalsIntegrationService';
+
 // Re-export types for backward compatibility
 export type { SalesMetrics, MonthlyData, CategoryData, PackageDistributionData, OriginData };
 
@@ -59,19 +62,11 @@ export function useSalesAnalytics(
     // Calculate goal progress using real pricing data
     let monthlyGoal = 0;
     try {
-      // Use dynamic import without await (fallback to sync loading)
-      import('@/services/GoalsIntegrationService').then(({ GoalsIntegrationService }) => {
-        try {
-          const monthlyGoals = GoalsIntegrationService.getMonthlyGoals();
-          monthlyGoal = monthlyGoals.revenue;
-        } catch (err) {
-          console.warn('⚠️ [useSalesAnalytics] Erro ao processar metas:', err);
-        }
-      }).catch(error => {
-        console.warn('⚠️ [useSalesAnalytics] Erro ao carregar meta mensal:', error);
-      });
+      const monthlyGoals = GoalsIntegrationService.getMonthlyGoals();
+      monthlyGoal = monthlyGoals.revenue;
     } catch (error) {
-      console.warn('⚠️ [useSalesAnalytics] Erro geral:', error);
+      console.warn('⚠️ [useSalesAnalytics] Erro ao carregar meta mensal:', error);
+      monthlyGoal = 0;
     }
     
     let monthlyGoalProgress = 0;
@@ -232,11 +227,9 @@ export function useSalesAnalytics(
     console.log(`🎯 [useSalesAnalytics] Calculando distribuição por origem com RevenueAnalyticsService`);
     
     try {
-      // Importar o serviço dinamicamente para evitar circular imports
-      import('@/services/RevenueAnalyticsService').then(({ revenueAnalyticsService }) => {
-        const result = revenueAnalyticsService.generateClientOriginMatrix(selectedYear, selectedCategory);
-        console.log(`📊 [useSalesAnalytics] RevenueAnalytics: ${result.originSummary.length} origens, R$ ${result.totalRevenue.toLocaleString()}`);
-      });
+      // Use static import with service already imported at top
+      const result = revenueAnalyticsService.generateClientOriginMatrix(selectedYear, selectedCategory);
+      console.log(`📊 [useSalesAnalytics] RevenueAnalytics: ${result.originSummary.length} origens, R$ ${result.totalRevenue.toLocaleString()}`);
     } catch (error) {
       console.warn('⚠️ [useSalesAnalytics] Fallback para cálculo manual de origem:', error);
     }

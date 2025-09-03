@@ -5,7 +5,7 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  base: mode === 'production' ? './' : '/',
+  base: '/',
   server: {
     host: "::",
     port: 8080,
@@ -22,5 +22,18 @@ export default defineConfig(({ mode }) => ({
   define: {
     global: "globalThis",
     VITE_APP_VERSION: JSON.stringify(process.env.npm_package_version || '1.0.0'),
+  },
+  build: {
+    sourcemap: false,
+    minify: 'terser',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          router: ['react-router-dom'],
+          ui: ['@radix-ui/react-dialog', '@radix-ui/react-popover', '@radix-ui/react-select']
+        }
+      }
+    }
   },
 }));

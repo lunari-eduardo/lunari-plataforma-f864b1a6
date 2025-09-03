@@ -1,6 +1,9 @@
 import { NormalizedWorkflowData } from '@/types/salesAnalytics';
 import { parseMonetaryValue } from '@/utils/workflowSessionsAdapter';
 
+// Safe import for GoalsIntegrationService
+import { GoalsIntegrationService } from '@/services/GoalsIntegrationService';
+
 /**
  * Normaliza dados brutos do workflow_sessions para estrutura otimizada de vendas
  * Garante dados limpos e consistentes para análise
@@ -177,24 +180,15 @@ export function generateAllMonthsData(year: number, normalizedData: NormalizedWo
     'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'
   ];
 
-  // Importar o serviço de metas dinâmico
+  // Import the goals service statically for production reliability
   let monthlyGoalAmount = 0;
   try {
-    // Use dynamic import without await (fallback to sync loading)
-    import('@/services/GoalsIntegrationService').then(({ GoalsIntegrationService }) => {
-      try {
-        const monthlyGoals = GoalsIntegrationService.getMonthlyGoals();
-        monthlyGoalAmount = monthlyGoals.revenue;
-        console.log(`📊 [SalesDataNormalizer] Meta mensal da precificação: R$ ${monthlyGoalAmount.toLocaleString()}`);
-      } catch (err) {
-        console.warn('⚠️ [SalesDataNormalizer] Erro ao processar metas:', err);
-      }
-    }).catch(error => {
-      console.warn('⚠️ [SalesDataNormalizer] Erro ao carregar metas da precificação:', error);
-    });
+    const monthlyGoals = GoalsIntegrationService.getMonthlyGoals();
+    monthlyGoalAmount = monthlyGoals.revenue;
+    console.log(`📊 [SalesDataNormalizer] Meta mensal da precificação: R$ ${monthlyGoalAmount.toLocaleString()}`);
   } catch (error) {
-    console.warn('⚠️ [SalesDataNormalizer] Erro geral:', error);
-    monthlyGoalAmount = 0; // Usar 0 se não conseguir carregar
+    console.warn('⚠️ [SalesDataNormalizer] Erro ao carregar metas da precificação:', error);
+    monthlyGoalAmount = 0;
   }
 
   return months.map((month, index) => {

@@ -25,6 +25,7 @@ import NotFound from "./pages/NotFound";
 import { AppProvider } from "./contexts/AppContext";
 import { AgendaProvider } from "./contexts/AgendaContext";
 import ThemeProvider from "./components/theme/ThemeProvider";
+import { BuildMonitor } from "./components/shared/BuildMonitor";
 
 // Create a stable QueryClient instance
 const queryClient = new QueryClient({
@@ -50,6 +51,7 @@ function App() {
           <AppProvider>
             <AgendaProvider>
               <TooltipProvider>
+                <BuildMonitor />
                 <Toaster />
                 <Sonner />
                 <Routes>
