@@ -5,7 +5,7 @@ import { Download, AlertCircle, User, FileText, List } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { useUserProfile, useUserBranding } from '@/hooks/useUserProfile';
-import { generateFinancialPDF, FinancialExportData } from '@/utils/financialPdfUtils';
+import { generateUnifiedExtratoFDF, UnifiedExtratoData } from '@/utils/unifiedPdfUtils';
 import { DadosExportacaoExtrato } from '@/types/extrato';
 import { TransacaoComItem } from '@/types/financas';
 import PeriodSelectionModal from './PeriodSelectionModal';
@@ -73,7 +73,18 @@ export default function ExportDetalhado({ dados }: ExportDetalhadoProps) {
         item: {
           id: linha.referenciaId,
           nome: linha.descricao,
-          grupo_principal: linha.categoria || (linha.tipo === 'entrada' ? 'Receita Operacional' : 'Despesa Variável'),
+          // Mapear grupos corretamente baseado na origem
+          grupo_principal: (() => {
+            if (linha.tipo === 'entrada') {
+              // Entradas do workflow = Receita Operacional
+              if (linha.origem === 'workflow') return 'Receita Operacional';
+              // Entradas do financeiro = Receita Não Operacional (categoria já definida)
+              return linha.categoria || 'Receita Não Operacional';
+            } else {
+              // Saídas: usar categoria se disponível, senão Despesa Variável
+              return linha.categoria || 'Despesa Variável';
+            }
+          })() as any,
           userId: 'current-user',
           ativo: true,
           criadoEm: new Date().toISOString(),
@@ -91,26 +102,18 @@ export default function ExportDetalhado({ dados }: ExportDetalhadoProps) {
       };
       filteredSummary.saldoFinal = filteredSummary.totalReceitas - filteredSummary.totalDespesas;
 
-      const exportData: FinancialExportData = {
+      const exportData: UnifiedExtratoData = {
         profile,
         branding,
         transactions,
         period: { 
-          month, 
-          year, 
-          isAnnual: false,
           startDate,
           endDate
         },
         summary: filteredSummary
       };
 
-      await generateFinancialPDF(exportData, {
-        type: 'monthly',
-        period: { month, year },
-        includeDetails: true,
-        includeGraphics: false
-      });
+      await generateUnifiedExtratoFDF(exportData);
 
       const periodText = `${formatDateForPDF(startDate)} a ${formatDateForPDF(endDate)}`;
       toast.success(`PDF gerado com sucesso para o período ${periodText}!`);

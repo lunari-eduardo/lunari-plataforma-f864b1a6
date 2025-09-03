@@ -8,7 +8,7 @@ export type StatusParcela = 'agendado' | 'faturado' | 'pago' | 'cancelado';
 export type TipoCategoria = 'despesa_fixa' | 'despesa_variavel' | 'receita_nao_operacional' | 'investimento' | 'equipamento' | 'marketing' | 'acervo';
 
 // Novos tipos para a arquitetura reestruturada
-export type GrupoPrincipal = 'Despesa Fixa' | 'Despesa Variável' | 'Investimento' | 'Receita Não Operacional';
+export type GrupoPrincipal = 'Despesa Fixa' | 'Despesa Variável' | 'Investimento' | 'Receita Não Operacional' | 'Receita Operacional';
 
 export type StatusTransacao = 'Agendado' | 'Faturado' | 'Pago';
 

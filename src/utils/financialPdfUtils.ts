@@ -61,18 +61,28 @@ const getCompanyInfo = (profile: UserProfile): string => {
   `;
 };
 
-const getTransactionsByGroup = (transactions: TransacaoComItem[]): Record<GrupoPrincipal, TransacaoComItem[]> => {
-  const groups: Record<GrupoPrincipal, TransacaoComItem[]> = {
+const getTransactionsByGroup = (transactions: TransacaoComItem[]): Record<string, TransacaoComItem[]> => {
+  const groups: Record<string, TransacaoComItem[]> = {
+    'Receita Operacional': [],
+    'Receita Não Operacional': [],
     'Despesa Fixa': [],
     'Despesa Variável': [],
-    'Investimento': [],
-    'Receita Não Operacional': []
+    'Investimento': []
   };
 
   transactions.forEach(transaction => {
     const group = transaction.item.grupo_principal;
+    // Garantir que todos os grupos sejam reconhecidos, incluindo 'Receita Operacional'
     if (groups[group]) {
       groups[group].push(transaction);
+    } else {
+      // Fallback: classificar por tipo de transação se grupo não reconhecido
+      console.warn(`Grupo não reconhecido: ${group}. Classificando automaticamente.`);
+      if (group?.includes('Receita') || transaction.valor > 0) {
+        groups['Receita Não Operacional'].push(transaction);
+      } else {
+        groups['Despesa Variável'].push(transaction);
+      }
     }
   });
 

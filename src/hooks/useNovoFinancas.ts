@@ -388,7 +388,8 @@ export function useNovoFinancas() {
       'Despesa Fixa': [],
       'Despesa Variável': [],
       'Investimento': [],
-      'Receita Não Operacional': []
+      'Receita Não Operacional': [],
+      'Receita Operacional': []
     };
 
     transacoesFiltradas.forEach(transacao => {

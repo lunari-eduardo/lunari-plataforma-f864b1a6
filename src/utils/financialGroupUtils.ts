@@ -47,6 +47,14 @@ export const GRUPOS_CONFIG: Record<GrupoPrincipal, GrupoInfo> = {
     titulo: 'Receitas Extras',
     corStatus: 'bg-lunar-success/10 text-lunar-success border-lunar-success/20',
     corBorda: 'border-lunar-success/20'
+  },
+  'Receita Operacional': {
+    cor: 'emerald',
+    corTema: 'text-emerald-600',
+    icone: PiggyBank,
+    titulo: 'Receitas Operacionais',
+    corStatus: 'bg-emerald-50 text-emerald-600 border-emerald-200',
+    corBorda: 'border-emerald-200'
   }
 };
 
@@ -74,10 +82,11 @@ export function mapearTipoParaGrupo(tipo: string): GrupoPrincipal {
  * Lista ordenada dos grupos para renderização consistente
  */
 export const GRUPOS_ORDEM: GrupoPrincipal[] = [
+  'Receita Operacional',
+  'Receita Não Operacional',
   'Despesa Fixa',
   'Despesa Variável', 
-  'Investimento',
-  'Receita Não Operacional'
+  'Investimento'
 ];
 
 /**

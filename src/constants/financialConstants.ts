@@ -4,14 +4,16 @@ export const FINANCIAL_GROUPS: GrupoPrincipal[] = [
   'Despesa Fixa', 
   'Despesa Variável', 
   'Investimento', 
-  'Receita Não Operacional'
+  'Receita Não Operacional',
+  'Receita Operacional'
 ];
 
 export const GROUP_COLORS: Record<GrupoPrincipal, string> = {
   'Despesa Fixa': 'bg-destructive/10 text-destructive border-destructive/20',
   'Despesa Variável': 'bg-lunar-warning/10 text-lunar-warning border-lunar-warning/20',
   'Investimento': 'bg-primary/10 text-primary border-primary/20',
-  'Receita Não Operacional': 'bg-availability/10 text-availability border-availability/20'
+  'Receita Não Operacional': 'bg-availability/10 text-availability border-availability/20',
+  'Receita Operacional': 'bg-lunar-success/10 text-lunar-success border-lunar-success/20'
 };
 
 export const POLLING_INTERVAL = 2000;
