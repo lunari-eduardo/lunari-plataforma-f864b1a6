@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Edit, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
 import type { EtapaTrabalho } from '@/types/configuration';
-
 interface FluxoTrabalhoProps {
   etapas: EtapaTrabalho[];
   onAdd: (etapa: Omit<EtapaTrabalho, 'id' | 'ordem'>) => void;
@@ -11,7 +10,6 @@ interface FluxoTrabalhoProps {
   onDelete: (id: string) => void;
   onMove: (id: string, direcao: 'cima' | 'baixo') => void;
 }
-
 export default function FluxoTrabalho({
   etapas,
   onAdd,
@@ -45,7 +43,6 @@ export default function FluxoTrabalho({
     }
     setEditandoEtapa(id);
   };
-
   const salvarEdicaoEtapa = (id: string) => {
     onUpdate(id, editData);
     setEditandoEtapa(null);
@@ -115,12 +112,18 @@ export default function FluxoTrabalho({
                     <div className="col-span-1 hidden sm:block">{etapa.ordem}</div>
                     <div className="col-span-7 sm:col-span-5 pr-2">
                         <Input defaultValue={etapa.nome} onChange={e => {
-                  setEditData(prev => ({ ...prev, nome: e.target.value }));
+                  setEditData(prev => ({
+                    ...prev,
+                    nome: e.target.value
+                  }));
                 }} className="h-8 text-sm" />
                     </div>
                     <div className="col-span-4 hidden sm:flex items-center">
                       <Input type="color" defaultValue={etapa.cor} onChange={e => {
-                  setEditData(prev => ({ ...prev, cor: e.target.value }));
+                  setEditData(prev => ({
+                    ...prev,
+                    cor: e.target.value
+                  }));
                 }} className="w-20 h-8" />
                     </div>
                     <div className="flex justify-end items-center gap-2 col-span-5 sm:col-span-2">
@@ -140,12 +143,7 @@ export default function FluxoTrabalho({
                       {etapa.nome}
                     </div>
                     <div className="col-span-4 hidden sm:flex items-center">
-                      <div className="px-3 py-1 rounded-full text-xs border border-border" style={{
-                  backgroundColor: etapa.cor,
-                  color: etapa.cor.toLowerCase() === '#ffffff' ? 'hsl(var(--foreground))' : 'hsl(var(--primary-foreground))'
-                }}>
-                        {etapa.cor}
-                      </div>
+                      
                     </div>
                     <div className="flex justify-end gap-1 col-span-5 sm:col-span-2">
                       <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => moverEtapa(etapa.id, 'cima')} disabled={etapa.ordem === 1}>
