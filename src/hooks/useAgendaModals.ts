@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Appointment } from '@/hooks/useAgenda';
-import { Orcamento } from '@/types/orcamentos';
+import { Orcamento } from '@/types/orcamento';
 
 export interface SelectedSlot {
   date: Date;

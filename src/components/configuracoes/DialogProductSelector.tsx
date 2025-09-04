@@ -1,4 +1,4 @@
-import { ProductSearchCombobox } from "@/components/orcamentos/ProductSearchCombobox";
+import { ProductSearchCombobox } from "@/components/ui/product-search-combobox";
 
 interface Product {
   id: string;

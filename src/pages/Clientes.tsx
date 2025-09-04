@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useAppContext } from '@/contexts/AppContext';
-import { Cliente } from '@/types/orcamentos';
+import { Cliente } from '@/types/cliente';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";

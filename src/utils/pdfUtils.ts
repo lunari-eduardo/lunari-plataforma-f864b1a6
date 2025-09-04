@@ -1,5 +1,5 @@
 
-import { Orcamento } from '@/types/orcamentos';
+import { Orcamento } from '@/types/orcamento';
 import { formatDateForDisplay } from './dateUtils';
 
 export const gerarPDFOrcamento = async (orcamento: Orcamento): Promise<string> => {
@@ -48,32 +48,6 @@ export const gerarHTMLOrcamento = (orcamento: Orcamento): string => {
         <h3>Detalhes do Serviço:</h3>
         <p>${orcamento.detalhes}</p>
       </div>
-      
-      ${orcamento.pacotes.length > 0 ? `
-        <div class="pacotes">
-          <h3>Pacotes e Produtos:</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>Item</th>
-                <th>Quantidade</th>
-                <th>Valor Unitário</th>
-                <th>Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${orcamento.pacotes.map(p => `
-                <tr>
-                  <td>${p.nome}</td>
-                  <td>${p.quantidade}</td>
-                  <td>R$ ${p.preco.toFixed(2)}</td>
-                  <td>R$ ${(p.preco * p.quantidade).toFixed(2)}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-      ` : ''}
       
       <div class="total">
         <p>Valor Total: R$ ${valorFinal.toFixed(2)}</p>

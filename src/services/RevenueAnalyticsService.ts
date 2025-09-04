@@ -1,5 +1,5 @@
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
-import { Cliente } from '@/types/orcamentos';
+import { Cliente } from '@/types/cliente';
 import { parseMonetaryValue } from '@/utils/workflowSessionsAdapter';
 import { ORIGENS_PADRAO } from '@/utils/defaultOrigens';
 

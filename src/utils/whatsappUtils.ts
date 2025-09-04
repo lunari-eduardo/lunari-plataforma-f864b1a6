@@ -1,5 +1,5 @@
 
-import { Orcamento } from '@/types/orcamentos';
+import { Orcamento } from '@/types/orcamento';
 import { formatDateForDisplay } from './dateUtils';
 
 export const gerarLinkWhatsApp = (orcamento: Orcamento, pdfUrl?: string): string => {

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Cliente } from '@/types/orcamentos';
+import { Cliente } from '@/types/cliente';
 import { formatToDayMonth, formatDateForDisplay } from '@/utils/dateUtils';
 import { MessageCircle, Phone, Cake, X } from "lucide-react";
 import { abrirWhatsApp } from '@/utils/whatsappUtils';

@@ -15,7 +15,7 @@ import { useSwipeNavigation } from "@/hooks/useSwipeNavigation";
 import { useAgendaNavigation } from "@/hooks/useAgendaNavigation";
 import { useAgendaModals } from "@/hooks/useAgendaModals";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
-import { Orcamento } from "@/types/orcamentos";
+import { Orcamento } from '@/types/orcamento';
 
 export default function Agenda() {
   const { unifiedEvents } = useUnifiedCalendar();

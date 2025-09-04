@@ -15,7 +15,7 @@ import { AppContext } from '@/contexts/AppContext';
 import { useIntegration } from '@/hooks/useIntegration';
 import { useOrcamentos } from '@/hooks/useOrcamentos';
 import { ORIGENS_PADRAO } from '@/utils/defaultOrigens';
-import { CategorySelector } from '@/components/orcamentos/CategorySelector';
+import { CategorySelector } from '@/components/ui/category-selector';
 import { configurationService } from '@/services/ConfigurationService';
 
 // Tipo de agendamento

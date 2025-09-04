@@ -1,12 +1,11 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import AppointmentForm from "./AppointmentForm";
 import AppointmentDetails from "./AppointmentDetails";
-import EditOrcamentoModal from "@/components/orcamentos/EditOrcamentoModal";
 import BudgetAppointmentDetails from "./BudgetAppointmentDetails";
 import AvailabilityConfigModal from "./AvailabilityConfigModal";
 import ShareAvailabilityModal from "./ShareAvailabilityModal";
 import { Appointment } from "@/hooks/useAgenda";
-import { Orcamento } from "@/types/orcamentos";
+import { Orcamento } from "@/types/orcamento";
 
 interface AgendaModalsProps {
   // Modal states
@@ -121,12 +120,19 @@ export default function AgendaModals({
         </DialogContent>
       </Dialog>
 
-      {/* Budget Edit Modal */}
-      <EditOrcamentoModal
-        isOpen={isBudgetModalOpen}
-        onClose={() => setIsBudgetModalOpen(false)}
-        orcamento={selectedBudget}
-      />
+      {/* Budget Edit Modal - Disabled */}
+      {selectedBudget && (
+        <Dialog open={isBudgetModalOpen} onOpenChange={setIsBudgetModalOpen}>
+          <DialogContent className="sm:max-w-[500px] bg-background border-border">
+            <DialogHeader>
+              <DialogTitle>Orçamento - Sistema Desabilitado</DialogTitle>
+            </DialogHeader>
+            <div className="p-4 text-center text-muted-foreground">
+              O sistema de orçamentos foi removido. Use o CRM e Workflow para gerenciar clientes e projetos.
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Availability Config Modal */}
       <AvailabilityConfigModal

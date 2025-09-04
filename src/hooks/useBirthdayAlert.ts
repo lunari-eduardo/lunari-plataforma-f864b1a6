@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Cliente } from '@/types/orcamentos';
+import { Cliente } from '@/types/cliente';
 
 function isWithinNext30Days(dataNascimento: string): boolean {
   if (!dataNascimento) return false;

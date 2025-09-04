@@ -4,7 +4,23 @@
  * Converte dados do sistema antigo para a nova estrutura com valores congelados
  */
 
-import { Orcamento, PacotePrincipal, ProdutoAdicional } from '@/types/orcamentos';
+import { Orcamento } from '@/types/orcamento';
+
+// Compatibility types for migration
+interface PacotePrincipal {
+  pacoteId: string;
+  nome: string;
+  valorCongelado: number;
+  produtosIncluidos: any[];
+}
+
+interface ProdutoAdicional {
+  produtoId: string;
+  nome: string;
+  quantidade: number;
+  valorUnitarioCongelado: number;
+  tipo: 'manual';
+}
 
 interface OrcamentoAntigo {
   id: string;
@@ -77,19 +93,21 @@ export function migrateOrcamentoToNewStructure(
     }));
   }
 
-  // Retornar orçamento na nova estrutura
+  // Retornar orçamento na nova estrutura (compatibility mode)
   return {
-    ...orcamentoAntigo,
-    pacotePrincipal,
-    produtosAdicionais,
+    id: orcamentoAntigo.id,
+    cliente: orcamentoAntigo.cliente,
+    data: orcamentoAntigo.data,
+    hora: orcamentoAntigo.hora,
+    categoria: orcamentoAntigo.categoria,
+    descricao: orcamentoAntigo.descricao,
+    detalhes: orcamentoAntigo.detalhes,
     valorFinal: orcamentoAntigo.valorTotal || 0,
-    desconto: 0,
-    
-    // Manter campos antigos para compatibilidade
+    desconto: orcamentoAntigo.desconto || 0,
+    status: orcamentoAntigo.status as any,
+    origemCliente: orcamentoAntigo.origemCliente,
+    criadoEm: orcamentoAntigo.criadoEm,
     valorTotal: orcamentoAntigo.valorTotal,
-    
-    
-    status: orcamentoAntigo.status as any
   };
 }
 
@@ -107,10 +125,10 @@ export function migrateAllOrcamentos(
 }
 
 /**
- * Verifica se um orçamento já está na nova estrutura
+ * Verifica se um orçamento já está na nova estrutura (compatibility check)
  */
 export function isNewStructure(orcamento: any): boolean {
-  return orcamento.pacotePrincipal !== undefined || orcamento.produtosAdicionais !== undefined;
+  return orcamento.valorFinal !== undefined;
 }
 
 /**

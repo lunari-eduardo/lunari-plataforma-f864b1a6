@@ -1,6 +1,6 @@
 import { storage, STORAGE_KEYS } from './localStorage';
 import { WorkflowItem } from '@/contexts/AppContext';
-import { Cliente } from '@/types/orcamentos';
+import { Cliente } from '@/types/cliente';
 
 /**
  * Utilitário para corrigir problemas de corrupção de clienteId no sistema

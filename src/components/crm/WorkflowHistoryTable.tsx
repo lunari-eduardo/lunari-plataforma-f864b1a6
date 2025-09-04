@@ -4,7 +4,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { History, Calendar, DollarSign, Package, CreditCard } from "lucide-react";
 import { formatCurrency } from '@/utils/financialUtils';
 import { formatDateForDisplay } from '@/utils/dateUtils';
-import { Cliente } from '@/types/orcamentos';
+import { Cliente } from '@/types/cliente';
 import { SessionPaymentHistory } from './SessionPaymentHistory';
 import { SessionPaymentExtended } from '@/types/sessionPayments';
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';

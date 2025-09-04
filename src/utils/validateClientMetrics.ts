@@ -1,4 +1,4 @@
-import { Cliente } from '@/types/orcamentos';
+import { Cliente } from '@/types/cliente';
 import { WorkflowItem } from '@/contexts/AppContext';
 
 /**

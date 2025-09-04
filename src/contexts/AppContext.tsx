@@ -622,7 +622,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setClientes(prev => [...prev, novoCliente]);
     
     // Sync with leads system
-    syncLeadsWithClientUpdate(novoCliente);
+    syncLeadsWithClientUpdate(novoCliente.id, novoCliente);
     
     return novoCliente;
   };
@@ -643,7 +643,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     if (clienteAtualizado) {
       // Sync with other systems
-      syncLeadsWithClientUpdate(clienteAtualizado);
+      syncLeadsWithClientUpdate(id, dadosAtualizados);
       
       // Update workflow sessions that have clienteId
       try {
@@ -781,21 +781,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         data: getCurrentDateString(),
       };
       
-      ProjetoService.adicionarPagamento(id, pagamento);
+      // Add payment to project
+      ProjetoService.atualizarProjeto(id, {
+        valorPago: (ProjetoService.carregarProjetos().find(p => p.projectId === id)?.valorPago || 0) + valor,
+        restante: (ProjetoService.carregarProjetos().find(p => p.projectId === id)?.restante || 0) - valor,
+        pagamentos: [
+          ...(ProjetoService.carregarProjetos().find(p => p.projectId === id)?.pagamentos || []),
+          { ...pagamento, metodo: 'dinheiro' }
+        ]
+      });
       setProjetos(ProjetoService.carregarProjetos());
       
       // Create financial transaction
       const projeto = ProjetoService.carregarProjetos().find(p => p.projectId === id);
       if (projeto) {
-        FinancialEngine.createTransaction({
-          type: 'receita',
-          amount: valor,
-          description: `Pagamento - ${projeto.nome}`,
-          category: 'Serviços',
-          date: getCurrentDateString(),
-          paymentMethod: 'dinheiro',
-          workflowId: id,
-          clientId: projeto.clienteId || undefined
+        FinancialEngine.createTransactions({
+          valorTotal: valor,
+          dataPrimeiraOcorrencia: getCurrentDateString(),
+          itemId: id,
+          isRecorrente: false,
+          isParcelado: false,
+          observacoes: `Pagamento - ${projeto.nome}`
         });
       }
     } catch (error) {
@@ -845,7 +851,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Financial engine action
   const createTransactionEngine = useCallback((input: CreateTransactionInput) => {
-    FinancialEngine.createTransaction(input);
+    FinancialEngine.createTransactions(input);
   }, []);
 
   // Clear selected client action

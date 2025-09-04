@@ -1,5 +1,5 @@
 import { storage, STORAGE_KEYS } from './localStorage';
-import { Cliente } from '@/types/orcamentos';
+import { Cliente } from '@/types/cliente';
 
 /**
  * SOLUÇÃO DEFINITIVA SIMPLIFICADA DO CRM

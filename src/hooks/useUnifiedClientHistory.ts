@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { Cliente, Orcamento } from '@/types/orcamentos';
+import { Cliente } from '@/types/cliente';
+import { Orcamento } from '@/types/orcamento';
 import { WorkflowItem } from '@/contexts/AppContext';
 import { Appointment } from '@/hooks/useAgenda';
 import { generateSessionId } from '@/utils/workflowSessionsAdapter';
@@ -102,7 +103,7 @@ export function useUnifiedClientHistory(
           nome: cliente.nome
         },
         categoria: orcamento.categoria,
-        pacote: orcamento.pacotePrincipal?.nome || orcamento.categoria,
+        pacote: orcamento.categoria || '',
         descricao: orcamento.descricao || `Orçamento - ${orcamento.categoria}`,
         status: orcamento.status,
         valorOriginal: orcamento.valorFinal || 0,

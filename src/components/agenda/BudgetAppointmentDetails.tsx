@@ -12,7 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { Calendar, Clock, User, Package, DollarSign, FileText, ExternalLink } from "lucide-react";
 import { toast } from 'sonner';
 import { Appointment } from "@/hooks/useAgenda";
-import { Orcamento } from "@/types/orcamentos";
+import { Orcamento } from '@/types/orcamento';
 interface BudgetAppointmentDetailsProps {
   appointment: Appointment;
   budget: Orcamento | null;
@@ -139,24 +139,10 @@ export default function BudgetAppointmentDetails({
 
           <Separator />
 
-          {/* Pacotes e Produtos */}
-          {budget.pacotes.length > 0 && <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm font-medium text-lunar-text">
-                <Package className="h-4 w-4" />
-                Pacotes Incluídos
-              </div>
-              <div className="space-y-1">
-                {budget.pacotes.map((pacote, index) => <div key={index} className="flex justify-between items-center text-xs bg-lunar-bg/50 p-2 rounded">
-                    <div>
-                      <span className="font-medium">{pacote.nome}</span>
-                      {pacote.quantidade > 1 && <span className="text-lunar-textSecondary"> x{pacote.quantidade}</span>}
-                    </div>
-                    <span className="text-lunar-textSecondary">
-                      R$ {(pacote.preco * pacote.quantidade).toFixed(2)}
-                    </span>
-                  </div>)}
-              </div>
-            </div>}
+          {/* Pacotes e Produtos - Compatibility removed */}
+          <div className="text-sm text-muted-foreground">
+            Sistema de pacotes foi simplificado. Dados legados preservados.
+          </div>
 
           <Separator />
 
