@@ -105,8 +105,10 @@ export function GerenciarProdutosModal({
       // Se já existe, incrementar quantidade
       setLocalProdutos(prev => prev.map(p => (p.nome === name ? { ...p, quantidade: p.quantidade + 1 } : p)));
     } else {
-      // Adicionar novo produto
-      const valorUnitario = parseFloat(productData.valor.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+    // Adicionar novo produto - converter valor corretamente
+    const valorString = productData.valor || 'R$ 0,00';
+    const valorUnitario = parseFloat(valorString.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+    console.log('💰 Valor do produto:', { valorString, valorUnitario });
       const novoProduto: ProdutoWorkflow = {
         nome: name,
         quantidade: 1,
@@ -119,6 +121,8 @@ export function GerenciarProdutosModal({
     setNovoProductOpen(false);
   };
   const handleSave = () => {
+    console.log('🔄 GerenciarProdutosModal - Salvando produtos:', localProdutos);
+    console.log('📊 Total de produtos:', localProdutos.length);
     onSave(localProdutos);
     onOpenChange(false);
   };

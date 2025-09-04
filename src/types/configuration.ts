@@ -152,7 +152,9 @@ export const DEFAULT_PACOTES: Pacote[] = [
     categoria_id: "1",
     valor_base: 980,
     valor_foto_extra: 35,
-    produtosIncluidos: []
+    produtosIncluidos: [
+      { produtoId: "1", quantidade: 1 }
+    ]
   },
   {
     id: "3",
@@ -160,7 +162,10 @@ export const DEFAULT_PACOTES: Pacote[] = [
     categoria_id: "4",
     valor_base: 890,
     valor_foto_extra: 30,
-    produtosIncluidos: []
+    produtosIncluidos: [
+      { produtoId: "1", quantidade: 1 },
+      { produtoId: "2", quantidade: 1 }
+    ]
   }
 ];
 

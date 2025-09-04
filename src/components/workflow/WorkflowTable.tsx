@@ -997,14 +997,18 @@ export function WorkflowTable({
         
         {/* Modal de Gerenciamento de Produtos */}
         {sessionSelecionada && <GerenciarProdutosModal open={modalAberto} onOpenChange={setModalAberto} sessionId={sessionSelecionada.id} clienteName={sessionSelecionada.nome} produtos={sessionSelecionada.produtosList || []} productOptions={productOptions} onSave={novosProdutos => {
-      // Atualizar a lista de produtos e recalcular totais
-      handleFieldUpdateStable(sessionSelecionada.id, 'produtosList', novosProdutos);
-
+      console.log('💾 Modal salvando produtos:', novosProdutos);
+      
       // Garantir que produtos inclusos sempre tenham valor 0
       const produtosCorrigidos = novosProdutos.map(p => ({
         ...p,
         valorUnitario: p.tipo === 'incluso' ? 0 : p.valorUnitario
       }));
+      
+      console.log('💾 Produtos corrigidos:', produtosCorrigidos);
+      
+      // Atualizar a lista de produtos e recalcular totais
+      handleFieldUpdateStable(sessionSelecionada.id, 'produtosList', produtosCorrigidos);
 
       // Atualizar campos de compatibilidade
       const produtosManuais = produtosCorrigidos.filter(p => p.tipo === 'manual');

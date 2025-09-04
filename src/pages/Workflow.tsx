@@ -165,7 +165,7 @@ export default function Workflow() {
   const productOptions: ProductOption[] = produtos.map(produto => ({
     id: produto.id,
     nome: produto.nome,
-    valor: `R$ ${(produto.valorVenda || 0).toFixed(2).replace('.', ',')}`
+    valor: `R$ ${(produto.preco_venda || produto.valorVenda || 0).toFixed(2).replace('.', ',')}`
   }));
   useEffect(() => {
     if (!searchTerm.trim()) {

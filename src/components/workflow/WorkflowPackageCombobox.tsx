@@ -13,6 +13,10 @@ interface PackageComboboxProps {
     valor: string;
     valorFotoExtra: string;
     categoria: string;
+    produtosIncluidos?: Array<{
+      produtoId: string;
+      quantidade: number;
+    }>;
   }) => void;
   disabled?: boolean;
 }
@@ -50,7 +54,8 @@ export function WorkflowPackageCombobox({
       nome: '',
       valor: 'R$ 0,00',
       valorFotoExtra: 'R$ 0,00',
-      categoria: ''
+      categoria: '',
+      produtosIncluidos: []
     });
     setOpen(false);
   };
@@ -71,7 +76,8 @@ export function WorkflowPackageCombobox({
         nome: pacote.nome,
         valor: pacote.valorVenda || pacote.valor_base || pacote.valor || 0,
         categoria,
-        valorFotoExtra: pacote.valor_foto_extra || pacote.valorFotoExtra || 35
+        valorFotoExtra: pacote.valor_foto_extra || pacote.valorFotoExtra || 35,
+        produtosIncluidos: pacote.produtosIncluidos || []
       };
     });
   }, []);
@@ -119,7 +125,8 @@ export function WorkflowPackageCombobox({
                         nome: pkg.nome,
                         valor: `R$ ${(pkg.valor || 0).toFixed(2).replace('.', ',')}`,
                         valorFotoExtra: `R$ ${(pkg.valorFotoExtra || 35).toFixed(2).replace('.', ',')}`,
-                        categoria: pkg.categoria
+                        categoria: pkg.categoria,
+                        produtosIncluidos: pkg.produtosIncluidos || []
                       });
                     }
                     setOpen(false);
