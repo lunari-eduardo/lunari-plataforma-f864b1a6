@@ -415,15 +415,12 @@ const getExtratoDetalhadoHTML = (data: ExtratoDetalhadoData): string => {
         }
 
         footer {
-          position: fixed;
-          bottom: 20px;
-          left: 40px;
-          right: 40px;
-          text-align: right;
+          margin-top: 40px;
+          padding-top: 15px;
+          border-top: 1px solid #ddd;
+          text-align: center;
+          color: #7f8c8d;
           font-size: 10px;
-          color: #777;
-          border-top: 1px solid #eee;
-          padding-top: 5px;
         }
 
         footer img {
@@ -435,25 +432,7 @@ const getExtratoDetalhadoHTML = (data: ExtratoDetalhadoData): string => {
 
         @media print {
           body { margin: 20px; }
-          footer { position: fixed; }
-          .month-section { 
-            page-break-inside: avoid;
-            break-inside: avoid;
-          }
-          .section { 
-            page-break-inside: avoid;
-            break-inside: avoid;
-          }
-          table { 
-            page-break-inside: avoid;
-            break-inside: avoid;
-          }
-          .month-header {
-            page-break-after: avoid;
-          }
-          .section h2 {
-            page-break-after: avoid;
-          }
+          .section { page-break-inside: avoid; }
         }
       </style>
     </head>
@@ -468,7 +447,7 @@ const getExtratoDetalhadoHTML = (data: ExtratoDetalhadoData): string => {
           <strong>Período:</strong> ${formatDateForPDF(period.startDate)} a ${formatDateForPDF(period.endDate)}<br>
           <strong>Data da emissão:</strong> ${getCurrentDateTimeForPDF()}
         </div>
-        ${branding.logoUrl ? `<img src="${branding.logoUrl}" alt="Logo da empresa">` : ''}
+        ${branding.logoUrl ? `<img src="${branding.logoUrl}" alt="Logo da empresa" crossorigin="anonymous">` : ''}
       </header>
 
       <h1>Extrato Financeiro Detalhado</h1>
@@ -660,26 +639,21 @@ export async function generateExtratoDetalhadoPDF(data: ExtratoDetalhadoData): P
   }
   
   const opt = {
-    margin: [0.5, 0.5, 0.8, 0.5],
+    margin: [0.5, 0.5, 0.5, 0.5],
     filename: `extrato-detalhado-${formatDateForPDF(data.period.startDate).replace(/\//g, '-')}-${formatDateForPDF(data.period.endDate).replace(/\//g, '-')}.pdf`,
     image: { type: 'jpeg', quality: 0.98 },
     html2canvas: { 
       scale: 2, 
       useCORS: true, 
       logging: false,
-      allowTaint: true,
-      foreignObjectRendering: true
+      letterRendering: true,
+      allowTaint: false
     },
     jsPDF: { 
       unit: 'in', 
       format: 'a4', 
       orientation: 'portrait',
       compress: true
-    },
-    pagebreak: { 
-      mode: ['avoid-all', 'css', 'legacy'],
-      before: '.month-section',
-      after: '.resumo-final'
     }
   };
 
