@@ -474,10 +474,28 @@ export default function Workflow() {
 
   // Função de atualização corrigida
   const handleFieldUpdate = useCallback((id: string, field: string, value: any) => {
-    setSessions(prev => prev.map(session => session.id === id ? {
-      ...session,
-      [field]: value
-    } : session));
+    setSessions(prev => prev.map(session => {
+      if (session.id === id) {
+        const updatedSession = { ...session, [field]: value };
+        
+        // Tratamento especial para produtosList
+        if (field === 'produtosList') {
+          // Recalcular valorTotalProduto baseado nos produtos manuais
+          const produtosManuais = value.filter((p: any) => p.tipo === 'manual');
+          const valorTotalProdutosManuais = produtosManuais.reduce((total: number, p: any) => {
+            const valorUnit = parseFloat(String(p.valorUnitario || 0)) || 0;
+            const quantidade = parseFloat(String(p.quantidade || 0)) || 0;
+            return total + valorUnit * quantidade;
+          }, 0);
+          
+          updatedSession.valorTotalProduto = `R$ ${valorTotalProdutosManuais.toFixed(2).replace('.', ',')}`;
+          console.log('✅ Produtos salvos e valorTotalProduto atualizado:', updatedSession.valorTotalProduto);
+        }
+        
+        return updatedSession;
+      }
+      return session;
+    }));
   }, []);
   const sortedSessions = useMemo(() => {
     // Função auxiliar para criar timestamp a partir de data + hora

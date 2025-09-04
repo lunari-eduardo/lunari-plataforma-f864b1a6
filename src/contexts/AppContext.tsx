@@ -775,35 +775,61 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const addPayment = useCallback((id: string, valor: number) => {
     try {
-      const pagamento = {
+      // Buscar sessão do workflow
+      const savedSessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
+      const sessionIndex = savedSessions.findIndex((s: any) => s.id === id);
+      
+      if (sessionIndex === -1) {
+        console.error('❌ Sessão não encontrada no workflow:', id);
+        return;
+      }
+
+      const session = savedSessions[sessionIndex];
+      const currentPaid = parseFloat((session.valorPago || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+      const newPaidTotal = currentPaid + valor;
+
+      // Criar objeto de pagamento
+      const novoPagamento = {
         id: Date.now().toString(),
         valor,
         data: getCurrentDateString(),
+        forma_pagamento: 'dinheiro',
+        observacoes: 'Pagamento rápido',
+        tipo: 'pago' as const,
+        statusPagamento: 'pago' as const,
+        origem: 'workflow_rapido' as const,
+        editavel: true
       };
+
+      // Atualizar sessão
+      savedSessions[sessionIndex] = {
+        ...session,
+        valorPago: `R$ ${newPaidTotal.toFixed(2).replace('.', ',')}`,
+        pagamentos: [...(session.pagamentos || []), novoPagamento]
+      };
+
+      // Recalcular restante
+      const total = parseFloat((session.total || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+      const restante = Math.max(0, total - newPaidTotal);
+      savedSessions[sessionIndex].restante = `R$ ${restante.toFixed(2).replace('.', ',')}`;
+
+      // Salvar no localStorage
+      localStorage.setItem('workflow_sessions', JSON.stringify(savedSessions));
       
-      // Add payment to project
-      ProjetoService.atualizarProjeto(id, {
-        valorPago: (ProjetoService.carregarProjetos().find(p => p.projectId === id)?.valorPago || 0) + valor,
-        restante: (ProjetoService.carregarProjetos().find(p => p.projectId === id)?.restante || 0) - valor,
-        pagamentos: [
-          ...(ProjetoService.carregarProjetos().find(p => p.projectId === id)?.pagamentos || []),
-          { ...pagamento, metodo: 'dinheiro' }
-        ]
+      // Criar transação financeira
+      FinancialEngine.createTransactions({
+        valorTotal: valor,
+        dataPrimeiraOcorrencia: getCurrentDateString(),
+        itemId: id,
+        isRecorrente: false,
+        isParcelado: false,
+        observacoes: `Pagamento rápido - ${session.nome || 'Cliente'}`
       });
-      setProjetos(ProjetoService.carregarProjetos());
-      
-      // Create financial transaction
-      const projeto = ProjetoService.carregarProjetos().find(p => p.projectId === id);
-      if (projeto) {
-        FinancialEngine.createTransactions({
-          valorTotal: valor,
-          dataPrimeiraOcorrencia: getCurrentDateString(),
-          itemId: id,
-          isRecorrente: false,
-          isParcelado: false,
-          observacoes: `Pagamento - ${projeto.nome}`
-        });
-      }
+
+      // Forçar atualização das métricas do workflow
+      window.dispatchEvent(new CustomEvent('workflow-data-changed'));
+
+      console.log('✅ Pagamento adicionado com sucesso:', valor, 'para sessão:', id);
     } catch (error) {
       console.error('❌ Erro ao adicionar pagamento:', error);
     }

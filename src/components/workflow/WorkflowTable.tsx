@@ -321,6 +321,11 @@ export function WorkflowTable({
         ...prev,
         [sessionId]: ''
       }));
+
+      // Forçar re-render para atualizar valores na tabela
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('workflow-data-changed'));
+      }, 100);
     }
   }, [paymentInputs, addPayment]);
   const handlePaymentKeyDown = useCallback((e: React.KeyboardEvent, sessionId: string) => {
