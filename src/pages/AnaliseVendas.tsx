@@ -8,7 +8,7 @@ import { SalesGoalsCard } from '@/components/analise-vendas/SalesGoalsCard';
 import SalesMonthYearFilter from '@/components/analise-vendas/SalesMonthYearFilter';
 import { LeadLossReasonsChart } from '@/components/analise-vendas/LeadLossReasonsChart';
 import SalesAnalysisHero from '@/components/analise-vendas/SalesAnalysisHero';
-import { useSalesAnalytics } from '@/hooks/useSalesAnalytics';
+import { useSalesAnalytics } from '@/hooks/useSalesAnalyticsWrapper';
 export default function AnaliseVendas() {
   // SEO basics
   useEffect(() => {
