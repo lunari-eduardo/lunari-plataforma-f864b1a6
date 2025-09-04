@@ -1,8 +1,8 @@
 
 import { useMemo } from 'react';
 import { useAppointments } from './useAppointments';
-import { useOrcamentos } from './useOrcamentos';
-import { Orcamento } from '@/types/orcamentos';
+import { useAppContext } from '@/contexts/AppContext';
+import { Orcamento } from '@/types/orcamento';
 import { parseDateFromStorage } from '@/utils/dateUtils';
 import { Appointment } from './useAgenda';
 
@@ -20,7 +20,8 @@ export interface UnifiedEvent {
 
 export const useUnifiedCalendar = () => {
   const { appointments } = useAppointments();
-  const { orcamentos } = useOrcamentos();
+  const { clientes } = useAppContext();
+  const orcamentos: Orcamento[] = []; // Empty - budget system removed
 
   // Create appointment ID Set for O(1) lookups
   const appointmentIdSet = useMemo(() => {

@@ -13,6 +13,7 @@ export const STORAGE_KEYS = {
   PRICING_SETTINGS: 'lunari_pricing_settings',
   WORKFLOW_ITEMS: 'workflow_sessions', // MIGRADO: Agora usa workflow_sessions como padrão
   WORKFLOW_COLUMNS: 'lunari_workflow_columns',
+  CARDS: 'lunari_cards',
   WORKFLOW_STATUS: 'lunari_workflow_status',
   // Nova arquitetura de Blueprints
   FIN_TRANSACTIONS: 'lunari_fin_transactions',
