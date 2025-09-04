@@ -676,11 +676,44 @@ export function WorkflowTable({
                 {renderCell('category', <span className="text-xs text-center font-light">{session.categoria || 'N/A'}</span>)}
 
                 {renderCell('package', <WorkflowPackageCombobox key={`package-${session.id}-${session.pacote}`} value={session.pacote} onValueChange={packageData => {
-                  // Atualizar dados do pacote (congelamento)
+                  console.log('🔄 Pacote selecionado:', packageData);
+                  
+                  // Atualizar dados do pacote
                   handleFieldUpdateStable(session.id, 'pacote', packageData.nome);
                   handleFieldUpdateStable(session.id, 'valorPacote', packageData.valor);
                   handleFieldUpdateStable(session.id, 'valorFotoExtra', packageData.valorFotoExtra);
                   handleFieldUpdateStable(session.id, 'categoria', packageData.categoria);
+
+                  // INCLUIR PRODUTOS DO PACOTE AUTOMATICAMENTE
+                  if (packageData.nome && packageData.nome !== '') {
+                    const pacotesData = configurationService.loadPacotes();
+                    const produtosData = configurationService.loadProdutos();
+                    const pacoteCompleto = pacotesData.find(p => p.nome === packageData.nome);
+                    
+                    if (pacoteCompleto?.produtosIncluidos?.length > 0) {
+                      console.log('📦 Incluindo produtos do pacote:', pacoteCompleto.produtosIncluidos);
+                      
+                      const produtosList = pacoteCompleto.produtosIncluidos.map((pi: any) => {
+                        const produto = produtosData.find(p => p.id === pi.produtoId);
+                        return {
+                          nome: produto?.nome || 'Produto não encontrado',
+                          quantidade: pi.quantidade || 1,
+                          valorUnitario: 0, // Produtos inclusos têm valor 0
+                          tipo: 'incluso' as const
+                        };
+                      });
+                      
+                      handleFieldUpdateStable(session.id, 'produtosList', produtosList);
+                      
+                      // Atualizar campo de produto principal (primeiro da lista)
+                      if (produtosList.length > 0) {
+                        const primeiroProduto = produtosList[0];
+                        handleFieldUpdateStable(session.id, 'produto', `${primeiroProduto.nome} (incluso no pacote)`);
+                        handleFieldUpdateStable(session.id, 'qtdProduto', primeiroProduto.quantidade);
+                        handleFieldUpdateStable(session.id, 'valorTotalProduto', 'R$ 0,00');
+                      }
+                    }
+                  }
 
                   // Recalcular total de fotos extras se houver quantidade
                   if (session.qtdFotosExtra > 0) {

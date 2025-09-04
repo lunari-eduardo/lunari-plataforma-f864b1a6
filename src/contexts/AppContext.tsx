@@ -774,6 +774,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   const addPayment = useCallback((id: string, valor: number) => {
+    console.log('💰 Adicionando pagamento rápido:', { id, valor });
+    
     try {
       // Buscar sessão do workflow
       const savedSessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
@@ -787,6 +789,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const session = savedSessions[sessionIndex];
       const currentPaid = parseFloat((session.valorPago || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0;
       const newPaidTotal = currentPaid + valor;
+
+      console.log('📊 Valores de pagamento:', {
+        currentPaid,
+        valor,
+        newPaidTotal,
+        sessionId: id
+      });
 
       // Criar objeto de pagamento
       const novoPagamento = {
@@ -815,6 +824,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       // Salvar no localStorage
       localStorage.setItem('workflow_sessions', JSON.stringify(savedSessions));
+      console.log('✅ Pagamento salvo no workflow_sessions');
+      
+      // CORRIGIR: Disparar evento para atualizar UI do workflow
+      window.dispatchEvent(new CustomEvent('workflow-sessions-updated'));
       
       // Criar transação financeira
       FinancialEngine.createTransactions({

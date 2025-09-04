@@ -225,6 +225,17 @@ export default function Workflow() {
     loadWorkflowData();
   }, [loadWorkflowData]);
 
+  // CORRIGIR: Listener para atualizar workflow quando pagamentos forem adicionados
+  useEffect(() => {
+    const handleWorkflowUpdate = () => {
+      console.log('🔄 Workflow detectou mudanças via evento');
+      loadWorkflowData();
+    };
+
+    window.addEventListener('workflow-sessions-updated', handleWorkflowUpdate);
+    return () => window.removeEventListener('workflow-sessions-updated', handleWorkflowUpdate);
+  }, [loadWorkflowData]);
+
   // ✅ CORREÇÃO AUTOMÁTICA: Executar uma vez na inicialização
   useEffect(() => {
     const hasFixedCache = sessionStorage.getItem('workflow_cache_fixed');
@@ -472,16 +483,25 @@ export default function Workflow() {
     }
   }, [sessions]);
 
-  // Função de atualização corrigida
+  // CORRIGIR: Função de atualização que salva no localStorage
   const handleFieldUpdate = useCallback((id: string, field: string, value: any) => {
+    console.log('🔄 Workflow.tsx - Atualizando campo:', { id, field, value });
+    
+    // Atualizar estado local primeiro
     setSessions(prev => prev.map(session => {
       if (session.id === id) {
         const updatedSession = { ...session, [field]: value };
         
         // Tratamento especial para produtosList
         if (field === 'produtosList') {
+          console.log('📦 Processando produtosList no Workflow.tsx:', value);
+          
+          // Garantir que value seja um array
+          const produtosList = Array.isArray(value) ? value : [];
+          updatedSession.produtosList = produtosList;
+          
           // Recalcular valorTotalProduto baseado nos produtos manuais
-          const produtosManuais = value.filter((p: any) => p.tipo === 'manual');
+          const produtosManuais = produtosList.filter((p: any) => p.tipo === 'manual');
           const valorTotalProdutosManuais = produtosManuais.reduce((total: number, p: any) => {
             const valorUnit = parseFloat(String(p.valorUnitario || 0)) || 0;
             const quantidade = parseFloat(String(p.quantidade || 0)) || 0;
@@ -489,13 +509,65 @@ export default function Workflow() {
           }, 0);
           
           updatedSession.valorTotalProduto = `R$ ${valorTotalProdutosManuais.toFixed(2).replace('.', ',')}`;
-          console.log('✅ Produtos salvos e valorTotalProduto atualizado:', updatedSession.valorTotalProduto);
+          
+          // Atualizar campo produto principal
+          if (produtosList.length > 0) {
+            const produtoNames = produtosList.map((p: any) => {
+              return p.tipo === 'incluso' ? `${p.nome} (incluso no pacote)` : p.nome;
+            }).join(', ');
+            updatedSession.produto = produtoNames;
+            updatedSession.qtdProduto = produtosList.reduce((sum: number, p: any) => sum + (parseInt(String(p.quantidade || 0))), 0);
+          }
+          
+          console.log('✅ Produtos processados no Workflow.tsx:', {
+            produtosList: updatedSession.produtosList,
+            valorTotalProduto: updatedSession.valorTotalProduto,
+            produto: updatedSession.produto
+          });
         }
         
         return updatedSession;
       }
       return session;
     }));
+
+    // CORRIGIR: Salvar no localStorage também
+    setTimeout(() => {
+      const currentSessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
+      const sessionIndex = currentSessions.findIndex((s: any) => s.id === id);
+      
+      if (sessionIndex !== -1) {
+        // Buscar sessão atualizada do estado
+        const updatedSession = { ...currentSessions[sessionIndex], [field]: value };
+        
+        if (field === 'produtosList') {
+          const produtosList = Array.isArray(value) ? value : [];
+          updatedSession.produtosList = produtosList;
+          
+          const produtosManuais = produtosList.filter((p: any) => p.tipo === 'manual');
+          const valorTotalProdutosManuais = produtosManuais.reduce((total: number, p: any) => {
+            const valorUnit = parseFloat(String(p.valorUnitario || 0)) || 0;
+            const quantidade = parseFloat(String(p.quantidade || 0)) || 0;
+            return total + valorUnit * quantidade;
+          }, 0);
+          
+          updatedSession.valorTotalProduto = `R$ ${valorTotalProdutosManuais.toFixed(2).replace('.', ',')}`;
+          
+          if (produtosList.length > 0) {
+            const produtoNames = produtosList.map((p: any) => {
+              return p.tipo === 'incluso' ? `${p.nome} (incluso no pacote)` : p.nome;
+            }).join(', ');
+            updatedSession.produto = produtoNames;
+            updatedSession.qtdProduto = produtosList.reduce((sum: number, p: any) => sum + (parseInt(String(p.quantidade || 0))), 0);
+          }
+        }
+        
+        currentSessions[sessionIndex] = updatedSession;
+        localStorage.setItem('workflow_sessions', JSON.stringify(currentSessions));
+        
+        console.log('✅ Workflow.tsx - Salvo no localStorage:', { id, field, value });
+      }
+    }, 0);
   }, []);
   const sortedSessions = useMemo(() => {
     // Função auxiliar para criar timestamp a partir de data + hora

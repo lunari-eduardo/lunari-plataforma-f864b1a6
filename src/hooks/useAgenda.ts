@@ -2,6 +2,7 @@
 import { useMemo } from 'react';
 import { useAppointments } from './useAppointments';
 import { formatDateForStorage, getCurrentDateString } from '@/utils/dateUtils';
+import { configurationService } from '@/services/ConfigurationService';
 
 export type AppointmentStatus = 'confirmado' | 'a confirmar';
 
@@ -83,10 +84,25 @@ export const useAgenda = () => {
           
           const pacote = pacoteData?.nome || "";
           const valorPacote = pacoteData ? `R$ ${(pacoteData.valor || pacoteData.valor_base || pacoteData.valorVenda || 0).toFixed(2).replace('.', ',')}` : "R$ 0,00";
-          const categoria = pacoteData?.categoria || 
-            (appointment.type.includes('Gestante') ? 'Gestante' : 
-             appointment.type.includes('Família') ? 'Família' : 
-             appointment.type.includes('Corporativo') ? 'Corporativo' : 'Outros');
+          
+          // CORRIGIR CATEGORIA: Buscar por categoria_id no configurationService
+          let categoria = '';
+          if (pacoteData) {
+            if (pacoteData.categoria_id) {
+              const configCategorias = configurationService.loadCategorias();
+              const categoriaEncontrada = configCategorias.find((cat: any) => cat.id === pacoteData.categoria_id);
+              categoria = categoriaEncontrada ? categoriaEncontrada.nome : String(pacoteData.categoria_id);
+            } else {
+              categoria = pacoteData.categoria || '';
+            }
+          }
+          
+          if (!categoria) {
+            categoria = appointment.type.includes('Gestante') ? 'Gestante' : 
+                       appointment.type.includes('Família') ? 'Família' : 
+                       appointment.type.includes('Corporativo') ? 'Corporativo' : 'Outros';
+          }
+          
           const valorFotoExtra = pacoteData ? `R$ ${(pacoteData.valorFotoExtra || pacoteData.valor_foto_extra || 35).toFixed(2).replace('.', ',')}` : "R$ 35,00";
           
           // Produtos incluídos otimizados
