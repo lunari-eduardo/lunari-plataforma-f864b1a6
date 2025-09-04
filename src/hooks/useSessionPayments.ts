@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { SessionPaymentExtended } from '@/types/sessionPayments';
 import { SessionPayment } from '@/types/workflow';
 import { formatDateForStorage } from '@/utils/dateUtils';
+import { unifiedStorageService } from '@/services/storage/UnifiedStorageService';
 
 // Converter SessionPaymentExtended para SessionPayment (formato legado)
 const convertToLegacyFormat = (extendedPayments: SessionPaymentExtended[]): SessionPayment[] => {
@@ -23,7 +24,7 @@ const convertToLegacyFormat = (extendedPayments: SessionPaymentExtended[]): Sess
 
 // Salvar pagamentos no localStorage
 const savePaymentsToStorage = (sessionId: string, payments: SessionPaymentExtended[]) => {
-  const sessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
+  const sessions = unifiedStorageService.loadRaw('workflow_sessions', []);
   const updatedSessions = sessions.map((s: any) => 
     s.id === sessionId ? { 
       ...s, 
@@ -31,7 +32,7 @@ const savePaymentsToStorage = (sessionId: string, payments: SessionPaymentExtend
       valorPago: payments.filter(p => p.statusPagamento === 'pago').reduce((acc, p) => acc + p.valor, 0)
     } : s
   );
-  localStorage.setItem('workflow_sessions', JSON.stringify(updatedSessions));
+  unifiedStorageService.saveRaw('workflow_sessions', updatedSessions);
   
   // Disparar evento para sincronização global
   window.dispatchEvent(new CustomEvent('workflowSessionsUpdated'));
@@ -43,7 +44,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
   // Listener para eventos do AppContext (pagamentos rápidos)
   useEffect(() => {
     const handleWorkflowUpdate = () => {
-      const sessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
+      const sessions = unifiedStorageService.loadRaw('workflow_sessions', []);
       const currentSession = sessions.find((s: any) => s.id === sessionId);
       
       if (currentSession && currentSession.pagamentos) {

@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { ItemFinanceiro, GrupoPrincipal, StatusTransacao } from '@/types/financas';
 import { storage } from '@/utils/localStorage';
+import { unifiedStorageService } from '@/services/storage/UnifiedStorageService';
 import { getCurrentDateString } from '@/utils/dateUtils';
 import { useAppContext } from '@/contexts/AppContext';
 import { 
@@ -90,12 +91,12 @@ export function useNovoFinancas() {
   // ============= ESTADOS PRINCIPAIS =============
   
   const [itensFinanceiros, setItensFinanceiros] = useState<ItemFinanceiroCompativel[]>(() => {
-    const currentVersion = localStorage.getItem('financial_items_version');
+    const currentVersion = unifiedStorageService.loadRaw('financial_items_version', null);
     
     // Se a versão mudou ou não existe, usar itens padrão
     if (currentVersion !== ITEMS_VERSION) {
       console.log('Atualizando itens financeiros padrão para versão:', ITEMS_VERSION);
-      localStorage.setItem('financial_items_version', ITEMS_VERSION);
+      unifiedStorageService.saveRaw('financial_items_version', ITEMS_VERSION);
       storage.save(STORAGE_KEYS.ITEMS, ITENS_INICIAIS);
       return ITENS_INICIAIS;
     }
@@ -175,12 +176,12 @@ export function useNovoFinancas() {
 
   useEffect(() => {
     // A persistência é gerenciada pelo RecurringBlueprintEngine
-    localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(transacoes));
+    unifiedStorageService.saveRaw(STORAGE_KEYS.TRANSACTIONS, transacoes);
   }, [transacoes]);
 
   useEffect(() => {
     // A persistência é gerenciada pelo RecurringBlueprintEngine
-    localStorage.setItem(STORAGE_KEYS.BLUEPRINTS, JSON.stringify(blueprintsRecorrentes));
+    unifiedStorageService.saveRaw(STORAGE_KEYS.BLUEPRINTS, blueprintsRecorrentes);
   }, [blueprintsRecorrentes]);
 
   // ============= MOTOR DE CRIAÇÃO DE TRANSAÇÕES RECORRENTES =============

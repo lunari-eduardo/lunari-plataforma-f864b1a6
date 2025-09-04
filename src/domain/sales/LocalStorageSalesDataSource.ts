@@ -6,6 +6,7 @@
 import { SalesDataSource, SalesDataSourceConfig } from './SalesDataSource';
 import { SalesSession, SalesFilters } from './sales-domain';
 import { parseMonetaryValue } from '@/utils/workflowSessionsAdapter';
+import { unifiedStorageService } from '@/services/storage/UnifiedStorageService';
 
 export class LocalStorageSalesDataSource implements SalesDataSource {
   private cache: SalesSession[] | null = null;
@@ -34,13 +35,12 @@ export class LocalStorageSalesDataSource implements SalesDataSource {
 
   private async loadRawSessions(): Promise<any[]> {
     try {
-      const rawSessions = localStorage.getItem('workflow_sessions');
-      if (!rawSessions) {
+      const sessions = unifiedStorageService.loadRaw('workflow_sessions', []);
+      if (!sessions || sessions.length === 0) {
         this.log('No workflow_sessions data found');
         return [];
       }
 
-      const sessions = JSON.parse(rawSessions);
       this.log(`Loaded ${sessions.length} raw sessions from localStorage`);
       return sessions;
     } catch (error) {
@@ -53,8 +53,8 @@ export class LocalStorageSalesDataSource implements SalesDataSource {
     if (!clientId) return 'nao-especificado';
 
     try {
-      const clientsData = localStorage.getItem('lunari_clients') || '[]';
-      const clients = JSON.parse(clientsData);
+      const clientsData = unifiedStorageService.loadRaw('lunari_clients', []);
+      const clients = Array.isArray(clientsData) ? clientsData : JSON.parse(clientsData || '[]');
       const client = clients.find((c: any) => c.id === clientId);
       
       if (client?.origem) {
