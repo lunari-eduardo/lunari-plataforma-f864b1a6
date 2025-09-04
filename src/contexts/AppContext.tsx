@@ -452,11 +452,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Cliente pré-selecionado State
   const [selectedClientForScheduling, setSelectedClientForScheduling] = useState<string | null>(null);
 
-  // Listener para eventos e backfill inicial
+  // Listener para eventos e backfill inicial - ignorar eventos internos do Workflow
   useEffect(() => {
-    const handler = (e: any) => {
-      const sessions = e?.detail?.sessions || [];
-      syncSessionsToProjects(sessions);
+    const handler = (e: CustomEvent) => {
+      // ✅ Só processar se não for mudança interna do Workflow
+      if (e?.detail?.source !== 'workflow-internal') {
+        const sessions = e?.detail?.sessions || [];
+        syncSessionsToProjects(sessions);
+      }
     };
     
     window.addEventListener('workflow-sessions-updated', handler);

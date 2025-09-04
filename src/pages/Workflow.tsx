@@ -141,8 +141,10 @@ export default function Workflow() {
           }
         });
         window.localStorage.setItem('workflow_sessions', JSON.stringify(mergedSessions));
-        // Disparar evento para sincronização com Projetos/Dashboard
-        window.dispatchEvent(new CustomEvent('workflow-sessions-updated', { detail: { sessions: mergedSessions } }));
+        // Disparar evento para sincronização com Projetos/Dashboard (marcado como interno)
+        window.dispatchEvent(new CustomEvent('workflow-sessions-updated', { 
+          detail: { sessions: mergedSessions, source: 'workflow-internal' } 
+        }));
         // ✅ OTIMIZADO: Remover console.log constante
         // console.log('Workflow sessions saved to localStorage:', sessions.length, 'sessions');
       } catch (error) {
@@ -225,15 +227,21 @@ export default function Workflow() {
     loadWorkflowData();
   }, [loadWorkflowData]);
 
-  // CORRIGIR: Listener para atualizar workflow quando pagamentos forem adicionados
+  // CORRIGIR: Listener condicional para atualizar workflow apenas quando mudanças vêm de fontes externas
   useEffect(() => {
-    const handleWorkflowUpdate = () => {
-      console.log('🔄 Workflow detectou mudanças via evento');
-      loadWorkflowData();
+    const handleWorkflowUpdate = (event: CustomEvent) => {
+      // ✅ Só recarregar se mudança veio de fonte externa (não do próprio Workflow)
+      const isExternalUpdate = event.detail?.source !== 'workflow-internal';
+      if (isExternalUpdate) {
+        console.log('🔄 Workflow detectou mudanças externas via evento');
+        loadWorkflowData();
+      } else {
+        console.log('🔄 Workflow ignorou mudança interna via evento');
+      }
     };
 
-    window.addEventListener('workflow-sessions-updated', handleWorkflowUpdate);
-    return () => window.removeEventListener('workflow-sessions-updated', handleWorkflowUpdate);
+    window.addEventListener('workflow-sessions-updated', handleWorkflowUpdate as EventListener);
+    return () => window.removeEventListener('workflow-sessions-updated', handleWorkflowUpdate as EventListener);
   }, [loadWorkflowData]);
 
   // ✅ CORREÇÃO AUTOMÁTICA: Executar uma vez na inicialização
@@ -483,21 +491,22 @@ export default function Workflow() {
     }
   }, [sessions]);
 
-  // CORRIGIR: Função de atualização que salva no localStorage
+  // ✅ OTIMIZADO: Função de atualização sem ciclo vicioso
   const handleFieldUpdate = useCallback((id: string, field: string, value: any) => {
     console.log('🔄 Workflow.tsx - Atualizando campo:', { id, field, value });
     
-    // Atualizar estado local primeiro
-    setSessions(prev => prev.map(session => {
-      if (session.id === id) {
-        const updatedSession = { ...session, [field]: value };
-        
-        // Tratamento especial para produtosList
-        if (field === 'produtosList') {
-          console.log('📦 Processando produtosList no Workflow.tsx:', value);
+    // Atualizar estado e localStorage atomicamente
+    setSessions(prev => {
+      const newSessions = prev.map(session => {
+        if (session.id === id) {
+          const updatedSession = { ...session, [field]: value };
           
-          // Garantir que value seja um array
-          const produtosList = Array.isArray(value) ? value : [];
+          // Tratamento especial para produtosList
+          if (field === 'produtosList') {
+            console.log('📦 Processando produtosList no Workflow.tsx:', value);
+            
+            // Garantir que value seja um array
+            const produtosList = Array.isArray(value) ? value : [];
           updatedSession.produtosList = produtosList;
           
           // Recalcular valorTotalProduto baseado nos produtos manuais
@@ -526,48 +535,52 @@ export default function Workflow() {
           });
         }
         
-        return updatedSession;
-      }
-      return session;
-    }));
-
-    // CORRIGIR: Salvar no localStorage também
-    setTimeout(() => {
-      const currentSessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
-      const sessionIndex = currentSessions.findIndex((s: any) => s.id === id);
-      
-      if (sessionIndex !== -1) {
-        // Buscar sessão atualizada do estado
-        const updatedSession = { ...currentSessions[sessionIndex], [field]: value };
-        
-        if (field === 'produtosList') {
-          const produtosList = Array.isArray(value) ? value : [];
-          updatedSession.produtosList = produtosList;
-          
-          const produtosManuais = produtosList.filter((p: any) => p.tipo === 'manual');
-          const valorTotalProdutosManuais = produtosManuais.reduce((total: number, p: any) => {
-            const valorUnit = parseFloat(String(p.valorUnitario || 0)) || 0;
-            const quantidade = parseFloat(String(p.quantidade || 0)) || 0;
-            return total + valorUnit * quantidade;
-          }, 0);
-          
-          updatedSession.valorTotalProduto = `R$ ${valorTotalProdutosManuais.toFixed(2).replace('.', ',')}`;
-          
-          if (produtosList.length > 0) {
-            const produtoNames = produtosList.map((p: any) => {
-              return p.tipo === 'incluso' ? `${p.nome} (incluso no pacote)` : p.nome;
-            }).join(', ');
-            updatedSession.produto = produtoNames;
-            updatedSession.qtdProduto = produtosList.reduce((sum: number, p: any) => sum + (parseInt(String(p.quantidade || 0))), 0);
-          }
+          return updatedSession;
         }
+        return session;
+      });
+      
+      // ✅ Salvar atomicamente no localStorage sem setTimeout
+      try {
+        const currentSessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
+        const sessionIndex = currentSessions.findIndex((s: any) => s.id === id);
         
-        currentSessions[sessionIndex] = updatedSession;
-        localStorage.setItem('workflow_sessions', JSON.stringify(currentSessions));
-        
-        console.log('✅ Workflow.tsx - Salvo no localStorage:', { id, field, value });
+        if (sessionIndex !== -1) {
+          const updatedSession = { ...currentSessions[sessionIndex], [field]: value };
+          
+          if (field === 'produtosList') {
+            const produtosList = Array.isArray(value) ? value : [];
+            updatedSession.produtosList = produtosList;
+            
+            const produtosManuais = produtosList.filter((p: any) => p.tipo === 'manual');
+            const valorTotalProdutosManuais = produtosManuais.reduce((total: number, p: any) => {
+              const valorUnit = parseFloat(String(p.valorUnitario || 0)) || 0;
+              const quantidade = parseFloat(String(p.quantidade || 0)) || 0;
+              return total + valorUnit * quantidade;
+            }, 0);
+            
+            updatedSession.valorTotalProduto = `R$ ${valorTotalProdutosManuais.toFixed(2).replace('.', ',')}`;
+            
+            if (produtosList.length > 0) {
+              const produtoNames = produtosList.map((p: any) => {
+                return p.tipo === 'incluso' ? `${p.nome} (incluso no pacote)` : p.nome;
+              }).join(', ');
+              updatedSession.produto = produtoNames;
+              updatedSession.qtdProduto = produtosList.reduce((sum: number, p: any) => sum + (parseInt(String(p.quantidade || 0))), 0);
+            }
+          }
+          
+          currentSessions[sessionIndex] = updatedSession;
+          localStorage.setItem('workflow_sessions', JSON.stringify(currentSessions));
+          
+          console.log('✅ Workflow.tsx - Salvo atomicamente no localStorage:', { id, field, value });
+        }
+      } catch (error) {
+        console.error('❌ Erro ao salvar no localStorage:', error);
       }
-    }, 0);
+      
+      return newSessions;
+    });
   }, []);
   const sortedSessions = useMemo(() => {
     // Função auxiliar para criar timestamp a partir de data + hora
