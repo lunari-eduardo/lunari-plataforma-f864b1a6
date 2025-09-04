@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
-import { unifiedStorageService } from '@/services/storage/UnifiedStorageService';
 import { configurationService } from '@/services/ConfigurationService';
 import { parseDateFromStorage, formatDateForStorage, getCurrentDateString } from '@/utils/dateUtils';
 import { formatCurrency } from '@/utils/financialUtils';
@@ -464,7 +463,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     
     // Backfill inicial
     try {
-      const existingSessions = unifiedStorageService.loadRaw('workflow_sessions', []);
+      const existingSessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
       if (existingSessions.length > 0) {
         syncSessionsToProjects(existingSessions);
       }
@@ -491,7 +490,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           ...item,
           dataOriginal: item.dataOriginal.toISOString()
         }));
-        unifiedStorageService.saveRaw('workflow_sessions', serialized);
+        localStorage.setItem('workflow_sessions', JSON.stringify(serialized));
         
         window.dispatchEvent(new CustomEvent('workflow-sessions-updated', { detail: { sessions: serialized } }));
       } catch (error) {
@@ -504,9 +503,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Update configuration when categorias/produtos/pacotes change
   useEffect(() => { 
-    const stored = unifiedStorageService.loadRaw('workflow_sessions', []);
+    const stored = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
     const saved = stored.map((item: any) => ({ ...item }));
-    unifiedStorageService.saveRaw('workflow_sessions', saved);
+    localStorage.setItem('workflow_sessions', JSON.stringify(saved));
     
     window.dispatchEvent(new CustomEvent('workflow-sessions-updated', { detail: { sessions: saved } }));
     // Log removido para evitar spam no console
@@ -648,7 +647,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       
       // Update workflow sessions that have clienteId
       try {
-        const workflowSessions = unifiedStorageService.loadRaw('workflow_sessions', []);
+        const workflowSessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
         let orcamentosAtualizados = 0;
         
         const sessionsAtualizadas = workflowSessions.map((session: any) => {
@@ -665,7 +664,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
         
         if (orcamentosAtualizados > 0) {
-          unifiedStorageService.saveRaw('workflow_sessions', sessionsAtualizadas);
+          localStorage.setItem('workflow_sessions', JSON.stringify(sessionsAtualizadas));
         }
       } catch (error) {
         console.error('❌ Erro ao atualizar workflow sessions:', error);

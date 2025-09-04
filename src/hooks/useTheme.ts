@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { unifiedStorageService } from '@/services/storage/UnifiedStorageService';
 
 type Theme = 'light' | 'dark' | 'system';
 
@@ -8,7 +7,7 @@ export function useTheme() {
 
   useEffect(() => {
     // Load saved theme preference or default to system
-    const savedTheme = unifiedStorageService.loadRaw('theme', 'system') as Theme;
+    const savedTheme = localStorage.getItem('theme') as Theme || 'system';
     setTheme(savedTheme);
     
     // Apply theme immediately
@@ -28,7 +27,7 @@ export function useTheme() {
 
   const setThemeAndSave = (newTheme: Theme) => {
     setTheme(newTheme);
-    unifiedStorageService.saveRaw('theme', newTheme);
+    localStorage.setItem('theme', newTheme);
     applyTheme(newTheme);
   };
 
