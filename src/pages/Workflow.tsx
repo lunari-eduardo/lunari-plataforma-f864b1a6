@@ -11,6 +11,7 @@ import { useContext } from 'react';
 import { AppContext } from '@/contexts/AppContext';
 import { parseDateFromStorage } from "@/utils/dateUtils";
 import { useWorkflowMetrics } from '@/hooks/useWorkflowMetrics';
+import { autoFixWorkflowCache } from '@/utils/workflowCacheManager';
 import type { SessionData, CategoryOption, PackageOption, ProductOption } from '@/types/workflow';
 const removeAccents = (str: string) => {
   return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -223,6 +224,16 @@ export default function Workflow() {
   useEffect(() => {
     loadWorkflowData();
   }, [loadWorkflowData]);
+
+  // ✅ CORREÇÃO AUTOMÁTICA: Executar uma vez na inicialização
+  useEffect(() => {
+    const hasFixedCache = sessionStorage.getItem('workflow_cache_fixed');
+    if (!hasFixedCache) {
+      console.log('🔧 Executando correção automática do cache na inicialização...');
+      autoFixWorkflowCache();
+      sessionStorage.setItem('workflow_cache_fixed', 'true');
+    }
+  }, []);
   const handlePreviousMonth = () => {
     let newMonth = currentMonth.month - 1;
     let newYear = currentMonth.year;
@@ -319,17 +330,60 @@ export default function Workflow() {
     };
   }, [sessions, calculateTotal, calculateRestante]);
 
-  // Salvar métricas no cache sempre que financials mudar
+  // ✅ CORREÇÃO: Salvar métricas baseado na data real dos agendamentos
   useEffect(() => {
-    if (financials.sessionCount > 0) {
-      saveMonthlyMetrics(currentMonth.year, currentMonth.month, {
-        receita: financials.revenue,
-        previsto: financials.forecasted,
-        aReceber: financials.outstanding,
-        sessoes: financials.sessionCount
-      });
-    }
-  }, [financials, currentMonth.year, currentMonth.month, saveMonthlyMetrics]);
+    // Agrupar sessões por mês REAL (baseado na data do agendamento)
+    const metricasPorMes: Record<string, {
+      receita: number;
+      previsto: number;
+      aReceber: number;
+      sessoes: number;
+    }> = {};
+
+    sessions.forEach(session => {
+      try {
+        // Extrair data real do agendamento
+        const sessionDate = parseDateFromStorage(session.data);
+        const mesReal = sessionDate.getUTCMonth() + 1; // 1-12
+        const anoReal = sessionDate.getUTCFullYear();
+        const chaveReal = `${anoReal}-${mesReal}`;
+
+        // Inicializar se não existe
+        if (!metricasPorMes[chaveReal]) {
+          metricasPorMes[chaveReal] = {
+            receita: 0,
+            previsto: 0,
+            aReceber: 0,
+            sessoes: 0
+          };
+        }
+
+        // Calcular valores para esta sessão
+        const paidStr = typeof session.valorPago === 'string' ? session.valorPago : String(session.valorPago || '0');
+        const paid = parseFloat(paidStr.replace(/[^\d,]/g, '').replace(',', '.') || '0');
+        const totalCalculado = calculateTotal(session);
+        const restanteCalculado = calculateRestante(session);
+
+        // Acumular métricas
+        metricasPorMes[chaveReal].receita += paid;
+        metricasPorMes[chaveReal].previsto += totalCalculado;
+        metricasPorMes[chaveReal].aReceber += restanteCalculado;
+        metricasPorMes[chaveReal].sessoes += 1;
+      } catch (error) {
+        console.warn('❌ Erro ao processar sessão para cache:', session.id, error);
+      }
+    });
+
+    // Salvar cache para todos os meses que têm dados
+    Object.entries(metricasPorMes).forEach(([chave, metricas]) => {
+      const [ano, mes] = chave.split('-').map(Number);
+      if (metricas.sessoes > 0) {
+        saveMonthlyMetrics(ano, mes, metricas);
+        console.log(`📊 Cache atualizado: ${ano}/${mes} - R$ ${metricas.receita.toFixed(2)} (${metricas.sessoes} sessões)`);
+      }
+    });
+
+  }, [sessions, calculateTotal, calculateRestante, saveMonthlyMetrics]);
 
   // Métricas do mês anterior para comparação
   const prevMonthFinancials = useMemo(() => {

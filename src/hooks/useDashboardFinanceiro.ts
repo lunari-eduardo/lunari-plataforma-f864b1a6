@@ -65,8 +65,11 @@ export function useDashboardFinanceiro() {
     data: string;
     allTransactionIds: string[];
   } | null>(null);
+  
+  // ✅ Estado para forçar recálculo quando cache for atualizado
+  const [cacheVersion, setCacheVersion] = useState(0);
 
-  // Listener para equipamentos detectados
+  // Listener para equipamentos detectados + cache updates
   useEffect(() => {
     const handleEquipmentDetected = (event: CustomEvent) => {
       const candidate = event.detail;
@@ -81,10 +84,20 @@ export function useDashboardFinanceiro() {
       setEquipmentModalOpen(true);
     };
 
+    // ✅ Listener para atualizações do cache do workflow
+    const handleCacheUpdate = () => {
+      console.log('📊 [Dashboard] Cache do workflow foi atualizado, recalculando...');
+      setCacheVersion(prev => prev + 1);
+    };
+
     window.addEventListener(EQUIPMENT_SYNC_EVENT, handleEquipmentDetected as EventListener);
+    window.addEventListener('workflowMetricsUpdated', handleCacheUpdate);
+    window.addEventListener('workflowCacheRecalculated', handleCacheUpdate);
     
     return () => {
       window.removeEventListener(EQUIPMENT_SYNC_EVENT, handleEquipmentDetected as EventListener);
+      window.removeEventListener('workflowMetricsUpdated', handleCacheUpdate);
+      window.removeEventListener('workflowCacheRecalculated', handleCacheUpdate);
     };
   }, []);
 
@@ -125,7 +138,7 @@ export function useDashboardFinanceiro() {
 
   // ============= CARREGAMENTO DE DADOS SIMPLIFICADO =============
   
-  // Usar cache de métricas do workflow ao invés de recalcular
+  // ✅ Usar cache de métricas do workflow - incluir cacheVersion para recálculo
   const { getMonthlyMetrics, getAnnualMetrics, getAvailableYears } = useWorkflowMetrics();
 
   // Otimizar carregamento de dados com cache
@@ -216,7 +229,7 @@ export function useDashboardFinanceiro() {
   const kpisData = useMemo((): KPIsData => {
     const ano = parseInt(anoSelecionado);
     
-    // ============= USAR CACHE DE MÉTRICAS DO WORKFLOW =============
+    // ============= ✅ FONTE ÚNICA: CACHE DO WORKFLOW =============
     let receitaOperacional = 0;
     let valorPrevisto = 0;
     let aReceber = 0;
@@ -238,11 +251,12 @@ export function useDashboardFinanceiro() {
       aReceber = metricas.aReceber;
     }
     
-    // ============= RECEITAS EXTRAS DAS TRANSAÇÕES =============
+    // ============= RECEITAS EXTRAS DAS TRANSAÇÕES (NÃO OPERACIONAIS) =============
     const receitasExtras = transacoesFiltradas
       .filter(t => t.status === 'Pago' && t.item?.grupo_principal === 'Receita Não Operacional')
       .reduce((sum, t) => sum + t.valor, 0);
 
+    // ✅ TOTAL DE RECEITAS: Operacionais (do cache) + Extras (das transações)
     const totalReceita = receitaOperacional + receitasExtras;
 
     // ============= DESPESAS DAS TRANSAÇÕES =============
@@ -254,6 +268,14 @@ export function useDashboardFinanceiro() {
     const totalLucro = totalReceita - totalDespesas;
     const saldoTotal = totalLucro;
 
+    console.log(`📊 KPIs (${anoSelecionado}/${mesSelecionado}):`, {
+      receitaOperacional: receitaOperacional.toFixed(2),
+      receitasExtras: receitasExtras.toFixed(2), 
+      totalReceita: totalReceita.toFixed(2),
+      totalDespesas: totalDespesas.toFixed(2),
+      fonte: 'cache-workflow'
+    });
+
     return {
       totalReceita,
       valorPrevisto,
@@ -262,7 +284,7 @@ export function useDashboardFinanceiro() {
       totalLucro,
       saldoTotal
     };
-  }, [anoSelecionado, mesSelecionado, getMonthlyMetrics, getAnnualMetrics, transacoesFiltradas]);
+  }, [anoSelecionado, mesSelecionado, getMonthlyMetrics, getAnnualMetrics, transacoesFiltradas, cacheVersion]);
 
   // ============= CÁLCULOS ESPECÍFICOS PARA ROI =============
   
@@ -311,7 +333,7 @@ export function useDashboardFinanceiro() {
     let receitaAnterior = 0;
     let despesasAnterior = 0;
     
-    // Receita operacional do período anterior
+    // ✅ RECEITA OPERACIONAL DO PERÍODO ANTERIOR (do cache)
     if (periodoAnterior.mes) {
       // Período anterior específico (mês)
       const metricasAnterior = getMonthlyMetrics(periodoAnterior.ano, periodoAnterior.mes);
@@ -423,7 +445,7 @@ export function useDashboardFinanceiro() {
 
     const ano = parseInt(anoSelecionado);
     
-    // Se um mês específico está selecionado, mostrar apenas esse mês
+    // ✅ RECEITA OPERACIONAL: usar sempre cache do workflow
     if (mesSelecionado && mesSelecionado !== 'ano-completo') {
       const mesNumero = parseInt(mesSelecionado);
       const metricas = getMonthlyMetrics(ano, mesNumero);
@@ -431,7 +453,7 @@ export function useDashboardFinanceiro() {
         dadosPorMes[mesNumero].receita += metricas.receita;
       }
     } else {
-      // Mostrar todos os meses do ano (comportamento original)
+      // Mostrar todos os meses do ano
       for (let mes = 1; mes <= 12; mes++) {
         const metricas = getMonthlyMetrics(ano, mes);
         if (metricas) {
