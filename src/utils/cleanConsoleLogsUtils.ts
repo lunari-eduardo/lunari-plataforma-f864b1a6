@@ -5,7 +5,7 @@
 
 // Função para logs apenas em desenvolvimento ou com flag específica
 export const devLog = (message: string, data?: any): void => {
-  if (process.env.NODE_ENV === 'development' && window.location.search.includes('debug=true')) {
+  if (import.meta.env.DEV && window.location.search.includes('debug=true')) {
     console.log(message, data);
   }
 };

@@ -60,7 +60,7 @@ export class ErrorHandlingService {
     }
 
     // Log to console in development
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       const logMethod = this.getLogMethod(severity);
       logMethod(`[${severity.toUpperCase()}] ${context.operation}:`, message, context);
     }
