@@ -38,7 +38,7 @@ export default function SimpleProductSelect({
       </SelectTrigger>
       <SelectContent className="max-h-[200px]">
         {products.length === 0 ? (
-          <SelectItem value="" disabled>
+          <SelectItem value="no-products" disabled>
             Nenhum produto disponível
           </SelectItem>
         ) : (
