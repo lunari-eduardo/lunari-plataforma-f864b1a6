@@ -4,7 +4,8 @@ export default function LandingHero() {
   return (
     <HeroSection
       title="CHEGA DE PLANILHAS!"
-      description="Se você ainda esquece clientes, horários ou não sabe pra onde foi o dinheiro do mês… o Lunari resolve. Aqui a bagunça não entra."
+      subtitle="Seu segundo emprego não é o excel!"
+      description="Se você não aguenta mais planilhas, sistemas confusos e desorganizados... Seja bem vindo(a) ao Lunari, o sistema de gestão para fotógrafos que vai colocar o seu negócio em perfeita órbita."
       actions={[
         {
           text: "TESTE GRÁTIS POR 30 DIAS",
@@ -13,11 +14,6 @@ export default function LandingHero() {
             // Lógica para teste grátis
             console.log("Iniciar teste grátis");
           },
-        },
-        {
-          text: "Ver Demo",
-          variant: "outline",
-          href: "#demo",
         },
       ]}
       image={{

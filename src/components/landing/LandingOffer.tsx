@@ -3,11 +3,12 @@ export default function LandingOffer() {
   return <section className="py-20 bg-gradient-to-br from-landing-brand/10 to-landing-accent/10">
       <div className="container mx-auto px-4 text-center">
         <div className="max-w-3xl mx-auto space-y-8">
-          <h2 className="text-3xl md:text-5xl font-bold text-landing-text">Por menos post-it grudados no monitor</h2>
+          <h2 className="text-3xl md:text-5xl font-bold text-landing-text">Um sistema sob medida</h2>
           
           <p className="text-xl md:text-2xl text-landing-text/80 leading-relaxed">
-            Comece hoje com 30 dias grátis. Não pedimos cartão, não mandamos spam, 
-            não tem contrato escondido. Só gestão que funciona.
+            Ainda tem dúvidas se o Lunari é para você? Teste 30 dias grátis. 
+            Não pedimos cartão, não mandamos spam, não tem contrato escondido. 
+            Só gestão que funciona.
           </p>
 
           <div className="pt-8">

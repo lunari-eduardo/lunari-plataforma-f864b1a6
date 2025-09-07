@@ -4,7 +4,7 @@ import { Check, Star } from "lucide-react";
 const plans = [
   {
     name: "Starter",
-    price: "R$ 47",
+    price: "R$ 19,90",
     period: "/mês",
     description: "Perfeito para começar",
     features: [
@@ -18,7 +18,7 @@ const plans = [
   },
   {
     name: "Pro",
-    price: "R$ 97",
+    price: "R$ 37,90",
     period: "/mês", 
     description: "Para fotógrafos sérios",
     features: [
@@ -34,7 +34,7 @@ const plans = [
   },
   {
     name: "Estúdio",
-    price: "R$ 197",
+    price: "R$ 97,90",
     period: "/mês",
     description: "Para equipes e estúdios",
     features: [

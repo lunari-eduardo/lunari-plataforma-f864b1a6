@@ -1,12 +1,12 @@
 const gains = [{
   title: "⏱️ Tempo real",
-  description: "porque editar foto já ocupa tempo demais."
+  description: "Porque editar foto já ocupa tempo demais."
 }, {
-  title: "😌 Cabeça leve",
-  description: "lembretes automáticos > post-its colados no monitor."
+  title: "📅 Organização",
+  description: "Agenda clara e integrada com CRM e workflow."
 }, {
   title: "📊 Controle de verdade",
-  description: "ver onde o dinheiro foi, sem susto no fim do mês."
+  description: "Ver de onde veio e para onde foi o dinheiro, sem susto."
 }];
 export default function LandingGains() {
   return <section className="py-16 bg-white/50">

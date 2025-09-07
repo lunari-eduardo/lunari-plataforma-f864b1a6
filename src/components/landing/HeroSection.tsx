@@ -20,6 +20,7 @@ interface HeroProps {
     };
   };
   title: string;
+  subtitle?: string;
   description: string;
   actions: HeroAction[];
   image?: {
@@ -30,6 +31,7 @@ interface HeroProps {
 export function HeroSection({
   badge,
   title,
+  subtitle,
   description,
   actions,
   image
@@ -56,8 +58,15 @@ export function HeroSection({
             {title}
           </h1>
 
+          {/* Subtitle */}
+          {subtitle && (
+            <h2 className="relative z-10 animate-appear text-lg font-medium text-landing-text/80 opacity-0 delay-75 sm:text-xl">
+              {subtitle}
+            </h2>
+          )}
+
           {/* Description */}
-          <p className="text-md relative z-10 max-w-[550px] animate-appear font-medium text-landing-text/70 opacity-0 delay-100 sm:text-xl">
+          <p className="text-md relative z-10 max-w-[650px] animate-appear font-medium text-landing-text/70 opacity-0 delay-100 sm:text-xl leading-relaxed">
             {description}
           </p>
 
