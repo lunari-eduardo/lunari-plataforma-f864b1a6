@@ -1,7 +1,7 @@
 import { Camera, Users, DollarSign, BarChart3 } from "lucide-react";
 import LandingHero from "@/components/landing/LandingHero";
 import LandingFeatures from "@/components/landing/LandingFeatures";
-import LandingTestimonials from "@/components/landing/LandingTestimonials";
+import LandingScrollCards from "@/components/landing/LandingScrollCards";
 import LandingPricing from "@/components/landing/LandingPricing";
 import LandingFAQ from "@/components/landing/LandingFAQ";
 import LandingFooter from "@/components/landing/LandingFooter";
@@ -15,7 +15,7 @@ export default function LandingPage() {
       <LandingHero />
       <LandingGains />
       <LandingFeatures />
-      <LandingTestimonials />
+      <LandingScrollCards />
       <LandingOffer />
       <LandingHowItWorks />
       <LandingPricing />
