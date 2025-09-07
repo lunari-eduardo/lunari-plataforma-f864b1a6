@@ -42,7 +42,7 @@ export default function LandingPricing() {
 
         {/* Pricing Cards */}
         <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-8">
-          {plans.map((plan, index) => <div key={index} className={`relative bg-white rounded-2xl p-8 shadow-lg border transition-all hover:shadow-xl ${plan.popular ? "border-landing-brand/30 ring-2 ring-landing-brand/20" : "border-gray-200"}`}>
+          {plans.map((plan, index) => <div key={index} className={`relative bg-white rounded-2xl p-8 shadow-lg border transition-all hover:shadow-xl flex flex-col ${plan.popular ? "border-landing-brand/30 ring-2 ring-landing-brand/20" : "border-gray-200"}`}>
               {plan.popular && <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
                   <div className="bg-landing-brand text-white px-4 py-1 rounded-full text-sm font-medium flex items-center gap-1">
                     <Star className="w-4 h-4" />
@@ -68,26 +68,17 @@ export default function LandingPricing() {
                 </div>
               </div>
 
-              <div className="space-y-4 mb-8">
+              <div className="space-y-4 mb-8 flex-grow">
                 {plan.features.map((feature, featureIndex) => <div key={featureIndex} className="flex items-center gap-3">
                     <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
                     <span className="text-landing-text">{feature}</span>
                   </div>)}
               </div>
 
-              <Button className={`w-full py-3 rounded-xl text-base font-medium transition-all ${plan.popular ? "bg-landing-brand hover:bg-landing-brand/90 text-white" : "bg-white border-2 border-landing-brand text-landing-brand hover:bg-landing-brand hover:text-white"}`}>
+              <Button className={`w-full py-3 rounded-xl text-base font-medium transition-all mt-auto ${plan.popular ? "bg-landing-brand hover:bg-landing-brand/90 text-white" : "bg-white border-2 border-landing-brand text-landing-brand hover:bg-landing-brand hover:text-white"}`}>
                 Começar Teste Grátis
               </Button>
             </div>)}
-        </div>
-
-        {/* FAQ Section */}
-        <div className="max-w-2xl mx-auto mt-20">
-          
-          
-          <div className="space-y-4">
-            {["Preciso de cartão?", "Posso cancelar?", "Meus dados ficam seguros?", "Integra com WhatsApp?"].map((question, index) => {})}
-          </div>
         </div>
       </div>
     </section>;
