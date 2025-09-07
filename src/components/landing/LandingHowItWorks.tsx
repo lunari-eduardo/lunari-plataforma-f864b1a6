@@ -9,8 +9,8 @@ const steps = [
   },
   {
     icon: Settings,
-    title: "Configure e seja livre",
-    description: "Tour guiado incluído",
+    title: "Configure",
+    description: "Fácil e intuitivo",
     number: 2
   },
   {
