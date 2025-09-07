@@ -30,20 +30,15 @@ export default function LandingHowItWorks() {
             Do zero à organização em 3 passos
           </h2>
           <p className="text-xl text-landing-text/70">
-            Com tour guiado (sem tutorial de 3 horas no YouTube)
+            (Sem maratonar tutorial de 3 horas no YouTube)
           </p>
         </div>
 
-        <div className="max-w-4xl mx-auto">
-          <div className="grid md:grid-cols-3 gap-8 md:gap-4">
+        <div className="max-w-5xl mx-auto">
+          <div className="grid md:grid-cols-3 gap-8">
             {steps.map((step, index) => (
-              <div key={index} className="text-center relative">
-                {/* Connector line (hidden on mobile) */}
-                {index < steps.length - 1 && (
-                  <div className="hidden md:block absolute top-16 left-1/2 w-full h-0.5 bg-landing-brand/20 transform translate-x-1/2 z-0"></div>
-                )}
-                
-                <div className="relative z-10 bg-white rounded-2xl p-8 shadow-lg border border-landing-brand/10 hover:shadow-xl transition-all">
+              <div key={index} className="text-center">
+                <div className="bg-white rounded-2xl p-8 shadow-lg border border-landing-brand/10 hover:shadow-xl transition-all">
                   {/* Number */}
                   <div className="w-12 h-12 bg-landing-brand text-white rounded-full flex items-center justify-center font-bold text-lg mx-auto mb-6">
                     {step.number}

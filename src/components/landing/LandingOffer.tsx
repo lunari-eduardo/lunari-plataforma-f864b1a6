@@ -5,10 +5,11 @@ export default function LandingOffer() {
         <div className="max-w-3xl mx-auto space-y-8">
           <h2 className="text-3xl md:text-5xl font-bold text-landing-text">Um sistema sob medida</h2>
           
-          <p className="text-xl md:text-2xl text-landing-text/80 leading-relaxed">
-            Se você ainda duvida... Te cadastra aí, é de graça por 30 dias.
-            O máximo que pode acontecer é você se organizar.
-          </p>
+          <div className="text-xl md:text-2xl text-landing-text/80 leading-relaxed">
+            <p>Se você ainda duvida...</p>
+            <p>Te cadastra aí, é de graça por 30 dias.</p>
+            <p>O máximo que pode acontecer é você se organizar.</p>
+          </div>
 
           <div className="pt-8">
             <Button size="lg" className="bg-landing-brand hover:bg-landing-brand/90 text-white px-12 py-6 text-xl rounded-full shadow-2xl hover:shadow-3xl transition-all transform hover:scale-105">
