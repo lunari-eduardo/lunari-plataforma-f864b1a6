@@ -6,9 +6,8 @@ export default function LandingOffer() {
           <h2 className="text-3xl md:text-5xl font-bold text-landing-text">Um sistema sob medida</h2>
           
           <p className="text-xl md:text-2xl text-landing-text/80 leading-relaxed">
-            Ainda tem dúvidas se o Lunari é para você? Teste 30 dias grátis. 
-            Não pedimos cartão, não mandamos spam, não tem contrato escondido. 
-            Só gestão que funciona.
+            Se você ainda duvida... Te cadastra aí, é de graça por 30 dias.
+            O máximo que pode acontecer é você se organizar.
           </p>
 
           <div className="pt-8">
