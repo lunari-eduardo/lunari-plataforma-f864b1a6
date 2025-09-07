@@ -1,11 +1,16 @@
+import { Clock, Calendar, BarChart3 } from "lucide-react";
+
 const gains = [{
-  title: "⏱️ Tempo real",
+  icon: Clock,
+  title: "Tempo real",
   description: "Porque editar foto já ocupa tempo demais."
 }, {
-  title: "📅 Organização",
+  icon: Calendar,
+  title: "Organização",
   description: "Agenda clara e integrada com CRM e workflow."
 }, {
-  title: "📊 Controle de verdade",
+  icon: BarChart3,
+  title: "Controle de verdade",
   description: "Ver de onde veio e para onde foi o dinheiro, sem susto."
 }];
 export default function LandingGains() {
@@ -16,16 +21,21 @@ export default function LandingGains() {
         </div>
 
         <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-          {gains.map((gain, index) => <div key={index} className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all border border-landing-brand/10">
-              <div>
-                <h3 className="text-lg font-semibold text-landing-text mb-2">
+          {gains.map((gain, index) => (
+            <div key={index} className="bg-white rounded-xl p-8 shadow-lg hover:shadow-xl transition-all border border-landing-brand/10">
+              <div className="text-center">
+                <div className="mx-auto w-16 h-16 bg-landing-brand/10 rounded-full flex items-center justify-center mb-6">
+                  <gain.icon className="w-8 h-8 text-landing-brand" />
+                </div>
+                <h3 className="text-xl font-semibold text-landing-text mb-3">
                   {gain.title}
                 </h3>
-                <p className="text-landing-text/70">
+                <p className="text-landing-text/70 leading-relaxed">
                   {gain.description}
                 </p>
               </div>
-            </div>)}
+            </div>
+          ))}
         </div>
       </div>
     </section>;
