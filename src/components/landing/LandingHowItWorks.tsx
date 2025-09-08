@@ -35,26 +35,26 @@ export default function LandingHowItWorks() {
         </div>
 
         <div className="max-w-5xl mx-auto">
-          <div className="grid grid-cols-3 gap-2 sm:gap-4 md:gap-8 items-stretch">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8 items-stretch">
             {steps.map((step, index) => (
               <div key={index} className="text-center h-full">
-                <div className="bg-white rounded-xl md:rounded-2xl p-3 sm:p-6 md:p-8 shadow-lg border border-landing-brand/10 hover:shadow-xl transition-all h-full flex flex-col min-h-[280px] sm:min-h-[300px] md:min-h-[320px]">
+                <div className="bg-white rounded-xl md:rounded-2xl p-6 md:p-8 shadow-lg border border-landing-brand/10 hover:shadow-xl transition-all h-full flex flex-col min-h-[280px] md:min-h-[320px]">
                   {/* Number */}
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-landing-brand text-white rounded-full flex items-center justify-center font-bold text-sm sm:text-base md:text-lg mx-auto mb-3 sm:mb-4 md:mb-6">
+                  <div className="w-10 h-10 md:w-12 md:h-12 bg-landing-brand text-white rounded-full flex items-center justify-center font-bold text-base md:text-lg mx-auto mb-4 md:mb-6">
                     {step.number}
                   </div>
 
                   {/* Icon */}
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 bg-landing-brand/10 rounded-lg md:rounded-xl flex items-center justify-center mx-auto mb-3 sm:mb-4 md:mb-6">
-                    <step.icon className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 text-landing-brand" />
+                  <div className="w-12 h-12 md:w-16 md:h-16 bg-landing-brand/10 rounded-lg md:rounded-xl flex items-center justify-center mx-auto mb-4 md:mb-6">
+                    <step.icon className="w-6 h-6 md:w-8 md:h-8 text-landing-brand" />
                   </div>
 
                   {/* Content */}
                   <div className="flex-grow flex flex-col justify-center">
-                    <h3 className="text-sm sm:text-lg md:text-xl font-bold text-landing-text mb-1 sm:mb-2 leading-tight">
+                    <h3 className="text-lg md:text-xl font-bold text-landing-text mb-2 leading-tight">
                       {step.title}
                     </h3>
-                    <p className="text-xs sm:text-sm md:text-base text-landing-text/70 leading-tight">
+                    <p className="text-sm md:text-base text-landing-text/70 leading-relaxed">
                       {step.description}
                     </p>
                   </div>
