@@ -35,10 +35,10 @@ export default function LandingHowItWorks() {
         </div>
 
         <div className="max-w-5xl mx-auto">
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-8 items-stretch">
             {steps.map((step, index) => (
-              <div key={index} className="text-center">
-                <div className="bg-white rounded-2xl p-8 shadow-lg border border-landing-brand/10 hover:shadow-xl transition-all">
+              <div key={index} className="text-center h-full">
+                <div className="bg-white rounded-2xl p-8 shadow-lg border border-landing-brand/10 hover:shadow-xl transition-all h-full flex flex-col min-h-[320px]">
                   {/* Number */}
                   <div className="w-12 h-12 bg-landing-brand text-white rounded-full flex items-center justify-center font-bold text-lg mx-auto mb-6">
                     {step.number}
@@ -50,12 +50,14 @@ export default function LandingHowItWorks() {
                   </div>
 
                   {/* Content */}
-                  <h3 className="text-xl font-bold text-landing-text mb-2">
-                    {step.title}
-                  </h3>
-                  <p className="text-landing-text/70">
-                    {step.description}
-                  </p>
+                  <div className="flex-grow flex flex-col justify-center">
+                    <h3 className="text-xl font-bold text-landing-text mb-2">
+                      {step.title}
+                    </h3>
+                    <p className="text-landing-text/70">
+                      {step.description}
+                    </p>
+                  </div>
                 </div>
               </div>
             ))}
