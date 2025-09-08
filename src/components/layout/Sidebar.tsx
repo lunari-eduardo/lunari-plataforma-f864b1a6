@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useUserProfile, useUserBranding } from '@/hooks/useUserProfile';
+import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 interface NavItemProps {
   to: string;
@@ -34,6 +35,7 @@ export default function Sidebar() {
   const [isDesktopExpanded, setIsDesktopExpanded] = useState(false);
   const { profile, getProfileOrDefault } = useUserProfile();
   const { branding, getBrandingOrDefault } = useUserBranding();
+  const { signOut } = useAuth();
   
   const currentProfile = getProfileOrDefault();
   const currentBranding = getBrandingOrDefault();
@@ -84,7 +86,10 @@ export default function Sidebar() {
           Plano de Assinatura
         </DropdownMenuItem>
         <DropdownMenuSeparator className="bg-lunar-border/30" />
-        <DropdownMenuItem className="text-xs text-lunar-text hover:bg-lunar-surface/50 rounded">
+        <DropdownMenuItem 
+          className="text-xs text-lunar-text hover:bg-lunar-surface/50 rounded cursor-pointer"
+          onClick={signOut}
+        >
           Sair
         </DropdownMenuItem>
       </DropdownMenuContent>
