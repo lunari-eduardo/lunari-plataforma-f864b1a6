@@ -4,6 +4,7 @@
  */
 
 import { LocalStorageConfigurationAdapter } from '@/adapters/LocalStorageConfigurationAdapter';
+import { SupabaseConfigurationAdapter } from '@/adapters/SupabaseConfigurationAdapter';
 import type { ConfigurationStorageAdapter } from '@/adapters/ConfigurationStorageAdapter';
 import type { 
   Categoria, 
@@ -11,19 +12,48 @@ import type {
   Produto, 
   EtapaTrabalho
 } from '@/types/configuration';
+import { supabase } from '@/integrations/supabase/client';
 
 /**
  * ConfigurationService - Abstração para persistência de configurações
  * 
- * Usa adapter pattern para abstrair a persistência,
- * facilitando migração futura para Supabase mantendo a mesma API.
+ * Usa adapter pattern para abstrair a persistência.
+ * Automaticamente usa Supabase quando usuário está autenticado,
+ * senão usa LocalStorage como fallback.
  */
 class ConfigurationService {
   private adapter: ConfigurationStorageAdapter;
+  private supabaseAdapter: SupabaseConfigurationAdapter;
+  private localAdapter: LocalStorageConfigurationAdapter;
   
   constructor(adapter?: ConfigurationStorageAdapter) {
-    // Por padrão usa LocalStorage, mas pode ser injetado outro adapter
-    this.adapter = adapter || new LocalStorageConfigurationAdapter();
+    this.localAdapter = new LocalStorageConfigurationAdapter();
+    this.supabaseAdapter = new SupabaseConfigurationAdapter();
+    
+    // Se adapter específico foi injetado, usa ele
+    if (adapter) {
+      this.adapter = adapter;
+    } else {
+      // Senão determina automaticamente baseado na autenticação
+      this.adapter = this.localAdapter; // Padrão inicial
+      this.initializeAdapter();
+    }
+  }
+
+  private async initializeAdapter() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        console.log('🔄 [ConfigurationService] Usuário autenticado, usando Supabase');
+        this.adapter = this.supabaseAdapter;
+      } else {
+        console.log('🏪 [ConfigurationService] Usuário não autenticado, usando LocalStorage');
+        this.adapter = this.localAdapter;
+      }
+    } catch (error) {
+      console.error('❌ [ConfigurationService] Erro ao verificar autenticação:', error);
+      this.adapter = this.localAdapter; // Fallback
+    }
   }
   
   // ============= OPERAÇÕES DE DADOS =============
@@ -32,7 +62,12 @@ class ConfigurationService {
     return this.adapter.loadCategorias();
   }
 
+  async saveCategoriasAsync(categorias: Categoria[]): Promise<void> {
+    await this.adapter.saveCategorias(categorias);
+  }
+
   saveCategorias(categorias: Categoria[]): void {
+    // Para compatibilidade com código existente
     this.adapter.saveCategorias(categorias);
   }
 
@@ -40,7 +75,12 @@ class ConfigurationService {
     return this.adapter.loadPacotes();
   }
 
+  async savePacotesAsync(pacotes: Pacote[]): Promise<void> {
+    await this.adapter.savePacotes(pacotes);
+  }
+
   savePacotes(pacotes: Pacote[]): void {
+    // Para compatibilidade com código existente
     this.adapter.savePacotes(pacotes);
   }
 
@@ -48,7 +88,12 @@ class ConfigurationService {
     return this.adapter.loadProdutos();
   }
 
+  async saveProdutosAsync(produtos: Produto[]): Promise<void> {
+    await this.adapter.saveProdutos(produtos);
+  }
+
   saveProdutos(produtos: Produto[]): void {
+    // Para compatibilidade com código existente
     this.adapter.saveProdutos(produtos);
   }
 
@@ -56,8 +101,42 @@ class ConfigurationService {
     return this.adapter.loadEtapas();
   }
 
+  async saveEtapasAsync(etapas: EtapaTrabalho[]): Promise<void> {
+    await this.adapter.saveEtapas(etapas);
+  }
+
   saveEtapas(etapas: EtapaTrabalho[]): void {
+    // Para compatibilidade com código existente
     this.adapter.saveEtapas(etapas);
+  }
+
+  // ============= MÉTODOS DE CARREGAMENTO ASSÍNCRONO =============
+
+  async loadConfigurationsAsync(): Promise<{
+    categorias: Categoria[];
+    pacotes: Pacote[];
+    produtos: Produto[];
+    etapas: EtapaTrabalho[];
+  }> {
+    // Se está usando Supabase, carrega dados assíncronos
+    if (this.adapter === this.supabaseAdapter) {
+      const [categorias, pacotes, produtos, etapas] = await Promise.all([
+        this.supabaseAdapter.loadCategoriasAsync(),
+        this.supabaseAdapter.loadPacotesAsync(),
+        this.supabaseAdapter.loadProdutosAsync(),
+        this.supabaseAdapter.loadEtapasAsync()
+      ]);
+
+      return { categorias, pacotes, produtos, etapas };
+    }
+
+    // Se está usando LocalStorage, dados são síncronos
+    return {
+      categorias: this.adapter.loadCategorias(),
+      pacotes: this.adapter.loadPacotes(),
+      produtos: this.adapter.loadProdutos(),
+      etapas: this.adapter.loadEtapas()
+    };
   }
   
   // ============= MIGRAÇÃO DE ADAPTER =============
