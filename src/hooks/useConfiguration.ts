@@ -6,7 +6,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { configurationService } from '@/services/ConfigurationService';
-import { useAuth } from '@/hooks/useAuth';
 import type {
   Categoria,
   Pacote, 
@@ -17,63 +16,41 @@ import type {
 } from '@/types/configuration';
 
 export function useConfiguration(): ConfigurationState & ConfigurationActions {
-  const { user } = useAuth();
-  
   // ============= ESTADOS =============
   
-  const [categorias, setCategorias] = useState<Categoria[]>([]);
-  const [pacotes, setPacotes] = useState<Pacote[]>([]);
-  const [produtos, setProdutos] = useState<Produto[]>([]);
-  const [etapas, setEtapas] = useState<EtapaTrabalho[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // ============= CARREGAMENTO INICIAL =============
+  const [categorias, setCategorias] = useState<Categoria[]>(() => 
+    configurationService.loadCategorias()
+  );
   
-  useEffect(() => {
-    async function loadConfigurations() {
-      setIsLoading(true);
-      try {
-        const configs = await configurationService.loadConfigurationsAsync();
-        setCategorias(configs.categorias);
-        setPacotes(configs.pacotes);
-        setProdutos(configs.produtos);
-        setEtapas(configs.etapas);
-      } catch (error) {
-        console.error('❌ [useConfiguration] Erro ao carregar configurações:', error);
-        toast.error('Erro ao carregar configurações');
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    loadConfigurations();
-  }, [user]); // Recarrega quando usuário muda
+  const [pacotes, setPacotes] = useState<Pacote[]>(() =>
+    configurationService.loadPacotes()
+  );
+  
+  const [produtos, setProdutos] = useState<Produto[]>(() =>
+    configurationService.loadProdutos()
+  );
+  
+  const [etapas, setEtapas] = useState<EtapaTrabalho[]>(() =>
+    configurationService.loadEtapas()
+  );
 
   // ============= EFEITOS DE PERSISTÊNCIA =============
   
   useEffect(() => {
-    if (!isLoading && categorias.length >= 0) {
-      configurationService.saveCategoriasAsync(categorias).catch(console.error);
-    }
-  }, [categorias, isLoading]);
+    configurationService.saveCategorias(categorias);
+  }, [categorias]);
 
   useEffect(() => {
-    if (!isLoading && pacotes.length >= 0) {
-      configurationService.savePacotesAsync(pacotes).catch(console.error);
-    }
-  }, [pacotes, isLoading]);
+    configurationService.savePacotes(pacotes);
+  }, [pacotes]);
 
   useEffect(() => {
-    if (!isLoading && produtos.length >= 0) {
-      configurationService.saveProdutosAsync(produtos).catch(console.error);
-    }
-  }, [produtos, isLoading]);
+    configurationService.saveProdutos(produtos);
+  }, [produtos]);
 
   useEffect(() => {
-    if (!isLoading && etapas.length >= 0) {
-      configurationService.saveEtapasAsync(etapas).catch(console.error);
-    }
-  }, [etapas, isLoading]);
+    configurationService.saveEtapas(etapas);
+  }, [etapas]);
 
   // ============= OPERAÇÕES DE CATEGORIAS =============
   

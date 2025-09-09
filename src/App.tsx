@@ -28,7 +28,10 @@ import { AuthProvider } from "./contexts/AuthContext";
 import ThemeProvider from "./components/theme/ThemeProvider";
 import { BuildMonitor } from "./components/shared/BuildMonitor";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
-import Auth from "./pages/Auth";
+import LoginPage from "./pages/LoginPage";
+import SignUpPage from "./pages/SignUpPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 
 // Create a stable QueryClient instance
 const queryClient = new QueryClient({
@@ -63,7 +66,10 @@ function App() {
                     <Route path="/landing" element={<LandingPage />} />
                     
                     {/* Auth routes - públicas */}
-                    <Route path="/auth" element={<Auth />} />
+                    <Route path="/login" element={<LoginPage />} />
+                    <Route path="/signup" element={<SignUpPage />} />
+                    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                    <Route path="/reset-password" element={<ResetPasswordPage />} />
                     
                     {/* Protected routes */}
                     <Route path="/" element={
