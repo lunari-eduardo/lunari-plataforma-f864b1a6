@@ -24,14 +24,8 @@ import LandingPage from "./pages/LandingPage";
 import NotFound from "./pages/NotFound";
 import { AppProvider } from "./contexts/AppContext";
 import { AgendaProvider } from "./contexts/AgendaContext";
-import { AuthProvider } from "./contexts/AuthContext";
 import ThemeProvider from "./components/theme/ThemeProvider";
 import { BuildMonitor } from "./components/shared/BuildMonitor";
-import ProtectedRoute from "./components/auth/ProtectedRoute";
-import LoginPage from "./pages/LoginPage";
-import SignUpPage from "./pages/SignUpPage";
-import ForgotPasswordPage from "./pages/ForgotPasswordPage";
-import ResetPasswordPage from "./pages/ResetPasswordPage";
 
 // Create a stable QueryClient instance
 const queryClient = new QueryClient({
@@ -54,50 +48,37 @@ function App() {
     <BrowserRouter>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
-          <AuthProvider>
-            <AppProvider>
-              <AgendaProvider>
-                <TooltipProvider>
-                  <BuildMonitor />
-                  <Toaster />
-                  <Sonner />
-                  <Routes>
-                    {/* Landing page sem layout */}
-                    <Route path="/landing" element={<LandingPage />} />
-                    
-                    {/* Auth routes - públicas */}
-                    <Route path="/login" element={<LoginPage />} />
-                    <Route path="/signup" element={<SignUpPage />} />
-                    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-                    <Route path="/reset-password" element={<ResetPasswordPage />} />
-                    
-                    {/* Protected routes */}
-                    <Route path="/" element={
-                      <ProtectedRoute>
-                        <Layout />
-                      </ProtectedRoute>
-                    }>
-                      <Route path="/" element={<Index />} />
-                      <Route path="/agenda" element={<Agenda />} />
-                      <Route path="/clientes" element={<Clientes />} />
-                      <Route path="/clientes/:id" element={<ClienteDetalhe />} />
-                      <Route path="/leads" element={<Leads />} />
-                      <Route path="/financas" element={<NovaFinancas />} />
-                      <Route path="/precificacao" element={<Precificacao />} />
-                      <Route path="/workflow" element={<Workflow />} />
-                      <Route path="/analise-vendas" element={<AnaliseVendas />} />
-                      <Route path="/configuracoes" element={<Configuracoes />} />
-                      <Route path="/minha-conta" element={<MinhaConta />} />
-                      <Route path="/preferencias" element={<Preferencias />} />
-                      <Route path="/tarefas" element={<Tarefas />} />
-                      <Route path="/feed-test" element={<FeedTest />} />
-                      <Route path="*" element={<NotFound />} />
-                    </Route>
-                  </Routes>
-                </TooltipProvider>
-              </AgendaProvider>
-            </AppProvider>
-          </AuthProvider>
+          <AppProvider>
+            <AgendaProvider>
+              <TooltipProvider>
+                <BuildMonitor />
+                <Toaster />
+                <Sonner />
+                <Routes>
+                  {/* Landing page sem layout */}
+                  <Route path="/landing" element={<LandingPage />} />
+                  
+                  <Route path="/" element={<Layout />}>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/agenda" element={<Agenda />} />
+                    <Route path="/clientes" element={<Clientes />} />
+                    <Route path="/clientes/:id" element={<ClienteDetalhe />} />
+                    <Route path="/leads" element={<Leads />} />
+                    <Route path="/financas" element={<NovaFinancas />} />
+                    <Route path="/precificacao" element={<Precificacao />} />
+                    <Route path="/workflow" element={<Workflow />} />
+                    <Route path="/analise-vendas" element={<AnaliseVendas />} />
+                    <Route path="/configuracoes" element={<Configuracoes />} />
+                    <Route path="/minha-conta" element={<MinhaConta />} />
+                    <Route path="/preferencias" element={<Preferencias />} />
+                    <Route path="/tarefas" element={<Tarefas />} />
+                    <Route path="/feed-test" element={<FeedTest />} />
+                    <Route path="*" element={<NotFound />} />
+                  </Route>
+                </Routes>
+              </TooltipProvider>
+            </AgendaProvider>
+          </AppProvider>
         </ThemeProvider>
       </QueryClientProvider>
     </BrowserRouter>
