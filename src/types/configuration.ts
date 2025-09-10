@@ -90,6 +90,9 @@ export interface ConfigurationState {
   produtos: Produto[];
   etapas: EtapaTrabalho[];
   isLoadingCategorias?: boolean;
+  isLoadingPacotes?: boolean;
+  isLoadingProdutos?: boolean;
+  isLoadingEtapas?: boolean;
 }
 
 export interface ConfigurationActions {
@@ -101,17 +104,17 @@ export interface ConfigurationActions {
   // Pacotes
   adicionarPacote: (pacote: Omit<Pacote, 'id'>) => void;
   atualizarPacote: (id: string, dados: Partial<Pacote>) => void;
-  removerPacote: (id: string) => void;
+  removerPacote: (id: string) => Promise<boolean>;
   
   // Produtos
   adicionarProduto: (produto: Omit<Produto, 'id'>) => void;
   atualizarProduto: (id: string, dados: Partial<Produto>) => void;
-  removerProduto: (id: string) => void;
+  removerProduto: (id: string) => Promise<boolean>;
   
   // Etapas de Trabalho
   adicionarEtapa: (etapa: Omit<EtapaTrabalho, 'id' | 'ordem'>) => void;
   atualizarEtapa: (id: string, dados: Partial<EtapaTrabalho>) => void;
-  removerEtapa: (id: string) => void;
+  removerEtapa: (id: string) => Promise<boolean>;
   moverEtapa: (id: string, direcao: 'cima' | 'baixo') => void;
 }
 
@@ -131,54 +134,54 @@ export const CONFIGURATION_STORAGE_KEYS = {
 // ============= DADOS PADRÃO =============
 
 export const DEFAULT_CATEGORIAS: Categoria[] = [
-  { id: "cat_gestante", nome: "Gestante", cor: "#FF9500" },
-  { id: "cat_newborn", nome: "Newborn", cor: "#34C759" },
-  { id: "cat_familia", nome: "Família", cor: "#5856D6" },
-  { id: "cat_casamento", nome: "Casamento", cor: "#FF2D55" },
-  { id: "cat_aniversario", nome: "Aniversário", cor: "#007AFF" }
+  { id: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c8d", nome: "Gestante", cor: "#FF9500" },
+  { id: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c8e", nome: "Newborn", cor: "#34C759" },
+  { id: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c8f", nome: "Família", cor: "#5856D6" },
+  { id: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c90", nome: "Casamento", cor: "#FF2D55" },
+  { id: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c91", nome: "Aniversário", cor: "#007AFF" }
 ];
 
 export const DEFAULT_PACOTES: Pacote[] = [
   {
-    id: "pac_basico",
+    id: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c92",
     nome: "Básico",
-    categoria_id: "cat_familia", 
+    categoria_id: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c8f", 
     valor_base: 450,
     valor_foto_extra: 25,
     produtosIncluidos: []
   },
   {
-    id: "pac_completo", 
+    id: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c93", 
     nome: "Completo",
-    categoria_id: "cat_gestante",
+    categoria_id: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c8d",
     valor_base: 980,
     valor_foto_extra: 35,
     produtosIncluidos: [
-      { produtoId: "prod_album", quantidade: 1 }
+      { produtoId: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c94", quantidade: 1 }
     ]
   },
   {
-    id: "pac_empresarial",
+    id: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c95",
     nome: "Empresarial", 
-    categoria_id: "cat_casamento",
+    categoria_id: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c90",
     valor_base: 890,
     valor_foto_extra: 30,
     produtosIncluidos: [
-      { produtoId: "prod_album", quantidade: 1 },
-      { produtoId: "prod_quadro", quantidade: 1 }
+      { produtoId: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c94", quantidade: 1 },
+      { produtoId: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c96", quantidade: 1 }
     ]
   }
 ];
 
 export const DEFAULT_PRODUTOS: Produto[] = [
   {
-    id: "prod_album",
+    id: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c94",
     nome: "Álbum 20x30",
     preco_custo: 180,
     preco_venda: 350
   },
   {
-    id: "prod_quadro",
+    id: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c96",
     nome: "Quadro 30x40", 
     preco_custo: 120,
     preco_venda: 280
@@ -186,7 +189,7 @@ export const DEFAULT_PRODUTOS: Produto[] = [
 ];
 
 export const DEFAULT_ETAPAS: EtapaTrabalho[] = [
-  { id: "etapa_fotografado", nome: "Fotografado", cor: "#00B2FF", ordem: 1 },
-  { id: "etapa_editando", nome: "Editando", cor: "#FF9500", ordem: 2 },
-  { id: "etapa_finalizado", nome: "Finalizado", cor: "#34C759", ordem: 3 }
+  { id: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c97", nome: "Fotografado", cor: "#00B2FF", ordem: 1 },
+  { id: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c98", nome: "Editando", cor: "#FF9500", ordem: 2 },
+  { id: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c99", nome: "Finalizado", cor: "#34C759", ordem: 3 }
 ];

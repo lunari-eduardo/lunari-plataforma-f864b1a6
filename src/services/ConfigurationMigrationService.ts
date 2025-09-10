@@ -124,6 +124,128 @@ export class ConfigurationMigrationService {
   }
 
   /**
+   * Migra pacotes para Supabase
+   */
+  private static async migratePacotesInternal(pacotes: Pacote[], userId: string): Promise<boolean> {
+    try {
+      // Verifica se há dados existentes
+      const { data: existing } = await (supabase as any)
+        .from('pacotes')
+        .select('id')
+        .limit(1);
+
+      if (existing && existing.length > 0) {
+        console.log('Pacotes already exist in Supabase');
+        return true;
+      }
+
+      // Prepara dados com UUIDs válidos
+      const pacotesData = pacotes.map(pacote => ({
+        id: this.generateOrKeepUUID(pacote.id),
+        user_id: userId,
+        nome: pacote.nome,
+        categoria_id: this.generateOrKeepUUID(pacote.categoria_id),
+        valor_base: pacote.valor_base,
+        valor_foto_extra: pacote.valor_foto_extra,
+        produtos_incluidos: pacote.produtosIncluidos.map(p => ({
+          produtoId: this.generateOrKeepUUID(p.produtoId),
+          quantidade: p.quantidade
+        }))
+      }));
+
+      const { error } = await (supabase as any)
+        .from('pacotes')
+        .insert(pacotesData);
+
+      if (error) throw error;
+
+      console.log(`Migrated ${pacotesData.length} pacotes to Supabase`);
+      return true;
+    } catch (error) {
+      console.error('Error migrating pacotes:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Migra produtos para Supabase
+   */
+  private static async migrateProdutosInternal(produtos: Produto[], userId: string): Promise<boolean> {
+    try {
+      // Verifica se há dados existentes
+      const { data: existing } = await (supabase as any)
+        .from('produtos')
+        .select('id')
+        .limit(1);
+
+      if (existing && existing.length > 0) {
+        console.log('Produtos already exist in Supabase');
+        return true;
+      }
+
+      // Prepara dados com UUIDs válidos
+      const produtosData = produtos.map(produto => ({
+        id: this.generateOrKeepUUID(produto.id),
+        user_id: userId,
+        nome: produto.nome,
+        preco_custo: produto.preco_custo,
+        preco_venda: produto.preco_venda
+      }));
+
+      const { error } = await (supabase as any)
+        .from('produtos')
+        .insert(produtosData);
+
+      if (error) throw error;
+
+      console.log(`Migrated ${produtosData.length} produtos to Supabase`);
+      return true;
+    } catch (error) {
+      console.error('Error migrating produtos:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Migra etapas para Supabase
+   */
+  private static async migrateEtapasInternal(etapas: EtapaTrabalho[], userId: string): Promise<boolean> {
+    try {
+      // Verifica se há dados existentes
+      const { data: existing } = await (supabase as any)
+        .from('etapas_trabalho')
+        .select('id')
+        .limit(1);
+
+      if (existing && existing.length > 0) {
+        console.log('Etapas already exist in Supabase');
+        return true;
+      }
+
+      // Prepara dados com UUIDs válidos
+      const etapasData = etapas.map(etapa => ({
+        id: this.generateOrKeepUUID(etapa.id),
+        user_id: userId,
+        nome: etapa.nome,
+        cor: etapa.cor,
+        ordem: etapa.ordem
+      }));
+
+      const { error } = await (supabase as any)
+        .from('etapas_trabalho')
+        .insert(etapasData);
+
+      if (error) throw error;
+
+      console.log(`Migrated ${etapasData.length} etapas to Supabase`);
+      return true;
+    } catch (error) {
+      console.error('Error migrating etapas:', error);
+      return false;
+    }
+  }
+
+  /**
    * Executa migração completa do sistema
    */
   static async migrateAll(): Promise<boolean> {
@@ -146,10 +268,15 @@ export class ConfigurationMigrationService {
       // Carrega dados do localStorage
       const localData = this.loadLocalData();
       
-      // Por enquanto, migra apenas categorias (outras entidades serão adicionadas gradualmente)
-      const categoriasOk = await this.migrateCategoriasInternal(localData.categorias, user.user.id);
+      // Migra todas as entidades
+      const [categoriasOk, pacotesOk, produtosOk, etapasOk] = await Promise.all([
+        this.migrateCategoriasInternal(localData.categorias, user.user.id),
+        this.migratePacotesInternal(localData.pacotes, user.user.id),
+        this.migrateProdutosInternal(localData.produtos, user.user.id),
+        this.migrateEtapasInternal(localData.etapas, user.user.id)
+      ]);
 
-      if (categoriasOk) {
+      if (categoriasOk && pacotesOk && produtosOk && etapasOk) {
         // Marca migração como concluída
         this.markMigrated();
         
@@ -161,7 +288,7 @@ export class ConfigurationMigrationService {
         
         return true;
       } else {
-        throw new Error('Migration failed');
+        throw new Error('Migration failed for some entities');
       }
     } catch (error) {
       console.error('Complete migration failed:', error);

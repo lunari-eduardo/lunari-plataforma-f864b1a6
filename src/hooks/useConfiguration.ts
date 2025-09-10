@@ -22,8 +22,13 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
   const [isLoadingCategorias, setIsLoadingCategorias] = useState(true);
   
   const [pacotes, setPacotes] = useState<Pacote[]>([]);
+  const [isLoadingPacotes, setIsLoadingPacotes] = useState(true);
+  
   const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [isLoadingProdutos, setIsLoadingProdutos] = useState(true);
+  
   const [etapas, setEtapas] = useState<EtapaTrabalho[]>([]);
+  const [isLoadingEtapas, setIsLoadingEtapas] = useState(true);
 
   // ============= INICIALIZAÇÃO E CARREGAMENTO =============
   
@@ -31,6 +36,9 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
     const initializeAllData = async () => {
       try {
         setIsLoadingCategorias(true);
+        setIsLoadingPacotes(true);
+        setIsLoadingProdutos(true);
+        setIsLoadingEtapas(true);
         
         // Carrega todos os dados de forma assíncrona
         const [loadedCategorias, loadedPacotes, loadedProdutos, loadedEtapas] = await Promise.all([
@@ -49,6 +57,9 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
         toast.error('Erro ao carregar configurações');
       } finally {
         setIsLoadingCategorias(false);
+        setIsLoadingPacotes(false);
+        setIsLoadingProdutos(false);
+        setIsLoadingEtapas(false);
       }
     };
 
@@ -67,31 +78,31 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
   }, [categorias, isLoadingCategorias]);
 
   useEffect(() => {
-    if (pacotes.length >= 0) {  // Allow empty arrays
+    if (!isLoadingPacotes) {
       configurationService.syncPacotes(pacotes).catch(error => {
-        console.error('Error saving pacotes:', error);
-        toast.error('Erro ao salvar pacotes');
+        console.error('Error syncing pacotes:', error);
+        toast.error('Erro ao sincronizar pacotes');
       });
     }
-  }, [pacotes]);
+  }, [pacotes, isLoadingPacotes]);
 
   useEffect(() => {
-    if (produtos.length >= 0) {  // Allow empty arrays
+    if (!isLoadingProdutos) {
       configurationService.syncProdutos(produtos).catch(error => {
-        console.error('Error saving produtos:', error);
-        toast.error('Erro ao salvar produtos');
+        console.error('Error syncing produtos:', error);
+        toast.error('Erro ao sincronizar produtos');
       });
     }
-  }, [produtos]);
+  }, [produtos, isLoadingProdutos]);
 
   useEffect(() => {
-    if (etapas.length >= 0) {  // Allow empty arrays
+    if (!isLoadingEtapas) {
       configurationService.syncEtapas(etapas).catch(error => {
-        console.error('Error saving etapas:', error);
-        toast.error('Erro ao salvar etapas');
+        console.error('Error syncing etapas:', error);
+        toast.error('Erro ao sincronizar etapas');
       });
     }
-  }, [etapas]);
+  }, [etapas, isLoadingEtapas]);
 
   // ============= OPERAÇÕES DE CATEGORIAS =============
   
@@ -301,6 +312,9 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
     
     // Loading states
     isLoadingCategorias,
+    isLoadingPacotes,
+    isLoadingProdutos,
+    isLoadingEtapas,
     
     // Ações de Categorias
     adicionarCategoria,
