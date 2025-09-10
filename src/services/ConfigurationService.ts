@@ -128,6 +128,15 @@ class ConfigurationService {
     }
   }
 
+  async deletePacoteById(id: string): Promise<void> {
+    await this.initialize();
+    if (this.asyncAdapter) {
+      await this.asyncAdapter.deletePacoteById(id);
+    } else {
+      throw new Error('Delete operation requires Supabase authentication');
+    }
+  }
+
   async syncPacotes(pacotes: Pacote[]): Promise<void> {
     await this.initialize();
     if (this.asyncAdapter) {
