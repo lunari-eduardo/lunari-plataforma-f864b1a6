@@ -19,7 +19,7 @@ interface PackageSearchComboboxProps {
   filtrarPorCategoria?: string;
 }
 
-import { useOrcamentos } from '@/hooks/useOrcamentos';
+import { useRealtimeConfiguration } from '@/hooks/useRealtimeConfiguration';
 
 export default function PackageSearchCombobox({
   value,
@@ -32,20 +32,22 @@ export default function PackageSearchCombobox({
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   
-  const { pacotes, categorias } = useOrcamentos();
+  const realtimeConfig = useRealtimeConfiguration();
   
-  // Carregar configurações de categorias do service
-  const configCategorias = configurationService.loadCategorias();
+  // Use real-time data from Supabase
+  const pacotes = realtimeConfig.pacotes || [];
+  const categorias = realtimeConfig.categorias || [];
   
-  // Converter pacotes para o formato Package local com conversão correta de categoria
+  // Carregar configurações de categorias
+  const configCategorias = categorias;
+  
+  // Convert packages to the local Package format with correct category conversion
   const availablePackages: Package[] = pacotes.map(pacote => {
-    // Converter categoria_id para nome da categoria usando configCategorias
+    // Convert categoria_id to category name using configCategorias
     let categoria = 'Sem categoria';
     if (pacote.categoria_id) {
       const categoriaConfig = configCategorias.find((cat) => cat.id === pacote.categoria_id);
       categoria = categoriaConfig?.nome || pacote.categoria_id;
-    } else if (pacote.categoria) {
-      categoria = pacote.categoria;
     }
     
     return {
@@ -99,7 +101,7 @@ export default function PackageSearchCombobox({
   }, {} as Record<string, Package[]>);
 
   const handleSelect = (packageId: string) => {
-    const pacoteSelecionado = pacotes.find(p => p.id === packageId);
+    const pacoteSelecionado = realtimeConfig.pacotes.find(p => p.id === packageId);
     onSelect(packageId, pacoteSelecionado);
     setIsOpen(false);
     setSearchTerm('');

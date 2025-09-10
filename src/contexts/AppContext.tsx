@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
 import { configurationService } from '@/services/ConfigurationService';
+import { useRealtimeConfiguration } from '@/hooks/useRealtimeConfiguration';
 import { parseDateFromStorage, formatDateForStorage, getCurrentDateString } from '@/utils/dateUtils';
 import { formatCurrency } from '@/utils/financialUtils';
 import { normalizeOriginToId } from '@/utils/originUtils';
@@ -206,6 +207,9 @@ const deserializeAppointments = (serializedAppointments: any[]): Appointment[] =
 };
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Get real-time configuration data
+  const realtimeConfig = useRealtimeConfiguration();
+  
   const [templates, setTemplates] = useState<Template[]>(() => {
     return storage.load(STORAGE_KEYS.TEMPLATES, []);
   });
@@ -218,18 +222,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return storage.load(STORAGE_KEYS.CLIENTS, []);
   });
   
-  const [categorias, setCategorias] = useState<string[]>(() => {
-    const configCategorias = configurationService.loadCategorias();
-    return configCategorias.map((cat) => cat.nome);
-  });
-
-  const [produtos, setProdutos] = useState(() => {
-    return configurationService.loadProdutos();
-  });
-
-  const [pacotes, setPacotes] = useState(() => {
-    return configurationService.loadPacotes();
-  });
+  // Use real-time data from Supabase instead of localStorage
+  const categorias = realtimeConfig.categorias?.map(cat => cat.nome) || [];
+  const produtos = realtimeConfig.produtos || [];
+  const pacotes = realtimeConfig.pacotes || [];
 
   // Agenda State
   const [appointments, setAppointments] = useState<Appointment[]>(() => {
@@ -680,13 +676,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const adicionarCategoria = (categoria: string) => {
-    if (!categorias.includes(categoria)) {
-      setCategorias(prev => [...prev, categoria]);
-    }
+    // Use the real-time configuration system instead
+    realtimeConfig.adicionarCategoria({
+      nome: categoria,
+      cor: '#3b82f6' // Default color
+    });
   };
 
   const removerCategoria = (categoria: string) => {
-    setCategorias(prev => prev.filter(c => c !== categoria));
+    // Find the category by name and remove it
+    const categoriaObj = realtimeConfig.categorias.find(c => c.nome === categoria);
+    if (categoriaObj) {
+      realtimeConfig.removerCategoria(categoriaObj.id);
+    }
   };
 
   // Agenda actions
