@@ -12,12 +12,6 @@ import type {
   Produto, 
   EtapaTrabalho 
 } from '@/types/configuration';
-import {
-  DEFAULT_CATEGORIAS,
-  DEFAULT_PACOTES,
-  DEFAULT_PRODUTOS, 
-  DEFAULT_ETAPAS
-} from '@/types/configuration';
 
 const STORAGE_KEYS = {
   CATEGORIAS: 'configuracoes_categorias',
@@ -30,8 +24,7 @@ export class LocalStorageConfigurationAdapter implements ConfigurationStorageAda
   // ============= CATEGORIAS =============
   
   loadCategorias(): Categoria[] {
-    const saved = storage.load(STORAGE_KEYS.CATEGORIAS, []);
-    return saved.length > 0 ? saved : DEFAULT_CATEGORIAS;
+    return storage.load(STORAGE_KEYS.CATEGORIAS, []);
   }
 
   async saveCategorias(categorias: Categoria[]): Promise<void> {
@@ -41,8 +34,7 @@ export class LocalStorageConfigurationAdapter implements ConfigurationStorageAda
   // ============= PACOTES =============
   
   loadPacotes(): Pacote[] {
-    const saved = storage.load(STORAGE_KEYS.PACOTES, []);
-    return saved.length > 0 ? saved : DEFAULT_PACOTES;
+    return storage.load(STORAGE_KEYS.PACOTES, []);
   }
 
   async savePacotes(pacotes: Pacote[]): Promise<void> {
@@ -52,8 +44,7 @@ export class LocalStorageConfigurationAdapter implements ConfigurationStorageAda
   // ============= PRODUTOS =============
   
   loadProdutos(): Produto[] {
-    const saved = storage.load(STORAGE_KEYS.PRODUTOS, []);
-    return saved.length > 0 ? saved : DEFAULT_PRODUTOS;
+    return storage.load(STORAGE_KEYS.PRODUTOS, []);
   }
 
   async saveProdutos(produtos: Produto[]): Promise<void> {
@@ -70,10 +61,10 @@ export class LocalStorageConfigurationAdapter implements ConfigurationStorageAda
     // Se há dados antigos mas não há novos, migra
     if (oldData.length > 0 && newData.length === 0) {
       storage.save(STORAGE_KEYS.ETAPAS, oldData);
-      return oldData.length > 0 ? oldData : DEFAULT_ETAPAS;
+      return oldData;
     }
     
-    return newData.length > 0 ? newData : DEFAULT_ETAPAS;
+    return newData;
   }
 
   async saveEtapas(etapas: EtapaTrabalho[]): Promise<void> {

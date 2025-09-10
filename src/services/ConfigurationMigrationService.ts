@@ -6,7 +6,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { storage } from '@/utils/localStorage';
 import { toast } from 'sonner';
-import { DEFAULT_CATEGORIAS, DEFAULT_PACOTES, DEFAULT_PRODUTOS, DEFAULT_ETAPAS } from '@/types/configuration';
 import type { Categoria, Pacote, Produto, EtapaTrabalho } from '@/types/configuration';
 
 const MIGRATION_STORAGE_KEY = 'migration_status_complete';
@@ -58,22 +57,28 @@ export class ConfigurationMigrationService {
   }
 
   /**
-   * Carrega dados do localStorage com fallback para defaults
+   * Carrega dados do localStorage apenas se existirem
    */
   private static loadLocalData() {
-    const categorias = storage.load(LOCALSTORAGE_KEYS.CATEGORIAS, DEFAULT_CATEGORIAS);
-    const pacotes = storage.load(LOCALSTORAGE_KEYS.PACOTES, DEFAULT_PACOTES);
-    const produtos = storage.load(LOCALSTORAGE_KEYS.PRODUTOS, DEFAULT_PRODUTOS);
-    const etapas = storage.load(LOCALSTORAGE_KEYS.ETAPAS, DEFAULT_ETAPAS);
+    const categorias = storage.load(LOCALSTORAGE_KEYS.CATEGORIAS, []);
+    const pacotes = storage.load(LOCALSTORAGE_KEYS.PACOTES, []);
+    const produtos = storage.load(LOCALSTORAGE_KEYS.PRODUTOS, []);
+    const etapas = storage.load(LOCALSTORAGE_KEYS.ETAPAS, []);
 
     return { categorias, pacotes, produtos, etapas };
   }
 
   /**
-   * Migra categorias para Supabase
+   * Migra categorias para Supabase apenas se há dados para migrar
    */
   private static async migrateCategoriasInternal(categorias: Categoria[], userId: string): Promise<boolean> {
     try {
+      // Se não há categorias para migrar, retorna sucesso
+      if (categorias.length === 0) {
+        console.log('No categorias to migrate');
+        return true;
+      }
+
       // Verifica se há dados existentes
       const { data: existing } = await supabase
         .from('categorias')
@@ -124,10 +129,16 @@ export class ConfigurationMigrationService {
   }
 
   /**
-   * Migra pacotes para Supabase
+   * Migra pacotes para Supabase apenas se há dados para migrar
    */
   private static async migratePacotesInternal(pacotes: Pacote[], userId: string): Promise<boolean> {
     try {
+      // Se não há pacotes para migrar, retorna sucesso
+      if (pacotes.length === 0) {
+        console.log('No pacotes to migrate');
+        return true;
+      }
+
       // Verifica se há dados existentes
       const { data: existing } = await (supabase as any)
         .from('pacotes')
@@ -168,10 +179,16 @@ export class ConfigurationMigrationService {
   }
 
   /**
-   * Migra produtos para Supabase
+   * Migra produtos para Supabase apenas se há dados para migrar
    */
   private static async migrateProdutosInternal(produtos: Produto[], userId: string): Promise<boolean> {
     try {
+      // Se não há produtos para migrar, retorna sucesso
+      if (produtos.length === 0) {
+        console.log('No produtos to migrate');
+        return true;
+      }
+
       // Verifica se há dados existentes
       const { data: existing } = await (supabase as any)
         .from('produtos')
@@ -207,10 +224,16 @@ export class ConfigurationMigrationService {
   }
 
   /**
-   * Migra etapas para Supabase
+   * Migra etapas para Supabase apenas se há dados para migrar
    */
   private static async migrateEtapasInternal(etapas: EtapaTrabalho[], userId: string): Promise<boolean> {
     try {
+      // Se não há etapas para migrar, retorna sucesso
+      if (etapas.length === 0) {
+        console.log('No etapas to migrate');
+        return true;
+      }
+
       // Verifica se há dados existentes
       const { data: existing } = await (supabase as any)
         .from('etapas_trabalho')
@@ -312,7 +335,7 @@ export class ConfigurationMigrationService {
     const { data: user } = await supabase.auth.getUser();
     if (!user.user) return false;
 
-    const categorias = storage.load(LOCALSTORAGE_KEYS.CATEGORIAS, DEFAULT_CATEGORIAS);
+    const categorias = storage.load(LOCALSTORAGE_KEYS.CATEGORIAS, []);
     return await this.migrateCategoriasInternal(categorias, user.user.id);
   }
 }

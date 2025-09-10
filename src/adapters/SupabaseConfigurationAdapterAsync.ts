@@ -11,12 +11,6 @@ import type {
   Produto, 
   EtapaTrabalho 
 } from '@/types/configuration';
-import {
-  DEFAULT_CATEGORIAS,
-  DEFAULT_PACOTES,
-  DEFAULT_PRODUTOS, 
-  DEFAULT_ETAPAS
-} from '@/types/configuration';
 
 export class SupabaseConfigurationAdapterAsync {
   
@@ -27,7 +21,7 @@ export class SupabaseConfigurationAdapterAsync {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) {
         console.warn('User not authenticated, returning default categorias');
-        return DEFAULT_CATEGORIAS;
+        return [];
       }
 
       const { data, error } = await supabase
@@ -40,10 +34,10 @@ export class SupabaseConfigurationAdapterAsync {
         throw error;
       }
 
-      // Se não há categorias, retorna padrões (primeiro login)  
+      // Se não há categorias, retorna array vazio (primeiro login)  
       if (!data || data.length === 0) {
-        console.log('No categorias found, returning defaults');
-        return DEFAULT_CATEGORIAS;
+        console.log('No categorias found, returning empty array');
+        return [];
       }
 
       // Converte formato Supabase para formato da aplicação
@@ -178,7 +172,7 @@ export class SupabaseConfigurationAdapterAsync {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) {
         console.log('📦 User not authenticated, returning default pacotes');
-        return DEFAULT_PACOTES;
+        return [];
       }
 
       const { data, error } = await (supabase as any)
@@ -189,12 +183,12 @@ export class SupabaseConfigurationAdapterAsync {
 
       if (error) {
         console.error('📦 Error loading pacotes from Supabase:', error);
-        return DEFAULT_PACOTES;
+        return [];
       }
 
       if (!data || data.length === 0) {
-        console.log('📦 No pacotes found, returning defaults');
-        return DEFAULT_PACOTES;
+        console.log('📦 No pacotes found, returning empty array');
+        return [];
       }
 
       // Transform Supabase data to match our Pacote interface
@@ -214,7 +208,7 @@ export class SupabaseConfigurationAdapterAsync {
       return pacotes;
     } catch (error) {
       console.error('📦 Unexpected error loading pacotes:', error);
-      return DEFAULT_PACOTES;
+      return [];
     }
   }
 
@@ -345,7 +339,7 @@ export class SupabaseConfigurationAdapterAsync {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) {
         console.log('🛍️ User not authenticated, returning default produtos');
-        return DEFAULT_PRODUTOS;
+        return [];
       }
 
       const { data, error } = await (supabase as any)
@@ -356,12 +350,12 @@ export class SupabaseConfigurationAdapterAsync {
 
       if (error) {
         console.error('🛍️ Error loading produtos from Supabase:', error);
-        return DEFAULT_PRODUTOS;
+        return [];
       }
 
       if (!data || data.length === 0) {
-        console.log('🛍️ No produtos found, returning defaults');
-        return DEFAULT_PRODUTOS;
+        console.log('🛍️ No produtos found, returning empty array');
+        return [];
       }
 
       // Transform Supabase data to match our Produto interface
@@ -379,7 +373,7 @@ export class SupabaseConfigurationAdapterAsync {
       return produtos;
     } catch (error) {
       console.error('🛍️ Unexpected error loading produtos:', error);
-      return DEFAULT_PRODUTOS;
+      return [];
     }
   }
 
@@ -508,7 +502,7 @@ export class SupabaseConfigurationAdapterAsync {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) {
         console.log('📋 User not authenticated, returning default etapas');
-        return DEFAULT_ETAPAS;
+        return [];
       }
 
       const { data, error } = await (supabase as any)
@@ -519,12 +513,12 @@ export class SupabaseConfigurationAdapterAsync {
 
       if (error) {
         console.error('📋 Error loading etapas from Supabase:', error);
-        return DEFAULT_ETAPAS;
+        return [];
       }
 
       if (!data || data.length === 0) {
-        console.log('📋 No etapas found, returning defaults');
-        return DEFAULT_ETAPAS;
+        console.log('📋 No etapas found, returning empty array');
+        return [];
       }
 
       // Transform Supabase data to match our EtapaTrabalho interface
@@ -542,7 +536,7 @@ export class SupabaseConfigurationAdapterAsync {
       return etapas;
     } catch (error) {
       console.error('📋 Unexpected error loading etapas:', error);
-      return DEFAULT_ETAPAS;
+        return [];
     }
   }
 
