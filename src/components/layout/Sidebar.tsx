@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useUserProfile, useUserBranding } from '@/hooks/useUserProfile';
+import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 interface NavItemProps {
   to: string;
@@ -30,6 +31,7 @@ const NavItem = ({
 export default function Sidebar() {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
+  const { signOut } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [isDesktopExpanded, setIsDesktopExpanded] = useState(false);
   const { profile, getProfileOrDefault } = useUserProfile();
@@ -49,6 +51,15 @@ export default function Sidebar() {
   };
   
   const userInitials = getInitials(currentProfile.nomeCompleto || currentProfile.nomeEmpresa || 'Usuario');
+  
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      navigate('/auth');
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+    }
+  };
   
   const UserAvatar = ({ className }: { className?: string }) => (
     <DropdownMenu>
@@ -84,7 +95,10 @@ export default function Sidebar() {
           Plano de Assinatura
         </DropdownMenuItem>
         <DropdownMenuSeparator className="bg-lunar-border/30" />
-        <DropdownMenuItem className="text-xs text-lunar-text hover:bg-lunar-surface/50 rounded">
+        <DropdownMenuItem 
+          className="text-xs text-lunar-text hover:bg-lunar-surface/50 rounded cursor-pointer"
+          onClick={handleSignOut}
+        >
           Sair
         </DropdownMenuItem>
       </DropdownMenuContent>
