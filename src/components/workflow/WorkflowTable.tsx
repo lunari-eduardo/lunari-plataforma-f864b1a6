@@ -17,6 +17,7 @@ import { calcularTotalFotosExtras, obterConfiguracaoPrecificacao, obterTabelaGlo
 import { RegrasCongeladasIndicator } from './RegrasCongeladasIndicator';
 import type { SessionData } from '@/types/workflow';
 import { configurationService } from '@/services/ConfigurationService';
+import { useConfiguration } from '@/hooks/useConfiguration';
 interface WorkflowTableProps {
   sessions: SessionData[];
   statusOptions: string[];
@@ -141,6 +142,7 @@ export function WorkflowTable({
   sortDirection,
   onSort
 }: WorkflowTableProps) {
+  const { categorias } = useConfiguration();
   const [paymentInputs, setPaymentInputs] = useState<Record<string, string>>({});
   const [editingValues, setEditingValues] = useState<Record<string, string>>({});
   const [modalAberto, setModalAberto] = useState(false);
@@ -779,7 +781,6 @@ export function WorkflowTable({
                       }
                     } else if (config.modelo === 'categoria') {
                       // Modelo por categoria - calcular valor baseado na categoria
-                      const { categorias } = useConfiguration();
                       const categoriaObj = categorias.find((cat) => cat.nome === session.categoria);
                       const categoriaId = categoriaObj?.id || session.categoria;
                       if (categoriaId) {
