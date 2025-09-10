@@ -5,8 +5,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
-import { useProdutos } from '@/hooks/useProdutos';
+import { useRealtimeConfiguration } from '@/hooks/useRealtimeConfiguration';
 import { formatarMoeda } from '@/utils/precificacaoUtils';
+import { calcularMargemLucro } from '@/utils/productUtils';
 import ProdutoFormModal from './ProdutoFormModal';
 import ProdutoCard from './ProdutoCard';
 import type { Produto, Pacote } from '@/types/configuration';
@@ -19,13 +20,21 @@ export default function Produtos({ pacotes }: ProdutosProps) {
   
   const {
     produtos,
-    isLoading,
+    isLoadingProdutos: isLoading,
     adicionarProduto,
     atualizarProduto,
-    removerProduto,
-    calcularMargemProduto,
-    podeRemoverProduto
-  } = useProdutos(pacotes);
+    removerProduto
+  } = useRealtimeConfiguration();
+  
+  const calcularMargemProduto = useCallback((custo: number, venda: number) => {
+    return calcularMargemLucro(custo, venda);
+  }, []);
+
+  const podeRemoverProduto = useCallback((id: string) => {
+    return !pacotes.some(pacote => 
+      pacote.produtosIncluidos.some(p => p.produtoId === id)
+    );
+  }, [pacotes]);
   
   const isMobile = useIsMobile();
   const { confirm } = useConfirmDialog();

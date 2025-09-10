@@ -41,6 +41,175 @@ export type Database = {
         }
         Relationships: []
       }
+      etapas_trabalho: {
+        Row: {
+          cor: string
+          created_at: string
+          id: string
+          nome: string
+          ordem: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cor: string
+          created_at?: string
+          id?: string
+          nome: string
+          ordem: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cor?: string
+          created_at?: string
+          id?: string
+          nome?: string
+          ordem?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      modelo_de_preco: {
+        Row: {
+          created_at: string
+          id: string
+          modelo: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          modelo: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          modelo?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      pacotes: {
+        Row: {
+          categoria_id: string
+          created_at: string
+          id: string
+          nome: string
+          produtos_incluidos: Json
+          updated_at: string
+          user_id: string
+          valor_base: number
+          valor_foto_extra: number
+        }
+        Insert: {
+          categoria_id: string
+          created_at?: string
+          id?: string
+          nome: string
+          produtos_incluidos?: Json
+          updated_at?: string
+          user_id: string
+          valor_base: number
+          valor_foto_extra?: number
+        }
+        Update: {
+          categoria_id?: string
+          created_at?: string
+          id?: string
+          nome?: string
+          produtos_incluidos?: Json
+          updated_at?: string
+          user_id?: string
+          valor_base?: number
+          valor_foto_extra?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pacotes_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "categorias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      produtos: {
+        Row: {
+          created_at: string
+          id: string
+          nome: string
+          preco_custo: number
+          preco_venda: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nome: string
+          preco_custo?: number
+          preco_venda?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nome?: string
+          preco_custo?: number
+          preco_venda?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      tabelas_precos: {
+        Row: {
+          categoria_id: string | null
+          created_at: string
+          faixas: Json
+          id: string
+          nome: string
+          tipo: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          categoria_id?: string | null
+          created_at?: string
+          faixas?: Json
+          id?: string
+          nome: string
+          tipo: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          categoria_id?: string | null
+          created_at?: string
+          faixas?: Json
+          id?: string
+          nome?: string
+          tipo?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tabelas_precos_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "categorias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
