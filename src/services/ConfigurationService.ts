@@ -86,6 +86,24 @@ class ConfigurationService {
     }
   }
 
+  async deleteCategoriaById(id: string): Promise<void> {
+    await this.initialize();
+    if (this.asyncAdapter) {
+      await this.asyncAdapter.deleteCategoriaById(id);
+    } else {
+      throw new Error('Delete operation requires Supabase authentication');
+    }
+  }
+
+  async syncCategorias(categorias: Categoria[]): Promise<void> {
+    await this.initialize();
+    if (this.asyncAdapter) {
+      await this.asyncAdapter.syncCategorias(categorias);
+    } else {
+      await this.adapter.saveCategorias(categorias);
+    }
+  }
+
   // ============= OPERAÇÕES DE PACOTES =============
   
   loadPacotes(): Pacote[] {

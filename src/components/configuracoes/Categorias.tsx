@@ -24,7 +24,7 @@ interface CategoriasProps {
   categorias: Categoria[];
   onAdd: (categoria: Omit<Categoria, 'id'>) => void;
   onUpdate: (id: string, dados: Partial<Categoria>) => void;
-  onDelete: (id: string) => boolean;
+  onDelete: (id: string) => Promise<boolean>;
   pacotes: Pacote[];
 }
 
@@ -119,14 +119,14 @@ export default function Categorias({
   }, []);
 
   // Remover categoria
-  const removerCategoria = useCallback((id: string) => {
+  const removerCategoria = useCallback(async (id: string) => {
     if (!podeRemoverCategoria(id)) {
       const pacotesVinculados = pacotes.filter(p => p.categoria_id === id);
       const nomes = pacotesVinculados.map(p => p.nome).join(', ');
       // Toast será mostrado pelo hook useConfiguration
       return;
     }
-    onDelete(id);
+    await onDelete(id);
   }, [onDelete, podeRemoverCategoria, pacotes]);
 
   // Determinar se pode adicionar

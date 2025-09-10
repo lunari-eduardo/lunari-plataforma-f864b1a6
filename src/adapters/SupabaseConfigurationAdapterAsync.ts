@@ -94,6 +94,83 @@ export class SupabaseConfigurationAdapterAsync {
     }
   }
 
+  async deleteCategoriaById(id: string): Promise<void> {
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) {
+        throw new Error('User not authenticated');
+      }
+
+      const { error } = await supabase
+        .from('categorias')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.user.id);
+
+      if (error) {
+        console.error('Error deleting categoria from Supabase:', error);
+        throw error;
+      }
+
+      console.log(`Successfully deleted categoria ${id} from Supabase`);
+    } catch (error) {
+      console.error('Failed to delete categoria:', error);
+      throw error;
+    }
+  }
+
+  async syncCategorias(categorias: Categoria[]): Promise<void> {
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) {
+        throw new Error('User not authenticated');
+      }
+
+      // Get current categorias in Supabase
+      const { data: supabaseCategorias, error: fetchError } = await supabase
+        .from('categorias')
+        .select('id')
+        .eq('user_id', user.user.id);
+
+      if (fetchError) {
+        console.error('Error fetching categorias from Supabase:', fetchError);
+        throw fetchError;
+      }
+
+      const currentIds = categorias.map(cat => cat.id);
+      const supabaseIds = (supabaseCategorias || []).map(cat => cat.id);
+      
+      // Find categorias that exist in Supabase but not in current state (should be deleted)
+      const toDelete = supabaseIds.filter(id => !currentIds.includes(id));
+      
+      // Delete orphaned categorias
+      if (toDelete.length > 0) {
+        const { error: deleteError } = await supabase
+          .from('categorias')
+          .delete()
+          .in('id', toDelete)
+          .eq('user_id', user.user.id);
+
+        if (deleteError) {
+          console.error('Error deleting orphaned categorias:', deleteError);
+          throw deleteError;
+        }
+
+        console.log(`Deleted ${toDelete.length} orphaned categorias from Supabase`);
+      }
+
+      // Upsert current categorias if any exist
+      if (categorias.length > 0) {
+        await this.saveCategorias(categorias);
+      }
+
+      console.log(`Successfully synced ${categorias.length} categorias with Supabase`);
+    } catch (error) {
+      console.error('Failed to sync categorias:', error);
+      throw error;
+    }
+  }
+
   // ============= PACOTES =============
   
   async loadPacotes(): Promise<Pacote[]> {

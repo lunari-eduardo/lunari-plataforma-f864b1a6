@@ -58,10 +58,10 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
   // ============= EFEITOS DE PERSISTÊNCIA =============
   
   useEffect(() => {
-    if (categorias.length > 0 && !isLoadingCategorias) {
-      configurationService.saveCategorias(categorias).catch(error => {
-        console.error('Error saving categorias:', error);
-        toast.error('Erro ao salvar categorias');
+    if (!isLoadingCategorias) {
+      configurationService.syncCategorias(categorias).catch(error => {
+        console.error('Error syncing categorias:', error);
+        toast.error('Erro ao sincronizar categorias');
       });
     }
   }, [categorias, isLoadingCategorias]);
@@ -118,15 +118,24 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
     toast.success('Categoria atualizada com sucesso!');
   }, []);
 
-  const removerCategoria = useCallback((id: string): boolean => {
+  const removerCategoria = useCallback(async (id: string): Promise<boolean> => {
     if (!configurationService.canDeleteCategoria(id, pacotes)) {
       toast.error('Esta categoria não pode ser removida pois está sendo usada em pacotes');
       return false;
     }
 
-    setCategorias(prev => prev.filter(cat => cat.id !== id));
-    toast.success('Categoria removida com sucesso!');
-    return true;
+    try {
+      // Delete directly from Supabase first
+      await configurationService.deleteCategoriaById(id);
+      // Only update local state after successful Supabase deletion
+      setCategorias(prev => prev.filter(cat => cat.id !== id));
+      toast.success('Categoria removida com sucesso!');
+      return true;
+    } catch (error) {
+      console.error('Error deleting categoria:', error);
+      toast.error('Erro ao remover categoria');
+      return false;
+    }
   }, [pacotes]);
 
   // ============= OPERAÇÕES DE PACOTES =============

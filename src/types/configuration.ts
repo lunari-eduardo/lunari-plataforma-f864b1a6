@@ -96,7 +96,7 @@ export interface ConfigurationActions {
   // Categorias
   adicionarCategoria: (categoria: Omit<Categoria, 'id'>) => void;
   atualizarCategoria: (id: string, dados: Partial<Categoria>) => void;
-  removerCategoria: (id: string) => boolean;
+  removerCategoria: (id: string) => Promise<boolean>;
   
   // Pacotes
   adicionarPacote: (pacote: Omit<Pacote, 'id'>) => void;
