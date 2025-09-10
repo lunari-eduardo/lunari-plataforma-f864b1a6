@@ -89,6 +89,7 @@ export interface ConfigurationState {
   pacotes: Pacote[];
   produtos: Produto[];
   etapas: EtapaTrabalho[];
+  isLoadingCategorias?: boolean;
 }
 
 export interface ConfigurationActions {

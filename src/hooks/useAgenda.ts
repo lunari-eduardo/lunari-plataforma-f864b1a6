@@ -89,8 +89,7 @@ export const useAgenda = () => {
           let categoria = '';
           if (pacoteData) {
             if (pacoteData.categoria_id) {
-              const configCategorias = configurationService.loadCategorias();
-              const categoriaEncontrada = configCategorias.find((cat: any) => cat.id === pacoteData.categoria_id);
+              const categoriaEncontrada = categorias.find((cat: any) => cat.id === pacoteData.categoria_id);
               categoria = categoriaEncontrada ? categoriaEncontrada.nome : String(pacoteData.categoria_id);
             } else {
               categoria = pacoteData.categoria || '';

@@ -34,7 +34,7 @@ export class LocalStorageConfigurationAdapter implements ConfigurationStorageAda
     return saved.length > 0 ? saved : DEFAULT_CATEGORIAS;
   }
 
-  saveCategorias(categorias: Categoria[]): void {
+  async saveCategorias(categorias: Categoria[]): Promise<void> {
     saveConfigWithNotification(STORAGE_KEYS.CATEGORIAS, categorias);
   }
 
@@ -45,7 +45,7 @@ export class LocalStorageConfigurationAdapter implements ConfigurationStorageAda
     return saved.length > 0 ? saved : DEFAULT_PACOTES;
   }
 
-  savePacotes(pacotes: Pacote[]): void {
+  async savePacotes(pacotes: Pacote[]): Promise<void> {
     saveConfigWithNotification(STORAGE_KEYS.PACOTES, pacotes);
   }
 
@@ -56,7 +56,7 @@ export class LocalStorageConfigurationAdapter implements ConfigurationStorageAda
     return saved.length > 0 ? saved : DEFAULT_PRODUTOS;
   }
 
-  saveProdutos(produtos: Produto[]): void {
+  async saveProdutos(produtos: Produto[]): Promise<void> {
     saveConfigWithNotification(STORAGE_KEYS.PRODUTOS, produtos);
   }
 
@@ -76,7 +76,7 @@ export class LocalStorageConfigurationAdapter implements ConfigurationStorageAda
     return newData.length > 0 ? newData : DEFAULT_ETAPAS;
   }
 
-  saveEtapas(etapas: EtapaTrabalho[]): void {
+  async saveEtapas(etapas: EtapaTrabalho[]): Promise<void> {
     storage.save(STORAGE_KEYS.ETAPAS, etapas);
     // Remove dados antigos após salvar
     storage.remove('workflow_status');

@@ -779,7 +779,7 @@ export function WorkflowTable({
                       }
                     } else if (config.modelo === 'categoria') {
                       // Modelo por categoria - calcular valor baseado na categoria
-                      const categorias = configurationService.loadCategorias();
+                      const { categorias } = useConfiguration();
                       const categoriaObj = categorias.find((cat) => cat.nome === session.categoria);
                       const categoriaId = categoriaObj?.id || session.categoria;
                       if (categoriaId) {

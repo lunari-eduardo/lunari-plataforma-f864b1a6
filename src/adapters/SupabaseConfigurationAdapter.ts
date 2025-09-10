@@ -1,8 +1,10 @@
 /**
- * Implementação do adapter para Supabase (preparação futura)
- * Stub para facilitar migração quando integração Supabase estiver ativa
+ * Implementação do adapter para Supabase
+ * Persiste configurações no banco de dados com isolamento por usuário
  */
 
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import type { ConfigurationStorageAdapter } from './ConfigurationStorageAdapter';
 import type { 
   Categoria, 
@@ -19,46 +21,84 @@ import {
 
 export class SupabaseConfigurationAdapter implements ConfigurationStorageAdapter {
   
-  // TODO: Implementar quando integração Supabase estiver ativa
-  // Por enquanto retorna dados padrão
+  // ============= CATEGORIAS =============
   
   loadCategorias(): Categoria[] {
-    console.warn('SupabaseConfigurationAdapter: Supabase não configurado, usando dados padrão');
-    return DEFAULT_CATEGORIAS;
+    // For synchronous compatibility, return empty array during first load
+    // The hook will handle async loading properly
+    try {
+      console.warn('SupabaseConfigurationAdapter: Using sync method, data may be empty on first load');
+      return DEFAULT_CATEGORIAS;
+    } catch (error) {
+      console.error('Error in sync loadCategorias:', error);
+      return DEFAULT_CATEGORIAS;
+    }
   }
 
   async saveCategorias(categorias: Categoria[]): Promise<void> {
-    console.warn('SupabaseConfigurationAdapter: Supabase não configurado');
-    // TODO: Implementar persistência no Supabase
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) {
+        throw new Error('User not authenticated');
+      }
+
+      // Upsert todas as categorias
+      const categoriasData = categorias.map(categoria => ({
+        id: categoria.id,
+        user_id: user.user.id,
+        nome: categoria.nome,
+        cor: categoria.cor
+      }));
+
+      const { error } = await supabase
+        .from('categorias')
+        .upsert(categoriasData, { 
+          onConflict: 'id'
+        });
+
+      if (error) {
+        console.error('Error saving categorias to Supabase:', error);
+        throw error;
+      }
+
+      console.log(`Successfully saved ${categorias.length} categorias to Supabase`);
+    } catch (error) {
+      console.error('Failed to save categorias:', error);
+      toast.error('Erro ao salvar categorias. Dados podem não estar sincronizados.');
+      throw error;
+    }
   }
 
+  // ============= PACOTES =============
+  
   loadPacotes(): Pacote[] {
-    console.warn('SupabaseConfigurationAdapter: Supabase não configurado, usando dados padrão');
+    console.warn('SupabaseConfigurationAdapter: Pacotes migration not implemented yet');
     return DEFAULT_PACOTES;
   }
 
   async savePacotes(pacotes: Pacote[]): Promise<void> {
-    console.warn('SupabaseConfigurationAdapter: Supabase não configurado');
-    // TODO: Implementar persistência no Supabase
+    console.warn('SupabaseConfigurationAdapter: Pacotes migration not implemented yet');
   }
 
+  // ============= PRODUTOS =============
+  
   loadProdutos(): Produto[] {
-    console.warn('SupabaseConfigurationAdapter: Supabase não configurado, usando dados padrão');
+    console.warn('SupabaseConfigurationAdapter: Produtos migration not implemented yet');
     return DEFAULT_PRODUTOS;
   }
 
   async saveProdutos(produtos: Produto[]): Promise<void> {
-    console.warn('SupabaseConfigurationAdapter: Supabase não configurado');
-    // TODO: Implementar persistência no Supabase
+    console.warn('SupabaseConfigurationAdapter: Produtos migration not implemented yet');
   }
 
+  // ============= ETAPAS =============
+  
   loadEtapas(): EtapaTrabalho[] {
-    console.warn('SupabaseConfigurationAdapter: Supabase não configurado, usando dados padrão');
+    console.warn('SupabaseConfigurationAdapter: Etapas migration not implemented yet');
     return DEFAULT_ETAPAS;
   }
 
   async saveEtapas(etapas: EtapaTrabalho[]): Promise<void> {
-    console.warn('SupabaseConfigurationAdapter: Supabase não configurado');
-    // TODO: Implementar persistência no Supabase
+    console.warn('SupabaseConfigurationAdapter: Etapas migration not implemented yet');
   }
 }

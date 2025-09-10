@@ -18,9 +18,8 @@ import type {
 export function useConfiguration(): ConfigurationState & ConfigurationActions {
   // ============= ESTADOS =============
   
-  const [categorias, setCategorias] = useState<Categoria[]>(() => 
-    configurationService.loadCategorias()
-  );
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [isLoadingCategorias, setIsLoadingCategorias] = useState(true);
   
   const [pacotes, setPacotes] = useState<Pacote[]>(() =>
     configurationService.loadPacotes()
@@ -34,11 +33,32 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
     configurationService.loadEtapas()
   );
 
+  // ============= INICIALIZAÇÃO E CARREGAMENTO =============
+  
+  useEffect(() => {
+    const initializeCategorias = async () => {
+      try {
+        setIsLoadingCategorias(true);
+        const loadedCategorias = await configurationService.loadCategoriasAsync();
+        setCategorias(loadedCategorias);
+      } catch (error) {
+        console.error('Error loading categorias:', error);
+        toast.error('Erro ao carregar categorias');
+      } finally {
+        setIsLoadingCategorias(false);
+      }
+    };
+
+    initializeCategorias();
+  }, []);
+
   // ============= EFEITOS DE PERSISTÊNCIA =============
   
   useEffect(() => {
-    configurationService.saveCategorias(categorias);
-  }, [categorias]);
+    if (categorias.length > 0 && !isLoadingCategorias) {
+      configurationService.saveCategorias(categorias);
+    }
+  }, [categorias, isLoadingCategorias]);
 
   useEffect(() => {
     configurationService.savePacotes(pacotes);
@@ -218,6 +238,9 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
     pacotes, 
     produtos,
     etapas,
+    
+    // Loading states
+    isLoadingCategorias,
     
     // Ações de Categorias
     adicionarCategoria,

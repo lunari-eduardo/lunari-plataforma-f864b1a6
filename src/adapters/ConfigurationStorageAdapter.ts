@@ -12,7 +12,7 @@ import type {
 
 export interface ConfigurationStorageAdapter {
   // Categorias
-  loadCategorias(): Categoria[];
+  loadCategorias(): Categoria[] | Promise<Categoria[]>;
   saveCategorias(categorias: Categoria[]): Promise<void> | void;
   
   // Pacotes

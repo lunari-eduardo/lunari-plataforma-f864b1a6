@@ -3,7 +3,10 @@
  * Preparado para migração futura para Supabase usando adapter pattern
  */
 
+import { SupabaseConfigurationAdapterAsync } from '@/adapters/SupabaseConfigurationAdapterAsync';
 import { LocalStorageConfigurationAdapter } from '@/adapters/LocalStorageConfigurationAdapter';
+import { ConfigurationMigrationService } from './ConfigurationMigrationService';
+import { supabase } from '@/integrations/supabase/client';
 import type { ConfigurationStorageAdapter } from '@/adapters/ConfigurationStorageAdapter';
 import type { 
   Categoria, 
@@ -20,20 +23,67 @@ import type {
  */
 class ConfigurationService {
   private adapter: ConfigurationStorageAdapter;
+  private asyncAdapter: SupabaseConfigurationAdapterAsync | null = null;
+  private initialized = false;
   
   constructor(adapter?: ConfigurationStorageAdapter) {
     // Por padrão usa LocalStorage, mas pode ser injetado outro adapter
     this.adapter = adapter || new LocalStorageConfigurationAdapter();
   }
+
+  /**
+   * Inicializa o serviço com o adapter correto baseado no estado de autenticação
+   */
+  async initialize(): Promise<void> {
+    if (this.initialized) return;
+
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      
+      if (user.user) {
+        console.log('User authenticated, enabling async Supabase adapter');
+        this.asyncAdapter = new SupabaseConfigurationAdapterAsync();
+        
+        // Executa migração se necessário
+        await ConfigurationMigrationService.migrateCategorias();
+      } else {
+        console.log('User not authenticated, using localStorage adapter only');
+        this.asyncAdapter = null;
+      }
+      
+      this.initialized = true;
+    } catch (error) {
+      console.error('Error initializing configuration service:', error);
+      // Fallback para localStorage em caso de erro
+      this.asyncAdapter = null;
+      this.initialized = true;
+    }
+  }
   
   // ============= OPERAÇÕES DE DADOS =============
   
   loadCategorias(): Categoria[] {
+    // Synchronous for compatibility, initialize in background
+    this.initialize().catch(console.error);
+    const result = this.adapter.loadCategorias();
+    return Array.isArray(result) ? result : [];
+  }
+
+  async loadCategoriasAsync(): Promise<Categoria[]> {
+    await this.initialize();
+    if (this.asyncAdapter) {
+      return await this.asyncAdapter.loadCategorias();
+    }
     return this.adapter.loadCategorias();
   }
 
-  saveCategorias(categorias: Categoria[]): void {
-    this.adapter.saveCategorias(categorias);
+  async saveCategorias(categorias: Categoria[]): Promise<void> {
+    await this.initialize();
+    if (this.asyncAdapter) {
+      await this.asyncAdapter.saveCategorias(categorias);
+    } else {
+      await this.adapter.saveCategorias(categorias);
+    }
   }
 
   loadPacotes(): Pacote[] {
