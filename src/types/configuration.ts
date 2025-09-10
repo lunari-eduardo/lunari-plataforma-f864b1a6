@@ -145,7 +145,7 @@ export const DEFAULT_PACOTES: Pacote[] = [
   {
     id: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c92",
     nome: "Básico",
-    categoria_id: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c8f", 
+    categoria_id: "ca5496f9-83fd-4b47-9331-d8cc17e39950", // Família
     valor_base: 450,
     valor_foto_extra: 25,
     produtosIncluidos: []
@@ -153,7 +153,7 @@ export const DEFAULT_PACOTES: Pacote[] = [
   {
     id: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c93", 
     nome: "Completo",
-    categoria_id: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c8d",
+    categoria_id: "a895b7bf-b224-467f-8cf4-4dbed9a51657", // Casamento
     valor_base: 980,
     valor_foto_extra: 35,
     produtosIncluidos: [
@@ -163,7 +163,7 @@ export const DEFAULT_PACOTES: Pacote[] = [
   {
     id: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c95",
     nome: "Empresarial", 
-    categoria_id: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c90",
+    categoria_id: "09481ef5-dc55-4f52-9ca8-cd7fd01675f2", // Aniversário
     valor_base: 890,
     valor_foto_extra: 30,
     produtosIncluidos: [
