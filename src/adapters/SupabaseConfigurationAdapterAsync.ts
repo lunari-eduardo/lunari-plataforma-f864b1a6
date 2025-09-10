@@ -174,33 +174,493 @@ export class SupabaseConfigurationAdapterAsync {
   // ============= PACOTES =============
   
   async loadPacotes(): Promise<Pacote[]> {
-    console.log('loadPacotes: Not implemented yet, returning defaults');
-    return DEFAULT_PACOTES;
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) {
+        console.log('📦 User not authenticated, returning default pacotes');
+        return DEFAULT_PACOTES;
+      }
+
+      const { data, error } = await (supabase as any)
+        .from('pacotes')
+        .select('*')
+        .eq('user_id', user.user.id)
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error('📦 Error loading pacotes from Supabase:', error);
+        return DEFAULT_PACOTES;
+      }
+
+      if (!data || data.length === 0) {
+        console.log('📦 No pacotes found, returning defaults');
+        return DEFAULT_PACOTES;
+      }
+
+      // Transform Supabase data to match our Pacote interface
+      const pacotes: Pacote[] = data.map((item: any) => ({
+        id: item.id,
+        user_id: item.user_id,
+        nome: item.nome,
+        categoria_id: item.categoria_id,
+        valor_base: Number(item.valor_base),
+        valor_foto_extra: Number(item.valor_foto_extra),
+        produtosIncluidos: Array.isArray(item.produtos_incluidos) ? item.produtos_incluidos : [],
+        created_at: item.created_at,
+        updated_at: item.updated_at
+      }));
+
+      console.log(`📦 Loaded ${pacotes.length} pacotes from Supabase`);
+      return pacotes;
+    } catch (error) {
+      console.error('📦 Unexpected error loading pacotes:', error);
+      return DEFAULT_PACOTES;
+    }
   }
 
   async savePacotes(pacotes: Pacote[]): Promise<void> {
-    console.log('savePacotes: Not implemented yet');
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) {
+        console.log('📦 User not authenticated, skipping save');
+        return;
+      }
+
+      if (pacotes.length === 0) {
+        console.log('📦 No pacotes to save');
+        return;
+      }
+
+      // Transform to Supabase format
+      const supabaseData = pacotes.map(pacote => ({
+        id: pacote.id,
+        user_id: user.user.id,
+        nome: pacote.nome,
+        categoria_id: pacote.categoria_id,
+        valor_base: pacote.valor_base,
+        valor_foto_extra: pacote.valor_foto_extra,
+        produtos_incluidos: pacote.produtosIncluidos,
+        created_at: pacote.created_at || new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }));
+
+      const { error } = await (supabase as any)
+        .from('pacotes')
+        .upsert(supabaseData, { 
+          onConflict: 'id',
+          ignoreDuplicates: false 
+        });
+
+      if (error) {
+        console.error('📦 Error saving pacotes to Supabase:', error);
+        throw error;
+      }
+
+      console.log(`📦 Successfully saved ${pacotes.length} pacotes to Supabase`);
+    } catch (error) {
+      console.error('📦 Error in savePacotes:', error);
+      throw error;
+    }
+  }
+
+  async deletePacoteById(id: string): Promise<void> {
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) {
+        throw new Error('User not authenticated');
+      }
+
+      const { error } = await (supabase as any)
+        .from('pacotes')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.user.id);
+
+      if (error) {
+        console.error('📦 Error deleting pacote from Supabase:', error);
+        throw error;
+      }
+
+      console.log(`📦 Successfully deleted pacote ${id} from Supabase`);
+    } catch (error) {
+      console.error('📦 Error in deletePacoteById:', error);
+      throw error;
+    }
+  }
+
+  async syncPacotes(pacotes: Pacote[]): Promise<void> {
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) {
+        console.log('📦 User not authenticated, skipping sync');
+        return;
+      }
+
+      // Get current pacotes from Supabase
+      const { data: currentData, error: fetchError } = await (supabase as any)
+        .from('pacotes')
+        .select('id')
+        .eq('user_id', user.user.id);
+
+      if (fetchError) {
+        console.error('📦 Error fetching current pacotes:', fetchError);
+        throw fetchError;
+      }
+
+      const currentIds = new Set(currentData?.map((item: any) => item.id) || []);
+      const newIds = new Set(pacotes.map(p => p.id));
+
+      // Delete orphaned records
+      const toDelete = [...currentIds].filter((id: string) => !newIds.has(id));
+      if (toDelete.length > 0) {
+        const { error: deleteError } = await (supabase as any)
+          .from('pacotes')
+          .delete()
+          .in('id', toDelete)
+          .eq('user_id', user.user.id);
+
+        if (deleteError) {
+          console.error('📦 Error deleting orphaned pacotes:', deleteError);
+        } else {
+          console.log(`📦 Deleted ${toDelete.length} orphaned pacotes`);
+        }
+      }
+
+      // Upsert current pacotes
+      if (pacotes.length > 0) {
+        await this.savePacotes(pacotes);
+      }
+
+      console.log('📦 Pacotes sync completed');
+    } catch (error) {
+      console.error('📦 Error in syncPacotes:', error);
+      throw error;
+    }
   }
 
   // ============= PRODUTOS =============
   
   async loadProdutos(): Promise<Produto[]> {
-    console.log('loadProdutos: Not implemented yet, returning defaults');
-    return DEFAULT_PRODUTOS;
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) {
+        console.log('🛍️ User not authenticated, returning default produtos');
+        return DEFAULT_PRODUTOS;
+      }
+
+      const { data, error } = await (supabase as any)
+        .from('produtos')
+        .select('*')
+        .eq('user_id', user.user.id)
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error('🛍️ Error loading produtos from Supabase:', error);
+        return DEFAULT_PRODUTOS;
+      }
+
+      if (!data || data.length === 0) {
+        console.log('🛍️ No produtos found, returning defaults');
+        return DEFAULT_PRODUTOS;
+      }
+
+      // Transform Supabase data to match our Produto interface
+      const produtos: Produto[] = data.map((item: any) => ({
+        id: item.id,
+        user_id: item.user_id,
+        nome: item.nome,
+        preco_custo: Number(item.preco_custo),
+        preco_venda: Number(item.preco_venda),
+        created_at: item.created_at,
+        updated_at: item.updated_at
+      }));
+
+      console.log(`🛍️ Loaded ${produtos.length} produtos from Supabase`);
+      return produtos;
+    } catch (error) {
+      console.error('🛍️ Unexpected error loading produtos:', error);
+      return DEFAULT_PRODUTOS;
+    }
   }
 
   async saveProdutos(produtos: Produto[]): Promise<void> {
-    console.log('saveProdutos: Not implemented yet');
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) {
+        console.log('🛍️ User not authenticated, skipping save');
+        return;
+      }
+
+      if (produtos.length === 0) {
+        console.log('🛍️ No produtos to save');
+        return;
+      }
+
+      // Transform to Supabase format
+      const supabaseData = produtos.map(produto => ({
+        id: produto.id,
+        user_id: user.user.id,
+        nome: produto.nome,
+        preco_custo: produto.preco_custo,
+        preco_venda: produto.preco_venda,
+        created_at: produto.created_at || new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }));
+
+      const { error } = await (supabase as any)
+        .from('produtos')
+        .upsert(supabaseData, { 
+          onConflict: 'id',
+          ignoreDuplicates: false 
+        });
+
+      if (error) {
+        console.error('🛍️ Error saving produtos to Supabase:', error);
+        throw error;
+      }
+
+      console.log(`🛍️ Successfully saved ${produtos.length} produtos to Supabase`);
+    } catch (error) {
+      console.error('🛍️ Error in saveProdutos:', error);
+      throw error;
+    }
+  }
+
+  async deleteProdutoById(id: string): Promise<void> {
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) {
+        throw new Error('User not authenticated');
+      }
+
+      const { error } = await (supabase as any)
+        .from('produtos')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.user.id);
+
+      if (error) {
+        console.error('🛍️ Error deleting produto from Supabase:', error);
+        throw error;
+      }
+
+      console.log(`🛍️ Successfully deleted produto ${id} from Supabase`);
+    } catch (error) {
+      console.error('🛍️ Error in deleteProdutoById:', error);
+      throw error;
+    }
+  }
+
+  async syncProdutos(produtos: Produto[]): Promise<void> {
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) {
+        console.log('🛍️ User not authenticated, skipping sync');
+        return;
+      }
+
+      // Get current produtos from Supabase
+      const { data: currentData, error: fetchError } = await (supabase as any)
+        .from('produtos')
+        .select('id')
+        .eq('user_id', user.user.id);
+
+      if (fetchError) {
+        console.error('🛍️ Error fetching current produtos:', fetchError);
+        throw fetchError;
+      }
+
+      const currentIds = new Set(currentData?.map((item: any) => item.id) || []);
+      const newIds = new Set(produtos.map(p => p.id));
+
+      // Delete orphaned records
+      const toDelete = [...currentIds].filter((id: string) => !newIds.has(id));
+      if (toDelete.length > 0) {
+        const { error: deleteError } = await (supabase as any)
+          .from('produtos')
+          .delete()
+          .in('id', toDelete)
+          .eq('user_id', user.user.id);
+
+        if (deleteError) {
+          console.error('🛍️ Error deleting orphaned produtos:', deleteError);
+        } else {
+          console.log(`🛍️ Deleted ${toDelete.length} orphaned produtos`);
+        }
+      }
+
+      // Upsert current produtos
+      if (produtos.length > 0) {
+        await this.saveProdutos(produtos);
+      }
+
+      console.log('🛍️ Produtos sync completed');
+    } catch (error) {
+      console.error('🛍️ Error in syncProdutos:', error);
+      throw error;
+    }
   }
 
   // ============= ETAPAS =============
   
   async loadEtapas(): Promise<EtapaTrabalho[]> {
-    console.log('loadEtapas: Not implemented yet, returning defaults');
-    return DEFAULT_ETAPAS;
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) {
+        console.log('📋 User not authenticated, returning default etapas');
+        return DEFAULT_ETAPAS;
+      }
+
+      const { data, error } = await (supabase as any)
+        .from('etapas_trabalho')
+        .select('*')
+        .eq('user_id', user.user.id)
+        .order('ordem', { ascending: true });
+
+      if (error) {
+        console.error('📋 Error loading etapas from Supabase:', error);
+        return DEFAULT_ETAPAS;
+      }
+
+      if (!data || data.length === 0) {
+        console.log('📋 No etapas found, returning defaults');
+        return DEFAULT_ETAPAS;
+      }
+
+      // Transform Supabase data to match our EtapaTrabalho interface
+      const etapas: EtapaTrabalho[] = data.map((item: any) => ({
+        id: item.id,
+        user_id: item.user_id,
+        nome: item.nome,
+        cor: item.cor,
+        ordem: Number(item.ordem),
+        created_at: item.created_at,
+        updated_at: item.updated_at
+      }));
+
+      console.log(`📋 Loaded ${etapas.length} etapas from Supabase`);
+      return etapas;
+    } catch (error) {
+      console.error('📋 Unexpected error loading etapas:', error);
+      return DEFAULT_ETAPAS;
+    }
   }
 
   async saveEtapas(etapas: EtapaTrabalho[]): Promise<void> {
-    console.log('saveEtapas: Not implemented yet');
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) {
+        console.log('📋 User not authenticated, skipping save');
+        return;
+      }
+
+      if (etapas.length === 0) {
+        console.log('📋 No etapas to save');
+        return;
+      }
+
+      // Transform to Supabase format
+      const supabaseData = etapas.map(etapa => ({
+        id: etapa.id,
+        user_id: user.user.id,
+        nome: etapa.nome,
+        cor: etapa.cor,
+        ordem: etapa.ordem,
+        created_at: etapa.created_at || new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }));
+
+      const { error } = await (supabase as any)
+        .from('etapas_trabalho')
+        .upsert(supabaseData, { 
+          onConflict: 'id',
+          ignoreDuplicates: false 
+        });
+
+      if (error) {
+        console.error('📋 Error saving etapas to Supabase:', error);
+        throw error;
+      }
+
+      console.log(`📋 Successfully saved ${etapas.length} etapas to Supabase`);
+    } catch (error) {
+      console.error('📋 Error in saveEtapas:', error);
+      throw error;
+    }
+  }
+
+  async deleteEtapaById(id: string): Promise<void> {
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) {
+        throw new Error('User not authenticated');
+      }
+
+      const { error } = await (supabase as any)
+        .from('etapas_trabalho')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.user.id);
+
+      if (error) {
+        console.error('📋 Error deleting etapa from Supabase:', error);
+        throw error;
+      }
+
+      console.log(`📋 Successfully deleted etapa ${id} from Supabase`);
+    } catch (error) {
+      console.error('📋 Error in deleteEtapaById:', error);
+      throw error;
+    }
+  }
+
+  async syncEtapas(etapas: EtapaTrabalho[]): Promise<void> {
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) {
+        console.log('📋 User not authenticated, skipping sync');
+        return;
+      }
+
+      // Get current etapas from Supabase
+      const { data: currentData, error: fetchError } = await (supabase as any)
+        .from('etapas_trabalho')
+        .select('id')
+        .eq('user_id', user.user.id);
+
+      if (fetchError) {
+        console.error('📋 Error fetching current etapas:', fetchError);
+        throw fetchError;
+      }
+
+      const currentIds = new Set(currentData?.map((item: any) => item.id) || []);
+      const newIds = new Set(etapas.map(e => e.id));
+
+      // Delete orphaned records
+      const toDelete = [...currentIds].filter((id: string) => !newIds.has(id));
+      if (toDelete.length > 0) {
+        const { error: deleteError } = await (supabase as any)
+          .from('etapas_trabalho')
+          .delete()
+          .in('id', toDelete)
+          .eq('user_id', user.user.id);
+
+        if (deleteError) {
+          console.error('📋 Error deleting orphaned etapas:', deleteError);
+        } else {
+          console.log(`📋 Deleted ${toDelete.length} orphaned etapas`);
+        }
+      }
+
+      // Upsert current etapas
+      if (etapas.length > 0) {
+        await this.saveEtapas(etapas);
+      }
+
+      console.log('📋 Etapas sync completed');
+    } catch (error) {
+      console.error('📋 Error in syncEtapas:', error);
+      throw error;
+    }
   }
 }

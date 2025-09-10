@@ -68,7 +68,7 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
 
   useEffect(() => {
     if (pacotes.length >= 0) {  // Allow empty arrays
-      configurationService.savePacotes(pacotes).catch(error => {
+      configurationService.syncPacotes(pacotes).catch(error => {
         console.error('Error saving pacotes:', error);
         toast.error('Erro ao salvar pacotes');
       });
@@ -77,7 +77,7 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
 
   useEffect(() => {
     if (produtos.length >= 0) {  // Allow empty arrays
-      configurationService.saveProdutos(produtos).catch(error => {
+      configurationService.syncProdutos(produtos).catch(error => {
         console.error('Error saving produtos:', error);
         toast.error('Erro ao salvar produtos');
       });
@@ -86,7 +86,7 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
 
   useEffect(() => {
     if (etapas.length >= 0) {  // Allow empty arrays
-      configurationService.saveEtapas(etapas).catch(error => {
+      configurationService.syncEtapas(etapas).catch(error => {
         console.error('Error saving etapas:', error);
         toast.error('Erro ao salvar etapas');
       });
@@ -163,9 +163,19 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
     toast.success('Pacote atualizado com sucesso!');
   }, []);
 
-  const removerPacote = useCallback((id: string) => {
-    setPacotes(prev => prev.filter(pac => pac.id !== id));
-    toast.success('Pacote removido com sucesso!');
+  const removerPacote = useCallback(async (id: string): Promise<boolean> => {
+    try {
+      // Delete directly from Supabase first
+      await configurationService.deletePacoteById(id);
+      // Only update local state after successful Supabase deletion
+      setPacotes(prev => prev.filter(pac => pac.id !== id));
+      toast.success('Pacote removido com sucesso!');
+      return true;
+    } catch (error) {
+      console.error('Error deleting pacote:', error);
+      toast.error('Erro ao remover pacote');
+      return false;
+    }
   }, []);
 
   // ============= OPERAÇÕES DE PRODUTOS =============
@@ -193,14 +203,24 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
     toast.success('Produto atualizado com sucesso!');
   }, []);
 
-  const removerProduto = useCallback((id: string) => {
+  const removerProduto = useCallback(async (id: string): Promise<boolean> => {
     if (!configurationService.canDeleteProduto(id, pacotes)) {
       toast.error('Este produto não pode ser removido pois está sendo usado em pacotes');
-      return;
+      return false;
     }
 
-    setProdutos(prev => prev.filter(prod => prod.id !== id));
-    toast.success('Produto removido com sucesso!');
+    try {
+      // Delete directly from Supabase first
+      await configurationService.deleteProdutoById(id);
+      // Only update local state after successful Supabase deletion
+      setProdutos(prev => prev.filter(prod => prod.id !== id));
+      toast.success('Produto removido com sucesso!');
+      return true;
+    } catch (error) {
+      console.error('Error deleting produto:', error);
+      toast.error('Erro ao remover produto');
+      return false;
+    }
   }, [pacotes]);
 
   // ============= OPERAÇÕES DE ETAPAS =============
@@ -230,9 +250,19 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
     toast.success('Etapa atualizada com sucesso!');
   }, []);
 
-  const removerEtapa = useCallback((id: string) => {
-    setEtapas(prev => prev.filter(etapa => etapa.id !== id));
-    toast.success('Etapa removida com sucesso!');
+  const removerEtapa = useCallback(async (id: string): Promise<boolean> => {
+    try {
+      // Delete directly from Supabase first
+      await configurationService.deleteEtapaById(id);
+      // Only update local state after successful Supabase deletion
+      setEtapas(prev => prev.filter(etapa => etapa.id !== id));
+      toast.success('Etapa removida com sucesso!');
+      return true;
+    } catch (error) {
+      console.error('Error deleting etapa:', error);
+      toast.error('Erro ao remover etapa');
+      return false;
+    }
   }, []);
 
   const moverEtapa = useCallback((id: string, direcao: 'cima' | 'baixo') => {

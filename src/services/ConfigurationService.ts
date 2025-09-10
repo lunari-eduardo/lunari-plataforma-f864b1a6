@@ -128,6 +128,15 @@ class ConfigurationService {
     }
   }
 
+  async syncPacotes(pacotes: Pacote[]): Promise<void> {
+    await this.initialize();
+    if (this.asyncAdapter) {
+      await this.asyncAdapter.syncPacotes(pacotes);
+    } else {
+      await this.adapter.savePacotes(pacotes);
+    }
+  }
+
   // ============= OPERAÇÕES DE PRODUTOS =============
   
   loadProdutos(): Produto[] {
@@ -152,6 +161,24 @@ class ConfigurationService {
     }
   }
 
+  async deleteProdutoById(id: string): Promise<void> {
+    await this.initialize();
+    if (this.asyncAdapter) {
+      await this.asyncAdapter.deleteProdutoById(id);
+    } else {
+      throw new Error('Delete operation requires Supabase authentication');
+    }
+  }
+
+  async syncProdutos(produtos: Produto[]): Promise<void> {
+    await this.initialize();
+    if (this.asyncAdapter) {
+      await this.asyncAdapter.syncProdutos(produtos);
+    } else {
+      await this.adapter.saveProdutos(produtos);
+    }
+  }
+
   // ============= OPERAÇÕES DE ETAPAS =============
 
   loadEtapas(): EtapaTrabalho[] {
@@ -171,6 +198,24 @@ class ConfigurationService {
     await this.initialize();
     if (this.asyncAdapter) {
       await this.asyncAdapter.saveEtapas(etapas);
+    } else {
+      await this.adapter.saveEtapas(etapas);
+    }
+  }
+
+  async deleteEtapaById(id: string): Promise<void> {
+    await this.initialize();
+    if (this.asyncAdapter) {
+      await this.asyncAdapter.deleteEtapaById(id);
+    } else {
+      throw new Error('Delete operation requires Supabase authentication');
+    }
+  }
+
+  async syncEtapas(etapas: EtapaTrabalho[]): Promise<void> {
+    await this.initialize();
+    if (this.asyncAdapter) {
+      await this.asyncAdapter.syncEtapas(etapas);
     } else {
       await this.adapter.saveEtapas(etapas);
     }
