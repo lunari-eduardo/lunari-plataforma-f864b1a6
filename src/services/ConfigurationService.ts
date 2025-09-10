@@ -1,6 +1,6 @@
 /**
  * Serviço de Configurações - Abstração para persistência de dados
- * Preparado para migração futura para Supabase usando adapter pattern
+ * Prioriza Supabase quando autenticado, com fallback para localStorage
  */
 
 import { SupabaseConfigurationAdapterAsync } from '@/adapters/SupabaseConfigurationAdapterAsync';
@@ -19,7 +19,7 @@ import type {
  * ConfigurationService - Abstração para persistência de configurações
  * 
  * Usa adapter pattern para abstrair a persistência,
- * facilitando migração futura para Supabase mantendo a mesma API.
+ * prioritizando Supabase quando usuário está autenticado.
  */
 class ConfigurationService {
   private adapter: ConfigurationStorageAdapter;
@@ -44,8 +44,8 @@ class ConfigurationService {
         console.log('User authenticated, enabling async Supabase adapter');
         this.asyncAdapter = new SupabaseConfigurationAdapterAsync();
         
-        // Executa migração se necessário
-        await ConfigurationMigrationService.migrateCategorias();
+        // Executa migração completa se necessário
+        await ConfigurationMigrationService.migrateAll();
       } else {
         console.log('User not authenticated, using localStorage adapter only');
         this.asyncAdapter = null;
@@ -60,7 +60,7 @@ class ConfigurationService {
     }
   }
   
-  // ============= OPERAÇÕES DE DADOS =============
+  // ============= OPERAÇÕES DE CATEGORIAS =============
   
   loadCategorias(): Categoria[] {
     // Synchronous for compatibility, initialize in background
@@ -86,28 +86,76 @@ class ConfigurationService {
     }
   }
 
+  // ============= OPERAÇÕES DE PACOTES =============
+  
   loadPacotes(): Pacote[] {
+    this.initialize().catch(console.error);
     return this.adapter.loadPacotes();
   }
 
-  savePacotes(pacotes: Pacote[]): void {
-    this.adapter.savePacotes(pacotes);
+  async loadPacotesAsync(): Promise<Pacote[]> {
+    await this.initialize();
+    if (this.asyncAdapter) {
+      return await this.asyncAdapter.loadPacotes();
+    }
+    return this.adapter.loadPacotes();
   }
 
+  async savePacotes(pacotes: Pacote[]): Promise<void> {
+    await this.initialize();
+    if (this.asyncAdapter) {
+      await this.asyncAdapter.savePacotes(pacotes);
+    } else {
+      await this.adapter.savePacotes(pacotes);
+    }
+  }
+
+  // ============= OPERAÇÕES DE PRODUTOS =============
+  
   loadProdutos(): Produto[] {
+    this.initialize().catch(console.error);
     return this.adapter.loadProdutos();
   }
 
-  saveProdutos(produtos: Produto[]): void {
-    this.adapter.saveProdutos(produtos);
+  async loadProdutosAsync(): Promise<Produto[]> {
+    await this.initialize();
+    if (this.asyncAdapter) {
+      return await this.asyncAdapter.loadProdutos();
+    }
+    return this.adapter.loadProdutos();
   }
 
+  async saveProdutos(produtos: Produto[]): Promise<void> {
+    await this.initialize();
+    if (this.asyncAdapter) {
+      await this.asyncAdapter.saveProdutos(produtos);
+    } else {
+      await this.adapter.saveProdutos(produtos);
+    }
+  }
+
+  // ============= OPERAÇÕES DE ETAPAS =============
+
   loadEtapas(): EtapaTrabalho[] {
+    this.initialize().catch(console.error);
     return this.adapter.loadEtapas();
   }
 
-  saveEtapas(etapas: EtapaTrabalho[]): void {
-    this.adapter.saveEtapas(etapas);
+  async loadEtapasAsync(): Promise<EtapaTrabalho[]> {
+    await this.initialize();
+    if (this.asyncAdapter) {
+      return await this.asyncAdapter.loadEtapas();
+    }
+    return this.adapter.loadEtapas();
+  }
+
+  async saveEtapas(etapas: EtapaTrabalho[]): Promise<void> {
+    await this.initialize();
+    if (this.asyncAdapter) {
+      await this.asyncAdapter.saveEtapas(etapas);
+    } else {
+      await this.adapter.saveEtapas(etapas);
+    }
   }
   
   // ============= MIGRAÇÃO DE ADAPTER =============
@@ -122,7 +170,7 @@ class ConfigurationService {
   // ============= OPERAÇÕES UTILITÁRIAS =============
   
   generateId(): string {
-    return String(Date.now());
+    return crypto.randomUUID();
   }
 
   validateCategoria(categoria: Omit<Categoria, 'id'>): { valid: boolean; error?: string } {

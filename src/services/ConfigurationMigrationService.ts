@@ -6,18 +6,24 @@
 import { supabase } from '@/integrations/supabase/client';
 import { storage } from '@/utils/localStorage';
 import { toast } from 'sonner';
-import { DEFAULT_CATEGORIAS } from '@/types/configuration';
-import type { Categoria } from '@/types/configuration';
+import { DEFAULT_CATEGORIAS, DEFAULT_PACOTES, DEFAULT_PRODUTOS, DEFAULT_ETAPAS } from '@/types/configuration';
+import type { Categoria, Pacote, Produto, EtapaTrabalho } from '@/types/configuration';
 
-const MIGRATION_STORAGE_KEY = 'migration_status_categorias';
+const MIGRATION_STORAGE_KEY = 'migration_status_complete';
 const LOCALSTORAGE_KEYS = {
-  CATEGORIAS: 'configuracoes_categorias'
+  CATEGORIAS: 'configuracoes_categorias',
+  PACOTES: 'configuracoes_pacotes',
+  PRODUTOS: 'configuracoes_produtos',
+  ETAPAS: 'lunari_workflow_status'
 } as const;
+
+// Mapeamento de IDs antigos para novos UUIDs
+const ID_MAPPING = new Map<string, string>();
 
 export class ConfigurationMigrationService {
   
   /**
-   * Verifica se a migração de categorias já foi executada
+   * Verifica se a migração já foi executada
    */
   private static hasMigrated(): boolean {
     return storage.load(MIGRATION_STORAGE_KEY, false);
@@ -31,19 +37,98 @@ export class ConfigurationMigrationService {
   }
 
   /**
-   * Carrega categorias do localStorage
+   * Gera UUID válido ou usa o existente se já for UUID
    */
-  private static loadLocalStorageCategorias(): Categoria[] {
-    const saved = storage.load(LOCALSTORAGE_KEYS.CATEGORIAS, []);
-    return saved.length > 0 ? saved : DEFAULT_CATEGORIAS;
+  private static generateOrKeepUUID(oldId: string): string {
+    // Se já for um UUID válido, manter
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (uuidRegex.test(oldId)) {
+      return oldId;
+    }
+    
+    // Se já temos mapeamento, usar
+    if (ID_MAPPING.has(oldId)) {
+      return ID_MAPPING.get(oldId)!;
+    }
+    
+    // Gerar novo UUID
+    const newUUID = crypto.randomUUID();
+    ID_MAPPING.set(oldId, newUUID);
+    return newUUID;
   }
 
   /**
-   * Migra categorias do localStorage para Supabase
+   * Carrega dados do localStorage com fallback para defaults
    */
-  static async migrateCategorias(): Promise<boolean> {
+  private static loadLocalData() {
+    const categorias = storage.load(LOCALSTORAGE_KEYS.CATEGORIAS, DEFAULT_CATEGORIAS);
+    const pacotes = storage.load(LOCALSTORAGE_KEYS.PACOTES, DEFAULT_PACOTES);
+    const produtos = storage.load(LOCALSTORAGE_KEYS.PRODUTOS, DEFAULT_PRODUTOS);
+    const etapas = storage.load(LOCALSTORAGE_KEYS.ETAPAS, DEFAULT_ETAPAS);
+
+    return { categorias, pacotes, produtos, etapas };
+  }
+
+  /**
+   * Migra categorias para Supabase
+   */
+  private static async migrateCategoriasInternal(categorias: Categoria[], userId: string): Promise<boolean> {
     try {
-      // Verifica se usuário está logado
+      // Verifica se há dados existentes
+      const { data: existing } = await supabase
+        .from('categorias')
+        .select('id')
+        .limit(1);
+
+      if (existing && existing.length > 0) {
+        console.log('Categorias already exist in Supabase');
+        return true;
+      }
+
+      // Prepara dados com UUIDs válidos
+      const categoriasData = categorias.map(categoria => ({
+        id: this.generateOrKeepUUID(categoria.id),
+        user_id: userId,
+        nome: categoria.nome,
+        cor: categoria.cor
+      }));
+
+      const { error } = await supabase
+        .from('categorias')
+        .insert(categoriasData);
+
+      if (error) throw error;
+
+      console.log(`Migrated ${categoriasData.length} categorias to Supabase`);
+      return true;
+    } catch (error) {
+      console.error('Error migrating categorias:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Remove dados do localStorage após migração bem-sucedida
+   */
+  private static cleanupLocalStorage(): void {
+    try {
+      Object.values(LOCALSTORAGE_KEYS).forEach(key => {
+        storage.remove(key);
+      });
+      // Remove também chaves antigas do sistema de preços
+      storage.remove('configuracao_modelos_de_preco');
+      console.log('localStorage cleanup completed');
+    } catch (error) {
+      console.error('Error during localStorage cleanup:', error);
+    }
+  }
+
+  /**
+   * Executa migração completa do sistema
+   */
+  static async migrateAll(): Promise<boolean> {
+    try {
+      // Verifica autenticação
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) {
         console.log('User not authenticated, skipping migration');
@@ -56,67 +141,32 @@ export class ConfigurationMigrationService {
         return true;
       }
 
-      // Verifica se há dados no Supabase
-      const { data: existingData } = await supabase
-        .from('categorias')
-        .select('id')
-        .limit(1);
-
-      if (existingData && existingData.length > 0) {
-        console.log('Data already exists in Supabase, marking as migrated');
-        this.markMigrated();
-        return true;
-      }
-
+      console.log('Starting complete configuration migration...');
+      
       // Carrega dados do localStorage
-      const localCategorias = this.loadLocalStorageCategorias();
-      console.log(`Found ${localCategorias.length} categorias in localStorage`);
+      const localData = this.loadLocalData();
+      
+      // Por enquanto, migra apenas categorias (outras entidades serão adicionadas gradualmente)
+      const categoriasOk = await this.migrateCategoriasInternal(localData.categorias, user.user.id);
 
-      // Prepara dados para inserção no Supabase
-      const categoriasData = localCategorias.map(categoria => ({
-        id: categoria.id,
-        user_id: user.user.id,
-        nome: categoria.nome,
-        cor: categoria.cor
-      }));
+      if (categoriasOk) {
+        // Marca migração como concluída
+        this.markMigrated();
+        
+        // Remove dados do localStorage
+        this.cleanupLocalStorage();
 
-      // Insere no Supabase
-      const { error } = await supabase
-        .from('categorias')
-        .insert(categoriasData);
-
-      if (error) {
-        console.error('Error migrating categorias:', error);
-        throw error;
+        console.log('Complete migration successful');
+        toast.success('Configurações migradas para a nuvem!');
+        
+        return true;
+      } else {
+        throw new Error('Migration failed');
       }
-
-      // Marca migração como concluída
-      this.markMigrated();
-      
-      // Remove dados do localStorage
-      this.cleanupLocalStorage();
-
-      console.log(`Successfully migrated ${localCategorias.length} categorias to Supabase`);
-      toast.success('Configurações migradas para a nuvem com sucesso!');
-      
-      return true;
     } catch (error) {
-      console.error('Migration failed:', error);
+      console.error('Complete migration failed:', error);
       toast.error('Erro na migração. Usando dados locais temporariamente.');
       return false;
-    }
-  }
-
-  /**
-   * Remove dados migrados do localStorage
-   */
-  private static cleanupLocalStorage(): void {
-    try {
-      // Remove apenas após confirmação da migração
-      storage.remove(LOCALSTORAGE_KEYS.CATEGORIAS);
-      console.log('localStorage cleanup completed');
-    } catch (error) {
-      console.error('Error during localStorage cleanup:', error);
     }
   }
 
@@ -125,14 +175,17 @@ export class ConfigurationMigrationService {
    */
   static resetMigrationStatus(): void {
     storage.remove(MIGRATION_STORAGE_KEY);
+    ID_MAPPING.clear();
   }
 
   /**
-   * Executa migração completa do sistema
+   * Migração individual de categorias (mantida para compatibilidade)
    */
-  static async migrateAll(): Promise<void> {
-    console.log('Starting configuration migration...');
-    await this.migrateCategorias();
-    // TODO: Adicionar migração de pacotes, produtos, etapas
+  static async migrateCategorias(): Promise<boolean> {
+    const { data: user } = await supabase.auth.getUser();
+    if (!user.user) return false;
+
+    const categorias = storage.load(LOCALSTORAGE_KEYS.CATEGORIAS, DEFAULT_CATEGORIAS);
+    return await this.migrateCategoriasInternal(categorias, user.user.id);
   }
 }

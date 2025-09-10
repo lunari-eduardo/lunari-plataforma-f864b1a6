@@ -1,6 +1,6 @@
 /**
- * Versão async do adapter Supabase para uso nos hooks
- * Mantém separação entre operações síncronas (compatibilidade) e assíncronas (hooks)
+ * Supabase Configuration Adapter - Async operations
+ * Handles all configuration data persistence to Supabase
  */
 
 import { supabase } from '@/integrations/supabase/client';
@@ -92,5 +92,38 @@ export class SupabaseConfigurationAdapterAsync {
       toast.error('Erro ao salvar categorias. Dados podem não estar sincronizados.');
       throw error;
     }
+  }
+
+  // ============= PACOTES =============
+  
+  async loadPacotes(): Promise<Pacote[]> {
+    console.log('loadPacotes: Not implemented yet, returning defaults');
+    return DEFAULT_PACOTES;
+  }
+
+  async savePacotes(pacotes: Pacote[]): Promise<void> {
+    console.log('savePacotes: Not implemented yet');
+  }
+
+  // ============= PRODUTOS =============
+  
+  async loadProdutos(): Promise<Produto[]> {
+    console.log('loadProdutos: Not implemented yet, returning defaults');
+    return DEFAULT_PRODUTOS;
+  }
+
+  async saveProdutos(produtos: Produto[]): Promise<void> {
+    console.log('saveProdutos: Not implemented yet');
+  }
+
+  // ============= ETAPAS =============
+  
+  async loadEtapas(): Promise<EtapaTrabalho[]> {
+    console.log('loadEtapas: Not implemented yet, returning defaults');
+    return DEFAULT_ETAPAS;
+  }
+
+  async saveEtapas(etapas: EtapaTrabalho[]): Promise<void> {
+    console.log('saveEtapas: Not implemented yet');
   }
 }

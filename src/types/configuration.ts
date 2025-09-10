@@ -131,54 +131,54 @@ export const CONFIGURATION_STORAGE_KEYS = {
 // ============= DADOS PADRÃO =============
 
 export const DEFAULT_CATEGORIAS: Categoria[] = [
-  { id: "1", nome: "Gestante", cor: "#FF9500" },
-  { id: "2", nome: "Newborn", cor: "#34C759" },
-  { id: "3", nome: "Família", cor: "#5856D6" },
-  { id: "4", nome: "Casamento", cor: "#FF2D55" },
-  { id: "5", nome: "Aniversário", cor: "#007AFF" }
+  { id: "cat_gestante", nome: "Gestante", cor: "#FF9500" },
+  { id: "cat_newborn", nome: "Newborn", cor: "#34C759" },
+  { id: "cat_familia", nome: "Família", cor: "#5856D6" },
+  { id: "cat_casamento", nome: "Casamento", cor: "#FF2D55" },
+  { id: "cat_aniversario", nome: "Aniversário", cor: "#007AFF" }
 ];
 
 export const DEFAULT_PACOTES: Pacote[] = [
   {
-    id: "1",
+    id: "pac_basico",
     nome: "Básico",
-    categoria_id: "3", 
+    categoria_id: "cat_familia", 
     valor_base: 450,
     valor_foto_extra: 25,
     produtosIncluidos: []
   },
   {
-    id: "2", 
+    id: "pac_completo", 
     nome: "Completo",
-    categoria_id: "1",
+    categoria_id: "cat_gestante",
     valor_base: 980,
     valor_foto_extra: 35,
     produtosIncluidos: [
-      { produtoId: "1", quantidade: 1 }
+      { produtoId: "prod_album", quantidade: 1 }
     ]
   },
   {
-    id: "3",
+    id: "pac_empresarial",
     nome: "Empresarial", 
-    categoria_id: "4",
+    categoria_id: "cat_casamento",
     valor_base: 890,
     valor_foto_extra: 30,
     produtosIncluidos: [
-      { produtoId: "1", quantidade: 1 },
-      { produtoId: "2", quantidade: 1 }
+      { produtoId: "prod_album", quantidade: 1 },
+      { produtoId: "prod_quadro", quantidade: 1 }
     ]
   }
 ];
 
 export const DEFAULT_PRODUTOS: Produto[] = [
   {
-    id: "1",
+    id: "prod_album",
     nome: "Álbum 20x30",
     preco_custo: 180,
     preco_venda: 350
   },
   {
-    id: "2",
+    id: "prod_quadro",
     nome: "Quadro 30x40", 
     preco_custo: 120,
     preco_venda: 280
@@ -186,7 +186,7 @@ export const DEFAULT_PRODUTOS: Produto[] = [
 ];
 
 export const DEFAULT_ETAPAS: EtapaTrabalho[] = [
-  { id: "1", nome: "Fotografado", cor: "#00B2FF", ordem: 1 },
-  { id: "2", nome: "Editando", cor: "#FF9500", ordem: 2 },
-  { id: "3", nome: "Finalizado", cor: "#34C759", ordem: 3 }
+  { id: "etapa_fotografado", nome: "Fotografado", cor: "#00B2FF", ordem: 1 },
+  { id: "etapa_editando", nome: "Editando", cor: "#FF9500", ordem: 2 },
+  { id: "etapa_finalizado", nome: "Finalizado", cor: "#34C759", ordem: 3 }
 ];

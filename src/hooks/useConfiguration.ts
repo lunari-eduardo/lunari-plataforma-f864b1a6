@@ -21,55 +21,76 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [isLoadingCategorias, setIsLoadingCategorias] = useState(true);
   
-  const [pacotes, setPacotes] = useState<Pacote[]>(() =>
-    configurationService.loadPacotes()
-  );
-  
-  const [produtos, setProdutos] = useState<Produto[]>(() =>
-    configurationService.loadProdutos()
-  );
-  
-  const [etapas, setEtapas] = useState<EtapaTrabalho[]>(() =>
-    configurationService.loadEtapas()
-  );
+  const [pacotes, setPacotes] = useState<Pacote[]>([]);
+  const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [etapas, setEtapas] = useState<EtapaTrabalho[]>([]);
 
   // ============= INICIALIZAÇÃO E CARREGAMENTO =============
   
   useEffect(() => {
-    const initializeCategorias = async () => {
+    const initializeAllData = async () => {
       try {
         setIsLoadingCategorias(true);
-        const loadedCategorias = await configurationService.loadCategoriasAsync();
+        
+        // Carrega todos os dados de forma assíncrona
+        const [loadedCategorias, loadedPacotes, loadedProdutos, loadedEtapas] = await Promise.all([
+          configurationService.loadCategoriasAsync(),
+          configurationService.loadPacotesAsync(),
+          configurationService.loadProdutosAsync(),
+          configurationService.loadEtapasAsync()
+        ]);
+
         setCategorias(loadedCategorias);
+        setPacotes(loadedPacotes);
+        setProdutos(loadedProdutos);
+        setEtapas(loadedEtapas);
       } catch (error) {
-        console.error('Error loading categorias:', error);
-        toast.error('Erro ao carregar categorias');
+        console.error('Error loading configuration data:', error);
+        toast.error('Erro ao carregar configurações');
       } finally {
         setIsLoadingCategorias(false);
       }
     };
 
-    initializeCategorias();
+    initializeAllData();
   }, []);
 
   // ============= EFEITOS DE PERSISTÊNCIA =============
   
   useEffect(() => {
     if (categorias.length > 0 && !isLoadingCategorias) {
-      configurationService.saveCategorias(categorias);
+      configurationService.saveCategorias(categorias).catch(error => {
+        console.error('Error saving categorias:', error);
+        toast.error('Erro ao salvar categorias');
+      });
     }
   }, [categorias, isLoadingCategorias]);
 
   useEffect(() => {
-    configurationService.savePacotes(pacotes);
+    if (pacotes.length >= 0) {  // Allow empty arrays
+      configurationService.savePacotes(pacotes).catch(error => {
+        console.error('Error saving pacotes:', error);
+        toast.error('Erro ao salvar pacotes');
+      });
+    }
   }, [pacotes]);
 
   useEffect(() => {
-    configurationService.saveProdutos(produtos);
+    if (produtos.length >= 0) {  // Allow empty arrays
+      configurationService.saveProdutos(produtos).catch(error => {
+        console.error('Error saving produtos:', error);
+        toast.error('Erro ao salvar produtos');
+      });
+    }
   }, [produtos]);
 
   useEffect(() => {
-    configurationService.saveEtapas(etapas);
+    if (etapas.length >= 0) {  // Allow empty arrays
+      configurationService.saveEtapas(etapas).catch(error => {
+        console.error('Error saving etapas:', error);
+        toast.error('Erro ao salvar etapas');
+      });
+    }
   }, [etapas]);
 
   // ============= OPERAÇÕES DE CATEGORIAS =============
