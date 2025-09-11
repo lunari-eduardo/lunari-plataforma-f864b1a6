@@ -1,314 +1,236 @@
-import { useMemo } from 'react';
-import { Cliente } from '@/types/cliente';
-import { Orcamento } from '@/types/orcamento';
-import { WorkflowItem } from '@/contexts/AppContext';
-import { Appointment } from '@/hooks/useAgenda';
-import { generateSessionId } from '@/utils/workflowSessionsAdapter';
-
 /**
- * SISTEMA DE HISTÓRICO UNIFICADO CORRIGIDO
- * 
- * Resolve os problemas identificados:
- * 1. Duplicação de entradas no histórico
- * 2. Valores incorretos (usa dados antigos em vez de dados do workflow)
- * 3. Falta de sessionId universal
- * 4. Reagendamento cria novos itens em vez de atualizar
+ * Hook for unified client history showing appointments, sessions, and transactions
  */
 
+import { useEffect, useState, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+
 export interface UnifiedHistoryItem {
-  sessionId: string; // ID único universal
-  id: string; // ID específico (pode mudar com reagendamento)
-  tipo: 'orcamento' | 'agendamento' | 'workflow' | 'projeto'; // Tipo do item
-  
-  // Dados básicos
-  data: Date;
-  hora: string;
-  cliente: {
-    id: string;
-    nome: string;
-  };
-  
-  // Dados do serviço
-  categoria: string;
-  pacote: string;
-  descricao: string;
+  id: string;
+  type: 'appointment' | 'session' | 'transaction';
+  data: string;
+  hora?: string;
+  titulo: string;
+  descricao?: string;
   status: string;
-  
-  // Dados financeiros (sempre os mais atualizados)
-  valorOriginal: number; // Valor do orçamento/agendamento original
-  valorFinal: number; // Valor final do workflow (se disponível)
-  valorPago: number;
-  valorRestante: number;
-  
-  // Metadados
-  origem: 'orcamento' | 'agenda' | 'direct';
-  dataUltimaAtualizacao: Date;
-  
-  // Dados completos para drill-down
-  dadosCompletos: {
-    orcamento?: Orcamento;
-    agendamento?: Appointment;
-    workflow?: WorkflowItem;
-  };
-  
-  // Timeline de mudanças
-  timeline: {
-    data: Date;
-    acao: string;
-    detalhes: string;
-    valorAnterior?: number;
-    valorNovo?: number;
-  }[];
+  valor?: number;
+  sessionId?: string;
+  packageId?: string;
+  pacoteNome?: string;
+  categoria?: string;
 }
 
-export function useUnifiedClientHistory(
-  cliente: Cliente,
-  orcamentos: Orcamento[],
-  agendamentos: Appointment[],
-  workflowItems: WorkflowItem[]
-): UnifiedHistoryItem[] {
-  
-  return useMemo(() => {
-    if (!cliente) return [];
-    
-    console.log('🔍 NOVO SISTEMA DE HISTÓRICO UNIFICADO:', {
-      clienteId: cliente.id,
-      clienteNome: cliente.nome,
-      orcamentos: orcamentos.length,
-      agendamentos: agendamentos.length,
-      workflowItems: workflowItems.length
-    });
+export function useUnifiedClientHistory(clienteId: string) {
+  const [history, setHistory] = useState<UnifiedHistoryItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-    // Mapa de projetos por sessionId
-    const projetosPorSessionId = new Map<string, UnifiedHistoryItem>();
-    
-    // FASE 1: Processar orçamentos (base dos projetos)
-    const orcamentosDoCliente = orcamentos.filter(orc => {
-      const nomeOrcamento = typeof orc.cliente === 'string' ? orc.cliente : orc.cliente?.nome;
-      return nomeOrcamento?.toLowerCase().trim() === cliente.nome?.toLowerCase().trim();
-    });
-    
-    orcamentosDoCliente.forEach(orcamento => {
-      // Gerar sessionId baseado no orçamento
-      const sessionId = orcamento.sessionId || generateSessionId(`orc-${orcamento.id}`);
-      
-      const projeto: UnifiedHistoryItem = {
-        sessionId,
-        id: orcamento.id,
-        tipo: 'orcamento',
-        data: new Date(orcamento.data),
-        hora: orcamento.hora || '',
-        cliente: {
-          id: cliente.id,
-          nome: cliente.nome
-        },
-        categoria: orcamento.categoria,
-        pacote: orcamento.categoria || '',
-        descricao: orcamento.descricao || `Orçamento - ${orcamento.categoria}`,
-        status: orcamento.status,
-        valorOriginal: orcamento.valorFinal || 0,
-        valorFinal: orcamento.valorFinal || 0,
-        valorPago: 0, // Orçamentos não têm valor pago
-        valorRestante: orcamento.valorFinal || 0,
-        origem: 'orcamento',
-        dataUltimaAtualizacao: new Date(orcamento.data),
-        dadosCompletos: {
-          orcamento
-        },
-        timeline: [{
-          data: new Date(orcamento.data),
-          acao: 'Orçamento Criado',
-          detalhes: `Orçamento de ${orcamento.categoria} criado`,
-          valorNovo: orcamento.valorFinal
-        }]
+  const loadHistory = useCallback(async () => {
+    if (!clienteId) {
+      setHistory([]);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      // Load appointments, sessions, and transactions in parallel
+      const [appointmentsData, sessionsData, transactionsData] = await Promise.all([
+        supabase
+          .from('appointments')
+          .select(`
+            *,
+            pacotes (nome, categorias(nome))
+          `)
+          .eq('cliente_id', clienteId)
+          .eq('user_id', user.id),
+        
+        supabase
+          .from('clientes_sessoes')
+          .select(`
+            *,
+            appointments (package_id),
+            pacotes (nome, categorias(nome))
+          `)
+          .eq('cliente_id', clienteId)
+          .eq('user_id', user.id),
+        
+        supabase
+          .from('clientes_transacoes')
+          .select('*')
+          .eq('cliente_id', clienteId)
+          .eq('user_id', user.id)
+      ]);
+
+      if (appointmentsData.error) throw appointmentsData.error;
+      if (sessionsData.error) throw sessionsData.error;
+      if (transactionsData.error) throw transactionsData.error;
+
+      const historyItems: UnifiedHistoryItem[] = [];
+
+      // Add appointments
+      if (appointmentsData.data) {
+        appointmentsData.data.forEach(appointment => {
+          const pacote = (appointment as any).pacotes;
+          historyItems.push({
+            id: appointment.id,
+            type: 'appointment',
+            data: appointment.date,
+            hora: appointment.time,
+            titulo: appointment.title,
+            descricao: appointment.description || '',
+            status: appointment.status,
+            sessionId: appointment.session_id,
+            packageId: appointment.package_id,
+            pacoteNome: pacote?.nome,
+            categoria: pacote?.categorias?.nome
+          });
+        });
+      }
+
+      // Add sessions
+      if (sessionsData.data) {
+        sessionsData.data.forEach(session => {
+          const appointment = (session as any).appointments;
+          const pacote = (session as any).pacotes;
+          
+          historyItems.push({
+            id: session.id,
+            type: 'session',
+            data: session.data_sessao,
+            hora: session.hora_sessao,
+            titulo: `Sessão - ${session.categoria}`,
+            descricao: session.descricao || '',
+            status: session.status,
+            valor: session.valor_total,
+            sessionId: session.session_id,
+            packageId: appointment?.package_id,
+            pacoteNome: pacote?.nome || session.pacote,
+            categoria: session.categoria
+          });
+        });
+      }
+
+      // Add transactions
+      if (transactionsData.data) {
+        transactionsData.data.forEach(transaction => {
+          historyItems.push({
+            id: transaction.id,
+            type: 'transaction',
+            data: transaction.data_transacao,
+            titulo: `${transaction.tipo} - ${transaction.descricao || 'Pagamento'}`,
+            descricao: transaction.descricao || '',
+            status: 'concluido',
+            valor: transaction.valor,
+            sessionId: transaction.session_id
+          });
+        });
+      }
+
+      // Sort by date (newest first)
+      historyItems.sort((a, b) => {
+        const dateA = new Date(a.data);
+        const dateB = new Date(b.data);
+        return dateB.getTime() - dateA.getTime();
+      });
+
+      setHistory(historyItems);
+      setError(null);
+
+    } catch (error) {
+      console.error('❌ Error loading unified client history:', error);
+      setError(error instanceof Error ? error.message : 'Erro desconhecido');
+      toast.error('Erro ao carregar histórico do cliente');
+    } finally {
+      setLoading(false);
+    }
+  }, [clienteId]);
+
+  // Set up real-time subscriptions
+  useEffect(() => {
+    if (!clienteId) return;
+
+    const setupRealtime = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Subscribe to appointments changes
+      const appointmentsChannel = supabase
+        .channel('client_appointments_changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'appointments',
+            filter: `cliente_id=eq.${clienteId}`,
+          },
+          () => {
+            console.log('🔄 Client appointment changed, reloading history');
+            loadHistory();
+          }
+        )
+        .subscribe();
+
+      // Subscribe to sessions changes
+      const sessionsChannel = supabase
+        .channel('client_sessions_changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'clientes_sessoes',
+            filter: `cliente_id=eq.${clienteId}`,
+          },
+          () => {
+            console.log('🔄 Client session changed, reloading history');
+            loadHistory();
+          }
+        )
+        .subscribe();
+
+      // Subscribe to transactions changes
+      const transactionsChannel = supabase
+        .channel('client_transactions_changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'clientes_transacoes',
+            filter: `cliente_id=eq.${clienteId}`,
+          },
+          () => {
+            console.log('🔄 Client transaction changed, reloading history');
+            loadHistory();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(appointmentsChannel);
+        supabase.removeChannel(sessionsChannel);
+        supabase.removeChannel(transactionsChannel);
       };
-      
-      projetosPorSessionId.set(sessionId, projeto);
-    });
-    
-    // FASE 2: Processar agendamentos (podem atualizar projetos existentes)
-    const agendamentosDoCliente = agendamentos.filter(agendamento => 
-      agendamento.client?.toLowerCase().trim() === cliente.nome?.toLowerCase().trim()
-    );
-    
-    agendamentosDoCliente.forEach(agendamento => {
-      let sessionId = agendamento.sessionId;
-      
-      // Se o agendamento veio de um orçamento, usar o sessionId do orçamento
-      if (agendamento.orcamentoId) {
-        sessionId = generateSessionId(`orc-${agendamento.orcamentoId}`);
-      } else {
-        // Agendamento direto
-        sessionId = agendamento.sessionId || generateSessionId(`agenda-${agendamento.id}`);
-      }
-      
-      const projetoExistente = projetosPorSessionId.get(sessionId);
-      
-      if (projetoExistente) {
-        // ATUALIZAR PROJETO EXISTENTE (orçamento que virou agendamento)
-        projetoExistente.tipo = 'projeto'; // Mudou de orçamento para projeto
-        projetoExistente.data = agendamento.date; // Data do agendamento
-        projetoExistente.hora = agendamento.time;
-        projetoExistente.status = agendamento.status;
-        projetoExistente.dadosCompletos.agendamento = agendamento;
-        projetoExistente.dataUltimaAtualizacao = agendamento.date;
-        
-        // Adicionar à timeline
-        projetoExistente.timeline.push({
-          data: agendamento.date,
-          acao: 'Agendamento Confirmado',
-          detalhes: `Orçamento transformado em agendamento para ${agendamento.time}`,
-        });
-      } else {
-        // NOVO AGENDAMENTO DIRETO
-        const novoProjeto: UnifiedHistoryItem = {
-          sessionId,
-          id: agendamento.id,
-          tipo: 'agendamento',
-          data: agendamento.date,
-          hora: agendamento.time,
-          cliente: {
-            id: cliente.id,
-            nome: cliente.nome
-          },
-          categoria: agendamento.type || '',
-          pacote: agendamento.type || '',
-          descricao: agendamento.description || `Agendamento - ${agendamento.type}`,
-          status: agendamento.status,
-          valorOriginal: agendamento.paidAmount || 0,
-          valorFinal: agendamento.paidAmount || 0,
-          valorPago: agendamento.paidAmount || 0,
-          valorRestante: 0,
-          origem: 'agenda',
-          dataUltimaAtualizacao: agendamento.date,
-          dadosCompletos: {
-            agendamento
-          },
-          timeline: [{
-            data: agendamento.date,
-            acao: 'Agendamento Criado',
-            detalhes: `Agendamento direto de ${agendamento.type}`,
-            valorNovo: agendamento.paidAmount || 0
-          }]
-        };
-        
-        projetosPorSessionId.set(sessionId, novoProjeto);
-      }
-    });
-    
-    // FASE 3: Processar workflow items (DADOS FINANCEIROS AUTORITATIVOS)
-    const workflowDoCliente = workflowItems.filter(item => {
-      const matchByClienteId = item.clienteId === cliente.id;
-      const matchByName = !item.clienteId && 
-        item.nome?.toLowerCase().trim() === cliente.nome?.toLowerCase().trim();
-      return matchByClienteId || matchByName;
-    });
-    
-    workflowDoCliente.forEach(workflowItem => {
-      let sessionId = workflowItem.sessionId;
-      
-      // Se não tem sessionId, tentar determinar baseado no ID
-      if (!sessionId) {
-        if (workflowItem.id.startsWith('orcamento-')) {
-          const orcamentoId = workflowItem.id.replace('orcamento-', '');
-          sessionId = generateSessionId(`orc-${orcamentoId}`);
-        } else {
-          sessionId = generateSessionId(workflowItem.id);
-        }
-      }
-      
-      const projetoExistente = projetosPorSessionId.get(sessionId);
-      
-      if (projetoExistente) {
-        // ATUALIZAR COM DADOS FINANCEIROS DO WORKFLOW (AUTORITATIVOS)
-        const valorAnterior = projetoExistente.valorFinal;
-        
-        projetoExistente.tipo = 'projeto'; // Evoluiu para projeto completo
-        projetoExistente.valorFinal = workflowItem.total || 0;
-        projetoExistente.valorPago = workflowItem.valorPago || 0;
-        projetoExistente.valorRestante = (workflowItem.total || 0) - (workflowItem.valorPago || 0);
-        projetoExistente.status = workflowItem.status;
-        projetoExistente.dadosCompletos.workflow = workflowItem;
-        projetoExistente.dataUltimaAtualizacao = new Date();
-        
-        // Adicionar mudanças financeiras à timeline
-        if (valorAnterior !== workflowItem.total) {
-          projetoExistente.timeline.push({
-            data: new Date(),
-            acao: 'Valor Atualizado',
-            detalhes: 'Valores financeiros atualizados no workflow',
-            valorAnterior,
-            valorNovo: workflowItem.total || 0
-          });
-        }
-        
-        // Adicionar pagamentos à timeline
-        workflowItem.pagamentos?.forEach(pagamento => {
-          projetoExistente.timeline.push({
-            data: new Date(pagamento.data),
-            acao: 'Pagamento Recebido',
-            detalhes: `Pagamento de R$ ${pagamento.valor.toFixed(2)}`,
-            valorNovo: pagamento.valor
-          });
-        });
-        
-      } else {
-        // WORKFLOW ÓRFÃO (sem orçamento/agendamento correspondente)
-        const novoProjeto: UnifiedHistoryItem = {
-          sessionId,
-          id: workflowItem.id,
-          tipo: 'workflow',
-          data: new Date(workflowItem.data),
-          hora: workflowItem.hora,
-          cliente: {
-            id: cliente.id,
-            nome: cliente.nome
-          },
-          categoria: workflowItem.categoria,
-          pacote: workflowItem.pacote,
-          descricao: workflowItem.descricao || workflowItem.pacote,
-          status: workflowItem.status,
-          valorOriginal: workflowItem.total || 0,
-          valorFinal: workflowItem.total || 0,
-          valorPago: workflowItem.valorPago || 0,
-          valorRestante: (workflowItem.total || 0) - (workflowItem.valorPago || 0),
-          origem: workflowItem.fonte === 'orcamento' ? 'orcamento' : 'agenda',
-          dataUltimaAtualizacao: new Date(),
-          dadosCompletos: {
-            workflow: workflowItem
-          },
-          timeline: [{
-            data: new Date(workflowItem.data),
-            acao: 'Sessão de Trabalho',
-            detalhes: `Sessão de ${workflowItem.pacote}`,
-            valorNovo: workflowItem.total || 0
-          }]
-        };
-        
-        projetosPorSessionId.set(sessionId, novoProjeto);
-      }
-    });
-    
-    // Ordenar timeline de cada projeto
-    projetosPorSessionId.forEach(projeto => {
-      projeto.timeline.sort((a, b) => a.data.getTime() - b.data.getTime());
-    });
-    
-    // Retornar histórico ordenado por data (mais recente primeiro)
-    const historicoUnificado = Array.from(projetosPorSessionId.values())
-      .sort((a, b) => b.dataUltimaAtualizacao.getTime() - a.dataUltimaAtualizacao.getTime());
-    
-    console.log('✅ HISTÓRICO UNIFICADO CRIADO:', {
-      total: historicoUnificado.length,
-      orcamentos: historicoUnificado.filter(h => h.tipo === 'orcamento').length,
-      agendamentos: historicoUnificado.filter(h => h.tipo === 'agendamento').length,
-      projetos: historicoUnificado.filter(h => h.tipo === 'projeto').length,
-      workflows: historicoUnificado.filter(h => h.tipo === 'workflow').length,
-      totalFaturado: historicoUnificado.reduce((acc, h) => acc + h.valorFinal, 0),
-      totalPago: historicoUnificado.reduce((acc, h) => acc + h.valorPago, 0)
-    });
-    
-    return historicoUnificado;
-    
-  }, [cliente, orcamentos, agendamentos, workflowItems]);
+    };
+
+    setupRealtime();
+  }, [clienteId, loadHistory]);
+
+  // Load initial data
+  useEffect(() => {
+    loadHistory();
+  }, [loadHistory]);
+
+  return {
+    history,
+    loading,
+    error,
+    refetch: loadHistory
+  };
 }

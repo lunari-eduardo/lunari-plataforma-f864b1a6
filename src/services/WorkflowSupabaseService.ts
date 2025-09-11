@@ -54,7 +54,7 @@ export class WorkflowSupabaseService {
         }
       }
 
-      // Create session record
+      // Create session record with package ID for proper linking
       const sessionData = {
         user_id: user.user.id,
         session_id: sessionId,
@@ -63,7 +63,7 @@ export class WorkflowSupabaseService {
         data_sessao: appointmentData.date,
         hora_sessao: appointmentData.time,
         categoria: categoria || 'Outros',
-        pacote: packageData?.nome || '',
+        pacote: appointmentData.package_id || '', // Store package_id for linking
         descricao: appointmentData.description || '',
         status: 'agendado',
         valor_total: valorTotal,
@@ -112,7 +112,7 @@ export class WorkflowSupabaseService {
   }
 
   /**
-   * Get sessions for a specific month
+   * Get sessions for a specific month with package information
    */
   static async getSessionsForMonth(month: number, year: number) {
     try {
@@ -129,7 +129,11 @@ export class WorkflowSupabaseService {
         .select(`
           *,
           clientes (nome, email, telefone),
-          appointments (status, package_id)
+          appointments (status, package_id, 
+            pacotes (nome, valor_base, valor_foto_extra, produtos_incluidos, 
+              categorias (nome)
+            )
+          )
         `)
         .eq('user_id', user.user.id)
         .gte('data_sessao', startDate)

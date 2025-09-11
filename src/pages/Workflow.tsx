@@ -4,36 +4,30 @@ import { WorkflowTable } from "@/components/workflow/WorkflowTable";
 import { ColumnSettings } from "@/components/workflow/ColumnSettings";
 import { ChevronLeft, ChevronRight, Eye, EyeOff, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { useAgenda } from "@/hooks/useAgenda";
 import { useWorkflowStatus } from "@/hooks/useWorkflowStatus";
 import { useOrcamentoData } from "@/hooks/useOrcamentoData";
 import { useWorkflowRealtime } from "@/hooks/useWorkflowRealtime";
 import { useAppointmentWorkflowSync } from "@/hooks/useAppointmentWorkflowSync";
-import { useContext } from 'react';
-import { AppContext } from '@/contexts/AppContext';
+import { useClientesRealtime } from "@/hooks/useClientesRealtime";
 import { parseDateFromStorage } from "@/utils/dateUtils";
 import { useWorkflowMetrics } from '@/hooks/useWorkflowMetrics';
-import { autoFixWorkflowCache } from '@/utils/workflowCacheManager';
 import type { SessionData, CategoryOption, PackageOption, ProductOption } from '@/types/workflow';
+
 const removeAccents = (str: string) => {
   return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 };
+
 export default function Workflow() {
-  const {
-    getConfirmedSessionsForWorkflow
-  } = useAgenda();
   const {
     getStatusOptions
   } = useWorkflowStatus();
-  const {
-    clientes
-  } = useContext(AppContext);
   const {
     pacotes,
     produtos,
     categorias
   } = useOrcamentoData();
   const {
+    sessions: workflowSessions,
     sessionsData,
     loading: workflowLoading,
     error: workflowError,
@@ -41,19 +35,19 @@ export default function Workflow() {
     createSessionFromAppointment
   } = useWorkflowRealtime();
   
+  const { clientes } = useClientesRealtime();
+  
   // Initialize appointment-workflow sync
   useAppointmentWorkflowSync();
   
   const { saveMonthlyMetrics } = useWorkflowMetrics();
+
   const getClienteByName = (nome: string) => {
     return clientes.find(cliente => cliente.nome === nome);
   };
 
-  // Carregamento dos status de workflow das configurações - apenas etapas personalizadas
-  const statusOptions = getStatusOptions();
-
-  // Use Supabase data instead of localStorage
-  const [sessions, setSessions] = useState<SessionData[]>([]);
+  // Estado local para UI
+  const [sessionDataList, setSessionDataList] = useState<SessionData[]>([]);
   const [filteredSessions, setFilteredSessions] = useState<SessionData[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showMetrics, setShowMetrics] = useState(true);
@@ -125,577 +119,330 @@ export default function Workflow() {
     }
   });
 
-  // Update sessions from Supabase realtime data
+  // Update sessions from Supabase realtime data using the hook conversion
   useEffect(() => {
     if (!workflowLoading) {
-      setSessions(sessionsData);
+      setSessionDataList(sessionsData);
     }
   }, [sessionsData, workflowLoading]);
+
   // Mapear dados reais das configurações para formato da tabela
   const categoryOptions: CategoryOption[] = categorias.map((categoria, index) => ({
     id: String(index + 1),
     nome: categoria
   }));
+  
   const packageOptions: PackageOption[] = pacotes.map(pacote => ({
     id: pacote.id,
     nome: pacote.nome,
-    valor: `R$ ${(pacote.valor || 0).toFixed(2).replace('.', ',')}`,
-    valorFotoExtra: `R$ ${(pacote.valorFotoExtra || 35).toFixed(2).replace('.', ',')}`,
-    categoria: pacote.categoria
+    valor: `R$ ${(pacote.valor_base || 0).toFixed(2).replace('.', ',')}`,
+    valorFotoExtra: `R$ ${(pacote.valor_foto_extra || 35).toFixed(2).replace('.', ',')}`,
+    categoria: pacote.categoria_id
   }));
+  
   const productOptions: ProductOption[] = produtos.map(produto => ({
     id: produto.id,
     nome: produto.nome,
-    valor: `R$ ${(produto.preco_venda || produto.valorVenda || 0).toFixed(2).replace('.', ',')}`
+    valor: `R$ ${(produto.preco_venda || 0).toFixed(2).replace('.', ',')}`
   }));
+
+  // Filter sessions by search term
   useEffect(() => {
     if (!searchTerm.trim()) {
-      setFilteredSessions(sessions);
+      setFilteredSessions(sessionDataList);
     } else {
       const searchTermNormalized = removeAccents(searchTerm.toLowerCase());
-      const filtered = sessions.filter(session => removeAccents(session.nome.toLowerCase()).includes(searchTermNormalized) || removeAccents(session.email.toLowerCase()).includes(searchTermNormalized) || removeAccents(session.descricao.toLowerCase()).includes(searchTermNormalized));
+      const filtered = sessionDataList.filter(session => {
+        const nomeNormalized = removeAccents(session.nome.toLowerCase());
+        const emailNormalized = removeAccents((session.email || '').toLowerCase());
+        return nomeNormalized.includes(searchTermNormalized) || 
+               emailNormalized.includes(searchTermNormalized);
+      });
       setFilteredSessions(filtered);
     }
-  }, [sessions, searchTerm]);
+  }, [searchTerm, sessionDataList]);
 
-  // Load workflow data from Supabase (filtered by month)
-  const loadWorkflowData = useCallback(() => {
-    if (!workflowLoading) {
-      // Filter sessions by current month
-      const filteredByMonth = sessionsData.filter((session: SessionData) => {
-        const sessionDate = parseDateFromStorage(session.data);
-        return sessionDate.getUTCMonth() + 1 === currentMonth.month && sessionDate.getUTCFullYear() === currentMonth.year;
-      });
-      setSessions(filteredByMonth);
-    }
-  }, [currentMonth.month, currentMonth.year, sessionsData, workflowLoading]);
-  useEffect(() => {
-    loadWorkflowData();
-  }, [loadWorkflowData]);
-
-  // ✅ CORREÇÃO AUTOMÁTICA: Executar uma vez na inicialização
-  useEffect(() => {
-    const hasFixedCache = sessionStorage.getItem('workflow_cache_fixed');
-    if (!hasFixedCache) {
-      console.log('🔧 Executando correção automática do cache na inicialização...');
-      autoFixWorkflowCache();
-      sessionStorage.setItem('workflow_cache_fixed', 'true');
-    }
-  }, []);
-  const handlePreviousMonth = () => {
-    let newMonth = currentMonth.month - 1;
-    let newYear = currentMonth.year;
-    if (newMonth < 1) {
-      newMonth = 12;
-      newYear--;
-    }
-    setCurrentMonth({
-      month: newMonth,
-      year: newYear
+  // Filter sessions by current month
+  const monthFilteredSessions = useMemo(() => {
+    return filteredSessions.filter(session => {
+      const sessionDate = parseDateFromStorage(session.data);
+      if (!sessionDate) return false;
+      return sessionDate.getMonth() + 1 === currentMonth.month && 
+             sessionDate.getFullYear() === currentMonth.year;
     });
-  };
-  const handleNextMonth = () => {
-    let newMonth = currentMonth.month + 1;
-    let newYear = currentMonth.year;
-    if (newMonth > 12) {
-      newMonth = 1;
-      newYear++;
-    }
-    setCurrentMonth({
-      month: newMonth,
-      year: newYear
-    });
-  };
-  const getCurrentMonthName = () => {
-    const date = new Date(currentMonth.year, currentMonth.month - 1);
-    return date.toLocaleDateString('pt-BR', {
-      month: 'long',
-      year: 'numeric'
-    });
-  };
-  const toggleMetrics = () => {
-    setShowMetrics(!showMetrics);
-  };
+  }, [filteredSessions, currentMonth]);
 
-  // Funções de cálculo dinâmico (mesmas usadas na tabela)
-  const calculateTotal = useCallback((session: SessionData) => {
-    try {
-      const valorPacoteStr = typeof session.valorPacote === 'string' ? session.valorPacote : String(session.valorPacote || '0');
-      const valorPacote = parseFloat(valorPacoteStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-      const valorFotoExtraStr = typeof session.valorTotalFotoExtra === 'string' ? session.valorTotalFotoExtra : String(session.valorTotalFotoExtra || '0');
-      const valorFotoExtra = parseFloat(valorFotoExtraStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-      const valorAdicionalStr = typeof session.valorAdicional === 'string' ? session.valorAdicional : String(session.valorAdicional || '0');
-      const valorAdicional = parseFloat(valorAdicionalStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-      const desconto = session.desconto || 0;
-
-      // Apenas produtos manuais somam ao total
-      let valorProdutosManuais = 0;
-      if (session.produtosList && session.produtosList.length > 0) {
-        const produtosManuais = session.produtosList.filter(p => p.tipo === 'manual');
-        valorProdutosManuais = produtosManuais.reduce((total, p) => total + p.valorUnitario * p.quantidade, 0);
-      } else if (session.valorTotalProduto) {
-        const valorProdutoStr = typeof session.valorTotalProduto === 'string' ? session.valorTotalProduto : String(session.valorTotalProduto || '0');
-        valorProdutosManuais = parseFloat(valorProdutoStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+  // Navigation functions for months
+  const handlePreviousMonth = useCallback(() => {
+    setCurrentMonth(prev => {
+      if (prev.month === 1) {
+        return { month: 12, year: prev.year - 1 };
       }
-      const totalCalculado = valorPacote + valorFotoExtra + valorProdutosManuais + valorAdicional - desconto;
-      return totalCalculado;
-    } catch (error) {
-      console.error('Erro no cálculo de total:', error);
-      return 0;
-    }
+      return { month: prev.month - 1, year: prev.year };
+    });
   }, []);
+
+  const handleNextMonth = useCallback(() => {
+    setCurrentMonth(prev => {
+      if (prev.month === 12) {
+        return { month: 1, year: prev.year + 1 };
+      }
+      return { month: prev.month + 1, year: prev.year };
+    });
+  }, []);
+
+  // Calculate totals for metrics
+  const calculateTotal = useCallback((session: SessionData) => {
+    const valorPacote = Number(session.valorPacote) || 0;
+    const valorFotoExtra = Number(session.valorTotalFotoExtra) || 0;
+    const valorProduto = Number(session.valorTotalProduto) || 0;
+    const valorAdicional = Number(session.valorAdicional) || 0;
+    const desconto = Number(session.desconto) || 0;
+    
+    return valorPacote + valorFotoExtra + valorProduto + valorAdicional - desconto;
+  }, []);
+
   const calculateRestante = useCallback((session: SessionData) => {
     const total = calculateTotal(session);
-    const valorPagoStr = typeof session.valorPago === 'string' ? session.valorPago : String(session.valorPago || '0');
-    const valorPago = parseFloat(valorPagoStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+    const valorPago = Number(session.valorPago) || 0;
     return total - valorPago;
   }, [calculateTotal]);
 
-  // Calcular métricas em tempo real do mês selecionado (ignora filtros)
+  // Financial metrics for current month
   const financials = useMemo(() => {
-    // Usar sessions ao invés de filteredSessions para ignorar filtros de busca
-    const currentMonthSessions = sessions;
-    const totalRevenue = currentMonthSessions.reduce((sum, session) => {
-      const paidStr = typeof session.valorPago === 'string' ? session.valorPago : String(session.valorPago || '0');
-      const paid = parseFloat(paidStr.replace(/[^\d,]/g, '').replace(',', '.') || '0');
-      return sum + paid;
-    }, 0);
+    const currentMonthTotal = monthFilteredSessions.reduce((acc, session) => acc + calculateTotal(session), 0);
+    const currentMonthPaid = monthFilteredSessions.reduce((acc, session) => acc + (Number(session.valorPago) || 0), 0);
+    const currentMonthRemaining = monthFilteredSessions.reduce((acc, session) => acc + calculateRestante(session), 0);
 
-    // USAR CÁLCULO DINÂMICO para Previsto (ao invés de session.total)
-    const totalForecasted = currentMonthSessions.reduce((sum, session) => {
-      return sum + calculateTotal(session);
-    }, 0);
-
-    // USAR CÁLCULO DINÂMICO para A Receber (ao invés de session.restante)  
-    const totalOutstanding = currentMonthSessions.reduce((sum, session) => {
-      return sum + calculateRestante(session);
-    }, 0);
     return {
-      revenue: totalRevenue,
-      forecasted: totalForecasted,
-      outstanding: totalOutstanding,
-      sessionCount: currentMonthSessions.length
+      totalMonth: currentMonthTotal,
+      paidMonth: currentMonthPaid,
+      remainingMonth: currentMonthRemaining
     };
-  }, [sessions, calculateTotal, calculateRestante]);
+  }, [monthFilteredSessions, calculateTotal, calculateRestante]);
 
-  // ✅ CORREÇÃO: Salvar métricas baseado na data real dos agendamentos
-  useEffect(() => {
-    // Agrupar sessões por mês REAL (baseado na data do agendamento)
-    const metricasPorMes: Record<string, {
-      receita: number;
-      previsto: number;
-      aReceber: number;
-      sessoes: number;
-    }> = {};
-
-    sessions.forEach(session => {
-      try {
-        // Extrair data real do agendamento
-        const sessionDate = parseDateFromStorage(session.data);
-        const mesReal = sessionDate.getUTCMonth() + 1; // 1-12
-        const anoReal = sessionDate.getUTCFullYear();
-        const chaveReal = `${anoReal}-${mesReal}`;
-
-        // Inicializar se não existe
-        if (!metricasPorMes[chaveReal]) {
-          metricasPorMes[chaveReal] = {
-            receita: 0,
-            previsto: 0,
-            aReceber: 0,
-            sessoes: 0
-          };
-        }
-
-        // Calcular valores para esta sessão
-        const paidStr = typeof session.valorPago === 'string' ? session.valorPago : String(session.valorPago || '0');
-        const paid = parseFloat(paidStr.replace(/[^\d,]/g, '').replace(',', '.') || '0');
-        const totalCalculado = calculateTotal(session);
-        const restanteCalculado = calculateRestante(session);
-
-        // Acumular métricas
-        metricasPorMes[chaveReal].receita += paid;
-        metricasPorMes[chaveReal].previsto += totalCalculado;
-        metricasPorMes[chaveReal].aReceber += restanteCalculado;
-        metricasPorMes[chaveReal].sessoes += 1;
-      } catch (error) {
-        console.warn('❌ Erro ao processar sessão para cache:', session.id, error);
-      }
-    });
-
-    // Salvar cache para todos os meses que têm dados
-    Object.entries(metricasPorMes).forEach(([chave, metricas]) => {
-      const [ano, mes] = chave.split('-').map(Number);
-      if (metricas.sessoes > 0) {
-        saveMonthlyMetrics(ano, mes, metricas);
-        console.log(`📊 Cache atualizado: ${ano}/${mes} - R$ ${metricas.receita.toFixed(2)} (${metricas.sessoes} sessões)`);
-      }
-    });
-
-  }, [sessions, calculateTotal, calculateRestante, saveMonthlyMetrics]);
-
-  // Métricas do mês anterior para comparação
+  // Previous month metrics for comparison
   const prevMonthFinancials = useMemo(() => {
     const prevMonth = currentMonth.month === 1 ? 12 : currentMonth.month - 1;
     const prevYear = currentMonth.month === 1 ? currentMonth.year - 1 : currentMonth.year;
-    const allSavedSessions = (() => {
-      try {
-        const saved = window.localStorage.getItem('workflow_sessions');
-        return saved ? JSON.parse(saved) : [];
-      } catch (error) {
-        return [];
-      }
-    })();
-    const prevMonthSessions = allSavedSessions.filter((session: SessionData) => {
-      const sessionDate = parseDateFromStorage(session.data);
-      return sessionDate.getUTCMonth() + 1 === prevMonth && sessionDate.getUTCFullYear() === prevYear;
-    });
-    const prevRevenue = prevMonthSessions.reduce((sum: number, session: SessionData) => {
-      const paidStr = typeof session.valorPago === 'string' ? session.valorPago : String(session.valorPago || '0');
-      const paid = parseFloat(paidStr.replace(/[^\d,]/g, '').replace(',', '.') || '0');
-      return sum + paid;
-    }, 0);
-    const prevForecasted = prevMonthSessions.reduce((sum: number, session: SessionData) => {
-      const totalStr = typeof session.total === 'string' ? session.total : String(session.total || '0');
-      const total = parseFloat(totalStr.replace(/[^\d,]/g, '').replace(',', '.') || '0');
-      return sum + total;
-    }, 0);
-    const prevOutstanding = prevMonthSessions.reduce((sum: number, session: SessionData) => {
-      const remainingStr = typeof session.restante === 'string' ? session.restante : String(session.restante || '0');
-      const remaining = parseFloat(remainingStr.replace(/[^\d,]/g, '').replace(',', '.') || '0');
-      return sum + remaining;
-    }, 0);
-    return {
-      revenue: prevRevenue,
-      forecasted: prevForecasted,
-      outstanding: prevOutstanding,
-      sessionCount: prevMonthSessions.length
-    };
-  }, [currentMonth]);
-  const formatCurrency = (val: number) => `R$ ${val.toLocaleString('pt-BR', {
-    minimumFractionDigits: 2
-  })}`;
-  const renderChange = (current: number, previous: number) => {
-    const change = (current - previous) / previous * 100;
-    const isPositive = change > 0;
-    return <span className={`text-xs ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-        {isPositive ? '↑' : '↓'} {Math.abs(change).toFixed(1)}%
-      </span>;
-  };
-  const handleColumnVisibilityChange = (cols: any) => {
-    setVisibleColumns(cols);
-    // Persistir configurações de colunas visíveis
-    try {
-      window.localStorage.setItem('workflow_visible_columns', JSON.stringify(cols));
-    } catch (error) {
-      console.error("Erro ao salvar configurações de colunas", error);
-    }
-  };
-  const handleColumnWidthChange = (widths: Record<string, number>) => {
-    setColumnWidths(widths);
-    // Persistir larguras das colunas
-    try {
-      window.localStorage.setItem('workflow_column_widths', JSON.stringify(widths));
-    } catch (error) {
-      console.error("Erro ao salvar larguras das colunas", error);
-    }
-  };
-  const handleStatusChange = (id: string, status: string) => {
-    setSessions(prev => prev.map(s => s.id === id ? {
-      ...s,
-      status
-    } : s));
-  };
-  const handleEditSession = useCallback((id: string) => {
-    const session = sessions.find(s => s.id === id);
-    if (session) {
-      // Implementar lógica de edição se necessário
-      console.log('Edit session:', id, session);
-    }
-  }, [sessions]);
-  const handleAddPayment = useCallback((id: string) => {
-    const session = sessions.find(s => s.id === id);
-    if (session) {
-      // Implementar lógica de adição de pagamento se necessário
-      console.log('Add payment for session:', id, session);
-    }
-  }, [sessions]);
-
-  // ✅ OTIMIZADO: Função de atualização sem ciclo vicioso
-  const handleFieldUpdate = useCallback((id: string, field: string, value: any) => {
-    console.log('🔄 Workflow.tsx - Atualizando campo:', { id, field, value });
     
-    // Atualizar estado e localStorage atomicamente
-    setSessions(prev => {
-      const newSessions = prev.map(session => {
-        if (session.id === id) {
-          const updatedSession = { ...session, [field]: value };
-          
-          // Tratamento especial para produtosList
-          if (field === 'produtosList') {
-            console.log('📦 Processando produtosList no Workflow.tsx:', value);
-            
-            // Garantir que value seja um array
-            const produtosList = Array.isArray(value) ? value : [];
-          updatedSession.produtosList = produtosList;
-          
-          // Recalcular valorTotalProduto baseado nos produtos manuais
-          const produtosManuais = produtosList.filter((p: any) => p.tipo === 'manual');
-          const valorTotalProdutosManuais = produtosManuais.reduce((total: number, p: any) => {
-            const valorUnit = parseFloat(String(p.valorUnitario || 0)) || 0;
-            const quantidade = parseFloat(String(p.quantidade || 0)) || 0;
-            return total + valorUnit * quantidade;
-          }, 0);
-          
-          updatedSession.valorTotalProduto = `R$ ${valorTotalProdutosManuais.toFixed(2).replace('.', ',')}`;
-          
-          // Atualizar campo produto principal
-          if (produtosList.length > 0) {
-            const produtoNames = produtosList.map((p: any) => {
-              return p.tipo === 'incluso' ? `${p.nome} (incluso no pacote)` : p.nome;
-            }).join(', ');
-            updatedSession.produto = produtoNames;
-            updatedSession.qtdProduto = produtosList.reduce((sum: number, p: any) => sum + (parseInt(String(p.quantidade || 0))), 0);
-          }
-          
-          console.log('✅ Produtos processados no Workflow.tsx:', {
-            produtosList: updatedSession.produtosList,
-            valorTotalProduto: updatedSession.valorTotalProduto,
-            produto: updatedSession.produto
-          });
-        }
-        
-          return updatedSession;
-        }
-        return session;
+    const prevMonthSessions = filteredSessions.filter(session => {
+      const sessionDate = parseDateFromStorage(session.data);
+      if (!sessionDate) return false;
+      return sessionDate.getMonth() + 1 === prevMonth && 
+             sessionDate.getFullYear() === prevYear;
+    });
+
+    const prevMonthTotal = prevMonthSessions.reduce((acc, session) => acc + calculateTotal(session), 0);
+    const prevMonthPaid = prevMonthSessions.reduce((acc, session) => acc + (Number(session.valorPago) || 0), 0);
+
+    return {
+      totalMonth: prevMonthTotal,
+      paidMonth: prevMonthPaid
+    };
+  }, [filteredSessions, currentMonth, calculateTotal]);
+
+  // Sort sessions
+  const sortedSessions = useMemo(() => {
+    if (!sortField) {
+      // Ordenação padrão: mais recentes primeiro
+      return [...monthFilteredSessions].sort((a, b) => {
+        const dateA = parseDateFromStorage(a.data);
+        const dateB = parseDateFromStorage(b.data);
+        if (!dateA || !dateB) return 0;
+        return dateB.getTime() - dateA.getTime();
       });
-      
-      // ✅ Salvar atomicamente no localStorage sem setTimeout
-      try {
-        const currentSessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
-        const sessionIndex = currentSessions.findIndex((s: any) => s.id === id);
-        
-        if (sessionIndex !== -1) {
-          const updatedSession = { ...currentSessions[sessionIndex], [field]: value };
-          
-          if (field === 'produtosList') {
-            const produtosList = Array.isArray(value) ? value : [];
-            updatedSession.produtosList = produtosList;
-            
-            const produtosManuais = produtosList.filter((p: any) => p.tipo === 'manual');
-            const valorTotalProdutosManuais = produtosManuais.reduce((total: number, p: any) => {
-              const valorUnit = parseFloat(String(p.valorUnitario || 0)) || 0;
-              const quantidade = parseFloat(String(p.quantidade || 0)) || 0;
-              return total + valorUnit * quantidade;
-            }, 0);
-            
-            updatedSession.valorTotalProduto = `R$ ${valorTotalProdutosManuais.toFixed(2).replace('.', ',')}`;
-            
-            if (produtosList.length > 0) {
-              const produtoNames = produtosList.map((p: any) => {
-                return p.tipo === 'incluso' ? `${p.nome} (incluso no pacote)` : p.nome;
-              }).join(', ');
-              updatedSession.produto = produtoNames;
-              updatedSession.qtdProduto = produtosList.reduce((sum: number, p: any) => sum + (parseInt(String(p.quantidade || 0))), 0);
-            }
-          }
-          
-          currentSessions[sessionIndex] = updatedSession;
-          localStorage.setItem('workflow_sessions', JSON.stringify(currentSessions));
-          
-          console.log('✅ Workflow.tsx - Salvo atomicamente no localStorage:', { id, field, value });
-        }
-      } catch (error) {
-        console.error('❌ Erro ao salvar no localStorage:', error);
-      }
-      
-      return newSessions;
+    }
+
+    return [...monthFilteredSessions].sort((a, b) => {
+      let aVal = a[sortField as keyof SessionData];
+      let bVal = b[sortField as keyof SessionData];
+
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [monthFilteredSessions, sortField, sortDirection]);
+
+  // Format currency
+  const formatCurrency = (value: number) => {
+    return `R$ ${value.toFixed(2).replace('.', ',')}`;
+  };
+
+  const renderPercentageChange = (current: number, previous: number) => {
+    if (previous === 0) return null;
+    const change = ((current - previous) / previous) * 100;
+    const isPositive = change > 0;
+    return (
+      <span className={`text-xs ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+        {isPositive ? '+' : ''}{change.toFixed(1)}%
+      </span>
+    );
+  };
+
+  // Event handlers
+  const handleColumnVisibilityChange = useCallback((columnKey: string, visible: boolean) => {
+    setVisibleColumns(prev => {
+      const updated = { ...prev, [columnKey]: visible };
+      window.localStorage.setItem('workflow_visible_columns', JSON.stringify(updated));
+      return updated;
     });
   }, []);
-  const sortedSessions = useMemo(() => {
-    // Função auxiliar para criar timestamp a partir de data + hora
-    const createTimestamp = (data: string, hora: string) => {
-      const [day, month, year] = data.split('/').map(Number);
-      const [hours, minutes] = hora.split(':').map(Number);
-      return new Date(year, month - 1, day, hours, minutes).getTime();
-    };
 
-    // SEMPRE aplicar ordenação cronológica crescente por padrão (quando não há sortField)
-    if (!sortField) {
-      return [...filteredSessions].sort((a, b) => {
-        const timestampA = createTimestamp(a.data, a.hora);
-        const timestampB = createTimestamp(b.data, b.hora);
-        return timestampA - timestampB; // Sempre cronológico crescente por padrão
-      });
-    }
+  const handleColumnWidthChange = useCallback((widths: Record<string, number>) => {
+    setColumnWidths(widths);
+    window.localStorage.setItem('workflow_column_widths', JSON.stringify(widths));
+  }, []);
 
-    // Quando há sortField, aplica ordenação solicitada
-    return [...filteredSessions].sort((a, b) => {
-      // Mapeamento de campos da interface para campos do SessionData
-      const fieldMapping: Record<string, keyof SessionData> = {
-        'date': 'data',
-        'client': 'nome',
-        'status': 'status',
-        'category': 'categoria',
-        'package': 'pacote',
-        'packageValue': 'valorPacote',
-        'discount': 'desconto',
-        'extraPhotoQty': 'qtdFotosExtra',
-        'extraPhotoTotal': 'valorTotalFotoExtra',
-        'product': 'produto',
-        'productTotal': 'valorTotalProduto',
-        'additionalValue': 'valorAdicional',
-        'total': 'total',
-        'paid': 'valorPago',
-        'remaining': 'restante'
-      };
-      let aValue: any, bValue: any;
+  const handleStatusChange = useCallback((sessionId: string, newStatus: string) => {
+    updateSession(sessionId, { status: newStatus });
+  }, [updateSession]);
 
-      // Handle different data types
-      if (sortField === 'date') {
-        // Para ordenação manual de data, usar a mesma lógica da ordenação padrão
-        aValue = createTimestamp(a.data, a.hora);
-        bValue = createTimestamp(b.data, b.hora);
-      } else {
-        const actualField = fieldMapping[sortField] || sortField as keyof SessionData;
-        aValue = a[actualField];
-        bValue = b[actualField];
-        if (['packageValue', 'discount', 'extraPhotoTotal', 'productTotal', 'additionalValue', 'total', 'paid', 'remaining'].includes(sortField)) {
-          aValue = parseFloat(String(aValue).replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-          bValue = parseFloat(String(bValue).replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-        } else if (sortField === 'extraPhotoQty') {
-          aValue = Number(aValue) || 0;
-          bValue = Number(bValue) || 0;
-        } else if (typeof aValue === 'string' && typeof bValue === 'string') {
-          aValue = aValue.toLowerCase();
-          bValue = bValue.toLowerCase();
-        }
-      }
-      if (sortDirection === 'asc') {
-        return aValue > bValue ? 1 : -1;
-      } else {
-        return aValue < bValue ? 1 : -1;
-      }
-    });
-  }, [filteredSessions, sortField, sortDirection]);
+  const handleEditSession = useCallback((sessionId: string) => {
+    // Implementation for editing session
+    console.log('Edit session:', sessionId);
+  }, []);
+
+  const handleAddPayment = useCallback((sessionId: string) => {
+    // Implementation for adding payment
+    console.log('Add payment to session:', sessionId);
+  }, []);
+
+  const handleFieldUpdate = useCallback((sessionId: string, field: string, value: any) => {
+    updateSession(sessionId, { [field]: value });
+  }, [updateSession]);
+
   const handleSort = useCallback((field: string) => {
-    if (sortField === field) {
-      // Se clicando no mesmo campo, alterna direção ou remove ordenação
-      if (sortDirection === 'asc') {
-        setSortDirection('desc');
-      } else {
-        // Remove ordenação para voltar à ordenação padrão
-        setSortField('');
-        setSortDirection('asc');
-      }
-    } else {
-      // Se clicando em campo diferente, define o campo e começa em crescente
-      setSortField(field);
-      setSortDirection('asc');
-    }
-  }, [sortField, sortDirection]);
-  return <div className="page-workflow h-full flex flex-col bg-background text-foreground dark:bg-gray-950">
-      <div className="border-b shadow-sm sticky top-0 z-50 bg-background">
-        <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 flex items-center justify-between pt-3 bg-background">
-          <div className="flex items-center space-x-3">
-            <Button variant="outline" size="icon" onClick={handlePreviousMonth} className="h-8 w-8">
+    setSortField(field);
+    setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+  }, []);
+
+  // Get month name
+  const getMonthName = (month: number) => {
+    const monthNames = [
+      'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+    ];
+    return monthNames[month - 1];
+  };
+
+  if (workflowLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-muted-foreground">Carregando workflow...</div>
+      </div>
+    );
+  }
+
+  if (workflowError) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-destructive">Erro ao carregar workflow: {String(workflowError)}</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <h1 className="text-3xl font-bold">Workflow</h1>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowMetrics(!showMetrics)}
+          >
+            {showMetrics ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            {showMetrics ? 'Ocultar' : 'Mostrar'} Métricas
+          </Button>
+        </div>
+        <ColumnSettings
+          visibleColumns={visibleColumns}
+          onColumnVisibilityChange={(columns) => {
+            setVisibleColumns(columns);
+            window.localStorage.setItem('workflow_visible_columns', JSON.stringify(columns));
+          }}
+        />
+      </div>
+
+      {/* Navigation and Metrics */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePreviousMonth}
+            >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <div className="text-lg font-semibold min-w-[180px] text-center">
-              {getCurrentMonthName()}
-            </div>
-            <Button variant="outline" size="icon" onClick={handleNextMonth} className="h-8 w-8">
+            <span className="font-medium text-lg">
+              {getMonthName(currentMonth.month)} {currentMonth.year}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleNextMonth}
+            >
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
-          <div className="flex items-center space-x-2">
-            <Button variant="ghost" size="sm" onClick={toggleMetrics} className="flex items-center space-x-2 text-gray-600">
-              {showMetrics ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              <span className="hidden sm:inline">{showMetrics ? "Ocultar" : "Métricas"}</span>
-            </Button>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              type="text"
+              placeholder="Buscar por cliente ou e-mail..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 w-80"
+            />
           </div>
         </div>
 
-        {showMetrics && <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 pt-2 pb-3 bg-background">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="bg-lunar-surface border border-lunar-border rounded-xl p-2.5 hover:shadow-lg hover:scale-[1.02] transition-all duration-300">
-                <div className="text-2xs font-medium uppercase tracking-wide mb-1 text-muted-foreground">RECEITA</div>
-                <div className="text-sm font-bold text-emerald-600">
-                  {formatCurrency(financials.revenue)}
-                </div>
-                <div className="text-2xs mt-0.5 text-muted-foreground">
-                  {renderChange(financials.revenue, prevMonthFinancials.revenue)}
-                </div>
-              </div>
-              <div className="bg-lunar-surface border border-lunar-border rounded-xl p-2.5 hover:shadow-lg hover:scale-[1.02] transition-all duration-300">
-                <div className="text-2xs font-medium uppercase tracking-wide mb-1 text-muted-foreground">PREVISTO</div>
-                <div className="text-sm font-bold text-blue-600">
-                  {formatCurrency(financials.forecasted)}
-                </div>
-                <div className="text-2xs mt-0.5 text-muted-foreground">
-                  {renderChange(financials.forecasted, prevMonthFinancials.forecasted)}
-                </div>
-              </div>
-              <div className="bg-lunar-surface border border-lunar-border rounded-xl p-2.5 hover:shadow-lg hover:scale-[1.02] transition-all duration-300">
-                <div className="text-2xs font-medium uppercase tracking-wide mb-1 text-muted-foreground">A RECEBER</div>
-                <div className="text-sm font-bold text-amber-600">
-                  {formatCurrency(financials.outstanding)}
-                </div>
-                <div className="text-2xs mt-0.5 text-muted-foreground">
-                  {renderChange(financials.outstanding, prevMonthFinancials.outstanding)}
-                </div>
-              </div>
-              <div className="bg-lunar-surface border border-lunar-border rounded-xl p-2.5 hover:shadow-lg hover:scale-[1.02] transition-all duration-300">
-                <div className="text-2xs font-medium uppercase tracking-wide mb-1 text-muted-foreground">SESSÕES</div>
-                <div className="text-sm font-bold text-foreground">
-                  {financials.sessionCount}
-                </div>
-                <div className="text-2xs mt-0.5 text-muted-foreground">
-                  {renderChange(financials.sessionCount, prevMonthFinancials.sessionCount)}
-                </div>
-              </div>
+        {showMetrics && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted rounded-lg">
+            <div className="text-center">
+              <div className="text-2xl font-bold">{formatCurrency(financials.totalMonth)}</div>
+              <div className="text-sm text-muted-foreground">Total do Mês</div>
+              {renderPercentageChange(financials.totalMonth, prevMonthFinancials.totalMonth)}
             </div>
-          </div>}
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">{formatCurrency(financials.paidMonth)}</div>
+              <div className="text-sm text-muted-foreground">Pago no Mês</div>
+              {renderPercentageChange(financials.paidMonth, prevMonthFinancials.paidMonth)}
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-orange-600">{formatCurrency(financials.remainingMonth)}</div>
+              <div className="text-sm text-muted-foreground">A Receber</div>
+            </div>
+          </div>
+        )}
+      </div>
 
-        <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 flex items-center justify-between gap-4 pb-3 pt-2 bg-background">
-          <div className="flex items-center space-x-2 flex-1 bg-background">
-            <div className="relative max-w-xs flex-1 bg-background">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input placeholder="Buscar por cliente (sem acentos)..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 h-9 bg-card" />
-            </div>
-            <Button variant="outline" size="sm" onClick={() => setSearchTerm('')}>Limpar</Button>
-          </div>
-          <div className="flex items-center space-x-2">
-            <span className="text-gray-500 hidden md:inline text-xs">
-              Mostrando {filteredSessions.length} sessões
-            </span>
-            <ColumnSettings visibleColumns={visibleColumns} onColumnVisibilityChange={handleColumnVisibilityChange} availableColumns={{
-            date: "Data e Hora",
-            client: "Cliente",
-            description: "Descrição",
-            email: "E-mail",
-            status: "Status",
-            category: "Categoria",
-            package: "Pacote",
-            packageValue: "Valor Pacote",
-            discount: "Desconto",
-            extraPhotoValue: "Valor Foto",
-            extraPhotoQty: "Qtd Foto",
-            extraPhotoTotal: "Total Foto",
-            product: "Produto",
-            productTotal: "Total Produto",
-            additionalValue: "Adicional",
-            details: "Obs",
-            total: "Total",
-            paid: "Pago",
-            remaining: "Restante",
-            payment: "Pagamento"
-          }} />
-          </div>
-        </div>
+      {/* Workflow Table */}
+      <div className="border rounded-lg">
+        <WorkflowTable
+          sessions={sortedSessions}
+          statusOptions={getStatusOptions()}
+          categoryOptions={categoryOptions}
+          packageOptions={packageOptions}
+          productOptions={productOptions}
+          onStatusChange={handleStatusChange}
+          onEditSession={handleEditSession}
+          onAddPayment={handleAddPayment}
+          onFieldUpdate={handleFieldUpdate}
+          visibleColumns={visibleColumns}
+          columnWidths={columnWidths}
+          onColumnWidthChange={handleColumnWidthChange}
+          onScrollChange={setScrollLeft}
+          sortField={sortField}
+          sortDirection={sortDirection}
+          onSort={handleSort}
+        />
       </div>
-      
-      <div className="flex-1 overflow-hidden">
-        <WorkflowTable sessions={sortedSessions} statusOptions={statusOptions} categoryOptions={categoryOptions} packageOptions={packageOptions} productOptions={productOptions} onStatusChange={handleStatusChange} onEditSession={handleEditSession} onAddPayment={handleAddPayment} onFieldUpdate={handleFieldUpdate} visibleColumns={visibleColumns} columnWidths={columnWidths} onColumnWidthChange={handleColumnWidthChange} onScrollChange={setScrollLeft} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
-      </div>
-    </div>;
+    </div>
+  );
 }

@@ -12,6 +12,7 @@ import ClientSearchCombobox from './ClientSearchCombobox';
 import PackageSearchCombobox from './PackageSearchCombobox';
 import { useContext } from 'react';
 import { AppContext } from '@/contexts/AppContext';
+import { useClientesRealtime } from '@/hooks/useClientesRealtime';
 import { useIntegration } from '@/hooks/useIntegration';
 import { useOrcamentos } from '@/hooks/useOrcamentos';
 import { ORIGENS_PADRAO } from '@/utils/defaultOrigens';
@@ -67,12 +68,13 @@ export default function AppointmentForm({
   onCancel
 }: AppointmentFormProps) {
   const {
-    clientes,
-    adicionarCliente,
     selectedClientForScheduling,
     clearSelectedClientForScheduling,
     appointments
   } = useContext(AppContext);
+  
+  // Use Supabase realtime for clients
+  const { clientes, adicionarCliente } = useClientesRealtime();
   const {
     isFromBudget
   } = useIntegration();
@@ -253,7 +255,7 @@ export default function AppointmentForm({
   };
 
   // Manipular envio do formulário
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Validar campos obrigatórios
@@ -274,8 +276,8 @@ export default function AppointmentForm({
     }
     let clientInfo;
     if (activeTab === 'new') {
-      // Criar novo cliente no CRM automaticamente
-      const novoCliente = adicionarCliente({
+      // Criar novo cliente no CRM automaticamente usando Supabase
+      const novoCliente = await adicionarCliente({
         nome: formData.newClientName,
         telefone: formData.newClientPhone,
         email: formData.newClientEmail,
