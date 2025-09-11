@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { useAgenda } from "@/hooks/useAgenda";
 import { useWorkflowStatus } from "@/hooks/useWorkflowStatus";
 import { useOrcamentoData } from "@/hooks/useOrcamentoData";
+import { useWorkflowRealtime } from "@/hooks/useWorkflowRealtime";
+import { useAppointmentWorkflowSync } from "@/hooks/useAppointmentWorkflowSync";
 import { useContext } from 'react';
 import { AppContext } from '@/contexts/AppContext';
 import { parseDateFromStorage } from "@/utils/dateUtils";
@@ -31,6 +33,16 @@ export default function Workflow() {
     produtos,
     categorias
   } = useOrcamentoData();
+  const {
+    sessionsData,
+    loading: workflowLoading,
+    error: workflowError,
+    updateSession,
+    createSessionFromAppointment
+  } = useWorkflowRealtime();
+  
+  // Initialize appointment-workflow sync
+  useAppointmentWorkflowSync();
   
   const { saveMonthlyMetrics } = useWorkflowMetrics();
   const getClienteByName = (nome: string) => {
@@ -40,16 +52,8 @@ export default function Workflow() {
   // Carregamento dos status de workflow das configurações - apenas etapas personalizadas
   const statusOptions = getStatusOptions();
 
-  // Carregamento inicial dos dados do localStorage
-  const [sessions, setSessions] = useState<SessionData[]>(() => {
-    try {
-      const savedSessions = window.localStorage.getItem('workflow_sessions');
-      return savedSessions ? JSON.parse(savedSessions) : [];
-    } catch (error) {
-      console.error("Erro ao carregar sessões do localStorage", error);
-      return [];
-    }
-  });
+  // Use Supabase data instead of localStorage
+  const [sessions, setSessions] = useState<SessionData[]>([]);
   const [filteredSessions, setFilteredSessions] = useState<SessionData[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showMetrics, setShowMetrics] = useState(true);
@@ -121,37 +125,12 @@ export default function Workflow() {
     }
   });
 
-  // Persistência automática das alterações - salvar sempre que sessions mudar
+  // Update sessions from Supabase realtime data
   useEffect(() => {
-    if (sessions.length > 0) {
-      try {
-        // Sempre fazer merge com dados existentes para não perder outras alterações
-        const allSavedSessions = JSON.parse(window.localStorage.getItem('workflow_sessions') || '[]');
-
-        // Criar um novo array com merge inteligente
-        const mergedSessions = [...allSavedSessions];
-        sessions.forEach(currentSession => {
-          const existingIndex = mergedSessions.findIndex(s => s.id === currentSession.id);
-          if (existingIndex >= 0) {
-            // Atualizar dados existentes
-            mergedSessions[existingIndex] = currentSession;
-          } else {
-            // Adicionar nova sessão
-            mergedSessions.push(currentSession);
-          }
-        });
-        window.localStorage.setItem('workflow_sessions', JSON.stringify(mergedSessions));
-        // Disparar evento para sincronização com Projetos/Dashboard (marcado como interno)
-        window.dispatchEvent(new CustomEvent('workflow-sessions-updated', { 
-          detail: { sessions: mergedSessions, source: 'workflow-internal' } 
-        }));
-        // ✅ OTIMIZADO: Remover console.log constante
-        // console.log('Workflow sessions saved to localStorage:', sessions.length, 'sessions');
-      } catch (error) {
-        console.error("Erro ao salvar sessões no localStorage", error);
-      }
+    if (!workflowLoading) {
+      setSessions(sessionsData);
     }
-  }, [sessions]);
+  }, [sessionsData, workflowLoading]);
   // Mapear dados reais das configurações para formato da tabela
   const categoryOptions: CategoryOption[] = categorias.map((categoria, index) => ({
     id: String(index + 1),
@@ -179,69 +158,19 @@ export default function Workflow() {
     }
   }, [sessions, searchTerm]);
 
-  // Integração com dados reais da agenda - carregar sessões do mês selecionado
-  // ✅ OTIMIZADO: useCallback para evitar recreação desnecessária
+  // Load workflow data from Supabase (filtered by month)
   const loadWorkflowData = useCallback(() => {
-    const confirmedSessions = getConfirmedSessionsForWorkflow(currentMonth.month, currentMonth.year, getClienteByName, pacotes, produtos);
-
-    // Carregar todas as sessões salvas do localStorage
-    const allSavedSessions = (() => {
-      try {
-        const saved = window.localStorage.getItem('workflow_sessions');
-        return saved ? JSON.parse(saved) : [];
-      } catch (error) {
-        console.error("Erro ao carregar sessões salvas", error);
-        return [];
-      }
-    })();
-
-    // Filtrar sessões salvas que pertencem ao mês atual (preservar TODAS as edições)
-    const existingSessionsForCurrentMonth = allSavedSessions.filter((session: SessionData) => {
-      const sessionDate = parseDateFromStorage(session.data);
-      return sessionDate.getUTCMonth() + 1 === currentMonth.month && sessionDate.getUTCFullYear() === currentMonth.year;
-    });
-
-    // Mapear agendamentos confirmados, preservando dados editados ou criando novos
-    const currentMonthSessions: SessionData[] = confirmedSessions.map(agendamento => {
-      const existingSession = existingSessionsForCurrentMonth.find((s: SessionData) => s.id === agendamento.id);
-      if (existingSession) {
-        return existingSession;
-      } else {
-        return {
-          ...agendamento,
-          status: '',
-          detalhes: ''
-        };
-      }
-    });
-
-    // ✅ OTIMIZADO: Só atualizar se realmente mudou
-    setSessions(prevSessions => {
-      if (JSON.stringify(prevSessions) !== JSON.stringify(currentMonthSessions)) {
-        return currentMonthSessions;
-      }
-      return prevSessions;
-    });
-  }, [currentMonth.month, currentMonth.year, getConfirmedSessionsForWorkflow, getClienteByName, pacotes, produtos]);
+    if (!workflowLoading) {
+      // Filter sessions by current month
+      const filteredByMonth = sessionsData.filter((session: SessionData) => {
+        const sessionDate = parseDateFromStorage(session.data);
+        return sessionDate.getUTCMonth() + 1 === currentMonth.month && sessionDate.getUTCFullYear() === currentMonth.year;
+      });
+      setSessions(filteredByMonth);
+    }
+  }, [currentMonth.month, currentMonth.year, sessionsData, workflowLoading]);
   useEffect(() => {
     loadWorkflowData();
-  }, [loadWorkflowData]);
-
-  // CORRIGIR: Listener condicional para atualizar workflow apenas quando mudanças vêm de fontes externas
-  useEffect(() => {
-    const handleWorkflowUpdate = (event: CustomEvent) => {
-      // ✅ Só recarregar se mudança veio de fonte externa (não do próprio Workflow)
-      const isExternalUpdate = event.detail?.source !== 'workflow-internal';
-      if (isExternalUpdate) {
-        console.log('🔄 Workflow detectou mudanças externas via evento');
-        loadWorkflowData();
-      } else {
-        console.log('🔄 Workflow ignorou mudança interna via evento');
-      }
-    };
-
-    window.addEventListener('workflow-sessions-updated', handleWorkflowUpdate as EventListener);
-    return () => window.removeEventListener('workflow-sessions-updated', handleWorkflowUpdate as EventListener);
   }, [loadWorkflowData]);
 
   // ✅ CORREÇÃO AUTOMÁTICA: Executar uma vez na inicialização

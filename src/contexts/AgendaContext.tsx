@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { AgendaService } from '@/services/AgendaService';
-import { LocalStorageAgendaAdapter } from '@/adapters/LocalStorageAgendaAdapter';
+import { SupabaseAgendaAdapter } from '@/adapters/SupabaseAgendaAdapter';
 import { AgendaWorkflowIntegrationService } from '@/services/AgendaWorkflowIntegrationService';
 import { Appointment } from '@/hooks/useAgenda';
 import { AvailabilitySlot, AvailabilityType } from '@/types/availability';
@@ -49,7 +49,7 @@ interface AgendaProviderProps {
 
 export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
   // Services
-  const agendaService = new AgendaService(new LocalStorageAgendaAdapter());
+  const agendaService = new AgendaService(new SupabaseAgendaAdapter());
   
   // Get dependencies from AppContext for integration
   const appContext = useAppContext();
