@@ -1,15 +1,17 @@
-import { useState } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { SlidersHorizontal } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+
 interface ColumnSettingsProps {
   visibleColumns: Record<string, boolean>;
   onColumnVisibilityChange: (columns: Record<string, boolean>) => void;
   availableColumns?: Record<string, string>;
 }
+
 export function ColumnSettings({
   visibleColumns,
   onColumnVisibilityChange,
@@ -26,31 +28,32 @@ export function ColumnSettings({
     remaining: "Resta"
   }
 }: ColumnSettingsProps) {
-  const [localColumns, setLocalColumns] = useState<Record<string, boolean>>(visibleColumns);
+  // Stabilize state to prevent infinite re-renders
+  const stableVisibleColumns = useMemo(() => visibleColumns, [JSON.stringify(visibleColumns)]);
+  const [localColumns, setLocalColumns] = useState<Record<string, boolean>>(stableVisibleColumns);
 
-  // Toggle a column's visibility
-  const toggleColumn = (column: string) => {
-    const updated = {
-      ...localColumns,
-      [column]: !localColumns[column]
-    };
-    setLocalColumns(updated);
-  };
+  // Toggle a column's visibility - stabilized with useCallback
+  const toggleColumn = useCallback((column: string) => {
+    setLocalColumns(prev => ({
+      ...prev,
+      [column]: !prev[column]
+    }));
+  }, []);
 
-  // Apply changes
-  const handleApply = () => {
+  // Apply changes - stabilized with useCallback
+  const handleApply = useCallback(() => {
     onColumnVisibilityChange(localColumns);
-  };
+  }, [localColumns, onColumnVisibilityChange]);
 
-  // Reset to all columns visible
-  const handleShowAll = () => {
+  // Reset to all columns visible - stabilized with useCallback
+  const handleShowAll = useCallback(() => {
     const all = Object.keys(availableColumns).reduce((acc, key) => {
       acc[key] = true;
       return acc;
     }, {} as Record<string, boolean>);
     setLocalColumns(all);
     onColumnVisibilityChange(all);
-  };
+  }, [availableColumns, onColumnVisibilityChange]);
   return <Popover>
       <PopoverTrigger asChild>
         <Button variant="outline" size="sm" className="h-7 px-2 text-sm">

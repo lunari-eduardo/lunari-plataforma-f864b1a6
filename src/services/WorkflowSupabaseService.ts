@@ -38,7 +38,7 @@ export class WorkflowSupabaseService {
         }
       }
 
-      // Get client data if available
+      // Get client data if available - create if missing
       let clienteId = appointmentData.cliente_id;
       if (!clienteId && appointmentData.title) {
         // Try to find client by name
@@ -51,6 +51,38 @@ export class WorkflowSupabaseService {
         
         if (cliente) {
           clienteId = cliente.id;
+          
+          // Update appointment with client_id
+          await supabase
+            .from('appointments')
+            .update({ cliente_id: clienteId })
+            .eq('id', appointmentId);
+            
+          console.log('✅ Linked existing client to appointment:', clienteId);
+        } else {
+          // Create new client
+          const { data: newClient } = await supabase
+            .from('clientes')
+            .insert({
+              user_id: user.user.id,
+              nome: appointmentData.title,
+              telefone: 'Não informado',
+              origem: 'agenda'
+            })
+            .select()
+            .single();
+            
+          if (newClient) {
+            clienteId = newClient.id;
+            
+            // Update appointment with client_id
+            await supabase
+              .from('appointments')
+              .update({ cliente_id: clienteId })
+              .eq('id', appointmentId);
+              
+            console.log('✅ Created new client and linked to appointment:', clienteId);
+          }
         }
       }
 

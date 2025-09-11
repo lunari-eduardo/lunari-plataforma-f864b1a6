@@ -11,6 +11,7 @@ import { useAppointmentWorkflowSync } from "@/hooks/useAppointmentWorkflowSync";
 import { useClientesRealtime } from "@/hooks/useClientesRealtime";
 import { parseDateFromStorage } from "@/utils/dateUtils";
 import { useWorkflowMetrics } from '@/hooks/useWorkflowMetrics';
+import { WorkflowSyncButton } from '@/components/workflow/WorkflowSyncButton';
 import type { SessionData, CategoryOption, PackageOption, ProductOption } from '@/types/workflow';
 
 const removeAccents = (str: string) => {
@@ -350,6 +351,7 @@ export default function Workflow() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <h1 className="text-3xl font-bold">Workflow</h1>
+          <WorkflowSyncButton />
           <Button
             variant="outline"
             size="sm"

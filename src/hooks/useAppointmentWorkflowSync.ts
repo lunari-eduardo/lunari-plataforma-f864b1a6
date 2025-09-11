@@ -4,9 +4,49 @@ import { WorkflowSupabaseService } from '@/services/WorkflowSupabaseService';
 
 /**
  * Hook to automatically sync confirmed appointments with workflow sessions
+ * Also handles manual synchronization for existing appointments
  */
 export const useAppointmentWorkflowSync = () => {
   
+  // Function to manually sync existing confirmed appointments
+  const syncExistingAppointments = async () => {
+    try {
+      console.log('🔄 Syncing existing confirmed appointments...');
+      
+      // Get all confirmed appointments without sessions
+      const { data: appointments } = await supabase
+        .from('appointments')
+        .select('*')
+        .eq('status', 'confirmado');
+
+      if (!appointments?.length) {
+        console.log('✅ No confirmed appointments found to sync');
+        return;
+      }
+
+      // Check which ones don't have sessions yet
+      for (const appointment of appointments) {
+        const { data: existingSession } = await supabase
+          .from('clientes_sessoes')
+          .select('id')
+          .eq('appointment_id', appointment.id)
+          .single();
+
+        if (!existingSession) {
+          console.log(`Creating session for appointment ${appointment.id}`);
+          await WorkflowSupabaseService.createSessionFromAppointment(
+            appointment.id,
+            appointment
+          );
+        }
+      }
+      
+      console.log('✅ Existing appointments sync completed');
+    } catch (error) {
+      console.error('❌ Error syncing existing appointments:', error);
+    }
+  };
+
   useEffect(() => {
     // Set up real-time listener for appointment status changes
     const channel = supabase
@@ -64,6 +104,9 @@ export const useAppointmentWorkflowSync = () => {
         }
       )
       .subscribe();
+
+    // Run sync for existing appointments after a delay
+    setTimeout(syncExistingAppointments, 3000);
 
     return () => {
       supabase.removeChannel(channel);
