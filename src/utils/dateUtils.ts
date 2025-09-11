@@ -44,9 +44,30 @@ export function formatDateForStorage(date: Date | string): string {
  * que pode ser formatado corretamente para exibição, evitando conversões de fuso horário
  */
 export function parseDateFromStorage(dateString: string): Date {
-  // Cria a data diretamente sem conversões de timezone usando os componentes da data
-  const [year, month, day] = dateString.split('-').map(Number);
-  return new Date(year, month - 1, day); // month é 0-indexed no constructor Date
+  // Handle null/undefined/empty strings
+  if (!dateString || typeof dateString !== 'string') {
+    return new Date(); // Return current date as fallback
+  }
+  
+  try {
+    // Cria a data diretamente sem conversões de timezone usando os componentes da data
+    const parts = dateString.split('-');
+    if (parts.length !== 3) {
+      return new Date(); // Return current date if format is invalid
+    }
+    
+    const [year, month, day] = parts.map(Number);
+    
+    // Validate the parsed numbers
+    if (isNaN(year) || isNaN(month) || isNaN(day)) {
+      return new Date(); // Return current date if any part is NaN
+    }
+    
+    return new Date(year, month - 1, day); // month é 0-indexed no constructor Date
+  } catch (error) {
+    console.warn('Error parsing date from storage:', dateString, error);
+    return new Date(); // Return current date as fallback
+  }
 }
 
 /**

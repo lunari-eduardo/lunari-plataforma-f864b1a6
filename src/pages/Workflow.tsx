@@ -155,7 +155,7 @@ export default function Workflow() {
     } else {
       const searchTermNormalized = removeAccents(searchTerm.toLowerCase());
       const filtered = sessionDataList.filter(session => {
-        const nomeNormalized = removeAccents(session.nome.toLowerCase());
+        const nomeNormalized = removeAccents((session.nome || '').toLowerCase());
         const emailNormalized = removeAccents((session.email || '').toLowerCase());
         return nomeNormalized.includes(searchTermNormalized) || 
                emailNormalized.includes(searchTermNormalized);

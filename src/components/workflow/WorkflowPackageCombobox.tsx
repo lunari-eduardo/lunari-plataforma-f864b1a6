@@ -109,10 +109,10 @@ export function WorkflowPackageCombobox({
           variant="outline" 
           role="combobox" 
           aria-expanded={open} 
-          disabled={disabled}
+          disabled={disabled || loading}
           className="w-full justify-between h-7 text-xs font-normal shadow-neumorphic hover:shadow-neumorphic-pressed disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {selectedPackage ? selectedPackage.nome : "Selecione"}
+          {loading ? "Carregando..." : selectedPackage ? selectedPackage.nome : "Selecione"}
           <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
