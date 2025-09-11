@@ -405,20 +405,24 @@ export default function Workflow() {
         </div>
 
         {showMetrics && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted rounded-lg">
-            <div className="text-center">
-              <div className="text-2xl font-bold">{formatCurrency(financials.totalMonth)}</div>
-              <div className="text-sm text-muted-foreground">Total do Mês</div>
-              {renderPercentageChange(financials.totalMonth, prevMonthFinancials.totalMonth)}
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{formatCurrency(financials.paidMonth)}</div>
-              <div className="text-sm text-muted-foreground">Pago no Mês</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-card border rounded-lg p-4">
+              <div className="text-sm text-muted-foreground font-medium mb-2">RECEITA</div>
+              <div className="text-2xl font-bold text-green-400">{formatCurrency(financials.paidMonth)}</div>
               {renderPercentageChange(financials.paidMonth, prevMonthFinancials.paidMonth)}
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-orange-600">{formatCurrency(financials.remainingMonth)}</div>
-              <div className="text-sm text-muted-foreground">A Receber</div>
+            <div className="bg-card border rounded-lg p-4">
+              <div className="text-sm text-muted-foreground font-medium mb-2">PREVISTO</div>
+              <div className="text-2xl font-bold text-blue-400">{formatCurrency(financials.totalMonth)}</div>
+              {renderPercentageChange(financials.totalMonth, prevMonthFinancials.totalMonth)}
+            </div>
+            <div className="bg-card border rounded-lg p-4">
+              <div className="text-sm text-muted-foreground font-medium mb-2">A RECEBER</div>
+              <div className="text-2xl font-bold text-orange-400">{formatCurrency(financials.remainingMonth)}</div>
+            </div>
+            <div className="bg-card border rounded-lg p-4">
+              <div className="text-sm text-muted-foreground font-medium mb-2">SESSÕES</div>
+              <div className="text-2xl font-bold">{monthFilteredSessions.length}</div>
             </div>
           </div>
         )}
