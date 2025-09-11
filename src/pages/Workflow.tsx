@@ -33,6 +33,7 @@ export default function Workflow() {
     loading: workflowLoading,
     error: workflowError,
     updateSession,
+    deleteSession,
     createSessionFromAppointment
   } = useWorkflowRealtime();
   
