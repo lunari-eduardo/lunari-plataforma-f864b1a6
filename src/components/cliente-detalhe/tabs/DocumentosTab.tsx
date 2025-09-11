@@ -1,14 +1,10 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Upload } from "lucide-react";
 import { FileUploadZone } from '@/components/shared/FileUploadZone';
-
-interface Cliente {
-  id: string;
-  nome: string;
-}
+import { ClienteCompleto } from '@/types/cliente-supabase';
 
 interface DocumentosTabProps {
-  cliente: Cliente;
+  cliente: ClienteCompleto;
 }
 
 export function DocumentosTab({ cliente }: DocumentosTabProps) {

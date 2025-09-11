@@ -1,21 +1,9 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useClientValidation } from './useClientValidation';
+import { ClienteCompleto } from '@/types/cliente-supabase';
 
-interface Cliente {
-  id: string;
-  nome: string;
-  email: string;
-  telefone: string;
-  endereco?: string;
-  observacoes?: string;
-  origem?: string;
-  dataNascimento?: string;
-  conjuge?: { nome?: string; dataNascimento?: string };
-  filhos?: { id: string; nome?: string; dataNascimento?: string }[];
-}
-
-export function useClientForm(cliente: Cliente | undefined, onUpdate: (id: string, data: any) => void) {
+export function useClientForm(cliente: ClienteCompleto | undefined, onUpdate: (id: string, data: any) => void) {
   const { validateForm } = useClientValidation();
   
   const [isEditing, setIsEditing] = useState(false);
@@ -26,7 +14,7 @@ export function useClientForm(cliente: Cliente | undefined, onUpdate: (id: strin
     endereco: cliente?.endereco || '',
     observacoes: cliente?.observacoes || '',
     origem: cliente?.origem || '',
-    dataNascimento: cliente?.dataNascimento || '',
+    dataNascimento: cliente?.data_nascimento || '',
     conjuge: (cliente as any)?.conjuge || { nome: '', dataNascimento: '' },
     filhos: (((cliente as any)?.filhos) || []) as { id: string; nome?: string; dataNascimento?: string }[],
   });
@@ -42,7 +30,7 @@ export function useClientForm(cliente: Cliente | undefined, onUpdate: (id: strin
       endereco: cliente.endereco || '',
       observacoes: cliente.observacoes || '',
       origem: cliente.origem || '',
-      dataNascimento: cliente.dataNascimento || '',
+      dataNascimento: cliente.data_nascimento || '',
       conjuge: (cliente as any)?.conjuge || { nome: '', dataNascimento: '' },
       filhos: (((cliente as any)?.filhos) || []) as { id: string; nome?: string; dataNascimento?: string }[],
     };
@@ -78,7 +66,7 @@ export function useClientForm(cliente: Cliente | undefined, onUpdate: (id: strin
       endereco: cliente.endereco || '',
       observacoes: cliente.observacoes || '',
       origem: cliente.origem || '',
-      dataNascimento: cliente.dataNascimento || '',
+      dataNascimento: cliente.data_nascimento || '',
       conjuge: (cliente as any).conjuge || { nome: '', dataNascimento: '' },
       filhos: ((cliente as any).filhos || []) as { id: string; nome?: string; dataNascimento?: string }[],
     });

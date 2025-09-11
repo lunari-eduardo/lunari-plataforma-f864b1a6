@@ -1,92 +1,37 @@
-import { useState, useContext, useMemo, useEffect } from 'react';
-import { AppContext } from '@/contexts/AppContext';
-import { autoFixIfNeeded, getSimplifiedClientMetrics } from '@/utils/crmDataFix';
-import { useFileUpload } from '@/hooks/useFileUpload';
-import { storage, STORAGE_KEYS } from '@/utils/localStorage';
+import { useState, useMemo, useEffect } from 'react';
+import { useClientesRealtime } from '@/hooks/useClientesRealtime';
+import { useClientMetricsRealtime } from '@/hooks/useClientMetricsRealtime';
+import { ClienteSupabase } from '@/types/cliente-supabase';
 
 export function useClientDetails(clienteId: string | undefined) {
-  const { clientes, atualizarCliente } = useContext(AppContext);
-  const { loadFiles } = useFileUpload();
+  const { clientes, isLoading: clientesLoading, atualizarCliente: updateCliente } = useClientesRealtime();
+  const { metrics, loading: metricsLoading } = useClientMetricsRealtime(clienteId || '');
   const [isLoading, setIsLoading] = useState(true);
-
-  // Carregar arquivos e executar correção automática (apenas uma vez no mount)
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        await autoFixIfNeeded();
-        await loadFiles();
-      } catch (error) {
-        console.error('Error initializing client data:', error);
-      } finally {
-        if (mounted) setIsLoading(false);
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, []);
 
   // Encontrar o cliente pelo ID
   const cliente = useMemo(() => {
-    return clientes.find(c => c.id === clienteId);
+    if (!clienteId) return null;
+    return clientes.find(c => c.id === clienteId) || null;
   }, [clientes, clienteId]);
 
-  // Métricas simplificadas e precisas
-  const metricas = useMemo(() => {
-    if (!cliente) return {
-      totalSessoes: 0,
-      totalFaturado: 0,
-      totalPago: 0,
-      aReceber: 0,
-      agendado: 0
-    };
-    
-    // Buscar sessões do workflow para calcular valor agendado (com memoização)
-    const workflowSessions = storage.load(STORAGE_KEYS.WORKFLOW_ITEMS, []);
-    const clientSessions = workflowSessions.filter((session: any) => {
-      const matchByClienteId = session.clienteId === cliente.id;
-      const matchByName = !session.clienteId && session.nome?.toLowerCase().trim() === cliente.nome.toLowerCase().trim();
-      return matchByClienteId || matchByName;
-    });
-    
-    // Calcular valor agendado baseado em pagamentos pendentes
-    const valorAgendado = clientSessions
-      .reduce((total: number, session: any) => {
-        if (!session.pagamentos || !Array.isArray(session.pagamentos)) return total;
-        
-        const pagamentosPendentes = session.pagamentos
-          .filter((pagamento: any) => pagamento.statusPagamento === 'pendente')
-          .reduce((subtotal: number, pagamento: any) => {
-            const valor = typeof pagamento.valor === 'number' ? pagamento.valor : 
-                         parseFloat(String(pagamento.valor || '0').replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(/,/g, '.')) || 0;
-            return subtotal + valor;
-          }, 0);
-        
-        return total + pagamentosPendentes;
-      }, 0);
+  // Loading state management
+  useEffect(() => {
+    setIsLoading(clientesLoading || metricsLoading);
+  }, [clientesLoading, metricsLoading]);
 
-    const clientMetrics = getSimplifiedClientMetrics([cliente]);
-    const metrics = clientMetrics[0];
-    if (!metrics) return {
-      totalSessoes: 0,
-      totalFaturado: 0,
-      totalPago: 0,
-      aReceber: 0,
-      agendado: valorAgendado
-    };
-    return {
-      totalSessoes: metrics.totalSessoes,
-      totalFaturado: metrics.totalFaturado,
-      totalPago: metrics.totalPago,
-      aReceber: metrics.aReceber,
-      agendado: valorAgendado
-    };
-  }, [cliente]);
+  // Função para atualizar cliente
+  const atualizarCliente = async (id: string, dadosAtualizados: any) => {
+    try {
+      await updateCliente(id, dadosAtualizados);
+    } catch (error) {
+      console.error('Erro ao atualizar cliente:', error);
+      throw error;
+    }
+  };
 
   return {
     cliente,
-    metricas,
+    metricas: metrics,
     isLoading,
     atualizarCliente
   };

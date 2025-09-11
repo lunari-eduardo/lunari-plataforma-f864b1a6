@@ -2,17 +2,10 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ArrowLeft, MessageCircle, Mail } from "lucide-react";
 import { OriginBadge } from '@/components/shared/OriginBadge';
-
-interface Cliente {
-  id: string;
-  nome: string;
-  email: string;
-  telefone: string;
-  origem?: string;
-}
+import { ClienteCompleto } from '@/types/cliente-supabase';
 
 interface ClientHeaderProps {
-  cliente: Cliente;
+  cliente: ClienteCompleto;
   onBack: () => void;
 }
 

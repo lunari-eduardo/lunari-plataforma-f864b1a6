@@ -4,12 +4,13 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { History, Calendar, DollarSign, Package, CreditCard } from "lucide-react";
 import { formatCurrency } from '@/utils/financialUtils';
 import { formatDateForDisplay } from '@/utils/dateUtils';
-import { Cliente } from '@/types/cliente';
+import { ClienteCompleto } from '@/types/cliente-supabase';
 import { SessionPaymentHistory } from './SessionPaymentHistory';
 import { SessionPaymentExtended } from '@/types/sessionPayments';
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
+
 interface WorkflowHistoryTableProps {
-  cliente: Cliente;
+  cliente: ClienteCompleto;
 }
 // Função robusta para parsing de valores financeiros
 const parseFinancialValue = (value: any): number => {

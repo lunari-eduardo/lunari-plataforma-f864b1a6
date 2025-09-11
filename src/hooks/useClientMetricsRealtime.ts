@@ -6,6 +6,7 @@ export interface ClientMetrics {
   totalFaturado: number;
   aReceber: number;
   agendamentos: number;
+  agendado: number;
   ultimaSessao?: string;
   sessaoEmAndamento: boolean;
 }
@@ -16,6 +17,7 @@ export function useClientMetricsRealtime(clienteId: string) {
     totalFaturado: 0,
     aReceber: 0,
     agendamentos: 0,
+    agendado: 0,
     sessaoEmAndamento: false,
   });
   const [loading, setLoading] = useState(true);
@@ -64,6 +66,7 @@ export function useClientMetricsRealtime(clienteId: string) {
         totalFaturado,
         aReceber,
         agendamentos: appointmentsCount || 0,
+        agendado: aReceber, // Por enquanto, agendado é igual a aReceber
         ultimaSessao,
         sessaoEmAndamento,
       });

@@ -1,15 +1,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { WorkflowHistoryTable } from '@/components/crm/WorkflowHistoryTable';
-
-interface Cliente {
-  id: string;
-  nome: string;
-  email: string;
-  telefone: string;
-}
+import { ClienteCompleto } from '@/types/cliente-supabase';
 
 interface HistoricoTabProps {
-  cliente: Cliente;
+  cliente: ClienteCompleto;
 }
 
 export function HistoricoTab({ cliente }: HistoricoTabProps) {

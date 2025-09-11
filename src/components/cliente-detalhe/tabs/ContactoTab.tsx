@@ -5,18 +5,10 @@ import { PersonalInfoForm } from '../forms/PersonalInfoForm';
 import { ContactInfoForm } from '../forms/ContactInfoForm';
 import { RelationshipForm } from '../forms/RelationshipForm';
 import { useClientForm } from '../hooks/useClientForm';
-interface Cliente {
-  id: string;
-  nome: string;
-  email: string;
-  telefone: string;
-  endereco?: string;
-  observacoes?: string;
-  origem?: string;
-  dataNascimento?: string;
-}
+import { ClienteCompleto } from '@/types/cliente-supabase';
+
 interface ContactoTabProps {
-  cliente: Cliente;
+  cliente: ClienteCompleto;
   onUpdate: (id: string, data: any) => void;
 }
 export function ContactoTab({
