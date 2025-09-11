@@ -12,6 +12,7 @@ import { Search, UserPlus, User, Phone, Mail, Edit, Trash2, MessageCircle, Cake 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from 'sonner';
 import { useClientMetrics, ClientMetrics } from '@/hooks/useClientMetrics';
+import { useClientesRealtime } from '@/hooks/useClientesRealtime';
 import { formatCurrency } from '@/utils/financialUtils';
 import { formatDateForDisplay } from '@/utils/dateUtils';
 import { abrirWhatsApp } from '@/utils/whatsappUtils';
@@ -21,14 +22,20 @@ import { AniversariantesModal } from '@/components/crm/AniversariantesModal';
 import { ClientFiltersBar, ClientFilters } from '@/components/crm/ClientFiltersBar';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { MigrationButton } from '@/components/clientes/MigrationButton';
 export default function Clientes() {
+  // New Supabase real-time client management
   const {
-    clientes,
-    workflowItems,
-    adicionarCliente,
-    atualizarCliente,
-    removerCliente
-  } = useAppContext();
+    clientes: clientesSupabase,
+    isLoading: isLoadingSupabase,
+    adicionarCliente: adicionarClienteSupabase,
+    atualizarCliente: atualizarClienteSupabase,
+    removerCliente: removerClienteSupabase,
+    searchClientes
+  } = useClientesRealtime();
+
+  // Legacy context for workflow integration (to be migrated in Step 2)
+  const { workflowItems } = useAppContext();
   const dropdownContext = useDialogDropdownContext();
   const [searchParams, setSearchParams] = useSearchParams();
   const [filters, setFilters] = useState<ClientFilters>({
@@ -68,8 +75,34 @@ export default function Clientes() {
     }
   }, [searchParams, setSearchParams]);
 
+  // Convert Supabase clients to legacy format for metrics compatibility
+  const clientesLegacy: Cliente[] = useMemo(() => {
+    return clientesSupabase.map(cliente => ({
+      id: cliente.id,
+      nome: cliente.nome,
+      email: cliente.email || '',
+      telefone: cliente.telefone,
+      whatsapp: cliente.whatsapp,
+      endereco: cliente.endereco,
+      observacoes: cliente.observacoes,
+      origem: cliente.origem,
+      dataNascimento: cliente.data_nascimento,
+      conjuge: cliente.familia.find(f => f.tipo === 'conjuge') ? {
+        nome: cliente.familia.find(f => f.tipo === 'conjuge')?.nome,
+        dataNascimento: cliente.familia.find(f => f.tipo === 'conjuge')?.data_nascimento
+      } : undefined,
+      filhos: cliente.familia
+        .filter(f => f.tipo === 'filho')
+        .map(f => ({
+          id: f.id,
+          nome: f.nome,
+          dataNascimento: f.data_nascimento
+        }))
+    }));
+  }, [clientesSupabase]);
+
   // Obter métricas dos clientes
-  const clientMetrics = useClientMetrics(clientes);
+  const clientMetrics = useClientMetrics(clientesLegacy);
 
   // Force cleanup on unmount
   useEffect(() => {
@@ -164,23 +197,32 @@ export default function Clientes() {
       variant: "destructive"
     });
     if (confirmed) {
-      removerCliente(clientId);
-      toast.success('Cliente excluído com sucesso');
+      try {
+        await removerClienteSupabase(clientId);
+        toast.success('Cliente excluído com sucesso');
+      } catch (error) {
+        // Error handling is done in the hook
+      }
     }
   };
-  const handleSaveClient = () => {
+  const handleSaveClient = async () => {
     if (!formData.nome || !formData.telefone) {
       toast.error('Nome e telefone são obrigatórios');
       return;
     }
-    if (editingClient) {
-      atualizarCliente(editingClient.id, formData);
-      toast.success('Cliente atualizado com sucesso');
-    } else {
-      adicionarCliente(formData);
-      toast.success('Cliente adicionado com sucesso');
+    
+    try {
+      if (editingClient) {
+        await atualizarClienteSupabase(editingClient.id, formData);
+        toast.success('Cliente atualizado com sucesso');
+      } else {
+        await adicionarClienteSupabase(formData);
+        toast.success('Cliente adicionado com sucesso');
+      }
+      setShowClientForm(false);
+    } catch (error) {
+      // Error handling is done in the hook
     }
-    setShowClientForm(false);
   };
   const handleWhatsApp = (cliente: ClientMetrics) => {
     const telefone = cliente.telefone.replace(/\D/g, '');
@@ -200,9 +242,17 @@ export default function Clientes() {
   };
   return <ScrollArea className="h-[calc(100vh-120px)]">
       <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 space-y-6 py-px">
+        {/* Migration Helper */}
+        <MigrationButton />
+
         {/* Header */}
         <div className="flex items-center justify-between">
-          
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Clientes</h1>
+            <p className="text-muted-foreground">
+              {isLoadingSupabase ? 'Carregando...' : `${clientesSupabase.length} cliente(s) cadastrado(s)`}
+            </p>
+          </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={() => setShowAniversariantesModal(true)} className="flex items-center gap-2">
               <Cake className="h-4 w-4" />
@@ -371,7 +421,7 @@ export default function Clientes() {
         </Dialog>
 
         {/* Modal de Aniversariantes */}
-        <AniversariantesModal open={showAniversariantesModal} onOpenChange={setShowAniversariantesModal} clientes={clientes} />
+        <AniversariantesModal open={showAniversariantesModal} onOpenChange={setShowAniversariantesModal} clientes={clientesLegacy} />
 
         {/* Confirm Dialog */}
         <ConfirmDialog state={dialogState} onConfirm={handleConfirm} onCancel={handleCancel} onClose={handleClose} />

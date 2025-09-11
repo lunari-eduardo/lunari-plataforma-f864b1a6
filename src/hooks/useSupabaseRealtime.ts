@@ -8,7 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import type { Database } from '@/integrations/supabase/types';
 
-type TableName = 'categorias' | 'pacotes' | 'produtos' | 'etapas_trabalho';
+type TableName = 'categorias' | 'pacotes' | 'produtos' | 'etapas_trabalho' | 'clientes' | 'clientes_familia' | 'clientes_documentos';
 
 interface RealtimeCallbacks {
   onInsert?: (payload: any) => void;
