@@ -166,14 +166,8 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
     return () => window.removeEventListener('workflowSessionsUpdated', handleWorkflowUpdate);
   }, [sessionId]);
 
-  // Auto-save quando pagamentos mudarem
-  useEffect(() => {
-    if (payments.length > 0 || initialPayments.length > 0) {
-      savePaymentsToStorage(sessionId, payments);
-      // Dual-write para Supabase
-      savePaymentsToSupabase(sessionId, payments);
-    }
-  }, [payments, sessionId]);
+  // Remove auto-save useEffect to prevent loops
+  // Payments will be saved explicitly in each action function
 
   // Calcular total pago (apenas pagamentos com status 'pago')
   const totalPago = payments
@@ -197,26 +191,43 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
       id: `pay-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
     };
     
-    setPayments(prev => [...prev, newPayment]);
+    setPayments(prev => {
+      const updated = [...prev, newPayment];
+      // Save explicitly
+      savePaymentsToStorage(sessionId, updated);
+      savePaymentsToSupabase(sessionId, updated);
+      return updated;
+    });
+    
     return newPayment;
-  }, []);
+  }, [sessionId]);
 
   // Editar pagamento existente
   const editPayment = useCallback((paymentId: string, updates: Partial<SessionPaymentExtended>) => {
-    setPayments(prev => 
-      prev.map(p => p.id === paymentId ? { ...p, ...updates } : p)
-    );
-  }, []);
+    setPayments(prev => {
+      const updated = prev.map(p => p.id === paymentId ? { ...p, ...updates } : p);
+      // Save explicitly
+      savePaymentsToStorage(sessionId, updated);
+      savePaymentsToSupabase(sessionId, updated);
+      return updated;
+    });
+  }, [sessionId]);
 
   // Excluir pagamento
   const deletePayment = useCallback((paymentId: string) => {
-    setPayments(prev => prev.filter(p => p.id !== paymentId));
-  }, []);
+    setPayments(prev => {
+      const updated = prev.filter(p => p.id !== paymentId);
+      // Save explicitly
+      savePaymentsToStorage(sessionId, updated);
+      savePaymentsToSupabase(sessionId, updated);
+      return updated;
+    });
+  }, [sessionId]);
 
   // Marcar como pago
   const markAsPaid = useCallback((paymentId: string) => {
-    setPayments(prev => 
-      prev.map(p => 
+    setPayments(prev => {
+      const updated = prev.map(p => 
         p.id === paymentId 
           ? { 
               ...p, 
@@ -224,9 +235,13 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
               data: formatDateForStorage(new Date())
             }
           : p
-      )
-    );
-  }, []);
+      );
+      // Save explicitly
+      savePaymentsToStorage(sessionId, updated);
+      savePaymentsToSupabase(sessionId, updated);
+      return updated;
+    });
+  }, [sessionId]);
 
   // Criar parcelas
   const createInstallments = useCallback((
@@ -256,7 +271,14 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
       });
     }
 
-    setPayments(prev => [...prev, ...newInstallments]);
+    setPayments(prev => {
+      const updated = [...prev, ...newInstallments];
+      // Save explicitly
+      savePaymentsToStorage(sessionId, updated);
+      savePaymentsToSupabase(sessionId, updated);
+      return updated;
+    });
+    
     return newInstallments;
   }, []);
 
@@ -286,7 +308,14 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
       observacoes
     };
 
-    setPayments(prev => [...prev, newPayment]);
+    setPayments(prev => {
+      const updated = [...prev, newPayment];
+      // Save explicitly
+      savePaymentsToStorage(sessionId, updated);
+      savePaymentsToSupabase(sessionId, updated);
+      return updated;
+    });
+    
     return newPayment;
   }, []);
 

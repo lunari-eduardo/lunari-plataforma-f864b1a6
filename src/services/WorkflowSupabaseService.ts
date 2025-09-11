@@ -15,6 +15,19 @@ export class WorkflowSupabaseService {
       const { data: user } = await supabase.auth.getUser();
       if (!user?.user) throw new Error('User not authenticated');
 
+      // Check if session already exists for this appointment
+      const { data: existingSession } = await supabase
+        .from('clientes_sessoes')
+        .select('*')
+        .eq('user_id', user.user.id)
+        .eq('appointment_id', appointmentId)
+        .maybeSingle();
+
+      if (existingSession) {
+        console.log('✅ Session already exists for appointment:', appointmentId);
+        return existingSession;
+      }
+
       // Generate universal session ID
       const sessionId = generateUniversalSessionId('workflow');
 
@@ -110,7 +123,20 @@ export class WorkflowSupabaseService {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        // Handle unique constraint violation (duplicate)
+        if (error.code === '23505') {
+          console.log('Session already exists due to unique constraint, fetching existing...');
+          const { data: existing } = await supabase
+            .from('clientes_sessoes')
+            .select('*')
+            .eq('user_id', user.user.id)
+            .eq('appointment_id', appointmentId)
+            .single();
+          return existing;
+        }
+        throw error;
+      }
 
       // Create initial transaction if paid_amount > 0
       const paidAmount = Number(appointmentData.paid_amount) || 0;

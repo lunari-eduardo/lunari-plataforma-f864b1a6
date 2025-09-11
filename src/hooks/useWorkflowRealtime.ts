@@ -110,25 +110,104 @@ export const useWorkflowRealtime = () => {
     }
   }, []);
 
-  // Update session
-  const updateSession = useCallback(async (id: string, updates: Partial<WorkflowSession>) => {
+  // Update session with field mapping and sanitization
+  const updateSession = useCallback(async (id: string, updates: any) => {
     try {
       const { data: user } = await supabase.auth.getUser();
       if (!user?.user) throw new Error('User not authenticated');
 
+      // Create sanitized update map
+      const sanitizedUpdates: Partial<WorkflowSession> = {};
+
+      // Import services for package lookup
+      const { configurationService } = await import('@/services/ConfigurationService');
+
+      for (const [field, value] of Object.entries(updates)) {
+        switch (field) {
+          case 'pacote':
+            // Handle both package name and ID
+            if (typeof value === 'string' && value) {
+            const packages = configurationService.loadPacotes();
+            const pkg = packages.find((p: any) => p.id === value || p.nome === value);
+            if (pkg) {
+              sanitizedUpdates.pacote = pkg.id; // Always store ID in database
+              // Also update valor_total if package found
+              if (pkg.valor_base) {
+                sanitizedUpdates.valor_total = Number(pkg.valor_base);
+              }
+            } else {
+              sanitizedUpdates.pacote = value; // Store as-is if not found
+            }
+            }
+            break;
+          case 'valorPacote':
+            // Parse currency string to number for valor_total
+            if (typeof value === 'string') {
+              const numValue = parseFloat(value.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+              sanitizedUpdates.valor_total = numValue;
+            } else if (typeof value === 'number') {
+              sanitizedUpdates.valor_total = value;
+            }
+            break;
+          case 'produtosList':
+            sanitizedUpdates.produtos_incluidos = value;
+            break;
+          case 'descricao':
+          case 'status':
+          case 'categoria':
+            (sanitizedUpdates as any)[field] = value;
+            break;
+          // Ignore fields that don't exist in the database schema
+          case 'valorFotoExtra':
+          case 'qtdFotosExtra':
+          case 'valorTotalFotoExtra':
+          case 'produto':
+          case 'qtdProduto':
+          case 'valorTotalProduto':
+          case 'valorAdicional':
+          case 'detalhes':
+          case 'observacoes':
+          case 'valor':
+          case 'total':
+          case 'valorPago':
+          case 'restante':
+          case 'desconto':
+          case 'pagamentos':
+            // Skip these fields - they don't exist in clientes_sessoes schema
+            break;
+          default:
+            // For any other field, check if it exists in WorkflowSession
+            const validFields = {
+              id: '', user_id: '', cliente_id: '', session_id: '', 
+              appointment_id: '', orcamento_id: '', data_sessao: '', 
+              hora_sessao: '', categoria: '', pacote: '', descricao: '', 
+              status: '', valor_total: 0, valor_pago: 0, produtos_incluidos: null
+            };
+            if (field in validFields) {
+              (sanitizedUpdates as any)[field] = value;
+            }
+            break;
+        }
+      }
+
+      // Only proceed if we have valid updates
+      if (Object.keys(sanitizedUpdates).length === 0) {
+        console.log('No valid updates to apply');
+        return;
+      }
+
+      sanitizedUpdates.updated_by = user.user.id;
+
       const { error } = await supabase
         .from('clientes_sessoes')
-        .update({
-          ...updates,
-          updated_by: user.user.id
-        })
+        .update(sanitizedUpdates)
         .eq('id', id)
         .eq('user_id', user.user.id);
 
       if (error) throw error;
 
       setSessions(prev => prev.map(session => 
-        session.id === id ? { ...session, ...updates } : session
+        session.id === id ? { ...session, ...sanitizedUpdates } : session
       ));
 
       toast({
@@ -244,8 +323,14 @@ export const useWorkflowRealtime = () => {
     };
   }, [loadSessions]);
 
-  // Convert to SessionData format for compatibility
-  const convertToSessionData = useCallback((session: WorkflowSession): SessionData => {
+  // Convert to SessionData format for compatibility (sync version for immediate use)
+  const convertToSessionDataSync = useCallback((session: WorkflowSession): SessionData => {
+    // Use cached package data for immediate conversion
+    let packageName = session.pacote || '';
+    let packageValue = session.valor_total;
+    let packageFotoExtraValue = 35;
+
+    // Simple sync conversion without async package lookup for performance
     return {
       id: session.id,
       data: session.data_sessao,
@@ -256,9 +341,66 @@ export const useWorkflowRealtime = () => {
       status: session.status,
       whatsapp: (session as any).clientes?.telefone || '',
       categoria: session.categoria,
-      pacote: session.pacote || '',
-      valorPacote: `R$ ${session.valor_total.toFixed(2).replace('.', ',')}`,
-      valorFotoExtra: 'R$ 35,00',
+      pacote: packageName,
+      valorPacote: `R$ ${packageValue.toFixed(2).replace('.', ',')}`,
+      valorFotoExtra: `R$ ${packageFotoExtraValue.toFixed(2).replace('.', ',')}`,
+      qtdFotosExtra: 0,
+      valorTotalFotoExtra: 'R$ 0,00',
+      produto: '',
+      qtdProduto: 0,
+      valorTotalProduto: 'R$ 0,00',
+      valorAdicional: 'R$ 0,00',
+      detalhes: session.descricao || '',
+      observacoes: '',
+      valor: `R$ ${session.valor_total.toFixed(2).replace('.', ',')}`,
+      total: `R$ ${session.valor_total.toFixed(2).replace('.', ',')}`,
+      valorPago: `R$ ${session.valor_pago.toFixed(2).replace('.', ',')}`,
+      restante: `R$ ${(session.valor_total - session.valor_pago).toFixed(2).replace('.', ',')}`,
+      desconto: 0,
+      pagamentos: [],
+      produtosList: session.produtos_incluidos || [],
+      clienteId: session.cliente_id
+    };
+  }, []);
+
+  // Convert to SessionData format for compatibility (async version for detailed mapping)
+  const convertToSessionData = useCallback(async (session: WorkflowSession): Promise<SessionData> => {
+    // Map package ID to name for display
+    let packageName = session.pacote || '';
+    let packageValue = session.valor_total;
+    let packageFotoExtraValue = 35;
+
+    if (session.pacote) {
+      try {
+        const { configurationService } = await import('@/services/ConfigurationService');
+        const packages = configurationService.loadPacotes();
+        const pkg = packages.find((p: any) => p.id === session.pacote || p.nome === session.pacote);
+        if (pkg) {
+          packageName = pkg.nome;
+          packageValue = Number(pkg.valor_base) || session.valor_total;
+          packageFotoExtraValue = Number(pkg.valor_foto_extra) || 35;
+        } else {
+          packageName = session.pacote; // Keep original if not found in packages
+        }
+      } catch (error) {
+        console.warn('Error loading package data:', error);
+        packageName = session.pacote; // Fallback to original value
+      }
+    }
+
+    return {
+      id: session.id,
+      data: session.data_sessao,
+      hora: session.hora_sessao,
+      nome: (session as any).clientes?.nome || '',
+      email: (session as any).clientes?.email || '',
+      descricao: session.descricao || '',
+      status: session.status,
+      whatsapp: (session as any).clientes?.telefone || '',
+      categoria: session.categoria,
+      pacote: packageName,
+      valorPacote: `R$ ${packageValue.toFixed(2).replace('.', ',')}`,
+      valorFotoExtra: `R$ ${packageFotoExtraValue.toFixed(2).replace('.', ',')}`,
       qtdFotosExtra: 0,
       valorTotalFotoExtra: 'R$ 0,00',
       produto: '',
@@ -279,13 +421,13 @@ export const useWorkflowRealtime = () => {
   }, []);
 
   // Get sessions formatted as SessionData
-  const getSessionsData = useCallback(() => {
-    return sessions.map(convertToSessionData);
+  const getSessionsData = useCallback(async () => {
+    return Promise.all(sessions.map(convertToSessionData));
   }, [sessions, convertToSessionData]);
 
   return {
     sessions,
-    sessionsData: getSessionsData(),
+    sessionsData: sessions.map(session => convertToSessionData(session)) as any, // Use sync version for immediate return
     loading,
     error,
     createSession,

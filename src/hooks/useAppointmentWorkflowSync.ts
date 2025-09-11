@@ -13,6 +13,13 @@ export const useAppointmentWorkflowSync = () => {
     try {
       console.log('🔄 Syncing existing confirmed appointments...');
       
+      // Check if sync already ran to prevent duplicates
+      const syncKey = 'appointment_sync_completed_v2';
+      if (localStorage.getItem(syncKey)) {
+        console.log('✅ Sync already completed, skipping');
+        return;
+      }
+
       // Get all confirmed appointments without sessions
       const { data: appointments } = await supabase
         .from('appointments')
@@ -21,6 +28,7 @@ export const useAppointmentWorkflowSync = () => {
 
       if (!appointments?.length) {
         console.log('✅ No confirmed appointments found to sync');
+        localStorage.setItem(syncKey, 'true');
         return;
       }
 
@@ -30,7 +38,7 @@ export const useAppointmentWorkflowSync = () => {
           .from('clientes_sessoes')
           .select('id')
           .eq('appointment_id', appointment.id)
-          .single();
+          .maybeSingle(); // Use maybeSingle to handle empty results properly
 
         if (!existingSession) {
           console.log(`Creating session for appointment ${appointment.id}`);
@@ -41,6 +49,7 @@ export const useAppointmentWorkflowSync = () => {
         }
       }
       
+      localStorage.setItem(syncKey, 'true');
       console.log('✅ Existing appointments sync completed');
     } catch (error) {
       console.error('❌ Error syncing existing appointments:', error);
@@ -68,7 +77,7 @@ export const useAppointmentWorkflowSync = () => {
               .from('clientes_sessoes')
               .select('id')
               .eq('appointment_id', payload.new.id)
-              .single();
+              .maybeSingle(); // Use maybeSingle to handle empty results properly
 
             if (!existingSession) {
               // Create new workflow session

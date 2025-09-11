@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { configurationService } from '@/services/ConfigurationService';
 interface PackageComboboxProps {
   value?: string;
   onValueChange: (packageData: {
+    id: string; // Add ID to the interface
     nome: string;
     valor: string;
     valorFotoExtra: string;
@@ -47,10 +48,48 @@ export function WorkflowPackageCombobox({
   disabled = false
 }: PackageComboboxProps) {
   const [open, setOpen] = useState(false);
+  const [pacotes, setPacotes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  // Load packages asynchronously
+  useEffect(() => {
+    const loadPackages = async () => {
+      try {
+        setLoading(true);
+        const storedPacotes = configurationService.loadPacotes();
+        const configCategorias = configurationService.loadCategorias();
+        
+        const processedPacotes = storedPacotes.map((pacote: any) => {
+          let categoria = pacote.categoria || '';
+          if (pacote.categoria_id) {
+            categoria = getCategoriaNameById(pacote.categoria_id, configCategorias);
+          }
+
+          return {
+            id: pacote.id,
+            nome: pacote.nome,
+            valor: pacote.valorVenda || pacote.valor_base || pacote.valor || 0,
+            categoria,
+            valorFotoExtra: pacote.valor_foto_extra || pacote.valorFotoExtra || 35,
+            produtosIncluidos: pacote.produtosIncluidos || []
+          };
+        });
+        
+        setPacotes(processedPacotes);
+      } catch (error) {
+        console.error('Error loading packages:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadPackages();
+  }, []);
   
   // Função para limpar a seleção
   const handleClearPackage = () => {
     onValueChange({
+      id: '',
       nome: '',
       valor: 'R$ 0,00',
       valorFotoExtra: 'R$ 0,00',
@@ -60,29 +99,8 @@ export function WorkflowPackageCombobox({
     setOpen(false);
   };
   
-  // Buscar dados diretamente do service sem usar contexto
-  const pacotes = useMemo(() => {
-    const storedPacotes = configurationService.loadPacotes();
-    const configCategorias = configurationService.loadCategorias();
-    
-    return storedPacotes.map((pacote: any) => {
-      let categoria = pacote.categoria || '';
-      if (pacote.categoria_id) {
-        categoria = getCategoriaNameById(pacote.categoria_id, configCategorias);
-      }
-
-      return {
-        id: pacote.id,
-        nome: pacote.nome,
-        valor: pacote.valorVenda || pacote.valor_base || pacote.valor || 0,
-        categoria,
-        valorFotoExtra: pacote.valor_foto_extra || pacote.valorFotoExtra || 35,
-        produtosIncluidos: pacote.produtosIncluidos || []
-      };
-    });
-  }, []);
-  
-  const selectedPackage = pacotes.find(pkg => pkg.nome === value);
+  // Find selected package by ID or name for flexibility
+  const selectedPackage = pacotes.find(pkg => pkg.id === value || pkg.nome === value);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -103,7 +121,7 @@ export function WorkflowPackageCombobox({
           <CommandInput placeholder="Buscar pacote..." className="h-8 text-xs border-0 bg-transparent focus:ring-0" />
           <CommandList>
             <CommandEmpty className="text-xs py-2 text-muted-foreground">
-              Nenhum pacote encontrado.
+              {loading ? 'Carregando pacotes...' : 'Nenhum pacote encontrado.'}
             </CommandEmpty>
             <CommandGroup>
               {/* Opção para limpar seleção */}
@@ -120,8 +138,10 @@ export function WorkflowPackageCombobox({
                   key={pkg.id} 
                   value={pkg.nome} 
                   onSelect={(currentValue) => {
-                    if (currentValue !== value) {
+                    const isSelected = pkg.id === value || pkg.nome === value;
+                    if (!isSelected) {
                       onValueChange({
+                        id: pkg.id, // Include package ID
                         nome: pkg.nome,
                         valor: `R$ ${(pkg.valor || 0).toFixed(2).replace('.', ',')}`,
                         valorFotoExtra: `R$ ${(pkg.valorFotoExtra || 35).toFixed(2).replace('.', ',')}`,
@@ -130,10 +150,10 @@ export function WorkflowPackageCombobox({
                       });
                     }
                     setOpen(false);
-                  }} 
+                  }}
                   className="text-xs hover:bg-neumorphic-base hover:shadow-neumorphic-inset rounded cursor-pointer"
                 >
-                  <Check className={cn("mr-2 h-3 w-3", value === pkg.nome ? "opacity-100" : "opacity-0")} />
+                  <Check className={cn("mr-2 h-3 w-3", (pkg.id === value || pkg.nome === value) ? "opacity-100" : "opacity-0")} />
                   <div className="flex flex-col">
                     <span className="font-medium">{pkg.nome}</span>
                     <span className="text-2xs text-muted-foreground">
