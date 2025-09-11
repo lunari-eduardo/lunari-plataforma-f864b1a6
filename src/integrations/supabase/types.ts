@@ -14,6 +14,71 @@ export type Database = {
   }
   public: {
     Tables: {
+      appointments: {
+        Row: {
+          cliente_id: string | null
+          created_at: string | null
+          date: string
+          description: string | null
+          id: string
+          orcamento_id: string | null
+          origem: string | null
+          package_id: string | null
+          paid_amount: number | null
+          session_id: string
+          status: string | null
+          time: string
+          title: string
+          type: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          cliente_id?: string | null
+          created_at?: string | null
+          date: string
+          description?: string | null
+          id?: string
+          orcamento_id?: string | null
+          origem?: string | null
+          package_id?: string | null
+          paid_amount?: number | null
+          session_id: string
+          status?: string | null
+          time: string
+          title: string
+          type: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          cliente_id?: string | null
+          created_at?: string | null
+          date?: string
+          description?: string | null
+          id?: string
+          orcamento_id?: string | null
+          origem?: string | null
+          package_id?: string | null
+          paid_amount?: number | null
+          session_id?: string
+          status?: string | null
+          time?: string
+          title?: string
+          type?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categorias: {
         Row: {
           cor: string
@@ -165,6 +230,132 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clientes"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      clientes_sessoes: {
+        Row: {
+          appointment_id: string | null
+          categoria: string
+          cliente_id: string
+          created_at: string | null
+          data_sessao: string
+          descricao: string | null
+          hora_sessao: string
+          id: string
+          orcamento_id: string | null
+          pacote: string | null
+          produtos_incluidos: Json | null
+          session_id: string
+          status: string | null
+          updated_at: string | null
+          user_id: string
+          valor_pago: number | null
+          valor_total: number | null
+        }
+        Insert: {
+          appointment_id?: string | null
+          categoria: string
+          cliente_id: string
+          created_at?: string | null
+          data_sessao: string
+          descricao?: string | null
+          hora_sessao: string
+          id?: string
+          orcamento_id?: string | null
+          pacote?: string | null
+          produtos_incluidos?: Json | null
+          session_id: string
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+          valor_pago?: number | null
+          valor_total?: number | null
+        }
+        Update: {
+          appointment_id?: string | null
+          categoria?: string
+          cliente_id?: string
+          created_at?: string | null
+          data_sessao?: string
+          descricao?: string | null
+          hora_sessao?: string
+          id?: string
+          orcamento_id?: string | null
+          pacote?: string | null
+          produtos_incluidos?: Json | null
+          session_id?: string
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
+          valor_pago?: number | null
+          valor_total?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clientes_sessoes_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clientes_sessoes_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clientes_transacoes: {
+        Row: {
+          cliente_id: string
+          created_at: string | null
+          data_transacao: string
+          descricao: string | null
+          id: string
+          session_id: string | null
+          tipo: string
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          cliente_id: string
+          created_at?: string | null
+          data_transacao: string
+          descricao?: string | null
+          id?: string
+          session_id?: string | null
+          tipo: string
+          user_id: string
+          valor: number
+        }
+        Update: {
+          cliente_id?: string
+          created_at?: string | null
+          data_transacao?: string
+          descricao?: string | null
+          id?: string
+          session_id?: string | null
+          tipo?: string
+          user_id?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clientes_transacoes_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clientes_transacoes_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "clientes_sessoes"
+            referencedColumns: ["session_id"]
           },
         ]
       }

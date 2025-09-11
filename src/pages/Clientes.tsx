@@ -22,7 +22,7 @@ import { AniversariantesModal } from '@/components/crm/AniversariantesModal';
 import { ClientFiltersBar, ClientFilters } from '@/components/crm/ClientFiltersBar';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { MigrationButton } from '@/components/clientes/MigrationButton';
+
 export default function Clientes() {
   // New Supabase real-time client management
   const {
@@ -243,7 +243,7 @@ export default function Clientes() {
   return <ScrollArea className="h-[calc(100vh-120px)]">
       <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 space-y-6 py-px">
         {/* Migration Helper */}
-        <MigrationButton />
+        
 
         {/* Header */}
         <div className="flex items-center justify-between">
