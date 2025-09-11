@@ -312,6 +312,11 @@ export default function Workflow() {
     console.log('Add payment to session:', sessionId);
   }, []);
 
+  const handleDeleteSession = useCallback((sessionId: string, sessionTitle: string, paymentCount: number) => {
+    // For now, delete without including payments (user can choose via modal)
+    deleteSession(sessionId, false);
+  }, [deleteSession]);
+
   const handleFieldUpdate = useCallback((sessionId: string, field: string, value: any) => {
     updateSession(sessionId, { [field]: value });
   }, [updateSession]);
@@ -439,6 +444,7 @@ export default function Workflow() {
           onStatusChange={handleStatusChange}
           onEditSession={handleEditSession}
           onAddPayment={handleAddPayment}
+          onDeleteSession={handleDeleteSession}
           onFieldUpdate={handleFieldUpdate}
           visibleColumns={visibleColumns}
           columnWidths={columnWidths}

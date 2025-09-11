@@ -6,7 +6,9 @@ import { WorkflowPackageCombobox } from "./WorkflowPackageCombobox";
 import { StatusBadge } from "./StatusBadge";
 import { GerenciarProdutosModal } from "./GerenciarProdutosModal";
 import { WorkflowPaymentsModal } from "./WorkflowPaymentsModal";
-import { MessageCircle, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Package, Plus, CreditCard, Calendar, CheckCircle } from "lucide-react";
+import { FlexibleDeleteModal } from "./FlexibleDeleteModal";
+import { AuditInfo } from "./AuditInfo";
+import { MessageCircle, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Package, Plus, CreditCard, Calendar, CheckCircle, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAppContext } from '@/contexts/AppContext';
@@ -27,6 +29,7 @@ interface WorkflowTableProps {
   onStatusChange: (id: string, newStatus: string) => void;
   onEditSession: (id: string) => void;
   onAddPayment: (id: string) => void;
+  onDeleteSession?: (id: string, sessionTitle: string, paymentCount: number) => void;
   onFieldUpdate: (id: string, field: string, value: any) => void;
   visibleColumns: Record<string, boolean>;
   columnWidths: Record<string, number>;
@@ -133,6 +136,7 @@ export function WorkflowTable({
   onStatusChange,
   onEditSession,
   onAddPayment,
+  onDeleteSession,
   onFieldUpdate,
   visibleColumns,
   columnWidths = desktopColumnWidths,
@@ -149,6 +153,12 @@ export function WorkflowTable({
   const [sessionSelecionada, setSessionSelecionada] = useState<SessionData | null>(null);
   const [workflowPaymentsOpen, setWorkflowPaymentsOpen] = useState(false);
   const [selectedSessionForPayment, setSelectedSessionForPayment] = useState<SessionData | null>(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [sessionToDelete, setSessionToDelete] = useState<{
+    id: string;
+    title: string;
+    paymentCount: number;
+  } | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [scrollPercent, setScrollPercent] = useState(0);
   const [maxScroll, setMaxScroll] = useState(0);
@@ -1043,5 +1053,23 @@ export function WorkflowTable({
         handleFieldUpdateStable(sessionId, 'pagamentos', fullPaymentsArray);
       }
     }} />}
+
+    {/* Modal de Exclusão Flexível */}
+    {sessionToDelete && (
+      <FlexibleDeleteModal
+        open={deleteModalOpen}
+        onClose={() => {
+          setDeleteModalOpen(false);
+          setSessionToDelete(null);
+        }}
+        onConfirm={(includePayments) => {
+          if (onDeleteSession && sessionToDelete) {
+            onDeleteSession(sessionToDelete.id, sessionToDelete.title, sessionToDelete.paymentCount);
+          }
+        }}
+        sessionTitle={sessionToDelete.title}
+        paymentCount={sessionToDelete.paymentCount}
+      />
+    )}
     </div>;
 }

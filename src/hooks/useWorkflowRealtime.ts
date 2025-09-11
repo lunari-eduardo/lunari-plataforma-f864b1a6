@@ -22,6 +22,7 @@ export interface WorkflowSession {
   produtos_incluidos: any;
   created_at?: string;
   updated_at?: string;
+  updated_by?: string;
 }
 
 export const useWorkflowRealtime = () => {
@@ -84,6 +85,7 @@ export const useWorkflowRealtime = () => {
         .insert({
           ...sessionData,
           user_id: user.user.id,
+          updated_by: user.user.id,
         })
         .select()
         .single();
@@ -116,7 +118,10 @@ export const useWorkflowRealtime = () => {
 
       const { error } = await supabase
         .from('clientes_sessoes')
-        .update(updates)
+        .update({
+          ...updates,
+          updated_by: user.user.id
+        })
         .eq('id', id)
         .eq('user_id', user.user.id);
 
@@ -141,24 +146,31 @@ export const useWorkflowRealtime = () => {
     }
   }, []);
 
-  // Delete session
-  const deleteSession = useCallback(async (id: string) => {
+  // Delete session with flexible options
+  const deleteSession = useCallback(async (id: string, includePayments: boolean = false) => {
     try {
       const { data: user } = await supabase.auth.getUser();
       if (!user?.user) throw new Error('User not authenticated');
 
-      const { error } = await supabase
-        .from('clientes_sessoes')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', user.user.id);
+      // Find session data for session_id
+      const session = sessions.find(s => s.id === id);
+      if (!session) throw new Error('Session not found');
 
-      if (error) throw error;
+      // Use flexible deletion utility
+      const { deleteSessionWithOptions } = await import('@/utils/sessionDeletionUtils');
+      
+      await deleteSessionWithOptions(session.session_id, {
+        includePayments,
+        userId: user.user.id
+      });
 
       setSessions(prev => prev.filter(session => session.id !== id));
+      
       toast({
         title: "Sessão excluída",
-        description: "Sessão excluída com sucesso.",
+        description: includePayments ? 
+          "Sessão e pagamentos excluídos com sucesso." :
+          "Sessão excluída. Pagamentos mantidos para auditoria.",
       });
     } catch (err) {
       console.error('Error deleting session:', err);
@@ -169,7 +181,7 @@ export const useWorkflowRealtime = () => {
       });
       throw err;
     }
-  }, []);
+  }, [sessions]);
 
   // Convert confirmed appointment to session
   const createSessionFromAppointment = useCallback(async (appointmentId: string, appointmentData: any) => {

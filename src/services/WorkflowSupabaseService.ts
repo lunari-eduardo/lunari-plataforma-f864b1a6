@@ -100,7 +100,8 @@ export class WorkflowSupabaseService {
         status: 'agendado',
         valor_total: valorTotal,
         valor_pago: Number(appointmentData.paid_amount) || 0,
-        produtos_incluidos: packageData?.produtos_incluidos || []
+        produtos_incluidos: packageData?.produtos_incluidos || [],
+        updated_by: user.user.id
       };
 
       const { data, error } = await supabase
@@ -110,6 +111,25 @@ export class WorkflowSupabaseService {
         .single();
 
       if (error) throw error;
+
+      // Create initial transaction if paid_amount > 0
+      const paidAmount = Number(appointmentData.paid_amount) || 0;
+      if (paidAmount > 0 && clienteId) {
+        await supabase
+          .from('clientes_transacoes')
+          .insert({
+            user_id: user.user.id,
+            cliente_id: clienteId,
+            session_id: sessionId,
+            tipo: 'pagamento',
+            valor: paidAmount,
+            descricao: 'Entrada do agendamento',
+            data_transacao: appointmentData.date,
+            updated_by: user.user.id
+          });
+        
+        console.log('✅ Initial transaction created for paid amount:', paidAmount);
+      }
 
       console.log('✅ Workflow session created from appointment:', data);
       return data;
@@ -130,7 +150,10 @@ export class WorkflowSupabaseService {
 
       const { error } = await supabase
         .from('clientes_sessoes')
-        .update({ appointment_id: appointmentId })
+        .update({ 
+          appointment_id: appointmentId,
+          updated_by: user.user.id
+        })
         .eq('session_id', sessionId)
         .eq('user_id', user.user.id);
 
@@ -245,7 +268,8 @@ export class WorkflowSupabaseService {
             status: session.status || 'agendado',
             valor_total: parseValue(session.total || session.valorPacote || 0),
             valor_pago: parseValue(session.valorPago || 0),
-            produtos_incluidos: session.produtosList || []
+            produtos_incluidos: session.produtosList || [],
+            updated_by: user.user.id
           };
 
           const { error } = await supabase
