@@ -33,7 +33,7 @@ export default function Workflow() {
     loading: workflowLoading,
     error: workflowError,
     updateSession,
-    deleteSession,
+    deleteSession: deleteWorkflowSession,
     createSessionFromAppointment
   } = useWorkflowRealtime();
   
@@ -315,8 +315,8 @@ export default function Workflow() {
 
   const handleDeleteSession = useCallback((sessionId: string, sessionTitle: string, paymentCount: number) => {
     // For now, delete without including payments (user can choose via modal)
-    deleteSession(sessionId, false);
-  }, [deleteSession]);
+    deleteWorkflowSession(sessionId, false);
+  }, [deleteWorkflowSession]);
 
   const handleFieldUpdate = useCallback((sessionId: string, field: string, value: any) => {
     updateSession(sessionId, { [field]: value });
