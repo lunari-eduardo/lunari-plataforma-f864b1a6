@@ -549,7 +549,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      recompute_session_paid: {
+        Args: { p_session_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
