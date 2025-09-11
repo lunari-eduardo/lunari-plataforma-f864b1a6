@@ -249,6 +249,7 @@ export type Database = {
           session_id: string
           status: string | null
           updated_at: string | null
+          updated_by: string | null
           user_id: string
           valor_pago: number | null
           valor_total: number | null
@@ -268,6 +269,7 @@ export type Database = {
           session_id: string
           status?: string | null
           updated_at?: string | null
+          updated_by?: string | null
           user_id: string
           valor_pago?: number | null
           valor_total?: number | null
@@ -287,6 +289,7 @@ export type Database = {
           session_id?: string
           status?: string | null
           updated_at?: string | null
+          updated_by?: string | null
           user_id?: string
           valor_pago?: number | null
           valor_total?: number | null
@@ -317,6 +320,8 @@ export type Database = {
           id: string
           session_id: string | null
           tipo: string
+          updated_at: string | null
+          updated_by: string | null
           user_id: string
           valor: number
         }
@@ -328,6 +333,8 @@ export type Database = {
           id?: string
           session_id?: string | null
           tipo: string
+          updated_at?: string | null
+          updated_by?: string | null
           user_id: string
           valor: number
         }
@@ -339,6 +346,8 @@ export type Database = {
           id?: string
           session_id?: string | null
           tipo?: string
+          updated_at?: string | null
+          updated_by?: string | null
           user_id?: string
           valor?: number
         }
@@ -352,6 +361,13 @@ export type Database = {
           },
           {
             foreignKeyName: "clientes_transacoes_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "clientes_sessoes"
+            referencedColumns: ["session_id"]
+          },
+          {
+            foreignKeyName: "fk_transacoes_session_id"
             columns: ["session_id"]
             isOneToOne: false
             referencedRelation: "clientes_sessoes"
