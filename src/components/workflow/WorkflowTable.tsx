@@ -855,26 +855,7 @@ export function WorkflowTable({
                       const qtd = parseInt(localValue) || 0;
                       if (qtd !== session.qtdFotosExtra) {
                         handleFieldUpdateStable(session.id, 'qtdFotosExtra', qtd);
-
-                        // CORREÇÃO: Usar regras congeladas quando disponíveis
-                        let total = 0;
-                        if (session.regrasDePrecoFotoExtraCongeladas) {
-                          // Item com regras congeladas - usar motor de cálculo específico
-                          total = calcularComRegrasProprias(qtd, session.regrasDePrecoFotoExtraCongeladas);
-                        } else {
-                          // Item sem regras congeladas - usar motor global (para compatibilidade)
-                          const valorFotoExtra = parseFloat((session.valorFotoExtra || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-
-                          // Buscar ID da categoria pelo nome
-                          const categoriaObj = categorias.find((cat) => cat.nome === session.categoria);
-                          const categoriaId = categoriaObj?.id || session.categoria;
-                          total = calcularTotalFotosExtras(qtd, {
-                            valorFotoExtra,
-                            categoria: session.categoria,
-                            categoriaId
-                          });
-                        }
-                        handleFieldUpdateStable(session.id, 'valorTotalFotoExtra', formatCurrency(total));
+                        // O AutoPhotoCalculator vai calcular automaticamente
                       }
                       setHasUnsavedChanges(false);
                     };
@@ -892,7 +873,15 @@ export function WorkflowTable({
                     };
                     return <Input key={`photoQty-${session.id}`} type="number" value={displayValue} onChange={handleChange} onFocus={handleFocus} onKeyDown={handleKeyDown} onBlur={handleBlur} className={`h-6 text-xs p-1 w-full border-none bg-transparent focus:bg-lunar-accent/10 transition-colors duration-150 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${hasUnsavedChanges ? 'bg-yellow-50' : ''}`} placeholder="" autoComplete="off" />;
                   };
-                  return <ExtraPhotoQtyInput />;
+                  return <>
+                    <ExtraPhotoQtyInput />
+                    <AutoPhotoCalculator 
+                      sessionId={session.id}
+                      quantidade={session.qtdFotosExtra || 0}
+                      regrasCongeladas={session.regrasDePrecoFotoExtraCongeladas}
+                      onValueUpdate={handleFieldUpdateStable}
+                    />
+                  </>;
                 })())}
 
                 {renderCell('extraPhotoTotal', (() => {

@@ -23,6 +23,7 @@ export function AutoPhotoCalculator({
   const calcularEAtualizarValores = useCallback(async () => {
     if (!quantidade || quantidade <= 0) {
       // Se quantidade for 0, zerar valores
+      onValueUpdate(sessionId, 'valorFotoExtra', 'R$ 0,00');
       onValueUpdate(sessionId, 'valorTotalFotoExtra', 'R$ 0,00');
       return;
     }

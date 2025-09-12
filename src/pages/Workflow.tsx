@@ -12,6 +12,7 @@ import { useClientesRealtime } from "@/hooks/useClientesRealtime";
 import { parseDateFromStorage } from "@/utils/dateUtils";
 import { useWorkflowMetrics } from '@/hooks/useWorkflowMetrics';
 import { WorkflowSyncButton } from '@/components/workflow/WorkflowSyncButton';
+import { usePricingMigration } from '@/hooks/usePricingMigration';
 import type { SessionData, CategoryOption, PackageOption, ProductOption } from '@/types/workflow';
 
 const removeAccents = (str: string) => {
@@ -41,6 +42,9 @@ export default function Workflow() {
   
   // Initialize appointment-workflow sync
   useAppointmentWorkflowSync();
+  
+  // Initialize pricing migration for existing sessions
+  usePricingMigration();
   
   const { saveMonthlyMetrics } = useWorkflowMetrics();
 
