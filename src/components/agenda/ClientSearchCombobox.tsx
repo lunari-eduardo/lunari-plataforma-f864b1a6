@@ -1,10 +1,9 @@
 
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Check, ChevronDown, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useContext } from 'react';
-import { AppContext } from '@/contexts/AppContext';
+import { useClientesRealtime } from '@/hooks/useClientesRealtime';
 
 interface Client {
   id: string;
@@ -19,42 +18,43 @@ interface ClientSearchComboboxProps {
   placeholder?: string;
 }
 
-// Integrado com hook real de clientes
+// Integrado com hook real de clientes do Supabase
 
 export default function ClientSearchCombobox({
   value,
   onSelect,
   placeholder = "Buscar cliente..."
 }: ClientSearchComboboxProps) {
-  const { clientes } = useContext(AppContext);
+  const { clientes, isLoading } = useClientesRealtime();
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredClients, setFilteredClients] = useState<Client[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Convert clientes from CRM to Client format
-  const clientsFromCRM: Client[] = clientes.map(cliente => ({
+  // Convert clientes from Supabase to Client format
+  const clientsFromSupabase: Client[] = clientes.map(cliente => ({
     id: cliente.id,
     name: cliente.nome,
     phone: cliente.telefone,
-    email: cliente.email
+    email: cliente.email || ''
   }));
 
-  const selectedClient = clientsFromCRM.find(client => client.id === value);
+  const selectedClient = clientsFromSupabase.find(client => client.id === value);
 
+  // Filter clients based on search term
   useEffect(() => {
-    if (searchTerm) {
-      const filtered = clientsFromCRM.filter(client =>
+    if (!searchTerm.trim()) {
+      setFilteredClients(clientsFromSupabase);
+    } else {
+      const filtered = clientsFromSupabase.filter(client =>
         client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         client.phone.includes(searchTerm) ||
         client.email.toLowerCase().includes(searchTerm.toLowerCase())
       );
       setFilteredClients(filtered);
-    } else {
-      setFilteredClients(clientsFromCRM);
     }
-  }, [searchTerm, clientes]);
+  }, [searchTerm, clientsFromSupabase.length]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -93,8 +93,9 @@ export default function ClientSearchCombobox({
           value={displayValue}
           onChange={handleInputChange}
           onFocus={handleInputFocus}
-          placeholder={placeholder}
+          placeholder={isLoading ? "Carregando clientes..." : placeholder}
           className="pr-8 text-xs"
+          disabled={isLoading}
         />
         <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
       </div>

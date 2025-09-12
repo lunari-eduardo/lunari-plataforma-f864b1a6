@@ -218,25 +218,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return storage.load(STORAGE_KEYS.ORIGINS, []);
   });
   
-  const [clientes, setClientes] = useState<Cliente[]>(() => {
-    return storage.load(STORAGE_KEYS.CLIENTS, []);
-  });
+  // MIGRATED TO SUPABASE: Usar useClientesRealtime() para clientes
+  const [clientes, setClientes] = useState<Cliente[]>([]);
   
   // Use real-time data from Supabase instead of localStorage
   const categorias = realtimeConfig.categorias?.map(cat => cat.nome) || [];
   const produtos = realtimeConfig.produtos || [];
   const pacotes = realtimeConfig.pacotes || [];
 
-  // Agenda State
-  const [appointments, setAppointments] = useState<Appointment[]>(() => {
-    const stored = storage.load(STORAGE_KEYS.APPOINTMENTS, []);
-    return stored.length > 0 ? deserializeAppointments(stored) : [];
-  });
+  // MIGRATED TO SUPABASE: Usar useAgendaRealtime() para appointments
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
 
-  // Disponibilidades da Agenda
-  const [availability, setAvailability] = useState<AvailabilitySlot[]>(() => {
-    return storage.load(STORAGE_KEYS.AVAILABILITY, [] as AvailabilitySlot[]);
-  });
+  // MIGRATED TO SUPABASE: Usar useAgendaRealtime() para availability
+  const [availability, setAvailability] = useState<AvailabilitySlot[]>([]);
 
   // Tipos de Disponibilidade
   const [availabilityTypes, setAvailabilityTypes] = useState<AvailabilityType[]>(() => {

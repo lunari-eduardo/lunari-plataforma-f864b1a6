@@ -4,7 +4,6 @@
  */
 
 import { SupabaseConfigurationAdapterAsync } from '@/adapters/SupabaseConfigurationAdapterAsync';
-import { LocalStorageConfigurationAdapter } from '@/adapters/LocalStorageConfigurationAdapter';
 import { ConfigurationMigrationService } from './ConfigurationMigrationService';
 import { supabase } from '@/integrations/supabase/client';
 import type { ConfigurationStorageAdapter } from '@/adapters/ConfigurationStorageAdapter';
@@ -27,8 +26,18 @@ class ConfigurationService {
   private initialized = false;
   
   constructor(adapter?: ConfigurationStorageAdapter) {
-    // Por padrão usa LocalStorage, mas pode ser injetado outro adapter
-    this.adapter = adapter || new LocalStorageConfigurationAdapter();
+    // FORÇA USO EXCLUSIVO DO SUPABASE - Requer autenticação
+    console.warn('⚠️ ConfigurationService: Requer autenticação Supabase para funcionar corretamente');
+    this.adapter = adapter || {
+      loadCategorias: () => [],
+      saveCategorias: async () => {},
+      loadPacotes: () => [],
+      savePacotes: async () => {},
+      loadProdutos: () => [],
+      saveProdutos: async () => {},
+      loadEtapas: () => [],
+      saveEtapas: async () => {}
+    } as ConfigurationStorageAdapter;
   }
 
   /**
