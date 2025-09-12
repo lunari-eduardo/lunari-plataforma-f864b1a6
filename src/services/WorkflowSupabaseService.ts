@@ -12,6 +12,8 @@ export class WorkflowSupabaseService {
    */
   static async createSessionFromAppointment(appointmentId: string, appointmentData: any) {
     try {
+      console.log('🔄 Creating workflow session from appointment:', appointmentId, appointmentData);
+      
       const { data: user } = await supabase.auth.getUser();
       if (!user?.user) throw new Error('User not authenticated');
 
@@ -37,6 +39,7 @@ export class WorkflowSupabaseService {
       let valorTotal = 0;
 
       if (appointmentData.package_id) {
+        console.log('📦 Loading package data for:', appointmentData.package_id);
         const { data: pacote } = await supabase
           .from('pacotes')
           .select('*, categorias(nome)')
@@ -45,15 +48,19 @@ export class WorkflowSupabaseService {
           .single();
 
         if (pacote) {
+          console.log('✅ Package loaded:', pacote);
           packageData = pacote;
           categoria = (pacote as any).categorias?.nome || '';
           valorTotal = Number(pacote.valor_base) || 0;
+        } else {
+          console.log('⚠️ Package not found for ID:', appointmentData.package_id);
         }
       }
 
       // Get client data if available - create if missing
       let clienteId = appointmentData.cliente_id;
       if (!clienteId && appointmentData.title) {
+        console.log('👤 Searching for client by name:', appointmentData.title);
         // Try to find client by name
         const { data: cliente } = await supabase
           .from('clientes')
@@ -64,6 +71,7 @@ export class WorkflowSupabaseService {
         
         if (cliente) {
           clienteId = cliente.id;
+          console.log('✅ Found existing client:', clienteId);
           
           // Update appointment with client_id
           await supabase
@@ -73,8 +81,9 @@ export class WorkflowSupabaseService {
             
           console.log('✅ Linked existing client to appointment:', clienteId);
         } else {
+          console.log('👤 Creating new client for:', appointmentData.title);
           // Create new client
-          const { data: newClient } = await supabase
+          const { data: newClient, error: clientError } = await supabase
             .from('clientes')
             .insert({
               user_id: user.user.id,
@@ -85,7 +94,7 @@ export class WorkflowSupabaseService {
             .select()
             .single();
             
-          if (newClient) {
+          if (newClient && !clientError) {
             clienteId = newClient.id;
             
             // Update appointment with client_id
@@ -95,6 +104,8 @@ export class WorkflowSupabaseService {
               .eq('id', appointmentId);
               
             console.log('✅ Created new client and linked to appointment:', clienteId);
+          } else {
+            console.error('❌ Error creating client:', clientError);
           }
         }
       }
@@ -107,15 +118,17 @@ export class WorkflowSupabaseService {
         cliente_id: clienteId || '',
         data_sessao: appointmentData.date,
         hora_sessao: appointmentData.time,
-        categoria: categoria || 'Outros',
+        categoria: categoria || appointmentData.type || 'Outros',
         pacote: appointmentData.package_id || '', // Store package_id for linking
-        descricao: appointmentData.description || '',
+        descricao: appointmentData.description || appointmentData.title || '',
         status: 'agendado',
         valor_total: valorTotal,
         valor_pago: Number(appointmentData.paid_amount) || 0,
         produtos_incluidos: packageData?.produtos_incluidos || [],
         updated_by: user.user.id
       };
+
+      console.log('📝 Creating session with data:', sessionData);
 
       const { data, error } = await supabase
         .from('clientes_sessoes')
@@ -124,6 +137,7 @@ export class WorkflowSupabaseService {
         .single();
 
       if (error) {
+        console.error('❌ Error inserting session:', error);
         // Handle unique constraint violation (duplicate)
         if (error.code === '23505') {
           console.log('Session already exists due to unique constraint, fetching existing...');
@@ -141,6 +155,7 @@ export class WorkflowSupabaseService {
       // Create initial transaction if paid_amount > 0
       const paidAmount = Number(appointmentData.paid_amount) || 0;
       if (paidAmount > 0 && clienteId) {
+        console.log('💰 Creating initial transaction for amount:', paidAmount);
         await supabase
           .from('clientes_transacoes')
           .insert({

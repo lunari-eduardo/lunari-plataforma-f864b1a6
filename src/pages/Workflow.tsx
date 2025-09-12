@@ -123,10 +123,17 @@ export default function Workflow() {
 
   // Update sessions from Supabase realtime data using the hook conversion
   useEffect(() => {
-    if (!workflowLoading) {
+    console.log('🔄 Workflow useEffect triggered:', {
+      workflowLoading,
+      sessionsDataLength: sessionsData?.length || 0,
+      workflowSessionsLength: workflowSessions?.length || 0
+    });
+    
+    if (!workflowLoading && sessionsData) {
+      console.log('✅ Setting session data list:', sessionsData.length, 'sessions');
       setSessionDataList(sessionsData);
     }
-  }, [sessionsData, workflowLoading]);
+  }, [sessionsData, workflowLoading, workflowSessions]);
 
   // Mapear dados reais das configurações para formato da tabela
   const categoryOptions: CategoryOption[] = categorias.map((categoria, index) => ({
@@ -346,8 +353,11 @@ export default function Workflow() {
 
   if (workflowError) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex flex-col items-center justify-center h-64 gap-4">
         <div className="text-destructive">Erro ao carregar workflow: {String(workflowError)}</div>
+        <Button onClick={() => window.location.reload()} variant="outline">
+          Recarregar página
+        </Button>
       </div>
     );
   }
@@ -379,25 +389,35 @@ export default function Workflow() {
       {/* Navigation and Metrics */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handlePreviousMonth}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <span className="font-medium text-lg">
-              {getMonthName(currentMonth.month)} {currentMonth.year}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleNextMonth}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handlePreviousMonth}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span className="font-medium text-lg">
+            {getMonthName(currentMonth.month)} {currentMonth.year}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleNextMonth}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setCurrentMonth({
+              month: new Date().getMonth() + 1,
+              year: new Date().getFullYear()
+            })}
+          >
+            Hoje
+          </Button>
+        </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
@@ -434,27 +454,68 @@ export default function Workflow() {
         )}
       </div>
 
+      {/* Debug Info */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="bg-muted p-4 rounded-lg text-sm">
+          <h3 className="font-bold mb-2">Debug Info:</h3>
+          <div>Total sessions: {workflowSessions?.length || 0}</div>
+          <div>Session data list: {sessionDataList?.length || 0}</div>
+          <div>Filtered sessions: {filteredSessions?.length || 0}</div>
+          <div>Month filtered sessions: {monthFilteredSessions?.length || 0}</div>
+          <div>Sorted sessions: {sortedSessions?.length || 0}</div>
+          <div>Current month: {getMonthName(currentMonth.month)} {currentMonth.year}</div>
+          <div>Loading: {workflowLoading ? 'Yes' : 'No'}</div>
+          <div>Error: {workflowError ? String(workflowError) : 'None'}</div>
+        </div>
+      )}
+
       {/* Workflow Table */}
       <div className="border rounded-lg">
-        <WorkflowTable
-          sessions={sortedSessions}
-          statusOptions={getStatusOptions()}
-          categoryOptions={categoryOptions}
-          packageOptions={packageOptions}
-          productOptions={productOptions}
-          onStatusChange={handleStatusChange}
-          onEditSession={handleEditSession}
-          onAddPayment={handleAddPayment}
-          onDeleteSession={handleDeleteSession}
-          onFieldUpdate={handleFieldUpdate}
-          visibleColumns={visibleColumns}
-          columnWidths={columnWidths}
-          onColumnWidthChange={handleColumnWidthChange}
-          onScrollChange={setScrollLeft}
-          sortField={sortField}
-          sortDirection={sortDirection}
-          onSort={handleSort}
-        />
+        {sortedSessions.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-64 gap-4">
+            <div className="text-muted-foreground text-center">
+              <div className="text-lg font-medium">Nenhuma sessão encontrada</div>
+              <div className="text-sm">
+                {searchTerm ? 'Tente ajustar o termo de busca' : `Não há sessões para ${getMonthName(currentMonth.month)} ${currentMonth.year}`}
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => setCurrentMonth({
+                  month: new Date().getMonth() + 1,
+                  year: new Date().getFullYear()
+                })}
+                variant="outline"
+                size="sm"
+              >
+                Ir para mês atual
+              </Button>
+              <Button onClick={() => window.location.reload()} variant="outline" size="sm">
+                Recarregar dados
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <WorkflowTable
+            sessions={sortedSessions}
+            statusOptions={getStatusOptions()}
+            categoryOptions={categoryOptions}
+            packageOptions={packageOptions}
+            productOptions={productOptions}
+            onStatusChange={handleStatusChange}
+            onEditSession={handleEditSession}
+            onAddPayment={handleAddPayment}
+            onDeleteSession={handleDeleteSession}
+            onFieldUpdate={handleFieldUpdate}
+            visibleColumns={visibleColumns}
+            columnWidths={columnWidths}
+            onColumnWidthChange={handleColumnWidthChange}
+            onScrollChange={setScrollLeft}
+            sortField={sortField}
+            sortDirection={sortDirection}
+            onSort={handleSort}
+          />
+        )}
       </div>
     </div>
   );

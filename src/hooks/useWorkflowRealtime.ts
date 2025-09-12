@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { generateUniversalSessionId } from '@/types/appointments-supabase';
 import { SessionData } from '@/types/workflow';
@@ -34,12 +34,17 @@ export const useWorkflowRealtime = () => {
   const loadSessions = useCallback(async () => {
     try {
       setLoading(true);
+      console.log('🔄 Loading workflow sessions from Supabase...');
+      
       const { data: user } = await supabase.auth.getUser();
       
       if (!user?.user) {
+        console.error('❌ User not authenticated');
         setError('User not authenticated');
         return;
       }
+
+      console.log('👤 User authenticated:', user.user.id);
 
       const { data, error: fetchError } = await supabase
         .from('clientes_sessoes')
@@ -48,7 +53,8 @@ export const useWorkflowRealtime = () => {
           clientes (
             nome,
             email,
-            telefone
+            telefone,
+            whatsapp
           )
         `)
         .eq('user_id', user.user.id)
@@ -56,8 +62,12 @@ export const useWorkflowRealtime = () => {
         .order('hora_sessao', { ascending: true });
 
       if (fetchError) {
+        console.error('❌ Error fetching sessions:', fetchError);
         throw fetchError;
       }
+
+      console.log('✅ Successfully loaded sessions:', data?.length || 0, 'sessions found');
+      console.log('📊 Sessions data:', data);
 
       setSessions(data || []);
       setError(null);
@@ -303,15 +313,18 @@ export const useWorkflowRealtime = () => {
           table: 'clientes_sessoes'
         },
         async (payload) => {
-          console.log('Real-time workflow session change:', payload);
+          console.log('🔄 Real-time workflow session change:', payload.eventType, payload);
           
           if (payload.eventType === 'INSERT') {
+            console.log('➕ Adding new session via realtime:', payload.new);
             setSessions(prev => [payload.new as WorkflowSession, ...prev]);
           } else if (payload.eventType === 'UPDATE') {
+            console.log('✏️ Updating session via realtime:', payload.new.id);
             setSessions(prev => prev.map(session => 
               session.id === payload.new.id ? payload.new as WorkflowSession : session
             ));
           } else if (payload.eventType === 'DELETE') {
+            console.log('🗑️ Deleting session via realtime:', payload.old.id);
             setSessions(prev => prev.filter(session => session.id !== payload.old.id));
           }
         }
@@ -325,21 +338,23 @@ export const useWorkflowRealtime = () => {
 
   // Convert to SessionData format for compatibility (sync version for immediate use)
   const convertToSessionDataSync = useCallback((session: WorkflowSession): SessionData => {
+    console.log('🔄 Converting session to SessionData:', session.id, session);
+    
     // Use cached package data for immediate conversion
     let packageName = session.pacote || '';
-    let packageValue = session.valor_total;
+    let packageValue = session.valor_total || 0;
     let packageFotoExtraValue = 35;
 
     // Simple sync conversion without async package lookup for performance
-    return {
+    const converted: SessionData = {
       id: session.id,
       data: session.data_sessao,
       hora: session.hora_sessao,
-      nome: (session as any).clientes?.nome || '',
+      nome: (session as any).clientes?.nome || 'Cliente não encontrado',
       email: (session as any).clientes?.email || '',
       descricao: session.descricao || '',
       status: session.status,
-      whatsapp: (session as any).clientes?.telefone || '',
+      whatsapp: (session as any).clientes?.telefone || (session as any).clientes?.whatsapp || '',
       categoria: session.categoria,
       pacote: packageName,
       valorPacote: `R$ ${(packageValue || 0).toFixed(2).replace('.', ',')}`,
@@ -361,6 +376,9 @@ export const useWorkflowRealtime = () => {
       produtosList: session.produtos_incluidos || [],
       clienteId: session.cliente_id
     };
+
+    console.log('✅ Converted session data:', converted);
+    return converted;
   }, []);
 
   // Convert to SessionData format for compatibility (async version for detailed mapping)
@@ -425,9 +443,17 @@ export const useWorkflowRealtime = () => {
     return Promise.all(sessions.map(convertToSessionData));
   }, [sessions, convertToSessionData]);
 
+  // Compute sessionsData using sync version for immediate access
+  const sessionsData = useMemo(() => {
+    console.log('🔄 Converting sessions to SessionData format:', sessions.length, 'sessions');
+    const converted = sessions.map(session => convertToSessionDataSync(session));
+    console.log('✅ Converted sessions data:', converted.length, 'sessions converted');
+    return converted;
+  }, [sessions, convertToSessionDataSync]);
+
   return {
     sessions,
-    sessionsData: sessions.map(session => convertToSessionData(session)) as any, // Use sync version for immediate return
+    sessionsData,
     loading,
     error,
     createSession,
