@@ -18,7 +18,6 @@ import { formatToDayMonth, formatDateForDisplay } from "@/utils/dateUtils";
 import { calcularTotalFotosExtras, obterConfiguracaoPrecificacao, obterTabelaGlobal, obterTabelaCategoria, calcularValorPorFoto, formatarMoeda, calcularComRegrasProprias, migrarRegrasParaItemAntigo } from '@/utils/precificacaoUtils';
 import { RegrasCongeladasIndicator } from './RegrasCongeladasIndicator';
 import type { SessionData } from '@/types/workflow';
-import { configurationService } from '@/services/ConfigurationService';
 import { useConfiguration } from '@/hooks/useConfiguration';
 interface WorkflowTableProps {
   sessions: SessionData[];
@@ -689,42 +688,44 @@ export function WorkflowTable({
 
                 {renderCell('package', <WorkflowPackageCombobox key={`package-${session.id}-${session.pacote}`} value={session.pacote} onValueChange={packageData => {
                   console.log('🔄 Pacote selecionado:', packageData);
+                  console.log('📦 ID do pacote sendo persistido:', packageData.id);
                   
-                  // Atualizar dados do pacote
-                  handleFieldUpdateStable(session.id, 'pacote', packageData.nome);
+                  // CORREÇÃO 1: Usar ID do pacote para persistência correta
+                  handleFieldUpdateStable(session.id, 'pacote', packageData.id || packageData.nome);
                   handleFieldUpdateStable(session.id, 'valorPacote', packageData.valor);
                   handleFieldUpdateStable(session.id, 'valorFotoExtra', packageData.valorFotoExtra);
                   handleFieldUpdateStable(session.id, 'categoria', packageData.categoria);
 
-                  // INCLUIR PRODUTOS DO PACOTE AUTOMATICAMENTE
-                  if (packageData.nome && packageData.nome !== '') {
-                    const pacotesData = configurationService.loadPacotes();
-                    const produtosData = configurationService.loadProdutos();
-                    const pacoteCompleto = pacotesData.find(p => p.nome === packageData.nome);
+                  // CORREÇÃO 2: INCLUIR PRODUTOS DO PACOTE usando dados real-time
+                  if (packageData.id && packageData.produtosIncluidos?.length > 0) {
+                    console.log('📦 Incluindo produtos do pacote:', packageData.produtosIncluidos);
                     
-                    if (pacoteCompleto?.produtosIncluidos?.length > 0) {
-                      console.log('📦 Incluindo produtos do pacote:', pacoteCompleto.produtosIncluidos);
-                      
-                      const produtosList = pacoteCompleto.produtosIncluidos.map((pi: any) => {
-                        const produto = produtosData.find(p => p.id === pi.produtoId);
-                        return {
-                          nome: produto?.nome || 'Produto não encontrado',
-                          quantidade: pi.quantidade || 1,
-                          valorUnitario: 0, // Produtos inclusos têm valor 0
-                          tipo: 'incluso' as const
-                        };
-                      });
-                      
-                      handleFieldUpdateStable(session.id, 'produtosList', produtosList);
-                      
-                      // Atualizar campo de produto principal (primeiro da lista)
-                      if (produtosList.length > 0) {
-                        const primeiroProduto = produtosList[0];
-                        handleFieldUpdateStable(session.id, 'produto', `${primeiroProduto.nome} (incluso no pacote)`);
-                        handleFieldUpdateStable(session.id, 'qtdProduto', primeiroProduto.quantidade);
-                        handleFieldUpdateStable(session.id, 'valorTotalProduto', 'R$ 0,00');
-                      }
+                    const produtosList = packageData.produtosIncluidos.map((pi: any) => {
+                      // Buscar produto nos dados real-time
+                      const produto = productOptions.find(p => p.id === pi.produtoId);
+                      return {
+                        nome: produto?.nome || `Produto ID: ${pi.produtoId}`,
+                        quantidade: pi.quantidade || 1,
+                        valorUnitario: 0, // Produtos inclusos têm valor 0
+                        tipo: 'incluso' as const
+                      };
+                    });
+                    
+                    handleFieldUpdateStable(session.id, 'produtosList', produtosList);
+                    
+                    // Atualizar campo de produto principal (primeiro da lista)
+                    if (produtosList.length > 0) {
+                      const primeiroProduto = produtosList[0];
+                      handleFieldUpdateStable(session.id, 'produto', `${primeiroProduto.nome} (incluso no pacote)`);
+                      handleFieldUpdateStable(session.id, 'qtdProduto', primeiroProduto.quantidade);
+                      handleFieldUpdateStable(session.id, 'valorTotalProduto', 'R$ 0,00');
                     }
+                  } else if (!packageData.id) {
+                    // Se limpou o pacote, limpar produtos inclusos
+                    handleFieldUpdateStable(session.id, 'produtosList', []);
+                    handleFieldUpdateStable(session.id, 'produto', '');
+                    handleFieldUpdateStable(session.id, 'qtdProduto', 0);
+                    handleFieldUpdateStable(session.id, 'valorTotalProduto', 'R$ 0,00');
                   }
 
                   // Recalcular total de fotos extras se houver quantidade
@@ -844,7 +845,6 @@ export function WorkflowTable({
                           const valorFotoExtra = parseFloat((session.valorFotoExtra || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0;
 
                           // Buscar ID da categoria pelo nome
-                          const categorias = configurationService.loadCategorias();
                           const categoriaObj = categorias.find((cat) => cat.nome === session.categoria);
                           const categoriaId = categoriaObj?.id || session.categoria;
                           total = calcularTotalFotosExtras(qtd, {
@@ -885,7 +885,6 @@ export function WorkflowTable({
                     const valorFotoExtra = parseFloat((session.valorFotoExtra || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0;
 
                     // Buscar ID da categoria pelo nome
-                    const categorias = configurationService.loadCategorias();
                     const categoriaObj = categorias.find((cat) => cat.nome === session.categoria);
                     const categoriaId = categoriaObj?.id || session.categoria;
                     valorCalculado = calcularTotalFotosExtras(session.qtdFotosExtra || 0, {

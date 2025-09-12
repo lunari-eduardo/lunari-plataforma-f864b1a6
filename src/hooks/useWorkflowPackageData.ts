@@ -21,24 +21,37 @@ export const useWorkflowPackageData = () => {
       let categoria = session.categoria || '';
 
       if (session.pacote && pacotes.length > 0) {
-        const pkg = pacotes.find((p: any) => p.id === session.pacote || p.nome === session.pacote);
+        // CORREÇÃO: Melhorar busca de pacote - priorizar ID, fallback para nome
+        const pkg = pacotes.find((p: any) => 
+          p.id === session.pacote || 
+          p.nome === session.pacote ||
+          String(p.id) === String(session.pacote)
+        );
+        
         if (pkg) {
           console.log('📦 Found package for session:', pkg.nome, 'ID:', pkg.id);
           packageName = pkg.nome;
           packageValue = Number(pkg.valor_base) || session.valor_total || 0;
           packageFotoExtraValue = Number(pkg.valor_foto_extra) || 35;
           
-          // Try to resolve category from package
+          // CORREÇÃO: Melhorar resolução de categoria
           if (pkg.categoria_id && categorias.length > 0) {
-            const cat = categorias.find((c: any) => c.id === pkg.categoria_id);
+            const cat = categorias.find((c: any) => 
+              c.id === pkg.categoria_id || 
+              String(c.id) === String(pkg.categoria_id)
+            );
             if (cat) {
               categoria = cat.nome;
               console.log('📂 Resolved category from package:', categoria);
             }
+          } else if (session.categoria) {
+            // Manter categoria da sessão se não conseguir resolver do pacote
+            categoria = session.categoria;
           }
         } else {
           console.warn('📦 Package not found in configuration:', session.pacote);
-          packageName = session.pacote; // Keep original if not found
+          // CORREÇÃO: Manter nome original para compatibilidade
+          packageName = typeof session.pacote === 'string' ? session.pacote : '';
         }
       }
 
@@ -60,14 +73,17 @@ export const useWorkflowPackageData = () => {
         id: session.id,
         data: session.data_sessao,
         hora: session.hora_sessao,
+        // CORREÇÃO: Melhorar resolução do cliente - garantir que não se perca
         nome: (session as any).clientes?.nome || 'Cliente não encontrado',
         email: (session as any).clientes?.email || '',
         descricao: session.descricao || '',
         status: session.status,
         whatsapp: (session as any).clientes?.telefone || (session as any).clientes?.whatsapp || '',
-        categoria: packageData.categoria,
-        pacote: packageData.packageName,
-        valorPacote: `R$ ${(packageData.packageValue || 0).toFixed(2).replace('.', ',')}`,
+        // CORREÇÃO: Usar categoria resolvida ou manter original
+        categoria: packageData.categoria || session.categoria || '',
+        // CORREÇÃO: Usar packageName resolvido mas manter referência original se necessário  
+        pacote: packageData.packageName || session.pacote || '',
+        valorPacote: `R$ ${(packageData.packageValue || session.valor_total || 0).toFixed(2).replace('.', ',')}`,
         valorFotoExtra: `R$ ${packageData.packageFotoExtraValue.toFixed(2).replace('.', ',')}`,
         qtdFotosExtra: 0,
         valorTotalFotoExtra: 'R$ 0,00',
@@ -83,6 +99,7 @@ export const useWorkflowPackageData = () => {
         restante: `R$ ${((session.valor_total || 0) - (session.valor_pago || 0)).toFixed(2).replace('.', ',')}`,
         desconto: 0,
         pagamentos: [],
+        // CORREÇÃO: Garantir que produtos incluídos sejam preservados corretamente
         produtosList: session.produtos_incluidos || [],
         clienteId: session.cliente_id
       };

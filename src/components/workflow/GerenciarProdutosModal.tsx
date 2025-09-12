@@ -10,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useConfiguration } from '@/hooks/useConfiguration';
 
 interface ProdutoWorkflow {
   nome: string;
@@ -48,18 +49,48 @@ export function GerenciarProdutosModal({
   const [localProdutos, setLocalProdutos] = useState<ProdutoWorkflow[]>([]);
   const [novoProductOpen, setNovoProductOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<string>("");
+  
+  // CORREÇÃO: Usar dados real-time do Supabase
+  const { produtos: produtosConfig } = useConfiguration();
 
-  // Inicializar produtos locais quando o modal abrir
+  // CORREÇÃO: Inicializar produtos locais com nomes corretos
   useEffect(() => {
     if (open) {
-      // FORÇAR valorUnitario = 0 para produtos inclusos sempre
-      const produtosCorrigidos = produtos.map(produto => ({
-        ...produto,
-        valorUnitario: produto.tipo === 'incluso' ? 0 : produto.valorUnitario
-      }));
+      console.log('🔄 GerenciarProdutosModal - Inicializando produtos:', produtos);
+      
+      const produtosCorrigidos = produtos.map(produto => {
+        // CORREÇÃO: Resolver nome do produto se estiver vazio ou for um ID
+        let nomeProduto = produto.nome;
+        
+        if (!nomeProduto || nomeProduto.startsWith('Produto ID:')) {
+          // Tentar encontrar o produto nos dados de configuração
+          const produtoEncontrado = produtosConfig.find(p => 
+            p.nome === produto.nome || 
+            p.id === produto.nome ||
+            produto.nome?.includes(p.id)
+          ) || productOptions.find(p => 
+            p.nome === produto.nome || 
+            p.id === produto.nome ||
+            produto.nome?.includes(p.id)
+          );
+          
+          if (produtoEncontrado) {
+            nomeProduto = produtoEncontrado.nome;
+            console.log('✅ Produto resolvido:', { original: produto.nome, resolvido: nomeProduto });
+          }
+        }
+        
+        return {
+          ...produto,
+          nome: nomeProduto,
+          valorUnitario: produto.tipo === 'incluso' ? 0 : produto.valorUnitario
+        };
+      });
+      
+      console.log('📦 Produtos corrigidos:', produtosCorrigidos);
       setLocalProdutos(produtosCorrigidos);
     }
-  }, [open, produtos]);
+  }, [open, produtos, produtosConfig, productOptions]);
 
   // Calcular totais dos produtos
   const totais = useMemo(() => {

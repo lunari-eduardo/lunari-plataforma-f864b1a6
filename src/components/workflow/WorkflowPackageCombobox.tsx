@@ -86,8 +86,12 @@ export function WorkflowPackageCombobox({
     setOpen(false);
   };
   
-  // Find selected package by ID or name for flexibility
-  const selectedPackage = pacotes.find(pkg => pkg.id === value || pkg.nome === value);
+  // Find selected package by ID first, then by name for flexibility
+  const selectedPackage = pacotes.find(pkg => 
+    pkg.id === value || 
+    pkg.nome === value ||
+    String(pkg.id) === String(value)
+  );
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -125,8 +129,10 @@ export function WorkflowPackageCombobox({
                   key={pkg.id} 
                   value={pkg.nome} 
                   onSelect={(currentValue) => {
-                    const isSelected = pkg.id === value || pkg.nome === value;
+                    // CORREÇÃO: Melhorar comparação de seleção
+                    const isSelected = pkg.id === value || pkg.nome === value || String(pkg.id) === String(value);
                     if (!isSelected) {
+                      console.log('📦 Selecionando pacote:', pkg.nome, 'ID:', pkg.id);
                       onValueChange({
                         id: pkg.id, // Include package ID
                         nome: pkg.nome,
@@ -140,7 +146,7 @@ export function WorkflowPackageCombobox({
                   }}
                   className="text-xs hover:bg-neumorphic-base hover:shadow-neumorphic-inset rounded cursor-pointer"
                 >
-                  <Check className={cn("mr-2 h-3 w-3", (pkg.id === value || pkg.nome === value) ? "opacity-100" : "opacity-0")} />
+                  <Check className={cn("mr-2 h-3 w-3", (pkg.id === value || pkg.nome === value || String(pkg.id) === String(value)) ? "opacity-100" : "opacity-0")} />
                   <div className="flex flex-col">
                     <span className="font-medium">{pkg.nome}</span>
                     <span className="text-2xs text-muted-foreground">
