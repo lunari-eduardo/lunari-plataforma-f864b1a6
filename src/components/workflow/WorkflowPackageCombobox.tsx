@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { configurationService } from '@/services/ConfigurationService';
+import { useConfiguration } from '@/hooks/useConfiguration';
 
 interface PackageComboboxProps {
   value?: string;
@@ -48,43 +48,30 @@ export function WorkflowPackageCombobox({
   disabled = false
 }: PackageComboboxProps) {
   const [open, setOpen] = useState(false);
-  const [pacotes, setPacotes] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   
-  // Load packages asynchronously
-  useEffect(() => {
-    const loadPackages = async () => {
-      try {
-        setLoading(true);
-        const storedPacotes = configurationService.loadPacotes();
-        const configCategorias = configurationService.loadCategorias();
-        
-        const processedPacotes = storedPacotes.map((pacote: any) => {
-          let categoria = pacote.categoria || '';
-          if (pacote.categoria_id) {
-            categoria = getCategoriaNameById(pacote.categoria_id, configCategorias);
-          }
+  // Use real-time configuration data from Supabase
+  const { pacotes: rawPacotes, categorias, isLoadingPacotes } = useConfiguration();
+  
+  // Process packages with category names
+  const pacotes = rawPacotes.map((pacote: any) => {
+    let categoria = pacote.categoria || '';
+    if (pacote.categoria_id) {
+      categoria = getCategoriaNameById(pacote.categoria_id, categorias);
+    }
 
-          return {
-            id: pacote.id,
-            nome: pacote.nome,
-            valor: pacote.valorVenda || pacote.valor_base || pacote.valor || 0,
-            categoria,
-            valorFotoExtra: pacote.valor_foto_extra || pacote.valorFotoExtra || 35,
-            produtosIncluidos: pacote.produtosIncluidos || []
-          };
-        });
-        
-        setPacotes(processedPacotes);
-      } catch (error) {
-        console.error('Error loading packages:', error);
-      } finally {
-        setLoading(false);
-      }
+    return {
+      id: pacote.id,
+      nome: pacote.nome,
+      valor: pacote.valor_base || pacote.valorVenda || pacote.valor || 0,
+      categoria,
+      valorFotoExtra: pacote.valor_foto_extra || pacote.valorFotoExtra || 35,
+      produtosIncluidos: pacote.produtos_incluidos || pacote.produtosIncluidos || []
     };
+  });
 
-    loadPackages();
-  }, []);
+  console.log('📦 WorkflowPackageCombobox - Packages loaded:', pacotes.length, 'packages');
+  console.log('📦 WorkflowPackageCombobox - Current value:', value);
+  console.log('📦 WorkflowPackageCombobox - Available packages:', pacotes);
   
   // Função para limpar a seleção
   const handleClearPackage = () => {
@@ -109,10 +96,10 @@ export function WorkflowPackageCombobox({
           variant="outline" 
           role="combobox" 
           aria-expanded={open} 
-          disabled={disabled || loading}
+          disabled={disabled || isLoadingPacotes}
           className="w-full justify-between h-7 text-xs font-normal shadow-neumorphic hover:shadow-neumorphic-pressed disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {loading ? "Carregando..." : selectedPackage ? selectedPackage.nome : "Selecione"}
+          {isLoadingPacotes ? "Carregando..." : selectedPackage ? selectedPackage.nome : "Selecione"}
           <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -121,7 +108,7 @@ export function WorkflowPackageCombobox({
           <CommandInput placeholder="Buscar pacote..." className="h-8 text-xs border-0 bg-transparent focus:ring-0" />
           <CommandList>
             <CommandEmpty className="text-xs py-2 text-muted-foreground">
-              {loading ? 'Carregando pacotes...' : 'Nenhum pacote encontrado.'}
+              {isLoadingPacotes ? 'Carregando pacotes...' : 'Nenhum pacote encontrado.'}
             </CommandEmpty>
             <CommandGroup>
               {/* Opção para limpar seleção */}

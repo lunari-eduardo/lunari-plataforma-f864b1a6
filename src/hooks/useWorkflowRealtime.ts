@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { generateUniversalSessionId } from '@/types/appointments-supabase';
 import { SessionData } from '@/types/workflow';
 import { toast } from '@/hooks/use-toast';
+import { useWorkflowPackageData } from '@/hooks/useWorkflowPackageData';
 
 export interface WorkflowSession {
   id: string;
@@ -29,6 +30,9 @@ export const useWorkflowRealtime = () => {
   const [sessions, setSessions] = useState<WorkflowSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Use package data resolution hook
+  const { convertSessionToData, isLoadingPacotes, isLoadingCategorias } = useWorkflowPackageData();
 
   // Load sessions from Supabase
   const loadSessions = useCallback(async () => {
@@ -336,50 +340,6 @@ export const useWorkflowRealtime = () => {
     };
   }, [loadSessions]);
 
-  // Convert to SessionData format for compatibility (sync version for immediate use)
-  const convertToSessionDataSync = useCallback((session: WorkflowSession): SessionData => {
-    console.log('🔄 Converting session to SessionData:', session.id, session);
-    
-    // Use cached package data for immediate conversion
-    let packageName = session.pacote || '';
-    let packageValue = session.valor_total || 0;
-    let packageFotoExtraValue = 35;
-
-    // Simple sync conversion without async package lookup for performance
-    const converted: SessionData = {
-      id: session.id,
-      data: session.data_sessao,
-      hora: session.hora_sessao,
-      nome: (session as any).clientes?.nome || 'Cliente não encontrado',
-      email: (session as any).clientes?.email || '',
-      descricao: session.descricao || '',
-      status: session.status,
-      whatsapp: (session as any).clientes?.telefone || (session as any).clientes?.whatsapp || '',
-      categoria: session.categoria,
-      pacote: packageName,
-      valorPacote: `R$ ${(packageValue || 0).toFixed(2).replace('.', ',')}`,
-      valorFotoExtra: `R$ ${packageFotoExtraValue.toFixed(2).replace('.', ',')}`,
-      qtdFotosExtra: 0,
-      valorTotalFotoExtra: 'R$ 0,00',
-      produto: '',
-      qtdProduto: 0,
-      valorTotalProduto: 'R$ 0,00',
-      valorAdicional: 'R$ 0,00',
-      detalhes: session.descricao || '',
-      observacoes: '',
-      valor: `R$ ${(session.valor_total || 0).toFixed(2).replace('.', ',')}`,
-      total: `R$ ${(session.valor_total || 0).toFixed(2).replace('.', ',')}`,
-      valorPago: `R$ ${(session.valor_pago || 0).toFixed(2).replace('.', ',')}`,
-      restante: `R$ ${((session.valor_total || 0) - (session.valor_pago || 0)).toFixed(2).replace('.', ',')}`,
-      desconto: 0,
-      pagamentos: [],
-      produtosList: session.produtos_incluidos || [],
-      clienteId: session.cliente_id
-    };
-
-    console.log('✅ Converted session data:', converted);
-    return converted;
-  }, []);
 
   // Convert to SessionData format for compatibility (async version for detailed mapping)
   const convertToSessionData = useCallback(async (session: WorkflowSession): Promise<SessionData> => {
@@ -443,13 +403,18 @@ export const useWorkflowRealtime = () => {
     return Promise.all(sessions.map(convertToSessionData));
   }, [sessions, convertToSessionData]);
 
-  // Compute sessionsData using sync version for immediate access
+  // Compute sessionsData using the package data hook for proper resolution
   const sessionsData = useMemo(() => {
+    if (isLoadingPacotes || isLoadingCategorias) {
+      console.log('⏳ Still loading package/category data, returning empty sessions');
+      return [];
+    }
+    
     console.log('🔄 Converting sessions to SessionData format:', sessions.length, 'sessions');
-    const converted = sessions.map(session => convertToSessionDataSync(session));
+    const converted = sessions.map(session => convertSessionToData(session));
     console.log('✅ Converted sessions data:', converted.length, 'sessions converted');
     return converted;
-  }, [sessions, convertToSessionDataSync]);
+  }, [sessions, convertSessionToData, isLoadingPacotes, isLoadingCategorias]);
 
   return {
     sessions,
