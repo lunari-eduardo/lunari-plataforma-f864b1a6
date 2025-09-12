@@ -1,33 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent } from '@/components/ui/card';
-import { supabaseUserService } from '@/services/SupabaseUserService';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useUserPreferences } from '@/hooks/useUserProfile';
 import { PreferencesForm } from '@/components/user-profile/forms/PreferencesForm';
 import { UserPreferences, RegimeTributario } from '@/types/userProfile';
 
 export default function Preferencias() {
-  const queryClient = useQueryClient();
-  
-  const { data: preferences } = useQuery({
-    queryKey: ['preferences'],
-    queryFn: () => supabaseUserService.loadPreferences()
-  });
-
-  const saveMutation = useMutation({
-    mutationFn: (prefs: Partial<UserPreferences>) => supabaseUserService.savePreferences(prefs),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['preferences'] })
-  });
-
-  const [formData, setFormData] = useState<UserPreferences>(preferences || {
-    id: '',
-    notificacoesWhatsapp: true,
-    habilitarAutomacoesWorkflow: true,
-    habilitarAlertaProdutosDoCliente: true,
-    regimeTributario: 'mei',
-    createdAt: '',
-    updatedAt: ''
-  });
+  const { preferences, savePreferences, getPreferencesOrDefault } = useUserPreferences();
+  const [formData, setFormData] = useState<UserPreferences>(getPreferencesOrDefault());
   
   useEffect(() => {
     if (preferences) {
@@ -38,8 +18,9 @@ export default function Preferencias() {
   const handlePreferenceChange = useCallback((field: keyof UserPreferences, value: boolean | RegimeTributario) => {
     const updatedData = { ...formData, [field]: value };
     setFormData(updatedData);
-    saveMutation.mutate({ [field]: value });
-  }, [formData, saveMutation]);
+    // Auto-save com debounce
+    savePreferences({ [field]: value });
+  }, [formData, savePreferences]);
 
   return (
     <div className="min-h-screen bg-lunar-bg">

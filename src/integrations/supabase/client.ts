@@ -8,27 +8,10 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-// In-memory storage to eliminate localStorage dependency
-class MemoryStorage {
-  private data: Record<string, string> = {};
-
-  getItem(key: string): string | null {
-    return this.data[key] || null;
-  }
-
-  setItem(key: string, value: string): void {
-    this.data[key] = value;
-  }
-
-  removeItem(key: string): void {
-    delete this.data[key];
-  }
-}
-
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
-    storage: new MemoryStorage(),
-    persistSession: false, // No persistence - user must re-login after refresh
+    storage: localStorage,
+    persistSession: true,
     autoRefreshToken: true,
   }
 });
