@@ -1,7 +1,7 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { DataMigrationRunner } from '@/components/migration/DataMigrationRunner';
+
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -24,16 +24,6 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Check if user needs data migration
-  const hasLocalStorageData = localStorage.length > 0;
-  
-  if (hasLocalStorageData) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <DataMigrationRunner />
-      </div>
-    );
-  }
 
   return <>{children}</>;
 };
