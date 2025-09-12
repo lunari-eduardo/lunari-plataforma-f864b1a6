@@ -17,8 +17,10 @@ import { useNumberInput } from '@/hooks/useNumberInput';
 import { formatToDayMonth, formatDateForDisplay } from "@/utils/dateUtils";
 import { calcularTotalFotosExtras, obterConfiguracaoPrecificacao, obterTabelaGlobal, obterTabelaCategoria, calcularValorPorFoto, formatarMoeda, calcularComRegrasProprias, migrarRegrasParaItemAntigo } from '@/utils/precificacaoUtils';
 import { RegrasCongeladasIndicator } from './RegrasCongeladasIndicator';
+import { AutoPhotoCalculator } from './AutoPhotoCalculator';
 import type { SessionData } from '@/types/workflow';
 import { useConfiguration } from '@/hooks/useConfiguration';
+import { usePricingMigration } from '@/hooks/usePricingMigration';
 interface WorkflowTableProps {
   sessions: SessionData[];
   statusOptions: string[];
@@ -146,6 +148,7 @@ export function WorkflowTable({
   onSort
 }: WorkflowTableProps) {
   const { categorias } = useConfiguration();
+  const { executarMigracaoSeNecessario } = usePricingMigration();
   const [paymentInputs, setPaymentInputs] = useState<Record<string, string>>({});
   const [editingValues, setEditingValues] = useState<Record<string, string>>({});
   const [modalAberto, setModalAberto] = useState(false);
@@ -418,7 +421,7 @@ export function WorkflowTable({
       [key]: newValue
     }));
   };
-  const handleEditFinish = (sessionId: string, field: string) => {
+  const handleEditFinish = useCallback(async (sessionId: string, field: string) => {
     const key = getEditingKey(sessionId, field);
     const newValue = editingValues[key];
     if (newValue !== undefined) {
@@ -440,11 +443,29 @@ export function WorkflowTable({
         if (session) {
           const novaQuantidade = parseInt(newValue) || 0;
 
-          // Como não temos acesso direto às regras congeladas aqui, 
-          // vamos disparar o recálculo através do contexto
-          setTimeout(() => {
-            handleFieldUpdateStable(sessionId, 'qtdFotoExtra', novaQuantidade);
-          }, 0);
+          // Importar e usar o AutoPhotoCalculator para recálculo
+          const { pricingFreezingService } = await import('@/services/PricingFreezingService');
+          
+          if (session.regrasDePrecoFotoExtraCongeladas) {
+            // Tentar usar regras congeladas se disponível
+            try {
+              const resultado = pricingFreezingService.calcularValorFotoExtraComRegrasCongeladas(
+                novaQuantidade, 
+                session.regrasDePrecoFotoExtraCongeladas as any
+              );
+              
+              handleFieldUpdateStable(sessionId, 'valorFotoExtra', formatCurrency(resultado.valorUnitario));
+              handleFieldUpdateStable(sessionId, 'valorTotalFotoExtra', formatCurrency(resultado.valorTotal));
+            } catch (error) {
+              console.warn('⚠️ Erro usando regras congeladas, usando valor fixo:', error);
+              const valorUnit = calcularValorRealPorFoto(session);
+              handleFieldUpdateStable(sessionId, 'valorTotalFotoExtra', formatCurrency(novaQuantidade * valorUnit));
+            }
+          } else {
+            // Usar valor atual fixo
+            const valorUnit = calcularValorRealPorFoto(session);
+            handleFieldUpdateStable(sessionId, 'valorTotalFotoExtra', formatCurrency(novaQuantidade * valorUnit));
+          }
         }
       }
       setEditingValues(prev => {
@@ -455,7 +476,7 @@ export function WorkflowTable({
         return updated;
       });
     }
-  };
+  }, [editingValues, sessions, handleFieldUpdateStable, calcularValorRealPorFoto, formatCurrency]);
   const handleKeyPress = (e: React.KeyboardEvent, sessionId: string, field: string) => {
     if (e.key === 'Enter') {
       e.preventDefault();

@@ -21,6 +21,10 @@ export interface WorkflowSession {
   valor_total: number;
   valor_pago: number;
   produtos_incluidos: any;
+  qtd_fotos_extra?: number;
+  valor_foto_extra?: number;
+  valor_total_foto_extra?: number;
+  regras_congeladas?: any;
   created_at?: string;
   updated_at?: string;
   updated_by?: string;
@@ -88,11 +92,17 @@ export const useWorkflowRealtime = () => {
     }
   }, []);
 
-  // Create new session
+  // Create new session with frozen pricing rules
   const createSession = useCallback(async (sessionData: Omit<WorkflowSession, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
     try {
       const { data: user } = await supabase.auth.getUser();
       if (!user?.user) throw new Error('User not authenticated');
+
+      // Import pricing freezing service
+      const { pricingFreezingService } = await import('@/services/PricingFreezingService');
+      
+      // Freeze current pricing rules for this session
+      const regrasCongeladas = pricingFreezingService.congelarRegrasAtuais(sessionData.categoria);
 
       const { data, error } = await supabase
         .from('clientes_sessoes')
@@ -100,6 +110,7 @@ export const useWorkflowRealtime = () => {
           ...sessionData,
           user_id: user.user.id,
           updated_by: user.user.id,
+          regras_congeladas: regrasCongeladas as any,
         })
         .select()
         .single();
@@ -171,10 +182,24 @@ export const useWorkflowRealtime = () => {
           case 'categoria':
             (sanitizedUpdates as any)[field] = value;
             break;
-          // Ignore fields that don't exist in the database schema
+          // Map extra photo fields to database columns
           case 'valorFotoExtra':
+            sanitizedUpdates.valor_foto_extra = typeof value === 'string' 
+              ? parseFloat(value.replace(/[^\d,]/g, '').replace(',', '.')) || 0
+              : Number(value) || 0;
+            break;
           case 'qtdFotosExtra':
+            sanitizedUpdates.qtd_fotos_extra = Number(value) || 0;
+            break;
           case 'valorTotalFotoExtra':
+            sanitizedUpdates.valor_total_foto_extra = typeof value === 'string' 
+              ? parseFloat(value.replace(/[^\d,]/g, '').replace(',', '.')) || 0
+              : Number(value) || 0;
+            break;
+          case 'regrasDePrecoFotoExtraCongeladas':
+            sanitizedUpdates.regras_congeladas = value;
+            break;
+          // Ignore fields that don't exist in the database schema  
           case 'produto':
           case 'qtdProduto':
           case 'valorTotalProduto':
@@ -386,9 +411,9 @@ export const useWorkflowRealtime = () => {
       categoria: session.categoria,
       pacote: packageName,
       valorPacote: `R$ ${packageValue.toFixed(2).replace('.', ',')}`,
-      valorFotoExtra: `R$ ${packageFotoExtraValue.toFixed(2).replace('.', ',')}`,
-      qtdFotosExtra: 0,
-      valorTotalFotoExtra: 'R$ 0,00',
+      valorFotoExtra: `R$ ${(session.valor_foto_extra || packageFotoExtraValue).toFixed(2).replace('.', ',')}`,
+      qtdFotosExtra: session.qtd_fotos_extra || 0,
+      valorTotalFotoExtra: `R$ ${(session.valor_total_foto_extra || 0).toFixed(2).replace('.', ',')}`,
       produto: '',
       qtdProduto: 0,
       valorTotalProduto: 'R$ 0,00',
@@ -402,6 +427,7 @@ export const useWorkflowRealtime = () => {
       desconto: 0,
       pagamentos: [],
       produtosList: session.produtos_incluidos || [],
+      regrasDePrecoFotoExtraCongeladas: session.regras_congeladas,
       clienteId: session.cliente_id
     };
   }, []);

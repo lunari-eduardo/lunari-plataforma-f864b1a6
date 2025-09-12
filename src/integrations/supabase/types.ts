@@ -282,13 +282,17 @@ export type Database = {
           orcamento_id: string | null
           pacote: string | null
           produtos_incluidos: Json | null
+          qtd_fotos_extra: number | null
+          regras_congeladas: Json | null
           session_id: string
           status: string | null
           updated_at: string | null
           updated_by: string | null
           user_id: string
+          valor_foto_extra: number | null
           valor_pago: number | null
           valor_total: number | null
+          valor_total_foto_extra: number | null
         }
         Insert: {
           appointment_id?: string | null
@@ -302,13 +306,17 @@ export type Database = {
           orcamento_id?: string | null
           pacote?: string | null
           produtos_incluidos?: Json | null
+          qtd_fotos_extra?: number | null
+          regras_congeladas?: Json | null
           session_id: string
           status?: string | null
           updated_at?: string | null
           updated_by?: string | null
           user_id: string
+          valor_foto_extra?: number | null
           valor_pago?: number | null
           valor_total?: number | null
+          valor_total_foto_extra?: number | null
         }
         Update: {
           appointment_id?: string | null
@@ -322,13 +330,17 @@ export type Database = {
           orcamento_id?: string | null
           pacote?: string | null
           produtos_incluidos?: Json | null
+          qtd_fotos_extra?: number | null
+          regras_congeladas?: Json | null
           session_id?: string
           status?: string | null
           updated_at?: string | null
           updated_by?: string | null
           user_id?: string
+          valor_foto_extra?: number | null
           valor_pago?: number | null
           valor_total?: number | null
+          valor_total_foto_extra?: number | null
         }
         Relationships: [
           {
