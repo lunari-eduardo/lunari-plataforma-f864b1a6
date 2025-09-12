@@ -74,8 +74,9 @@ export function GerenciarProdutosModal({
     };
   }, [localProdutos]);
 
-  const formatCurrency = (value: number) => {
-    return `R$ ${value.toFixed(2).replace('.', ',')}`;
+  const formatCurrency = (value: number | undefined | null) => {
+    const numValue = Number(value) || 0;
+    return `R$ ${numValue.toFixed(2).replace('.', ',')}`;
   };
 
   const handleQuantidadeChange = (index: number, novaQuantidade: number) => {
