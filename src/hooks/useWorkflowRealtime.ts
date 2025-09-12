@@ -324,9 +324,17 @@ export const useWorkflowRealtime = () => {
             setSessions(prev => [payload.new as WorkflowSession, ...prev]);
           } else if (payload.eventType === 'UPDATE') {
             console.log('✏️ Updating session via realtime:', payload.new.id);
-            setSessions(prev => prev.map(session => 
-              session.id === payload.new.id ? payload.new as WorkflowSession : session
-            ));
+            setSessions(prev => prev.map((session: any) => {
+              if (session.id !== payload.new.id) return session;
+              const incoming = payload.new as any;
+              // Preserve nested cliente info if the realtime payload doesn't include it
+              const preservedCliente = session?.clientes && !('clientes' in incoming) ? session.clientes : incoming?.clientes;
+              return {
+                ...session,
+                ...incoming,
+                ...(preservedCliente ? { clientes: preservedCliente } : {})
+              } as WorkflowSession;
+            }));
           } else if (payload.eventType === 'DELETE') {
             console.log('🗑️ Deleting session via realtime:', payload.old.id);
             setSessions(prev => prev.filter(session => session.id !== payload.old.id));
