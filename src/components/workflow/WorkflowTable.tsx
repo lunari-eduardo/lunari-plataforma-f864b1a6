@@ -849,8 +849,8 @@ export function WorkflowTable({
                         if (qtd !== session.qtdFotosExtra) {
                           handleFieldUpdateStable(session.id, 'qtdFotosExtra', qtd);
                         }
-                      }, 300),
-                      [session.id, session.qtdFotosExtra, handleFieldUpdateStable]
+                      }, 800), // Increased debounce time to prevent excessive calls
+                      [session.id, handleFieldUpdateStable] // Removed session.qtdFotosExtra to prevent recreation
                     );
 
                     // Cleanup debounce on unmount
@@ -870,9 +870,11 @@ export function WorkflowTable({
                         setLocalValue(value);
                         setHasUnsavedChanges(value !== String(session.qtdFotosExtra || ''));
                         
-                        // Trigger debounced save for real-time updates
+                        // Trigger debounced save for real-time updates only if value actually changed
                         const qtd = parseInt(value) || 0;
-                        debouncedSave(qtd);
+                        if (qtd !== session.qtdFotosExtra) {
+                          debouncedSave(qtd);
+                        }
                       }
                     });
                     

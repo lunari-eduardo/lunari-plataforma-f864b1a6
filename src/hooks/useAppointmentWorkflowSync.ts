@@ -11,12 +11,12 @@ export const useAppointmentWorkflowSync = () => {
   // Function to manually sync existing confirmed appointments
   const syncExistingAppointments = async () => {
     try {
-      console.log('🔄 Syncing existing confirmed appointments...');
+      console.log('🔄 [AppointmentSync] Syncing existing confirmed appointments...');
       
       // Check if sync already ran to prevent duplicates
       const syncKey = 'appointment_sync_completed_v2';
       if (localStorage.getItem(syncKey)) {
-        console.log('✅ Sync already completed, skipping');
+        console.log('✅ [AppointmentSync] Sync already completed, skipping');
         return;
       }
 
@@ -26,14 +26,18 @@ export const useAppointmentWorkflowSync = () => {
         .select('*')
         .eq('status', 'confirmado');
 
+      console.log('📋 [AppointmentSync] Found appointments:', appointments?.length || 0);
+      
       if (!appointments?.length) {
-        console.log('✅ No confirmed appointments found to sync');
+        console.log('✅ [AppointmentSync] No confirmed appointments found to sync');
         localStorage.setItem(syncKey, 'true');
         return;
       }
 
       // Check which ones don't have sessions yet
       for (const appointment of appointments) {
+        console.log('🔍 [AppointmentSync] Checking appointment:', appointment.id, 'status:', appointment.status);
+        
         const { data: existingSession } = await supabase
           .from('clientes_sessoes')
           .select('id')
@@ -41,18 +45,20 @@ export const useAppointmentWorkflowSync = () => {
           .maybeSingle(); // Use maybeSingle to handle empty results properly
 
         if (!existingSession) {
-          console.log(`Creating session for appointment ${appointment.id}`);
+          console.log(`📝 [AppointmentSync] Creating session for appointment ${appointment.id}`);
           await WorkflowSupabaseService.createSessionFromAppointment(
             appointment.id,
             appointment
           );
+        } else {
+          console.log(`✅ [AppointmentSync] Session already exists for appointment ${appointment.id}`);
         }
       }
       
       localStorage.setItem(syncKey, 'true');
-      console.log('✅ Existing appointments sync completed');
+      console.log('✅ [AppointmentSync] Existing appointments sync completed');
     } catch (error) {
-      console.error('❌ Error syncing existing appointments:', error);
+      console.error('❌ [AppointmentSync] Error syncing existing appointments:', error);
     }
   };
 
@@ -69,7 +75,7 @@ export const useAppointmentWorkflowSync = () => {
           filter: 'status=eq.confirmado'
         },
         async (payload) => {
-          console.log('Appointment confirmed, creating workflow session:', payload);
+          console.log('📝 [AppointmentSync] Appointment confirmed, creating workflow session:', payload);
           
           try {
             // Check if session already exists for this appointment
@@ -80,14 +86,17 @@ export const useAppointmentWorkflowSync = () => {
               .maybeSingle(); // Use maybeSingle to handle empty results properly
 
             if (!existingSession) {
+              console.log('🆕 [AppointmentSync] Creating new workflow session for appointment:', payload.new.id);
               // Create new workflow session
               await WorkflowSupabaseService.createSessionFromAppointment(
                 payload.new.id,
                 payload.new
               );
+            } else {
+              console.log('✅ [AppointmentSync] Session already exists for appointment:', payload.new.id);
             }
           } catch (error) {
-            console.error('Error syncing appointment to workflow:', error);
+            console.error('❌ [AppointmentSync] Error syncing appointment to workflow:', error);
           }
         }
       )
@@ -100,15 +109,16 @@ export const useAppointmentWorkflowSync = () => {
           filter: 'status=eq.confirmado'
         },
         async (payload) => {
-          console.log('New confirmed appointment, creating workflow session:', payload);
+          console.log('🆕 [AppointmentSync] New confirmed appointment, creating workflow session:', payload);
           
           try {
+            console.log('📝 [AppointmentSync] Creating session for new appointment:', payload.new.id);
             await WorkflowSupabaseService.createSessionFromAppointment(
               payload.new.id,
               payload.new
             );
           } catch (error) {
-            console.error('Error syncing new appointment to workflow:', error);
+            console.error('❌ [AppointmentSync] Error syncing new appointment to workflow:', error);
           }
         }
       )

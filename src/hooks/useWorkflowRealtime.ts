@@ -249,6 +249,12 @@ export const useWorkflowRealtime = () => {
         session.id === id ? { ...session, ...sanitizedUpdates } : session
       ));
 
+      // Manual success toast only for user-initiated updates  
+      toast({
+        title: "Sessão atualizada",
+        description: "Sessão atualizada com sucesso.",
+      });
+      // Manual success toast only for user-initiated updates
       toast({
         title: "Sessão atualizada",
         description: "Sessão atualizada com sucesso.",
@@ -342,13 +348,13 @@ export const useWorkflowRealtime = () => {
           table: 'clientes_sessoes'
         },
         async (payload) => {
-          console.log('🔄 Real-time workflow session change:', payload.eventType, payload);
+          console.log('🔄 [WorkflowRealtime] Real-time workflow session change:', payload.eventType, payload);
           
           if (payload.eventType === 'INSERT') {
-            console.log('➕ Adding new session via realtime:', payload.new);
+            console.log('➕ [WorkflowRealtime] Adding new session via realtime:', payload.new);
             setSessions(prev => [payload.new as WorkflowSession, ...prev]);
           } else if (payload.eventType === 'UPDATE') {
-            console.log('✏️ Updating session via realtime:', payload.new.id);
+            console.log('✏️ [WorkflowRealtime] Updating session via realtime:', payload.new.id);
             setSessions(prev => prev.map((session: any) => {
               if (session.id !== payload.new.id) return session;
               const incoming = payload.new as any;
@@ -360,8 +366,9 @@ export const useWorkflowRealtime = () => {
                 ...(preservedCliente ? { clientes: preservedCliente } : {})
               } as WorkflowSession;
             }));
+            // No toast here - realtime updates should be silent
           } else if (payload.eventType === 'DELETE') {
-            console.log('🗑️ Deleting session via realtime:', payload.old.id);
+            console.log('🗑️ [WorkflowRealtime] Deleting session via realtime:', payload.old.id);
             setSessions(prev => prev.filter(session => session.id !== payload.old.id));
           }
         }
