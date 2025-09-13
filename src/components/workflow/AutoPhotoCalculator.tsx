@@ -21,7 +21,10 @@ export function AutoPhotoCalculator({
 }: AutoPhotoCalculatorProps) {
   
   const calcularEAtualizarValores = useCallback(async () => {
+    console.log('🧮 AutoPhotoCalculator: Starting calculation for session', sessionId, 'qty:', quantidade);
+    
     if (!quantidade || quantidade <= 0) {
+      console.log('🧮 Zero quantity, clearing values');
       // Se quantidade for 0, zerar valores
       onValueUpdate(sessionId, 'valorFotoExtra', 'R$ 0,00');
       onValueUpdate(sessionId, 'valorTotalFotoExtra', 'R$ 0,00');
@@ -30,6 +33,7 @@ export function AutoPhotoCalculator({
 
     try {
       if (regrasCongeladas) {
+        console.log('🧮 Using frozen rules for calculation:', regrasCongeladas);
         // Usar regras congeladas
         const resultado = pricingFreezingService.calcularValorFotoExtraComRegrasCongeladas(
           quantidade, 
@@ -41,12 +45,14 @@ export function AutoPhotoCalculator({
         onValueUpdate(sessionId, 'valorTotalFotoExtra', `R$ ${resultado.valorTotal.toFixed(2).replace('.', ',')}`);
         
         console.log('📸 Cálculo com regras congeladas:', {
+          sessionId,
           quantidade,
           valorUnitario: resultado.valorUnitario,
           valorTotal: resultado.valorTotal,
           regras: regrasCongeladas
         });
       } else {
+        console.log('🧮 Using current pricing rules');
         // Usar regras atuais (para sessões sem congelamento)
         const { calcularTotalFotosExtras } = await import('@/utils/precificacaoUtils');
         
@@ -57,6 +63,7 @@ export function AutoPhotoCalculator({
         onValueUpdate(sessionId, 'valorTotalFotoExtra', `R$ ${valorTotal.toFixed(2).replace('.', ',')}`);
         
         console.log('📸 Cálculo com regras atuais:', {
+          sessionId,
           quantidade,
           valorUnitario,
           valorTotal

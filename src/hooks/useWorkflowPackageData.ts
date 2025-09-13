@@ -84,9 +84,16 @@ export const useWorkflowPackageData = () => {
         // CORREÇÃO: Usar packageName resolvido mas manter referência original se necessário  
         pacote: packageData.packageName || session.pacote || '',
         valorPacote: `R$ ${(packageData.packageValue || session.valor_total || 0).toFixed(2).replace('.', ',')}`,
-        valorFotoExtra: `R$ ${packageData.packageFotoExtraValue.toFixed(2).replace('.', ',')}`,
-        qtdFotosExtra: 0,
-        valorTotalFotoExtra: 'R$ 0,00',
+        // CORREÇÃO: Priorizar valor da sessão, fallback para valor do pacote
+        valorFotoExtra: session.valor_foto_extra ? 
+          `R$ ${Number(session.valor_foto_extra).toFixed(2).replace('.', ',')}` : 
+          `R$ ${packageData.packageFotoExtraValue.toFixed(2).replace('.', ',')}`,
+        // CORREÇÃO: Usar valores da sessão, não zerar
+        qtdFotosExtra: session.qtd_fotos_extra || 0,
+        valorTotalFotoExtra: session.valor_total_foto_extra ? 
+          `R$ ${Number(session.valor_total_foto_extra).toFixed(2).replace('.', ',')}` : 'R$ 0,00',
+        // CORREÇÃO: Mapear regras congeladas
+        regrasDePrecoFotoExtraCongeladas: session.regras_congeladas,
         produto: '',
         qtdProduto: 0,
         valorTotalProduto: 'R$ 0,00',
