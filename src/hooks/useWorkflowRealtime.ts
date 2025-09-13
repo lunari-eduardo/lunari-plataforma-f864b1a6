@@ -235,6 +235,24 @@ export const useWorkflowRealtime = () => {
         return;
       }
 
+      // Check if values actually changed to prevent unnecessary updates
+      const currentSession = sessions.find(s => s.id === id);
+      if (currentSession) {
+        const hasChanges = Object.entries(sanitizedUpdates).some(([key, value]) => {
+          const currentValue = (currentSession as any)[key];
+          // Handle deep comparison for objects
+          if (typeof value === 'object' && typeof currentValue === 'object') {
+            return JSON.stringify(value) !== JSON.stringify(currentValue);
+          }
+          return currentValue !== value;
+        });
+        
+        if (!hasChanges) {
+          console.log('No actual changes detected, skipping update');
+          return;
+        }
+      }
+
       sanitizedUpdates.updated_by = user.user.id;
 
       const { error } = await supabase
@@ -249,12 +267,7 @@ export const useWorkflowRealtime = () => {
         session.id === id ? { ...session, ...sanitizedUpdates } : session
       ));
 
-      // Manual success toast only for user-initiated updates  
-      toast({
-        title: "Sessão atualizada",
-        description: "Sessão atualizada com sucesso.",
-      });
-      // Manual success toast only for user-initiated updates
+      // Single toast for user-initiated updates only
       toast({
         title: "Sessão atualizada",
         description: "Sessão atualizada com sucesso.",

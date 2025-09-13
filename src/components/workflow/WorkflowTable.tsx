@@ -908,6 +908,8 @@ export function WorkflowTable({
                       sessionId={session.id}
                       quantidade={session.qtdFotosExtra || 0}
                       regrasCongeladas={session.regrasDePrecoFotoExtraCongeladas}
+                      currentValorFotoExtra={session.valorFotoExtra}
+                      currentValorTotalFotoExtra={session.valorTotalFotoExtra}
                       onValueUpdate={handleFieldUpdateStable}
                     />
                   </>;

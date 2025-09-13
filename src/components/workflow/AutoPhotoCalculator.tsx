@@ -10,6 +10,8 @@ interface AutoPhotoCalculatorProps {
   sessionId: string;
   quantidade: number;
   regrasCongeladas?: any;
+  currentValorFotoExtra?: string;
+  currentValorTotalFotoExtra?: string;
   onValueUpdate: (sessionId: string, field: string, value: any) => void;
 }
 
@@ -17,17 +19,25 @@ export function AutoPhotoCalculator({
   sessionId, 
   quantidade, 
   regrasCongeladas,
+  currentValorFotoExtra,
+  currentValorTotalFotoExtra,
   onValueUpdate 
 }: AutoPhotoCalculatorProps) {
   
   const calcularEAtualizarValores = useCallback(async () => {
     console.log('🧮 AutoPhotoCalculator: Starting calculation for session', sessionId, 'qty:', quantidade);
     
+    const zeroValueString = 'R$ 0,00';
+    
     if (!quantidade || quantidade <= 0) {
-      console.log('🧮 Zero quantity, clearing values');
-      // Se quantidade for 0, zerar valores
-      onValueUpdate(sessionId, 'valorFotoExtra', 'R$ 0,00');
-      onValueUpdate(sessionId, 'valorTotalFotoExtra', 'R$ 0,00');
+      console.log('🧮 Zero quantity, clearing values if needed');
+      // Only update if values actually need to change
+      if (currentValorFotoExtra !== zeroValueString) {
+        onValueUpdate(sessionId, 'valorFotoExtra', zeroValueString);
+      }
+      if (currentValorTotalFotoExtra !== zeroValueString) {
+        onValueUpdate(sessionId, 'valorTotalFotoExtra', zeroValueString);
+      }
       return;
     }
 
@@ -40,16 +50,23 @@ export function AutoPhotoCalculator({
           regrasCongeladas
         );
         
-        // Atualizar valor unitário e total
-        onValueUpdate(sessionId, 'valorFotoExtra', `R$ ${resultado.valorUnitario.toFixed(2).replace('.', ',')}`);
-        onValueUpdate(sessionId, 'valorTotalFotoExtra', `R$ ${resultado.valorTotal.toFixed(2).replace('.', ',')}`);
+        const newValorUnitario = `R$ ${resultado.valorUnitario.toFixed(2).replace('.', ',')}`;
+        const newValorTotal = `R$ ${resultado.valorTotal.toFixed(2).replace('.', ',')}`;
+        
+        // Only update if values actually changed
+        if (currentValorFotoExtra !== newValorUnitario) {
+          onValueUpdate(sessionId, 'valorFotoExtra', newValorUnitario);
+        }
+        if (currentValorTotalFotoExtra !== newValorTotal) {
+          onValueUpdate(sessionId, 'valorTotalFotoExtra', newValorTotal);
+        }
         
         console.log('📸 Cálculo com regras congeladas:', {
           sessionId,
           quantidade,
           valorUnitario: resultado.valorUnitario,
           valorTotal: resultado.valorTotal,
-          regras: regrasCongeladas
+          changed: currentValorFotoExtra !== newValorUnitario || currentValorTotalFotoExtra !== newValorTotal
         });
       } else {
         console.log('🧮 Using current pricing rules');
@@ -59,20 +76,29 @@ export function AutoPhotoCalculator({
         const valorTotal = calcularTotalFotosExtras(quantidade, {});
         const valorUnitario = quantidade > 0 ? valorTotal / quantidade : 0;
         
-        onValueUpdate(sessionId, 'valorFotoExtra', `R$ ${valorUnitario.toFixed(2).replace('.', ',')}`);
-        onValueUpdate(sessionId, 'valorTotalFotoExtra', `R$ ${valorTotal.toFixed(2).replace('.', ',')}`);
+        const newValorUnitario = `R$ ${valorUnitario.toFixed(2).replace('.', ',')}`;
+        const newValorTotal = `R$ ${valorTotal.toFixed(2).replace('.', ',')}`;
+        
+        // Only update if values actually changed
+        if (currentValorFotoExtra !== newValorUnitario) {
+          onValueUpdate(sessionId, 'valorFotoExtra', newValorUnitario);
+        }
+        if (currentValorTotalFotoExtra !== newValorTotal) {
+          onValueUpdate(sessionId, 'valorTotalFotoExtra', newValorTotal);
+        }
         
         console.log('📸 Cálculo com regras atuais:', {
           sessionId,
           quantidade,
           valorUnitario,
-          valorTotal
+          valorTotal,
+          changed: currentValorFotoExtra !== newValorUnitario || currentValorTotalFotoExtra !== newValorTotal
         });
       }
     } catch (error) {
       console.error('❌ Erro no cálculo automático de fotos extras:', error);
     }
-  }, [sessionId, quantidade, regrasCongeladas, onValueUpdate]);
+  }, [sessionId, quantidade, regrasCongeladas, currentValorFotoExtra, currentValorTotalFotoExtra, onValueUpdate]);
 
   // Executar cálculo quando quantidade mudar
   useEffect(() => {
