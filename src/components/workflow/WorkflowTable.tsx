@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import debounce from 'lodash.debounce';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -840,6 +841,25 @@ export function WorkflowTable({
                   const ExtraPhotoQtyInput = () => {
                     const [localValue, setLocalValue] = useState(String(session.qtdFotosExtra || ''));
                     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+                    
+                    // Debounced save function for real-time updates
+                    const debouncedSave = useMemo(
+                      () => debounce((qtd: number) => {
+                        console.log('📸 Debounced save extra photo qty:', qtd, 'for session:', session.id);
+                        if (qtd !== session.qtdFotosExtra) {
+                          handleFieldUpdateStable(session.id, 'qtdFotosExtra', qtd);
+                        }
+                      }, 300),
+                      [session.id, session.qtdFotosExtra, handleFieldUpdateStable]
+                    );
+
+                    // Cleanup debounce on unmount
+                    useEffect(() => {
+                      return () => {
+                        debouncedSave.cancel();
+                      };
+                    }, [debouncedSave]);
+
                     const {
                       displayValue,
                       handleFocus,
@@ -849,13 +869,20 @@ export function WorkflowTable({
                       onChange: value => {
                         setLocalValue(value);
                         setHasUnsavedChanges(value !== String(session.qtdFotosExtra || ''));
+                        
+                        // Trigger debounced save for real-time updates
+                        const qtd = parseInt(value) || 0;
+                        debouncedSave(qtd);
                       }
                     });
+                    
                     const saveValue = () => {
                       const qtd = parseInt(localValue) || 0;
+                      console.log('📸 Manual save extra photo qty:', qtd, 'for session:', session.id);
                       if (qtd !== session.qtdFotosExtra) {
+                        // Cancel any pending debounced save
+                        debouncedSave.cancel();
                         handleFieldUpdateStable(session.id, 'qtdFotosExtra', qtd);
-                        // O AutoPhotoCalculator vai calcular automaticamente
                       }
                       setHasUnsavedChanges(false);
                     };
@@ -904,9 +931,14 @@ export function WorkflowTable({
                     });
                   }
 
-                  // Mostrar como campo editável com o valor calculado como fallback
-                  const valorAtual = session.valorTotalFotoExtra || formatCurrency(valorCalculado);
-                  return renderEditableInput(session, 'valorTotalFotoExtra', valorAtual, 'text', 'R$ 0,00');
+                  // Exibir valor da sessão ou calculado em tempo real  
+                  const displayTotalValue = session.valorTotalFotoExtra && session.valorTotalFotoExtra !== 'R$ 0,00' 
+                    ? session.valorTotalFotoExtra 
+                    : formatCurrency(valorCalculado);
+                  
+                  return <span className={`text-xs ${session.valorTotalFotoExtra && session.valorTotalFotoExtra !== 'R$ 0,00' ? 'text-foreground' : 'text-muted-foreground'}`}>
+                    {displayTotalValue}
+                  </span>;
                 })())}
 
                 {renderCell('product', <Button variant="ghost" size="sm" onClick={() => {
