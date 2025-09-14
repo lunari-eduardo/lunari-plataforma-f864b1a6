@@ -32,7 +32,7 @@ interface WorkflowTableProps {
   onEditSession: (id: string) => void;
   onAddPayment: (id: string) => void;
   onDeleteSession?: (id: string, sessionTitle: string, paymentCount: number) => void;
-  onFieldUpdate: (id: string, field: string, value: any) => void;
+  onFieldUpdate: (id: string, field: string, value: any, silent?: boolean) => void;
   visibleColumns: Record<string, boolean>;
   columnWidths: Record<string, number>;
   onScrollChange: (scrollLeft: number) => void;
@@ -180,9 +180,10 @@ export function WorkflowTable({
     addPayment
   } = useAppContext();
 
-  // Stable field update callback
-  const handleFieldUpdateStable = useCallback((sessionId: string, field: string, value: any) => {
-    onFieldUpdate(sessionId, field, value);
+  // Stable field update callback with silent option
+  const handleFieldUpdateStable = useCallback((sessionId: string, field: string, value: any, silent: boolean = false) => {
+    console.log('🔧 WorkflowTable: Field update for session:', sessionId, 'field:', field, 'value:', value, 'silent:', silent);
+    onFieldUpdate(sessionId, field, value, silent);
   }, [onFieldUpdate]);
 
   // Atualizar larguras quando columnWidths prop mudar

@@ -136,10 +136,16 @@ export const useWorkflowRealtime = () => {
   }, []);
 
   // Update session with field mapping and sanitization
-  const updateSession = useCallback(async (id: string, updates: any) => {
+  const updateSession = useCallback(async (id: string, updates: any, silent: boolean = false) => {
     try {
       const { data: user } = await supabase.auth.getUser();
       if (!user?.user) throw new Error('User not authenticated');
+
+      // Find current session to perform diff check
+      const currentSession = sessions.find(s => s.id === id);
+      if (!currentSession) {
+        console.warn('⚠️ Session not found for diff check:', id);
+      }
 
       // Create sanitized update map
       const sanitizedUpdates: Partial<WorkflowSession> = {};
@@ -164,6 +170,9 @@ export const useWorkflowRealtime = () => {
               sanitizedUpdates.pacote = value; // Store as-is if not found
             }
             }
+            break;
+          case 'valorTotal':  // Handle direct valor_total updates
+            sanitizedUpdates.valor_total = Number(value) || 0;
             break;
           case 'valorPacote':
             // Parse currency string to number for valor_total
@@ -235,23 +244,28 @@ export const useWorkflowRealtime = () => {
         return;
       }
 
-      // Check if values actually changed to prevent unnecessary updates
-      const currentSession = sessions.find(s => s.id === id);
+      // Perform diff check to avoid unnecessary updates
       if (currentSession) {
-        const hasChanges = Object.entries(sanitizedUpdates).some(([key, value]) => {
-          const currentValue = (currentSession as any)[key];
-          // Handle deep comparison for objects
-          if (typeof value === 'object' && typeof currentValue === 'object') {
-            return JSON.stringify(value) !== JSON.stringify(currentValue);
+        let hasChanges = false;
+        const fieldsToCheck = ['pacote', 'valor_total', 'valor_pago', 'qtd_fotos_extra', 'valor_foto_extra', 'valor_total_foto_extra', 'produtos_incluidos', 'categoria', 'descricao', 'status'];
+        
+        for (const field of fieldsToCheck) {
+          const newValue = sanitizedUpdates[field as keyof WorkflowSession];
+          const currentValue = currentSession[field as keyof WorkflowSession];
+          
+          if (newValue !== undefined && JSON.stringify(newValue) !== JSON.stringify(currentValue)) {
+            hasChanges = true;
+            break;
           }
-          return currentValue !== value;
-        });
+        }
         
         if (!hasChanges) {
-          console.log('No actual changes detected, skipping update');
+          console.log('📝 No changes detected, skipping update for session:', id);
           return;
         }
       }
+
+      console.log('🔄 Updating session:', id, 'with sanitized updates:', sanitizedUpdates, 'silent:', silent);
 
       sanitizedUpdates.updated_by = user.user.id;
 
@@ -267,21 +281,25 @@ export const useWorkflowRealtime = () => {
         session.id === id ? { ...session, ...sanitizedUpdates } : session
       ));
 
-      // Single toast for user-initiated updates only
-      toast({
-        title: "Sessão atualizada",
-        description: "Sessão atualizada com sucesso.",
-      });
+      // Only show toast if not silent (user-initiated action)
+      if (!silent) {
+        toast({
+          title: "Sessão atualizada",
+          description: "Sessão atualizada com sucesso.",
+        });
+      }
     } catch (err) {
       console.error('Error updating session:', err);
-      toast({
-        title: "Erro ao atualizar sessão",
-        description: err instanceof Error ? err.message : 'Failed to update session',
-        variant: "destructive",
-      });
+      if (!silent) {
+        toast({
+          title: "Erro ao atualizar sessão",
+          description: err instanceof Error ? err.message : 'Failed to update session',
+          variant: "destructive",
+        });
+      }
       throw err;
     }
-  }, []);
+  }, [sessions]);
 
   // Delete session with flexible options
   const deleteSession = useCallback(async (id: string, includePayments: boolean = false) => {
