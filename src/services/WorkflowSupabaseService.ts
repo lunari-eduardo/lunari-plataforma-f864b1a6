@@ -172,6 +172,17 @@ export class WorkflowSupabaseService {
         console.log('✅ Initial transaction created for paid amount:', paidAmount);
       }
 
+      // Update appointment with session_id for bidirectional linking
+      if (data) {
+        await supabase
+          .from('appointments')
+          .update({ session_id: data.session_id })
+          .eq('id', appointmentId)
+          .eq('user_id', user.user.id);
+        
+        console.log('✅ Appointment updated with session_id:', data.session_id);
+      }
+
       console.log('✅ Workflow session created from appointment:', data);
       return data;
 

@@ -11,6 +11,7 @@ import { StatusBadge } from "@/components/workflow/StatusBadge";
 import { toast } from 'sonner';
 import { useNumberInput } from '@/hooks/useNumberInput';
 import { useOrcamentos } from '@/hooks/useOrcamentos';
+import { useAppointmentWorkflowInfo } from '@/hooks/useAppointmentWorkflowInfo';
 import { AppointmentDeleteConfirmModal } from './AppointmentDeleteConfirmModal';
 import { Appointment } from '@/hooks/useAgenda';
 
@@ -38,6 +39,7 @@ export default function AppointmentDetails({
   onDelete
 }: AppointmentDetailsProps) {
   const { pacotes } = useOrcamentos();
+  const { workflowInfo } = useAppointmentWorkflowInfo(appointment.id);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     date: appointment.date,
@@ -269,7 +271,9 @@ export default function AppointmentDetails({
           sessionId: appointment.sessionId,
           title: appointment.title,
           clientName: appointment.client,
-          date: format(appointment.date, "dd/MM/yyyy", { locale: ptBR })
+          date: format(appointment.date, "dd/MM/yyyy", { locale: ptBR }),
+          hasWorkflowSession: workflowInfo.hasSession,
+          hasPayments: workflowInfo.hasPayments
         }}
       />
     </div>;

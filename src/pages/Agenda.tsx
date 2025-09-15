@@ -15,6 +15,7 @@ import { useSwipeNavigation } from "@/hooks/useSwipeNavigation";
 import { useAgendaNavigation } from "@/hooks/useAgendaNavigation";
 import { useAgendaModals } from "@/hooks/useAgendaModals";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
+import { DataIntegrityPanel } from "@/components/agenda/DataIntegrityPanel";
 import { Orcamento } from '@/types/orcamento';
 
 export default function Agenda() {
@@ -132,7 +133,7 @@ export default function Agenda() {
 
   // Handle appointment deletion
   const handleDeleteAppointment = useCallback(async (id: string, preservePayments?: boolean) => {
-    await deleteAppointment(id);
+    await deleteAppointment(id, preservePayments);
     setIsDetailsOpen(false);
     setIsBudgetAppointmentModalOpen(false);
   }, [deleteAppointment, setIsDetailsOpen, setIsBudgetAppointmentModalOpen]);
@@ -220,6 +221,11 @@ export default function Agenda() {
         {/* Content container with swipe support */}
         <div className="mt-4" {...(isMobile || isTablet) && view !== 'year' ? swipeHandlers : {}}>
           {renderView()}
+        </div>
+        
+        {/* Data integrity panel */}
+        <div className="mt-4">
+          <DataIntegrityPanel />
         </div>
       </Card>
 

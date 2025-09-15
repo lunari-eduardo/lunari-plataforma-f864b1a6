@@ -29,8 +29,8 @@ export class AgendaService {
     await this.adapter.updateAppointment(id, updates);
   }
 
-  async deleteAppointment(id: string): Promise<void> {
-    await this.adapter.deleteAppointment(id);
+  async deleteAppointment(id: string, preservePayments?: boolean): Promise<void> {
+    await this.adapter.deleteAppointment(id, preservePayments);
   }
 
   // Availability

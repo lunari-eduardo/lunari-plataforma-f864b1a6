@@ -111,10 +111,79 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
     if (error) throw error;
   }
 
-  async deleteAppointment(id: string): Promise<void> {
+  async deleteAppointment(id: string, preservePayments?: boolean): Promise<void> {
     const { data: user } = await supabase.auth.getUser();
     if (!user?.user) throw new Error('User not authenticated');
 
+    // First, find the appointment to get its session data
+    const { data: appointment, error: appointmentError } = await supabase
+      .from('appointments')
+      .select('*')
+      .eq('id', id)
+      .eq('user_id', user.user.id)
+      .single();
+
+    if (appointmentError || !appointment) {
+      console.error('❌ Appointment not found for deletion:', appointmentError);
+      throw appointmentError;
+    }
+
+    console.log('🗑️ [DeleteAppointment] Starting deletion process:', {
+      appointmentId: id,
+      sessionId: appointment.session_id,
+      preservePayments: preservePayments ?? false
+    });
+
+    // Find related workflow session by appointment_id or session_id
+    const { data: workflowSession } = await supabase
+      .from('clientes_sessoes')
+      .select('*')
+      .eq('user_id', user.user.id)
+      .or(`appointment_id.eq.${id},session_id.eq.${appointment.session_id}`)
+      .maybeSingle();
+
+    if (workflowSession) {
+      console.log('🔍 Found related workflow session:', workflowSession.id);
+
+      if (preservePayments) {
+        // Preserve payments: unlink appointment but keep session and transactions
+        console.log('💾 Preserving payments - unlinking appointment from session');
+        
+        await supabase
+          .from('clientes_sessoes')
+          .update({ 
+            appointment_id: null,
+            status: 'cancelado',
+            descricao: `${workflowSession.descricao || ''} (Agendamento cancelado)`.trim()
+          })
+          .eq('id', workflowSession.id);
+
+        console.log('✅ Appointment unlinked from session, payments preserved');
+      } else {
+        // Delete everything: session and related transactions
+        console.log('🗑️ Deleting session and all related data');
+        
+        // Delete transactions first (foreign key constraint)
+        await supabase
+          .from('clientes_transacoes')
+          .delete()
+          .eq('session_id', workflowSession.session_id)
+          .eq('user_id', user.user.id);
+
+        // Delete the session
+        await supabase
+          .from('clientes_sessoes')
+          .delete()
+          .eq('id', workflowSession.id)
+          .eq('user_id', user.user.id);
+
+        console.log('✅ Session and transactions deleted completely');
+      }
+    } else {
+      console.log('ℹ️ No related workflow session found for appointment');
+    }
+
+    // Finally, delete the appointment
     const { error } = await supabase
       .from('appointments')
       .delete()
@@ -122,6 +191,8 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
       .eq('user_id', user.user.id);
 
     if (error) throw error;
+
+    console.log('✅ Appointment deleted successfully');
   }
 
   // Availability (using localStorage for now - will migrate later if needed)

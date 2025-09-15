@@ -15,6 +15,8 @@ interface AppointmentDeleteConfirmModalProps {
     title: string;
     clientName?: string;
     date: string;
+    hasWorkflowSession?: boolean;
+    hasPayments?: boolean;
   } | null;
 }
 
@@ -66,39 +68,61 @@ export function AppointmentDeleteConfirmModal({
               <p className="text-sm text-lunar-textSecondary">
                 Data: <span className="font-medium">{appointmentData.date}</span>
               </p>
+              {appointmentData.hasWorkflowSession && (
+                <div className="mt-2 p-2 bg-lunar-warning/10 border border-lunar-warning/20 rounded">
+                  <p className="text-xs text-lunar-warning">
+                    ⚠️ Este agendamento possui uma sessão no workflow
+                    {appointmentData.hasPayments && ' com histórico de pagamentos'}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
           <div className="space-y-4">
-            <p className="text-sm font-medium text-lunar-text">
-              O que deseja fazer com os dados financeiros desta sessão?
-            </p>
+            {appointmentData.hasWorkflowSession ? (
+              <p className="text-sm font-medium text-lunar-text">
+                O que deseja fazer com os dados do workflow?
+              </p>
+            ) : (
+              <p className="text-sm font-medium text-lunar-text">
+                Confirmar exclusão do agendamento?
+              </p>
+            )}
             
-            <RadioGroup value={preservePayments} onValueChange={(value) => setPreservePayments(value as 'preserve' | 'remove')}>
-              <div className="flex items-center space-x-2 p-3 rounded-lg border border-lunar-border bg-lunar-surface/50">
-                <RadioGroupItem value="preserve" id="preserve" />
-                <Label htmlFor="preserve" className="flex-1 cursor-pointer">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-lunar-text">Preservar histórico de pagamentos</p>
-                    <p className="text-xs text-lunar-textSecondary">
-                      Remove o agendamento mas mantém os pagamentos registrados como "agendamento cancelado"
-                    </p>
-                  </div>
-                </Label>
+            {appointmentData.hasWorkflowSession ? (
+              <RadioGroup value={preservePayments} onValueChange={(value) => setPreservePayments(value as 'preserve' | 'remove')}>
+                <div className="flex items-center space-x-2 p-3 rounded-lg border border-lunar-border bg-lunar-surface/50">
+                  <RadioGroupItem value="preserve" id="preserve" />
+                  <Label htmlFor="preserve" className="flex-1 cursor-pointer">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-lunar-text">Cancelar agendamento (preservar workflow)</p>
+                      <p className="text-xs text-lunar-textSecondary">
+                        Remove apenas o agendamento. A sessão do workflow e pagamentos são mantidos como "cancelado"
+                      </p>
+                    </div>
+                  </Label>
+                </div>
+                
+                <div className="flex items-center space-x-2 p-3 rounded-lg border border-destructive/20 bg-destructive/5">
+                  <RadioGroupItem value="remove" id="remove" />
+                  <Label htmlFor="remove" className="flex-1 cursor-pointer">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-lunar-text">Excluir tudo permanentemente</p>
+                      <p className="text-xs text-lunar-textSecondary">
+                        Remove agendamento, sessão do workflow e todos os pagamentos relacionados
+                      </p>
+                    </div>
+                  </Label>
+                </div>
+              </RadioGroup>
+            ) : (
+              <div className="p-3 rounded-lg border border-lunar-border bg-lunar-surface/50">
+                <p className="text-sm text-lunar-text">
+                  Este agendamento será excluído permanentemente.
+                </p>
               </div>
-              
-              <div className="flex items-center space-x-2 p-3 rounded-lg border border-destructive/20 bg-destructive/5">
-                <RadioGroupItem value="remove" id="remove" />
-                <Label htmlFor="remove" className="flex-1 cursor-pointer">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-lunar-text">Excluir completamente</p>
-                    <p className="text-xs text-lunar-textSecondary">
-                      Remove o agendamento e todos os dados financeiros permanentemente
-                    </p>
-                  </div>
-                </Label>
-              </div>
-            </RadioGroup>
+            )}
           </div>
         </div>
 
@@ -117,7 +141,10 @@ export function AppointmentDeleteConfirmModal({
             ) : (
               <>
                 <Trash2 className="h-4 w-4" />
-                {preservePayments === 'preserve' ? 'Cancelar Agendamento' : 'Excluir Completamente'}
+                {appointmentData.hasWorkflowSession 
+                  ? (preservePayments === 'preserve' ? 'Cancelar Agendamento' : 'Excluir Tudo')
+                  : 'Confirmar Exclusão'
+                }
               </>
             )}
           </Button>

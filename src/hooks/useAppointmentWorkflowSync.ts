@@ -28,23 +28,40 @@ export const useAppointmentWorkflowSync = () => {
         .from('appointments')
         .select('*')
         .eq('user_id', user.user.id)
-        .eq('status', 'confirmado')
-        .is('session_id', null); // Apenas agendamentos sem session_id
+        .eq('status', 'confirmado');
 
       if (appointmentsError) {
         console.error('❌ [AppointmentSync] Error fetching appointments:', appointmentsError);
         return;
       }
 
-      console.log(`📋 [AppointmentSync] Found ${appointments?.length || 0} confirmed appointments without sessions`);
+      // Filter to only appointments that don't have corresponding sessions
+      const appointmentsNeedingSync = [];
+      if (appointments && appointments.length > 0) {
+        for (const appointment of appointments) {
+          // Check if this appointment already has a session
+          const { data: existingSession } = await supabase
+            .from('clientes_sessoes')
+            .select('id')
+            .eq('user_id', user.user.id)
+            .or(`appointment_id.eq.${appointment.id},session_id.eq.${appointment.session_id}`)
+            .maybeSingle();
 
-      if (!appointments || appointments.length === 0) {
+          if (!existingSession) {
+            appointmentsNeedingSync.push(appointment);
+          }
+        }
+      }
+
+      console.log(`📋 [AppointmentSync] Found ${appointmentsNeedingSync.length} confirmed appointments without sessions`);
+
+      if (appointmentsNeedingSync.length === 0) {
         console.log('✅ [AppointmentSync] No appointments to sync');
         return;
       }
 
       // Create sessions for appointments that don't have them
-      for (const appointment of appointments) {
+      for (const appointment of appointmentsNeedingSync) {
         console.log(`📝 [AppointmentSync] Creating session for appointment ${appointment.id}`);
         
         try {
@@ -89,15 +106,27 @@ export const useAppointmentWorkflowSync = () => {
             hasSessionId: !!appointment.session_id
           });
           
-          // Check for status transition to 'confirmado' and no existing session
-          if (newStatus === 'confirmado' && oldStatus !== 'confirmado' && !appointment.session_id) {
-            console.log('🆕 [AppointmentSync] Appointment confirmed, creating workflow session...');
+          // Check for status transition to 'confirmado'
+          if (newStatus === 'confirmado' && oldStatus !== 'confirmado') {
+            console.log('🆕 [AppointmentSync] Appointment confirmed, checking for existing session...');
             
-            try {
-              const newSession = await WorkflowSupabaseService.createSessionFromAppointment(appointment.id, appointment);
-              console.log('✅ [AppointmentSync] Session created for confirmed appointment:', newSession?.id);
-            } catch (error) {
-              console.error('❌ [AppointmentSync] Error creating session from confirmed appointment:', error);
+            // Check if session already exists before creating
+            const { data: existingSession } = await supabase
+              .from('clientes_sessoes')
+              .select('id')
+              .eq('user_id', appointment.user_id)
+              .or(`appointment_id.eq.${appointment.id},session_id.eq.${appointment.session_id}`)
+              .maybeSingle();
+
+            if (!existingSession) {
+              try {
+                const newSession = await WorkflowSupabaseService.createSessionFromAppointment(appointment.id, appointment);
+                console.log('✅ [AppointmentSync] Session created for confirmed appointment:', newSession?.id);
+              } catch (error) {
+                console.error('❌ [AppointmentSync] Error creating session from confirmed appointment:', error);
+              }
+            } else {
+              console.log('ℹ️ [AppointmentSync] Session already exists for appointment:', appointment.id);
             }
           }
         }
@@ -116,14 +145,26 @@ export const useAppointmentWorkflowSync = () => {
           console.log('📊 [AppointmentSync] New appointment inserted:', appointment.id, 'status:', appointment.status);
           
           // Check if new appointment is already confirmed and needs a session
-          if (appointment.status === 'confirmado' && !appointment.session_id) {
-            console.log('🆕 [AppointmentSync] New confirmed appointment without session, creating session...');
+          if (appointment.status === 'confirmado') {
+            console.log('🆕 [AppointmentSync] New confirmed appointment, checking for existing session...');
             
-            try {
-              const newSession = await WorkflowSupabaseService.createSessionFromAppointment(appointment.id, appointment);
-              console.log('✅ [AppointmentSync] Session created for new confirmed appointment:', newSession?.id);
-            } catch (error) {
-              console.error('❌ [AppointmentSync] Error creating session from new confirmed appointment:', error);
+            // Check if session already exists before creating
+            const { data: existingSession } = await supabase
+              .from('clientes_sessoes')
+              .select('id')
+              .eq('user_id', appointment.user_id)
+              .or(`appointment_id.eq.${appointment.id},session_id.eq.${appointment.session_id}`)
+              .maybeSingle();
+
+            if (!existingSession) {
+              try {
+                const newSession = await WorkflowSupabaseService.createSessionFromAppointment(appointment.id, appointment);
+                console.log('✅ [AppointmentSync] Session created for new confirmed appointment:', newSession?.id);
+              } catch (error) {
+                console.error('❌ [AppointmentSync] Error creating session from new confirmed appointment:', error);
+              }
+            } else {
+              console.log('ℹ️ [AppointmentSync] Session already exists for new appointment:', appointment.id);
             }
           }
         }

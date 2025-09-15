@@ -11,7 +11,7 @@ export abstract class AgendaStorageAdapter {
   abstract loadAppointments(): Promise<Appointment[]>;
   abstract saveAppointment(appointment: Appointment): Promise<Appointment>;
   abstract updateAppointment(id: string, updates: Partial<Appointment>): Promise<void>;
-  abstract deleteAppointment(id: string): Promise<void>;
+  abstract deleteAppointment(id: string, preservePayments?: boolean): Promise<void>;
 
   // Availability
   abstract loadAvailabilitySlots(): Promise<AvailabilitySlot[]>;

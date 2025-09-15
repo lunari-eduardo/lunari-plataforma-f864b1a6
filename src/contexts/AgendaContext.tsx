@@ -15,7 +15,7 @@ interface AgendaContextType {
   appointments: Appointment[];
   addAppointment: (appointmentData: Omit<Appointment, 'id'>) => Promise<Appointment>;
   updateAppointment: (id: string, updates: Partial<Appointment>) => Promise<void>;
-  deleteAppointment: (id: string) => Promise<void>;
+  deleteAppointment: (id: string, preservePayments?: boolean) => Promise<void>;
   
   // Availability
   availability: AvailabilitySlot[];
@@ -139,9 +139,9 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
     }
   }, []);
 
-  const deleteAppointment = useCallback(async (id: string) => {
+  const deleteAppointment = useCallback(async (id: string, preservePayments?: boolean) => {
     try {
-      await agendaService.deleteAppointment(id);
+      await agendaService.deleteAppointment(id, preservePayments);
       setAppointments(prev => prev.filter(app => app.id !== id));
     } catch (error) {
       console.error('❌ Erro ao deletar appointment:', error);
