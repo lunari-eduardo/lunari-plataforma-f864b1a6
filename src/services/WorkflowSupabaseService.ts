@@ -110,6 +110,13 @@ export class WorkflowSupabaseService {
         }
       }
 
+      // Freeze complete package and product data
+      const { pricingFreezingService } = await import('@/services/PricingFreezingService');
+      const regrasCongeladas = await pricingFreezingService.congelarDadosCompletos(
+        appointmentData.package_id,
+        categoria
+      );
+
       // Create session record with package ID for proper linking
       const sessionData = {
         user_id: user.user.id,
@@ -125,6 +132,7 @@ export class WorkflowSupabaseService {
         valor_total: valorTotal,
         valor_pago: Number(appointmentData.paid_amount) || 0,
         produtos_incluidos: packageData?.produtos_incluidos || [],
+        regras_congeladas: regrasCongeladas as any,
         updated_by: user.user.id
       };
 

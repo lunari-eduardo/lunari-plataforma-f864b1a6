@@ -10,11 +10,25 @@ import { SessionData } from '@/types/workflow';
 export const useWorkflowPackageData = () => {
   const { pacotes, categorias, isLoadingPacotes, isLoadingCategorias } = useConfiguration();
 
-  // Helper function to resolve package data
+  // Helper function to resolve package data with frozen data priority
   const resolvePackageData = useMemo(() => {
     return (session: WorkflowSession) => {
       console.log('📦 Resolving package data for session:', session.id, 'package:', session.pacote);
       
+      // PRIORITY 1: Use frozen data if available
+      if (session.regras_congeladas?.pacote) {
+        const frozenPackage = session.regras_congeladas.pacote;
+        console.log('❄️ Using frozen package data:', frozenPackage);
+        
+        return {
+          packageName: frozenPackage.nome,
+          packageValue: frozenPackage.valorBase,
+          packageFotoExtraValue: frozenPackage.valorFotoExtra,
+          categoria: frozenPackage.categoria
+        };
+      }
+      
+      // PRIORITY 2: Dynamic resolution for sessions without frozen data
       let packageName = session.pacote || '';
       let packageValue = session.valor_total || 0;
       let packageFotoExtraValue = 35;
@@ -29,7 +43,7 @@ export const useWorkflowPackageData = () => {
         );
         
         if (pkg) {
-          console.log('📦 Found package for session:', pkg.nome, 'ID:', pkg.id);
+          console.log('📦 Found package for session (dynamic):', pkg.nome, 'ID:', pkg.id);
           packageName = pkg.nome;
           packageValue = Number(pkg.valor_base) || session.valor_total || 0;
           packageFotoExtraValue = Number(pkg.valor_foto_extra) || 35;
@@ -64,10 +78,14 @@ export const useWorkflowPackageData = () => {
     };
   }, [pacotes, categorias]);
 
-  // Convert session to SessionData with proper package resolution
+  // Convert session to SessionData with frozen data priority
   const convertSessionToData = useMemo(() => {
     return (session: WorkflowSession): SessionData => {
       const packageData = resolvePackageData(session);
+      
+      // Check for frozen product data
+      const frozenProducts = session.regras_congeladas?.produtos || [];
+      const produtosList = frozenProducts.length > 0 ? frozenProducts : (session.produtos_incluidos || []);
       
       const converted: SessionData = {
         id: session.id,
@@ -84,7 +102,7 @@ export const useWorkflowPackageData = () => {
         // CORREÇÃO: Usar packageName resolvido mas manter referência original se necessário  
         pacote: packageData.packageName || session.pacote || '',
         valorPacote: `R$ ${(packageData.packageValue || session.valor_total || 0).toFixed(2).replace('.', ',')}`,
-        // CORREÇÃO: Priorizar valor da sessão, fallback para valor do pacote
+        // CORREÇÃO: Priorizar valor da sessão, fallback para valor do pacote ou frozen data
         valorFotoExtra: session.valor_foto_extra ? 
           `R$ ${Number(session.valor_foto_extra).toFixed(2).replace('.', ',')}` : 
           `R$ ${packageData.packageFotoExtraValue.toFixed(2).replace('.', ',')}`,
@@ -106,12 +124,12 @@ export const useWorkflowPackageData = () => {
         restante: `R$ ${((session.valor_total || 0) - (session.valor_pago || 0)).toFixed(2).replace('.', ',')}`,
         desconto: 0,
         pagamentos: [],
-        // CORREÇÃO: Garantir que produtos incluídos sejam preservados corretamente
-        produtosList: session.produtos_incluidos || [],
+        // PRIORITY: Use frozen product data if available
+        produtosList: produtosList,
         clienteId: session.cliente_id
       };
 
-      console.log('✅ Converted session to SessionData:', converted.id, 'package:', converted.pacote, 'category:', converted.categoria);
+      console.log('✅ Converted session to SessionData:', converted.id, 'package:', converted.pacote, 'category:', converted.categoria, 'frozen data:', !!session.regras_congeladas?.pacote);
       return converted;
     };
   }, [resolvePackageData]);

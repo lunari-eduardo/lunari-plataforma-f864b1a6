@@ -101,8 +101,11 @@ export const useWorkflowRealtime = () => {
       // Import pricing freezing service
       const { pricingFreezingService } = await import('@/services/PricingFreezingService');
       
-      // Freeze current pricing rules for this session
-      const regrasCongeladas = pricingFreezingService.congelarRegrasAtuais(sessionData.categoria);
+      // Freeze complete data including package and products
+      const regrasCongeladas = await pricingFreezingService.congelarDadosCompletos(
+        sessionData.pacote,
+        sessionData.categoria
+      );
 
       const { data, error } = await supabase
         .from('clientes_sessoes')
@@ -166,6 +169,16 @@ export const useWorkflowRealtime = () => {
               if (pkg.valor_base) {
                 sanitizedUpdates.valor_total = Number(pkg.valor_base);
               }
+              
+              // CRITICAL: Freeze new package data when package changes
+              const { pricingFreezingService } = await import('@/services/PricingFreezingService');
+              const novasRegrasCongeladas = await pricingFreezingService.congelarDadosCompletos(
+                pkg.id,
+                currentSession?.categoria
+              );
+              sanitizedUpdates.regras_congeladas = novasRegrasCongeladas as any;
+              
+              console.log('📦 Package changed - freezing new data:', novasRegrasCongeladas);
             } else {
               sanitizedUpdates.pacote = value; // Store as-is if not found
             }
