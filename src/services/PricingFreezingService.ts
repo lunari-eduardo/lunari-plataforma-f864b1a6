@@ -414,6 +414,24 @@ class PricingFreezingService {
       throw error;
     }
   }
+
+  /**
+   * Re-freeze only photo extra pricing model with current pricing rules
+   * Preserves package and product data, updates only photo extra pricing
+   */
+  async recongelarApenasModeloPrecificacao(regrasAtuais: RegrasCongeladas, categoria?: string): Promise<RegrasCongeladas> {
+    console.log('🎯 Smart re-freezing: updating only photo extra pricing model', { categoria });
+    
+    // Keep ALL existing frozen data
+    const regrasAtualizadas = { ...regrasAtuais };
+    
+    // Update ONLY the photo extra pricing model with current rules
+    console.log('📊 Freezing current photo extra pricing model for category:', categoria);
+    regrasAtualizadas.modeloPrecoFotoExtra = this.congelarRegrasPrecoFotoExtra(categoria);
+    
+    console.log('✅ Photo extra pricing model updated with current rules:', regrasAtualizadas.modeloPrecoFotoExtra);
+    return regrasAtualizadas;
+  }
 }
 
 export const pricingFreezingService = new PricingFreezingService();

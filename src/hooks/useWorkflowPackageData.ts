@@ -15,11 +15,12 @@ export const useWorkflowPackageData = () => {
     return (session: WorkflowSession) => {
       console.log('📦 Resolving package data for session:', session.id, 'package:', session.pacote);
       
-      // CRITICAL: ABSOLUTE PRIORITY for frozen data - never override
+      // CRITICAL: ABSOLUTE PRIORITY for frozen data - NEVER override with dynamic data
       if (session.regras_congeladas?.pacote) {
         const frozenPackage = session.regras_congeladas.pacote;
-        console.log('❄️ Using FROZEN package data (ABSOLUTE PRIORITY):', frozenPackage);
+        console.log('❄️ Using FROZEN package data (ABSOLUTE PRIORITY - NO FALLBACKS):', frozenPackage);
         
+        // ALWAYS return frozen data when it exists - no dynamic resolution
         return {
           packageName: frozenPackage.nome,
           packageValue: frozenPackage.valorBase,
@@ -28,8 +29,8 @@ export const useWorkflowPackageData = () => {
         };
       }
       
-      // FALLBACK: Dynamic resolution ONLY when no frozen data exists
-      console.log('🔄 No frozen data - using dynamic resolution');
+      // Dynamic resolution ONLY for new sessions without frozen data
+      console.log('🔄 No frozen data - using dynamic resolution for new session');
       let packageName = session.pacote || '';
       let packageValue = session.valor_total || 0;
       let packageFotoExtraValue = 35;
@@ -43,7 +44,7 @@ export const useWorkflowPackageData = () => {
         );
         
         if (pkg) {
-          console.log('📦 Found package for session (dynamic):', pkg.nome, 'ID:', pkg.id);
+          console.log('📦 Found package for new session (dynamic):', pkg.nome, 'ID:', pkg.id);
           packageName = pkg.nome;
           packageValue = Number(pkg.valor_base) || session.valor_total || 0;
           packageFotoExtraValue = Number(pkg.valor_foto_extra) || 35;

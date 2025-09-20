@@ -110,12 +110,14 @@ export class WorkflowSupabaseService {
         }
       }
 
-      // Freeze complete package and product data
+      // Freeze complete package and product data with CURRENT pricing model
       const { pricingFreezingService } = await import('@/services/PricingFreezingService');
       const regrasCongeladas = await pricingFreezingService.congelarDadosCompletos(
         appointmentData.package_id,
         categoria
       );
+      
+      console.log('❄️ Frozen pricing data for new appointment:', regrasCongeladas);
 
       // Create session record with package ID for proper linking
       const sessionData = {
@@ -132,6 +134,10 @@ export class WorkflowSupabaseService {
         valor_total: valorTotal,
         valor_pago: Number(appointmentData.paid_amount) || 0,
         produtos_incluidos: packageData?.produtos_incluidos || [],
+        // Set default extra photo values from frozen pricing model
+        valor_foto_extra: regrasCongeladas.modeloPrecoFotoExtra?.valorFixo || packageData?.valor_foto_extra || 0,
+        qtd_fotos_extra: 0,
+        valor_total_foto_extra: 0,
         regras_congeladas: regrasCongeladas as any,
         updated_by: user.user.id
       };

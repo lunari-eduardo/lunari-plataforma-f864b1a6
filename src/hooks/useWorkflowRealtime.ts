@@ -170,8 +170,8 @@ export const useWorkflowRealtime = () => {
                 sanitizedUpdates.valor_total = Number(pkg.valor_base);
               }
               
-              // CRITICAL: Freeze new package data when package changes
-              // Use NEW package's category for correct extra photo pricing
+              // CRITICAL: Smart re-freezing when package changes
+              // Only re-freeze photo extra pricing, keep other frozen data stable
               const { configurationService } = await import('@/services/ConfigurationService');
               const categorias = configurationService.loadCategorias();
               let novaCategoria = currentSession?.categoria;
@@ -185,13 +185,25 @@ export const useWorkflowRealtime = () => {
               }
               
               const { pricingFreezingService } = await import('@/services/PricingFreezingService');
-              const novasRegrasCongeladas = await pricingFreezingService.congelarDadosCompletos(
-                pkg.id,
-                novaCategoria // Use NEW package's category, not old one
-              );
-              sanitizedUpdates.regras_congeladas = novasRegrasCongeladas as any;
               
-              console.log('📦 Package changed - freezing new data:', novasRegrasCongeladas);
+              // SMART RE-FREEZING: Only update photo extra pricing with NEW package category
+              if (currentSession?.regras_congeladas) {
+                console.log('🔄 Smart re-freezing: updating only photo extra pricing for new package');
+                const regrasAtualizadas = await pricingFreezingService.recongelarApenasModeloPrecificacao(
+                  currentSession.regras_congeladas,
+                  novaCategoria // Use NEW package's category for current pricing model
+                );
+                sanitizedUpdates.regras_congeladas = regrasAtualizadas as any;
+              } else {
+                console.log('🆕 Full freezing for new package (no existing frozen data)');
+                const novasRegrasCongeladas = await pricingFreezingService.congelarDadosCompletos(
+                  pkg.id,
+                  novaCategoria
+                );
+                sanitizedUpdates.regras_congeladas = novasRegrasCongeladas as any;
+              }
+              
+              console.log('📦 Package changed - updated frozen data with current pricing model');
             } else {
               sanitizedUpdates.pacote = value; // Store as-is if not found
             }
