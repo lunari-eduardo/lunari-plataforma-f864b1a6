@@ -19,6 +19,7 @@ import { formatToDayMonth, formatDateForDisplay } from "@/utils/dateUtils";
 import { calcularTotalFotosExtras, obterConfiguracaoPrecificacao, obterTabelaGlobal, obterTabelaCategoria, calcularValorPorFoto, formatarMoeda, calcularComRegrasProprias, migrarRegrasParaItemAntigo } from '@/utils/precificacaoUtils';
 import { RegrasCongeladasIndicator } from './RegrasCongeladasIndicator';
 import { AutoPhotoCalculator } from './AutoPhotoCalculator';
+import { DataFreezingStatus } from './DataFreezingStatus';
 import type { SessionData } from '@/types/workflow';
 import { useConfiguration } from '@/hooks/useConfiguration';
 import { usePricingMigration } from '@/hooks/usePricingMigration';
@@ -709,7 +710,8 @@ export function WorkflowTable({
 
                 {renderCell('category', <span className="text-xs text-center font-light">{session.categoria || 'N/A'}</span>)}
 
-                {renderCell('package', <WorkflowPackageCombobox key={`package-${session.id}-${session.pacote}`} value={session.pacote} onValueChange={packageData => {
+                {renderCell('package', <div className="flex flex-col gap-1">
+                  <WorkflowPackageCombobox key={`package-${session.id}-${session.pacote}`} value={session.pacote} onValueChange={packageData => {
                   console.log('🔄 Pacote selecionado:', packageData);
                   console.log('📦 ID do pacote sendo persistido:', packageData.id);
                   
@@ -756,7 +758,9 @@ export function WorkflowTable({
                     const valorUnit = parseFloat(packageData.valorFotoExtra.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
                     handleFieldUpdateStable(session.id, 'valorTotalFotoExtra', formatCurrency(session.qtdFotosExtra * valorUnit));
                   }
-                }} />)}
+                }} />
+                  <DataFreezingStatus regrasCongeladas={session.regrasDePrecoFotoExtraCongeladas} isCompact={true} />
+                </div>)}
 
                 {renderCell('packageValue', renderEditableInput(session, 'valorPacote', session.valorPacote || '', 'text', 'R$ 0,00', true))}
 

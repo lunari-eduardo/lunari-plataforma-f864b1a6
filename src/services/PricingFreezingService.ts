@@ -340,6 +340,36 @@ class PricingFreezingService {
   }
 
   /**
+   * Recongela apenas produtos mantendo outros dados estáveis
+   */
+  async recongelarProdutos(regrasAtuais?: RegrasCongeladas, novosProdutos?: any[]): Promise<RegrasCongeladas> {
+    try {
+      // Se não há regras atuais, criar novas
+      if (!regrasAtuais) {
+        return this.congelarDadosCompletos();
+      }
+
+      // Manter dados existentes e atualizar apenas produtos
+      const regrasAtualizadas = { ...regrasAtuais };
+      
+      if (novosProdutos) {
+        regrasAtualizadas.produtos = await this.congelarDadosProdutos(novosProdutos);
+        regrasAtualizadas.dataCongelamento = new Date().toISOString();
+        console.log('📦 Produtos recongelados:', regrasAtualizadas.produtos);
+      }
+
+      return regrasAtualizadas;
+    } catch (error) {
+      console.error('❌ Erro ao recongelar produtos:', error);
+      return regrasAtuais || {
+        modelo: 'completo',
+        dataCongelamento: new Date().toISOString(),
+        precificacaoFotoExtra: this.congelarRegrasPrecoFotoExtra()
+      };
+    }
+  }
+
+  /**
    * Verifica integridade dos dados congelados
    */
   async verificarIntegridade() {

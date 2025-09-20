@@ -13,7 +13,7 @@ interface DataFreezingStatusProps {
 }
 
 export const DataFreezingStatus = ({ regrasCongeladas, isCompact = false }: DataFreezingStatusProps) => {
-  const hasFrozenData = regrasCongeladas?.modelo === 'completo';
+  const hasFrozenData = regrasCongeladas?.modelo === 'completo' && regrasCongeladas?.pacote;
   const hasLegacyData = regrasCongeladas && regrasCongeladas.modelo !== 'completo';
   
   if (!regrasCongeladas) {

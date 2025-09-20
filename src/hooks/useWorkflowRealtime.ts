@@ -171,10 +171,23 @@ export const useWorkflowRealtime = () => {
               }
               
               // CRITICAL: Freeze new package data when package changes
+              // Use NEW package's category for correct extra photo pricing
+              const { configurationService } = await import('@/services/ConfigurationService');
+              const categorias = configurationService.loadCategorias();
+              let novaCategoria = currentSession?.categoria;
+              
+              if (pkg.categoria_id) {
+                const cat = categorias.find((c: any) => c.id === pkg.categoria_id);
+                if (cat) {
+                  novaCategoria = cat.nome;
+                  sanitizedUpdates.categoria = cat.nome; // Also update session category
+                }
+              }
+              
               const { pricingFreezingService } = await import('@/services/PricingFreezingService');
               const novasRegrasCongeladas = await pricingFreezingService.congelarDadosCompletos(
                 pkg.id,
-                currentSession?.categoria
+                novaCategoria // Use NEW package's category, not old one
               );
               sanitizedUpdates.regras_congeladas = novasRegrasCongeladas as any;
               
@@ -198,6 +211,16 @@ export const useWorkflowRealtime = () => {
             break;
           case 'produtosList':
             sanitizedUpdates.produtos_incluidos = value;
+            // CRITICAL: Re-freeze product data when products change
+            if (currentSession && Array.isArray(value)) {
+              const { pricingFreezingService } = await import('@/services/PricingFreezingService');
+              const regrasAtualizadas = await pricingFreezingService.recongelarProdutos(
+                currentSession.regras_congeladas,
+                value as any[]
+              );
+              sanitizedUpdates.regras_congeladas = regrasAtualizadas as any;
+              console.log('📦 Products changed - re-freezing product data');
+            }
             break;
           case 'descricao':
           case 'status':

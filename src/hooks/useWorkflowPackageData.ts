@@ -10,15 +10,15 @@ import { SessionData } from '@/types/workflow';
 export const useWorkflowPackageData = () => {
   const { pacotes, categorias, isLoadingPacotes, isLoadingCategorias } = useConfiguration();
 
-  // Helper function to resolve package data with frozen data priority
+  // Helper function to resolve package data with ABSOLUTE PRIORITY for frozen data
   const resolvePackageData = useMemo(() => {
     return (session: WorkflowSession) => {
       console.log('📦 Resolving package data for session:', session.id, 'package:', session.pacote);
       
-      // PRIORITY 1: Use frozen data if available
+      // CRITICAL: ABSOLUTE PRIORITY for frozen data - never override
       if (session.regras_congeladas?.pacote) {
         const frozenPackage = session.regras_congeladas.pacote;
-        console.log('❄️ Using frozen package data:', frozenPackage);
+        console.log('❄️ Using FROZEN package data (ABSOLUTE PRIORITY):', frozenPackage);
         
         return {
           packageName: frozenPackage.nome,
@@ -28,14 +28,14 @@ export const useWorkflowPackageData = () => {
         };
       }
       
-      // PRIORITY 2: Dynamic resolution for sessions without frozen data
+      // FALLBACK: Dynamic resolution ONLY when no frozen data exists
+      console.log('🔄 No frozen data - using dynamic resolution');
       let packageName = session.pacote || '';
       let packageValue = session.valor_total || 0;
       let packageFotoExtraValue = 35;
       let categoria = session.categoria || '';
 
       if (session.pacote && pacotes.length > 0) {
-        // CORREÇÃO: Melhorar busca de pacote - priorizar ID, fallback para nome
         const pkg = pacotes.find((p: any) => 
           p.id === session.pacote || 
           p.nome === session.pacote ||
@@ -48,7 +48,6 @@ export const useWorkflowPackageData = () => {
           packageValue = Number(pkg.valor_base) || session.valor_total || 0;
           packageFotoExtraValue = Number(pkg.valor_foto_extra) || 35;
           
-          // CORREÇÃO: Melhorar resolução de categoria
           if (pkg.categoria_id && categorias.length > 0) {
             const cat = categorias.find((c: any) => 
               c.id === pkg.categoria_id || 
@@ -59,12 +58,10 @@ export const useWorkflowPackageData = () => {
               console.log('📂 Resolved category from package:', categoria);
             }
           } else if (session.categoria) {
-            // Manter categoria da sessão se não conseguir resolver do pacote
             categoria = session.categoria;
           }
         } else {
           console.warn('📦 Package not found in configuration:', session.pacote);
-          // CORREÇÃO: Manter nome original para compatibilidade
           packageName = typeof session.pacote === 'string' ? session.pacote : '';
         }
       }
@@ -124,8 +121,10 @@ export const useWorkflowPackageData = () => {
         restante: `R$ ${((session.valor_total || 0) - (session.valor_pago || 0)).toFixed(2).replace('.', ',')}`,
         desconto: 0,
         pagamentos: [],
-        // PRIORITY: Use frozen product data if available
-        produtosList: produtosList,
+        // CRITICAL: Always prioritize frozen product data
+        produtosList: session.regras_congeladas?.produtos?.length > 0 ? 
+          session.regras_congeladas.produtos : 
+          (session.produtos_incluidos || []),
         clienteId: session.cliente_id
       };
 
