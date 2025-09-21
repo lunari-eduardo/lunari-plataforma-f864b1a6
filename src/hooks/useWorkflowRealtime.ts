@@ -168,54 +168,60 @@ export const useWorkflowRealtime = () => {
           case 'pacote':
             // Handle both package name and ID
             if (typeof value === 'string' && value) {
-            const packages = configurationService.loadPacotes();
-            const pkg = packages.find((p: any) => p.id === value || p.nome === value);
-            if (pkg) {
-              sanitizedUpdates.pacote = pkg.id; // Always store ID in database
-              // Also update valor_total if package found
-              if (pkg.valor_base) {
-                sanitizedUpdates.valor_total = Number(pkg.valor_base);
-              }
-              
-              // CRITICAL: Smart re-freezing when package changes
-              // Only re-freeze photo extra pricing, keep other frozen data stable
-              const { configurationService } = await import('@/services/ConfigurationService');
-              const categorias = configurationService.loadCategorias();
-              let novaCategoria = currentSession?.categoria;
-              
-              if (pkg.categoria_id) {
-                const cat = categorias.find((c: any) => c.id === pkg.categoria_id);
-                if (cat) {
-                  novaCategoria = cat.nome;
-                  sanitizedUpdates.categoria = cat.nome; // Also update session category
+              console.log('🔄 Processing package change:', value);
+              const packages = configurationService.loadPacotes();
+              const pkg = packages.find((p: any) => p.id === value || p.nome === value);
+              if (pkg) {
+                console.log('📦 Package found:', pkg.nome, 'ID:', pkg.id);
+                sanitizedUpdates.pacote = pkg.id; // Always store ID in database
+                
+                // Also update valor_total if package found
+                if (pkg.valor_base) {
+                  sanitizedUpdates.valor_total = Number(pkg.valor_base);
+                  console.log('💰 Updated valor_total:', sanitizedUpdates.valor_total);
                 }
+                
+                // CRITICAL: Smart re-freezing when package changes
+                const categorias = configurationService.loadCategorias();
+                let novaCategoria = currentSession?.categoria;
+                
+                if (pkg.categoria_id) {
+                  const cat = categorias.find((c: any) => c.id === pkg.categoria_id);
+                  if (cat) {
+                    novaCategoria = cat.nome;
+                    sanitizedUpdates.categoria = cat.nome; // Also update session category
+                  }
+                }
+                
+                const { pricingFreezingService } = await import('@/services/PricingFreezingService');
+                
+                // Always do complete re-freezing when package changes
+                console.log('❄️ Complete re-freezing for new package:', pkg.nome);
+                const novasRegrasCongeladas = await pricingFreezingService.congelarDadosCompletos(
+                  pkg.id,
+                  novaCategoria
+                );
+                sanitizedUpdates.regras_congeladas = novasRegrasCongeladas as any;
+                
+                // Initialize extra photo values from frozen rules
+                const valorFotoExtraInicial = pricingFreezingService.calcularValorFotoExtraComRegrasCongeladas(1, novasRegrasCongeladas).valorUnitario;
+                sanitizedUpdates.valor_foto_extra = valorFotoExtraInicial;
+                
+                // Recalculate photo extra values if needed
+                if (currentSession?.qtd_fotos_extra && currentSession.qtd_fotos_extra > 0) {
+                  const { valorUnitario, valorTotal } = pricingFreezingService.calcularValorFotoExtraComRegrasCongeladas(
+                    currentSession.qtd_fotos_extra,
+                    novasRegrasCongeladas
+                  );
+                  sanitizedUpdates.valor_foto_extra = valorUnitario;
+                  sanitizedUpdates.valor_total_foto_extra = valorTotal;
+                }
+                
+                console.log('✅ Package change processed successfully with frozen rules');
+              } else {
+                console.warn('⚠️ Package not found:', value);
+                sanitizedUpdates.pacote = value; // Store as-is if not found
               }
-              
-              const { pricingFreezingService } = await import('@/services/PricingFreezingService');
-              
-              // SMART RE-FREEZING: Only update photo extra pricing with NEW package category
-            // Always do complete re-freezing when package changes
-            console.log('🔄 Complete re-freezing for new package');
-            const novasRegrasCongeladas = await pricingFreezingService.congelarDadosCompletos(
-              pkg.id,
-              novaCategoria
-            );
-            sanitizedUpdates.regras_congeladas = novasRegrasCongeladas as any;
-            
-            // Recalculate photo extra values if needed
-            if (currentSession?.qtd_fotos_extra && currentSession.qtd_fotos_extra > 0) {
-              const { valorUnitario, valorTotal } = pricingFreezingService.calcularValorFotoExtraComRegrasCongeladas(
-                currentSession.qtd_fotos_extra,
-                novasRegrasCongeladas
-              );
-              sanitizedUpdates.valor_foto_extra = valorUnitario;
-              sanitizedUpdates.valor_total_foto_extra = valorTotal;
-            }
-            
-            console.log('📦 Package changed - complete re-freezing with current pricing model');
-            } else {
-              sanitizedUpdates.pacote = value; // Store as-is if not found
-            }
             }
             break;
           case 'valorTotal':  // Handle direct valor_total updates
@@ -404,7 +410,7 @@ export const useWorkflowRealtime = () => {
         session_id: sessionId,
         appointment_id: appointmentId,
         cliente_id: appointmentData.clienteId || '',
-        data_sessao: appointmentData.date,
+        data_sessao: typeof appointmentData.date === 'string' ? appointmentData.date : appointmentData.date.toISOString().split('T')[0],
         hora_sessao: appointmentData.time,
         categoria: appointmentData.categoria || '',
         pacote: appointmentData.pacote || '',

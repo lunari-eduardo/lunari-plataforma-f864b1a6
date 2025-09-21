@@ -125,7 +125,7 @@ export class WorkflowSupabaseService {
         session_id: sessionId,
         appointment_id: appointmentId,
         cliente_id: clienteId || '',
-        data_sessao: appointmentData.date,
+        data_sessao: typeof appointmentData.date === 'string' ? appointmentData.date : appointmentData.date.toISOString().split('T')[0],
         hora_sessao: appointmentData.time,
         categoria: categoria || appointmentData.type || 'Outros',
         pacote: appointmentData.package_id || '', // Store package_id for linking
@@ -135,7 +135,7 @@ export class WorkflowSupabaseService {
         valor_pago: Number(appointmentData.paid_amount) || 0,
         produtos_incluidos: packageData?.produtos_incluidos || [],
         // Set default extra photo values from frozen pricing model
-        valor_foto_extra: regrasCongeladas.modeloPrecoFotoExtra?.valorFixo || packageData?.valor_foto_extra || 0,
+        valor_foto_extra: regrasCongeladas.precificacaoFotoExtra?.valorFixo || packageData?.valor_foto_extra || 0,
         qtd_fotos_extra: 0,
         valor_total_foto_extra: 0,
         regras_congeladas: regrasCongeladas as any,
@@ -179,7 +179,7 @@ export class WorkflowSupabaseService {
             tipo: 'pagamento',
             valor: paidAmount,
             descricao: 'Entrada do agendamento',
-            data_transacao: appointmentData.date,
+            data_transacao: typeof appointmentData.date === 'string' ? appointmentData.date : appointmentData.date.toISOString().split('T')[0],
             updated_by: user.user.id
           });
         

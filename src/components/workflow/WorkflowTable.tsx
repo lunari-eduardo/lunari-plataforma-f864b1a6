@@ -714,12 +714,21 @@ export function WorkflowTable({
                   <WorkflowPackageCombobox key={`package-${session.id}-${session.pacote}`} value={session.pacote} onValueChange={packageData => {
                   console.log('🔄 Pacote selecionado:', packageData);
                   console.log('📦 ID do pacote sendo persistido:', packageData.id);
+                  console.log('📦 Session ID:', session.id);
+                  console.log('📦 Valor antes:', session.valorPacote);
                   
                   // CORREÇÃO 1: Usar ID do pacote para persistência correta
                   handleFieldUpdateStable(session.id, 'pacote', packageData.id || packageData.nome);
                   handleFieldUpdateStable(session.id, 'valorPacote', packageData.valor);
                   handleFieldUpdateStable(session.id, 'valorFotoExtra', packageData.valorFotoExtra);
                   handleFieldUpdateStable(session.id, 'categoria', packageData.categoria);
+                  
+                  console.log('📦 Chamando updates com:', {
+                    pacote: packageData.id || packageData.nome,
+                    valorPacote: packageData.valor,
+                    valorFotoExtra: packageData.valorFotoExtra,
+                    categoria: packageData.categoria
+                  });
 
                   // CORREÇÃO 2: INCLUIR PRODUTOS DO PACOTE usando dados real-time
                   if (packageData.id && packageData.produtosIncluidos?.length > 0) {
