@@ -108,8 +108,8 @@ export const useWorkflowPackageData = () => {
         qtdFotosExtra: session.qtd_fotos_extra || 0,
         valorTotalFotoExtra: session.valor_total_foto_extra ? 
           `R$ ${Number(session.valor_total_foto_extra).toFixed(2).replace('.', ',')}` : 'R$ 0,00',
-        // CORREÇÃO: Mapear regras congeladas
-        regrasDePrecoFotoExtraCongeladas: session.regras_congeladas,
+        // CORREÇÃO: Mapear regras congeladas - usar apenas precificacaoFotoExtra
+        regrasDePrecoFotoExtraCongeladas: session.regras_congeladas?.precificacaoFotoExtra || null,
         produto: '',
         qtdProduto: 0,
         valorTotalProduto: 'R$ 0,00',

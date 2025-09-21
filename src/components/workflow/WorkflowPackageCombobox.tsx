@@ -109,7 +109,7 @@ export function WorkflowPackageCombobox({
       </PopoverTrigger>
       <PopoverContent className="w-[200px] p-0 shadow-neumorphic border-0 bg-neumorphic-base z-[9999]">
         <Command className="bg-neumorphic-base">
-          <CommandInput placeholder="Buscar pacote..." className="h-8 text-xs border-0 bg-transparent focus:ring-0" />
+          <CommandInput placeholder="Buscar pacote..." className="h-8 text-xs border-0 bg-neumorphic-base focus:ring-0" />
           <CommandList>
             <CommandEmpty className="text-xs py-2 text-muted-foreground">
               {isLoadingPacotes ? 'Carregando pacotes...' : 'Nenhum pacote encontrado.'}

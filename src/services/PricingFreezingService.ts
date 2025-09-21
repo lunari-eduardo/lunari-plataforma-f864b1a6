@@ -427,7 +427,7 @@ class PricingFreezingService {
     
     // Update ONLY the photo extra pricing model with current rules
     console.log('📊 Freezing current photo extra pricing model for category:', categoria);
-    regrasAtualizadas.modeloPrecoFotoExtra = this.congelarRegrasPrecoFotoExtra(categoria);
+    regrasAtualizadas.precificacaoFotoExtra = this.congelarRegrasPrecoFotoExtra(categoria);
     
     console.log('✅ Photo extra pricing model updated with current rules:', regrasAtualizadas.modeloPrecoFotoExtra);
     return regrasAtualizadas;

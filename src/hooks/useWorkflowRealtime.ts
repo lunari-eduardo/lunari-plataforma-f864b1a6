@@ -107,6 +107,10 @@ export const useWorkflowRealtime = () => {
         sessionData.categoria
       );
 
+      // Initialize extra photo values with frozen rules
+      const valorFotoExtraInicial = regrasCongeladas ? 
+        pricingFreezingService.calcularValorFotoExtraComRegrasCongeladas(1, regrasCongeladas).valorUnitario : 0;
+
       const { data, error } = await supabase
         .from('clientes_sessoes')
         .insert({
@@ -114,6 +118,9 @@ export const useWorkflowRealtime = () => {
           user_id: user.user.id,
           updated_by: user.user.id,
           regras_congeladas: regrasCongeladas as any,
+          valor_foto_extra: valorFotoExtraInicial,
+          valor_total_foto_extra: 0,
+          qtd_fotos_extra: 0,
         })
         .select()
         .single();
@@ -187,23 +194,25 @@ export const useWorkflowRealtime = () => {
               const { pricingFreezingService } = await import('@/services/PricingFreezingService');
               
               // SMART RE-FREEZING: Only update photo extra pricing with NEW package category
-              if (currentSession?.regras_congeladas) {
-                console.log('🔄 Smart re-freezing: updating only photo extra pricing for new package');
-                const regrasAtualizadas = await pricingFreezingService.recongelarApenasModeloPrecificacao(
-                  currentSession.regras_congeladas,
-                  novaCategoria // Use NEW package's category for current pricing model
-                );
-                sanitizedUpdates.regras_congeladas = regrasAtualizadas as any;
-              } else {
-                console.log('🆕 Full freezing for new package (no existing frozen data)');
-                const novasRegrasCongeladas = await pricingFreezingService.congelarDadosCompletos(
-                  pkg.id,
-                  novaCategoria
-                );
-                sanitizedUpdates.regras_congeladas = novasRegrasCongeladas as any;
-              }
-              
-              console.log('📦 Package changed - updated frozen data with current pricing model');
+            // Always do complete re-freezing when package changes
+            console.log('🔄 Complete re-freezing for new package');
+            const novasRegrasCongeladas = await pricingFreezingService.congelarDadosCompletos(
+              pkg.id,
+              novaCategoria
+            );
+            sanitizedUpdates.regras_congeladas = novasRegrasCongeladas as any;
+            
+            // Recalculate photo extra values if needed
+            if (currentSession?.qtd_fotos_extra && currentSession.qtd_fotos_extra > 0) {
+              const { valorUnitario, valorTotal } = pricingFreezingService.calcularValorFotoExtraComRegrasCongeladas(
+                currentSession.qtd_fotos_extra,
+                novasRegrasCongeladas
+              );
+              sanitizedUpdates.valor_foto_extra = valorUnitario;
+              sanitizedUpdates.valor_total_foto_extra = valorTotal;
+            }
+            
+            console.log('📦 Package changed - complete re-freezing with current pricing model');
             } else {
               sanitizedUpdates.pacote = value; // Store as-is if not found
             }
