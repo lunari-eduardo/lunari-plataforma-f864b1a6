@@ -310,7 +310,7 @@ export const useWorkflowRealtime = () => {
       // Perform diff check to avoid unnecessary updates
       if (currentSession) {
         let hasChanges = false;
-        const fieldsToCheck = ['pacote', 'valor_total', 'valor_pago', 'qtd_fotos_extra', 'valor_foto_extra', 'valor_total_foto_extra', 'produtos_incluidos', 'categoria', 'descricao', 'status'];
+        const fieldsToCheck = ['pacote', 'valor_total', 'valor_pago', 'qtd_fotos_extra', 'valor_foto_extra', 'valor_total_foto_extra', 'produtos_incluidos', 'categoria', 'descricao', 'status', 'regras_congeladas'];
         
         for (const field of fieldsToCheck) {
           const newValue = sanitizedUpdates[field as keyof WorkflowSession];
@@ -410,7 +410,7 @@ export const useWorkflowRealtime = () => {
         session_id: sessionId,
         appointment_id: appointmentId,
         cliente_id: appointmentData.clienteId || '',
-        data_sessao: typeof appointmentData.date === 'string' ? appointmentData.date : appointmentData.date.toISOString().split('T')[0],
+        data_sessao: typeof appointmentData.date === 'string' ? appointmentData.date : `${appointmentData.date.getFullYear()}-${String(appointmentData.date.getMonth() + 1).padStart(2, '0')}-${String(appointmentData.date.getDate()).padStart(2, '0')}`,
         hora_sessao: appointmentData.time,
         categoria: appointmentData.categoria || '',
         pacote: appointmentData.pacote || '',

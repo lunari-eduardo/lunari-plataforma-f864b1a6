@@ -125,7 +125,7 @@ export class WorkflowSupabaseService {
         session_id: sessionId,
         appointment_id: appointmentId,
         cliente_id: clienteId || '',
-        data_sessao: typeof appointmentData.date === 'string' ? appointmentData.date : appointmentData.date.toISOString().split('T')[0],
+        data_sessao: typeof appointmentData.date === 'string' ? appointmentData.date : `${appointmentData.date.getFullYear()}-${String(appointmentData.date.getMonth() + 1).padStart(2, '0')}-${String(appointmentData.date.getDate()).padStart(2, '0')}`,
         hora_sessao: appointmentData.time,
         categoria: categoria || appointmentData.type || 'Outros',
         pacote: appointmentData.package_id || '', // Store package_id for linking
@@ -179,7 +179,7 @@ export class WorkflowSupabaseService {
             tipo: 'pagamento',
             valor: paidAmount,
             descricao: 'Entrada do agendamento',
-            data_transacao: typeof appointmentData.date === 'string' ? appointmentData.date : appointmentData.date.toISOString().split('T')[0],
+            data_transacao: typeof appointmentData.date === 'string' ? appointmentData.date : `${appointmentData.date.getFullYear()}-${String(appointmentData.date.getMonth() + 1).padStart(2, '0')}-${String(appointmentData.date.getDate()).padStart(2, '0')}`,
             updated_by: user.user.id
           });
         
