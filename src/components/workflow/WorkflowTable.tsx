@@ -711,62 +711,11 @@ export function WorkflowTable({
                 {renderCell('category', <span className="text-xs text-center font-light">{session.categoria || 'N/A'}</span>)}
 
                 {renderCell('package', <div className="flex flex-col gap-1">
-                  <WorkflowPackageCombobox key={`package-${session.id}-${session.pacote}`} value={session.pacote} onValueChange={packageData => {
-                  console.log('🔄 Pacote selecionado:', packageData);
-                  console.log('📦 ID do pacote sendo persistido:', packageData.id);
-                  console.log('📦 Session ID:', session.id);
-                  console.log('📦 Valor antes:', session.valorPacote);
+                <WorkflowPackageCombobox key={`package-${session.id}-${session.pacote}`} value={session.pacote} onValueChange={packageData => {
+                  console.log('🔄 Pacote selecionado - ID:', packageData.id);
                   
-                  // CORREÇÃO 1: Usar ID do pacote para persistência correta
+                  // CRITICAL FIX: Only call one update - let the hook handle everything else
                   handleFieldUpdateStable(session.id, 'pacote', packageData.id || packageData.nome);
-                  handleFieldUpdateStable(session.id, 'valorPacote', packageData.valor);
-                  handleFieldUpdateStable(session.id, 'valorFotoExtra', packageData.valorFotoExtra);
-                  handleFieldUpdateStable(session.id, 'categoria', packageData.categoria);
-                  
-                  console.log('📦 Chamando updates com:', {
-                    pacote: packageData.id || packageData.nome,
-                    valorPacote: packageData.valor,
-                    valorFotoExtra: packageData.valorFotoExtra,
-                    categoria: packageData.categoria
-                  });
-
-                  // CORREÇÃO 2: INCLUIR PRODUTOS DO PACOTE usando dados real-time
-                  if (packageData.id && packageData.produtosIncluidos?.length > 0) {
-                    console.log('📦 Incluindo produtos do pacote:', packageData.produtosIncluidos);
-                    
-                    const produtosList = packageData.produtosIncluidos.map((pi: any) => {
-                      // Buscar produto nos dados real-time
-                      const produto = productOptions.find(p => p.id === pi.produtoId);
-                      return {
-                        nome: produto?.nome || `Produto ID: ${pi.produtoId}`,
-                        quantidade: pi.quantidade || 1,
-                        valorUnitario: 0, // Produtos inclusos têm valor 0
-                        tipo: 'incluso' as const
-                      };
-                    });
-                    
-                    handleFieldUpdateStable(session.id, 'produtosList', produtosList);
-                    
-                    // Atualizar campo de produto principal (primeiro da lista)
-                    if (produtosList.length > 0) {
-                      const primeiroProduto = produtosList[0];
-                      handleFieldUpdateStable(session.id, 'produto', `${primeiroProduto.nome} (incluso no pacote)`);
-                      handleFieldUpdateStable(session.id, 'qtdProduto', primeiroProduto.quantidade);
-                      handleFieldUpdateStable(session.id, 'valorTotalProduto', 'R$ 0,00');
-                    }
-                  } else if (!packageData.id) {
-                    // Se limpou o pacote, limpar produtos inclusos
-                    handleFieldUpdateStable(session.id, 'produtosList', []);
-                    handleFieldUpdateStable(session.id, 'produto', '');
-                    handleFieldUpdateStable(session.id, 'qtdProduto', 0);
-                    handleFieldUpdateStable(session.id, 'valorTotalProduto', 'R$ 0,00');
-                  }
-
-                  // Recalcular total de fotos extras se houver quantidade
-                  if (session.qtdFotosExtra > 0) {
-                    const valorUnit = parseFloat(packageData.valorFotoExtra.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-                    handleFieldUpdateStable(session.id, 'valorTotalFotoExtra', formatCurrency(session.qtdFotosExtra * valorUnit));
-                  }
                 }} />
                   <DataFreezingStatus regrasCongeladas={session.regrasDePrecoFotoExtraCongeladas} isCompact={true} />
                 </div>)}

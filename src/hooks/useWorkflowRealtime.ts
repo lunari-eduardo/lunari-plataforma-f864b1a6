@@ -169,7 +169,11 @@ export const useWorkflowRealtime = () => {
             // Handle both package name and ID
             if (typeof value === 'string' && value) {
               console.log('🔄 Processing package change:', value);
-              const packages = configurationService.loadPacotes();
+              
+              // CRITICAL: Use async loading to ensure data is available
+              const packages = await configurationService.loadPacotesAsync();
+              const categorias = await configurationService.loadCategoriasAsync();
+              
               const pkg = packages.find((p: any) => p.id === value || p.nome === value);
               if (pkg) {
                 console.log('📦 Package found:', pkg.nome, 'ID:', pkg.id);
@@ -182,7 +186,6 @@ export const useWorkflowRealtime = () => {
                 }
                 
                 // CRITICAL: Smart re-freezing when package changes
-                const categorias = configurationService.loadCategorias();
                 let novaCategoria = currentSession?.categoria;
                 
                 if (pkg.categoria_id) {
@@ -190,22 +193,25 @@ export const useWorkflowRealtime = () => {
                   if (cat) {
                     novaCategoria = cat.nome;
                     sanitizedUpdates.categoria = cat.nome; // Also update session category
+                    console.log('📂 Updated categoria:', novaCategoria);
                   }
                 }
                 
                 const { pricingFreezingService } = await import('@/services/PricingFreezingService');
                 
                 // Always do complete re-freezing when package changes
-                console.log('❄️ Complete re-freezing for new package:', pkg.nome);
+                console.log('❄️ Complete re-freezing for new package:', pkg.nome, 'categoria:', novaCategoria);
                 const novasRegrasCongeladas = await pricingFreezingService.congelarDadosCompletos(
                   pkg.id,
                   novaCategoria
                 );
                 sanitizedUpdates.regras_congeladas = novasRegrasCongeladas as any;
+                console.log('❄️ Frozen rules applied:', Object.keys(novasRegrasCongeladas));
                 
                 // Initialize extra photo values from frozen rules
                 const valorFotoExtraInicial = pricingFreezingService.calcularValorFotoExtraComRegrasCongeladas(1, novasRegrasCongeladas).valorUnitario;
                 sanitizedUpdates.valor_foto_extra = valorFotoExtraInicial;
+                console.log('📸 Initial photo extra value:', valorFotoExtraInicial);
                 
                 // Recalculate photo extra values if needed
                 if (currentSession?.qtd_fotos_extra && currentSession.qtd_fotos_extra > 0) {
@@ -215,6 +221,7 @@ export const useWorkflowRealtime = () => {
                   );
                   sanitizedUpdates.valor_foto_extra = valorUnitario;
                   sanitizedUpdates.valor_total_foto_extra = valorTotal;
+                  console.log('📸 Recalculated photo extra - unit:', valorUnitario, 'total:', valorTotal);
                 }
                 
                 console.log('✅ Package change processed successfully with frozen rules');
@@ -239,14 +246,24 @@ export const useWorkflowRealtime = () => {
           case 'produtosList':
             sanitizedUpdates.produtos_incluidos = value;
             // CRITICAL: Re-freeze product data when products change
-            if (currentSession && Array.isArray(value)) {
-              const { pricingFreezingService } = await import('@/services/PricingFreezingService');
-              const regrasAtualizadas = await pricingFreezingService.recongelarProdutos(
-                currentSession.regras_congeladas,
-                value as any[]
-              );
-              sanitizedUpdates.regras_congeladas = regrasAtualizadas as any;
-              console.log('📦 Products changed - re-freezing product data');
+            if (Array.isArray(value)) {
+              // Fetch fresh session data to avoid using stale regras_congeladas
+              const { data: freshSession } = await supabase
+                .from('clientes_sessoes')
+                .select('regras_congeladas')
+                .eq('id', id)
+                .eq('user_id', user.user.id)
+                .single();
+              
+              if (freshSession) {
+                const { pricingFreezingService } = await import('@/services/PricingFreezingService');
+                const regrasAtualizadas = await pricingFreezingService.recongelarProdutos(
+                  freshSession.regras_congeladas as any,
+                  value as any[]
+                );
+                sanitizedUpdates.regras_congeladas = regrasAtualizadas as any;
+                console.log('📦 Products changed - re-freezing product data with fresh session rules');
+              }
             }
             break;
           case 'descricao':
