@@ -26,6 +26,17 @@ export function usePricingMigration() {
         localStorage.setItem(correctionKey, 'true');
         console.log('✅ Correção de dados inconsistentes concluída');
       }
+
+      // Nova correção específica para modelo categoria
+      const categoryFixKey = 'pricing_category_fix_v1_executed';
+      const jaCatCorrigiu = localStorage.getItem(categoryFixKey);
+      
+      if (!jaCatCorrigiu) {
+        console.log('🔧 Executando correção específica para modelo categoria...');
+        await pricingFreezingService.corrigirModeloCategoria();
+        localStorage.setItem(categoryFixKey, 'true');
+        console.log('✅ Correção modelo categoria concluída');
+      }
     } catch (error) {
       console.error('❌ Erro na migração/correção de precificação:', error);
     }

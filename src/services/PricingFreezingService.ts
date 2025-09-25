@@ -138,14 +138,58 @@ class PricingFreezingService {
       
       case 'categoria':
         if (categoria) {
-          const tabelaCategoria = obterTabelaCategoria(categoria);
+          const tabelaCategoria = this.resolverTabelaCategoria(categoria);
           regras.tabelaCategoria = tabelaCategoria;
-          console.log('📊 Tabela categoria congelada:', tabelaCategoria?.nome, 'para categoria:', categoria);
+          console.log('📊 Tabela categoria congelada:', tabelaCategoria?.nome, 'para categoria:', categoria, 'resolvida:', !!tabelaCategoria);
         }
         break;
     }
 
     return regras;
+  }
+
+  /**
+   * Resolve tabela de categoria por ID ou nome
+   */
+  private resolverTabelaCategoria(categoria: string) {
+    try {
+      // Primeiro, tentar como ID
+      let tabelaCategoria = obterTabelaCategoria(categoria);
+      
+      if (!tabelaCategoria) {
+        // Se não encontrou, pode ser um nome - tentar resolver o ID
+        const categorias = this.obterCategorias();
+        const categoriaObj = categorias.find((cat: any) => cat.nome === categoria);
+        
+        if (categoriaObj?.id) {
+          tabelaCategoria = obterTabelaCategoria(categoriaObj.id);
+          console.log('📋 Categoria resolvida por nome:', categoria, '→ ID:', categoriaObj.id);
+        }
+      }
+      
+      if (!tabelaCategoria) {
+        console.warn('⚠️ Tabela de categoria não encontrada para:', categoria);
+      }
+      
+      return tabelaCategoria;
+    } catch (error) {
+      console.error('❌ Erro ao resolver tabela categoria:', categoria, error);
+      return null;
+    }
+  }
+
+  /**
+   * Obtém categorias do localStorage
+   */
+  private obterCategorias() {
+    try {
+      const { PRICING_STORAGE_KEYS } = require('@/types/pricing');
+      const categorias = localStorage.getItem(PRICING_STORAGE_KEYS.CATEGORIAS_PREFIX);
+      return categorias ? JSON.parse(categorias) : [];
+    } catch (error) {
+      console.error('❌ Erro ao obter categorias:', error);
+      return [];
+    }
   }
 
   /**
@@ -235,28 +279,24 @@ class PricingFreezingService {
           break;
         
         case 'global':
+          const tabelaGlobal = regrasPrecoFoto.tabelaGlobal;
+          if (tabelaGlobal?.faixas?.length > 0) {
+            valorUnitario = this.calcularValorPorTabela(quantidade, tabelaGlobal);
+            console.log('📊 Valor calculado por tabela global:', valorUnitario, 'para quantidade:', quantidade);
+          } else {
+            console.warn('⚠️ Tabela global não encontrada ou vazia');
+          }
+          break;
+          
         case 'categoria':
-          const tabela = regrasPrecoFoto.modelo === 'global' 
-            ? regrasPrecoFoto.tabelaGlobal 
-            : regrasPrecoFoto.tabelaCategoria;
-            
-          if (tabela?.faixas?.length > 0) {
-            const faixasOrdenadas = [...tabela.faixas].sort((a, b) => a.min - b.min);
-            
-            // Encontra a faixa correta para a quantidade
-            for (const faixa of faixasOrdenadas) {
-              if (quantidade >= faixa.min && (faixa.max === null || quantidade <= faixa.max)) {
-                valorUnitario = faixa.valor;
-                break;
-              }
-            }
-            
-            // Se não encontrou, usa a última faixa
-            if (valorUnitario === 0 && faixasOrdenadas.length > 0) {
-              valorUnitario = faixasOrdenadas[faixasOrdenadas.length - 1].valor;
-            }
-            
-            console.log('📊 Valor calculado por tabela:', valorUnitario, 'para quantidade:', quantidade);
+          const tabelaCategoria = regrasPrecoFoto.tabelaCategoria;
+          if (tabelaCategoria?.faixas?.length > 0) {
+            valorUnitario = this.calcularValorPorTabela(quantidade, tabelaCategoria);
+            console.log('📊 Valor calculado por tabela categoria:', valorUnitario, 'para quantidade:', quantidade, 'tabela:', tabelaCategoria.nome);
+          } else {
+            console.warn('⚠️ Tabela de categoria não encontrada ou vazia para modelo categoria');
+            // Para modelo categoria sem tabela, não usar fallback do modelo fixo
+            valorUnitario = 0;
           }
           break;
       }
@@ -269,6 +309,25 @@ class PricingFreezingService {
 
     console.log('✅ Resultado final foto extra:', resultado);
     return resultado;
+  }
+
+  /**
+   * Calcula valor por tabela de preços progressivos
+   */
+  private calcularValorPorTabela(quantidade: number, tabela: any): number {
+    if (!tabela?.faixas?.length) return 0;
+    
+    const faixasOrdenadas = [...tabela.faixas].sort((a, b) => a.min - b.min);
+    
+    // Encontra a faixa correta para a quantidade
+    for (const faixa of faixasOrdenadas) {
+      if (quantidade >= faixa.min && (faixa.max === null || quantidade <= faixa.max)) {
+        return faixa.valor;
+      }
+    }
+    
+    // Se não encontrou faixa específica, usa a última faixa
+    return faixasOrdenadas[faixasOrdenadas.length - 1].valor;
   }
 
   /**
@@ -452,6 +511,78 @@ class PricingFreezingService {
       
     } catch (error) {
       console.error('❌ Erro na correção de sessões:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Corrige sessões com modelo categoria que podem ter tabelas incorretas
+   */
+  async corrigirModeloCategoria() {
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data: user } = await supabase.auth.getUser();
+      
+      if (!user?.user) {
+        throw new Error('User not authenticated');
+      }
+
+      console.log('🔧 Iniciando correção específica para modelo categoria...');
+
+      const { data: sessions, error } = await supabase
+        .from('clientes_sessoes')
+        .select('id, categoria, pacote, regras_congeladas')
+        .eq('user_id', user.user.id);
+
+      if (error) throw error;
+
+      let corrected = 0;
+      let skipped = 0;
+
+      for (const session of sessions || []) {
+        try {
+          const regras = session.regras_congeladas as RegrasCongeladas;
+          
+          // Verifica se é modelo categoria e se precisa de correção
+          if (regras?.precificacaoFotoExtra?.modelo === 'categoria' && session.categoria) {
+            const tabelaAtual = regras.precificacaoFotoExtra.tabelaCategoria;
+            const tabelaCorreta = this.resolverTabelaCategoria(session.categoria);
+            
+            // Se não tem tabela ou a tabela está diferente, corrigir
+            if (!tabelaAtual || (tabelaCorreta && tabelaAtual?.id !== tabelaCorreta?.id)) {
+              console.log('🔧 Corrigindo tabela categoria para sessão:', session.id, {
+                categoria: session.categoria,
+                tabelaAtual: tabelaAtual?.nome || 'nenhuma',
+                tabelaCorreta: tabelaCorreta?.nome || 'não encontrada'
+              });
+
+              const regrasCorrigidas = { ...regras };
+              regrasCorrigidas.precificacaoFotoExtra.tabelaCategoria = tabelaCorreta;
+              regrasCorrigidas.dataCongelamento = new Date().toISOString();
+
+              await supabase
+                .from('clientes_sessoes')
+                .update({ regras_congeladas: regrasCorrigidas as any })
+                .eq('id', session.id)
+                .eq('user_id', user.user.id);
+              
+              corrected++;
+            } else {
+              skipped++;
+            }
+          } else {
+            skipped++;
+          }
+        } catch (sessionError) {
+          console.error('❌ Erro ao corrigir sessão categoria:', session.id, sessionError);
+        }
+      }
+      
+      console.log(`✅ Correção modelo categoria concluída: ${corrected} corrigidas, ${skipped} ignoradas`);
+      return { corrected, skipped };
+      
+    } catch (error) {
+      console.error('❌ Erro na correção modelo categoria:', error);
       throw error;
     }
   }
