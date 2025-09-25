@@ -9,7 +9,9 @@ export function usePricingMigration() {
   const executarMigracaoSeNecessario = useCallback(async () => {
     try {
       const migrationKey = 'pricing_migration_v1_executed';
+      const correctionKey = 'pricing_correction_v1_executed';
       const jaExecutou = localStorage.getItem(migrationKey);
+      const jaCorrigiu = localStorage.getItem(correctionKey);
       
       if (!jaExecutou) {
         console.log('🔄 Executando migração de regras de precificação...');
@@ -17,8 +19,15 @@ export function usePricingMigration() {
         localStorage.setItem(migrationKey, 'true');
         console.log('✅ Migração de precificação concluída');
       }
+
+      if (!jaCorrigiu) {
+        console.log('🔧 Executando correção de dados inconsistentes...');
+        await pricingFreezingService.corrigirSessoesInconsistentes();
+        localStorage.setItem(correctionKey, 'true');
+        console.log('✅ Correção de dados inconsistentes concluída');
+      }
     } catch (error) {
-      console.error('❌ Erro na migração de precificação:', error);
+      console.error('❌ Erro na migração/correção de precificação:', error);
     }
   }, []);
 

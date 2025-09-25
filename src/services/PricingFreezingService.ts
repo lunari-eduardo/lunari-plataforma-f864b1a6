@@ -125,18 +125,22 @@ class PricingFreezingService {
 
     switch (config.modelo) {
       case 'fixo':
-        regras.valorFixo = 35; // Valor padrão caso não exista na config
+        // Para modelo fixo, o valor será determinado pelo pacote específico
+        // Não definimos valorFixo aqui para forçar uso do valor do pacote
+        console.log('📦 Modelo fixo: valor será determinado pelo pacote específico');
         break;
       
       case 'global':
         const tabelaGlobal = obterTabelaGlobal();
         regras.tabelaGlobal = tabelaGlobal;
+        console.log('📊 Tabela global congelada:', tabelaGlobal?.nome);
         break;
       
       case 'categoria':
         if (categoria) {
           const tabelaCategoria = obterTabelaCategoria(categoria);
           regras.tabelaCategoria = tabelaCategoria;
+          console.log('📊 Tabela categoria congelada:', tabelaCategoria?.nome, 'para categoria:', categoria);
         }
         break;
     }
@@ -210,14 +214,24 @@ class PricingFreezingService {
     // Para regras completas, usar dados específicos de foto extra
     const regrasPrecoFoto = regrasCongeladas.precificacaoFotoExtra || regrasCongeladas;
 
-    // Se temos valor congelado no pacote, usar ele
-    if (regrasCongeladas.pacote?.valorFotoExtra) {
+    console.log('💰 Calculando valor foto extra:', {
+      quantidade,
+      modelo: regrasPrecoFoto.modelo,
+      valorPacote: regrasCongeladas.pacote?.valorFotoExtra,
+      valorFixo: regrasPrecoFoto.valorFixo
+    });
+
+    // PRIORIDADE 1: Se temos valor congelado no pacote (modelo fixo), usar SEMPRE
+    if (regrasCongeladas.pacote?.valorFotoExtra !== undefined) {
       valorUnitario = regrasCongeladas.pacote.valorFotoExtra;
+      console.log('✅ Usando valor do pacote congelado:', valorUnitario);
     } else {
-      // Usar lógica de precificação baseada no modelo
+      // PRIORIDADE 2: Usar lógica de precificação baseada no modelo
       switch (regrasPrecoFoto.modelo) {
         case 'fixo':
+          // Para modelo fixo sem valor de pacote, usar valor configurado ou 0
           valorUnitario = regrasPrecoFoto.valorFixo || 0;
+          console.log('⚠️ Modelo fixo sem valor de pacote, usando valorFixo:', valorUnitario);
           break;
         
         case 'global':
@@ -241,15 +255,20 @@ class PricingFreezingService {
             if (valorUnitario === 0 && faixasOrdenadas.length > 0) {
               valorUnitario = faixasOrdenadas[faixasOrdenadas.length - 1].valor;
             }
+            
+            console.log('📊 Valor calculado por tabela:', valorUnitario, 'para quantidade:', quantidade);
           }
           break;
       }
     }
 
-    return {
+    const resultado = {
       valorUnitario,
       valorTotal: valorUnitario * quantidade
     };
+
+    console.log('✅ Resultado final foto extra:', resultado);
+    return resultado;
   }
 
   /**
@@ -366,6 +385,74 @@ class PricingFreezingService {
         dataCongelamento: new Date().toISOString(),
         precificacaoFotoExtra: this.congelarRegrasPrecoFotoExtra()
       };
+    }
+  }
+
+  /**
+   * Corrige sessões existentes com dados inconsistentes de foto extra
+   */
+  async corrigirSessoesInconsistentes() {
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data: user } = await supabase.auth.getUser();
+      
+      if (!user?.user) {
+        throw new Error('User not authenticated');
+      }
+
+      console.log('🔧 Iniciando correção de sessões com dados inconsistentes...');
+
+      const { data: sessions, error } = await supabase
+        .from('clientes_sessoes')
+        .select('id, categoria, pacote, regras_congeladas')
+        .eq('user_id', user.user.id);
+
+      if (error) throw error;
+
+      let corrected = 0;
+      let skipped = 0;
+
+      for (const session of sessions || []) {
+        try {
+          const regras = session.regras_congeladas as RegrasCongeladas;
+          
+          // Verifica se precisa de correção
+          if (regras?.precificacaoFotoExtra?.modelo === 'fixo' && 
+              regras.precificacaoFotoExtra.valorFixo === 35 && 
+              regras.pacote?.valorFotoExtra && 
+              regras.pacote.valorFotoExtra !== 35) {
+            
+            console.log('🔧 Corrigindo sessão:', session.id, {
+              valorIncorreto: regras.precificacaoFotoExtra.valorFixo,
+              valorCorreto: regras.pacote.valorFotoExtra
+            });
+
+            // Remove o valorFixo hardcoded para forçar uso do valor do pacote
+            const regrasCorrigidas = { ...regras };
+            delete regrasCorrigidas.precificacaoFotoExtra.valorFixo;
+            regrasCorrigidas.dataCongelamento = new Date().toISOString();
+
+            await supabase
+              .from('clientes_sessoes')
+              .update({ regras_congeladas: regrasCorrigidas as any })
+              .eq('id', session.id)
+              .eq('user_id', user.user.id);
+            
+            corrected++;
+          } else {
+            skipped++;
+          }
+        } catch (sessionError) {
+          console.error('❌ Erro ao corrigir sessão:', session.id, sessionError);
+        }
+      }
+      
+      console.log(`✅ Correção concluída: ${corrected} corrigidas, ${skipped} ignoradas`);
+      return { corrected, skipped };
+      
+    } catch (error) {
+      console.error('❌ Erro na correção de sessões:', error);
+      throw error;
     }
   }
 
