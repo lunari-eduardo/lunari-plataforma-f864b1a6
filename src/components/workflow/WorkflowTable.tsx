@@ -886,7 +886,8 @@ export function WorkflowTable({
                   let valorCalculado = 0;
                   if (session.regrasDePrecoFotoExtraCongeladas) {
                     // Item com regras congeladas - usar motor de cálculo específico
-                    valorCalculado = calcularComRegrasProprias(session.qtdFotosExtra || 0, session.regrasDePrecoFotoExtraCongeladas);
+                    const resultado = calcularComRegrasProprias(session.qtdFotosExtra || 0, session.regrasDePrecoFotoExtraCongeladas);
+                    valorCalculado = resultado.valorTotal;
                   } else {
                     // Item sem regras congeladas - usar motor global
                     const valorFotoExtra = parseFloat((session.valorFotoExtra || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0;
