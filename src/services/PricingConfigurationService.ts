@@ -110,9 +110,10 @@ export class PricingConfigurationService {
     try {
       const { SupabasePricingAdapter } = await import('@/adapters/SupabasePricingAdapter');
       this.setAdapter(new SupabasePricingAdapter());
-      console.log('✅ Supabase pricing adapter initialized');
+      console.log('✅ Supabase pricing adapter initialized and set as active adapter');
     } catch (error) {
       console.error('❌ Failed to initialize Supabase adapter:', error);
+      throw error;
     }
   }
 

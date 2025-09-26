@@ -29,6 +29,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import ThemeProvider from "./components/theme/ThemeProvider";
 import { BuildMonitor } from "./components/shared/BuildMonitor";
+import { usePricingBootstrap } from "./hooks/usePricingBootstrap";
 
 // Create a stable QueryClient instance
 const queryClient = new QueryClient({
@@ -42,10 +43,16 @@ const queryClient = new QueryClient({
 
 // Define App as a proper function component
 function App() {
+  // Bootstrap pricing system early
+  const { isInitialized: pricingInitialized, error: pricingError } = usePricingBootstrap();
+
   // Log app version for debugging
   React.useEffect(() => {
     console.log(`🚀 Lunari 2.0 v${import.meta.env.VITE_APP_VERSION || '1.0.0'} - Ready`);
-  }, []);
+    if (pricingError) {
+      console.warn('⚠️ Pricing system had initialization issues:', pricingError);
+    }
+  }, [pricingError]);
   
   return (
     <BrowserRouter>

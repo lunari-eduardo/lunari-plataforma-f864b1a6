@@ -95,13 +95,13 @@ class PricingFreezingService {
       return {
         modelo: 'completo',
         dataCongelamento: new Date().toISOString(),
-        precificacaoFotoExtra: this.congelarRegrasPrecoFotoExtra(categoria)
+        precificacaoFotoExtra
       };
     }
   }
 
   /**
-   * Congela apenas regras de preço de foto extra (compatibilidade com versão antiga)
+   * Congela apenas regras de preço de foto extra (compatibilidade com versão antiga)  
    */
   congelarRegrasAtuais(categoria?: string): RegrasCongeladas {
     const precificacaoFotoExtra = this.congelarRegrasPrecoFotoExtra(categoria);
@@ -125,8 +125,6 @@ class PricingFreezingService {
 
     switch (config.modelo) {
       case 'fixo':
-        // Para modelo fixo, o valor será determinado pelo pacote específico
-        // Não definimos valorFixo aqui para forçar uso do valor do pacote
         console.log('📦 Modelo fixo: valor será determinado pelo pacote específico');
         break;
       
@@ -149,23 +147,12 @@ class PricingFreezingService {
   }
 
   /**
-   * Resolve tabela de categoria por ID ou nome
+   * Resolve tabela de categoria por ID ou nome - versão síncrona para compatibilidade
    */
   private resolverTabelaCategoria(categoria: string) {
     try {
-      // Primeiro, tentar como ID
+      // Para manter compatibilidade, usar o adaptador síncrono por enquanto
       let tabelaCategoria = obterTabelaCategoria(categoria);
-      
-      if (!tabelaCategoria) {
-        // Se não encontrou, pode ser um nome - tentar resolver o ID
-        const categorias = this.obterCategorias();
-        const categoriaObj = categorias.find((cat: any) => cat.nome === categoria);
-        
-        if (categoriaObj?.id) {
-          tabelaCategoria = obterTabelaCategoria(categoriaObj.id);
-          console.log('📋 Categoria resolvida por nome:', categoria, '→ ID:', categoriaObj.id);
-        }
-      }
       
       if (!tabelaCategoria) {
         console.warn('⚠️ Tabela de categoria não encontrada para:', categoria);
@@ -175,20 +162,6 @@ class PricingFreezingService {
     } catch (error) {
       console.error('❌ Erro ao resolver tabela categoria:', categoria, error);
       return null;
-    }
-  }
-
-  /**
-   * Obtém categorias do localStorage
-   */
-  private obterCategorias() {
-    try {
-      const { PRICING_STORAGE_KEYS } = require('@/types/pricing');
-      const categorias = localStorage.getItem(PRICING_STORAGE_KEYS.CATEGORIAS_PREFIX);
-      return categorias ? JSON.parse(categorias) : [];
-    } catch (error) {
-      console.error('❌ Erro ao obter categorias:', error);
-      return [];
     }
   }
 
@@ -265,41 +238,44 @@ class PricingFreezingService {
       valorFixo: regrasPrecoFoto.valorFixo
     });
 
-    // PRIORIDADE 1: Se temos valor congelado no pacote (modelo fixo), usar SEMPRE
-    if (regrasCongeladas.pacote?.valorFotoExtra !== undefined) {
-      valorUnitario = regrasCongeladas.pacote.valorFotoExtra;
-      console.log('✅ Usando valor do pacote congelado:', valorUnitario);
-    } else {
-      // PRIORIDADE 2: Usar lógica de precificação baseada no modelo
-      switch (regrasPrecoFoto.modelo) {
-        case 'fixo':
-          // Para modelo fixo sem valor de pacote, usar valor configurado ou 0
+    // Respeitar o modelo escolhido - não forçar valor do pacote para outros modelos
+    switch (regrasPrecoFoto.modelo) {
+      case 'fixo':
+        // Para modelo fixo, usar valor do pacote ou valor fixo configurado
+        if (regrasCongeladas.pacote?.valorFotoExtra !== undefined) {
+          valorUnitario = regrasCongeladas.pacote.valorFotoExtra;
+          console.log('✅ Modelo fixo: usando valor do pacote congelado:', valorUnitario);
+        } else {
           valorUnitario = regrasPrecoFoto.valorFixo || 0;
-          console.log('⚠️ Modelo fixo sem valor de pacote, usando valorFixo:', valorUnitario);
-          break;
+          console.log('⚠️ Modelo fixo: usando valorFixo configurado:', valorUnitario);
+        }
+        break;
+      
+      case 'global':
+        const tabelaGlobal = regrasPrecoFoto.tabelaGlobal;
+        if (tabelaGlobal?.faixas?.length > 0) {
+          valorUnitario = this.calcularValorPorTabela(quantidade, tabelaGlobal);
+          console.log('📊 Modelo global: valor calculado por tabela:', valorUnitario, 'para quantidade:', quantidade);
+        } else {
+          console.warn('⚠️ Modelo global: tabela global não encontrada ou vazia');
+          valorUnitario = 0;
+        }
+        break;
         
-        case 'global':
-          const tabelaGlobal = regrasPrecoFoto.tabelaGlobal;
-          if (tabelaGlobal?.faixas?.length > 0) {
-            valorUnitario = this.calcularValorPorTabela(quantidade, tabelaGlobal);
-            console.log('📊 Valor calculado por tabela global:', valorUnitario, 'para quantidade:', quantidade);
-          } else {
-            console.warn('⚠️ Tabela global não encontrada ou vazia');
-          }
-          break;
-          
-        case 'categoria':
-          const tabelaCategoria = regrasPrecoFoto.tabelaCategoria;
-          if (tabelaCategoria?.faixas?.length > 0) {
-            valorUnitario = this.calcularValorPorTabela(quantidade, tabelaCategoria);
-            console.log('📊 Valor calculado por tabela categoria:', valorUnitario, 'para quantidade:', quantidade, 'tabela:', tabelaCategoria.nome);
-          } else {
-            console.warn('⚠️ Tabela de categoria não encontrada ou vazia para modelo categoria');
-            // Para modelo categoria sem tabela, não usar fallback do modelo fixo
-            valorUnitario = 0;
-          }
-          break;
-      }
+      case 'categoria':
+        const tabelaCategoria = regrasPrecoFoto.tabelaCategoria;
+        if (tabelaCategoria?.faixas?.length > 0) {
+          valorUnitario = this.calcularValorPorTabela(quantidade, tabelaCategoria);
+          console.log('📊 Modelo categoria: valor calculado por tabela:', valorUnitario, 'para quantidade:', quantidade, 'tabela:', tabelaCategoria.nome);
+        } else {
+          console.warn('⚠️ Modelo categoria: tabela de categoria não encontrada ou vazia');
+          valorUnitario = 0;
+        }
+        break;
+      
+      default:
+        console.warn('⚠️ Modelo de preço desconhecido:', regrasPrecoFoto.modelo);
+        valorUnitario = 0;
     }
 
     const resultado = {
@@ -546,7 +522,7 @@ class PricingFreezingService {
           // Verifica se é modelo categoria e se precisa de correção
           if (regras?.precificacaoFotoExtra?.modelo === 'categoria' && session.categoria) {
             const tabelaAtual = regras.precificacaoFotoExtra.tabelaCategoria;
-            const tabelaCorreta = this.resolverTabelaCategoria(session.categoria);
+            const tabelaCorreta = await this.resolverTabelaCategoria(session.categoria);
             
             // Se não tem tabela ou a tabela está diferente, corrigir
             if (!tabelaAtual || (tabelaCorreta && tabelaAtual?.id !== tabelaCorreta?.id)) {

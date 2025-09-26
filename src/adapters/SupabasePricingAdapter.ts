@@ -13,12 +13,19 @@ import type {
 } from '@/types/pricing';
 
 export class SupabasePricingAdapter implements PricingStorageAdapter {
+  // ============= INTERNAL CACHE =============
+  private cachedConfig: ConfiguracaoPrecificacao | null = null;
+  private cachedGlobalTable: TabelaPrecos | null = null;
+  private categoryTablesCache: Record<string, TabelaPrecos> = {};
   
   // ============= CONFIGURATION =============
   
   loadConfiguration(): ConfiguracaoPrecificacao {
-    // For synchronous compatibility, return default during first load
-    console.warn('SupabasePricingAdapter: Using sync method, use async loading for better UX');
+    // Return cached config if available, otherwise default
+    if (this.cachedConfig) {
+      return this.cachedConfig;
+    }
+    console.warn('SupabasePricingAdapter: No cached config, returning default');
     return { modelo: 'fixo' };
   }
 
@@ -41,17 +48,22 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
       }
 
       if (data) {
-        return {
+        const config = {
           id: data.id,
           user_id: data.user_id,
           modelo: data.modelo as 'fixo' | 'global' | 'categoria',
           created_at: data.created_at,
           updated_at: data.updated_at
         };
+        // Update cache
+        this.cachedConfig = config;
+        return config;
       }
 
       // Return default if no configuration exists
-      return { modelo: 'fixo' };
+      const defaultConfig = { modelo: 'fixo' as const };
+      this.cachedConfig = defaultConfig;
+      return defaultConfig;
     } catch (error) {
       console.error('Failed to load pricing configuration:', error);
       return { modelo: 'fixo' };
@@ -81,6 +93,8 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
         throw error;
       }
 
+      // Update cache after successful save
+      this.cachedConfig = { ...config, user_id: user.user.id };
       console.log(`Successfully saved pricing configuration: ${config.modelo}`);
     } catch (error) {
       console.error('Failed to save pricing configuration:', error);
@@ -92,7 +106,11 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
   // ============= GLOBAL TABLE =============
   
   loadGlobalTable(): TabelaPrecos | null {
-    console.warn('SupabasePricingAdapter: Using sync method for global table');
+    // Return cached global table if available
+    if (this.cachedGlobalTable) {
+      return this.cachedGlobalTable;
+    }
+    console.warn('SupabasePricingAdapter: No cached global table available');
     return null;
   }
 
@@ -116,7 +134,7 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
       }
 
       if (data) {
-        return {
+        const table = {
           id: data.id,
           user_id: data.user_id,
           nome: data.nome,
@@ -124,6 +142,9 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
           created_at: data.created_at,
           updated_at: data.updated_at
         };
+        // Update cache
+        this.cachedGlobalTable = table;
+        return table;
       }
 
       return null;
@@ -140,23 +161,43 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
         throw new Error('User not authenticated');
       }
 
-      const tableData = {
-        id: table.id,
+      // Sanitize ID - if not UUID, omit to let DB generate
+      const tableData: any = {
         user_id: user.user.id,
         nome: table.nome,
         faixas: table.faixas as any,
         tipo: 'global'
       };
 
-      const { error } = await supabase
+      // Only include ID if it's a valid UUID
+      const isValidUuid = table.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(table.id);
+      if (isValidUuid) {
+        tableData.id = table.id;
+      }
+
+      const { data: savedData, error } = await supabase
         .from('tabelas_precos')
         .upsert(tableData, {
-          onConflict: 'id'
-        });
+          onConflict: isValidUuid ? 'id' : 'user_id,tipo'
+        })
+        .select()
+        .single();
 
       if (error) {
         console.error('Error saving global pricing table:', error);
         throw error;
+      }
+
+      // Update cache with saved data
+      if (savedData) {
+        this.cachedGlobalTable = {
+          id: savedData.id,
+          user_id: savedData.user_id,
+          nome: savedData.nome,
+          faixas: savedData.faixas as unknown as FaixaPreco[],
+          created_at: savedData.created_at,
+          updated_at: savedData.updated_at
+        };
       }
 
       console.log(`Successfully saved global pricing table: ${table.nome}`);
@@ -170,7 +211,11 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
   // ============= CATEGORY TABLE =============
   
   loadCategoryTable(categoryId: string): TabelaPrecos | null {
-    console.warn(`SupabasePricingAdapter: Using sync method for category table: ${categoryId}`);
+    // Return cached category table if available
+    if (this.categoryTablesCache[categoryId]) {
+      return this.categoryTablesCache[categoryId];
+    }
+    console.warn(`SupabasePricingAdapter: No cached category table for: ${categoryId}`);
     return null;
   }
 
@@ -195,7 +240,7 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
       }
 
       if (data) {
-        return {
+        const table = {
           id: data.id,
           user_id: data.user_id,
           nome: data.nome,
@@ -203,6 +248,9 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
           created_at: data.created_at,
           updated_at: data.updated_at
         };
+        // Update cache
+        this.categoryTablesCache[categoryId] = table;
+        return table;
       }
 
       return null;
@@ -219,8 +267,8 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
         throw new Error('User not authenticated');
       }
 
-      const tableData = {
-        id: table.id,
+      // Sanitize ID - if not UUID, omit to let DB generate
+      const tableData: any = {
         user_id: user.user.id,
         nome: table.nome,
         faixas: table.faixas as any,
@@ -228,15 +276,35 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
         categoria_id: categoryId
       };
 
-      const { error } = await supabase
+      // Only include ID if it's a valid UUID
+      const isValidUuid = table.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(table.id);
+      if (isValidUuid) {
+        tableData.id = table.id;
+      }
+
+      const { data: savedData, error } = await supabase
         .from('tabelas_precos')
         .upsert(tableData, {
-          onConflict: 'id'
-        });
+          onConflict: isValidUuid ? 'id' : 'user_id,tipo,categoria_id'
+        })
+        .select()
+        .single();
 
       if (error) {
         console.error(`Error saving category pricing table for ${categoryId}:`, error);
         throw error;
+      }
+
+      // Update cache with saved data
+      if (savedData) {
+        this.categoryTablesCache[categoryId] = {
+          id: savedData.id,
+          user_id: savedData.user_id,
+          nome: savedData.nome,
+          faixas: savedData.faixas as unknown as FaixaPreco[],
+          created_at: savedData.created_at,
+          updated_at: savedData.updated_at
+        };
       }
 
       console.log(`Successfully saved category pricing table: ${table.nome} for category ${categoryId}`);
@@ -271,7 +339,7 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
       
       data?.forEach(table => {
         if (table.categoria_id) {
-          categoryTables[table.categoria_id] = {
+          const categoryTable = {
             id: table.id,
             user_id: table.user_id,
             nome: table.nome,
@@ -279,6 +347,9 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
             created_at: table.created_at,
             updated_at: table.updated_at
           };
+          categoryTables[table.categoria_id] = categoryTable;
+          // Update cache
+          this.categoryTablesCache[table.categoria_id] = categoryTable;
         }
       });
 
@@ -286,6 +357,27 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
     } catch (error) {
       console.error('Failed to load all category tables:', error);
       return {};
+    }
+  }
+
+  // ============= PRELOAD METHOD =============
+  
+  async preloadAll(): Promise<void> {
+    console.log('🔄 Preloading all pricing data...');
+    try {
+      // Load configuration
+      await this.loadConfigurationAsync();
+      
+      // Load global table
+      await this.loadGlobalTableAsync();
+      
+      // Load all category tables
+      await this.getAllCategoryTables();
+      
+      console.log('✅ All pricing data preloaded successfully');
+    } catch (error) {
+      console.error('❌ Error preloading pricing data:', error);
+      throw error;
     }
   }
 }
