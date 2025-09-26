@@ -17,6 +17,7 @@ import { PricingCalculationService } from '@/services/PricingCalculationService'
 import { PricingConfigurationService } from '@/services/PricingConfigurationService';
 import { PricingValidationService } from '@/services/PricingValidationService';
 import { PricingMigrationService } from '@/services/PricingMigrationService';
+import { pricingFreezingService } from '@/services/PricingFreezingService';
 import { formatarMoeda } from '@/utils/currencyUtils';
 
 // Legacy function mappings
@@ -29,11 +30,11 @@ export const salvarTabelaCategoria = (id: string, table: any) => PricingConfigur
 export const calcularValorPorFoto = (quantidade: number, tabela: any) => PricingCalculationService.calcularValorPorFoto(quantidade, tabela);
 export const validarTabelaPrecos = (tabela: any) => PricingValidationService.validarTabelaPrecos(tabela);
 export const criarTabelaExemplo = () => PricingCalculationService.criarTabelaExemplo();
-export const congelarRegrasPrecoFotoExtra = (info?: any) => PricingMigrationService.congelarRegrasPrecoFotoExtra(info);
-export const calcularComRegrasProprias = (qtd: number, regras: any) => PricingCalculationService.calcularComRegrasProprias(qtd, regras);
-export const migrarRegrasParaItemAntigo = (valor?: number, catId?: string) => PricingMigrationService.migrarRegrasParaItemAntigo(valor, catId);
-export const debugWorkflowItems = () => PricingMigrationService.debugWorkflowItems();
-export const validarRegrasCongeladas = (regras: any) => PricingMigrationService.validarRegrasCongeladas(regras);
+export const congelarRegrasPrecoFotoExtra = (info?: any) => pricingFreezingService.congelarDadosCompletos(info?.pacoteId, info?.categoria);
+export const calcularComRegrasProprias = (qtd: number, regras: any) => pricingFreezingService.calcularValorFotoExtraComRegrasCongeladas(qtd, regras);
+export const migrarRegrasParaItemAntigo = (valor?: number, catId?: string) => pricingFreezingService.congelarRegrasAtuais(catId);
+export const debugWorkflowItems = () => console.log('Debug não implementado na nova versão');
+export const validarRegrasCongeladas = (regras: any) => pricingFreezingService.verificarIntegridade();
 
 // Main calculation function with backward compatibility
 export function calcularTotalFotosExtras(

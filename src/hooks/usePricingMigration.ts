@@ -4,8 +4,10 @@
 
 import { useEffect, useCallback } from 'react';
 import { pricingFreezingService } from '@/services/PricingFreezingService';
+import { usePricingSupabase } from './usePricingSupabase';
 
 export function usePricingMigration() {
+  const { isInitialized, isLoading } = usePricingSupabase();
   const executarMigracaoSeNecessario = useCallback(async () => {
     try {
       const migrationKey = 'pricing_migration_v1_executed';
@@ -43,12 +45,16 @@ export function usePricingMigration() {
   }, []);
 
   useEffect(() => {
+    // Only run migration corrections after Supabase is initialized
+    if (!isInitialized || isLoading) return;
+    
     // Executar migração após um pequeno delay para não bloquear o carregamento inicial
     const timer = setTimeout(executarMigracaoSeNecessario, 3000);
     return () => clearTimeout(timer);
-  }, [executarMigracaoSeNecessario]);
+  }, [executarMigracaoSeNecessario, isInitialized, isLoading]);
 
   return {
-    executarMigracaoSeNecessario
+    executarMigracaoSeNecessario,
+    isSupabaseReady: isInitialized && !isLoading
   };
 }

@@ -93,12 +93,27 @@ class LocalStorageAdapter implements PricingStorageAdapter {
 
 export class PricingConfigurationService {
   private static adapter: PricingStorageAdapter = new LocalStorageAdapter();
+  private static isUsingSupabase: boolean = false;
 
   /**
    * Set storage adapter (useful for testing or Supabase migration)
    */
   static setAdapter(adapter: PricingStorageAdapter): void {
     this.adapter = adapter;
+    this.isUsingSupabase = adapter.constructor.name === 'SupabasePricingAdapter';
+  }
+
+  /**
+   * Initialize Supabase adapter
+   */
+  static async initializeSupabaseAdapter(): Promise<void> {
+    try {
+      const { SupabasePricingAdapter } = await import('@/adapters/SupabasePricingAdapter');
+      this.setAdapter(new SupabasePricingAdapter());
+      console.log('✅ Supabase pricing adapter initialized');
+    } catch (error) {
+      console.error('❌ Failed to initialize Supabase adapter:', error);
+    }
   }
 
   /**
