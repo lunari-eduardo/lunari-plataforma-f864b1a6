@@ -172,6 +172,8 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
         throw new Error('User not authenticated');
       }
 
+      console.log('💾 Saving global table:', table);
+
       // Sanitize ID - if not UUID, omit to let DB generate
       const tableData: any = {
         user_id: user.user.id,
@@ -195,7 +197,10 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
         .single();
 
       if (error) {
-        console.error('Error saving global pricing table:', error);
+        console.error('❌ Error saving global pricing table:', error);
+        if (error.code === '42P10') {
+          console.error('🚨 Database index mismatch! The unique constraints may need to be recreated.');
+        }
         throw error;
       }
 
@@ -211,9 +216,9 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
         };
       }
 
-      console.log(`Successfully saved global pricing table: ${table.nome}`);
+      console.log(`✅ Successfully saved global pricing table: ${table.nome}`);
     } catch (error) {
-      console.error('Failed to save global pricing table:', error);
+      console.error('❌ Failed to save global pricing table:', error);
       toast.error('Erro ao salvar tabela global de preços');
       throw error;
     }
@@ -289,13 +294,39 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
         throw new Error('User not authenticated');
       }
 
+      console.log('💾 Saving category table:', { categoryId, table });
+
+      // Validate and resolve categoryId if it's a name instead of UUID
+      let resolvedCategoryId = categoryId;
+      
+      // Check if categoryId is a valid UUID format
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(categoryId)) {
+        console.log('🔍 Resolving category name to UUID:', categoryId);
+        
+        const { data: categoria, error: categoriaError } = await supabase
+          .from('categorias')
+          .select('id')
+          .eq('user_id', user.user.id)
+          .eq('nome', categoryId)
+          .maybeSingle();
+
+        if (categoriaError || !categoria) {
+          console.error('❌ Category not found:', categoryId, categoriaError);
+          throw new Error(`Categoria não encontrada: ${categoryId}`);
+        }
+        
+        resolvedCategoryId = categoria.id;
+        console.log('✅ Category resolved:', { name: categoryId, id: resolvedCategoryId });
+      }
+
       // Sanitize ID - if not UUID, omit to let DB generate
       const tableData: any = {
         user_id: user.user.id,
         nome: table.nome,
         faixas: table.faixas as any,
         tipo: 'categoria',
-        categoria_id: categoryId
+        categoria_id: resolvedCategoryId
       };
 
       // Only include ID if it's a valid UUID
@@ -313,11 +344,14 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
         .single();
 
       if (error) {
-        console.error(`Error saving category pricing table for ${categoryId}:`, error);
+        console.error(`❌ Error saving category pricing table for ${categoryId}:`, error);
+        if (error.code === '42P10') {
+          console.error('🚨 Database index mismatch! The unique constraints may need to be recreated.');
+        }
         throw error;
       }
 
-      // Update cache with saved data
+      // Update cache with saved data (using original categoryId as key)
       if (savedData) {
         this.categoryTablesCache[categoryId] = {
           id: savedData.id,
@@ -329,9 +363,9 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
         };
       }
 
-      console.log(`Successfully saved category pricing table: ${table.nome} for category ${categoryId}`);
+      console.log(`✅ Successfully saved category pricing table: ${table.nome} for category ${categoryId}`);
     } catch (error) {
-      console.error(`Failed to save category pricing table for ${categoryId}:`, error);
+      console.error(`❌ Failed to save category pricing table for ${categoryId}:`, error);
       toast.error('Erro ao salvar tabela de preços por categoria');
       throw error;
     }
