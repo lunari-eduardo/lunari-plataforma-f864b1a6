@@ -143,7 +143,13 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
           id: data.id,
           user_id: data.user_id,
           nome: data.nome,
-          faixas: data.faixas as unknown as FaixaPreco[],
+          faixas: Array.isArray(data.faixas)
+            ? (data.faixas as any[]).map((f: any) => ({
+                min: f.min ?? f.de ?? 1,
+                max: f.max ?? (f.ate === 999999 ? null : (f.ate ?? null)),
+                valor: f.valor ?? f.valor_foto_extra ?? 0,
+              }))
+            : [],
           created_at: data.created_at,
           updated_at: data.updated_at
         };
@@ -183,7 +189,7 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
       const { data: savedData, error } = await supabase
         .from('tabelas_precos')
         .upsert(tableData, {
-          onConflict: isValidUuid ? 'id' : 'tabelas_precos_global_unique'
+          onConflict: isValidUuid ? 'id' : 'user_id,tipo'
         })
         .select()
         .single();
@@ -254,7 +260,13 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
           id: data.id,
           user_id: data.user_id,
           nome: data.nome,
-          faixas: data.faixas as unknown as FaixaPreco[],
+          faixas: Array.isArray(data.faixas)
+            ? (data.faixas as any[]).map((f: any) => ({
+                min: f.min ?? f.de ?? 1,
+                max: f.max ?? (f.ate === 999999 ? null : (f.ate ?? null)),
+                valor: f.valor ?? f.valor_foto_extra ?? 0,
+              }))
+            : [],
           created_at: data.created_at,
           updated_at: data.updated_at
         };
@@ -295,7 +307,7 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
       const { data: savedData, error } = await supabase
         .from('tabelas_precos')
         .upsert(tableData, {
-          onConflict: isValidUuid ? 'id' : 'tabelas_precos_categoria_unique'
+          onConflict: isValidUuid ? 'id' : 'user_id,tipo,categoria_id'
         })
         .select()
         .single();
@@ -353,7 +365,13 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
             id: table.id,
             user_id: table.user_id,
             nome: table.nome,
-            faixas: table.faixas as unknown as FaixaPreco[],
+            faixas: Array.isArray(table.faixas)
+              ? (table.faixas as any[]).map((f: any) => ({
+                  min: f.min ?? f.de ?? 1,
+                  max: f.max ?? (f.ate === 999999 ? null : (f.ate ?? null)),
+                  valor: f.valor ?? f.valor_foto_extra ?? 0,
+                }))
+              : [],
             created_at: table.created_at,
             updated_at: table.updated_at
           };

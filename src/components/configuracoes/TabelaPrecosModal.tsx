@@ -57,7 +57,7 @@ export default function TabelaPrecosModal({ categoriaId, categoriaNome, categori
         return;
       }
 
-      salvarTabelaCategoria(categoriaId, tabela);
+      await salvarTabelaCategoria(categoriaId, tabela);
       toast.success('Tabela de preços salva com sucesso!');
       setOpen(false);
     } catch (error) {

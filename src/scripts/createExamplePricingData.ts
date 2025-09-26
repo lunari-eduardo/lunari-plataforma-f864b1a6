@@ -31,33 +31,17 @@ export async function createExamplePricingData() {
       tipo: 'global',
       categoria_id: null,
       faixas: [
-        {
-          de: 1,
-          ate: 50,
-          valor_foto_extra: 25.00
-        },
-        {
-          de: 51,
-          ate: 100,
-          valor_foto_extra: 22.50
-        },
-        {
-          de: 101,
-          ate: 200,
-          valor_foto_extra: 20.00
-        },
-        {
-          de: 201,
-          ate: 999999,
-          valor_foto_extra: 15.00
-        }
+        { min: 1, max: 50, valor: 25.0 },
+        { min: 51, max: 100, valor: 22.5 },
+        { min: 101, max: 200, valor: 20.0 },
+        { min: 201, max: null, valor: 15.0 }
       ]
     };
 
     const { data: globalData, error: globalError } = await supabase
       .from('tabelas_precos')
       .upsert(globalTableData, {
-        onConflict: 'tabelas_precos_global_unique'
+        onConflict: 'user_id,tipo'
       })
       .select()
       .single();
@@ -77,33 +61,17 @@ export async function createExamplePricingData() {
           tipo: 'categoria',
           categoria_id: category.id,
           faixas: [
-            {
-              de: 1,
-              ate: 30,
-              valor_foto_extra: 30.00
-            },
-            {
-              de: 31,
-              ate: 80,
-              valor_foto_extra: 27.50
-            },
-            {
-              de: 81,
-              ate: 150,
-              valor_foto_extra: 25.00
-            },
-            {
-              de: 151,
-              ate: 999999,
-              valor_foto_extra: 20.00
-            }
+            { min: 1, max: 30, valor: 30.0 },
+            { min: 31, max: 80, valor: 27.5 },
+            { min: 81, max: 150, valor: 25.0 },
+            { min: 151, max: null, valor: 20.0 }
           ]
         };
 
         const { data: categoryData, error: categoryError } = await supabase
           .from('tabelas_precos')
           .upsert(categoryTableData, {
-            onConflict: 'tabelas_precos_categoria_unique'
+            onConflict: 'user_id,tipo,categoria_id'
           })
           .select()
           .single();
