@@ -6,6 +6,7 @@
 import { useEffect, useState } from 'react';
 import { PricingConfigurationService } from '@/services/PricingConfigurationService';
 import { pricingMigrationService } from '@/services/PricingMigrationService';
+import { createExamplePricingData } from '@/scripts/createExamplePricingData';
 import { toast } from 'sonner';
 
 export function usePricingBootstrap() {
@@ -41,6 +42,20 @@ export function usePricingBootstrap() {
         if (adapter && typeof adapter.preloadAll === 'function') {
           await adapter.preloadAll();
           console.log('✅ All pricing data preloaded');
+          
+          // Check if no pricing tables exist and create examples
+          const globalTable = adapter.loadGlobalTable();
+          if (!globalTable) {
+            console.log('🔄 No pricing data found, creating examples...');
+            const exampleCreated = await createExamplePricingData();
+            if (exampleCreated) {
+              // Reload after creating examples
+              await adapter.preloadAll();
+              console.log('✅ Example pricing data created and reloaded');
+            }
+          }
+        } else {
+          console.warn('⚠️ No Supabase adapter found for preloading');
         }
 
         if (isMounted) {

@@ -110,7 +110,12 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
     if (this.cachedGlobalTable) {
       return this.cachedGlobalTable;
     }
-    console.warn('SupabasePricingAdapter: No cached global table available');
+    
+    // Try to load synchronously from cache, if empty try async load once
+    console.warn('SupabasePricingAdapter: No cached global table, attempting async load...');
+    this.loadGlobalTableAsync().catch(err => 
+      console.error('Failed to async load global table:', err)
+    );
     return null;
   }
 
@@ -178,7 +183,7 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
       const { data: savedData, error } = await supabase
         .from('tabelas_precos')
         .upsert(tableData, {
-          onConflict: isValidUuid ? 'id' : 'user_id,tipo'
+          onConflict: isValidUuid ? 'id' : 'tabelas_precos_global_unique'
         })
         .select()
         .single();
@@ -215,7 +220,12 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
     if (this.categoryTablesCache[categoryId]) {
       return this.categoryTablesCache[categoryId];
     }
-    console.warn(`SupabasePricingAdapter: No cached category table for: ${categoryId}`);
+    
+    // Try to load synchronously from cache, if empty try async load once
+    console.warn(`SupabasePricingAdapter: No cached category table for: ${categoryId}, attempting async load...`);
+    this.loadCategoryTableAsync(categoryId).catch(err => 
+      console.error(`Failed to async load category table for ${categoryId}:`, err)
+    );
     return null;
   }
 
@@ -285,7 +295,7 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
       const { data: savedData, error } = await supabase
         .from('tabelas_precos')
         .upsert(tableData, {
-          onConflict: isValidUuid ? 'id' : 'user_id,tipo,categoria_id'
+          onConflict: isValidUuid ? 'id' : 'tabelas_precos_categoria_unique'
         })
         .select()
         .single();
