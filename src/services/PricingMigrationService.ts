@@ -16,9 +16,12 @@ import { PRICING_STORAGE_KEYS } from '@/types/pricing';
 
 const MIGRATION_KEY = 'pricing_supabase_migration_v1_completed';
 const MIGRATION_VERSION = '1.0.0';
+const MIGRATION_IN_PROGRESS_KEY = 'pricing_migration_in_progress';
 
 export class PricingMigrationService {
   private supabaseAdapter: SupabasePricingAdapter;
+  private migrationInProgress = false;
+  private toastShown = false;
 
   constructor() {
     this.supabaseAdapter = new SupabasePricingAdapter();
@@ -29,9 +32,11 @@ export class PricingMigrationService {
    */
   isMigrationNeeded(): boolean {
     const migrationCompleted = localStorage.getItem(MIGRATION_KEY);
+    const migrationInProgress = localStorage.getItem(MIGRATION_IN_PROGRESS_KEY);
     const hasLocalData = this.hasLocalPricingData();
     
-    return !migrationCompleted && hasLocalData;
+    // Don't migrate if already completed, in progress, or no local data
+    return !migrationCompleted && !migrationInProgress && !this.migrationInProgress && hasLocalData;
   }
 
   /**
@@ -59,6 +64,15 @@ export class PricingMigrationService {
       return true;
     }
 
+    // Prevent concurrent migrations
+    if (this.migrationInProgress) {
+      console.log('⚠️ Migration already in progress, skipping');
+      return true;
+    }
+
+    this.migrationInProgress = true;
+    localStorage.setItem(MIGRATION_IN_PROGRESS_KEY, 'true');
+
     try {
       console.log('🔄 Starting pricing data migration to Supabase...');
       
@@ -84,15 +98,30 @@ export class PricingMigrationService {
 
       // Mark migration as completed
       localStorage.setItem(MIGRATION_KEY, new Date().toISOString());
+      localStorage.removeItem(MIGRATION_IN_PROGRESS_KEY);
       
       console.log('✅ Pricing migration completed successfully');
-      toast.success('Dados de precificação migrados para o Supabase com sucesso!');
+      
+      // Show success toast only once
+      if (!this.toastShown) {
+        toast.success('Dados de precificação migrados com sucesso!');
+        this.toastShown = true;
+      }
       
       return true;
     } catch (error) {
       console.error('❌ Pricing migration failed:', error);
-      toast.error('Erro na migração dos dados de precificação. Contacte o suporte.');
+      localStorage.removeItem(MIGRATION_IN_PROGRESS_KEY);
+      
+      // Show error toast only once
+      if (!this.toastShown) {
+        toast.error('Erro na migração dos dados. Tentando novamente...');
+        this.toastShown = true;
+      }
+      
       return false;
+    } finally {
+      this.migrationInProgress = false;
     }
   }
 
@@ -140,7 +169,14 @@ export class PricingMigrationService {
 
     // Migrate global table
     if (data.tabelaGlobal) {
-      await this.supabaseAdapter.saveGlobalTable(data.tabelaGlobal);
+      // Sanitize global table - ensure UUID or let DB generate
+      const globalTableToSave = { ...data.tabelaGlobal };
+      if (globalTableToSave.id && !this.isValidUUID(globalTableToSave.id)) {
+        console.log(`🔧 Removing non-UUID id from global table: ${globalTableToSave.id}`);
+        delete globalTableToSave.id;
+      }
+      
+      await this.supabaseAdapter.saveGlobalTable(globalTableToSave);
       console.log('✅ Global table migrated');
     }
 
@@ -149,7 +185,14 @@ export class PricingMigrationService {
     for (const categoryId of categoryIds) {
       const table = data.tabelasCategorias[categoryId];
       if (table) {
-        await this.supabaseAdapter.saveCategoryTable(categoryId, table);
+        // Sanitize category table - ensure UUID or let DB generate
+        const tableToSave = { ...table };
+        if (tableToSave.id && !this.isValidUUID(tableToSave.id)) {
+          console.log(`🔧 Removing non-UUID id from category table: ${tableToSave.id}`);
+          delete tableToSave.id;
+        }
+        
+        await this.supabaseAdapter.saveCategoryTable(categoryId, tableToSave);
         console.log(`✅ Category table migrated for: ${categoryId}`);
       }
     }
@@ -278,10 +321,21 @@ export class PricingMigrationService {
   }
 
   /**
+   * Check if a string is a valid UUID
+   */
+  private isValidUUID(id: string): boolean {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(id);
+  }
+
+  /**
    * Force reset migration status (for testing)
    */
   resetMigrationStatus(): void {
     localStorage.removeItem(MIGRATION_KEY);
+    localStorage.removeItem(MIGRATION_IN_PROGRESS_KEY);
+    this.migrationInProgress = false;
+    this.toastShown = false;
     console.log('🔄 Migration status reset');
   }
 }

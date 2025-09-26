@@ -169,6 +169,12 @@ export class PricingConfigurationService {
    * Get all available categories with pricing tables
    */
   static getCategoriesWithPricing(): Array<{id: string, nome: string, hasPricing: boolean}> {
+    // If using Supabase adapter, delegate to it
+    if (this.isUsingSupabase && 'getAllCategoriesWithPricing' in this.adapter) {
+      return (this.adapter as any).getAllCategoriesWithPricing();
+    }
+    
+    // Fallback to localStorage
     try {
       const categorias = localStorage.getItem(PRICING_STORAGE_KEYS.CATEGORIAS_PREFIX);
       if (!categorias) return [];

@@ -95,7 +95,7 @@ class PricingFreezingService {
       return {
         modelo: 'completo',
         dataCongelamento: new Date().toISOString(),
-        precificacaoFotoExtra
+        precificacaoFotoExtra: this.congelarRegrasPrecoFotoExtra()
       };
     }
   }
