@@ -148,7 +148,7 @@ export class PricingCalculationService {
    */
   static criarTabelaExemplo(): TabelaPrecos {
     return {
-      id: `tabela_${Date.now()}`,
+      id: crypto.randomUUID(),
       nome: 'Tabela Progressiva Padrão',
       faixas: [
         { min: 1, max: 5, valor: 35 },

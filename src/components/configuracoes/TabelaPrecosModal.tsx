@@ -38,7 +38,7 @@ export default function TabelaPrecosModal({ categoriaId, categoriaNome, categori
         // Criar tabela exemplo se não existir
         const novaTabela = {
           ...criarTabelaExemplo(),
-          id: `categoria_${categoriaId}_${Date.now()}`,
+          id: crypto.randomUUID(),
           nome: `Tabela ${categoriaNome}`
         };
         setTabela(novaTabela);

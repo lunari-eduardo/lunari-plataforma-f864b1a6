@@ -30,9 +30,39 @@ export function PricingContainer({ categorias }: PricingContainerProps) {
   const [tabelaGlobal, setTabelaGlobal] = useState<TabelaPrecos | null>(() =>
     PricingConfigurationService.loadGlobalTable()
   );
+  const [hydrated, setHydrated] = useState(false);
 
-  // Auto-save configuration
+  // Hydrate from Supabase on mount
   useEffect(() => {
+    const hydrateFromSupabase = async () => {
+      try {
+        const adapter = PricingConfigurationService['adapter'] as any;
+        if (adapter && typeof adapter.loadConfigurationAsync === 'function') {
+          const supabaseConfig = await adapter.loadConfigurationAsync();
+          if (supabaseConfig) {
+            setConfig(supabaseConfig);
+          }
+        }
+        if (adapter && typeof adapter.loadGlobalTableAsync === 'function') {
+          const supabaseGlobalTable = await adapter.loadGlobalTableAsync();
+          if (supabaseGlobalTable) {
+            setTabelaGlobal(supabaseGlobalTable);
+          }
+        }
+      } catch (error) {
+        console.error('Error hydrating from Supabase:', error);
+      } finally {
+        setHydrated(true);
+      }
+    };
+
+    hydrateFromSupabase();
+  }, []);
+
+  // Auto-save configuration (skip first render)
+  useEffect(() => {
+    if (!hydrated) return;
+    
     const saveConfig = async () => {
       try {
         await PricingConfigurationService.saveConfiguration(config);
@@ -42,10 +72,12 @@ export function PricingContainer({ categorias }: PricingContainerProps) {
     };
     
     saveConfig();
-  }, [config]);
+  }, [config, hydrated]);
 
-  // Auto-save global table
+  // Auto-save global table (skip first render)
   useEffect(() => {
+    if (!hydrated) return;
+    
     const saveTable = async () => {
       if (tabelaGlobal) {
         try {
@@ -57,7 +89,7 @@ export function PricingContainer({ categorias }: PricingContainerProps) {
     };
     
     saveTable();
-  }, [tabelaGlobal]);
+  }, [tabelaGlobal, hydrated]);
 
   const handleModeloChange = (novoModelo: 'fixo' | 'global' | 'categoria') => {
     const validation = PricingValidationService.validarConfiguracao(novoModelo);

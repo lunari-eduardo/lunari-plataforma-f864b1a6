@@ -174,33 +174,46 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
 
       console.log('💾 Saving global table:', table);
 
-      // Sanitize ID - if not UUID, omit to let DB generate
-      const tableData: any = {
+      let tableId = table.id;
+
+      // If table.id is not a valid UUID, find existing or generate new
+      if (!this.isValidUUID(tableId)) {
+        const { data: existingTable } = await supabase
+          .from('tabelas_precos')
+          .select('id')
+          .eq('user_id', user.user.id)
+          .eq('tipo', 'global')
+          .single();
+
+        if (existingTable) {
+          tableId = existingTable.id;
+        } else {
+          tableId = crypto.randomUUID();
+        }
+      }
+
+      const tableData = {
+        id: tableId,
         user_id: user.user.id,
         nome: table.nome,
-        faixas: table.faixas as any,
-        tipo: 'global'
+        tipo: 'global' as const,
+        categoria_id: null,
+        faixas: table.faixas as any
       };
-
-      // Only include ID if it's a valid UUID
-      const isValidUuid = table.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(table.id);
-      if (isValidUuid) {
-        tableData.id = table.id;
-      }
 
       const { data: savedData, error } = await supabase
         .from('tabelas_precos')
         .upsert(tableData, {
-          onConflict: isValidUuid ? 'id' : 'user_id,tipo'
+          onConflict: 'id'
         })
         .select()
         .single();
 
       if (error) {
-        console.error('❌ Error saving global pricing table:', error);
         if (error.code === '42P10') {
-          console.error('🚨 Database index mismatch! The unique constraints may need to be recreated.');
+          console.error('❌ Unique constraint conflict for global table - this should not happen with id-based upsert');
         }
+        console.error('❌ Error saving global pricing table:', error);
         throw error;
       }
 
@@ -300,8 +313,7 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
       let resolvedCategoryId = categoryId;
       
       // Check if categoryId is a valid UUID format
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      if (!uuidRegex.test(categoryId)) {
+      if (!this.isValidUUID(categoryId)) {
         console.log('🔍 Resolving category name to UUID:', categoryId);
         
         const { data: categoria, error: categoriaError } = await supabase
@@ -320,34 +332,47 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
         console.log('✅ Category resolved:', { name: categoryId, id: resolvedCategoryId });
       }
 
-      // Sanitize ID - if not UUID, omit to let DB generate
-      const tableData: any = {
+      let tableId = table.id;
+
+      // If table.id is not a valid UUID, find existing or generate new
+      if (!this.isValidUUID(tableId)) {
+        const { data: existingTable } = await supabase
+          .from('tabelas_precos')
+          .select('id')
+          .eq('user_id', user.user.id)
+          .eq('tipo', 'categoria')
+          .eq('categoria_id', resolvedCategoryId)
+          .single();
+
+        if (existingTable) {
+          tableId = existingTable.id;
+        } else {
+          tableId = crypto.randomUUID();
+        }
+      }
+
+      const tableData = {
+        id: tableId,
         user_id: user.user.id,
         nome: table.nome,
-        faixas: table.faixas as any,
-        tipo: 'categoria',
-        categoria_id: resolvedCategoryId
+        tipo: 'categoria' as const,
+        categoria_id: resolvedCategoryId,
+        faixas: table.faixas as any
       };
-
-      // Only include ID if it's a valid UUID
-      const isValidUuid = table.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(table.id);
-      if (isValidUuid) {
-        tableData.id = table.id;
-      }
 
       const { data: savedData, error } = await supabase
         .from('tabelas_precos')
         .upsert(tableData, {
-          onConflict: isValidUuid ? 'id' : 'user_id,tipo,categoria_id'
+          onConflict: 'id'
         })
         .select()
         .single();
 
       if (error) {
-        console.error(`❌ Error saving category pricing table for ${categoryId}:`, error);
         if (error.code === '42P10') {
-          console.error('🚨 Database index mismatch! The unique constraints may need to be recreated.');
+          console.error('❌ Unique constraint conflict for category table - this should not happen with id-based upsert');
         }
+        console.error(`❌ Error saving category pricing table for ${categoryId}:`, error);
         throw error;
       }
 
@@ -441,5 +466,10 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
       console.error('❌ Error preloading pricing data:', error);
       throw error;
     }
+  }
+
+  private isValidUUID(id: string): boolean {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(id);
   }
 }
