@@ -873,6 +873,17 @@ export function WorkflowTable({
                       regrasCongeladas={session.regrasDePrecoFotoExtraCongeladas}
                       currentValorFotoExtra={Number(session.valorFotoExtra) || 0}
                       currentValorTotalFotoExtra={Number(session.valorTotalFotoExtra) || 0}
+                      categoria={session.categoria}
+                      categoriaId={(() => {
+                        // Find category ID from category name
+                        const categoria = categorias.find(cat => cat.nome === session.categoria);
+                        return categoria?.id;
+                      })()}
+                      valorFotoExtraPacote={(() => {
+                        // Find package extra photo value
+                        const pacote = packageOptions.find(pkg => pkg.nome === session.pacote);
+                        return pacote?.valorFotoExtra || 0;
+                      })()}
                       onValueUpdate={(updates) => {
                         handleFieldUpdateStable(session.id, 'valorFotoExtra', updates.valorFotoExtra, true);
                         handleFieldUpdateStable(session.id, 'valorTotalFotoExtra', updates.valorTotalFotoExtra, true);

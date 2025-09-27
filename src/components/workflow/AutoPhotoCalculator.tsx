@@ -12,6 +12,9 @@ interface AutoPhotoCalculatorProps {
   regrasCongeladas?: any;
   currentValorFotoExtra?: number;
   currentValorTotalFotoExtra?: number;
+  categoria?: string;
+  categoriaId?: string;
+  valorFotoExtraPacote?: number;
   onValueUpdate: (updates: {
     valorFotoExtra: number;
     valorTotalFotoExtra: number;
@@ -24,6 +27,9 @@ export const AutoPhotoCalculator: React.FC<AutoPhotoCalculatorProps> = ({
   regrasCongeladas,
   currentValorFotoExtra = 0,
   currentValorTotalFotoExtra = 0,
+  categoria,
+  categoriaId,
+  valorFotoExtraPacote,
   onValueUpdate
 }) => {
   const lastComputedRef = useRef<{
@@ -65,11 +71,18 @@ export const AutoPhotoCalculator: React.FC<AutoPhotoCalculatorProps> = ({
         valorFotoExtra = resultado.valorUnitario;
         valorTotalFotoExtra = resultado.valorTotal;
       } else {
-        console.log('🧮 AutoPhotoCalculator: Using dynamic pricing calculation');
+        console.log('🧮 AutoPhotoCalculator: Using dynamic pricing calculation', { categoria, categoriaId, valorFotoExtraPacote });
         // Import dynamically to avoid circular dependencies
         const { calcularTotalFotosExtras } = await import('@/utils/precificacaoUtils');
         
-        const resultado = calcularTotalFotosExtras(quantidade);
+        // Build pacoteInfo with category information for categoria mode
+        const pacoteInfo = {
+          valorFotoExtra: valorFotoExtraPacote,
+          categoria,
+          categoriaId
+        };
+        
+        const resultado = calcularTotalFotosExtras(quantidade, pacoteInfo);
         valorFotoExtra = quantidade > 0 ? resultado / quantidade : 0;
         valorTotalFotoExtra = resultado;
       }
@@ -119,7 +132,7 @@ export const AutoPhotoCalculator: React.FC<AutoPhotoCalculatorProps> = ({
     } catch (error) {
       console.error('❌ AutoPhotoCalculator: Error calculating values:', error);
     }
-  }, [sessionId, quantidade, regrasCongeladas, currentValorFotoExtra, currentValorTotalFotoExtra, onValueUpdate]);
+  }, [sessionId, quantidade, regrasCongeladas, currentValorFotoExtra, currentValorTotalFotoExtra, categoria, categoriaId, valorFotoExtraPacote, onValueUpdate]);
 
   // Calculate whenever dependencies change
   useEffect(() => {
