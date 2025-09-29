@@ -187,6 +187,9 @@ export function useRealtimeConfiguration(): ConfigurationState & ConfigurationAc
   useEffect(() => {
     const loadAllData = async () => {
       try {
+        // Wait for service initialization (includes default data setup)
+        await configurationService.initialize();
+        
         const [categorias, pacotes, produtos, etapas] = await Promise.all([
           configurationService.loadCategoriasAsync(),
           configurationService.loadPacotesAsync(), 
@@ -199,7 +202,7 @@ export function useRealtimeConfiguration(): ConfigurationState & ConfigurationAc
         produtosOps.set(produtos);
         etapasOps.set(etapas);
         
-        console.log('✅ All configuration data loaded');
+        console.log('✅ All configuration data loaded with initialization');
       } catch (error) {
         console.error('❌ Error loading configuration data:', error);
         toast.error('Erro ao carregar configurações');

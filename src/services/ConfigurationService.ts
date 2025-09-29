@@ -5,6 +5,7 @@
 
 import { SupabaseConfigurationAdapterAsync } from '@/adapters/SupabaseConfigurationAdapterAsync';
 import { ConfigurationMigrationService } from './ConfigurationMigrationService';
+import { InitialDataService } from './InitialDataService';
 import { supabase } from '@/integrations/supabase/client';
 import type { ConfigurationStorageAdapter } from '@/adapters/ConfigurationStorageAdapter';
 import type { 
@@ -55,6 +56,9 @@ class ConfigurationService {
         
         // Executa migração completa se necessário
         await ConfigurationMigrationService.migrateAll();
+        
+        // Inicializa dados padrão se usuário for novo
+        await InitialDataService.initializeDefaultDataIfNeeded();
       } else {
         console.log('User not authenticated, using localStorage adapter only');
         this.asyncAdapter = null;

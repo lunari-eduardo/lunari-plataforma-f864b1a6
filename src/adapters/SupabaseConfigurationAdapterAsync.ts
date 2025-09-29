@@ -36,7 +36,7 @@ export class SupabaseConfigurationAdapterAsync {
 
       // Se não há categorias, retorna array vazio (primeiro login)  
       if (!data || data.length === 0) {
-        console.log('No categorias found, returning empty array');
+        console.log('🏷️ No categorias found, returning empty array');
         return [];
       }
 
