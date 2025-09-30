@@ -4,12 +4,12 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { useConfiguration } from '@/hooks/useConfiguration';
+import { useConfigurationContext } from '@/contexts/ConfigurationContext';
 
 interface PackageComboboxProps {
   value?: string;
   onValueChange: (packageData: {
-    id: string; // Add ID to the interface
+    id: string;
     nome: string;
     valor: string;
     valorFotoExtra: string;
@@ -49,8 +49,8 @@ export function WorkflowPackageCombobox({
 }: PackageComboboxProps) {
   const [open, setOpen] = useState(false);
   
-  // Use real-time configuration data from Supabase
-  const { pacotes: rawPacotes, categorias, isLoadingPacotes } = useConfiguration();
+  // Use cached configuration data from context
+  const { pacotes: rawPacotes, categorias, isLoadingPacotes } = useConfigurationContext();
   
   // Process packages with category names
   const pacotes = rawPacotes.map((pacote: any) => {
