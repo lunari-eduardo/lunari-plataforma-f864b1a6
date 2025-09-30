@@ -40,13 +40,15 @@ class PricingFreezingService {
     try {
       console.log('📦 Congelando dados completos para pacote:', pacoteId, 'categoria:', categoria);
       
+      // Criar objeto base de regras (precificacao será preenchida de forma assíncrona)
       const regras: RegrasCongeladas = {
         modelo: 'completo',
         dataCongelamento: new Date().toISOString(),
-        precificacaoFotoExtra: this.congelarRegrasPrecoFotoExtra(categoria)
+        precificacaoFotoExtra: { modelo: 'fixo' } // Temporário, será atualizado abaixo
       };
 
       // Congela dados do pacote se ID fornecido
+      let categoriaIdResolvido: string | undefined;
       if (pacoteId) {
         const { supabase } = await import('@/integrations/supabase/client');
         const { data: user } = await supabase.auth.getUser();
@@ -66,6 +68,7 @@ class PricingFreezingService {
             .single();
 
           if (pacote) {
+            categoriaIdResolvido = pacote.categoria_id;
             regras.pacote = {
               id: pacote.id,
               nome: pacote.nome,
@@ -86,6 +89,9 @@ class PricingFreezingService {
           }
         }
       }
+
+      // Congela regras de precificação de foto extra de forma ASSÍNCRONA
+      regras.precificacaoFotoExtra = await this.congelarRegrasPrecoFotoExtraAsync(categoria, categoriaIdResolvido);
 
       console.log('📦 Dados completos congelados:', regras);
       return regras;
@@ -114,7 +120,42 @@ class PricingFreezingService {
   }
 
   /**
-   * Congela regras específicas de precificação de foto extra
+   * Congela regras específicas de precificação de foto extra (VERSÃO ASSÍNCRONA)
+   */
+  private async congelarRegrasPrecoFotoExtraAsync(categoria?: string, categoriaId?: string) {
+    const config = obterConfiguracaoPrecificacao();
+    
+    const regras: any = {
+      modelo: config.modelo
+    };
+
+    switch (config.modelo) {
+      case 'fixo':
+        console.log('📦 Modelo fixo: valor será determinado pelo pacote específico');
+        break;
+      
+      case 'global':
+        const tabelaGlobal = obterTabelaGlobal();
+        regras.tabelaGlobal = tabelaGlobal;
+        console.log('📊 Tabela global congelada:', tabelaGlobal?.nome);
+        break;
+      
+      case 'categoria':
+        if (categoria || categoriaId) {
+          const tabelaCategoria = await this.resolverTabelaCategoriaAsync(categoria, categoriaId);
+          regras.tabelaCategoria = tabelaCategoria;
+          console.log('📊 Tabela categoria congelada (ASYNC):', tabelaCategoria?.nome, 'para categoria:', categoria || categoriaId, 'resolvida:', !!tabelaCategoria);
+        } else {
+          console.warn('⚠️ Modelo categoria mas sem categoria ou categoriaId fornecido');
+        }
+        break;
+    }
+
+    return regras;
+  }
+
+  /**
+   * Congela regras específicas de precificação de foto extra (VERSÃO SÍNCRONA - para compatibilidade)
    */
   private congelarRegrasPrecoFotoExtra(categoria?: string) {
     const config = obterConfiguracaoPrecificacao();
@@ -138,12 +179,62 @@ class PricingFreezingService {
         if (categoria) {
           const tabelaCategoria = this.resolverTabelaCategoria(categoria);
           regras.tabelaCategoria = tabelaCategoria;
-          console.log('📊 Tabela categoria congelada:', tabelaCategoria?.nome, 'para categoria:', categoria, 'resolvida:', !!tabelaCategoria);
+          console.log('📊 Tabela categoria congelada (SYNC):', tabelaCategoria?.nome, 'para categoria:', categoria, 'resolvida:', !!tabelaCategoria);
         }
         break;
     }
 
     return regras;
+  }
+
+  /**
+   * Resolve tabela de categoria por ID ou nome - VERSÃO ASSÍNCRONA
+   */
+  private async resolverTabelaCategoriaAsync(categoria?: string, categoriaId?: string) {
+    try {
+      const { PricingConfigurationService } = await import('@/services/PricingConfigurationService');
+      const adapter = (PricingConfigurationService as any).adapter;
+      
+      if (!adapter || typeof adapter.loadCategoryTableAsync !== 'function') {
+        console.warn('⚠️ Adapter não suporta loadCategoryTableAsync, usando fallback síncrono');
+        return categoria ? this.resolverTabelaCategoria(categoria) : null;
+      }
+
+      // Usar categoriaId se disponível
+      let id = categoriaId;
+      
+      // Se não temos ID, precisamos resolver pelo nome
+      if (!id && categoria) {
+        const { supabase } = await import('@/integrations/supabase/client');
+        const { data: user } = await supabase.auth.getUser();
+        if (!user?.user) {
+          console.warn('⚠️ Usuário não autenticado');
+          return null;
+        }
+
+        const { data: cat } = await supabase
+          .from('categorias')
+          .select('id')
+          .eq('nome', categoria)
+          .eq('user_id', user.user.id)
+          .maybeSingle();
+        
+        id = cat?.id;
+      }
+
+      if (!id) {
+        console.warn('⚠️ Não foi possível resolver categoriaId para:', categoria);
+        return null;
+      }
+
+      // Carregar tabela de forma assíncrona
+      const tabela = await adapter.loadCategoryTableAsync(id);
+      console.log('✅ Tabela categoria carregada de forma ASSÍNCRONA:', tabela?.nome, 'para ID:', id);
+      return tabela;
+    } catch (error) {
+      console.error('❌ Erro ao resolver tabela categoria de forma assíncrona:', error);
+      return null;
+    }
   }
 
   /**
@@ -263,12 +354,23 @@ class PricingFreezingService {
         break;
         
       case 'categoria':
-        const tabelaCategoria = regrasPrecoFoto.tabelaCategoria;
+        let tabelaCategoria = regrasPrecoFoto.tabelaCategoria;
+        
+        // FALLBACK: Se tabela está null, tentar recarregar do cache
+        if (!tabelaCategoria?.faixas?.length && regrasCongeladas.pacote?.categoriaId) {
+          console.warn('⚠️ Tabela categoria null nas regras, tentando recarregar do cache...');
+          tabelaCategoria = obterTabelaCategoria(regrasCongeladas.pacote.categoriaId);
+          
+          if (tabelaCategoria) {
+            console.log('✅ Tabela categoria recuperada do cache:', tabelaCategoria.nome);
+          }
+        }
+        
         if (tabelaCategoria?.faixas?.length > 0) {
           valorUnitario = this.calcularValorPorTabela(quantidade, tabelaCategoria);
           console.log('📊 Modelo categoria: valor calculado por tabela:', valorUnitario, 'para quantidade:', quantidade, 'tabela:', tabelaCategoria.nome);
         } else {
-          console.warn('⚠️ Modelo categoria: tabela de categoria não encontrada ou vazia');
+          console.error('❌ ERRO: Tabela categoria não disponível. CategoriaId:', regrasCongeladas.pacote?.categoriaId);
           valorUnitario = 0;
         }
         break;
@@ -492,6 +594,70 @@ class PricingFreezingService {
   }
 
   /**
+   * Corrige sessões com modelo categoria que podem ter tabelas null
+   */
+  async corrigirSessoesComTabelasNull() {
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data: user } = await supabase.auth.getUser();
+      
+      if (!user?.user) {
+        throw new Error('User not authenticated');
+      }
+
+      console.log('🔧 Iniciando correção de sessões com tabelas null...');
+
+      const { data: sessions, error } = await supabase
+        .from('clientes_sessoes')
+        .select('id, categoria, pacote, regras_congeladas')
+        .eq('user_id', user.user.id);
+
+      if (error) throw error;
+
+      let corrected = 0;
+      let skipped = 0;
+
+      for (const session of sessions || []) {
+        try {
+          const regras = session.regras_congeladas as RegrasCongeladas;
+          
+          // Verifica se tem problema com tabela categoria null
+          if (regras?.precificacaoFotoExtra?.modelo === 'categoria' && 
+              !regras.precificacaoFotoExtra.tabelaCategoria) {
+            
+            console.log('🔧 Recongelando sessão com tabela null:', session.id, 'categoria:', session.categoria);
+
+            // Recongela com método assíncrono
+            const regrasCorrigidas = await this.congelarDadosCompletos(
+              session.pacote,
+              session.categoria
+            );
+
+            await supabase
+              .from('clientes_sessoes')
+              .update({ regras_congeladas: regrasCorrigidas as any })
+              .eq('id', session.id)
+              .eq('user_id', user.user.id);
+            
+            corrected++;
+          } else {
+            skipped++;
+          }
+        } catch (sessionError) {
+          console.error('❌ Erro ao corrigir sessão:', session.id, sessionError);
+        }
+      }
+      
+      console.log(`✅ Correção de tabelas null concluída: ${corrected} corrigidas, ${skipped} ignoradas`);
+      return { corrected, skipped };
+      
+    } catch (error) {
+      console.error('❌ Erro na correção de sessões com tabelas null:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Corrige sessões com modelo categoria que podem ter tabelas incorretas
    */
   async corrigirModeloCategoria() {
@@ -522,19 +688,15 @@ class PricingFreezingService {
           // Verifica se é modelo categoria e se precisa de correção
           if (regras?.precificacaoFotoExtra?.modelo === 'categoria' && session.categoria) {
             const tabelaAtual = regras.precificacaoFotoExtra.tabelaCategoria;
-            const tabelaCorreta = await this.resolverTabelaCategoria(session.categoria);
             
-            // Se não tem tabela ou a tabela está diferente, corrigir
-            if (!tabelaAtual || (tabelaCorreta && tabelaAtual?.id !== tabelaCorreta?.id)) {
-              console.log('🔧 Corrigindo tabela categoria para sessão:', session.id, {
-                categoria: session.categoria,
-                tabelaAtual: tabelaAtual?.nome || 'nenhuma',
-                tabelaCorreta: tabelaCorreta?.nome || 'não encontrada'
-              });
+            // Se não tem tabela, precisa recongelar
+            if (!tabelaAtual) {
+              console.log('🔧 Recongelando sessão sem tabela categoria:', session.id, 'categoria:', session.categoria);
 
-              const regrasCorrigidas = { ...regras };
-              regrasCorrigidas.precificacaoFotoExtra.tabelaCategoria = tabelaCorreta;
-              regrasCorrigidas.dataCongelamento = new Date().toISOString();
+              const regrasCorrigidas = await this.congelarDadosCompletos(
+                session.pacote,
+                session.categoria
+              );
 
               await supabase
                 .from('clientes_sessoes')

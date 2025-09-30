@@ -54,6 +54,23 @@ export function usePricingBootstrap() {
               console.log('✅ Example pricing data created and reloaded');
             }
           }
+
+          // Run correction for sessions with null category tables (one-time fix)
+          const correctionKey = 'pricing_null_tables_fix_v1_executed';
+          const jaCorrectionExecuted = localStorage.getItem(correctionKey);
+          
+          if (!jaCorrectionExecuted) {
+            console.log('🔧 Executando correção de sessões com tabelas null...');
+            const { pricingFreezingService } = await import('@/services/PricingFreezingService');
+            try {
+              const result = await pricingFreezingService.corrigirSessoesComTabelasNull();
+              console.log(`✅ Correção de tabelas null concluída: ${result.corrected} sessões corrigidas`);
+              localStorage.setItem(correctionKey, 'true');
+            } catch (correctionError) {
+              console.error('❌ Erro na correção de tabelas null:', correctionError);
+              // Não bloquear inicialização por causa de erro na correção
+            }
+          }
         } else {
           console.warn('⚠️ No Supabase adapter found for preloading');
         }
