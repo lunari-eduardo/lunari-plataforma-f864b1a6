@@ -447,47 +447,64 @@ export const useWorkflowRealtime = () => {
 
   // Real-time subscription
   useEffect(() => {
-    loadSessions();
+    let mounted = true;
+    let channel: any = null;
+    const handler = async (payload: any) => {
+      console.log('🔄 [WorkflowRealtime] Real-time workflow session change:', payload.eventType, payload);
+      if (payload.eventType === 'INSERT') {
+        console.log('➕ [WorkflowRealtime] Adding new session via realtime:', payload.new);
+        setSessions(prev => [payload.new as WorkflowSession, ...prev]);
+      } else if (payload.eventType === 'UPDATE') {
+        console.log('✏️ [WorkflowRealtime] Updating session via realtime:', payload.new.id);
+        setSessions(prev => prev.map((session: any) => {
+          if (session.id !== payload.new.id) return session;
+          const incoming = payload.new as any;
+          const preservedCliente = session?.clientes && !('clientes' in incoming) ? session.clientes : incoming?.clientes;
+          return { ...session, ...incoming, ...(preservedCliente ? { clientes: preservedCliente } : {}) } as WorkflowSession;
+        }));
+      } else if (payload.eventType === 'DELETE') {
+        console.log('🗑️ [WorkflowRealtime] Deleting session via realtime:', payload.old.id);
+        setSessions(prev => prev.filter(session => session.id !== payload.old.id));
+      }
+    };
 
-    const channel = supabase
-      .channel('workflow-sessions')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'clientes_sessoes'
-        },
-        async (payload) => {
-          console.log('🔄 [WorkflowRealtime] Real-time workflow session change:', payload.eventType, payload);
-          
-          if (payload.eventType === 'INSERT') {
-            console.log('➕ [WorkflowRealtime] Adding new session via realtime:', payload.new);
-            setSessions(prev => [payload.new as WorkflowSession, ...prev]);
-          } else if (payload.eventType === 'UPDATE') {
-            console.log('✏️ [WorkflowRealtime] Updating session via realtime:', payload.new.id);
-            setSessions(prev => prev.map((session: any) => {
-              if (session.id !== payload.new.id) return session;
-              const incoming = payload.new as any;
-              // Preserve nested cliente info if the realtime payload doesn't include it
-              const preservedCliente = session?.clientes && !('clientes' in incoming) ? session.clientes : incoming?.clientes;
-              return {
-                ...session,
-                ...incoming,
-                ...(preservedCliente ? { clientes: preservedCliente } : {})
-              } as WorkflowSession;
-            }));
-            // No toast here - realtime updates should be silent
-          } else if (payload.eventType === 'DELETE') {
-            console.log('🗑️ [WorkflowRealtime] Deleting session via realtime:', payload.old.id);
-            setSessions(prev => prev.filter(session => session.id !== payload.old.id));
+    const subscribeForUser = async (userId: string) => {
+      if (!mounted) return;
+      channel = supabase
+        .channel(`workflow-sessions-${userId}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'clientes_sessoes', filter: `user_id=eq.${userId}` }, handler)
+        .subscribe();
+    };
+
+    const init = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await loadSessions();
+        await subscribeForUser(user.id);
+      } else {
+        console.log('🔒 [WorkflowRealtime] Waiting for authentication to initialize');
+        const res = supabase.auth.onAuthStateChange((_event, session) => {
+          if (session?.user && mounted) {
+            loadSessions();
+            subscribeForUser(session.user.id);
           }
-        }
-      )
-      .subscribe();
+        });
+        // Cleanup auth subscription on unmount
+        return () => {
+          res.data?.subscription?.unsubscribe?.();
+        };
+      }
+    };
+
+    let cleanupAuthFn: (() => void) | undefined;
+    init().then((fn) => {
+      if (typeof fn === 'function') cleanupAuthFn = fn;
+    });
 
     return () => {
-      supabase.removeChannel(channel);
+      mounted = false;
+      if (channel) supabase.removeChannel(channel);
+      cleanupAuthFn?.();
     };
   }, [loadSessions]);
 

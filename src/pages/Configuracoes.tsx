@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/
 import { Package, Box, Workflow, Shapes, DollarSign } from 'lucide-react';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { TableSyncStatus } from '@/components/ui/sync-indicator';
-import { useRealtimeConfiguration } from '@/hooks/useRealtimeConfiguration';
+import { useConfigurationContext } from '@/contexts/ConfigurationContext';
 
 // Importação dos componentes de configuração
 import Categorias from '@/components/configuracoes/Categorias';
@@ -14,7 +14,7 @@ import FluxoTrabalho from '@/components/configuracoes/FluxoTrabalho';
 import PrecificacaoFotos from '@/components/configuracoes/PrecificacaoFotos';
 export default function Configuracoes() {
   // Hook unificado para todas as configurações
-  const configuration = useRealtimeConfiguration();
+  const configuration = useConfigurationContext();
   const [tabAtiva, setTabAtiva] = useState('categorias');
   
   return (
