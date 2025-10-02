@@ -22,14 +22,10 @@ export function useSupabaseRealtime(
   enabled: boolean = true
 ) {
   const channelRef = useRef<RealtimeChannel | null>(null);
-  const subscribedRef = useRef<boolean>(false);
 
   const setupRealtime = useCallback(async (retryCount = 0) => {
     if (!enabled) return;
-    if (subscribedRef.current) {
-      console.log(`✅ Already subscribed to ${tableName}, skipping setup`);
-      return;
-    }
+
     try {
       // Check if user is authenticated
       const { data: { user } } = await supabase.auth.getUser();
@@ -41,13 +37,11 @@ export function useSupabaseRealtime(
       // Remove existing channel if any
       if (channelRef.current) {
         await supabase.removeChannel(channelRef.current);
-        channelRef.current = null;
-        subscribedRef.current = false;
       }
 
       // Create new channel for this table
       const channel = supabase
-        .channel(`realtime_${tableName}_${user.id}`)
+        .channel(`realtime_${tableName}_${Date.now()}`)
         .on(
           'postgres_changes',
           {
@@ -93,10 +87,8 @@ export function useSupabaseRealtime(
         if (status === 'SUBSCRIBED') {
           console.log(`✅ Realtime subscribed to ${tableName}`);
           channelRef.current = channel;
-          subscribedRef.current = true;
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
           console.warn(`⚠️ Subscription ${status} for ${tableName}`);
-          subscribedRef.current = false;
           
           // Retry with exponential backoff (max 3 attempts)
           if (retryCount < 3) {
@@ -128,7 +120,6 @@ export function useSupabaseRealtime(
       console.log(`🧹 Cleaning up realtime subscription for ${tableName}`);
       await supabase.removeChannel(channelRef.current);
       channelRef.current = null;
-      subscribedRef.current = false;
     }
   }, [tableName]);
 

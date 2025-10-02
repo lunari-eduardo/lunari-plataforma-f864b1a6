@@ -4,7 +4,6 @@
  */
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { PricingConfigurationService } from '@/services/PricingConfigurationService';
 import { pricingMigrationService } from '@/services/PricingMigrationService';
 import { createExamplePricingData } from '@/scripts/createExamplePricingData';
@@ -21,15 +20,6 @@ export function usePricingBootstrap() {
     const initializePricingSystem = async () => {
       try {
         console.log('🔄 Bootstrapping pricing system...');
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          console.log('🔒 Pricing bootstrap: user not authenticated, skipping until login');
-          if (isMounted) {
-            setIsInitialized(true);
-            setIsLoading(false);
-          }
-          return;
-        }
         
         // Initialize Supabase adapter
         await PricingConfigurationService.initializeSupabaseAdapter();
