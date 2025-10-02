@@ -7,7 +7,6 @@ import { SupabaseConfigurationAdapterAsync } from '@/adapters/SupabaseConfigurat
 import { ConfigurationMigrationService } from './ConfigurationMigrationService';
 import { InitialDataService } from './InitialDataService';
 import { supabase } from '@/integrations/supabase/client';
-import debounce from 'lodash.debounce';
 import type { ConfigurationStorageAdapter } from '@/adapters/ConfigurationStorageAdapter';
 import type { 
   Categoria, 
@@ -26,12 +25,6 @@ class ConfigurationService {
   private adapter: ConfigurationStorageAdapter;
   private asyncAdapter: SupabaseConfigurationAdapterAsync | null = null;
   private initialized = false;
-  
-  // Debounced sync methods to reduce Supabase calls
-  private debouncedSyncCategorias: ((categorias: Categoria[]) => Promise<void>) | null = null;
-  private debouncedSyncPacotes: ((pacotes: Pacote[]) => Promise<void>) | null = null;
-  private debouncedSyncProdutos: ((produtos: Produto[]) => Promise<void>) | null = null;
-  private debouncedSyncEtapas: ((etapas: EtapaTrabalho[]) => Promise<void>) | null = null;
   
   constructor(adapter?: ConfigurationStorageAdapter) {
     // FORÇA USO EXCLUSIVO DO SUPABASE - Requer autenticação
@@ -60,31 +53,6 @@ class ConfigurationService {
       if (user.user) {
         console.log('User authenticated, enabling async Supabase adapter');
         this.asyncAdapter = new SupabaseConfigurationAdapterAsync();
-        
-        // Initialize debounced sync methods
-        this.debouncedSyncCategorias = debounce(async (categorias: Categoria[]) => {
-          if (this.asyncAdapter) {
-            await this.asyncAdapter.syncCategorias(categorias);
-          }
-        }, 500);
-        
-        this.debouncedSyncPacotes = debounce(async (pacotes: Pacote[]) => {
-          if (this.asyncAdapter) {
-            await this.asyncAdapter.syncPacotes(pacotes);
-          }
-        }, 500);
-        
-        this.debouncedSyncProdutos = debounce(async (produtos: Produto[]) => {
-          if (this.asyncAdapter) {
-            await this.asyncAdapter.syncProdutos(produtos);
-          }
-        }, 500);
-        
-        this.debouncedSyncEtapas = debounce(async (etapas: EtapaTrabalho[]) => {
-          if (this.asyncAdapter) {
-            await this.asyncAdapter.syncEtapas(etapas);
-          }
-        }, 500);
         
         // Executa migração completa se necessário
         await ConfigurationMigrationService.migrateAll();
@@ -142,9 +110,7 @@ class ConfigurationService {
 
   async syncCategorias(categorias: Categoria[]): Promise<void> {
     await this.initialize();
-    if (this.debouncedSyncCategorias) {
-      await this.debouncedSyncCategorias(categorias);
-    } else if (this.asyncAdapter) {
+    if (this.asyncAdapter) {
       await this.asyncAdapter.syncCategorias(categorias);
     } else {
       await this.adapter.saveCategorias(categorias);
@@ -186,9 +152,7 @@ class ConfigurationService {
 
   async syncPacotes(pacotes: Pacote[]): Promise<void> {
     await this.initialize();
-    if (this.debouncedSyncPacotes) {
-      await this.debouncedSyncPacotes(pacotes);
-    } else if (this.asyncAdapter) {
+    if (this.asyncAdapter) {
       await this.asyncAdapter.syncPacotes(pacotes);
     } else {
       await this.adapter.savePacotes(pacotes);
@@ -230,9 +194,7 @@ class ConfigurationService {
 
   async syncProdutos(produtos: Produto[]): Promise<void> {
     await this.initialize();
-    if (this.debouncedSyncProdutos) {
-      await this.debouncedSyncProdutos(produtos);
-    } else if (this.asyncAdapter) {
+    if (this.asyncAdapter) {
       await this.asyncAdapter.syncProdutos(produtos);
     } else {
       await this.adapter.saveProdutos(produtos);
@@ -274,9 +236,7 @@ class ConfigurationService {
 
   async syncEtapas(etapas: EtapaTrabalho[]): Promise<void> {
     await this.initialize();
-    if (this.debouncedSyncEtapas) {
-      await this.debouncedSyncEtapas(etapas);
-    } else if (this.asyncAdapter) {
+    if (this.asyncAdapter) {
       await this.asyncAdapter.syncEtapas(etapas);
     } else {
       await this.adapter.saveEtapas(etapas);

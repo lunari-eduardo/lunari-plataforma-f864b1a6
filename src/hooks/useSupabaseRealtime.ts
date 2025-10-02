@@ -23,7 +23,7 @@ export function useSupabaseRealtime(
 ) {
   const channelRef = useRef<RealtimeChannel | null>(null);
 
-  const setupRealtime = useCallback(async (retryCount = 0) => {
+  const setupRealtime = useCallback(async () => {
     if (!enabled) return;
 
     try {
@@ -41,7 +41,7 @@ export function useSupabaseRealtime(
 
       // Create new channel for this table
       const channel = supabase
-        .channel(`realtime_${tableName}_${Date.now()}`)
+        .channel(`realtime_${tableName}`)
         .on(
           'postgres_changes',
           {
@@ -82,36 +82,17 @@ export function useSupabaseRealtime(
           }
         );
 
-      // Subscribe with retry logic
+      // Subscribe to the channel
       channel.subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           console.log(`✅ Realtime subscribed to ${tableName}`);
           channelRef.current = channel;
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-          console.warn(`⚠️ Subscription ${status} for ${tableName}`);
-          
-          // Retry with exponential backoff (max 3 attempts)
-          if (retryCount < 3) {
-            const delay = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
-            console.log(`🔄 Retrying subscription for ${tableName} in ${delay}ms (attempt ${retryCount + 1}/3)`);
-            setTimeout(() => {
-              setupRealtime(retryCount + 1);
-            }, delay);
-          } else {
-            console.error(`❌ Failed to subscribe to ${tableName} after 3 attempts`);
-          }
+          console.error(`❌ Failed to subscribe to ${tableName}:`, status);
         }
       });
     } catch (error) {
       console.error(`❌ Error setting up realtime for ${tableName}:`, error);
-      
-      // Retry on error
-      if (retryCount < 3) {
-        const delay = Math.pow(2, retryCount) * 1000;
-        setTimeout(() => {
-          setupRealtime(retryCount + 1);
-        }, delay);
-      }
     }
   }, [tableName, callbacks, enabled]);
 

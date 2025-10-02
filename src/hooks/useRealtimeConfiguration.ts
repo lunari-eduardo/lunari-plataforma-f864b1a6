@@ -3,7 +3,7 @@
  * Combines optimistic updates with Supabase real-time subscriptions
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useEffect, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 import { useSupabaseRealtime } from './useSupabaseRealtime';
 import { useOptimisticConfiguration } from './useOptimisticConfiguration';
@@ -25,37 +25,6 @@ export function useRealtimeConfiguration(): ConfigurationState & ConfigurationAc
   const [pacotesState, pacotesOps] = useOptimisticConfiguration<Pacote>([]);
   const [produtosState, produtosOps] = useOptimisticConfiguration<Produto>([]);
   const [etapasState, etapasOps] = useOptimisticConfiguration<EtapaTrabalho>([]);
-
-  // ============= SEQUENCED SUBSCRIPTIONS =============
-  // Enable subscriptions one at a time to prevent connection errors
-  
-  const [subscriptionsEnabled, setSubscriptionsEnabled] = useState({
-    categorias: false,
-    pacotes: false,
-    produtos: false,
-    etapas: false
-  });
-
-  // Sequentially enable subscriptions with delays
-  useEffect(() => {
-    const enableSubscriptionsSequentially = async () => {
-      // Wait for initial data load
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      setSubscriptionsEnabled(prev => ({ ...prev, categorias: true }));
-      await new Promise(resolve => setTimeout(resolve, 200));
-      
-      setSubscriptionsEnabled(prev => ({ ...prev, pacotes: true }));
-      await new Promise(resolve => setTimeout(resolve, 200));
-      
-      setSubscriptionsEnabled(prev => ({ ...prev, produtos: true }));
-      await new Promise(resolve => setTimeout(resolve, 200));
-      
-      setSubscriptionsEnabled(prev => ({ ...prev, etapas: true }));
-    };
-    
-    enableSubscriptionsSequentially();
-  }, []);
 
   // ============= REAL-TIME SUBSCRIPTIONS =============
   
@@ -90,7 +59,7 @@ export function useRealtimeConfiguration(): ConfigurationState & ConfigurationAc
       const deleted = payload.old as any;
       categoriasOps.set(categoriasState.data.filter(c => c.id !== deleted.id));
     }
-  }, subscriptionsEnabled.categorias);
+  });
 
   // Pacotes realtime  
   useSupabaseRealtime('pacotes', {
@@ -133,7 +102,7 @@ export function useRealtimeConfiguration(): ConfigurationState & ConfigurationAc
       const deleted = payload.old as any;
       pacotesOps.set(pacotesState.data.filter(p => p.id !== deleted.id));
     }
-  }, subscriptionsEnabled.pacotes);
+  });
 
   // Produtos realtime
   useSupabaseRealtime('produtos', {
@@ -172,7 +141,7 @@ export function useRealtimeConfiguration(): ConfigurationState & ConfigurationAc
       const deleted = payload.old as any;
       produtosOps.set(produtosState.data.filter(p => p.id !== deleted.id));
     }
-  }, subscriptionsEnabled.produtos);
+  });
 
   // Etapas realtime
   useSupabaseRealtime('etapas_trabalho', {
@@ -211,7 +180,7 @@ export function useRealtimeConfiguration(): ConfigurationState & ConfigurationAc
       const deleted = payload.old as any;
       etapasOps.set(etapasState.data.filter(e => e.id !== deleted.id));
     }
-  }, subscriptionsEnabled.etapas);
+  });
 
   // ============= INITIAL DATA LOADING =============
   

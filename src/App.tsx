@@ -1,3 +1,4 @@
+
 import * as React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -25,7 +26,6 @@ import NotFound from "./pages/NotFound";
 import { AppProvider } from "./contexts/AppContext";
 import { AgendaProvider } from "./contexts/AgendaContext";
 import { AuthProvider } from "./contexts/AuthContext";
-import { ConfigurationProvider } from "./contexts/ConfigurationContext";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import ThemeProvider from "./components/theme/ThemeProvider";
 import { BuildMonitor } from "./components/shared/BuildMonitor";
@@ -59,45 +59,43 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <AuthProvider>
-            <ConfigurationProvider>
-              <AppProvider>
-                <AgendaProvider>
-                  <TooltipProvider>
-                    <BuildMonitor />
-                    <Toaster />
-                    <Sonner />
-                    <Routes>
-                      {/* Public routes */}
-                      <Route path="/landing" element={<LandingPage />} />
-                      <Route path="/auth" element={<Auth />} />
-                      
-                      {/* Protected routes with layout */}
-                      <Route path="/" element={
-                        <ProtectedRoute>
-                          <Layout />
-                        </ProtectedRoute>
-                      }>
-                        <Route path="/" element={<Index />} />
-                        <Route path="/agenda" element={<Agenda />} />
-                        <Route path="/clientes" element={<Clientes />} />
-                        <Route path="/clientes/:id" element={<ClienteDetalhe />} />
-                        <Route path="/leads" element={<Leads />} />
-                        <Route path="/financas" element={<NovaFinancas />} />
-                        <Route path="/precificacao" element={<Precificacao />} />
-                        <Route path="/workflow" element={<Workflow />} />
-                        <Route path="/analise-vendas" element={<AnaliseVendas />} />
-                        <Route path="/configuracoes" element={<Configuracoes />} />
-                        <Route path="/minha-conta" element={<MinhaConta />} />
-                        <Route path="/preferencias" element={<Preferencias />} />
-                        <Route path="/tarefas" element={<Tarefas />} />
-                        <Route path="/feed-test" element={<FeedTest />} />
-                        <Route path="*" element={<NotFound />} />
-                      </Route>
-                    </Routes>
-                  </TooltipProvider>
-                </AgendaProvider>
-              </AppProvider>
-            </ConfigurationProvider>
+            <AppProvider>
+              <AgendaProvider>
+                <TooltipProvider>
+                  <BuildMonitor />
+                  <Toaster />
+                  <Sonner />
+                  <Routes>
+                    {/* Public routes */}
+                    <Route path="/landing" element={<LandingPage />} />
+                    <Route path="/auth" element={<Auth />} />
+                    
+                    {/* Protected routes with layout */}
+                    <Route path="/" element={
+                      <ProtectedRoute>
+                        <Layout />
+                      </ProtectedRoute>
+                    }>
+                      <Route path="/" element={<Index />} />
+                      <Route path="/agenda" element={<Agenda />} />
+                      <Route path="/clientes" element={<Clientes />} />
+                      <Route path="/clientes/:id" element={<ClienteDetalhe />} />
+                      <Route path="/leads" element={<Leads />} />
+                      <Route path="/financas" element={<NovaFinancas />} />
+                      <Route path="/precificacao" element={<Precificacao />} />
+                      <Route path="/workflow" element={<Workflow />} />
+                      <Route path="/analise-vendas" element={<AnaliseVendas />} />
+                      <Route path="/configuracoes" element={<Configuracoes />} />
+                      <Route path="/minha-conta" element={<MinhaConta />} />
+                      <Route path="/preferencias" element={<Preferencias />} />
+                      <Route path="/tarefas" element={<Tarefas />} />
+                      <Route path="/feed-test" element={<FeedTest />} />
+                      <Route path="*" element={<NotFound />} />
+                    </Route>
+                  </Routes>
+                </TooltipProvider>
+              </AgendaProvider>
+            </AppProvider>
           </AuthProvider>
         </ThemeProvider>
       </QueryClientProvider>
