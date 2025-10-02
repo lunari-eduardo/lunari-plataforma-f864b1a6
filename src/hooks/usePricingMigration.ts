@@ -39,6 +39,17 @@ export function usePricingMigration() {
         localStorage.setItem(categoryFixKey, 'true');
         console.log('✅ Correção modelo categoria concluída');
       }
+
+      // Correção para modelo fixo sem valorFixo
+      const fixedPriceFixKey = 'pricing_fixed_value_fix_v1_executed';
+      const jaFixoCorrigiu = localStorage.getItem(fixedPriceFixKey);
+      
+      if (!jaFixoCorrigiu) {
+        console.log('🔧 Executando correção para modelo fixo...');
+        await pricingFreezingService.corrigirSessoesModeloFixo();
+        localStorage.setItem(fixedPriceFixKey, 'true');
+        console.log('✅ Correção modelo fixo concluída');
+      }
     } catch (error) {
       console.error('❌ Erro na migração/correção de precificação:', error);
     }

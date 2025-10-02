@@ -91,7 +91,7 @@ class PricingFreezingService {
       }
 
       // Congela regras de precificação de foto extra de forma ASSÍNCRONA
-      regras.precificacaoFotoExtra = await this.congelarRegrasPrecoFotoExtraAsync(categoria, categoriaIdResolvido);
+      regras.precificacaoFotoExtra = await this.congelarRegrasPrecoFotoExtraAsync(categoria, categoriaIdResolvido, regras.pacote);
 
       console.log('📦 Dados completos congelados:', regras);
       return regras;
@@ -122,7 +122,7 @@ class PricingFreezingService {
   /**
    * Congela regras específicas de precificação de foto extra (VERSÃO ASSÍNCRONA)
    */
-  private async congelarRegrasPrecoFotoExtraAsync(categoria?: string, categoriaId?: string) {
+  private async congelarRegrasPrecoFotoExtraAsync(categoria?: string, categoriaId?: string, pacoteDados?: any) {
     const config = obterConfiguracaoPrecificacao();
     
     const regras: any = {
@@ -131,7 +131,8 @@ class PricingFreezingService {
 
     switch (config.modelo) {
       case 'fixo':
-        console.log('📦 Modelo fixo: valor será determinado pelo pacote específico');
+        regras.valorFixo = pacoteDados?.valorFotoExtra || 0;
+        console.log('📦 Modelo fixo: valor congelado do pacote:', regras.valorFixo);
         break;
       
       case 'global':
@@ -722,6 +723,89 @@ class PricingFreezingService {
     } catch (error) {
       console.error('❌ Erro na correção modelo categoria:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Corrige sessões com modelo fixo sem valorFixo definido
+   */
+  async corrigirSessoesModeloFixo(): Promise<{ migrated: number; skipped: number }> {
+    console.log('🔧 Iniciando correção de sessões com modelo fixo...');
+    
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data: user } = await supabase.auth.getUser();
+      
+      if (!user?.user) {
+        throw new Error('User not authenticated');
+      }
+
+      const { data: sessoes, error } = await supabase
+        .from('clientes_sessoes')
+        .select('*')
+        .eq('user_id', user.user.id)
+        .not('regras_congeladas', 'is', null);
+
+      if (error) {
+        console.error('❌ Erro ao buscar sessões:', error);
+        return { migrated: 0, skipped: 0 };
+      }
+
+      let migrated = 0;
+      let skipped = 0;
+
+      for (const sessao of sessoes || []) {
+        try {
+          const regras = sessao.regras_congeladas as RegrasCongeladas;
+          
+          // Verificar se é modelo fixo sem valorFixo
+          if (
+            regras?.precificacaoFotoExtra?.modelo === 'fixo' &&
+            (regras.precificacaoFotoExtra.valorFixo === undefined ||
+             regras.precificacaoFotoExtra.valorFixo === 0)
+          ) {
+            // Pegar valor do pacote congelado
+            const valorFotoExtra = regras.pacote?.valorFotoExtra || 0;
+            
+            if (valorFotoExtra > 0) {
+              const regrasAtualizadas = {
+                ...regras,
+                precificacaoFotoExtra: {
+                  ...regras.precificacaoFotoExtra,
+                  valorFixo: valorFotoExtra
+                }
+              };
+
+              const { error: updateError } = await supabase
+                .from('clientes_sessoes')
+                .update({ regras_congeladas: regrasAtualizadas })
+                .eq('id', sessao.id)
+                .eq('user_id', user.user.id);
+
+              if (updateError) {
+                console.error(`❌ Erro ao atualizar sessão ${sessao.id}:`, updateError);
+                skipped++;
+              } else {
+                console.log(`✅ Sessão ${sessao.id} corrigida: R$ ${valorFotoExtra}`);
+                migrated++;
+              }
+            } else {
+              skipped++;
+            }
+          } else {
+            skipped++;
+          }
+        } catch (error) {
+          console.error(`❌ Erro ao processar sessão ${sessao.id}:`, error);
+          skipped++;
+        }
+      }
+
+      console.log(`✅ Correção concluída: ${migrated} sessões atualizadas, ${skipped} ignoradas`);
+      return { migrated, skipped };
+    } catch (error) {
+      console.error('❌ Erro na correção de modelo fixo:', error);
+      return { migrated: 0, skipped: 0 };
     }
   }
 
