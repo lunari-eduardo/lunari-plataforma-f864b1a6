@@ -81,8 +81,13 @@ class PricingFreezingService {
 
             // Congela dados detalhados dos produtos incluídos
             const produtosIncluidos = pacote.produtos_incluidos;
-            if (produtosIncluidos && Array.isArray(produtosIncluidos)) {
+            if (produtosIncluidos && Array.isArray(produtosIncluidos) && produtosIncluidos.length > 0) {
               regras.produtos = await this.congelarDadosProdutos(produtosIncluidos as any[]);
+              console.log('📦 Produtos congelados:', regras.produtos.length);
+            } else {
+              // Explicitly clear products when package has none
+              regras.produtos = [];
+              console.log('🧹 Produtos limpos (pacote sem produtos incluídos)');
             }
 
             console.log('✅ Dados do pacote congelados:', regras.pacote);

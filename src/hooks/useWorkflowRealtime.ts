@@ -206,7 +206,11 @@ export const useWorkflowRealtime = () => {
                   novaCategoria
                 );
                 sanitizedUpdates.regras_congeladas = novasRegrasCongeladas as any;
+                
+                // Sync produtos_incluidos with frozen products
+                sanitizedUpdates.produtos_incluidos = novasRegrasCongeladas.produtos || [];
                 console.log('❄️ Frozen rules applied:', Object.keys(novasRegrasCongeladas));
+                console.log('📦 Products synced:', sanitizedUpdates.produtos_incluidos.length);
                 
                 // Initialize extra photo values from frozen rules
                 const valorFotoExtraInicial = pricingFreezingService.calcularValorFotoExtraComRegrasCongeladas(1, novasRegrasCongeladas).valorUnitario;
