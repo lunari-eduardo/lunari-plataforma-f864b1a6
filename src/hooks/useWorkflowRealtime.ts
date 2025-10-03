@@ -432,7 +432,7 @@ export const useWorkflowRealtime = () => {
         categoria: appointmentData.categoria || '',
         pacote: appointmentData.pacote || '',
         descricao: appointmentData.description || '',
-        status: 'agendado',
+        status: '',
         valor_total: appointmentData.valorPacote || 0,
         valor_pago: appointmentData.paidAmount || 0,
         produtos_incluidos: appointmentData.produtosIncluidos || []

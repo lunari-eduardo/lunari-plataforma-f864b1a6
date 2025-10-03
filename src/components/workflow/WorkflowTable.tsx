@@ -695,13 +695,18 @@ export function WorkflowTable({
                       </a>}
                   </div>)}
 
-                {renderCell('status', <Select key={`status-${session.id}-${session.status}`} value={session.status} onValueChange={value => handleStatusChangeStable(session.id, value)}>
+                {renderCell('status', <Select key={`status-${session.id}-${session.status || 'empty'}`} value={session.status || ''} onValueChange={value => handleStatusChangeStable(session.id, value)}>
                     <SelectTrigger className="h-auto p-2 text-xs w-full border-none bg-transparent hover:bg-lunar-accent/5 focus:bg-lunar-accent/10 transition-colors">
                       <SelectValue asChild>
-                        <StatusBadge status={session.status} />
+                        <StatusBadge status={session.status || ''} />
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent className="z-50 bg-lunar-surface text-foreground border border-lunar-border shadow-lg">
+                      {session.status && session.status !== '' && (
+                        <SelectItem key="clear-status" value="" className="text-xs p-2 italic text-muted-foreground">
+                          Limpar status
+                        </SelectItem>
+                      )}
                       {statusOptions.map(status => <SelectItem key={status} value={status} className="text-xs p-2">
                           <StatusBadge status={status} />
                         </SelectItem>)}

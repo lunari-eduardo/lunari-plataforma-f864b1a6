@@ -11,6 +11,22 @@ type StatusBadgeProps = {
 export function StatusBadge({ status, className, showCircle = true }: StatusBadgeProps) {
   const { getStatusColor } = useWorkflowStatus();
 
+  // Handle empty status
+  if (!status || status === '') {
+    return (
+      <div className={`inline-flex items-center gap-2 ${className}`}>
+        {showCircle && (
+          <div 
+            className="w-3 h-3 rounded-full flex-shrink-0 bg-muted"
+          />
+        )}
+        <span className="text-xs font-normal text-muted-foreground italic">
+          Sem status
+        </span>
+      </div>
+    );
+  }
+
   // Define color mappings for default statuses
   const getStatusColorValue = (status: string) => {
     switch (status.toLowerCase()) {

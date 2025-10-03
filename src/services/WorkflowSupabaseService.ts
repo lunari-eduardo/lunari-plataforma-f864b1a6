@@ -130,7 +130,7 @@ export class WorkflowSupabaseService {
         categoria: categoria || appointmentData.type || 'Outros',
         pacote: appointmentData.package_id || '', // Store package_id for linking
         descricao: appointmentData.description || appointmentData.title || '',
-        status: 'agendado',
+        status: '',
         valor_total: valorTotal,
         valor_pago: Number(appointmentData.paid_amount) || 0,
         produtos_incluidos: packageData?.produtos_incluidos || [],
