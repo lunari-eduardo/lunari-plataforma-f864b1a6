@@ -502,7 +502,7 @@ export default function Workflow() {
         ) : (
           <WorkflowTable
             sessions={sortedSessions}
-            statusOptions={getStatusOptions()}
+            statusOptions={getStatusOptions}
             categoryOptions={categoryOptions}
             packageOptions={packageOptions}
             productOptions={productOptions}

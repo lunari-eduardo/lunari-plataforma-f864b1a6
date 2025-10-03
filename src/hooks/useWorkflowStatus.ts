@@ -1,58 +1,35 @@
-
-import { useMemo, useEffect, useState } from 'react';
-import { configurationService } from '@/services/ConfigurationService';
-import type { EtapaTrabalho } from '@/types/configuration';
+import { useMemo } from 'react';
+import { useRealtimeConfiguration } from '@/hooks/useRealtimeConfiguration';
 
 export const useWorkflowStatus = () => {
-  const [storageUpdate, setStorageUpdate] = useState(0);
+  // Use Supabase data instead of localStorage
+  const { etapas: workflowStatuses } = useRealtimeConfiguration();
 
-  // Força atualização quando o localStorage muda
-  useEffect(() => {
-    const handleStorageChange = () => {
-      setStorageUpdate(prev => prev + 1);
-    };
+  // Debug log to verify etapas are loading
+  useMemo(() => {
+    console.log('📋 Workflow statuses from Supabase:', workflowStatuses);
+    console.log('📊 Total etapas:', workflowStatuses.length);
+  }, [workflowStatuses]);
 
-    const handleWorkflowUpdate = () => {
-      setStorageUpdate(prev => prev + 1);
-    };
+  const getStatusOptions = useMemo(() => {
+    const options = workflowStatuses.map(status => status.nome);
+    console.log('✅ Status options generated:', options);
+    return options;
+  }, [workflowStatuses]);
 
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('workflowStatusUpdated', handleWorkflowUpdate);
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('workflowStatusUpdated', handleWorkflowUpdate);
-    };
-  }, []);
-
-  const workflowStatuses = useMemo(() => {
-    const configuredStatuses = configurationService.loadEtapas();
-    return configuredStatuses.sort((a, b) => a.ordem - b.ordem);
-  }, [storageUpdate]);
-
-  const getStatusOptions = () => {
-    return workflowStatuses.map(status => status.nome);
-  };
-
-  const getStatusColor = (statusName: string) => {
+  const getStatusColor = useMemo(() => (statusName: string) => {
     const status = workflowStatuses.find(s => s.nome === statusName);
     return status?.cor || '#6B7280';
-  };
+  }, [workflowStatuses]);
 
-  const getAllStatuses = () => {
+  const getAllStatuses = useMemo(() => {
     return ['Confirmado', ...workflowStatuses.map(s => s.nome)];
-  };
-
-  // Força atualizações
-  const forceUpdate = () => {
-    setStorageUpdate(prev => prev + 1);
-  };
+  }, [workflowStatuses]);
 
   return {
     workflowStatuses,
     getStatusOptions,
     getStatusColor,
-    getAllStatuses,
-    forceUpdate
+    getAllStatuses
   };
 };
