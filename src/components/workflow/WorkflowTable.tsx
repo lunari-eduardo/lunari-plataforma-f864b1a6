@@ -550,7 +550,9 @@ export function WorkflowTable({
     }} className={`h-6 text-xs p-1 w-full border-none bg-transparent transition-colors duration-150 ${readonly ? 'cursor-default' : 'focus:bg-lunar-accent/10'}`} placeholder={placeholder} autoComplete="off" />;
   }, [editingValues, handleFieldUpdateStable]);
   const handleStatusChangeStable = useCallback((sessionId: string, newStatus: string) => {
-    onStatusChange(sessionId, newStatus);
+    // Handle the clear status sentinel value
+    const statusValue = newStatus === '__CLEAR__' ? '' : newStatus;
+    onStatusChange(sessionId, statusValue);
   }, [onStatusChange]);
   const getSortIcon = (field: string) => {
     if (sortField !== field) return null;
@@ -703,7 +705,7 @@ export function WorkflowTable({
                     </SelectTrigger>
                     <SelectContent className="z-50 bg-lunar-surface text-foreground border border-lunar-border shadow-lg">
                       {session.status && session.status !== '' && (
-                        <SelectItem key="clear-status" value="" className="text-xs p-2 italic text-muted-foreground">
+                        <SelectItem key="clear-status" value="__CLEAR__" className="text-xs p-2 italic text-muted-foreground">
                           Limpar status
                         </SelectItem>
                       )}
