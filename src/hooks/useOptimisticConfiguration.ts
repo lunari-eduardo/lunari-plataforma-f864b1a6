@@ -5,6 +5,7 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
+import debounce from 'lodash.debounce';
 
 interface OptimisticState<T> {
   data: T[];
@@ -31,11 +32,28 @@ export function useOptimisticConfiguration<T extends { id: string }>(
   });
 
   const rollbackRef = useRef<Map<string, { type: 'add' | 'update' | 'remove', previous?: T }>>(new Map());
+  const operationLockRef = useRef<boolean>(false);
+  
+  // Debounced persist function to group multiple operations
+  const debouncedPersist = useRef(
+    debounce(async (persistFn: () => Promise<void>) => {
+      try {
+        await persistFn();
+      } catch (error) {
+        throw error;
+      }
+    }, 300)
+  ).current;
 
   const operations: OptimisticOperations<T> = {
     
     add: useCallback(async (item: T, persistFn: () => Promise<void>) => {
       const operationId = `add_${item.id}`;
+      
+      // Prevent concurrent operations
+      if (operationLockRef.current) {
+        console.log('⏳ Operation in progress, queuing...');
+      }
       
       // Optimistic update
       setState(prev => ({
@@ -48,7 +66,8 @@ export function useOptimisticConfiguration<T extends { id: string }>(
       rollbackRef.current.set(operationId, { type: 'add' });
 
       try {
-        await persistFn();
+        operationLockRef.current = true;
+        await debouncedPersist(persistFn);
         
         // Success - remove from pending
         setState(prev => ({
@@ -72,8 +91,10 @@ export function useOptimisticConfiguration<T extends { id: string }>(
         rollbackRef.current.delete(operationId);
         toast.error('Erro ao salvar. Alteração revertida.');
         throw error;
+      } finally {
+        operationLockRef.current = false;
       }
-    }, []),
+    }, [debouncedPersist]),
 
     update: useCallback(async (id: string, updates: Partial<T>, persistFn: () => Promise<void>) => {
       const operationId = `update_${id}`;
@@ -95,7 +116,8 @@ export function useOptimisticConfiguration<T extends { id: string }>(
       rollbackRef.current.set(operationId, { type: 'update', previous: previousItem });
 
       try {
-        await persistFn();
+        operationLockRef.current = true;
+        await debouncedPersist(persistFn);
         
         // Success - remove from pending
         setState(prev => ({
@@ -121,8 +143,10 @@ export function useOptimisticConfiguration<T extends { id: string }>(
         rollbackRef.current.delete(operationId);
         toast.error('Erro ao salvar. Alteração revertida.');
         throw error;
+      } finally {
+        operationLockRef.current = false;
       }
-    }, [state.data]),
+    }, [state.data, debouncedPersist]),
 
     remove: useCallback(async (id: string, persistFn: () => Promise<void>) => {
       const operationId = `remove_${id}`;
@@ -142,7 +166,8 @@ export function useOptimisticConfiguration<T extends { id: string }>(
       rollbackRef.current.set(operationId, { type: 'remove', previous: itemToRemove });
 
       try {
-        await persistFn();
+        operationLockRef.current = true;
+        await debouncedPersist(persistFn);
         
         // Success - remove from pending  
         setState(prev => ({
@@ -166,8 +191,10 @@ export function useOptimisticConfiguration<T extends { id: string }>(
         rollbackRef.current.delete(operationId);
         toast.error('Erro ao salvar. Alteração revertida.');
         throw error;
+      } finally {
+        operationLockRef.current = false;
       }
-    }, [state.data]),
+    }, [state.data, debouncedPersist]),
 
     set: useCallback((data: T[]) => {
       setState(prev => ({

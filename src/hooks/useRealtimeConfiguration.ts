@@ -28,9 +28,9 @@ export function useRealtimeConfiguration(): ConfigurationState & ConfigurationAc
 
   // ============= REAL-TIME SUBSCRIPTIONS =============
   
-  // Categorias realtime
-  useSupabaseRealtime('categorias', {
-    onInsert: (payload) => {
+  // Memoize callbacks to prevent re-subscriptions
+  const categoriasCallbacks = useMemo(() => ({
+    onInsert: (payload: any) => {
       const newItem = payload.new as any;
       const categoria: Categoria = {
         id: newItem.id,
@@ -59,11 +59,13 @@ export function useRealtimeConfiguration(): ConfigurationState & ConfigurationAc
       const deleted = payload.old as any;
       categoriasOps.set(categoriasState.data.filter(c => c.id !== deleted.id));
     }
-  });
+  }), [categoriasState.data, categoriasOps]);
+  
+  // Categorias realtime
+  useSupabaseRealtime('categorias', categoriasCallbacks);
 
-  // Pacotes realtime  
-  useSupabaseRealtime('pacotes', {
-    onInsert: (payload) => {
+  const pacotesCallbacks = useMemo(() => ({
+    onInsert: (payload: any) => {
       const newItem = payload.new as any;
       const pacote: Pacote = {
         id: newItem.id,
@@ -102,11 +104,13 @@ export function useRealtimeConfiguration(): ConfigurationState & ConfigurationAc
       const deleted = payload.old as any;
       pacotesOps.set(pacotesState.data.filter(p => p.id !== deleted.id));
     }
-  });
+  }), [pacotesState.data, pacotesOps]);
+  
+  // Pacotes realtime  
+  useSupabaseRealtime('pacotes', pacotesCallbacks);
 
-  // Produtos realtime
-  useSupabaseRealtime('produtos', {
-    onInsert: (payload) => {
+  const produtosCallbacks = useMemo(() => ({
+    onInsert: (payload: any) => {
       const newItem = payload.new as any;
       const produto: Produto = {
         id: newItem.id,
@@ -141,11 +145,13 @@ export function useRealtimeConfiguration(): ConfigurationState & ConfigurationAc
       const deleted = payload.old as any;
       produtosOps.set(produtosState.data.filter(p => p.id !== deleted.id));
     }
-  });
+  }), [produtosState.data, produtosOps]);
+  
+  // Produtos realtime
+  useSupabaseRealtime('produtos', produtosCallbacks);
 
-  // Etapas realtime
-  useSupabaseRealtime('etapas_trabalho', {
-    onInsert: (payload) => {
+  const etapasCallbacks = useMemo(() => ({
+    onInsert: (payload: any) => {
       const newItem = payload.new as any;
       const etapa: EtapaTrabalho = {
         id: newItem.id,
@@ -160,7 +166,7 @@ export function useRealtimeConfiguration(): ConfigurationState & ConfigurationAc
         etapasOps.set([...etapasState.data, etapa].sort((a, b) => a.ordem - b.ordem));
       }
     },
-    onUpdate: (payload) => {
+    onUpdate: (payload: any) => {
       const updated = payload.new as any;
       etapasOps.set(
         etapasState.data.map(e => 
@@ -176,11 +182,14 @@ export function useRealtimeConfiguration(): ConfigurationState & ConfigurationAc
         ).sort((a, b) => a.ordem - b.ordem)
       );
     },
-    onDelete: (payload) => {
+    onDelete: (payload: any) => {
       const deleted = payload.old as any;
       etapasOps.set(etapasState.data.filter(e => e.id !== deleted.id));
     }
-  });
+  }), [etapasState.data, etapasOps]);
+  
+  // Etapas realtime
+  useSupabaseRealtime('etapas_trabalho', etapasCallbacks);
 
   // ============= INITIAL DATA LOADING =============
   
