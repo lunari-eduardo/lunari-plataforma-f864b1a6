@@ -320,14 +320,14 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // ==================== OPERATIONS WITH OWN-UPDATE FLAG ====================
   
-  const adicionarCategoria = useCallback(async (nome: string, cor: string) => {
-    if (!nome.trim()) {
+  const adicionarCategoria = useCallback(async (categoria: Omit<Categoria, 'id'>) => {
+    if (!categoria.nome.trim()) {
       toast.error('Nome da categoria é obrigatório');
       return;
     }
     
     isOwnUpdateRef.current = true;
-    const newCategoria: Categoria = { id: crypto.randomUUID(), nome, cor };
+    const newCategoria: Categoria = { id: crypto.randomUUID(), ...categoria };
     
     await categoriasOps.add(
       newCategoria,
@@ -339,14 +339,14 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
     setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
   }, []);
 
-  const atualizarCategoria = useCallback(async (id: string, nome: string, cor: string) => {
+  const atualizarCategoria = useCallback(async (id: string, dados: Partial<Categoria>) => {
     isOwnUpdateRef.current = true;
     
     await categoriasOps.update(
       id,
-      { nome, cor },
+      dados,
       async () => {
-        const updated = categoriasRef.current.map(c => c.id === id ? { ...c, nome, cor } : c);
+        const updated = categoriasRef.current.map(c => c.id === id ? { ...c, ...dados } : c);
         await configurationService.saveCategorias(updated);
       }
     );
@@ -354,25 +354,30 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
     setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
   }, []);
 
-  const removerCategoria = useCallback(async (id: string) => {
+  const removerCategoria = useCallback(async (id: string): Promise<boolean> => {
     isOwnUpdateRef.current = true;
     
-    await categoriasOps.remove(
-      id,
-      async () => {
-        await configurationService.deleteCategoriaById(id);
-      }
-    );
-    
-    setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
+    try {
+      await categoriasOps.remove(
+        id,
+        async () => {
+          await configurationService.deleteCategoriaById(id);
+        }
+      );
+      setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
+      return true;
+    } catch (error) {
+      setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
+      return false;
+    }
   }, []);
 
   const canDeleteCategoria = useCallback((id: string) => {
     return configurationService.canDeleteCategoria(id, pacotesRef.current);
   }, []);
 
-  const adicionarPacote = useCallback(async (nome: string, valorBase: number, categoriaId: string, valorFotoExtra: number, produtosIncluidos: any[]) => {
-    if (!nome.trim()) {
+  const adicionarPacote = useCallback(async (pacote: Omit<Pacote, 'id'>) => {
+    if (!pacote.nome.trim()) {
       toast.error('Nome do pacote é obrigatório');
       return;
     }
@@ -380,11 +385,7 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
     isOwnUpdateRef.current = true;
     const newPacote: Pacote = { 
       id: crypto.randomUUID(), 
-      nome, 
-      valor_base: valorBase, 
-      categoria_id: categoriaId,
-      valor_foto_extra: valorFotoExtra,
-      produtosIncluidos
+      ...pacote
     };
     
     await pacotesOps.add(
@@ -397,17 +398,15 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
     setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
   }, []);
 
-  const atualizarPacote = useCallback(async (id: string, nome: string, valorBase: number, categoriaId: string, valorFotoExtra: number, produtosIncluidos: any[]) => {
+  const atualizarPacote = useCallback(async (id: string, dados: Partial<Pacote>) => {
     isOwnUpdateRef.current = true;
     
     await pacotesOps.update(
       id,
-      { nome, valor_base: valorBase, categoria_id: categoriaId, valor_foto_extra: valorFotoExtra, produtosIncluidos },
+      dados,
       async () => {
         const updated = pacotesRef.current.map(p => 
-          p.id === id 
-            ? { ...p, nome, valor_base: valorBase, categoria_id: categoriaId, valor_foto_extra: valorFotoExtra, produtosIncluidos }
-            : p
+          p.id === id ? { ...p, ...dados } : p
         );
         await configurationService.savePacotes(updated);
       }
@@ -416,27 +415,32 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
     setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
   }, []);
 
-  const removerPacote = useCallback(async (id: string) => {
+  const removerPacote = useCallback(async (id: string): Promise<boolean> => {
     isOwnUpdateRef.current = true;
     
-    await pacotesOps.remove(
-      id,
-      async () => {
-        await configurationService.deletePacoteById(id);
-      }
-    );
-    
-    setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
+    try {
+      await pacotesOps.remove(
+        id,
+        async () => {
+          await configurationService.deletePacoteById(id);
+        }
+      );
+      setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
+      return true;
+    } catch (error) {
+      setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
+      return false;
+    }
   }, []);
 
-  const adicionarProduto = useCallback(async (nome: string, precoCusto: number, precoVenda: number) => {
-    if (!nome.trim()) {
+  const adicionarProduto = useCallback(async (produto: Omit<Produto, 'id'>) => {
+    if (!produto.nome.trim()) {
       toast.error('Nome do produto é obrigatório');
       return;
     }
     
     isOwnUpdateRef.current = true;
-    const newProduto: Produto = { id: crypto.randomUUID(), nome, preco_custo: precoCusto, preco_venda: precoVenda };
+    const newProduto: Produto = { id: crypto.randomUUID(), ...produto };
     
     await produtosOps.add(
       newProduto,
@@ -448,15 +452,15 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
     setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
   }, []);
 
-  const atualizarProduto = useCallback(async (id: string, nome: string, precoCusto: number, precoVenda: number) => {
+  const atualizarProduto = useCallback(async (id: string, dados: Partial<Produto>) => {
     isOwnUpdateRef.current = true;
     
     await produtosOps.update(
       id,
-      { nome, preco_custo: precoCusto, preco_venda: precoVenda },
+      dados,
       async () => {
         const updated = produtosRef.current.map(p => 
-          p.id === id ? { ...p, nome, preco_custo: precoCusto, preco_venda: precoVenda } : p
+          p.id === id ? { ...p, ...dados } : p
         );
         await configurationService.saveProdutos(updated);
       }
@@ -465,31 +469,39 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
     setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
   }, []);
 
-  const removerProduto = useCallback(async (id: string) => {
+  const removerProduto = useCallback(async (id: string): Promise<boolean> => {
     isOwnUpdateRef.current = true;
     
-    await produtosOps.remove(
-      id,
-      async () => {
-        await configurationService.deleteProdutoById(id);
-      }
-    );
-    
-    setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
+    try {
+      await produtosOps.remove(
+        id,
+        async () => {
+          await configurationService.deleteProdutoById(id);
+        }
+      );
+      setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
+      return true;
+    } catch (error) {
+      setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
+      return false;
+    }
   }, []);
 
   const canDeleteProduto = useCallback((id: string) => {
     return configurationService.canDeleteProduto(id, pacotesRef.current);
   }, []);
 
-  const adicionarEtapa = useCallback(async (nome: string, cor: string, ordem: number) => {
-    if (!nome.trim()) {
+  const adicionarEtapa = useCallback(async (etapa: Omit<EtapaTrabalho, 'id' | 'ordem'>) => {
+    if (!etapa.nome.trim()) {
       toast.error('Nome da etapa é obrigatório');
       return;
     }
     
     isOwnUpdateRef.current = true;
-    const newEtapa: EtapaTrabalho = { id: crypto.randomUUID(), nome, cor, ordem };
+    const ordem = etapasRef.current.length > 0 
+      ? Math.max(...etapasRef.current.map(e => e.ordem)) + 1 
+      : 1;
+    const newEtapa: EtapaTrabalho = { id: crypto.randomUUID(), ...etapa, ordem };
     
     await etapasOps.add(
       newEtapa,
@@ -501,14 +513,14 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
     setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
   }, []);
 
-  const atualizarEtapa = useCallback(async (id: string, nome: string, cor: string) => {
+  const atualizarEtapa = useCallback(async (id: string, dados: Partial<EtapaTrabalho>) => {
     isOwnUpdateRef.current = true;
     
     await etapasOps.update(
       id,
-      { nome, cor },
+      dados,
       async () => {
-        const updated = etapasRef.current.map(e => e.id === id ? { ...e, nome, cor } : e);
+        const updated = etapasRef.current.map(e => e.id === id ? { ...e, ...dados } : e);
         await configurationService.saveEtapas(updated);
       }
     );
@@ -516,30 +528,58 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
     setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
   }, []);
 
-  const removerEtapa = useCallback(async (id: string) => {
+  const removerEtapa = useCallback(async (id: string): Promise<boolean> => {
     isOwnUpdateRef.current = true;
     
-    await etapasOps.remove(
-      id,
-      async () => {
-        await configurationService.deleteEtapaById(id);
-      }
-    );
-    
-    setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
+    try {
+      await etapasOps.remove(
+        id,
+        async () => {
+          await configurationService.deleteEtapaById(id);
+        }
+      );
+      setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
+      return true;
+    } catch (error) {
+      setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
+      return false;
+    }
   }, []);
 
-  const moverEtapa = useCallback(async (id: string, novaOrdem: number) => {
+  const moverEtapa = useCallback(async (id: string, direcao: 'cima' | 'baixo') => {
     isOwnUpdateRef.current = true;
     
-    await etapasOps.update(
-      id,
-      { ordem: novaOrdem },
-      async () => {
-        const updated = etapasRef.current.map(e => e.id === id ? { ...e, ordem: novaOrdem } : e);
+    const etapa = etapasRef.current.find(e => e.id === id);
+    if (!etapa) return;
+    
+    const sorted = [...etapasRef.current].sort((a, b) => a.ordem - b.ordem);
+    const currentIndex = sorted.findIndex(e => e.id === id);
+    
+    if (direcao === 'cima' && currentIndex > 0) {
+      const targetEtapa = sorted[currentIndex - 1];
+      const tempOrdem = etapa.ordem;
+      
+      await etapasOps.update(id, { ordem: targetEtapa.ordem }, async () => {
+        const updated = etapasRef.current.map(e => {
+          if (e.id === id) return { ...e, ordem: targetEtapa.ordem };
+          if (e.id === targetEtapa.id) return { ...e, ordem: tempOrdem };
+          return e;
+        });
         await configurationService.saveEtapas(updated);
-      }
-    );
+      });
+    } else if (direcao === 'baixo' && currentIndex < sorted.length - 1) {
+      const targetEtapa = sorted[currentIndex + 1];
+      const tempOrdem = etapa.ordem;
+      
+      await etapasOps.update(id, { ordem: targetEtapa.ordem }, async () => {
+        const updated = etapasRef.current.map(e => {
+          if (e.id === id) return { ...e, ordem: targetEtapa.ordem };
+          if (e.id === targetEtapa.id) return { ...e, ordem: tempOrdem };
+          return e;
+        });
+        await configurationService.saveEtapas(updated);
+      });
+    }
     
     setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
   }, []);
@@ -570,14 +610,12 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
     adicionarCategoria,
     atualizarCategoria,
     removerCategoria,
-    canDeleteCategoria,
     adicionarPacote,
     atualizarPacote,
     removerPacote,
     adicionarProduto,
     atualizarProduto,
     removerProduto,
-    canDeleteProduto,
     adicionarEtapa,
     atualizarEtapa,
     removerEtapa,

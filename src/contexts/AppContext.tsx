@@ -671,7 +671,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const adicionarCategoria = (categoria: string) => {
     // Use the real-time configuration system instead
-    realtimeConfig.adicionarCategoria(categoria, '#3b82f6'); // Default color
+    realtimeConfig.adicionarCategoria({ nome: categoria, cor: '#3b82f6' });
   };
 
   const removerCategoria = (categoria: string) => {
