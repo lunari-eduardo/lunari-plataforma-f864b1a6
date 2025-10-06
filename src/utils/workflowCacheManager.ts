@@ -31,7 +31,8 @@ const calculateSessionTotal = (session: SessionData): number => {
     const valorAdicionalStr = typeof session.valorAdicional === 'string' ? session.valorAdicional : String(session.valorAdicional || '0');
     const valorAdicional = parseFloat(valorAdicionalStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
     
-    const desconto = session.desconto || 0;
+    const descontoStr = typeof session.desconto === 'string' ? session.desconto : String(session.desconto || '0');
+    const desconto = parseFloat(descontoStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
 
     // Apenas produtos manuais somam ao total
     let valorProdutosManuais = 0;

@@ -50,7 +50,7 @@ export interface SessionData {
   total: string;
   valorPago: string;
   restante: string;
-  desconto: number;
+  desconto: string;
   pagamentos?: SessionPayment[];
   produtosList?: ProdutoWorkflow[];
   // Novos campos para orçamentos ajustados

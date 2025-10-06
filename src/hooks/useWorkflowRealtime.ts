@@ -563,7 +563,7 @@ export const useWorkflowRealtime = () => {
       total: `R$ ${session.valor_total.toFixed(2).replace('.', ',')}`,
       valorPago: `R$ ${session.valor_pago.toFixed(2).replace('.', ',')}`,
       restante: `R$ ${(session.valor_total - session.valor_pago).toFixed(2).replace('.', ',')}`,
-      desconto: session.desconto || 0,
+      desconto: `R$ ${(session.desconto || 0).toFixed(2).replace('.', ',')}`,
       pagamentos: [],
       produtosList: session.produtos_incluidos || [],
       regrasDePrecoFotoExtraCongeladas: session.regras_congeladas,
