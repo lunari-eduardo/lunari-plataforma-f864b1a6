@@ -14,13 +14,17 @@ interface RealtimeCallbacks {
   onDelete?: (payload: any) => void;
 }
 
+const SUBSCRIPTION_DEBUG = false; // Set to true to enable detailed logging
+
 export function useSupabaseRealtime(
   tableName: TableName,
   callbacks: RealtimeCallbacks,
   enabled: boolean = true
 ) {
-  const listenerIdRef = useRef<string>(`${tableName}_${Date.now()}_${Math.random()}`);
+  const generationIdRef = useRef<string>(`${tableName}_${Date.now()}_${Math.random()}`);
+  const listenerIdRef = useRef<string>(generationIdRef.current);
   const isSubscribedRef = useRef<boolean>(false);
+  const isMountedRef = useRef<boolean>(true);
   
   // Memoize callbacks to prevent re-subscriptions
   const memoizedCallbacks = useMemo(() => callbacks, [
@@ -30,18 +34,38 @@ export function useSupabaseRealtime(
   ]);
 
   useEffect(() => {
-    if (!enabled || isSubscribedRef.current) return;
+    isMountedRef.current = true;
+
+    if (!enabled) {
+      if (SUBSCRIPTION_DEBUG) console.log(`⏸️ [${tableName}] Subscription disabled`);
+      return;
+    }
+
+    if (isSubscribedRef.current) {
+      if (SUBSCRIPTION_DEBUG) console.log(`⚠️ [${tableName}] Already subscribed, skipping...`);
+      return;
+    }
 
     const listenerId = listenerIdRef.current;
+    if (SUBSCRIPTION_DEBUG) console.log(`🔌 [${tableName}] Setting up subscription with ID: ${listenerId}`);
     
     const setupSubscription = async () => {
+      if (!isMountedRef.current) {
+        if (SUBSCRIPTION_DEBUG) console.log(`⏹️ [${tableName}] Component unmounted, aborting subscription`);
+        return;
+      }
+
       try {
         await realtimeSubscriptionManager.subscribe(
           tableName,
           memoizedCallbacks,
           listenerId
         );
-        isSubscribedRef.current = true;
+        
+        if (isMountedRef.current) {
+          isSubscribedRef.current = true;
+          if (SUBSCRIPTION_DEBUG) console.log(`✅ [${tableName}] Successfully subscribed`);
+        }
       } catch (error) {
         console.error(`❌ Error setting up subscription for ${tableName}:`, error);
       }
@@ -50,7 +74,10 @@ export function useSupabaseRealtime(
     setupSubscription();
 
     return () => {
+      isMountedRef.current = false;
+      
       if (isSubscribedRef.current) {
+        if (SUBSCRIPTION_DEBUG) console.log(`🔌 [${tableName}] Cleaning up subscription: ${listenerId}`);
         realtimeSubscriptionManager.unsubscribe(tableName, listenerId);
         isSubscribedRef.current = false;
       }

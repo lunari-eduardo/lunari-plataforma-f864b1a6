@@ -7,6 +7,10 @@
 import { supabase } from '@/integrations/supabase/client';
 import { RealtimeChannel } from '@supabase/supabase-js';
 
+const CIRCUIT_BREAKER_DEBUG = false; // Set to true for debugging
+const MAX_SUBSCRIPTIONS_PER_SECOND = 5;
+const CIRCUIT_BREAKER_COOLDOWN_MS = 5000;
+
 type TableName = 'categorias' | 'pacotes' | 'produtos' | 'etapas_trabalho' | 'clientes' | 'clientes_familia' | 'clientes_documentos' | 'appointments' | 'clientes_sessoes' | 'clientes_transacoes';
 
 interface SubscriptionCallbacks {
@@ -26,6 +30,8 @@ interface Subscription {
 class RealtimeSubscriptionManager {
   private static instance: RealtimeSubscriptionManager;
   private subscriptions: Map<TableName, Subscription> = new Map();
+  private subscriptionCounter: Map<TableName, { count: number; resetTime: number }> = new Map();
+  private circuitBreakerActive: Map<TableName, number> = new Map();
   private maxRetries = 3;
   private baseRetryDelay = 1000; // 1 second
   private userId: string | null = null;
@@ -40,6 +46,39 @@ class RealtimeSubscriptionManager {
   }
 
   /**
+   * Circuit breaker check - prevents subscription loops
+   */
+  private checkCircuitBreaker(tableName: TableName): boolean {
+    const now = Date.now();
+    
+    // Check if in cooldown
+    const cooldownEnd = this.circuitBreakerActive.get(tableName);
+    if (cooldownEnd && now < cooldownEnd) {
+      if (CIRCUIT_BREAKER_DEBUG) {
+        console.warn(`🚨 [CIRCUIT BREAKER] ${tableName} in cooldown until ${new Date(cooldownEnd).toISOString()}`);
+      }
+      return false;
+    }
+
+    // Reset counter every second
+    const counter = this.subscriptionCounter.get(tableName);
+    if (!counter || now > counter.resetTime) {
+      this.subscriptionCounter.set(tableName, { count: 1, resetTime: now + 1000 });
+      return true;
+    }
+
+    // Check if too many subscriptions
+    if (counter.count >= MAX_SUBSCRIPTIONS_PER_SECOND) {
+      console.error(`🚨 [CIRCUIT BREAKER] Too many subscriptions to ${tableName} (${counter.count}/s). Activating cooldown.`);
+      this.circuitBreakerActive.set(tableName, now + CIRCUIT_BREAKER_COOLDOWN_MS);
+      return false;
+    }
+
+    counter.count++;
+    return true;
+  }
+
+  /**
    * Subscribe to a table with callbacks
    * Returns a listener ID that can be used to unsubscribe
    */
@@ -49,10 +88,16 @@ class RealtimeSubscriptionManager {
     listenerId: string
   ): Promise<string> {
     try {
+      // Circuit breaker check
+      if (!this.checkCircuitBreaker(tableName)) {
+        console.warn(`⚠️ Circuit breaker active for ${tableName}, subscription blocked`);
+        return '';
+      }
+
       // Get authenticated user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        console.log(`🔄 User not authenticated, skipping realtime for ${tableName}`);
+        if (CIRCUIT_BREAKER_DEBUG) console.log(`🔄 User not authenticated, skipping realtime for ${tableName}`);
         return '';
       }
 
@@ -62,14 +107,18 @@ class RealtimeSubscriptionManager {
       let subscription = this.subscriptions.get(tableName);
 
       if (!subscription) {
-        // Create new subscription
+        if (CIRCUIT_BREAKER_DEBUG) console.log(`📡 Creating new subscription for ${tableName}`);
         subscription = await this.createSubscription(tableName, user.id);
         this.subscriptions.set(tableName, subscription);
+      } else {
+        if (CIRCUIT_BREAKER_DEBUG) console.log(`♻️ Reusing existing subscription for ${tableName}`);
       }
 
       // Add listener
       subscription.listeners.set(listenerId, callbacks);
-      console.log(`✅ Listener ${listenerId} added to ${tableName} (total: ${subscription.listeners.size})`);
+      if (CIRCUIT_BREAKER_DEBUG) {
+        console.log(`✅ Listener ${listenerId} added to ${tableName} (total: ${subscription.listeners.size})`);
+      }
 
       return listenerId;
     } catch (error) {

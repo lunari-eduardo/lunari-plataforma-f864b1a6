@@ -1,9 +1,10 @@
 /**
  * Main hook for real-time configuration management
  * Combines optimistic updates with Supabase real-time subscriptions
+ * WITH STABLE CALLBACKS TO PREVENT RE-SUBSCRIPTION LOOPS
  */
 
-import { useEffect, useCallback, useMemo } from 'react';
+import { useEffect, useCallback, useMemo, useRef } from 'react';
 import { toast } from 'sonner';
 import { useSupabaseRealtime } from './useSupabaseRealtime';
 import { useOptimisticConfiguration } from './useOptimisticConfiguration';
@@ -17,6 +18,8 @@ import type {
   ConfigurationActions
 } from '@/types/configuration';
 
+const REALTIME_DEBUG = false; // Set to true for debugging
+
 export function useRealtimeConfiguration(): ConfigurationState & ConfigurationActions {
   
   // ============= OPTIMISTIC STATE MANAGEMENT =============
@@ -26,11 +29,30 @@ export function useRealtimeConfiguration(): ConfigurationState & ConfigurationAc
   const [produtosState, produtosOps] = useOptimisticConfiguration<Produto>([]);
   const [etapasState, etapasOps] = useOptimisticConfiguration<EtapaTrabalho>([]);
 
-  // ============= REAL-TIME SUBSCRIPTIONS =============
+  // ============= REFS FOR STABLE CALLBACKS =============
   
-  // Memoize callbacks to prevent re-subscriptions
+  const categoriasRef = useRef(categoriasState);
+  const pacotesRef = useRef(pacotesState);
+  const produtosRef = useRef(produtosState);
+  const etapasRef = useRef(etapasState);
+
+  // Flag to ignore own updates and prevent loops
+  const isOwnUpdateRef = useRef(false);
+
+  // Update refs when state changes
+  useEffect(() => { categoriasRef.current = categoriasState; }, [categoriasState]);
+  useEffect(() => { pacotesRef.current = pacotesState; }, [pacotesState]);
+  useEffect(() => { produtosRef.current = produtosState; }, [produtosState]);
+  useEffect(() => { etapasRef.current = etapasState; }, [etapasState]);
+
+  // ============= REAL-TIME SUBSCRIPTIONS WITH STABLE CALLBACKS =============
+  
   const categoriasCallbacks = useMemo(() => ({
     onInsert: (payload: any) => {
+      if (isOwnUpdateRef.current) {
+        if (REALTIME_DEBUG) console.log('⏭️ Ignoring own INSERT on categorias');
+        return;
+      }
       const newItem = payload.new as any;
       const categoria: Categoria = {
         id: newItem.id,
@@ -40,15 +62,20 @@ export function useRealtimeConfiguration(): ConfigurationState & ConfigurationAc
         updated_at: newItem.updated_at
       };
       
-      // Only add if not already in state (avoid duplicates from own operations)
-      if (!categoriasState.data.find(c => c.id === categoria.id)) {
-        categoriasOps.set([...categoriasState.data, categoria]);
+      const currentData = categoriasRef.current.data;
+      if (!currentData.find(c => c.id === categoria.id)) {
+        categoriasOps.set([...currentData, categoria]);
       }
     },
     onUpdate: (payload) => {
+      if (isOwnUpdateRef.current) {
+        if (REALTIME_DEBUG) console.log('⏭️ Ignoring own UPDATE on categorias');
+        return;
+      }
       const updated = payload.new as any;
+      const currentData = categoriasRef.current.data;
       categoriasOps.set(
-        categoriasState.data.map(c => 
+        currentData.map(c => 
           c.id === updated.id 
             ? { ...c, nome: updated.nome, cor: updated.cor, updated_at: updated.updated_at }
             : c
@@ -56,16 +83,24 @@ export function useRealtimeConfiguration(): ConfigurationState & ConfigurationAc
       );
     },
     onDelete: (payload) => {
+      if (isOwnUpdateRef.current) {
+        if (REALTIME_DEBUG) console.log('⏭️ Ignoring own DELETE on categorias');
+        return;
+      }
       const deleted = payload.old as any;
-      categoriasOps.set(categoriasState.data.filter(c => c.id !== deleted.id));
+      const currentData = categoriasRef.current.data;
+      categoriasOps.set(currentData.filter(c => c.id !== deleted.id));
     }
-  }), [categoriasState.data, categoriasOps]);
+  }), [categoriasOps]);
   
-  // Categorias realtime
   useSupabaseRealtime('categorias', categoriasCallbacks);
 
   const pacotesCallbacks = useMemo(() => ({
     onInsert: (payload: any) => {
+      if (isOwnUpdateRef.current) {
+        if (REALTIME_DEBUG) console.log('⏭️ Ignoring own INSERT on pacotes');
+        return;
+      }
       const newItem = payload.new as any;
       const pacote: Pacote = {
         id: newItem.id,
@@ -78,14 +113,20 @@ export function useRealtimeConfiguration(): ConfigurationState & ConfigurationAc
         updated_at: newItem.updated_at
       };
       
-      if (!pacotesState.data.find(p => p.id === pacote.id)) {
-        pacotesOps.set([...pacotesState.data, pacote]);
+      const currentData = pacotesRef.current.data;
+      if (!currentData.find(p => p.id === pacote.id)) {
+        pacotesOps.set([...currentData, pacote]);
       }
     },
     onUpdate: (payload) => {
+      if (isOwnUpdateRef.current) {
+        if (REALTIME_DEBUG) console.log('⏭️ Ignoring own UPDATE on pacotes');
+        return;
+      }
       const updated = payload.new as any;
+      const currentData = pacotesRef.current.data;
       pacotesOps.set(
-        pacotesState.data.map(p => 
+        currentData.map(p => 
           p.id === updated.id 
             ? {
                 ...p,
@@ -101,16 +142,24 @@ export function useRealtimeConfiguration(): ConfigurationState & ConfigurationAc
       );
     },
     onDelete: (payload) => {
+      if (isOwnUpdateRef.current) {
+        if (REALTIME_DEBUG) console.log('⏭️ Ignoring own DELETE on pacotes');
+        return;
+      }
       const deleted = payload.old as any;
-      pacotesOps.set(pacotesState.data.filter(p => p.id !== deleted.id));
+      const currentData = pacotesRef.current.data;
+      pacotesOps.set(currentData.filter(p => p.id !== deleted.id));
     }
-  }), [pacotesState.data, pacotesOps]);
+  }), [pacotesOps]);
   
-  // Pacotes realtime  
   useSupabaseRealtime('pacotes', pacotesCallbacks);
 
   const produtosCallbacks = useMemo(() => ({
     onInsert: (payload: any) => {
+      if (isOwnUpdateRef.current) {
+        if (REALTIME_DEBUG) console.log('⏭️ Ignoring own INSERT on produtos');
+        return;
+      }
       const newItem = payload.new as any;
       const produto: Produto = {
         id: newItem.id,
@@ -121,14 +170,20 @@ export function useRealtimeConfiguration(): ConfigurationState & ConfigurationAc
         updated_at: newItem.updated_at
       };
       
-      if (!produtosState.data.find(p => p.id === produto.id)) {
-        produtosOps.set([...produtosState.data, produto]);
+      const currentData = produtosRef.current.data;
+      if (!currentData.find(p => p.id === produto.id)) {
+        produtosOps.set([...currentData, produto]);
       }
     },
     onUpdate: (payload) => {
+      if (isOwnUpdateRef.current) {
+        if (REALTIME_DEBUG) console.log('⏭️ Ignoring own UPDATE on produtos');
+        return;
+      }
       const updated = payload.new as any;
+      const currentData = produtosRef.current.data;
       produtosOps.set(
-        produtosState.data.map(p => 
+        currentData.map(p => 
           p.id === updated.id 
             ? {
                 ...p,
@@ -142,16 +197,24 @@ export function useRealtimeConfiguration(): ConfigurationState & ConfigurationAc
       );
     },
     onDelete: (payload) => {
+      if (isOwnUpdateRef.current) {
+        if (REALTIME_DEBUG) console.log('⏭️ Ignoring own DELETE on produtos');
+        return;
+      }
       const deleted = payload.old as any;
-      produtosOps.set(produtosState.data.filter(p => p.id !== deleted.id));
+      const currentData = produtosRef.current.data;
+      produtosOps.set(currentData.filter(p => p.id !== deleted.id));
     }
-  }), [produtosState.data, produtosOps]);
+  }), [produtosOps]);
   
-  // Produtos realtime
   useSupabaseRealtime('produtos', produtosCallbacks);
 
   const etapasCallbacks = useMemo(() => ({
     onInsert: (payload: any) => {
+      if (isOwnUpdateRef.current) {
+        if (REALTIME_DEBUG) console.log('⏭️ Ignoring own INSERT on etapas');
+        return;
+      }
       const newItem = payload.new as any;
       const etapa: EtapaTrabalho = {
         id: newItem.id,
@@ -162,14 +225,20 @@ export function useRealtimeConfiguration(): ConfigurationState & ConfigurationAc
         updated_at: newItem.updated_at
       };
       
-      if (!etapasState.data.find(e => e.id === etapa.id)) {
-        etapasOps.set([...etapasState.data, etapa].sort((a, b) => a.ordem - b.ordem));
+      const currentData = etapasRef.current.data;
+      if (!currentData.find(e => e.id === etapa.id)) {
+        etapasOps.set([...currentData, etapa].sort((a, b) => a.ordem - b.ordem));
       }
     },
     onUpdate: (payload: any) => {
+      if (isOwnUpdateRef.current) {
+        if (REALTIME_DEBUG) console.log('⏭️ Ignoring own UPDATE on etapas');
+        return;
+      }
       const updated = payload.new as any;
+      const currentData = etapasRef.current.data;
       etapasOps.set(
-        etapasState.data.map(e => 
+        currentData.map(e => 
           e.id === updated.id 
             ? {
                 ...e,
@@ -183,12 +252,16 @@ export function useRealtimeConfiguration(): ConfigurationState & ConfigurationAc
       );
     },
     onDelete: (payload: any) => {
+      if (isOwnUpdateRef.current) {
+        if (REALTIME_DEBUG) console.log('⏭️ Ignoring own DELETE on etapas');
+        return;
+      }
       const deleted = payload.old as any;
-      etapasOps.set(etapasState.data.filter(e => e.id !== deleted.id));
+      const currentData = etapasRef.current.data;
+      etapasOps.set(currentData.filter(e => e.id !== deleted.id));
     }
-  }), [etapasState.data, etapasOps]);
+  }), [etapasOps]);
   
-  // Etapas realtime
   useSupabaseRealtime('etapas_trabalho', etapasCallbacks);
 
   // ============= INITIAL DATA LOADING =============
@@ -196,7 +269,6 @@ export function useRealtimeConfiguration(): ConfigurationState & ConfigurationAc
   useEffect(() => {
     const loadAllData = async () => {
       try {
-        // Wait for service initialization (includes default data setup)
         await configurationService.initialize();
         
         const [categorias, pacotes, produtos, etapas] = await Promise.all([
@@ -211,7 +283,7 @@ export function useRealtimeConfiguration(): ConfigurationState & ConfigurationAc
         produtosOps.set(produtos);
         etapasOps.set(etapas);
         
-        console.log('✅ All configuration data loaded with initialization');
+        console.log('✅ All configuration data loaded');
       } catch (error) {
         console.error('❌ Error loading configuration data:', error);
         toast.error('Erro ao carregar configurações');
@@ -221,7 +293,7 @@ export function useRealtimeConfiguration(): ConfigurationState & ConfigurationAc
     loadAllData();
   }, []);
 
-  // ============= CATEGORIA OPERATIONS =============
+  // ============= OPERATIONS WITH OWN-UPDATE FLAG =============
   
   const adicionarCategoria = useCallback(async (categoria: Omit<Categoria, 'id'>) => {
     const validation = configurationService.validateCategoria(categoria);
@@ -237,18 +309,28 @@ export function useRealtimeConfiguration(): ConfigurationState & ConfigurationAc
       updated_at: new Date().toISOString()
     };
 
-    await categoriasOps.add(novaCategoria, async () => {
-      await configurationService.saveCategorias([...categoriasState.data, novaCategoria]);
-    });
+    isOwnUpdateRef.current = true;
+    try {
+      await categoriasOps.add(novaCategoria, async () => {
+        await configurationService.saveCategorias([...categoriasState.data, novaCategoria]);
+      });
+    } finally {
+      setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
+    }
   }, [categoriasState.data, categoriasOps]);
 
   const atualizarCategoria = useCallback(async (id: string, dados: Partial<Categoria>) => {
-    await categoriasOps.update(id, dados, async () => {
-      const updatedCategorias = categoriasState.data.map(cat => 
-        cat.id === id ? { ...cat, ...dados, updated_at: new Date().toISOString() } : cat
-      );
-      await configurationService.saveCategorias(updatedCategorias);
-    });
+    isOwnUpdateRef.current = true;
+    try {
+      await categoriasOps.update(id, dados, async () => {
+        const updatedCategorias = categoriasState.data.map(cat => 
+          cat.id === id ? { ...cat, ...dados, updated_at: new Date().toISOString() } : cat
+        );
+        await configurationService.saveCategorias(updatedCategorias);
+      });
+    } finally {
+      setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
+    }
   }, [categoriasState.data, categoriasOps]);
 
   const removerCategoria = useCallback(async (id: string): Promise<boolean> => {
@@ -257,6 +339,7 @@ export function useRealtimeConfiguration(): ConfigurationState & ConfigurationAc
       return false;
     }
 
+    isOwnUpdateRef.current = true;
     try {
       await categoriasOps.remove(id, async () => {
         await configurationService.deleteCategoriaById(id);
@@ -264,11 +347,11 @@ export function useRealtimeConfiguration(): ConfigurationState & ConfigurationAc
       return true;
     } catch (error) {
       return false;
+    } finally {
+      setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
     }
   }, [pacotesState.data, categoriasOps]);
 
-  // ============= PACOTE OPERATIONS =============
-  
   const adicionarPacote = useCallback(async (pacote: Omit<Pacote, 'id'>) => {
     const validation = configurationService.validatePacote(pacote);
     if (!validation.valid) {
@@ -283,21 +366,32 @@ export function useRealtimeConfiguration(): ConfigurationState & ConfigurationAc
       updated_at: new Date().toISOString()
     };
 
-    await pacotesOps.add(novoPacote, async () => {
-      await configurationService.savePacotes([...pacotesState.data, novoPacote]);
-    });
+    isOwnUpdateRef.current = true;
+    try {
+      await pacotesOps.add(novoPacote, async () => {
+        await configurationService.savePacotes([...pacotesState.data, novoPacote]);
+      });
+    } finally {
+      setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
+    }
   }, [pacotesState.data, pacotesOps]);
 
   const atualizarPacote = useCallback(async (id: string, dados: Partial<Pacote>) => {
-    await pacotesOps.update(id, dados, async () => {
-      const updatedPacotes = pacotesState.data.map(pac => 
-        pac.id === id ? { ...pac, ...dados, updated_at: new Date().toISOString() } : pac
-      );
-      await configurationService.savePacotes(updatedPacotes);
-    });
+    isOwnUpdateRef.current = true;
+    try {
+      await pacotesOps.update(id, dados, async () => {
+        const updatedPacotes = pacotesState.data.map(pac => 
+          pac.id === id ? { ...pac, ...dados, updated_at: new Date().toISOString() } : pac
+        );
+        await configurationService.savePacotes(updatedPacotes);
+      });
+    } finally {
+      setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
+    }
   }, [pacotesState.data, pacotesOps]);
 
   const removerPacote = useCallback(async (id: string): Promise<boolean> => {
+    isOwnUpdateRef.current = true;
     try {
       await pacotesOps.remove(id, async () => {
         await configurationService.deletePacoteById(id);
@@ -305,11 +399,11 @@ export function useRealtimeConfiguration(): ConfigurationState & ConfigurationAc
       return true;
     } catch (error) {
       return false;
+    } finally {
+      setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
     }
   }, [pacotesOps]);
 
-  // ============= PRODUTO OPERATIONS =============
-  
   const adicionarProduto = useCallback(async (produto: Omit<Produto, 'id'>) => {
     const validation = configurationService.validateProduto(produto);
     if (!validation.valid) {
@@ -324,18 +418,28 @@ export function useRealtimeConfiguration(): ConfigurationState & ConfigurationAc
       updated_at: new Date().toISOString()
     };
 
-    await produtosOps.add(novoProduto, async () => {
-      await configurationService.saveProdutos([...produtosState.data, novoProduto]);
-    });
+    isOwnUpdateRef.current = true;
+    try {
+      await produtosOps.add(novoProduto, async () => {
+        await configurationService.saveProdutos([...produtosState.data, novoProduto]);
+      });
+    } finally {
+      setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
+    }
   }, [produtosState.data, produtosOps]);
 
   const atualizarProduto = useCallback(async (id: string, dados: Partial<Produto>) => {
-    await produtosOps.update(id, dados, async () => {
-      const updatedProdutos = produtosState.data.map(prod => 
-        prod.id === id ? { ...prod, ...dados, updated_at: new Date().toISOString() } : prod
-      );
-      await configurationService.saveProdutos(updatedProdutos);
-    });
+    isOwnUpdateRef.current = true;
+    try {
+      await produtosOps.update(id, dados, async () => {
+        const updatedProdutos = produtosState.data.map(prod => 
+          prod.id === id ? { ...prod, ...dados, updated_at: new Date().toISOString() } : prod
+        );
+        await configurationService.saveProdutos(updatedProdutos);
+      });
+    } finally {
+      setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
+    }
   }, [produtosState.data, produtosOps]);
 
   const removerProduto = useCallback(async (id: string): Promise<boolean> => {
@@ -344,6 +448,7 @@ export function useRealtimeConfiguration(): ConfigurationState & ConfigurationAc
       return false;
     }
 
+    isOwnUpdateRef.current = true;
     try {
       await produtosOps.remove(id, async () => {
         await configurationService.deleteProdutoById(id);
@@ -351,11 +456,11 @@ export function useRealtimeConfiguration(): ConfigurationState & ConfigurationAc
       return true;
     } catch (error) {
       return false;
+    } finally {
+      setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
     }
   }, [pacotesState.data, produtosOps]);
 
-  // ============= ETAPA OPERATIONS =============
-  
   const adicionarEtapa = useCallback(async (etapa: Omit<EtapaTrabalho, 'id' | 'ordem'>) => {
     const validation = configurationService.validateEtapa(etapa);
     if (!validation.valid) {
@@ -372,21 +477,32 @@ export function useRealtimeConfiguration(): ConfigurationState & ConfigurationAc
       updated_at: new Date().toISOString()
     };
 
-    await etapasOps.add(novaEtapa, async () => {
-      await configurationService.saveEtapas([...etapasState.data, novaEtapa]);
-    });
+    isOwnUpdateRef.current = true;
+    try {
+      await etapasOps.add(novaEtapa, async () => {
+        await configurationService.saveEtapas([...etapasState.data, novaEtapa]);
+      });
+    } finally {
+      setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
+    }
   }, [etapasState.data, etapasOps]);
 
   const atualizarEtapa = useCallback(async (id: string, dados: Partial<EtapaTrabalho>) => {
-    await etapasOps.update(id, dados, async () => {
-      const updatedEtapas = etapasState.data.map(etapa => 
-        etapa.id === id ? { ...etapa, ...dados, updated_at: new Date().toISOString() } : etapa
-      );
-      await configurationService.saveEtapas(updatedEtapas);
-    });
+    isOwnUpdateRef.current = true;
+    try {
+      await etapasOps.update(id, dados, async () => {
+        const updatedEtapas = etapasState.data.map(etapa => 
+          etapa.id === id ? { ...etapa, ...dados, updated_at: new Date().toISOString() } : etapa
+        );
+        await configurationService.saveEtapas(updatedEtapas);
+      });
+    } finally {
+      setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
+    }
   }, [etapasState.data, etapasOps]);
 
   const removerEtapa = useCallback(async (id: string): Promise<boolean> => {
+    isOwnUpdateRef.current = true;
     try {
       await etapasOps.remove(id, async () => {
         await configurationService.deleteEtapaById(id);
@@ -394,6 +510,8 @@ export function useRealtimeConfiguration(): ConfigurationState & ConfigurationAc
       return true;
     } catch (error) {
       return false;
+    } finally {
+      setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
     }
   }, [etapasOps]);
 
@@ -411,24 +529,23 @@ export function useRealtimeConfiguration(): ConfigurationState & ConfigurationAc
     const novoIndex = direcao === 'cima' ? index - 1 : index + 1;
     const etapaTroca = etapasAtualizadas[novoIndex];
 
-    // Troca as ordens
     const ordemTemp = etapaAtual.ordem;
     etapaAtual.ordem = etapaTroca.ordem;
     etapaTroca.ordem = ordemTemp;
 
-    // Reorganiza o array baseado na nova ordem
     etapasAtualizadas.sort((a, b) => a.ordem - b.ordem);
 
+    isOwnUpdateRef.current = true;
     etapasOps.set(etapasAtualizadas);
     
-    // Persiste as mudanças
     try {
       await configurationService.saveEtapas(etapasAtualizadas);
       toast.success('Ordem das etapas atualizada');
     } catch (error) {
-      // Rollback on error
       etapasOps.set(etapasState.data);
       toast.error('Erro ao atualizar ordem das etapas');
+    } finally {
+      setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
     }
   }, [etapasState.data, etapasOps]);
 
@@ -442,34 +559,28 @@ export function useRealtimeConfiguration(): ConfigurationState & ConfigurationAc
   , [categoriasState.syncing, pacotesState.syncing, produtosState.syncing, etapasState.syncing]);
 
   return {
-    // Estado
     categorias: categoriasState.data,
     pacotes: pacotesState.data,
     produtos: produtosState.data,
     etapas: etapasState.data,
     
-    // Loading states
     isLoadingCategorias: categoriasState.syncing,
     isLoadingPacotes: pacotesState.syncing,
     isLoadingProdutos: produtosState.syncing,
     isLoadingEtapas: etapasState.syncing,
     
-    // Ações de Categorias
     adicionarCategoria,
     atualizarCategoria,
     removerCategoria,
     
-    // Ações de Pacotes
     adicionarPacote,
     atualizarPacote,
     removerPacote,
     
-    // Ações de Produtos
     adicionarProduto,
     atualizarProduto,
     removerProduto,
     
-    // Ações de Etapas
     adicionarEtapa,
     atualizarEtapa,
     removerEtapa,
