@@ -2,17 +2,26 @@ import { supabase } from '@/integrations/supabase/client';
 
 /**
  * Serviço centralizado para gerenciar pagamentos no Supabase
+ * 
+ * IMPORTANTE: 
+ * - clientes_sessoes.id (UUID) = chave primária, usada no workflow UI
+ * - clientes_sessoes.session_id (text) = identificador legível (workflow-timestamp-random)
+ * - clientes_transacoes.session_id = armazena o UUID para vinculação
+ * 
+ * Este serviço usa clientes_sessoes.id (UUID) para buscar o cliente_id
  */
 export class PaymentSupabaseService {
   /**
-   * Buscar cliente_id através do session_id
+   * Buscar cliente_id através do UUID da sessão
    */
-  static async getClienteIdFromSession(sessionId: string): Promise<string | null> {
+  static async getClienteIdFromSession(sessionUuid: string): Promise<string | null> {
     try {
+      console.log('🔍 Buscando cliente_id para session UUID:', sessionUuid);
+      
       const { data, error } = await supabase
         .from('clientes_sessoes')
         .select('cliente_id')
-        .eq('session_id', sessionId)
+        .eq('id', sessionUuid)
         .single();
 
       if (error) {
@@ -34,7 +43,7 @@ export class PaymentSupabaseService {
    * - Disparar evento realtime
    */
   static async saveSinglePaymentToSupabase(
-    sessionId: string,
+    sessionUuid: string,
     payment: {
       valor: number;
       data: string;
@@ -53,21 +62,21 @@ export class PaymentSupabaseService {
 
       const userId = userData.user.id;
 
-      // 2. Buscar cliente_id através do session_id
-      const clienteId = await this.getClienteIdFromSession(sessionId);
+      // 2. Buscar cliente_id através do UUID da sessão
+      const clienteId = await this.getClienteIdFromSession(sessionUuid);
       
       if (!clienteId) {
-        console.error('❌ Não foi possível encontrar cliente_id para session:', sessionId);
+        console.error('❌ Não foi possível encontrar cliente_id para session UUID:', sessionUuid);
         return false;
       }
 
-      // 3. Inserir transação em clientes_transacoes
+      // 3. Inserir transação em clientes_transacoes (session_id armazena o UUID)
       const { error: insertError } = await supabase
         .from('clientes_transacoes')
         .insert({
           user_id: userId,
           cliente_id: clienteId,
-          session_id: sessionId,
+          session_id: sessionUuid,
           tipo: 'pagamento',
           valor: payment.valor,
           data_transacao: payment.data,
@@ -81,7 +90,7 @@ export class PaymentSupabaseService {
       }
 
       console.log('✅ Pagamento salvo no Supabase:', {
-        sessionId,
+        sessionUuid,
         valor: payment.valor,
         clienteId
       });
@@ -102,7 +111,7 @@ export class PaymentSupabaseService {
    * Salvar múltiplos pagamentos (para modal de gerenciamento)
    */
   static async saveMultiplePayments(
-    sessionId: string,
+    sessionUuid: string,
     payments: Array<{
       valor: number;
       data: string;
@@ -112,7 +121,7 @@ export class PaymentSupabaseService {
   ): Promise<boolean> {
     try {
       for (const payment of payments) {
-        const success = await this.saveSinglePaymentToSupabase(sessionId, payment);
+        const success = await this.saveSinglePaymentToSupabase(sessionUuid, payment);
         if (!success) {
           console.error('❌ Falha ao salvar pagamento:', payment);
           return false;
