@@ -113,14 +113,14 @@ export const useWorkflowPackageData = () => {
         produto: '',
         qtdProduto: 0,
         valorTotalProduto: 'R$ 0,00',
-        valorAdicional: 'R$ 0,00',
-        detalhes: session.descricao || '',
-        observacoes: '',
+        valorAdicional: `R$ ${(session.valor_adicional || 0).toFixed(2).replace('.', ',')}`,
+        detalhes: session.detalhes || session.descricao || '',
+        observacoes: session.observacoes || '',
         valor: `R$ ${(session.valor_total || 0).toFixed(2).replace('.', ',')}`,
         total: `R$ ${(session.valor_total || 0).toFixed(2).replace('.', ',')}`,
         valorPago: `R$ ${(session.valor_pago || 0).toFixed(2).replace('.', ',')}`,
         restante: `R$ ${((session.valor_total || 0) - (session.valor_pago || 0)).toFixed(2).replace('.', ',')}`,
-        desconto: 'R$ 0,00',
+        desconto: `R$ ${(session.desconto || 0).toFixed(2).replace('.', ',')}`,
         pagamentos: [],
         // CRITICAL: Always prioritize frozen product data
         produtosList: session.regras_congeladas?.produtos?.length > 0 ? 
