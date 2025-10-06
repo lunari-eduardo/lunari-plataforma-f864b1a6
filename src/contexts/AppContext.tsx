@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
 import { configurationService } from '@/services/ConfigurationService';
-import { useRealtimeConfiguration } from '@/hooks/useRealtimeConfiguration';
+import { useConfigurationContext } from '@/contexts/ConfigurationContext';
 import { parseDateFromStorage, formatDateForStorage, getCurrentDateString } from '@/utils/dateUtils';
 import { formatCurrency } from '@/utils/financialUtils';
 import { normalizeOriginToId } from '@/utils/originUtils';
@@ -207,8 +207,8 @@ const deserializeAppointments = (serializedAppointments: any[]): Appointment[] =
 };
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Get real-time configuration data
-  const realtimeConfig = useRealtimeConfiguration();
+  // Get real-time configuration data from context (single instance)
+  const realtimeConfig = useConfigurationContext();
   
   const [templates, setTemplates] = useState<Template[]>(() => {
     return storage.load(STORAGE_KEYS.TEMPLATES, []);
@@ -671,10 +671,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const adicionarCategoria = (categoria: string) => {
     // Use the real-time configuration system instead
-    realtimeConfig.adicionarCategoria({
-      nome: categoria,
-      cor: '#3b82f6' // Default color
-    });
+    realtimeConfig.adicionarCategoria(categoria, '#3b82f6'); // Default color
   };
 
   const removerCategoria = (categoria: string) => {

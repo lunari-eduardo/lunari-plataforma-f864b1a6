@@ -26,6 +26,7 @@ import NotFound from "./pages/NotFound";
 import { AppProvider } from "./contexts/AppContext";
 import { AgendaProvider } from "./contexts/AgendaContext";
 import { AuthProvider } from "./contexts/AuthContext";
+import { ConfigurationProvider } from "./contexts/ConfigurationContext";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import ThemeProvider from "./components/theme/ThemeProvider";
 import { BuildMonitor } from "./components/shared/BuildMonitor";
@@ -59,8 +60,9 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <AuthProvider>
-            <AppProvider>
-              <AgendaProvider>
+            <ConfigurationProvider>
+              <AppProvider>
+                <AgendaProvider>
                 <TooltipProvider>
                   <BuildMonitor />
                   <Toaster />
@@ -94,8 +96,9 @@ function App() {
                     </Route>
                   </Routes>
                 </TooltipProvider>
-              </AgendaProvider>
-            </AppProvider>
+                </AgendaProvider>
+              </AppProvider>
+            </ConfigurationProvider>
           </AuthProvider>
         </ThemeProvider>
       </QueryClientProvider>
