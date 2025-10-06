@@ -325,24 +325,25 @@ export function WorkflowTable({
       totalPending: session.pagamentos.filter(p => p.statusPagamento === 'pendente').reduce((acc, p) => acc + (p.valor || 0), 0)
     };
   }, [sessions]);
-  const handlePaymentAdd = useCallback((sessionId: string) => {
+  const handlePaymentAdd = useCallback(async (sessionId: string) => {
     const value = paymentInputs[sessionId];
     if (value && !isNaN(parseFloat(value))) {
       const paymentValue = parseFloat(value);
 
-      // Usar a função addPayment do contexto
-      addPayment(sessionId, paymentValue);
+      try {
+        // Usar a função addPayment do contexto (agora async)
+        await addPayment(sessionId, paymentValue);
 
-      // Limpar o campo após adicionar
-      setPaymentInputs(prev => ({
-        ...prev,
-        [sessionId]: ''
-      }));
+        // Limpar o campo após adicionar
+        setPaymentInputs(prev => ({
+          ...prev,
+          [sessionId]: ''
+        }));
 
-      // Forçar re-render para atualizar valores na tabela
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('workflow-data-changed'));
-      }, 100);
+        // Nota: Não precisamos forçar re-render - o realtime do Supabase cuida disso
+      } catch (error) {
+        console.error('❌ Erro ao adicionar pagamento:', error);
+      }
     }
   }, [paymentInputs, addPayment]);
   const handlePaymentKeyDown = useCallback((e: React.KeyboardEvent, sessionId: string) => {

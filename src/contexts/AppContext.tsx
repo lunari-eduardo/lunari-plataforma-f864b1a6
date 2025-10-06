@@ -769,7 +769,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, []);
 
-  const addPayment = useCallback((id: string, valor: number) => {
+  const addPayment = useCallback(async (id: string, valor: number) => {
     console.log('💰 Adicionando pagamento rápido:', { id, valor });
     
     try {
@@ -779,6 +779,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       
       if (sessionIndex === -1) {
         console.error('❌ Sessão não encontrada no workflow:', id);
+        toast({
+          title: "Erro ao adicionar pagamento",
+          description: "Sessão não encontrada",
+          variant: "destructive"
+        });
         return;
       }
 
@@ -806,7 +811,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         editavel: true
       };
 
-      // Atualizar sessão
+      // Atualizar sessão no localStorage
       savedSessions[sessionIndex] = {
         ...session,
         valorPago: `R$ ${newPaidTotal.toFixed(2).replace('.', ',')}`,
@@ -822,8 +827,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.setItem('workflow_sessions', JSON.stringify(savedSessions));
       console.log('✅ Pagamento salvo no workflow_sessions');
       
-      // CORRIGIR: Disparar evento para atualizar UI do workflow
-      window.dispatchEvent(new CustomEvent('workflow-sessions-updated'));
+      // NOVO: Salvar no Supabase
+      const { PaymentSupabaseService } = await import('@/services/PaymentSupabaseService');
+      const success = await PaymentSupabaseService.saveSinglePaymentToSupabase(id, {
+        valor,
+        data: getCurrentDateString(),
+        observacoes: 'Pagamento rápido',
+        forma_pagamento: 'dinheiro'
+      });
+
+      if (success) {
+        console.log('✅ Pagamento salvo no Supabase - trigger irá recalcular valor_pago automaticamente');
+        toast({
+          title: "Pagamento adicionado",
+          description: `R$ ${valor.toFixed(2).replace('.', ',')} registrado com sucesso`,
+        });
+      } else {
+        console.warn('⚠️ Pagamento salvo no localStorage mas falhou no Supabase');
+        toast({
+          title: "Aviso",
+          description: "Pagamento salvo localmente, mas pode não estar sincronizado",
+          variant: "default"
+        });
+      }
       
       // Criar transação financeira
       FinancialEngine.createTransactions({
@@ -835,12 +861,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         observacoes: `Pagamento rápido - ${session.nome || 'Cliente'}`
       });
 
-      // Forçar atualização das métricas do workflow
-      window.dispatchEvent(new CustomEvent('workflow-data-changed'));
-
+      // Nota: Não precisamos disparar eventos manualmente - o realtime do Supabase cuida disso
       console.log('✅ Pagamento adicionado com sucesso:', valor, 'para sessão:', id);
     } catch (error) {
       console.error('❌ Erro ao adicionar pagamento:', error);
+      toast({
+        title: "Erro ao adicionar pagamento",
+        description: "Ocorreu um erro ao processar o pagamento",
+        variant: "destructive"
+      });
     }
   }, []);
 

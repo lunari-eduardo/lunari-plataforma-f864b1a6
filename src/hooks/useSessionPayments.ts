@@ -25,48 +25,25 @@ const convertToLegacyFormat = (extendedPayments: SessionPaymentExtended[]): Sess
 // Salvar pagamentos no Supabase e localStorage (dual-write para compatibilidade)
 const savePaymentsToSupabase = async (sessionId: string, payments: SessionPaymentExtended[]) => {
   try {
-    const { data: user } = await supabase.auth.getUser();
-    if (!user?.user) return;
-
-    // Para cada pagamento, sincronizar com clientes_transacoes
-    for (const payment of payments) {
-      if (payment.statusPagamento === 'pago' && payment.data) {
-        // Verificar se transação já existe
-        const { data: existing } = await supabase
-          .from('clientes_transacoes')
-          .select('id')
-          .eq('session_id', sessionId)
-          .eq('valor', payment.valor)
-          .eq('data_transacao', payment.data)
-          .single();
-
-        if (!existing) {
-          // Buscar cliente_id através da sessão
-          const { data: session } = await supabase
-            .from('clientes_sessoes')
-            .select('cliente_id')
-            .eq('session_id', sessionId)
-            .single();
-
-          if (session?.cliente_id) {
-            await supabase
-              .from('clientes_transacoes')
-              .insert({
-                user_id: user.user.id,
-                cliente_id: session.cliente_id,
-                session_id: sessionId,
-                tipo: 'pagamento',
-                valor: payment.valor,
-                descricao: payment.observacoes || 'Pagamento da sessão',
-                data_transacao: payment.data,
-                updated_by: user.user.id
-              });
-          }
-        }
-      }
+    // Usar o serviço centralizado para salvar pagamentos
+    const { PaymentSupabaseService } = await import('@/services/PaymentSupabaseService');
+    
+    // Filtrar apenas pagamentos pagos que têm data
+    const paidPayments = payments.filter(p => p.statusPagamento === 'pago' && p.data);
+    
+    // Salvar cada pagamento usando o serviço
+    for (const payment of paidPayments) {
+      await PaymentSupabaseService.saveSinglePaymentToSupabase(sessionId, {
+        valor: payment.valor,
+        data: payment.data,
+        observacoes: payment.observacoes,
+        forma_pagamento: payment.forma_pagamento
+      });
     }
+    
+    console.log('✅ Pagamentos sincronizados com Supabase via PaymentSupabaseService');
   } catch (error) {
-    console.error('Error saving payments to Supabase:', error);
+    console.error('❌ Erro ao salvar pagamentos no Supabase:', error);
   }
 };
 
