@@ -276,9 +276,12 @@ export type Database = {
           cliente_id: string
           created_at: string | null
           data_sessao: string
+          desconto: number | null
           descricao: string | null
+          detalhes: string | null
           hora_sessao: string
           id: string
+          observacoes: string | null
           orcamento_id: string | null
           pacote: string | null
           produtos_incluidos: Json | null
@@ -289,6 +292,7 @@ export type Database = {
           updated_at: string | null
           updated_by: string | null
           user_id: string
+          valor_adicional: number | null
           valor_foto_extra: number | null
           valor_pago: number | null
           valor_total: number | null
@@ -300,9 +304,12 @@ export type Database = {
           cliente_id: string
           created_at?: string | null
           data_sessao: string
+          desconto?: number | null
           descricao?: string | null
+          detalhes?: string | null
           hora_sessao: string
           id?: string
+          observacoes?: string | null
           orcamento_id?: string | null
           pacote?: string | null
           produtos_incluidos?: Json | null
@@ -313,6 +320,7 @@ export type Database = {
           updated_at?: string | null
           updated_by?: string | null
           user_id: string
+          valor_adicional?: number | null
           valor_foto_extra?: number | null
           valor_pago?: number | null
           valor_total?: number | null
@@ -324,9 +332,12 @@ export type Database = {
           cliente_id?: string
           created_at?: string | null
           data_sessao?: string
+          desconto?: number | null
           descricao?: string | null
+          detalhes?: string | null
           hora_sessao?: string
           id?: string
+          observacoes?: string | null
           orcamento_id?: string | null
           pacote?: string | null
           produtos_incluidos?: Json | null
@@ -337,6 +348,7 @@ export type Database = {
           updated_at?: string | null
           updated_by?: string | null
           user_id?: string
+          valor_adicional?: number | null
           valor_foto_extra?: number | null
           valor_pago?: number | null
           valor_total?: number | null

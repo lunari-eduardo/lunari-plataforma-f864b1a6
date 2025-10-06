@@ -25,6 +25,10 @@ export interface WorkflowSession {
   valor_foto_extra?: number;
   valor_total_foto_extra?: number;
   regras_congeladas?: any;
+  desconto?: number;
+  valor_adicional?: number;
+  observacoes?: string | null;
+  detalhes?: string | null;
   created_at?: string;
   updated_at?: string;
   updated_by?: string;
@@ -292,18 +296,31 @@ export const useWorkflowRealtime = () => {
           case 'regrasDePrecoFotoExtraCongeladas':
             sanitizedUpdates.regras_congeladas = value;
             break;
+          // Map desconto, valor_adicional, observacoes, detalhes to database columns
+          case 'desconto':
+            sanitizedUpdates.desconto = typeof value === 'string'
+              ? parseFloat(value.replace(/[^\d,]/g, '').replace(',', '.')) || 0
+              : Number(value) || 0;
+            break;
+          case 'valorAdicional':
+            sanitizedUpdates.valor_adicional = typeof value === 'string'
+              ? parseFloat(value.replace(/[^\d,]/g, '').replace(',', '.')) || 0
+              : Number(value) || 0;
+            break;
+          case 'observacoes':
+            sanitizedUpdates.observacoes = value as string;
+            break;
+          case 'detalhes':
+            sanitizedUpdates.detalhes = value as string;
+            break;
           // Ignore fields that don't exist in the database schema  
           case 'produto':
           case 'qtdProduto':
           case 'valorTotalProduto':
-          case 'valorAdicional':
-          case 'detalhes':
-          case 'observacoes':
           case 'valor':
           case 'total':
           case 'valorPago':
           case 'restante':
-          case 'desconto':
           case 'pagamentos':
             // Skip these fields - they don't exist in clientes_sessoes schema
             break;
@@ -331,7 +348,7 @@ export const useWorkflowRealtime = () => {
       // Perform diff check to avoid unnecessary updates
       if (currentSession) {
         let hasChanges = false;
-        const fieldsToCheck = ['pacote', 'valor_total', 'valor_pago', 'qtd_fotos_extra', 'valor_foto_extra', 'valor_total_foto_extra', 'produtos_incluidos', 'categoria', 'descricao', 'status', 'regras_congeladas'];
+        const fieldsToCheck = ['pacote', 'valor_total', 'valor_pago', 'qtd_fotos_extra', 'valor_foto_extra', 'valor_total_foto_extra', 'produtos_incluidos', 'categoria', 'descricao', 'status', 'regras_congeladas', 'desconto', 'valor_adicional', 'observacoes', 'detalhes'];
         
         for (const field of fieldsToCheck) {
           const newValue = sanitizedUpdates[field as keyof WorkflowSession];
@@ -539,14 +556,14 @@ export const useWorkflowRealtime = () => {
       produto: '',
       qtdProduto: 0,
       valorTotalProduto: 'R$ 0,00',
-      valorAdicional: 'R$ 0,00',
-      detalhes: session.descricao || '',
-      observacoes: '',
+      valorAdicional: `R$ ${(session.valor_adicional || 0).toFixed(2).replace('.', ',')}`,
+      detalhes: session.detalhes || '',
+      observacoes: session.observacoes || '',
       valor: `R$ ${session.valor_total.toFixed(2).replace('.', ',')}`,
       total: `R$ ${session.valor_total.toFixed(2).replace('.', ',')}`,
       valorPago: `R$ ${session.valor_pago.toFixed(2).replace('.', ',')}`,
       restante: `R$ ${(session.valor_total - session.valor_pago).toFixed(2).replace('.', ',')}`,
-      desconto: 0,
+      desconto: session.desconto || 0,
       pagamentos: [],
       produtosList: session.produtos_incluidos || [],
       regrasDePrecoFotoExtraCongeladas: session.regras_congeladas,
