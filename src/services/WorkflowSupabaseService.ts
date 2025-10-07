@@ -1,7 +1,14 @@
 import { supabase } from '@/integrations/supabase/client';
 import { generateUniversalSessionId } from '@/types/appointments-supabase';
+import { formatDateForStorage } from '@/utils/dateUtils';
 
 /**
+ * IMPORTANTE - SINCRONIZAÇÃO DE DATAS:
+ * - appointments.date ↔ clientes_sessoes.data_sessao (sincronizado via trigger)
+ * - appointments.time ↔ clientes_sessoes.hora_sessao (sincronizado via trigger)
+ * - Trigger: sync_appointment_date_to_session (ativa em UPDATE de date/time)
+ * - Sempre usar formatDateForStorage() para evitar bugs de timezone
+ * 
  * Service for handling workflow integration with appointments
  * Automatically creates workflow sessions when appointments are confirmed
  */
@@ -125,7 +132,7 @@ export class WorkflowSupabaseService {
         session_id: sessionId,
         appointment_id: appointmentId,
         cliente_id: clienteId || '',
-        data_sessao: typeof appointmentData.date === 'string' ? appointmentData.date : `${appointmentData.date.getFullYear()}-${String(appointmentData.date.getMonth() + 1).padStart(2, '0')}-${String(appointmentData.date.getDate()).padStart(2, '0')}`,
+        data_sessao: formatDateForStorage(appointmentData.date),
         hora_sessao: appointmentData.time,
         categoria: categoria || appointmentData.type || 'Outros',
         pacote: appointmentData.package_id || '', // Store package_id for linking
@@ -179,7 +186,7 @@ export class WorkflowSupabaseService {
             tipo: 'pagamento',
             valor: paidAmount,
             descricao: 'Entrada do agendamento',
-            data_transacao: typeof appointmentData.date === 'string' ? appointmentData.date : `${appointmentData.date.getFullYear()}-${String(appointmentData.date.getMonth() + 1).padStart(2, '0')}-${String(appointmentData.date.getDate()).padStart(2, '0')}`,
+            data_transacao: formatDateForStorage(appointmentData.date),
             updated_by: user.user.id
           });
         

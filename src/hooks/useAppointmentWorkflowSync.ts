@@ -97,14 +97,25 @@ export const useAppointmentWorkflowSync = () => {
           
           const oldStatus = payload.old?.status;
           const newStatus = payload.new?.status;
+          const oldDate = payload.old?.date;
+          const newDate = payload.new?.date;
+          const oldTime = payload.old?.time;
+          const newTime = payload.new?.time;
           const appointment = payload.new;
           
-          console.log('📊 [AppointmentSync] Appointment status change:', {
+          console.log('📊 [AppointmentSync] Appointment change:', {
             id: appointment.id,
             oldStatus,
             newStatus,
+            dateChanged: oldDate !== newDate,
+            timeChanged: oldTime !== newTime,
             hasSessionId: !!appointment.session_id
           });
+
+          // Check for date/time changes on confirmed appointments
+          if (newStatus === 'confirmado' && (oldDate !== newDate || oldTime !== newTime)) {
+            console.log('📅 [AppointmentSync] Date/time changed for confirmed appointment - database trigger will sync automatically');
+          }
           
           // Check for status transition to 'confirmado'
           if (newStatus === 'confirmado' && oldStatus !== 'confirmado') {

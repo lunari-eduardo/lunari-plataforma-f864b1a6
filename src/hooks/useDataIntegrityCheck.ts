@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { WorkflowSupabaseService } from '@/services/WorkflowSupabaseService';
+import { formatDateForStorage } from '@/utils/dateUtils';
 
 interface IntegrityIssue {
-  type: 'confirmed_without_session' | 'orphaned_session' | 'mismatched_session_id';
+  type: 'confirmed_without_session' | 'orphaned_session' | 'mismatched_session_id' | 'date_mismatch' | 'time_mismatch';
   appointmentId?: string;
   sessionId?: string;
   description: string;
@@ -100,6 +101,40 @@ export const useDataIntegrityCheck = () => {
         }
       }
 
+      // Check 4: Date/Time mismatches between appointments and sessions
+      if (confirmedAppointments) {
+        for (const appointment of confirmedAppointments) {
+          const { data: session } = await supabase
+            .from('clientes_sessoes')
+            .select('*')
+            .eq('appointment_id', appointment.id)
+            .eq('user_id', user.user.id)
+            .maybeSingle();
+
+          if (session) {
+            const appointmentDate = formatDateForStorage(appointment.date);
+            
+            if (session.data_sessao !== appointmentDate) {
+              foundIssues.push({
+                type: 'date_mismatch',
+                appointmentId: appointment.id,
+                sessionId: session.id,
+                description: `Data divergente: Agenda=${appointmentDate}, Workflow=${session.data_sessao}`
+              });
+            }
+            
+            if (session.hora_sessao !== appointment.time) {
+              foundIssues.push({
+                type: 'time_mismatch',
+                appointmentId: appointment.id,
+                sessionId: session.id,
+                description: `Hora divergente: Agenda=${appointment.time}, Workflow=${session.hora_sessao}`
+              });
+            }
+          }
+        }
+      }
+
       console.log('🔍 [IntegrityCheck] Found issues:', foundIssues);
       setIssues(foundIssues);
 
@@ -170,6 +205,33 @@ export const useDataIntegrityCheck = () => {
 
                 repairedCount++;
                 console.log('✅ [IntegrityRepair] Fixed session link:', issue.sessionId);
+              }
+              break;
+
+            case 'date_mismatch':
+            case 'time_mismatch':
+              if (issue.appointmentId && issue.sessionId) {
+                // Get current appointment data
+                const { data: appointment } = await supabase
+                  .from('appointments')
+                  .select('date, time')
+                  .eq('id', issue.appointmentId)
+                  .eq('user_id', user.user.id)
+                  .single();
+                
+                if (appointment) {
+                  await supabase
+                    .from('clientes_sessoes')
+                    .update({
+                      data_sessao: formatDateForStorage(appointment.date),
+                      hora_sessao: appointment.time
+                    })
+                    .eq('id', issue.sessionId)
+                    .eq('user_id', user.user.id);
+                  
+                  repairedCount++;
+                  console.log('✅ [IntegrityRepair] Fixed date/time mismatch:', issue.sessionId);
+                }
               }
               break;
           }
