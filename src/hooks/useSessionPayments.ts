@@ -22,28 +22,43 @@ const convertToLegacyFormat = (extendedPayments: SessionPaymentExtended[]): Sess
   }));
 };
 
-// Salvar pagamentos no Supabase e localStorage (dual-write para compatibilidade)
-const savePaymentsToSupabase = async (sessionId: string, payments: SessionPaymentExtended[]) => {
+// Salvar UM ÚNICO pagamento específico no Supabase (evita loops de duplicação)
+const saveSinglePaymentToSupabase = async (
+  sessionId: string, 
+  paymentId: string,
+  payment: SessionPaymentExtended
+) => {
   try {
-    // Usar o serviço centralizado para salvar pagamentos
+    // Só salvar se o pagamento estiver pago e tiver data
+    if (payment.statusPagamento !== 'pago' || !payment.data) {
+      console.log('⏭️ Pagamento não está pago ou sem data, não salvando no Supabase:', paymentId);
+      return;
+    }
+
     const { PaymentSupabaseService } = await import('@/services/PaymentSupabaseService');
     
-    // Filtrar apenas pagamentos pagos que têm data
-    const paidPayments = payments.filter(p => p.statusPagamento === 'pago' && p.data);
+    // Usar método rastreado para evitar duplicação
+    await PaymentSupabaseService.saveSinglePaymentTracked(sessionId, paymentId, {
+      valor: payment.valor,
+      data: payment.data,
+      observacoes: payment.observacoes,
+      forma_pagamento: payment.forma_pagamento
+    });
     
-    // Salvar cada pagamento usando o serviço
-    for (const payment of paidPayments) {
-      await PaymentSupabaseService.saveSinglePaymentToSupabase(sessionId, {
-        valor: payment.valor,
-        data: payment.data,
-        observacoes: payment.observacoes,
-        forma_pagamento: payment.forma_pagamento
-      });
-    }
-    
-    console.log('✅ Pagamentos sincronizados com Supabase via PaymentSupabaseService');
+    console.log('✅ Pagamento único sincronizado com Supabase:', paymentId);
   } catch (error) {
-    console.error('❌ Erro ao salvar pagamentos no Supabase:', error);
+    console.error('❌ Erro ao salvar pagamento único no Supabase:', error);
+  }
+};
+
+// Deletar pagamento do Supabase
+const deletePaymentFromSupabase = async (sessionId: string, paymentId: string) => {
+  try {
+    const { PaymentSupabaseService } = await import('@/services/PaymentSupabaseService');
+    await PaymentSupabaseService.deletePaymentFromSupabase(sessionId, paymentId);
+    console.log('✅ Pagamento deletado do Supabase:', paymentId);
+  } catch (error) {
+    console.error('❌ Erro ao deletar pagamento do Supabase:', error);
   }
 };
 
@@ -170,9 +185,12 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
     
     setPayments(prev => {
       const updated = [...prev, newPayment];
-      // Save explicitly
+      // Save to localStorage
       savePaymentsToStorage(sessionId, updated);
-      savePaymentsToSupabase(sessionId, updated);
+      // Save to Supabase only if paid
+      if (newPayment.statusPagamento === 'pago' && newPayment.data) {
+        saveSinglePaymentToSupabase(sessionId, newPayment.id, newPayment);
+      }
       return updated;
     });
     
@@ -182,10 +200,18 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
   // Editar pagamento existente
   const editPayment = useCallback((paymentId: string, updates: Partial<SessionPaymentExtended>) => {
     setPayments(prev => {
-      const updated = prev.map(p => p.id === paymentId ? { ...p, ...updates } : p);
-      // Save explicitly
+      const updatedPayment = prev.find(p => p.id === paymentId);
+      if (!updatedPayment) return prev;
+      
+      const finalPayment = { ...updatedPayment, ...updates };
+      const updated = prev.map(p => p.id === paymentId ? finalPayment : p);
+      
+      // Save to localStorage
       savePaymentsToStorage(sessionId, updated);
-      savePaymentsToSupabase(sessionId, updated);
+      // Save to Supabase only if paid
+      if (finalPayment.statusPagamento === 'pago' && finalPayment.data) {
+        saveSinglePaymentToSupabase(sessionId, paymentId, finalPayment);
+      }
       return updated;
     });
   }, [sessionId]);
@@ -194,9 +220,10 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
   const deletePayment = useCallback((paymentId: string) => {
     setPayments(prev => {
       const updated = prev.filter(p => p.id !== paymentId);
-      // Save explicitly
+      // Save to localStorage
       savePaymentsToStorage(sessionId, updated);
-      savePaymentsToSupabase(sessionId, updated);
+      // Delete from Supabase (não re-salvar os restantes!)
+      deletePaymentFromSupabase(sessionId, paymentId);
       return updated;
     });
   }, [sessionId]);
@@ -204,23 +231,26 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
   // Marcar como pago
   const markAsPaid = useCallback((paymentId: string) => {
     setPayments(prev => {
-      const updated = prev.map(p => 
-        p.id === paymentId 
-          ? { 
-              ...p, 
-              statusPagamento: 'pago' as const,
-              data: formatDateForStorage(new Date())
-            }
-          : p
-      );
-      // Save explicitly
+      const paidPayment = prev.find(p => p.id === paymentId);
+      if (!paidPayment) return prev;
+      
+      const finalPayment = { 
+        ...paidPayment, 
+        statusPagamento: 'pago' as const,
+        data: formatDateForStorage(new Date())
+      };
+      
+      const updated = prev.map(p => p.id === paymentId ? finalPayment : p);
+      
+      // Save to localStorage
       savePaymentsToStorage(sessionId, updated);
-      savePaymentsToSupabase(sessionId, updated);
+      // Save ONLY this payment to Supabase
+      saveSinglePaymentToSupabase(sessionId, paymentId, finalPayment);
       return updated;
     });
   }, [sessionId]);
 
-  // Criar parcelas
+  // Criar parcelas (NÃO salvar no Supabase até serem pagas)
   const createInstallments = useCallback((
     totalValue: number, 
     installmentCount: number, 
@@ -235,7 +265,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
       dueDate.setDate(dueDate.getDate() + (i * intervalDays));
 
       newInstallments.push({
-        id: `installment-${Date.now()}-${i}`,
+        id: `installment-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 5)}`,
         valor: installmentValue,
         data: '',
         dataVencimento: formatDateForStorage(dueDate),
@@ -250,16 +280,15 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
 
     setPayments(prev => {
       const updated = [...prev, ...newInstallments];
-      // Save explicitly
+      // Save ONLY to localStorage (não Supabase - só quando marcar como pago)
       savePaymentsToStorage(sessionId, updated);
-      savePaymentsToSupabase(sessionId, updated);
       return updated;
     });
     
     return newInstallments;
-  }, []);
+  }, [sessionId]);
 
-  // Agendar pagamento único
+  // Agendar pagamento único (NÃO salvar no Supabase até ser pago)
   const schedulePayment = useCallback((
     value: number,
     dueDate: Date,
@@ -274,7 +303,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
     });
     
     const newPayment: SessionPaymentExtended = {
-      id: `scheduled-${Date.now()}`,
+      id: `scheduled-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       valor: value,
       data: '', // Vazio pois ainda não foi pago
       dataVencimento: dataVencimento,
@@ -287,14 +316,13 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
 
     setPayments(prev => {
       const updated = [...prev, newPayment];
-      // Save explicitly
+      // Save ONLY to localStorage (não Supabase - só quando marcar como pago)
       savePaymentsToStorage(sessionId, updated);
-      savePaymentsToSupabase(sessionId, updated);
       return updated;
     });
     
     return newPayment;
-  }, []);
+  }, [sessionId]);
 
   return {
     payments,
