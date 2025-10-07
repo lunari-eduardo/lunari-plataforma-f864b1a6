@@ -773,61 +773,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     console.log('💰 Adicionando pagamento rápido:', { id, valor });
     
     try {
-      // Buscar sessão do workflow
-      const savedSessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
-      const sessionIndex = savedSessions.findIndex((s: any) => s.id === id);
-      
-      if (sessionIndex === -1) {
-        console.error('❌ Sessão não encontrada no workflow:', id);
-        toast({
-          title: "Erro ao adicionar pagamento",
-          description: "Sessão não encontrada",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      const session = savedSessions[sessionIndex];
-      const currentPaid = parseFloat((session.valorPago || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-      const newPaidTotal = currentPaid + valor;
-
-      console.log('📊 Valores de pagamento:', {
-        currentPaid,
-        valor,
-        newPaidTotal,
-        sessionId: id
-      });
-
-      // Criar objeto de pagamento
-      const novoPagamento = {
-        id: Date.now().toString(),
-        valor,
-        data: getCurrentDateString(),
-        forma_pagamento: 'dinheiro',
-        observacoes: 'Pagamento rápido',
-        tipo: 'pago' as const,
-        statusPagamento: 'pago' as const,
-        origem: 'workflow_rapido' as const,
-        editavel: true
-      };
-
-      // Atualizar sessão no localStorage
-      savedSessions[sessionIndex] = {
-        ...session,
-        valorPago: `R$ ${newPaidTotal.toFixed(2).replace('.', ',')}`,
-        pagamentos: [...(session.pagamentos || []), novoPagamento]
-      };
-
-      // Recalcular restante
-      const total = parseFloat((session.total || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-      const restante = Math.max(0, total - newPaidTotal);
-      savedSessions[sessionIndex].restante = `R$ ${restante.toFixed(2).replace('.', ',')}`;
-
-      // Salvar no localStorage
-      localStorage.setItem('workflow_sessions', JSON.stringify(savedSessions));
-      console.log('✅ Pagamento salvo no workflow_sessions');
-      
-      // NOVO: Salvar no Supabase
+      // 1. PRIMEIRO: Tentar salvar no Supabase (fonte de verdade)
       const { PaymentSupabaseService } = await import('@/services/PaymentSupabaseService');
       const success = await PaymentSupabaseService.saveSinglePaymentToSupabase(id, {
         valor,
@@ -836,32 +782,78 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         forma_pagamento: 'dinheiro'
       });
 
-      if (success) {
-        console.log('✅ Pagamento salvo no Supabase - trigger irá recalcular valor_pago automaticamente');
+      if (!success) {
+        console.error('❌ Falha ao salvar pagamento no Supabase');
         toast({
-          title: "Pagamento adicionado",
-          description: `R$ ${valor.toFixed(2).replace('.', ',')} registrado com sucesso`,
+          title: "Erro ao adicionar pagamento",
+          description: "Não foi possível salvar o pagamento. Verifique sua conexão.",
+          variant: "destructive"
         });
-      } else {
-        console.warn('⚠️ Pagamento salvo no localStorage mas falhou no Supabase');
-        toast({
-          title: "Aviso",
-          description: "Pagamento salvo localmente, mas pode não estar sincronizado",
-          variant: "default"
-        });
+        return;
       }
-      
-      // Criar transação financeira
-      FinancialEngine.createTransactions({
-        valorTotal: valor,
-        dataPrimeiraOcorrencia: getCurrentDateString(),
-        itemId: id,
-        isRecorrente: false,
-        isParcelado: false,
-        observacoes: `Pagamento rápido - ${session.nome || 'Cliente'}`
+
+      console.log('✅ Pagamento salvo no Supabase - trigger irá recalcular valor_pago automaticamente');
+
+      // 2. OPCIONAL: Atualizar localStorage SE a sessão existir lá (compatibilidade)
+      try {
+        const savedSessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
+        const sessionIndex = savedSessions.findIndex((s: any) => 
+          s.id === id || s.sessionId === id || s.session_id === id
+        );
+        
+        if (sessionIndex !== -1) {
+          const session = savedSessions[sessionIndex];
+          const currentPaid = parseFloat((session.valorPago || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+          const newPaidTotal = currentPaid + valor;
+
+          const novoPagamento = {
+            id: Date.now().toString(),
+            valor,
+            data: getCurrentDateString(),
+            forma_pagamento: 'dinheiro',
+            observacoes: 'Pagamento rápido',
+            tipo: 'pago' as const,
+            statusPagamento: 'pago' as const,
+            origem: 'workflow_rapido' as const,
+            editavel: true
+          };
+
+          savedSessions[sessionIndex] = {
+            ...session,
+            valorPago: `R$ ${newPaidTotal.toFixed(2).replace('.', ',')}`,
+            pagamentos: [...(session.pagamentos || []), novoPagamento]
+          };
+
+          const total = parseFloat((session.total || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+          const restante = Math.max(0, total - newPaidTotal);
+          savedSessions[sessionIndex].restante = `R$ ${restante.toFixed(2).replace('.', ',')}`;
+
+          localStorage.setItem('workflow_sessions', JSON.stringify(savedSessions));
+          console.log('✅ Pagamento também atualizado no localStorage (compatibilidade)');
+
+          // Criar transação financeira (motor financeiro)
+          FinancialEngine.createTransactions({
+            valorTotal: valor,
+            dataPrimeiraOcorrencia: getCurrentDateString(),
+            itemId: id,
+            isRecorrente: false,
+            isParcelado: false,
+            observacoes: `Pagamento rápido - ${session.nome || 'Cliente'}`
+          });
+        } else {
+          console.log('ℹ️ Sessão não encontrada no localStorage (pode ser só do Supabase) - OK');
+        }
+      } catch (localStorageError) {
+        console.warn('⚠️ Erro ao atualizar localStorage (não crítico):', localStorageError);
+      }
+
+      // 3. Exibir toast de sucesso
+      toast({
+        title: "Pagamento adicionado",
+        description: `R$ ${valor.toFixed(2).replace('.', ',')} registrado com sucesso`,
       });
 
-      // Nota: Não precisamos disparar eventos manualmente - o realtime do Supabase cuida disso
+      // Nota: O realtime do Supabase irá disparar eventos automaticamente
       console.log('✅ Pagamento adicionado com sucesso:', valor, 'para sessão:', id);
     } catch (error) {
       console.error('❌ Erro ao adicionar pagamento:', error);

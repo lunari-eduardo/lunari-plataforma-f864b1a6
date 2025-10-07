@@ -6,32 +6,44 @@ import { supabase } from '@/integrations/supabase/client';
  * IMPORTANTE: 
  * - clientes_sessoes.id (UUID) = chave primária, usada no workflow UI
  * - clientes_sessoes.session_id (text) = identificador legível (workflow-timestamp-random)
- * - clientes_transacoes.session_id = armazena o UUID para vinculação
+ * - clientes_transacoes.session_id = armazena session_id (text) para vinculação
  * 
- * Este serviço usa clientes_sessoes.id (UUID) para buscar o cliente_id
+ * Este serviço aceita tanto UUID quanto session_id (text) e resolve automaticamente
  */
 export class PaymentSupabaseService {
   /**
-   * Buscar cliente_id através do UUID da sessão
+   * Buscar dados da sessão através de UUID ou session_id (text)
+   * Retorna { id: UUID, session_id: string, cliente_id: UUID }
    */
-  static async getClienteIdFromSession(sessionUuid: string): Promise<string | null> {
+  static async getSessionBinding(sessionKey: string): Promise<{ id: string; session_id: string; cliente_id: string } | null> {
     try {
-      console.log('🔍 Buscando cliente_id para session UUID:', sessionUuid);
+      console.log('🔍 Buscando sessão por chave:', sessionKey);
       
       const { data, error } = await supabase
         .from('clientes_sessoes')
-        .select('cliente_id')
-        .eq('id', sessionUuid)
-        .single();
+        .select('id, session_id, cliente_id')
+        .or(`id.eq.${sessionKey},session_id.eq.${sessionKey}`)
+        .maybeSingle();
 
       if (error) {
-        console.error('❌ Erro ao buscar cliente_id:', error);
+        console.error('❌ Erro ao buscar sessão:', error);
         return null;
       }
 
-      return data?.cliente_id || null;
+      if (!data) {
+        console.warn('⚠️ Nenhuma sessão encontrada para chave:', sessionKey);
+        return null;
+      }
+
+      console.log('✅ Sessão encontrada:', { 
+        id: data.id, 
+        session_id: data.session_id,
+        cliente_id: data.cliente_id 
+      });
+
+      return data;
     } catch (error) {
-      console.error('❌ Erro ao buscar cliente_id:', error);
+      console.error('❌ Erro ao buscar sessão:', error);
       return null;
     }
   }
@@ -43,7 +55,7 @@ export class PaymentSupabaseService {
    * - Disparar evento realtime
    */
   static async saveSinglePaymentToSupabase(
-    sessionUuid: string,
+    sessionKey: string,
     payment: {
       valor: number;
       data: string;
@@ -62,21 +74,21 @@ export class PaymentSupabaseService {
 
       const userId = userData.user.id;
 
-      // 2. Buscar cliente_id através do UUID da sessão
-      const clienteId = await this.getClienteIdFromSession(sessionUuid);
+      // 2. Buscar sessão (aceita UUID ou session_id text)
+      const sessao = await this.getSessionBinding(sessionKey);
       
-      if (!clienteId) {
-        console.error('❌ Não foi possível encontrar cliente_id para session UUID:', sessionUuid);
+      if (!sessao) {
+        console.error('❌ Sessão não encontrada para chave:', sessionKey);
         return false;
       }
 
-      // 3. Inserir transação em clientes_transacoes (session_id armazena o UUID)
+      // 3. Inserir transação em clientes_transacoes (session_id armazena o session_id TEXT)
       const { error: insertError } = await supabase
         .from('clientes_transacoes')
         .insert({
           user_id: userId,
-          cliente_id: clienteId,
-          session_id: sessionUuid,
+          cliente_id: sessao.cliente_id,
+          session_id: sessao.session_id,  // ⚡ Usar session_id (text) para consistência com trigger
           tipo: 'pagamento',
           valor: payment.valor,
           data_transacao: payment.data,
@@ -90,9 +102,10 @@ export class PaymentSupabaseService {
       }
 
       console.log('✅ Pagamento salvo no Supabase:', {
-        sessionUuid,
+        sessionKey,
+        session_id: sessao.session_id,
         valor: payment.valor,
-        clienteId
+        cliente_id: sessao.cliente_id
       });
 
       // 4. O trigger trigger_recompute_session_paid() irá automaticamente:
@@ -111,7 +124,7 @@ export class PaymentSupabaseService {
    * Salvar múltiplos pagamentos (para modal de gerenciamento)
    */
   static async saveMultiplePayments(
-    sessionUuid: string,
+    sessionKey: string,
     payments: Array<{
       valor: number;
       data: string;
@@ -121,7 +134,7 @@ export class PaymentSupabaseService {
   ): Promise<boolean> {
     try {
       for (const payment of payments) {
-        const success = await this.saveSinglePaymentToSupabase(sessionUuid, payment);
+        const success = await this.saveSinglePaymentToSupabase(sessionKey, payment);
         if (!success) {
           console.error('❌ Falha ao salvar pagamento:', payment);
           return false;
