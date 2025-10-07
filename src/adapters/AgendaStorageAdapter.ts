@@ -38,7 +38,15 @@ export abstract class AgendaStorageAdapter {
     return date.toISOString().split('T')[0];
   }
 
+  /**
+   * Converte string YYYY-MM-DD em Date object
+   * IMPORTANTE: Cria Date em timezone LOCAL para evitar deslocamentos
+   * 
+   * @param dateStr - String no formato YYYY-MM-DD
+   * @returns Date object em timezone local
+   */
   protected parseDateFromStorage(dateStr: string): Date {
-    return new Date(dateStr + 'T00:00:00.000Z');
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day);
   }
 }

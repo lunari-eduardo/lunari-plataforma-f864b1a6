@@ -8,6 +8,11 @@ import { generateUniversalSessionId } from '@/types/appointments-supabase';
 /**
  * Supabase implementation for agenda data persistence
  * Real-time enabled with full CRUD operations
+ * 
+ * IMPORTANTE - PARSING DE DATAS:
+ * - SEMPRE usar this.parseDateFromStorage() para converter string → Date
+ * - NUNCA usar new Date(string) pois causa bugs de timezone
+ * - this.parseDateFromStorage() garante Date em timezone LOCAL
  */
 export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
   constructor() {
@@ -33,7 +38,7 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
       id: appointment.id,
       sessionId: appointment.session_id,
       title: appointment.title,
-      date: new Date(appointment.date),
+      date: this.parseDateFromStorage(appointment.date),
       time: appointment.time,
       type: appointment.type,
       client: appointment.title, // Using title as client name
