@@ -187,6 +187,23 @@ export function WorkflowTable({
     onFieldUpdate(sessionId, field, value, silent);
   }, [onFieldUpdate]);
 
+  // ✅ FASE 4: Auto-recalculate and sync total when components change
+  useEffect(() => {
+    sessions.forEach(session => {
+      const totalCalculado = calculateTotal(session);
+      
+      // Parse valor_total from session (can be string or number)
+      const valorTotalStr = typeof session.total === 'string' ? session.total : String(session.total || '0');
+      const totalAtualNoSupabase = parseFloat(valorTotalStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+      
+      // If there's a difference, silently update
+      if (Math.abs(totalCalculado - totalAtualNoSupabase) > 0.01) {
+        console.log('🔄 Auto-sync: total calculado=', totalCalculado, 'atual no DB=', totalAtualNoSupabase);
+        handleFieldUpdateStable(session.id, 'total', totalCalculado, true); // silent=true
+      }
+    });
+  }, [sessions, calculateTotal, handleFieldUpdateStable]);
+
   // Atualizar larguras quando columnWidths prop mudar
   useEffect(() => {
     setCurrentColumnWidths({
@@ -305,23 +322,6 @@ export function WorkflowTable({
     }
     return restante;
   }, [calculateTotal]);
-
-  // ✅ FASE 4: Auto-recalculate and sync total when components change
-  useEffect(() => {
-    sessions.forEach(session => {
-      const totalCalculado = calculateTotal(session);
-      
-      // Parse valor_total from session (can be string or number)
-      const valorTotalStr = typeof session.total === 'string' ? session.total : String(session.total || '0');
-      const totalAtualNoSupabase = parseFloat(valorTotalStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-      
-      // If there's a difference, silently update
-      if (Math.abs(totalCalculado - totalAtualNoSupabase) > 0.01) {
-        console.log('🔄 Auto-sync: total calculado=', totalCalculado, 'atual no DB=', totalAtualNoSupabase);
-        handleFieldUpdateStable(session.id, 'total', totalCalculado, true); // silent=true
-      }
-    });
-  }, [sessions, calculateTotal, handleFieldUpdateStable]);
 
   // Função para detectar pagamentos agendados/parcelados
   const getPaymentPlanInfo = useCallback((sessionId: string) => {
