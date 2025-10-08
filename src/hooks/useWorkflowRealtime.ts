@@ -169,7 +169,7 @@ export const useWorkflowRealtime = () => {
 
       for (const [field, value] of Object.entries(updates)) {
         switch (field) {
-            case 'pacote':
+          case 'pacote':
             // Handle both package name and ID
             if (typeof value === 'string' && value) {
               console.log('🔄 Processing package change:', value);
@@ -183,10 +183,10 @@ export const useWorkflowRealtime = () => {
                 console.log('📦 Package found:', pkg.nome, 'ID:', pkg.id);
                 sanitizedUpdates.pacote = pkg.id; // Always store ID in database
                 
-                // FASE 2: Set ONLY base package value - trigger will add extras automatically
+                // Also update valor_total if package found
                 if (pkg.valor_base) {
                   sanitizedUpdates.valor_total = Number(pkg.valor_base);
-                  console.log('💰 Set base package value (trigger will add extras):', sanitizedUpdates.valor_total);
+                  console.log('💰 Updated valor_total:', sanitizedUpdates.valor_total);
                 }
                 
                 // CRITICAL: Smart re-freezing when package changes
@@ -239,21 +239,16 @@ export const useWorkflowRealtime = () => {
               }
             }
             break;
-          case 'valorTotal':  // Handle direct valor_total updates (ONLY base package value)
-            // FASE 2: Only accept base package value - trigger adds extras
+          case 'valorTotal':  // Handle direct valor_total updates
             sanitizedUpdates.valor_total = Number(value) || 0;
-            console.log('💰 Set base package value directly (trigger will add extras):', sanitizedUpdates.valor_total);
             break;
           case 'valorPacote':
-            // FASE 2: Parse currency string to number for ONLY base package value
-            // The SQL trigger will automatically add extras, discount, etc.
+            // Parse currency string to number for valor_total
             if (typeof value === 'string') {
               const numValue = parseFloat(value.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
               sanitizedUpdates.valor_total = numValue;
-              console.log('💰 Set base package value from valorPacote (trigger will add extras):', numValue);
             } else if (typeof value === 'number') {
               sanitizedUpdates.valor_total = value;
-              console.log('💰 Set base package value from valorPacote (trigger will add extras):', value);
             }
             break;
           case 'produtosList':
@@ -449,7 +444,6 @@ export const useWorkflowRealtime = () => {
     try {
       const sessionId = generateUniversalSessionId('workflow');
       
-      // FASE 2: Set ONLY base package value - SQL trigger will add extras automatically
       const sessionData = {
         session_id: sessionId,
         appointment_id: appointmentId,
@@ -460,12 +454,11 @@ export const useWorkflowRealtime = () => {
         pacote: appointmentData.pacote || '',
         descricao: appointmentData.description || '',
         status: '',
-        valor_total: appointmentData.valorPacote || 0, // ONLY base package value - trigger adds extras
+        valor_total: appointmentData.valorPacote || 0,
         valor_pago: appointmentData.paidAmount || 0,
         produtos_incluidos: appointmentData.produtosIncluidos || []
       };
 
-      console.log('💰 Creating session with base package value (trigger will add extras):', sessionData.valor_total);
       return await createSession(sessionData);
     } catch (err) {
       console.error('Error creating session from appointment:', err);
