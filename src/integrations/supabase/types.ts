@@ -900,10 +900,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      calculate_manual_products_total: {
-        Args: { produtos: Json }
-        Returns: number
-      }
       recompute_session_paid: {
         Args: { p_session_id: string }
         Returns: undefined
