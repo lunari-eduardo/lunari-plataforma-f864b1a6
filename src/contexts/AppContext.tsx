@@ -773,9 +773,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     console.log('💰 Adicionando pagamento rápido:', { id, valor });
     
     try {
-      // 1. PRIMEIRO: Tentar salvar no Supabase (fonte de verdade)
+      // 1. PRIMEIRO: Gerar ID único para rastreamento
+      const paymentId = `quick-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      
+      // 2. Salvar no Supabase COM tracking ID
       const { PaymentSupabaseService } = await import('@/services/PaymentSupabaseService');
-      const success = await PaymentSupabaseService.saveSinglePaymentToSupabase(id, {
+      const success = await PaymentSupabaseService.saveSinglePaymentTracked(id, paymentId, {
         valor,
         data: getCurrentDateString(),
         observacoes: 'Pagamento rápido',
@@ -807,7 +810,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const newPaidTotal = currentPaid + valor;
 
           const novoPagamento = {
-            id: Date.now().toString(),
+            id: paymentId, // Usar o mesmo ID rastreável
             valor,
             data: getCurrentDateString(),
             forma_pagamento: 'dinheiro',
