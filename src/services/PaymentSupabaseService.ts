@@ -167,19 +167,37 @@ export class PaymentSupabaseService {
         return false;
       }
 
-      // Deletar transação que contenha o paymentId na descrição
-      const { error } = await supabase
+      // Buscar transações que contenham o paymentId na descrição
+      const { data: transacoes, error: fetchError } = await supabase
         .from('clientes_transacoes')
-        .delete()
+        .select('id')
         .eq('session_id', sessao.session_id)
-        .ilike('descricao', `%${paymentId}%`);
+        .ilike('descricao', `%[ID:${paymentId}]%`);
 
-      if (error) {
-        console.error('❌ Erro ao deletar pagamento:', error);
+      if (fetchError) {
+        console.error('❌ Erro ao buscar transação:', fetchError);
         return false;
       }
 
-      console.log('✅ Pagamento deletado do Supabase:', { paymentId, session_id: sessao.session_id });
+      if (!transacoes || transacoes.length === 0) {
+        console.warn('⚠️ Nenhuma transação encontrada para deletar:', paymentId);
+        return true; // Considerar sucesso se não existe
+      }
+
+      // Deletar cada transação encontrada
+      for (const transacao of transacoes) {
+        const { error: deleteError } = await supabase
+          .from('clientes_transacoes')
+          .delete()
+          .eq('id', transacao.id);
+
+        if (deleteError) {
+          console.error('❌ Erro ao deletar transação:', deleteError);
+          return false;
+        }
+      }
+
+      console.log('✅ Pagamento deletado do Supabase:', { paymentId, session_id: sessao.session_id, count: transacoes.length });
       return true;
     } catch (error) {
       console.error('❌ Erro ao deletar pagamento:', error);

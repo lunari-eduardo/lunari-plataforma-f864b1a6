@@ -108,8 +108,10 @@ export function useClientSessionsRealtime(clienteId: string) {
           const total = Number(valorPacote) + Number(valorTotalFotoExtra) + Number(valorTotalProduto) + Number(valorAdicional) - Number(desconto);
           const restante = Math.max(0, total - valorPago);
 
-          // Calcular total agendado (por enquanto 0, será implementado quando houver sistema de agendamento)
-          const totalAgendado = 0;
+          // Calcular total agendado: pagamentos pendentes (ainda não realizados)
+          // Por enquanto, baseado apenas no restante, pois pagamentos agendados 
+          // ainda não estão implementados em clientes_transacoes
+          const totalAgendado = 0; // TODO: Implementar quando adicionar campo de data_vencimento em transações
 
           return {
             id: session.id,

@@ -46,9 +46,9 @@ export function useClientMetricsRealtime(clienteId: string) {
 
       // Calculate metrics
       const totalSessoes = sessionsData?.length || 0;
-      const totalFaturado = sessionsData?.reduce((sum, session) => sum + (session.valor_pago || 0), 0) || 0;
-      const totalValor = sessionsData?.reduce((sum, session) => sum + (session.valor_total || 0), 0) || 0;
-      const aReceber = totalValor - totalFaturado;
+      const totalFaturado = sessionsData?.reduce((sum, session) => sum + (session.valor_total || 0), 0) || 0;
+      const totalPago = sessionsData?.reduce((sum, session) => sum + (session.valor_pago || 0), 0) || 0;
+      const aReceber = Math.max(0, totalFaturado - totalPago);
       
       // Find latest session
       const sortedSessions = sessionsData?.sort((a, b) => 
@@ -66,7 +66,7 @@ export function useClientMetricsRealtime(clienteId: string) {
         totalFaturado,
         aReceber,
         agendamentos: appointmentsCount || 0,
-        agendado: aReceber, // Por enquanto, agendado é igual a aReceber
+        agendado: 0, // TODO: Calcular baseado em transações agendadas quando implementado
         ultimaSessao,
         sessaoEmAndamento,
       });

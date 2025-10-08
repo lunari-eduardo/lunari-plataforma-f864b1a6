@@ -276,7 +276,8 @@ export function getSimplifiedClientMetrics(clientes: Cliente[]): SimplifiedMetri
     const totalPago = sessionsCalculadas.reduce((acc: number, session: any) => 
       acc + session.valorPago, 0
     );
-    const aReceber = totalFaturado - totalPago;
+    // Garantir que aReceber nunca seja negativo
+    const aReceber = Math.max(0, totalFaturado - totalPago);
     
     // Última sessão (usando dados recalculados)
     let ultimaSessao: Date | null = null;
