@@ -183,11 +183,8 @@ export const useWorkflowRealtime = () => {
                 console.log('📦 Package found:', pkg.nome, 'ID:', pkg.id);
                 sanitizedUpdates.pacote = pkg.id; // Always store ID in database
                 
-                // Also update valor_total if package found
-                if (pkg.valor_base) {
-                  sanitizedUpdates.valor_total = Number(pkg.valor_base);
-                  console.log('💰 Updated valor_total:', sanitizedUpdates.valor_total);
-                }
+                // ✅ FASE 2: Não sobrescrever valor_total aqui
+                // O total será recalculado e enviado pelo WorkflowTable
                 
                 // CRITICAL: Smart re-freezing when package changes
                 let novaCategoria = currentSession?.categoria;
@@ -318,11 +315,17 @@ export const useWorkflowRealtime = () => {
           case 'qtdProduto':
           case 'valorTotalProduto':
           case 'valor':
-          case 'total':
           case 'valorPago':
           case 'restante':
           case 'pagamentos':
             // Skip these fields - they don't exist in clientes_sessoes schema
+            break;
+          case 'total':
+            // ✅ FASE 1: Map 'total' from frontend to 'valor_total' in database
+            sanitizedUpdates.valor_total = typeof value === 'string' 
+              ? parseFloat(value.replace(/[^\d,]/g, '').replace(',', '.')) || 0
+              : Number(value) || 0;
+            console.log('💰 Mapped total to valor_total:', sanitizedUpdates.valor_total);
             break;
           default:
             // For any other field, check if it exists in WorkflowSession

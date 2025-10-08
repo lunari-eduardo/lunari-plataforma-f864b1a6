@@ -187,6 +187,23 @@ export function WorkflowTable({
     onFieldUpdate(sessionId, field, value, silent);
   }, [onFieldUpdate]);
 
+  // ✅ FASE 4: Auto-recalculate and sync total when components change
+  useEffect(() => {
+    sessions.forEach(session => {
+      const totalCalculado = calculateTotal(session);
+      
+      // Parse valor_total from session (can be string or number)
+      const valorTotalStr = typeof session.total === 'string' ? session.total : String(session.total || '0');
+      const totalAtualNoSupabase = parseFloat(valorTotalStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+      
+      // If there's a difference, silently update
+      if (Math.abs(totalCalculado - totalAtualNoSupabase) > 0.01) {
+        console.log('🔄 Auto-sync: total calculado=', totalCalculado, 'atual no DB=', totalAtualNoSupabase);
+        handleFieldUpdateStable(session.id, 'total', totalCalculado, true); // silent=true
+      }
+    });
+  }, [sessions, calculateTotal, handleFieldUpdateStable]);
+
   // Atualizar larguras quando columnWidths prop mudar
   useEffect(() => {
     setCurrentColumnWidths({
@@ -438,6 +455,10 @@ export function WorkflowTable({
           const valorUnit = parseFloat(newValue.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
           const qtd = session.qtdFotosExtra || 0;
           handleFieldUpdateStable(sessionId, 'valorTotalFotoExtra', formatCurrency(qtd * valorUnit));
+          
+          // ✅ FASE 3: Recalcular e enviar total atualizado
+          const novoTotal = calculateTotal({ ...session, valorTotalFotoExtra: formatCurrency(qtd * valorUnit) });
+          handleFieldUpdateStable(sessionId, 'total', novoTotal, true);
         }
       }
 
@@ -460,15 +481,41 @@ export function WorkflowTable({
               
               handleFieldUpdateStable(sessionId, 'valorFotoExtra', formatCurrency(resultado.valorUnitario));
               handleFieldUpdateStable(sessionId, 'valorTotalFotoExtra', formatCurrency(resultado.valorTotal));
+              
+              // ✅ FASE 3: Recalcular e enviar total atualizado
+              const novoTotal = calculateTotal({ 
+                ...session, 
+                qtdFotosExtra: novaQuantidade,
+                valorTotalFotoExtra: formatCurrency(resultado.valorTotal) 
+              });
+              handleFieldUpdateStable(sessionId, 'total', novoTotal, true);
             } catch (error) {
               console.warn('⚠️ Erro usando regras congeladas, usando valor fixo:', error);
               const valorUnit = calcularValorRealPorFoto(session);
-              handleFieldUpdateStable(sessionId, 'valorTotalFotoExtra', formatCurrency(novaQuantidade * valorUnit));
+              const valorTotal = novaQuantidade * valorUnit;
+              handleFieldUpdateStable(sessionId, 'valorTotalFotoExtra', formatCurrency(valorTotal));
+              
+              // ✅ FASE 3: Recalcular e enviar total atualizado
+              const novoTotal = calculateTotal({ 
+                ...session, 
+                qtdFotosExtra: novaQuantidade,
+                valorTotalFotoExtra: formatCurrency(valorTotal) 
+              });
+              handleFieldUpdateStable(sessionId, 'total', novoTotal, true);
             }
           } else {
             // Usar valor atual fixo
             const valorUnit = calcularValorRealPorFoto(session);
-            handleFieldUpdateStable(sessionId, 'valorTotalFotoExtra', formatCurrency(novaQuantidade * valorUnit));
+            const valorTotal = novaQuantidade * valorUnit;
+            handleFieldUpdateStable(sessionId, 'valorTotalFotoExtra', formatCurrency(valorTotal));
+            
+            // ✅ FASE 3: Recalcular e enviar total atualizado
+            const novoTotal = calculateTotal({ 
+              ...session, 
+              qtdFotosExtra: novaQuantidade,
+              valorTotalFotoExtra: formatCurrency(valorTotal) 
+            });
+            handleFieldUpdateStable(sessionId, 'total', novoTotal, true);
           }
         }
       }
