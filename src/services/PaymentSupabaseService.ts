@@ -152,9 +152,12 @@ export class PaymentSupabaseService {
 
   /**
    * Deletar um pagamento específico do Supabase
+   * FASE 2: Suporte para migração de dados antigos
    */
   static async deletePaymentFromSupabase(sessionKey: string, paymentId: string): Promise<boolean> {
     try {
+      console.log('🗑️ Deletando pagamento:', { sessionKey, paymentId });
+
       const { data: userData } = await supabase.auth.getUser();
       if (!userData?.user) {
         console.error('❌ Usuário não autenticado');
@@ -167,37 +170,54 @@ export class PaymentSupabaseService {
         return false;
       }
 
-      // Buscar transações que contenham o paymentId na descrição
-      const { data: transacoes, error: fetchError } = await supabase
+      // FASE 2: Buscar com fallback para dados antigos
+      // Tentar formato novo primeiro: [ID:paymentId]
+      const { data: transacoesComTracking, error: errorTracking } = await supabase
         .from('clientes_transacoes')
-        .select('id')
+        .select('id, descricao')
         .eq('session_id', sessao.session_id)
         .ilike('descricao', `%[ID:${paymentId}]%`);
 
-      if (fetchError) {
-        console.error('❌ Erro ao buscar transação:', fetchError);
+      if (errorTracking) {
+        console.error('❌ Erro ao buscar transações com tracking:', errorTracking);
+      }
+
+      // Se não encontrou, tentar buscar por paymentId diretamente (formato antigo)
+      let { data: transacoesSemTracking, error: errorSemTracking } = await supabase
+        .from('clientes_transacoes')
+        .select('id, descricao')
+        .eq('session_id', sessao.session_id)
+        .or(`descricao.ilike.%${paymentId}%,id.eq.${paymentId}`);
+
+      if (errorSemTracking) {
+        console.error('❌ Erro ao buscar transações sem tracking:', errorSemTracking);
+      }
+
+      // Combinar resultados e remover duplicatas
+      const todasTransacoes = [
+        ...(transacoesComTracking || []),
+        ...(transacoesSemTracking || [])
+      ];
+      
+      const idsUnicos = [...new Set(todasTransacoes.map(t => t.id))];
+
+      if (idsUnicos.length === 0) {
+        console.warn('⚠️ Nenhuma transação encontrada para deletar:', paymentId);
+        return true; // Considerar sucesso se já não existe
+      }
+
+      // Deletar todas as transações encontradas
+      const { error: deleteError } = await supabase
+        .from('clientes_transacoes')
+        .delete()
+        .in('id', idsUnicos);
+
+      if (deleteError) {
+        console.error('❌ Erro ao deletar transações:', deleteError);
         return false;
       }
 
-      if (!transacoes || transacoes.length === 0) {
-        console.warn('⚠️ Nenhuma transação encontrada para deletar:', paymentId);
-        return true; // Considerar sucesso se não existe
-      }
-
-      // Deletar cada transação encontrada
-      for (const transacao of transacoes) {
-        const { error: deleteError } = await supabase
-          .from('clientes_transacoes')
-          .delete()
-          .eq('id', transacao.id);
-
-        if (deleteError) {
-          console.error('❌ Erro ao deletar transação:', deleteError);
-          return false;
-        }
-      }
-
-      console.log('✅ Pagamento deletado do Supabase:', { paymentId, session_id: sessao.session_id, count: transacoes.length });
+      console.log(`✅ ${idsUnicos.length} transação(ões) deletada(s) com sucesso`);
       return true;
     } catch (error) {
       console.error('❌ Erro ao deletar pagamento:', error);
