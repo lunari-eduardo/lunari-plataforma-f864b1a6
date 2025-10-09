@@ -324,10 +324,15 @@ export const useWorkflowRealtime = () => {
             sanitizedUpdates.detalhes = value as string;
             break;
           
-          // FASE 2: Map frontend 'total' field to valor_total in database
+          // FASE 3: Save frontend-calculated total directly (Single Source of Truth)
           case 'total':
-            sanitizedUpdates.valor_total = typeof value === 'string' ? parseFloat(value) : Number(value);
-            console.log('💰 Updating valor_total from frontend total:', sanitizedUpdates.valor_total);
+            // Frontend already calculated correctly using calculateTotal()
+            // Simply save it directly to Supabase without any recalculation
+            const numericTotal = typeof value === 'string' 
+              ? parseFloat(value.replace(/[^\d,.-]/g, '').replace(',', '.'))
+              : Number(value);
+            sanitizedUpdates.valor_total = numericTotal || 0;
+            console.log('💰 [FASE 3] Saving frontend-calculated total directly:', sanitizedUpdates.valor_total);
             break;
           
           // Ignore fields that don't exist in the database schema  

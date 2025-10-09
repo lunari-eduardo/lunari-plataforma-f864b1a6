@@ -126,6 +126,13 @@ export class WorkflowSupabaseService {
       
       console.log('❄️ Frozen pricing data for new appointment:', regrasCongeladas);
 
+      // FASE 1: Extract valor_base_pacote from frozen rules
+      const valorBasePacote = regrasCongeladas?.valorBase 
+        ? Number(regrasCongeladas.valorBase) 
+        : (packageData?.valor_base ? Number(packageData.valor_base) : valorTotal);
+      
+      console.log('💰 Extracted valor_base_pacote:', valorBasePacote);
+
       // Create session record with package ID for proper linking
       const sessionData = {
         user_id: user.user.id,
@@ -138,7 +145,8 @@ export class WorkflowSupabaseService {
         pacote: appointmentData.package_id || '', // Store package_id for linking
         descricao: appointmentData.description || appointmentData.title || '',
         status: '',
-        valor_total: valorTotal,
+        valor_base_pacote: valorBasePacote, // FASE 1: Save base package value
+        valor_total: valorTotal, // Frontend calculates and sends correct total
         valor_pago: Number(appointmentData.paid_amount) || 0,
         produtos_incluidos: packageData?.produtos_incluidos || [],
         // Set default extra photo values from frozen pricing model
