@@ -82,8 +82,8 @@ export function useClientSessionsRealtime(clienteId: string) {
               editavel: true
             }));
 
-          // Calcular valores
-          const valorPacote = Number(session.valor_total) || 0;
+          // FASE 3: Read valor_base_pacote directly from database
+          const valorPacote = Number(session.valor_base_pacote) || 0;
           const valorTotalFotoExtra = Number(session.valor_total_foto_extra) || 0;
           const valorAdicional = Number(session.valor_adicional) || 0;
           const desconto = Number(session.desconto) || 0;
@@ -94,7 +94,7 @@ export function useClientSessionsRealtime(clienteId: string) {
             ? session.produtos_incluidos 
             : [];
 
-          // Calcular valor total dos produtos
+          // Calcular valor total dos produtos manuais
           const valorTotalProduto = produtosList.reduce((acc: number, p: any) => {
             if (p.tipo === 'manual') {
               const unitario = Number(p.valorUnitario) || 0;
@@ -104,8 +104,8 @@ export function useClientSessionsRealtime(clienteId: string) {
             return acc;
           }, 0);
 
-          // Total geral - garantindo que todos os valores são números
-          const total = Number(valorPacote) + Number(valorTotalFotoExtra) + Number(valorTotalProduto) + Number(valorAdicional) - Number(desconto);
+          // FASE 3: Read valor_total directly from database (DON'T recalculate)
+          const total = Number(session.valor_total) || 0;
           const restante = Math.max(0, total - valorPago);
 
           // Calcular total agendado: pagamentos pendentes (ainda não realizados)

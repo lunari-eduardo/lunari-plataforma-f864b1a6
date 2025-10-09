@@ -293,6 +293,7 @@ export type Database = {
           updated_by: string | null
           user_id: string
           valor_adicional: number | null
+          valor_base_pacote: number | null
           valor_foto_extra: number | null
           valor_pago: number | null
           valor_total: number | null
@@ -321,6 +322,7 @@ export type Database = {
           updated_by?: string | null
           user_id: string
           valor_adicional?: number | null
+          valor_base_pacote?: number | null
           valor_foto_extra?: number | null
           valor_pago?: number | null
           valor_total?: number | null
@@ -349,6 +351,7 @@ export type Database = {
           updated_by?: string | null
           user_id?: string
           valor_adicional?: number | null
+          valor_base_pacote?: number | null
           valor_foto_extra?: number | null
           valor_pago?: number | null
           valor_total?: number | null

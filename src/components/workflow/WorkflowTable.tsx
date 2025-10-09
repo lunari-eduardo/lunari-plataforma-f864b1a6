@@ -212,6 +212,31 @@ export function WorkflowTable({
     };
   }, []);
 
+  // FASE 4: Auto-sync calculated total with database valor_total
+  useEffect(() => {
+    if (!sessions || sessions.length === 0) return;
+
+    // Check each session for total discrepancies
+    sessions.forEach(session => {
+      const calculatedTotal = calculateTotal(session);
+      const databaseTotal = typeof session.total === 'string' 
+        ? parseFloat(session.total.replace(/[^\d,]/g, '').replace(',', '.')) || 0
+        : Number(session.total) || 0;
+
+      const discrepancy = Math.abs(calculatedTotal - databaseTotal);
+      
+      // If difference > 0.01, silently update database
+      if (discrepancy > 0.01) {
+        console.log('🔄 Auto-syncing total for session:', session.id, {
+          calculated: calculatedTotal,
+          database: databaseTotal,
+          discrepancy
+        });
+        handleFieldUpdateStable(session.id, 'total', calculatedTotal, true);
+      }
+    });
+  }, [sessions, handleFieldUpdateStable]); // Depend on calculateTotal via sessions changes
+
   // Função para calcular valor real por foto baseado nas regras congeladas
   const calcularValorRealPorFoto = useCallback((session: SessionData) => {
     if (session.regrasDePrecoFotoExtraCongeladas) {

@@ -19,6 +19,7 @@ export interface WorkflowSession {
   descricao?: string;
   status: string;
   valor_total: number;
+  valor_base_pacote?: number; // FASE 1: Valor base do pacote congelado
   valor_pago: number;
   produtos_incluidos: any;
   qtd_fotos_extra?: number;
@@ -115,6 +116,9 @@ export const useWorkflowRealtime = () => {
       const valorFotoExtraInicial = regrasCongeladas ? 
         pricingFreezingService.calcularValorFotoExtraComRegrasCongeladas(1, regrasCongeladas).valorUnitario : 0;
 
+      // FASE 2: Extract valor_base_pacote from frozen rules
+      const valorBasePacote = regrasCongeladas?.valorBase ? Number(regrasCongeladas.valorBase) : 0;
+
       const { data, error } = await supabase
         .from('clientes_sessoes')
         .insert({
@@ -122,6 +126,7 @@ export const useWorkflowRealtime = () => {
           user_id: user.user.id,
           updated_by: user.user.id,
           regras_congeladas: regrasCongeladas as any,
+          valor_base_pacote: valorBasePacote,
           valor_foto_extra: valorFotoExtraInicial,
           valor_total_foto_extra: 0,
           qtd_fotos_extra: 0,
@@ -183,10 +188,10 @@ export const useWorkflowRealtime = () => {
                 console.log('📦 Package found:', pkg.nome, 'ID:', pkg.id);
                 sanitizedUpdates.pacote = pkg.id; // Always store ID in database
                 
-                // FASE 2: Set ONLY base package value - trigger will add extras automatically
+                // FASE 2: Save valor_base_pacote separately
                 if (pkg.valor_base) {
-                  sanitizedUpdates.valor_total = Number(pkg.valor_base);
-                  console.log('💰 Set base package value (trigger will add extras):', sanitizedUpdates.valor_total);
+                  sanitizedUpdates.valor_base_pacote = Number(pkg.valor_base);
+                  console.log('💰 Set base package value:', sanitizedUpdates.valor_base_pacote);
                 }
                 
                 // CRITICAL: Smart re-freezing when package changes
@@ -318,12 +323,18 @@ export const useWorkflowRealtime = () => {
           case 'detalhes':
             sanitizedUpdates.detalhes = value as string;
             break;
+          
+          // FASE 2: Map frontend 'total' field to valor_total in database
+          case 'total':
+            sanitizedUpdates.valor_total = typeof value === 'string' ? parseFloat(value) : Number(value);
+            console.log('💰 Updating valor_total from frontend total:', sanitizedUpdates.valor_total);
+            break;
+          
           // Ignore fields that don't exist in the database schema  
           case 'produto':
           case 'qtdProduto':
           case 'valorTotalProduto':
           case 'valor':
-          case 'total':
           case 'valorPago':
           case 'restante':
           case 'pagamentos':
