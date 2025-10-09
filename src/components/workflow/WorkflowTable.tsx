@@ -475,6 +475,25 @@ export function WorkflowTable({
           }
         }
       }
+      // FASE 1: Auto-sync do total após campos que afetam o cálculo
+      const camposQueAfetamTotal = ['qtdFotosExtra', 'valorFotoExtra', 'valorTotalFotoExtra', 
+                                      'valorAdicional', 'desconto', 'valorPacote'];
+      
+      if (camposQueAfetamTotal.includes(field)) {
+        const session = sessions.find(s => s.id === sessionId);
+        if (session) {
+          // Aguardar um tick para garantir que o state foi atualizado
+          setTimeout(() => {
+            const sessionAtualizada = sessions.find(s => s.id === sessionId);
+            if (sessionAtualizada) {
+              const novoTotal = calculateTotal(sessionAtualizada);
+              console.log('🔄 Auto-sync total após edição de', field, '- Novo total:', novoTotal);
+              handleFieldUpdateStable(sessionId, 'total', formatCurrency(novoTotal), true);
+            }
+          }, 100);
+        }
+      }
+
       setEditingValues(prev => {
         const updated = {
           ...prev
@@ -483,7 +502,7 @@ export function WorkflowTable({
         return updated;
       });
     }
-  }, [editingValues, sessions, handleFieldUpdateStable, calcularValorRealPorFoto, formatCurrency]);
+  }, [editingValues, sessions, handleFieldUpdateStable, calcularValorRealPorFoto, formatCurrency, calculateTotal]);
   const handleKeyPress = (e: React.KeyboardEvent, sessionId: string, field: string) => {
     if (e.key === 'Enter') {
       e.preventDefault();
