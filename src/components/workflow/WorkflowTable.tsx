@@ -1092,6 +1092,17 @@ export function WorkflowTable({
         handleFieldUpdateStable(sessionSelecionada.id, 'qtdProduto', 0);
       }
       handleFieldUpdateStable(sessionSelecionada.id, 'valorTotalProduto', formatCurrency(valorTotalManuais));
+      
+      // FASE 1: Auto-sync do total após mudanças em produtos
+      setTimeout(() => {
+        const session = sessions.find(s => s.id === sessionSelecionada.id);
+        if (session) {
+          const novoTotal = calculateTotal(session);
+          console.log('🔄 Auto-sync total após mudança em produtos - Novo total:', novoTotal);
+          handleFieldUpdateStable(sessionSelecionada.id, 'total', formatCurrency(novoTotal), true);
+        }
+      }, 100);
+      
       setSessionSelecionada(null);
     }} />}
 
