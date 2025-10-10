@@ -251,36 +251,163 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
     console.log('✅ Appointment deleted successfully');
   }
 
-  // Availability (using localStorage for now - will migrate later if needed)
+  // Availability - FASE 1: Migração para Supabase
   async loadAvailabilitySlots(): Promise<AvailabilitySlot[]> {
     try {
-      const saved = localStorage.getItem('agenda_availability_slots');
-      return saved ? JSON.parse(saved) : [];
+      const user = await supabase.auth.getUser();
+      if (!user.data.user) {
+        console.warn('⚠️ Usuário não autenticado');
+        return [];
+      }
+
+      const { data, error } = await supabase
+        .from('availability_slots')
+        .select('*')
+        .eq('user_id', user.data.user.id)
+        .order('date', { ascending: true })
+        .order('start_time', { ascending: true });
+
+      if (error) {
+        console.error('❌ Erro ao carregar availability slots:', error);
+        throw error;
+      }
+
+      // Converter formato Supabase para o formato da aplicação
+      const slots: AvailabilitySlot[] = (data || []).map(slot => ({
+        id: slot.id,
+        date: slot.date,
+        time: slot.start_time,
+        duration: this.calculateDuration(slot.start_time, slot.end_time),
+        typeId: slot.type || 'disponivel',
+        label: slot.description || this.getLabelFromType(slot.type),
+        color: this.getColorFromType(slot.type)
+      }));
+
+      console.log(`✅ ${slots.length} availability slots carregados do Supabase`);
+      return slots;
     } catch (error) {
-      console.error('Error loading availability slots:', error);
+      console.error('❌ Erro ao carregar slots:', error);
       return [];
     }
   }
 
   async saveAvailabilitySlots(slots: AvailabilitySlot[]): Promise<void> {
     try {
-      localStorage.setItem('agenda_availability_slots', JSON.stringify(slots));
+      const user = await supabase.auth.getUser();
+      if (!user.data.user) {
+        throw new Error('Usuário não autenticado');
+      }
+
+      // Converter formato da aplicação para formato Supabase
+      const supabaseSlots = slots.map(slot => ({
+        id: slot.id,
+        user_id: user.data.user.id,
+        date: slot.date,
+        start_time: slot.time,
+        end_time: this.calculateEndTime(slot.time, slot.duration),
+        type: slot.typeId || 'disponivel',
+        description: slot.label || null
+      }));
+
+      // Upsert (insert ou update)
+      const { error } = await supabase
+        .from('availability_slots')
+        .upsert(supabaseSlots, { onConflict: 'id' });
+
+      if (error) {
+        console.error('❌ Erro ao salvar availability slots:', error);
+        throw error;
+      }
+
+      console.log(`✅ ${supabaseSlots.length} slots salvos no Supabase`);
     } catch (error) {
-      console.error('Error saving availability slots:', error);
+      console.error('❌ Erro ao salvar slots:', error);
       throw error;
     }
   }
 
   async deleteAvailabilitySlot(id: string): Promise<void> {
-    const slots = await this.loadAvailabilitySlots();
-    const updatedSlots = slots.filter(slot => slot.id !== id);
-    await this.saveAvailabilitySlots(updatedSlots);
+    try {
+      const user = await supabase.auth.getUser();
+      if (!user.data.user) {
+        throw new Error('Usuário não autenticado');
+      }
+
+      const { error } = await supabase
+        .from('availability_slots')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.data.user.id);
+
+      if (error) {
+        console.error('❌ Erro ao deletar slot:', error);
+        throw error;
+      }
+
+      console.log(`✅ Slot ${id} deletado do Supabase`);
+    } catch (error) {
+      console.error('❌ Erro ao deletar slot:', error);
+      throw error;
+    }
   }
 
   async clearAvailabilityForDate(date: string): Promise<void> {
-    const slots = await this.loadAvailabilitySlots();
-    const updatedSlots = slots.filter(slot => slot.date !== date);
-    await this.saveAvailabilitySlots(updatedSlots);
+    try {
+      const user = await supabase.auth.getUser();
+      if (!user.data.user) {
+        throw new Error('Usuário não autenticado');
+      }
+
+      const { data, error } = await supabase
+        .from('availability_slots')
+        .delete()
+        .eq('date', date)
+        .eq('user_id', user.data.user.id)
+        .select();
+
+      if (error) {
+        console.error('❌ Erro ao limpar slots da data:', error);
+        throw error;
+      }
+
+      console.log(`✅ ${data?.length || 0} slots removidos da data ${date}`);
+    } catch (error) {
+      console.error('❌ Erro ao limpar data:', error);
+      throw error;
+    }
+  }
+
+  // Métodos auxiliares
+  private calculateDuration(startTime: string, endTime: string): number {
+    const [startHour, startMin] = startTime.split(':').map(Number);
+    const [endHour, endMin] = endTime.split(':').map(Number);
+    return (endHour * 60 + endMin) - (startHour * 60 + startMin);
+  }
+
+  private calculateEndTime(startTime: string, duration: number): string {
+    const [hour, min] = startTime.split(':').map(Number);
+    const totalMinutes = hour * 60 + min + duration;
+    const endHour = Math.floor(totalMinutes / 60);
+    const endMin = totalMinutes % 60;
+    return `${String(endHour).padStart(2, '0')}:${String(endMin).padStart(2, '0')}`;
+  }
+
+  private getLabelFromType(type: string | null): string {
+    const typeMap: Record<string, string> = {
+      'disponivel': 'Disponível',
+      'almoco': 'Almoço',
+      'reuniao': 'Reunião'
+    };
+    return type ? typeMap[type] || type : 'Disponível';
+  }
+
+  private getColorFromType(type: string | null): string {
+    const colorMap: Record<string, string> = {
+      'disponivel': '#10b981',
+      'almoco': '#f59e0b',
+      'reuniao': '#3b82f6'
+    };
+    return type ? colorMap[type] || '#10b981' : '#10b981';
   }
 
   // Availability Types

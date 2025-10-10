@@ -154,15 +154,15 @@ export default function DailyView({
                               borderColor: slot.color ? `${slot.color}80` : 'hsl(var(--availability) / 0.5)'
                             }}
                           >
-                            {slot.label || 'Disponível'}
-                          </span>
-                         <button type="button" onClick={e => {
+                     {slot.label || 'Disponível'}
+                           </span>
+                          <button type="button" onClick={e => {
                   e.stopPropagation();
                   handleRemoveAvailability(time);
                 }} className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1" aria-label="Remover disponibilidade" title="Remover disponibilidade">
                            <Trash2 className="h-3.5 w-3.5" /> Remover
-                         </button>
-                        </div> : <span className="text-muted-foreground">Disponível</span>;
+                          </button>
+                        </div> : <span className="text-xs text-muted-foreground">Clique para criar agendamento</span>;
                      })()}
                      <ConflictIndicator date={date} time={time} />
                    </div>}
