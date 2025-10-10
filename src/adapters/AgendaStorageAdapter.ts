@@ -16,6 +16,7 @@ export abstract class AgendaStorageAdapter {
   // Availability
   abstract loadAvailabilitySlots(): Promise<AvailabilitySlot[]>;
   abstract saveAvailabilitySlots(slots: AvailabilitySlot[]): Promise<void>;
+  abstract addAvailabilitySlots(slots: Omit<AvailabilitySlot, 'id'>[]): Promise<void>;
   abstract deleteAvailabilitySlot(id: string): Promise<void>;
   abstract clearAvailabilityForDate(date: string): Promise<void>;
 

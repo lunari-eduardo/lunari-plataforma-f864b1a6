@@ -39,13 +39,8 @@ export class AgendaService {
   }
 
   async addAvailabilitySlots(slots: Omit<AvailabilitySlot, 'id'>[]): Promise<void> {
-    const currentSlots = await this.adapter.loadAvailabilitySlots();
-    const newSlots = slots.map(slot => ({
-      ...slot,
-      id: this.generateId()
-    }));
-    
-    await this.adapter.saveAvailabilitySlots([...currentSlots, ...newSlots]);
+    // ✅ CORREÇÃO: Chamar método correto do adapter que faz INSERT sem IDs
+    await this.adapter.addAvailabilitySlots(slots);
   }
 
   async deleteAvailabilitySlot(id: string): Promise<void> {
