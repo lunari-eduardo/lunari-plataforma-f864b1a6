@@ -270,9 +270,9 @@ export class PaymentSupabaseService {
           user_id: user.id,
           cliente_id: binding.cliente_id,
           session_id: binding.session_id,
-          tipo: 'pagamento_pendente',
+          tipo: 'ajuste', // Usar 'ajuste' para não violar CHECK constraint
           valor: p.valor,
-          data_transacao: p.dataVencimento, // Usar data_vencimento como data_transacao temporária
+          data_transacao: p.dataVencimento,
           data_vencimento: p.dataVencimento,
           descricao: descricao,
           updated_by: user.id
@@ -298,12 +298,103 @@ export class PaymentSupabaseService {
   }
 
   /**
+   * Atualizar pagamento pendente (editar valores/vencimento sem marcar como pago)
+   */
+  static async updatePendingPayment(
+    sessionKey: string,
+    paymentId: string,
+    updates: {
+      valor?: number;
+      dataVencimento?: string;
+      observacoes?: string;
+      numeroParcela?: number;
+      totalParcelas?: number;
+    }
+  ): Promise<boolean> {
+    try {
+      console.log('📝 Atualizando pagamento pendente:', { sessionKey, paymentId, updates });
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('❌ User not authenticated');
+        return false;
+      }
+
+      const binding = await this.getSessionBinding(sessionKey);
+      if (!binding) {
+        console.error('❌ Session not found:', sessionKey);
+        return false;
+      }
+
+      // Buscar o registro atual para preservar a descrição
+      const { data: existing } = await supabase
+        .from('clientes_transacoes')
+        .select('descricao')
+        .eq('session_id', binding.session_id)
+        .ilike('descricao', `%[ID:${paymentId}]%`)
+        .maybeSingle();
+
+      if (!existing) {
+        console.error('❌ Pending payment not found:', paymentId);
+        return false;
+      }
+
+      // Reconstruir descrição preservando [ID:...]
+      let descricao = existing.descricao;
+      if (updates.observacoes !== undefined) {
+        // Extrair a parte [ID:...]
+        const idMatch = descricao.match(/\[ID:[^\]]+\]/);
+        const idPart = idMatch ? idMatch[0] : `[ID:${paymentId}]`;
+        
+        if (updates.numeroParcela && updates.totalParcelas) {
+          descricao = `Parcela ${updates.numeroParcela}/${updates.totalParcelas} ${idPart}`;
+        } else {
+          descricao = `${updates.observacoes || 'Pagamento agendado'} ${idPart}`;
+        }
+      }
+
+      const updateData: any = {
+        updated_at: new Date().toISOString(),
+        updated_by: user.id,
+        descricao
+      };
+
+      if (updates.valor !== undefined) updateData.valor = updates.valor;
+      if (updates.dataVencimento) {
+        updateData.data_vencimento = updates.dataVencimento;
+        updateData.data_transacao = updates.dataVencimento;
+      }
+
+      const { error } = await supabase
+        .from('clientes_transacoes')
+        .update(updateData)
+        .eq('session_id', binding.session_id)
+        .ilike('descricao', `%[ID:${paymentId}]%`);
+
+      if (error) {
+        console.error('❌ Error updating pending payment:', error);
+        return false;
+      }
+
+      console.log('✅ Pending payment updated successfully');
+      return true;
+
+    } catch (error) {
+      console.error('❌ Error in updatePendingPayment:', error);
+      return false;
+    }
+  }
+
+  /**
    * Atualizar pagamento pendente para pago (marca como realizado)
+   * Com fallback para inserir se não existir
    */
   static async markPaymentAsPaid(
     sessionKey: string,
     paymentId: string,
-    dataPagamento: string
+    dataPagamento: string,
+    valor?: number,
+    observacoes?: string
   ): Promise<boolean> {
     try {
       console.log('✅ Marcando pagamento como pago:', { sessionKey, paymentId, dataPagamento });
@@ -320,8 +411,8 @@ export class PaymentSupabaseService {
         return false;
       }
 
-      // Atualizar de pagamento_pendente para pagamento
-      const { error } = await supabase
+      // Atualizar de 'ajuste' (pendente) para 'pagamento'
+      const { data: updated, error } = await supabase
         .from('clientes_transacoes')
         .update({
           tipo: 'pagamento',
@@ -330,11 +421,28 @@ export class PaymentSupabaseService {
           updated_by: user.id
         })
         .eq('session_id', binding.session_id)
-        .ilike('descricao', `%[ID:${paymentId}]%`);
+        .ilike('descricao', `%[ID:${paymentId}]%`)
+        .select('id');
 
       if (error) {
         console.error('❌ Error marking payment as paid:', error);
         return false;
+      }
+
+      // Fallback: se não encontrou nenhum registro, inserir como novo pagamento
+      if (!updated || updated.length === 0) {
+        console.warn('⚠️ Pending payment not found, inserting as new payment');
+        
+        if (!valor) {
+          console.error('❌ Cannot insert payment without valor');
+          return false;
+        }
+
+        return await this.saveSinglePaymentTracked(sessionKey, paymentId, {
+          valor,
+          data: dataPagamento,
+          observacoes
+        });
       }
 
       console.log('✅ Payment marked as paid successfully');

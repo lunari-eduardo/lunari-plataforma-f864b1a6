@@ -237,9 +237,22 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
       // Save to localStorage
       savePaymentsToStorage(sessionId, updated);
       
-      // UPDATE in Supabase if it's a paid payment (not INSERT)
+      // Persistir no Supabase
       if (finalPayment.statusPagamento === 'pago' && finalPayment.data) {
+        // UPDATE pagamento pago
         updatePaymentInSupabase(sessionId, paymentId, finalPayment);
+      } else {
+        // UPDATE pagamento pendente (agendado/parcelado)
+        (async () => {
+          const { PaymentSupabaseService } = await import('@/services/PaymentSupabaseService');
+          await PaymentSupabaseService.updatePendingPayment(sessionId, paymentId, {
+            valor: finalPayment.valor,
+            dataVencimento: finalPayment.dataVencimento,
+            observacoes: finalPayment.observacoes,
+            numeroParcela: finalPayment.numeroParcela,
+            totalParcelas: finalPayment.totalParcelas
+          });
+        })();
       }
       
       return updated;
@@ -277,10 +290,16 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
       // Save to localStorage
       savePaymentsToStorage(sessionId, updated);
       
-      // Atualizar no Supabase (de pendente para pago)
+      // Atualizar no Supabase (de pendente para pago) com fallback
       (async () => {
         const { PaymentSupabaseService } = await import('@/services/PaymentSupabaseService');
-        await PaymentSupabaseService.markPaymentAsPaid(sessionId, paymentId, dataPagamento);
+        await PaymentSupabaseService.markPaymentAsPaid(
+          sessionId, 
+          paymentId, 
+          dataPagamento,
+          paidPayment.valor,
+          paidPayment.observacoes
+        );
       })();
       
       return updated;

@@ -61,7 +61,7 @@ export function useClientSessionsRealtime(clienteId: string) {
             .select('*')
             .eq('session_id', session.session_id)
             .eq('user_id', user.id)
-            .in('tipo', ['pagamento', 'pagamento_pendente'])
+            .in('tipo', ['pagamento', 'ajuste'])
             .order('data_transacao', { ascending: false });
 
           if (transacoesError) {
@@ -76,7 +76,7 @@ export function useClientSessionsRealtime(clienteId: string) {
 
             // Determinar se é pago ou pendente
             const isPaid = t.tipo === 'pagamento';
-            const isPending = t.tipo === 'pagamento_pendente';
+            const isPending = t.tipo === 'ajuste';
 
             // Extrair número da parcela se existir (ex: "Parcela 2/3")
             const parcelaMatch = t.descricao?.match(/Parcela (\d+)\/(\d+)/);
@@ -145,10 +145,10 @@ export function useClientSessionsRealtime(clienteId: string) {
           const total = Number(session.valor_total) || 0;
           const restante = Math.max(0, total - valorPago);
 
-          // Calcular total agendado: pagamentos pendentes (ainda não realizados)
-          // Por enquanto, baseado apenas no restante, pois pagamentos agendados 
-          // ainda não estão implementados em clientes_transacoes
-          const totalAgendado = 0; // TODO: Implementar quando adicionar campo de data_vencimento em transações
+          // Calcular total agendado: soma dos ajustes (pendentes)
+          const totalAgendado = (transacoesData || [])
+            .filter(t => t.tipo === 'ajuste')
+            .reduce((acc, t) => acc + (Number(t.valor) || 0), 0);
 
           return {
             id: session.id,
