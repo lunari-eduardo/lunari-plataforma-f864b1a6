@@ -4,6 +4,7 @@ import { generateUniversalSessionId } from '@/types/appointments-supabase';
 import { SessionData } from '@/types/workflow';
 import { toast } from '@/hooks/use-toast';
 import { useWorkflowPackageData } from '@/hooks/useWorkflowPackageData';
+import { calculateSessionTotal, calculateManualProductsTotal } from '@/utils/sessionCalculations';
 
 export interface WorkflowSession {
   id: string;
@@ -364,6 +365,45 @@ export const useWorkflowRealtime = () => {
       if (Object.keys(sanitizedUpdates).length === 0) {
         console.log('No valid updates to apply');
         return;
+      }
+
+      // ATOMIC TOTAL CALCULATION: If 'total' was not explicitly sent but component fields changed
+      const totalAffectingFields = ['valor_base_pacote', 'qtd_fotos_extra', 'valor_foto_extra', 'valor_total_foto_extra', 
+                                     'desconto', 'valor_adicional', 'produtos_incluidos'];
+      const hasTotalAffectingChanges = totalAffectingFields.some(field => field in sanitizedUpdates);
+      const hasExplicitTotal = 'valor_total' in sanitizedUpdates;
+
+      if (hasTotalAffectingChanges && !hasExplicitTotal && currentSession) {
+        // Build snapshot by merging current session with sanitized updates
+        const snapshot = {
+          valor_base_pacote: sanitizedUpdates.valor_base_pacote ?? currentSession.valor_base_pacote ?? 0,
+          valor_total_foto_extra: sanitizedUpdates.valor_total_foto_extra ?? currentSession.valor_total_foto_extra ?? 0,
+          valor_adicional: sanitizedUpdates.valor_adicional ?? currentSession.valor_adicional ?? 0,
+          desconto: sanitizedUpdates.desconto ?? currentSession.desconto ?? 0,
+          produtos_incluidos: sanitizedUpdates.produtos_incluidos ?? currentSession.produtos_incluidos ?? []
+        };
+
+        // Calculate manual products total
+        const valorProdutos = calculateManualProductsTotal(snapshot.produtos_incluidos as any);
+
+        // Calculate new total atomically
+        const novoTotal = calculateSessionTotal({
+          valorBase: Number(snapshot.valor_base_pacote) || 0,
+          valorFotoExtra: Number(snapshot.valor_total_foto_extra) || 0,
+          valorProdutos,
+          valorAdicional: Number(snapshot.valor_adicional) || 0,
+          desconto: Number(snapshot.desconto) || 0
+        });
+
+        sanitizedUpdates.valor_total = novoTotal;
+        console.info('🧮 [AUTO-CALC] Recalculated valor_total atomically:', {
+          valorBase: snapshot.valor_base_pacote,
+          valorFotoExtra: snapshot.valor_total_foto_extra,
+          valorProdutos,
+          valorAdicional: snapshot.valor_adicional,
+          desconto: snapshot.desconto,
+          novoTotal
+        });
       }
 
       // Perform diff check to avoid unnecessary updates

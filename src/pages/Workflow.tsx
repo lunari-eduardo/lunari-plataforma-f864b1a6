@@ -329,8 +329,8 @@ export default function Workflow() {
     deleteWorkflowSession(sessionId, false);
   }, [deleteWorkflowSession]);
 
-  const handleFieldUpdate = useCallback((sessionId: string, field: string, value: any) => {
-    updateSession(sessionId, { [field]: value });
+  const handleFieldUpdate = useCallback((sessionId: string, field: string, value: any, silent: boolean = false) => {
+    return updateSession(sessionId, { [field]: value }, silent);
   }, [updateSession]);
 
   const handleSort = useCallback((field: string) => {

@@ -432,7 +432,8 @@ export function WorkflowTable({
     const key = getEditingKey(sessionId, field);
     const newValue = editingValues[key];
     if (newValue !== undefined) {
-      handleFieldUpdateStable(sessionId, field, newValue);
+      // ATOMIC UPDATE: Await field update before dependent calculations
+      await handleFieldUpdateStable(sessionId, field, newValue);
 
       // Recalcular valor total das fotos extras quando o valor unitário for alterado
       if (field === 'valorFotoExtra') {
@@ -440,7 +441,7 @@ export function WorkflowTable({
         if (session) {
           const valorUnit = parseFloat(newValue.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
           const qtd = session.qtdFotosExtra || 0;
-          handleFieldUpdateStable(sessionId, 'valorTotalFotoExtra', formatCurrency(qtd * valorUnit));
+          await handleFieldUpdateStable(sessionId, 'valorTotalFotoExtra', formatCurrency(qtd * valorUnit), true);
         }
       }
 
@@ -461,17 +462,17 @@ export function WorkflowTable({
                 session.regrasDePrecoFotoExtraCongeladas as any
               );
               
-              handleFieldUpdateStable(sessionId, 'valorFotoExtra', formatCurrency(resultado.valorUnitario));
-              handleFieldUpdateStable(sessionId, 'valorTotalFotoExtra', formatCurrency(resultado.valorTotal));
+              await handleFieldUpdateStable(sessionId, 'valorFotoExtra', formatCurrency(resultado.valorUnitario), true);
+              await handleFieldUpdateStable(sessionId, 'valorTotalFotoExtra', formatCurrency(resultado.valorTotal), true);
             } catch (error) {
               console.warn('⚠️ Erro usando regras congeladas, usando valor fixo:', error);
               const valorUnit = calcularValorRealPorFoto(session);
-              handleFieldUpdateStable(sessionId, 'valorTotalFotoExtra', formatCurrency(novaQuantidade * valorUnit));
+              await handleFieldUpdateStable(sessionId, 'valorTotalFotoExtra', formatCurrency(novaQuantidade * valorUnit), true);
             }
           } else {
             // Usar valor atual fixo
             const valorUnit = calcularValorRealPorFoto(session);
-            handleFieldUpdateStable(sessionId, 'valorTotalFotoExtra', formatCurrency(novaQuantidade * valorUnit));
+            await handleFieldUpdateStable(sessionId, 'valorTotalFotoExtra', formatCurrency(novaQuantidade * valorUnit), true);
           }
         }
       }
@@ -1060,7 +1061,7 @@ export function WorkflowTable({
         </div>}
         
         {/* Modal de Gerenciamento de Produtos */}
-        {sessionSelecionada && <GerenciarProdutosModal open={modalAberto} onOpenChange={setModalAberto} sessionId={sessionSelecionada.id} clienteName={sessionSelecionada.nome} produtos={sessionSelecionada.produtosList || []} productOptions={productOptions} onSave={novosProdutos => {
+        {sessionSelecionada && <GerenciarProdutosModal open={modalAberto} onOpenChange={setModalAberto} sessionId={sessionSelecionada.id} clienteName={sessionSelecionada.nome} produtos={sessionSelecionada.produtosList || []} productOptions={productOptions} onSave={async novosProdutos => {
       console.log('💾 Modal salvando produtos:', novosProdutos);
       
       // Garantir que produtos inclusos sempre tenham valor 0
@@ -1091,17 +1092,8 @@ export function WorkflowTable({
         handleFieldUpdateStable(sessionSelecionada.id, 'produto', '');
         handleFieldUpdateStable(sessionSelecionada.id, 'qtdProduto', 0);
       }
-      handleFieldUpdateStable(sessionSelecionada.id, 'valorTotalProduto', formatCurrency(valorTotalManuais));
-      
-      // FASE 1: Auto-sync do total após mudanças em produtos
-      setTimeout(() => {
-        const session = sessions.find(s => s.id === sessionSelecionada.id);
-        if (session) {
-          const novoTotal = calculateTotal(session);
-          console.log('🔄 Auto-sync total após mudança em produtos - Novo total:', novoTotal);
-          handleFieldUpdateStable(sessionSelecionada.id, 'total', formatCurrency(novoTotal), true);
-        }
-      }, 100);
+      // ATOMIC UPDATE: Await product update - hook will auto-recalculate total
+      await handleFieldUpdateStable(sessionSelecionada.id, 'valorTotalProduto', formatCurrency(valorTotalManuais), true);
       
       setSessionSelecionada(null);
     }} />}
