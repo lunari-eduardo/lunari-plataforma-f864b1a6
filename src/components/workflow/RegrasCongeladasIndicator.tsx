@@ -2,16 +2,16 @@ import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Snowflake, Calculator, TrendingUp, Tag, AlertTriangle, Clock } from "lucide-react";
 import { RegrasPrecoFotoExtraCongeladas, validarRegrasCongeladas } from "@/utils/precificacaoUtils";
-
 interface RegrasCongeladasIndicatorProps {
   regras?: RegrasPrecoFotoExtraCongeladas;
   compact?: boolean;
 }
-
-export function RegrasCongeladasIndicator({ regras, compact = false }: RegrasCongeladasIndicatorProps) {
+export function RegrasCongeladasIndicator({
+  regras,
+  compact = false
+}: RegrasCongeladasIndicatorProps) {
   if (!regras) {
-    return (
-      <TooltipProvider>
+    return <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
             <Badge variant="outline" className="text-xs gap-1 border-orange-200 text-orange-700">
@@ -23,28 +23,23 @@ export function RegrasCongeladasIndicator({ regras, compact = false }: RegrasCon
             <p>⚠️ Item sem regras congeladas - será migrado automaticamente</p>
           </TooltipContent>
         </Tooltip>
-      </TooltipProvider>
-    );
+      </TooltipProvider>;
   }
-
   const regraValida = validarRegrasCongeladas(regras);
-
   const getIcon = () => {
     switch (regras.modelo) {
       case 'fixo':
         return <Tag className="h-3 w-3" />;
       case 'global':
-        return <TrendingUp className="h-3 w-3" />;
+        return;
       case 'categoria':
         return <Calculator className="h-3 w-3" />;
       default:
         return <Snowflake className="h-3 w-3" />;
     }
   };
-
   const getLabel = () => {
     if (compact) return regras.modelo.charAt(0).toUpperCase();
-    
     switch (regras.modelo) {
       case 'fixo':
         return 'Fixo';
@@ -56,10 +51,8 @@ export function RegrasCongeladasIndicator({ regras, compact = false }: RegrasCon
         return 'Congelado';
     }
   };
-
   const getDescription = () => {
     const data = new Date(regras.timestampCongelamento).toLocaleDateString('pt-BR');
-    
     switch (regras.modelo) {
       case 'fixo':
         return `Valor fixo: R$ ${regras.valorFixo?.toFixed(2) || '0,00'} (congelado em ${data})`;
@@ -71,23 +64,10 @@ export function RegrasCongeladasIndicator({ regras, compact = false }: RegrasCon
         return `Regras congeladas em ${data}`;
     }
   };
-
-  return (
-    <TooltipProvider>
+  return <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Badge 
-            variant={regraValida ? "secondary" : "destructive"} 
-            className={`text-xs gap-1 ${
-              regraValida 
-                ? 'bg-blue-600/10 text-blue-600 border-blue-600/20 dark:bg-blue-400/10 dark:text-blue-400 dark:border-blue-400/20' 
-                : 'bg-red-600/10 text-red-600 border-red-600/20 dark:bg-red-400/10 dark:text-red-400 dark:border-red-400/20'
-            }`}
-          >
-            <Snowflake className="h-3 w-3" />
-            {regraValida ? getIcon() : <AlertTriangle className="h-3 w-3" />}
-            {regraValida ? getLabel() : (compact ? "!" : "Erro")}
-          </Badge>
+          
         </TooltipTrigger>
         <TooltipContent>
           <div className="max-w-sm space-y-2">
@@ -97,15 +77,11 @@ export function RegrasCongeladasIndicator({ regras, compact = false }: RegrasCon
             </p>
             <p className="text-sm text-muted-foreground">{getDescription()}</p>
             
-            {regraValida ? (
-              <p className="text-xs text-green-600 bg-green-50 p-2 rounded">
+            {regraValida ? <p className="text-xs text-green-600 bg-green-50 p-2 rounded">
                 ✅ Mudanças na configuração não afetam este item
-              </p>
-            ) : (
-              <p className="text-xs text-red-600 bg-red-50 p-2 rounded">
+              </p> : <p className="text-xs text-red-600 bg-red-50 p-2 rounded">
                 ❌ Regras inválidas - migração necessária
-              </p>
-            )}
+              </p>}
             
             <div className="text-xs text-muted-foreground flex items-center gap-1 border-t pt-1">
               <Clock className="h-3 w-3" />
@@ -114,6 +90,5 @@ export function RegrasCongeladasIndicator({ regras, compact = false }: RegrasCon
           </div>
         </TooltipContent>
       </Tooltip>
-    </TooltipProvider>
-  );
+    </TooltipProvider>;
 }

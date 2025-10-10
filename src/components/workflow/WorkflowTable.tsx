@@ -149,8 +149,12 @@ export function WorkflowTable({
   sortDirection,
   onSort
 }: WorkflowTableProps) {
-  const { categorias } = useConfiguration();
-  const { executarMigracaoSeNecessario } = usePricingMigration();
+  const {
+    categorias
+  } = useConfiguration();
+  const {
+    executarMigracaoSeNecessario
+  } = usePricingMigration();
   const [paymentInputs, setPaymentInputs] = useState<Record<string, string>>({});
   const [editingValues, setEditingValues] = useState<Record<string, string>>({});
   const [modalAberto, setModalAberto] = useState(false);
@@ -332,7 +336,6 @@ export function WorkflowTable({
     const value = paymentInputs[sessionId];
     if (value && !isNaN(parseFloat(value))) {
       const paymentValue = parseFloat(value);
-
       try {
         // Usar a função addPayment do contexto (agora async)
         await addPayment(sessionId, paymentValue);
@@ -452,16 +455,13 @@ export function WorkflowTable({
           const novaQuantidade = parseInt(newValue) || 0;
 
           // Importar e usar o AutoPhotoCalculator para recálculo
-          const { pricingFreezingService } = await import('@/services/PricingFreezingService');
-          
+          const {
+            pricingFreezingService
+          } = await import('@/services/PricingFreezingService');
           if (session.regrasDePrecoFotoExtraCongeladas) {
             // Tentar usar regras congeladas se disponível
             try {
-              const resultado = pricingFreezingService.calcularValorFotoExtraComRegrasCongeladas(
-                novaQuantidade, 
-                session.regrasDePrecoFotoExtraCongeladas as any
-              );
-              
+              const resultado = pricingFreezingService.calcularValorFotoExtraComRegrasCongeladas(novaQuantidade, session.regrasDePrecoFotoExtraCongeladas as any);
               await handleFieldUpdateStable(sessionId, 'valorFotoExtra', formatCurrency(resultado.valorUnitario), true);
               await handleFieldUpdateStable(sessionId, 'valorTotalFotoExtra', formatCurrency(resultado.valorTotal), true);
             } catch (error) {
@@ -477,9 +477,7 @@ export function WorkflowTable({
         }
       }
       // FASE 1: Auto-sync do total após campos que afetam o cálculo
-      const camposQueAfetamTotal = ['qtdFotosExtra', 'valorFotoExtra', 'valorTotalFotoExtra', 
-                                      'valorAdicional', 'desconto', 'valorPacote'];
-      
+      const camposQueAfetamTotal = ['qtdFotosExtra', 'valorFotoExtra', 'valorTotalFotoExtra', 'valorAdicional', 'desconto', 'valorPacote'];
       if (camposQueAfetamTotal.includes(field)) {
         const session = sessions.find(s => s.id === sessionId);
         if (session) {
@@ -494,7 +492,6 @@ export function WorkflowTable({
           }, 100);
         }
       }
-
       setEditingValues(prev => {
         const updated = {
           ...prev
@@ -728,11 +725,9 @@ export function WorkflowTable({
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent className="z-50 bg-lunar-surface text-foreground border border-lunar-border shadow-lg">
-                      {session.status && session.status !== '' && (
-                        <SelectItem key="clear-status" value="__CLEAR__" className="text-xs p-2 italic text-muted-foreground">
+                      {session.status && session.status !== '' && <SelectItem key="clear-status" value="__CLEAR__" className="text-xs p-2 italic text-muted-foreground">
                           Limpar status
-                        </SelectItem>
-                      )}
+                        </SelectItem>}
                       {statusOptions.map(status => <SelectItem key={status} value={status} className="text-xs p-2">
                           <StatusBadge status={status} />
                         </SelectItem>)}
@@ -743,11 +738,11 @@ export function WorkflowTable({
 
                 {renderCell('package', <div className="flex flex-col gap-1">
                 <WorkflowPackageCombobox key={`package-${session.id}-${session.pacote}`} value={session.pacote} onValueChange={packageData => {
-                  console.log('🔄 Pacote selecionado - ID:', packageData.id);
-                  
-                  // CRITICAL FIX: Only call one update - let the hook handle everything else
-                  handleFieldUpdateStable(session.id, 'pacote', packageData.id || packageData.nome);
-                }} />
+                    console.log('🔄 Pacote selecionado - ID:', packageData.id);
+
+                    // CRITICAL FIX: Only call one update - let the hook handle everything else
+                    handleFieldUpdateStable(session.id, 'pacote', packageData.id || packageData.nome);
+                  }} />
                   <DataFreezingStatus regrasCongeladas={session.regrasDePrecoFotoExtraCongeladas} isCompact={true} />
                 </div>)}
 
@@ -780,12 +775,7 @@ export function WorkflowTable({
                         tooltipInfo = 'Regras congeladas';
                     }
                     return <div className="flex flex-col gap-1" title={tooltipInfo}>
-                        <div className="flex items-center gap-1">
-                          <RegrasCongeladasIndicator regras={session.regrasDePrecoFotoExtraCongeladas} compact={true} />
-                          <span className="text-xs text-muted-foreground">
-                            ({labelModelo})
-                          </span>
-                        </div>
+                        
                         <span className="text-xs font-medium text-blue-600">
                           {formatCurrency(valorExibido)}
                         </span>
@@ -808,7 +798,7 @@ export function WorkflowTable({
                       }
                     } else if (config.modelo === 'categoria') {
                       // Modelo por categoria - calcular valor baseado na categoria
-                      const categoriaObj = categorias.find((cat) => cat.nome === session.categoria);
+                      const categoriaObj = categorias.find(cat => cat.nome === session.categoria);
                       const categoriaId = categoriaObj?.id || session.categoria;
                       if (categoriaId) {
                         const tabelaCategoria = obterTabelaCategoria(categoriaId);
@@ -835,16 +825,16 @@ export function WorkflowTable({
                   const ExtraPhotoQtyInput = () => {
                     const [localValue, setLocalValue] = useState(String(session.qtdFotosExtra || ''));
                     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-                    
+
                     // Debounced save function for real-time updates
-                    const debouncedSave = useMemo(
-                      () => debounce((qtd: number) => {
-                        console.log('📸 Debounced save extra photo qty:', qtd, 'for session:', session.id);
-                        if (qtd !== session.qtdFotosExtra) {
-                          handleFieldUpdateStable(session.id, 'qtdFotosExtra', qtd);
-                        }
-                      }, 800), // Increased debounce time to prevent excessive calls
-                      [session.id, handleFieldUpdateStable] // Removed session.qtdFotosExtra to prevent recreation
+                    const debouncedSave = useMemo(() => debounce((qtd: number) => {
+                      console.log('📸 Debounced save extra photo qty:', qtd, 'for session:', session.id);
+                      if (qtd !== session.qtdFotosExtra) {
+                        handleFieldUpdateStable(session.id, 'qtdFotosExtra', qtd);
+                      }
+                    }, 800),
+                    // Increased debounce time to prevent excessive calls
+                    [session.id, handleFieldUpdateStable] // Removed session.qtdFotosExtra to prevent recreation
                     );
 
                     // Cleanup debounce on unmount
@@ -853,7 +843,6 @@ export function WorkflowTable({
                         debouncedSave.cancel();
                       };
                     }, [debouncedSave]);
-
                     const {
                       displayValue,
                       handleFocus,
@@ -863,7 +852,7 @@ export function WorkflowTable({
                       onChange: value => {
                         setLocalValue(value);
                         setHasUnsavedChanges(value !== String(session.qtdFotosExtra || ''));
-                        
+
                         // Trigger debounced save for real-time updates only if value actually changed
                         const qtd = parseInt(value) || 0;
                         if (qtd !== session.qtdFotosExtra) {
@@ -871,7 +860,6 @@ export function WorkflowTable({
                         }
                       }
                     });
-                    
                     const saveValue = () => {
                       const qtd = parseInt(localValue) || 0;
                       console.log('📸 Manual save extra photo qty:', qtd, 'for session:', session.id);
@@ -898,28 +886,18 @@ export function WorkflowTable({
                   };
                   return <>
                     <ExtraPhotoQtyInput />
-                    <AutoPhotoCalculator 
-                      sessionId={session.id}
-                      quantidade={session.qtdFotosExtra || 0}
-                      regrasCongeladas={session.regrasDePrecoFotoExtraCongeladas}
-                      currentValorFotoExtra={Number(session.valorFotoExtra) || 0}
-                      currentValorTotalFotoExtra={Number(session.valorTotalFotoExtra) || 0}
-                      categoria={session.categoria}
-                      categoriaId={(() => {
-                        // Find category ID from category name
-                        const categoria = categorias.find(cat => cat.nome === session.categoria);
-                        return categoria?.id;
-                      })()}
-                      valorFotoExtraPacote={(() => {
-                        // Find package extra photo value
-                        const pacote = packageOptions.find(pkg => pkg.nome === session.pacote);
-                        return pacote?.valorFotoExtra || 0;
-                      })()}
-                      onValueUpdate={(updates) => {
-                        handleFieldUpdateStable(session.id, 'valorFotoExtra', updates.valorFotoExtra, true);
-                        handleFieldUpdateStable(session.id, 'valorTotalFotoExtra', updates.valorTotalFotoExtra, true);
-                      }}
-                    />
+                    <AutoPhotoCalculator sessionId={session.id} quantidade={session.qtdFotosExtra || 0} regrasCongeladas={session.regrasDePrecoFotoExtraCongeladas} currentValorFotoExtra={Number(session.valorFotoExtra) || 0} currentValorTotalFotoExtra={Number(session.valorTotalFotoExtra) || 0} categoria={session.categoria} categoriaId={(() => {
+                      // Find category ID from category name
+                      const categoria = categorias.find(cat => cat.nome === session.categoria);
+                      return categoria?.id;
+                    })()} valorFotoExtraPacote={(() => {
+                      // Find package extra photo value
+                      const pacote = packageOptions.find(pkg => pkg.nome === session.pacote);
+                      return pacote?.valorFotoExtra || 0;
+                    })()} onValueUpdate={updates => {
+                      handleFieldUpdateStable(session.id, 'valorFotoExtra', updates.valorFotoExtra, true);
+                      handleFieldUpdateStable(session.id, 'valorTotalFotoExtra', updates.valorTotalFotoExtra, true);
+                    }} />
                   </>;
                 })())}
 
@@ -935,7 +913,7 @@ export function WorkflowTable({
                     const valorFotoExtra = parseFloat((session.valorFotoExtra || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0;
 
                     // Buscar ID da categoria pelo nome
-                    const categoriaObj = categorias.find((cat) => cat.nome === session.categoria);
+                    const categoriaObj = categorias.find(cat => cat.nome === session.categoria);
                     const categoriaId = categoriaObj?.id || session.categoria;
                     valorCalculado = calcularTotalFotosExtras(session.qtdFotosExtra || 0, {
                       valorFotoExtra,
@@ -945,10 +923,7 @@ export function WorkflowTable({
                   }
 
                   // Exibir valor da sessão ou calculado em tempo real  
-                  const displayTotalValue = session.valorTotalFotoExtra && session.valorTotalFotoExtra !== 'R$ 0,00' 
-                    ? session.valorTotalFotoExtra 
-                    : formatCurrency(valorCalculado);
-                  
+                  const displayTotalValue = session.valorTotalFotoExtra && session.valorTotalFotoExtra !== 'R$ 0,00' ? session.valorTotalFotoExtra : formatCurrency(valorCalculado);
                   return <span className={`text-xs ${session.valorTotalFotoExtra && session.valorTotalFotoExtra !== 'R$ 0,00' ? 'text-foreground' : 'text-muted-foreground'}`}>
                     {displayTotalValue}
                   </span>;
@@ -959,23 +934,18 @@ export function WorkflowTable({
                   setModalAberto(true);
                 }} className="h-6 p-2 text-xs justify-start hover:bg-lunar-accent/10 w-full">
                     {session.produtosList && session.produtosList.length > 0 ? (() => {
-                      const produtosProduzidos = session.produtosList.filter(p => p.produzido);
-                      const todosCompletos = session.produtosList.length > 0 && produtosProduzidos.length === session.produtosList.length;
-                      const parcialmenteCompletos = produtosProduzidos.length > 0 && produtosProduzidos.length < session.produtosList.length;
-                      
-                      return <div className="flex items-center gap-1">
+                    const produtosProduzidos = session.produtosList.filter(p => p.produzido);
+                    const todosCompletos = session.produtosList.length > 0 && produtosProduzidos.length === session.produtosList.length;
+                    const parcialmenteCompletos = produtosProduzidos.length > 0 && produtosProduzidos.length < session.produtosList.length;
+                    return <div className="flex items-center gap-1">
                         <Package className="h-3 w-3 text-blue-600" />
                         <span className="text-blue-700 font-medium">
                           {session.produtosList.length} produtos
                         </span>
-                        {todosCompletos && (
-                          <div className="w-2 h-2 bg-green-500 rounded-full" title="Todos os produtos foram produzidos" />
-                        )}
-                        {parcialmenteCompletos && (
-                          <div className="w-2 h-2 bg-yellow-500 rounded-full" title={`${produtosProduzidos.length} de ${session.produtosList.length} produtos produzidos`} />
-                        )}
+                        {todosCompletos && <div className="w-2 h-2 bg-green-500 rounded-full" title="Todos os produtos foram produzidos" />}
+                        {parcialmenteCompletos && <div className="w-2 h-2 bg-yellow-500 rounded-full" title={`${produtosProduzidos.length} de ${session.produtosList.length} produtos produzidos`} />}
                       </div>;
-                    })() : <div className="flex items-center gap-1 text-muted-foreground">
+                  })() : <div className="flex items-center gap-1 text-muted-foreground">
                         <Plus className="h-3 w-3" />
                         <span>Adicionar</span>
                       </div>}
@@ -1063,15 +1033,14 @@ export function WorkflowTable({
         {/* Modal de Gerenciamento de Produtos */}
         {sessionSelecionada && <GerenciarProdutosModal open={modalAberto} onOpenChange={setModalAberto} sessionId={sessionSelecionada.id} clienteName={sessionSelecionada.nome} produtos={sessionSelecionada.produtosList || []} productOptions={productOptions} onSave={async novosProdutos => {
       console.log('💾 Modal salvando produtos:', novosProdutos);
-      
+
       // Garantir que produtos inclusos sempre tenham valor 0
       const produtosCorrigidos = novosProdutos.map(p => ({
         ...p,
         valorUnitario: p.tipo === 'incluso' ? 0 : p.valorUnitario
       }));
-      
       console.log('💾 Produtos corrigidos:', produtosCorrigidos);
-      
+
       // Atualizar a lista de produtos e recalcular totais
       handleFieldUpdateStable(sessionSelecionada.id, 'produtosList', produtosCorrigidos);
 
@@ -1094,7 +1063,6 @@ export function WorkflowTable({
       }
       // ATOMIC UPDATE: Await product update - hook will auto-recalculate total
       await handleFieldUpdateStable(sessionSelecionada.id, 'valorTotalProduto', formatCurrency(valorTotalManuais), true);
-      
       setSessionSelecionada(null);
     }} />}
 
@@ -1111,21 +1079,13 @@ export function WorkflowTable({
     }} />}
 
     {/* Modal de Exclusão Flexível */}
-    {sessionToDelete && (
-      <FlexibleDeleteModal
-        open={deleteModalOpen}
-        onClose={() => {
-          setDeleteModalOpen(false);
-          setSessionToDelete(null);
-        }}
-        onConfirm={(includePayments) => {
-          if (onDeleteSession && sessionToDelete) {
-            onDeleteSession(sessionToDelete.id, sessionToDelete.title, sessionToDelete.paymentCount);
-          }
-        }}
-        sessionTitle={sessionToDelete.title}
-        paymentCount={sessionToDelete.paymentCount}
-      />
-    )}
+    {sessionToDelete && <FlexibleDeleteModal open={deleteModalOpen} onClose={() => {
+      setDeleteModalOpen(false);
+      setSessionToDelete(null);
+    }} onConfirm={includePayments => {
+      if (onDeleteSession && sessionToDelete) {
+        onDeleteSession(sessionToDelete.id, sessionToDelete.title, sessionToDelete.paymentCount);
+      }
+    }} sessionTitle={sessionToDelete.title} paymentCount={sessionToDelete.paymentCount} />}
     </div>;
 }

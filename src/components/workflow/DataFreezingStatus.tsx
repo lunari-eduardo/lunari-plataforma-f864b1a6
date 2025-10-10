@@ -6,19 +6,18 @@
 import { Badge } from "@/components/ui/badge";
 import { Snowflake, AlertTriangle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-
 interface DataFreezingStatusProps {
   regrasCongeladas?: any;
   isCompact?: boolean;
 }
-
-export const DataFreezingStatus = ({ regrasCongeladas, isCompact = false }: DataFreezingStatusProps) => {
+export const DataFreezingStatus = ({
+  regrasCongeladas,
+  isCompact = false
+}: DataFreezingStatusProps) => {
   const hasFrozenData = regrasCongeladas?.modelo === 'completo' && regrasCongeladas?.pacote;
   const hasLegacyData = regrasCongeladas && regrasCongeladas.modelo !== 'completo';
-  
   if (!regrasCongeladas) {
-    return (
-      <TooltipProvider>
+    return <TooltipProvider>
         <Tooltip>
           <TooltipTrigger>
             <Badge variant="outline" className="text-yellow-600 border-yellow-300">
@@ -30,13 +29,10 @@ export const DataFreezingStatus = ({ regrasCongeladas, isCompact = false }: Data
             <p>Dados não congelados - valores podem mudar se configurações forem alteradas</p>
           </TooltipContent>
         </Tooltip>
-      </TooltipProvider>
-    );
+      </TooltipProvider>;
   }
-
   if (hasFrozenData) {
-    return (
-      <TooltipProvider>
+    return <TooltipProvider>
         <Tooltip>
           <TooltipTrigger>
             <Badge variant="outline" className="text-blue-600 border-blue-300">
@@ -48,27 +44,19 @@ export const DataFreezingStatus = ({ regrasCongeladas, isCompact = false }: Data
             <p>Dados históricos preservados - valores não mudam com alterações de configuração</p>
           </TooltipContent>
         </Tooltip>
-      </TooltipProvider>
-    );
+      </TooltipProvider>;
   }
-
   if (hasLegacyData) {
-    return (
-      <TooltipProvider>
+    return <TooltipProvider>
         <Tooltip>
           <TooltipTrigger>
-            <Badge variant="outline" className="text-orange-600 border-orange-300">
-              <Snowflake className="w-3 h-3 mr-1" />
-              {isCompact ? "" : "Parcial"}
-            </Badge>
+            
           </TooltipTrigger>
           <TooltipContent>
             <p>Dados parcialmente preservados - apenas preços de foto extra congelados</p>
           </TooltipContent>
         </Tooltip>
-      </TooltipProvider>
-    );
+      </TooltipProvider>;
   }
-
   return null;
 };
