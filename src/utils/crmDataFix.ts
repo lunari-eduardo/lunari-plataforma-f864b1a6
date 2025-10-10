@@ -2,7 +2,14 @@ import { storage, STORAGE_KEYS } from './localStorage';
 import { Cliente } from '@/types/cliente';
 
 /**
- * SOLUÇÃO DEFINITIVA SIMPLIFICADA DO CRM
+ * @deprecated Este arquivo está obsoleto e será removido em versões futuras
+ * 
+ * MIGRAÇÃO PARA SUPABASE:
+ * - Use useClientMetrics (busca do Supabase) em vez de getSimplifiedClientMetrics (LocalStorage)
+ * - Use useClientMetricsRealtime para métricas individuais de clientes
+ * - Todos os dados agora são persistidos no Supabase com RLS policies
+ * 
+ * MANTIDO TEMPORARIAMENTE APENAS PARA COMPATIBILIDADE DURANTE A MIGRAÇÃO
  * 
  * Sistema único e simples que corrige TODAS as inconsistências:
  * 1. Use APENAS workflow_sessions como fonte única de verdade

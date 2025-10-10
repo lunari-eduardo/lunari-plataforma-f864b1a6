@@ -44,6 +44,21 @@ export function useClientMetricsRealtime(clienteId: string) {
 
       if (sessionsError) throw sessionsError;
 
+      // Get transactions for calculating scheduled amounts
+      const { data: transacoesData, error: transacoesError } = await supabase
+        .from('clientes_transacoes')
+        .select('valor, tipo')
+        .eq('cliente_id', clienteId)
+        .in('tipo', ['ajuste']);
+
+      if (transacoesError) {
+        console.warn('⚠️ Erro ao buscar transações agendadas:', transacoesError);
+      }
+
+      // Calculate total scheduled (sum of all pending transactions)
+      const totalAgendado = (transacoesData || [])
+        .reduce((acc, t) => acc + (Number(t.valor) || 0), 0);
+
       // Calculate metrics
       const totalSessoes = sessionsData?.length || 0;
       const totalFaturado = sessionsData?.reduce((sum, session) => sum + (session.valor_total || 0), 0) || 0;
@@ -66,7 +81,7 @@ export function useClientMetricsRealtime(clienteId: string) {
         totalFaturado,
         aReceber,
         agendamentos: appointmentsCount || 0,
-        agendado: 0, // TODO: Calcular baseado em transações agendadas quando implementado
+        agendado: totalAgendado,
         ultimaSessao,
         sessaoEmAndamento,
       });
