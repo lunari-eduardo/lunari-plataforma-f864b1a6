@@ -184,7 +184,13 @@ export class WorkflowSupabaseService {
       // Create initial transaction if paid_amount > 0
       const paidAmount = Number(appointmentData.paid_amount) || 0;
       if (paidAmount > 0 && clienteId) {
-        console.log('💰 Creating initial transaction for amount:', paidAmount);
+        const dataHoje = new Date();
+        console.log('💰 Creating initial transaction:', { 
+          amount: paidAmount, 
+          dateToday: formatDateForStorage(dataHoje),
+          sessionDate: formatDateForStorage(appointmentData.date)
+        });
+        
         await supabase
           .from('clientes_transacoes')
           .insert({
@@ -194,11 +200,11 @@ export class WorkflowSupabaseService {
             tipo: 'pagamento',
             valor: paidAmount,
             descricao: 'Entrada do agendamento',
-            data_transacao: formatDateForStorage(appointmentData.date),
+            data_transacao: formatDateForStorage(dataHoje), // ✅ Data de HOJE, não da sessão
             updated_by: user.user.id
           });
         
-        console.log('✅ Initial transaction created for paid amount:', paidAmount);
+        console.log('✅ Initial transaction created with today\'s date:', formatDateForStorage(dataHoje));
       }
 
       // Update appointment with session_id for bidirectional linking

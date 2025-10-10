@@ -64,6 +64,12 @@ export function EditPaymentModal({ payment, onClose, onSave }: EditPaymentModalP
         }
       }
 
+      console.log('📝 [EditPaymentModal] Saving payment:', { 
+        paymentId: payment.id, 
+        updates,
+        originalData: data 
+      });
+
       onSave(updates);
 
       toast({

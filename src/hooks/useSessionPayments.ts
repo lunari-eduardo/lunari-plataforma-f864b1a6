@@ -51,6 +51,32 @@ const saveSinglePaymentToSupabase = async (
   }
 };
 
+// Atualizar pagamento existente no Supabase (UPDATE em vez de INSERT)
+const updatePaymentInSupabase = async (
+  sessionId: string, 
+  paymentId: string,
+  payment: SessionPaymentExtended
+) => {
+  try {
+    const { PaymentSupabaseService } = await import('@/services/PaymentSupabaseService');
+    
+    const success = await PaymentSupabaseService.updateSinglePayment(sessionId, paymentId, {
+      valor: payment.valor,
+      data: payment.data,
+      observacoes: payment.observacoes,
+      forma_pagamento: payment.forma_pagamento
+    });
+    
+    if (success) {
+      console.log('✅ Pagamento atualizado no Supabase:', paymentId);
+    } else {
+      console.error('❌ Falha ao atualizar pagamento no Supabase:', paymentId);
+    }
+  } catch (error) {
+    console.error('❌ Erro ao atualizar pagamento no Supabase:', error);
+  }
+};
+
 // Deletar pagamento do Supabase
 const deletePaymentFromSupabase = async (sessionId: string, paymentId: string) => {
   try {
@@ -199,6 +225,8 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
 
   // Editar pagamento existente
   const editPayment = useCallback((paymentId: string, updates: Partial<SessionPaymentExtended>) => {
+    console.log('📝 [useSessionPayments] Editing payment:', { paymentId, updates });
+    
     setPayments(prev => {
       const updatedPayment = prev.find(p => p.id === paymentId);
       if (!updatedPayment) return prev;
@@ -208,10 +236,12 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
       
       // Save to localStorage
       savePaymentsToStorage(sessionId, updated);
-      // Save to Supabase only if paid
+      
+      // UPDATE in Supabase if it's a paid payment (not INSERT)
       if (finalPayment.statusPagamento === 'pago' && finalPayment.data) {
-        saveSinglePaymentToSupabase(sessionId, paymentId, finalPayment);
+        updatePaymentInSupabase(sessionId, paymentId, finalPayment);
       }
+      
       return updated;
     });
   }, [sessionId]);

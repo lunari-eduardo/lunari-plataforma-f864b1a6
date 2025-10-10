@@ -121,6 +121,71 @@ export class PaymentSupabaseService {
   }
 
   /**
+   * Update an existing payment in Supabase (prevents duplication on edit)
+   */
+  static async updateSinglePayment(
+    sessionKey: string,
+    paymentId: string,
+    payment: {
+      valor?: number;
+      data?: string;
+      observacoes?: string;
+      forma_pagamento?: string;
+    }
+  ): Promise<boolean> {
+    try {
+      console.log('🔄 [PaymentService] Updating payment:', { sessionKey, paymentId, payment });
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('❌ User not authenticated');
+        return false;
+      }
+
+      // Find session binding
+      const binding = await this.getSessionBinding(sessionKey);
+      if (!binding) {
+        console.error('❌ Session not found:', sessionKey);
+        return false;
+      }
+
+      // Build update object
+      const updates: any = {
+        updated_at: new Date().toISOString(),
+        updated_by: user.id
+      };
+
+      if (payment.valor !== undefined) updates.valor = payment.valor;
+      if (payment.data) updates.data_transacao = payment.data;
+      
+      // Update description to preserve [ID:paymentId] tracking
+      const baseDesc = payment.observacoes || 'Pagamento';
+      updates.descricao = `${baseDesc} [ID:${paymentId}]`;
+
+      // Update transaction with paymentId tracking
+      const { error } = await supabase
+        .from('clientes_transacoes')
+        .update(updates)
+        .eq('session_id', binding.session_id)
+        .eq('cliente_id', binding.cliente_id)
+        .eq('user_id', user.id)
+        .ilike('descricao', `%[ID:${paymentId}]%`);
+
+      if (error) {
+        console.error('❌ Error updating payment:', error);
+        return false;
+      }
+
+      console.log('✅ Payment updated successfully');
+      return true;
+
+    } catch (error) {
+      console.error('❌ Error in updateSinglePayment:', error);
+      return false;
+    }
+  }
+
+  /**
    * Verificar se um pagamento já existe no Supabase
    */
   static async paymentExists(sessionKey: string, paymentId: string): Promise<boolean> {

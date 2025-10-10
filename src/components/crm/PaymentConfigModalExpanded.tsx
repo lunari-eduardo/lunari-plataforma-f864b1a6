@@ -128,9 +128,16 @@ export function PaymentConfigModalExpanded({
     try {
       // Se há entrada, registrar pagamento imediato primeiro
       if (entradaAgoraParsed > 0) {
+        const dataHoje = formatDateForStorage(new Date());
+        console.log('💰 [PaymentConfig] Criando entrada:', {
+          valor: entradaAgoraParsed,
+          data: dataHoje,
+          observacoes: 'Entrada'
+        });
+        
         onAddPayment({
           valor: entradaAgoraParsed,
-          data: formatDateForStorage(new Date()),
+          data: dataHoje,
           tipo: 'pago',
           statusPagamento: 'pago',
           origem: 'workflow_rapido',
