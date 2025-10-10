@@ -106,7 +106,7 @@ export default function AvailabilityConfigModal({
 
   // Sem sincronização automática de término/duração: usando lista manual de horários
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const times = normalizeTimes(timesList);
     if (times.length === 0) {
       toast.error('Adicione pelo menos um horário válido (HH:mm).');
@@ -158,9 +158,14 @@ export default function AvailabilityConfigModal({
       toast.error('Nenhum horário gerado. Verifique os campos.');
       return;
     }
-    addAvailabilitySlots(toAdd);
-    toast.success(`Disponibilidades adicionadas: ${toAdd.length}. Conflitos com agendamentos: ${conflicts}. Duplicados: ${duplicates}.`);
-    onClose();
+    try {
+      await addAvailabilitySlots(toAdd);
+      toast.success(`Disponibilidades adicionadas: ${toAdd.length}. Conflitos com agendamentos: ${conflicts}. Duplicados: ${duplicates}.`);
+      onClose();
+    } catch (error) {
+      console.error('❌ Erro ao salvar disponibilidades:', error);
+      toast.error('Erro ao salvar horários. Verifique o console.');
+    }
   };
   const handleRemoveTimesInRange = () => {
     const times = normalizeTimes(timesList);

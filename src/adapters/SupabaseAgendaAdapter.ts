@@ -326,6 +326,46 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
     }
   }
 
+  /**
+   * Add new availability slots (FASE 1)
+   */
+  async addAvailabilitySlots(slots: Omit<AvailabilitySlot, 'id'>[]): Promise<void> {
+    try {
+      const user = await supabase.auth.getUser();
+      if (!user.data.user) {
+        throw new Error('Usuário não autenticado');
+      }
+
+      console.log(`🔄 Adicionando ${slots.length} novos slots de disponibilidade...`);
+
+      // Converter formato da aplicação para formato Supabase
+      const supabaseSlots = slots.map(slot => ({
+        user_id: user.data.user.id,
+        date: slot.date,
+        start_time: slot.time,
+        end_time: this.calculateEndTime(slot.time, slot.duration || 60),
+        type: slot.typeId || 'disponivel',
+        description: slot.label || null
+      }));
+
+      // Insert (não upsert, pois são novos registros)
+      const { data, error } = await supabase
+        .from('availability_slots')
+        .insert(supabaseSlots)
+        .select();
+
+      if (error) {
+        console.error('❌ Erro ao adicionar availability slots:', error);
+        throw error;
+      }
+
+      console.log(`✅ ${data?.length || 0} slots adicionados com sucesso ao Supabase`);
+    } catch (error) {
+      console.error('❌ Erro ao adicionar slots:', error);
+      throw error;
+    }
+  }
+
   async deleteAvailabilitySlot(id: string): Promise<void> {
     try {
       const user = await supabase.auth.getUser();
@@ -449,6 +489,28 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
       return newType;
     } catch (error) {
       console.error('Error saving availability type:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Add a new availability type (FASE 2)
+   */
+  async addAvailabilityType(typeData: Omit<AvailabilityType, 'id'>): Promise<AvailabilityType> {
+    const newType: AvailabilityType = {
+      id: crypto.randomUUID(),
+      ...typeData
+    };
+    
+    const types = await this.loadAvailabilityTypes();
+    const updatedTypes = [...types, newType];
+    
+    try {
+      localStorage.setItem('agenda_availability_types', JSON.stringify(updatedTypes));
+      console.log('✅ Tipo de disponibilidade adicionado:', newType);
+      return newType;
+    } catch (error) {
+      console.error('❌ Erro ao adicionar availability type:', error);
       throw error;
     }
   }

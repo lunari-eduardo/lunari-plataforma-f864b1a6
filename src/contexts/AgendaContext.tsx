@@ -8,6 +8,7 @@ import { AgendaSettings } from '@/types/agenda-supabase';
 import { useAppContext } from './AppContext';
 import { configurationService } from '@/services/ConfigurationService';
 import { congelarRegrasPrecoFotoExtra } from '@/utils/precificacaoUtils';
+import { toast } from 'sonner';
 import { ProjetoService } from '@/services/ProjetoService';
 import { AvailabilityService } from '@/services/AvailabilityService';
 import { supabase } from '@/integrations/supabase/client';
@@ -281,11 +282,18 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
   // Availability operations
   const addAvailabilitySlots = useCallback(async (slots: Omit<AvailabilitySlot, 'id'>[]) => {
     try {
+      console.log('🔄 [AgendaContext] Adicionando slots:', slots);
+      
       await agendaService.addAvailabilitySlots(slots);
+      
+      console.log('✅ [AgendaContext] Slots salvos, recarregando...');
       const updatedSlots = await agendaService.loadAvailabilitySlots();
+      
+      console.log(`✅ [AgendaContext] ${updatedSlots.length} slots carregados`);
       setAvailability(updatedSlots);
     } catch (error) {
       console.error('❌ Erro ao adicionar availability slots:', error);
+      toast.error('Erro ao salvar horários de disponibilidade');
       throw error;
     }
   }, []);
