@@ -120,6 +120,14 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
     const { data: user } = await supabase.auth.getUser();
     if (!user?.user) throw new Error('User not authenticated');
 
+    // FASE 3: Validar parâmetro
+    console.log(`🔍 [DeleteAppointment] preservePayments = ${preservePayments} (${typeof preservePayments})`);
+    
+    if (preservePayments !== undefined && typeof preservePayments !== 'boolean') {
+      console.error('❌ Parâmetro preservePayments inválido:', preservePayments);
+      throw new Error('preservePayments deve ser boolean (true/false)');
+    }
+
     // First, find the appointment to get its session data
     const { data: appointment, error: appointmentError } = await supabase
       .from('appointments')
@@ -148,41 +156,84 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
       .maybeSingle();
 
     if (workflowSession) {
-      console.log('🔍 Found related workflow session:', workflowSession.id);
+      // FASE 4: Log detalhado da sessão encontrada
+      console.log('🔍 Sessão encontrada:', {
+        id: workflowSession.id,
+        session_id: workflowSession.session_id,
+        appointment_id: workflowSession.appointment_id,
+        status: workflowSession.status
+      });
+      
+      // Contar pagamentos vinculados
+      const { count } = await supabase
+        .from('clientes_transacoes')
+        .select('*', { count: 'exact', head: true })
+        .eq('session_id', workflowSession.session_id)
+        .eq('user_id', user.user.id);
+        
+      console.log(`💰 ${count || 0} pagamento(s) vinculado(s) a esta sessão`);
 
       if (preservePayments) {
-        // Preserve payments: unlink appointment but keep session and transactions
+        // FASE 2: Preserve payments with error handling
         console.log('💾 Preserving payments - unlinking appointment from session');
         
-        await supabase
+        const { data: updatedSession, error: updateError } = await supabase
           .from('clientes_sessoes')
           .update({ 
             appointment_id: null,
             status: 'cancelado',
             descricao: `${workflowSession.descricao || ''} (Agendamento cancelado)`.trim()
           })
-          .eq('id', workflowSession.id);
+          .eq('id', workflowSession.id)
+          .select();
+
+        if (updateError) {
+          console.error('❌ Erro ao desvincular agendamento:', updateError);
+          throw new Error(`Falha ao preservar sessão: ${updateError.message}`);
+        }
+
+        if (!updatedSession || updatedSession.length === 0) {
+          console.warn('⚠️ Sessão não foi encontrada para desvincular');
+        }
 
         console.log('✅ Appointment unlinked from session, payments preserved');
       } else {
-        // Delete everything: session and related transactions
+        // FASE 1: Delete everything with robust error handling
         console.log('🗑️ Deleting session and all related data');
         
         // Delete transactions first (foreign key constraint)
-        await supabase
+        const { data: deletedTransactions, error: transacoesError } = await supabase
           .from('clientes_transacoes')
           .delete()
           .eq('session_id', workflowSession.session_id)
-          .eq('user_id', user.user.id);
+          .eq('user_id', user.user.id)
+          .select();
+
+        if (transacoesError) {
+          console.error('❌ Erro ao deletar transações:', transacoesError);
+          throw new Error(`Falha ao deletar pagamentos: ${transacoesError.message}`);
+        }
+
+        console.log(`🗑️ ${deletedTransactions?.length || 0} transação(ões) deletada(s)`);
 
         // Delete the session
-        await supabase
+        const { data: deletedSession, error: sessionError } = await supabase
           .from('clientes_sessoes')
           .delete()
           .eq('id', workflowSession.id)
-          .eq('user_id', user.user.id);
+          .eq('user_id', user.user.id)
+          .select();
 
-        console.log('✅ Session and transactions deleted completely');
+        if (sessionError) {
+          console.error('❌ Erro ao deletar sessão:', sessionError);
+          throw new Error(`Falha ao deletar sessão: ${sessionError.message}`);
+        }
+
+        if (!deletedSession || deletedSession.length === 0) {
+          console.warn('⚠️ Sessão não foi encontrada ou já foi deletada');
+        }
+
+        console.log(`✅ Exclusão completa: ${deletedTransactions?.length || 0} pagamento(s) + 1 sessão deletados`);
       }
     } else {
       console.log('ℹ️ No related workflow session found for appointment');

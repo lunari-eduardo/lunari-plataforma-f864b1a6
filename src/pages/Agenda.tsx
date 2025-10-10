@@ -131,11 +131,24 @@ export default function Agenda() {
     }
   }, [editingAppointment, viewingAppointment, updateAppointment, addAppointment, setIsDetailsOpen, setIsAppointmentDialogOpen]);
 
-  // Handle appointment deletion
+  // Handle appointment deletion - FASE 5: Adicionar feedback visual
   const handleDeleteAppointment = useCallback(async (id: string, preservePayments?: boolean) => {
-    await deleteAppointment(id, preservePayments);
-    setIsDetailsOpen(false);
-    setIsBudgetAppointmentModalOpen(false);
+    try {
+      await deleteAppointment(id, preservePayments);
+      
+      if (preservePayments) {
+        toast.success('Agendamento cancelado com sucesso! Histórico de pagamentos preservado.');
+      } else {
+        toast.success('Agendamento e todos os dados relacionados foram excluídos permanentemente.');
+      }
+      
+      setIsDetailsOpen(false);
+      setIsBudgetAppointmentModalOpen(false);
+    } catch (error: any) {
+      console.error('❌ Erro ao deletar agendamento:', error);
+      toast.error(`Erro ao excluir: ${error.message || 'Erro desconhecido'}`);
+      throw error;
+    }
   }, [deleteAppointment, setIsDetailsOpen, setIsBudgetAppointmentModalOpen]);
 
   // Handle budget appointment save (reschedule)
