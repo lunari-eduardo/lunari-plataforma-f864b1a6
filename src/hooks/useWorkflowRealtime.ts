@@ -568,6 +568,19 @@ export const useWorkflowRealtime = () => {
           }
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'clientes_transacoes'
+        },
+        async (payload) => {
+          console.log('💰 [WorkflowRealtime] Payment transaction change:', payload.eventType);
+          // When payments change, reload sessions to update valor_pago and payment history
+          loadSessions();
+        }
+      )
       .subscribe();
 
     return () => {

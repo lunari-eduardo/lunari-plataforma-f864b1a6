@@ -82,6 +82,7 @@ export function WorkflowPaymentsModal({
   const {
     payments,
     totalPago,
+    totalAgendado,
     totalPendente,
     addPayment,
     editPayment,
@@ -195,11 +196,11 @@ export function WorkflowPaymentsModal({
                     <p className="font-bold text-green-600 text-xs sm:text-sm">{formatCurrency(totalPago)}</p>
                   </div>
                   <div>
-                    <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Pendente</p>
-                    <p className="font-bold text-yellow-600 text-xs sm:text-sm">{formatCurrency(totalPendente)}</p>
+                    <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Agendado</p>
+                    <p className="font-bold text-orange-500 text-xs sm:text-sm">{formatCurrency(totalAgendado)}</p>
                   </div>
                   <div>
-                    <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Restante</p>
+                    <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Pendente</p>
                     <p className="font-bold text-red-600 text-xs sm:text-sm">{formatCurrency(valorRestante)}</p>
                   </div>
                 </div>
