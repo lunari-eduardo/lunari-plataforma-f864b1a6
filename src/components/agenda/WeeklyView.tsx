@@ -185,24 +185,33 @@ export default function WeeklyView({
                           <UnifiedEventCard event={event} onClick={onEventClick} variant="weekly" />
                         </div> : (() => {
                           const slot = getAvailabilityForSlot(day, time);
+                          
+                          // FASE 4: Verificar se há agendamento confirmado no mesmo horário
+                          const confirmedAtSlot = unifiedEvents.some(e => 
+                            e.type === 'appointment' && 
+                            e.originalData?.status === 'confirmado' &&
+                            isSameDay(e.date, day) &&
+                            e.time === time
+                          );
+                          
                           if (!slot) return null;
                           
                           if (isMobile) {
                             // Mobile: apenas ponto colorido
                             return <div className="absolute inset-0 flex items-center justify-center">
                               <span 
-                                className="h-3 w-3 rounded-full"
+                                className={`h-3 w-3 rounded-full ${confirmedAtSlot ? 'opacity-30' : ''}`}
                                 style={{ 
                                   backgroundColor: slot.color || 'hsl(var(--availability))'
                                 }}
-                                aria-label="Horário disponível"
+                                aria-label={confirmedAtSlot ? 'Horário ocupado' : 'Horário disponível'}
                               />
                             </div>;
                           }
                           
                           // Desktop/Tablet: label com botão remover
                           return (
-                            <div className={`absolute inset-0 flex items-center justify-center ${isTablet ? 'gap-1' : 'gap-2'}`}>
+                            <div className={`absolute inset-0 flex items-center justify-center ${isTablet ? 'gap-1' : 'gap-2'} ${confirmedAtSlot ? 'opacity-40' : ''}`}>
                               <span 
                                 className={`rounded text-lunar-text border ${isTablet ? 'text-[8px] px-1 py-0.5' : 'text-[10px] px-1.5 py-0.5'}`}
                                 style={{ 
@@ -210,21 +219,23 @@ export default function WeeklyView({
                                   borderColor: slot.color ? `${slot.color}80` : 'hsl(var(--availability) / 0.5)'
                                 }}
                               >
-                                {slot.label || 'Disponível'}
+                                {confirmedAtSlot ? '🔒 Ocupado' : (slot.label || 'Disponível')}
                               </span>
-                              <button 
-                                type="button" 
-                                onClick={e => {
-                                  e.stopPropagation();
-                                  handleRemoveAvailability(day, time);
-                                }} 
-                                className={`text-muted-foreground hover:text-foreground items-center gap-1 ${isTablet ? 'text-[8px] inline-flex' : 'text-[10px] hidden lg:inline-flex'}`} 
-                                aria-label="Remover disponibilidade" 
-                                title="Remover disponibilidade"
-                              >
-                                <Trash2 className={isTablet ? 'h-2.5 w-2.5' : 'h-3 w-3'} /> 
-                                {!isTablet && 'Remover'}
-                              </button>
+                              {!confirmedAtSlot && (
+                                <button 
+                                  type="button" 
+                                  onClick={e => {
+                                    e.stopPropagation();
+                                    handleRemoveAvailability(day, time);
+                                  }} 
+                                  className={`text-muted-foreground hover:text-foreground items-center gap-1 ${isTablet ? 'text-[8px] inline-flex' : 'text-[10px] hidden lg:inline-flex'}`} 
+                                  aria-label="Remover disponibilidade" 
+                                  title="Remover disponibilidade"
+                                >
+                                  <Trash2 className={isTablet ? 'h-2.5 w-2.5' : 'h-3 w-3'} /> 
+                                  {!isTablet && 'Remover'}
+                                </button>
+                              )}
                             </div>
                           );
                         })()}
