@@ -121,7 +121,7 @@ export class PaymentSupabaseService {
   }
 
   /**
-   * Update an existing payment in Supabase (prevents duplication on edit)
+   * Update an existing payment in Supabase with fallback for legacy data
    */
   static async updateSinglePayment(
     sessionKey: string,
@@ -142,10 +142,54 @@ export class PaymentSupabaseService {
         return false;
       }
 
-      // Find session binding
       const binding = await this.getSessionBinding(sessionKey);
       if (!binding) {
         console.error('❌ Session not found:', sessionKey);
+        return false;
+      }
+
+      // FASE 1: Try to find with [ID:paymentId] (new format)
+      const { data: withTracking } = await supabase
+        .from('clientes_transacoes')
+        .select('id, valor, data_transacao, descricao')
+        .eq('session_id', binding.session_id)
+        .ilike('descricao', `%[ID:${paymentId}]%`)
+        .maybeSingle();
+
+      let transactionIdToUpdate: string | null = null;
+      let originalValue: number | null = null;
+      let originalDate: string | null = null;
+
+      if (withTracking) {
+        transactionIdToUpdate = withTracking.id;
+        originalValue = Number(withTracking.valor);
+        originalDate = withTracking.data_transacao;
+        console.log('✅ Found payment with tracking:', transactionIdToUpdate);
+      } else {
+        console.log('⚠️ Payment not found with [ID:...], trying fallback for legacy data');
+        
+        // Fallback: buscar por dados originais (para pagamentos legados sem [ID:...])
+        const { data: legacy } = await supabase
+          .from('clientes_transacoes')
+          .select('id, descricao, valor, data_transacao')
+          .eq('session_id', binding.session_id)
+          .eq('cliente_id', binding.cliente_id)
+          .eq('user_id', user.id)
+          .eq('tipo', 'pagamento')
+          .order('created_at', { ascending: true });
+
+        // Encontrar o primeiro que NÃO tenha [ID:...] (é legado)
+        const legacyPayment = legacy?.find(t => !t.descricao.includes('[ID:'));
+        if (legacyPayment) {
+          transactionIdToUpdate = legacyPayment.id;
+          originalValue = Number(legacyPayment.valor);
+          originalDate = legacyPayment.data_transacao;
+          console.log('✅ Found legacy payment without tracking:', transactionIdToUpdate);
+        }
+      }
+
+      if (!transactionIdToUpdate) {
+        console.error('❌ Payment not found for update (neither with tracking nor legacy)');
         return false;
       }
 
@@ -158,29 +202,146 @@ export class PaymentSupabaseService {
       if (payment.valor !== undefined) updates.valor = payment.valor;
       if (payment.data) updates.data_transacao = payment.data;
       
-      // Update description to preserve [ID:paymentId] tracking
+      // SEMPRE adicionar [ID:paymentId] na descrição (para migrar dados legados)
       const baseDesc = payment.observacoes || 'Pagamento';
       updates.descricao = `${baseDesc} [ID:${paymentId}]`;
 
-      // Update transaction with paymentId tracking
+      // Execute UPDATE
       const { error } = await supabase
         .from('clientes_transacoes')
         .update(updates)
-        .eq('session_id', binding.session_id)
-        .eq('cliente_id', binding.cliente_id)
-        .eq('user_id', user.id)
-        .ilike('descricao', `%[ID:${paymentId}]%`);
+        .eq('id', transactionIdToUpdate);
 
       if (error) {
         console.error('❌ Error updating payment:', error);
         return false;
       }
 
-      console.log('✅ Payment updated successfully');
+      console.log('✅ Payment updated successfully with tracking added');
       return true;
 
     } catch (error) {
       console.error('❌ Error in updateSinglePayment:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Salvar pagamentos pendentes (parcelas/agendamentos) no Supabase
+   * Usa tipo='pagamento_pendente' para diferenciar de pagamentos realizados
+   */
+  static async savePendingPayments(
+    sessionKey: string,
+    payments: Array<{
+      paymentId: string;
+      valor: number;
+      dataVencimento: string;
+      numeroParcela?: number;
+      totalParcelas?: number;
+      observacoes?: string;
+      tipo: 'agendado' | 'parcelado';
+    }>
+  ): Promise<boolean> {
+    try {
+      console.log('💾 Salvando pagamentos pendentes:', { sessionKey, count: payments.length });
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('❌ User not authenticated');
+        return false;
+      }
+
+      const binding = await this.getSessionBinding(sessionKey);
+      if (!binding) {
+        console.error('❌ Session not found:', sessionKey);
+        return false;
+      }
+
+      // Preparar registros para inserção
+      const records = payments.map(p => {
+        let descricao = p.observacoes || (p.tipo === 'parcelado' 
+          ? `Parcela ${p.numeroParcela}/${p.totalParcelas}` 
+          : 'Pagamento agendado');
+        
+        // Adicionar tracking [ID:paymentId]
+        descricao = `${descricao} [ID:${p.paymentId}]`;
+
+        return {
+          user_id: user.id,
+          cliente_id: binding.cliente_id,
+          session_id: binding.session_id,
+          tipo: 'pagamento_pendente',
+          valor: p.valor,
+          data_transacao: p.dataVencimento, // Usar data_vencimento como data_transacao temporária
+          data_vencimento: p.dataVencimento,
+          descricao: descricao,
+          updated_by: user.id
+        };
+      });
+
+      const { error } = await supabase
+        .from('clientes_transacoes')
+        .insert(records);
+
+      if (error) {
+        console.error('❌ Error saving pending payments:', error);
+        return false;
+      }
+
+      console.log(`✅ ${payments.length} pagamentos pendentes salvos no Supabase`);
+      return true;
+
+    } catch (error) {
+      console.error('❌ Error in savePendingPayments:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Atualizar pagamento pendente para pago (marca como realizado)
+   */
+  static async markPaymentAsPaid(
+    sessionKey: string,
+    paymentId: string,
+    dataPagamento: string
+  ): Promise<boolean> {
+    try {
+      console.log('✅ Marcando pagamento como pago:', { sessionKey, paymentId, dataPagamento });
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('❌ User not authenticated');
+        return false;
+      }
+
+      const binding = await this.getSessionBinding(sessionKey);
+      if (!binding) {
+        console.error('❌ Session not found:', sessionKey);
+        return false;
+      }
+
+      // Atualizar de pagamento_pendente para pagamento
+      const { error } = await supabase
+        .from('clientes_transacoes')
+        .update({
+          tipo: 'pagamento',
+          data_transacao: dataPagamento,
+          updated_at: new Date().toISOString(),
+          updated_by: user.id
+        })
+        .eq('session_id', binding.session_id)
+        .ilike('descricao', `%[ID:${paymentId}]%`);
+
+      if (error) {
+        console.error('❌ Error marking payment as paid:', error);
+        return false;
+      }
+
+      console.log('✅ Payment marked as paid successfully');
+      return true;
+
+    } catch (error) {
+      console.error('❌ Error in markPaymentAsPaid:', error);
       return false;
     }
   }

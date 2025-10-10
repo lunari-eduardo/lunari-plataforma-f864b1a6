@@ -61,26 +61,63 @@ export function useClientSessionsRealtime(clienteId: string) {
             .select('*')
             .eq('session_id', session.session_id)
             .eq('user_id', user.id)
+            .in('tipo', ['pagamento', 'pagamento_pendente'])
             .order('data_transacao', { ascending: false });
 
           if (transacoesError) {
             console.warn('Erro ao buscar transações:', transacoesError);
           }
 
-          // Converter transações para formato de pagamentos
-          const pagamentos = (transacoesData || [])
-            .filter(t => t.tipo === 'pagamento')
-            .map(t => ({
-              id: t.id,
+          // Converter transações para formato de pagamentos (incluir pendentes)
+          const pagamentos = (transacoesData || []).map(t => {
+            // Extrair paymentId do [ID:...] na descrição, senão usar UUID do Supabase
+            const match = t.descricao?.match(/\[ID:([^\]]+)\]/);
+            const paymentId = match ? match[1] : t.id;
+
+            // Determinar se é pago ou pendente
+            const isPaid = t.tipo === 'pagamento';
+            const isPending = t.tipo === 'pagamento_pendente';
+
+            // Extrair número da parcela se existir (ex: "Parcela 2/3")
+            const parcelaMatch = t.descricao?.match(/Parcela (\d+)\/(\d+)/);
+            const numeroParcela = parcelaMatch ? parseInt(parcelaMatch[1]) : undefined;
+            const totalParcelas = parcelaMatch ? parseInt(parcelaMatch[2]) : undefined;
+
+            // Determinar tipo de pagamento
+            let tipo: 'pago' | 'agendado' | 'parcelado' = 'pago';
+            if (isPending) {
+              tipo = totalParcelas ? 'parcelado' : 'agendado';
+            }
+
+            // Determinar status
+            let statusPagamento: 'pago' | 'pendente' | 'atrasado' = 'pago';
+            if (isPending) {
+              statusPagamento = 'pendente';
+              // Verificar se está atrasado
+              if (t.data_vencimento) {
+                const hoje = new Date();
+                const vencimento = new Date(t.data_vencimento);
+                if (vencimento < hoje) {
+                  statusPagamento = 'atrasado';
+                }
+              }
+            }
+
+            return {
+              id: paymentId,
               valor: Number(t.valor) || 0,
-              data: t.data_transacao,
+              data: isPaid ? t.data_transacao : '',
+              dataVencimento: t.data_vencimento || undefined,
               forma_pagamento: '',
-              observacoes: t.descricao || '',
-              tipo: 'pago',
-              statusPagamento: 'pago',
-              origem: 'manual',
+              observacoes: t.descricao?.replace(/\s*\[ID:[^\]]+\]/, '') || '',
+              tipo,
+              statusPagamento,
+              numeroParcela,
+              totalParcelas,
+              origem: 'manual' as const,
               editavel: true
-            }));
+            };
+          });
 
           // FASE 3: Read valor_base_pacote directly from database
           const valorPacote = Number(session.valor_base_pacote) || 0;

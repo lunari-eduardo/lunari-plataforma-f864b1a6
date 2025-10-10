@@ -379,6 +379,7 @@ export type Database = {
           cliente_id: string
           created_at: string | null
           data_transacao: string
+          data_vencimento: string | null
           descricao: string | null
           id: string
           session_id: string | null
@@ -392,6 +393,7 @@ export type Database = {
           cliente_id: string
           created_at?: string | null
           data_transacao: string
+          data_vencimento?: string | null
           descricao?: string | null
           id?: string
           session_id?: string | null
@@ -405,6 +407,7 @@ export type Database = {
           cliente_id?: string
           created_at?: string | null
           data_transacao?: string
+          data_vencimento?: string | null
           descricao?: string | null
           id?: string
           session_id?: string | null

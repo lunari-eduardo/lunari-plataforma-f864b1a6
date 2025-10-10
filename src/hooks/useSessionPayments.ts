@@ -258,8 +258,10 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
     });
   }, [sessionId]);
 
-  // Marcar como pago
-  const markAsPaid = useCallback((paymentId: string) => {
+  // Marcar como pago (atualiza de pendente para pago no Supabase)
+  const markAsPaid = useCallback(async (paymentId: string) => {
+    const dataPagamento = formatDateForStorage(new Date());
+    
     setPayments(prev => {
       const paidPayment = prev.find(p => p.id === paymentId);
       if (!paidPayment) return prev;
@@ -267,21 +269,26 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
       const finalPayment = { 
         ...paidPayment, 
         statusPagamento: 'pago' as const,
-        data: formatDateForStorage(new Date())
+        data: dataPagamento
       };
       
       const updated = prev.map(p => p.id === paymentId ? finalPayment : p);
       
       // Save to localStorage
       savePaymentsToStorage(sessionId, updated);
-      // Save ONLY this payment to Supabase
-      saveSinglePaymentToSupabase(sessionId, paymentId, finalPayment);
+      
+      // Atualizar no Supabase (de pendente para pago)
+      (async () => {
+        const { PaymentSupabaseService } = await import('@/services/PaymentSupabaseService');
+        await PaymentSupabaseService.markPaymentAsPaid(sessionId, paymentId, dataPagamento);
+      })();
+      
       return updated;
     });
   }, [sessionId]);
 
-  // Criar parcelas (NÃO salvar no Supabase até serem pagas)
-  const createInstallments = useCallback((
+  // Criar parcelas e salvar como pendentes no Supabase
+  const createInstallments = useCallback(async (
     totalValue: number, 
     installmentCount: number, 
     startDate: Date,
@@ -310,16 +317,33 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
 
     setPayments(prev => {
       const updated = [...prev, ...newInstallments];
-      // Save ONLY to localStorage (não Supabase - só quando marcar como pago)
+      // Save to localStorage
       savePaymentsToStorage(sessionId, updated);
+      
+      // Salvar parcelas pendentes no Supabase
+      (async () => {
+        const { PaymentSupabaseService } = await import('@/services/PaymentSupabaseService');
+        await PaymentSupabaseService.savePendingPayments(
+          sessionId,
+          newInstallments.map(p => ({
+            paymentId: p.id,
+            valor: p.valor,
+            dataVencimento: p.dataVencimento!,
+            numeroParcela: p.numeroParcela,
+            totalParcelas: p.totalParcelas,
+            tipo: 'parcelado'
+          }))
+        );
+      })();
+      
       return updated;
     });
     
     return newInstallments;
   }, [sessionId]);
 
-  // Agendar pagamento único (NÃO salvar no Supabase até ser pago)
-  const schedulePayment = useCallback((
+  // Agendar pagamento único e salvar como pendente no Supabase
+  const schedulePayment = useCallback(async (
     value: number,
     dueDate: Date,
     observacoes?: string
@@ -346,8 +370,24 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
 
     setPayments(prev => {
       const updated = [...prev, newPayment];
-      // Save ONLY to localStorage (não Supabase - só quando marcar como pago)
+      // Save to localStorage
       savePaymentsToStorage(sessionId, updated);
+      
+      // Salvar agendamento pendente no Supabase
+      (async () => {
+        const { PaymentSupabaseService } = await import('@/services/PaymentSupabaseService');
+        await PaymentSupabaseService.savePendingPayments(
+          sessionId,
+          [{
+            paymentId: newPayment.id,
+            valor: newPayment.valor,
+            dataVencimento: newPayment.dataVencimento!,
+            observacoes: newPayment.observacoes,
+            tipo: 'agendado'
+          }]
+        );
+      })();
+      
       return updated;
     });
     
