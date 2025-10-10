@@ -83,7 +83,67 @@ export const useWorkflowRealtime = () => {
       console.log('✅ Successfully loaded sessions:', data?.length || 0, 'sessions found');
       console.log('📊 Sessions data:', data);
 
-      setSessions(data || []);
+      // FASE 1: Load payments for each session (same logic as CRM)
+      const sessionsWithPayments = await Promise.all(
+        (data || []).map(async (session) => {
+          // Fetch transactions/payments for this session
+          const { data: transacoesData } = await supabase
+            .from('clientes_transacoes')
+            .select('*')
+            .eq('session_id', session.session_id)
+            .eq('user_id', user.user.id)
+            .in('tipo', ['pagamento', 'ajuste'])
+            .order('data_transacao', { ascending: false });
+
+          // Convert to payment format (same as CRM)
+          const pagamentos = (transacoesData || []).map(t => {
+            const match = t.descricao?.match(/\[ID:([^\]]+)\]/);
+            const paymentId = match ? match[1] : t.id;
+            
+            const isPaid = t.tipo === 'pagamento';
+            const isPending = t.tipo === 'ajuste';
+            
+            const parcelaMatch = t.descricao?.match(/Parcela (\d+)\/(\d+)/);
+            const numeroParcela = parcelaMatch ? parseInt(parcelaMatch[1]) : undefined;
+            const totalParcelas = parcelaMatch ? parseInt(parcelaMatch[2]) : undefined;
+            
+            let tipo: 'pago' | 'agendado' | 'parcelado' = 'pago';
+            if (isPending) {
+              tipo = totalParcelas ? 'parcelado' : 'agendado';
+            }
+            
+            let statusPagamento: 'pago' | 'pendente' | 'atrasado' = 'pago';
+            if (isPending) {
+              statusPagamento = 'pendente';
+              if (t.data_vencimento && new Date(t.data_vencimento) < new Date()) {
+                statusPagamento = 'atrasado';
+              }
+            }
+            
+            return {
+              id: paymentId,
+              valor: Number(t.valor) || 0,
+              data: isPaid ? t.data_transacao : '',
+              dataVencimento: t.data_vencimento || undefined,
+              observacoes: t.descricao?.replace(/\s*\[ID:[^\]]+\]/, '') || '',
+              tipo,
+              statusPagamento,
+              numeroParcela,
+              totalParcelas,
+              origem: 'manual' as const,
+              editavel: true
+            };
+          });
+          
+          return {
+            ...session,
+            pagamentos // Attach payments to session
+          };
+        })
+      );
+
+      console.log('💰 Loaded payments for sessions');
+      setSessions(sessionsWithPayments);
       setError(null);
     } catch (err) {
       console.error('Error loading workflow sessions:', err);

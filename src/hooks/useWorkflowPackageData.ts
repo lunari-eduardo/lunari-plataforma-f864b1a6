@@ -121,7 +121,7 @@ export const useWorkflowPackageData = () => {
         valorPago: `R$ ${(session.valor_pago || 0).toFixed(2).replace('.', ',')}`,
         restante: `R$ ${((session.valor_total || 0) - (session.valor_pago || 0)).toFixed(2).replace('.', ',')}`,
         desconto: `R$ ${(session.desconto || 0).toFixed(2).replace('.', ',')}`,
-        pagamentos: [],
+        pagamentos: (session as any).pagamentos || [], // Use loaded payments from session
         // CRITICAL: Always prioritize frozen product data
         produtosList: session.regras_congeladas?.produtos?.length > 0 ? 
           session.regras_congeladas.produtos : 
