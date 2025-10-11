@@ -23,7 +23,7 @@ import type { Categoria, Pacote } from '@/types/configuration';
 interface CategoriasProps {
   categorias: Categoria[];
   onAdd: (categoria: Omit<Categoria, 'id'>) => void;
-  onUpdate: (id: string, dados: Partial<Categoria>) => void;
+  onUpdate: (id: string, dados: Partial<Categoria>) => Promise<void>;
   onDelete: (id: string) => Promise<boolean>;
   pacotes: Pacote[];
 }
@@ -100,16 +100,21 @@ export default function Categorias({
   }, []);
 
   // Salvar edição
-  const salvarEdicaoCategoria = useCallback((id: string, nome: string, cor: string) => {
+  const salvarEdicaoCategoria = useCallback(async (id: string, nome: string, cor: string) => {
     const error = validateCategoria(nome);
     if (error) {
       setValidationError(error);
       return;
     }
     
-    onUpdate(id, { nome: nome.trim(), cor });
-    setEditandoCategoria(null);
-    setValidationError('');
+    try {
+      await onUpdate(id, { nome: nome.trim(), cor });
+      setEditandoCategoria(null);
+      setValidationError('');
+    } catch (error) {
+      console.error('Erro ao atualizar categoria:', error);
+      // Error toast já mostrado pelo context, edição permanece aberta
+    }
   }, [onUpdate, validateCategoria]);
 
   // Cancelar edição

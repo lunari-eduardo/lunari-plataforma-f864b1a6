@@ -27,19 +27,19 @@ interface ConfigurationContextType {
   
   // Operations - matching ConfigurationActions interface
   adicionarCategoria: (categoria: Omit<Categoria, 'id'>) => void;
-  atualizarCategoria: (id: string, dados: Partial<Categoria>) => void;
+  atualizarCategoria: (id: string, dados: Partial<Categoria>) => Promise<void>;
   removerCategoria: (id: string) => Promise<boolean>;
   
   adicionarPacote: (pacote: Omit<Pacote, 'id'>) => void;
-  atualizarPacote: (id: string, dados: Partial<Pacote>) => void;
+  atualizarPacote: (id: string, dados: Partial<Pacote>) => Promise<void>;
   removerPacote: (id: string) => Promise<boolean>;
   
   adicionarProduto: (produto: Omit<Produto, 'id'>) => void;
-  atualizarProduto: (id: string, dados: Partial<Produto>) => void;
+  atualizarProduto: (id: string, dados: Partial<Produto>) => Promise<void>;
   removerProduto: (id: string) => Promise<boolean>;
   
   adicionarEtapa: (etapa: Omit<EtapaTrabalho, 'id' | 'ordem'>) => void;
-  atualizarEtapa: (id: string, dados: Partial<EtapaTrabalho>) => void;
+  atualizarEtapa: (id: string, dados: Partial<EtapaTrabalho>) => Promise<void>;
   removerEtapa: (id: string) => Promise<boolean>;
   moverEtapa: (id: string, direcao: 'cima' | 'baixo') => void;
 }
@@ -364,7 +364,7 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
     );
   }, [suppress]);
 
-  const atualizarCategoria = useCallback(async (id: string, dados: Partial<Categoria>) => {
+  const atualizarCategoria = useCallback(async (id: string, dados: Partial<Categoria>): Promise<void> => {
     suppress(id);
     
     // Capturar o item atual ANTES do update otimista
@@ -372,12 +372,12 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
     if (!currentItem) {
       console.error('[atualizarCategoria] Item not found:', id);
       toast.error('Categoria não encontrada');
-      return;
+      throw new Error('Categoria não encontrada');
     }
     
     const updatedItem = { ...currentItem, ...dados };
     
-    await categoriasOps.update(
+    return categoriasOps.update(
       id,
       dados,
       async () => {
@@ -464,7 +464,7 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
     );
   }, [suppress]);
 
-  const atualizarPacote = useCallback(async (id: string, dados: Partial<Pacote>) => {
+  const atualizarPacote = useCallback(async (id: string, dados: Partial<Pacote>): Promise<void> => {
     suppress(id);
     
     // Capturar o item atual ANTES do update otimista
@@ -472,12 +472,12 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
     if (!currentItem) {
       console.error('[atualizarPacote] Item not found:', id);
       toast.error('Pacote não encontrado');
-      return;
+      throw new Error('Pacote não encontrado');
     }
     
     const updatedItem = { ...currentItem, ...dados };
     
-    await pacotesOps.update(
+    return pacotesOps.update(
       id,
       dados,
       async () => {
@@ -545,7 +545,7 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
     );
   }, [suppress]);
 
-  const atualizarProduto = useCallback(async (id: string, dados: Partial<Produto>) => {
+  const atualizarProduto = useCallback(async (id: string, dados: Partial<Produto>): Promise<void> => {
     suppress(id);
     
     // Capturar o item atual ANTES do update otimista
@@ -553,12 +553,12 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
     if (!currentItem) {
       console.error('[atualizarProduto] Item not found:', id);
       toast.error('Produto não encontrado');
-      return;
+      throw new Error('Produto não encontrado');
     }
     
     const updatedItem = { ...currentItem, ...dados };
     
-    await produtosOps.update(
+    return produtosOps.update(
       id,
       dados,
       async () => {
@@ -647,7 +647,7 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
     console.log('📋 [adicionarEtapa] Concluído');
   }, [suppress]);
 
-  const atualizarEtapa = useCallback(async (id: string, dados: Partial<EtapaTrabalho>) => {
+  const atualizarEtapa = useCallback(async (id: string, dados: Partial<EtapaTrabalho>): Promise<void> => {
     suppress(id);
     
     // Capturar o item atual ANTES do update otimista
@@ -655,12 +655,12 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
     if (!currentItem) {
       console.error('[atualizarEtapa] Item not found:', id);
       toast.error('Etapa não encontrada');
-      return;
+      throw new Error('Etapa não encontrada');
     }
     
     const updatedItem = { ...currentItem, ...dados };
     
-    await etapasOps.update(
+    return etapasOps.update(
       id,
       dados,
       async () => {

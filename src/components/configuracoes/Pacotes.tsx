@@ -15,7 +15,7 @@ import type { Categoria, Pacote, Produto, PacoteFormData } from '@/types/configu
 interface PacotesProps {
   pacotes: Pacote[];
   onAdd: (pacote: Omit<Pacote, 'id'>) => void;
-  onUpdate: (id: string, dados: Partial<Pacote>) => void;
+  onUpdate: (id: string, dados: Partial<Pacote>) => Promise<void>;
   onDelete: (id: string) => Promise<boolean>;
   categorias: Categoria[];
   produtos: Produto[];
@@ -57,9 +57,14 @@ export default function Pacotes({
   const editarPacote = useCallback((pacote: Pacote) => {
     setPacoteEdicao(pacote);
   }, []);
-  const salvarEdicaoPacote = useCallback((id: string, dados: Partial<Pacote>) => {
-    onUpdate(id, dados);
-    setPacoteEdicao(null);
+  const salvarEdicaoPacote = useCallback(async (id: string, dados: Partial<Pacote>) => {
+    try {
+      await onUpdate(id, dados);
+      setPacoteEdicao(null);
+    } catch (error) {
+      console.error('Erro ao atualizar pacote:', error);
+      // Error toast já mostrado pelo context, modal permanece aberto
+    }
   }, [onUpdate]);
   const removerPacote = useCallback(async (id: string) => {
     setDeletingId(id);

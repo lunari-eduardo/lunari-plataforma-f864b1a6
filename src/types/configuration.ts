@@ -79,7 +79,7 @@ export interface EditPacoteModalProps {
   pacote: Pacote | null;
   categorias: Categoria[];
   produtos: Produto[];
-  onSave: (id: string, dados: Partial<Pacote>) => void;
+  onSave: (id: string, dados: Partial<Pacote>) => Promise<void>;
 }
 
 // ============= TIPOS PARA CONFIGURAÇÃO GLOBAL =============
@@ -98,22 +98,22 @@ export interface ConfigurationState {
 export interface ConfigurationActions {
   // Categorias
   adicionarCategoria: (categoria: Omit<Categoria, 'id'>) => void;
-  atualizarCategoria: (id: string, dados: Partial<Categoria>) => void;
+  atualizarCategoria: (id: string, dados: Partial<Categoria>) => Promise<void>;
   removerCategoria: (id: string) => Promise<boolean>;
   
   // Pacotes
   adicionarPacote: (pacote: Omit<Pacote, 'id'>) => void;
-  atualizarPacote: (id: string, dados: Partial<Pacote>) => void;
+  atualizarPacote: (id: string, dados: Partial<Pacote>) => Promise<void>;
   removerPacote: (id: string) => Promise<boolean>;
   
   // Produtos
   adicionarProduto: (produto: Omit<Produto, 'id'>) => void;
-  atualizarProduto: (id: string, dados: Partial<Produto>) => void;
+  atualizarProduto: (id: string, dados: Partial<Produto>) => Promise<void>;
   removerProduto: (id: string) => Promise<boolean>;
   
   // Etapas de Trabalho
   adicionarEtapa: (etapa: Omit<EtapaTrabalho, 'id' | 'ordem'>) => void;
-  atualizarEtapa: (id: string, dados: Partial<EtapaTrabalho>) => void;
+  atualizarEtapa: (id: string, dados: Partial<EtapaTrabalho>) => Promise<void>;
   removerEtapa: (id: string) => Promise<boolean>;
   moverEtapa: (id: string, direcao: 'cima' | 'baixo') => void;
 }

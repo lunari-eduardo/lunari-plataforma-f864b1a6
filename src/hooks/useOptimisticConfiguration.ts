@@ -123,8 +123,18 @@ export function useOptimisticConfiguration<T extends { id: string }>(
       return new Promise((resolve, reject) => {
         operationQueueRef.current.push(async () => {
           const previousItem = state.data.find(item => item.id === id);
+          
           if (!previousItem) {
-            reject(new Error('Item not found'));
+            // Fallback: item not found locally, execute persistFn directly
+            console.warn(`⚠️ [UPDATE] Item ${id} not found locally, executing persistFn directly`);
+            try {
+              await persistFn();
+              resolve();
+            } catch (error) {
+              console.error('Failed to update item (direct persistFn):', error);
+              toast.error('Erro ao salvar. Tente novamente.');
+              reject(error);
+            }
             return;
           }
 

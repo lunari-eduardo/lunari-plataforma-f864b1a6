@@ -6,7 +6,7 @@ import type { EtapaTrabalho } from '@/types/configuration';
 interface FluxoTrabalhoProps {
   etapas: EtapaTrabalho[];
   onAdd: (etapa: Omit<EtapaTrabalho, 'id' | 'ordem'>) => void;
-  onUpdate: (id: string, dados: Partial<EtapaTrabalho>) => void;
+  onUpdate: (id: string, dados: Partial<EtapaTrabalho>) => Promise<void>;
   onDelete: (id: string) => Promise<boolean>;
   onMove: (id: string, direcao: 'cima' | 'baixo') => void;
 }
@@ -49,10 +49,15 @@ export default function FluxoTrabalho({
     }
     setEditandoEtapa(id);
   };
-  const salvarEdicaoEtapa = (id: string) => {
-    onUpdate(id, editData);
-    setEditandoEtapa(null);
-    setEditData({});
+  const salvarEdicaoEtapa = async (id: string) => {
+    try {
+      await onUpdate(id, editData);
+      setEditandoEtapa(null);
+      setEditData({});
+    } catch (error) {
+      console.error('Erro ao atualizar etapa:', error);
+      // Error toast já mostrado pelo context, edição permanece aberta
+    }
   };
   const removerEtapa = async (id: string) => {
     setDeletingId(id);

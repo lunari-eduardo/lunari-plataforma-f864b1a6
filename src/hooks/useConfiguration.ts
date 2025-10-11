@@ -122,7 +122,7 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
     toast.success('Categoria adicionada com sucesso!');
   }, []);
 
-  const atualizarCategoria = useCallback((id: string, dados: Partial<Categoria>) => {
+  const atualizarCategoria = useCallback(async (id: string, dados: Partial<Categoria>): Promise<void> => {
     setCategorias(prev => prev.map(cat => 
       cat.id === id ? { ...cat, ...dados } : cat
     ));
@@ -167,7 +167,7 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
     toast.success('Pacote adicionado com sucesso!');
   }, []);
 
-  const atualizarPacote = useCallback((id: string, dados: Partial<Pacote>) => {
+  const atualizarPacote = useCallback(async (id: string, dados: Partial<Pacote>): Promise<void> => {
     setPacotes(prev => prev.map(pac => 
       pac.id === id ? { ...pac, ...dados } : pac
     ));
@@ -207,7 +207,7 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
     toast.success('Produto adicionado com sucesso!');
   }, []);
 
-  const atualizarProduto = useCallback((id: string, dados: Partial<Produto>) => {
+  const atualizarProduto = useCallback(async (id: string, dados: Partial<Produto>): Promise<void> => {
     setProdutos(prev => prev.map(prod => 
       prod.id === id ? { ...prod, ...dados } : prod
     ));
@@ -254,7 +254,7 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
     toast.success('Etapa adicionada com sucesso!');
   }, [etapas]);
 
-  const atualizarEtapa = useCallback((id: string, dados: Partial<EtapaTrabalho>) => {
+  const atualizarEtapa = useCallback(async (id: string, dados: Partial<EtapaTrabalho>): Promise<void> => {
     setEtapas(prev => prev.map(etapa => 
       etapa.id === id ? { ...etapa, ...dados } : etapa
     ));

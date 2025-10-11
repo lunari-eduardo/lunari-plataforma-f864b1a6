@@ -15,7 +15,7 @@ interface ProdutoFormModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   produto?: Produto | null;
-  onSave: (id: string, dados: Partial<Produto>) => void;
+  onSave: (id: string, dados: Partial<Produto>) => Promise<void>;
 }
 
 export default function ProdutoFormModal({
@@ -46,13 +46,18 @@ export default function ProdutoFormModal({
     }
   }, [produto, open]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!produto?.id) return;
     
-    onSave(produto.id, formData);
-    onOpenChange(false);
+    try {
+      await onSave(produto.id, formData);
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Erro ao salvar produto:', error);
+      // Error toast já mostrado pelo context, modal permanece aberto
+    }
   };
 
   const margem = calcularMargemLucro(formData.preco_custo, formData.preco_venda);
