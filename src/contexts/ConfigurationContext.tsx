@@ -367,12 +367,23 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
   const atualizarCategoria = useCallback(async (id: string, dados: Partial<Categoria>) => {
     suppress(id);
     
+    // Capturar o item atual ANTES do update otimista
+    const currentItem = categoriasRef.current.find(c => c.id === id);
+    if (!currentItem) {
+      console.error('[atualizarCategoria] Item not found:', id);
+      toast.error('Categoria não encontrada');
+      return;
+    }
+    
+    const updatedItem = { ...currentItem, ...dados };
+    
     await categoriasOps.update(
       id,
       dados,
       async () => {
-        const updated = categoriasRef.current.map(c => c.id === id ? { ...c, ...dados } : c);
-        await configurationService.saveCategorias(updated);
+        // Usar o item já mesclado, não reprocessar do ref
+        await configurationService.saveCategorias([updatedItem]);
+        console.log('✅ [atualizarCategoria] Salvo:', updatedItem);
       }
     );
   }, [suppress]);
@@ -456,14 +467,23 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
   const atualizarPacote = useCallback(async (id: string, dados: Partial<Pacote>) => {
     suppress(id);
     
+    // Capturar o item atual ANTES do update otimista
+    const currentItem = pacotesRef.current.find(p => p.id === id);
+    if (!currentItem) {
+      console.error('[atualizarPacote] Item not found:', id);
+      toast.error('Pacote não encontrado');
+      return;
+    }
+    
+    const updatedItem = { ...currentItem, ...dados };
+    
     await pacotesOps.update(
       id,
       dados,
       async () => {
-        const updated = pacotesRef.current.map(p => 
-          p.id === id ? { ...p, ...dados } : p
-        );
-        await configurationService.savePacotes(updated);
+        // Usar o item já mesclado, não reprocessar do ref
+        await configurationService.savePacotes([updatedItem]);
+        console.log('✅ [atualizarPacote] Salvo:', updatedItem);
       }
     );
   }, [suppress]);
@@ -528,14 +548,23 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
   const atualizarProduto = useCallback(async (id: string, dados: Partial<Produto>) => {
     suppress(id);
     
+    // Capturar o item atual ANTES do update otimista
+    const currentItem = produtosRef.current.find(p => p.id === id);
+    if (!currentItem) {
+      console.error('[atualizarProduto] Item not found:', id);
+      toast.error('Produto não encontrado');
+      return;
+    }
+    
+    const updatedItem = { ...currentItem, ...dados };
+    
     await produtosOps.update(
       id,
       dados,
       async () => {
-        const updated = produtosRef.current.map(p => 
-          p.id === id ? { ...p, ...dados } : p
-        );
-        await configurationService.saveProdutos(updated);
+        // Usar o item já mesclado, não reprocessar do ref
+        await configurationService.saveProdutos([updatedItem]);
+        console.log('✅ [atualizarProduto] Salvo:', updatedItem);
       }
     );
   }, [suppress]);
@@ -621,12 +650,23 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
   const atualizarEtapa = useCallback(async (id: string, dados: Partial<EtapaTrabalho>) => {
     suppress(id);
     
+    // Capturar o item atual ANTES do update otimista
+    const currentItem = etapasRef.current.find(e => e.id === id);
+    if (!currentItem) {
+      console.error('[atualizarEtapa] Item not found:', id);
+      toast.error('Etapa não encontrada');
+      return;
+    }
+    
+    const updatedItem = { ...currentItem, ...dados };
+    
     await etapasOps.update(
       id,
       dados,
       async () => {
-        const updated = etapasRef.current.map(e => e.id === id ? { ...e, ...dados } : e);
-        await configurationService.saveEtapas(updated);
+        // Usar o item já mesclado, não reprocessar do ref
+        await configurationService.saveEtapas([updatedItem]);
+        console.log('✅ [atualizarEtapa] Salvo:', updatedItem);
       }
     );
   }, [suppress]);
