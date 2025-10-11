@@ -39,13 +39,23 @@ class ConfigurationService {
       loadEtapas: () => [],
       saveEtapas: async () => {}
     } as ConfigurationStorageAdapter;
+    
+    // Listen to auth changes to reinitialize adapter
+    supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        console.log('🔄 User signed in, resetting adapter for reinitialization');
+        this.asyncAdapter = null;
+        this.initialized = false;
+      }
+    });
   }
 
   /**
    * Inicializa o serviço com o adapter correto baseado no estado de autenticação
    */
   async initialize(): Promise<void> {
-    if (this.initialized) return;
+    // Allow re-initialization until asyncAdapter is set
+    if (this.initialized && this.asyncAdapter) return;
 
     try {
       const { data: user } = await supabase.auth.getUser();

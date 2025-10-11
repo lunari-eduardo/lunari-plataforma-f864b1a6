@@ -75,7 +75,8 @@ export class SupabaseConfigurationAdapterAsync {
         id: categoria.id,
         user_id: user.user.id,
         nome: categoria.nome,
-        cor: categoria.cor
+        cor: categoria.cor,
+        updated_at: new Date().toISOString()
       }));
 
       const { error } = await supabase
@@ -225,8 +226,7 @@ export class SupabaseConfigurationAdapterAsync {
     try {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) {
-        console.log('📦 User not authenticated, skipping save');
-        return;
+        throw new Error('User not authenticated');
       }
 
       if (pacotes.length === 0) {
@@ -399,8 +399,7 @@ export class SupabaseConfigurationAdapterAsync {
     try {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) {
-        console.log('🛍️ User not authenticated, skipping save');
-        return;
+        throw new Error('User not authenticated');
       }
 
       if (produtos.length === 0) {
@@ -571,8 +570,7 @@ export class SupabaseConfigurationAdapterAsync {
     try {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) {
-        console.log('📋 User not authenticated, skipping save');
-        return;
+        throw new Error('User not authenticated');
       }
 
       if (etapas.length === 0) {
