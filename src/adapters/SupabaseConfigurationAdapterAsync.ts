@@ -61,8 +61,17 @@ export class SupabaseConfigurationAdapterAsync {
         throw new Error('User not authenticated');
       }
 
+      // ✅ Deduplicar por ID para evitar "ON CONFLICT DO UPDATE"
+      const uniqueCategorias = Array.from(
+        new Map(categorias.map(c => [c.id, c])).values()
+      );
+
+      if (uniqueCategorias.length < categorias.length) {
+        console.log(`💾 Removed ${categorias.length - uniqueCategorias.length} duplicate categorias`);
+      }
+
       // Upsert todas as categorias
-      const categoriasData = categorias.map(categoria => ({
+      const categoriasData = uniqueCategorias.map(categoria => ({
         id: categoria.id,
         user_id: user.user.id,
         nome: categoria.nome,
@@ -80,7 +89,7 @@ export class SupabaseConfigurationAdapterAsync {
         throw error;
       }
 
-      console.log(`Successfully saved ${categorias.length} categorias to Supabase`);
+      console.log(`✅ Successfully saved ${uniqueCategorias.length} categorias to Supabase`);
     } catch (error) {
       console.error('Failed to save categorias:', error);
       toast.error('Erro ao salvar categorias. Dados podem não estar sincronizados.');
@@ -225,8 +234,17 @@ export class SupabaseConfigurationAdapterAsync {
         return;
       }
 
+      // ✅ Deduplicar por ID para evitar "ON CONFLICT DO UPDATE"
+      const uniquePacotes = Array.from(
+        new Map(pacotes.map(p => [p.id, p])).values()
+      );
+
+      if (uniquePacotes.length < pacotes.length) {
+        console.log(`📦 Removed ${pacotes.length - uniquePacotes.length} duplicate pacotes`);
+      }
+
       // Transform to Supabase format
-      const supabaseData = pacotes.map(pacote => ({
+      const supabaseData = uniquePacotes.map(pacote => ({
         id: pacote.id,
         user_id: user.user.id,
         nome: pacote.nome,
@@ -250,7 +268,7 @@ export class SupabaseConfigurationAdapterAsync {
         throw error;
       }
 
-      console.log(`📦 Successfully saved ${pacotes.length} pacotes to Supabase`);
+      console.log(`📦 Successfully saved ${uniquePacotes.length} pacotes to Supabase`);
     } catch (error) {
       console.error('📦 Error in savePacotes:', error);
       throw error;
@@ -390,8 +408,17 @@ export class SupabaseConfigurationAdapterAsync {
         return;
       }
 
+      // ✅ Deduplicar por ID para evitar "ON CONFLICT DO UPDATE"
+      const uniqueProdutos = Array.from(
+        new Map(produtos.map(p => [p.id, p])).values()
+      );
+
+      if (uniqueProdutos.length < produtos.length) {
+        console.log(`🛍️ Removed ${produtos.length - uniqueProdutos.length} duplicate produtos`);
+      }
+
       // Transform to Supabase format
-      const supabaseData = produtos.map(produto => ({
+      const supabaseData = uniqueProdutos.map(produto => ({
         id: produto.id,
         user_id: user.user.id,
         nome: produto.nome,
@@ -413,7 +440,7 @@ export class SupabaseConfigurationAdapterAsync {
         throw error;
       }
 
-      console.log(`🛍️ Successfully saved ${produtos.length} produtos to Supabase`);
+      console.log(`🛍️ Successfully saved ${uniqueProdutos.length} produtos to Supabase`);
     } catch (error) {
       console.error('🛍️ Error in saveProdutos:', error);
       throw error;
@@ -553,8 +580,17 @@ export class SupabaseConfigurationAdapterAsync {
         return;
       }
 
+      // ✅ Deduplicar por ID para evitar "ON CONFLICT DO UPDATE"
+      const uniqueEtapas = Array.from(
+        new Map(etapas.map(e => [e.id, e])).values()
+      );
+
+      if (uniqueEtapas.length < etapas.length) {
+        console.log(`📋 Removed ${etapas.length - uniqueEtapas.length} duplicate etapas`);
+      }
+
       // Transform to Supabase format
-      const supabaseData = etapas.map(etapa => ({
+      const supabaseData = uniqueEtapas.map(etapa => ({
         id: etapa.id,
         user_id: user.user.id,
         nome: etapa.nome,
@@ -576,7 +612,7 @@ export class SupabaseConfigurationAdapterAsync {
         throw error;
       }
 
-      console.log(`📋 Successfully saved ${etapas.length} etapas to Supabase`);
+      console.log(`📋 Successfully saved ${uniqueEtapas.length} etapas to Supabase`);
     } catch (error) {
       console.error('📋 Error in saveEtapas:', error);
       throw error;

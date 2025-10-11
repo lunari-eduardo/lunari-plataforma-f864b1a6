@@ -326,13 +326,19 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
       return;
     }
     
+    console.log('📋 [adicionarCategoria] Iniciando...', { categoria, currentCount: categoriasRef.current.length });
+    
     isOwnUpdateRef.current = true;
     const newCategoria: Categoria = { id: crypto.randomUUID(), ...categoria };
+    
+    console.log('📋 [adicionarCategoria] Nova categoria criada:', newCategoria);
     
     await categoriasOps.add(
       newCategoria,
       async () => {
-        await configurationService.saveCategorias([...categoriasRef.current, newCategoria]);
+        console.log('📋 [adicionarCategoria] Salvando no Supabase...');
+        await configurationService.saveCategorias([newCategoria]);
+        console.log('📋 [adicionarCategoria] Salvo com sucesso!');
       }
     );
     
@@ -382,16 +388,22 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
       return;
     }
     
+    console.log('📦 [adicionarPacote] Iniciando...', { pacote, currentCount: pacotesRef.current.length });
+    
     isOwnUpdateRef.current = true;
     const newPacote: Pacote = { 
       id: crypto.randomUUID(), 
       ...pacote
     };
     
+    console.log('📦 [adicionarPacote] Novo pacote criado:', newPacote);
+    
     await pacotesOps.add(
       newPacote,
       async () => {
-        await configurationService.savePacotes([...pacotesRef.current, newPacote]);
+        console.log('📦 [adicionarPacote] Salvando no Supabase...');
+        await configurationService.savePacotes([newPacote]);
+        console.log('📦 [adicionarPacote] Salvo com sucesso!');
       }
     );
     
@@ -439,13 +451,19 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
       return;
     }
     
+    console.log('🛍️ [adicionarProduto] Iniciando...', { produto, currentCount: produtosRef.current.length });
+    
     isOwnUpdateRef.current = true;
     const newProduto: Produto = { id: crypto.randomUUID(), ...produto };
+    
+    console.log('🛍️ [adicionarProduto] Novo produto criado:', newProduto);
     
     await produtosOps.add(
       newProduto,
       async () => {
-        await configurationService.saveProdutos([...produtosRef.current, newProduto]);
+        console.log('🛍️ [adicionarProduto] Salvando no Supabase...');
+        await configurationService.saveProdutos([newProduto]);
+        console.log('🛍️ [adicionarProduto] Salvo com sucesso!');
       }
     );
     
@@ -497,20 +515,27 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
       return;
     }
     
+    console.log('📋 [adicionarEtapa] Iniciando...', { etapa, currentCount: etapasRef.current.length });
+    
     isOwnUpdateRef.current = true;
     const ordem = etapasRef.current.length > 0 
       ? Math.max(...etapasRef.current.map(e => e.ordem)) + 1 
       : 1;
     const newEtapa: EtapaTrabalho = { id: crypto.randomUUID(), ...etapa, ordem };
     
+    console.log('📋 [adicionarEtapa] Nova etapa criada:', newEtapa);
+    
     await etapasOps.add(
       newEtapa,
       async () => {
-        await configurationService.saveEtapas([...etapasRef.current, newEtapa]);
+        console.log('📋 [adicionarEtapa] Salvando no Supabase...');
+        await configurationService.saveEtapas([newEtapa]);
+        console.log('📋 [adicionarEtapa] Salvo com sucesso!');
       }
     );
     
     setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
+    console.log('📋 [adicionarEtapa] Concluído');
   }, []);
 
   const atualizarEtapa = useCallback(async (id: string, dados: Partial<EtapaTrabalho>) => {
