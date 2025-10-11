@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useRealtimeConfiguration } from '@/hooks/useRealtimeConfiguration';
 import { formatarMoeda } from '@/utils/precificacaoUtils';
 import { calcularMargemLucro } from '@/utils/productUtils';
@@ -37,7 +38,7 @@ export default function Produtos({ pacotes }: ProdutosProps) {
   }, [pacotes]);
   
   const isMobile = useIsMobile();
-  const { confirm } = useConfirmDialog();
+  const { confirm, dialogState, handleConfirm, handleCancel, handleClose } = useConfirmDialog();
 
   // ============= ESTADO LOCAL =============
   
@@ -251,6 +252,14 @@ export default function Produtos({ pacotes }: ProdutosProps) {
         onOpenChange={setModalEditOpen}
         produto={produtoEditando}
         onSave={atualizarProduto}
+      />
+      
+      {/* Dialog de confirmação */}
+      <ConfirmDialog
+        state={dialogState}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
+        onClose={handleClose}
       />
     </div>
   );
