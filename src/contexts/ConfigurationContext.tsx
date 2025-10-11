@@ -91,15 +91,50 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => { produtosRef.current = produtosState.data; }, [produtosState.data]);
   useEffect(() => { etapasRef.current = etapasState.data; }, [etapasState.data]);
 
-  // Flag to ignore own updates (prevents loops)
-  const isOwnUpdateRef = useRef(false);
+  // ID-based suppression with TTL (prevents realtime loops)
+  const suppressedIdsRef = useRef<Map<string, number>>(new Map());
+  const SUPPRESS_TTL = 3000; // 3 seconds
+  
+  const suppress = useCallback((id: string) => {
+    suppressedIdsRef.current.set(id, Date.now());
+    if (CONFIGURATION_DEBUG) console.log(`🔕 Suppressing ID: ${id}`);
+  }, []);
+  
+  const isSuppressed = useCallback((id: string): boolean => {
+    const timestamp = suppressedIdsRef.current.get(id);
+    if (!timestamp) return false;
+    
+    const elapsed = Date.now() - timestamp;
+    const expired = elapsed > SUPPRESS_TTL;
+    
+    if (expired) {
+      suppressedIdsRef.current.delete(id);
+      return false;
+    }
+    
+    if (CONFIGURATION_DEBUG) console.log(`🔕 ID ${id} is suppressed (${SUPPRESS_TTL - elapsed}ms remaining)`);
+    return true;
+  }, []);
+
+  // Helper functions for idempotent realtime operations
+  const upsertById = useCallback(<T extends { id: string }>(list: T[], item: T): T[] => {
+    const exists = list.some(i => i.id === item.id);
+    if (exists) {
+      return list.map(i => i.id === item.id ? item : i);
+    }
+    return [...list, item];
+  }, []);
+
+  const removeById = useCallback(<T extends { id: string }>(list: T[], id: string): T[] => {
+    return list.filter(i => i.id !== id);
+  }, []);
 
   // ==================== REALTIME CALLBACKS ====================
   
   const categoriasCallbacks = useMemo(() => ({
     onInsert: (payload: any) => {
-      if (isOwnUpdateRef.current) {
-        if (CONFIGURATION_DEBUG) console.log('🔕 [Categorias] Ignoring own INSERT');
+      if (isSuppressed(payload.new.id)) {
+        if (CONFIGURATION_DEBUG) console.log('🔕 [Categorias] Ignoring suppressed INSERT');
         return;
       }
       if (CONFIGURATION_DEBUG) console.log('➕ [Categorias] INSERT:', payload.new);
@@ -108,38 +143,35 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
         nome: payload.new.nome,
         cor: payload.new.cor
       };
-      categoriasOps.set([...categoriasRef.current, categoria]);
+      categoriasOps.set(upsertById(categoriasRef.current, categoria));
     },
     onUpdate: (payload: any) => {
-      if (isOwnUpdateRef.current) {
-        if (CONFIGURATION_DEBUG) console.log('🔕 [Categorias] Ignoring own UPDATE');
+      if (isSuppressed(payload.new.id)) {
+        if (CONFIGURATION_DEBUG) console.log('🔕 [Categorias] Ignoring suppressed UPDATE');
         return;
       }
       if (CONFIGURATION_DEBUG) console.log('✏️ [Categorias] UPDATE:', payload.new);
-      categoriasOps.set(
-        categoriasRef.current.map(c => 
-          c.id === payload.new.id 
-            ? { id: payload.new.id, nome: payload.new.nome, cor: payload.new.cor }
-            : c
-        )
-      );
+      const categoria: Categoria = {
+        id: payload.new.id,
+        nome: payload.new.nome,
+        cor: payload.new.cor
+      };
+      categoriasOps.set(upsertById(categoriasRef.current, categoria));
     },
     onDelete: (payload: any) => {
-      if (isOwnUpdateRef.current) {
-        if (CONFIGURATION_DEBUG) console.log('🔕 [Categorias] Ignoring own DELETE');
+      if (isSuppressed(payload.old.id)) {
+        if (CONFIGURATION_DEBUG) console.log('🔕 [Categorias] Ignoring suppressed DELETE');
         return;
       }
       if (CONFIGURATION_DEBUG) console.log('🗑️ [Categorias] DELETE:', payload.old);
-      categoriasOps.set(
-        categoriasRef.current.filter(c => c.id !== payload.old.id)
-      );
+      categoriasOps.set(removeById(categoriasRef.current, payload.old.id));
     }
-  }), []); // Empty deps - callbacks are stable, use refs internally
+  }), [isSuppressed, upsertById, removeById]); // Empty deps - callbacks are stable, use refs internally
 
   const pacotesCallbacks = useMemo(() => ({
     onInsert: (payload: any) => {
-      if (isOwnUpdateRef.current) {
-        if (CONFIGURATION_DEBUG) console.log('🔕 [Pacotes] Ignoring own INSERT');
+      if (isSuppressed(payload.new.id)) {
+        if (CONFIGURATION_DEBUG) console.log('🔕 [Pacotes] Ignoring suppressed INSERT');
         return;
       }
       if (CONFIGURATION_DEBUG) console.log('➕ [Pacotes] INSERT:', payload.new);
@@ -151,45 +183,38 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
         valor_foto_extra: payload.new.valor_foto_extra,
         produtosIncluidos: payload.new.produtos_incluidos || []
       };
-      pacotesOps.set([...pacotesRef.current, pacote]);
+      pacotesOps.set(upsertById(pacotesRef.current, pacote));
     },
     onUpdate: (payload: any) => {
-      if (isOwnUpdateRef.current) {
-        if (CONFIGURATION_DEBUG) console.log('🔕 [Pacotes] Ignoring own UPDATE');
+      if (isSuppressed(payload.new.id)) {
+        if (CONFIGURATION_DEBUG) console.log('🔕 [Pacotes] Ignoring suppressed UPDATE');
         return;
       }
       if (CONFIGURATION_DEBUG) console.log('✏️ [Pacotes] UPDATE:', payload.new);
-      pacotesOps.set(
-        pacotesRef.current.map(p =>
-          p.id === payload.new.id
-            ? {
-                id: payload.new.id,
-                nome: payload.new.nome,
-                valor_base: payload.new.valor_base,
-                categoria_id: payload.new.categoria_id,
-                valor_foto_extra: payload.new.valor_foto_extra,
-                produtosIncluidos: payload.new.produtos_incluidos || []
-              }
-            : p
-        )
-      );
+      const pacote: Pacote = {
+        id: payload.new.id,
+        nome: payload.new.nome,
+        valor_base: payload.new.valor_base,
+        categoria_id: payload.new.categoria_id,
+        valor_foto_extra: payload.new.valor_foto_extra,
+        produtosIncluidos: payload.new.produtos_incluidos || []
+      };
+      pacotesOps.set(upsertById(pacotesRef.current, pacote));
     },
     onDelete: (payload: any) => {
-      if (isOwnUpdateRef.current) {
-        if (CONFIGURATION_DEBUG) console.log('🔕 [Pacotes] Ignoring own DELETE');
+      if (isSuppressed(payload.old.id)) {
+        if (CONFIGURATION_DEBUG) console.log('🔕 [Pacotes] Ignoring suppressed DELETE');
         return;
       }
       if (CONFIGURATION_DEBUG) console.log('🗑️ [Pacotes] DELETE:', payload.old);
-      pacotesOps.set(
-        pacotesRef.current.filter(p => p.id !== payload.old.id)
-      );
+      pacotesOps.set(removeById(pacotesRef.current, payload.old.id));
     }
-  }), []);
+  }), [isSuppressed, upsertById, removeById]);
 
   const produtosCallbacks = useMemo(() => ({
     onInsert: (payload: any) => {
-      if (isOwnUpdateRef.current) {
-        if (CONFIGURATION_DEBUG) console.log('🔕 [Produtos] Ignoring own INSERT');
+      if (isSuppressed(payload.new.id)) {
+        if (CONFIGURATION_DEBUG) console.log('🔕 [Produtos] Ignoring suppressed INSERT');
         return;
       }
       if (CONFIGURATION_DEBUG) console.log('➕ [Produtos] INSERT:', payload.new);
@@ -199,38 +224,36 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
         preco_custo: payload.new.preco_custo,
         preco_venda: payload.new.preco_venda
       };
-      produtosOps.set([...produtosRef.current, produto]);
+      produtosOps.set(upsertById(produtosRef.current, produto));
     },
     onUpdate: (payload: any) => {
-      if (isOwnUpdateRef.current) {
-        if (CONFIGURATION_DEBUG) console.log('🔕 [Produtos] Ignoring own UPDATE');
+      if (isSuppressed(payload.new.id)) {
+        if (CONFIGURATION_DEBUG) console.log('🔕 [Produtos] Ignoring suppressed UPDATE');
         return;
       }
       if (CONFIGURATION_DEBUG) console.log('✏️ [Produtos] UPDATE:', payload.new);
-      produtosOps.set(
-        produtosRef.current.map(p =>
-          p.id === payload.new.id
-            ? { id: payload.new.id, nome: payload.new.nome, preco_custo: payload.new.preco_custo, preco_venda: payload.new.preco_venda }
-            : p
-        )
-      );
+      const produto: Produto = {
+        id: payload.new.id,
+        nome: payload.new.nome,
+        preco_custo: payload.new.preco_custo,
+        preco_venda: payload.new.preco_venda
+      };
+      produtosOps.set(upsertById(produtosRef.current, produto));
     },
     onDelete: (payload: any) => {
-      if (isOwnUpdateRef.current) {
-        if (CONFIGURATION_DEBUG) console.log('🔕 [Produtos] Ignoring own DELETE');
+      if (isSuppressed(payload.old.id)) {
+        if (CONFIGURATION_DEBUG) console.log('🔕 [Produtos] Ignoring suppressed DELETE');
         return;
       }
       if (CONFIGURATION_DEBUG) console.log('🗑️ [Produtos] DELETE:', payload.old);
-      produtosOps.set(
-        produtosRef.current.filter(p => p.id !== payload.old.id)
-      );
+      produtosOps.set(removeById(produtosRef.current, payload.old.id));
     }
-  }), []);
+  }), [isSuppressed, upsertById, removeById]);
 
   const etapasCallbacks = useMemo(() => ({
     onInsert: (payload: any) => {
-      if (isOwnUpdateRef.current) {
-        if (CONFIGURATION_DEBUG) console.log('🔕 [Etapas] Ignoring own INSERT');
+      if (isSuppressed(payload.new.id)) {
+        if (CONFIGURATION_DEBUG) console.log('🔕 [Etapas] Ignoring suppressed INSERT');
         return;
       }
       if (CONFIGURATION_DEBUG) console.log('➕ [Etapas] INSERT:', payload.new);
@@ -240,33 +263,31 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
         cor: payload.new.cor,
         ordem: payload.new.ordem
       };
-      etapasOps.set([...etapasRef.current, etapa].sort((a, b) => a.ordem - b.ordem));
+      etapasOps.set(upsertById(etapasRef.current, etapa).sort((a, b) => a.ordem - b.ordem));
     },
     onUpdate: (payload: any) => {
-      if (isOwnUpdateRef.current) {
-        if (CONFIGURATION_DEBUG) console.log('🔕 [Etapas] Ignoring own UPDATE');
+      if (isSuppressed(payload.new.id)) {
+        if (CONFIGURATION_DEBUG) console.log('🔕 [Etapas] Ignoring suppressed UPDATE');
         return;
       }
       if (CONFIGURATION_DEBUG) console.log('✏️ [Etapas] UPDATE:', payload.new);
-      etapasOps.set(
-        etapasRef.current.map(e =>
-          e.id === payload.new.id
-            ? { id: payload.new.id, nome: payload.new.nome, cor: payload.new.cor, ordem: payload.new.ordem }
-            : e
-        ).sort((a, b) => a.ordem - b.ordem)
-      );
+      const etapa: EtapaTrabalho = {
+        id: payload.new.id,
+        nome: payload.new.nome,
+        cor: payload.new.cor,
+        ordem: payload.new.ordem
+      };
+      etapasOps.set(upsertById(etapasRef.current, etapa).sort((a, b) => a.ordem - b.ordem));
     },
     onDelete: (payload: any) => {
-      if (isOwnUpdateRef.current) {
-        if (CONFIGURATION_DEBUG) console.log('🔕 [Etapas] Ignoring own DELETE');
+      if (isSuppressed(payload.old.id)) {
+        if (CONFIGURATION_DEBUG) console.log('🔕 [Etapas] Ignoring suppressed DELETE');
         return;
       }
       if (CONFIGURATION_DEBUG) console.log('🗑️ [Etapas] DELETE:', payload.old);
-      etapasOps.set(
-        etapasRef.current.filter(e => e.id !== payload.old.id)
-      );
+      etapasOps.set(removeById(etapasRef.current, payload.old.id));
     }
-  }), []);
+  }), [isSuppressed, upsertById, removeById]);
 
   // Setup realtime subscriptions (stable callbacks)
   useSupabaseRealtime('categorias', categoriasCallbacks, true);
@@ -328,8 +349,8 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
     
     console.log('📋 [adicionarCategoria] Iniciando...', { categoria, currentCount: categoriasRef.current.length });
     
-    isOwnUpdateRef.current = true;
     const newCategoria: Categoria = { id: crypto.randomUUID(), ...categoria };
+    suppress(newCategoria.id);
     
     console.log('📋 [adicionarCategoria] Nova categoria criada:', newCategoria);
     
@@ -341,12 +362,10 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
         console.log('📋 [adicionarCategoria] Salvo com sucesso!');
       }
     );
-    
-    setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
-  }, []);
+  }, [suppress]);
 
   const atualizarCategoria = useCallback(async (id: string, dados: Partial<Categoria>) => {
-    isOwnUpdateRef.current = true;
+    suppress(id);
     
     await categoriasOps.update(
       id,
@@ -356,12 +375,11 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
         await configurationService.saveCategorias(updated);
       }
     );
-    
-    setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
-  }, []);
+  }, [suppress]);
 
   const removerCategoria = useCallback(async (id: string): Promise<boolean> => {
-    isOwnUpdateRef.current = true;
+    console.log('🗑️ [removerCategoria] Iniciando exclusão:', id);
+    suppress(id);
     
     try {
       await categoriasOps.remove(
@@ -370,13 +388,15 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
           await configurationService.deleteCategoriaById(id);
         }
       );
-      setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
+      toast.success('Categoria excluída com sucesso');
+      console.log('✅ [removerCategoria] Categoria excluída:', id);
       return true;
     } catch (error) {
-      setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
+      console.error('❌ [removerCategoria] Erro ao excluir:', error);
+      toast.error('Erro ao excluir categoria');
       return false;
     }
-  }, []);
+  }, [suppress]);
 
   const canDeleteCategoria = useCallback((id: string) => {
     return configurationService.canDeleteCategoria(id, pacotesRef.current);
@@ -390,11 +410,11 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
     
     console.log('📦 [adicionarPacote] Iniciando...', { pacote, currentCount: pacotesRef.current.length });
     
-    isOwnUpdateRef.current = true;
     const newPacote: Pacote = { 
       id: crypto.randomUUID(), 
       ...pacote
     };
+    suppress(newPacote.id);
     
     console.log('📦 [adicionarPacote] Novo pacote criado:', newPacote);
     
@@ -406,12 +426,10 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
         console.log('📦 [adicionarPacote] Salvo com sucesso!');
       }
     );
-    
-    setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
-  }, []);
+  }, [suppress]);
 
   const atualizarPacote = useCallback(async (id: string, dados: Partial<Pacote>) => {
-    isOwnUpdateRef.current = true;
+    suppress(id);
     
     await pacotesOps.update(
       id,
@@ -423,12 +441,11 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
         await configurationService.savePacotes(updated);
       }
     );
-    
-    setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
-  }, []);
+  }, [suppress]);
 
   const removerPacote = useCallback(async (id: string): Promise<boolean> => {
-    isOwnUpdateRef.current = true;
+    console.log('🗑️ [removerPacote] Iniciando exclusão:', id);
+    suppress(id);
     
     try {
       await pacotesOps.remove(
@@ -437,13 +454,15 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
           await configurationService.deletePacoteById(id);
         }
       );
-      setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
+      toast.success('Pacote excluído com sucesso');
+      console.log('✅ [removerPacote] Pacote excluído:', id);
       return true;
     } catch (error) {
-      setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
+      console.error('❌ [removerPacote] Erro ao excluir:', error);
+      toast.error('Erro ao excluir pacote');
       return false;
     }
-  }, []);
+  }, [suppress]);
 
   const adicionarProduto = useCallback(async (produto: Omit<Produto, 'id'>) => {
     if (!produto.nome.trim()) {
@@ -453,8 +472,8 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
     
     console.log('🛍️ [adicionarProduto] Iniciando...', { produto, currentCount: produtosRef.current.length });
     
-    isOwnUpdateRef.current = true;
     const newProduto: Produto = { id: crypto.randomUUID(), ...produto };
+    suppress(newProduto.id);
     
     console.log('🛍️ [adicionarProduto] Novo produto criado:', newProduto);
     
@@ -466,12 +485,10 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
         console.log('🛍️ [adicionarProduto] Salvo com sucesso!');
       }
     );
-    
-    setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
-  }, []);
+  }, [suppress]);
 
   const atualizarProduto = useCallback(async (id: string, dados: Partial<Produto>) => {
-    isOwnUpdateRef.current = true;
+    suppress(id);
     
     await produtosOps.update(
       id,
@@ -483,12 +500,11 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
         await configurationService.saveProdutos(updated);
       }
     );
-    
-    setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
-  }, []);
+  }, [suppress]);
 
   const removerProduto = useCallback(async (id: string): Promise<boolean> => {
-    isOwnUpdateRef.current = true;
+    console.log('🗑️ [removerProduto] Iniciando exclusão:', id);
+    suppress(id);
     
     try {
       await produtosOps.remove(
@@ -497,13 +513,15 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
           await configurationService.deleteProdutoById(id);
         }
       );
-      setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
+      toast.success('Produto excluído com sucesso');
+      console.log('✅ [removerProduto] Produto excluído:', id);
       return true;
     } catch (error) {
-      setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
+      console.error('❌ [removerProduto] Erro ao excluir:', error);
+      toast.error('Erro ao excluir produto');
       return false;
     }
-  }, []);
+  }, [suppress]);
 
   const canDeleteProduto = useCallback((id: string) => {
     return configurationService.canDeleteProduto(id, pacotesRef.current);
@@ -517,11 +535,11 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
     
     console.log('📋 [adicionarEtapa] Iniciando...', { etapa, currentCount: etapasRef.current.length });
     
-    isOwnUpdateRef.current = true;
     const ordem = etapasRef.current.length > 0 
       ? Math.max(...etapasRef.current.map(e => e.ordem)) + 1 
       : 1;
     const newEtapa: EtapaTrabalho = { id: crypto.randomUUID(), ...etapa, ordem };
+    suppress(newEtapa.id);
     
     console.log('📋 [adicionarEtapa] Nova etapa criada:', newEtapa);
     
@@ -534,12 +552,11 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     );
     
-    setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
     console.log('📋 [adicionarEtapa] Concluído');
-  }, []);
+  }, [suppress]);
 
   const atualizarEtapa = useCallback(async (id: string, dados: Partial<EtapaTrabalho>) => {
-    isOwnUpdateRef.current = true;
+    suppress(id);
     
     await etapasOps.update(
       id,
@@ -549,12 +566,11 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
         await configurationService.saveEtapas(updated);
       }
     );
-    
-    setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
-  }, []);
+  }, [suppress]);
 
   const removerEtapa = useCallback(async (id: string): Promise<boolean> => {
-    isOwnUpdateRef.current = true;
+    console.log('🗑️ [removerEtapa] Iniciando exclusão:', id);
+    suppress(id);
     
     try {
       await etapasOps.remove(
@@ -563,16 +579,18 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
           await configurationService.deleteEtapaById(id);
         }
       );
-      setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
+      toast.success('Etapa excluída com sucesso');
+      console.log('✅ [removerEtapa] Etapa excluída:', id);
       return true;
     } catch (error) {
-      setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
+      console.error('❌ [removerEtapa] Erro ao excluir:', error);
+      toast.error('Erro ao excluir etapa');
       return false;
     }
-  }, []);
+  }, [suppress]);
 
   const moverEtapa = useCallback(async (id: string, direcao: 'cima' | 'baixo') => {
-    isOwnUpdateRef.current = true;
+    suppress(id);
     
     const etapa = etapasRef.current.find(e => e.id === id);
     if (!etapa) return;
@@ -583,6 +601,7 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
     if (direcao === 'cima' && currentIndex > 0) {
       const targetEtapa = sorted[currentIndex - 1];
       const tempOrdem = etapa.ordem;
+      suppress(targetEtapa.id);
       
       await etapasOps.update(id, { ordem: targetEtapa.ordem }, async () => {
         const updated = etapasRef.current.map(e => {
@@ -595,6 +614,7 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
     } else if (direcao === 'baixo' && currentIndex < sorted.length - 1) {
       const targetEtapa = sorted[currentIndex + 1];
       const tempOrdem = etapa.ordem;
+      suppress(targetEtapa.id);
       
       await etapasOps.update(id, { ordem: targetEtapa.ordem }, async () => {
         const updated = etapasRef.current.map(e => {
@@ -605,9 +625,7 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
         await configurationService.saveEtapas(updated);
       });
     }
-    
-    setTimeout(() => { isOwnUpdateRef.current = false; }, 500);
-  }, []);
+  }, [suppress]);
 
   // ==================== COMPUTED VALUES ====================
   
