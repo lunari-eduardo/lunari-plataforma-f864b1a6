@@ -365,8 +365,6 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [suppress]);
 
   const atualizarCategoria = useCallback(async (id: string, dados: Partial<Categoria>): Promise<void> => {
-    suppress(id);
-    
     // Capturar o item atual ANTES do update otimista
     const currentItem = categoriasRef.current.find(c => c.id === id);
     if (!currentItem) {
@@ -465,8 +463,6 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [suppress]);
 
   const atualizarPacote = useCallback(async (id: string, dados: Partial<Pacote>): Promise<void> => {
-    suppress(id);
-    
     // Capturar o item atual ANTES do update otimista
     const currentItem = pacotesRef.current.find(p => p.id === id);
     if (!currentItem) {
@@ -546,8 +542,6 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [suppress]);
 
   const atualizarProduto = useCallback(async (id: string, dados: Partial<Produto>): Promise<void> => {
-    suppress(id);
-    
     // Capturar o item atual ANTES do update otimista
     const currentItem = produtosRef.current.find(p => p.id === id);
     if (!currentItem) {
@@ -648,8 +642,6 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [suppress]);
 
   const atualizarEtapa = useCallback(async (id: string, dados: Partial<EtapaTrabalho>): Promise<void> => {
-    suppress(id);
-    
     // Capturar o item atual ANTES do update otimista
     const currentItem = etapasRef.current.find(e => e.id === id);
     if (!currentItem) {
