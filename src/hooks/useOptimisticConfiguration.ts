@@ -194,8 +194,16 @@ export function useOptimisticConfiguration<T extends { id: string }>(
       return new Promise((resolve, reject) => {
         operationQueueRef.current.push(async () => {
           const itemToRemove = state.data.find(item => item.id === id);
+          
           if (!itemToRemove) {
-            reject(new Error('Item not found'));
+            console.warn('[Optimistic] remove: item not found locally, calling persistFn anyway');
+            try {
+              await debouncedPersist(persistFn);
+              resolve();
+            } catch (error) {
+              console.error('[Optimistic] Remove persistFn failed:', error);
+              reject(error);
+            }
             return;
           }
 

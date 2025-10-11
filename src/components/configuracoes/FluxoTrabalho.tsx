@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Edit, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
@@ -7,7 +7,7 @@ interface FluxoTrabalhoProps {
   etapas: EtapaTrabalho[];
   onAdd: (etapa: Omit<EtapaTrabalho, 'id' | 'ordem'>) => void;
   onUpdate: (id: string, dados: Partial<EtapaTrabalho>) => void;
-  onDelete: (id: string) => void;
+  onDelete: (id: string) => Promise<boolean>;
   onMove: (id: string, direcao: 'cima' | 'baixo') => void;
 }
 export default function FluxoTrabalho({
@@ -23,6 +23,12 @@ export default function FluxoTrabalho({
   });
   const [editandoEtapa, setEditandoEtapa] = useState<string | null>(null);
   const [editData, setEditData] = useState<Partial<EtapaTrabalho>>({});
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Memorizar lista ordenada para evitar mutação in-place
+  const etapasOrdenadas = useMemo(() => {
+    return [...etapas].sort((a, b) => a.ordem - b.ordem);
+  }, [etapas]);
   const adicionarEtapa = () => {
     if (novaEtapa.nome.trim() === '') {
       return; // Error handled by service
@@ -48,8 +54,13 @@ export default function FluxoTrabalho({
     setEditandoEtapa(null);
     setEditData({});
   };
-  const removerEtapa = (id: string) => {
-    onDelete(id);
+  const removerEtapa = async (id: string) => {
+    setDeletingId(id);
+    try {
+      await onDelete(id);
+    } finally {
+      setDeletingId(null);
+    }
   };
   const moverEtapa = (id: string, direcao: 'cima' | 'baixo') => {
     onMove(id, direcao);
@@ -107,7 +118,7 @@ export default function FluxoTrabalho({
           </div>
           
           <div className="divide-y divide-border">
-            {etapas.sort((a, b) => a.ordem - b.ordem).map((etapa, index) => <div key={etapa.id} className={`grid grid-cols-12 px-4 py-2 text-sm ${index % 2 === 0 ? 'bg-card' : 'bg-muted/30'} hover:bg-accent/50 transition-colors`}>
+            {etapasOrdenadas.map((etapa, index) => <div key={etapa.id} className={`grid grid-cols-12 px-4 py-2 text-sm ${index % 2 === 0 ? 'bg-card' : 'bg-muted/30'} hover:bg-accent/50 transition-colors`}>
                 {editandoEtapa === etapa.id ? <>
                     <div className="col-span-1 hidden sm:block">{etapa.ordem}</div>
                     <div className="col-span-7 sm:col-span-5 pr-2">
@@ -146,23 +157,23 @@ export default function FluxoTrabalho({
                       
                     </div>
                     <div className="flex justify-end gap-1 col-span-5 sm:col-span-2">
-                      <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => moverEtapa(etapa.id, 'cima')} disabled={etapa.ordem === 1}>
+                      <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => moverEtapa(etapa.id, 'cima')} disabled={etapa.ordem === 1 || deletingId === etapa.id}>
                         <ArrowUp className="h-3.5 w-3.5" />
                       </Button>
-                      <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => moverEtapa(etapa.id, 'baixo')} disabled={etapa.ordem === etapas.length}>
+                      <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => moverEtapa(etapa.id, 'baixo')} disabled={etapa.ordem === etapas.length || deletingId === etapa.id}>
                         <ArrowDown className="h-3.5 w-3.5" />
                       </Button>
-                      <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => iniciarEdicaoEtapa(etapa.id)}>
+                      <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => iniciarEdicaoEtapa(etapa.id)} disabled={deletingId === etapa.id}>
                         <Edit className="h-3.5 w-3.5" />
                       </Button>
-                      <Button variant="outline" size="icon" className="h-7 w-7 text-red-500 hover:text-red-600 hover:border-red-200" onClick={() => removerEtapa(etapa.id)}>
+                      <Button variant="outline" size="icon" className="h-7 w-7 text-red-500 hover:text-red-600 hover:border-red-200" onClick={() => removerEtapa(etapa.id)} disabled={deletingId === etapa.id}>
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
                   </>}
               </div>)}
             
-            {etapas.length === 0 && <div className="px-4 py-8 text-center text-sm text-muted-foreground bg-card">
+            {etapasOrdenadas.length === 0 && <div className="px-4 py-8 text-center text-sm text-muted-foreground bg-card">
                 Nenhuma etapa cadastrada. Adicione sua primeira etapa acima.
               </div>}
           </div>

@@ -378,25 +378,50 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [suppress]);
 
   const removerCategoria = useCallback(async (id: string): Promise<boolean> => {
-    console.log('🗑️ [removerCategoria] Iniciando exclusão:', id);
-    suppress(id);
+    console.log('🗑️ [removerCategoria] Iniciando exclusão', id);
     
-    try {
-      await categoriasOps.remove(
-        id,
-        async () => {
-          await configurationService.deleteCategoriaById(id);
-        }
+    if (!configurationService.canDeleteCategoria(id, pacotesRef.current)) {
+      const pacotesVinculados = pacotesRef.current
+        .filter(p => p.categoria_id === id)
+        .map(p => p.nome)
+        .join(', ');
+      
+      toast.error(
+        `Não é possível excluir esta categoria. Ela está sendo usada pelos pacotes: ${pacotesVinculados}`
       );
-      toast.success('Categoria excluída com sucesso');
-      console.log('✅ [removerCategoria] Categoria excluída:', id);
-      return true;
-    } catch (error) {
-      console.error('❌ [removerCategoria] Erro ao excluir:', error);
-      toast.error('Erro ao excluir categoria');
       return false;
     }
-  }, [suppress]);
+
+    const existsLocally = categoriasRef.current.some(c => c.id === id);
+    
+    if (existsLocally) {
+      suppress(id);
+      try {
+        await categoriasOps.remove(
+          id,
+          async () => {
+            await configurationService.deleteCategoriaById(id);
+          }
+        );
+      } catch (error) {
+        console.error('❌ [removerCategoria] Erro ao excluir', error);
+        toast.error('Erro ao excluir categoria. Alteração foi revertida.');
+        return false;
+      }
+    } else {
+      try {
+        await configurationService.deleteCategoriaById(id);
+      } catch (error) {
+        console.error('❌ [removerCategoria] Erro ao excluir diretamente', error);
+        toast.error('Erro ao excluir categoria.');
+        return false;
+      }
+    }
+    
+    toast.success('Categoria excluída com sucesso');
+    console.log('✅ [removerCategoria] Exclusão confirmada', id);
+    return true;
+  }, [categoriasOps, suppress]);
 
   const canDeleteCategoria = useCallback((id: string) => {
     return configurationService.canDeleteCategoria(id, pacotesRef.current);
@@ -444,25 +469,38 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [suppress]);
 
   const removerPacote = useCallback(async (id: string): Promise<boolean> => {
-    console.log('🗑️ [removerPacote] Iniciando exclusão:', id);
-    suppress(id);
+    console.log('🗑️ [removerPacote] Iniciando exclusão', id);
     
-    try {
-      await pacotesOps.remove(
-        id,
-        async () => {
-          await configurationService.deletePacoteById(id);
-        }
-      );
-      toast.success('Pacote excluído com sucesso');
-      console.log('✅ [removerPacote] Pacote excluído:', id);
-      return true;
-    } catch (error) {
-      console.error('❌ [removerPacote] Erro ao excluir:', error);
-      toast.error('Erro ao excluir pacote');
-      return false;
+    const existsLocally = pacotesRef.current.some(p => p.id === id);
+    
+    if (existsLocally) {
+      suppress(id);
+      try {
+        await pacotesOps.remove(
+          id,
+          async () => {
+            await configurationService.deletePacoteById(id);
+          }
+        );
+      } catch (error) {
+        console.error('❌ [removerPacote] Erro ao excluir', error);
+        toast.error('Erro ao excluir pacote. Alteração foi revertida.');
+        return false;
+      }
+    } else {
+      try {
+        await configurationService.deletePacoteById(id);
+      } catch (error) {
+        console.error('❌ [removerPacote] Erro ao excluir diretamente', error);
+        toast.error('Erro ao excluir pacote.');
+        return false;
+      }
     }
-  }, [suppress]);
+    
+    toast.success('Pacote excluído com sucesso');
+    console.log('✅ [removerPacote] Exclusão confirmada', id);
+    return true;
+  }, [pacotesOps, suppress]);
 
   const adicionarProduto = useCallback(async (produto: Omit<Produto, 'id'>) => {
     if (!produto.nome.trim()) {
@@ -503,25 +541,50 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [suppress]);
 
   const removerProduto = useCallback(async (id: string): Promise<boolean> => {
-    console.log('🗑️ [removerProduto] Iniciando exclusão:', id);
-    suppress(id);
+    console.log('🗑️ [removerProduto] Iniciando exclusão', id);
     
-    try {
-      await produtosOps.remove(
-        id,
-        async () => {
-          await configurationService.deleteProdutoById(id);
-        }
+    if (!configurationService.canDeleteProduto(id, pacotesRef.current)) {
+      const pacotesVinculados = pacotesRef.current
+        .filter(p => p.produtosIncluidos?.some(pid => pid.produtoId === id))
+        .map(p => p.nome)
+        .join(', ');
+      
+      toast.error(
+        `Não é possível excluir este produto. Ele está sendo usado pelos pacotes: ${pacotesVinculados}`
       );
-      toast.success('Produto excluído com sucesso');
-      console.log('✅ [removerProduto] Produto excluído:', id);
-      return true;
-    } catch (error) {
-      console.error('❌ [removerProduto] Erro ao excluir:', error);
-      toast.error('Erro ao excluir produto');
       return false;
     }
-  }, [suppress]);
+
+    const existsLocally = produtosRef.current.some(p => p.id === id);
+    
+    if (existsLocally) {
+      suppress(id);
+      try {
+        await produtosOps.remove(
+          id,
+          async () => {
+            await configurationService.deleteProdutoById(id);
+          }
+        );
+      } catch (error) {
+        console.error('❌ [removerProduto] Erro ao excluir', error);
+        toast.error('Erro ao excluir produto. Alteração foi revertida.');
+        return false;
+      }
+    } else {
+      try {
+        await configurationService.deleteProdutoById(id);
+      } catch (error) {
+        console.error('❌ [removerProduto] Erro ao excluir diretamente', error);
+        toast.error('Erro ao excluir produto.');
+        return false;
+      }
+    }
+    
+    toast.success('Produto excluído com sucesso');
+    console.log('✅ [removerProduto] Exclusão confirmada', id);
+    return true;
+  }, [produtosOps, suppress]);
 
   const canDeleteProduto = useCallback((id: string) => {
     return configurationService.canDeleteProduto(id, pacotesRef.current);
@@ -569,25 +632,38 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [suppress]);
 
   const removerEtapa = useCallback(async (id: string): Promise<boolean> => {
-    console.log('🗑️ [removerEtapa] Iniciando exclusão:', id);
-    suppress(id);
+    console.log('🗑️ [removerEtapa] Iniciando exclusão', id);
     
-    try {
-      await etapasOps.remove(
-        id,
-        async () => {
-          await configurationService.deleteEtapaById(id);
-        }
-      );
-      toast.success('Etapa excluída com sucesso');
-      console.log('✅ [removerEtapa] Etapa excluída:', id);
-      return true;
-    } catch (error) {
-      console.error('❌ [removerEtapa] Erro ao excluir:', error);
-      toast.error('Erro ao excluir etapa');
-      return false;
+    const existsLocally = etapasRef.current.some(e => e.id === id);
+    
+    if (existsLocally) {
+      suppress(id);
+      try {
+        await etapasOps.remove(
+          id,
+          async () => {
+            await configurationService.deleteEtapaById(id);
+          }
+        );
+      } catch (error) {
+        console.error('❌ [removerEtapa] Erro ao excluir', error);
+        toast.error('Erro ao excluir etapa. Alteração foi revertida.');
+        return false;
+      }
+    } else {
+      try {
+        await configurationService.deleteEtapaById(id);
+      } catch (error) {
+        console.error('❌ [removerEtapa] Erro ao excluir diretamente', error);
+        toast.error('Erro ao excluir etapa.');
+        return false;
+      }
     }
-  }, [suppress]);
+    
+    toast.success('Etapa excluída com sucesso');
+    console.log('✅ [removerEtapa] Exclusão confirmada', id);
+    return true;
+  }, [etapasOps, suppress]);
 
   const moverEtapa = useCallback(async (id: string, direcao: 'cima' | 'baixo') => {
     suppress(id);

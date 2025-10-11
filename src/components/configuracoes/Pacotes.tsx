@@ -16,7 +16,7 @@ interface PacotesProps {
   pacotes: Pacote[];
   onAdd: (pacote: Omit<Pacote, 'id'>) => void;
   onUpdate: (id: string, dados: Partial<Pacote>) => void;
-  onDelete: (id: string) => void;
+  onDelete: (id: string) => Promise<boolean>;
   categorias: Categoria[];
   produtos: Produto[];
 }
@@ -34,6 +34,7 @@ export default function Pacotes({
   const [novoPacoteAberto, setNovoPacoteAberto] = useState(false);
   const [pacoteEdicao, setPacoteEdicao] = useState<Pacote | null>(null);
   const [filtrosAbertos, setFiltrosAbertos] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Debounce para filtro de nome
   const debouncedFiltroNome = useDebounce(filtroNome, 300);
@@ -60,8 +61,16 @@ export default function Pacotes({
     onUpdate(id, dados);
     setPacoteEdicao(null);
   }, [onUpdate]);
-  const removerPacote = useCallback((id: string) => {
-    onDelete(id);
+  const removerPacote = useCallback(async (id: string) => {
+    setDeletingId(id);
+    try {
+      const success = await onDelete(id);
+      if (!success) {
+        // Error toast already shown by context
+      }
+    } finally {
+      setDeletingId(null);
+    }
   }, [onDelete]);
   const limparFiltros = useCallback(() => {
     setFiltroCategoria('all');

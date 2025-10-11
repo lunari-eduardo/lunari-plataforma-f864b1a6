@@ -12,6 +12,7 @@ interface PacoteCardProps {
   produtos: Produto[];
   onEdit: (pacote: Pacote) => void;
   onDelete: (id: string) => void;
+  isDeleting?: boolean;
 }
 
 export default function PacoteCard({ 
@@ -19,7 +20,8 @@ export default function PacoteCard({
   categoria, 
   produtos, 
   onEdit, 
-  onDelete 
+  onDelete,
+  isDeleting = false
 }: PacoteCardProps) {
   const [isHovered, setIsHovered] = useState(false);
 
@@ -65,6 +67,7 @@ export default function PacoteCard({
               size="icon"
               className="h-7 w-7 text-lunar-textSecondary hover:text-lunar-accent hover:bg-lunar-accent/10"
               onClick={() => onEdit(pacote)}
+              disabled={isDeleting}
             >
               <Edit3 className="h-3.5 w-3.5" />
             </Button>
@@ -73,6 +76,7 @@ export default function PacoteCard({
               size="icon"
               className="h-7 w-7 text-lunar-textSecondary hover:text-destructive hover:bg-destructive/10"
               onClick={() => onDelete(pacote.id)}
+              disabled={isDeleting}
             >
               <Trash2 className="h-3.5 w-3.5" />
             </Button>

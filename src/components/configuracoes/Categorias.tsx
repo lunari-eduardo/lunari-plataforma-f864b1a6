@@ -126,7 +126,14 @@ export default function Categorias({
       // Toast será mostrado pelo hook useConfiguration
       return;
     }
-    await onDelete(id);
+    try {
+      const success = await onDelete(id);
+      if (!success) {
+        // Error toast already shown by context
+      }
+    } catch (error) {
+      console.error('Erro ao remover categoria:', error);
+    }
   }, [onDelete, podeRemoverCategoria, pacotes]);
 
   // Determinar se pode adicionar

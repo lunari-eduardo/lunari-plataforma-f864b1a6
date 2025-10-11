@@ -49,6 +49,7 @@ export default function Produtos({ pacotes }: ProdutosProps) {
   
   const [produtoEditando, setProdutoEditando] = useState<Produto | null>(null);
   const [modalEditOpen, setModalEditOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // ============= CÁLCULOS MEMOIZADOS =============
   
@@ -89,7 +90,12 @@ export default function Produtos({ pacotes }: ProdutosProps) {
     });
     
     if (confirmed) {
-      removerProduto(id);
+      setDeletingId(id);
+      try {
+        await removerProduto(id);
+      } finally {
+        setDeletingId(null);
+      }
     }
   }, [confirm, removerProduto]);
   
@@ -177,6 +183,7 @@ export default function Produtos({ pacotes }: ProdutosProps) {
                 onEdit={() => handleEditarProduto(produto)}
                 onDelete={() => handleRemoverProduto(produto.id)}
                 canDelete={canDelete}
+                isDeleting={deletingId === produto.id}
               />
             ))}
           </div>
@@ -216,6 +223,7 @@ export default function Produtos({ pacotes }: ProdutosProps) {
                       size="icon" 
                       className="h-7 w-7" 
                       onClick={() => handleEditarProduto(produto)}
+                      disabled={deletingId === produto.id}
                     >
                       <Edit className="h-3 w-3" />
                     </Button>
@@ -224,7 +232,7 @@ export default function Produtos({ pacotes }: ProdutosProps) {
                       size="icon" 
                       className="h-7 w-7 text-red-500 hover:text-red-600 hover:border-red-200" 
                       onClick={() => handleRemoverProduto(produto.id)}
-                      disabled={!canDelete}
+                      disabled={!canDelete || deletingId === produto.id}
                       title={!canDelete ? 'Produto usado em pacotes' : 'Remover produto'}
                     >
                       <Trash2 className="h-3 w-3" />

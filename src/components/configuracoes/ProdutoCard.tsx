@@ -16,6 +16,7 @@ interface ProdutoCardProps {
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   canDelete: boolean;
+  isDeleting?: boolean;
 }
 
 const ProdutoCard = memo(({
@@ -23,7 +24,8 @@ const ProdutoCard = memo(({
   margem,
   onEdit,
   onDelete,
-  canDelete
+  canDelete,
+  isDeleting = false
 }: ProdutoCardProps) => {
   return (
     <Card className="overflow-hidden">
@@ -37,6 +39,7 @@ const ProdutoCard = memo(({
                 size="icon" 
                 className="h-8 w-8" 
                 onClick={() => onEdit(produto.id)}
+                disabled={isDeleting}
               >
                 <Edit className="h-4 w-4" />
               </Button>
@@ -45,7 +48,7 @@ const ProdutoCard = memo(({
                 size="icon" 
                 className="h-8 w-8 text-red-500 hover:text-red-600 hover:border-red-200" 
                 onClick={() => onDelete(produto.id)}
-                disabled={!canDelete}
+                disabled={!canDelete || isDeleting}
                 title={!canDelete ? 'Produto usado em pacotes' : 'Remover produto'}
               >
                 <Trash2 className="h-4 w-4" />
