@@ -98,7 +98,7 @@ export function useOptimisticConfiguration<T extends { id: string }>(
             setState(prev => ({
               ...prev,
               pending: new Set([...prev.pending].filter(id => id !== operationId)),
-              syncing: prev.pending.size <= 1
+              syncing: prev.pending.size > 1
             }));
             
             rollbackRef.current.delete(operationId);
@@ -112,7 +112,7 @@ export function useOptimisticConfiguration<T extends { id: string }>(
               ...prev,
               data: prev.data.filter(i => i.id !== item.id),
               pending: new Set([...prev.pending].filter(id => id !== operationId)),
-              syncing: prev.pending.size <= 1
+              syncing: prev.pending.size > 1
             }));
             
             rollbackRef.current.delete(operationId);
@@ -157,7 +157,7 @@ export function useOptimisticConfiguration<T extends { id: string }>(
             setState(prev => ({
               ...prev,
               pending: new Set([...prev.pending].filter(pid => pid !== operationId)),
-              syncing: prev.pending.size <= 1
+              syncing: prev.pending.size > 1
             }));
             
             rollbackRef.current.delete(operationId);
@@ -173,7 +173,7 @@ export function useOptimisticConfiguration<T extends { id: string }>(
                 item.id === id ? previousItem : item
               ),
               pending: new Set([...prev.pending].filter(pid => pid !== operationId)),
-              syncing: prev.pending.size <= 1
+              syncing: prev.pending.size > 1
             }));
             
             rollbackRef.current.delete(operationId);
@@ -224,7 +224,7 @@ export function useOptimisticConfiguration<T extends { id: string }>(
             setState(prev => ({
               ...prev,
               pending: new Set([...prev.pending].filter(pid => pid !== operationId)),
-              syncing: prev.pending.size <= 1
+              syncing: prev.pending.size > 1
             }));
             
             rollbackRef.current.delete(operationId);
@@ -238,7 +238,7 @@ export function useOptimisticConfiguration<T extends { id: string }>(
               ...prev,
               data: [...prev.data, itemToRemove],
               pending: new Set([...prev.pending].filter(pid => pid !== operationId)),
-              syncing: prev.pending.size <= 1
+              syncing: prev.pending.size > 1
             }));
             
             rollbackRef.current.delete(operationId);
