@@ -146,7 +146,7 @@ export default function Produtos({ pacotes }: ProdutosProps) {
           <Button 
             onClick={handleAdicionarProduto} 
             className="flex items-center gap-2"
-            disabled={isLoading}
+            disabled={isLoading || novoProduto.nome.trim() === ''}
           >
             <Plus className="h-4 w-4" />
             <span>Adicionar Produto</span>
