@@ -5,7 +5,7 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
-import debounce from 'lodash.debounce';
+
 
 const OPTIMISTIC_DEBUG = false; // Set to true for debugging
 
@@ -39,16 +39,6 @@ export function useOptimisticConfiguration<T extends { id: string }>(
   const operationQueueRef = useRef<Array<() => Promise<void>>>([]);
   const isProcessingRef = useRef<boolean>(false);
   
-  // Reduced debounce to 100ms (was 300ms)
-  const debouncedPersist = useRef(
-    debounce(async (persistFn: () => Promise<void>) => {
-      try {
-        await persistFn();
-      } catch (error) {
-        throw error;
-      }
-    }, 100) // Reduced from 300ms
-  ).current;
 
   // Process queue sequentially
   const processQueue = useCallback(async () => {
@@ -92,7 +82,7 @@ export function useOptimisticConfiguration<T extends { id: string }>(
           rollbackRef.current.set(operationId, { type: 'add' });
 
           try {
-            await debouncedPersist(persistFn);
+            await persistFn();
             
             // Success
             setState(prev => ({
@@ -123,7 +113,7 @@ export function useOptimisticConfiguration<T extends { id: string }>(
 
         processQueue();
       });
-    }, [debouncedPersist, processQueue]),
+    }, [processQueue]),
 
     update: useCallback(async (id: string, updates: Partial<T>, persistFn: () => Promise<void>) => {
       const operationId = `update_${id}_${Date.now()}`;
@@ -151,7 +141,7 @@ export function useOptimisticConfiguration<T extends { id: string }>(
           rollbackRef.current.set(operationId, { type: 'update', previous: previousItem });
 
           try {
-            await debouncedPersist(persistFn);
+            await persistFn();
             
             // Success
             setState(prev => ({
@@ -184,7 +174,7 @@ export function useOptimisticConfiguration<T extends { id: string }>(
 
         processQueue();
       });
-    }, [state.data, debouncedPersist, processQueue]),
+    }, [state.data, processQueue]),
 
     remove: useCallback(async (id: string, persistFn: () => Promise<void>) => {
       const operationId = `remove_${id}_${Date.now()}`;
@@ -198,7 +188,7 @@ export function useOptimisticConfiguration<T extends { id: string }>(
           if (!itemToRemove) {
             console.warn('[Optimistic] remove: item not found locally, calling persistFn anyway');
             try {
-              await debouncedPersist(persistFn);
+              await persistFn();
               resolve();
             } catch (error) {
               console.error('[Optimistic] Remove persistFn failed:', error);
@@ -218,7 +208,7 @@ export function useOptimisticConfiguration<T extends { id: string }>(
           rollbackRef.current.set(operationId, { type: 'remove', previous: itemToRemove });
 
           try {
-            await debouncedPersist(persistFn);
+            await persistFn();
             
             // Success
             setState(prev => ({
@@ -249,7 +239,7 @@ export function useOptimisticConfiguration<T extends { id: string }>(
 
         processQueue();
       });
-    }, [state.data, debouncedPersist, processQueue]),
+    }, [state.data, processQueue]),
 
     set: useCallback((data: T[]) => {
       setState(prev => ({
