@@ -736,15 +736,26 @@ export function WorkflowTable({
 
                 {renderCell('category', <span className="text-xs text-center font-light">{session.categoria || 'N/A'}</span>)}
 
-                {renderCell('package', <div className="flex flex-col gap-1">
-                <WorkflowPackageCombobox key={`package-${session.id}-${session.pacote}`} value={session.pacote} onValueChange={packageData => {
-                    console.log('🔄 Pacote selecionado - ID:', packageData.id);
-
-                    // CRITICAL FIX: Only call one update - let the hook handle everything else
-                    handleFieldUpdateStable(session.id, 'pacote', packageData.id || packageData.nome);
-                  }} />
-                  <DataFreezingStatus regrasCongeladas={session.regrasDePrecoFotoExtraCongeladas} isCompact={true} />
-                </div>)}
+                {renderCell('package', (() => {
+                  const regrasCongeladas = session.regras_congeladas as any;
+                  const pacoteCongelado = regrasCongeladas?.pacote;
+                  const displayName = pacoteCongelado?.nome;
+                  
+                  return (
+                    <div className="flex flex-col gap-1">
+                      <WorkflowPackageCombobox 
+                        key={`package-${session.id}-${session.pacote}`} 
+                        value={session.pacote}
+                        displayName={displayName}
+                        onValueChange={packageData => {
+                          console.log('🔄 Pacote selecionado - ID:', packageData.id);
+                          handleFieldUpdateStable(session.id, 'pacote', packageData.id || packageData.nome);
+                        }} 
+                      />
+                      <DataFreezingStatus regrasCongeladas={session.regrasDePrecoFotoExtraCongeladas} isCompact={true} />
+                    </div>
+                  );
+                })())}
 
                 {renderCell('packageValue', renderEditableInput(session, 'valorPacote', session.valorPacote || '', 'text', 'R$ 0,00', true))}
 

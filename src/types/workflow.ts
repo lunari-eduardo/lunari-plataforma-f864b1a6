@@ -59,6 +59,8 @@ export interface SessionData {
   percentualAjusteOrcamento?: number;
   // Campo para regras congeladas
   regrasDePrecoFotoExtraCongeladas?: RegrasPrecoFotoExtraCongeladas;
+  // Campo para dados de precificação congelados completos (Supabase)
+  regras_congeladas?: any;
   // Campo para relacionar com cliente específico (CRM)
   clienteId?: string;
 }
