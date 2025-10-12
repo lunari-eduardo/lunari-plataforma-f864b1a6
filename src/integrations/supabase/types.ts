@@ -510,6 +510,198 @@ export type Database = {
         }
         Relationships: []
       }
+      fin_credit_cards: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          dia_fechamento: number
+          dia_vencimento: number
+          id: string
+          nome: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          dia_fechamento: number
+          dia_vencimento: number
+          id?: string
+          nome: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          dia_fechamento?: number
+          dia_vencimento?: number
+          id?: string
+          nome?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      fin_items_master: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          grupo_principal: string
+          id: string
+          is_default: boolean | null
+          nome: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          grupo_principal: string
+          id?: string
+          is_default?: boolean | null
+          nome: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          grupo_principal?: string
+          id?: string
+          is_default?: boolean | null
+          nome?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      fin_recurring_blueprints: {
+        Row: {
+          created_at: string | null
+          data_fim: string | null
+          data_inicio: string
+          dia_vencimento: number
+          id: string
+          is_valor_fixo: boolean | null
+          item_id: string
+          observacoes: string | null
+          updated_at: string | null
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          created_at?: string | null
+          data_fim?: string | null
+          data_inicio: string
+          dia_vencimento: number
+          id?: string
+          is_valor_fixo?: boolean | null
+          item_id: string
+          observacoes?: string | null
+          updated_at?: string | null
+          user_id: string
+          valor: number
+        }
+        Update: {
+          created_at?: string | null
+          data_fim?: string | null
+          data_inicio?: string
+          dia_vencimento?: number
+          id?: string
+          is_valor_fixo?: boolean | null
+          item_id?: string
+          observacoes?: string | null
+          updated_at?: string | null
+          user_id?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_recurring_blueprints_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "fin_items_master"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_transactions: {
+        Row: {
+          created_at: string | null
+          credit_card_id: string | null
+          data_compra: string | null
+          data_vencimento: string
+          id: string
+          item_id: string
+          observacoes: string | null
+          parcela_atual: number | null
+          parcela_total: number | null
+          parent_id: string | null
+          recurring_blueprint_id: string | null
+          status: string
+          updated_at: string | null
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          created_at?: string | null
+          credit_card_id?: string | null
+          data_compra?: string | null
+          data_vencimento: string
+          id?: string
+          item_id: string
+          observacoes?: string | null
+          parcela_atual?: number | null
+          parcela_total?: number | null
+          parent_id?: string | null
+          recurring_blueprint_id?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id: string
+          valor: number
+        }
+        Update: {
+          created_at?: string | null
+          credit_card_id?: string | null
+          data_compra?: string | null
+          data_vencimento?: string
+          id?: string
+          item_id?: string
+          observacoes?: string | null
+          parcela_atual?: number | null
+          parcela_total?: number | null
+          parent_id?: string | null
+          recurring_blueprint_id?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_transactions_credit_card_id_fkey"
+            columns: ["credit_card_id"]
+            isOneToOne: false
+            referencedRelation: "fin_credit_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_transactions_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "fin_items_master"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_transactions_recurring_blueprint_id_fkey"
+            columns: ["recurring_blueprint_id"]
+            isOneToOne: false
+            referencedRelation: "fin_recurring_blueprints"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       financial_items: {
         Row: {
           categoria: string
