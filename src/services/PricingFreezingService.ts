@@ -438,7 +438,8 @@ class PricingFreezingService {
   }
 
   /**
-   * Migra sessões existentes para incluir dados completos congelados
+   * FASE 4: Migra sessões existentes para incluir dados completos congelados
+   * Busca TODAS as sessões SEM regras_congeladas completas
    */
   async migrarSessoesExistentes() {
     try {
@@ -449,50 +450,45 @@ class PricingFreezingService {
         throw new Error('User not authenticated');
       }
 
-      // Busca todas as sessões que precisam de migração
+      // FASE 4: Buscar TODAS as sessões SEM regras_congeladas completas
       const { data: sessions, error } = await supabase
         .from('clientes_sessoes')
         .select('id, categoria, pacote, regras_congeladas')
-        .eq('user_id', user.user.id);
+        .eq('user_id', user.user.id)
+        .or('regras_congeladas.is.null,regras_congeladas->pacote.is.null');
 
       if (error) throw error;
 
-      console.log(`📦 Verificando ${sessions?.length || 0} sessões para migração de dados congelados...`);
+      console.log(`📦 [FASE 4] Verificando ${sessions?.length || 0} sessões SEM dados congelados completos...`);
 
       let migrated = 0;
       let skipped = 0;
 
-      // Para cada sessão, verifica se precisa de migração
+      // Para cada sessão, recongelar dados
       for (const session of sessions || []) {
         try {
-          let needsUpdate = false;
-          let regrasCongeladas = session.regras_congeladas;
-
-          // Se não tem regras congeladas ou está no formato antigo
-          if (!regrasCongeladas || (typeof regrasCongeladas === 'object' && 
-              regrasCongeladas !== null && !Array.isArray(regrasCongeladas) &&
-              (regrasCongeladas as any).modelo !== 'completo')) {
-            regrasCongeladas = await this.congelarDadosCompletos(session.pacote, session.categoria);
-            needsUpdate = true;
-          }
-
-          if (needsUpdate) {
-            await supabase
-              .from('clientes_sessoes')
-              .update({ regras_congeladas: regrasCongeladas as any })
-              .eq('id', session.id)
-              .eq('user_id', user.user.id);
-            
-            migrated++;
-          } else {
-            skipped++;
-          }
+          console.log(`🔄 Recongelando sessão: ${session.id} - pacote: ${session.pacote}`);
+          
+          const regrasCongeladas = await this.congelarDadosCompletos(
+            session.pacote,
+            session.categoria
+          );
+          
+          await supabase
+            .from('clientes_sessoes')
+            .update({ regras_congeladas: regrasCongeladas as any })
+            .eq('id', session.id)
+            .eq('user_id', user.user.id);
+          
+          migrated++;
+          console.log(`✅ Sessão ${session.id} recongelada com sucesso`);
         } catch (sessionError) {
           console.error('❌ Erro ao migrar sessão:', session.id, sessionError);
+          skipped++;
         }
       }
       
-      console.log(`✅ Migração de dados congelados concluída: ${migrated} migradas, ${skipped} ignoradas`);
+      console.log(`✅ [FASE 4] Migração concluída: ${migrated} recongeladas, ${skipped} com erro`);
       return { migrated, skipped };
       
     } catch (error) {

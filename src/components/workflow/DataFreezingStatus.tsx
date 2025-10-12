@@ -16,6 +16,33 @@ export const DataFreezingStatus = ({
 }: DataFreezingStatusProps) => {
   const hasFrozenData = regrasCongeladas?.modelo === 'completo' && regrasCongeladas?.pacote;
   const hasLegacyData = regrasCongeladas && regrasCongeladas.modelo !== 'completo';
+  
+  // FASE 2: Badge de ERRO para sessões sem dados congelados completos
+  if (!regrasCongeladas || !regrasCongeladas.pacote) {
+    return <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Badge variant="destructive" className={isCompact ? "h-5 px-1" : ""}>
+              <AlertTriangle className="w-3 h-3 mr-1" />
+              {!isCompact && "ERRO: Sem Dados"}
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent side="left" className="max-w-xs">
+            <div className="space-y-2">
+              <p className="font-semibold text-red-500">⚠️ Dados Históricos Ausentes</p>
+              <p className="text-sm">
+                Esta sessão não possui dados congelados completos. 
+                Edições em pacotes/produtos podem afetar esta sessão.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Clique em "Recongelar Dados" no menu do Workflow.
+              </p>
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>;
+  }
+  
   if (!regrasCongeladas) {
     return <TooltipProvider>
         <Tooltip>

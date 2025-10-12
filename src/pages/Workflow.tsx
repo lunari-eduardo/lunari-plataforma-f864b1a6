@@ -13,6 +13,8 @@ import { parseDateFromStorage } from "@/utils/dateUtils";
 import { useWorkflowMetrics } from '@/hooks/useWorkflowMetrics';
 import { WorkflowSyncButton } from '@/components/workflow/WorkflowSyncButton';
 import { usePricingMigration } from '@/hooks/usePricingMigration';
+import { Snowflake } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 import type { SessionData, CategoryOption, PackageOption, ProductOption } from '@/types/workflow';
 
 const removeAccents = (str: string) => {
@@ -338,6 +340,34 @@ export default function Workflow() {
     setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
   }, []);
 
+  // FASE 4: Recongelar todas as sessões manualmente
+  const recongelarTodasSessoes = useCallback(async () => {
+    try {
+      toast({
+        title: "Recongelando dados...",
+        description: "Processando todas as sessões. Isso pode levar alguns segundos.",
+      });
+
+      const { pricingFreezingService } = await import('@/services/PricingFreezingService');
+      const result = await pricingFreezingService.migrarSessoesExistentes();
+      
+      toast({
+        title: "✅ Recongelamento concluído",
+        description: `${result.migrated} sessões recongeladas com sucesso!`,
+      });
+      
+      // Recarregar sessões
+      window.location.reload();
+    } catch (error) {
+      console.error('❌ Erro ao recongelar sessões:', error);
+      toast({
+        title: "Erro ao recongelar",
+        description: "Ocorreu um erro ao recongelar os dados. Tente novamente.",
+        variant: "destructive",
+      });
+    }
+  }, []);
+
   // Get month name
   const getMonthName = (month: number) => {
     const monthNames = [
@@ -372,6 +402,15 @@ export default function Workflow() {
         <div className="flex items-center gap-4">
           <h1 className="text-3xl font-bold">Workflow</h1>
           <WorkflowSyncButton />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={recongelarTodasSessoes}
+            className="gap-2"
+          >
+            <Snowflake className="w-4 h-4" />
+            Recongelar Dados
+          </Button>
           <Button
             variant="outline"
             size="sm"

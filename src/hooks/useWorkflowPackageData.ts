@@ -13,68 +13,32 @@ export const useWorkflowPackageData = () => {
   // Helper function to resolve package data with ABSOLUTE PRIORITY for frozen data
   const resolvePackageData = useMemo(() => {
     return (session: WorkflowSession) => {
-      console.log('📦 Resolving package data for session:', session.id, 'package:', session.pacote);
+      console.log('📦 [FASE 2] Resolving package data for session:', session.id, 'package:', session.pacote);
       
-      // CRITICAL: ABSOLUTE PRIORITY for frozen data - NEVER override with dynamic data
+      // FASE 2: PRIORIDADE ABSOLUTA para dados congelados - NUNCA usar resolução dinâmica
       if (session.regras_congeladas?.pacote) {
         const frozenPackage = session.regras_congeladas.pacote;
-        console.log('❄️ Using FROZEN package data (ABSOLUTE PRIORITY - NO FALLBACKS):', frozenPackage);
+        console.log('❄️ Usando dados congelados do pacote (PRIORIDADE ABSOLUTA):', frozenPackage.nome);
         
-        // ALWAYS return frozen data when it exists - no dynamic resolution
         return {
           packageName: frozenPackage.nome,
           packageValue: frozenPackage.valorBase,
           packageFotoExtraValue: frozenPackage.valorFotoExtra,
-          categoria: frozenPackage.categoria
+          categoria: frozenPackage.categoria || session.categoria
         };
       }
       
-      // Dynamic resolution ONLY for new sessions without frozen data
-      console.log('🔄 No frozen data - using dynamic resolution for new session');
-      let packageName = session.pacote || '';
-      let packageValue = session.valor_total || 0;
-      let packageFotoExtraValue = 35;
-      let categoria = session.categoria || '';
-
-      if (session.pacote && pacotes.length > 0) {
-        const pkg = pacotes.find((p: any) => 
-          p.id === session.pacote || 
-          p.nome === session.pacote ||
-          String(p.id) === String(session.pacote)
-        );
-        
-        if (pkg) {
-          console.log('📦 Found package for new session (dynamic):', pkg.nome, 'ID:', pkg.id);
-          packageName = pkg.nome;
-          packageValue = Number(pkg.valor_base) || session.valor_total || 0;
-          packageFotoExtraValue = Number(pkg.valor_foto_extra) || 35;
-          
-          if (pkg.categoria_id && categorias.length > 0) {
-            const cat = categorias.find((c: any) => 
-              c.id === pkg.categoria_id || 
-              String(c.id) === String(pkg.categoria_id)
-            );
-            if (cat) {
-              categoria = cat.nome;
-              console.log('📂 Resolved category from package:', categoria);
-            }
-          } else if (session.categoria) {
-            categoria = session.categoria;
-          }
-        } else {
-          console.warn('📦 Package not found in configuration:', session.pacote);
-          packageName = typeof session.pacote === 'string' ? session.pacote : '';
-        }
-      }
-
+      // FALLBACK CRÍTICO: Se não tem dados congelados, exibir erro
+      console.error('❌ SESSÃO SEM DADOS CONGELADOS:', session.id, 'pacote:', session.pacote);
+      
       return {
-        packageName,
-        packageValue,
-        packageFotoExtraValue,
-        categoria
+        packageName: session.pacote || '⚠️ Pacote Indisponível',
+        packageValue: 0,
+        packageFotoExtraValue: 0,
+        categoria: session.categoria || ''
       };
     };
-  }, [pacotes, categorias]);
+  }, []); // NUNCA depender de pacotes/categorias do contexto global
 
   // Convert session to SessionData with frozen data priority
   const convertSessionToData = useMemo(() => {

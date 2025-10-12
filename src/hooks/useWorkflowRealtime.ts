@@ -142,6 +142,28 @@ export const useWorkflowRealtime = () => {
         })
       );
 
+      // FASE 1: Validar integridade dos dados congelados
+      const { pricingFreezingService } = await import('@/services/PricingFreezingService');
+
+      for (const session of sessionsWithPayments) {
+        if (!session.regras_congeladas?.pacote) {
+          console.warn('⚠️ Sessão sem dados congelados, recongelando:', session.id);
+          
+          const regrasCongeladas = await pricingFreezingService.congelarDadosCompletos(
+            session.pacote,
+            session.categoria
+          );
+          
+          await supabase
+            .from('clientes_sessoes')
+            .update({ regras_congeladas: regrasCongeladas as any })
+            .eq('id', session.id)
+            .eq('user_id', user.user.id);
+          
+          session.regras_congeladas = regrasCongeladas;
+        }
+      }
+
       console.log('💰 Loaded payments for sessions');
       setSessions(sessionsWithPayments);
       setError(null);
@@ -225,6 +247,13 @@ export const useWorkflowRealtime = () => {
       const currentSession = sessions.find(s => s.id === id);
       if (!currentSession) {
         console.warn('⚠️ Session not found for diff check:', id);
+      }
+
+      // FASE 3: PROTEÇÃO - NUNCA permitir que regras_congeladas seja sobrescrito com NULL
+      if ('regrasDePrecoFotoExtraCongeladas' in updates && 
+          (updates.regrasDePrecoFotoExtraCongeladas === null || updates.regrasDePrecoFotoExtraCongeladas === undefined)) {
+        console.warn('⚠️ Tentativa de sobrescrever regras_congeladas com NULL bloqueada');
+        delete updates.regrasDePrecoFotoExtraCongeladas;
       }
 
       // Create sanitized update map
