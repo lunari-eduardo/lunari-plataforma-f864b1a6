@@ -146,21 +146,22 @@ export const useWorkflowRealtime = () => {
       const { pricingFreezingService } = await import('@/services/PricingFreezingService');
 
       for (const session of sessionsWithPayments) {
-        if (!session.regras_congeladas?.pacote) {
+        const regrasCongeladas = session.regras_congeladas as any;
+        if (!regrasCongeladas?.pacote) {
           console.warn('⚠️ Sessão sem dados congelados, recongelando:', session.id);
           
-          const regrasCongeladas = await pricingFreezingService.congelarDadosCompletos(
+          const novasRegrasCongeladas = await pricingFreezingService.congelarDadosCompletos(
             session.pacote,
             session.categoria
           );
           
           await supabase
             .from('clientes_sessoes')
-            .update({ regras_congeladas: regrasCongeladas as any })
+            .update({ regras_congeladas: novasRegrasCongeladas as any })
             .eq('id', session.id)
             .eq('user_id', user.user.id);
           
-          session.regras_congeladas = regrasCongeladas;
+          session.regras_congeladas = novasRegrasCongeladas as any;
         }
       }
 
