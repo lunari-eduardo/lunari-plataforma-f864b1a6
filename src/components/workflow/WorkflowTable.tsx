@@ -737,7 +737,7 @@ export function WorkflowTable({
                 {renderCell('category', <span className="text-xs text-center font-light">{session.categoria || 'N/A'}</span>)}
 
                 {renderCell('package', (() => {
-                  const regrasCongeladas = session.regras_congeladas as any;
+                  const regrasCongeladas = session.regrasDePrecoFotoExtraCongeladas as any;
                   const pacoteCongelado = regrasCongeladas?.pacote;
                   const displayName = pacoteCongelado?.nome;
                   
