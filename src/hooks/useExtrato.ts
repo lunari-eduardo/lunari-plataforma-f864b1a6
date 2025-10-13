@@ -1,33 +1,26 @@
 /**
- * Hook principal do extrato - refatorado para usar hooks especializados
- * TODO: [SUPABASE] Este hook será simplificado quando migrarmos para queries Supabase
+ * Hook principal do extrato - 100% SUPABASE
  */
 
 import { useCallback } from 'react';
 import { LinhaExtrato } from '@/types/extrato';
 import { useExtratoData } from '@/hooks/useExtratoData';
 import { useExtratoFilters } from '@/hooks/useExtratoFilters';
-import { useExtratoCalculations } from '@/hooks/useExtratoCalculations';
+import { useExtratoCalculationsSupabase } from '@/hooks/useExtratoCalculationsSupabase';
 
 export function useExtrato() {
-  // ============= HOOKS ESPECIALIZADOS =============
+  // ============= HOOKS ESPECIALIZADOS SUPABASE =============
   const extratoData = useExtratoData();
   const filters = useExtratoFilters(extratoData.linhasExtrato);
-  const calculations = useExtratoCalculations(
+  const calculations = useExtratoCalculationsSupabase(
     filters.linhasFiltradas, 
-    filters.filtros,
-    {
-      transacoesFinanceiras: extratoData.transacoesFinanceiras,
-      pagamentosWorkflow: extratoData.pagamentosWorkflow,
-      itensFinanceiros: extratoData.itensFinanceiros
-    }
+    filters.filtros
   );
 
   // ============= DRILL-DOWN =============
   const abrirOrigem = useCallback((linha: LinhaExtrato) => {
-    // TODO: [SUPABASE] Implementar drill-down para modais específicos
-    // TODO: [SUPABASE] Criar queries para buscar detalhes da origem
-    console.log('Abrir origem:', linha);
+    console.log('📊 Abrir origem:', linha);
+    // TODO: Implementar modais de detalhes
   }, []);
 
   // ============= EXPORTAÇÃO =============

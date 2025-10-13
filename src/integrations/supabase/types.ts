@@ -1095,7 +1095,29 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      extrato_unificado: {
+        Row: {
+          cartao: string | null
+          categoria: string | null
+          categoria_session: string | null
+          cliente: string | null
+          created_at: string | null
+          data: string | null
+          descricao: string | null
+          id: string | null
+          observacoes: string | null
+          origem: string | null
+          parcela_atual: number | null
+          parcela_total: number | null
+          projeto: string | null
+          session_id: string | null
+          status: string | null
+          tipo: string | null
+          user_id: string | null
+          valor: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       calculate_manual_products_total: {
