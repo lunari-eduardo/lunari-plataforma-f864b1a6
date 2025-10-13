@@ -98,7 +98,7 @@ export function AppointmentDeleteConfirmModal({
                     <div className="space-y-1">
                       <p className="text-sm font-medium text-lunar-text">Cancelar agendamento (preservar histórico)</p>
                       <p className="text-xs text-lunar-textSecondary">
-                        Remove o agendamento e a sessão do workflow. Os pagamentos já realizados são preservados no histórico do cliente (sem valores pendentes)
+                        Remove o agendamento e oculta a sessão do workflow. Os valores pagos e dados da sessão ficam preservados no histórico do cliente (somente leitura)
                       </p>
                     </div>
                   </Label>

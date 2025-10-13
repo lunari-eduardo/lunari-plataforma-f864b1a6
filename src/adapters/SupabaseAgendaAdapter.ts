@@ -174,45 +174,35 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
       console.log(`💰 ${count || 0} pagamento(s) vinculado(s) a esta sessão`);
 
       if (preservePayments) {
-        // FASE 2: Delete session but preserve payments as orphans
-        console.log('💾 Preserving payments - orphaning payments first, then deleting session');
+        // NOVO: Marcar sessão como histórico em vez de deletar
+        console.log('💾 Preserving payments - marking session as historical');
         
-        // Step 1: Orphan payments by explicitly setting session_id to NULL
-        const { error: updateError, count: updatedCount } = await supabase
-          .from('clientes_transacoes')
-          .update({ 
-            session_id: null, 
-            updated_at: new Date().toISOString(),
-            updated_by: user.user.id 
-          })
-          .eq('session_id', workflowSession.session_id)
-          .eq('user_id', user.user.id);
-
-        if (updateError) {
-          console.error('❌ Erro ao desvincular pagamentos:', updateError);
-          throw new Error(`Falha ao desvincular pagamentos: ${updateError.message}`);
-        }
-
-        console.log(`✅ ${updatedCount || 0} pagamento(s) desvinculado(s) com sucesso`);
-
-        // Step 2: Now delete the session (no FK constraint violations)
-        const { data: deletedSession, error: deleteError } = await supabase
+        const { data: updatedSession, error: updateError } = await supabase
           .from('clientes_sessoes')
-          .delete()
+          .update({ 
+            appointment_id: null,
+            status: 'historico',
+            descricao: `${workflowSession.descricao || ''} (Agendamento cancelado)`.trim(),
+            observacoes: workflowSession.observacoes 
+              ? `${workflowSession.observacoes}\n\n[${new Date().toLocaleDateString()}] Agendamento cancelado - mantido apenas para histórico de pagamentos` 
+              : `[${new Date().toLocaleDateString()}] Agendamento cancelado - mantido apenas para histórico de pagamentos`,
+            updated_at: new Date().toISOString(),
+            updated_by: user.user.id
+          })
           .eq('id', workflowSession.id)
           .eq('user_id', user.user.id)
           .select();
 
-        if (deleteError) {
-          console.error('❌ Erro ao excluir sessão:', deleteError);
-          throw new Error(`Falha ao excluir sessão: ${deleteError.message}`);
+        if (updateError) {
+          console.error('❌ Erro ao marcar sessão como histórico:', updateError);
+          throw new Error(`Falha ao preservar histórico: ${updateError.message}`);
         }
 
-        if (!deletedSession || deletedSession.length === 0) {
-          console.warn('⚠️ Sessão não foi encontrada para exclusão');
+        if (!updatedSession || updatedSession.length === 0) {
+          console.warn('⚠️ Sessão não encontrada para atualização');
         }
 
-        console.log('✅ Sessão excluída, pagamentos preservados como órfãos (session_id = NULL)');
+        console.log('✅ Session marked as historical, payments preserved with context');
       } else {
         // FASE 1: Delete everything with robust error handling
         console.log('🗑️ Deleting session and all related data');
