@@ -210,4 +210,40 @@ export class SupabaseFinancialItemsAdapter {
       throw error;
     }
   }
+
+  /**
+   * FASE 1: Obter itens por grupo específico
+   */
+  static async getItemsByGroup(grupo: GrupoPrincipal): Promise<ItemFinanceiroSupabase[]> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Usuário não autenticado');
+
+      const { data, error } = await supabase
+        .from('fin_items_master')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('grupo_principal', grupo)
+        .eq('ativo', true)
+        .order('nome');
+
+      if (error) throw error;
+      
+      return (data || []).map(item => ({
+        id: item.id,
+        nome: item.nome,
+        grupo_principal: item.grupo_principal as GrupoPrincipal,
+        userId: item.user_id,
+        ativo: item.ativo,
+        criadoEm: item.created_at?.split('T')[0] || getCurrentDateString(),
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+        user_id: item.user_id,
+        is_default: item.is_default || false
+      }));
+    } catch (error) {
+      console.error('Erro ao buscar itens por grupo:', error);
+      throw error;
+    }
+  }
 }
