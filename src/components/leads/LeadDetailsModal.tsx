@@ -1,12 +1,12 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Calendar, Mail, Phone, MessageSquare, Clock } from 'lucide-react';
-import { formatDistanceToNowStrict } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { useMemo } from 'react';
-import type { Lead } from '@/types/leads';
-import LeadHistoryPanel from './LeadHistoryPanel';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Calendar, Mail, Phone, MessageSquare, Clock } from "lucide-react";
+import { formatDistanceToNowStrict } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { useMemo } from "react";
+import type { Lead } from "@/types/leads";
+import LeadHistoryPanel from "./LeadHistoryPanel";
 
 interface LeadDetailsModalProps {
   lead: Lead;
@@ -16,26 +16,20 @@ interface LeadDetailsModalProps {
   onDelete?: () => void;
 }
 
-export default function LeadDetailsModal({ 
-  lead, 
-  open, 
-  onOpenChange, 
-  onConvert, 
-  onDelete 
-}: LeadDetailsModalProps) {
+export default function LeadDetailsModal({ lead, open, onOpenChange, onConvert, onDelete }: LeadDetailsModalProps) {
   const timeAgo = useMemo(() => {
     try {
-      return formatDistanceToNowStrict(new Date(lead.dataCriacao), { 
-        addSuffix: true, 
-        locale: ptBR 
+      return formatDistanceToNowStrict(new Date(lead.dataCriacao), {
+        addSuffix: true,
+        locale: ptBR,
       });
     } catch {
-      return 'Data inválida';
+      return "Data inválida";
     }
   }, [lead.dataCriacao]);
 
-  const isConverted = lead.status === 'convertido';
-  const isLost = lead.status === 'perdido';
+  const isConverted = lead.status === "convertido";
+  const isLost = lead.status === "perdido";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -59,9 +53,7 @@ export default function LeadDetailsModal({
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-lunar-accent/10 flex items-center justify-center">
-                    <span className="text-sm font-medium text-lunar-accent">
-                      {lead.nome.charAt(0).toUpperCase()}
-                    </span>
+                    <span className="text-sm font-medium text-lunar-accent">{lead.nome.charAt(0).toUpperCase()}</span>
                   </div>
                   <div>
                     <p className="font-medium text-lunar-text">{lead.nome}</p>
@@ -100,10 +92,7 @@ export default function LeadDetailsModal({
             <div>
               <h3 className="font-medium text-lunar-text mb-2">Status</h3>
               <div className="flex items-center gap-2">
-                <Badge 
-                  variant={isConverted ? "default" : isLost ? "destructive" : "secondary"}
-                  className="text-xs"
-                >
+                <Badge variant={isConverted ? "default" : isLost ? "destructive" : "secondary"} className="text-xs">
                   {lead.status}
                 </Badge>
                 {lead.needsFollowUp && (
@@ -131,11 +120,7 @@ export default function LeadDetailsModal({
               </Button>
             )}
             {onDelete && (
-              <Button 
-                variant="destructive" 
-                onClick={onDelete}
-                className="px-4"
-              >
+              <Button variant="destructive" onClick={onDelete} className="px-4">
                 Excluir Lead
               </Button>
             )}
