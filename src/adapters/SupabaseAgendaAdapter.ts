@@ -4,6 +4,7 @@ import { AvailabilitySlot, AvailabilityType } from '@/types/availability';
 import { AgendaSettings } from '@/types/agenda-supabase';
 import { supabase } from '@/integrations/supabase/client';
 import { generateUniversalSessionId } from '@/types/appointments-supabase';
+import { formatCurrency } from '@/utils/financialUtils';
 
 /**
  * Supabase implementation for agenda data persistence
@@ -174,18 +175,34 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
       console.log(`💰 ${count || 0} pagamento(s) vinculado(s) a esta sessão`);
 
       if (preservePayments) {
-        // NOVO: Marcar sessão como histórico em vez de deletar
-        console.log('💾 Preserving payments - marking session as historical');
+        console.log('💾 Preserving payments - marking session as historical (payments only)');
+        
+        // Ler valor pago atual ANTES de zerar tudo
+        const valorPagoAtual = Number(workflowSession.valor_pago) || 0;
         
         const { data: updatedSession, error: updateError } = await supabase
           .from('clientes_sessoes')
           .update({ 
             appointment_id: null,
             status: 'historico',
-            descricao: `${workflowSession.descricao || ''} (Agendamento cancelado)`.trim(),
+            
+            // ✅ ZERAR TODOS OS VALORES (exceto valor_pago)
+            valor_total: valorPagoAtual, // Total = apenas o que foi pago
+            valor_base_pacote: 0,
+            valor_total_foto_extra: 0,
+            qtd_fotos_extra: 0,
+            valor_foto_extra: 0,
+            valor_adicional: 0,
+            desconto: 0,
+            produtos_incluidos: [], // Esvaziar array de produtos
+            regras_congeladas: null, // Limpar regras
+            
+            // ✅ MANTER contexto descritivo
+            descricao: `${workflowSession.pacote || workflowSession.descricao || ''} (Agendamento cancelado)`.trim(),
             observacoes: workflowSession.observacoes 
-              ? `${workflowSession.observacoes}\n\n[${new Date().toLocaleDateString()}] Agendamento cancelado - mantido apenas para histórico de pagamentos` 
-              : `[${new Date().toLocaleDateString()}] Agendamento cancelado - mantido apenas para histórico de pagamentos`,
+              ? `${workflowSession.observacoes}\n\n[${new Date().toLocaleDateString()}] Agendamento cancelado - preservado apenas valor pago de ${formatCurrency(valorPagoAtual)}` 
+              : `[${new Date().toLocaleDateString()}] Agendamento cancelado - preservado apenas valor pago de ${formatCurrency(valorPagoAtual)}`,
+            
             updated_at: new Date().toISOString(),
             updated_by: user.user.id
           })
@@ -202,7 +219,7 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
           console.warn('⚠️ Sessão não encontrada para atualização');
         }
 
-        console.log('✅ Session marked as historical, payments preserved with context');
+        console.log(`✅ Session marked as historical - preserved only R$ ${valorPagoAtual.toFixed(2)} paid`);
       } else {
         // FASE 1: Delete everything with robust error handling
         console.log('🗑️ Deleting session and all related data');
