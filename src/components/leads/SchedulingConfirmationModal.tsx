@@ -1,13 +1,13 @@
-import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Calendar, Clock } from 'lucide-react';
-import { useAgenda } from '@/hooks/useAgenda';
-import { useConflictResolution } from '@/hooks/useConflictResolution';
-import { useToast } from '@/hooks/use-toast';
-import AppointmentForm from '@/components/agenda/AppointmentForm';
-import ConflictResolutionModal from '@/components/agenda/ConflictResolutionModal';
-import type { Lead } from '@/types/leads';
+import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Calendar, Clock } from "lucide-react";
+import { useAgenda } from "@/hooks/useAgenda";
+import { useConflictResolution } from "@/hooks/useConflictResolution";
+import { useToast } from "@/hooks/use-toast";
+import AppointmentForm from "@/components/agenda/AppointmentForm";
+import ConflictResolutionModal from "@/components/agenda/ConflictResolutionModal";
+import type { Lead } from "@/types/leads";
 
 interface SchedulingConfirmationModalProps {
   open: boolean;
@@ -22,12 +22,8 @@ export default function SchedulingConfirmationModal({
   onOpenChange,
   lead,
   onScheduled,
-  onNotScheduled
+  onNotScheduled,
 }: SchedulingConfirmationModalProps) {
-  // Early return if lead is null/undefined
-  if (!lead) {
-    return null;
-  }
   const [showAppointmentForm, setShowAppointmentForm] = useState(false);
   const [showConflictModal, setShowConflictModal] = useState(false);
   const [pendingAppointment, setPendingAppointment] = useState<any>(null);
@@ -45,29 +41,29 @@ export default function SchedulingConfirmationModal({
     onOpenChange(false);
   };
 
-  const handleAppointmentSaved = async (appointmentData: any) => {
+  const handleAppointmentSaved = (appointmentData: any) => {
     try {
       const appointmentToCreate = {
         ...appointmentData,
         client: lead.nome,
         clientId: lead.clienteId,
         leadId: lead.id,
-        origin: 'lead_conversion'
+        origin: "lead_conversion",
       };
 
       // Validar conflitos apenas se o status for confirmado
-      if (appointmentToCreate.status === 'confirmado') {
+      if (appointmentToCreate.status === "confirmado") {
         const validation = validateTimeConflict(
-          appointmentToCreate.date, 
-          appointmentToCreate.time, 
-          appointmentToCreate.status
+          appointmentToCreate.date,
+          appointmentToCreate.time,
+          appointmentToCreate.status,
         );
 
         if (!validation.valid) {
           toast({
-            title: 'Conflito de Horário',
+            title: "Conflito de Horário",
             description: validation.reason,
-            variant: 'destructive'
+            variant: "destructive",
           });
           return;
         }
@@ -80,24 +76,24 @@ export default function SchedulingConfirmationModal({
         }
       }
 
-      const appointment = await addAppointment(appointmentToCreate);
+      const appointment = addAppointment(appointmentToCreate);
       onScheduled(appointment.id);
       setShowAppointmentForm(false);
       onOpenChange(false);
     } catch (error) {
-      console.error('Erro ao criar agendamento:', error);
+      console.error("Erro ao criar agendamento:", error);
       toast({
-        title: 'Erro',
-        description: 'Não foi possível criar o agendamento',
-        variant: 'destructive'
+        title: "Erro",
+        description: "Não foi possível criar o agendamento",
+        variant: "destructive",
       });
     }
   };
 
-  const handleConflictResolved = async () => {
+  const handleConflictResolved = () => {
     if (pendingAppointment) {
       try {
-        const appointment = await addAppointment(pendingAppointment);
+        const appointment = addAppointment(pendingAppointment);
         resolveTimeConflicts(appointment);
         onScheduled(appointment.id);
         setShowAppointmentForm(false);
@@ -106,11 +102,11 @@ export default function SchedulingConfirmationModal({
         setPendingAppointment(null);
         setConflictingAppointments([]);
       } catch (error) {
-        console.error('Erro ao criar agendamento:', error);
+        console.error("Erro ao criar agendamento:", error);
         toast({
-          title: 'Erro',
-          description: 'Não foi possível criar o agendamento',
-          variant: 'destructive'
+          title: "Erro",
+          description: "Não foi possível criar o agendamento",
+          variant: "destructive",
         });
       }
     }
@@ -145,14 +141,14 @@ export default function SchedulingConfirmationModal({
             initialDate={new Date()}
             initialTime="14:00"
             appointment={{
-              id: '',
+              id: "",
               title: `Sessão - ${lead.nome}`,
               date: new Date(),
-              time: '14:00',
-              type: 'Sessão',
+              time: "14:00",
+              type: "Sessão",
               client: lead.nome,
-              status: 'a confirmar',
-              description: `Lead convertido: ${lead.nome}`
+              status: "a confirmar",
+              description: `Lead convertido: ${lead.nome}`,
             }}
           />
         </DialogContent>
@@ -169,31 +165,22 @@ export default function SchedulingConfirmationModal({
             Agendar Cliente
           </DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-4">
           <div className="text-center space-y-2">
             <p className="text-lunar-text">
               <strong>{lead.nome}</strong> foi convertido com sucesso!
             </p>
-            <p className="text-sm text-lunar-textSecondary">
-              Deseja agendar esse cliente agora?
-            </p>
+            <p className="text-sm text-lunar-textSecondary">Deseja agendar esse cliente agora?</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <Button
-              variant="outline"
-              onClick={handleNotNow}
-              className="flex items-center gap-2"
-            >
+            <Button variant="outline" onClick={handleNotNow} className="flex items-center gap-2">
               <Clock className="h-4 w-4" />
               Ainda não
             </Button>
-            
-            <Button
-              onClick={handleScheduleNow}
-              className="flex items-center gap-2"
-            >
+
+            <Button onClick={handleScheduleNow} className="flex items-center gap-2">
               <Calendar className="h-4 w-4" />
               Sim, escolher horário
             </Button>
