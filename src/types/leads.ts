@@ -1,4 +1,4 @@
-import type { LeadInteraction } from './leadInteractions';
+import type { LeadInteraction } from "./leadInteractions";
 
 export type LeadStatus = string;
 
@@ -23,9 +23,6 @@ export interface Lead {
   scheduledAppointmentId?: string; // ID do agendamento criado
   motivoPerda?: string; // Motivo da perda do lead
   perdidoEm?: string; // Timestamp de quando foi perdido
-  arquivado?: boolean; // Indica se o lead foi arquivado
-  dataArquivamento?: string; // Timestamp do arquivamento
-  motivoArquivamento?: 'automatico' | 'manual'; // Como foi arquivado
   historicoStatus?: Array<{
     status: string;
     data: string; // ISO timestamp
