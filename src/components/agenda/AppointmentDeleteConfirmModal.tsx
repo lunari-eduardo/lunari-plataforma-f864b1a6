@@ -96,9 +96,9 @@ export function AppointmentDeleteConfirmModal({
                   <RadioGroupItem value="preserve" id="preserve" />
                   <Label htmlFor="preserve" className="flex-1 cursor-pointer">
                     <div className="space-y-1">
-                      <p className="text-sm font-medium text-lunar-text">Cancelar agendamento (preservar workflow)</p>
+                      <p className="text-sm font-medium text-lunar-text">Cancelar agendamento (preservar histórico)</p>
                       <p className="text-xs text-lunar-textSecondary">
-                        Remove apenas o agendamento. A sessão do workflow e pagamentos são mantidos como "cancelado"
+                        Remove o agendamento e a sessão do workflow. Os pagamentos já realizados são preservados no histórico do cliente (sem valores pendentes)
                       </p>
                     </div>
                   </Label>

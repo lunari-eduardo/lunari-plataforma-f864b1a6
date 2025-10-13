@@ -174,29 +174,27 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
       console.log(`💰 ${count || 0} pagamento(s) vinculado(s) a esta sessão`);
 
       if (preservePayments) {
-        // FASE 2: Preserve payments with error handling
-        console.log('💾 Preserving payments - unlinking appointment from session');
+        // FASE 2: Delete session but preserve payments as orphans
+        console.log('💾 Preserving payments - deleting session, keeping payments orphaned');
         
-        const { data: updatedSession, error: updateError } = await supabase
+        // DELETE session → foreign key ON DELETE SET NULL will automatically orphan payments
+        const { data: deletedSession, error: deleteError } = await supabase
           .from('clientes_sessoes')
-          .update({ 
-            appointment_id: null,
-            status: 'cancelado',
-            descricao: `${workflowSession.descricao || ''} (Agendamento cancelado)`.trim()
-          })
+          .delete()
           .eq('id', workflowSession.id)
+          .eq('user_id', user.user.id)
           .select();
 
-        if (updateError) {
-          console.error('❌ Erro ao desvincular agendamento:', updateError);
-          throw new Error(`Falha ao preservar sessão: ${updateError.message}`);
+        if (deleteError) {
+          console.error('❌ Erro ao excluir sessão:', deleteError);
+          throw new Error(`Falha ao excluir sessão: ${deleteError.message}`);
         }
 
-        if (!updatedSession || updatedSession.length === 0) {
-          console.warn('⚠️ Sessão não foi encontrada para desvincular');
+        if (!deletedSession || deletedSession.length === 0) {
+          console.warn('⚠️ Sessão não foi encontrada para exclusão');
         }
 
-        console.log('✅ Appointment unlinked from session, payments preserved');
+        console.log('✅ Session deleted, payments kept as orphans (session_id = NULL)');
       } else {
         // FASE 1: Delete everything with robust error handling
         console.log('🗑️ Deleting session and all related data');
