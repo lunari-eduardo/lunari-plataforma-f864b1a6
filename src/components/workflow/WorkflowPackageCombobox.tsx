@@ -105,7 +105,7 @@ export function WorkflowPackageCombobox({
           disabled={disabled || isLoadingPacotes}
           className="w-full justify-between h-7 text-xs font-normal shadow-neumorphic hover:shadow-neumorphic-pressed disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isLoadingPacotes ? "Carregando..." : displayName || selectedPackage?.nome || "Selecione"}
+          {isLoadingPacotes ? "Carregando..." : displayName || selectedPackage?.nome || (typeof value === 'string' ? value : 'Selecione')}
           <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>

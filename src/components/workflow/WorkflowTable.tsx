@@ -737,9 +737,15 @@ export function WorkflowTable({
                 {renderCell('category', <span className="text-xs text-center font-light">{session.categoria || 'N/A'}</span>)}
 
                 {renderCell('package', (() => {
-                  const regrasCongeladas = session.regrasDePrecoFotoExtraCongeladas as any;
-                  const pacoteCongelado = regrasCongeladas?.pacote;
-                  const displayName = pacoteCongelado?.nome;
+                  // CORREÇÃO: Usar regras_congeladas completo para obter nome histórico do pacote
+                  const displayName = session.regras_congeladas?.pacote?.nome || session.pacote || '';
+                  
+                  console.log('📦 [WorkflowTable] Renderizando pacote:', {
+                    sessionId: session.id,
+                    displayName,
+                    pacote: session.pacote,
+                    temRegrasCongeladas: !!session.regras_congeladas
+                  });
                   
                   return (
                     <div className="flex flex-col gap-1">
@@ -752,7 +758,7 @@ export function WorkflowTable({
                           handleFieldUpdateStable(session.id, 'pacote', packageData.id || packageData.nome);
                         }} 
                       />
-                      <DataFreezingStatus regrasCongeladas={session.regrasDePrecoFotoExtraCongeladas} isCompact={true} />
+                      <DataFreezingStatus regrasCongeladas={session.regras_congeladas} isCompact={true} />
                     </div>
                   );
                 })())}

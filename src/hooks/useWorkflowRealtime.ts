@@ -743,17 +743,13 @@ export const useWorkflowRealtime = () => {
   }, [sessions, convertToSessionData]);
 
   // Compute sessionsData using the package data hook for proper resolution
+  // CORREÇÃO: Remover gating por isLoading pois convertSessionToData prioriza dados congelados
   const sessionsData = useMemo(() => {
-    if (isLoadingPacotes || isLoadingCategorias) {
-      console.log('⏳ Still loading package/category data, returning empty sessions');
-      return [];
-    }
-    
     console.log('🔄 Converting sessions to SessionData format:', sessions.length, 'sessions');
     const converted = sessions.map(session => convertSessionToData(session));
     console.log('✅ Converted sessions data:', converted.length, 'sessions converted');
     return converted;
-  }, [sessions, convertSessionToData, isLoadingPacotes, isLoadingCategorias]);
+  }, [sessions, convertSessionToData]);
 
   return {
     sessions,
