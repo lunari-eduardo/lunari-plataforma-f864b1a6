@@ -41,7 +41,7 @@ export default function SchedulingConfirmationModal({
     onOpenChange(false);
   };
 
-  const handleAppointmentSaved = (appointmentData: any) => {
+  const handleAppointmentSaved = async (appointmentData: any) => {
     try {
       const appointmentToCreate = {
         ...appointmentData,
@@ -76,7 +76,7 @@ export default function SchedulingConfirmationModal({
         }
       }
 
-      const appointment = addAppointment(appointmentToCreate);
+      const appointment = await addAppointment(appointmentToCreate);
       onScheduled(appointment.id);
       setShowAppointmentForm(false);
       onOpenChange(false);
@@ -90,10 +90,10 @@ export default function SchedulingConfirmationModal({
     }
   };
 
-  const handleConflictResolved = () => {
+  const handleConflictResolved = async () => {
     if (pendingAppointment) {
       try {
-        const appointment = addAppointment(pendingAppointment);
+        const appointment = await addAppointment(pendingAppointment);
         resolveTimeConflicts(appointment);
         onScheduled(appointment.id);
         setShowAppointmentForm(false);

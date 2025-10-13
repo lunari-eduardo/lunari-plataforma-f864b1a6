@@ -35,7 +35,7 @@ export default function LeadSchedulingModal({
   const { validateTimeConflict, resolveTimeConflicts } = useConflictResolution();
   const { toast } = useToast();
 
-  const handleSchedule = () => {
+  const handleSchedule = async () => {
     try {
       const appointmentToCreate = {
         title: `${lead.nome} - Sessão`,
@@ -72,7 +72,7 @@ export default function LeadSchedulingModal({
         return;
       }
 
-      const appointment = addAppointment(appointmentToCreate);
+      const appointment = await addAppointment(appointmentToCreate);
       onScheduled(appointment.id);
       onOpenChange(false);
 
@@ -90,10 +90,10 @@ export default function LeadSchedulingModal({
     }
   };
 
-  const handleConflictResolved = () => {
+  const handleConflictResolved = async () => {
     if (pendingAppointment) {
       try {
-        const appointment = addAppointment(pendingAppointment);
+        const appointment = await addAppointment(pendingAppointment);
         resolveTimeConflicts(appointment);
         onScheduled(appointment.id);
         setShowConflictModal(false);

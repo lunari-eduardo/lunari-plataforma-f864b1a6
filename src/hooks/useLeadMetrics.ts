@@ -14,6 +14,9 @@ export interface LeadMetrics {
 
 export type PeriodType =
   | "current_year"
+  | "last_7_days"
+  | "last_30_days"
+  | "last_90_days"
   | "january_2025"
   | "february_2025"
   | "march_2025"
@@ -27,6 +30,8 @@ export type PeriodType =
   | "november_2025"
   | "december_2025"
   | "previous_year"
+  | "archived"
+  | "all_active"
   | "all_time";
 
 export interface PeriodFilter {

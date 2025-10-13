@@ -12,6 +12,7 @@ export interface Lead {
   status: LeadStatus;
   observacoes?: string;
   dataCriacao: string; // ISO string
+  arquivado?: boolean; // Indica se o lead está arquivado
   dataAtualizacao?: string; // Timestamp da última atualização
   clienteId?: string; // Relacionamento com Cliente CRM
   interacoes: LeadInteraction[];
