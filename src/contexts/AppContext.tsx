@@ -9,6 +9,8 @@ import { toast } from '@/hooks/use-toast';
 import { CreateTransactionInput } from '@/hooks/useFinancialTransactionsSupabase';
 import { calculateTotals, calculateTotalsNew } from '@/services/FinancialCalculationEngine';
 import { initializeApp, needsInitialization } from '@/utils/initializeApp';
+import { useCreditCardsSupabase } from '@/hooks/useCreditCardsSupabase';
+import { migrateCreditCardsToSupabase } from '@/utils/migrateCreditCardsToSupabase';
 import { Projeto, CriarProjetoInput } from '@/types/projeto';
 import { ProjetoService } from '@/services/ProjetoService';
 import { corrigirClienteIdSessoes, corrigirClienteIdAgendamentos } from '@/utils/corrigirClienteIdSessoes';
@@ -434,10 +436,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   });
 
-  // Cartões de Crédito State
-  const [cartoes, setCartoes] = useState(() => {
-    return storage.load(STORAGE_KEYS.CARDS, []);
-  });
+  // ============= CARTÕES DE CRÉDITO (SUPABASE) =============
+  const creditCardsHook = useCreditCardsSupabase();
+  const cartoes = creditCardsHook.cartoes;
+
+  // ============= MIGRAÇÃO DE CARTÕES (UMA VEZ) =============
+  useEffect(() => {
+    const checkAndMigrate = async () => {
+      const localCards = storage.load(STORAGE_KEYS.CARDS, []);
+      if (localCards && localCards.length > 0 && !creditCardsHook.isLoading) {
+        console.log('🔄 Detectados cartões no localStorage, iniciando migração...');
+        const result = await migrateCreditCardsToSupabase();
+        if (result.success) {
+          console.log(`✅ Migração concluída: ${result.migrated} cartões migrados`);
+        }
+      }
+    };
+    
+    checkAndMigrate();
+  }, [creditCardsHook.isLoading]);
 
   // Cliente pré-selecionado State
   const [selectedClientForScheduling, setSelectedClientForScheduling] = useState<string | null>(null);
@@ -883,23 +900,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   }, []);
 
-  // Credit card actions
+  // ============= CREDIT CARD ACTIONS (SUPABASE) =============
   const adicionarCartao = useCallback((cartao: { nome: string; diaVencimento: number; diaFechamento: number }) => {
-    const novoCartao = {
-      id: Date.now().toString(),
-      ...cartao,
-      ativo: true,
-    };
-    setCartoes(prev => [...prev, novoCartao]);
-  }, []);
+    creditCardsHook.adicionarCartao(cartao);
+  }, [creditCardsHook]);
 
   const atualizarCartao = useCallback((id: string, dadosAtualizados: Partial<{ nome: string; diaVencimento: number; diaFechamento: number; ativo: boolean }>) => {
-    setCartoes(prev => prev.map(c => c.id === id ? { ...c, ...dadosAtualizados } : c));
-  }, []);
+    creditCardsHook.atualizarCartao(id, dadosAtualizados);
+  }, [creditCardsHook]);
 
   const removerCartao = useCallback((id: string) => {
-    setCartoes(prev => prev.filter(c => c.id !== id));
-  }, []);
+    creditCardsHook.removerCartao(id);
+  }, [creditCardsHook]);
 
   // Financial engine action
   const createTransactionEngine = useCallback((input: CreateTransactionInput) => {
