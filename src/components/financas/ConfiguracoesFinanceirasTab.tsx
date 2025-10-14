@@ -5,7 +5,7 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import ConfiguracaoCartoes from './ConfiguracaoCartoes';
 import SyncFromPricingModal from './SyncFromPricingModal';
-import { FinancialItemsServiceFactory } from '@/services/FinancialItemsService';
+import { supabaseFinancialItemsService } from '@/services/FinancialItemsService';
 import { toast as sonnerToast } from 'sonner';
 
 // Specialized components
@@ -31,8 +31,8 @@ export default function ConfiguracoesFinanceirasTab({
   removerItemFinanceiro,
   atualizarItemFinanceiro
 }: ConfiguracoesFinanceirasTabProps) {
-  // Supabase connection state
-  const [isSupabaseConnected] = useState(() => FinancialItemsServiceFactory.isUsingSupabase());
+  // Supabase connection state (sempre conectado agora)
+  const [isSupabaseConnected] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
 
   // Specialized hooks for different concerns

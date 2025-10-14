@@ -8,7 +8,7 @@ import { Trash2, Calendar, DollarSign, Plus, Settings } from 'lucide-react';
 import { TransacaoComItem, GrupoPrincipal, NovaTransacaoFinanceira, ItemFinanceiro, StatusTransacao } from '@/types/financas';
 import { formatCurrency } from '@/utils/financialUtils';
 import OpcoesLancamento, { OpcoesLancamentoState } from './OpcoesLancamento';
-import { CreateTransactionInput } from '@/services/FinancialEngine';
+import { CreateTransactionInput } from '@/hooks/useFinancialTransactionsSupabase';
 interface TabelaLancamentosProps {
   transacoes: TransacaoComItem[];
   onAtualizarTransacao: (id: string, dadosAtualizados: Partial<NovaTransacaoFinanceira>) => void;

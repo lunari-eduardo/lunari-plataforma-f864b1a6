@@ -10,7 +10,7 @@ import TabelaLancamentosMobile from './TabelaLancamentosMobile';
 import ModalNovoLancamentoRefatorado from './ModalNovoLancamentoRefatorado';
 import MonthYearNavigator from '@/components/shared/MonthYearNavigator';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { CreateTransactionInput } from '@/services/FinancialEngine';
+import { CreateTransactionInput } from '@/hooks/useFinancialTransactionsSupabase';
 
 const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 interface LancamentosTabProps {

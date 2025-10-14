@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { GrupoPrincipal, ItemFinanceiro } from '@/types/financas';
-import { CreateTransactionInput } from '@/services/FinancialEngine';
+import { CreateTransactionInput } from '@/hooks/useFinancialTransactionsSupabase';
 import OpcoesLancamento, { OpcoesLancamentoState } from './OpcoesLancamento';
 
 type TipoLancamento = 'despesa' | 'receita';

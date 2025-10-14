@@ -20,19 +20,38 @@ import { useToast } from '@/hooks/use-toast';
 
 // Tipos para criação de transações
 export interface CreateTransactionParams {
+  item_id: string;
+  valor: number;
+  data_vencimento: string;
+  observacoes?: string;
+  isRecorrente?: boolean;
+  isValorFixo?: boolean;
+  isParcelado?: boolean;
+  parcela_total?: number;
+  credit_card_id?: string;
+  data_compra?: string;
+}
+
+// Interface de compatibilidade com sistema antigo
+export interface CreateTransactionInput {
   itemId: string;
   valorTotal: number;
   dataPrimeiraOcorrencia: string;
-  isRecorrente: boolean;
-  isParcelado: boolean;
+  isRecorrente?: boolean;
+  isParcelado?: boolean;
   numeroDeParcelas?: number;
   observacoes?: string;
   isValorFixo?: boolean;
   cartaoCreditoId?: string;
+  dataCompra?: string;
 }
 
 // Tipo estendido com informações do item
 export interface TransacaoComItem extends NovaTransacaoFinanceira {
+  dataVencimento: string;
+  parent_id?: string;
+  parcela_atual?: number;
+  parcela_total?: number;
   item: {
     id: string;
     nome: string;
