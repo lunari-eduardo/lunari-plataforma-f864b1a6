@@ -17,9 +17,9 @@ export function useClientValidation() {
   };
 
   const validatePhone = (phone: string) => {
-    if (!phone) return { isValid: false, message: 'Telefone é obrigatório' };
+    if (!phone) return { isValid: true }; // Telefone agora é opcional
     
-    // Remove todos os caracteres não numéricos
+    // Se preenchido, validar formato
     const cleanPhone = phone.replace(/\D/g, '');
     if (cleanPhone.length < 10 || cleanPhone.length > 11) {
       return { isValid: false, message: 'Telefone deve ter 10 ou 11 dígitos' };
@@ -32,11 +32,11 @@ export function useClientValidation() {
     const nomeValidation = validateRequired(formData.nome, 'Nome');
     if (!nomeValidation.isValid) return nomeValidation;
 
-    // Validar telefone (obrigatório)
+    // Validar telefone (OPCIONAL, mas formato deve ser válido se preenchido)
     const phoneValidation = validatePhone(formData.telefone);
     if (!phoneValidation.isValid) return phoneValidation;
 
-    // Validar email (opcional, mas se preenchido deve ser válido)
+    // Validar email (opcional, mas formato deve ser válido se preenchido)
     const emailValidation = validateEmail(formData.email);
     if (!emailValidation.isValid) return emailValidation;
 

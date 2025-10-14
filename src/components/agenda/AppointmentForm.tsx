@@ -259,8 +259,8 @@ export default function AppointmentForm({
     e.preventDefault();
 
     // Validar campos obrigatórios
-    if (activeTab === 'new' && (!formData.newClientName || !formData.newClientPhone)) {
-      toast.error('Nome e telefone do cliente são obrigatórios');
+    if (activeTab === 'new' && !formData.newClientName) {
+      toast.error('Nome do cliente é obrigatório');
       return;
     }
     if (activeTab === 'existing' && !formData.clientId) {
@@ -279,9 +279,9 @@ export default function AppointmentForm({
       // Criar novo cliente no CRM automaticamente usando Supabase
       const novoCliente = await adicionarCliente({
         nome: formData.newClientName,
-        telefone: formData.newClientPhone,
-        email: formData.newClientEmail,
-        origem: formData.newClientOrigem
+        telefone: formData.newClientPhone || '',
+        email: formData.newClientEmail || '',
+        origem: formData.newClientOrigem || ''
       });
       clientInfo = {
         client: formData.newClientName,
@@ -388,8 +388,8 @@ export default function AppointmentForm({
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="new-client-phone" className="text-sm font-medium">Telefone *</Label>
-                    <Input id="new-client-phone" name="newClientPhone" value={formData.newClientPhone} onChange={handleChange} placeholder="+55 (DDD) 00000-0000" />
+                    <Label htmlFor="new-client-phone" className="text-sm font-medium">Telefone</Label>
+                    <Input id="new-client-phone" name="newClientPhone" value={formData.newClientPhone} onChange={handleChange} placeholder="(Opcional) +55 (DDD) 00000-0000" />
                   </div>
                   
                   <div className="space-y-2">

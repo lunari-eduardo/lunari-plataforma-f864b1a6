@@ -206,8 +206,8 @@ export default function Clientes() {
     }
   };
   const handleSaveClient = async () => {
-    if (!formData.nome || !formData.telefone) {
-      toast.error('Nome e telefone são obrigatórios');
+    if (!formData.nome || !formData.nome.trim()) {
+      toast.error('Nome é obrigatório');
       return;
     }
     
@@ -379,11 +379,11 @@ export default function Clientes() {
               </div>
               
               <div>
-                <Label htmlFor="telefone">Telefone *</Label>
+                <Label htmlFor="telefone">Telefone</Label>
                 <Input id="telefone" value={formData.telefone} onChange={e => setFormData(prev => ({
                 ...prev,
                 telefone: e.target.value
-              }))} placeholder="+55 (DDD) 00000-0000" />
+              }))} placeholder="(Opcional) +55 (DDD) 00000-0000" />
               </div>
               
               <div>

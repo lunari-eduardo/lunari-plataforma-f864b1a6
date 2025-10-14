@@ -152,7 +152,7 @@ export type Database = {
           nome: string
           observacoes: string | null
           origem: string | null
-          telefone: string
+          telefone: string | null
           updated_at: string | null
           user_id: string
           whatsapp: string | null
@@ -166,7 +166,7 @@ export type Database = {
           nome: string
           observacoes?: string | null
           origem?: string | null
-          telefone: string
+          telefone?: string | null
           updated_at?: string | null
           user_id: string
           whatsapp?: string | null
@@ -180,7 +180,7 @@ export type Database = {
           nome?: string
           observacoes?: string | null
           origem?: string | null
-          telefone?: string
+          telefone?: string | null
           updated_at?: string | null
           user_id?: string
           whatsapp?: string | null

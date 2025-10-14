@@ -73,21 +73,13 @@ export default function ClientForm({ client, onSave, onCancel }: ClientFormProps
       return;
     }
 
-    if (!formData.telefone.trim()) {
-      toast.error('Telefone é obrigatório');
-      return;
-    }
-
-    if (!formData.email.trim()) {
-      toast.error('E-mail é obrigatório');
-      return;
-    }
-
-    // Validação de e-mail simples
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      toast.error('E-mail inválido');
-      return;
+    // Validação de e-mail (opcional, mas se preenchido deve ser válido)
+    if (formData.email.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email)) {
+        toast.error('E-mail inválido');
+        return;
+      }
     }
 
     onSave(formData);
@@ -109,27 +101,25 @@ export default function ClientForm({ client, onSave, onCancel }: ClientFormProps
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="telefone">Telefone *</Label>
+          <Label htmlFor="telefone">Telefone</Label>
           <Input
             id="telefone"
             name="telefone"
             value={formData.telefone}
             onChange={handleChange}
-            placeholder="+55 (11) 00000-0000"
-            required
+            placeholder="(Opcional) +55 (11) 00000-0000"
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="email">E-mail *</Label>
+          <Label htmlFor="email">E-mail</Label>
           <Input
             id="email"
             name="email"
             type="email"
             value={formData.email}
             onChange={handleChange}
-            placeholder="cliente@email.com"
-            required
+            placeholder="(Opcional) cliente@email.com"
           />
         </div>
       </div>

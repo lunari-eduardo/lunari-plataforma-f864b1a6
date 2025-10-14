@@ -34,7 +34,7 @@ export function ContactInfoForm({ formData, isEditing, onUpdate }: ContactInfoFo
         <div className="space-y-2">
           <Label htmlFor="telefone" className="flex items-center gap-2">
             <Phone className="h-3 w-3" />
-            Telefone *
+            Telefone
           </Label>
           <Input 
             id="telefone" 

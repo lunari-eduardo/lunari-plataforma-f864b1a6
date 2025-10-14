@@ -145,15 +145,12 @@ export default function LeadFormModal({
       newErrors.nome = 'Nome é obrigatório';
     }
 
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email é obrigatório';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    // Email é opcional, mas se preenchido deve ser válido
+    if (formData.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = 'Email inválido';
     }
 
-    if (!formData.telefone.trim()) {
-      newErrors.telefone = 'Telefone é obrigatório';
-    }
+    // Telefone é opcional
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -308,13 +305,14 @@ export default function LeadFormModal({
 
           {/* Email */}
           <div className="space-y-2">
-            <Label htmlFor="email">Email *</Label>
+            <Label htmlFor="email">Email</Label>
             <Input
               id="email"
               type="email"
               value={formData.email}
               onChange={(e) => handleInputChange('email', e.target.value)}
               className={errors.email ? 'border-destructive' : ''}
+              placeholder="(Opcional) email@exemplo.com"
               disabled={isSubmitting}
             />
             {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
@@ -322,13 +320,13 @@ export default function LeadFormModal({
 
           {/* Telefone */}
           <div className="space-y-2">
-            <Label htmlFor="telefone">Telefone *</Label>
+            <Label htmlFor="telefone">Telefone</Label>
             <Input
               id="telefone"
               value={formData.telefone}
               onChange={(e) => handleInputChange('telefone', e.target.value)}
               className={errors.telefone ? 'border-destructive' : ''}
-              placeholder="(11) 99999-9999"
+              placeholder="(Opcional) (11) 99999-9999"
               disabled={isSubmitting}
             />
             {errors.telefone && <p className="text-sm text-destructive">{errors.telefone}</p>}

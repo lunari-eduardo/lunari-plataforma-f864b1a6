@@ -42,28 +42,38 @@ export class ValidationService {
   }
 
   /**
-   * Validate email format
+   * Validate email format (optional field)
+   * Returns valid if empty, validates format if provided
    */
   validateEmail(email: string): ValidationResult {
+    if (!email || email.trim() === '') {
+      return { isValid: true, errors: [] }; // Email opcional
+    }
+    
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const isValid = emailRegex.test(email);
     
     return {
       isValid,
-      errors: isValid ? [] : ['Email deve ter um formato válido']
+      errors: isValid ? [] : ['Formato de email inválido']
     };
   }
 
   /**
-   * Validate phone number (WhatsApp)
+   * Validate phone number (optional field)
+   * Returns valid if empty, validates format if provided
    */
   validatePhone(phone: string): ValidationResult {
+    if (!phone || phone.trim() === '') {
+      return { isValid: true, errors: [] }; // Telefone opcional
+    }
+    
     const phoneRegex = /^\(\d{2}\)\s\d{4,5}-\d{4}$/;
     const isValid = phoneRegex.test(phone) || phone.length >= 10;
     
     return {
       isValid,
-      errors: isValid ? [] : ['Telefone deve ter um formato válido']
+      errors: isValid ? [] : ['Formato de telefone inválido']
     };
   }
 
