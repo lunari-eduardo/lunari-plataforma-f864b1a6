@@ -240,6 +240,23 @@ export function useClientesRealtime() {
     }
   }, []);
 
+  const atualizarFamilia = useCallback(async (id: string, dados: Partial<ClienteFamilia>) => {
+    try {
+      const { error } = await supabase
+        .from('clientes_familia')
+        .update(dados)
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      console.log('✅ Family member updated');
+    } catch (error) {
+      console.error('❌ Error updating family member:', error);
+      toast.error('Erro ao atualizar membro da família');
+      throw error;
+    }
+  }, []);
+
   const removerFamilia = useCallback(async (id: string) => {
     try {
       const { error } = await supabase
@@ -256,6 +273,128 @@ export function useClientesRealtime() {
       throw error;
     }
   }, []);
+
+  // ============= SYNC FAMÍLIA COMPLETA =============
+  
+  const syncFamiliaData = useCallback(async (
+    clienteId: string,
+    conjuge: { nome?: string; dataNascimento?: string },
+    filhos: Array<{ id: string; nome?: string; dataNascimento?: string }>
+  ) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      // Buscar família atual do cliente
+      const familiaAtual = familia.filter(f => f.cliente_id === clienteId);
+      const conjugeAtual = familiaAtual.find(f => f.tipo === 'conjuge');
+      const filhosAtuais = familiaAtual.filter(f => f.tipo === 'filho');
+
+      // ===== SINCRONIZAR CÔNJUGE =====
+      
+      if (conjuge?.nome?.trim()) {
+        // Cônjuge tem nome → criar ou atualizar
+        if (conjugeAtual) {
+          // Atualizar cônjuge existente
+          await atualizarFamilia(conjugeAtual.id, {
+            nome: conjuge.nome,
+            data_nascimento: conjuge.dataNascimento || null
+          });
+        } else {
+          // Criar novo cônjuge
+          await adicionarFamilia(clienteId, {
+            tipo: 'conjuge',
+            nome: conjuge.nome,
+            data_nascimento: conjuge.dataNascimento || null
+          });
+        }
+      } else if (conjugeAtual) {
+        // Cônjuge vazio e existe → deletar
+        await removerFamilia(conjugeAtual.id);
+      }
+
+      // ===== SINCRONIZAR FILHOS =====
+      
+      // Identificar filhos que são do Supabase (têm UUID válido)
+      const filhosSupabaseIds = filhosAtuais.map(f => f.id);
+      const filhosParaManter = filhos.filter(f => 
+        filhosSupabaseIds.includes(f.id) && f.nome?.trim()
+      );
+      const filhosParaCriar = filhos.filter(f => 
+        !filhosSupabaseIds.includes(f.id) && f.nome?.trim()
+      );
+      const filhosParaDeletar = filhosAtuais.filter(f => 
+        !filhos.some(filho => filho.id === f.id && filho.nome?.trim())
+      );
+
+      // Atualizar filhos existentes
+      for (const filho of filhosParaManter) {
+        await atualizarFamilia(filho.id, {
+          nome: filho.nome,
+          data_nascimento: filho.dataNascimento || null
+        });
+      }
+
+      // Criar novos filhos
+      for (const filho of filhosParaCriar) {
+        await adicionarFamilia(clienteId, {
+          tipo: 'filho',
+          nome: filho.nome!,
+          data_nascimento: filho.dataNascimento || null
+        });
+      }
+
+      // Deletar filhos removidos
+      for (const filho of filhosParaDeletar) {
+        await removerFamilia(filho.id);
+      }
+
+      console.log('✅ Família sincronizada com sucesso');
+    } catch (error) {
+      console.error('❌ Erro ao sincronizar família:', error);
+      throw error;
+    }
+  }, [familia, adicionarFamilia, atualizarFamilia, removerFamilia]);
+
+  // ============= ATUALIZAR CLIENTE COMPLETO =============
+  
+  const atualizarClienteCompleto = useCallback(async (
+    id: string, 
+    dadosCliente: any
+  ) => {
+    try {
+      // Separar dados do cliente dos dados da família
+      const { conjuge, filhos, ...dadosBasicos } = dadosCliente;
+
+      // 1. Atualizar dados básicos do cliente
+      const updateData: Partial<ClienteSupabase> = {
+        nome: dadosBasicos.nome,
+        email: dadosBasicos.email || null,
+        telefone: dadosBasicos.telefone || null,
+        endereco: dadosBasicos.endereco || null,
+        observacoes: dadosBasicos.observacoes || null,
+        origem: dadosBasicos.origem || null,
+        data_nascimento: dadosBasicos.dataNascimento || null
+      };
+
+      await atualizarCliente(id, updateData);
+
+      // 2. Sincronizar dados da família
+      if (conjuge !== undefined || filhos !== undefined) {
+        await syncFamiliaData(
+          id,
+          conjuge || { nome: '', dataNascimento: '' },
+          filhos || []
+        );
+      }
+
+      toast.success('Cliente atualizado com sucesso');
+    } catch (error) {
+      console.error('❌ Erro ao atualizar cliente completo:', error);
+      toast.error('Erro ao atualizar cliente');
+      throw error;
+    }
+  }, [atualizarCliente, syncFamiliaData]);
 
   // ============= COMPUTED VALUES =============
   
@@ -364,9 +503,11 @@ export function useClientesRealtime() {
     adicionarCliente,
     atualizarCliente,
     removerCliente,
+    atualizarClienteCompleto,
     
     // Family operations
     adicionarFamilia,
+    atualizarFamilia,
     removerFamilia,
     
     // Utility functions

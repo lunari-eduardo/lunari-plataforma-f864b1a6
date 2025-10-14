@@ -7,6 +7,27 @@ export function useClientForm(cliente: ClienteCompleto | undefined, onUpdate: (i
   const { validateForm } = useClientValidation();
   
   const [isEditing, setIsEditing] = useState(false);
+  
+  // Mapear família do Supabase para formato do form
+  const mapFamiliaToForm = (cliente: ClienteCompleto | undefined) => {
+    if (!cliente) return { conjuge: { nome: '', dataNascimento: '' }, filhos: [] };
+    
+    const conjugeData = cliente.familia?.find(f => f.tipo === 'conjuge');
+    const filhosData = cliente.familia?.filter(f => f.tipo === 'filho') || [];
+    
+    return {
+      conjuge: {
+        nome: conjugeData?.nome || '',
+        dataNascimento: conjugeData?.data_nascimento || ''
+      },
+      filhos: filhosData.map(f => ({
+        id: f.id,
+        nome: f.nome || '',
+        dataNascimento: f.data_nascimento || ''
+      }))
+    };
+  };
+
   const [formData, setFormData] = useState({
     nome: cliente?.nome || '',
     email: cliente?.email || '',
@@ -15,14 +36,14 @@ export function useClientForm(cliente: ClienteCompleto | undefined, onUpdate: (i
     observacoes: cliente?.observacoes || '',
     origem: cliente?.origem || '',
     dataNascimento: cliente?.data_nascimento || '',
-    conjuge: (cliente as any)?.conjuge || { nome: '', dataNascimento: '' },
-    filhos: (((cliente as any)?.filhos) || []) as { id: string; nome?: string; dataNascimento?: string }[],
+    ...mapFamiliaToForm(cliente)
   });
 
   // Sincronizar formData quando cliente muda
   useEffect(() => {
     if (!cliente || isEditing) return;
 
+    const familiaData = mapFamiliaToForm(cliente);
     const nextData = {
       nome: cliente.nome || '',
       email: cliente.email || '',
@@ -31,16 +52,15 @@ export function useClientForm(cliente: ClienteCompleto | undefined, onUpdate: (i
       observacoes: cliente.observacoes || '',
       origem: cliente.origem || '',
       dataNascimento: cliente.data_nascimento || '',
-      conjuge: (cliente as any)?.conjuge || { nome: '', dataNascimento: '' },
-      filhos: (((cliente as any)?.filhos) || []) as { id: string; nome?: string; dataNascimento?: string }[],
+      ...familiaData
     };
 
-    // Evitar re-render desnecessário e loops quando o objeto cliente muda de referência sem alterar valores
+    // Evitar re-render desnecessário e loops
     const isSame = JSON.stringify(nextData) === JSON.stringify(formData);
     if (isSame) return;
 
     setFormData(nextData);
-  }, [cliente, isEditing, formData]);
+  }, [cliente, isEditing]);
 
   const handleSave = () => {
     if (!cliente) return;
@@ -59,16 +79,16 @@ export function useClientForm(cliente: ClienteCompleto | undefined, onUpdate: (i
   const handleCancel = () => {
     if (!cliente) return;
     
+    const familiaData = mapFamiliaToForm(cliente);
     setFormData({
       nome: cliente.nome,
-      email: cliente.email,
-      telefone: cliente.telefone,
+      email: cliente.email || '',
+      telefone: cliente.telefone || '',
       endereco: cliente.endereco || '',
       observacoes: cliente.observacoes || '',
       origem: cliente.origem || '',
       dataNascimento: cliente.data_nascimento || '',
-      conjuge: (cliente as any).conjuge || { nome: '', dataNascimento: '' },
-      filhos: ((cliente as any).filhos || []) as { id: string; nome?: string; dataNascimento?: string }[],
+      ...familiaData
     });
     setIsEditing(false);
   };
@@ -94,7 +114,11 @@ export function useClientForm(cliente: ClienteCompleto | undefined, onUpdate: (i
   const updateConjuge = (field: string, value: string) => {
     setFormData(prev => ({
       ...prev,
-      conjuge: { ...(prev.conjuge || {}), [field]: value }
+      conjuge: { 
+        nome: prev.conjuge?.nome || '', 
+        dataNascimento: prev.conjuge?.dataNascimento || '',
+        [field]: value 
+      }
     }));
   };
 
