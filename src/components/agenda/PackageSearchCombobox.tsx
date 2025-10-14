@@ -139,18 +139,18 @@ export default function PackageSearchCombobox({
       </div>
 
       {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg max-h-60 overflow-auto scrollbar-minimal">
+        <div className="absolute z-50 w-full mt-1 dropdown-solid border border-border rounded-md shadow-lg max-h-60 overflow-auto scrollbar-minimal">
           {Object.keys(groupedPackages).length > 0 ? (
             Object.entries(groupedPackages).map(([category, packages]) => (
               <div key={category}>
-                <div className="px-3 py-1 bg-muted text-[11px] font-medium text-muted-foreground border-b border-border">
+                <div className="px-3 py-1 dropdown-solid-header text-[11px] font-medium text-muted-foreground border-b border-border">
                   {category}
                 </div>
                 {packages.map((pkg) => (
                   <div
                     key={pkg.id}
                     onClick={() => handleSelect(pkg.id)}
-                    className="px-3 py-2 hover:bg-accent cursor-pointer text-xs border-b border-border last:border-b-0"
+                    className="px-3 py-2 dropdown-solid-item cursor-pointer text-xs border-b border-border last:border-b-0"
                   >
                     <div className="flex items-center">
                       <Package className="h-3 w-3 mr-2 text-muted-foreground" />

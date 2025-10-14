@@ -68,7 +68,7 @@ export default function ComboboxDescricao({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0 bg-popover border border-border shadow-lg z-50">
+      <PopoverContent className="w-full p-0 dropdown-solid border border-border shadow-lg z-50">
         <Command>
           <CommandInput
             placeholder="Digite para buscar ou criar nova descrição..."

@@ -75,7 +75,7 @@ export function SimpleProductSelector({
           <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[300px] p-0 z-[9999] bg-popover border shadow-lg">
+      <PopoverContent className="w-[300px] p-0 z-[9999] dropdown-solid border shadow-lg">
         <Command>
           <CommandInput placeholder="Buscar produto..." className="h-8 text-xs" />
           <CommandList>

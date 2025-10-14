@@ -147,7 +147,7 @@ export default function ProdutoSelectorImproved({
             }
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[300px] p-0 z-[9999] bg-popover border shadow-lg" align="start">
+        <PopoverContent className="w-[300px] p-0 z-[9999] dropdown-solid border shadow-lg" align="start">
           <Command>
             <CommandInput 
               placeholder="Buscar produto..." 

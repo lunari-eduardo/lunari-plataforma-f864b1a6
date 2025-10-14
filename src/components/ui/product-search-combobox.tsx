@@ -52,7 +52,7 @@ export function ProductSearchCombobox({
         </Button>
       </PopoverTrigger>
       <PopoverContent 
-        className="w-[300px] p-0 z-[60] bg-popover border shadow-lg" 
+        className="w-[300px] p-0 z-[60] dropdown-solid border shadow-lg"
         onOpenAutoFocus={(e) => e.preventDefault()}
         sideOffset={4}
       >
