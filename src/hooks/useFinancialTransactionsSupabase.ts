@@ -89,11 +89,12 @@ export function useFinancialTransactionsSupabase(filtroMesAno: { mes: number; an
           item_id: t.item_id,
           valor: t.valor,
           data_vencimento: t.data_vencimento,
+          dataVencimento: t.data_vencimento,
           status: t.status as StatusTransacao,
           observacoes: t.observacoes || undefined,
-          parcelas: t.parcela_atual && t.parcela_total 
-            ? { atual: t.parcela_atual, total: t.parcela_total }
-            : undefined,
+          parcela_atual: t.parcela_atual ?? undefined,
+          parcela_total: t.parcela_total ?? undefined,
+          parent_id: t.parent_id ?? undefined,
           userId: t.user_id,
           criadoEm: t.created_at,
           item: item ? {
