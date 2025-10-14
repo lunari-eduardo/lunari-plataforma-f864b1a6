@@ -5,7 +5,6 @@ import { useNovoFinancas } from './useNovoFinancas';
 import { generateFinancialPDF, FinancialExportData, ExportOptions } from '@/utils/financialPdfUtils';
 import { FinancialSummary, ExportConfigState } from '@/types/financialExport';
 import { TransacaoComItem, StatusTransacao } from '@/types/financas';
-import { RecurringBlueprintEngine } from '@/services/RecurringBlueprintEngine';
 import { useAppContext } from '@/contexts/AppContext';
 
 export function useFinancialExport() {
@@ -45,12 +44,13 @@ export function useFinancialExport() {
     setConfig(prev => ({ ...prev, ...updates }));
   };
 
-  // Carrega TODAS as transações do motor e anexa os dados do item
+  // Carrega TODAS as transações do hook useNovoFinancas
+  const { transacoes: allTransactionsRaw } = useNovoFinancas();
+  
   const allTransactions = useMemo<TransacaoComItem[]>(() => {
-    const raw = RecurringBlueprintEngine.loadTransactions();
-    return raw.map((t) => {
-      const item = itensFinanceiros.find((i) => i.id === t.itemId) || ({
-        id: t.itemId,
+    return allTransactionsRaw.map((t: any) => {
+      const item = itensFinanceiros.find((i) => i.id === t.itemId || i.id === t.item_id) || ({
+        id: t.itemId || t.item_id,
         nome: 'Item',
         grupo_principal: 'Despesa Variável',
         userId: t.userId,

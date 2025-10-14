@@ -1,6 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { FinancialEngine } from '@/services/FinancialEngine';
 import { useNovoFinancas } from '@/hooks/useNovoFinancas';
 import { useWorkflowMetrics } from '@/hooks/useWorkflowMetrics';
 import { getCurrentDateString, parseDateFromStorage } from '@/utils/dateUtils';
@@ -144,9 +143,8 @@ export function useDashboardFinanceiro() {
   // Otimizar carregamento de dados com cache
   const { itensFinanceiros } = useNovoFinancas();
   
-  const transacoesFinanceiras = useMemo(() => {
-    return FinancialEngine.loadTransactions();
-  }, []);
+  // Usar transações do hook useNovoFinancas (já vem do Supabase)
+  const { transacoes: transacoesFinanceiras } = useNovoFinancas();
 
   // Criar Maps para lookup O(1) ao invés de find() O(n)
   const itensMap = useMemo(() => {

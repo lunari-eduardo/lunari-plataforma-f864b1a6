@@ -136,50 +136,65 @@ export function useFinancialTransactionsSupabase(filtroMesAno: { mes: number; an
 
   // ============= MUTATION: CRIAR TRANSAÇÃO =============
   const criarTransacaoMutation = useMutation({
-    mutationFn: async (params: CreateTransactionParams) => {
+    mutationFn: async (params: CreateTransactionParams | CreateTransactionInput) => {
+      // Normalizar parâmetros para formato interno
+      const normalizedParams: CreateTransactionParams = 'item_id' in params ? params as CreateTransactionParams : {
+        item_id: (params as CreateTransactionInput).itemId,
+        valor: (params as CreateTransactionInput).valorTotal,
+        data_vencimento: (params as CreateTransactionInput).dataPrimeiraOcorrencia,
+        observacoes: params.observacoes,
+        isRecorrente: (params as CreateTransactionInput).isRecorrente,
+        isValorFixo: params.isValorFixo,
+        isParcelado: (params as CreateTransactionInput).isParcelado,
+        parcela_total: (params as CreateTransactionInput).numeroDeParcelas,
+        credit_card_id: (params as CreateTransactionInput).cartaoCreditoId,
+        data_compra: (params as CreateTransactionInput).dataCompra || (params as CreateTransactionInput).dataPrimeiraOcorrencia
+      };
+
       const {
-        itemId,
-        valorTotal,
-        dataPrimeiraOcorrencia,
-        isRecorrente,
-        isParcelado,
-        numeroDeParcelas,
+        item_id,
+        valor,
+        data_vencimento,
         observacoes,
+        isRecorrente,
         isValorFixo,
-        cartaoCreditoId
-      } = params;
+        isParcelado,
+        parcela_total,
+        credit_card_id,
+        data_compra
+      } = normalizedParams;
 
       // PRIORIDADE 1: Cartão de Crédito
-      if (cartaoCreditoId) {
+      if (credit_card_id) {
         return await SupabaseFinancialTransactionsAdapter.createCreditCardTransactions({
-          itemId,
-          valorTotal,
-          dataCompra: dataPrimeiraOcorrencia,
-          cartaoCreditoId,
-          numeroDeParcelas,
+          itemId: item_id,
+          valorTotal: valor,
+          dataCompra: data_compra || data_vencimento,
+          cartaoCreditoId: credit_card_id,
+          numeroDeParcelas: parcela_total || 1,
           observacoes
         });
       }
 
       // PRIORIDADE 2: Parcelado
-      if (isParcelado && numeroDeParcelas && numeroDeParcelas > 1) {
+      if (isParcelado && parcela_total && parcela_total > 1) {
         return await SupabaseFinancialTransactionsAdapter.createParceledTransactions({
-          itemId,
-          valorTotal,
-          dataPrimeiraOcorrencia,
-          numeroDeParcelas,
+          itemId: item_id,
+          valorTotal: valor,
+          dataPrimeiraOcorrencia: data_vencimento,
+          numeroDeParcelas: parcela_total,
           observacoes
         });
       }
 
       // PRIORIDADE 3: Recorrente Anual (12 meses)
       if (isRecorrente) {
-        const [ano, mes, dia] = dataPrimeiraOcorrencia.split('-').map(Number);
+        const [ano, mes, dia] = data_vencimento.split('-').map(Number);
         return await SupabaseFinancialTransactionsAdapter.createRecurringYearlyTransactions({
-          itemId,
-          valor: valorTotal,
+          itemId: item_id,
+          valor,
           diaVencimento: dia,
-          dataInicio: dataPrimeiraOcorrencia,
+          dataInicio: data_vencimento,
           isValorFixo: isValorFixo ?? true,
           observacoes
         });
@@ -187,17 +202,11 @@ export function useFinancialTransactionsSupabase(filtroMesAno: { mes: number; an
 
       // PADRÃO: Transação Única
       return await SupabaseFinancialTransactionsAdapter.createTransaction({
-        item_id: itemId,
-        valor: valorTotal,
-        data_vencimento: dataPrimeiraOcorrencia,
-        status: dataPrimeiraOcorrencia <= new Date().toISOString().split('T')[0] ? 'Faturado' : 'Agendado',
-        observacoes: observacoes || null,
-        parcela_atual: null,
-        parcela_total: null,
-        recurring_blueprint_id: null,
-        credit_card_id: null,
-        data_compra: null,
-        parent_id: null
+        item_id,
+        valor,
+        data_vencimento,
+        status: data_vencimento <= new Date().toISOString().split('T')[0] ? 'Faturado' : 'Agendado',
+        observacoes: observacoes || null
       });
     },
     onSuccess: () => {

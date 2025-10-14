@@ -6,7 +6,7 @@ import { parseDateFromStorage, formatDateForStorage, getCurrentDateString } from
 import { formatCurrency } from '@/utils/financialUtils';
 import { normalizeOriginToId } from '@/utils/originUtils';
 import { toast } from '@/hooks/use-toast';
-import { FinancialEngine, CreateTransactionInput } from '@/services/FinancialEngine';
+import { CreateTransactionInput } from '@/hooks/useFinancialTransactionsSupabase';
 import { calculateTotals, calculateTotalsNew } from '@/services/FinancialCalculationEngine';
 import { initializeApp, needsInitialization } from '@/utils/initializeApp';
 import { Projeto, CriarProjetoInput } from '@/types/projeto';
@@ -834,15 +834,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           localStorage.setItem('workflow_sessions', JSON.stringify(savedSessions));
           console.log('✅ Pagamento também atualizado no localStorage (compatibilidade)');
 
-          // Criar transação financeira (motor financeiro)
-          FinancialEngine.createTransactions({
-            valorTotal: valor,
-            dataPrimeiraOcorrencia: getCurrentDateString(),
-            itemId: id,
-            isRecorrente: false,
-            isParcelado: false,
-            observacoes: `Pagamento rápido - ${session.nome || 'Cliente'}`
-          });
+          // TODO: Criar transação financeira via hook useNovoFinancas
+          // (precisa ser refatorado para usar o sistema Supabase)
         } else {
           console.log('ℹ️ Sessão não encontrada no localStorage (pode ser só do Supabase) - OK');
         }
@@ -910,7 +903,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Financial engine action
   const createTransactionEngine = useCallback((input: CreateTransactionInput) => {
-    FinancialEngine.createTransactions(input);
+    // TODO: Migrado para hook useNovoFinancas - precisa refatorar
+    console.warn('[AppContext] createTransactionEngine deprecated');
   }, []);
 
   // Clear selected client action

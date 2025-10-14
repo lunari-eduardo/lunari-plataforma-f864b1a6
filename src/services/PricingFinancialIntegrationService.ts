@@ -1,10 +1,7 @@
-import { FinancialEngine, FinancialTransaction } from './FinancialEngine';
-import { autoMigrateCreditCardData } from '@/utils/creditCardDataMigration';
 import { storage } from '@/utils/localStorage';
 import { getCurrentDateString } from '@/utils/dateUtils';
-import { ItemFinanceiro, GrupoPrincipal } from '@/types/financas';
+import { ItemFinanceiro, GrupoPrincipal, NovaTransacaoFinanceira } from '@/types/financas';
 import { GastoItem } from '@/types/precificacao';
-import { RecurringBlueprintEngine } from '@/services/RecurringBlueprintEngine';
 
 // ============= SERVIÇO DE INTEGRAÇÃO PRECIFICAÇÃO-FINANCEIRO =============
 
@@ -241,7 +238,7 @@ class PricingFinancialIntegrationService {
 
   /**
    * Detecta novas transações de equipamentos de forma simplificada
-   * NOVA VERSÃO: agrupa parcelamentos automaticamente
+   * NOTA: MIGRADO PARA SUPABASE - Função temporariamente desabilitada
    */
   detectNewEquipmentTransactions(): {
     transacao: any;
@@ -253,39 +250,15 @@ class PricingFinancialIntegrationService {
     // Garantir que o item "Equipamentos" existe
     this.ensureEquipamentosItemExists();
     
-    const transacoes = RecurringBlueprintEngine.loadTransactions();
-    const itensFinanceiros = storage.load(this.STORAGE_KEYS.FINANCIAL_ITEMS, []);
-    const processedIds = this.getProcessedEquipmentTransactionIds();
-
-    // Encontrar item "Equipamentos"
-    const itemEquipamentos = itensFinanceiros.find((item: ItemFinanceiro) => 
-      item.nome === 'Equipamentos' && item.grupo_principal === 'Investimento'
-    );
-
-    if (!itemEquipamentos) {
-      console.log('🔧 [DetectEquipment] Item "Equipamentos" não encontrado');
-      return [];
-    }
-
-    // Filtrar transações de equipamentos não processadas
-    const transacoesEquipamentos = transacoes.filter((t: any) => {
-      return t.itemId === itemEquipamentos.id && !processedIds.includes(t.id);
-    });
-
-    if (transacoesEquipamentos.length === 0) {
-      return [];
-    }
-    
-    // NOVA LÓGICA: Agrupar por observações/descrições para consolidar parcelamentos
-    const grupos = this.agruparTransacoesPorEquipamento(transacoesEquipamentos);
-    
-    console.log(`🔧 [DetectEquipment] ${grupos.length} equipamentos detectados (${transacoesEquipamentos.length} transações)`);
-    
-    return grupos;
+    // MIGRADO PARA SUPABASE: Aguardando refatoração completa
+    // Por enquanto retornar array vazio
+    console.warn('[PricingFinancialIntegration] detectNewEquipmentTransactions deprecated - migrar para Supabase');
+    return [];
   }
 
   /**
-   * NOVA FUNÇÃO: Agrupa transações por equipamento (baseado em observações ou proximidade temporal)
+   * FUNÇÃO DESABILITADA: Agrupar transações por equipamento
+   * Será reimplementada quando migrar para Supabase
    */
   private agruparTransacoesPorEquipamento(transacoes: any[]): {
     transacao: any;
@@ -294,91 +267,7 @@ class PricingFinancialIntegrationService {
     observacoes?: string;
     allTransactionIds: string[];
   }[] {
-    const grupos = new Map<string, any[]>();
-    
-    transacoes.forEach(transacao => {
-      let chaveGrupo = '';
-      
-      // Se tem observação, usar como chave
-      if (transacao.observacoes?.trim()) {
-        chaveGrupo = transacao.observacoes.trim();
-      } else {
-        // Se não tem observação, agrupar por valor + data próxima (assumindo parcelamento)
-        const dataBase = new Date(transacao.dataVencimento);
-        const mesAno = `${dataBase.getFullYear()}-${String(dataBase.getMonth() + 1).padStart(2, '0')}`;
-        chaveGrupo = `valor_${transacao.valor}_mes_${mesAno}`;
-      }
-      
-      if (!grupos.has(chaveGrupo)) {
-        grupos.set(chaveGrupo, []);
-      }
-      grupos.get(chaveGrupo)!.push(transacao);
-    });
-
-    const resultados: {
-      transacao: any;
-      valor: number;
-      data: string;
-      observacoes?: string;
-      allTransactionIds: string[];
-    }[] = [];
-
-    grupos.forEach((transacoesGrupo) => {
-      // Ordenar por data para usar a primeira como referência
-      transacoesGrupo.sort((a, b) => new Date(a.dataVencimento).getTime() - new Date(b.dataVencimento).getTime());
-      
-      const primeiraTransacao = transacoesGrupo[0];
-      const valorTotal = transacoesGrupo.reduce((sum, t) => sum + t.valor, 0);
-      const allIds = transacoesGrupo.map(t => t.id);
-      
-      // Gerar nome do equipamento
-      let nomeEquipamento = primeiraTransacao.observacoes?.trim();
-      if (!nomeEquipamento) {
-        nomeEquipamento = transacoesGrupo.length > 1 
-          ? `Equipamento R$ ${valorTotal.toFixed(2)} (${transacoesGrupo.length} parcelas)`
-          : `Equipamento R$ ${valorTotal.toFixed(2)}`;
-      }
-      
-      // CORREÇÃO: Usar dataCompra (data original) ao invés de dataVencimento (data da fatura)
-      let dataOriginal = primeiraTransacao.dataCompra;
-      
-      // Se não tem dataCompra e é cartão de crédito, calcular data provável da compra
-      if (!dataOriginal && primeiraTransacao.cartaoCreditoId) {
-        const cartoes = FinancialEngine.loadCreditCards();
-        const cartao = cartoes.find(c => c.id === primeiraTransacao.cartaoCreditoId);
-        
-        if (cartao) {
-          // Calcular data provável da compra baseado no vencimento
-          const [ano, mes] = primeiraTransacao.dataVencimento.split('-').map(Number);
-          let mesCompra = mes - 1;
-          let anoCompra = ano;
-          
-          if (mesCompra < 1) {
-            mesCompra = 12;
-            anoCompra--;
-          }
-          
-          // Usar dia de fechamento como estimativa
-          const diaCompra = Math.min(cartao.diaFechamento, new Date(anoCompra, mesCompra, 0).getDate());
-          dataOriginal = `${anoCompra}-${mesCompra.toString().padStart(2, '0')}-${diaCompra.toString().padStart(2, '0')}`;
-        }
-      }
-      
-      // Fallback para dataVencimento se ainda não temos dataOriginal
-      if (!dataOriginal) {
-        dataOriginal = primeiraTransacao.dataVencimento;
-      }
-      
-      resultados.push({
-        transacao: primeiraTransacao,
-        valor: valorTotal, // VALOR TOTAL CONSOLIDADO
-        data: dataOriginal, // USAR DATA ORIGINAL DA COMPRA
-        observacoes: nomeEquipamento,
-        allTransactionIds: allIds
-      });
-    });
-
-    return resultados;
+    return [];
   }
 
   /**

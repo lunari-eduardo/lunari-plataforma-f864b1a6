@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import { useNovoFinancas } from './useNovoFinancas';
-import { FinancialEngine } from '@/services/FinancialEngine';
 import { formatToDayMonth } from '@/utils/dateUtils';
 
 interface CriticalFinancialItem {

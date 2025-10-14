@@ -12,7 +12,6 @@ import { useToast } from '@/hooks/use-toast';
 
 import { formatDateForDisplay } from '@/utils/dateUtils';
 import { EstruturaCustosService } from '@/services/PricingService';
-import { autoMigrateCreditCardData } from '@/utils/creditCardDataMigration';
 
 interface EquipmentSyncModalProps {
   equipment: {
@@ -44,10 +43,8 @@ export function EquipmentSyncModal({
     vidaUtil: '5'
   });
 
-  // Executar migração automática quando modal abre
-  if (open) {
-    autoMigrateCreditCardData();
-  }
+  // Modal aberto - não precisa mais de migração automática
+  // Os dados já estão no Supabase
 
   // Identificar se é parcelado
   const isInstallment = equipment.observacoes?.includes('parcelado') || false;
