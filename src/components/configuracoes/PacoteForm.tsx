@@ -8,6 +8,7 @@ import { obterConfiguracaoPrecificacao } from '@/utils/precificacaoUtils';
 import SimpleProductSelect from '@/components/configuracoes/SimpleProductSelect';
 import { Badge } from '@/components/ui/badge';
 import { X } from 'lucide-react';
+import { useNumberInput } from '@/hooks/useNumberInput';
 import { 
   Categoria, 
   Produto, 
@@ -26,7 +27,7 @@ export default function PacoteForm({
 }: PacoteFormProps) {
   const [formData, setFormData] = useState<PacoteFormData>({
     nome: initialData?.nome || '',
-    categoria_id: initialData?.categoria_id || categorias[0]?.id || '',
+    categoria_id: initialData?.categoria_id || '',
     valor_base: initialData?.valor_base || 0,
     valor_foto_extra: initialData?.valor_foto_extra || 0,
     produtosIncluidos: initialData?.produtosIncluidos || []
@@ -37,6 +38,22 @@ export default function PacoteForm({
   // Verificar modelo de precificação atual
   const configPrecificacao = obterConfiguracaoPrecificacao();
   const isFixedPricing = configPrecificacao.modelo === 'fixo';
+
+  // Hooks para inputs numéricos com auto-seleção
+  const valorBaseInput = useNumberInput({
+    value: formData.valor_base,
+    onChange: (value) => {
+      setFormData(prev => ({ ...prev, valor_base: parseFloat(value) || 0 }));
+      if (errors.valor_base) {
+        setErrors(prev => ({ ...prev, valor_base: '' }));
+      }
+    }
+  });
+
+  const valorFotoExtraInput = useNumberInput({
+    value: formData.valor_foto_extra,
+    onChange: (value) => setFormData(prev => ({ ...prev, valor_foto_extra: parseFloat(value) || 0 }))
+  });
   const handleSubmit = () => {
     const newErrors: {[key: string]: string} = {};
 
@@ -62,7 +79,7 @@ export default function PacoteForm({
     if (!isEditing) {
       setFormData({
         nome: '',
-        categoria_id: categorias[0]?.id || '',
+        categoria_id: '',
         valor_base: 0,
         valor_foto_extra: 0,
         produtosIncluidos: []
@@ -163,13 +180,9 @@ export default function PacoteForm({
             type="number"
             step="0.01"
             min="0"
-            value={formData.valor_base}
-            onChange={(e) => {
-              setFormData(prev => ({ ...prev, valor_base: parseFloat(e.target.value) || 0 }));
-              if (errors.valor_base) {
-                setErrors(prev => ({ ...prev, valor_base: '' }));
-              }
-            }}
+            value={valorBaseInput.displayValue}
+            onChange={valorBaseInput.handleChange}
+            onFocus={valorBaseInput.handleFocus}
             placeholder="0,00"
             className={cn(
               "h-9 text-sm transition-colors [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
@@ -192,8 +205,9 @@ export default function PacoteForm({
               type="number"
               step="0.01"
               min="0"
-              value={formData.valor_foto_extra}
-              onChange={(e) => setFormData(prev => ({ ...prev, valor_foto_extra: parseFloat(e.target.value) || 0 }))}
+              value={valorFotoExtraInput.displayValue}
+              onChange={valorFotoExtraInput.handleChange}
+              onFocus={valorFotoExtraInput.handleFocus}
               placeholder="0,00"
               className="h-9 text-sm [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />

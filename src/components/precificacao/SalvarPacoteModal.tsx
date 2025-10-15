@@ -9,6 +9,7 @@ import { useAppContext } from '@/contexts/AppContext';
 import { useToast } from '@/hooks/use-toast';
 import { storage } from '@/utils/localStorage';
 import { configurationService } from '@/services/ConfigurationService';
+import { useNumberInput } from '@/hooks/useNumberInput';
 
 interface ProdutoAdicional {
   id: string;
@@ -44,6 +45,17 @@ export function SalvarPacoteModal({
     valor_base: precoFinal,
     valor_foto_extra: 35,
     observacoes: ''
+  });
+
+  // Hooks para inputs numéricos com auto-seleção
+  const valorBaseInput = useNumberInput({
+    value: formData.valor_base,
+    onChange: (value) => setFormData(prev => ({ ...prev, valor_base: parseFloat(value) || 0 }))
+  });
+
+  const valorFotoExtraInput = useNumberInput({
+    value: formData.valor_foto_extra,
+    onChange: (value) => setFormData(prev => ({ ...prev, valor_foto_extra: parseFloat(value) || 0 }))
   });
 
   // Atualizar valor base quando precoFinal mudar
@@ -188,8 +200,9 @@ export function SalvarPacoteModal({
               type="number"
               min="0"
               step="0.01"
-              value={formData.valor_base}
-              onChange={(e) => setFormData(prev => ({ ...prev, valor_base: parseFloat(e.target.value) || 0 }))}
+              value={valorBaseInput.displayValue}
+              onChange={valorBaseInput.handleChange}
+              onFocus={valorBaseInput.handleFocus}
               className="mt-1"
             />
           </div>
@@ -202,8 +215,9 @@ export function SalvarPacoteModal({
               type="number"
               min="0"
               step="0.01"
-              value={formData.valor_foto_extra}
-              onChange={(e) => setFormData(prev => ({ ...prev, valor_foto_extra: parseFloat(e.target.value) || 0 }))}
+              value={valorFotoExtraInput.displayValue}
+              onChange={valorFotoExtraInput.handleChange}
+              onFocus={valorFotoExtraInput.handleFocus}
               className="mt-1"
             />
           </div>
