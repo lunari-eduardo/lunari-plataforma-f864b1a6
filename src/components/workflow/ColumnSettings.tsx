@@ -19,13 +19,23 @@ export function ColumnSettings({
     date: "Data e Hora",
     client: "Cliente",
     description: "Descrição",
+    email: "E-mail",
     status: "Status",
+    category: "Categoria",
     package: "Pacote",
-    extras: "Extras",
+    packageValue: "Vlr Pacote",
     discount: "Desconto",
+    extraPhotoValue: "Vlr Foto",
+    extraPhotoQty: "Qtd Foto",
+    extraPhotoTotal: "Total Foto Extra",
+    product: "Produto",
+    productTotal: "Total Prod",
+    additionalValue: "Adicional",
+    details: "Obs",
     total: "Total",
     paid: "Pago",
-    remaining: "Resta"
+    remaining: "Resta",
+    payment: "Pagamento"
   }
 }: ColumnSettingsProps) {
   // Stabilize state to prevent infinite re-renders
