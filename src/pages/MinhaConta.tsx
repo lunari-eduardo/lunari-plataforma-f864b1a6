@@ -8,7 +8,7 @@ import { useFormValidation } from '@/hooks/user-profile/useFormValidation';
 import { PersonalInfoForm } from '@/components/user-profile/forms/PersonalInfoForm';
 import { ContactInfoSection } from '@/components/user-profile/forms/ContactInfoSection';
 import { LogoUploadSection } from '@/components/user-profile/upload/LogoUploadSection';
-import { UserProfile } from '@/types/userProfile';
+import { UserProfile } from '@/services/ProfileService';
 import { toast } from 'sonner';
 export default function MinhaConta() {
   const { profile, saveProfile, getProfileOrDefault } = useUserProfile();
@@ -44,20 +44,20 @@ export default function MinhaConta() {
     }
 
     // Garantir que campos obrigatórios estão presentes
-    if (!formData.nomeCompleto?.trim()) {
+    if (!formData.nome?.trim()) {
       toast.error('Nome completo é obrigatório');
       return;
     }
 
     // Filtrar telefones e redes sociais vazios
     const cleanedData = {
-      nomeCompleto: formData.nomeCompleto.trim(),
-      nomeEmpresa: formData.nomeEmpresa || '',
-      cpfCnpj: formData.cpfCnpj || '',
-      emailPrincipal: formData.emailPrincipal || '',
-      enderecoComercial: formData.enderecoComercial || '',
+      nome: formData.nome.trim(),
+      empresa: formData.empresa || null,
+      cpf_cnpj: formData.cpf_cnpj || null,
+      email: formData.email || null,
+      endereco_comercial: formData.endereco_comercial || null,
       telefones: (formData.telefones || []).filter(tel => tel.trim() !== ''),
-      siteRedesSociais: (formData.siteRedesSociais || []).filter(site => site.trim() !== '')
+      site_redes_sociais: (formData.site_redes_sociais || []).filter(site => site.trim() !== '')
     };
     
     await saveProfile(cleanedData);
@@ -95,9 +95,9 @@ export default function MinhaConta() {
                   
                   <ContactInfoSection
                     telefones={formData.telefones || []}
-                    siteRedesSociais={formData.siteRedesSociais || []}
-                    onTelefonesChange={handleTelefonesChange}
-                    onSitesChange={handleSitesChange}
+                    siteRedesSociais={formData.site_redes_sociais || []}
+                    onTelefonesChange={(telefones) => setFormData(prev => ({ ...prev, telefones }))}
+                    onSitesChange={(sites) => setFormData(prev => ({ ...prev, site_redes_sociais: sites }))}
                   />
 
                   <div className="flex justify-end pt-4">

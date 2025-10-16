@@ -2,7 +2,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { formatCpfCnpj } from '@/utils/userUtils';
-import { UserProfile } from '@/types/userProfile';
+import { UserProfile } from '@/services/ProfileService';
 
 interface PersonalInfoFormProps {
   formData: Partial<UserProfile>;
@@ -13,73 +13,73 @@ interface PersonalInfoFormProps {
 export function PersonalInfoForm({ formData, onChange, errors }: PersonalInfoFormProps) {
   const handleCpfCnpjChange = (value: string) => {
     const formatted = formatCpfCnpj(value);
-    onChange('cpfCnpj', formatted);
+    onChange('cpf_cnpj', formatted);
   };
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="nomeCompleto">Nome Completo *</Label>
+          <Label htmlFor="nome">Nome Completo *</Label>
           <Input 
-            id="nomeCompleto" 
-            value={formData.nomeCompleto || ''} 
-            onChange={e => onChange('nomeCompleto', e.target.value)} 
+            id="nome" 
+            value={formData.nome || ''} 
+            onChange={e => onChange('nome', e.target.value)} 
             placeholder="Seu nome completo"
-            className={errors?.nomeCompleto ? 'border-destructive' : ''}
+            className={errors?.nome ? 'border-destructive' : ''}
           />
-          {errors?.nomeCompleto && (
-            <p className="text-sm text-destructive">{errors.nomeCompleto}</p>
+          {errors?.nome && (
+            <p className="text-sm text-destructive">{errors.nome}</p>
           )}
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="nomeEmpresa">Nome da Empresa (Fantasia)</Label>
+          <Label htmlFor="empresa">Nome da Empresa (Fantasia)</Label>
           <Input 
-            id="nomeEmpresa" 
-            value={formData.nomeEmpresa || ''} 
-            onChange={e => onChange('nomeEmpresa', e.target.value)} 
+            id="empresa" 
+            value={formData.empresa || ''} 
+            onChange={e => onChange('empresa', e.target.value)} 
             placeholder="Nome fantasia da empresa" 
           />
         </div>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="cpfCnpj">CPF/CNPJ</Label>
+        <Label htmlFor="cpf_cnpj">CPF/CNPJ</Label>
         <Input 
-          id="cpfCnpj" 
-          value={formData.cpfCnpj || ''} 
+          id="cpf_cnpj" 
+          value={formData.cpf_cnpj || ''} 
           onChange={e => handleCpfCnpjChange(e.target.value)} 
           placeholder="000.000.000-00 ou 00.000.000/0000-00" 
           maxLength={18}
-          className={errors?.cpfCnpj ? 'border-destructive' : ''}
+          className={errors?.cpf_cnpj ? 'border-destructive' : ''}
         />
-        {errors?.cpfCnpj && (
-          <p className="text-sm text-destructive">{errors.cpfCnpj}</p>
+        {errors?.cpf_cnpj && (
+          <p className="text-sm text-destructive">{errors.cpf_cnpj}</p>
         )}
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="emailPrincipal">E-mail Principal de Contato</Label>
+        <Label htmlFor="email">E-mail Principal de Contato</Label>
         <Input 
-          id="emailPrincipal" 
+          id="email" 
           type="email" 
-          value={formData.emailPrincipal || ''} 
-          onChange={e => onChange('emailPrincipal', e.target.value)} 
+          value={formData.email || ''} 
+          onChange={e => onChange('email', e.target.value)} 
           placeholder="seu@email.com"
-          className={errors?.emailPrincipal ? 'border-destructive' : ''}
+          className={errors?.email ? 'border-destructive' : ''}
         />
-        {errors?.emailPrincipal && (
-          <p className="text-sm text-destructive">{errors.emailPrincipal}</p>
+        {errors?.email && (
+          <p className="text-sm text-destructive">{errors.email}</p>
         )}
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="enderecoComercial">Endereço Comercial</Label>
+        <Label htmlFor="endereco_comercial">Endereço Comercial</Label>
         <Textarea 
-          id="enderecoComercial" 
-          value={formData.enderecoComercial || ''} 
-          onChange={e => onChange('enderecoComercial', e.target.value)} 
+          id="endereco_comercial" 
+          value={formData.endereco_comercial || ''} 
+          onChange={e => onChange('endereco_comercial', e.target.value)} 
           placeholder="Endereço completo do estúdio/escritório" 
           rows={3} 
         />

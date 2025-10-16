@@ -41,7 +41,7 @@ export default function DemonstrativoSimplificado({
 
   const validateProfileData = () => {
     const profile = getProfileOrDefault();
-    return !!(profile.nomeEmpresa || profile.nomeCompleto);
+    return !!(profile.empresa || profile.nome);
   };
 
   const handleExportRequest = () => {

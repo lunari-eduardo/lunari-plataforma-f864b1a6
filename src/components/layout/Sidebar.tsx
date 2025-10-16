@@ -50,7 +50,7 @@ export default function Sidebar() {
       .slice(0, 2);
   };
   
-  const userInitials = getInitials(currentProfile.nomeCompleto || currentProfile.nomeEmpresa || 'Usuario');
+  const userInitials = getInitials(currentProfile.nome || currentProfile.empresa || 'Usuario');
   
   const handleSignOut = async () => {
     try {
@@ -75,7 +75,7 @@ export default function Sidebar() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-48 bg-lunar-bg shadow-lunar-md border border-lunar-border/50">
         <DropdownMenuLabel className="text-xs text-lunar-text">
-          {currentProfile.nomeCompleto || currentProfile.nomeEmpresa || 'Minha Conta'}
+          {currentProfile.nome || currentProfile.empresa || 'Minha Conta'}
         </DropdownMenuLabel>
         <DropdownMenuSeparator className="bg-lunar-border/30" />
         <DropdownMenuItem 
@@ -214,7 +214,7 @@ export default function Sidebar() {
           <UserAvatar className="flex-shrink-0" />
           {isDesktopExpanded && <div>
               <span className="font-semibold text-sm text-lunar-text">
-                {currentProfile.nomeCompleto || currentProfile.nomeEmpresa || 'Minha Conta'}
+                {currentProfile.nome || currentProfile.empresa || 'Minha Conta'}
               </span>
               <div className="text-2xs text-lunar-textSecondary">
                 Lunari

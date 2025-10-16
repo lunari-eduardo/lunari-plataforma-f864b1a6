@@ -10,6 +10,10 @@ export interface UserProfile {
   empresa: string | null;
   logo_url: string | null;
   avatar_url: string | null;
+  cpf_cnpj: string | null;
+  endereco_comercial: string | null;
+  telefones: string[] | null;
+  site_redes_sociais: string[] | null;
   is_onboarding_complete: boolean;
   created_at: string;
   updated_at: string;

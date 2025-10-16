@@ -24,7 +24,7 @@ export default function ExportDetalhado({ dados }: ExportDetalhadoProps) {
 
   const validateProfileData = () => {
     const profile = getProfileOrDefault();
-    return !!(profile.nomeEmpresa || profile.nomeCompleto);
+    return !!(profile.empresa || profile.nome);
   };
 
   const handleExportRequest = () => {

@@ -1,5 +1,6 @@
 import html2pdf from 'html2pdf.js';
-import { UserProfile, UserBranding } from '@/types/userProfile';
+import { UserProfile } from '@/services/ProfileService';
+import { UserBranding } from '@/types/userProfile';
 import { NovaTransacaoFinanceira, TransacaoComItem, GrupoPrincipal } from '@/types/financas';
 
 import { formatCurrency } from './financialUtils';

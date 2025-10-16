@@ -1,6 +1,7 @@
 import { formatCurrency } from './financialUtils';
 import { formatDateForDisplay, formatDateForPDF, getCurrentDateTimeForPDF } from './dateUtils';
-import { UserProfile, UserBranding } from '@/types/userProfile';
+import { UserProfile } from '@/services/ProfileService';
+import { UserBranding } from '@/types/userProfile';
 import { TransacaoComItem } from '@/types/financas';
 import html2pdf from 'html2pdf.js';
 

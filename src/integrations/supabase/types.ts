@@ -936,42 +936,54 @@ export type Database = {
         Row: {
           avatar_url: string | null
           cidade: string | null
+          cpf_cnpj: string | null
           created_at: string
           email: string | null
           empresa: string | null
+          endereco_comercial: string | null
           id: string
           is_onboarding_complete: boolean | null
           logo_url: string | null
           nome: string | null
+          site_redes_sociais: string[] | null
           telefone: string | null
+          telefones: string[] | null
           updated_at: string
           user_id: string
         }
         Insert: {
           avatar_url?: string | null
           cidade?: string | null
+          cpf_cnpj?: string | null
           created_at?: string
           email?: string | null
           empresa?: string | null
+          endereco_comercial?: string | null
           id?: string
           is_onboarding_complete?: boolean | null
           logo_url?: string | null
           nome?: string | null
+          site_redes_sociais?: string[] | null
           telefone?: string | null
+          telefones?: string[] | null
           updated_at?: string
           user_id: string
         }
         Update: {
           avatar_url?: string | null
           cidade?: string | null
+          cpf_cnpj?: string | null
           created_at?: string
           email?: string | null
           empresa?: string | null
+          endereco_comercial?: string | null
           id?: string
           is_onboarding_complete?: boolean | null
           logo_url?: string | null
           nome?: string | null
+          site_redes_sociais?: string[] | null
           telefone?: string | null
+          telefones?: string[] | null
           updated_at?: string
           user_id?: string
         }

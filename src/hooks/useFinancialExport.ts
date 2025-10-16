@@ -116,7 +116,7 @@ export function useFinancialExport() {
     const profile = getProfileOrDefault();
     const branding = getBrandingOrDefault();
     
-    if (!profile.nomeEmpresa && !profile.nomeCompleto) {
+    if (!profile.empresa && !profile.nome) {
       return null;
     }
 
@@ -214,7 +214,7 @@ export function useFinancialExport() {
 
   const canExport = useMemo(() => {
     const profile = getProfileOrDefault();
-    return !!(profile.nomeEmpresa || profile.nomeCompleto);
+    return !!(profile.empresa || profile.nome);
   }, [getProfileOrDefault]);
 
   const exportSummary = useMemo(() => {

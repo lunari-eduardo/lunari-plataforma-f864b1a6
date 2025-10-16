@@ -99,6 +99,10 @@ export function useUserProfile() {
       empresa: null,
       logo_url: null,
       avatar_url: null,
+      cpf_cnpj: null,
+      endereco_comercial: null,
+      telefones: null,
+      site_redes_sociais: null,
       is_onboarding_complete: false,
       created_at: now,
       updated_at: now
