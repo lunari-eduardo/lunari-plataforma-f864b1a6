@@ -934,10 +934,13 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_url: string | null
+          cidade: string | null
           created_at: string
           email: string | null
           empresa: string | null
           id: string
+          is_onboarding_complete: boolean | null
           logo_url: string | null
           nome: string | null
           telefone: string | null
@@ -945,10 +948,13 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          avatar_url?: string | null
+          cidade?: string | null
           created_at?: string
           email?: string | null
           empresa?: string | null
           id?: string
+          is_onboarding_complete?: boolean | null
           logo_url?: string | null
           nome?: string | null
           telefone?: string | null
@@ -956,10 +962,13 @@ export type Database = {
           user_id: string
         }
         Update: {
+          avatar_url?: string | null
+          cidade?: string | null
           created_at?: string
           email?: string | null
           empresa?: string | null
           id?: string
+          is_onboarding_complete?: boolean | null
           logo_url?: string | null
           nome?: string | null
           telefone?: string | null
