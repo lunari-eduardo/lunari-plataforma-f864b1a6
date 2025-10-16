@@ -22,6 +22,7 @@ import Tarefas from "./pages/Tarefas";
 import FeedTest from "./pages/FeedTest";
 import LandingPage from "./pages/LandingPage";
 import Auth from "./pages/Auth";
+import Onboarding from "./pages/Onboarding";
 import NotFound from "./pages/NotFound";
 import { AppProvider } from "./contexts/AppContext";
 import { AgendaProvider } from "./contexts/AgendaContext";
@@ -71,6 +72,13 @@ function App() {
                     {/* Public routes */}
                     <Route path="/landing" element={<LandingPage />} />
                     <Route path="/auth" element={<Auth />} />
+                    
+                    {/* Semi-protected: onboarding (requires auth but not complete profile) */}
+                    <Route path="/onboarding" element={
+                      <ProtectedRoute>
+                        <Onboarding />
+                      </ProtectedRoute>
+                    } />
                     
                     {/* Protected routes with layout */}
                     <Route path="/" element={

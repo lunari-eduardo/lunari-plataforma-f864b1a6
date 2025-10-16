@@ -1,16 +1,19 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserProfile } from '@/hooks/useUserProfile';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const { profile, loading: profileLoading } = useUserProfile();
   const location = useLocation();
 
-  if (loading) {
+  // 1. Verificar autenticação
+  if (authLoading || profileLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-lunar-bg">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-lunar-accent"></div>
@@ -21,6 +24,13 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   if (!user) {
     // Redirect to auth page with return url
     return <Navigate to="/auth" state={{ from: location }} replace />;
+  }
+
+  // 2. Verificar onboarding (exceto se já estiver na rota /onboarding)
+  if (location.pathname !== '/onboarding') {
+    if (!profile?.is_onboarding_complete || !profile?.nome || !profile?.cidade) {
+      return <Navigate to="/onboarding" replace />;
+    }
   }
 
   return <>{children}</>;

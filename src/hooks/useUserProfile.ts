@@ -1,57 +1,117 @@
 import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { UserProfile, UserBranding, UserPreferences, DEFAULT_USER_PROFILE, DEFAULT_USER_BRANDING, DEFAULT_USER_PREFERENCES } from '@/types/userProfile';
+import { useAuth } from '@/contexts/AuthContext';
+import { ProfileService, UserProfile as SupabaseProfile } from '@/services/ProfileService';
+import { UserBranding, UserPreferences, DEFAULT_USER_BRANDING, DEFAULT_USER_PREFERENCES } from '@/types/userProfile';
 import { UserDataService } from '@/services/UserDataService';
+import { supabase } from '@/integrations/supabase/client';
 
 export function useUserProfile() {
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
 
+  // Query para buscar perfil
+  const { data: profile, isLoading: loading } = useQuery({
+    queryKey: ['profile', user?.id],
+    queryFn: () => user ? ProfileService.getProfile(user.id) : Promise.resolve(null),
+    enabled: !!user,
+    staleTime: 1000 * 60 * 5 // 5 minutos
+  });
+
+  // Mutation para atualizar perfil
+  const updateProfileMutation = useMutation({
+    mutationFn: (data: Partial<Omit<SupabaseProfile, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => 
+      ProfileService.updateProfile(user!.id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
+      toast.success('Perfil atualizado com sucesso!');
+    },
+    onError: (error) => {
+      console.error('Erro ao atualizar perfil:', error);
+      toast.error('Erro ao atualizar perfil');
+    }
+  });
+
+  // Subscription para mudanças em tempo real
   useEffect(() => {
-    loadProfile();
-  }, []);
+    if (!user) return;
 
-  const loadProfile = () => {
+    const channel = supabase
+      .channel('profile-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          queryClient.setQueryData(['profile', user.id], payload.new);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, queryClient]);
+
+  const uploadAvatar = async (file: File) => {
+    if (!user) throw new Error('Usuário não autenticado');
     try {
-      const savedProfile = UserDataService.loadProfile();
-      setProfile(savedProfile);
+      const avatarUrl = await ProfileService.uploadAvatar(user.id, file);
+      queryClient.invalidateQueries({ queryKey: ['profile', user.id] });
+      toast.success('Foto atualizada com sucesso!');
+      return avatarUrl;
     } catch (error) {
-      console.error('❌ Erro ao carregar perfil:', error);
-    } finally {
-      setLoading(false);
+      console.error('Erro ao fazer upload:', error);
+      toast.error('Erro ao fazer upload da foto');
+      throw error;
     }
   };
 
-  const saveProfile = async (profileData: Omit<UserProfile, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const deleteAvatar = async () => {
+    if (!user) throw new Error('Usuário não autenticado');
     try {
-      const updatedProfile = await UserDataService.saveProfile(profileData);
-      setProfile(updatedProfile);
-      toast.success('Perfil salvo com sucesso!');
-      return true;
+      await ProfileService.deleteAvatar(user.id, profile?.avatar_url || null);
+      queryClient.invalidateQueries({ queryKey: ['profile', user.id] });
+      toast.success('Foto removida com sucesso!');
     } catch (error) {
-      console.error('❌ Erro ao salvar perfil:', error);
-      toast.error('Erro ao salvar perfil');
-      return false;
+      console.error('Erro ao remover foto:', error);
+      toast.error('Erro ao remover foto');
+      throw error;
     }
   };
 
-  const getProfileOrDefault = (): UserProfile => {
+  const getProfileOrDefault = (): SupabaseProfile => {
     if (profile) return profile;
     
     const now = new Date().toISOString();
     return {
-      ...DEFAULT_USER_PROFILE,
-      id: `profile_${Date.now()}`,
-      createdAt: now,
-      updatedAt: now
+      id: '',
+      user_id: user?.id || '',
+      nome: null,
+      email: null,
+      telefone: null,
+      cidade: null,
+      empresa: null,
+      logo_url: null,
+      avatar_url: null,
+      is_onboarding_complete: false,
+      created_at: now,
+      updated_at: now
     };
   };
 
   return {
     profile,
     loading,
-    saveProfile,
-    loadProfile,
+    updateProfile: updateProfileMutation.mutate,
+    saveProfile: updateProfileMutation.mutate, // Alias for compatibility
+    uploadAvatar,
+    deleteAvatar,
     getProfileOrDefault
   };
 }
