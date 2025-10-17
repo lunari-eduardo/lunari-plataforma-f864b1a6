@@ -20,7 +20,7 @@ function getGreeting(): { label: string; Icon: React.ComponentType<any> } {
 
 export default function DailyHero() {
   const { profile } = useUserProfile();
-  const name = profile?.nomeCompleto?.split(" ")[0] || "";
+  const name = profile?.nome?.split(" ")[0] || "";
   const { sessionsToday, tasksToday, nextAppointment } = useTodayOverview();
   const { label, Icon } = getGreeting();
   const isTablet = useIsTablet();

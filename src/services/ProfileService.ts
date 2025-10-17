@@ -39,18 +39,39 @@ export class ProfileService {
   }
 
   /**
-   * Atualizar perfil do usuário
+   * Atualizar perfil do usuário (com UPSERT automático)
    */
   static async updateProfile(
     userId: string,
     updates: Partial<Omit<UserProfile, 'id' | 'user_id' | 'created_at' | 'updated_at'>>
   ): Promise<UserProfile> {
+    // Primeiro, tentar fazer UPDATE normal
     const { data, error } = await supabase
       .from('profiles')
       .update(updates)
       .eq('user_id', userId)
       .select()
       .single();
+
+    // Se UPDATE não encontrou nenhuma linha (erro PGRST116), criar o perfil
+    if (error?.code === 'PGRST116') {
+      const { data: insertData, error: insertError } = await supabase
+        .from('profiles')
+        .insert({
+          user_id: userId,
+          email: updates.email || '',
+          ...updates
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('Erro ao criar perfil:', insertError);
+        throw insertError;
+      }
+
+      return insertData;
+    }
 
     if (error) {
       console.error('Erro ao atualizar perfil:', error);

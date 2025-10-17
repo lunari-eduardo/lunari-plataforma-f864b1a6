@@ -26,7 +26,7 @@ export default function SalesAnalysisHero({
   const {
     profile
   } = useUserProfile();
-  const name = profile?.nomeCompleto?.split(" ")[0] || "";
+  const name = profile?.nome?.split(" ")[0] || "";
   const getPeriodLabel = () => {
     if (selectedMonth === null) {
       return `Ano de ${selectedYear}`;

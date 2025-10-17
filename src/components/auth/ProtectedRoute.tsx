@@ -28,7 +28,12 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
   // 2. Verificar onboarding (exceto se já estiver na rota /onboarding)
   if (location.pathname !== '/onboarding') {
-    if (!profile?.is_onboarding_complete || !profile?.nome || !profile?.cidade) {
+    const needsOnboarding = !profile || 
+      !profile.is_onboarding_complete || 
+      !profile.nome?.trim() || 
+      !profile.cidade?.trim();
+      
+    if (needsOnboarding) {
       return <Navigate to="/onboarding" replace />;
     }
   }

@@ -11,10 +11,26 @@ export function useUserProfile() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // Query para buscar perfil
+  // Query para buscar perfil (com criação automática se não existir)
   const { data: profile, isLoading: loading } = useQuery({
     queryKey: ['profile', user?.id],
-    queryFn: () => user ? ProfileService.getProfile(user.id) : Promise.resolve(null),
+    queryFn: async () => {
+      if (!user) return null;
+      
+      let userProfile = await ProfileService.getProfile(user.id);
+      
+      // Se perfil não existe, criar um básico
+      if (!userProfile) {
+        userProfile = await ProfileService.updateProfile(user.id, {
+          email: user.email || '',
+          nome: '',
+          cidade: '',
+          is_onboarding_complete: false
+        });
+      }
+      
+      return userProfile;
+    },
     enabled: !!user,
     staleTime: 1000 * 60 * 5 // 5 minutos
   });
