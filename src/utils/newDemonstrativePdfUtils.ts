@@ -226,9 +226,9 @@ const getDemonstrativeHTML = (data: DemonstrativeExportData): string => {
     <body>
       <header>
         <div class="company-info">
-          <h2>${profile.nomeEmpresa || profile.nomeCompleto}</h2>
-          ${profile.cpfCnpj ? `<p>CNPJ/CPF: ${profile.cpfCnpj}</p>` : ''}
-          ${profile.enderecoComercial ? `<p>${profile.enderecoComercial}</p>` : ''}
+          <h2>${profile.empresa || profile.nome}</h2>
+          ${profile.cpf_cnpj ? `<p>CNPJ/CPF: ${profile.cpf_cnpj}</p>` : ''}
+          ${profile.endereco_comercial ? `<p>${profile.endereco_comercial}</p>` : ''}
         </div>
         <div class="period-info">
           <strong>Período:</strong> ${formatDateForPDF(period.startDate)} a ${formatDateForPDF(period.endDate)}<br>

@@ -19,8 +19,18 @@ export class ClienteSupabaseService {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
-      // Generate unique file path
-      const fileExt = file.name.split('.').pop();
+      // Validate file size (10MB max for documents)
+      const MAX_SIZE = 10 * 1024 * 1024;
+      if (file.size > MAX_SIZE) {
+        throw new Error('Arquivo muito grande. Tamanho máximo: 10MB');
+      }
+
+      // Sanitize file extension
+      const fileExt = file.name.split('.').pop()?.toLowerCase();
+      if (!fileExt) {
+        throw new Error('Arquivo sem extensão');
+      }
+
       const fileName = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
       const filePath = `${user.id}/${clienteId}/${fileName}`;
 

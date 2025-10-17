@@ -64,8 +64,24 @@ export class ProfileService {
    * Fazer upload de avatar
    */
   static async uploadAvatar(userId: string, file: File): Promise<string> {
-    // Criar nome único para o arquivo
-    const fileExt = file.name.split('.').pop();
+    // Validate file type
+    const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      throw new Error('Tipo de arquivo inválido. Apenas JPG, PNG e WEBP são permitidos.');
+    }
+
+    // Validate file size (5MB max)
+    const MAX_SIZE = 5 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      throw new Error('Arquivo muito grande. Tamanho máximo: 5MB');
+    }
+
+    // Sanitize file extension
+    const fileExt = file.name.split('.').pop()?.toLowerCase();
+    if (!fileExt || !['jpg', 'jpeg', 'png', 'webp'].includes(fileExt)) {
+      throw new Error('Extensão de arquivo inválida');
+    }
+
     const fileName = `${userId}/${Date.now()}.${fileExt}`;
 
     // Upload do arquivo

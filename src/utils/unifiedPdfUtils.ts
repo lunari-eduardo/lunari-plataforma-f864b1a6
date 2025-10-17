@@ -302,9 +302,9 @@ const getExtratoHTML = (data: UnifiedExtratoData): string => {
     <body>
       <header>
         <div class="company-info">
-          <h2>${profile.nomeEmpresa || profile.nomeCompleto}</h2>
-          ${profile.cpfCnpj ? `<p>CNPJ/CPF: ${profile.cpfCnpj}</p>` : ''}
-          ${profile.enderecoComercial ? `<p>${profile.enderecoComercial}</p>` : ''}
+          <h2>${profile.empresa || profile.nome}</h2>
+          ${profile.cpf_cnpj ? `<p>CNPJ/CPF: ${profile.cpf_cnpj}</p>` : ''}
+          ${profile.endereco_comercial ? `<p>${profile.endereco_comercial}</p>` : ''}
         </div>
         <div class="period-info">
           <strong>Período:</strong> ${formatDateForPDF(period.startDate)} a ${formatDateForPDF(period.endDate)}<br>
@@ -548,7 +548,7 @@ const getExtratoHTML = (data: UnifiedExtratoData): string => {
 
       <footer style="margin-top: 40px; padding-top: 15px; border-top: 1px solid #ddd; text-align: center; color: #7f8c8d; font-size: 10px;">
         <p>Relatório gerado automaticamente pelo sistema de gestão financeira em ${getCurrentDateTimeForPDF()}</p>
-        <p>${profile.nomeEmpresa || profile.nomeCompleto} - Extrato Financeiro</p>
+        <p>${profile.empresa || profile.nome} - Extrato Financeiro</p>
       </footer>
     </body>
     </html>

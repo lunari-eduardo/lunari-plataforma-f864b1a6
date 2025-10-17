@@ -54,10 +54,10 @@ const getLogoElement = (branding: UserBranding): string => {
 const getCompanyInfo = (profile: UserProfile): string => {
   return `
     <div class="company-info">
-      <h2 class="company-name">${profile.nomeEmpresa || profile.nomeCompleto}</h2>
-      ${profile.cpfCnpj ? `<p class="company-doc">CNPJ/CPF: ${profile.cpfCnpj}</p>` : ''}
-      ${profile.enderecoComercial ? `<p class="company-address">${profile.enderecoComercial}</p>` : ''}
-      ${profile.emailPrincipal ? `<p class="company-email">${profile.emailPrincipal}</p>` : ''}
+      <h2 class="company-name">${profile.empresa || profile.nome}</h2>
+      ${profile.cpf_cnpj ? `<p class="company-doc">CNPJ/CPF: ${profile.cpf_cnpj}</p>` : ''}
+      ${profile.endereco_comercial ? `<p class="company-address">${profile.endereco_comercial}</p>` : ''}
+      ${profile.email ? `<p class="company-email">${profile.email}</p>` : ''}
     </div>
   `;
 };
@@ -358,7 +358,7 @@ const getMonthlyHTML = (data: FinancialExportData): string => {
 
       <div class="footer">
         <p>Relatório gerado automaticamente pelo sistema de gestão financeira</p>
-        <p>${profile.nomeEmpresa || profile.nomeCompleto} - ${new Date().getFullYear()}</p>
+        <p>${profile.empresa || profile.nome} - ${new Date().getFullYear()}</p>
       </div>
     </body>
     </html>
@@ -511,7 +511,7 @@ const getAnnualHTML = (data: FinancialExportData): string => {
 
       <div class="footer">
         <p>Relatório gerado automaticamente pelo sistema de gestão financeira</p>
-        <p>${profile.nomeEmpresa || profile.nomeCompleto} - ${period.year}</p>
+        <p>${profile.empresa || profile.nome} - ${period.year}</p>
       </div>
     </body>
     </html>
@@ -526,7 +526,7 @@ export const generateFinancialPDF = async (data: FinancialExportData, options: E
     ? `relatorio-anual-${options.period.year}`
     : `extrato-${String(options.period.month).padStart(2, '0')}-${options.period.year}`;
   
-  const filename = `${periodText}-${data.profile.nomeEmpresa || 'financeiro'}.pdf`.replace(/[^a-zA-Z0-9-_]/g, '-');
+  const filename = `${periodText}-${data.profile.empresa || 'financeiro'}.pdf`.replace(/[^a-zA-Z0-9-_]/g, '-');
 
   const pdfOptions = {
     margin: 8,
@@ -968,7 +968,7 @@ const getDemonstrativeHTML = (data: DemonstrativeExportData): string => {
 
       <div class="footer">
         <p>Demonstrativo gerado automaticamente pelo sistema de gestão financeira</p>
-        <p>${profile.nomeEmpresa || profile.nomeCompleto} - ${new Date().getFullYear()}</p>
+        <p>${profile.empresa || profile.nome} - ${new Date().getFullYear()}</p>
       </div>
     </body>
     </html>

@@ -142,9 +142,9 @@ export default function ExportFinancialPDF({ variant = 'dropdown', className }: 
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0">
-                  <p className="font-medium">{exportData.profile.nomeEmpresa || exportData.profile.nomeCompleto}</p>
-                  {exportData.profile.cpfCnpj && (
-                    <p className="text-xs text-muted-foreground">{exportData.profile.cpfCnpj}</p>
+                  <p className="font-medium">{exportData.profile.empresa || exportData.profile.nome}</p>
+                  {exportData.profile.cpf_cnpj && (
+                    <p className="text-xs text-muted-foreground">{exportData.profile.cpf_cnpj}</p>
                   )}
                 </CardContent>
               </Card>
