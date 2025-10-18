@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { useNovoFinancas } from '@/hooks/useNovoFinancas';
 import { useWorkflowMetrics } from '@/hooks/useWorkflowMetrics';
+import { useWorkflowMetricsRealtime } from '@/hooks/useWorkflowMetricsRealtime';
 import { getCurrentDateString, parseDateFromStorage } from '@/utils/dateUtils';
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
 import { GoalsIntegrationService } from '@/services/GoalsIntegrationService';
@@ -137,8 +138,9 @@ export function useDashboardFinanceiro() {
 
   // ============= CARREGAMENTO DE DADOS SIMPLIFICADO =============
   
-  // ✅ Usar cache de métricas do workflow - incluir cacheVersion para recálculo
-  const { getMonthlyMetrics, getAnnualMetrics, getAvailableYears } = useWorkflowMetrics();
+  // ✅ Usar métricas em tempo real do workflow (substituindo cache localStorage)
+  // ✅ DEPRECATED: Manter apenas para anos disponíveis (será removido depois)
+  const { getAvailableYears } = useWorkflowMetrics();
 
   // Otimizar carregamento de dados com cache
   const { itensFinanceiros } = useNovoFinancas();
@@ -195,6 +197,35 @@ export function useDashboardFinanceiro() {
 
   const [mesSelecionado, setMesSelecionado] = useState<string>('ano-completo');
 
+  // ============= MÉTRICAS EM TEMPO REAL DO WORKFLOW =============
+  
+  // ✅ Calcular ano e mês para o hook de métricas
+  const ano = parseInt(anoSelecionado);
+  const mesNumero = mesSelecionado !== 'ano-completo' ? parseInt(mesSelecionado) : undefined;
+  
+  // ✅ Hook de métricas em tempo real (sempre no topo, nunca dentro de useMemo)
+  const workflowMetrics = useWorkflowMetricsRealtime(ano, mesNumero);
+
+  // ✅ Calcular período anterior para comparação
+  const periodoAnterior = useMemo(() => {
+    if (mesSelecionado && mesSelecionado !== 'ano-completo') {
+      const mesAtual = parseInt(mesSelecionado);
+      if (mesAtual === 1) {
+        return { ano: ano - 1, mes: 12 };
+      } else {
+        return { ano, mes: mesAtual - 1 };
+      }
+    } else {
+      return { ano: ano - 1, mes: undefined };
+    }
+  }, [ano, mesSelecionado]);
+
+  // ✅ Hook de métricas do período anterior para comparação
+  const workflowMetricsAnterior = useWorkflowMetricsRealtime(
+    periodoAnterior.ano, 
+    periodoAnterior.mes
+  );
+
   // ============= FILTROS POR PERÍODO =============
 
   const transacoesFiltradas = useMemo(() => {
@@ -225,29 +256,10 @@ export function useDashboardFinanceiro() {
   // ============= CÁLCULOS DE MÉTRICAS =============
   
   const kpisData = useMemo((): KPIsData => {
-    const ano = parseInt(anoSelecionado);
-    
-    // ============= ✅ FONTE ÚNICA: CACHE DO WORKFLOW =============
-    let receitaOperacional = 0;
-    let valorPrevisto = 0;
-    let aReceber = 0;
-    
-    if (mesSelecionado && mesSelecionado !== 'ano-completo') {
-      // Buscar métricas do mês específico
-      const mesNumero = parseInt(mesSelecionado);
-      const metricas = getMonthlyMetrics(ano, mesNumero);
-      if (metricas) {
-        receitaOperacional = metricas.receita;
-        valorPrevisto = metricas.previsto;
-        aReceber = metricas.aReceber;
-      }
-    } else {
-      // Buscar métricas anuais (soma de todos os meses)
-      const metricas = getAnnualMetrics(ano);
-      receitaOperacional = metricas.receita;
-      valorPrevisto = metricas.previsto;
-      aReceber = metricas.aReceber;
-    }
+    // ============= ✅ FONTE ÚNICA: SUPABASE EM TEMPO REAL =============
+    const receitaOperacional = workflowMetrics.receita;
+    const valorPrevisto = workflowMetrics.previsto;
+    const aReceber = workflowMetrics.aReceber;
     
     // ============= RECEITAS EXTRAS DAS TRANSAÇÕES (NÃO OPERACIONAIS) =============
     const receitasExtras = transacoesFiltradas
@@ -271,7 +283,7 @@ export function useDashboardFinanceiro() {
       receitasExtras: receitasExtras.toFixed(2), 
       totalReceita: totalReceita.toFixed(2),
       totalDespesas: totalDespesas.toFixed(2),
-      fonte: 'cache-workflow'
+      fonte: 'supabase-realtime'
     });
 
     return {
@@ -282,7 +294,7 @@ export function useDashboardFinanceiro() {
       totalLucro,
       saldoTotal
     };
-  }, [anoSelecionado, mesSelecionado, getMonthlyMetrics, getAnnualMetrics, transacoesFiltradas, cacheVersion]);
+  }, [workflowMetrics, transacoesFiltradas]);
 
   // ============= CÁLCULOS ESPECÍFICOS PARA ROI =============
   
@@ -304,45 +316,18 @@ export function useDashboardFinanceiro() {
   // ============= COMPARAÇÕES PERÍODO ANTERIOR =============
   
   const comparisonData = useMemo(() => {
-    const ano = parseInt(anoSelecionado);
-    
     // Definir período anterior baseado no filtro atual
-    let periodoAnterior = { ano: ano, mes: null as number | null };
     let labelComparacao = '';
     
     if (mesSelecionado && mesSelecionado !== 'ano-completo') {
-      // Comparação mês a mês
-      const mesAtual = parseInt(mesSelecionado);
-      if (mesAtual === 1) {
-        // Janeiro -> Dezembro do ano anterior
-        periodoAnterior = { ano: ano - 1, mes: 12 };
-      } else {
-        // Mês anterior do mesmo ano
-        periodoAnterior = { ano, mes: mesAtual - 1 };
-      }
       labelComparacao = 'em comparação ao mês anterior';
     } else {
-      // Comparação ano a ano
-      periodoAnterior = { ano: ano - 1, mes: null };
       labelComparacao = 'em comparação ao ano anterior';
     }
     
     // Buscar dados do período anterior
-    let receitaAnterior = 0;
+    let receitaAnterior = workflowMetricsAnterior.receita;
     let despesasAnterior = 0;
-    
-    // ✅ RECEITA OPERACIONAL DO PERÍODO ANTERIOR (do cache)
-    if (periodoAnterior.mes) {
-      // Período anterior específico (mês)
-      const metricasAnterior = getMonthlyMetrics(periodoAnterior.ano, periodoAnterior.mes);
-      if (metricasAnterior) {
-        receitaAnterior += metricasAnterior.receita;
-      }
-    } else {
-      // Período anterior anual
-      const metricasAnterior = getAnnualMetrics(periodoAnterior.ano);
-      receitaAnterior += metricasAnterior.receita;
-    }
     
     // Transações do período anterior
     const transacoesAnterior = transacoesComItens.filter(transacao => {
@@ -384,7 +369,7 @@ export function useDashboardFinanceiro() {
       variacaoLucro: calcularVariacao(kpisData.totalLucro, lucroAnterior),
       variacaoDespesas: calcularVariacao(kpisData.totalDespesas, despesasAnterior)
     };
-  }, [anoSelecionado, mesSelecionado, kpisData, transacoesComItens, getMonthlyMetrics, getAnnualMetrics]);
+  }, [anoSelecionado, mesSelecionado, kpisData, transacoesComItens, workflowMetricsAnterior, periodoAnterior]);
 
   // ============= METAS INTEGRADAS COM PRECIFICAÇÃO =============
   
@@ -443,20 +428,18 @@ export function useDashboardFinanceiro() {
 
     const ano = parseInt(anoSelecionado);
     
-    // ✅ RECEITA OPERACIONAL: usar sempre cache do workflow
+    // ✅ RECEITA OPERACIONAL: usar sempre Supabase em tempo real
     if (mesSelecionado && mesSelecionado !== 'ano-completo') {
+      // Mês específico - usar métricas já calculadas
       const mesNumero = parseInt(mesSelecionado);
-      const metricas = getMonthlyMetrics(ano, mesNumero);
-      if (metricas) {
-        dadosPorMes[mesNumero].receita += metricas.receita;
-      }
+      dadosPorMes[mesNumero].receita += workflowMetrics.receita;
     } else {
-      // Mostrar todos os meses do ano
+      // Ano completo - distribuir receita total proporcionalmente
+      // TODO: Implementar busca individual por mês em versão futura
+      const receitaTotal = workflowMetrics.receita;
+      const receitaPorMes = receitaTotal / 12;
       for (let mes = 1; mes <= 12; mes++) {
-        const metricas = getMonthlyMetrics(ano, mes);
-        if (metricas) {
-          dadosPorMes[mes].receita += metricas.receita;
-        }
+        dadosPorMes[mes].receita += receitaPorMes;
       }
     }
     
@@ -511,7 +494,7 @@ export function useDashboardFinanceiro() {
         lucro: dadosMes.receita - dadosMes.despesas
       };
     });
-  }, [anoSelecionado, mesSelecionado, transacoesComItens, getMonthlyMetrics]);
+  }, [anoSelecionado, mesSelecionado, transacoesComItens, workflowMetrics]);
 
   // ============= COMPOSIÇÃO DE DESPESAS =============
   

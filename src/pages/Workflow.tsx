@@ -11,6 +11,7 @@ import { useAppointmentWorkflowSync } from "@/hooks/useAppointmentWorkflowSync";
 import { useClientesRealtime } from "@/hooks/useClientesRealtime";
 import { parseDateFromStorage } from "@/utils/dateUtils";
 import { useWorkflowMetrics } from '@/hooks/useWorkflowMetrics';
+import { useWorkflowMetricsRealtime } from '@/hooks/useWorkflowMetricsRealtime';
 import { WorkflowSyncButton } from '@/components/workflow/WorkflowSyncButton';
 import { usePricingMigration } from '@/hooks/usePricingMigration';
 import { Snowflake } from "lucide-react";
@@ -206,7 +207,13 @@ export default function Workflow() {
     });
   }, []);
 
-  // Calculate totals for metrics
+  // ✅ MÉTRICAS EM TEMPO REAL DO SUPABASE
+  const workflowMetrics = useWorkflowMetricsRealtime(
+    currentMonth.year,
+    currentMonth.month
+  );
+
+  // Calculate totals for metrics (mantido para compatibilidade com outras funções)
   const calculateTotal = useCallback((session: SessionData) => {
     const valorPacote = Number(session.valorPacote) || 0;
     const valorFotoExtra = Number(session.valorTotalFotoExtra) || 0;
@@ -223,18 +230,14 @@ export default function Workflow() {
     return total - valorPago;
   }, [calculateTotal]);
 
-  // Financial metrics for current month
+  // ✅ Financial metrics usando dados em tempo real do Supabase
   const financials = useMemo(() => {
-    const currentMonthTotal = monthFilteredSessions.reduce((acc, session) => acc + calculateTotal(session), 0);
-    const currentMonthPaid = monthFilteredSessions.reduce((acc, session) => acc + (Number(session.valorPago) || 0), 0);
-    const currentMonthRemaining = monthFilteredSessions.reduce((acc, session) => acc + calculateRestante(session), 0);
-
     return {
-      totalMonth: currentMonthTotal,
-      paidMonth: currentMonthPaid,
-      remainingMonth: currentMonthRemaining
+      totalMonth: workflowMetrics.previsto,
+      paidMonth: workflowMetrics.receita,
+      remainingMonth: workflowMetrics.aReceber
     };
-  }, [monthFilteredSessions, calculateTotal, calculateRestante]);
+  }, [workflowMetrics]);
 
   // Previous month metrics for comparison
   const prevMonthFinancials = useMemo(() => {
