@@ -155,8 +155,8 @@ export class ProfileService {
   /**
    * Completar onboarding
    */
-  static async completeOnboarding(userId: string, data: { nome: string; cidade: string }): Promise<void> {
-    await this.updateProfile(userId, {
+  static async completeOnboarding(userId: string, data: { nome: string; cidade: string }): Promise<UserProfile> {
+    return await this.updateProfile(userId, {
       nome: data.nome,
       cidade: data.cidade,
       is_onboarding_complete: true

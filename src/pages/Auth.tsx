@@ -18,7 +18,7 @@ export default function Auth() {
 
   // Form states
   const [signInData, setSignInData] = useState({ email: '', password: '' });
-  const [signUpData, setSignUpData] = useState({ email: '', password: '', nome: '', confirmPassword: '' });
+  const [signUpData, setSignUpData] = useState({ email: '', password: '', confirmPassword: '' });
   const [resetEmail, setResetEmail] = useState('');
 
   // Redirect if already authenticated
@@ -70,7 +70,7 @@ export default function Auth() {
     setIsSubmitting(true);
 
     try {
-      const { error } = await signUp(signUpData.email, signUpData.password, signUpData.nome);
+      const { error } = await signUp(signUpData.email, signUpData.password);
       
       if (error) {
         if (error.message.includes('User already registered')) {
@@ -199,21 +199,6 @@ export default function Auth() {
 
             <TabsContent value="signup" className="space-y-4">
               <form onSubmit={handleSignUp} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signup-nome">Nome completo</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-lunar-textSecondary h-4 w-4" />
-                    <Input
-                      id="signup-nome"
-                      type="text"
-                      placeholder="Seu nome completo"
-                      value={signUpData.nome}
-                      onChange={(e) => setSignUpData({ ...signUpData, nome: e.target.value })}
-                      className="pl-10"
-                      required
-                    />
-                  </div>
-                </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-email">Email</Label>
                   <div className="relative">

@@ -5,12 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { OnboardingStep } from '@/components/onboarding/OnboardingStep';
 import { useAuth } from '@/contexts/AuthContext';
-import { ProfileService } from '@/services/ProfileService';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { toast } from 'sonner';
 import { Progress } from '@/components/ui/progress';
 
 export default function Onboarding() {
   const { user } = useAuth();
+  const { updateProfile } = useUserProfile();
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -86,10 +87,15 @@ export default function Onboarding() {
 
     setIsLoading(true);
     try {
-      await ProfileService.completeOnboarding(user.id, {
+      // Usar mutation do React Query que invalida cache automaticamente
+      await updateProfile({
         nome: formData.nome.trim(),
-        cidade: formData.cidade.trim()
+        cidade: formData.cidade.trim(),
+        is_onboarding_complete: true
       });
+
+      // Aguardar um momento para o cache ser invalidado
+      await new Promise(resolve => setTimeout(resolve, 300));
 
       toast.success('Bem-vindo(a)! 🎉');
       navigate('/');
@@ -110,13 +116,16 @@ export default function Onboarding() {
   const handleSkip = async () => {
     if (!user) return;
 
+    setIsLoading(true);
     try {
-      await ProfileService.updateProfile(user.id, {
-        is_onboarding_complete: true
-      });
+      await updateProfile({ is_onboarding_complete: true });
+      await new Promise(resolve => setTimeout(resolve, 300));
       navigate('/');
     } catch (error) {
       console.error('Erro ao pular onboarding:', error);
+      toast.error('Erro ao pular onboarding');
+    } finally {
+      setIsLoading(false);
     }
   };
 

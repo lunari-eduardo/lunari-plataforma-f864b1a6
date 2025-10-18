@@ -50,15 +50,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signUp = async (email: string, password: string, nome?: string) => {
     const redirectUrl = `${window.location.origin}/`;
     
+    const signUpOptions: any = {
+      emailRedirectTo: redirectUrl
+    };
+
+    // Só adicionar data se nome foi fornecido
+    if (nome && nome.trim()) {
+      signUpOptions.data = { nome: nome.trim() };
+    }
+    
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: {
-          nome: nome || 'Usuário'
-        }
-      }
+      options: signUpOptions
     });
     
     return { error };

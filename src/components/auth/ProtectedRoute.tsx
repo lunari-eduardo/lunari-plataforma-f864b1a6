@@ -32,6 +32,15 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
       !profile.is_onboarding_complete || 
       !profile.nome?.trim() || 
       !profile.cidade?.trim();
+    
+    // Debug temporário
+    console.log('🔍 ProtectedRoute - Verificação de onboarding:', {
+      hasProfile: !!profile,
+      isComplete: profile?.is_onboarding_complete,
+      hasNome: !!profile?.nome?.trim(),
+      hasCidade: !!profile?.cidade?.trim(),
+      needsOnboarding
+    });
       
     if (needsOnboarding) {
       return <Navigate to="/onboarding" replace />;
