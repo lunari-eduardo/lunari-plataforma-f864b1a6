@@ -441,6 +441,33 @@ export type Database = {
           },
         ]
       }
+      custom_time_slots: {
+        Row: {
+          created_at: string | null
+          date: string
+          id: string
+          time_slots: string[]
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          date: string
+          id?: string
+          time_slots: string[]
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          id?: string
+          time_slots?: string[]
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       etapas_trabalho: {
         Row: {
           cor: string

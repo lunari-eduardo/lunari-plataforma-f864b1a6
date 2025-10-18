@@ -13,6 +13,7 @@ import { ProjetoService } from '@/services/ProjetoService';
 import { AvailabilityService } from '@/services/AvailabilityService';
 import { supabase } from '@/integrations/supabase/client';
 import { addDays, format } from 'date-fns';
+import { CustomTimeSlotsService } from '@/services/CustomTimeSlotsService';
 
 interface AgendaContextType {
   // Appointments
@@ -100,6 +101,13 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
         setAvailability(availabilityData);
         setAvailabilityTypes(typesData);
         setSettings(settingsData);
+
+        // Migrar horários personalizados do localStorage (uma vez)
+        const hasMigrated = localStorage.getItem('custom_slots_migrated');
+        if (!hasMigrated) {
+          await CustomTimeSlotsService.migrateFromLocalStorage();
+          localStorage.setItem('custom_slots_migrated', 'true');
+        }
       } catch (error) {
         console.error('❌ Erro ao carregar dados da agenda:', error);
       }

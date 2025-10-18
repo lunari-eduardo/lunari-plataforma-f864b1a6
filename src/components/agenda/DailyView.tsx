@@ -1,14 +1,14 @@
 import { format, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { TimeInput } from "@/components/ui/time-input";
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import ConflictIndicator from './ConflictIndicator';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, RotateCcw } from 'lucide-react';
 import { UnifiedEvent } from '@/hooks/useUnifiedCalendar';
 import UnifiedEventCard from './UnifiedEventCard';
 import { useAvailability } from '@/hooks/useAvailability';
+import { useCustomTimeSlots } from '@/hooks/useCustomTimeSlots';
 import { toast } from 'sonner';
-import { storage } from '@/utils/localStorage';
 interface DailyViewProps {
   date: Date;
   unifiedEvents: UnifiedEvent[];
@@ -18,53 +18,48 @@ interface DailyViewProps {
   }) => void;
   onEventClick: (event: UnifiedEvent) => void;
 }
-const DEFAULT_TIME_SLOTS = ["08:00", "09:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"];
 export default function DailyView({
   date,
   unifiedEvents,
   onCreateSlot,
   onEventClick
 }: DailyViewProps) {
-  const [customTimeSlots, setCustomTimeSlots] = useState<{
-    [key: string]: string[];
-  }>({});
   const [editingTimeSlot, setEditingTimeSlot] = useState<number | null>(null);
   const dateKey = format(date, 'yyyy-MM-dd');
+  
   const {
     availability,
     deleteAvailabilitySlot
   } = useAvailability();
 
-  // Load custom time slots from storage
-  useEffect(() => {
-    const saved = storage.load('customTimeSlots', {});
-    if (Object.keys(saved).length > 0) {
-      setCustomTimeSlots(saved);
-    }
-  }, []);
-
-  // Save custom time slots to storage
-  useEffect(() => {
-    storage.save('customTimeSlots', customTimeSlots);
-  }, [customTimeSlots]);
+  // Usar hook customizado para horários personalizados
+  const {
+    timeSlots: customSlots,
+    isLoading: slotsLoading,
+    hasCustomSlots,
+    editTimeSlot,
+    resetToDefault
+  } = useCustomTimeSlots(date);
 
   // Get time slots for the current date (include events and availability times)
   const getCurrentTimeSlots = () => {
-    const baseSlots = customTimeSlots[dateKey] || DEFAULT_TIME_SLOTS;
-    const eventTimes = unifiedEvents.filter(event => isSameDay(event.date, date)).map(event => event.time);
-    const availabilityTimes = availability.filter(s => s.date === dateKey).map(s => s.time);
-    const merged = Array.from(new Set([...baseSlots, ...eventTimes, ...availabilityTimes])).sort();
-
-    // If merged differs from stored, persist for this day
-    if (merged.join('|') !== baseSlots.sort().join('|')) {
-      setCustomTimeSlots(prev => ({
-        ...prev,
-        [dateKey]: merged
-      }));
-      return merged;
-    }
-    return baseSlots;
+    const eventTimes = unifiedEvents
+      .filter(event => isSameDay(event.date, date))
+      .map(event => event.time);
+    
+    const availabilityTimes = availability
+      .filter(s => s.date === dateKey)
+      .map(s => s.time);
+    
+    const merged = Array.from(new Set([
+      ...customSlots,
+      ...eventTimes,
+      ...availabilityTimes
+    ])).sort();
+    
+    return merged;
   };
+  
   const timeSlots = getCurrentTimeSlots();
   const dayEvents = unifiedEvents.filter(event => isSameDay(event.date, date));
   const getEventsForSlot = (time: string) => {
@@ -85,29 +80,27 @@ export default function DailyView({
     if (events.length > 0) return;
     setEditingTimeSlot(index);
   };
-  const handleSaveTimeSlot = (index: number, newTime: string) => {
-    if (!newTime || !newTime.match(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/)) {
+  
+  const handleSaveTimeSlot = async (index: number, newTime: string) => {
+    const oldTime = timeSlots[index];
+    const success = await editTimeSlot(oldTime, newTime);
+    
+    if (success) {
       setEditingTimeSlot(null);
-      return;
     }
-    const currentSlots = customTimeSlots[dateKey] || DEFAULT_TIME_SLOTS;
-    if (currentSlots.includes(newTime) && currentSlots[index] !== newTime) {
-      alert('Este horário já existe');
-      setEditingTimeSlot(null);
-      return;
-    }
-    const updatedSlots = [...currentSlots];
-    updatedSlots[index] = newTime;
-    updatedSlots.sort();
-    setCustomTimeSlots(prev => ({
-      ...prev,
-      [dateKey]: updatedSlots
-    }));
-    setEditingTimeSlot(null);
   };
   return <div className="bg-lunar-bg pb-16 md:pb-4">
       <div className="hidden md:flex justify-center mb-4">
-        
+        {hasCustomSlots && (
+          <button 
+            onClick={resetToDefault}
+            className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 transition-colors"
+            title="Restaurar horários padrão"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            Restaurar horários padrão
+          </button>
+        )}
       </div>
       
       <div className="space-y-1">
