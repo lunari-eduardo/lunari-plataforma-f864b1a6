@@ -260,6 +260,65 @@ export default function Workflow() {
     };
   }, [filteredSessions, currentMonth, calculateTotal]);
 
+  // Helper: Map header keys to SessionData properties
+  const getFieldMapping = useCallback((headerKey: string): keyof SessionData => {
+    const mapping: Record<string, keyof SessionData> = {
+      'client': 'nome',
+      'date': 'data',
+      'status': 'status',
+      'category': 'categoria',
+      'package': 'pacote',
+      'extraPhotoQty': 'qtdFotosExtra',
+      'productTotal': 'valorTotalProduto',
+      'total': 'total', // Calculated field
+      'remaining': 'restante', // Calculated field
+      'paid': 'valorPago'
+    };
+    return (mapping[headerKey] || headerKey) as keyof SessionData;
+  }, []);
+
+  // Helper: Get sortable value (handles dates, currency, calculated fields)
+  const getSortValue = useCallback((session: SessionData, headerKey: string): string | number => {
+    const field = getFieldMapping(headerKey);
+    
+    // Handle calculated fields
+    if (headerKey === 'total') {
+      return calculateTotal(session);
+    }
+    if (headerKey === 'remaining') {
+      return calculateRestante(session);
+    }
+    
+    // Handle dates - convert to timestamp
+    if (headerKey === 'date' || field === 'data') {
+      const dateObj = parseDateFromStorage(session.data);
+      return dateObj ? dateObj.getTime() : 0;
+    }
+    
+    // Handle currency fields - convert to number
+    const currencyFields = ['valorPago', 'valorTotalProduto', 'valorPacote', 'desconto', 'valorAdicional'];
+    if (currencyFields.includes(field as string)) {
+      const value = session[field];
+      if (typeof value === 'string') {
+        return parseFloat(value.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+      }
+      return Number(value) || 0;
+    }
+    
+    // Handle quantity fields
+    if (headerKey === 'extraPhotoQty' || field === 'qtdFotosExtra') {
+      return Number(session.qtdFotosExtra) || 0;
+    }
+    
+    // Handle text fields
+    const value = session[field];
+    if (typeof value === 'string') {
+      return value.toLowerCase();
+    }
+    
+    return value || '';
+  }, [getFieldMapping, calculateTotal, calculateRestante]);
+
   // Sort sessions
   const sortedSessions = useMemo(() => {
     if (!sortField) {
@@ -273,17 +332,14 @@ export default function Workflow() {
     }
 
     return [...monthFilteredSessions].sort((a, b) => {
-      let aVal = a[sortField as keyof SessionData];
-      let bVal = b[sortField as keyof SessionData];
-
-      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
-      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+      const aVal = getSortValue(a, sortField);
+      const bVal = getSortValue(b, sortField);
 
       if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
       if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
       return 0;
     });
-  }, [monthFilteredSessions, sortField, sortDirection]);
+  }, [monthFilteredSessions, sortField, sortDirection, getSortValue]);
 
   // Format currency
   const formatCurrency = (value: number) => {
@@ -339,8 +395,16 @@ export default function Workflow() {
   }, [updateSession]);
 
   const handleSort = useCallback((field: string) => {
-    setSortField(field);
-    setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    setSortField(prevField => {
+      // Se mudou de coluna, começar com 'asc'
+      if (prevField !== field) {
+        setSortDirection('asc');
+        return field;
+      }
+      // Mesma coluna: alternar direção
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+      return field;
+    });
   }, []);
 
   // FASE 4: Recongelar todas as sessões manualmente

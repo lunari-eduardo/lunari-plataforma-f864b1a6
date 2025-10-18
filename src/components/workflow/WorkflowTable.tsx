@@ -576,7 +576,10 @@ export function WorkflowTable({
     onStatusChange(sessionId, statusValue);
   }, [onStatusChange]);
   const getSortIcon = (field: string) => {
-    if (sortField !== field) return null;
+    if (sortField !== field) {
+      // Mostrar ícone neutro para indicar que é ordenável
+      return <ChevronUp className="h-3 w-3 opacity-30" />;
+    }
     return sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />;
   };
   // Handlers para redimensionamento
