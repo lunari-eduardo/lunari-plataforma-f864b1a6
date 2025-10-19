@@ -8,6 +8,7 @@ import { ProductionRemindersCard } from "@/components/dashboard/ProductionRemind
 import { HighPriorityDueSoonCard } from "@/components/tarefas/HighPriorityDueSoonCard";
 import { useIsTablet } from "@/hooks/useIsTablet";
 import { FinancialRemindersCard } from "@/components/dashboard/FinancialRemindersCard";
+import { InstallPWAButton } from "@/components/pwa/InstallPWAButton";
 
 import DailyHero from "@/components/dashboard/DailyHero";
 import DailyKPIs from "@/components/dashboard/DailyKPIs";
@@ -244,6 +245,9 @@ export default function Index() {
     return items;
   }, [appointments]);
   return <main className="space-y-6">
+    {/* Botão de instalação PWA - aparece apenas se aplicável */}
+    <InstallPWAButton />
+    
     <section aria-label="Resumo do dia" className="animate-fade-in">
       <DailyHero />
     </section>
