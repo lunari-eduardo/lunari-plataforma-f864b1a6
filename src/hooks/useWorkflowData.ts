@@ -107,10 +107,9 @@ export function useWorkflowData(options: UseWorkflowDataOptions) {
                sessionDate.getMonth() + 1 === month;
       });
       
-      if (filtered.length > 0) {
-        setSessions(filtered);
-        console.log(`🔔 useWorkflowData: Cache updated, ${filtered.length} sessions for ${year}-${month}`);
-      }
+      // ✅ FASE 1: SEMPRE atualizar estado (mesmo com array vazio ou 1 item)
+      setSessions(filtered);
+      console.log(`🔔 useWorkflowData: Cache updated, ${filtered.length} sessions for ${year}-${month}`);
     });
 
     return unsubscribe;
@@ -132,10 +131,18 @@ export function useWorkflowData(options: UseWorkflowDataOptions) {
           console.log('🆕 useWorkflowData: New session inserted', payload.new);
           const newSession = payload.new as WorkflowSession;
           
-          // Verificar se pertence ao mês atual
+          // ✅ FASE 4: Logs detalhados para debug
           const sessionDate = new Date(newSession.data_sessao);
-          if (sessionDate.getFullYear() === year && sessionDate.getMonth() + 1 === month) {
+          const belongsToCurrentMonth = sessionDate.getFullYear() === year && 
+                                         sessionDate.getMonth() + 1 === month;
+          
+          console.log(`📅 Session date: ${newSession.data_sessao}, Current view: ${year}-${month}, Belongs: ${belongsToCurrentMonth}`);
+          
+          if (belongsToCurrentMonth) {
             workflowCacheManager.addSession(newSession);
+            console.log('✅ Session added to cache for current month');
+          } else {
+            console.log('⏭️ Session skipped - belongs to different month');
           }
         },
         onUpdate: (payload) => {

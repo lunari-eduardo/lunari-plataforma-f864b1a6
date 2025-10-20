@@ -172,7 +172,7 @@ export class WorkflowSupabaseService {
         hora_sessao: appointmentData.time,
         categoria: categoria || appointmentData.type || 'Outros',
         pacote: appointmentData.package_id || '', // Store package_id for linking
-        descricao: appointmentData.description || appointmentData.title || '',
+        descricao: appointmentData.description || '', // ✅ FASE 2: Não usar title como fallback
         status: '',
         valor_base_pacote: valorBasePacote, // FASE 1: Save base package value
         valor_total: valorTotal, // Frontend calculates and sends correct total
