@@ -21,6 +21,8 @@ export const useIntegration = () => {
   // Controle de sincronização para evitar loops infinitos
   const syncInProgressRef = useRef(false);
   const lastSyncTimeRef = useRef<Record<string, number>>({});
+  // FASE 4: Rastrear orçamentos já processados para evitar duplicação
+  const createdAppointmentsRef = useRef<Set<string>>(new Set());
 
   // Utility functions with useCallback to ensure stable references
   const isFromBudget = useCallback((appointment: Appointment) => {
@@ -70,6 +72,11 @@ export const useIntegration = () => {
       const currentTime = Date.now();
       if (!shouldSync(`create-${orcamento.id}`, currentTime)) return;
 
+      // FASE 4: Verificar se já criamos este appointment nesta sessão
+      if (createdAppointmentsRef.current.has(orcamento.id)) {
+        return;
+      }
+
       // Verificar se já existe um agendamento para este orçamento
       const existingAppointment = appointments.find(app => 
         app.id === `orcamento-${orcamento.id}` || 
@@ -104,11 +111,17 @@ export const useIntegration = () => {
           origem: 'orcamento'
         };
 
-        // Criar o agendamento com ID específico
-        const appointment = await addAppointment(newAppointment);
-        await updateAppointment(appointment.id, { 
-          id: `orcamento-${orcamento.id}`
+        // FASE 4: Criar o agendamento (sem tentar modificar o ID depois)
+        console.log('🔵 [APPOINTMENT-CREATE]', {
+          orcamentoId: orcamento.id,
+          source: 'useIntegration',
+          timestamp: new Date().toISOString()
         });
+        
+        const appointment = await addAppointment(newAppointment);
+        
+        // Marcar como criado
+        createdAppointmentsRef.current.add(orcamento.id);
 
         toast({
           title: "Agendamento criado automaticamente",

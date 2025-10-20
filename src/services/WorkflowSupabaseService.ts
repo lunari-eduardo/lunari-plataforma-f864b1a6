@@ -13,11 +13,40 @@ import { formatDateForStorage } from '@/utils/dateUtils';
  * Automatically creates workflow sessions when appointments are confirmed
  */
 export class WorkflowSupabaseService {
+  // FASE 3: Lock para prevenir race conditions na criação de sessões
+  private static creationLocks: Map<string, Promise<any>> = new Map();
   
   /**
    * Create workflow session from confirmed appointment
+   * Uses lock mechanism to prevent duplicate session creation
    */
   static async createSessionFromAppointment(appointmentId: string, appointmentData: any) {
+    // ✅ Verificar se já está sendo criada (lock)
+    const existingLock = this.creationLocks.get(appointmentId);
+    if (existingLock) {
+      console.log('⏳ [WorkflowService] Session creation already in progress for:', appointmentId);
+      return existingLock;
+    }
+
+    // ✅ Criar lock
+    const creationPromise = this._createSessionInternal(appointmentId, appointmentData);
+    this.creationLocks.set(appointmentId, creationPromise);
+
+    try {
+      const result = await creationPromise;
+      return result;
+    } finally {
+      // ✅ Remover lock após conclusão (com delay para garantir)
+      setTimeout(() => {
+        this.creationLocks.delete(appointmentId);
+      }, 5000);
+    }
+  }
+
+  /**
+   * Internal method for session creation (called by lock mechanism)
+   */
+  private static async _createSessionInternal(appointmentId: string, appointmentData: any) {
     try {
       console.log('🔄 Creating workflow session from appointment:', appointmentId, appointmentData);
       

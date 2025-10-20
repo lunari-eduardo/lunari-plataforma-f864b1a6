@@ -4,12 +4,14 @@
  * Responsável por:
  * 1. Configurar userId no cache manager
  * 2. Pré-carregar mês atual + anterior
- * 3. Cleanup ao deslogar
+ * 3. FASE 5: Sincronizar appointments existentes (uma única vez)
+ * 4. Cleanup ao deslogar
  */
 
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { workflowCacheManager } from '@/services/WorkflowCacheManager';
+import { WorkflowSupabaseService } from '@/services/WorkflowSupabaseService';
 
 export function useWorkflowCacheInit() {
   useEffect(() => {
@@ -24,6 +26,21 @@ export function useWorkflowCacheInit() {
         // Configurar userId
         workflowCacheManager.setUserId(user.id);
         
+        // FASE 5: Sincronizar appointments existentes (apenas uma vez por sessão)
+        const hasSyncedThisSession = sessionStorage.getItem('appointments_synced_session');
+        if (!hasSyncedThisSession) {
+          setTimeout(async () => {
+            try {
+              console.log('🔄 [WorkflowCacheInit] Syncing existing appointments...');
+              await syncExistingAppointments();
+              sessionStorage.setItem('appointments_synced_session', 'true');
+              console.log('✅ [WorkflowCacheInit] Appointments sync completed');
+            } catch (error) {
+              console.error('❌ [WorkflowCacheInit] Error syncing appointments:', error);
+            }
+          }, 2000);
+        }
+        
         // Pré-carregar dados em background (não bloquear UI)
         setTimeout(() => {
           workflowCacheManager.preloadCurrentAndPreviousMonth().catch(err => {
@@ -35,6 +52,49 @@ export function useWorkflowCacheInit() {
       }
     };
 
+    // FASE 5: Função de sincronização de appointments (extraída do useAppointmentWorkflowSync)
+    const syncExistingAppointments = async () => {
+      try {
+        const { data: user } = await supabase.auth.getUser();
+        if (!user?.user) return;
+
+        const { data: appointments } = await supabase
+          .from('appointments')
+          .select('*')
+          .eq('user_id', user.user.id)
+          .eq('status', 'confirmado');
+
+        if (!appointments?.length) return;
+
+        const appointmentsNeedingSync = [];
+        for (const appointment of appointments) {
+          const { data: existingSession } = await supabase
+            .from('clientes_sessoes')
+            .select('id')
+            .eq('user_id', user.user.id)
+            .or(`appointment_id.eq.${appointment.id},session_id.eq.${appointment.session_id}`)
+            .maybeSingle();
+
+          if (!existingSession) {
+            appointmentsNeedingSync.push(appointment);
+          }
+        }
+
+        for (const appointment of appointmentsNeedingSync) {
+          try {
+            await WorkflowSupabaseService.createSessionFromAppointment(
+              appointment.id,
+              appointment
+            );
+          } catch (error) {
+            console.error(`❌ Error creating session for appointment ${appointment.id}:`, error);
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error syncing existing appointments:', error);
+      }
+    };
+
     initCache();
 
     // Listener para mudanças de auth
@@ -42,6 +102,9 @@ export function useWorkflowCacheInit() {
       if (event === 'SIGNED_IN' && session?.user) {
         console.log('🔄 User signed in, initializing cache');
         workflowCacheManager.setUserId(session.user.id);
+        
+        // FASE 5: Limpar flag de sync ao fazer novo login
+        sessionStorage.removeItem('appointments_synced_session');
         
         setTimeout(() => {
           workflowCacheManager.preloadCurrentAndPreviousMonth().catch(err => {
@@ -51,6 +114,7 @@ export function useWorkflowCacheInit() {
       } else if (event === 'SIGNED_OUT') {
         console.log('🧹 User signed out, cleaning up cache');
         workflowCacheManager.cleanup();
+        sessionStorage.removeItem('appointments_synced_session');
         isInitialized = false;
       }
     });

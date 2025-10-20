@@ -195,8 +195,7 @@ export const useAppointmentWorkflowSync = () => {
       )
       .subscribe();
 
-    // Run sync for existing appointments after a delay
-    setTimeout(syncExistingAppointments, 3000);
+    // FASE 5: Removido setTimeout - sync será executado apenas no mount do App via useWorkflowCacheInit
 
     return () => {
       supabase.removeChannel(channel);
@@ -229,6 +228,7 @@ export const useAppointmentWorkflowSync = () => {
   return {
     // Return sync utilities if needed
     createSessionFromAppointment: WorkflowSupabaseService.createSessionFromAppointment,
-    linkAppointmentToSession: WorkflowSupabaseService.linkAppointmentToSession
+    linkAppointmentToSession: WorkflowSupabaseService.linkAppointmentToSession,
+    syncExistingAppointments // FASE 5: Exportar para usar no useWorkflowCacheInit
   };
 };
