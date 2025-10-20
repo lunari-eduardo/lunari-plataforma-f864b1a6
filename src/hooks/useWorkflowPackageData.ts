@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useConfiguration } from '@/hooks/useConfiguration';
+import { useRealtimeConfiguration } from '@/hooks/useRealtimeConfiguration';
 import { WorkflowSession } from '@/hooks/useWorkflowRealtime';
 import { SessionData } from '@/types/workflow';
 
@@ -8,7 +8,7 @@ import { SessionData } from '@/types/workflow';
  * This separates the package resolution logic from the main workflow hook
  */
 export const useWorkflowPackageData = () => {
-  const { pacotes, categorias, isLoadingPacotes, isLoadingCategorias } = useConfiguration();
+  const { pacotes, categorias, isLoadingPacotes, isLoadingCategorias } = useRealtimeConfiguration();
 
   // Helper function to resolve package data with ABSOLUTE PRIORITY for frozen data
   const resolvePackageData = useMemo(() => {

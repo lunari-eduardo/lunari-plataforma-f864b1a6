@@ -67,42 +67,19 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
   }, []);
 
   // ============= EFEITOS DE PERSISTÊNCIA =============
+  // DEPRECATED: Sync effects removed to prevent infinite loops
+  // All configuration data should now be managed via ConfigurationContext (real-time)
+  // This hook is kept for backwards compatibility but should not be used for new code
   
-  useEffect(() => {
-    if (!isLoadingCategorias) {
-      configurationService.syncCategorias(categorias).catch(error => {
-        console.error('Error syncing categorias:', error);
-        toast.error('Erro ao sincronizar categorias');
-      });
-    }
-  }, [categorias, isLoadingCategorias]);
-
-  useEffect(() => {
-    if (!isLoadingPacotes) {
-      configurationService.syncPacotes(pacotes).catch(error => {
-        console.error('Error syncing pacotes:', error);
-        toast.error('Erro ao sincronizar pacotes');
-      });
-    }
-  }, [pacotes, isLoadingPacotes]);
-
-  useEffect(() => {
-    if (!isLoadingProdutos) {
-      configurationService.syncProdutos(produtos).catch(error => {
-        console.error('Error syncing produtos:', error);
-        toast.error('Erro ao sincronizar produtos');
-      });
-    }
-  }, [produtos, isLoadingProdutos]);
-
-  useEffect(() => {
-    if (!isLoadingEtapas) {
-      configurationService.syncEtapas(etapas).catch(error => {
-        console.error('Error syncing etapas:', error);
-        toast.error('Erro ao sincronizar etapas');
-      });
-    }
-  }, [etapas, isLoadingEtapas]);
+  // Original sync effects have been removed as they caused:
+  // 1. Duplicate writes to Supabase on every render
+  // 2. Infinite loops with ConfigurationContext
+  // 3. Unnecessary network traffic
+  
+  // Migration guide:
+  // Replace: import { useConfiguration } from '@/hooks/useConfiguration';
+  // With: import { useConfigurationContext } from '@/contexts/ConfigurationContext';
+  // or: import { useRealtimeConfiguration } from '@/hooks/useRealtimeConfiguration';
 
   // ============= OPERAÇÕES DE CATEGORIAS =============
   

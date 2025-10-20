@@ -10,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useConfiguration } from '@/hooks/useConfiguration';
+import { useRealtimeConfiguration } from '@/hooks/useRealtimeConfiguration';
 
 interface ProdutoWorkflow {
   nome: string;
@@ -50,8 +50,8 @@ export function GerenciarProdutosModal({
   const [novoProductOpen, setNovoProductOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<string>("");
   
-  // CORREÇÃO: Usar dados real-time do Supabase
-  const { produtos: produtosConfig } = useConfiguration();
+  // CORREÇÃO: Usar dados real-time do Supabase (sem loops de sync)
+  const { produtos: produtosConfig } = useRealtimeConfiguration();
 
   // CORREÇÃO: Inicializar produtos locais com nomes corretos
   useEffect(() => {

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import { AgendaService } from '@/services/AgendaService';
 import { SupabaseAgendaAdapter } from '@/adapters/SupabaseAgendaAdapter';
 import { AgendaWorkflowIntegrationService } from '@/services/AgendaWorkflowIntegrationService';
@@ -53,28 +53,40 @@ interface AgendaProviderProps {
 }
 
 export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
-  // Services
-  const agendaService = new AgendaService(new SupabaseAgendaAdapter());
-  
   // Get dependencies from AppContext for integration
   const appContext = useAppContext();
   
-  // Create projeto function from service
-  const criarProjeto = (input: any) => {
-    const novoProjeto = ProjetoService.criarProjeto(input);
-    // The project creation will handle its own persistence
-    return novoProjeto;
-  };
+  // CORREÇÃO: Memoizar serviços para evitar recriação em cada render
+  const agendaService = useMemo(() => {
+    console.log('🔄 AgendaProvider: Creating agendaService instance');
+    return new AgendaService(new SupabaseAgendaAdapter());
+  }, []);
   
-  const integrationService = new AgendaWorkflowIntegrationService({
-    clientes: appContext.clientes || [],
-    pacotes: appContext.pacotes || [],
-    produtos: appContext.produtos || [],
-    configurationService,
-    workflowItems: appContext.workflowItems || [],
-    congelarRegrasPrecoFotoExtra,
+  // Create projeto function from service (memoized)
+  const criarProjeto = useCallback((input: any) => {
+    const novoProjeto = ProjetoService.criarProjeto(input);
+    return novoProjeto;
+  }, []);
+  
+  // CORREÇÃO: Memoizar integrationService com dependências mínimas
+  const integrationService = useMemo(() => {
+    console.log('🔄 AgendaProvider: Creating integrationService instance');
+    return new AgendaWorkflowIntegrationService({
+      clientes: appContext.clientes || [],
+      pacotes: appContext.pacotes || [],
+      produtos: appContext.produtos || [],
+      configurationService,
+      workflowItems: appContext.workflowItems || [],
+      congelarRegrasPrecoFotoExtra,
+      criarProjeto
+    });
+  }, [
+    appContext.clientes?.length,
+    appContext.pacotes?.length,
+    appContext.produtos?.length,
+    appContext.workflowItems?.length,
     criarProjeto
-  });
+  ]);
 
   // State
   const [appointments, setAppointments] = useState<Appointment[]>([]);

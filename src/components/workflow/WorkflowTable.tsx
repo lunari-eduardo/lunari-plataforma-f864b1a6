@@ -21,7 +21,7 @@ import { RegrasCongeladasIndicator } from './RegrasCongeladasIndicator';
 import { AutoPhotoCalculator } from './AutoPhotoCalculator';
 import { DataFreezingStatus } from './DataFreezingStatus';
 import type { SessionData } from '@/types/workflow';
-import { useConfiguration } from '@/hooks/useConfiguration';
+import { useRealtimeConfiguration } from '@/hooks/useRealtimeConfiguration';
 import { usePricingMigration } from '@/hooks/usePricingMigration';
 interface WorkflowTableProps {
   sessions: SessionData[];
@@ -149,9 +149,8 @@ export function WorkflowTable({
   sortDirection,
   onSort
 }: WorkflowTableProps) {
-  const {
-    categorias
-  } = useConfiguration();
+  // CORREÇÃO: Usar real-time configuration (não mais useConfiguration)
+  const { categorias } = useRealtimeConfiguration();
   const {
     executarMigracaoSeNecessario
   } = usePricingMigration();

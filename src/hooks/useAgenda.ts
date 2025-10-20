@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import { useAppointments } from './useAppointments';
 import { formatDateForStorage, getCurrentDateString } from '@/utils/dateUtils';
 import { configurationService } from '@/services/ConfigurationService';
-import { useConfiguration } from './useConfiguration';
+import { useRealtimeConfiguration } from './useRealtimeConfiguration';
 
 export type AppointmentStatus = 'confirmado' | 'a confirmar';
 
@@ -36,7 +36,7 @@ export interface Appointment {
 }
 
 export const useAgenda = () => {
-  const { categorias } = useConfiguration();
+  const { categorias } = useRealtimeConfiguration();
   const appointmentsHook = useAppointments();
 
   // Otimizada função para converter agendamentos confirmados em sessões do workflow

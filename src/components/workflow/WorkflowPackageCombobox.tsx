@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useMemo, memo } from "react";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { useConfiguration } from '@/hooks/useConfiguration';
+import { useRealtimeConfiguration } from '@/hooks/useRealtimeConfiguration';
 
 interface PackageComboboxProps {
   value?: string;
@@ -43,37 +43,35 @@ const getCategoriaNameById = (categoriaId: string | number, configCategorias: an
   return String(categoriaId);
 };
 
-export function WorkflowPackageCombobox({
+const WorkflowPackageComboboxComponent = ({
   value,
   displayName,
   onValueChange,
   disabled = false
-}: PackageComboboxProps) {
+}: PackageComboboxProps) => {
   const [open, setOpen] = useState(false);
   
-  // Use real-time configuration data from Supabase
-  const { pacotes: rawPacotes, categorias, isLoadingPacotes } = useConfiguration();
+  // CORREÇÃO: Usar real-time configuration (não mais useConfiguration que causa loops)
+  const { pacotes: rawPacotes, categorias, isLoadingPacotes } = useRealtimeConfiguration();
   
-  // Process packages with category names
-  const pacotes = rawPacotes.map((pacote: any) => {
-    let categoria = pacote.categoria || '';
-    if (pacote.categoria_id) {
-      categoria = getCategoriaNameById(pacote.categoria_id, categorias);
-    }
+  // CORREÇÃO: Memoizar processamento de pacotes para evitar recalcular em cada render
+  const pacotes = useMemo(() => {
+    return rawPacotes.map((pacote: any) => {
+      let categoria = pacote.categoria || '';
+      if (pacote.categoria_id) {
+        categoria = getCategoriaNameById(pacote.categoria_id, categorias);
+      }
 
-    return {
-      id: pacote.id,
-      nome: pacote.nome,
-      valor: pacote.valor_base || pacote.valorVenda || pacote.valor || 0,
-      categoria,
-      valorFotoExtra: pacote.valor_foto_extra || pacote.valorFotoExtra || 35,
-      produtosIncluidos: pacote.produtos_incluidos || pacote.produtosIncluidos || []
-    };
-  });
-
-  console.log('📦 WorkflowPackageCombobox - Packages loaded:', pacotes.length, 'packages');
-  console.log('📦 WorkflowPackageCombobox - Current value:', value);
-  console.log('📦 WorkflowPackageCombobox - Available packages:', pacotes);
+      return {
+        id: pacote.id,
+        nome: pacote.nome,
+        valor: pacote.valor_base || pacote.valorVenda || pacote.valor || 0,
+        categoria,
+        valorFotoExtra: pacote.valor_foto_extra || pacote.valorFotoExtra || 35,
+        produtosIncluidos: pacote.produtos_incluidos || pacote.produtosIncluidos || []
+      };
+    });
+  }, [rawPacotes, categorias]);
   
   // Função para limpar a seleção
   const handleClearPackage = () => {
@@ -88,12 +86,14 @@ export function WorkflowPackageCombobox({
     setOpen(false);
   };
   
-  // Find selected package by ID first, then by name for flexibility
-  const selectedPackage = pacotes.find(pkg => 
-    pkg.id === value || 
-    pkg.nome === value ||
-    String(pkg.id) === String(value)
-  );
+  // CORREÇÃO: Memoizar seleção de pacote para evitar recalcular
+  const selectedPackage = useMemo(() => {
+    return pacotes.find(pkg => 
+      pkg.id === value || 
+      pkg.nome === value ||
+      String(pkg.id) === String(value)
+    );
+  }, [pacotes, value]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -131,12 +131,10 @@ export function WorkflowPackageCombobox({
                   key={pkg.id} 
                   value={pkg.nome} 
                   onSelect={(currentValue) => {
-                    // CORREÇÃO: Melhorar comparação de seleção
                     const isSelected = pkg.id === value || pkg.nome === value || String(pkg.id) === String(value);
                     if (!isSelected) {
-                      console.log('📦 Selecionando pacote:', pkg.nome, 'ID:', pkg.id);
                       onValueChange({
-                        id: pkg.id, // Include package ID
+                        id: pkg.id,
                         nome: pkg.nome,
                         valor: `R$ ${(pkg.valor || 0).toFixed(2).replace('.', ',')}`,
                         valorFotoExtra: `R$ ${(pkg.valorFotoExtra || 35).toFixed(2).replace('.', ',')}`,
@@ -163,4 +161,7 @@ export function WorkflowPackageCombobox({
       </PopoverContent>
     </Popover>
   );
-}
+};
+
+// CORREÇÃO: Memoizar componente para evitar re-renders desnecessários
+export const WorkflowPackageCombobox = memo(WorkflowPackageComboboxComponent);

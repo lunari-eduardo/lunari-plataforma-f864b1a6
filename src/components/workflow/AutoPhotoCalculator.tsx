@@ -3,7 +3,7 @@
  * Integra com as regras congeladas e o banco de dados
  */
 
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useMemo } from 'react';
 import { pricingFreezingService } from '@/services/PricingFreezingService';
 
 interface AutoPhotoCalculatorProps {
@@ -39,18 +39,29 @@ export const AutoPhotoCalculator: React.FC<AutoPhotoCalculatorProps> = ({
     regrasCongeladas?: any;
   } | null>(null);
 
+  // CORREÇÃO: Armazenar onValueUpdate em ref para evitar dependências instáveis
+  const onValueUpdateRef = useRef(onValueUpdate);
+  useEffect(() => {
+    onValueUpdateRef.current = onValueUpdate;
+  }, [onValueUpdate]);
+
   // Helper function to calculate and update values
   const calcularEAtualizarValores = useCallback(async () => {
-    console.log('🧮 AutoPhotoCalculator: Starting calculation for session:', sessionId, 'quantidade:', quantidade);
     
     try {
-      // If quantidade is 0 or null, reset values
+      // CORREÇÃO: Early return reforçado para quantidade 0
       if (!quantidade || quantidade === 0) {
-        console.log('🧮 AutoPhotoCalculator: Resetting values (quantidade is 0)');
+        // Verificar se já computamos isso
+        const lastComputed = lastComputedRef.current;
+        if (lastComputed && lastComputed.quantidade === 0 && 
+            currentValorFotoExtra === 0 && currentValorTotalFotoExtra === 0) {
+          return; // Já está zerado, não precisa fazer nada
+        }
         
-        // Check if we need to reset
+        // Resetar apenas se necessário
         if (currentValorFotoExtra !== 0 || currentValorTotalFotoExtra !== 0) {
-          onValueUpdate({
+          lastComputedRef.current = { quantidade: 0, valorFotoExtra: 0, valorTotalFotoExtra: 0 };
+          onValueUpdateRef.current({
             valorFotoExtra: 0,
             valorTotalFotoExtra: 0
           });
@@ -63,7 +74,6 @@ export const AutoPhotoCalculator: React.FC<AutoPhotoCalculatorProps> = ({
 
       // If we have frozen rules, use them
       if (regrasCongeladas) {
-        console.log('🧮 AutoPhotoCalculator: Using frozen rules:', regrasCongeladas);
         const resultado = pricingFreezingService.calcularValorFotoExtraComRegrasCongeladas(
           quantidade,
           regrasCongeladas
@@ -71,28 +81,16 @@ export const AutoPhotoCalculator: React.FC<AutoPhotoCalculatorProps> = ({
         valorFotoExtra = resultado.valorUnitario;
         valorTotalFotoExtra = resultado.valorTotal;
       } else {
-        console.log('🧮 AutoPhotoCalculator: Using dynamic pricing calculation', { categoria, categoriaId, valorFotoExtraPacote });
-        // Import dynamically to avoid circular dependencies
         const { calcularTotalFotosExtras } = await import('@/utils/precificacaoUtils');
-        
-        // Build pacoteInfo with category information for categoria mode
         const pacoteInfo = {
           valorFotoExtra: valorFotoExtraPacote,
           categoria,
           categoriaId
         };
-        
         const resultado = calcularTotalFotosExtras(quantidade, pacoteInfo);
         valorFotoExtra = quantidade > 0 ? resultado / quantidade : 0;
         valorTotalFotoExtra = resultado;
       }
-
-      console.log('🧮 AutoPhotoCalculator: Calculated values:', {
-        valorFotoExtra,
-        valorTotalFotoExtra,
-        currentValorFotoExtra,
-        currentValorTotalFotoExtra
-      });
 
       // Check if this is the same computation we just did
       const lastComputed = lastComputedRef.current;
@@ -103,7 +101,6 @@ export const AutoPhotoCalculator: React.FC<AutoPhotoCalculatorProps> = ({
         Math.abs(lastComputed.valorTotalFotoExtra - valorTotalFotoExtra) < 0.01 &&
         JSON.stringify(lastComputed.regrasCongeladas) === JSON.stringify(regrasCongeladas)
       ) {
-        console.log('🧮 AutoPhotoCalculator: Same computation already done, skipping');
         return;
       }
 
@@ -112,8 +109,6 @@ export const AutoPhotoCalculator: React.FC<AutoPhotoCalculatorProps> = ({
         Math.abs(valorFotoExtra - currentValorFotoExtra) > 0.01 ||
         Math.abs(valorTotalFotoExtra - currentValorTotalFotoExtra) > 0.01
       ) {
-        console.log('🧮 AutoPhotoCalculator: Values changed, updating...');
-        
         // Store what we computed
         lastComputedRef.current = {
           quantidade,
@@ -122,17 +117,16 @@ export const AutoPhotoCalculator: React.FC<AutoPhotoCalculatorProps> = ({
           regrasCongeladas
         };
         
-        onValueUpdate({
+        // CORREÇÃO: Usar ref para evitar dependência instável
+        onValueUpdateRef.current({
           valorFotoExtra,
           valorTotalFotoExtra
         });
-      } else {
-        console.log('🧮 AutoPhotoCalculator: Values unchanged, skipping update');
       }
     } catch (error) {
       console.error('❌ AutoPhotoCalculator: Error calculating values:', error);
     }
-  }, [sessionId, quantidade, regrasCongeladas, currentValorFotoExtra, currentValorTotalFotoExtra, categoria, categoriaId, valorFotoExtraPacote, onValueUpdate]);
+  }, [sessionId, quantidade, regrasCongeladas, currentValorFotoExtra, currentValorTotalFotoExtra, categoria, categoriaId, valorFotoExtraPacote]);
 
   // Calculate whenever dependencies change
   useEffect(() => {

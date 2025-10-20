@@ -3,7 +3,7 @@
  * Usado no formulário de agendamento e outros locais
  */
 
-import { useConfiguration } from '@/hooks/useConfiguration';
+import { useRealtimeConfiguration } from '@/hooks/useRealtimeConfiguration';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Categoria } from '@/types/configuration';
@@ -21,7 +21,7 @@ export function CategoriaSelect({
   placeholder = "Selecione uma categoria",
   className 
 }: CategoriaSelectProps) {
-  const { categorias, isLoadingCategorias } = useConfiguration();
+  const { categorias, isLoadingCategorias } = useRealtimeConfiguration();
 
   if (isLoadingCategorias) {
     return <Skeleton className="h-10 w-full" />;
@@ -53,7 +53,7 @@ export function CategoriaSelect({
  * Hook para buscar categoria por ID
  */
 export function useCategoriaById(categoriaId?: string): Categoria | undefined {
-  const { categorias, isLoadingCategorias } = useConfiguration();
+  const { categorias, isLoadingCategorias } = useRealtimeConfiguration();
   
   if (isLoadingCategorias || !categoriaId) {
     return undefined;
