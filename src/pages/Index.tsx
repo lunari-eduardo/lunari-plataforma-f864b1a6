@@ -9,7 +9,6 @@ import { HighPriorityDueSoonCard } from "@/components/tarefas/HighPriorityDueSoo
 import { useIsTablet } from "@/hooks/useIsTablet";
 import { FinancialRemindersCard } from "@/components/dashboard/FinancialRemindersCard";
 import { InstallPWAButton } from "@/components/pwa/InstallPWAButton";
-
 import DailyHero from "@/components/dashboard/DailyHero";
 import DailyKPIs from "@/components/dashboard/DailyKPIs";
 import FollowUpNotificationCard from "@/components/leads/FollowUpNotificationCard";
@@ -65,7 +64,7 @@ export default function Index() {
   // Receita do mês atual vs meta (usando mesma lógica do dashboard financeiro)
   const currentMonthIndex = new Date().getMonth();
   const currentYear = new Date().getFullYear();
-  
+
   // Obter receita do mês atual usando métricas cacheadas (mesma fonte do Workflow e Finanças)
   const receitaMes = useMemo(() => {
     const cachedMetrics = getMonthlyMetrics(currentYear, currentMonthIndex + 1);
@@ -78,9 +77,7 @@ export default function Index() {
       // Carregar metas históricas primeiro
       const historicalGoals = storage.load(STORAGE_KEYS.HISTORICAL_GOALS, []);
       const metaDoAno = historicalGoals.find((goal: any) => goal.ano === currentYear);
-      
       let metaReceita = 0;
-      
       if (metaDoAno) {
         // Usar meta histórica se disponível
         metaReceita = metaDoAno.metaFaturamento;
@@ -89,7 +86,7 @@ export default function Index() {
         const goalsData = GoalsIntegrationService.getAnnualGoals();
         metaReceita = goalsData.revenue;
       }
-      
+
       // Meta proporcional do mês
       return metaReceita / 12;
     } catch (error) {
@@ -97,8 +94,7 @@ export default function Index() {
       return 0;
     }
   }, [currentYear]);
-
-  const progressoMeta = metaMes > 0 ? Math.min(100, (receitaMes / metaMes) * 100) : 0;
+  const progressoMeta = metaMes > 0 ? Math.min(100, receitaMes / metaMes * 100) : 0;
 
   // Categoria mais rentável
   const topCategoria = categoryData[0] || null;
@@ -212,36 +208,28 @@ export default function Index() {
   const proximosAgendamentos = useMemo(() => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    
-    const items = appointments
-      .filter(a => a.status === "confirmado")
-      .filter(a => {
-        const appointmentDate = a.date instanceof Date ? a.date : new Date(a.date);
-        const appointmentDay = new Date(appointmentDate.getFullYear(), appointmentDate.getMonth(), appointmentDate.getDate());
-        
-        // If appointment is on a future date, include it
-        if (appointmentDay > today) return true;
-        
-        // If appointment is today, check if time hasn't passed
-        if (appointmentDay.getTime() === today.getTime()) {
-          const [hh, mm] = a.time.split(":").map(Number);
-          const appointmentDateTime = new Date(appointmentDate);
-          appointmentDateTime.setHours(hh || 0, mm || 0, 0, 0);
-          return appointmentDateTime >= now;
-        }
-        
-        return false;
-      })
-      .map(a => ({
-        id: a.id,
-        cliente: a.client,
-        tipo: a.type,
-        data: a.date,
-        hora: a.time
-      }))
-      .sort((a, b) => a.data.getTime() - b.data.getTime())
-      .slice(0, 3);
-    
+    const items = appointments.filter(a => a.status === "confirmado").filter(a => {
+      const appointmentDate = a.date instanceof Date ? a.date : new Date(a.date);
+      const appointmentDay = new Date(appointmentDate.getFullYear(), appointmentDate.getMonth(), appointmentDate.getDate());
+
+      // If appointment is on a future date, include it
+      if (appointmentDay > today) return true;
+
+      // If appointment is today, check if time hasn't passed
+      if (appointmentDay.getTime() === today.getTime()) {
+        const [hh, mm] = a.time.split(":").map(Number);
+        const appointmentDateTime = new Date(appointmentDate);
+        appointmentDateTime.setHours(hh || 0, mm || 0, 0, 0);
+        return appointmentDateTime >= now;
+      }
+      return false;
+    }).map(a => ({
+      id: a.id,
+      cliente: a.client,
+      tipo: a.type,
+      data: a.date,
+      hora: a.time
+    })).sort((a, b) => a.data.getTime() - b.data.getTime()).slice(0, 3);
     return items;
   }, [appointments]);
   return <main className="space-y-6">
@@ -273,8 +261,8 @@ export default function Index() {
               {proximosAgendamentos.map(ev => <div key={ev.id} className="border-b pb-3 last:border-b-0 last:pb-0">
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="font-medium text-sm">{ev.cliente}</p>
-                      <p className="text-2xs text-lunar-textSecondary mt-0.5">{ev.tipo}</p>
+                      <p className="font-medium text-xs">{ev.cliente}</p>
+                      <p className="text-lunar-textSecondary mt-0.5 text-2xs">{ev.tipo}</p>
                     </div>
                     <div className="text-right text-2xs text-lunar-textSecondary">
                       <div>{ev.data.toLocaleDateString("pt-BR")}</div>
