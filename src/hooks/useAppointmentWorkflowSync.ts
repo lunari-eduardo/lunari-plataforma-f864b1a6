@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { WorkflowSupabaseService } from '@/services/WorkflowSupabaseService';
+import { workflowCacheManager } from '@/services/WorkflowCacheManager';
 
 /**
  * Hook to automatically sync confirmed appointments with workflow sessions
@@ -133,6 +134,12 @@ export const useAppointmentWorkflowSync = () => {
               try {
                 const newSession = await WorkflowSupabaseService.createSessionFromAppointment(appointment.id, appointment);
                 console.log('✅ [AppointmentSync] Session created for confirmed appointment:', newSession?.id);
+                
+                // ⚡ NOVO: Adicionar ao cache imediatamente
+                if (newSession) {
+                  workflowCacheManager.addSession(newSession);
+                  console.log('💾 [AppointmentSync] Session added to cache instantly');
+                }
               } catch (error) {
                 console.error('❌ [AppointmentSync] Error creating session from confirmed appointment:', error);
               }
@@ -171,6 +178,12 @@ export const useAppointmentWorkflowSync = () => {
               try {
                 const newSession = await WorkflowSupabaseService.createSessionFromAppointment(appointment.id, appointment);
                 console.log('✅ [AppointmentSync] Session created for new confirmed appointment:', newSession?.id);
+                
+                // ⚡ NOVO: Adicionar ao cache imediatamente
+                if (newSession) {
+                  workflowCacheManager.addSession(newSession);
+                  console.log('💾 [AppointmentSync] Session added to cache instantly');
+                }
               } catch (error) {
                 console.error('❌ [AppointmentSync] Error creating session from new confirmed appointment:', error);
               }

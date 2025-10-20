@@ -33,6 +33,7 @@ import ThemeProvider from "./components/theme/ThemeProvider";
 import { BuildMonitor } from "./components/shared/BuildMonitor";
 import { usePricingBootstrap } from "./hooks/usePricingBootstrap";
 import { useServiceWorker } from "./hooks/useServiceWorker";
+import { useWorkflowCacheInit } from "./hooks/useWorkflowCacheInit";
 
 // Create a stable QueryClient instance
 const queryClient = new QueryClient({
@@ -51,6 +52,9 @@ function App() {
   
   // Enable automatic updates and service worker control
   useServiceWorker();
+  
+  // Initialize workflow cache manager
+  useWorkflowCacheInit();
 
   // Log app version for debugging
   React.useEffect(() => {

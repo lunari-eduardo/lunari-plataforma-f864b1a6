@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { useWorkflowStatus } from "@/hooks/useWorkflowStatus";
 import { useOrcamentoData } from "@/hooks/useOrcamentoData";
 import { useWorkflowRealtime } from "@/hooks/useWorkflowRealtime";
+import { useWorkflowData } from "@/hooks/useWorkflowData";
 import { useAppointmentWorkflowSync } from "@/hooks/useAppointmentWorkflowSync";
 import { useClientesRealtime } from "@/hooks/useClientesRealtime";
 import { parseDateFromStorage } from "@/utils/dateUtils";
@@ -31,6 +32,13 @@ export default function Workflow() {
     produtos,
     categorias
   } = useOrcamentoData();
+  
+  // Estado local para UI - MOVER ANTES dos hooks que dependem dele
+  const [currentMonth, setCurrentMonth] = useState({
+    month: new Date().getMonth() + 1,
+    year: new Date().getFullYear()
+  });
+  
   const {
     sessions: workflowSessions,
     sessionsData,
@@ -40,6 +48,19 @@ export default function Workflow() {
     deleteSession: deleteWorkflowSession,
     createSessionFromAppointment
   } = useWorkflowRealtime();
+  
+  // ⚡ NOVO: Usar cache inteligente para carregamento rápido
+  const {
+    sessions: cachedSessions,
+    loading: cacheLoading,
+    cacheHit,
+    refresh: refreshCache
+  } = useWorkflowData({
+    year: currentMonth.year,
+    month: currentMonth.month,
+    enableRealtime: true,
+    autoPreload: true
+  });
   
   const { clientes } = useClientesRealtime();
   
@@ -60,10 +81,6 @@ export default function Workflow() {
   const [filteredSessions, setFilteredSessions] = useState<SessionData[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showMetrics, setShowMetrics] = useState(true);
-  const [currentMonth, setCurrentMonth] = useState({
-    month: new Date().getMonth() + 1,
-    year: new Date().getFullYear()
-  });
   const [sortField, setSortField] = useState<string>(''); // Vazio para usar ordenação padrão
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [scrollLeft, setScrollLeft] = useState(0);
