@@ -203,6 +203,7 @@ export function SalvarPacoteModal({
               value={valorBaseInput.displayValue}
               onChange={valorBaseInput.handleChange}
               onFocus={valorBaseInput.handleFocus}
+              placeholder="0,00"
               className="mt-1"
             />
           </div>

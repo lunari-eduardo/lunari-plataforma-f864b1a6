@@ -65,10 +65,6 @@ export default function PacoteForm({
       newErrors.categoria_id = 'Categoria é obrigatória';
     }
 
-    if (formData.valor_base <= 0) {
-      newErrors.valor_base = 'Valor base deve ser maior que zero';
-    }
-
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
@@ -173,7 +169,7 @@ export default function PacoteForm({
         {/* Valor Base */}
         <div className="space-y-1.5">
           <Label htmlFor="valor_base" className="text-xs font-medium text-muted-foreground">
-            Valor Base (R$) *
+            Valor Base (R$)
           </Label>
           <Input
             id="valor_base"
