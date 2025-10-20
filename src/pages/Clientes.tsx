@@ -22,7 +22,6 @@ import { AniversariantesModal } from '@/components/crm/AniversariantesModal';
 import { ClientFiltersBar, ClientFilters } from '@/components/crm/ClientFiltersBar';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-
 export default function Clientes() {
   // New Supabase real-time client management
   const {
@@ -35,7 +34,9 @@ export default function Clientes() {
   } = useClientesRealtime();
 
   // Legacy context for workflow integration (to be migrated in Step 2)
-  const { workflowItems } = useAppContext();
+  const {
+    workflowItems
+  } = useAppContext();
   const dropdownContext = useDialogDropdownContext();
   const [searchParams, setSearchParams] = useSearchParams();
   const [filters, setFilters] = useState<ClientFilters>({
@@ -91,13 +92,11 @@ export default function Clientes() {
         nome: cliente.familia.find(f => f.tipo === 'conjuge')?.nome,
         dataNascimento: cliente.familia.find(f => f.tipo === 'conjuge')?.data_nascimento
       } : undefined,
-      filhos: cliente.familia
-        .filter(f => f.tipo === 'filho')
-        .map(f => ({
-          id: f.id,
-          nome: f.nome,
-          dataNascimento: f.data_nascimento
-        }))
+      filhos: cliente.familia.filter(f => f.tipo === 'filho').map(f => ({
+        id: f.id,
+        nome: f.nome,
+        dataNascimento: f.data_nascimento
+      }))
     }));
   }, [clientesSupabase]);
 
@@ -210,7 +209,6 @@ export default function Clientes() {
       toast.error('Nome é obrigatório');
       return;
     }
-    
     try {
       if (editingClient) {
         await atualizarClienteSupabase(editingClient.id, formData);
@@ -278,7 +276,7 @@ export default function Clientes() {
                     <Link to={`/clientes/${cliente.id}`} className="text-lg font-semibold text-primary hover:text-primary/80 block">
                       {cliente.nome}
                     </Link>
-                    <p className="text-muted-foreground text-xs">{cliente.email}</p>
+                    
                   </div>
                   <div className="flex gap-1">
                     <Button variant="ghost" size="sm" onClick={() => handleWhatsApp(cliente)} className="h-8 w-8 p-0 text-green-600 hover:text-green-700">
@@ -294,13 +292,7 @@ export default function Clientes() {
                 </div>
 
                 {/* Informações de Contato */}
-                <div className="flex items-center justify-between mb-3 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-3 w-3" />
-                    <span className="text-xs">{cliente.telefone}</span>
-                  </div>
-                  <OriginBadge originId={(cliente as any).origem} className="text-xs" />
-                </div>
+                
 
                 {/* Métricas Financeiras */}
                 <div className="grid grid-cols-3 gap-3 text-center">
