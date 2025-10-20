@@ -8,9 +8,11 @@ export function useServiceWorker() {
   useEffect(() => {
     // Verificar se service workers são suportados
     if (!('serviceWorker' in navigator)) {
-      console.log('Service Workers não suportados neste navegador');
+      console.warn('⚠️ Service Workers não suportados neste navegador');
       return;
     }
+
+    console.log('🔧 Iniciando registro do Service Worker...');
 
     // Registrar o service worker
     const registerServiceWorker = async () => {
@@ -19,7 +21,7 @@ export function useServiceWorker() {
           scope: '/'
         });
 
-        console.log('Service Worker registrado com sucesso:', registration.scope);
+        console.log('✅ Service Worker registrado:', registration.scope);
 
         // Verificar se há atualização ao registrar
         registration.update();
@@ -29,16 +31,14 @@ export function useServiceWorker() {
           const newWorker = registration.installing;
           
           if (newWorker) {
-            console.log('Nova versão do Service Worker encontrada');
+            console.log('🔄 Nova versão do Service Worker encontrada');
             
             newWorker.addEventListener('statechange', () => {
               if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                // Novo SW instalado mas ainda não está ativo
-                console.log('Nova versão disponível, preparando atualização...');
+                console.log('✅ Nova versão instalada, ativando atualização...');
                 setWaitingWorker(newWorker);
                 setShowReload(true);
                 
-                // Auto-reload após 2 segundos
                 toast.info('Nova versão disponível! Atualizando...', {
                   duration: 2000,
                 });
@@ -78,7 +78,7 @@ export function useServiceWorker() {
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       if (refreshing) return;
       refreshing = true;
-      console.log('Service Worker atualizado, recarregando página...');
+      console.log('🔄 Service Worker atualizado, recarregando página...');
       window.location.reload();
     });
 

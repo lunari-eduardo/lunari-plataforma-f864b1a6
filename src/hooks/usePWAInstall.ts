@@ -9,9 +9,10 @@ export function usePWAInstall() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstallable, setIsInstallable] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [checkCount, setCheckCount] = useState(0);
 
   useEffect(() => {
-    // 1. Detectar se já está instalado (ANTES da renderização)
+    // 1. Detectar se já está instalado
     const checkIfInstalled = () => {
       // Chrome/Edge/Samsung Internet
       if (window.matchMedia('(display-mode: standalone)').matches) {
@@ -32,20 +33,36 @@ export function usePWAInstall() {
     // Se já está instalado, não precisa mostrar botão
     if (installed) {
       setIsInstallable(false);
+      console.log('✅ App já está instalado (display-mode: standalone)');
       return;
     }
 
-    // Verificar se foi desinstalado recentemente (nova sessão sem cache de instalação)
-    const checkReinstallability = () => {
-      const wasInstalled = sessionStorage.getItem('pwa_was_installed');
-      if (wasInstalled === 'true') {
-        // Foi desinstalado, limpar flag
-        sessionStorage.removeItem('pwa_was_installed');
-        console.log('App foi desinstalado, aguardando evento de instalação...');
+    console.log('🔍 Iniciando detecção de instalabilidade do PWA...');
+
+    // Limpar caches antigos se necessário
+    const clearOldCaches = async () => {
+      try {
+        const cacheNames = await caches.keys();
+        console.log('📦 Caches encontrados:', cacheNames.length);
+        
+        // Verificar se estamos em uma nova sessão após desinstalação
+        const wasInstalled = sessionStorage.getItem('pwa_was_installed');
+        if (wasInstalled === 'true' && !installed) {
+          console.log('🔄 App foi desinstalado, limpando estado...');
+          sessionStorage.removeItem('pwa_was_installed');
+          
+          // Limpar todos os caches para forçar estado limpo
+          for (const cacheName of cacheNames) {
+            await caches.delete(cacheName);
+            console.log('🗑️ Cache removido:', cacheName);
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao limpar caches:', error);
       }
     };
 
-    checkReinstallability();
+    clearOldCaches();
 
     // 2. Capturar evento de instalação disponível
     const handleBeforeInstallPrompt = (e: Event) => {
@@ -53,7 +70,7 @@ export function usePWAInstall() {
       const promptEvent = e as BeforeInstallPromptEvent;
       setDeferredPrompt(promptEvent);
       setIsInstallable(true);
-      console.log('Evento beforeinstallprompt capturado, app é instalável');
+      console.log('✅ Evento beforeinstallprompt capturado - App é instalável!');
     };
 
     // 3. Detectar quando app foi instalado
@@ -62,18 +79,28 @@ export function usePWAInstall() {
       setIsInstallable(false);
       setDeferredPrompt(null);
       sessionStorage.setItem('pwa_was_installed', 'true');
-      console.log('App instalado com sucesso');
+      console.log('✅ App instalado com sucesso!');
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
 
-    // Verificar periodicamente se o evento pode ser disparado (fallback)
-    // Isso ajuda em casos onde o evento não dispara imediatamente
+    // Verificar periodicamente (máximo 12 tentativas = 1 minuto)
     const checkInterval = setInterval(() => {
-      if (!isInstallable && !installed && !deferredPrompt) {
-        console.log('Verificando instalabilidade...');
-      }
+      setCheckCount(prev => {
+        const newCount = prev + 1;
+        
+        if (newCount <= 12) {
+          if (!isInstallable && !installed && !deferredPrompt) {
+            console.log(`⏳ Aguardando evento de instalação... (${newCount}/12)`);
+          }
+        } else {
+          console.log('⚠️ Evento beforeinstallprompt não disparado. Pode haver cooldown do navegador.');
+          clearInterval(checkInterval);
+        }
+        
+        return newCount;
+      });
     }, 5000);
 
     return () => {
