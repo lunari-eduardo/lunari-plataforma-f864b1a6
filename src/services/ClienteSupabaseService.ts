@@ -19,16 +19,33 @@ export class ClienteSupabaseService {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
+      // Validate file type (security: prevent executable uploads)
+      const ALLOWED_DOCUMENT_TYPES = [
+        'application/pdf',
+        'image/jpeg', 
+        'image/png', 
+        'image/webp',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      ];
+
+      if (!ALLOWED_DOCUMENT_TYPES.includes(file.type)) {
+        throw new Error('Tipo de arquivo não permitido. Apenas PDF, imagens e documentos Office são aceitos.');
+      }
+
       // Validate file size (10MB max for documents)
       const MAX_SIZE = 10 * 1024 * 1024;
       if (file.size > MAX_SIZE) {
         throw new Error('Arquivo muito grande. Tamanho máximo: 10MB');
       }
 
-      // Sanitize file extension
+      // Validate file extension (double-check security)
+      const ALLOWED_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'doc', 'docx', 'xls', 'xlsx'];
       const fileExt = file.name.split('.').pop()?.toLowerCase();
-      if (!fileExt) {
-        throw new Error('Arquivo sem extensão');
+      if (!fileExt || !ALLOWED_EXTENSIONS.includes(fileExt)) {
+        throw new Error('Extensão de arquivo inválida');
       }
 
       const fileName = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
