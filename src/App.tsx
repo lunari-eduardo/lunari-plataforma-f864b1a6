@@ -32,6 +32,7 @@ import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import ThemeProvider from "./components/theme/ThemeProvider";
 import { BuildMonitor } from "./components/shared/BuildMonitor";
 import { usePricingBootstrap } from "./hooks/usePricingBootstrap";
+import { useServiceWorker } from "./hooks/useServiceWorker";
 
 // Create a stable QueryClient instance
 const queryClient = new QueryClient({
@@ -47,6 +48,9 @@ const queryClient = new QueryClient({
 function App() {
   // Bootstrap pricing system early
   const { isInitialized: pricingInitialized, error: pricingError } = usePricingBootstrap();
+  
+  // Enable automatic updates and service worker control
+  useServiceWorker();
 
   // Log app version for debugging
   React.useEffect(() => {
