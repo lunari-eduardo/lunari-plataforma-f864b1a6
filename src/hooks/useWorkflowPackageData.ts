@@ -49,16 +49,26 @@ export const useWorkflowPackageData = () => {
       const frozenProducts = session.regras_congeladas?.produtos || [];
       const produtosList = frozenProducts.length > 0 ? frozenProducts : (session.produtos_incluidos || []);
       
+      // ✅ FASE 4: Log de debug para sessões sem cliente
+      if (!session.clientes || !session.clientes.nome) {
+        console.warn('⚠️ Sessão sem cliente detectada:', {
+          sessionId: session.id,
+          clienteId: session.cliente_id,
+          data: session.data_sessao,
+          hasClientesProperty: !!session.clientes
+        });
+      }
+
       const converted: SessionData = {
         id: session.id,
         data: session.data_sessao,
         hora: session.hora_sessao,
-        // CORREÇÃO: Melhorar resolução do cliente - garantir que não se perca
-        nome: (session as any).clientes?.nome || 'Cliente não encontrado',
-        email: (session as any).clientes?.email || '',
+        // ✅ FASE 3: Usar tipagem correta sem 'as any'
+        nome: session.clientes?.nome || 'Cliente não encontrado',
+        email: session.clientes?.email || '',
         descricao: session.descricao || '',
         status: session.status,
-        whatsapp: (session as any).clientes?.telefone || (session as any).clientes?.whatsapp || '',
+        whatsapp: session.clientes?.telefone || session.clientes?.whatsapp || '',
         // CORREÇÃO: Usar categoria resolvida ou manter original
         categoria: packageData.categoria || session.categoria || '',
         // CORREÇÃO: Usar packageName resolvido mas manter referência original se necessário  

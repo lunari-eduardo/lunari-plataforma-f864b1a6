@@ -174,6 +174,8 @@ class WorkflowCacheManager {
     }
 
     console.log(`✅ WorkflowCacheManager: Fetched ${data?.length || 0} sessions for ${year}-${month}`);
+    
+    // ✅ FASE 2: Cast explícito para preservar dados do JOIN (incluindo clientes)
     return (data || []) as WorkflowSession[];
   }
 
@@ -306,6 +308,13 @@ class WorkflowCacheManager {
     
     // Broadcast
     this.broadcastUpdate('cache-cleared', {});
+  }
+
+  /**
+   * ✅ FASE 6: Limpa completamente todo o cache (alias para clearCache)
+   */
+  clearAllCache() {
+    this.clearCache();
   }
 
   /**

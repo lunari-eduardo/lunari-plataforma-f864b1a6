@@ -34,6 +34,13 @@ export interface WorkflowSession {
   created_at?: string;
   updated_at?: string;
   updated_by?: string;
+  // ✅ FASE 1: Adicionar dados do cliente do JOIN Supabase
+  clientes?: {
+    nome: string;
+    email?: string;
+    telefone?: string;
+    whatsapp?: string;
+  };
 }
 
 export const useWorkflowRealtime = () => {
