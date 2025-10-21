@@ -139,6 +139,16 @@ export const useAppointmentWorkflowSync = () => {
                 if (newSession) {
                   workflowCacheManager.addSession(newSession);
                   console.log('💾 [AppointmentSync] Session added to cache instantly');
+                  
+                  // ✅ FASE 4: Disparar evento global para forçar refresh imediato
+                  window.dispatchEvent(new CustomEvent('workflow-session-created', {
+                    detail: { 
+                      sessionId: newSession.id,
+                      appointmentId: appointment.id,
+                      timestamp: new Date().toISOString()
+                    }
+                  }));
+                  console.log('📢 [AppointmentSync] Dispatched workflow-session-created event');
                 }
               } catch (error) {
                 console.error('❌ [AppointmentSync] Error creating session from confirmed appointment:', error);
@@ -183,6 +193,16 @@ export const useAppointmentWorkflowSync = () => {
                 if (newSession) {
                   workflowCacheManager.addSession(newSession);
                   console.log('💾 [AppointmentSync] Session added to cache instantly');
+                  
+                  // ✅ FASE 4: Disparar evento global para forçar refresh imediato
+                  window.dispatchEvent(new CustomEvent('workflow-session-created', {
+                    detail: { 
+                      sessionId: newSession.id,
+                      appointmentId: appointment.id,
+                      timestamp: new Date().toISOString()
+                    }
+                  }));
+                  console.log('📢 [AppointmentSync] Dispatched workflow-session-created event');
                 }
               } catch (error) {
                 console.error('❌ [AppointmentSync] Error creating session from new confirmed appointment:', error);

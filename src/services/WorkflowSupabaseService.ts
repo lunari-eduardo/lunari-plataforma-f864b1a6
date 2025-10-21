@@ -50,6 +50,18 @@ export class WorkflowSupabaseService {
     try {
       console.log('🔄 Creating workflow session from appointment:', appointmentId, appointmentData);
       
+      // ✅ FASE 2: Log de diagnóstico completo
+      console.log('🔍 [WorkflowService] Appointment data received:', {
+        id: appointmentId,
+        package_id: appointmentData.package_id,
+        packageId: appointmentData.packageId,
+        cliente_id: appointmentData.cliente_id,
+        clienteId: appointmentData.clienteId,
+        date: appointmentData.date,
+        description: appointmentData.description,
+        title: appointmentData.title
+      });
+      
       const { data: user } = await supabase.auth.getUser();
       if (!user?.user) throw new Error('User not authenticated');
 
@@ -148,8 +160,18 @@ export class WorkflowSupabaseService {
 
       // Freeze complete package and product data with CURRENT pricing model
       const { pricingFreezingService } = await import('@/services/PricingFreezingService');
+      
+      // ✅ FASE 2: Aceitar package_id ou packageId (camelCase/snake_case)
+      const packageId = appointmentData.package_id || appointmentData.packageId;
+      console.log('📦 [WorkflowService] PackageId being frozen:', packageId, 'categoria:', categoria);
+      
+      if (!packageId) {
+        console.error('❌ Package ID not found in appointment data!');
+        throw new Error('Package ID é obrigatório para criar sessão');
+      }
+      
       const regrasCongeladas = await pricingFreezingService.congelarDadosCompletos(
-        appointmentData.package_id,
+        packageId,
         categoria
       );
       

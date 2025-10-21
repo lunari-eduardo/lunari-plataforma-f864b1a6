@@ -197,6 +197,23 @@ export function useWorkflowData(options: UseWorkflowDataOptions) {
   }, [year, month, enableRealtime, loadData]);
 
   /**
+   * ✅ FASE 4: Listener para evento de criação de sessão
+   */
+  useEffect(() => {
+    const handleSessionCreated = (event: CustomEvent) => {
+      console.log('📢 [useWorkflowData] Received workflow-session-created event:', event.detail);
+      // Forçar reload para garantir que a UI atualiza
+      loadData(true);
+    };
+
+    window.addEventListener('workflow-session-created' as any, handleSessionCreated);
+    
+    return () => {
+      window.removeEventListener('workflow-session-created' as any, handleSessionCreated);
+    };
+  }, [loadData]);
+
+  /**
    * Refresh manual
    */
   const refresh = useCallback(() => {

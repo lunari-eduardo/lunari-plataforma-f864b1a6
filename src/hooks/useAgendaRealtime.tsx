@@ -106,18 +106,14 @@ export const useAgendaRealtime = () => {
     loadAppointments();
     loadAvailability();
 
-    const appointmentsChannel = supabase
-      .channel('appointments_realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' }, loadAppointments)
-      .subscribe();
-
+    // ✅ FASE 3: Remover subscription de appointments - deixar apenas availability
+    // O useAppointmentWorkflowSync é o canal PRINCIPAL para appointments
     const availabilityChannel = supabase
       .channel('availability_realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'availability_slots' }, loadAvailability)
       .subscribe();
 
     return () => {
-      supabase.removeChannel(appointmentsChannel);
       supabase.removeChannel(availabilityChannel);
     };
   }, [loadAppointments, loadAvailability]);

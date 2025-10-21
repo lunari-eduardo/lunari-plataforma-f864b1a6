@@ -123,7 +123,7 @@ export default function AppointmentDetails({
     const selectedPackage = pacotes.find(p => p.id === formData.packageId);
     const appointmentData = {
       id: appointment.id,
-      date: formData.date, // Mandar como Date, a função updateAppointment irá converter
+      date: formatDateForStorage(formData.date), // ✅ FASE 1: Converter para string YYYY-MM-DD para evitar timezone issues
       time: formData.time,
       title: formData.title,
       client: formData.title,

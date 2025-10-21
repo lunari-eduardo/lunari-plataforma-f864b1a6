@@ -61,13 +61,25 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
 
     const sessionId = appointment.sessionId || generateUniversalSessionId('agenda');
 
+    // ✅ FASE 5: Validar e preparar data
+    const dateStr = typeof appointment.date === 'string' 
+      ? appointment.date 
+      : this.formatDateForStorage(appointment.date);
+    
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      console.error('❌ Invalid date format:', dateStr);
+      throw new Error('Data inválida. Use formato YYYY-MM-DD');
+    }
+
+    console.log(`📅 [${new Date().toISOString()}] Saving appointment with date:`, dateStr);
+
     const { data, error } = await supabase
       .from('appointments')
       .insert({
         user_id: user.user.id,
         session_id: sessionId,
         title: appointment.title,
-        date: this.formatDateForStorage(appointment.date),
+        date: dateStr,
         time: appointment.time,
         type: appointment.type,
         status: appointment.status,
@@ -97,7 +109,20 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
     const updateData: any = {};
     
     if (updates.title) updateData.title = updates.title;
-    if (updates.date) updateData.date = this.formatDateForStorage(updates.date);
+    if (updates.date) {
+      // ✅ FASE 5: Validar e preparar data
+      const dateStr = typeof updates.date === 'string' 
+        ? updates.date 
+        : this.formatDateForStorage(updates.date);
+      
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        console.error('❌ Invalid date format:', dateStr);
+        throw new Error('Data inválida. Use formato YYYY-MM-DD');
+      }
+      
+      console.log(`📅 [${new Date().toISOString()}] Updating appointment ${id} with date:`, dateStr);
+      updateData.date = dateStr;
+    }
     if (updates.time) updateData.time = updates.time;
     if (updates.type) updateData.type = updates.type;
     if (updates.status) updateData.status = updates.status;
