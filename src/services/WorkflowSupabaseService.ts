@@ -161,28 +161,52 @@ export class WorkflowSupabaseService {
       // Freeze complete package and product data with CURRENT pricing model
       const { pricingFreezingService } = await import('@/services/PricingFreezingService');
       
-      // ✅ FASE 2: Aceitar package_id ou packageId (camelCase/snake_case)
+      // ✅ FASE 4: Aceitar package_id ou packageId (camelCase/snake_case) com tolerância
       const packageId = appointmentData.package_id || appointmentData.packageId;
-      console.log('📦 [WorkflowService] PackageId being frozen:', packageId, 'categoria:', categoria);
       
-      if (!packageId) {
-        console.error('❌ Package ID not found in appointment data!');
-        throw new Error('Package ID é obrigatório para criar sessão');
+      // FASE 4: Congelar dados de precificação com tolerância a pacote ausente
+      console.log('📦 PackageId being frozen:', packageId, 'Categoria:', categoria);
+      
+      let regrasCongeladas;
+      let valorBasePacote = 0;
+      
+      if (packageId) {
+        regrasCongeladas = await pricingFreezingService.congelarDadosCompletos(
+          packageId,
+          categoria
+        );
+        
+        if (!regrasCongeladas) {
+          console.warn('⚠️ Falha ao congelar dados de precificação, usando valores padrão');
+          regrasCongeladas = {
+            modelo: 'fixo',
+            valorBase: 0,
+            produtos: [],
+            categoria: categoria || 'Outros'
+          };
+        } else {
+          console.log('✅ Dados congelados com sucesso:', Object.keys(regrasCongeladas));
+          valorBasePacote = Number(regrasCongeladas.valorBase) || 0;
+        }
+      } else {
+        console.warn('⚠️ Criando sessão sem pacote, usando regras mínimas');
+        regrasCongeladas = {
+          modelo: 'fixo',
+          valorBase: 0,
+          produtos: [],
+          categoria: categoria || 'Outros'
+        };
       }
       
-      const regrasCongeladas = await pricingFreezingService.congelarDadosCompletos(
-        packageId,
-        categoria
-      );
-      
-      console.log('❄️ Frozen pricing data for new appointment:', regrasCongeladas);
+      console.log('💰 Valor base do pacote congelado:', valorBasePacote);
 
-      // FASE 1: Extract valor_base_pacote from frozen rules
-      const valorBasePacote = regrasCongeladas?.valorBase 
-        ? Number(regrasCongeladas.valorBase) 
-        : (packageData?.valor_base ? Number(packageData.valor_base) : valorTotal);
+      // FASE 4: Calcular valor inicial da foto extra
+      const valorFotoExtraInicial = regrasCongeladas ? 
+        pricingFreezingService.calcularValorFotoExtraComRegrasCongeladas(1, regrasCongeladas).valorUnitario : 0;
       
-      console.log('💰 Extracted valor_base_pacote:', valorBasePacote);
+      // FASE 4: Montar descrição sem fallback para title
+      const descricao = appointmentData.description || '';
+      console.log('📝 Descrição da sessão:', descricao || '(vazia)');
 
       // Create session record with package ID for proper linking
       const sessionData = {
@@ -194,14 +218,14 @@ export class WorkflowSupabaseService {
         hora_sessao: appointmentData.time,
         categoria: categoria || appointmentData.type || 'Outros',
         pacote: appointmentData.package_id || '', // Store package_id for linking
-        descricao: appointmentData.description || '', // ✅ FASE 2: Não usar title como fallback
+        descricao: descricao,
         status: '',
         valor_base_pacote: valorBasePacote, // FASE 1: Save base package value
         valor_total: valorTotal, // Frontend calculates and sends correct total
         valor_pago: Number(appointmentData.paid_amount) || 0,
         produtos_incluidos: packageData?.produtos_incluidos || [],
         // Set default extra photo values from frozen pricing model
-        valor_foto_extra: regrasCongeladas.precificacaoFotoExtra?.valorFixo || packageData?.valor_foto_extra || 0,
+        valor_foto_extra: valorFotoExtraInicial,
         qtd_fotos_extra: 0,
         valor_total_foto_extra: 0,
         regras_congeladas: regrasCongeladas as any,

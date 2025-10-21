@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -30,6 +30,9 @@ export function useClientSessionsRealtime(clienteId: string) {
   const [sessions, setSessions] = useState<ClientSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // FASE 5: Debounce timer para refetch
+  const refetchTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const loadSessions = useCallback(async () => {
     if (!clienteId) {
@@ -188,6 +191,18 @@ export function useClientSessionsRealtime(clienteId: string) {
     }
   }, [clienteId]);
 
+  // FASE 5: Debounced refetch para evitar race conditions
+  const debouncedRefetch = useCallback(() => {
+    if (refetchTimerRef.current) {
+      clearTimeout(refetchTimerRef.current);
+    }
+    
+    refetchTimerRef.current = setTimeout(() => {
+      console.log('🔄 [Debounced] Recarregando sessões do cliente...');
+      loadSessions();
+    }, 150); // 150ms debounce
+  }, [loadSessions]);
+
   // Configurar realtime subscriptions
   useEffect(() => {
     if (!clienteId) return;
@@ -208,8 +223,8 @@ export function useClientSessionsRealtime(clienteId: string) {
             filter: `cliente_id=eq.${clienteId}`,
           },
           () => {
-            console.log('🔄 Sessão alterada, recarregando...');
-            loadSessions();
+            console.log('🔄 Sessão alterada, usando debounce...');
+            debouncedRefetch();
           }
         )
         .subscribe();
@@ -226,20 +241,23 @@ export function useClientSessionsRealtime(clienteId: string) {
             filter: `cliente_id=eq.${clienteId}`,
           },
           () => {
-            console.log('🔄 Transação alterada, recarregando...');
-            loadSessions();
+            console.log('🔄 Transação alterada, usando debounce...');
+            debouncedRefetch();
           }
         )
         .subscribe();
 
       return () => {
+        if (refetchTimerRef.current) {
+          clearTimeout(refetchTimerRef.current);
+        }
         supabase.removeChannel(sessionsChannel);
         supabase.removeChannel(transactionsChannel);
       };
     };
 
     setupRealtime();
-  }, [clienteId, loadSessions]);
+  }, [clienteId, debouncedRefetch]);
 
   // Carregar dados iniciais
   useEffect(() => {

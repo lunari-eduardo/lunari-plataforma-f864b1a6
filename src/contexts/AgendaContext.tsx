@@ -125,28 +125,53 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
       }
     };
 
-    loadData();
+    const setupRealtime = async () => {
+      // FASE 2: Subscrever a mudanças em tempo real (appointments + availability)
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-    // FASE 1: Subscrever a mudanças em tempo real
-    const availabilityChannel = supabase
-      .channel('availability_realtime')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'availability_slots'
-      }, (payload) => {
-        console.log('🔄 Mudança detectada em availability_slots:', payload);
-        
-        // Recarregar availability slots
-        agendaService.loadAvailabilitySlots().then(slots => {
-          setAvailability(slots);
-        });
-      })
-      .subscribe();
+      const availabilityChannel = supabase
+        .channel('availability_realtime')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'availability_slots'
+        }, (payload) => {
+          console.log('🔄 Mudança detectada em availability_slots:', payload);
+          
+          // Recarregar availability slots
+          agendaService.loadAvailabilitySlots().then(slots => {
+            setAvailability(slots);
+          });
+        })
+        .subscribe();
 
-    return () => {
-      supabase.removeChannel(availabilityChannel);
+      // FASE 2: Subscrição específica para appointments (multi-dispositivo)
+      const appointmentsChannel = supabase
+        .channel('appointments_realtime')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'appointments',
+          filter: `user_id=eq.${user.id}`
+        }, (payload) => {
+          console.log('🔄 [AgendaContext] Mudança detectada em appointments:', payload.eventType);
+          
+          // Recarregar appointments para sincronizar multi-dispositivo
+          agendaService.loadAppointments().then(apps => {
+            setAppointments(apps);
+          });
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(availabilityChannel);
+        supabase.removeChannel(appointmentsChannel);
+      };
     };
+
+    loadData();
+    setupRealtime();
   }, []);
 
   // Critical: Convert confirmed appointments to workflow items

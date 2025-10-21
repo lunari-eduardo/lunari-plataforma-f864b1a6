@@ -465,7 +465,7 @@ export const useWorkflowRealtime = () => {
         return;
       }
 
-      // ATOMIC TOTAL CALCULATION: If 'total' was not explicitly sent but component fields changed
+      // FASE 5: ATOMIC TOTAL CALCULATION - Sempre recalcular se campos afetarem o total
       const totalAffectingFields = ['valor_base_pacote', 'qtd_fotos_extra', 'valor_foto_extra', 'valor_total_foto_extra', 
                                      'desconto', 'valor_adicional', 'produtos_incluidos'];
       const hasTotalAffectingChanges = totalAffectingFields.some(field => field in sanitizedUpdates);
@@ -494,7 +494,7 @@ export const useWorkflowRealtime = () => {
         });
 
         sanitizedUpdates.valor_total = novoTotal;
-        console.info('🧮 [AUTO-CALC] Recalculated valor_total atomically:', {
+        console.info('🧮 [FASE 5] Recalculated valor_total atomically:', {
           valorBase: snapshot.valor_base_pacote,
           valorFotoExtra: snapshot.valor_total_foto_extra,
           valorProdutos,
@@ -537,9 +537,41 @@ export const useWorkflowRealtime = () => {
 
       if (error) throw error;
 
+      // FASE 5: Read-back para garantir consistência (verificação de segurança)
+      const { data: updatedSession } = await supabase
+        .from('clientes_sessoes')
+        .select('id, valor_total, qtd_fotos_extra, valor_total_foto_extra')
+        .eq('id', id)
+        .eq('user_id', user.user.id)
+        .single();
+      
+      if (updatedSession && 'valor_total' in sanitizedUpdates) {
+        const expectedTotal = sanitizedUpdates.valor_total;
+        const actualTotal = Number(updatedSession.valor_total);
+        
+        if (Math.abs(expectedTotal - actualTotal) > 0.01) {
+          console.warn('⚠️ [FASE 5] Divergência detectada no total após update, corrigindo:', {
+            expected: expectedTotal,
+            actual: actualTotal
+          });
+          
+          // Corrigir divergência
+          await supabase
+            .from('clientes_sessoes')
+            .update({ valor_total: expectedTotal })
+            .eq('id', id)
+            .eq('user_id', user.user.id);
+        }
+      }
+
       setSessions(prev => prev.map(session => 
         session.id === id ? { ...session, ...sanitizedUpdates } : session
       ));
+      
+      // FASE 6: Emitir evento para atualização de UIs (CRM, etc.)
+      window.dispatchEvent(new CustomEvent('workflow-session-updated', {
+        detail: { sessionId: id, updates: sanitizedUpdates, timestamp: new Date().toISOString() }
+      }));
 
       // Only show toast if not silent (user-initiated action)
       if (!silent) {
@@ -645,7 +677,29 @@ export const useWorkflowRealtime = () => {
           
           if (payload.eventType === 'INSERT') {
             console.log('➕ [WorkflowRealtime] Adding new session via realtime:', payload.new);
-            setSessions(prev => [payload.new as WorkflowSession, ...prev]);
+            
+            // FASE 3: Enriquecer INSERT com dados do cliente (JOIN)
+            const { data: enrichedSession } = await supabase
+              .from('clientes_sessoes')
+              .select(`
+                *,
+                clientes (
+                  nome,
+                  email,
+                  telefone,
+                  whatsapp
+                )
+              `)
+              .eq('id', payload.new.id)
+              .single();
+            
+            if (enrichedSession) {
+              console.log('✅ [WorkflowRealtime] Sessão enriquecida com cliente:', enrichedSession.clientes?.nome);
+              setSessions(prev => [enrichedSession as WorkflowSession, ...prev]);
+            } else {
+              // Fallback para payload.new se não conseguir enriquecer
+              setSessions(prev => [payload.new as WorkflowSession, ...prev]);
+            }
           } else if (payload.eventType === 'UPDATE') {
             console.log('✏️ [WorkflowRealtime] Updating session via realtime:', payload.new.id);
             setSessions(prev => prev.map((session: any) => {

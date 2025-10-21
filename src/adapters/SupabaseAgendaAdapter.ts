@@ -61,7 +61,7 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
 
     const sessionId = appointment.sessionId || generateUniversalSessionId('agenda');
 
-    // ✅ FASE 5: Validar e preparar data
+    // ✅ FASE 1: Validar e preparar data
     const dateStr = typeof appointment.date === 'string' 
       ? appointment.date 
       : this.formatDateForStorage(appointment.date);
@@ -95,11 +95,31 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
 
     if (error) throw error;
 
-    return {
+    const converted = {
       ...appointment,
       id: data.id,
       sessionId: data.session_id
     };
+    
+    // FASE 1: Criar sessão imediatamente se confirmado (idempotente)
+    if (converted.status === 'confirmado') {
+      try {
+        console.log('✅ [SupabaseAdapter] Appointment confirmado, criando sessão imediatamente:', converted.id);
+        const { WorkflowSupabaseService } = await import('@/services/WorkflowSupabaseService');
+        const session = await WorkflowSupabaseService.createSessionFromAppointment(converted.id, converted);
+        
+        if (session) {
+          console.log('🎯 [SupabaseAdapter] Sessão criada com sucesso:', session.id);
+          window.dispatchEvent(new CustomEvent('workflow-session-created', {
+            detail: { sessionId: session.id, appointmentId: converted.id, timestamp: new Date().toISOString() }
+          }));
+        }
+      } catch (sessionError) {
+        console.error('⚠️ [SupabaseAdapter] Erro ao criar sessão (não fatal):', sessionError);
+      }
+    }
+
+    return converted;
   }
 
   async updateAppointment(id: string, updates: Partial<Appointment>): Promise<void> {
@@ -110,7 +130,7 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
     
     if (updates.title) updateData.title = updates.title;
     if (updates.date) {
-      // ✅ FASE 5: Validar e preparar data
+      // ✅ FASE 1: Validar e preparar data
       const dateStr = typeof updates.date === 'string' 
         ? updates.date 
         : this.formatDateForStorage(updates.date);
@@ -140,6 +160,60 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
       .eq('user_id', user.user.id);
 
     if (error) throw error;
+    
+    // FASE 1: Se mudou para confirmado, criar sessão imediatamente
+    const wasConfirmed = updates.status === 'confirmado';
+    if (wasConfirmed) {
+      try {
+        // Buscar dados completos do appointment
+        const { data: appointmentData } = await supabase
+          .from('appointments')
+          .select('*')
+          .eq('id', id)
+          .eq('user_id', user.user.id)
+          .single();
+        
+        if (appointmentData) {
+          console.log('✅ [SupabaseAdapter] Appointment confirmado, criando sessão imediatamente:', id);
+          const { WorkflowSupabaseService } = await import('@/services/WorkflowSupabaseService');
+          
+          // Convert to Appointment format
+          const converted = {
+            id: appointmentData.id,
+            sessionId: appointmentData.session_id,
+            title: appointmentData.title,
+            date: this.parseDateFromStorage(appointmentData.date),
+            time: appointmentData.time,
+            type: appointmentData.type,
+            client: appointmentData.title,
+            status: appointmentData.status,
+            description: appointmentData.description || '',
+            packageId: appointmentData.package_id || '',
+            paidAmount: Number(appointmentData.paid_amount) || 0,
+            email: '',
+            whatsapp: '',
+            orcamentoId: appointmentData.orcamento_id || '',
+            origem: appointmentData.origem,
+            clienteId: appointmentData.cliente_id || '',
+            // Add extra fields needed by WorkflowSupabaseService
+            package_id: appointmentData.package_id,
+            paid_amount: appointmentData.paid_amount,
+            cliente_id: appointmentData.cliente_id
+          };
+          
+          const session = await WorkflowSupabaseService.createSessionFromAppointment(id, converted);
+          
+          if (session) {
+            console.log('🎯 [SupabaseAdapter] Sessão criada com sucesso:', session.id);
+            window.dispatchEvent(new CustomEvent('workflow-session-created', {
+              detail: { sessionId: session.id, appointmentId: id, timestamp: new Date().toISOString() }
+            }));
+          }
+        }
+      } catch (sessionError) {
+        console.error('⚠️ [SupabaseAdapter] Erro ao criar sessão (não fatal):', sessionError);
+      }
+    }
   }
 
   async deleteAppointment(id: string, preservePayments?: boolean): Promise<void> {

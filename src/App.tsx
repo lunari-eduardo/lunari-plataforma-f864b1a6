@@ -34,6 +34,7 @@ import { BuildMonitor } from "./components/shared/BuildMonitor";
 import { usePricingBootstrap } from "./hooks/usePricingBootstrap";
 import { useServiceWorker } from "./hooks/useServiceWorker";
 import { useWorkflowCacheInit } from "./hooks/useWorkflowCacheInit";
+import { useAppointmentWorkflowSync } from "./hooks/useAppointmentWorkflowSync";
 
 // Create a stable QueryClient instance
 const queryClient = new QueryClient({
@@ -55,6 +56,9 @@ function App() {
   
   // Initialize workflow cache manager
   useWorkflowCacheInit();
+  
+  // FASE 1: Global appointment→workflow sync (works on any route)
+  useAppointmentWorkflowSync();
 
   // Log app version for debugging
   React.useEffect(() => {
