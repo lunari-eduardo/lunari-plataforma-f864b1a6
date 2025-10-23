@@ -179,13 +179,13 @@ export class WorkflowSupabaseService {
         
         if (!regrasCongeladas) {
           console.warn('⚠️ Falha ao congelar dados de precificação, usando fallbacks');
-          // FASE 3: Try to get package value directly as fallback
+          // FASE 1: Try to get package value directly as fallback
           if (packageData?.valor_base) {
             valorBasePacote = Number(packageData.valor_base);
             console.log('💰 Using package valor_base as fallback:', valorBasePacote);
-          } else if (valorTotal > 0) {
-            valorBasePacote = valorTotal;
-            console.log('💰 Using valorTotal as fallback:', valorBasePacote);
+          } else {
+            valorBasePacote = 0;
+            console.log('⚠️ Sem pacote, valor base será 0');
           }
           
           regrasCongeladas = {
@@ -198,16 +198,14 @@ export class WorkflowSupabaseService {
           console.log('✅ Dados congelados com sucesso:', Object.keys(regrasCongeladas));
           valorBasePacote = Number(regrasCongeladas.valorBase) || 0;
           
-          // FASE 3: Double fallback if valorBase is 0 in frozen data
+          // FASE 1: Double fallback if valorBase is 0 in frozen data
           if (valorBasePacote === 0) {
             if (packageData?.valor_base) {
               valorBasePacote = Number(packageData.valor_base);
               regrasCongeladas.valorBase = valorBasePacote;
               console.log('💰 Corrected frozen valorBase from package:', valorBasePacote);
-            } else if (valorTotal > 0) {
-              valorBasePacote = valorTotal;
-              regrasCongeladas.valorBase = valorBasePacote;
-              console.log('💰 Corrected frozen valorBase from valorTotal:', valorBasePacote);
+            } else {
+              console.warn('⚠️ valorBase é 0 e sem dados do pacote');
             }
           }
         }
@@ -260,6 +258,17 @@ export class WorkflowSupabaseService {
         updated_by: user.user.id
       };
 
+      // FASE 3: Validation - valor_total must include valor_base_pacote
+      console.log('🔍 [Validação] Criando sessão com valores:');
+      console.log('  - valor_base_pacote:', valorBasePacote);
+      console.log('  - valor_total:', valorTotal);
+      
+      if (valorBasePacote > 0 && valorTotal < valorBasePacote) {
+        console.error('❌ ERRO: valor_total menor que valor_base_pacote!');
+        console.error('  Corrigindo valor_total...');
+        sessionData.valor_total = valorBasePacote;
+      }
+      
       console.log('📝 Creating session with data:', sessionData);
 
       const { data, error } = await supabase

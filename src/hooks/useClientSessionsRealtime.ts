@@ -122,20 +122,45 @@ export function useClientSessionsRealtime(clienteId: string) {
             };
           });
 
-          // FASE 6: Read valor_base_pacote with intelligent fallback
+          // FASE 2: Read valor_base_pacote with intelligent fallback
           let valorPacote = Number(session.valor_base_pacote) || 0;
           
-          // FASE 6: Fallback chain if valor_base_pacote is 0
+          // FASE 2: Fallback chain if valor_base_pacote is 0
           if (valorPacote === 0) {
             const regrasCongeladas = session.regras_congeladas as any;
-            if (regrasCongeladas?.valorBase) {
+            
+            // 1º fallback: regras_congeladas.valorBase (CONFIÁVEL)
+            if (regrasCongeladas?.valorBase && Number(regrasCongeladas.valorBase) > 0) {
               valorPacote = Number(regrasCongeladas.valorBase);
-              console.log('💰 [CRM] Using fallback from regras_congeladas.valorBase:', valorPacote);
-            } else if (session.valor_total && session.valor_total > 0) {
-              valorPacote = Number(session.valor_total);
-              console.log('💰 [CRM] Using fallback from valor_total:', valorPacote);
-            } else {
-              console.warn('⚠️ [CRM] No valid valor_base_pacote found for session:', session.id);
+              console.log('💰 [CRM] Usando regras_congeladas.valorBase:', valorPacote);
+            }
+            // 2º fallback: Calcular por subtração (MELHOR que usar valor_total direto)
+            else if (session.valor_total && session.valor_total > 0) {
+              const total = Number(session.valor_total);
+              const fotoExtra = Number(session.valor_total_foto_extra) || 0;
+              const adicional = Number(session.valor_adicional) || 0;
+              const desconto = Number(session.desconto) || 0;
+              
+              // Calcular produtos manuais ANTES de usar
+              const produtosListTemp = Array.isArray(session.produtos_incluidos) 
+                ? session.produtos_incluidos : [];
+              let valorProdutosTemp = 0;
+              for (const p of produtosListTemp) {
+                const prod = p as any;
+                if (prod.tipo === 'manual') {
+                  valorProdutosTemp += (Number(prod.valorUnitario) || 0) * (Number(prod.quantidade) || 0);
+                }
+              }
+              
+              // valor_base_pacote = total - fotos - produtos - adicional + desconto
+              const soma = total - fotoExtra - valorProdutosTemp - adicional;
+              valorPacote = Math.max(0, soma + desconto);
+              console.log('💰 [CRM] Calculado por subtração:', valorPacote, {
+                total, fotoExtra, valorProdutosTemp, adicional, desconto
+              });
+            } 
+            else {
+              console.warn('⚠️ [CRM] Não foi possível determinar valor_base_pacote:', session.id);
             }
           }
           const valorTotalFotoExtra = Number(session.valor_total_foto_extra) || 0;

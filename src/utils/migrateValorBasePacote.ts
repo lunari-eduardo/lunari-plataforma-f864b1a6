@@ -43,10 +43,28 @@ export async function migrateValorBasePacoteForClient(clienteId: string): Promis
         newValorBasePacote = Number(regrasCongeladas.valorBase);
         console.log(`💰 [Migration] Using frozen valorBase: ${newValorBasePacote} for session ${session.id}`);
       }
-      // Priority 2: Use valor_total as fallback
+      // Priority 2: Calculate by subtraction (FASE 4 improvement)
       else if (session.valor_total && session.valor_total > 0) {
-        newValorBasePacote = Number(session.valor_total);
-        console.log(`💰 [Migration] Using valor_total as fallback: ${newValorBasePacote} for session ${session.id}`);
+        const total = Number(session.valor_total);
+        const fotoExtra = Number(session.valor_total_foto_extra) || 0;
+        const adicional = Number(session.valor_adicional) || 0;
+        const desconto = Number(session.desconto) || 0;
+        
+        // Calcular produtos manuais
+        const produtosList = Array.isArray(session.produtos_incluidos) 
+          ? session.produtos_incluidos : [];
+        let valorProdutos = 0;
+        for (const p of produtosList) {
+          const prod = p as any;
+          if (prod.tipo === 'manual') {
+            valorProdutos += (Number(prod.valorUnitario) || 0) * (Number(prod.quantidade) || 0);
+          }
+        }
+        
+        // valor_base_pacote = total - fotos - produtos - adicional + desconto
+        const soma = total - fotoExtra - valorProdutos - adicional;
+        newValorBasePacote = Math.max(0, soma + desconto);
+        console.log(`💰 [Migration] Calculated by subtraction: ${newValorBasePacote} for session ${session.id}`);
       }
       // Priority 3: Keep as 0 if nothing available
       else {
@@ -117,9 +135,27 @@ export async function migrateAllValorBasePacote(): Promise<{ total: number; corr
       if (regrasCongeladas?.valorBase) {
         newValorBasePacote = Number(regrasCongeladas.valorBase);
       }
-      // Priority 2: Use valor_total as fallback
+      // Priority 2: Calculate by subtraction (FASE 4 improvement)
       else if (session.valor_total && session.valor_total > 0) {
-        newValorBasePacote = Number(session.valor_total);
+        const total = Number(session.valor_total);
+        const fotoExtra = Number(session.valor_total_foto_extra) || 0;
+        const adicional = Number(session.valor_adicional) || 0;
+        const desconto = Number(session.desconto) || 0;
+        
+        // Calcular produtos manuais
+        const produtosList = Array.isArray(session.produtos_incluidos) 
+          ? session.produtos_incluidos : [];
+        let valorProdutos = 0;
+        for (const p of produtosList) {
+          const prod = p as any;
+          if (prod.tipo === 'manual') {
+            valorProdutos += (Number(prod.valorUnitario) || 0) * (Number(prod.quantidade) || 0);
+          }
+        }
+        
+        // valor_base_pacote = total - fotos - produtos - adicional + desconto
+        const soma = total - fotoExtra - valorProdutos - adicional;
+        newValorBasePacote = Math.max(0, soma + desconto);
       }
       // Priority 3: Keep as 0 if nothing available
       else {
