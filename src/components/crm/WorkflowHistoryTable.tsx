@@ -1,12 +1,16 @@
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { History, Calendar, DollarSign, Package } from "lucide-react";
+import { History, Calendar, DollarSign, Package, RefreshCcw } from "lucide-react";
 import { formatCurrency } from '@/utils/financialUtils';
 import { formatDateForDisplay } from '@/utils/dateUtils';
 import { ClienteCompleto } from '@/types/cliente-supabase';
 import { SessionPaymentHistory } from './SessionPaymentHistory';
 import { useClientSessionsRealtime } from '@/hooks/useClientSessionsRealtime';
 import { useWorkflowRealtime } from '@/hooks/useWorkflowRealtime';
+import { migrateValorBasePacoteForClient } from '@/utils/migrateValorBasePacote';
+import { useState } from 'react';
+import { toast } from 'sonner';
 
 interface WorkflowHistoryTableProps {
   cliente: ClienteCompleto;
@@ -14,8 +18,33 @@ interface WorkflowHistoryTableProps {
 
 export function WorkflowHistoryTable({ cliente }: WorkflowHistoryTableProps) {
   // Buscar sessões diretamente do Supabase
-  const { sessions, loading } = useClientSessionsRealtime(cliente.id);
+  const { sessions, loading, refetch } = useClientSessionsRealtime(cliente.id);
   const { updateSession } = useWorkflowRealtime();
+  const [isMigrating, setIsMigrating] = useState(false);
+  
+  // FASE 5: Handler for valor_base_pacote migration
+  const handleMigrateValores = async () => {
+    try {
+      setIsMigrating(true);
+      console.log('🔧 Starting migration for client:', cliente.id);
+      
+      const corrected = await migrateValorBasePacoteForClient(cliente.id);
+      
+      if (corrected > 0) {
+        toast.success(`${corrected} sessão(ões) corrigida(s) com sucesso!`);
+        // Reload sessions to show corrected values
+        refetch();
+      } else {
+        toast.info('Nenhuma sessão precisou ser corrigida');
+      }
+    } catch (error) {
+      console.error('Erro ao corrigir valores:', error);
+      toast.error('Erro ao corrigir valores do histórico');
+    } finally {
+      setIsMigrating(false);
+    }
+  };
+  
   const getStatusBadge = (status: string) => {
     const colors = {
       'agendado': 'bg-blue-100 text-blue-800',
@@ -47,6 +76,20 @@ export function WorkflowHistoryTable({ cliente }: WorkflowHistoryTableProps) {
   }
   return (
     <div className="space-y-4">
+      {/* FASE 5: Migration button */}
+      <div className="flex justify-end mb-4">
+        <Button
+          onClick={handleMigrateValores}
+          disabled={isMigrating || sessions.length === 0}
+          variant="outline"
+          size="sm"
+          className="gap-2"
+        >
+          <RefreshCcw className={`h-4 w-4 ${isMigrating ? 'animate-spin' : ''}`} />
+          {isMigrating ? 'Corrigindo...' : 'Corrigir Valores do Histórico'}
+        </Button>
+      </div>
+      
       <Accordion type="single" collapsible className="w-full">
         {sessions.map((item) => (
           <AccordionItem 

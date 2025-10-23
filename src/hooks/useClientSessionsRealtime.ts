@@ -122,8 +122,22 @@ export function useClientSessionsRealtime(clienteId: string) {
             };
           });
 
-          // FASE 3: Read valor_base_pacote directly from database
-          const valorPacote = Number(session.valor_base_pacote) || 0;
+          // FASE 6: Read valor_base_pacote with intelligent fallback
+          let valorPacote = Number(session.valor_base_pacote) || 0;
+          
+          // FASE 6: Fallback chain if valor_base_pacote is 0
+          if (valorPacote === 0) {
+            const regrasCongeladas = session.regras_congeladas as any;
+            if (regrasCongeladas?.valorBase) {
+              valorPacote = Number(regrasCongeladas.valorBase);
+              console.log('💰 [CRM] Using fallback from regras_congeladas.valorBase:', valorPacote);
+            } else if (session.valor_total && session.valor_total > 0) {
+              valorPacote = Number(session.valor_total);
+              console.log('💰 [CRM] Using fallback from valor_total:', valorPacote);
+            } else {
+              console.warn('⚠️ [CRM] No valid valor_base_pacote found for session:', session.id);
+            }
+          }
           const valorTotalFotoExtra = Number(session.valor_total_foto_extra) || 0;
           const valorAdicional = Number(session.valor_adicional) || 0;
           const desconto = Number(session.desconto) || 0;

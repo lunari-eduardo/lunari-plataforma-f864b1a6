@@ -726,10 +726,80 @@ export const useWorkflowRealtime = () => {
             }
           } else if (payload.eventType === 'UPDATE') {
             console.log('✏️ [WorkflowRealtime] Updating session via realtime:', payload.new.id);
+            
+            // FASE 2: Fetch payments selectively for the updated session only
+            const sessionId = (payload.new as any).session_id;
+            if (sessionId) {
+              const { data: { user } } = await supabase.auth.getUser();
+              if (user) {
+                const { data: transacoesData } = await supabase
+                  .from('clientes_transacoes')
+                  .select('*')
+                  .eq('session_id', sessionId)
+                  .eq('user_id', user.id)
+                  .in('tipo', ['pagamento', 'ajuste'])
+                  .order('data_transacao', { ascending: false });
+
+                // Convert to payment format
+                const pagamentos = (transacoesData || []).map(t => {
+                  const match = t.descricao?.match(/\[ID:([^\]]+)\]/);
+                  const paymentId = match ? match[1] : t.id;
+                  const isPaid = t.tipo === 'pagamento';
+                  const isPending = t.tipo === 'ajuste';
+                  const parcelaMatch = t.descricao?.match(/Parcela (\d+)\/(\d+)/);
+                  const numeroParcela = parcelaMatch ? parseInt(parcelaMatch[1]) : undefined;
+                  const totalParcelas = parcelaMatch ? parseInt(parcelaMatch[2]) : undefined;
+                  
+                  let tipo: 'pago' | 'agendado' | 'parcelado' = 'pago';
+                  if (isPending) {
+                    tipo = totalParcelas ? 'parcelado' : 'agendado';
+                  }
+                  
+                  let statusPagamento: 'pago' | 'pendente' | 'atrasado' = 'pago';
+                  if (isPending) {
+                    statusPagamento = 'pendente';
+                    if (t.data_vencimento && new Date(t.data_vencimento) < new Date()) {
+                      statusPagamento = 'atrasado';
+                    }
+                  }
+                  
+                  return {
+                    id: paymentId,
+                    valor: Number(t.valor) || 0,
+                    data: isPaid ? t.data_transacao : '',
+                    dataVencimento: t.data_vencimento || undefined,
+                    observacoes: t.descricao?.replace(/\s*\[ID:[^\]]+\]/, '') || '',
+                    tipo,
+                    statusPagamento,
+                    numeroParcela,
+                    totalParcelas,
+                    origem: 'manual' as const,
+                    editavel: true
+                  };
+                });
+
+                // Update session with new payments
+                setSessions(prev => prev.map((session: any) => {
+                  if (session.id !== payload.new.id) return session;
+                  const incoming = payload.new as any;
+                  const preservedCliente = session?.clientes && !('clientes' in incoming) ? session.clientes : incoming?.clientes;
+                  return {
+                    ...session,
+                    ...incoming,
+                    pagamentos, // Update with fresh payments
+                    ...(preservedCliente ? { clientes: preservedCliente } : {})
+                  } as WorkflowSession;
+                }));
+                
+                console.log('💰 [WorkflowRealtime] Session updated with fresh payments:', pagamentos.length);
+                return;
+              }
+            }
+            
+            // Fallback: update without payments if sessionId is missing
             setSessions(prev => prev.map((session: any) => {
               if (session.id !== payload.new.id) return session;
               const incoming = payload.new as any;
-              // Preserve nested cliente info if the realtime payload doesn't include it
               const preservedCliente = session?.clientes && !('clientes' in incoming) ? session.clientes : incoming?.clientes;
               return {
                 ...session,
@@ -744,20 +814,7 @@ export const useWorkflowRealtime = () => {
           }
         }
       )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'clientes_transacoes'
-        },
-        async (payload) => {
-          console.log('💰 [WorkflowRealtime] Payment transaction change:', payload.eventType);
-          // When payments change, reload sessions to update valor_pago and payment history
-          loadSessions();
-        }
-      )
-      .subscribe();
+      .subscribe(); // FASE 1: Removed redundant clientes_transacoes listener
 
     return () => {
       supabase.removeChannel(channel);

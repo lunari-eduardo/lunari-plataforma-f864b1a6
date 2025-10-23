@@ -167,6 +167,7 @@ export class WorkflowSupabaseService {
       // FASE 4: Congelar dados de precificação com tolerância a pacote ausente
       console.log('📦 PackageId being frozen:', packageId, 'Categoria:', categoria);
       
+      // FASE 3: Enhanced freezing with fallbacks to ensure valor_base_pacote is always set
       let regrasCongeladas;
       let valorBasePacote = 0;
       
@@ -177,22 +178,49 @@ export class WorkflowSupabaseService {
         );
         
         if (!regrasCongeladas) {
-          console.warn('⚠️ Falha ao congelar dados de precificação, usando valores padrão');
+          console.warn('⚠️ Falha ao congelar dados de precificação, usando fallbacks');
+          // FASE 3: Try to get package value directly as fallback
+          if (packageData?.valor_base) {
+            valorBasePacote = Number(packageData.valor_base);
+            console.log('💰 Using package valor_base as fallback:', valorBasePacote);
+          } else if (valorTotal > 0) {
+            valorBasePacote = valorTotal;
+            console.log('💰 Using valorTotal as fallback:', valorBasePacote);
+          }
+          
           regrasCongeladas = {
             modelo: 'fixo',
-            valorBase: 0,
-            produtos: [],
+            valorBase: valorBasePacote,
+            produtos: packageData?.produtos_incluidos || [],
             categoria: categoria || 'Outros'
           };
         } else {
           console.log('✅ Dados congelados com sucesso:', Object.keys(regrasCongeladas));
           valorBasePacote = Number(regrasCongeladas.valorBase) || 0;
+          
+          // FASE 3: Double fallback if valorBase is 0 in frozen data
+          if (valorBasePacote === 0) {
+            if (packageData?.valor_base) {
+              valorBasePacote = Number(packageData.valor_base);
+              regrasCongeladas.valorBase = valorBasePacote;
+              console.log('💰 Corrected frozen valorBase from package:', valorBasePacote);
+            } else if (valorTotal > 0) {
+              valorBasePacote = valorTotal;
+              regrasCongeladas.valorBase = valorBasePacote;
+              console.log('💰 Corrected frozen valorBase from valorTotal:', valorBasePacote);
+            }
+          }
         }
       } else {
         console.warn('⚠️ Criando sessão sem pacote, usando regras mínimas');
+        // FASE 3: Even without package, try to use valorTotal
+        if (valorTotal > 0) {
+          valorBasePacote = valorTotal;
+        }
+        
         regrasCongeladas = {
           modelo: 'fixo',
-          valorBase: 0,
+          valorBase: valorBasePacote,
           produtos: [],
           categoria: categoria || 'Outros'
         };
