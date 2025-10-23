@@ -84,6 +84,7 @@ export class WorkflowSupabaseService {
       // Get package details if package_id exists
       let packageData = null;
       let categoria = '';
+      let nomePacote = ''; // ✅ CORREÇÃO: Armazenar nome do pacote
       let valorTotal = 0;
 
       if (appointmentData.package_id) {
@@ -98,6 +99,7 @@ export class WorkflowSupabaseService {
         if (pacote) {
           console.log('✅ Package loaded:', pacote);
           packageData = pacote;
+          nomePacote = pacote.nome || ''; // ✅ CORREÇÃO: Extrair nome do pacote
           categoria = (pacote as any).categorias?.nome || '';
           valorTotal = Number(pacote.valor_base) || 0;
         } else {
@@ -243,7 +245,7 @@ export class WorkflowSupabaseService {
         data_sessao: formatDateForStorage(appointmentData.date),
         hora_sessao: appointmentData.time,
         categoria: categoria || appointmentData.type || 'Outros',
-        pacote: appointmentData.package_id || '', // Store package_id for linking
+        pacote: nomePacote || '', // ✅ CORREÇÃO: Salvar NOME do pacote, não o ID
         descricao: descricao,
         status: '',
         valor_base_pacote: valorBasePacote, // FASE 1: Save base package value

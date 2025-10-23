@@ -73,6 +73,8 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
 
     console.log(`📅 [${new Date().toISOString()}] Saving appointment with date:`, dateStr);
 
+    // ✅ CORREÇÃO: type deve ser a CATEGORIA, não o nome do pacote
+    // O nome do pacote está em package_id (que referencia a tabela pacotes)
     const { data, error } = await supabase
       .from('appointments')
       .insert({
@@ -81,7 +83,7 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
         title: appointment.title,
         date: dateStr,
         time: appointment.time,
-        type: appointment.type,
+        type: (appointment as any).category || appointment.type, // Priorizar 'category' se existir
         status: appointment.status,
         description: appointment.description,
         package_id: appointment.packageId,
@@ -144,7 +146,9 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
       updateData.date = dateStr;
     }
     if (updates.time) updateData.time = updates.time;
-    if (updates.type) updateData.type = updates.type;
+    // ✅ CORREÇÃO: Priorizar 'category' se existir, senão usar 'type'
+    if ((updates as any).category) updateData.type = (updates as any).category;
+    else if (updates.type) updateData.type = updates.type;
     if (updates.status) updateData.status = updates.status;
     if (updates.description !== undefined) updateData.description = updates.description;
     if (updates.packageId !== undefined) updateData.package_id = updates.packageId;
