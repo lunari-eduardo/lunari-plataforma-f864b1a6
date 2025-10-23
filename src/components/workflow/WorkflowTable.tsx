@@ -475,22 +475,9 @@ export function WorkflowTable({
           }
         }
       }
-      // FASE 1: Auto-sync do total após campos que afetam o cálculo
-      const camposQueAfetamTotal = ['qtdFotosExtra', 'valorFotoExtra', 'valorTotalFotoExtra', 'valorAdicional', 'desconto', 'valorPacote'];
-      if (camposQueAfetamTotal.includes(field)) {
-        const session = sessions.find(s => s.id === sessionId);
-        if (session) {
-          // Aguardar um tick para garantir que o state foi atualizado
-          setTimeout(() => {
-            const sessionAtualizada = sessions.find(s => s.id === sessionId);
-            if (sessionAtualizada) {
-              const novoTotal = calculateTotal(sessionAtualizada);
-              console.log('🔄 Auto-sync total após edição de', field, '- Novo total:', novoTotal);
-              handleFieldUpdateStable(sessionId, 'total', formatCurrency(novoTotal), true);
-            }
-          }, 100);
-        }
-      }
+      // FASE 1-3: NÃO enviar total explícito - deixar o backend calcular atomicamente
+      // O backend (useWorkflowRealtime) irá recalcular automaticamente quando campos
+      // que afetam o total forem alterados. Isso garante consistência total.
       setEditingValues(prev => {
         const updated = {
           ...prev

@@ -465,13 +465,13 @@ export const useWorkflowRealtime = () => {
         return;
       }
 
-      // FASE 5: ATOMIC TOTAL CALCULATION - Sempre recalcular se campos afetarem o total
+      // FASE 2: ATOMIC TOTAL CALCULATION - SEMPRE recalcular se campos afetarem o total
+      // CRÍTICO: Ignorar valor_total explícito do frontend quando houver mudanças nos componentes
       const totalAffectingFields = ['valor_base_pacote', 'qtd_fotos_extra', 'valor_foto_extra', 'valor_total_foto_extra', 
                                      'desconto', 'valor_adicional', 'produtos_incluidos'];
       const hasTotalAffectingChanges = totalAffectingFields.some(field => field in sanitizedUpdates);
-      const hasExplicitTotal = 'valor_total' in sanitizedUpdates;
 
-      if (hasTotalAffectingChanges && !hasExplicitTotal && currentSession) {
+      if (hasTotalAffectingChanges && currentSession) {
         // Build snapshot by merging current session with sanitized updates
         const snapshot = {
           valor_base_pacote: sanitizedUpdates.valor_base_pacote ?? currentSession.valor_base_pacote ?? 0,
@@ -537,30 +537,54 @@ export const useWorkflowRealtime = () => {
 
       if (error) throw error;
 
-      // FASE 5: Read-back para garantir consistência (verificação de segurança)
-      const { data: updatedSession } = await supabase
-        .from('clientes_sessoes')
-        .select('id, valor_total, qtd_fotos_extra, valor_total_foto_extra')
-        .eq('id', id)
-        .eq('user_id', user.user.id)
-        .single();
-      
-      if (updatedSession && 'valor_total' in sanitizedUpdates) {
-        const expectedTotal = sanitizedUpdates.valor_total;
-        const actualTotal = Number(updatedSession.valor_total);
+      // FASE 4: Read-back para garantir consistência (correção automática se necessário)
+      if (hasTotalAffectingChanges && currentSession) {
+        const { data: updatedSession } = await supabase
+          .from('clientes_sessoes')
+          .select('id, valor_total, valor_base_pacote, qtd_fotos_extra, valor_total_foto_extra, valor_adicional, desconto, produtos_incluidos')
+          .eq('id', id)
+          .eq('user_id', user.user.id)
+          .single();
         
-        if (Math.abs(expectedTotal - actualTotal) > 0.01) {
-          console.warn('⚠️ [FASE 5] Divergência detectada no total após update, corrigindo:', {
-            expected: expectedTotal,
-            actual: actualTotal
+        if (updatedSession) {
+          // Recalcular o total esperado baseado nos valores reais do banco
+          const valorProdutos = calculateManualProductsTotal(updatedSession.produtos_incluidos as any);
+          const expectedTotal = calculateSessionTotal({
+            valorBase: Number(updatedSession.valor_base_pacote) || 0,
+            valorFotoExtra: Number(updatedSession.valor_total_foto_extra) || 0,
+            valorProdutos,
+            valorAdicional: Number(updatedSession.valor_adicional) || 0,
+            desconto: Number(updatedSession.desconto) || 0
           });
           
-          // Corrigir divergência
-          await supabase
-            .from('clientes_sessoes')
-            .update({ valor_total: expectedTotal })
-            .eq('id', id)
-            .eq('user_id', user.user.id);
+          const actualTotal = Number(updatedSession.valor_total);
+          
+          // Se houver divergência > 0.01, corrigir automaticamente
+          if (Math.abs(expectedTotal - actualTotal) > 0.01) {
+            console.warn('⚠️ [FASE 4] Divergência detectada no total após update, corrigindo:', {
+              expected: expectedTotal,
+              actual: actualTotal,
+              components: {
+                valorBase: updatedSession.valor_base_pacote,
+                valorFotoExtra: updatedSession.valor_total_foto_extra,
+                valorProdutos,
+                valorAdicional: updatedSession.valor_adicional,
+                desconto: updatedSession.desconto
+              }
+            });
+            
+            // Corrigir divergência atomicamente
+            await supabase
+              .from('clientes_sessoes')
+              .update({ valor_total: expectedTotal, updated_at: new Date().toISOString() })
+              .eq('id', id)
+              .eq('user_id', user.user.id);
+              
+            // Atualizar sanitizedUpdates para refletir o valor correto
+            sanitizedUpdates.valor_total = expectedTotal;
+          } else {
+            console.log('✅ [FASE 4] Valor total validado e consistente:', actualTotal);
+          }
         }
       }
 
