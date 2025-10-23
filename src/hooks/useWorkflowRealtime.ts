@@ -726,35 +726,15 @@ export const useWorkflowRealtime = () => {
             }
           } else if (payload.eventType === 'UPDATE') {
             console.log('✏️ [WorkflowRealtime] Updating session via realtime:', payload.new.id);
-            
-            // FASE 2: Buscar pagamentos seletivamente apenas da sessão afetada
-            const { data: payments } = await supabase
-              .from('clientes_transacoes')
-              .select('*')
-              .eq('session_id', payload.new.session_id)
-              .order('data_transacao', { ascending: false });
-            
             setSessions(prev => prev.map((session: any) => {
               if (session.id !== payload.new.id) return session;
               const incoming = payload.new as any;
               // Preserve nested cliente info if the realtime payload doesn't include it
               const preservedCliente = session?.clientes && !('clientes' in incoming) ? session.clientes : incoming?.clientes;
-              
-              // Incluir pagamentos atualizados se disponíveis
-              const paymentsList = payments ? payments.map(p => ({
-                id: p.id,
-                valor: p.valor,
-                data: p.data_transacao,
-                tipo: p.tipo as 'pagamento' | 'parcelado',
-                statusPagamento: 'pago' as const,
-                descricao: p.descricao || ''
-              })) : session.pagamentos || [];
-              
               return {
                 ...session,
                 ...incoming,
-                ...(preservedCliente ? { clientes: preservedCliente } : {}),
-                pagamentos: paymentsList
+                ...(preservedCliente ? { clientes: preservedCliente } : {})
               } as WorkflowSession;
             }));
             // No toast here - realtime updates should be silent
@@ -764,8 +744,19 @@ export const useWorkflowRealtime = () => {
           }
         }
       )
-      // FASE 1: Removido listener redundante de clientes_transacoes
-      // O trigger do banco já atualiza clientes_sessoes.valor_pago automaticamente
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'clientes_transacoes'
+        },
+        async (payload) => {
+          console.log('💰 [WorkflowRealtime] Payment transaction change:', payload.eventType);
+          // When payments change, reload sessions to update valor_pago and payment history
+          loadSessions();
+        }
+      )
       .subscribe();
 
     return () => {
@@ -837,13 +828,14 @@ export const useWorkflowRealtime = () => {
     return Promise.all(sessions.map(convertToSessionData));
   }, [sessions, convertToSessionData]);
 
-  // Memoize sessions data with proper dependency tracking
+  // Compute sessionsData using the package data hook for proper resolution
+  // CORREÇÃO: Remover gating por isLoading pois convertSessionToData prioriza dados congelados
   const sessionsData = useMemo(() => {
     console.log('🔄 Converting sessions to SessionData format:', sessions.length, 'sessions');
     const converted = sessions.map(session => convertSessionToData(session));
     console.log('✅ Converted sessions data:', converted.length, 'sessions converted');
     return converted;
-  }, [sessions, convertSessionToData, isLoadingPacotes, isLoadingCategorias]);
+  }, [sessions, convertSessionToData]);
 
   return {
     sessions,

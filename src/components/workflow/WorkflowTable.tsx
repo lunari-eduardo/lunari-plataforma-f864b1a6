@@ -335,18 +335,17 @@ export function WorkflowTable({
     const value = paymentInputs[sessionId];
     if (value && !isNaN(parseFloat(value))) {
       const paymentValue = parseFloat(value);
-      
-      // Limpar o campo imediatamente para melhor UX
-      setPaymentInputs(prev => ({
-        ...prev,
-        [sessionId]: ''
-      }));
-      
       try {
-        // Salvar pagamento no Supabase
+        // Usar a função addPayment do contexto (agora async)
         await addPayment(sessionId, paymentValue);
-        console.log('✅ [WorkflowTable] Pagamento salvo com sucesso');
-        // O realtime vai atualizar os valores automaticamente
+
+        // Limpar o campo após adicionar
+        setPaymentInputs(prev => ({
+          ...prev,
+          [sessionId]: ''
+        }));
+
+        // Nota: Não precisamos forçar re-render - o realtime do Supabase cuida disso
       } catch (error) {
         console.error('❌ Erro ao adicionar pagamento:', error);
       }
