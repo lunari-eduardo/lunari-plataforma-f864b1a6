@@ -78,6 +78,42 @@ export class WorkflowSupabaseService {
         return existingSession;
       }
 
+      // ✅ FASE 1: HIDRATAÇÃO - Garantir dados completos mesmo com cache antigo
+      let hydratedData = { ...appointmentData };
+      const needsHydration = !appointmentData.package_id && !appointmentData.packageId;
+      
+      if (needsHydration && appointmentId) {
+        console.log('🧴 [Workflow] Detectado appointmentData incompleto, hidratando do banco...');
+        
+        const { data: freshAppointment, error: hydrationError } = await supabase
+          .from('appointments')
+          .select('*')
+          .eq('id', appointmentId)
+          .eq('user_id', user.user.id)
+          .single();
+        
+        if (!hydrationError && freshAppointment) {
+          const hydratedFields = {
+            package_id: freshAppointment.package_id,
+            packageId: freshAppointment.package_id,
+            type: freshAppointment.type,
+            cliente_id: freshAppointment.cliente_id,
+            clienteId: freshAppointment.cliente_id,
+            date: freshAppointment.date,
+            time: freshAppointment.time,
+            description: freshAppointment.description,
+            title: freshAppointment.title,
+            paid_amount: freshAppointment.paid_amount,
+            paidAmount: freshAppointment.paid_amount
+          };
+          
+          hydratedData = { ...appointmentData, ...hydratedFields };
+          console.log('🧴 [Workflow] Appointment hydration aplicada:', Object.keys(hydratedFields).filter(k => hydratedFields[k] != null));
+        } else {
+          console.warn('⚠️ [Workflow] Não foi possível hidratar appointment:', hydrationError);
+        }
+      }
+
       // Generate universal session ID
       const sessionId = generateUniversalSessionId('workflow');
 
@@ -88,7 +124,7 @@ export class WorkflowSupabaseService {
       let valorTotal = 0;
 
       // ✅ CRÍTICO: Resolver package_id tolerante a camelCase e snake_case
-      const resolvedPackageId = appointmentData.package_id || appointmentData.packageId;
+      const resolvedPackageId = hydratedData.package_id || hydratedData.packageId;
       console.log('📦 [Workflow] resolvedPackageId:', resolvedPackageId);
 
       if (resolvedPackageId) {
@@ -318,15 +354,15 @@ export class WorkflowSupabaseService {
         session_id: sessionId,
         appointment_id: appointmentId,
         cliente_id: clienteId || '',
-        data_sessao: formatDateForStorage(appointmentData.date),
-        hora_sessao: appointmentData.time,
+        data_sessao: formatDateForStorage(hydratedData.date),
+        hora_sessao: hydratedData.time,
         categoria: finalCategoria,
         pacote: nomePacote || '', // ✅ CORREÇÃO: Salvar NOME do pacote, não o ID
         descricao: descricao,
         status: '',
         valor_base_pacote: valorBasePacote, // FASE 1: Save base package value
         valor_total: valorTotal, // Frontend calculates and sends correct total
-        valor_pago: Number(appointmentData.paid_amount) || 0,
+        valor_pago: Number(hydratedData.paidAmount || hydratedData.paid_amount || 0),
         produtos_incluidos: packageData?.produtos_incluidos || [],
         // Set default extra photo values from frozen pricing model
         valor_foto_extra: valorFotoExtraInicial,

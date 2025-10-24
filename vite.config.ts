@@ -15,8 +15,8 @@ export default defineConfig(({ mode }) => ({
     react(),
     mode === 'development' && componentTagger(),
     VitePWA({
-      registerType: 'prompt',
-      injectRegister: 'auto',
+      registerType: 'autoUpdate',
+      injectRegister: null,
       includeAssets: ['favicon.ico', 'lovable-uploads/caa859cc-c72e-4964-b21b-1cad68a4a9a5.png'],
       manifest: {
         name: 'Lunari 2.0 - Gestão para Fotógrafos',
@@ -46,6 +46,8 @@ export default defineConfig(({ mode }) => ({
       workbox: {
         skipWaiting: true,
         clientsClaim: true,
+        cleanupOutdatedCaches: true,
+        navigationPreload: true,
         maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10 MB
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
         runtimeCaching: [
