@@ -122,6 +122,16 @@ export function useClientSessionsRealtime(clienteId: string) {
             };
           });
 
+          // ✅ FASE 5: Validação visual - detectar pacote vazio
+          if (!session.pacote || session.pacote === '') {
+            console.warn('⚠️ [CRM] Sessão sem pacote definido:', {
+              sessionId: session.session_id,
+              appointmentId: session.appointment_id,
+              categoria: session.categoria,
+              valorBasePacote: session.valor_base_pacote
+            });
+          }
+
           // FASE 2: Read valor_base_pacote with intelligent fallback
           let valorPacote = Number(session.valor_base_pacote) || 0;
           

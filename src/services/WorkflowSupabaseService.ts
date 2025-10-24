@@ -89,17 +89,58 @@ export class WorkflowSupabaseService {
 
       if (appointmentData.package_id) {
         console.log('📦 Loading package data for:', appointmentData.package_id);
-        const { data: pacote } = await supabase
+        
+        // ✅ FASE 1: Adicionar verificação de erro explícita
+        const { data: pacote, error: packageError } = await supabase
           .from('pacotes')
           .select('*, categorias(nome)')
           .eq('id', appointmentData.package_id)
           .eq('user_id', user.user.id)
           .single();
 
-        if (pacote) {
+        if (packageError) {
+          console.error('❌ Error loading package:', packageError);
+          console.error('   package_id:', appointmentData.package_id);
+          console.error('   user_id:', user.user.id);
+          
+          // FASE 1: FALLBACK - Tentar buscar sem JOIN para debug
+          console.log('🔄 Tentando buscar pacote sem JOIN...');
+          const { data: pacoteSemJoin, error: errorSemJoin } = await supabase
+            .from('pacotes')
+            .select('*')
+            .eq('id', appointmentData.package_id)
+            .eq('user_id', user.user.id)
+            .maybeSingle();
+          
+          if (errorSemJoin) {
+            console.error('❌ Erro mesmo sem JOIN:', errorSemJoin);
+          } else if (pacoteSemJoin) {
+            console.log('✅ Pacote encontrado SEM JOIN, problema no categorias:', pacoteSemJoin);
+            // Usar dados do pacote mesmo sem categoria
+            packageData = pacoteSemJoin;
+            nomePacote = pacoteSemJoin.nome || '';
+            valorTotal = Number(pacoteSemJoin.valor_base) || 0;
+            
+            // Buscar categoria separadamente
+            if (pacoteSemJoin.categoria_id) {
+              const { data: cat } = await supabase
+                .from('categorias')
+                .select('nome')
+                .eq('id', pacoteSemJoin.categoria_id)
+                .maybeSingle();
+              
+              if (cat) {
+                categoria = cat.nome;
+                console.log('✅ Categoria carregada separadamente:', categoria);
+              }
+            }
+          } else {
+            console.error('❌ Pacote realmente não existe no banco!');
+          }
+        } else if (pacote) {
           console.log('✅ Package loaded:', pacote);
           packageData = pacote;
-          nomePacote = pacote.nome || ''; // ✅ CORREÇÃO: Extrair nome do pacote
+          nomePacote = pacote.nome || '';
           categoria = (pacote as any).categorias?.nome || '';
           valorTotal = Number(pacote.valor_base) || 0;
         } else {
@@ -248,6 +289,23 @@ export class WorkflowSupabaseService {
         console.error('   categoria deveria ser a CATEGORIA, não o nome do pacote');
       }
 
+      // ✅ FASE 4: Determinar categoria com fallbacks seguros
+      let finalCategoria = categoria; // Da query do pacote
+
+      if (!finalCategoria) {
+        // Fallback 1: appointmentData.type (só se não for nome de pacote)
+        if (appointmentData.type && appointmentData.type !== nomePacote) {
+          finalCategoria = appointmentData.type;
+          console.log('📋 Usando appointmentData.type como categoria:', finalCategoria);
+        }
+      }
+
+      if (!finalCategoria) {
+        // Fallback 2: Usar categoria genérica
+        finalCategoria = 'Sessão';
+        console.log('📋 Usando categoria genérica: Sessão');
+      }
+
       // Create session record with package ID for proper linking
       const sessionData = {
         user_id: user.user.id,
@@ -256,7 +314,7 @@ export class WorkflowSupabaseService {
         cliente_id: clienteId || '',
         data_sessao: formatDateForStorage(appointmentData.date),
         hora_sessao: appointmentData.time,
-        categoria: categoria || appointmentData.type || 'Outros',
+        categoria: finalCategoria,
         pacote: nomePacote || '', // ✅ CORREÇÃO: Salvar NOME do pacote, não o ID
         descricao: descricao,
         status: '',

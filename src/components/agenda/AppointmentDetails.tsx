@@ -121,18 +121,35 @@ export default function AppointmentDetails({
   // Salvar alterações
   const handleSave = () => {
     const selectedPackage = pacotes.find(p => p.id === formData.packageId);
+    
+    // ✅ FASE 2: Buscar categoria do pacote (se disponível)
+    let packageCategory = '';
+    if (selectedPackage && (selectedPackage as any).categorias) {
+      packageCategory = (selectedPackage as any).categorias.nome || '';
+    } else if (selectedPackage && (selectedPackage as any).categoria) {
+      packageCategory = (selectedPackage as any).categoria;
+    }
+    
     const appointmentData = {
       id: appointment.id,
-      date: formatDateForStorage(formData.date), // ✅ FASE 1: Converter para string YYYY-MM-DD para evitar timezone issues
+      date: formatDateForStorage(formData.date),
       time: formData.time,
       title: formData.title,
       client: formData.title,
-      type: selectedPackage?.nome || formData.type,
+      type: packageCategory || formData.type,  // ✅ FASE 2: type = CATEGORIA (não nome do pacote)
+      category: selectedPackage?.nome,  // ✅ FASE 2: category = NOME DO PACOTE
       status: formData.status as 'confirmado' | 'a confirmar',
       description: formData.description,
       packageId: formData.packageId,
       paidAmount: formData.paidAmount
     };
+    
+    console.log('💾 [AppointmentDetails] Salvando com:', {
+      type: appointmentData.type,
+      category: appointmentData.category,
+      packageId: appointmentData.packageId
+    });
+    
     onSave(appointmentData);
     toast.success('Agendamento atualizado com sucesso');
   };
