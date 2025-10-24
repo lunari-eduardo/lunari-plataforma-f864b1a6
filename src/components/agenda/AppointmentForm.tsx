@@ -327,10 +327,8 @@ export default function AppointmentForm({
       date: formData.date,
       time: formData.time,
       title: clientInfo.client,
-      type: packageType,
-      // Nome real do pacote
-      category: packageCategory,
-      // Categoria do pacote
+      type: packageCategory || 'Sessão',  // ✅ FASE 1: type = CATEGORIA
+      category: packageType,  // ✅ FASE 1: category = NOME DO PACOTE (para compatibilidade)
       status: formData.status as 'confirmado' | 'a confirmar',
       description: formData.description,
       packageId: formData.packageId,

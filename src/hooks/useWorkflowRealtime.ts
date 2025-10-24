@@ -285,7 +285,8 @@ export const useWorkflowRealtime = () => {
               const pkg = packages.find((p: any) => p.id === value || p.nome === value);
               if (pkg) {
                 console.log('📦 Package found:', pkg.nome, 'ID:', pkg.id);
-                sanitizedUpdates.pacote = pkg.id; // Always store ID in database
+                sanitizedUpdates.pacote = pkg.nome; // ✅ FASE 3: Always store NAME in database
+                console.log('📦 Salvando NOME do pacote no banco:', pkg.nome);
                 
                 // FASE 2: Save valor_base_pacote separately
                 if (pkg.valor_base) {

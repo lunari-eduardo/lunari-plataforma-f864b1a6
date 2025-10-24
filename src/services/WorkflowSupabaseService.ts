@@ -236,6 +236,18 @@ export class WorkflowSupabaseService {
       const descricao = appointmentData.description || '';
       console.log('📝 Descrição da sessão:', descricao || '(vazia)');
 
+      // ✅ FASE 4: Validation - categoria must be the category name, not package name
+      console.log('🔍 [Validação] Dados da sessão:');
+      console.log('  - categoria:', categoria || appointmentData.type || 'Outros');
+      console.log('  - pacote (nome):', nomePacote || '(vazio)');
+      console.log('  - appointmentData.type:', appointmentData.type);
+      console.log('  - appointmentData.package_id:', appointmentData.package_id);
+      
+      if (nomePacote && (categoria || appointmentData.type) === nomePacote) {
+        console.error('❌ ERRO: categoria está igual ao nome do pacote!');
+        console.error('   categoria deveria ser a CATEGORIA, não o nome do pacote');
+      }
+
       // Create session record with package ID for proper linking
       const sessionData = {
         user_id: user.user.id,
