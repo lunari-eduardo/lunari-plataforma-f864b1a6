@@ -87,20 +87,24 @@ export class WorkflowSupabaseService {
       let nomePacote = ''; // ✅ CORREÇÃO: Armazenar nome do pacote
       let valorTotal = 0;
 
-      if (appointmentData.package_id) {
-        console.log('📦 Loading package data for:', appointmentData.package_id);
+      // ✅ CRÍTICO: Resolver package_id tolerante a camelCase e snake_case
+      const resolvedPackageId = appointmentData.package_id || appointmentData.packageId;
+      console.log('📦 [Workflow] resolvedPackageId:', resolvedPackageId);
+
+      if (resolvedPackageId) {
+        console.log('📦 Loading package data for:', resolvedPackageId);
         
         // ✅ FASE 1: Adicionar verificação de erro explícita
-        const { data: pacote, error: packageError } = await supabase
-          .from('pacotes')
-          .select('*, categorias(nome)')
-          .eq('id', appointmentData.package_id)
-          .eq('user_id', user.user.id)
-          .single();
+      const { data: pacote, error: packageError } = await supabase
+        .from('pacotes')
+        .select('*, categorias(nome)')
+        .eq('id', resolvedPackageId)
+        .eq('user_id', user.user.id)
+        .single();
 
         if (packageError) {
           console.error('❌ Error loading package:', packageError);
-          console.error('   package_id:', appointmentData.package_id);
+          console.error('   resolvedPackageId:', resolvedPackageId);
           console.error('   user_id:', user.user.id);
           
           // FASE 1: FALLBACK - Tentar buscar sem JOIN para debug
@@ -108,7 +112,7 @@ export class WorkflowSupabaseService {
           const { data: pacoteSemJoin, error: errorSemJoin } = await supabase
             .from('pacotes')
             .select('*')
-            .eq('id', appointmentData.package_id)
+            .eq('id', resolvedPackageId)
             .eq('user_id', user.user.id)
             .maybeSingle();
           
@@ -144,7 +148,7 @@ export class WorkflowSupabaseService {
           categoria = (pacote as any).categorias?.nome || '';
           valorTotal = Number(pacote.valor_base) || 0;
         } else {
-          console.log('⚠️ Package not found for ID:', appointmentData.package_id);
+          console.log('⚠️ Package not found for ID:', resolvedPackageId);
         }
       }
 
@@ -305,6 +309,8 @@ export class WorkflowSupabaseService {
         finalCategoria = 'Sessão';
         console.log('📋 Usando categoria genérica: Sessão');
       }
+
+      console.log('🧩 [Workflow] Final categoria/pacote:', { finalCategoria, nomePacote, resolvedPackageId });
 
       // Create session record with package ID for proper linking
       const sessionData = {

@@ -100,7 +100,11 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
     const converted = {
       ...appointment,
       id: data.id,
-      sessionId: data.session_id
+      sessionId: data.session_id,
+      // ✅ Higienização: Adicionar campos snake_case esperados pelo WorkflowSupabaseService
+      package_id: appointment.packageId,
+      paid_amount: appointment.paidAmount,
+      cliente_id: appointment.clienteId
     };
     
     // FASE 1: Criar sessão imediatamente se confirmado (idempotente)
