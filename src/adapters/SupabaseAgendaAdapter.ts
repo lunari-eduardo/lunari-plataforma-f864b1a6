@@ -119,6 +119,21 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
           window.dispatchEvent(new CustomEvent('workflow-session-created', {
             detail: { sessionId: session.id, appointmentId: converted.id, timestamp: new Date().toISOString() }
           }));
+        } else {
+          // ✅ CORREÇÃO: Verificação pós-criação - fallback se sessão não foi criada
+          console.warn('⚠️ [SupabaseAdapter] Sessão não foi criada, verificando...');
+          setTimeout(async () => {
+            const { data: checkSession } = await supabase
+              .from('clientes_sessoes')
+              .select('id')
+              .eq('appointment_id', converted.id)
+              .maybeSingle();
+            
+            if (!checkSession) {
+              console.log('🔄 [SupabaseAdapter] Fallback: tentando criar sessão novamente...');
+              await WorkflowSupabaseService.createSessionFromAppointment(converted.id, converted);
+            }
+          }, 2000);
         }
       } catch (sessionError) {
         console.error('⚠️ [SupabaseAdapter] Erro ao criar sessão (não fatal):', sessionError);
@@ -215,6 +230,21 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
             window.dispatchEvent(new CustomEvent('workflow-session-created', {
               detail: { sessionId: session.id, appointmentId: id, timestamp: new Date().toISOString() }
             }));
+          } else {
+            // ✅ CORREÇÃO: Verificação pós-criação no UPDATE também
+            console.warn('⚠️ [SupabaseAdapter] Sessão não foi criada no UPDATE, verificando...');
+            setTimeout(async () => {
+              const { data: checkSession } = await supabase
+                .from('clientes_sessoes')
+                .select('id')
+                .eq('appointment_id', id)
+                .maybeSingle();
+              
+              if (!checkSession) {
+                console.log('🔄 [SupabaseAdapter] Fallback UPDATE: tentando criar sessão novamente...');
+                await WorkflowSupabaseService.createSessionFromAppointment(id, converted);
+              }
+            }, 2000);
           }
         }
       } catch (sessionError) {

@@ -2,6 +2,7 @@ import { AgendaStorageAdapter } from '@/adapters/AgendaStorageAdapter';
 import { Appointment } from '@/hooks/useAgenda';
 import { AvailabilitySlot, AvailabilityType } from '@/types/availability';
 import { AgendaSettings } from '@/types/agenda-supabase';
+import { safeParseInputDate } from '@/utils/dateUtils';
 
 /**
  * Service layer for agenda business logic
@@ -16,10 +17,21 @@ export class AgendaService {
   }
 
   async addAppointment(appointmentData: Omit<Appointment, 'id'>): Promise<Appointment> {
+    // ✅ CORREÇÃO TIMEZONE: Se date for string YYYY-MM-DD, usar safeParseInputDate
+    let parsedDate: Date;
+    if (typeof appointmentData.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(appointmentData.date)) {
+      const parsed = safeParseInputDate(appointmentData.date);
+      parsedDate = parsed || new Date();
+    } else if (appointmentData.date instanceof Date) {
+      parsedDate = appointmentData.date;
+    } else {
+      parsedDate = new Date(appointmentData.date);
+    }
+
     const appointment: Appointment = {
       ...appointmentData,
       id: this.generateId(),
-      date: appointmentData.date instanceof Date ? appointmentData.date : new Date(appointmentData.date)
+      date: parsedDate
     };
     
     return this.adapter.saveAppointment(appointment);

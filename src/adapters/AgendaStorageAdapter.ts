@@ -35,8 +35,17 @@ export abstract class AgendaStorageAdapter {
     return Date.now().toString() + Math.random().toString(36).substr(2, 9);
   }
 
-  protected formatDateForStorage(date: Date): string {
-    return date.toISOString().split('T')[0];
+  protected formatDateForStorage(date: Date | string): string {
+    // ✅ CORREÇÃO TIMEZONE: Usar formatDateForStorage do dateUtils para evitar desvio de fuso
+    // Importado como método utilitário abaixo
+    if (typeof date === 'string') {
+      return date;
+    }
+    // Converter Date → YYYY-MM-DD em timezone LOCAL (sem UTC shift)
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   /**

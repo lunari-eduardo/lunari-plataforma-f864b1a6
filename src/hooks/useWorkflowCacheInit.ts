@@ -26,20 +26,22 @@ export function useWorkflowCacheInit() {
         // Configurar userId
         workflowCacheManager.setUserId(user.id);
         
-        // FASE 5: Sincronizar appointments existentes (apenas uma vez por sessão)
-        const hasSyncedThisSession = sessionStorage.getItem('appointments_synced_session');
-        if (!hasSyncedThisSession) {
-          setTimeout(async () => {
-            try {
-              console.log('🔄 [WorkflowCacheInit] Syncing existing appointments...');
-              await syncExistingAppointments();
-              sessionStorage.setItem('appointments_synced_session', 'true');
-              console.log('✅ [WorkflowCacheInit] Appointments sync completed');
-            } catch (error) {
-              console.error('❌ [WorkflowCacheInit] Error syncing appointments:', error);
-            }
-          }, 2000);
-        }
+        // ✅ CORREÇÃO: Sempre sincronizar appointments ao montar (idempotente)
+        // Remover gate de sessionStorage que bloqueava novas abas/PWA
+        setTimeout(async () => {
+          try {
+            console.log('🔄 [WorkflowCacheInit] Syncing existing appointments...');
+            await syncExistingAppointments();
+            console.log('✅ [WorkflowCacheInit] Appointments sync completed');
+            
+            // ✅ FASE 3: Reparar divergências retroativas (uma única vez por mount)
+            console.log('🔧 [WorkflowCacheInit] Running repair for date/time mismatches...');
+            await WorkflowSupabaseService.repairAppointmentsSessionsMismatch();
+            console.log('✅ [WorkflowCacheInit] Repair completed');
+          } catch (error) {
+            console.error('❌ [WorkflowCacheInit] Error syncing/repairing:', error);
+          }
+        }, 2000);
         
         // Pré-carregar dados em background (não bloquear UI)
         setTimeout(() => {
@@ -103,9 +105,6 @@ export function useWorkflowCacheInit() {
         console.log('🔄 User signed in, initializing cache');
         workflowCacheManager.setUserId(session.user.id);
         
-        // FASE 5: Limpar flag de sync ao fazer novo login
-        sessionStorage.removeItem('appointments_synced_session');
-        
         setTimeout(() => {
           workflowCacheManager.preloadCurrentAndPreviousMonth().catch(err => {
             console.error('❌ Error preloading workflow cache:', err);
@@ -114,7 +113,6 @@ export function useWorkflowCacheInit() {
       } else if (event === 'SIGNED_OUT') {
         console.log('🧹 User signed out, cleaning up cache');
         workflowCacheManager.cleanup();
-        sessionStorage.removeItem('appointments_synced_session');
         isInitialized = false;
       }
     });

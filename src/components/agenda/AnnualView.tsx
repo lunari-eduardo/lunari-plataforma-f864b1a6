@@ -4,6 +4,7 @@ import { ptBR } from "date-fns/locale";
 import { Card } from "@/components/ui/card";
 import { UnifiedEvent } from "@/hooks/useUnifiedCalendar";
 import { cn } from "@/lib/utils";
+import { parseDateFromStorage } from "@/utils/dateUtils";
 
 interface AnnualViewProps {
   date: Date;
@@ -27,7 +28,16 @@ export default function AnnualView({ date, unifiedEvents, onDayClick }: AnnualVi
   const eventsPerMonth = Array.from({ length: 12 }, () => 0);
 
   unifiedEvents.forEach((ev) => {
-    const d = ev.date instanceof Date ? ev.date : new Date(ev.date);
+    // ✅ CORREÇÃO TIMEZONE: Se string YYYY-MM-DD, usar parseDateFromStorage
+    let d: Date;
+    if (typeof ev.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(ev.date)) {
+      d = parseDateFromStorage(ev.date);
+    } else if (ev.date instanceof Date) {
+      d = ev.date;
+    } else {
+      d = new Date(ev.date);
+    }
+    
     if (d.getFullYear() !== year) return;
     const key = dateKey(d);
     eventsByDate.set(key, (eventsByDate.get(key) || 0) + 1);

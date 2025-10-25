@@ -16,6 +16,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { useAgenda } from '@/hooks/useAgenda';
 import { Settings, Plus, Trash2, Edit2, Check, X } from 'lucide-react';
+import { formatDateForInput } from '@/utils/dateUtils';
 
 interface AvailabilityConfigModalProps {
   isOpen: boolean;
@@ -118,7 +119,8 @@ export default function AvailabilityConfigModal({
     }
     const targetDates = computeTargetDatesBetween(startDate, endDate, selectedWeekdays);
     const appointmentKeys = new Set(appointments.map(a => {
-      const dateStr = typeof a.date === 'string' ? a.date : format(new Date(a.date), 'yyyy-MM-dd');
+      // ✅ CORREÇÃO TIMEZONE: Usar formatDateForInput para evitar desvio
+      const dateStr = typeof a.date === 'string' ? a.date : formatDateForInput(a.date);
       return `${dateStr}|${a.time}`;
     }));
     const existingAvailabilitySet = new Set(availability.map(a => `${a.date}|${a.time}`));

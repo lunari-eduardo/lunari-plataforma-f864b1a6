@@ -608,4 +608,91 @@ export class WorkflowSupabaseService {
       throw error;
     }
   }
+
+  /**
+   * ✅ FASE 3: Reparar divergências entre appointments e clientes_sessoes
+   * - Cria sessões faltantes para appointments confirmados
+   * - Atualiza datas/horas divergentes (sessão deve seguir appointment)
+   */
+  static async repairAppointmentsSessionsMismatch() {
+    try {
+      console.log('🔧 [Repair] Iniciando reparo de divergências...');
+      
+      const { data: user } = await supabase.auth.getUser();
+      if (!user?.user) {
+        console.log('⚠️ [Repair] User not authenticated, skipping repair');
+        return;
+      }
+
+      // 1. Buscar appointments confirmados sem sessão
+      const { data: appointmentsWithoutSession } = await supabase
+        .from('appointments')
+        .select('*')
+        .eq('user_id', user.user.id)
+        .eq('status', 'confirmado')
+        .is('session_id', null);
+
+      if (appointmentsWithoutSession && appointmentsWithoutSession.length > 0) {
+        console.log(`🔧 [Repair] Encontrados ${appointmentsWithoutSession.length} appointments sem sessão`);
+        
+        for (const appointment of appointmentsWithoutSession) {
+          try {
+            await this.createSessionFromAppointment(appointment.id, appointment);
+            console.log(`✅ [Repair] Sessão criada para appointment ${appointment.id}`);
+          } catch (error) {
+            console.error(`❌ [Repair] Erro ao criar sessão para ${appointment.id}:`, error);
+          }
+        }
+      }
+
+      // 2. Buscar sessões com appointment_id e verificar divergências de data/hora
+      const { data: sessionsWithAppointment } = await supabase
+        .from('clientes_sessoes')
+        .select('id, appointment_id, data_sessao, hora_sessao')
+        .eq('user_id', user.user.id)
+        .not('appointment_id', 'is', null);
+
+      if (sessionsWithAppointment && sessionsWithAppointment.length > 0) {
+        console.log(`🔧 [Repair] Verificando ${sessionsWithAppointment.length} sessões com appointment_id`);
+        
+        for (const session of sessionsWithAppointment) {
+          // Buscar appointment correspondente
+          const { data: appointment } = await supabase
+            .from('appointments')
+            .select('date, time')
+            .eq('id', session.appointment_id)
+            .eq('user_id', user.user.id)
+            .single();
+
+          if (appointment) {
+            const needsDateFix = appointment.date !== session.data_sessao;
+            const needsTimeFix = appointment.time !== session.hora_sessao;
+
+            if (needsDateFix || needsTimeFix) {
+              console.log(`🔧 [Repair] Divergência detectada na sessão ${session.id}:`, {
+                appointment: { date: appointment.date, time: appointment.time },
+                session: { date: session.data_sessao, time: session.hora_sessao }
+              });
+
+              await supabase
+                .from('clientes_sessoes')
+                .update({
+                  data_sessao: appointment.date,
+                  hora_sessao: appointment.time,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', session.id)
+                .eq('user_id', user.user.id);
+
+              console.log(`✅ [Repair] Sessão ${session.id} atualizada para corresponder ao appointment`);
+            }
+          }
+        }
+      }
+
+      console.log('✅ [Repair] Reparo concluído com sucesso');
+    } catch (error) {
+      console.error('❌ [Repair] Erro durante reparo:', error);
+    }
+  }
 }
