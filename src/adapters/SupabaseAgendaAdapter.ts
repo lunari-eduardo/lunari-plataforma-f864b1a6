@@ -194,9 +194,11 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
                   timestamp: new Date().toISOString(),
                   categoria: checkSession.categoria,
                   pacote: checkSession.pacote,
-                  valor_base_pacote: checkSession.valor_base_pacote
+                  valor_base_pacote: checkSession.valor_base_pacote,
+                  appointment_id: converted.id
                 });
                 
+                // Tentar resolver por package_id primeiro
                 const { data: packageData } = await supabase
                   .from('pacotes')
                   .select('nome, valor_base, categorias(nome)')
@@ -217,11 +219,50 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
                     })
                     .eq('id', session.id);
                   
-                  console.log('✅ [SupabaseAdapter] Patch aplicado:', { 
+                  console.log('✅ [SupabaseAdapter] Patch aplicado (via package_id):', { 
                     correctCategoria, 
                     correctPacote,
                     correctValorBase
                   });
+                } else if (checkSession.pacote) {
+                  // Último recurso: resolver por nome do pacote
+                  console.log('🔄 [SupabaseAdapter] Fallback: tentando por nome do pacote...');
+                  
+                  // Buscar user_id da sessão
+                  const { data: sessionData } = await supabase
+                    .from('clientes_sessoes')
+                    .select('user_id')
+                    .eq('id', session.id)
+                    .single();
+                  
+                  if (sessionData?.user_id) {
+                    const { data: packageByName } = await supabase
+                      .from('pacotes')
+                      .select('nome, valor_base, categorias(nome)')
+                      .eq('nome', checkSession.pacote)
+                      .eq('user_id', sessionData.user_id)
+                      .maybeSingle();
+                    
+                    if (packageByName) {
+                      const correctCategoria = packageByName.categorias?.nome || 'Sessão';
+                      const correctValorBase = Number(packageByName.valor_base) || 0;
+                      
+                      await supabase
+                        .from('clientes_sessoes')
+                        .update({
+                          categoria: correctCategoria,
+                          valor_base_pacote: correctValorBase
+                        })
+                        .eq('id', session.id);
+                      
+                      console.log('✅ [SupabaseAdapter] Patch aplicado (via nome):', { 
+                        correctCategoria,
+                        correctValorBase
+                      });
+                    } else {
+                      console.error('❌ [SupabaseAdapter] Não foi possível resolver valor_base_pacote');
+                    }
+                  }
                 }
               }
             } catch (patchError) {

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { BUILD_VERSION } from '@/version';
 
 export function useServiceWorker() {
   const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
@@ -14,10 +15,10 @@ export function useServiceWorker() {
 
     console.log('🔧 Iniciando registro do Service Worker...');
 
-    // Registrar o service worker
+    // Registrar o service worker com versão
     const registerServiceWorker = async () => {
       try {
-        const registration = await navigator.serviceWorker.register('/sw.js', {
+        const registration = await navigator.serviceWorker.register(`/sw.js?v=${BUILD_VERSION}`, {
           scope: '/'
         });
 

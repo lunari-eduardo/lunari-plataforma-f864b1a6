@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useUserPreferences } from '@/hooks/useUserProfile';
 import { PreferencesForm } from '@/components/user-profile/forms/PreferencesForm';
 import { UserPreferences, RegimeTributario } from '@/types/userProfile';
+import { ForceUpdateButton } from '@/components/shared/ForceUpdateButton';
 
 export default function Preferencias() {
   const { preferences, savePreferences, getPreferencesOrDefault } = useUserPreferences();
@@ -37,6 +38,20 @@ export default function Preferencias() {
                 preferences={formData}
                 onChange={handlePreferenceChange}
               />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-lunar-text mb-1">Atualização do App</h3>
+                  <p className="text-sm text-lunar-textSecondary mb-4">
+                    Force a atualização do aplicativo em todos os dispositivos conectados para garantir que todos estejam usando a versão mais recente.
+                  </p>
+                </div>
+                <ForceUpdateButton />
+              </div>
             </CardContent>
           </Card>
         </div>

@@ -35,6 +35,8 @@ import { usePricingBootstrap } from "./hooks/usePricingBootstrap";
 import { useServiceWorker } from "./hooks/useServiceWorker";
 import { useWorkflowCacheInit } from "./hooks/useWorkflowCacheInit";
 import { useAppointmentWorkflowSync } from "./hooks/useAppointmentWorkflowSync";
+import { useVersionCheck } from "./hooks/useVersionCheck";
+import { useAppForceUpdate } from "./hooks/useAppForceUpdate";
 
 // Create a stable QueryClient instance
 const queryClient = new QueryClient({
@@ -53,6 +55,12 @@ function App() {
   
   // Enable automatic updates and service worker control
   useServiceWorker();
+  
+  // Check for version updates
+  useVersionCheck();
+  
+  // Enable force update mechanism for all devices
+  useAppForceUpdate();
   
   // Initialize workflow cache manager
   useWorkflowCacheInit();
