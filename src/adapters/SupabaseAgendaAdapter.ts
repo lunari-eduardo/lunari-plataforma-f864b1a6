@@ -110,44 +110,122 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
     // FASE 1: Criar sessão imediatamente se confirmado (idempotente)
     if (converted.status === 'confirmado') {
       try {
-        console.log('✅ [SupabaseAdapter] Appointment confirmado, criando sessão imediatamente:', converted.id);
+        console.log('📝 [SupabaseAdapter] Criando sessão no workflow para appointment confirmado:', data.id);
+        
+        // ✅ CORREÇÃO CRÍTICA: Buscar dados FRESCOS do banco antes de criar sessão
+        console.log('🔄 [SupabaseAdapter] Buscando dados frescos do banco...');
+        
+        const { data: freshAppointment, error: fetchError } = await supabase
+          .from('appointments')
+          .select('*')
+          .eq('id', data.id)
+          .eq('user_id', user.user.id)
+          .single();
+        
+        if (fetchError) {
+          console.error('❌ [SupabaseAdapter] Erro ao buscar dados frescos:', fetchError);
+          throw fetchError;
+        }
+        
+        if (!freshAppointment) {
+          console.error('❌ [SupabaseAdapter] Appointment não encontrado após criação');
+          throw new Error('Appointment não encontrado após criação');
+        }
+        
+        // Reconstruir converted com dados FRESCOS e HIDRATADOS
+        const hydratedConverted = {
+          id: freshAppointment.id,
+          sessionId: freshAppointment.session_id,
+          title: freshAppointment.title,
+          date: this.parseDateFromStorage(freshAppointment.date),
+          time: freshAppointment.time,
+          type: freshAppointment.type,
+          client: freshAppointment.title,
+          status: freshAppointment.status,
+          description: freshAppointment.description || '',
+          packageId: freshAppointment.package_id || '',
+          paidAmount: Number(freshAppointment.paid_amount) || 0,
+          email: '',
+          whatsapp: '',
+          orcamentoId: freshAppointment.orcamento_id || '',
+          origem: freshAppointment.origem,
+          clienteId: freshAppointment.cliente_id || '',
+          // Campos snake_case para WorkflowSupabaseService
+          package_id: freshAppointment.package_id,
+          paid_amount: freshAppointment.paid_amount,
+          cliente_id: freshAppointment.cliente_id
+        };
+        
+        console.log('✅ [SupabaseAdapter] Dados hidratados:', {
+          timestamp: new Date().toISOString(),
+          package_id: hydratedConverted.package_id,
+          type: hydratedConverted.type,
+          cliente_id: hydratedConverted.cliente_id,
+          paid_amount: hydratedConverted.paid_amount
+        });
+        
         const { WorkflowSupabaseService } = await import('@/services/WorkflowSupabaseService');
-        const session = await WorkflowSupabaseService.createSessionFromAppointment(converted.id, converted);
+        const session = await WorkflowSupabaseService.createSessionFromAppointment(
+          hydratedConverted.id, 
+          hydratedConverted  // ← DADOS FRESCOS E HIDRATADOS
+        );
         
         if (session) {
           console.log('🎯 [SupabaseAdapter] Sessão criada com sucesso:', session.id);
           
-          // ✅ PATCH REDUNDANTE: Verificar se categoria/pacote estão corretos
+          // Patch redundante: corrigir inversão categoria/pacote E valor_base_pacote = 0
           setTimeout(async () => {
-            const { data: checkSession } = await supabase
-              .from('clientes_sessoes')
-              .select('categoria, pacote, appointment_id')
-              .eq('id', session.id)
-              .maybeSingle();
-            
-            if (checkSession && converted.packageId && (!checkSession.pacote || checkSession.categoria === checkSession.pacote)) {
-              console.log('🔧 [SupabaseAdapter] Patch: corrigindo categoria/pacote via JOIN...');
-              
-              const { data: packageData } = await supabase
-                .from('pacotes')
-                .select('nome, categorias(nome)')
-                .eq('id', converted.packageId)
+            try {
+              const { data: checkSession } = await supabase
+                .from('clientes_sessoes')
+                .select('id, categoria, pacote, valor_base_pacote, appointment_id')
+                .eq('id', session.id)
                 .maybeSingle();
               
-              if (packageData) {
-                await supabase
-                  .from('clientes_sessoes')
-                  .update({
-                    categoria: packageData.categorias?.nome || 'Sessão',
-                    pacote: packageData.nome
-                  })
-                  .eq('id', session.id);
-                
-                console.log('✅ [SupabaseAdapter] Patch aplicado:', {
-                  categoria: packageData.categorias?.nome,
-                  pacote: packageData.nome
+              // Verificar se precisa patch (inversão OU valor zerado)
+              const needsPatch = checkSession && hydratedConverted.packageId && (
+                !checkSession.pacote || 
+                checkSession.categoria === checkSession.pacote ||
+                Number(checkSession.valor_base_pacote) === 0
+              );
+              
+              if (needsPatch) {
+                console.log('🔧 [SupabaseAdapter] Patch redundante: corrigindo sessão...', {
+                  timestamp: new Date().toISOString(),
+                  categoria: checkSession.categoria,
+                  pacote: checkSession.pacote,
+                  valor_base_pacote: checkSession.valor_base_pacote
                 });
+                
+                const { data: packageData } = await supabase
+                  .from('pacotes')
+                  .select('nome, valor_base, categorias(nome)')
+                  .eq('id', hydratedConverted.packageId)
+                  .maybeSingle();
+                
+                if (packageData) {
+                  const correctCategoria = packageData.categorias?.nome || 'Sessão';
+                  const correctPacote = packageData.nome;
+                  const correctValorBase = Number(packageData.valor_base) || 0;
+                  
+                  await supabase
+                    .from('clientes_sessoes')
+                    .update({
+                      categoria: correctCategoria,
+                      pacote: correctPacote,
+                      valor_base_pacote: correctValorBase
+                    })
+                    .eq('id', session.id);
+                  
+                  console.log('✅ [SupabaseAdapter] Patch aplicado:', { 
+                    correctCategoria, 
+                    correctPacote,
+                    correctValorBase
+                  });
+                }
               }
+            } catch (patchError) {
+              console.error('⚠️ [SupabaseAdapter] Erro no patch redundante:', patchError);
             }
           }, 1000);
           

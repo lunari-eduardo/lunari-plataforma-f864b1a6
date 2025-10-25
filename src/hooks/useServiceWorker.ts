@@ -27,9 +27,12 @@ export function useServiceWorker() {
         try {
           await registration.update();
         } catch (updateError: any) {
-          // ✅ CORREÇÃO: Detectar "behind a redirect" e forçar atualização total
-          if (updateError?.message?.includes('redirect')) {
-            console.warn('⚠️ SW update falhou (behind redirect), forçando atualização completa...');
+          // ✅ CORREÇÃO: Detectar redirect loop ou erro "behind a redirect"
+          const errorMessage = updateError?.message?.toLowerCase() || '';
+          const isRedirectError = errorMessage.includes('redirect') || errorMessage.includes('behind');
+          
+          if (isRedirectError) {
+            console.warn('🚨 [SW] Detectado redirect loop, executando limpeza AGRESSIVA...');
             await forceUnregisterAndReload();
             return;
           }
@@ -108,26 +111,44 @@ export function useServiceWorker() {
 
     checkAndClearOldCache();
 
-    // ✅ Função para forçar atualização completa (desregistrar SW + limpar cache)
+    // ✅ Função para forçar atualização AGRESSIVA completa
     async function forceUnregisterAndReload() {
       try {
-        console.log('🔄 Forçando atualização completa do SW...');
+        console.log('🔄 [SW] Forçando atualização AGRESSIVA completa...');
         
-        // Desregistrar todos os SWs
+        // 1. Unregister TODOS os Service Workers
         const registrations = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(registrations.map(r => r.unregister()));
-        console.log('✅ SWs desregistrados');
+        console.log(`🧹 [SW] Removendo ${registrations.length} service worker(s)...`);
+        await Promise.all(registrations.map(registration => registration.unregister()));
         
-        // Limpar caches problemáticos
+        // 2. Limpar TODOS os caches (não apenas workbox)
         const cacheNames = await caches.keys();
-        const workboxCaches = cacheNames.filter(n => n.includes('workbox') || n.includes('vite'));
-        await Promise.all(workboxCaches.map(n => caches.delete(n)));
-        console.log('✅ Caches limpos:', workboxCaches.length);
+        console.log(`🧹 [SW] Limpando ${cacheNames.length} cache(s)...`);
+        await Promise.all(cacheNames.map(name => caches.delete(name)));
         
-        // Reload forçado
+        // 3. Limpar IndexedDB (workbox e vite)
+        try {
+          if ('databases' in indexedDB) {
+            const dbs = await indexedDB.databases();
+            dbs.forEach(db => {
+              if (db.name && (db.name.includes('workbox') || db.name.includes('vite'))) {
+                console.log(`🧹 [SW] Removendo IndexedDB: ${db.name}`);
+                indexedDB.deleteDatabase(db.name);
+              }
+            });
+          }
+        } catch (idbError) {
+          console.warn('⚠️ [SW] Não foi possível limpar IndexedDB:', idbError);
+        }
+        
+        console.log('✅ [SW] Limpeza completa realizada, recarregando...');
+        
+        // 4. Hard reload (sem cache)
         window.location.reload();
       } catch (error) {
-        console.error('❌ Erro ao forçar atualização:', error);
+        console.error('❌ [SW] Erro ao forçar atualização:', error);
+        // Fallback: simple reload
+        window.location.reload();
       }
     }
 
