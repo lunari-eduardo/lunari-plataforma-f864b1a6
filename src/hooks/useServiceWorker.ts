@@ -23,8 +23,17 @@ export function useServiceWorker() {
 
         console.log('✅ Service Worker registrado:', registration.scope);
 
-        // Verificar se há atualização ao registrar
-        registration.update();
+        // Verificar se há atualização ao registrar (com tratamento de erro)
+        try {
+          await registration.update();
+        } catch (updateError: any) {
+          // ✅ CORREÇÃO: Detectar "behind a redirect" e forçar atualização total
+          if (updateError?.message?.includes('redirect')) {
+            console.warn('⚠️ SW update falhou (behind redirect), forçando atualização completa...');
+            await forceUnregisterAndReload();
+            return;
+          }
+        }
 
         // Listener para detectar novo service worker
         registration.addEventListener('updatefound', () => {
@@ -98,6 +107,29 @@ export function useServiceWorker() {
     };
 
     checkAndClearOldCache();
+
+    // ✅ Função para forçar atualização completa (desregistrar SW + limpar cache)
+    async function forceUnregisterAndReload() {
+      try {
+        console.log('🔄 Forçando atualização completa do SW...');
+        
+        // Desregistrar todos os SWs
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map(r => r.unregister()));
+        console.log('✅ SWs desregistrados');
+        
+        // Limpar caches problemáticos
+        const cacheNames = await caches.keys();
+        const workboxCaches = cacheNames.filter(n => n.includes('workbox') || n.includes('vite'));
+        await Promise.all(workboxCaches.map(n => caches.delete(n)));
+        console.log('✅ Caches limpos:', workboxCaches.length);
+        
+        // Reload forçado
+        window.location.reload();
+      } catch (error) {
+        console.error('❌ Erro ao forçar atualização:', error);
+      }
+    }
 
   }, []);
 

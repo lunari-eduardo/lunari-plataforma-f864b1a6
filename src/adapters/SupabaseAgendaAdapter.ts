@@ -116,6 +116,41 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
         
         if (session) {
           console.log('🎯 [SupabaseAdapter] Sessão criada com sucesso:', session.id);
+          
+          // ✅ PATCH REDUNDANTE: Verificar se categoria/pacote estão corretos
+          setTimeout(async () => {
+            const { data: checkSession } = await supabase
+              .from('clientes_sessoes')
+              .select('categoria, pacote, appointment_id')
+              .eq('id', session.id)
+              .maybeSingle();
+            
+            if (checkSession && converted.packageId && (!checkSession.pacote || checkSession.categoria === checkSession.pacote)) {
+              console.log('🔧 [SupabaseAdapter] Patch: corrigindo categoria/pacote via JOIN...');
+              
+              const { data: packageData } = await supabase
+                .from('pacotes')
+                .select('nome, categorias(nome)')
+                .eq('id', converted.packageId)
+                .maybeSingle();
+              
+              if (packageData) {
+                await supabase
+                  .from('clientes_sessoes')
+                  .update({
+                    categoria: packageData.categorias?.nome || 'Sessão',
+                    pacote: packageData.nome
+                  })
+                  .eq('id', session.id);
+                
+                console.log('✅ [SupabaseAdapter] Patch aplicado:', {
+                  categoria: packageData.categorias?.nome,
+                  pacote: packageData.nome
+                });
+              }
+            }
+          }, 1000);
+          
           window.dispatchEvent(new CustomEvent('workflow-session-created', {
             detail: { sessionId: session.id, appointmentId: converted.id, timestamp: new Date().toISOString() }
           }));

@@ -268,17 +268,24 @@ export class WorkflowSupabaseService {
           };
         } else {
           console.log('✅ Dados congelados com sucesso:', Object.keys(regrasCongeladas));
-          valorBasePacote = Number(regrasCongeladas.valorBase) || 0;
           
-          // FASE 1: Double fallback if valorBase is 0 in frozen data
+          // ✅ CORREÇÃO CRÍTICA: Resolver valorBasePacote de múltiplas fontes
+          // Prioridade: top-level valorBase > pacote.valorBase > packageData.valor_base
+          valorBasePacote = Number(regrasCongeladas.valorBase) 
+            || Number(regrasCongeladas.pacote?.valorBase)
+            || Number(packageData?.valor_base) 
+            || 0;
+          
+          console.log('💰 Valor base resolvido:', {
+            'regrasCongeladas.valorBase': regrasCongeladas.valorBase,
+            'regrasCongeladas.pacote?.valorBase': regrasCongeladas.pacote?.valorBase,
+            'packageData?.valor_base': packageData?.valor_base,
+            'FINAL valorBasePacote': valorBasePacote
+          });
+          
+          // Se mesmo assim for 0, avisar
           if (valorBasePacote === 0) {
-            if (packageData?.valor_base) {
-              valorBasePacote = Number(packageData.valor_base);
-              regrasCongeladas.valorBase = valorBasePacote;
-              console.log('💰 Corrected frozen valorBase from package:', valorBasePacote);
-            } else {
-              console.warn('⚠️ valorBase é 0 e sem dados do pacote');
-            }
+            console.warn('⚠️ valorBasePacote é 0 mesmo com regras congeladas');
           }
         }
       } else {
@@ -306,36 +313,44 @@ export class WorkflowSupabaseService {
       const descricao = appointmentData.description || '';
       console.log('📝 Descrição da sessão:', descricao || '(vazia)');
 
-      // ✅ FASE 4: Validation - categoria must be the category name, not package name
-      console.log('🔍 [Validação] Dados da sessão:');
-      console.log('  - categoria:', categoria || appointmentData.type || 'Outros');
-      console.log('  - pacote (nome):', nomePacote || '(vazio)');
-      console.log('  - appointmentData.type:', appointmentData.type);
-      console.log('  - appointmentData.package_id:', appointmentData.package_id);
+      // ✅ CORREÇÃO CRÍTICA: finalCategoria NUNCA deve ser nome de pacote
+      // Prioridade: categoria do pacote > hydratedData.type (se não for pacote) > 'Sessão'
+      let finalCategoria = 'Sessão';
+      let categoriaData = null;
       
-      if (nomePacote && (categoria || appointmentData.type) === nomePacote) {
-        console.error('❌ ERRO: categoria está igual ao nome do pacote!');
-        console.error('   categoria deveria ser a CATEGORIA, não o nome do pacote');
-      }
-
-      // ✅ FASE 4: Determinar categoria com fallbacks seguros
-      let finalCategoria = categoria; // Da query do pacote
-
-      if (!finalCategoria) {
-        // Fallback 1: appointmentData.type (só se não for nome de pacote)
-        if (appointmentData.type && appointmentData.type !== nomePacote) {
-          finalCategoria = appointmentData.type;
-          console.log('📋 Usando appointmentData.type como categoria:', finalCategoria);
+      if (packageData) {
+        // Se tem pacote, buscar categoria via categoria_id
+        const { data: cat } = await supabase
+          .from('categorias')
+          .select('nome')
+          .eq('id', packageData.categoria_id)
+          .maybeSingle();
+        
+        if (cat) {
+          categoriaData = cat;
+          finalCategoria = cat.nome;
+          console.log('🏷️ Categoria do pacote usada:', finalCategoria);
         }
       }
-
-      if (!finalCategoria) {
-        // Fallback 2: Usar categoria genérica
-        finalCategoria = 'Sessão';
-        console.log('📋 Usando categoria genérica: Sessão');
+      
+      // Se não encontrou categoria do pacote, usar hydratedData.type (se não for nome de pacote)
+      if (!categoriaData && hydratedData.type && hydratedData.type !== nomePacote) {
+        finalCategoria = hydratedData.type;
+        console.log('🏷️ Type do appointment usado:', finalCategoria);
+      }
+      
+      // ✅ BLINDAGEM FINAL: Se mesmo assim finalCategoria == nomePacote, forçar correção
+      if (finalCategoria === nomePacote) {
+        finalCategoria = categoriaData?.nome || 'Sessão';
+        console.warn('⚠️ Correção: finalCategoria era nome de pacote, ajustado para:', finalCategoria);
       }
 
-      console.log('🧩 [Workflow] Final categoria/pacote:', { finalCategoria, nomePacote, resolvedPackageId });
+      console.log('🧩 [Workflow] Final categoria/pacote/valorBase:', { 
+        finalCategoria, 
+        nomePacote, 
+        resolvedPackageId,
+        valorBasePacote
+      });
 
       // Create session record with package ID for proper linking
       const sessionData = {
@@ -348,8 +363,8 @@ export class WorkflowSupabaseService {
         categoria: finalCategoria,
         pacote: nomePacote || '', // ✅ CORREÇÃO: Salvar NOME do pacote, não o ID
         descricao: descricao,
+        valor_base_pacote: valorBasePacote, // ✅ CORREÇÃO: Adicionar valor_base_pacote
         status: '',
-        valor_base_pacote: valorBasePacote, // FASE 1: Save base package value
         valor_total: valorTotal, // Frontend calculates and sends correct total
         valor_pago: Number(hydratedData.paidAmount || hydratedData.paid_amount || 0),
         produtos_incluidos: packageData?.produtos_incluidos || [],
