@@ -50,18 +50,6 @@ export class WorkflowSupabaseService {
     try {
       console.log('🔄 Creating workflow session from appointment:', appointmentId, appointmentData);
       
-      // ✅ FASE 2: Log de diagnóstico completo
-      console.log('🔍 [WorkflowService] Appointment data received:', {
-        id: appointmentId,
-        package_id: appointmentData.package_id,
-        packageId: appointmentData.packageId,
-        cliente_id: appointmentData.cliente_id,
-        clienteId: appointmentData.clienteId,
-        date: appointmentData.date,
-        description: appointmentData.description,
-        title: appointmentData.title
-      });
-      
       const { data: user } = await supabase.auth.getUser();
       if (!user?.user) throw new Error('User not authenticated');
 
@@ -78,41 +66,42 @@ export class WorkflowSupabaseService {
         return existingSession;
       }
 
-      // ✅ FASE 1: HIDRATAÇÃO - Garantir dados completos mesmo com cache antigo
-      let hydratedData = { ...appointmentData };
-      const needsHydration = !appointmentData.package_id && !appointmentData.packageId;
+      // ✅ HIDRATAÇÃO FORÇADA: SEMPRE buscar dados completos do banco
+      console.log('🧴 [Workflow] Hidratando appointment do banco (sempre)...');
       
-      if (needsHydration && appointmentId) {
-        console.log('🧴 [Workflow] Detectado appointmentData incompleto, hidratando do banco...');
-        
-        const { data: freshAppointment, error: hydrationError } = await supabase
-          .from('appointments')
-          .select('*')
-          .eq('id', appointmentId)
-          .eq('user_id', user.user.id)
-          .single();
-        
-        if (!hydrationError && freshAppointment) {
-          const hydratedFields = {
-            package_id: freshAppointment.package_id,
-            packageId: freshAppointment.package_id,
-            type: freshAppointment.type,
-            cliente_id: freshAppointment.cliente_id,
-            clienteId: freshAppointment.cliente_id,
-            date: freshAppointment.date,
-            time: freshAppointment.time,
-            description: freshAppointment.description,
-            title: freshAppointment.title,
-            paid_amount: freshAppointment.paid_amount,
-            paidAmount: freshAppointment.paid_amount
-          };
-          
-          hydratedData = { ...appointmentData, ...hydratedFields };
-          console.log('🧴 [Workflow] Appointment hydration aplicada:', Object.keys(hydratedFields).filter(k => hydratedFields[k] != null));
-        } else {
-          console.warn('⚠️ [Workflow] Não foi possível hidratar appointment:', hydrationError);
-        }
+      const { data: freshAppointment, error: hydrationError } = await supabase
+        .from('appointments')
+        .select('*')
+        .eq('id', appointmentId)
+        .eq('user_id', user.user.id)
+        .single();
+      
+      if (hydrationError || !freshAppointment) {
+        console.error('❌ [Workflow] Falha ao hidratar appointment:', hydrationError);
+        throw new Error('Failed to fetch appointment from database');
       }
+
+      // Usar SEMPRE dados hidratados (do banco)
+      const hydratedData = {
+        ...freshAppointment,
+        package_id: freshAppointment.package_id,
+        packageId: freshAppointment.package_id,
+        cliente_id: freshAppointment.cliente_id,
+        clienteId: freshAppointment.cliente_id,
+        date: freshAppointment.date,
+        time: freshAppointment.time,
+        type: freshAppointment.type,
+        description: freshAppointment.description,
+        title: freshAppointment.title,
+        paid_amount: freshAppointment.paid_amount,
+        paidAmount: freshAppointment.paid_amount
+      };
+      
+      console.log('🧴 [Workflow] Appointment hidratado com sucesso:', {
+        package_id: hydratedData.package_id,
+        cliente_id: hydratedData.cliente_id,
+        type: hydratedData.type
+      });
 
       // Generate universal session ID
       const sessionId = generateUniversalSessionId('workflow');
