@@ -149,8 +149,18 @@ class PricingFreezingService {
       case 'categoria':
         if (categoria || categoriaId) {
           const tabelaCategoria = await this.resolverTabelaCategoriaAsync(categoria, categoriaId);
-          regras.tabelaCategoria = tabelaCategoria;
-          console.log('📊 Tabela categoria congelada (ASYNC):', tabelaCategoria?.nome, 'para categoria:', categoria || categoriaId, 'resolvida:', !!tabelaCategoria);
+          
+          // 🆕 NOVA LÓGICA: Verificar flag usar_valor_fixo_pacote
+          if (tabelaCategoria?.usar_valor_fixo_pacote) {
+            // Se flag ativa, congelar como modelo FIXO em vez de categoria
+            regras.modelo = 'fixo';
+            regras.valorFixo = pacoteDados?.valorFotoExtra || 0;
+            console.log('📦 Categoria com flag fixo ativa: usando valorFixo do pacote:', regras.valorFixo);
+          } else {
+            // Comportamento atual: usar tabela progressiva
+            regras.tabelaCategoria = tabelaCategoria;
+            console.log('📊 Tabela categoria congelada (ASYNC):', tabelaCategoria?.nome, 'para categoria:', categoria || categoriaId, 'resolvida:', !!tabelaCategoria);
+          }
         } else {
           console.warn('⚠️ Modelo categoria mas sem categoria ou categoriaId fornecido');
         }
@@ -184,8 +194,16 @@ class PricingFreezingService {
       case 'categoria':
         if (categoria) {
           const tabelaCategoria = this.resolverTabelaCategoria(categoria);
-          regras.tabelaCategoria = tabelaCategoria;
-          console.log('📊 Tabela categoria congelada (SYNC):', tabelaCategoria?.nome, 'para categoria:', categoria, 'resolvida:', !!tabelaCategoria);
+          
+          // 🆕 NOVA LÓGICA: Verificar flag usar_valor_fixo_pacote (versão sync)
+          if (tabelaCategoria?.usar_valor_fixo_pacote) {
+            // Se flag ativa, modelo será tratado como fixo
+            regras.modelo = 'fixo';
+            console.log('📦 Categoria com flag fixo ativa (SYNC): será usado valor do pacote');
+          } else {
+            regras.tabelaCategoria = tabelaCategoria;
+            console.log('📊 Tabela categoria congelada (SYNC):', tabelaCategoria?.nome, 'para categoria:', categoria, 'resolvida:', !!tabelaCategoria);
+          }
         }
         break;
     }

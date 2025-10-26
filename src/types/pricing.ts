@@ -15,6 +15,7 @@ export interface TabelaPrecos {
   user_id?: string; // For Supabase multi-user compatibility
   nome: string;
   faixas: FaixaPreco[];
+  usar_valor_fixo_pacote?: boolean; // 🆕 Se true, ignora tabela progressiva e usa valor do pacote
   created_at?: string;
   updated_at?: string;
 }
@@ -109,6 +110,7 @@ export interface SupabaseTabelaPrecos {
   faixas: FaixaPreco[];
   tipo: 'global' | 'categoria';
   categoria_id?: string;
+  usar_valor_fixo_pacote?: boolean; // 🆕 Nova flag
   created_at: string;
   updated_at: string;
 }

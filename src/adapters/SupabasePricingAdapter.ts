@@ -150,6 +150,7 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
                 valor: f.valor ?? f.valor_foto_extra ?? 0,
               }))
             : [],
+          usar_valor_fixo_pacote: data.usar_valor_fixo_pacote ?? false, // 🆕
           created_at: data.created_at,
           updated_at: data.updated_at
         };
@@ -198,7 +199,8 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
         nome: table.nome,
         tipo: 'global' as const,
         categoria_id: null,
-        faixas: table.faixas as any
+        faixas: table.faixas as any,
+        usar_valor_fixo_pacote: table.usar_valor_fixo_pacote ?? false // 🆕
       };
 
       const { data: savedData, error } = await supabase
@@ -285,6 +287,7 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
                 valor: f.valor ?? f.valor_foto_extra ?? 0,
               }))
             : [],
+          usar_valor_fixo_pacote: data.usar_valor_fixo_pacote ?? false, // 🆕
           created_at: data.created_at,
           updated_at: data.updated_at
         };
@@ -357,7 +360,8 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
         nome: table.nome,
         tipo: 'categoria' as const,
         categoria_id: resolvedCategoryId,
-        faixas: table.faixas as any
+        faixas: table.faixas as any,
+        usar_valor_fixo_pacote: table.usar_valor_fixo_pacote ?? false // 🆕
       };
 
       const { data: savedData, error } = await supabase
@@ -431,6 +435,7 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
                   valor: f.valor ?? f.valor_foto_extra ?? 0,
                 }))
               : [],
+            usar_valor_fixo_pacote: table.usar_valor_fixo_pacote ?? false, // 🆕
             created_at: table.created_at,
             updated_at: table.updated_at
           };

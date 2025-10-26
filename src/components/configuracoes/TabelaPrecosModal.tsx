@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Plus, Trash2, Save, Settings } from 'lucide-react';
@@ -58,7 +59,14 @@ export default function TabelaPrecosModal({ categoriaId, categoriaNome, categori
       }
 
       await salvarTabelaCategoria(categoriaId, tabela);
-      toast.success('Tabela de preços salva com sucesso!');
+      
+      // 🆕 Feedback diferenciado baseado na flag
+      if (tabela.usar_valor_fixo_pacote) {
+        toast.success('Configurado para usar valor fixo do pacote!');
+      } else {
+        toast.success('Tabela de preços progressivos salva com sucesso!');
+      }
+      
       setOpen(false);
     } catch (error) {
       console.error('Erro ao salvar tabela:', error);
@@ -145,6 +153,11 @@ export default function TabelaPrecosModal({ categoriaId, categoriaNome, categori
   const calcularPreview = () => {
     if (!tabela || previewQuantidade <= 0) return 'Configure a quantidade';
     
+    // 🆕 Se flag ativa, mostrar que usa valor do pacote
+    if (tabela.usar_valor_fixo_pacote) {
+      return 'Usando valor fixo do pacote (não usa tabela progressiva)';
+    }
+    
     // Simular cálculo usando a tabela atual
     let valorUnitario = 0;
     const faixasOrdenadas = [...tabela.faixas].sort((a, b) => a.min - b.min);
@@ -202,8 +215,37 @@ export default function TabelaPrecosModal({ categoriaId, categoriaNome, categori
               />
             </div>
 
+            {/* 🆕 Opção de usar valor fixo */}
+            <div className="p-4 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-900 rounded-lg">
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  id="usar-valor-fixo"
+                  checked={tabela?.usar_valor_fixo_pacote ?? false}
+                  onCheckedChange={(checked) => 
+                    setTabela(prev => prev ? { ...prev, usar_valor_fixo_pacote: !!checked } : null)
+                  }
+                />
+                <div className="space-y-1 flex-1">
+                  <Label htmlFor="usar-valor-fixo" className="cursor-pointer font-medium">
+                    Usar valor fixo do pacote (recomendado para categorias sem progressivo)
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Quando marcado, o sistema vai usar o valor de foto extra configurado no pacote 
+                    em vez da tabela progressiva abaixo. Útil para categorias como Feminino, 
+                    Marca Pessoal, etc.
+                  </p>
+                  {tabela?.usar_valor_fixo_pacote && (
+                    <div className="mt-2 p-2 bg-white dark:bg-gray-900 rounded border text-xs">
+                      <strong>💡 Importante:</strong> A tabela abaixo será ignorada. 
+                      O valor será sempre o configurado no pacote da categoria.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
             {/* Tabela de Faixas */}
-            <div>
+            <div className={tabela?.usar_valor_fixo_pacote ? 'opacity-50 pointer-events-none' : ''}>
               <div className="flex items-center justify-between mb-4">
                 <Label className="text-base font-medium">Faixas de Preços</Label>
                 <Button onClick={adicionarFaixa} variant="outline" size="sm">

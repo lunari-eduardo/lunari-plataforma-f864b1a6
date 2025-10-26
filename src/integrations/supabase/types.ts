@@ -1043,6 +1043,7 @@ export type Database = {
           nome: string
           tipo: string
           updated_at: string
+          usar_valor_fixo_pacote: boolean | null
           user_id: string
         }
         Insert: {
@@ -1053,6 +1054,7 @@ export type Database = {
           nome: string
           tipo: string
           updated_at?: string
+          usar_valor_fixo_pacote?: boolean | null
           user_id: string
         }
         Update: {
@@ -1063,6 +1065,7 @@ export type Database = {
           nome?: string
           tipo?: string
           updated_at?: string
+          usar_valor_fixo_pacote?: boolean | null
           user_id?: string
         }
         Relationships: [
