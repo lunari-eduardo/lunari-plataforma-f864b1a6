@@ -61,11 +61,13 @@ export default function ClientSearchCombobox({
       const filtered = clientsFromSupabase.filter(client => {
         const normalizedName = normalizeText(client.name);
         const normalizedEmail = normalizeText(client.email);
-        const normalizedPhone = client.phone.replace(/[^0-9]/g, ''); // Remove caracteres não numéricos do telefone
+        const normalizedPhone = (client.phone || '').replace(/[^0-9]/g, '');
+        const numericSearch = searchTerm.replace(/[^0-9]/g, '');
+        const matchesPhone = numericSearch.length > 0 && normalizedPhone.includes(numericSearch);
         
         return normalizedName.includes(normalizedSearch) ||
-               normalizedPhone.includes(searchTerm.replace(/[^0-9]/g, '')) ||
-               normalizedEmail.includes(normalizedSearch);
+               normalizedEmail.includes(normalizedSearch) ||
+               matchesPhone;
       });
       setFilteredClients(filtered);
     }
