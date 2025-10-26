@@ -1,9 +1,18 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+
+// Função para normalizar texto (remover acentos e caracteres especiais)
+const normalizeText = (text: string): string => {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove diacríticos
+    .replace(/[^a-z0-9\s]/g, ''); // Remove caracteres especiais
+};
 
 interface Product {
   id: string;
@@ -29,6 +38,7 @@ export function ProductSearchCombobox({
   className
 }: ProductSearchComboboxProps) {
   const [open, setOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const [selectedValue, setSelectedValue] = useState("");
 
   const selectedProduct = products.find(product => product.nome === selectedValue);
@@ -36,6 +46,19 @@ export function ProductSearchCombobox({
   const getProductValue = (product: Product): number => {
     return product.valorVenda || product.preco_venda || product.valor || 0;
   };
+
+  // Filtrar produtos com base no termo de busca (normalizado)
+  const filteredProducts = useMemo(() => {
+    if (!searchTerm.trim()) return products;
+    
+    const normalizedSearch = normalizeText(searchTerm);
+    return products.filter(product => {
+      const normalizedName = normalizeText(product.nome);
+      const normalizedCategory = normalizeText(product.categoria || '');
+      return normalizedName.includes(normalizedSearch) || 
+             normalizedCategory.includes(normalizedSearch);
+    });
+  }, [products, searchTerm]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -60,6 +83,8 @@ export function ProductSearchCombobox({
           <CommandInput 
             placeholder="Buscar produto..." 
             className="h-8 text-xs" 
+            value={searchTerm}
+            onValueChange={setSearchTerm}
             autoFocus
           />
           <CommandList>
@@ -67,19 +92,17 @@ export function ProductSearchCombobox({
               Nenhum produto encontrado.
             </CommandEmpty>
             <CommandGroup>
-              {products.map((product) => {
+              {filteredProducts.map((product) => {
                 const valorProduto = getProductValue(product);
                 
                 return (
                   <CommandItem
                     key={product.id}
                     value={product.nome}
-                    onSelect={(currentValue) => {
-                      const selected = products.find(p => p.nome === currentValue);
-                      if (selected) {
-                        onSelect(selected);
-                        setSelectedValue("");
-                      }
+                    onSelect={() => {
+                      onSelect(product);
+                      setSelectedValue("");
+                      setSearchTerm("");
                       setOpen(false);
                     }}
                     className="text-xs cursor-pointer"

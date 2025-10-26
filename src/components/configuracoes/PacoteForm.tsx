@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { obterConfiguracaoPrecificacao } from '@/utils/precificacaoUtils';
-import SimpleProductSelect from '@/components/configuracoes/SimpleProductSelect';
+import { ProductSearchCombobox } from '@/components/ui/product-search-combobox';
 import { Badge } from '@/components/ui/badge';
 import { X } from 'lucide-react';
 import { useNumberInput } from '@/hooks/useNumberInput';
@@ -219,11 +219,11 @@ export default function PacoteForm({
       <div className="space-y-2">
         <Label className="text-xs font-medium text-muted-foreground">Produtos Incluídos</Label>
         
-        {/* Seletor de Produtos */}
-        <SimpleProductSelect
+        {/* Seletor de Produtos com Busca */}
+        <ProductSearchCombobox
           products={produtosDisponiveis}
           onSelect={adicionarProduto}
-          placeholder="Adicionar produto..."
+          placeholder="Buscar e adicionar produto..."
           className="h-9"
         />
         
