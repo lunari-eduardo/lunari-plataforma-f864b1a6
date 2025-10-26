@@ -5,6 +5,15 @@ import { Check, ChevronDown, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useClientesRealtime } from '@/hooks/useClientesRealtime';
 
+// Função para normalizar texto (remover acentos e caracteres especiais)
+const normalizeText = (text: string): string => {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove diacríticos
+    .replace(/[^a-z0-9\s]/g, ''); // Remove caracteres especiais
+};
+
 interface Client {
   id: string;
   name: string;
@@ -47,11 +56,16 @@ export default function ClientSearchCombobox({
     if (!searchTerm.trim()) {
       setFilteredClients(clientsFromSupabase);
     } else {
-      const filtered = clientsFromSupabase.filter(client =>
-        client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        client.phone.includes(searchTerm) ||
-        client.email.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      const normalizedSearch = normalizeText(searchTerm);
+      const filtered = clientsFromSupabase.filter(client => {
+        const normalizedName = normalizeText(client.name);
+        const normalizedEmail = normalizeText(client.email);
+        const normalizedPhone = client.phone.replace(/[^0-9]/g, ''); // Remove caracteres não numéricos do telefone
+        
+        return normalizedName.includes(normalizedSearch) ||
+               normalizedPhone.includes(searchTerm.replace(/[^0-9]/g, '')) ||
+               normalizedEmail.includes(normalizedSearch);
+      });
       setFilteredClients(filtered);
     }
   }, [searchTerm, clientsFromSupabase.length]);

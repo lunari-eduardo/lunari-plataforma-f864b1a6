@@ -5,6 +5,15 @@ import { Check, ChevronDown, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { configurationService } from '@/services/ConfigurationService';
 
+// Função para normalizar texto (remover acentos e caracteres especiais)
+const normalizeText = (text: string): string => {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove diacríticos
+    .replace(/[^a-z0-9\s]/g, ''); // Remove caracteres especiais
+};
+
 interface Package {
   id: string;
   name: string;
@@ -71,10 +80,13 @@ export default function PackageSearchCombobox({
     
     // Filtrar por termo de busca
     if (searchTerm) {
-      filtered = filtered.filter(pkg =>
-        pkg.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        pkg.category.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      const normalizedSearch = normalizeText(searchTerm);
+      filtered = filtered.filter(pkg => {
+        const normalizedName = normalizeText(pkg.name);
+        const normalizedCategory = normalizeText(pkg.category);
+        return normalizedName.includes(normalizedSearch) ||
+               normalizedCategory.includes(normalizedSearch);
+      });
     }
     
     setFilteredPackages(filtered);
