@@ -16,7 +16,7 @@ export const DataFreezingStatus = ({
 }: DataFreezingStatusProps) => {
   const hasFrozenData = regrasCongeladas?.modelo === 'completo' && regrasCongeladas?.pacote;
   const hasLegacyData = regrasCongeladas && regrasCongeladas.modelo !== 'completo';
-  
+
   // FASE 2: Badge de ERRO para sessões sem dados congelados completos
   if (!regrasCongeladas || !regrasCongeladas.pacote) {
     return <TooltipProvider>
@@ -42,7 +42,6 @@ export const DataFreezingStatus = ({
         </Tooltip>
       </TooltipProvider>;
   }
-  
   if (!regrasCongeladas) {
     return <TooltipProvider>
         <Tooltip>
@@ -62,10 +61,7 @@ export const DataFreezingStatus = ({
     return <TooltipProvider>
         <Tooltip>
           <TooltipTrigger>
-            <Badge variant="outline" className="text-blue-600 border-blue-300">
-              <Snowflake className="w-3 h-3 mr-1" />
-              {isCompact ? "" : "Preservado"}
-            </Badge>
+            
           </TooltipTrigger>
           <TooltipContent>
             <p>Dados históricos preservados - valores não mudam com alterações de configuração</p>
