@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { WorkflowPackageCombobox } from "./WorkflowPackageCombobox";
 import { StatusBadge } from "./StatusBadge";
+import { ColoredStatusBadge } from "./ColoredStatusBadge";
+import { getContrastColor } from "@/lib/colorUtils";
 import { GerenciarProdutosModal } from "./GerenciarProdutosModal";
 import { WorkflowPaymentsModal } from "./WorkflowPaymentsModal";
 import { FlexibleDeleteModal } from "./FlexibleDeleteModal";
@@ -22,6 +24,7 @@ import { AutoPhotoCalculator } from './AutoPhotoCalculator';
 import { DataFreezingStatus } from './DataFreezingStatus';
 import type { SessionData } from '@/types/workflow';
 import { useRealtimeConfiguration } from '@/hooks/useRealtimeConfiguration';
+import { useWorkflowStatus } from '@/hooks/useWorkflowStatus';
 import { usePricingMigration } from '@/hooks/usePricingMigration';
 interface WorkflowTableProps {
   sessions: SessionData[];
@@ -151,6 +154,7 @@ export function WorkflowTable({
 }: WorkflowTableProps) {
   // CORREÇÃO: Usar real-time configuration (não mais useConfiguration)
   const { categorias } = useRealtimeConfiguration();
+  const { getStatusColor } = useWorkflowStatus();
   const {
     executarMigracaoSeNecessario
   } = usePricingMigration();
@@ -561,6 +565,23 @@ export function WorkflowTable({
     const statusValue = newStatus === '__CLEAR__' ? '' : newStatus;
     onStatusChange(sessionId, statusValue);
   }, [onStatusChange]);
+  
+  // Helper para obter cor do status
+  const getStatusColorValue = useCallback((status: string) => {
+    switch (status.toLowerCase()) {
+      case 'confirmado':
+        return '#34C759';
+      case 'a confirmar':
+      case 'pendente':
+        return '#F59E0B';
+      case 'cancelado':
+        return '#EF4444';
+      default:
+        // Buscar da configuração de workflow
+        return getStatusColor(status);
+    }
+  }, [getStatusColor]);
+  
   const getSortIcon = (field: string) => {
     if (sortField !== field) {
       // Mostrar ícone neutro para indicar que é ordenável
@@ -708,9 +729,17 @@ export function WorkflowTable({
                   </div>)}
 
                 {renderCell('status', <Select key={`status-${session.id}-${session.status || 'empty'}`} value={session.status || ''} onValueChange={value => handleStatusChangeStable(session.id, value)}>
-                    <SelectTrigger className="h-auto p-2 text-xs w-full border-none bg-transparent hover:bg-lunar-accent/5 focus:bg-lunar-accent/10 transition-colors">
+                    <SelectTrigger 
+                      className="h-auto p-0 text-xs w-full border-none overflow-hidden transition-opacity hover:opacity-90"
+                      style={{
+                        backgroundColor: session.status ? getStatusColorValue(session.status) : 'transparent',
+                        color: session.status ? getContrastColor(getStatusColorValue(session.status)) : 'inherit'
+                      }}
+                    >
                       <SelectValue asChild>
-                        <StatusBadge status={session.status || ''} />
+                        <div className="px-2 py-1.5 w-full text-center font-medium">
+                          {session.status || 'Sem status'}
+                        </div>
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent className="z-50 bg-lunar-surface text-foreground border border-lunar-border shadow-lg">
@@ -718,7 +747,10 @@ export function WorkflowTable({
                           Limpar status
                         </SelectItem>}
                       {statusOptions.map(status => <SelectItem key={status} value={status} className="text-xs p-2">
-                          <StatusBadge status={status} />
+                          <ColoredStatusBadge 
+                            status={status} 
+                            showBackground={true}
+                          />
                         </SelectItem>)}
                     </SelectContent>
                   </Select>)}

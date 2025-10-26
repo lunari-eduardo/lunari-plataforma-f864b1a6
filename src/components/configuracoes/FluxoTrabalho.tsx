@@ -67,8 +67,8 @@ export default function FluxoTrabalho({
       setDeletingId(null);
     }
   };
-  const moverEtapa = (id: string, direcao: 'cima' | 'baixo') => {
-    onMove(id, direcao);
+  const moverEtapa = async (id: string, direcao: 'cima' | 'baixo') => {
+    await onMove(id, direcao);
   };
   return <div className="mt-4 space-y-6">
       <div>
@@ -162,10 +162,10 @@ export default function FluxoTrabalho({
                       
                     </div>
                     <div className="flex justify-end gap-1 col-span-5 sm:col-span-2">
-                      <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => moverEtapa(etapa.id, 'cima')} disabled={etapa.ordem === 1 || deletingId === etapa.id}>
+                      <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => moverEtapa(etapa.id, 'cima')} disabled={index === 0 || deletingId === etapa.id}>
                         <ArrowUp className="h-3.5 w-3.5" />
                       </Button>
-                      <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => moverEtapa(etapa.id, 'baixo')} disabled={etapa.ordem === etapas.length || deletingId === etapa.id}>
+                      <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => moverEtapa(etapa.id, 'baixo')} disabled={index === etapasOrdenadas.length - 1 || deletingId === etapa.id}>
                         <ArrowDown className="h-3.5 w-3.5" />
                       </Button>
                       <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => iniciarEdicaoEtapa(etapa.id)} disabled={deletingId === etapa.id}>
