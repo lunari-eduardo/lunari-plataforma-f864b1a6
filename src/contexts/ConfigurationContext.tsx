@@ -698,31 +698,26 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [etapasOps, suppress]);
 
   const moverEtapa = useCallback(async (id: string, direcao: 'cima' | 'baixo') => {
-    // Encontrar etapa atual e calcular alvo baseado na lista ordenada
-    const current = etapasRef.current.find(e => e.id === id);
-    if (!current) return;
-
+    // Reordenar pelo índice e RENORMALIZAR ordens (1..N) para evitar duplicatas
     const sorted = [...etapasRef.current].sort((a, b) => a.ordem - b.ordem);
     const currentIndex = sorted.findIndex(e => e.id === id);
+    if (currentIndex === -1) return;
 
-    const targetIndex = direcao === 'cima' ? currentIndex - 1 : currentIndex + 1;
-    const target = sorted[targetIndex];
-    if (!target) return;
+    const newIndex = direcao === 'cima' ? currentIndex - 1 : currentIndex + 1;
+    if (newIndex < 0 || newIndex >= sorted.length) return;
 
-    // Preparar atualização otimista para AMBOS os itens (swap de ordem)
-    const updated = etapasRef.current
-      .map(e => {
-        if (e.id === current.id) return { ...e, ordem: target.ordem };
-        if (e.id === target.id) return { ...e, ordem: current.ordem };
-        return e;
-      })
-      .sort((a, b) => a.ordem - b.ordem);
+    // Move o item no array ordenado
+    const reordered = [...sorted];
+    const [moved] = reordered.splice(currentIndex, 1);
+    reordered.splice(newIndex, 0, moved);
 
-    // Suprimir eventos realtime para os dois IDs enquanto persistimos
-    suppress(current.id);
-    suppress(target.id);
+    // Renumera para ordens únicas e sequenciais
+    const updated = reordered.map((e, idx) => ({ ...e, ordem: idx + 1 }));
 
-    // Atualização otimista do array completo para refletir imediatamente no UI
+    // Suprimir todos IDs para evitar loops de realtime enquanto persistimos
+    updated.forEach(e => suppress(e.id));
+
+    // Atualização otimista
     etapasOps.set(updated);
 
     try {
@@ -731,7 +726,6 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
       console.error('❌ [moverEtapa] Erro ao salvar reordenação', error);
       toast.error('Erro ao reordenar etapas. Alteração pode não ter sido salva.');
       try {
-        // Recuperar estado consistente do backend
         const reloaded = await configurationService.loadEtapasAsync();
         etapasOps.set(reloaded);
       } catch (reloadError) {
