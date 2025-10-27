@@ -178,73 +178,47 @@ export default function Clientes() {
   // Ordenar clientes
   const clientesOrdenados = useMemo(() => {
     if (!sortConfig) return clientesFiltrados;
-
     return [...clientesFiltrados].sort((a, b) => {
       const aValue = a[sortConfig.key];
       const bValue = b[sortConfig.key];
-
       if (sortConfig.key === 'nome') {
-        return sortConfig.direction === 'asc'
-          ? String(aValue).localeCompare(String(bValue))
-          : String(bValue).localeCompare(String(aValue));
+        return sortConfig.direction === 'asc' ? String(aValue).localeCompare(String(bValue)) : String(bValue).localeCompare(String(aValue));
       }
 
       // Valores numéricos
       const aNum = Number(aValue) || 0;
       const bNum = Number(bValue) || 0;
-      
-      return sortConfig.direction === 'asc' 
-        ? aNum - bNum 
-        : bNum - aNum;
+      return sortConfig.direction === 'asc' ? aNum - bNum : bNum - aNum;
     });
   }, [clientesFiltrados, sortConfig]);
-
   const handleSort = (key: typeof sortConfig['key']) => {
     let direction: 'asc' | 'desc' = 'asc';
-    
     if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
       direction = 'desc';
     }
-    
-    setSortConfig({ key, direction });
+    setSortConfig({
+      key,
+      direction
+    });
   };
-
-  const SortableHeader = ({ 
-    label, 
-    sortKey 
-  }: { 
-    label: string; 
-    sortKey: typeof sortConfig['key'] 
+  const SortableHeader = ({
+    label,
+    sortKey
+  }: {
+    label: string;
+    sortKey: typeof sortConfig['key'];
   }) => {
     const isActive = sortConfig?.key === sortKey;
     const direction = sortConfig?.direction;
-
-    return (
-      <TableHead 
-        className="cursor-pointer hover:bg-muted/50 select-none"
-        onClick={() => handleSort(sortKey)}
-      >
+    return <TableHead className="cursor-pointer hover:bg-muted/50 select-none" onClick={() => handleSort(sortKey)}>
         <div className="flex items-center gap-2">
           {label}
           <div className="flex flex-col">
-            <ChevronUp 
-              className={`h-3 w-3 -mb-1 ${
-                isActive && direction === 'asc' 
-                  ? 'text-primary' 
-                  : 'text-muted-foreground/30'
-              }`} 
-            />
-            <ChevronDown 
-              className={`h-3 w-3 ${
-                isActive && direction === 'desc' 
-                  ? 'text-primary' 
-                  : 'text-muted-foreground/30'
-              }`} 
-            />
+            <ChevronUp className={`h-3 w-3 -mb-1 ${isActive && direction === 'asc' ? 'text-primary' : 'text-muted-foreground/30'}`} />
+            <ChevronDown className={`h-3 w-3 ${isActive && direction === 'desc' ? 'text-primary' : 'text-muted-foreground/30'}`} />
           </div>
         </div>
-      </TableHead>
-    );
+      </TableHead>;
   };
   const handleAddClient = () => {
     setEditingClient(null);
@@ -268,8 +242,11 @@ export default function Clientes() {
   };
   const handleDeleteClient = async (clientId: string) => {
     // 1. Verificar se o cliente tem dados vinculados
-    const { temDados, sessoes, pagamentos } = await verificarClienteTemDados(clientId);
-
+    const {
+      temDados,
+      sessoes,
+      pagamentos
+    } = await verificarClienteTemDados(clientId);
     if (temDados) {
       // Criar mensagem detalhada
       let mensagem = 'Este cliente possui dados vinculados e não pode ser excluído:\n\n';
@@ -279,7 +256,6 @@ export default function Clientes() {
       if (pagamentos > 0) {
         mensagem += `• ${pagamentos} pagamento(s) registrado(s)\n`;
       }
-      
       toast.error(mensagem, {
         duration: 6000,
         description: 'Para manter a integridade dos dados, clientes com histórico não podem ser removidos.'
@@ -295,7 +271,6 @@ export default function Clientes() {
       cancelText: "Cancelar",
       variant: "destructive"
     });
-    
     if (confirmed) {
       try {
         await removerClienteSupabase(clientId);
@@ -347,7 +322,7 @@ export default function Clientes() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Clientes</h1>
+            
             <p className="text-muted-foreground">
               {isLoadingSupabase ? 'Carregando...' : `${clientesSupabase.length} cliente(s) cadastrado(s)`}
             </p>
@@ -355,26 +330,10 @@ export default function Clientes() {
           <div className="flex items-center gap-2">
             {/* Toggle de visualização */}
             <div className="flex items-center border border-lunar-border rounded-lg overflow-hidden">
-              <Button
-                variant={viewMode === 'cards' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('cards')}
-                className={viewMode === 'cards' 
-                  ? "rounded-none" 
-                  : "rounded-none"
-                }
-              >
+              <Button variant={viewMode === 'cards' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('cards')} className={viewMode === 'cards' ? "rounded-none" : "rounded-none"}>
                 <LayoutGrid className="h-4 w-4" />
               </Button>
-              <Button
-                variant={viewMode === 'list' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('list')}
-                className={viewMode === 'list' 
-                  ? "rounded-none" 
-                  : "rounded-none"
-                }
-              >
+              <Button variant={viewMode === 'list' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('list')} className={viewMode === 'list' ? "rounded-none" : "rounded-none"}>
                 <List className="h-4 w-4" />
               </Button>
             </div>
@@ -394,8 +353,7 @@ export default function Clientes() {
         <ClientFiltersBar filters={filters} onFiltersChange={setFilters} totalClients={clientMetrics.length} filteredClients={clientesFiltrados.length} />
 
         {/* Visualização em Lista */}
-        {viewMode === 'list' && (
-          <div className="border rounded-lg overflow-hidden">
+        {viewMode === 'list' && <div className="border rounded-lg overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -409,20 +367,14 @@ export default function Clientes() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {clientesOrdenados.map(cliente => (
-                  <TableRow key={cliente.id}>
+                {clientesOrdenados.map(cliente => <TableRow key={cliente.id}>
                     <TableCell>
-                      <Link 
-                        to={`/clientes/${cliente.id}`}
-                        className="font-medium text-primary hover:text-primary/80"
-                      >
+                      <Link to={`/clientes/${cliente.id}`} className="font-medium text-primary hover:text-primary/80">
                         {cliente.nome}
                       </Link>
-                      {(cliente as any).origem && (
-                        <div className="mt-1">
+                      {(cliente as any).origem && <div className="mt-1">
                           <OriginBadge originId={(cliente as any).origem} />
-                        </div>
-                      )}
+                        </div>}
                     </TableCell>
                     <TableCell className="font-semibold text-primary">
                       {formatCurrency(cliente.totalFaturado)}
@@ -439,52 +391,30 @@ export default function Clientes() {
                       </span>
                     </TableCell>
                     <TableCell>
-                      <span className={`px-2 py-1 text-xs rounded-full ${
-                        cliente.totalFaturado > 0 
-                          ? 'bg-green-100 text-green-700' 
-                          : 'bg-gray-100 text-gray-600'
-                      }`}>
+                      <span className={`px-2 py-1 text-xs rounded-full ${cliente.totalFaturado > 0 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
                         {cliente.totalFaturado > 0 ? 'Ativo' : 'Novo'}
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleWhatsApp(cliente)}
-                          className="h-8 w-8 p-0 text-green-600 hover:text-green-700"
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => handleWhatsApp(cliente)} className="h-8 w-8 p-0 text-green-600 hover:text-green-700">
                           <MessageCircle className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEditClient(cliente)}
-                          className="h-8 w-8 p-0"
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => handleEditClient(cliente)} className="h-8 w-8 p-0">
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteClient(cliente.id)}
-                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => handleDeleteClient(cliente.id)} className="h-8 w-8 p-0 text-red-600 hover:text-red-700">
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </TableCell>
-                  </TableRow>
-                ))}
+                  </TableRow>)}
               </TableBody>
             </Table>
-          </div>
-        )}
+          </div>}
 
         {/* Grid de Clientes - Cards */}
-        {viewMode === 'cards' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {viewMode === 'cards' && <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {clientesOrdenados.map(cliente => <Card key={cliente.id} className="overflow-hidden hover:shadow-md transition-shadow">
               <CardContent className="p-4">
                 {/* Header do Card */}
@@ -544,8 +474,7 @@ export default function Clientes() {
                 </div>
               </CardContent>
             </Card>)}
-          </div>
-        )}
+          </div>}
         
         {/* Empty State */}
         {clientesFiltrados.length === 0 && <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-lg">
