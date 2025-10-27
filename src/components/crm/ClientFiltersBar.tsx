@@ -43,6 +43,12 @@ export function ClientFiltersBar({
   
   // Buscar categorias disponíveis
   const { categorias, isLoadingCategorias } = useRealtimeConfiguration();
+  
+  console.log('🎨 ClientFiltersBar - Categorias:', { 
+    total: categorias?.length || 0, 
+    loading: isLoadingCategorias,
+    categorias: categorias 
+  });
 
   const updateFilter = (key: keyof ClientFilters, value: string) => {
     onFiltersChange({
@@ -221,21 +227,27 @@ export function ClientFiltersBar({
                     : ''
                 }`}
               >
-                <SelectValue />
+                <SelectValue placeholder="Todas as Categorias" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-50 bg-background">
                 <SelectItem value="todas">Todas as Categorias</SelectItem>
-                {categorias.map(cat => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    <div className="flex items-center gap-2">
-                      <div 
-                        className="w-2 h-2 rounded-full" 
-                        style={{ backgroundColor: cat.cor }}
-                      />
-                      {cat.nome}
-                    </div>
+                {categorias && categorias.length > 0 ? (
+                  categorias.map(cat => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-2 h-2 rounded-full" 
+                          style={{ backgroundColor: cat.cor }}
+                        />
+                        {cat.nome}
+                      </div>
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="sem-categorias" disabled>
+                    Nenhuma categoria cadastrada
                   </SelectItem>
-                ))}
+                )}
               </SelectContent>
             </Select>
           </div>
