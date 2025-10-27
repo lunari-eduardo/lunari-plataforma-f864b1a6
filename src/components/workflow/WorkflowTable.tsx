@@ -153,8 +153,12 @@ export function WorkflowTable({
   onSort
 }: WorkflowTableProps) {
   // CORREÇÃO: Usar real-time configuration (não mais useConfiguration)
-  const { categorias } = useRealtimeConfiguration();
-  const { getStatusColor } = useWorkflowStatus();
+  const {
+    categorias
+  } = useRealtimeConfiguration();
+  const {
+    getStatusColor
+  } = useWorkflowStatus();
   const {
     executarMigracaoSeNecessario
   } = usePricingMigration();
@@ -565,7 +569,7 @@ export function WorkflowTable({
     const statusValue = newStatus === '__CLEAR__' ? '' : newStatus;
     onStatusChange(sessionId, statusValue);
   }, [onStatusChange]);
-  
+
   // Helper para obter cor do status
   const getStatusColorValue = useCallback((status: string) => {
     switch (status.toLowerCase()) {
@@ -581,7 +585,6 @@ export function WorkflowTable({
         return getStatusColor(status);
     }
   }, [getStatusColor]);
-  
   const getSortIcon = (field: string) => {
     if (sortField !== field) {
       // Mostrar ícone neutro para indicar que é ordenável
@@ -710,7 +713,7 @@ export function WorkflowTable({
                 {renderCell('date', <div className="font-medium">{formatToDayMonth(session.data)}</div>, true)}
                 
                 {renderCell('client', <div className="flex items-center gap-2">
-                    {session.clienteId ? <Link to={`/clientes/${session.clienteId}`} className="font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer">
+                    {session.clienteId ? <Link to={`/clientes/${session.clienteId}`} className="font-medium text-blue-600 hover:text-orange-800 cursor-pointer">
                         {session.nome}
                       </Link> : <span className="font-medium text-gray-600">{session.nome}</span>}
                     {session.produtosList && session.produtosList.length > 0 && <Badge variant="secondary" className="h-5 text-[10px] px-1.5">Prod.</Badge>}
@@ -729,13 +732,10 @@ export function WorkflowTable({
                   </div>)}
 
                 {renderCell('status', <Select key={`status-${session.id}-${session.status || 'empty'}`} value={session.status || ''} onValueChange={value => handleStatusChangeStable(session.id, value)}>
-                    <SelectTrigger 
-                      className="h-auto p-0 text-xs w-full border-none overflow-hidden transition-opacity hover:opacity-90"
-                      style={{
-                        backgroundColor: session.status ? getStatusColorValue(session.status) : 'transparent',
-                        color: session.status ? getContrastColor(getStatusColorValue(session.status)) : 'inherit'
-                      }}
-                    >
+                    <SelectTrigger className="h-auto p-0 text-xs w-full border-none overflow-hidden transition-opacity hover:opacity-90" style={{
+                    backgroundColor: session.status ? getStatusColorValue(session.status) : 'transparent',
+                    color: session.status ? getContrastColor(getStatusColorValue(session.status)) : 'inherit'
+                  }}>
                       <SelectValue asChild>
                         <div className="px-2 py-1.5 w-full text-center font-medium">
                           {session.status || 'Sem status'}
@@ -747,10 +747,7 @@ export function WorkflowTable({
                           Limpar status
                         </SelectItem>}
                       {statusOptions.map(status => <SelectItem key={status} value={status} className="text-xs p-2">
-                          <ColoredStatusBadge 
-                            status={status} 
-                            showBackground={true}
-                          />
+                          <ColoredStatusBadge status={status} showBackground={true} />
                         </SelectItem>)}
                     </SelectContent>
                   </Select>)}
@@ -760,28 +757,19 @@ export function WorkflowTable({
                 {renderCell('package', (() => {
                   // CORREÇÃO: Usar regras_congeladas completo para obter nome histórico do pacote
                   const displayName = session.regras_congeladas?.pacote?.nome || session.pacote || '';
-                  
                   console.log('📦 [WorkflowTable] Renderizando pacote:', {
                     sessionId: session.id,
                     displayName,
                     pacote: session.pacote,
                     temRegrasCongeladas: !!session.regras_congeladas
                   });
-                  
-                  return (
-                    <div className="flex flex-col gap-1">
-                      <WorkflowPackageCombobox 
-                        key={`package-${session.id}-${session.pacote}`} 
-                        value={session.pacote}
-                        displayName={displayName}
-                        onValueChange={packageData => {
-                          console.log('🔄 Pacote selecionado - ID:', packageData.id);
-                          handleFieldUpdateStable(session.id, 'pacote', packageData.id || packageData.nome);
-                        }} 
-                      />
+                  return <div className="flex flex-col gap-1">
+                      <WorkflowPackageCombobox key={`package-${session.id}-${session.pacote}`} value={session.pacote} displayName={displayName} onValueChange={packageData => {
+                      console.log('🔄 Pacote selecionado - ID:', packageData.id);
+                      handleFieldUpdateStable(session.id, 'pacote', packageData.id || packageData.nome);
+                    }} />
                       <DataFreezingStatus regrasCongeladas={session.regras_congeladas} isCompact={true} />
-                    </div>
-                  );
+                    </div>;
                 })())}
 
                 {renderCell('packageValue', renderEditableInput(session, 'valorPacote', session.valorPacote || '', 'text', 'R$ 0,00', true))}
