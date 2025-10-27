@@ -9,15 +9,19 @@ import {
   SelectModalValue as SelectValue 
 } from '@/components/ui/select-in-modal';
 import { Badge } from "@/components/ui/badge";
-import { Search, User, DollarSign, CheckCircle, Clock, X, Filter, SlidersHorizontal } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Search, Calendar, X, Filter, SlidersHorizontal } from "lucide-react";
 import { useDialogDropdownContext } from "@/components/ui/dialog";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { useRealtimeConfiguration } from "@/hooks/useRealtimeConfiguration";
 
 export interface ClientFilters {
   filtro: string;
-  statusFilter: string;
-  faturadoFilter: string;
-  pagoFilter: string;
-  receberFilter: string;
+  dataInicio: string;
+  dataFim: string;
+  categoria: string;
 }
 
 interface ClientFiltersBarProps {
@@ -36,6 +40,9 @@ export function ClientFiltersBar({
   const [isExpanded, setIsExpanded] = useState(false);
   const [openDropdowns, setOpenDropdowns] = useState<Record<string, boolean>>({});
   const dropdownContext = useDialogDropdownContext();
+  
+  // Buscar categorias disponíveis
+  const { categorias, isLoadingCategorias } = useRealtimeConfiguration();
 
   const updateFilter = (key: keyof ClientFilters, value: string) => {
     onFiltersChange({
@@ -47,10 +54,9 @@ export function ClientFiltersBar({
   const clearAllFilters = () => {
     onFiltersChange({
       filtro: '',
-      statusFilter: 'todos',
-      faturadoFilter: 'todos',
-      pagoFilter: 'todos',
-      receberFilter: 'todos'
+      dataInicio: '',
+      dataFim: '',
+      categoria: 'todas'
     });
   };
 
@@ -65,28 +71,13 @@ export function ClientFiltersBar({
   const getActiveFiltersCount = () => {
     let count = 0;
     if (filters.filtro) count++;
-    if (filters.statusFilter && filters.statusFilter !== 'todos') count++;
-    if (filters.faturadoFilter && filters.faturadoFilter !== 'todos') count++;
-    if (filters.pagoFilter && filters.pagoFilter !== 'todos') count++;
-    if (filters.receberFilter && filters.receberFilter !== 'todos') count++;
+    if (filters.dataInicio) count++;
+    if (filters.dataFim) count++;
+    if (filters.categoria && filters.categoria !== 'todas') count++;
     return count;
   };
 
   const activeFiltersCount = getActiveFiltersCount();
-
-  const filterOptions = {
-    status: [
-      { value: 'todos', label: 'Todos os Status' },
-      { value: 'ativo', label: 'Ativo' },
-      { value: 'inativo', label: 'Inativo' }
-    ],
-    faturado: [
-      { value: 'todos', label: 'Todos os Valores' },
-      { value: 'baixo', label: 'Até R$ 1.000' },
-      { value: 'medio', label: 'R$ 1.000 - R$ 5.000' },
-      { value: 'alto', label: 'Acima de R$ 5.000' }
-    ]
-  };
 
   return (
     <div className="space-y-4">
@@ -136,102 +127,176 @@ export function ClientFiltersBar({
         </div>
 
         {/* Filters Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          {/* Status Filter */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {/* Data Início */}
           <div className="space-y-1">
             <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-              <User className="h-3 w-3" />
-              Status do Cliente
+              <Calendar className="h-3 w-3" />
+              Data Início
             </div>
-            <Select 
-              value={filters.statusFilter} 
-              onValueChange={(value) => updateFilter('statusFilter', value)}
-              onOpenChange={(open) => handleSelectOpenChange(open, 'status')}
-            >
-              <SelectTrigger className={`h-9 ${filters.statusFilter !== 'todos' ? 'ring-1 ring-primary bg-primary/5' : ''}`}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {filterOptions.status.map(option => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={`h-9 w-full justify-start text-left font-normal ${
+                    filters.dataInicio ? 'ring-1 ring-primary bg-primary/5' : ''
+                  }`}
+                >
+                  <Calendar className="mr-2 h-4 w-4" />
+                  {filters.dataInicio
+                    ? format(new Date(filters.dataInicio), "dd/MM/yyyy", { locale: ptBR })
+                    : "Selecione..."}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <CalendarComponent
+                  mode="single"
+                  selected={filters.dataInicio ? new Date(filters.dataInicio) : undefined}
+                  onSelect={(date) => 
+                    updateFilter('dataInicio', date ? format(date, 'yyyy-MM-dd') : '')
+                  }
+                  initialFocus
+                  className="pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
           </div>
 
-          {/* Total Faturado Filter */}
+          {/* Data Fim */}
           <div className="space-y-1">
             <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-              <DollarSign className="h-3 w-3" />
-              Total Faturado
+              <Calendar className="h-3 w-3" />
+              Data Fim
             </div>
-            <Select 
-              value={filters.faturadoFilter} 
-              onValueChange={(value) => updateFilter('faturadoFilter', value)}
-              onOpenChange={(open) => handleSelectOpenChange(open, 'faturado')}
-            >
-              <SelectTrigger className={`h-9 ${filters.faturadoFilter !== 'todos' ? 'ring-1 ring-primary bg-primary/5' : ''}`}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {filterOptions.faturado.map(option => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={`h-9 w-full justify-start text-left font-normal ${
+                    filters.dataFim ? 'ring-1 ring-primary bg-primary/5' : ''
+                  }`}
+                >
+                  <Calendar className="mr-2 h-4 w-4" />
+                  {filters.dataFim
+                    ? format(new Date(filters.dataFim), "dd/MM/yyyy", { locale: ptBR })
+                    : "Selecione..."}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <CalendarComponent
+                  mode="single"
+                  selected={filters.dataFim ? new Date(filters.dataFim) : undefined}
+                  onSelect={(date) => 
+                    updateFilter('dataFim', date ? format(date, 'yyyy-MM-dd') : '')
+                  }
+                  disabled={(date) => {
+                    if (filters.dataInicio) {
+                      return date < new Date(filters.dataInicio);
+                    }
+                    return false;
+                  }}
+                  initialFocus
+                  className="pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
           </div>
 
-          {/* Total Pago Filter */}
+          {/* Categoria */}
           <div className="space-y-1">
             <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-              <CheckCircle className="h-3 w-3" />
-              Total Pago
+              <Filter className="h-3 w-3" />
+              Categoria
             </div>
             <Select 
-              value={filters.pagoFilter} 
-              onValueChange={(value) => updateFilter('pagoFilter', value)}
-              onOpenChange={(open) => handleSelectOpenChange(open, 'pago')}
+              value={filters.categoria} 
+              onValueChange={(value) => updateFilter('categoria', value)}
+              onOpenChange={(open) => handleSelectOpenChange(open, 'categoria')}
+              disabled={isLoadingCategorias}
             >
-              <SelectTrigger className={`h-9 ${filters.pagoFilter !== 'todos' ? 'ring-1 ring-primary bg-primary/5' : ''}`}>
+              <SelectTrigger 
+                className={`h-9 ${
+                  filters.categoria && filters.categoria !== 'todas' 
+                    ? 'ring-1 ring-primary bg-primary/5' 
+                    : ''
+                }`}
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {filterOptions.faturado.map(option => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
+                <SelectItem value="todas">Todas as Categorias</SelectItem>
+                {categorias.map(cat => (
+                  <SelectItem key={cat.id} value={cat.id}>
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-2 h-2 rounded-full" 
+                        style={{ backgroundColor: cat.cor }}
+                      />
+                      {cat.nome}
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
+        </div>
 
-          {/* A Receber Filter */}
-          <div className="space-y-1">
-            <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-              <Clock className="h-3 w-3" />
-              Valor a Receber
-            </div>
-            <Select 
-              value={filters.receberFilter} 
-              onValueChange={(value) => updateFilter('receberFilter', value)}
-              onOpenChange={(open) => handleSelectOpenChange(open, 'receber')}
-            >
-              <SelectTrigger className={`h-9 ${filters.receberFilter !== 'todos' ? 'ring-1 ring-primary bg-primary/5' : ''}`}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {filterOptions.faturado.map(option => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        {/* Atalhos de Período */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-muted-foreground">Atalhos:</span>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs"
+            onClick={() => {
+              const hoje = new Date();
+              const doisAnosAtras = new Date();
+              doisAnosAtras.setFullYear(hoje.getFullYear() - 2);
+              
+              onFiltersChange({
+                ...filters,
+                dataInicio: format(doisAnosAtras, 'yyyy-MM-dd'),
+                dataFim: format(hoje, 'yyyy-MM-dd')
+              });
+            }}
+          >
+            Últimos 2 anos
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs"
+            onClick={() => {
+              const hoje = new Date();
+              const umAnoAtras = new Date();
+              umAnoAtras.setFullYear(hoje.getFullYear() - 1);
+              
+              onFiltersChange({
+                ...filters,
+                dataInicio: format(umAnoAtras, 'yyyy-MM-dd'),
+                dataFim: format(hoje, 'yyyy-MM-dd')
+              });
+            }}
+          >
+            Último ano
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs"
+            onClick={() => {
+              const hoje = new Date();
+              const inicioAno = new Date(hoje.getFullYear(), 0, 1);
+              
+              onFiltersChange({
+                ...filters,
+                dataInicio: format(inicioAno, 'yyyy-MM-dd'),
+                dataFim: format(hoje, 'yyyy-MM-dd')
+              });
+            }}
+          >
+            Este ano
+          </Button>
         </div>
 
         {/* Active Filters & Actions */}
@@ -253,53 +318,40 @@ export function ClientFiltersBar({
                     </Button>
                   </Badge>
                 )}
-                {filters.statusFilter !== 'todos' && (
+                {filters.dataInicio && (
                   <Badge variant="secondary" className="text-xs">
-                    Status: {filterOptions.status.find(opt => opt.value === filters.statusFilter)?.label}
+                    Início: {format(new Date(filters.dataInicio), "dd/MM/yyyy", { locale: ptBR })}
                     <Button
                       variant="ghost"
                       size="sm"
                       className="ml-1 h-3 w-3 p-0 hover:bg-transparent"
-                      onClick={() => updateFilter('statusFilter', 'todos')}
+                      onClick={() => updateFilter('dataInicio', '')}
                     >
                       <X className="h-2 w-2" />
                     </Button>
                   </Badge>
                 )}
-                {filters.faturadoFilter !== 'todos' && (
+                {filters.dataFim && (
                   <Badge variant="secondary" className="text-xs">
-                    Faturado: {filterOptions.faturado.find(opt => opt.value === filters.faturadoFilter)?.label}
+                    Fim: {format(new Date(filters.dataFim), "dd/MM/yyyy", { locale: ptBR })}
                     <Button
                       variant="ghost"
                       size="sm"
                       className="ml-1 h-3 w-3 p-0 hover:bg-transparent"
-                      onClick={() => updateFilter('faturadoFilter', 'todos')}
+                      onClick={() => updateFilter('dataFim', '')}
                     >
                       <X className="h-2 w-2" />
                     </Button>
                   </Badge>
                 )}
-                {filters.pagoFilter !== 'todos' && (
+                {filters.categoria && filters.categoria !== 'todas' && (
                   <Badge variant="secondary" className="text-xs">
-                    Pago: {filterOptions.faturado.find(opt => opt.value === filters.pagoFilter)?.label}
+                    Categoria: {categorias.find(c => c.id === filters.categoria)?.nome || 'N/A'}
                     <Button
                       variant="ghost"
                       size="sm"
                       className="ml-1 h-3 w-3 p-0 hover:bg-transparent"
-                      onClick={() => updateFilter('pagoFilter', 'todos')}
-                    >
-                      <X className="h-2 w-2" />
-                    </Button>
-                  </Badge>
-                )}
-                {filters.receberFilter !== 'todos' && (
-                  <Badge variant="secondary" className="text-xs">
-                    A Receber: {filterOptions.faturado.find(opt => opt.value === filters.receberFilter)?.label}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="ml-1 h-3 w-3 p-0 hover:bg-transparent"
-                      onClick={() => updateFilter('receberFilter', 'todos')}
+                      onClick={() => updateFilter('categoria', 'todas')}
                     >
                       <X className="h-2 w-2" />
                     </Button>

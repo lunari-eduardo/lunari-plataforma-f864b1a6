@@ -23,6 +23,7 @@ import { ClientFiltersBar, ClientFilters } from '@/components/crm/ClientFiltersB
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { supabase } from '@/integrations/supabase/client';
 export default function Clientes() {
   // New Supabase real-time client management
   const {
@@ -43,10 +44,9 @@ export default function Clientes() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [filters, setFilters] = useState<ClientFilters>({
     filtro: '',
-    statusFilter: 'todos',
-    faturadoFilter: 'todos',
-    pagoFilter: 'todos',
-    receberFilter: 'todos'
+    dataInicio: '',
+    dataFim: '',
+    categoria: 'todas'
   });
   const [showClientForm, setShowClientForm] = useState(false);
   const [editingClient, setEditingClient] = useState<Cliente | null>(null);
@@ -110,6 +110,72 @@ export default function Clientes() {
   // Obter métricas dos clientes
   const clientMetrics = useClientMetrics(clientesLegacy);
 
+  // Estado para armazenar IDs de clientes que passaram no filtro de sessões
+  const [clientesFiltradosPorSessao, setClientesFiltradosPorSessao] = useState<Set<string> | null>(null);
+  const [isLoadingSessionFilter, setIsLoadingSessionFilter] = useState(false);
+
+  // Buscar clientes que tiveram sessões no período/categoria especificados
+  useEffect(() => {
+    const filtrarPorSessoes = async () => {
+      // Se não há filtros de período/categoria, limpar filtro
+      if (!filters.dataInicio && !filters.dataFim && (!filters.categoria || filters.categoria === 'todas')) {
+        setClientesFiltradosPorSessao(null);
+        return;
+      }
+
+      setIsLoadingSessionFilter(true);
+
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          setClientesFiltradosPorSessao(null);
+          return;
+        }
+
+        let query = supabase
+          .from('clientes_sessoes')
+          .select('cliente_id')
+          .eq('user_id', user.id);
+
+        // Filtrar por data início
+        if (filters.dataInicio) {
+          query = query.gte('data_sessao', filters.dataInicio);
+        }
+
+        // Filtrar por data fim
+        if (filters.dataFim) {
+          query = query.lte('data_sessao', filters.dataFim);
+        }
+
+        // Filtrar por categoria
+        if (filters.categoria && filters.categoria !== 'todas') {
+          query = query.eq('categoria', filters.categoria);
+        }
+
+        const { data, error } = await query;
+
+        if (error) {
+          console.error('Erro ao filtrar sessões:', error);
+          toast.error('Erro ao aplicar filtros de sessão');
+          setClientesFiltradosPorSessao(null);
+          return;
+        }
+
+        // Extrair IDs únicos de clientes
+        const clienteIds = new Set<string>(data?.map(s => s.cliente_id as string) || []);
+        setClientesFiltradosPorSessao(clienteIds);
+
+      } catch (error) {
+        console.error('Erro ao filtrar por sessões:', error);
+        setClientesFiltradosPorSessao(null);
+      } finally {
+        setIsLoadingSessionFilter(false);
+      }
+    };
+
+    filtrarPorSessoes();
+  }, [filters.dataInicio, filters.dataFim, filters.categoria]);
+
   // Force cleanup on unmount
   useEffect(() => {
     return () => {
@@ -167,13 +233,20 @@ export default function Clientes() {
   // Filtrar clientes
   const clientesFiltrados = useMemo(() => {
     return clientMetrics.filter(cliente => {
-      const nomeMatch = cliente.nome.toLowerCase().includes(filters.filtro.toLowerCase()) || cliente.email.toLowerCase().includes(filters.filtro.toLowerCase()) || cliente.telefone.includes(filters.filtro);
-      const faturadoMatch = !filters.faturadoFilter || filters.faturadoFilter === 'todos' || filters.faturadoFilter === 'baixo' && cliente.totalFaturado < 1000 || filters.faturadoFilter === 'medio' && cliente.totalFaturado >= 1000 && cliente.totalFaturado < 5000 || filters.faturadoFilter === 'alto' && cliente.totalFaturado >= 5000;
-      const pagoMatch = !filters.pagoFilter || filters.pagoFilter === 'todos' || filters.pagoFilter === 'baixo' && cliente.totalPago < 1000 || filters.pagoFilter === 'medio' && cliente.totalPago >= 1000 && cliente.totalPago < 5000 || filters.pagoFilter === 'alto' && cliente.totalPago >= 5000;
-      const receberMatch = !filters.receberFilter || filters.receberFilter === 'todos' || filters.receberFilter === 'baixo' && cliente.aReceber < 1000 || filters.receberFilter === 'medio' && cliente.aReceber >= 1000 && cliente.aReceber < 5000 || filters.receberFilter === 'alto' && cliente.aReceber >= 5000;
-      return nomeMatch && faturadoMatch && pagoMatch && receberMatch;
+      // Filtro de busca por nome/email/telefone
+      const nomeMatch = 
+        cliente.nome.toLowerCase().includes(filters.filtro.toLowerCase()) ||
+        cliente.email.toLowerCase().includes(filters.filtro.toLowerCase()) ||
+        cliente.telefone.includes(filters.filtro);
+
+      // Filtro de sessões por período/categoria
+      const sessaoMatch = 
+        clientesFiltradosPorSessao === null || // Sem filtro de sessão
+        clientesFiltradosPorSessao.has(cliente.id); // Cliente está na lista filtrada
+
+      return nomeMatch && sessaoMatch;
     });
-  }, [clientMetrics, filters]);
+  }, [clientMetrics, filters.filtro, clientesFiltradosPorSessao]);
 
   // Ordenar clientes
   const clientesOrdenados = useMemo(() => {
@@ -308,10 +381,9 @@ export default function Clientes() {
   const limparFiltros = () => {
     setFilters({
       filtro: '',
-      statusFilter: 'todos',
-      faturadoFilter: 'todos',
-      pagoFilter: 'todos',
-      receberFilter: 'todos'
+      dataInicio: '',
+      dataFim: '',
+      categoria: 'todas'
     });
   };
   return <ScrollArea className="h-[calc(100vh-120px)]">
@@ -481,9 +553,9 @@ export default function Clientes() {
             <User className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium mb-2">Nenhum cliente encontrado</h3>
             <p className="text-sm text-muted-foreground mb-4 text-center">
-              {filters.filtro || filters.statusFilter && filters.statusFilter !== 'todos' || filters.faturadoFilter && filters.faturadoFilter !== 'todos' || filters.pagoFilter && filters.pagoFilter !== 'todos' || filters.receberFilter && filters.receberFilter !== 'todos' ? 'Não encontramos clientes com os critérios de busca informados.' : 'Adicione seus primeiros clientes para começar.'}
+              {filters.filtro || filters.dataInicio || filters.dataFim || (filters.categoria && filters.categoria !== 'todas') ? 'Não encontramos clientes com os critérios de busca informados.' : 'Adicione seus primeiros clientes para começar.'}
             </p>
-            {filters.filtro || filters.statusFilter && filters.statusFilter !== 'todos' || filters.faturadoFilter && filters.faturadoFilter !== 'todos' || filters.pagoFilter && filters.pagoFilter !== 'todos' || filters.receberFilter && filters.receberFilter !== 'todos' ? <Button onClick={limparFiltros} variant="outline">
+            {filters.filtro || filters.dataInicio || filters.dataFim || (filters.categoria && filters.categoria !== 'todas') ? <Button onClick={limparFiltros} variant="outline">
                 Limpar filtros
               </Button> : <Button onClick={handleAddClient} className="flex items-center gap-2">
                 <UserPlus className="h-4 w-4" />
