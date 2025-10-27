@@ -5,7 +5,7 @@ import { useOptimisticConfiguration } from '@/hooks/useOptimisticConfiguration';
 import { toast } from 'sonner';
 import type { Categoria, Pacote, Produto, EtapaTrabalho } from '@/types/configuration';
 
-const CONFIGURATION_DEBUG = true;
+const CONFIGURATION_DEBUG = false;
 
 // Singleton guard to prevent multiple initializations
 let isInitialized = false;

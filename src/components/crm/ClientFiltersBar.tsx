@@ -43,12 +43,6 @@ export function ClientFiltersBar({
   
   // Buscar categorias disponíveis
   const { categorias, isLoadingCategorias } = useRealtimeConfiguration();
-  
-  console.log('🎨 ClientFiltersBar - Categorias:', { 
-    total: categorias?.length || 0, 
-    loading: isLoadingCategorias,
-    categorias: categorias 
-  });
 
   const updateFilter = (key: keyof ClientFilters, value: string) => {
     onFiltersChange({
@@ -233,7 +227,7 @@ export function ClientFiltersBar({
                 <SelectItem value="todas">Todas as Categorias</SelectItem>
                 {categorias && categorias.length > 0 ? (
                   categorias.map(cat => (
-                    <SelectItem key={cat.id} value={cat.id}>
+                    <SelectItem key={cat.id} value={cat.nome}>
                       <div className="flex items-center gap-2">
                         <div 
                           className="w-2 h-2 rounded-full" 
