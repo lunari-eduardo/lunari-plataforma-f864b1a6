@@ -274,6 +274,49 @@ export function useClientesRealtime() {
     }
   }, []);
 
+  // ============= VERIFICAR DADOS VINCULADOS =============
+  
+  const verificarClienteTemDados = useCallback(async (id: string): Promise<{
+    temDados: boolean;
+    sessoes: number;
+    pagamentos: number;
+  }> => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Usuário não autenticado');
+
+      // Verificar sessões
+      const { count: sessoesCount, error: sessoesError } = await supabase
+        .from('clientes_sessoes')
+        .select('*', { count: 'exact', head: true })
+        .eq('cliente_id', id)
+        .eq('user_id', user.id);
+
+      if (sessoesError) throw sessoesError;
+
+      // Verificar transações
+      const { count: transacoesCount, error: transacoesError } = await supabase
+        .from('clientes_transacoes')
+        .select('*', { count: 'exact', head: true })
+        .eq('cliente_id', id)
+        .eq('user_id', user.id);
+
+      if (transacoesError) throw transacoesError;
+
+      const sessoes = sessoesCount || 0;
+      const pagamentos = transacoesCount || 0;
+
+      return {
+        temDados: sessoes > 0 || pagamentos > 0,
+        sessoes,
+        pagamentos
+      };
+    } catch (error) {
+      console.error('❌ Erro ao verificar dados do cliente:', error);
+      return { temDados: false, sessoes: 0, pagamentos: 0 };
+    }
+  }, []);
+
   // ============= SYNC FAMÍLIA COMPLETA =============
   
   const syncFamiliaData = useCallback(async (
@@ -504,6 +547,7 @@ export function useClientesRealtime() {
     atualizarCliente,
     removerCliente,
     atualizarClienteCompleto,
+    verificarClienteTemDados,
     
     // Family operations
     adicionarFamilia,
