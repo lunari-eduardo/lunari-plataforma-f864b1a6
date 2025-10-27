@@ -698,40 +698,45 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [etapasOps, suppress]);
 
   const moverEtapa = useCallback(async (id: string, direcao: 'cima' | 'baixo') => {
-    suppress(id);
-    
-    const etapa = etapasRef.current.find(e => e.id === id);
-    if (!etapa) return;
-    
+    // Encontrar etapa atual e calcular alvo baseado na lista ordenada
+    const current = etapasRef.current.find(e => e.id === id);
+    if (!current) return;
+
     const sorted = [...etapasRef.current].sort((a, b) => a.ordem - b.ordem);
     const currentIndex = sorted.findIndex(e => e.id === id);
-    
-    if (direcao === 'cima' && currentIndex > 0) {
-      const targetEtapa = sorted[currentIndex - 1];
-      const tempOrdem = etapa.ordem;
-      suppress(targetEtapa.id);
-      
-      await etapasOps.update(id, { ordem: targetEtapa.ordem }, async () => {
-        const updated = etapasRef.current.map(e => {
-          if (e.id === id) return { ...e, ordem: targetEtapa.ordem };
-          if (e.id === targetEtapa.id) return { ...e, ordem: tempOrdem };
-          return e;
-        });
-        await configurationService.saveEtapas(updated);
-      });
-    } else if (direcao === 'baixo' && currentIndex < sorted.length - 1) {
-      const targetEtapa = sorted[currentIndex + 1];
-      const tempOrdem = etapa.ordem;
-      suppress(targetEtapa.id);
-      
-      await etapasOps.update(id, { ordem: targetEtapa.ordem }, async () => {
-        const updated = etapasRef.current.map(e => {
-          if (e.id === id) return { ...e, ordem: targetEtapa.ordem };
-          if (e.id === targetEtapa.id) return { ...e, ordem: tempOrdem };
-          return e;
-        });
-        await configurationService.saveEtapas(updated);
-      });
+
+    const targetIndex = direcao === 'cima' ? currentIndex - 1 : currentIndex + 1;
+    const target = sorted[targetIndex];
+    if (!target) return;
+
+    // Preparar atualização otimista para AMBOS os itens (swap de ordem)
+    const updated = etapasRef.current
+      .map(e => {
+        if (e.id === current.id) return { ...e, ordem: target.ordem };
+        if (e.id === target.id) return { ...e, ordem: current.ordem };
+        return e;
+      })
+      .sort((a, b) => a.ordem - b.ordem);
+
+    // Suprimir eventos realtime para os dois IDs enquanto persistimos
+    suppress(current.id);
+    suppress(target.id);
+
+    // Atualização otimista do array completo para refletir imediatamente no UI
+    etapasOps.set(updated);
+
+    try {
+      await configurationService.saveEtapas(updated);
+    } catch (error) {
+      console.error('❌ [moverEtapa] Erro ao salvar reordenação', error);
+      toast.error('Erro ao reordenar etapas. Alteração pode não ter sido salva.');
+      try {
+        // Recuperar estado consistente do backend
+        const reloaded = await configurationService.loadEtapasAsync();
+        etapasOps.set(reloaded);
+      } catch (reloadError) {
+        console.error('❌ [moverEtapa] Erro ao recarregar etapas', reloadError);
+      }
     }
   }, [suppress]);
 
