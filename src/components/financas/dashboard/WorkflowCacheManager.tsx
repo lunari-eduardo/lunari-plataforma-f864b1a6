@@ -53,9 +53,5 @@ export function WorkflowCacheManager() {
       setIsLoading(false);
     }
   };
-  return <Card className="border-2 border-dashed border-orange-200 bg-orange-50/50">
-      
-      
-      
-    </Card>;
+  return;
 }
