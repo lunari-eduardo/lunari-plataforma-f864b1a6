@@ -82,6 +82,9 @@ export default defineConfig(({ mode }) => ({
     global: "globalThis",
     VITE_APP_VERSION: JSON.stringify(process.env.npm_package_version || '1.0.0'),
   },
+  esbuild: {
+    drop: mode === 'production' ? ['console', 'debugger'] : [],
+  },
   build: {
     sourcemap: false,
     rollupOptions: {

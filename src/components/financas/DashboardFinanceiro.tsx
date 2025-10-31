@@ -6,8 +6,7 @@ import {
   DashboardKpiCards,
   DashboardGoalsDonuts,
   DashboardChartsBlock,
-  EquipmentModalGateway,
-  WorkflowCacheManager
+  EquipmentModalGateway
 } from './dashboard';
 
 const DashboardFinanceiro = memo(function DashboardFinanceiro() {
@@ -51,9 +50,6 @@ const DashboardFinanceiro = memo(function DashboardFinanceiro() {
           anosDisponiveis={anosDisponiveis}
           getNomeMes={getNomeMes}
         />
-
-        {/* ⚠️ TEMPORÁRIO: Ferramenta de correção */}
-        <WorkflowCacheManager />
 
         {/* KPIs Cards */}
         <DashboardKpiCards

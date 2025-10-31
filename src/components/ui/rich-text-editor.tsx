@@ -1,4 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+import DOMPurify from 'dompurify';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Toggle } from '@/components/ui/toggle';
@@ -88,7 +89,11 @@ export default function RichTextEditor({
 
   const handleInput = useCallback(() => {
     if (editorRef.current) {
-      onChange(editorRef.current.innerHTML);
+      const sanitized = DOMPurify.sanitize(editorRef.current.innerHTML, {
+        ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'ul', 'ol', 'li', 'b', 'i', 'div', 'a'],
+        ALLOWED_ATTR: ['href', 'target']
+      });
+      onChange(sanitized);
     }
   }, [onChange]);
 
@@ -218,7 +223,10 @@ export default function RichTextEditor({
             className="p-3 bg-lunar-background text-lunar-text prose prose-sm max-w-none"
             style={{ minHeight }}
             dangerouslySetInnerHTML={{ 
-              __html: formatPreview(value) || `<span class="text-lunar-textSecondary">${placeholder}</span>`
+              __html: DOMPurify.sanitize(
+                formatPreview(value) || `<span class="text-lunar-textSecondary">${placeholder}</span>`,
+                { ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'ul', 'ol', 'li', 'b', 'i', 'span', 'a'], ALLOWED_ATTR: ['href', 'target', 'class'] }
+              )
             }}
           />
         ) : (

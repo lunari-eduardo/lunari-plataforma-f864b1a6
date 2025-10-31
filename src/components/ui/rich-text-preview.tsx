@@ -1,4 +1,5 @@
 import React from 'react';
+import DOMPurify from 'dompurify';
 import { cn } from '@/lib/utils';
 
 interface RichTextPreviewProps {
@@ -40,7 +41,10 @@ export default function RichTextPreview({
         className
       )}
       dangerouslySetInnerHTML={{ 
-        __html: formatContent(content)
+        __html: DOMPurify.sanitize(formatContent(content), {
+          ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'ul', 'ol', 'li', 'b', 'i', 'div', 'a'],
+          ALLOWED_ATTR: ['href', 'target']
+        })
       }}
     />
   );
