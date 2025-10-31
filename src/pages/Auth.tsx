@@ -62,8 +62,8 @@ export default function Auth() {
       return;
     }
 
-    if (signUpData.password.length < 6) {
-      toast.error('A senha deve ter pelo menos 6 caracteres');
+    if (signUpData.password.length < 8) {
+      toast.error('A senha deve ter pelo menos 8 caracteres');
       return;
     }
 
