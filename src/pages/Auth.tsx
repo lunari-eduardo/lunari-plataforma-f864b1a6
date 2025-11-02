@@ -68,15 +68,15 @@ export default function Auth() {
         <div className="absolute inset-0 bg-gradient-to-br from-[#CD7F5E]/60 via-[#E89A7A]/50 to-[#CD7F5E]/60" />
         
         {/* Card Principal */}
-        <Card className="relative z-10 w-full max-w-md bg-white/95 backdrop-blur-md border-white/30 shadow-2xl overflow-hidden">
+        <Card className="relative z-10 w-full max-w-md bg-black/20 backdrop-blur-md border-white/20 shadow-2xl overflow-hidden">
           {mode === 'signup' && <StepIndicator currentStep={1} />}
           
           <CardContent className="space-y-6 p-6 md:p-8">
             <div className="space-y-2 text-center">
-              <h1 className="text-3xl md:text-4xl font-light text-gray-800">
+              <h1 className="text-3xl md:text-4xl font-light text-white">
                 {mode === 'login' ? 'Entrar' : 'Criar Conta'}
               </h1>
-              <p className="text-sm text-gray-600 font-light">
+              <p className="text-sm text-white/80 font-light">
                 {mode === 'login' 
                   ? 'Entre com sua conta Google para continuar' 
                   : 'Cadastre-se com Google para começar'
@@ -87,7 +87,7 @@ export default function Auth() {
             <Button 
               onClick={handleGoogleSignIn}
               disabled={isSigningIn}
-              className="w-full h-12 flex items-center justify-center gap-3 bg-white hover:bg-gray-50 text-gray-900 border border-gray-300 font-light shadow-sm transition-all duration-150"
+              className="w-full h-12 flex items-center justify-center gap-3 bg-white hover:bg-gray-50 text-gray-900 border border-white/30 font-light shadow-sm transition-all duration-150"
               variant="outline"
             >
               {isSigningIn ? (
@@ -107,16 +107,16 @@ export default function Auth() {
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300"></div>
+                <div className="w-full border-t border-white/30"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500 font-light">ou</span>
+                <span className="px-2 bg-black/20 text-white/80 font-light">ou</span>
               </div>
             </div>
 
             <button 
               onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
-              className="w-full text-sm text-gray-600 hover:text-[#CD7F5E] font-light transition-colors duration-150"
+              className="w-full text-sm text-white/80 hover:text-white font-light transition-colors duration-150"
             >
               {mode === 'login' 
                 ? 'Não tem conta? Cadastre-se' 
@@ -124,8 +124,8 @@ export default function Auth() {
               }
             </button>
 
-            <div className="border-t border-gray-200 pt-4">
-              <p className="text-xs text-center text-gray-500 font-light">
+            <div className="border-t border-white/20 pt-4">
+              <p className="text-xs text-center text-white/70 font-light">
                 Ao continuar, você concorda com nossos{' '}
                 <a href="#" className="text-[#CD7F5E] hover:underline">Termos de Serviço</a>
                 {' '}e{' '}

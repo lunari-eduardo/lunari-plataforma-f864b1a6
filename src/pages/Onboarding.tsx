@@ -155,7 +155,7 @@ export default function Onboarding() {
       >
         <div className="absolute inset-0 bg-gradient-to-br from-[#CD7F5E]/60 via-[#E89A7A]/50 to-[#CD7F5E]/60" />
         
-        <Card className="relative z-10 w-full max-w-md bg-white/95 backdrop-blur-md border-white/30 shadow-2xl overflow-hidden">
+        <Card className="relative z-10 w-full max-w-md bg-black/20 backdrop-blur-md border-white/20 shadow-2xl overflow-hidden">
           {/* Step Indicator - Etapa 2 (Nome) ou Etapa 3 (Cidade) */}
           <StepIndicator currentStep={currentStep === 0 ? 2 : 3} />
 
@@ -184,7 +184,7 @@ export default function Onboarding() {
                   variant="outline"
                   onClick={handleBack}
                   disabled={isLoading}
-                  className="flex-1 h-12 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 font-light"
+                  className="flex-1 h-12 bg-white/10 hover:bg-white/20 text-white border border-white/30 font-light"
                 >
                   Voltar
                 </Button>
@@ -209,7 +209,7 @@ export default function Onboarding() {
             <button
               onClick={handleSkip}
               disabled={isLoading}
-              className="w-full text-sm text-gray-600 hover:text-[#CD7F5E] font-light transition-colors duration-150"
+              className="w-full text-sm text-white/80 hover:text-white font-light transition-colors duration-150"
             >
               Pular por enquanto
             </button>
