@@ -1,14 +1,18 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
+import { StepIndicator } from '@/components/auth/StepIndicator';
+import lunariLogo from '@/assets/lunari-logo.png';
+import authBackground from '@/assets/auth-background.jpg';
 
 export default function Auth() {
   const navigate = useNavigate();
   const { signInWithGoogle, user, loading } = useAuth();
   const [isSigningIn, setIsSigningIn] = useState(false);
+  const [mode, setMode] = useState<'login' | 'signup'>('login');
 
   useEffect(() => {
     if (!loading && user) {
@@ -25,7 +29,6 @@ export default function Auth() {
         toast.error(`Erro ao entrar com Google: ${error.message}`);
         setIsSigningIn(false);
       }
-      // Não seta isSigningIn(false) aqui pois o usuário será redirecionado
     } catch (error) {
       toast.error('Erro inesperado. Tente novamente.');
       setIsSigningIn(false);
@@ -35,29 +38,56 @@ export default function Auth() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-lunar-bg">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-lunar-accent"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#CD7F5E]"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-lunar-bg p-4">
-      <Card className="w-full max-w-md bg-lunar-surface border-lunar-border">
-        <CardHeader className="space-y-3 text-center">
-          <CardTitle className="text-3xl font-bold text-lunar-text">Lunari</CardTitle>
-          <CardDescription className="text-lunar-textSecondary text-base">
-            Seu negócio em perfeita órbita
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-3">
-            <p className="text-sm text-center text-lunar-textSecondary">
-              Entre com sua conta Google para começar
-            </p>
+    <div className="min-h-screen relative">
+      {/* Barra Superior com Logo */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-white/10 backdrop-blur-md border-b border-white/20 p-3 md:p-4">
+        <div className="container mx-auto">
+          <img 
+            src={lunariLogo} 
+            alt="Lunari" 
+            className="h-8 md:h-10 lg:h-12 object-contain" 
+          />
+        </div>
+      </div>
+
+      {/* Background com Gradiente */}
+      <div 
+        className="min-h-screen flex items-center justify-center pt-20 px-4"
+        style={{
+          backgroundImage: `url(${authBackground})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center'
+        }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-br from-[#CD7F5E]/60 via-[#E89A7A]/50 to-[#CD7F5E]/60" />
+        
+        {/* Card Principal */}
+        <Card className="relative z-10 w-full max-w-md bg-white/95 backdrop-blur-md border-white/30 shadow-2xl overflow-hidden">
+          {mode === 'signup' && <StepIndicator currentStep={1} />}
+          
+          <CardContent className="space-y-6 p-6 md:p-8">
+            <div className="space-y-2 text-center">
+              <h1 className="text-3xl md:text-4xl font-light text-gray-800">
+                {mode === 'login' ? 'Entrar' : 'Criar Conta'}
+              </h1>
+              <p className="text-sm text-gray-600 font-light">
+                {mode === 'login' 
+                  ? 'Entre com sua conta Google para continuar' 
+                  : 'Cadastre-se com Google para começar'
+                }
+              </p>
+            </div>
+
             <Button 
               onClick={handleGoogleSignIn}
               disabled={isSigningIn}
-              className="w-full h-12 flex items-center justify-center gap-3 bg-white hover:bg-gray-50 text-gray-900 border border-gray-300"
+              className="w-full h-12 flex items-center justify-center gap-3 bg-white hover:bg-gray-50 text-gray-900 border border-gray-300 font-light shadow-sm transition-all duration-150"
               variant="outline"
             >
               {isSigningIn ? (
@@ -70,22 +100,41 @@ export default function Auth() {
                     <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                     <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                   </svg>
-                  Entrar com Google
+                  {mode === 'login' ? 'Entrar com Google' : 'Cadastre-se com Google'}
                 </>
               )}
             </Button>
-          </div>
 
-          <div className="border-t border-lunar-border pt-4">
-            <p className="text-xs text-center text-lunar-textSecondary">
-              Ao continuar, você concorda com nossos{' '}
-              <a href="#" className="text-lunar-accent hover:underline">Termos de Serviço</a>
-              {' '}e{' '}
-              <a href="#" className="text-lunar-accent hover:underline">Política de Privacidade</a>
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-gray-500 font-light">ou</span>
+              </div>
+            </div>
+
+            <button 
+              onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
+              className="w-full text-sm text-gray-600 hover:text-[#CD7F5E] font-light transition-colors duration-150"
+            >
+              {mode === 'login' 
+                ? 'Não tem conta? Cadastre-se' 
+                : 'Já tem conta? Entre'
+              }
+            </button>
+
+            <div className="border-t border-gray-200 pt-4">
+              <p className="text-xs text-center text-gray-500 font-light">
+                Ao continuar, você concorda com nossos{' '}
+                <a href="#" className="text-[#CD7F5E] hover:underline">Termos de Serviço</a>
+                {' '}e{' '}
+                <a href="#" className="text-[#CD7F5E] hover:underline">Política de Privacidade</a>
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
