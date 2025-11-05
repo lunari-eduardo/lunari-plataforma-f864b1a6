@@ -2,7 +2,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { StepIndicator } from '@/components/auth/StepIndicator';
 import lunariLogo from '@/assets/lunari-logo.png';
@@ -10,9 +10,22 @@ import authBackground from '@/assets/auth-background.jpg';
 
 export default function Auth() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { signInWithGoogle, user, loading } = useAuth();
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [mode, setMode] = useState<'login' | 'signup'>('login');
+
+  // Verificar mensagens de erro/razão na URL
+  useEffect(() => {
+    const reason = searchParams.get('reason');
+    const error = searchParams.get('error');
+
+    if (reason === 'suspended') {
+      toast.error('Sua assinatura está inativa ou expirada. Entre em contato com o suporte.');
+    } else if (error === 'access_denied') {
+      toast.error('Acesso negado. Seu e-mail não está autorizado.');
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (!loading && user) {
@@ -26,7 +39,11 @@ export default function Auth() {
       const { error } = await signInWithGoogle();
       
       if (error) {
-        toast.error(`Erro ao entrar com Google: ${error.message}`);
+        if (error.message?.includes('signup_not_allowed')) {
+          toast.error('E-mail não autorizado. Entre em contato com o suporte para solicitar acesso.');
+        } else {
+          toast.error(`Erro ao entrar com Google: ${error.message}`);
+        }
         setIsSigningIn(false);
       }
     } catch (error) {

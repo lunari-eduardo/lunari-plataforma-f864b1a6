@@ -46,10 +46,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signInWithGoogle = async () => {
+    // Usar domínio fixo para garantir persistência de sessão
+    const siteUrl = import.meta.env.VITE_SITE_URL || window.location.origin;
+    
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/`,
+        redirectTo: `${siteUrl}/`,
         queryParams: {
           access_type: 'offline',
           prompt: 'consent',
