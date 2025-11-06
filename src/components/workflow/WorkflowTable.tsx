@@ -11,6 +11,7 @@ import { GerenciarProdutosModal } from "./GerenciarProdutosModal";
 import { WorkflowPaymentsModal } from "./WorkflowPaymentsModal";
 import { FlexibleDeleteModal } from "./FlexibleDeleteModal";
 import { AuditInfo } from "./AuditInfo";
+import { QuickSessionAdd } from "./QuickSessionAdd";
 import { MessageCircle, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Package, Plus, CreditCard, Calendar, CheckCircle, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -44,6 +45,8 @@ interface WorkflowTableProps {
   sortField: string;
   sortDirection: 'asc' | 'desc';
   onSort: (field: string) => void;
+  enableQuickAdd?: boolean;
+  onQuickAdd?: (sessionData: any) => Promise<void>;
 }
 const desktopColumnWidths = {
   date: 80,
@@ -150,7 +153,9 @@ export function WorkflowTable({
   onScrollChange,
   sortField,
   sortDirection,
-  onSort
+  onSort,
+  enableQuickAdd = false,
+  onQuickAdd
 }: WorkflowTableProps) {
   // CORREÇÃO: Usar real-time configuration (não mais useConfiguration)
   const {

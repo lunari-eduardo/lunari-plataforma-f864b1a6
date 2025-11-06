@@ -10,6 +10,7 @@ import { useWorkflowRealtime } from "@/hooks/useWorkflowRealtime";
 import { useWorkflowData } from "@/hooks/useWorkflowData";
 import { useAppointmentWorkflowSync } from "@/hooks/useAppointmentWorkflowSync";
 import { useClientesRealtime } from "@/hooks/useClientesRealtime";
+import { useSessionsRealtime } from "@/hooks/useSessionsRealtime";
 import { parseDateFromStorage } from "@/utils/dateUtils";
 import { useWorkflowMetrics } from '@/hooks/useWorkflowMetrics';
 import { useWorkflowMetricsRealtime } from '@/hooks/useWorkflowMetricsRealtime';
@@ -48,6 +49,9 @@ export default function Workflow() {
     deleteSession: deleteWorkflowSession,
     createSessionFromAppointment
   } = useWorkflowRealtime();
+  
+  // Use sessions hook for manual session creation
+  const { createManualSession } = useSessionsRealtime();
   
   // ⚡ NOVO: Usar cache inteligente para carregamento rápido
   const {
@@ -424,6 +428,16 @@ export default function Workflow() {
     });
   }, []);
 
+  // Handle quick session add
+  const handleQuickSessionAdd = useCallback(async (data: any) => {
+    try {
+      await createManualSession(data);
+      // Real-time will update the list automatically
+    } catch (error) {
+      console.error('Erro ao criar sessão rápida:', error);
+    }
+  }, [createManualSession]);
+
   // FASE 4: Recongelar todas as sessões manualmente
   const recongelarTodasSessoes = useCallback(async () => {
     try {
@@ -641,6 +655,8 @@ export default function Workflow() {
             sortField={sortField}
             sortDirection={sortDirection}
             onSort={handleSort}
+            enableQuickAdd={true}
+            onQuickAdd={handleQuickSessionAdd}
           />
         )}
       </div>
