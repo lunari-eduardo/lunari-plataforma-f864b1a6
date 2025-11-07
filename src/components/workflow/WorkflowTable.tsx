@@ -674,6 +674,13 @@ export function WorkflowTable({
       </td>;
   }, [visibleColumns, currentColumnWidths, responsiveColumnWidths]);
   return <div className="relative flex flex-col h-full bg-background text-foreground dark:bg-lunar-bg">
+      {/* Quick Add Session Component */}
+      {enableQuickAdd && onQuickAdd && (
+        <div className="mb-4">
+          <QuickSessionAdd onSubmit={onQuickAdd} />
+        </div>
+      )}
+      
       {/* NÍVEL 1: O "BOX DE ROLAGEM" */}
       <div ref={scrollContainerRef} className="h-full w-full overflow-auto bg-background dark:bg-lunar-surface" style={{
       height: 'calc(100vh - 280px)'
