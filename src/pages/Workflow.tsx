@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { WorkflowTable } from "@/components/workflow/WorkflowTable";
+import { QuickSessionAdd } from "@/components/workflow/QuickSessionAdd";
 import { ColumnSettings } from "@/components/workflow/ColumnSettings";
 import { ChevronLeft, ChevronRight, Eye, EyeOff, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -612,6 +613,11 @@ export default function Workflow() {
 
       {/* Workflow Table */}
       <div className="border rounded-lg">
+        {/* Quick Add Session - Always visible */}
+        <div className="p-4 border-b">
+          <QuickSessionAdd onSubmit={handleQuickSessionAdd} />
+        </div>
+
         {sortedSessions.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 gap-4">
             <div className="text-muted-foreground text-center">
@@ -655,8 +661,6 @@ export default function Workflow() {
             sortField={sortField}
             sortDirection={sortDirection}
             onSort={handleSort}
-            enableQuickAdd={true}
-            onQuickAdd={handleQuickSessionAdd}
           />
         )}
       </div>

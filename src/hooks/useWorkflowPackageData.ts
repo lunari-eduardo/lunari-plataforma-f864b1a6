@@ -73,7 +73,7 @@ export const useWorkflowPackageData = () => {
         categoria: packageData.categoria || session.categoria || '',
         // CORREÇÃO: Usar packageName resolvido mas manter referência original se necessário  
         pacote: packageData.packageName || session.pacote || '',
-        valorPacote: `R$ ${(packageData.packageValue || session.valor_total || 0).toFixed(2).replace('.', ',')}`,
+        valorPacote: `R$ ${(packageData.packageValue || session.valor_base_pacote || 0).toFixed(2).replace('.', ',')}`,
         // CORREÇÃO: Priorizar valor da sessão, fallback para valor do pacote ou frozen data
         valorFotoExtra: session.valor_foto_extra ? 
           `R$ ${Number(session.valor_foto_extra).toFixed(2).replace('.', ',')}` : 
