@@ -24,6 +24,9 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
+import { useClienteDuplicateCheck } from '@/hooks/useClienteDuplicateCheck';
+import { ClienteSuggestionsCard } from '@/components/clientes/ClienteSuggestionsCard';
+import { DuplicateWarningDialog } from '@/components/clientes/DuplicateWarningDialog';
 export default function Clientes() {
   // New Supabase real-time client management
   const {
@@ -59,6 +62,11 @@ export default function Clientes() {
   const [openDropdowns, setOpenDropdowns] = useState<Record<string, boolean>>({});
   const [showAniversariantesModal, setShowAniversariantesModal] = useState(false);
   const [viewMode, setViewMode] = useState<'cards' | 'list'>('cards');
+  
+  // Estados para prevenção de duplicatas
+  const [showSuggestions, setShowSuggestions] = useState(true);
+  const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
+  const [forceCreate, setForceCreate] = useState(false);
   const [sortConfig, setSortConfig] = useState<{
     key: 'nome' | 'totalFaturado' | 'totalPago' | 'aReceber' | 'sessoes';
     direction: 'asc' | 'desc';
@@ -109,6 +117,26 @@ export default function Clientes() {
 
   // Obter métricas dos clientes
   const clientMetrics = useClientMetrics(clientesLegacy);
+  
+  // Hook para verificar duplicatas (convertendo de clientesLegacy para array de Cliente)
+  const clientesParaDuplicateCheck = useMemo(() => {
+    return clientesSupabase.map(c => ({
+      id: c.id,
+      nome: c.nome,
+      email: c.email || '',
+      telefone: c.telefone,
+      whatsapp: c.whatsapp,
+      endereco: c.endereco,
+      observacoes: c.observacoes,
+      origem: c.origem
+    }));
+  }, [clientesSupabase]);
+  
+  const duplicateCheck = useClienteDuplicateCheck(
+    formData.nome,
+    clientesParaDuplicateCheck,
+    editingClient?.id
+  );
 
   // Estado para armazenar IDs de clientes que passaram no filtro de sessões
   const [clientesFiltradosPorSessao, setClientesFiltradosPorSessao] = useState<Set<string> | null>(null);
@@ -226,6 +254,18 @@ export default function Clientes() {
           }
         });
       }, 50);
+      
+      // Resetar formulário e estados de duplicata
+      setEditingClient(null);
+      setFormData({
+        nome: '',
+        email: '',
+        telefone: '',
+        origem: ''
+      });
+      setShowSuggestions(true);
+      setShowDuplicateDialog(false);
+      setForceCreate(false);
     }
     setShowClientForm(newOpen);
   }, [dropdownContext]);
@@ -301,6 +341,10 @@ export default function Clientes() {
       telefone: '',
       origem: ''
     });
+    // Resetar estados de duplicata
+    setShowSuggestions(true);
+    setShowDuplicateDialog(false);
+    setForceCreate(false);
     setShowClientForm(true);
   };
   const handleEditClient = (client: ClientMetrics) => {
@@ -358,6 +402,12 @@ export default function Clientes() {
       toast.error('Nome é obrigatório');
       return;
     }
+    
+    // Verificar duplicata apenas se não estiver editando e não for criação forçada
+    if (!editingClient && !forceCreate && duplicateCheck.isDuplicata) {
+      setShowDuplicateDialog(true);
+      return;
+    }
     try {
       if (editingClient) {
         await atualizarClienteSupabase(editingClient.id, formData);
@@ -367,9 +417,68 @@ export default function Clientes() {
         toast.success('Cliente adicionado com sucesso');
       }
       setShowClientForm(false);
+      setEditingClient(null);
+      setFormData({
+        nome: '',
+        email: '',
+        telefone: '',
+        origem: ''
+      });
+      
+      // Resetar estados de duplicata
+      setShowSuggestions(true);
+      setShowDuplicateDialog(false);
+      setForceCreate(false);
     } catch (error) {
       // Error handling is done in the hook
     }
+  };
+  
+  // Funções para lidar com duplicatas
+  const handleEditSuggestion = (cliente: Cliente) => {
+    // Converter Cliente para o formato esperado
+    const clienteLegacy = clientMetrics.find(c => c.id === cliente.id);
+    if (clienteLegacy) {
+      setShowClientForm(false);
+      setShowSuggestions(true);
+      setShowDuplicateDialog(false);
+      setForceCreate(false);
+      
+      // Pequeno delay para evitar problemas com o modal
+      setTimeout(() => {
+        handleEditClient(clienteLegacy);
+      }, 100);
+    }
+  };
+  
+  const handleDismissSuggestions = () => {
+    setShowSuggestions(false);
+  };
+  
+  const handleEditDuplicate = () => {
+    if (duplicateCheck.clienteDuplicado) {
+      handleEditSuggestion(duplicateCheck.clienteDuplicado);
+    }
+  };
+  
+  const handleCreateAnyway = () => {
+    setForceCreate(true);
+    setShowDuplicateDialog(false);
+    
+    // Adicionar sufixo ao nome para diferenciar
+    const suffixMatch = formData.nome.match(/\((\d+)\)$/);
+    const nextNumber = suffixMatch ? parseInt(suffixMatch[1]) + 1 : 2;
+    const newName = suffixMatch 
+      ? formData.nome.replace(/\(\d+\)$/, `(${nextNumber})`)
+      : `${formData.nome} (${nextNumber})`;
+    
+    setFormData(prev => ({ ...prev, nome: newName }));
+    
+    toast.info(`Nome alterado para "${newName}" para evitar duplicação`);
+  };
+  
+  const handleCancelDuplicate = () => {
+    setShowDuplicateDialog(false);
   };
   const handleWhatsApp = (cliente: ClientMetrics) => {
     const telefone = cliente.telefone.replace(/\D/g, '');
@@ -575,10 +684,30 @@ export default function Clientes() {
             <div className="space-y-4">
               <div>
                 <Label htmlFor="nome">Nome *</Label>
-                <Input id="nome" value={formData.nome} onChange={e => setFormData(prev => ({
-                ...prev,
-                nome: e.target.value
-              }))} placeholder="Nome completo" />
+                <Input 
+                  id="nome" 
+                  value={formData.nome} 
+                  onChange={e => {
+                    setFormData(prev => ({
+                      ...prev,
+                      nome: e.target.value
+                    }));
+                    // Resetar flag de criação forçada quando usuário muda o nome
+                    setForceCreate(false);
+                    setShowSuggestions(true);
+                  }} 
+                  placeholder="Nome completo"
+                  className={duplicateCheck.isDuplicata ? 'border-destructive' : ''}
+                />
+                
+                {/* Sugestões de clientes similares */}
+                {!editingClient && showSuggestions && duplicateCheck.clientesSimilares.length > 0 && (
+                  <ClienteSuggestionsCard
+                    clientes={duplicateCheck.clientesSimilares}
+                    onEditClient={handleEditSuggestion}
+                    onDismiss={handleDismissSuggestions}
+                  />
+                )}
               </div>
               
               <div>
@@ -623,13 +752,32 @@ export default function Clientes() {
                 <Button variant="outline" onClick={() => setShowClientForm(false)}>
                   Cancelar
                 </Button>
-                <Button onClick={handleSaveClient}>
+                <Button 
+                  onClick={handleSaveClient}
+                  disabled={!editingClient && !forceCreate && duplicateCheck.isDuplicata}
+                >
                   {editingClient ? 'Atualizar' : 'Adicionar'}
                 </Button>
               </div>
+              
+              {/* Aviso de duplicata bloqueada */}
+              {!editingClient && !forceCreate && duplicateCheck.isDuplicata && (
+                <p className="text-sm text-destructive text-center mt-2">
+                  Cliente com este nome já existe. Clique em "Adicionar" para ver opções.
+                </p>
+              )}
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Dialog de aviso de duplicata */}
+        <DuplicateWarningDialog
+          open={showDuplicateDialog}
+          cliente={duplicateCheck.clienteDuplicado}
+          onEditExisting={handleEditDuplicate}
+          onCreateAnyway={handleCreateAnyway}
+          onCancel={handleCancelDuplicate}
+        />
 
         {/* Modal de Aniversariantes */}
         <AniversariantesModal open={showAniversariantesModal} onOpenChange={setShowAniversariantesModal} clientes={clientesLegacy} />
