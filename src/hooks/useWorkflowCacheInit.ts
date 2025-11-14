@@ -43,12 +43,12 @@ export function useWorkflowCacheInit() {
           }
         }, 2000);
         
-        // Pré-carregar dados em background (não bloquear UI)
+        // Pré-carregar dados em background (4 meses: atual + 2 ant + 1 post)
         setTimeout(() => {
-          workflowCacheManager.preloadCurrentAndPreviousMonth().catch(err => {
+          workflowCacheManager.preloadWorkflowRange().catch(err => {
             console.error('❌ Error preloading workflow cache:', err);
           });
-        }, 1000);
+        }, 500); // Reduzido de 1000ms (já carrega do LocalStorage primeiro)
         
         isInitialized = true;
       }
@@ -106,10 +106,10 @@ export function useWorkflowCacheInit() {
         workflowCacheManager.setUserId(session.user.id);
         
         setTimeout(() => {
-          workflowCacheManager.preloadCurrentAndPreviousMonth().catch(err => {
+          workflowCacheManager.preloadWorkflowRange().catch(err => {
             console.error('❌ Error preloading workflow cache:', err);
           });
-        }, 1000);
+        }, 500); // Reduzido de 1000ms
       } else if (event === 'SIGNED_OUT') {
         console.log('🧹 User signed out, cleaning up cache');
         workflowCacheManager.cleanup();

@@ -26,11 +26,14 @@ class WorkflowCacheManager {
   private channel: BroadcastChannel | null = null;
   private listeners: Set<CacheUpdateListener> = new Set();
   private userId: string | null = null;
-  private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+  private readonly CACHE_TTL = 30 * 60 * 1000; // 30 minutos (aumentado para persistência)
   private readonly CHANNEL_NAME = 'workflow-cache-sync';
+  private readonly STORAGE_KEY = 'workflow-cache';
+  private readonly STORAGE_MAX_AGE = 30 * 60 * 1000; // 30 minutos
 
   private constructor() {
     this.initBroadcastChannel();
+    this.initStorageListener();
   }
 
   static getInstance(): WorkflowCacheManager {
@@ -52,13 +55,38 @@ class WorkflowCacheManager {
   }
 
   /**
-   * Define o userId atual
+   * Inicializa listener para StorageEvent (sincronização entre abas via localStorage)
+   */
+  private initStorageListener() {
+    if (typeof window === 'undefined') return;
+    
+    window.addEventListener('storage', (event) => {
+      if (event.key === this.STORAGE_KEY && event.newValue) {
+        console.log('🔄 WorkflowCacheManager: LocalStorage updated from another tab');
+        this.loadCacheFromLocalStorage();
+        
+        // Notificar listeners com todos os dados em cache
+        const allSessions: WorkflowSession[] = [];
+        this.cache.forEach(entry => allSessions.push(...entry.sessions));
+        this.notifyListeners(allSessions);
+      }
+    });
+  }
+
+  /**
+   * Define o userId atual e tenta carregar cache do LocalStorage
    */
   setUserId(userId: string) {
     if (this.userId !== userId) {
       this.userId = userId;
       this.cache.clear();
       console.log('👤 WorkflowCacheManager: User changed, cache cleared');
+      
+      // Tentar carregar cache do LocalStorage para o novo usuário
+      const loaded = this.loadCacheFromLocalStorage();
+      if (loaded) {
+        console.log('✅ WorkflowCacheManager: Cache loaded from LocalStorage for new user');
+      }
     }
   }
 
@@ -83,26 +111,52 @@ class WorkflowCacheManager {
   }
 
   /**
-   * Pré-carrega mês atual e anterior
+   * Pré-carrega range de 4 meses: atual + 2 anteriores + 1 posterior
    */
-  async preloadCurrentAndPreviousMonth(): Promise<void> {
+  async preloadWorkflowRange(): Promise<void> {
     const now = new Date();
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth() + 1;
     
-    // Calcular mês anterior
-    const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
-    const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+    // Calcular range: 2 meses anteriores + atual + 1 posterior
+    const months = [];
+    
+    // 2 meses anteriores
+    for (let i = 2; i >= 1; i--) {
+      let month = currentMonth - i;
+      let year = currentYear;
+      if (month <= 0) {
+        month += 12;
+        year -= 1;
+      }
+      months.push({ year, month });
+    }
+    
+    // Mês atual
+    months.push({ year: currentYear, month: currentMonth });
+    
+    // 1 mês posterior
+    let nextMonth = currentMonth + 1;
+    let nextYear = currentYear;
+    if (nextMonth > 12) {
+      nextMonth = 1;
+      nextYear += 1;
+    }
+    months.push({ year: nextYear, month: nextMonth });
 
-    console.log('🔄 WorkflowCacheManager: Preloading current and previous month...');
+    console.log('🔄 WorkflowCacheManager: Preloading 4 months:', months);
     
     try {
-      await Promise.all([
-        this.getSessionsForMonth(currentYear, currentMonth, true),
-        this.getSessionsForMonth(prevYear, prevMonth, true)
-      ]);
+      await Promise.all(
+        months.map(({ year, month }) => 
+          this.getSessionsForMonth(year, month, true)
+        )
+      );
       
-      console.log('✅ WorkflowCacheManager: Preload completed');
+      console.log('✅ WorkflowCacheManager: Preload completed (4 months cached)');
+      
+      // Salvar no LocalStorage após pré-carregamento
+      this.saveCacheToLocalStorage();
     } catch (error) {
       console.error('❌ WorkflowCacheManager: Preload failed:', error);
     }
@@ -193,6 +247,9 @@ class WorkflowCacheManager {
 
     console.log(`💾 WorkflowCacheManager: Cache updated for ${key} (${sessions.length} sessions)`);
 
+    // Salvar no LocalStorage
+    this.saveCacheToLocalStorage();
+
     // Broadcast para outras tabs
     this.broadcastUpdate('cache-updated', { year, month, sessionsCount: sessions.length });
   }
@@ -215,6 +272,9 @@ class WorkflowCacheManager {
         cached.sessions.unshift(session); // Adicionar no início
         cached.lastUpdate = Date.now();
         console.log(`➕ WorkflowCacheManager: Session added to cache ${key}`);
+        
+        // Salvar no LocalStorage
+        this.saveCacheToLocalStorage();
         
         // Notificar listeners
         this.notifyListeners(cached.sessions);
@@ -242,6 +302,9 @@ class WorkflowCacheManager {
         updated = true;
         
         console.log(`📝 WorkflowCacheManager: Session updated in cache ${key}`);
+        
+        // Salvar no LocalStorage
+        this.saveCacheToLocalStorage();
         
         // Notificar listeners
         this.notifyListeners(entry.sessions);
@@ -273,6 +336,9 @@ class WorkflowCacheManager {
         removed = true;
         
         console.log(`🗑️ WorkflowCacheManager: Session removed from cache ${key}`);
+        
+        // Salvar no LocalStorage
+        this.saveCacheToLocalStorage();
         
         // Notificar listeners
         this.notifyListeners(entry.sessions);
@@ -315,6 +381,63 @@ class WorkflowCacheManager {
    */
   clearAllCache() {
     this.clearCache();
+  }
+
+  /**
+   * Salva cache no LocalStorage
+   */
+  private saveCacheToLocalStorage() {
+    if (!this.userId) return;
+    
+    try {
+      const cacheData = {
+        userId: this.userId,
+        cache: Array.from(this.cache.entries()),
+        timestamp: Date.now()
+      };
+      
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(cacheData));
+      console.log('💾 WorkflowCacheManager: Cache saved to LocalStorage');
+    } catch (error) {
+      console.error('❌ WorkflowCacheManager: Failed to save cache:', error);
+    }
+  }
+
+  /**
+   * Carrega cache do LocalStorage
+   */
+  private loadCacheFromLocalStorage(): boolean {
+    if (!this.userId) return false;
+    
+    try {
+      const stored = localStorage.getItem(this.STORAGE_KEY);
+      if (!stored) return false;
+      
+      const { userId, cache: cacheEntries, timestamp } = JSON.parse(stored);
+      
+      // Validar userId
+      if (userId !== this.userId) {
+        console.log('⚠️ WorkflowCacheManager: Cache userId mismatch, clearing');
+        localStorage.removeItem(this.STORAGE_KEY);
+        return false;
+      }
+      
+      // Validar idade (máximo configurado em STORAGE_MAX_AGE)
+      const age = Date.now() - timestamp;
+      if (age > this.STORAGE_MAX_AGE) {
+        console.log('⚠️ WorkflowCacheManager: Cache too old, clearing');
+        localStorage.removeItem(this.STORAGE_KEY);
+        return false;
+      }
+      
+      // Restaurar cache
+      this.cache = new Map(cacheEntries);
+      console.log(`✅ WorkflowCacheManager: Cache loaded from LocalStorage (${this.cache.size} months, age: ${Math.round(age / 1000)}s)`);
+      return true;
+    } catch (error) {
+      console.error('❌ WorkflowCacheManager: Failed to load cache:', error);
+      return false;
+    }
   }
 
   /**
