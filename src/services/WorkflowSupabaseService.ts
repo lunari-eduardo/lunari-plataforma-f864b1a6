@@ -449,6 +449,15 @@ export class WorkflowSupabaseService {
       }
 
       console.log('✅ Workflow session created from appointment:', data);
+      
+      // Disparar evento customizado para invalidação imediata do cache
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('workflow-session-created', {
+          detail: { session: data }
+        }));
+        console.log('📢 Event workflow-session-created dispatched');
+      }
+      
       return data;
 
     } catch (error) {

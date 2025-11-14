@@ -77,9 +77,9 @@ export function useWorkflowData(options: UseWorkflowDataOptions) {
         userIdRef.current = user.id;
         workflowCacheManager.setUserId(user.id);
         
-        // Pré-carregar mês atual e anterior no primeiro mount
+        // Pré-carregar range de 4 meses no primeiro mount
         if (isInitialMount.current && autoPreload) {
-          await workflowCacheManager.preloadCurrentAndPreviousMonth();
+          await workflowCacheManager.preloadWorkflowRange();
           isInitialMount.current = false;
         }
       }
@@ -88,12 +88,17 @@ export function useWorkflowData(options: UseWorkflowDataOptions) {
     initUser();
   }, [autoPreload]);
 
-  /**
-   * Carregar dados quando year/month mudam
-   */
+  // Carregar dados quando year/month mudar (otimizado: não recarregar se cache válido)
   useEffect(() => {
+    // Se já temos dados válidos em cache, não recarregar
+    const cacheKey = `${year}-${String(month).padStart(2, '0')}`;
+    if (sessions.length > 0 && !workflowCacheManager.isCacheStale(year, month)) {
+      console.log(`⚡ useWorkflowData: Using existing cached data for ${cacheKey}`);
+      return;
+    }
+    
     loadData();
-  }, [loadData]);
+  }, [loadData, year, month, sessions.length]);
 
   /**
    * Subscribe para atualizações do cache manager
