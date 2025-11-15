@@ -147,9 +147,10 @@ class WorkflowCacheManager {
     console.log('🔄 WorkflowCacheManager: Preloading 4 months:', months);
     
     try {
+      // Carregar todos os meses em paralelo
       await Promise.all(
         months.map(({ year, month }) => 
-          this.getSessionsForMonth(year, month, true)
+          this.fetchFromSupabaseAndCache(year, month)
         )
       );
       
@@ -163,13 +164,13 @@ class WorkflowCacheManager {
   }
 
   /**
-   * Obtém sessões para um mês (com cache)
+   * Obtém sessões para um mês (com cache) - VERSÃO SÍNCRONA
    */
-  async getSessionsForMonth(
+  getSessionsForMonth(
     year: number, 
     month: number,
     forceRefresh: boolean = false
-  ): Promise<WorkflowSession[]> {
+  ): WorkflowSession[] {
     const key = this.getCacheKey(year, month);
     const cached = this.cache.get(key);
 
@@ -179,13 +180,19 @@ class WorkflowCacheManager {
       return cached.sessions;
     }
 
-    // Buscar do Supabase
-    console.log(`🔄 WorkflowCacheManager: Fetching from Supabase for ${key}`);
+    // Se não tem cache, retornar array vazio e carregar em background
+    console.log(`🔄 WorkflowCacheManager: Cache miss for ${key}, loading in background`);
+    this.fetchFromSupabaseAndCache(year, month);
+    return [];
+  }
+
+  /**
+   * Versão assíncrona pública para carregar do Supabase
+   */
+  async fetchFromSupabaseAndCache(year: number, month: number): Promise<WorkflowSession[]> {
+    console.log(`🔄 WorkflowCacheManager: Fetching from Supabase for ${year}-${month}`);
     const sessions = await this.fetchFromSupabase(year, month);
-    
-    // Atualizar cache
     this.updateCache(year, month, sessions, true);
-    
     return sessions;
   }
 
