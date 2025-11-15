@@ -23,11 +23,16 @@ export function useWorkflowCacheInit() {
       if (user && !isInitialized) {
         console.log('🔄 Initializing WorkflowCacheManager for user:', user.id);
         
-        // Configurar userId
+        // Configurar userId e carregar cache do LocalStorage IMEDIATAMENTE
         workflowCacheManager.setUserId(user.id);
         
-        // ✅ CORREÇÃO: Sempre sincronizar appointments ao montar (idempotente)
-        // Remover gate de sessionStorage que bloqueava novas abas/PWA
+        // Pré-carregar dados em background IMEDIATAMENTE (4 meses: atual + 2 ant + 1 post)
+        // O preloadWorkflowRange já verifica o LocalStorage internamente
+        workflowCacheManager.preloadWorkflowRange().catch(err => {
+          console.error('❌ Error preloading workflow cache:', err);
+        });
+        
+        // ✅ Sincronizar appointments em background (não bloqueia carregamento)
         setTimeout(async () => {
           try {
             console.log('🔄 [WorkflowCacheInit] Syncing existing appointments...');
@@ -41,14 +46,7 @@ export function useWorkflowCacheInit() {
           } catch (error) {
             console.error('❌ [WorkflowCacheInit] Error syncing/repairing:', error);
           }
-        }, 2000);
-        
-        // Pré-carregar dados em background (4 meses: atual + 2 ant + 1 post)
-        setTimeout(() => {
-          workflowCacheManager.preloadWorkflowRange().catch(err => {
-            console.error('❌ Error preloading workflow cache:', err);
-          });
-        }, 500); // Reduzido de 1000ms (já carrega do LocalStorage primeiro)
+        }, 3000); // Executar em background sem bloquear
         
         isInitialized = true;
       }

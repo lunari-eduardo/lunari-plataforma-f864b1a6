@@ -41,9 +41,9 @@ export function useWorkflowData(options: UseWorkflowDataOptions) {
       setLoading(true);
       setError(null);
 
-      // 1. Tentar cache primeiro
+      // 1. Tentar cache primeiro (síncrono)
       if (!forceRefresh && !workflowCacheManager.isCacheStale(year, month)) {
-        const cached = await workflowCacheManager.getSessionsForMonth(year, month, false);
+        const cached = workflowCacheManager.getSessionsForMonth(year, month, false);
         if (cached && cached.length > 0) {
           setSessions(cached);
           setCacheHit(true);
@@ -53,9 +53,9 @@ export function useWorkflowData(options: UseWorkflowDataOptions) {
         }
       }
 
-      // 2. Buscar do Supabase (com atualização de cache automática)
+      // 2. Buscar do Supabase
       setCacheHit(false);
-      const freshSessions = await workflowCacheManager.getSessionsForMonth(year, month, true);
+      const freshSessions = await workflowCacheManager.fetchFromSupabaseAndCache(year, month);
       setSessions(freshSessions);
       console.log(`🔄 useWorkflowData: Fresh data loaded for ${year}-${month} (${freshSessions.length} sessions)`);
       
@@ -90,15 +90,25 @@ export function useWorkflowData(options: UseWorkflowDataOptions) {
 
   // Carregar dados quando year/month mudar (otimizado: não recarregar se cache válido)
   useEffect(() => {
-    // Se já temos dados válidos em cache, não recarregar
-    const cacheKey = `${year}-${String(month).padStart(2, '0')}`;
-    if (sessions.length > 0 && !workflowCacheManager.isCacheStale(year, month)) {
-      console.log(`⚡ useWorkflowData: Using existing cached data for ${cacheKey}`);
-      return;
+    // Verificar se já temos dados em cache válidos ANTES de chamar loadData
+    if (!workflowCacheManager.isCacheStale(year, month)) {
+      const cached = workflowCacheManager.getSessionsForMonth(year, month, false);
+      if (cached && cached.length > 0) {
+        // Usar Promise.then para garantir que seja síncrono
+        Promise.resolve(cached).then(cachedSessions => {
+          if (cachedSessions.length > 0) {
+            setSessions(cachedSessions);
+            setCacheHit(true);
+            setLoading(false);
+            console.log(`⚡ useWorkflowData: Using cached data for ${year}-${month} (${cachedSessions.length} sessions)`);
+          }
+        });
+        return;
+      }
     }
     
     loadData();
-  }, [loadData, year, month, sessions.length]);
+  }, [year, month, loadData]);
 
   /**
    * Subscribe para atualizações do cache manager
