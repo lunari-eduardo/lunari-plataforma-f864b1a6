@@ -34,17 +34,17 @@ export function useWorkflowData(options: UseWorkflowDataOptions) {
   const userIdRef = useRef<string | null>(null);
 
   /**
-   * Carrega dados (cache-first)
+   * Carrega dados (cache-first) - usado para refresh manual
    */
   const loadData = useCallback(async (forceRefresh = false) => {
     try {
       setLoading(true);
       setError(null);
 
-      // 1. Tentar cache primeiro (síncrono)
-      if (!forceRefresh && !workflowCacheManager.isCacheStale(year, month)) {
-        const cached = workflowCacheManager.getSessionsForMonth(year, month, false);
-        if (cached && cached.length > 0) {
+      // 1. Tentar cache primeiro (síncrono) se não forçar refresh
+      if (!forceRefresh) {
+        const cached = workflowCacheManager.getSessionsForMonthSync(year, month);
+        if (cached !== null) {
           setSessions(cached);
           setCacheHit(true);
           setLoading(false);
@@ -75,40 +75,75 @@ export function useWorkflowData(options: UseWorkflowDataOptions) {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         userIdRef.current = user.id;
+        // Apenas garantir que userId está configurado (preload é feito no useWorkflowCacheInit)
         workflowCacheManager.setUserId(user.id);
-        
-        // Pré-carregar range de 4 meses no primeiro mount
-        if (isInitialMount.current && autoPreload) {
-          await workflowCacheManager.preloadWorkflowRange();
-          isInitialMount.current = false;
-        }
       }
     };
 
     initUser();
-  }, [autoPreload]);
+  }, []);
 
-  // Carregar dados quando year/month mudar (otimizado: não recarregar se cache válido)
+  // FASE 4: Carregar dados com estratégia otimizada
   useEffect(() => {
-    // Verificar se já temos dados em cache válidos ANTES de chamar loadData
-    if (!workflowCacheManager.isCacheStale(year, month)) {
-      const cached = workflowCacheManager.getSessionsForMonth(year, month, false);
-      if (cached && cached.length > 0) {
-        // Usar Promise.then para garantir que seja síncrono
-        Promise.resolve(cached).then(cachedSessions => {
-          if (cachedSessions.length > 0) {
-            setSessions(cachedSessions);
+    let isMounted = true;
+    
+    const loadDataSmart = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // 1️⃣ Tentar cache síncrono PRIMEIRO (< 1ms)
+        const cachedSync = workflowCacheManager.getSessionsForMonthSync(year, month);
+        if (cachedSync !== null) {
+          if (isMounted) {
+            setSessions(cachedSync);
             setCacheHit(true);
             setLoading(false);
-            console.log(`⚡ useWorkflowData: Using cached data for ${year}-${month} (${cachedSessions.length} sessions)`);
+            console.log(`⚡ useWorkflowData: Instant cache hit for ${year}-${month} (${cachedSync.length} sessions)`);
           }
-        });
-        return;
+          return;
+        }
+        
+        // 2️⃣ Se não tem cache, ESPERAR preload completar
+        console.log(`⏳ useWorkflowData: Waiting for preload to complete...`);
+        await workflowCacheManager.waitForPreload();
+        
+        // 3️⃣ Verificar cache novamente (preload pode ter carregado)
+        const cachedAfterPreload = workflowCacheManager.getSessionsForMonthSync(year, month);
+        if (cachedAfterPreload !== null) {
+          if (isMounted) {
+            setSessions(cachedAfterPreload);
+            setCacheHit(true);
+            setLoading(false);
+            console.log(`⚡ useWorkflowData: Cache hit after preload for ${year}-${month} (${cachedAfterPreload.length} sessions)`);
+          }
+          return;
+        }
+        
+        // 4️⃣ Se ainda não tem (mês fora do range 4 meses), buscar do Supabase
+        console.log(`🔄 useWorkflowData: Fetching from Supabase for ${year}-${month}`);
+        const fresh = await workflowCacheManager.getSessionsForMonth(year, month, false);
+        if (isMounted) {
+          setSessions(fresh);
+          setCacheHit(false);
+          setLoading(false);
+        }
+        
+      } catch (err) {
+        console.error('❌ useWorkflowData: Error loading data:', err);
+        if (isMounted) {
+          setError(err instanceof Error ? err.message : 'Failed to load workflow data');
+          setLoading(false);
+        }
       }
-    }
+    };
     
-    loadData();
-  }, [year, month, loadData]);
+    loadDataSmart();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [year, month]);
 
   /**
    * Subscribe para atualizações do cache manager

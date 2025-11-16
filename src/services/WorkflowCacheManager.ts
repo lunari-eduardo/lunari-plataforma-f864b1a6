@@ -30,6 +30,10 @@ class WorkflowCacheManager {
   private readonly CHANNEL_NAME = 'workflow-cache-sync';
   private readonly STORAGE_KEY = 'workflow-cache';
   private readonly STORAGE_MAX_AGE = 30 * 60 * 1000; // 30 minutos
+  
+  // FASE 1: Controle de preload
+  private isPreloading: boolean = false;
+  private preloadPromise: Promise<void> | null = null;
 
   private constructor() {
     this.initBroadcastChannel();
@@ -86,6 +90,16 @@ class WorkflowCacheManager {
       const loaded = this.loadCacheFromLocalStorage();
       if (loaded) {
         console.log('✅ WorkflowCacheManager: Cache loaded from LocalStorage for new user');
+        
+        // FASE 2: Notificar listeners que cache foi carregado
+        const allSessions: WorkflowSession[] = [];
+        this.cache.forEach(entry => allSessions.push(...entry.sessions));
+        this.notifyListeners(allSessions);
+        
+        // Broadcast para outras tabs
+        this.broadcastUpdate('cache-loaded-from-storage', { 
+          monthsLoaded: this.cache.size 
+        });
       }
     }
   }
@@ -111,79 +125,115 @@ class WorkflowCacheManager {
   }
 
   /**
-   * Pré-carrega range de 4 meses: atual + 2 anteriores + 1 posterior
+   * FASE 1: Retorna se há um preload em andamento
    */
-  async preloadWorkflowRange(): Promise<void> {
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth() + 1;
-    
-    // Calcular range: 2 meses anteriores + atual + 1 posterior
-    const months = [];
-    
-    // 2 meses anteriores
-    for (let i = 2; i >= 1; i--) {
-      let month = currentMonth - i;
-      let year = currentYear;
-      if (month <= 0) {
-        month += 12;
-        year -= 1;
-      }
-      months.push({ year, month });
-    }
-    
-    // Mês atual
-    months.push({ year: currentYear, month: currentMonth });
-    
-    // 1 mês posterior
-    let nextMonth = currentMonth + 1;
-    let nextYear = currentYear;
-    if (nextMonth > 12) {
-      nextMonth = 1;
-      nextYear += 1;
-    }
-    months.push({ year: nextYear, month: nextMonth });
-
-    console.log('🔄 WorkflowCacheManager: Preloading 4 months:', months);
-    
-    try {
-      // Carregar todos os meses em paralelo
-      await Promise.all(
-        months.map(({ year, month }) => 
-          this.fetchFromSupabaseAndCache(year, month)
-        )
-      );
-      
-      console.log('✅ WorkflowCacheManager: Preload completed (4 months cached)');
-      
-      // Salvar no LocalStorage após pré-carregamento
-      this.saveCacheToLocalStorage();
-    } catch (error) {
-      console.error('❌ WorkflowCacheManager: Preload failed:', error);
+  isPreloadInProgress(): boolean {
+    return this.isPreloading;
+  }
+  
+  /**
+   * FASE 1: Aguarda preload completar (se estiver em andamento)
+   */
+  async waitForPreload(): Promise<void> {
+    if (this.preloadPromise) {
+      await this.preloadPromise;
     }
   }
 
   /**
-   * Obtém sessões para um mês (com cache) - VERSÃO SÍNCRONA
+   * Pré-carrega range de 4 meses: atual + 2 anteriores + 1 posterior
+   * FASE 1: Com controle de estado
    */
-  getSessionsForMonth(
+  async preloadWorkflowRange(): Promise<void> {
+    // Se já está preloading, retornar a Promise existente
+    if (this.preloadPromise) {
+      console.log('⏳ WorkflowCacheManager: Preload already in progress, waiting...');
+      return this.preloadPromise;
+    }
+    
+    this.isPreloading = true;
+    this.preloadPromise = (async () => {
+      try {
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth() + 1;
+
+        // Calcular range de 4 meses
+        const months = [];
+        
+        // Adicionar 2 meses anteriores
+        for (let i = 2; i >= 1; i--) {
+          const date = new Date(currentYear, currentMonth - 1 - i, 1);
+          months.push({ year: date.getFullYear(), month: date.getMonth() + 1 });
+        }
+        
+        // Adicionar mês atual
+        months.push({ year: currentYear, month: currentMonth });
+        
+        // Adicionar 1 mês posterior
+        const nextMonth = new Date(currentYear, currentMonth, 1);
+        months.push({ year: nextMonth.getFullYear(), month: nextMonth.getMonth() + 1 });
+
+        console.log('🔄 WorkflowCacheManager: Preloading range:', months);
+
+        // Carregar todos os meses em paralelo
+        await Promise.all(
+          months.map(({ year, month }) => 
+            this.fetchFromSupabaseAndCache(year, month)
+          )
+        );
+        
+        console.log('✅ WorkflowCacheManager: Preload completed (4 months cached)');
+        
+        // Salvar no LocalStorage após pré-carregamento
+        this.saveCacheToLocalStorage();
+      } catch (error) {
+        console.error('❌ WorkflowCacheManager: Preload failed:', error);
+        throw error;
+      } finally {
+        this.isPreloading = false;
+        this.preloadPromise = null;
+      }
+    })();
+    
+    return this.preloadPromise;
+  }
+
+  /**
+   * FASE 3: SÍNCRONO - Retorna cache se disponível, senão retorna null
+   */
+  getSessionsForMonthSync(year: number, month: number): WorkflowSession[] | null {
+    const key = this.getCacheKey(year, month);
+    const cached = this.cache.get(key);
+    
+    if (cached && !this.isCacheStale(year, month)) {
+      console.log(`⚡ WorkflowCacheManager: Cache hit (sync) for ${key} (${cached.sessions.length} sessions)`);
+      return cached.sessions;
+    }
+    
+    console.log(`⏳ WorkflowCacheManager: No valid cache (sync) for ${key}`);
+    return null; // Indica que não tem cache disponível
+  }
+
+  /**
+   * FASE 3: ASSÍNCRONO - Retorna cache OU busca do Supabase
+   */
+  async getSessionsForMonth(
     year: number, 
     month: number,
     forceRefresh: boolean = false
-  ): WorkflowSession[] {
-    const key = this.getCacheKey(year, month);
-    const cached = this.cache.get(key);
-
-    // Retornar cache se válido e não forçar refresh
-    if (cached && !forceRefresh && !this.isCacheStale(year, month)) {
-      console.log(`⚡ WorkflowCacheManager: Cache hit for ${key}`);
-      return cached.sessions;
+  ): Promise<WorkflowSession[]> {
+    // Se tem cache válido e não força refresh, retorna
+    if (!forceRefresh) {
+      const cached = this.getSessionsForMonthSync(year, month);
+      if (cached !== null) {
+        return cached;
+      }
     }
-
-    // Se não tem cache, retornar array vazio e carregar em background
-    console.log(`🔄 WorkflowCacheManager: Cache miss for ${key}, loading in background`);
-    this.fetchFromSupabaseAndCache(year, month);
-    return [];
+    
+    // Senão, buscar do Supabase (com await)
+    console.log(`🔄 WorkflowCacheManager: Fetching from Supabase for ${year}-${month}`);
+    return await this.fetchFromSupabaseAndCache(year, month);
   }
 
   /**
@@ -392,21 +442,59 @@ class WorkflowCacheManager {
 
   /**
    * Salva cache no LocalStorage
+   * FASE 6: Otimizado - salva apenas dados essenciais
    */
   private saveCacheToLocalStorage() {
     if (!this.userId) return;
     
     try {
+      // Extrair apenas dados essenciais (sem duplicação desnecessária)
+      const cacheEntries = Array.from(this.cache.entries()).map(([key, entry]) => {
+        return [
+          key,
+          {
+            sessions: entry.sessions.map(s => ({
+              // Campos essenciais para renderização
+              id: s.id,
+              session_id: s.session_id,
+              data_sessao: s.data_sessao,
+              hora_sessao: s.hora_sessao,
+              cliente_id: s.cliente_id,
+              status: s.status,
+              categoria: s.categoria,
+              pacote: s.pacote,
+              valor_base_pacote: s.valor_base_pacote,
+              valor_total: s.valor_total,
+              valor_pago: s.valor_pago,
+              desconto: s.desconto,
+              // Cliente (apenas nome e contatos principais)
+              clientes: s.clientes ? {
+                nome: s.clientes.nome,
+                email: s.clientes.email,
+                whatsapp: s.clientes.whatsapp
+              } : undefined
+            })),
+            lastUpdate: entry.lastUpdate,
+            isPreloaded: entry.isPreloaded
+          }
+        ];
+      });
+      
       const cacheData = {
         userId: this.userId,
-        cache: Array.from(this.cache.entries()),
+        cache: cacheEntries,
         timestamp: Date.now()
       };
       
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(cacheData));
-      console.log('💾 WorkflowCacheManager: Cache saved to LocalStorage');
+      console.log('💾 WorkflowCacheManager: Optimized cache saved to LocalStorage');
     } catch (error) {
       console.error('❌ WorkflowCacheManager: Failed to save cache:', error);
+      // Se falhar por quota excedida, tentar limpar cache antigo
+      if (error instanceof Error && error.name === 'QuotaExceededError') {
+        console.warn('⚠️ LocalStorage quota exceeded, clearing old cache');
+        localStorage.removeItem(this.STORAGE_KEY);
+      }
     }
   }
 
