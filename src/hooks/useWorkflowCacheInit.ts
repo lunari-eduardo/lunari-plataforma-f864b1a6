@@ -8,12 +8,15 @@
  * 4. Cleanup ao deslogar
  */
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { workflowCacheManager } from '@/services/WorkflowCacheManager';
 import { WorkflowSupabaseService } from '@/services/WorkflowSupabaseService';
 
 export function useWorkflowCacheInit() {
+  // FASE 5: Estado de prontidão do cache
+  const [isReady, setIsReady] = useState(false);
+  
   useEffect(() => {
     let isInitialized = false;
 
@@ -23,23 +26,28 @@ export function useWorkflowCacheInit() {
       if (user && !isInitialized) {
         console.log('🔄 Initializing WorkflowCacheManager for user:', user.id);
         
-        // Configurar userId e carregar cache do LocalStorage IMEDIATAMENTE
+        // 1. Configurar userId (carrega LocalStorage automaticamente)
         workflowCacheManager.setUserId(user.id);
         
-        // Pré-carregar dados em background IMEDIATAMENTE (4 meses: atual + 2 ant + 1 post)
-        // O preloadWorkflowRange já verifica o LocalStorage internamente
-        workflowCacheManager.preloadWorkflowRange().catch(err => {
+        // 2. FASE 5: Aguardar preload completar (crítico!)
+        try {
+          await workflowCacheManager.preloadWorkflowRange();
+          console.log('✅ WorkflowCacheManager: Preload completed, app ready');
+        } catch (err) {
           console.error('❌ Error preloading workflow cache:', err);
-        });
+        }
         
-        // ✅ Sincronizar appointments em background (não bloqueia carregamento)
+        // 3. Marcar como pronto
+        setIsReady(true);
+        
+        // 4. Sincronizar appointments em background (não bloqueia)
         setTimeout(async () => {
           try {
             console.log('🔄 [WorkflowCacheInit] Syncing existing appointments...');
             await syncExistingAppointments();
             console.log('✅ [WorkflowCacheInit] Appointments sync completed');
             
-            // ✅ FASE 3: Reparar divergências retroativas (uma única vez por mount)
+            // Reparar divergências retroativas (uma única vez por mount)
             console.log('🔧 [WorkflowCacheInit] Running repair for date/time mismatches...');
             await WorkflowSupabaseService.repairAppointmentsSessionsMismatch();
             console.log('✅ [WorkflowCacheInit] Repair completed');
@@ -98,19 +106,23 @@ export function useWorkflowCacheInit() {
     initCache();
 
     // Listener para mudanças de auth
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
         console.log('🔄 User signed in, initializing cache');
         workflowCacheManager.setUserId(session.user.id);
         
-        setTimeout(() => {
-          workflowCacheManager.preloadWorkflowRange().catch(err => {
-            console.error('❌ Error preloading workflow cache:', err);
-          });
-        }, 500); // Reduzido de 1000ms
+        // Aguardar preload antes de marcar como pronto
+        try {
+          await workflowCacheManager.preloadWorkflowRange();
+          setIsReady(true);
+        } catch (err) {
+          console.error('❌ Error preloading workflow cache:', err);
+          setIsReady(true); // Marcar como pronto mesmo com erro
+        }
       } else if (event === 'SIGNED_OUT') {
         console.log('🧹 User signed out, cleaning up cache');
         workflowCacheManager.cleanup();
+        setIsReady(false);
         isInitialized = false;
       }
     });
@@ -119,4 +131,7 @@ export function useWorkflowCacheInit() {
       subscription.unsubscribe();
     };
   }, []);
+  
+  // FASE 5: Exportar estado de prontidão
+  return { isReady };
 }

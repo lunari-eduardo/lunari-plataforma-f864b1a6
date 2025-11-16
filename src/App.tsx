@@ -63,7 +63,7 @@ function App() {
   useAppForceUpdate();
   
   // Initialize workflow cache manager
-  useWorkflowCacheInit();
+  const { isReady: cacheReady } = useWorkflowCacheInit();
   
   // FASE 1: Global appointment→workflow sync (works on any route)
   useAppointmentWorkflowSync();
