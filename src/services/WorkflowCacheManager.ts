@@ -142,7 +142,7 @@ class WorkflowCacheManager {
 
   /**
    * Pré-carrega range de 4 meses: atual + 2 anteriores + 1 posterior
-   * FASE 1: Com controle de estado
+   * ✅ CORREÇÃO: Não sobrescreve cache existente do LocalStorage
    */
   async preloadWorkflowRange(): Promise<void> {
     // Se já está preloading, retornar a Promise existente
@@ -176,11 +176,16 @@ class WorkflowCacheManager {
 
         console.log('🔄 WorkflowCacheManager: Preloading range:', months);
 
-        // Carregar todos os meses em paralelo
+        // ✅ CORREÇÃO: Só carregar meses que NÃO estão em cache
         await Promise.all(
-          months.map(({ year, month }) => 
-            this.fetchFromSupabaseAndCache(year, month)
-          )
+          months.map(({ year, month }) => {
+            const cached = this.getSessionsForMonthSync(year, month);
+            if (cached !== null) {
+              console.log(`⚡ Skipping preload for ${year}-${month} (already cached)`);
+              return Promise.resolve();
+            }
+            return this.fetchFromSupabaseAndCache(year, month);
+          })
         );
         
         console.log('✅ WorkflowCacheManager: Preload completed (4 months cached)');

@@ -83,7 +83,7 @@ export function useWorkflowData(options: UseWorkflowDataOptions) {
     initUser();
   }, []);
 
-  // FASE 4: Carregar dados com estratégia otimizada
+  // Carregar dados com estratégia cache-first otimizada
   useEffect(() => {
     let isMounted = true;
     
@@ -104,28 +104,12 @@ export function useWorkflowData(options: UseWorkflowDataOptions) {
           return;
         }
         
-        // 2️⃣ Se não tem cache, ESPERAR preload completar
-        console.log(`⏳ useWorkflowData: Waiting for preload to complete...`);
-        await workflowCacheManager.waitForPreload();
-        
-        // 3️⃣ Verificar cache novamente (preload pode ter carregado)
-        const cachedAfterPreload = workflowCacheManager.getSessionsForMonthSync(year, month);
-        if (cachedAfterPreload !== null) {
-          if (isMounted) {
-            setSessions(cachedAfterPreload);
-            setCacheHit(true);
-            setLoading(false);
-            console.log(`⚡ useWorkflowData: Cache hit after preload for ${year}-${month} (${cachedAfterPreload.length} sessions)`);
-          }
-          return;
-        }
-        
-        // 4️⃣ Se ainda não tem (mês fora do range 4 meses), buscar do Supabase
-        console.log(`🔄 useWorkflowData: Fetching from Supabase for ${year}-${month}`);
-        const fresh = await workflowCacheManager.getSessionsForMonth(year, month, false);
+        // 2️⃣ Não tem cache? Buscar direto do Supabase (sem esperar preload)
+        console.log(`🔄 useWorkflowData: No cache, fetching from Supabase for ${year}-${month}`);
+        setCacheHit(false);
+        const freshSessions = await workflowCacheManager.fetchFromSupabaseAndCache(year, month);
         if (isMounted) {
-          setSessions(fresh);
-          setCacheHit(false);
+          setSessions(freshSessions);
           setLoading(false);
         }
         
