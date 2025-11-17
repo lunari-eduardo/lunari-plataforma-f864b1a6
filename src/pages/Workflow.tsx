@@ -5,6 +5,7 @@ import { QuickSessionAdd } from "@/components/workflow/QuickSessionAdd";
 import { ColumnSettings } from "@/components/workflow/ColumnSettings";
 import { ChevronLeft, ChevronRight, Eye, EyeOff, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { useWorkflowStatus } from "@/hooks/useWorkflowStatus";
 import { useOrcamentoData } from "@/hooks/useOrcamentoData";
 import { useWorkflowRealtime } from "@/hooks/useWorkflowRealtime";
@@ -542,6 +543,11 @@ export default function Workflow() {
           <span className="font-medium text-lg">
             {getMonthName(currentMonth.month)} {currentMonth.year}
           </span>
+          {cacheHit && (
+            <Badge variant="outline" className="ml-2">
+              ⚡ Cache
+            </Badge>
+          )}
           <Button
             variant="outline"
             size="sm"

@@ -14,9 +14,6 @@ import { workflowCacheManager } from '@/services/WorkflowCacheManager';
 import { WorkflowSupabaseService } from '@/services/WorkflowSupabaseService';
 
 export function useWorkflowCacheInit() {
-  // FASE 5: Estado de prontidão do cache
-  const [isReady, setIsReady] = useState(false);
-  
   useEffect(() => {
     let isInitialized = false;
 
@@ -29,18 +26,16 @@ export function useWorkflowCacheInit() {
         // 1. Configurar userId (carrega LocalStorage automaticamente)
         workflowCacheManager.setUserId(user.id);
         
-        // 2. FASE 5: Aguardar preload completar (crítico!)
-        try {
-          await workflowCacheManager.preloadWorkflowRange();
-          console.log('✅ WorkflowCacheManager: Preload completed, app ready');
-        } catch (err) {
-          console.error('❌ Error preloading workflow cache:', err);
-        }
+        // 2. Executar preload em background (NÃO BLOQUEAR)
+        workflowCacheManager.preloadWorkflowRange()
+          .then(() => {
+            console.log('✅ WorkflowCacheManager: Preload completed in background');
+          })
+          .catch(err => {
+            console.error('❌ Preload failed (non-fatal):', err);
+          });
         
-        // 3. Marcar como pronto
-        setIsReady(true);
-        
-        // 4. Sincronizar appointments em background (não bloqueia)
+        // 3. Sincronizar appointments em background (não bloqueia)
         setTimeout(async () => {
           try {
             console.log('🔄 [WorkflowCacheInit] Syncing existing appointments...');
@@ -111,18 +106,13 @@ export function useWorkflowCacheInit() {
         console.log('🔄 User signed in, initializing cache');
         workflowCacheManager.setUserId(session.user.id);
         
-        // Aguardar preload antes de marcar como pronto
-        try {
-          await workflowCacheManager.preloadWorkflowRange();
-          setIsReady(true);
-        } catch (err) {
-          console.error('❌ Error preloading workflow cache:', err);
-          setIsReady(true); // Marcar como pronto mesmo com erro
-        }
+        // Preload em background (não bloqueia)
+        workflowCacheManager.preloadWorkflowRange()
+          .then(() => console.log('✅ Cache preload completed'))
+          .catch(err => console.error('❌ Cache preload failed:', err));
       } else if (event === 'SIGNED_OUT') {
         console.log('🧹 User signed out, cleaning up cache');
         workflowCacheManager.cleanup();
-        setIsReady(false);
         isInitialized = false;
       }
     });
@@ -131,7 +121,4 @@ export function useWorkflowCacheInit() {
       subscription.unsubscribe();
     };
   }, []);
-  
-  // FASE 5: Exportar estado de prontidão
-  return { isReady };
 }

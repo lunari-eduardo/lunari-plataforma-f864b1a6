@@ -201,7 +201,14 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
                 // Tentar resolver por package_id primeiro
                 const { data: packageData } = await supabase
                   .from('pacotes')
-                  .select('nome, valor_base, categorias(nome)')
+                  .select(`
+                    nome,
+                    valor_base,
+                    categoria_id,
+                    categorias!inner (
+                      nome
+                    )
+                  `)
                   .eq('id', hydratedConverted.packageId)
                   .maybeSingle();
                 
@@ -238,7 +245,14 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
                   if (sessionData?.user_id) {
                     const { data: packageByName } = await supabase
                       .from('pacotes')
-                      .select('nome, valor_base, categorias(nome)')
+                      .select(`
+                        nome,
+                        valor_base,
+                        categoria_id,
+                        categorias!inner (
+                          nome
+                        )
+                      `)
                       .eq('nome', checkSession.pacote)
                       .eq('user_id', sessionData.user_id)
                       .maybeSingle();
