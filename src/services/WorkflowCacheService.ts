@@ -63,6 +63,8 @@ interface CacheStats {
 type CacheUpdateCallback = (year: number, month: number, sessions: WorkflowSession[]) => void;
 
 export class WorkflowCacheService {
+  private static instance: WorkflowCacheService | null = null;
+  
   private cache: Map<string, CacheEntry> = new Map();
   private supabaseSubscriptions: Map<string, RealtimeChannel> = new Map();
   private broadcastChannel: BroadcastChannel | null = null;
@@ -77,9 +79,19 @@ export class WorkflowCacheService {
   private isPreloading = false;
   private preloadPromise: Promise<void> | null = null;
 
-  constructor() {
+  private constructor() {
     this.initIndexedDB();
     this.initBroadcastChannel();
+  }
+
+  /**
+   * Get singleton instance
+   */
+  static getInstance(): WorkflowCacheService {
+    if (!WorkflowCacheService.instance) {
+      WorkflowCacheService.instance = new WorkflowCacheService();
+    }
+    return WorkflowCacheService.instance;
   }
 
   /**
@@ -394,10 +406,18 @@ export class WorkflowCacheService {
    * Subscribe to realtime updates for a month
    */
   subscribeToRealtimeUpdates(year: number, month: number) {
+    this.subscribeToSessionUpdates(year, month);
+    this.subscribeToPaymentUpdates(year, month);
+  }
+
+  /**
+   * Subscribe to session changes
+   */
+  private subscribeToSessionUpdates(year: number, month: number) {
     const key = this.getCacheKey(year, month);
     
-    if (this.supabaseSubscriptions.has(key)) {
-      console.log(`📡 Already subscribed to realtime: ${key}`);
+    if (this.supabaseSubscriptions.has(`${key}-sessions`)) {
+      console.log(`📡 Already subscribed to sessions: ${key}`);
       return;
     }
 
@@ -406,7 +426,7 @@ export class WorkflowCacheService {
     const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
 
     const channel = supabase
-      .channel(`workflow-${key}`)
+      .channel(`workflow-sessions-${key}`)
       .on(
         'postgres_changes',
         {
@@ -416,14 +436,57 @@ export class WorkflowCacheService {
           filter: `data_sessao=gte.${startDate},data_sessao=lte.${endDate}`
         },
         (payload) => {
-          console.log('🔄 Realtime update:', payload);
+          console.log('🔄 Session realtime update:', payload);
           this.handleRealtimeUpdate(year, month, payload);
         }
       )
       .subscribe();
 
-    this.supabaseSubscriptions.set(key, channel);
-    console.log(`📡 Subscribed to realtime: ${key}`);
+    this.supabaseSubscriptions.set(`${key}-sessions`, channel);
+    console.log(`📡 Subscribed to session updates: ${key}`);
+  }
+
+  /**
+   * Subscribe to payment changes for realtime sync
+   */
+  private subscribeToPaymentUpdates(year: number, month: number) {
+    const key = this.getCacheKey(year, month);
+    
+    if (this.supabaseSubscriptions.has(`${key}-payments`)) {
+      console.log(`📡 Already subscribed to payments: ${key}`);
+      return;
+    }
+
+    const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+    const lastDay = new Date(year, month, 0).getDate();
+    const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
+
+    console.log(`📡 Subscribing to payment updates: ${key}`);
+
+    const channel = supabase
+      .channel(`workflow-payments-${key}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'clientes_transacoes',
+          filter: `data_transacao=gte.${startDate},data_transacao=lte.${endDate}`
+        },
+        async (payload: any) => {
+          console.log('💰 Payment realtime update:', payload);
+          
+          // Invalidate the session that received the payment
+          const sessionId = (payload.new as any)?.session_id || (payload.old as any)?.session_id;
+          if (sessionId) {
+            await this.invalidateSessionById(sessionId);
+          }
+        }
+      )
+      .subscribe();
+
+    this.supabaseSubscriptions.set(`${key}-payments`, channel);
+    console.log(`✅ Subscribed to payment realtime: ${key}`);
   }
 
   /**

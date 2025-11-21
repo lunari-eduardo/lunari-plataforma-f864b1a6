@@ -113,6 +113,17 @@ export class PaymentSupabaseService {
       //    - Atualizar updated_at
       //    - Disparar evento realtime para sincronização automática
 
+      // 5. Invalidate workflow cache for this session
+      try {
+        const { WorkflowCacheService } = await import('@/services/WorkflowCacheService');
+        const cacheService = WorkflowCacheService.getInstance();
+        await cacheService.setUserId(userId);
+        await cacheService.invalidateSessionById(sessao.id);
+        console.log('🔄 Cache invalidated for session:', sessao.id);
+      } catch (cacheError) {
+        console.warn('⚠️ Could not invalidate cache:', cacheError);
+      }
+
       return true;
     } catch (error) {
       console.error('❌ Erro ao salvar pagamento no Supabase:', error);
@@ -218,6 +229,18 @@ export class PaymentSupabaseService {
       }
 
       console.log('✅ Payment updated successfully with tracking added');
+      
+      // Invalidate workflow cache for this session
+      try {
+        const { WorkflowCacheService } = await import('@/services/WorkflowCacheService');
+        const cacheService = WorkflowCacheService.getInstance();
+        await cacheService.setUserId(user.id);
+        await cacheService.invalidateSessionById(binding.id);
+        console.log('🔄 Cache invalidated for session:', binding.id);
+      } catch (cacheError) {
+        console.warn('⚠️ Could not invalidate cache:', cacheError);
+      }
+      
       return true;
 
     } catch (error) {
@@ -446,6 +469,18 @@ export class PaymentSupabaseService {
       }
 
       console.log('✅ Payment marked as paid successfully');
+      
+      // Invalidate workflow cache for this session
+      try {
+        const { WorkflowCacheService } = await import('@/services/WorkflowCacheService');
+        const cacheService = WorkflowCacheService.getInstance();
+        await cacheService.setUserId(user.id);
+        await cacheService.invalidateSessionById(binding.id);
+        console.log('🔄 Cache invalidated for session:', binding.id);
+      } catch (cacheError) {
+        console.warn('⚠️ Could not invalidate cache:', cacheError);
+      }
+      
       return true;
 
     } catch (error) {

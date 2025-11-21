@@ -16,6 +16,7 @@ import { ProjetoService } from '@/services/ProjetoService';
 import { corrigirClienteIdSessoes, corrigirClienteIdAgendamentos } from '@/utils/corrigirClienteIdSessoes';
 import { generateSessionId } from '@/utils/workflowSessionsAdapter';
 import { syncLeadsWithClientUpdate } from '@/utils/leadClientSync';
+import { supabase } from '@/integrations/supabase/client';
 
 // Types
 import { Cliente, OrigemCliente } from '@/types/cliente';
@@ -814,7 +815,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       console.log('✅ Pagamento salvo no Supabase - trigger irá recalcular valor_pago automaticamente');
 
-      // 2. OPCIONAL: Atualizar localStorage SE a sessão existir lá (compatibilidade)
+      // 2. Invalidate workflow cache to reflect new payment
+      try {
+        const { WorkflowCacheService } = await import('@/services/WorkflowCacheService');
+        const cacheService = WorkflowCacheService.getInstance();
+        const { data: userData } = await supabase.auth.getUser();
+        if (userData?.user) {
+          await cacheService.setUserId(userData.user.id);
+          await cacheService.invalidateSessionById(id);
+          console.log('🔄 Workflow cache invalidated for session:', id);
+        }
+      } catch (cacheError) {
+        console.warn('⚠️ Could not invalidate workflow cache:', cacheError);
+      }
+
+      // 3. OPCIONAL: Atualizar localStorage SE a sessão existir lá (compatibilidade)
       try {
         const savedSessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
         const sessionIndex = savedSessions.findIndex((s: any) => 
