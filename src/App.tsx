@@ -28,6 +28,7 @@ import { AppProvider } from "./contexts/AppContext";
 import { AgendaProvider } from "./contexts/AgendaContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ConfigurationProvider } from "./contexts/ConfigurationContext";
+import { WorkflowCacheProvider } from "./contexts/WorkflowCacheContext";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import ThemeProvider from "./components/theme/ThemeProvider";
 import { BuildMonitor } from "./components/shared/BuildMonitor";
@@ -78,12 +79,13 @@ function App() {
         <ThemeProvider>
           <AuthProvider>
             <ConfigurationProvider>
-              <AppProvider>
-                <AgendaProvider>
-                <TooltipProvider>
-                  <BuildMonitor />
-                  <Toaster />
-                  <Sonner />
+              <WorkflowCacheProvider>
+                <AppProvider>
+                  <AgendaProvider>
+                  <TooltipProvider>
+                    <BuildMonitor />
+                    <Toaster />
+                    <Sonner />
                   <Routes>
                     {/* Public routes */}
                     <Route path="/landing" element={<LandingPage />} />
@@ -119,9 +121,10 @@ function App() {
                       <Route path="*" element={<NotFound />} />
                     </Route>
                   </Routes>
-                </TooltipProvider>
-                </AgendaProvider>
-              </AppProvider>
+                  </TooltipProvider>
+                  </AgendaProvider>
+                </AppProvider>
+              </WorkflowCacheProvider>
             </ConfigurationProvider>
           </AuthProvider>
         </ThemeProvider>
