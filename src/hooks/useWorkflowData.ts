@@ -95,6 +95,26 @@ export function useWorkflowData(options: UseWorkflowDataOptions) {
         // 1️⃣ Tentar cache síncrono PRIMEIRO (< 1ms)
         const cachedSync = workflowCacheManager.getSessionsForMonthSync(year, month);
         if (cachedSync !== null) {
+          // ✅ VALIDAR INTEGRIDADE DO CACHE
+          const primeiraSessionIncompleta = cachedSync.find(s => 
+            s.regras_congeladas === null || 
+            s.regras_congeladas === undefined
+          );
+          
+          if (primeiraSessionIncompleta && cachedSync.length > 0) {
+            console.warn('⚠️ Cache incompleto detectado, forçando reload do Supabase');
+            // Invalidar cache e recarregar
+            workflowCacheManager.invalidateMonth(year, month);
+            const freshSessions = await workflowCacheManager.fetchFromSupabaseAndCache(year, month);
+            if (isMounted) {
+              setSessions(freshSessions);
+              setCacheHit(false);
+              setLoading(false);
+            }
+            return;
+          }
+          
+          // Cache OK, usar normalmente
           if (isMounted) {
             setSessions(cachedSync);
             setCacheHit(true);

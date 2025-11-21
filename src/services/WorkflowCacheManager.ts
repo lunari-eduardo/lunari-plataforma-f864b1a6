@@ -447,35 +447,25 @@ class WorkflowCacheManager {
 
   /**
    * Salva cache no LocalStorage
-   * FASE 6: Otimizado - salva apenas dados essenciais
+   * ✅ CORREÇÃO: Salva TODOS os campos necessários para edição
    */
   private saveCacheToLocalStorage() {
     if (!this.userId) return;
     
     try {
-      // Extrair apenas dados essenciais (sem duplicação desnecessária)
+      // ✅ CORREÇÃO: Salvar dados COMPLETOS (todos os campos críticos)
       const cacheEntries = Array.from(this.cache.entries()).map(([key, entry]) => {
         return [
           key,
           {
             sessions: entry.sessions.map(s => ({
-              // Campos essenciais para renderização
-              id: s.id,
-              session_id: s.session_id,
-              data_sessao: s.data_sessao,
-              hora_sessao: s.hora_sessao,
-              cliente_id: s.cliente_id,
-              status: s.status,
-              categoria: s.categoria,
-              pacote: s.pacote,
-              valor_base_pacote: s.valor_base_pacote,
-              valor_total: s.valor_total,
-              valor_pago: s.valor_pago,
-              desconto: s.desconto,
-              // Cliente (apenas nome e contatos principais)
+              // ✅ Manter TODOS os campos da sessão para permitir edição
+              ...s,
+              // Otimizar apenas o objeto clientes (manter campos principais)
               clientes: s.clientes ? {
                 nome: s.clientes.nome,
                 email: s.clientes.email,
+                telefone: s.clientes.telefone,
                 whatsapp: s.clientes.whatsapp
               } : undefined
             })),
@@ -492,7 +482,20 @@ class WorkflowCacheManager {
       };
       
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(cacheData));
-      console.log('💾 WorkflowCacheManager: Optimized cache saved to LocalStorage');
+      
+      // ✅ LOGGING DETALHADO
+      const firstEntry = Array.from(this.cache.values())[0];
+      console.log('💾 Cache saved to LocalStorage:', {
+        months: this.cache.size,
+        totalSessions: Array.from(this.cache.values()).reduce((sum, e) => sum + e.sessions.length, 0),
+        sampleSession: firstEntry?.sessions[0] ? {
+          id: firstEntry.sessions[0].id,
+          hasRegrasCongeladas: !!firstEntry.sessions[0].regras_congeladas,
+          hasDescricao: !!firstEntry.sessions[0].descricao,
+          hasProdutosIncluidos: Array.isArray(firstEntry.sessions[0].produtos_incluidos),
+          hasValorBasePackote: !!firstEntry.sessions[0].valor_base_pacote
+        } : null
+      });
     } catch (error) {
       console.error('❌ WorkflowCacheManager: Failed to save cache:', error);
       // Se falhar por quota excedida, tentar limpar cache antigo
@@ -505,6 +508,7 @@ class WorkflowCacheManager {
 
   /**
    * Carrega cache do LocalStorage
+   * ✅ CORREÇÃO: Garante hydration completa com valores padrão
    */
   private loadCacheFromLocalStorage(): boolean {
     if (!this.userId) return false;
@@ -530,9 +534,47 @@ class WorkflowCacheManager {
         return false;
       }
       
-      // Restaurar cache
-      this.cache = new Map(cacheEntries);
-      console.log(`✅ WorkflowCacheManager: Cache loaded from LocalStorage (${this.cache.size} months, age: ${Math.round(age / 1000)}s)`);
+      // ✅ CORREÇÃO: Restaurar cache com hydration completa
+      const restoredCache = new Map<string, CacheEntry>(
+        cacheEntries.map(([key, entry]: [string, CacheEntry]) => [
+          key,
+          {
+            ...entry,
+            sessions: entry.sessions.map(s => ({
+              ...s,
+              // ✅ Garantir campos com valores padrão se faltarem
+              descricao: s.descricao ?? '',
+              status: s.status ?? 'agendado',
+              qtd_fotos_extra: s.qtd_fotos_extra ?? 0,
+              valor_foto_extra: s.valor_foto_extra ?? 0,
+              valor_total_foto_extra: s.valor_total_foto_extra ?? 0,
+              valor_adicional: s.valor_adicional ?? 0,
+              desconto: s.desconto ?? 0,
+              observacoes: s.observacoes ?? '',
+              detalhes: s.detalhes ?? '',
+              produtos_incluidos: s.produtos_incluidos ?? [],
+              regras_congeladas: s.regras_congeladas ?? null
+            }))
+          }
+        ])
+      );
+      
+      this.cache = restoredCache;
+      
+      // ✅ LOGGING DETALHADO
+      const firstEntry = Array.from(this.cache.values())[0];
+      console.log('📂 Cache loaded from LocalStorage:', {
+        months: this.cache.size,
+        ageSeconds: Math.round(age / 1000),
+        totalSessions: Array.from(this.cache.values()).reduce((sum, e) => sum + e.sessions.length, 0),
+        sampleSession: firstEntry?.sessions[0] ? {
+          id: firstEntry.sessions[0].id,
+          hasRegrasCongeladas: !!firstEntry.sessions[0].regras_congeladas,
+          hasDescricao: !!firstEntry.sessions[0].descricao,
+          hasProdutosIncluidos: Array.isArray(firstEntry.sessions[0].produtos_incluidos)
+        } : null
+      });
+      
       return true;
     } catch (error) {
       console.error('❌ WorkflowCacheManager: Failed to load cache:', error);

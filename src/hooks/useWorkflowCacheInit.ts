@@ -23,6 +23,15 @@ export function useWorkflowCacheInit() {
       if (user && !isInitialized) {
         console.log('🔄 Initializing WorkflowCacheManager for user:', user.id);
         
+        // ✅ NOVO: Limpar cache antigo corrompido (uma vez)
+        const cacheVersion = localStorage.getItem('workflow_cache_version');
+        if (cacheVersion !== '2.0') {
+          console.log('🗑️ Clearing old corrupted cache...');
+          workflowCacheManager.clearAllCache();
+          localStorage.removeItem('workflow-cache');
+          localStorage.setItem('workflow_cache_version', '2.0');
+        }
+        
         // 1. Configurar userId (carrega LocalStorage automaticamente)
         workflowCacheManager.setUserId(user.id);
         

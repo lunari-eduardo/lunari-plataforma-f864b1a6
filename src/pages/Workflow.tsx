@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { WorkflowTable } from "@/components/workflow/WorkflowTable";
 import { QuickSessionAdd } from "@/components/workflow/QuickSessionAdd";
 import { ColumnSettings } from "@/components/workflow/ColumnSettings";
-import { ChevronLeft, ChevronRight, Eye, EyeOff, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, EyeOff, Search, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useWorkflowStatus } from "@/hooks/useWorkflowStatus";
@@ -20,6 +20,7 @@ import { WorkflowSyncButton } from '@/components/workflow/WorkflowSyncButton';
 import { usePricingMigration } from '@/hooks/usePricingMigration';
 import { Snowflake } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { workflowCacheManager } from '@/services/WorkflowCacheManager';
 import type { SessionData, CategoryOption, PackageOption, ProductOption } from '@/types/workflow';
 
 const removeAccents = (str: string) => {
@@ -510,6 +511,22 @@ export default function Workflow() {
           >
             <Snowflake className="w-4 h-4" />
             Recongelar Dados
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              workflowCacheManager.clearAllCache();
+              toast({
+                title: "Cache limpo",
+                description: "Recarregando dados do servidor...",
+              });
+              window.location.reload();
+            }}
+            className="gap-2"
+          >
+            <Trash2 className="w-4 h-4" />
+            Limpar Cache
           </Button>
           <Button
             variant="outline"
