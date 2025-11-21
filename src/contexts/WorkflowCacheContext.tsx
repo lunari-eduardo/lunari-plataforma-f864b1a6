@@ -26,6 +26,11 @@ interface WorkflowCacheContextType {
   fetchMonth: (year: number, month: number) => Promise<WorkflowSession[]>;
   invalidateMonth: (year: number, month: number) => Promise<void>;
   
+  // Mutation methods
+  updateSession: (sessionId: string, updates: Partial<WorkflowSession>) => Promise<void>;
+  deleteSession: (sessionId: string, dataSessao: string) => Promise<void>;
+  invalidateSessionById: (sessionId: string) => Promise<void>;
+  
   // Realtime
   subscribeToMonth: (year: number, month: number, callback: (sessions: WorkflowSession[]) => void) => () => void;
   
@@ -141,6 +146,22 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
     await serviceRef.current.invalidateMonth(year, month);
   }, []);
 
+  // Mutation methods
+  const updateSession = useCallback(async (sessionId: string, updates: Partial<WorkflowSession>) => {
+    if (!serviceRef.current) return;
+    await serviceRef.current.updateSession(sessionId, updates);
+  }, []);
+
+  const deleteSession = useCallback(async (sessionId: string, dataSessao: string) => {
+    if (!serviceRef.current) return;
+    await serviceRef.current.deleteSession(sessionId, dataSessao);
+  }, []);
+
+  const invalidateSessionById = useCallback(async (sessionId: string) => {
+    if (!serviceRef.current) return;
+    await serviceRef.current.invalidateSessionById(sessionId);
+  }, []);
+
   // Realtime subscription
   const subscribeToMonth = useCallback((
     year: number, 
@@ -197,6 +218,9 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
     isMonthCached,
     fetchMonth,
     invalidateMonth,
+    updateSession,
+    deleteSession,
+    invalidateSessionById,
     subscribeToMonth,
     clearCache,
     getCacheStats
