@@ -8,8 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useWorkflowStatus } from "@/hooks/useWorkflowStatus";
 import { useOrcamentoData } from "@/hooks/useOrcamentoData";
-import { useWorkflowRealtime } from "@/hooks/useWorkflowRealtime";
-import { useWorkflowData } from "@/hooks/useWorkflowData";
+import { useWorkflowCache } from "@/contexts/WorkflowCacheContext";
+import { useWorkflowPackageData } from "@/hooks/useWorkflowPackageData";
 import { useAppointmentWorkflowSync } from "@/hooks/useAppointmentWorkflowSync";
 import { useClientesRealtime } from "@/hooks/useClientesRealtime";
 import { useSessionsRealtime } from "@/hooks/useSessionsRealtime";
@@ -20,8 +20,9 @@ import { WorkflowSyncButton } from '@/components/workflow/WorkflowSyncButton';
 import { usePricingMigration } from '@/hooks/usePricingMigration';
 import { Snowflake } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { workflowCacheManager } from '@/services/WorkflowCacheManager';
+import { supabase } from "@/integrations/supabase/client";
 import type { SessionData, CategoryOption, PackageOption, ProductOption } from '@/types/workflow';
+import type { WorkflowSession } from '@/hooks/useWorkflowRealtime';
 
 const removeAccents = (str: string) => {
   return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -43,31 +44,109 @@ export default function Workflow() {
     year: new Date().getFullYear()
   });
   
+  // ⚡ NOVO: Usar Context Provider com cache IndexedDB
   const {
-    sessions: workflowSessions,
-    sessionsData,
-    loading: workflowLoading,
-    error: workflowError,
-    updateSession,
-    deleteSession: deleteWorkflowSession,
-    createSessionFromAppointment
-  } = useWorkflowRealtime();
+    getSessionsForMonthSync,
+    isPreloading,
+    subscribe,
+    mergeUpdate,
+    forceRefresh
+  } = useWorkflowCache();
+  
+  // Use package data resolution hook para conversão
+  const { convertSessionToData } = useWorkflowPackageData();
+  
+  // Estado para sessões do cache
+  const [workflowSessions, setWorkflowSessions] = useState<WorkflowSession[]>(() => {
+    // Tentativa INSTANTÂNEA de carregar do cache
+    return getSessionsForMonthSync(currentMonth.year, currentMonth.month) || [];
+  });
+  
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Subscribe para updates do cache
+  useEffect(() => {
+    const unsubscribe = subscribe((allSessions) => {
+      // Filtrar pelo mês atual
+      const filtered = allSessions.filter(s => {
+        const date = new Date(s.data_sessao);
+        return date.getFullYear() === currentMonth.year && 
+               date.getMonth() + 1 === currentMonth.month;
+      });
+      setWorkflowSessions(filtered);
+      setLoading(false);
+    });
+    
+    return unsubscribe;
+  }, [currentMonth, subscribe]);
+  
+  // Converter sessões para SessionData usando o hook de conversão
+  const sessionsData = useMemo(() => {
+    return workflowSessions.map(session => convertSessionToData(session));
+  }, [workflowSessions, convertSessionToData]);
   
   // Use sessions hook for manual session creation
   const { createManualSession } = useSessionsRealtime();
   
-  // ⚡ NOVO: Usar cache inteligente para carregamento rápido
-  const {
-    sessions: cachedSessions,
-    loading: cacheLoading,
-    cacheHit,
-    refresh: refreshCache
-  } = useWorkflowData({
-    year: currentMonth.year,
-    month: currentMonth.month,
-    enableRealtime: true,
-    autoPreload: true
-  });
+  // Funções de edição (integradas com Context)
+  const updateSession = useCallback(async (sessionId: string, updates: Partial<WorkflowSession>, silent = false) => {
+    try {
+      // 1. Optimistic update no cache
+      const currentSession = workflowSessions.find(s => s.id === sessionId);
+      if (currentSession) {
+        mergeUpdate({ ...currentSession, ...updates });
+      }
+      
+      // 2. Salvar no Supabase
+      const { error: updateError } = await supabase
+        .from('clientes_sessoes')
+        .update(updates)
+        .eq('id', sessionId);
+      
+      if (updateError) throw updateError;
+      
+      if (!silent) {
+        toast({
+          title: "Sessão atualizada",
+          description: "As alterações foram salvas com sucesso.",
+        });
+      }
+    } catch (error) {
+      console.error('Error updating session:', error);
+      // Reverter update otimista em caso de erro
+      await forceRefresh();
+      toast({
+        title: "Erro ao atualizar",
+        description: "Não foi possível salvar as alterações.",
+        variant: "destructive",
+      });
+    }
+  }, [workflowSessions, mergeUpdate, forceRefresh]);
+  
+  const deleteWorkflowSession = useCallback(async (sessionId: string, deletePayments: boolean) => {
+    try {
+      // Delete session do Supabase
+      const { error: deleteError } = await supabase
+        .from('clientes_sessoes')
+        .delete()
+        .eq('id', sessionId);
+      
+      if (deleteError) throw deleteError;
+      
+      toast({
+        title: "Sessão excluída",
+        description: "A sessão foi removida com sucesso.",
+      });
+    } catch (error) {
+      console.error('Error deleting session:', error);
+      toast({
+        title: "Erro ao excluir",
+        description: "Não foi possível excluir a sessão.",
+        variant: "destructive",
+      });
+    }
+  }, []);
   
   const { clientes } = useClientesRealtime();
   
@@ -76,8 +155,6 @@ export default function Workflow() {
   
   // Initialize pricing migration for existing sessions
   usePricingMigration();
-  
-  const { saveMonthlyMetrics } = useWorkflowMetrics();
 
   const getClienteByName = (nome: string) => {
     return clientes.find(cliente => cliente.nome === nome);
@@ -152,19 +229,12 @@ export default function Workflow() {
     }
   });
 
-  // Update sessions from Supabase realtime data using the hook conversion
+  // Update sessions from cache data
   useEffect(() => {
-    console.log('🔄 Workflow useEffect triggered:', {
-      workflowLoading,
-      sessionsDataLength: sessionsData?.length || 0,
-      workflowSessionsLength: workflowSessions?.length || 0
-    });
-    
-    if (!workflowLoading && sessionsData) {
-      console.log('✅ Setting session data list:', sessionsData.length, 'sessions');
+    if (sessionsData) {
       setSessionDataList(sessionsData);
     }
-  }, [sessionsData, workflowLoading, workflowSessions]);
+  }, [sessionsData]);
 
   // Mapear dados reais das configurações para formato da tabela
   const categoryOptions: CategoryOption[] = categorias.map((categoria, index) => ({
@@ -478,7 +548,7 @@ export default function Workflow() {
     return monthNames[month - 1];
   };
 
-  if (workflowLoading) {
+  if (loading && workflowSessions.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-muted-foreground">Carregando workflow...</div>
@@ -486,12 +556,12 @@ export default function Workflow() {
     );
   }
 
-  if (workflowError) {
+  if (error) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-4">
-        <div className="text-destructive">Erro ao carregar workflow: {String(workflowError)}</div>
-        <Button onClick={() => window.location.reload()} variant="outline">
-          Recarregar página
+        <div className="text-destructive">Erro ao carregar workflow: {String(error)}</div>
+        <Button onClick={() => forceRefresh()} variant="outline">
+          Recarregar dados
         </Button>
       </div>
     );
@@ -516,12 +586,11 @@ export default function Workflow() {
             variant="outline"
             size="sm"
             onClick={() => {
-              workflowCacheManager.clearAllCache();
+              forceRefresh();
               toast({
                 title: "Cache limpo",
                 description: "Recarregando dados do servidor...",
               });
-              window.location.reload();
             }}
             className="gap-2"
           >
@@ -560,9 +629,9 @@ export default function Workflow() {
           <span className="font-medium text-lg">
             {getMonthName(currentMonth.month)} {currentMonth.year}
           </span>
-          {cacheHit && (
+          {isPreloading && (
             <Badge variant="outline" className="ml-2">
-              ⚡ Cache
+              ⏳ Atualizando...
             </Badge>
           )}
           <Button
@@ -629,8 +698,8 @@ export default function Workflow() {
           <div>Month filtered sessions: {monthFilteredSessions?.length || 0}</div>
           <div>Sorted sessions: {sortedSessions?.length || 0}</div>
           <div>Current month: {getMonthName(currentMonth.month)} {currentMonth.year}</div>
-          <div>Loading: {workflowLoading ? 'Yes' : 'No'}</div>
-          <div>Error: {workflowError ? String(workflowError) : 'None'}</div>
+          <div>Loading: {loading ? 'Yes' : 'No'}</div>
+          <div>Error: {error ? String(error) : 'None'}</div>
         </div>
       )}
 
