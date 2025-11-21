@@ -362,25 +362,48 @@ export const useWorkflowRealtime = () => {
             }
             break;
           case 'produtosList':
-            sanitizedUpdates.produtos_incluidos = value;
-            // CRITICAL: Re-freeze product data when products change
+            // BLOCO C: Completar case produtosList
             if (Array.isArray(value)) {
-              // Fetch fresh session data to avoid using stale regras_congeladas
+              // Converter para formato do banco
+              const produtosConvertidos = value.map((p: any) => ({
+                id: p.id,
+                nome: p.nome,
+                quantidade: Number(p.quantidade) || 0,
+                valorUnitario: Number(p.valorUnitario) || 0,
+                tipo: p.tipo || 'manual',
+                produzido: p.produzido || false,
+                entregue: p.entregue || false
+              }));
+              
+              sanitizedUpdates.produtos_incluidos = produtosConvertidos;
+              
+              // Recalcular total de produtos manuais
+              const totalProdutosManuais = calculateManualProductsTotal(produtosConvertidos);
+              console.log('📦 Total produtos manuais recalculado:', totalProdutosManuais);
+              
+              // Buscar sessão atual para recalcular total geral
               const { data: freshSession } = await supabase
                 .from('clientes_sessoes')
-                .select('regras_congeladas')
+                .select('*')
                 .eq('id', id)
                 .eq('user_id', user.user.id)
                 .single();
               
               if (freshSession) {
+                // Re-congelar dados dos produtos
                 const { pricingFreezingService } = await import('@/services/PricingFreezingService');
                 const regrasAtualizadas = await pricingFreezingService.recongelarProdutos(
                   freshSession.regras_congeladas as any,
-                  value as any[]
+                  produtosConvertidos
                 );
                 sanitizedUpdates.regras_congeladas = regrasAtualizadas as any;
-                console.log('📦 Products changed - re-freezing product data with fresh session rules');
+                
+                // Recalcular valor total da sessão
+                const updatedSession = { ...freshSession, produtos_incluidos: produtosConvertidos };
+                const novoValorTotal = calculateSessionTotal(updatedSession);
+                sanitizedUpdates.valor_total = novoValorTotal;
+                
+                console.log('📦 Produtos atualizados - recongelados e total recalculado:', novoValorTotal);
               }
             }
             break;
