@@ -59,6 +59,22 @@ export const useWorkflowPackageData = () => {
         });
       }
 
+      // BLOCO B: Normalizar todos os valores numéricos ANTES de usar .toFixed()
+      const descontoNum = Number(session.desconto) || 0;
+      const valorAdicionalNum = Number(session.valor_adicional) || 0;
+      const valorTotalFotoExtraNum = Number(session.valor_total_foto_extra) || 0;
+      const valorFotoExtraNum = Number(session.valor_foto_extra) || 0;
+      const valorTotalNum = Number(session.valor_total) || 0;
+      const valorBasePacoteNum = Number(packageData.packageValue || session.valor_base_pacote) || 0;
+      
+      // BLOCO D: Calcular valorPago a partir dos pagamentos reais
+      const pagamentos = (session as any).pagamentos || [];
+      const totalPagamentos = pagamentos
+        .filter((p: any) => p.statusPagamento === 'pago')
+        .reduce((sum: number, p: any) => sum + (Number(p.valor) || 0), 0);
+      const valorPagoNum = totalPagamentos || Number(session.valor_pago) || 0;
+      const restanteNum = valorTotalNum - valorPagoNum;
+
       const converted: SessionData = {
         id: session.id,
         data: session.data_sessao,
@@ -73,15 +89,14 @@ export const useWorkflowPackageData = () => {
         categoria: packageData.categoria || session.categoria || '',
         // CORREÇÃO: Usar packageName resolvido mas manter referência original se necessário  
         pacote: packageData.packageName || session.pacote || '',
-        valorPacote: `R$ ${(packageData.packageValue || session.valor_base_pacote || 0).toFixed(2).replace('.', ',')}`,
+        valorPacote: `R$ ${valorBasePacoteNum.toFixed(2).replace('.', ',')}`,
         // CORREÇÃO: Priorizar valor da sessão, fallback para valor do pacote ou frozen data
-        valorFotoExtra: session.valor_foto_extra ? 
-          `R$ ${Number(session.valor_foto_extra).toFixed(2).replace('.', ',')}` : 
+        valorFotoExtra: valorFotoExtraNum > 0 ? 
+          `R$ ${valorFotoExtraNum.toFixed(2).replace('.', ',')}` : 
           `R$ ${packageData.packageFotoExtraValue.toFixed(2).replace('.', ',')}`,
         // CORREÇÃO: Usar valores da sessão, não zerar
         qtdFotosExtra: session.qtd_fotos_extra || 0,
-        valorTotalFotoExtra: session.valor_total_foto_extra ? 
-          `R$ ${Number(session.valor_total_foto_extra).toFixed(2).replace('.', ',')}` : 'R$ 0,00',
+        valorTotalFotoExtra: `R$ ${valorTotalFotoExtraNum.toFixed(2).replace('.', ',')}`,
         // CORREÇÃO: Mapear regras congeladas - usar apenas precificacaoFotoExtra
         regrasDePrecoFotoExtraCongeladas: session.regras_congeladas?.precificacaoFotoExtra || null,
         // CRÍTICO: Adicionar regras_congeladas completo para UI e indicadores
@@ -89,14 +104,14 @@ export const useWorkflowPackageData = () => {
         produto: '',
         qtdProduto: 0,
         valorTotalProduto: 'R$ 0,00',
-        valorAdicional: `R$ ${(session.valor_adicional || 0).toFixed(2).replace('.', ',')}`,
+        valorAdicional: `R$ ${valorAdicionalNum.toFixed(2).replace('.', ',')}`,
         detalhes: session.detalhes || session.descricao || '',
         observacoes: session.observacoes || '',
-        valor: `R$ ${(session.valor_total || 0).toFixed(2).replace('.', ',')}`,
-        total: `R$ ${(session.valor_total || 0).toFixed(2).replace('.', ',')}`,
-        valorPago: `R$ ${(session.valor_pago || 0).toFixed(2).replace('.', ',')}`,
-        restante: `R$ ${((session.valor_total || 0) - (session.valor_pago || 0)).toFixed(2).replace('.', ',')}`,
-        desconto: `R$ ${(session.desconto || 0).toFixed(2).replace('.', ',')}`,
+        valor: `R$ ${valorTotalNum.toFixed(2).replace('.', ',')}`,
+        total: `R$ ${valorTotalNum.toFixed(2).replace('.', ',')}`,
+        valorPago: `R$ ${valorPagoNum.toFixed(2).replace('.', ',')}`,
+        restante: `R$ ${restanteNum.toFixed(2).replace('.', ',')}`,
+        desconto: `R$ ${descontoNum.toFixed(2).replace('.', ',')}`,
         pagamentos: (session as any).pagamentos || [], // Use loaded payments from session
         // CRITICAL: Always prioritize frozen product data
         produtosList: session.regras_congeladas?.produtos?.length > 0 ? 

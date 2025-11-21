@@ -114,8 +114,43 @@ export default function Workflow() {
         delete validUpdates.created_at;
       }
       
-      // 1. Optimistic update no cache com dados validados
-      mergeUpdate({ ...currentSession, ...validUpdates });
+      // BLOCO C: Criar cacheSafeUpdates - normalizar valores numéricos
+      const cacheSafeUpdates: Partial<WorkflowSession> = {};
+      
+      for (const [field, value] of Object.entries(validUpdates)) {
+        switch (field) {
+          case 'desconto':
+          case 'valorAdicional':
+          case 'valorFotoExtra':
+          case 'valorTotalFotoExtra':
+            // Converter strings formatadas em números
+            const snakeField = field === 'valorAdicional' ? 'valor_adicional' :
+                               field === 'valorFotoExtra' ? 'valor_foto_extra' :
+                               field === 'valorTotalFotoExtra' ? 'valor_total_foto_extra' : field;
+            (cacheSafeUpdates as any)[snakeField] = 
+              typeof value === 'string'
+                ? parseFloat(value.replace(/[^\d,]/g, '').replace(',', '.')) || 0
+                : Number(value) || 0;
+            break;
+          case 'qtdFotosExtra':
+            cacheSafeUpdates.qtd_fotos_extra = Number(value) || 0;
+            break;
+          case 'descricao':
+          case 'observacoes':
+          case 'detalhes':
+          case 'status':
+            (cacheSafeUpdates as any)[field] = value;
+            break;
+          // pacote e produtosList: deixar serem atualizados pelo realtime do backend
+          default:
+            break;
+        }
+      }
+      
+      // 1. Optimistic update no cache com dados normalizados (apenas se houver algo)
+      if (Object.keys(cacheSafeUpdates).length > 0) {
+        mergeUpdate({ ...currentSession, ...cacheSafeUpdates });
+      }
       
       // 2. FASE 2: Usar função robusta do hook (já sanitiza e recongela)
       await updateSessionRealtime(sessionId, validUpdates, silent);
@@ -124,9 +159,11 @@ export default function Workflow() {
       console.error('Error updating session:', error);
       // Reverter update otimista em caso de erro
       await forceRefresh();
+      // BLOCO E: Melhorar mensagem de erro
+      const errorMsg = error instanceof Error ? error.message : 'Não foi possível salvar as alterações.';
       toast({
         title: "Erro ao atualizar",
-        description: "Não foi possível salvar as alterações.",
+        description: errorMsg,
         variant: "destructive",
       });
       throw error;

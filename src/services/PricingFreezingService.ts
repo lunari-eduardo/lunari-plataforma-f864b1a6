@@ -54,7 +54,11 @@ class PricingFreezingService {
         const { data: user } = await supabase.auth.getUser();
         
         if (user?.user) {
-          const { data: pacote } = await supabase
+          // BLOCO A: Detectar se é UUID ou nome
+          const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/i.test(pacoteId);
+          console.log(`📦 Buscando pacote por ${isUuid ? 'ID (UUID)' : 'NOME'}:`, pacoteId);
+          
+          let query = supabase
             .from('pacotes')
             .select(`
               *,
@@ -63,11 +67,21 @@ class PricingFreezingService {
                 nome
               )
             `)
-            .eq('id', pacoteId)
-            .eq('user_id', user.user.id)
-            .single();
+            .eq('user_id', user.user.id);
+          
+          // BLOCO A: Usar .eq('id', ...) para UUID ou .eq('nome', ...) para nome
+          if (isUuid) {
+            query = query.eq('id', pacoteId);
+          } else {
+            query = query.eq('nome', pacoteId);
+          }
+          
+          const { data: pacote, error: pacoteError } = await query.maybeSingle();
 
-          if (pacote) {
+          if (pacoteError) {
+            console.error('❌ Erro ao buscar pacote:', pacoteError);
+          } else if (pacote) {
+            console.log('✅ Pacote encontrado:', pacote.nome);
             categoriaIdResolvido = pacote.categoria_id;
             regras.pacote = {
               id: pacote.id,
