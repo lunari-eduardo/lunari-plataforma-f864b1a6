@@ -28,11 +28,11 @@ import { AppProvider } from "./contexts/AppContext";
 import { AgendaProvider } from "./contexts/AgendaContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ConfigurationProvider } from "./contexts/ConfigurationContext";
-import { WorkflowCacheProvider } from "./contexts/WorkflowCacheContext";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import ThemeProvider from "./components/theme/ThemeProvider";
 import { BuildMonitor } from "./components/shared/BuildMonitor";
 import { usePricingBootstrap } from "./hooks/usePricingBootstrap";
+import { useWorkflowCacheInit } from "./hooks/useWorkflowCacheInit";
 import { useAppointmentWorkflowSync } from "./hooks/useAppointmentWorkflowSync";
 import { useVersionCheck } from "./hooks/useVersionCheck";
 import { useAppForceUpdate } from "./hooks/useAppForceUpdate";
@@ -58,6 +58,9 @@ function App() {
   // Enable force update mechanism for all devices
   useAppForceUpdate();
   
+  // Initialize workflow cache manager (non-blocking)
+  useWorkflowCacheInit();
+  
   // FASE 1: Global appointment→workflow sync (works on any route)
   useAppointmentWorkflowSync();
 
@@ -75,14 +78,13 @@ function App() {
         <ThemeProvider>
           <AuthProvider>
             <ConfigurationProvider>
-              <WorkflowCacheProvider>
-                <AppProvider>
-                  <AgendaProvider>
-                  <TooltipProvider>
-                    <BuildMonitor />
-                    <Toaster />
-                    <Sonner />
-                    <Routes>
+              <AppProvider>
+                <AgendaProvider>
+                <TooltipProvider>
+                  <BuildMonitor />
+                  <Toaster />
+                  <Sonner />
+                  <Routes>
                     {/* Public routes */}
                     <Route path="/landing" element={<LandingPage />} />
                     <Route path="/auth" element={<Auth />} />
@@ -116,11 +118,10 @@ function App() {
                       <Route path="/feed-test" element={<FeedTest />} />
                       <Route path="*" element={<NotFound />} />
                     </Route>
-                    </Routes>
-                  </TooltipProvider>
-                  </AgendaProvider>
-                </AppProvider>
-              </WorkflowCacheProvider>
+                  </Routes>
+                </TooltipProvider>
+                </AgendaProvider>
+              </AppProvider>
             </ConfigurationProvider>
           </AuthProvider>
         </ThemeProvider>

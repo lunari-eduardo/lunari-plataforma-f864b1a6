@@ -52,34 +52,12 @@ export default defineConfig(({ mode }) => ({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
         runtimeCaching: [
           {
-            // ✅ NUNCA cachear auth (sempre network)
-            urlPattern: /^https:\/\/.*\.supabase\.co\/auth\/.*/i,
-            handler: 'NetworkOnly',
-          },
-          {
-            // ✅ API requests: NetworkFirst com TTL curto
-            urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/.*/i,
+            urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
             handler: 'NetworkFirst',
             options: {
-              cacheName: 'supabase-api',
+              cacheName: 'supabase-cache',
               expiration: {
                 maxEntries: 50,
-                maxAgeSeconds: 5 * 60, // 5 minutos apenas
-              },
-              networkTimeoutSeconds: 10,
-              cacheableResponse: {
-                statuses: [0, 200]
-              }
-            }
-          },
-          {
-            // ✅ Storage: NetworkFirst
-            urlPattern: /^https:\/\/.*\.supabase\.co\/storage\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'supabase-storage',
-              expiration: {
-                maxEntries: 100,
                 maxAgeSeconds: 60 * 60 * 24 // 24 horas
               },
               cacheableResponse: {
