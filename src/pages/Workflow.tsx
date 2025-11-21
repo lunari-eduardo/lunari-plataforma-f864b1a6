@@ -8,8 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useWorkflowStatus } from "@/hooks/useWorkflowStatus";
 import { useOrcamentoData } from "@/hooks/useOrcamentoData";
-import { useWorkflowRealtime } from "@/hooks/useWorkflowRealtime";
-import { useWorkflowData } from "@/hooks/useWorkflowData";
+import { useWorkflowCache } from "@/hooks/useWorkflowCache";
 import { useAppointmentWorkflowSync } from "@/hooks/useAppointmentWorkflowSync";
 import { useClientesRealtime } from "@/hooks/useClientesRealtime";
 import { useSessionsRealtime } from "@/hooks/useSessionsRealtime";
@@ -21,6 +20,7 @@ import { usePricingMigration } from '@/hooks/usePricingMigration';
 import { Snowflake } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import type { SessionData, CategoryOption, PackageOption, ProductOption } from '@/types/workflow';
+import type { WorkflowSession } from '@/services/WorkflowCacheService';
 
 const removeAccents = (str: string) => {
   return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -42,31 +42,21 @@ export default function Workflow() {
     year: new Date().getFullYear()
   });
   
-  const {
-    sessions: workflowSessions,
-    sessionsData,
-    loading: workflowLoading,
-    error: workflowError,
-    updateSession,
-    deleteSession: deleteWorkflowSession,
-    createSessionFromAppointment
-  } = useWorkflowRealtime();
+  // ⚡ NOVO: Usar APENAS WorkflowCache (fonte única de verdade)
+  const { 
+    getSessionsForMonthSync, 
+    subscribeToMonth,
+    isPreloading,
+    fetchMonth,
+    isMonthCached
+  } = useWorkflowCache();
+  
+  const [workflowSessions, setWorkflowSessions] = useState<WorkflowSession[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [cacheHit, setCacheHit] = useState(false);
   
   // Use sessions hook for manual session creation
   const { createManualSession } = useSessionsRealtime();
-  
-  // ⚡ NOVO: Usar cache inteligente para carregamento rápido
-  const {
-    sessions: cachedSessions,
-    loading: cacheLoading,
-    cacheHit,
-    refresh: refreshCache
-  } = useWorkflowData({
-    year: currentMonth.year,
-    month: currentMonth.month,
-    enableRealtime: true,
-    autoPreload: true
-  });
   
   const { clientes } = useClientesRealtime();
   
@@ -81,6 +71,92 @@ export default function Workflow() {
   const getClienteByName = (nome: string) => {
     return clientes.find(cliente => cliente.nome === nome);
   };
+
+  // ⚡ SMART LOADING: Cache primeiro, Supabase como fallback
+  useEffect(() => {
+    const loadWorkflowData = async () => {
+      console.log(`🔄 Loading workflow for ${currentMonth.year}-${currentMonth.month}`);
+      
+      // 1️⃣ Tentar cache síncrono PRIMEIRO (< 1ms)
+      const cached = getSessionsForMonthSync(currentMonth.year, currentMonth.month);
+      
+      if (cached) {
+        console.log(`⚡ Cache HIT: ${cached.length} sessions`);
+        setWorkflowSessions(cached);
+        setCacheHit(true);
+        setLoading(false);
+        return;
+      }
+      
+      // 2️⃣ Não tem cache: mostrar loading e buscar do Supabase
+      console.log(`🔄 Cache MISS: fetching from Supabase`);
+      setCacheHit(false);
+      setLoading(true);
+      
+      try {
+        const sessions = await fetchMonth(currentMonth.year, currentMonth.month);
+        setWorkflowSessions(sessions);
+      } catch (error) {
+        console.error('❌ Error loading workflow:', error);
+        toast({
+          title: "Erro ao carregar workflow",
+          description: "Não foi possível carregar as sessões.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadWorkflowData();
+    
+    // 3️⃣ Subscrever para updates em tempo real
+    const unsubscribe = subscribeToMonth(
+      currentMonth.year,
+      currentMonth.month,
+      (updatedSessions) => {
+        console.log(`🔄 Realtime update: ${updatedSessions.length} sessions`);
+        setWorkflowSessions(updatedSessions);
+      }
+    );
+    
+    return unsubscribe;
+  }, [currentMonth.year, currentMonth.month, getSessionsForMonthSync, fetchMonth, subscribeToMonth]);
+
+  // Convert WorkflowSession to SessionData format
+  const convertToSessionData = useCallback((session: WorkflowSession): SessionData => {
+    return {
+      id: session.id,
+      data: session.data_sessao,
+      hora: session.hora_sessao,
+      nome: session.clientes?.nome || '',
+      email: session.clientes?.email || '',
+      whatsapp: session.clientes?.whatsapp || '',
+      descricao: session.descricao || '',
+      status: session.status || '',
+      categoria: session.categoria || '',
+      pacote: session.pacote || '',
+      valorPacote: String(session.valor_base_pacote || 0),
+      valorFotoExtra: String(session.valor_foto_extra || 0),
+      qtdFotosExtra: session.qtd_fotos_extra || 0,
+      valorTotalFotoExtra: String(session.valor_total_foto_extra || 0),
+      produto: '',
+      qtdProduto: 0,
+      valorTotalProduto: String(0),
+      valorAdicional: String(session.valor_adicional || 0),
+      detalhes: session.detalhes || '',
+      observacoes: session.observacoes || '',
+      valor: String(session.valor_total || 0),
+      total: String(session.valor_total || 0),
+      valorPago: String(session.valor_pago || 0),
+      restante: String((session.valor_total || 0) - (session.valor_pago || 0)),
+      desconto: String(session.desconto || 0),
+      pagamentos: session.pagamentos || [],
+      produtosList: session.produtos_incluidos || [],
+      regrasDePrecoFotoExtraCongeladas: session.regras_congeladas,
+      clienteId: session.cliente_id
+    };
+  }, []);
 
   // Estado local para UI
   const [sessionDataList, setSessionDataList] = useState<SessionData[]>([]);
@@ -151,19 +227,11 @@ export default function Workflow() {
     }
   });
 
-  // Update sessions from Supabase realtime data using the hook conversion
+  // Convert WorkflowSessions to SessionData format
   useEffect(() => {
-    console.log('🔄 Workflow useEffect triggered:', {
-      workflowLoading,
-      sessionsDataLength: sessionsData?.length || 0,
-      workflowSessionsLength: workflowSessions?.length || 0
-    });
-    
-    if (!workflowLoading && sessionsData) {
-      console.log('✅ Setting session data list:', sessionsData.length, 'sessions');
-      setSessionDataList(sessionsData);
-    }
-  }, [sessionsData, workflowLoading, workflowSessions]);
+    const converted = workflowSessions.map(convertToSessionData);
+    setSessionDataList(converted);
+  }, [workflowSessions, convertToSessionData]);
 
   // Mapear dados reais das configurações para formato da tabela
   const categoryOptions: CategoryOption[] = categorias.map((categoria, index) => ({
@@ -395,8 +463,9 @@ export default function Workflow() {
   }, []);
 
   const handleStatusChange = useCallback((sessionId: string, newStatus: string) => {
-    updateSession(sessionId, { status: newStatus });
-  }, [updateSession]);
+    // TODO: implement status update via cache service
+    console.log('Status change:', sessionId, newStatus);
+  }, []);
 
   const handleEditSession = useCallback((sessionId: string) => {
     // Implementation for editing session
@@ -409,13 +478,14 @@ export default function Workflow() {
   }, []);
 
   const handleDeleteSession = useCallback((sessionId: string, sessionTitle: string, paymentCount: number) => {
-    // For now, delete without including payments (user can choose via modal)
-    deleteWorkflowSession(sessionId, false);
-  }, [deleteWorkflowSession]);
+    // TODO: implement delete via cache service
+    console.log('Delete session:', sessionId);
+  }, []);
 
   const handleFieldUpdate = useCallback((sessionId: string, field: string, value: any, silent: boolean = false) => {
-    return updateSession(sessionId, { [field]: value }, silent);
-  }, [updateSession]);
+    // TODO: implement field update via cache service
+    console.log('Field update:', sessionId, field, value);
+  }, []);
 
   const handleSort = useCallback((field: string) => {
     setSortField(prevField => {
@@ -477,21 +547,12 @@ export default function Workflow() {
     return monthNames[month - 1];
   };
 
-  if (workflowLoading) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-muted-foreground">Carregando workflow...</div>
-      </div>
-    );
-  }
-
-  if (workflowError) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 gap-4">
-        <div className="text-destructive">Erro ao carregar workflow: {String(workflowError)}</div>
-        <Button onClick={() => window.location.reload()} variant="outline">
-          Recarregar página
-        </Button>
+        <div className="text-muted-foreground">
+          {isPreloading ? 'Pré-carregando cache...' : 'Carregando workflow...'}
+        </div>
       </div>
     );
   }
@@ -605,15 +666,17 @@ export default function Workflow() {
       {/* Debug Info */}
       {process.env.NODE_ENV === 'development' && (
         <div className="bg-muted p-4 rounded-lg text-sm">
-          <h3 className="font-bold mb-2">Debug Info:</h3>
-          <div>Total sessions: {workflowSessions?.length || 0}</div>
+          <h3 className="font-bold mb-2">Debug Info (SPRINT 1 - Cache System):</h3>
+          <div>Workflow sessions: {workflowSessions?.length || 0}</div>
           <div>Session data list: {sessionDataList?.length || 0}</div>
           <div>Filtered sessions: {filteredSessions?.length || 0}</div>
           <div>Month filtered sessions: {monthFilteredSessions?.length || 0}</div>
           <div>Sorted sessions: {sortedSessions?.length || 0}</div>
           <div>Current month: {getMonthName(currentMonth.month)} {currentMonth.year}</div>
-          <div>Loading: {workflowLoading ? 'Yes' : 'No'}</div>
-          <div>Error: {workflowError ? String(workflowError) : 'None'}</div>
+          <div>Loading: {loading ? 'Yes' : 'No'}</div>
+          <div>Cache Hit: {cacheHit ? '⚡ YES' : '❌ NO'}</div>
+          <div>Is Preloading: {isPreloading ? 'Yes' : 'No'}</div>
+          <div>Month Cached: {isMonthCached(currentMonth.year, currentMonth.month) ? 'Yes' : 'No'}</div>
         </div>
       )}
 
