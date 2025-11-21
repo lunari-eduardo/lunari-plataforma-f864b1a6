@@ -49,12 +49,11 @@ const WorkflowCacheContext = createContext<WorkflowCacheContextType | undefined>
 export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isPreloading, setIsPreloading] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
-  const serviceRef = useRef<WorkflowCacheService | null>(null);
+  const serviceRef = useRef<WorkflowCacheService>(WorkflowCacheService.getInstance());
   const monthCallbacksRef = useRef<Map<string, Set<(sessions: WorkflowSession[]) => void>>>(new Map());
 
   // Initialize service
   useEffect(() => {
-    serviceRef.current = new WorkflowCacheService();
     console.log('🚀 WorkflowCacheProvider: Service initialized');
 
     // Setup global cache update listener
