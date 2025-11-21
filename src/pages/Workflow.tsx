@@ -48,7 +48,10 @@ export default function Workflow() {
     subscribeToMonth,
     isPreloading,
     fetchMonth,
-    isMonthCached
+    isMonthCached,
+    updateSession,
+    deleteSession,
+    invalidateSessionById
   } = useWorkflowCache();
   
   const [workflowSessions, setWorkflowSessions] = useState<WorkflowSession[]>([]);
@@ -462,10 +465,22 @@ export default function Workflow() {
     window.localStorage.setItem('workflow_column_widths', JSON.stringify(widths));
   }, []);
 
-  const handleStatusChange = useCallback((sessionId: string, newStatus: string) => {
-    // TODO: implement status update via cache service
-    console.log('Status change:', sessionId, newStatus);
-  }, []);
+  const handleStatusChange = useCallback(async (sessionId: string, newStatus: string) => {
+    try {
+      await updateSession(sessionId, { status: newStatus });
+      toast({
+        title: "✅ Status atualizado",
+        description: `Status alterado para: ${newStatus}`
+      });
+    } catch (error) {
+      console.error('Error updating status:', error);
+      toast({
+        title: "Erro ao atualizar status",
+        description: "Não foi possível atualizar o status.",
+        variant: "destructive"
+      });
+    }
+  }, [updateSession]);
 
   const handleEditSession = useCallback((sessionId: string) => {
     // Implementation for editing session
@@ -477,15 +492,54 @@ export default function Workflow() {
     console.log('Add payment to session:', sessionId);
   }, []);
 
-  const handleDeleteSession = useCallback((sessionId: string, sessionTitle: string, paymentCount: number) => {
-    // TODO: implement delete via cache service
-    console.log('Delete session:', sessionId);
-  }, []);
+  const handleDeleteSession = useCallback(async (sessionId: string, sessionTitle: string, paymentCount: number) => {
+    try {
+      const session = workflowSessions.find(s => s.id === sessionId);
+      if (!session) {
+        toast({
+          title: "Erro",
+          description: "Sessão não encontrada.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      await deleteSession(sessionId, session.data_sessao);
+      
+      toast({
+        title: "✅ Sessão excluída",
+        description: `${sessionTitle} foi removida do workflow.`
+      });
+    } catch (error) {
+      console.error('Error deleting session:', error);
+      toast({
+        title: "Erro ao excluir",
+        description: "Não foi possível excluir a sessão.",
+        variant: "destructive"
+      });
+    }
+  }, [deleteSession, workflowSessions]);
 
-  const handleFieldUpdate = useCallback((sessionId: string, field: string, value: any, silent: boolean = false) => {
-    // TODO: implement field update via cache service
-    console.log('Field update:', sessionId, field, value);
-  }, []);
+  const handleFieldUpdate = useCallback(async (sessionId: string, field: string, value: any, silent: boolean = false) => {
+    try {
+      const updates: any = { [field]: value };
+      await updateSession(sessionId, updates);
+      
+      if (!silent) {
+        toast({
+          title: "✅ Campo atualizado",
+          description: `${field} foi atualizado com sucesso.`
+        });
+      }
+    } catch (error) {
+      console.error('Error updating field:', error);
+      toast({
+        title: "Erro ao atualizar",
+        description: "Não foi possível atualizar o campo.",
+        variant: "destructive"
+      });
+    }
+  }, [updateSession]);
 
   const handleSort = useCallback((field: string) => {
     setSortField(prevField => {

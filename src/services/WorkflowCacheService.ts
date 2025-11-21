@@ -462,6 +462,124 @@ export class WorkflowCacheService {
   }
 
   /**
+   * Update a session in Supabase and cache
+   */
+  async updateSession(sessionId: string, updates: Partial<WorkflowSession>): Promise<void> {
+    if (!this.userId) throw new Error('No userId set');
+
+    // 1. Update in Supabase
+    const { error } = await supabase
+      .from('clientes_sessoes')
+      .update(updates)
+      .eq('id', sessionId)
+      .eq('user_id', this.userId);
+    
+    if (error) throw error;
+    
+    // 2. Update in cache
+    this.updateSessionInCache(sessionId, updates);
+    
+    // 3. Persist to IndexedDB
+    await this.saveToIndexedDB();
+    
+    // 4. Broadcast to other tabs
+    this.broadcastUpdate('session-updated', { sessionId, updates });
+    
+    console.log(`✅ Session updated: ${sessionId}`);
+  }
+
+  /**
+   * Delete a session from Supabase and cache
+   */
+  async deleteSession(sessionId: string, dataSessao: string): Promise<void> {
+    if (!this.userId) throw new Error('No userId set');
+
+    // 1. Delete from Supabase
+    const { error } = await supabase
+      .from('clientes_sessoes')
+      .delete()
+      .eq('id', sessionId)
+      .eq('user_id', this.userId);
+    
+    if (error) throw error;
+    
+    // 2. Remove from cache
+    this.removeSessionFromCache(sessionId, dataSessao);
+    
+    // 3. Persist to IndexedDB
+    await this.saveToIndexedDB();
+    
+    // 4. Broadcast to other tabs
+    this.broadcastUpdate('session-deleted', { sessionId });
+    
+    console.log(`✅ Session deleted: ${sessionId}`);
+  }
+
+  /**
+   * Helper: Update session in cache memory
+   */
+  private updateSessionInCache(sessionId: string, updates: Partial<WorkflowSession>): void {
+    for (const [key, entry] of this.cache.entries()) {
+      const sessionIndex = entry.sessions.findIndex(s => s.id === sessionId);
+      if (sessionIndex !== -1) {
+        entry.sessions[sessionIndex] = {
+          ...entry.sessions[sessionIndex],
+          ...updates
+        };
+        
+        const [year, month] = key.split('-').map(Number);
+        this.notifyCallbacks(year, month, entry.sessions);
+        console.log(`💾 Cache updated for session: ${sessionId} in ${key}`);
+        break;
+      }
+    }
+  }
+
+  /**
+   * Helper: Remove session from cache
+   */
+  private removeSessionFromCache(sessionId: string, dataSessao: string): void {
+    const date = new Date(dataSessao);
+    const key = this.getCacheKey(date.getFullYear(), date.getMonth() + 1);
+    const entry = this.cache.get(key);
+    
+    if (entry) {
+      entry.sessions = entry.sessions.filter(s => s.id !== sessionId);
+      this.notifyCallbacks(
+        date.getFullYear(),
+        date.getMonth() + 1,
+        entry.sessions
+      );
+      console.log(`🗑️ Session removed from cache: ${sessionId} from ${key}`);
+    }
+  }
+
+  /**
+   * Invalidate cache for a specific session (by fetching its date)
+   */
+  async invalidateSessionById(sessionId: string): Promise<void> {
+    if (!this.userId) return;
+
+    try {
+      // Fetch session to discover its month
+      const { data: session } = await supabase
+        .from('clientes_sessoes')
+        .select('data_sessao')
+        .eq('id', sessionId)
+        .eq('user_id', this.userId)
+        .single();
+      
+      if (session) {
+        const date = new Date(session.data_sessao);
+        await this.invalidateMonth(date.getFullYear(), date.getMonth() + 1);
+        console.log(`🗑️ Cache invalidated for session: ${sessionId}`);
+      }
+    } catch (error) {
+      console.error('❌ Failed to invalidate session cache:', error);
+    }
+  }
+
+  /**
    * Invalidate a month (force refresh)
    */
   async invalidateMonth(year: number, month: number) {
