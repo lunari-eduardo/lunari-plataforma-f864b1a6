@@ -228,6 +228,9 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
   const setupRealtimeSubscription = () => {
     if (!userId) return;
 
+    // FASE 3: Debounce para reduzir updates excessivos e flickering
+    let realtimeDebounce: NodeJS.Timeout | null = null;
+
     const channel = supabase
       .channel('workflow-realtime')
       .on('postgres_changes', {
@@ -236,16 +239,24 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
         table: 'clientes_sessoes',
         filter: `user_id=eq.${userId}`
       }, (payload) => {
-        if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-          mergeUpdate(payload.new as WorkflowSession);
-        }
-        if (payload.eventType === 'DELETE') {
-          removeSession(payload.old.id);
-        }
+        console.log('📡 Realtime event:', payload.eventType, (payload.new as any)?.id);
+        
+        // Debounce de 300ms para evitar flickering
+        if (realtimeDebounce) clearTimeout(realtimeDebounce);
+        
+        realtimeDebounce = setTimeout(() => {
+          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+            mergeUpdate(payload.new as WorkflowSession);
+          }
+          if (payload.eventType === 'DELETE' && payload.old) {
+            removeSession((payload.old as any).id);
+          }
+        }, 300);
       })
       .subscribe();
 
     return () => {
+      if (realtimeDebounce) clearTimeout(realtimeDebounce);
       supabase.removeChannel(channel);
     };
   };
