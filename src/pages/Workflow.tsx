@@ -13,6 +13,7 @@ import { useWorkflowPackageData } from "@/hooks/useWorkflowPackageData";
 import { useAppointmentWorkflowSync } from "@/hooks/useAppointmentWorkflowSync";
 import { useClientesRealtime } from "@/hooks/useClientesRealtime";
 import { useSessionsRealtime } from "@/hooks/useSessionsRealtime";
+import { useWorkflowRealtime } from '@/hooks/useWorkflowRealtime';
 import { parseDateFromStorage } from "@/utils/dateUtils";
 import { useWorkflowMetrics } from '@/hooks/useWorkflowMetrics';
 import { useWorkflowMetricsRealtime } from '@/hooks/useWorkflowMetricsRealtime';
@@ -88,30 +89,37 @@ export default function Workflow() {
   
   // Use sessions hook for manual session creation
   const { createManualSession } = useSessionsRealtime();
+  const { updateSession: updateSessionRealtime } = useWorkflowRealtime();
   
-  // Funções de edição (integradas com Context)
+  // Funções de edição (integradas com Context) - FASE 1, 2 e 4
   const updateSession = useCallback(async (sessionId: string, updates: Partial<WorkflowSession>, silent = false) => {
     try {
-      // 1. Optimistic update no cache
       const currentSession = workflowSessions.find(s => s.id === sessionId);
-      if (currentSession) {
-        mergeUpdate({ ...currentSession, ...updates });
+      if (!currentSession) {
+        throw new Error('Sessão não encontrada');
       }
       
-      // 2. Salvar no Supabase
-      const { error: updateError } = await supabase
-        .from('clientes_sessoes')
-        .update(updates)
-        .eq('id', sessionId);
-      
-      if (updateError) throw updateError;
-      
-      if (!silent) {
-        toast({
-          title: "Sessão atualizada",
-          description: "As alterações foram salvas com sucesso.",
-        });
+      // FASE 4: Validação - Remover campos read-only antes do update
+      const validUpdates = { ...updates };
+      if ((validUpdates as any).clientes) {
+        console.warn('⚠️ Campo "clientes" removido (read-only)');
+        delete (validUpdates as any).clientes;
       }
+      if ((validUpdates as any).pagamentos) {
+        console.warn('⚠️ Campo "pagamentos" removido (read-only)');
+        delete (validUpdates as any).pagamentos;
+      }
+      if (validUpdates.created_at) {
+        console.warn('⚠️ Campo "created_at" removido (read-only)');
+        delete validUpdates.created_at;
+      }
+      
+      // 1. Optimistic update no cache com dados validados
+      mergeUpdate({ ...currentSession, ...validUpdates });
+      
+      // 2. FASE 2: Usar função robusta do hook (já sanitiza e recongela)
+      await updateSessionRealtime(sessionId, validUpdates, silent);
+      
     } catch (error) {
       console.error('Error updating session:', error);
       // Reverter update otimista em caso de erro
@@ -121,8 +129,9 @@ export default function Workflow() {
         description: "Não foi possível salvar as alterações.",
         variant: "destructive",
       });
+      throw error;
     }
-  }, [workflowSessions, mergeUpdate, forceRefresh]);
+  }, [workflowSessions, mergeUpdate, forceRefresh, updateSessionRealtime]);
   
   const deleteWorkflowSession = useCallback(async (sessionId: string, deletePayments: boolean) => {
     try {
