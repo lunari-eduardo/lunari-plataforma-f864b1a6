@@ -398,9 +398,10 @@ export const useWorkflowRealtime = () => {
                 );
                 sanitizedUpdates.regras_congeladas = regrasAtualizadas as any;
                 
-                // Recalcular valor total da sessão
+                // Recalcular valor total da sessão usando função correta
+                const { calculateSessionTotalFromRow } = await import('@/utils/sessionCalculations');
                 const updatedSession = { ...freshSession, produtos_incluidos: produtosConvertidos };
-                const novoValorTotal = calculateSessionTotal(updatedSession);
+                const novoValorTotal = calculateSessionTotalFromRow(updatedSession);
                 sanitizedUpdates.valor_total = novoValorTotal;
                 
                 console.log('📦 Produtos atualizados - recongelados e total recalculado:', novoValorTotal);
