@@ -87,16 +87,32 @@ export default function Workflow() {
     loadMonth();
   }, [currentMonth.year, currentMonth.month, ensureMonthLoaded]);
   
-  // Subscribe para updates do cache
+  // FASE 1: Leitura direta do cache ao navegar entre meses
+  useEffect(() => {
+    const sessions = getSessionsForMonthSync(currentMonth.year, currentMonth.month);
+    if (sessions) {
+      console.log(`📊 [Workflow] Loaded ${sessions.length} sessions for ${currentMonth.month}/${currentMonth.year} from cache`);
+      setWorkflowSessions(sessions);
+    }
+  }, [currentMonth, getSessionsForMonthSync]);
+  
+  // Subscribe para updates do cache (realtime apenas)
   useEffect(() => {
     const unsubscribe = subscribe((allSessions) => {
-      // Filtrar pelo mês atual
+      // Filtrar apenas sessões do mês atual
       const filtered = allSessions.filter(s => {
         const date = new Date(s.data_sessao);
         return date.getFullYear() === currentMonth.year && 
                date.getMonth() + 1 === currentMonth.month;
       });
-      setWorkflowSessions(filtered);
+      
+      // Só atualizar se houver mudança (evitar re-renders desnecessários)
+      setWorkflowSessions(prevSessions => {
+        const hasChanges = filtered.length !== prevSessions.length ||
+          filtered.some((s, i) => s.id !== prevSessions[i]?.id);
+        
+        return hasChanges ? filtered : prevSessions;
+      });
     });
     
     return unsubscribe;
@@ -767,6 +783,16 @@ export default function Workflow() {
           <div>Current month: {getMonthName(currentMonth.month)} {currentMonth.year}</div>
           <div>Loading: {loading ? 'Yes' : 'No'}</div>
           <div>Error: {error ? String(error) : 'None'}</div>
+          
+          {/* FASE 3: Validação visual do mês correto */}
+          <div className={`mt-2 p-2 rounded font-semibold ${
+            isLoadingCurrentMonth 
+              ? 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-400' 
+              : 'bg-green-500/20 text-green-700 dark:text-green-400'
+          }`}>
+            📊 Exibindo {filteredSessions.length} sessões de {getMonthName(currentMonth.month)} {currentMonth.year}
+            {isLoadingCurrentMonth && ' (carregando...)'}
+          </div>
         </div>
       )}
 

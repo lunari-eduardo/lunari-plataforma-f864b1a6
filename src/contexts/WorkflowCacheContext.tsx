@@ -289,9 +289,10 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
   const ensureMonthLoaded = useCallback(async (year: number, month: number) => {
     const key = getCacheKey(year, month);
     
-    // Se já está em cache, não fazer nada
+    // Se já está em cache, retornar imediatamente
     if (memoryCache.current.has(key)) {
-      console.log(`⚡ [WorkflowCache] Cache hit for ${key}`);
+      const cachedSessions = memoryCache.current.get(key) || [];
+      console.log(`⚡ [WorkflowCache] Cache hit for ${key} (${cachedSessions.length} sessions)`);
       return;
     }
     
@@ -316,7 +317,8 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
     
     try {
       await fetchAndCacheMonth(year, month);
-      console.log(`✅ [WorkflowCache] Successfully loaded ${key}`);
+      const sessions = memoryCache.current.get(key) || [];
+      console.log(`✅ [WorkflowCache] Successfully loaded ${key} (${sessions.length} sessions from Supabase)`);
     } catch (error) {
       console.error(`❌ [WorkflowCache] Error loading ${key}:`, error);
     } finally {
