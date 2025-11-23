@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { WorkflowSupabaseService } from '@/services/WorkflowSupabaseService';
-import { workflowCacheManager } from '@/services/WorkflowCacheManager';
 
 /**
  * Hook to automatically sync confirmed appointments with workflow sessions
@@ -135,12 +134,14 @@ export const useAppointmentWorkflowSync = () => {
                 const newSession = await WorkflowSupabaseService.createSessionFromAppointment(appointment.id, appointment);
                 console.log('✅ [AppointmentSync] Session created for confirmed appointment:', newSession?.id);
                 
-                // ⚡ NOVO: Adicionar ao cache imediatamente
+                // FASE 2: Adicionar ao novo sistema de cache via evento customizado
                 if (newSession) {
-                  workflowCacheManager.addSession(newSession);
-                  console.log('💾 [AppointmentSync] Session added to cache instantly');
+                  window.dispatchEvent(new CustomEvent('workflow-cache-merge', {
+                    detail: { session: newSession }
+                  }));
+                  console.log('💾 [AppointmentSync] Session sent to WorkflowCacheContext via event');
                   
-                  // ✅ FASE 4: Disparar evento global para forçar refresh imediato
+                  // Manter evento de criação para outros listeners
                   window.dispatchEvent(new CustomEvent('workflow-session-created', {
                     detail: { 
                       sessionId: newSession.id,
@@ -189,12 +190,14 @@ export const useAppointmentWorkflowSync = () => {
                 const newSession = await WorkflowSupabaseService.createSessionFromAppointment(appointment.id, appointment);
                 console.log('✅ [AppointmentSync] Session created for new confirmed appointment:', newSession?.id);
                 
-                // ⚡ NOVO: Adicionar ao cache imediatamente
+                // FASE 2: Adicionar ao novo sistema de cache via evento customizado
                 if (newSession) {
-                  workflowCacheManager.addSession(newSession);
-                  console.log('💾 [AppointmentSync] Session added to cache instantly');
+                  window.dispatchEvent(new CustomEvent('workflow-cache-merge', {
+                    detail: { session: newSession }
+                  }));
+                  console.log('💾 [AppointmentSync] Session sent to WorkflowCacheContext via event');
                   
-                  // ✅ FASE 4: Disparar evento global para forçar refresh imediato
+                  // Manter evento de criação para outros listeners
                   window.dispatchEvent(new CustomEvent('workflow-session-created', {
                     detail: { 
                       sessionId: newSession.id,
