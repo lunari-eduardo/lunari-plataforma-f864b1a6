@@ -51,7 +51,9 @@ export default function Workflow() {
     isPreloading,
     subscribe,
     mergeUpdate,
-    forceRefresh
+    forceRefresh,
+    ensureMonthLoaded,
+    isLoadingMonth
   } = useWorkflowCache();
   
   // Use package data resolution hook para conversão
@@ -66,6 +68,25 @@ export default function Workflow() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
+  // FASE 1: Garantir que o mês está carregado quando mudar
+  useEffect(() => {
+    const loadMonth = async () => {
+      setLoading(true);
+      console.log(`🔄 [Workflow] Loading month ${currentMonth.month}/${currentMonth.year}...`);
+      
+      try {
+        await ensureMonthLoaded(currentMonth.year, currentMonth.month);
+        console.log(`✅ [Workflow] Month ${currentMonth.month}/${currentMonth.year} loaded`);
+      } catch (error) {
+        console.error(`❌ [Workflow] Error loading month:`, error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadMonth();
+  }, [currentMonth.year, currentMonth.month, ensureMonthLoaded]);
+  
   // Subscribe para updates do cache
   useEffect(() => {
     const unsubscribe = subscribe((allSessions) => {
@@ -76,11 +97,13 @@ export default function Workflow() {
                date.getMonth() + 1 === currentMonth.month;
       });
       setWorkflowSessions(filtered);
-      setLoading(false);
     });
     
     return unsubscribe;
   }, [currentMonth, subscribe]);
+  
+  // Verificar se o mês está sendo carregado
+  const isLoadingCurrentMonth = isLoadingMonth(currentMonth.year, currentMonth.month);
   
   // Converter sessões para SessionData usando o hook de conversão
   const sessionsData = useMemo(() => {
@@ -318,15 +341,8 @@ export default function Workflow() {
     }
   }, [searchTerm, sessionDataList]);
 
-  // Filter sessions by current month
-  const monthFilteredSessions = useMemo(() => {
-    return filteredSessions.filter(session => {
-      const sessionDate = parseDateFromStorage(session.data);
-      if (!sessionDate) return false;
-      return sessionDate.getMonth() + 1 === currentMonth.month && 
-             sessionDate.getFullYear() === currentMonth.year;
-    });
-  }, [filteredSessions, currentMonth]);
+  // FASE 3: Removido filtro duplicado - filteredSessions já está filtrado pelo mês correto
+  // O useEffect acima já filtra pelo mês ao buscar do cache
 
   // Navigation functions for months
   const handlePreviousMonth = useCallback(() => {
@@ -463,7 +479,7 @@ export default function Workflow() {
   const sortedSessions = useMemo(() => {
     if (!sortField) {
       // Ordenação padrão: mais recentes primeiro
-      return [...monthFilteredSessions].sort((a, b) => {
+      return [...filteredSessions].sort((a, b) => {
         const dateA = parseDateFromStorage(a.data);
         const dateB = parseDateFromStorage(b.data);
         if (!dateA || !dateB) return 0;
@@ -471,7 +487,7 @@ export default function Workflow() {
       });
     }
 
-    return [...monthFilteredSessions].sort((a, b) => {
+    return [...filteredSessions].sort((a, b) => {
       const aVal = getSortValue(a, sortField);
       const bVal = getSortValue(b, sortField);
 
@@ -479,7 +495,7 @@ export default function Workflow() {
       if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
       return 0;
     });
-  }, [monthFilteredSessions, sortField, sortDirection, getSortValue]);
+  }, [filteredSessions, sortField, sortDirection, getSortValue]);
 
   // Format currency
   const formatCurrency = (value: number) => {
@@ -594,10 +610,16 @@ export default function Workflow() {
     return monthNames[month - 1];
   };
 
-  if (loading && workflowSessions.length === 0) {
+  // FASE 4: Melhorar indicador de carregamento
+  if ((loading || isLoadingCurrentMonth) && workflowSessions.length === 0) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-muted-foreground">Carregando workflow...</div>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">
+            Carregando sessões de {getMonthName(currentMonth.month)} {currentMonth.year}...
+          </p>
+        </div>
       </div>
     );
   }
@@ -728,7 +750,7 @@ export default function Workflow() {
             </div>
             <div className="bg-card border rounded-lg p-4">
               <div className="text-sm text-muted-foreground font-medium mb-2">SESSÕES</div>
-              <div className="text-2xl font-bold">{monthFilteredSessions.length}</div>
+              <div className="text-2xl font-bold">{filteredSessions.length}</div>
             </div>
           </div>
         )}
@@ -741,7 +763,6 @@ export default function Workflow() {
           <div>Total sessions: {workflowSessions?.length || 0}</div>
           <div>Session data list: {sessionDataList?.length || 0}</div>
           <div>Filtered sessions: {filteredSessions?.length || 0}</div>
-          <div>Month filtered sessions: {monthFilteredSessions?.length || 0}</div>
           <div>Sorted sessions: {sortedSessions?.length || 0}</div>
           <div>Current month: {getMonthName(currentMonth.month)} {currentMonth.year}</div>
           <div>Loading: {loading ? 'Yes' : 'No'}</div>

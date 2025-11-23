@@ -12,6 +12,8 @@ interface WorkflowCacheContextType {
   removeSession: (sessionId: string) => void;
   subscribe: (callback: (sessions: WorkflowSession[]) => void) => () => void;
   forceRefresh: () => Promise<void>;
+  ensureMonthLoaded: (year: number, month: number) => Promise<void>;
+  isLoadingMonth: (year: number, month: number) => boolean;
 }
 
 const WorkflowCacheContext = createContext<WorkflowCacheContextType | null>(null);
@@ -32,6 +34,9 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
   const memoryCache = useRef<Map<string, WorkflowSession[]>>(new Map());
   const subscribers = useRef<Set<(sessions: WorkflowSession[]) => void>>(new Set());
   const broadcastChannel = useRef<BroadcastChannel | null>(null);
+  
+  // FASE 1: Rastrear meses sendo carregados (evitar requests duplicados)
+  const loadingMonths = useRef<Set<string>>(new Set());
 
   // Inicializar BroadcastChannel para sync entre tabs
   useEffect(() => {
@@ -280,6 +285,64 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
     await preloadMonths();
   }, [userId]);
 
+  // FASE 1: Método para garantir que um mês específico está carregado
+  const ensureMonthLoaded = useCallback(async (year: number, month: number) => {
+    const key = getCacheKey(year, month);
+    
+    // Se já está em cache, não fazer nada
+    if (memoryCache.current.has(key)) {
+      console.log(`⚡ [WorkflowCache] Cache hit for ${key}`);
+      return;
+    }
+    
+    // Se já está carregando, aguardar
+    if (loadingMonths.current.has(key)) {
+      console.log(`⏳ [WorkflowCache] Already loading ${key}, waiting...`);
+      // Aguardar até que o carregamento termine
+      await new Promise<void>((resolve) => {
+        const checkInterval = setInterval(() => {
+          if (!loadingMonths.current.has(key)) {
+            clearInterval(checkInterval);
+            resolve();
+          }
+        }, 100);
+      });
+      return;
+    }
+    
+    // Marcar como carregando e buscar do Supabase
+    loadingMonths.current.add(key);
+    console.log(`🔄 [WorkflowCache] Fetching from Supabase for ${key}`);
+    
+    try {
+      await fetchAndCacheMonth(year, month);
+      console.log(`✅ [WorkflowCache] Successfully loaded ${key}`);
+    } catch (error) {
+      console.error(`❌ [WorkflowCache] Error loading ${key}:`, error);
+    } finally {
+      loadingMonths.current.delete(key);
+    }
+  }, [userId]);
+
+  const isLoadingMonth = useCallback((year: number, month: number): boolean => {
+    const key = getCacheKey(year, month);
+    return loadingMonths.current.has(key);
+  }, []);
+
+  // FASE 2: Escutar eventos de merge vindos do useAppointmentWorkflowSync
+  useEffect(() => {
+    const handleMergeEvent = (event: CustomEvent) => {
+      const session = event.detail?.session;
+      if (session) {
+        console.log('📥 [WorkflowCache] Received merge event from AppointmentSync:', session.id);
+        mergeUpdate(session);
+      }
+    };
+    
+    window.addEventListener('workflow-cache-merge', handleMergeEvent as EventListener);
+    return () => window.removeEventListener('workflow-cache-merge', handleMergeEvent as EventListener);
+  }, [mergeUpdate]);
+
   const value: WorkflowCacheContextType = {
     getSessionsForMonthSync,
     isPreloading,
@@ -288,7 +351,9 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
     mergeUpdate,
     removeSession,
     subscribe,
-    forceRefresh
+    forceRefresh,
+    ensureMonthLoaded,
+    isLoadingMonth
   };
 
   return (
