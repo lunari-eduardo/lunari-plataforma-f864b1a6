@@ -111,6 +111,7 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [userId]);
 
   const mergeUpdate = useCallback((session: WorkflowSession) => {
+    console.log('🔀 [WorkflowCache] mergeUpdate called for session:', session.id, 'updated_at:', session.updated_at);
     const date = new Date(session.data_sessao);
     const year = date.getFullYear();
     const month = date.getMonth() + 1;
@@ -275,6 +276,7 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const notifySubscribers = () => {
     const allSessions = Array.from(memoryCache.current.values()).flat();
+    console.log('📢 [WorkflowCache] Notifying subscribers:', allSessions.length, 'sessions');
     subscribers.current.forEach(callback => callback(allSessions));
   };
 

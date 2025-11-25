@@ -106,12 +106,27 @@ export default function Workflow() {
                date.getMonth() + 1 === currentMonth.month;
       });
       
-      // Só atualizar se houver mudança (evitar re-renders desnecessários)
+      // FASE 1: Detectar mudanças por quantidade, IDs OU conteúdo (updated_at e campos críticos)
       setWorkflowSessions(prevSessions => {
-        const hasChanges = filtered.length !== prevSessions.length ||
-          filtered.some((s, i) => s.id !== prevSessions[i]?.id);
+        const hasChanges = 
+          filtered.length !== prevSessions.length ||
+          filtered.some((s, i) => {
+            const prev = prevSessions.find(p => p.id === s.id);
+            if (!prev) return true; // Sessão nova
+            // Comparar updated_at ou campos críticos
+            return s.updated_at !== prev.updated_at ||
+                   s.valor_total !== prev.valor_total ||
+                   s.status !== prev.status ||
+                   s.desconto !== prev.desconto ||
+                   s.valor_adicional !== prev.valor_adicional ||
+                   s.qtd_fotos_extra !== prev.qtd_fotos_extra;
+          });
         
-        return hasChanges ? filtered : prevSessions;
+        if (hasChanges) {
+          console.log('🔄 [Workflow] Subscriber detected changes, updating UI');
+          return filtered;
+        }
+        return prevSessions;
       });
     });
     
@@ -187,8 +202,13 @@ export default function Workflow() {
       }
       
       // 1. Optimistic update no cache com dados normalizados (apenas se houver algo)
+      // FASE 2: Garantir que updated_at seja sempre atualizado para detecção de mudanças
       if (Object.keys(cacheSafeUpdates).length > 0) {
-        mergeUpdate({ ...currentSession, ...cacheSafeUpdates });
+        mergeUpdate({ 
+          ...currentSession, 
+          ...cacheSafeUpdates,
+          updated_at: new Date().toISOString() // Garantir timestamp para comparação
+        });
       }
       
       // 2. FASE 2: Usar função robusta do hook (já sanitiza e recongela)
