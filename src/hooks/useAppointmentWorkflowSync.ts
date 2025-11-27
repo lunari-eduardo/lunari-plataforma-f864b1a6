@@ -134,8 +134,19 @@ export const useAppointmentWorkflowSync = () => {
                 const newSession = await WorkflowSupabaseService.createSessionFromAppointment(appointment.id, appointment);
                 console.log('✅ [AppointmentSync] Session created for confirmed appointment:', newSession?.id);
                 
-                // FASE 2: Adicionar ao novo sistema de cache via evento customizado
+                // FASE 5: Invalidar cache do mês antes de adicionar nova sessão
                 if (newSession) {
+                  const sessionDate = new Date(newSession.data_sessao);
+                  const year = sessionDate.getFullYear();
+                  const month = sessionDate.getMonth() + 1;
+                  
+                  // Disparar evento de invalidação para garantir dados frescos
+                  window.dispatchEvent(new CustomEvent('workflow-cache-invalidate', {
+                    detail: { year, month }
+                  }));
+                  console.log('🗑️ [AppointmentSync] Cache invalidation triggered for:', year, month);
+                  
+                  // Adicionar ao cache via evento customizado
                   window.dispatchEvent(new CustomEvent('workflow-cache-merge', {
                     detail: { session: newSession }
                   }));
@@ -190,8 +201,19 @@ export const useAppointmentWorkflowSync = () => {
                 const newSession = await WorkflowSupabaseService.createSessionFromAppointment(appointment.id, appointment);
                 console.log('✅ [AppointmentSync] Session created for new confirmed appointment:', newSession?.id);
                 
-                // FASE 2: Adicionar ao novo sistema de cache via evento customizado
+                // FASE 5: Invalidar cache do mês antes de adicionar nova sessão
                 if (newSession) {
+                  const sessionDate = new Date(newSession.data_sessao);
+                  const year = sessionDate.getFullYear();
+                  const month = sessionDate.getMonth() + 1;
+                  
+                  // Disparar evento de invalidação para garantir dados frescos
+                  window.dispatchEvent(new CustomEvent('workflow-cache-invalidate', {
+                    detail: { year, month }
+                  }));
+                  console.log('🗑️ [AppointmentSync] Cache invalidation triggered for:', year, month);
+                  
+                  // Adicionar ao cache via evento customizado
                   window.dispatchEvent(new CustomEvent('workflow-cache-merge', {
                     detail: { session: newSession }
                   }));
