@@ -389,10 +389,19 @@ export class WorkflowSupabaseService {
       
       console.log('📝 Creating session with data:', sessionData);
 
+      // FASE 1: Corrigir SELECT com JOIN para trazer dados do cliente
       const { data, error } = await supabase
         .from('clientes_sessoes')
         .insert(sessionData)
-        .select()
+        .select(`
+          *,
+          clientes (
+            nome,
+            email,
+            telefone,
+            whatsapp
+          )
+        `)
         .single();
 
       if (error) {

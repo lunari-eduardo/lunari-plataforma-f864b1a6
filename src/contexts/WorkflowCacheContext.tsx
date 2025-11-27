@@ -214,16 +214,12 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
 
     notifySubscribers();
 
-    // Depois, atualizar do Supabase em paralelo (máx 3 por vez)
+    // FASE 2: SEMPRE atualizar do Supabase para garantir dados frescos
     const chunks = [monthsToPreload.slice(0, 3), monthsToPreload.slice(3)];
     for (const chunk of chunks) {
       await Promise.allSettled(
         chunk.map(({ year, month }) => {
-          const key = getCacheKey(year, month);
-          if (!memoryCache.current.has(key)) {
-            return fetchAndCacheMonth(year, month);
-          }
-          return Promise.resolve();
+          return fetchAndCacheMonth(year, month);
         })
       );
     }
@@ -250,9 +246,27 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
         // Debounce de 300ms para evitar flickering
         if (realtimeDebounce) clearTimeout(realtimeDebounce);
         
-        realtimeDebounce = setTimeout(() => {
+        realtimeDebounce = setTimeout(async () => {
+          // FASE 3: Hidratar dados do cliente se não estiverem presentes
           if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-            mergeUpdate(payload.new as WorkflowSession);
+            const session = payload.new as WorkflowSession;
+            
+            // Se não tem dados do cliente, buscar completo
+            if (!session.clientes && session.cliente_id) {
+              console.log('🔄 [Realtime] Hidratando dados do cliente...');
+              const { data: fullSession } = await supabase
+                .from('clientes_sessoes')
+                .select(`*, clientes(nome, email, telefone, whatsapp)`)
+                .eq('id', session.id)
+                .single();
+              
+              if (fullSession) {
+                mergeUpdate(fullSession as WorkflowSession);
+                return;
+              }
+            }
+            
+            mergeUpdate(session);
           }
           if (payload.eventType === 'DELETE' && payload.old) {
             removeSession((payload.old as any).id);
@@ -333,19 +347,47 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
     return loadingMonths.current.has(key);
   }, []);
 
-  // FASE 2: Escutar eventos de merge vindos do useAppointmentWorkflowSync
+  // FASE 4: Listen for custom cache merge events with client hydration
   useEffect(() => {
-    const handleMergeEvent = (event: CustomEvent) => {
+    const handleMergeEvent = async (event: CustomEvent) => {
       const session = event.detail?.session;
-      if (session) {
-        console.log('📥 [WorkflowCache] Received merge event from AppointmentSync:', session.id);
-        mergeUpdate(session);
+      if (!session) return;
+      
+      console.log('📥 [WorkflowCache] Received merge event from AppointmentSync:', session.id);
+      
+      // Se não tem dados do cliente, hidratar
+      if (!session.clientes && session.cliente_id) {
+        console.log('🔄 [CacheMerge] Hidratando dados do cliente...');
+        const { data: fullSession } = await supabase
+          .from('clientes_sessoes')
+          .select(`*, clientes(nome, email, telefone, whatsapp)`)
+          .eq('id', session.id)
+          .single();
+        
+        if (fullSession) {
+          mergeUpdate(fullSession as WorkflowSession);
+          return;
+        }
       }
+      
+      mergeUpdate(session);
     };
     
     window.addEventListener('workflow-cache-merge', handleMergeEvent as EventListener);
     return () => window.removeEventListener('workflow-cache-merge', handleMergeEvent as EventListener);
   }, [mergeUpdate]);
+
+  // FASE 5: Listen for cache invalidation events
+  useEffect(() => {
+    const handleInvalidate = async (event: CustomEvent) => {
+      const { year, month } = event.detail;
+      console.log('🗑️ [WorkflowCache] Invalidating cache for:', year, month);
+      await invalidateMonth(year, month);
+    };
+    
+    window.addEventListener('workflow-cache-invalidate', handleInvalidate as EventListener);
+    return () => window.removeEventListener('workflow-cache-invalidate', handleInvalidate as EventListener);
+  }, [invalidateMonth]);
 
   const value: WorkflowCacheContextType = {
     getSessionsForMonthSync,
