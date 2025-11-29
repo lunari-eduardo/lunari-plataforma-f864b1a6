@@ -49,6 +49,7 @@ export function GerenciarProdutosModal({
   const [localProdutos, setLocalProdutos] = useState<ProdutoWorkflow[]>([]);
   const [novoProductOpen, setNovoProductOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<string>("");
+  const [searchTerm, setSearchTerm] = useState('');
   
   // CORREÇÃO: Usar dados real-time do Supabase (sem loops de sync)
   const { produtos: produtosConfig } = useRealtimeConfiguration();
@@ -167,8 +168,14 @@ export function GerenciarProdutosModal({
       setLocalProdutos(prev => [...prev, novoProduto]);
     }
     setSelectedProduct("");
+    setSearchTerm('');
     setNovoProductOpen(false);
   };
+
+  // Filtrar produtos manualmente baseado no termo de busca
+  const filteredProducts = productOptions.filter(product =>
+    product.nome.toLowerCase().includes(searchTerm.toLowerCase())
+  );
   const handleSave = () => {
     console.log('🔄 GerenciarProdutosModal - Salvando produtos:', localProdutos);
     console.log('📊 Total de produtos:', localProdutos.length);
@@ -275,17 +282,22 @@ export function GerenciarProdutosModal({
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent 
-                    className="w-[--radix-popover-trigger-width] p-0 z-[100]" 
+                    className="w-[--radix-popover-trigger-width] p-0 z-[9999]" 
                     align="start"
                     sideOffset={4}
                     onCloseAutoFocus={e => e.preventDefault()}
                   >
-                    <Command>
-                      <CommandInput placeholder="Buscar produto..." className="h-9" />
+                    <Command shouldFilter={false}>
+                      <CommandInput 
+                        placeholder="Buscar produto..." 
+                        className="h-9"
+                        value={searchTerm}
+                        onValueChange={setSearchTerm}
+                      />
                       <CommandList>
                         <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
                         <CommandGroup>
-                          {productOptions.map(product => (
+                          {filteredProducts.map(product => (
                             <CommandItem 
                               key={product.id} 
                               value={product.nome}
