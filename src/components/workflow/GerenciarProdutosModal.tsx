@@ -83,7 +83,9 @@ export function GerenciarProdutosModal({
         return {
           ...produto,
           nome: nomeProduto,
-          valorUnitario: produto.tipo === 'incluso' ? 0 : produto.valorUnitario
+          valorUnitario: produto.tipo === 'incluso' ? 0 : produto.valorUnitario,
+          produzido: produto.produzido ?? false,
+          entregue: produto.entregue ?? false
         };
       });
       
@@ -145,7 +147,9 @@ export function GerenciarProdutosModal({
         nome: name,
         quantidade: 1,
         valorUnitario,
-        tipo: 'manual'
+        tipo: 'manual',
+        produzido: false,
+        entregue: false
       };
       setLocalProdutos(prev => [...prev, novoProduto]);
     }
