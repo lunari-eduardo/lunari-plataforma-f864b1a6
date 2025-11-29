@@ -14,11 +14,10 @@ const Dialog = DialogPrimitive.Root;
 const DialogTrigger = DialogPrimitive.Trigger;
 const DialogPortal = DialogPrimitive.Portal;
 const DialogClose = DialogPrimitive.Close;
-const DialogOverlay = React.forwardRef<React.ElementRef<typeof DialogPrimitive.Overlay>, React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay> & { hasOpenDropdown?: boolean }>(({
+const DialogOverlay = React.forwardRef<React.ElementRef<typeof DialogPrimitive.Overlay>, React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>>(({
   className,
-  hasOpenDropdown,
   ...props
-}, ref) => <DialogPrimitive.Overlay ref={ref} className={cn("fixed inset-0 z-40 bg-black/80  data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0", hasOpenDropdown && "pointer-events-none", className)} {...props} />);
+}, ref) => <DialogPrimitive.Overlay ref={ref} className={cn("fixed inset-0 z-40 bg-black/80  data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0", className)} {...props} />);
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 const DialogContent = React.forwardRef<React.ElementRef<typeof DialogPrimitive.Content>, React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>>(({
   className,
@@ -66,8 +65,8 @@ const DialogContent = React.forwardRef<React.ElementRef<typeof DialogPrimitive.C
     setHasOpenDropdown
   }), []);
   return <DialogPortal>
-      <DialogOverlay hasOpenDropdown={hasOpenDropdown} />
-      <DialogPrimitive.Content ref={ref} className={cn("fixed left-1/2 top-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 border bg-background p-6 shadow-lg sm:rounded-lg outline-none focus:outline-none max-h-[85vh] overflow-auto scrollbar-elegant data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0", className)} onInteractOutside={handleInteractOutside} {...props}>
+      <DialogOverlay />
+      <DialogPrimitive.Content ref={ref} className={cn("fixed left-1/2 top-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 border bg-background p-6 shadow-lg sm:rounded-lg outline-none focus:outline-none max-h-[85vh] overflow-auto scrollbar-elegant will-change-transform data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0", className)} onInteractOutside={handleInteractOutside} {...props}>
         <DialogDropdownContext.Provider value={contextValue}>
           {children}
         </DialogDropdownContext.Provider>

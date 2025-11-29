@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo, useRef } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, useDialogDropdownContext } from "@/components/ui/dialog";
+import { useState, useEffect, useMemo } from "react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,21 +49,13 @@ export function GerenciarProdutosModal({
   const [localProdutos, setLocalProdutos] = useState<ProdutoWorkflow[]>([]);
   const [novoProductOpen, setNovoProductOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<string>("");
-  const [searchTerm, setSearchTerm] = useState('');
   
   // CORREÇÃO: Usar dados real-time do Supabase (sem loops de sync)
   const { produtos: produtosConfig } = useRealtimeConfiguration();
-  
-  // FASE 1: Usar ref para controlar inicialização e evitar reset
-  const isInitialized = useRef(false);
-  
-  // FASE 2: Usar contexto do Dialog para notificar sobre dropdowns abertos
-  const dialogContext = useDialogDropdownContext();
 
-  // CORREÇÃO: Inicializar produtos locais APENAS quando modal abre
+  // CORREÇÃO: Inicializar produtos locais com nomes corretos
   useEffect(() => {
-    // Só inicializar quando o modal ABRIR e não estiver inicializado
-    if (open && !isInitialized.current) {
+    if (open) {
       console.log('🔄 GerenciarProdutosModal - Inicializando produtos:', produtos);
       
       const produtosCorrigidos = produtos.map(produto => {
@@ -99,12 +91,6 @@ export function GerenciarProdutosModal({
       
       console.log('📦 Produtos corrigidos:', produtosCorrigidos);
       setLocalProdutos(produtosCorrigidos);
-      isInitialized.current = true;  // Marcar como inicializado
-    }
-    
-    // Resetar flag quando modal fechar
-    if (!open) {
-      isInitialized.current = false;
     }
   }, [open, produtos, produtosConfig, productOptions]);
 
@@ -168,14 +154,8 @@ export function GerenciarProdutosModal({
       setLocalProdutos(prev => [...prev, novoProduto]);
     }
     setSelectedProduct("");
-    setSearchTerm('');
     setNovoProductOpen(false);
   };
-
-  // Filtrar produtos manualmente baseado no termo de busca
-  const filteredProducts = productOptions.filter(product =>
-    product.nome.toLowerCase().includes(searchTerm.toLowerCase())
-  );
   const handleSave = () => {
     console.log('🔄 GerenciarProdutosModal - Salvando produtos:', localProdutos);
     console.log('📊 Total de produtos:', localProdutos.length);
@@ -188,7 +168,9 @@ export function GerenciarProdutosModal({
   };
 
     return <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[92vw] sm:max-w-2xl max-h-[90vh] flex flex-col py-[17px] px-3 sm:px-6 text-xs sm:text-sm" onPointerDownOutside={e => {
+      <DialogContent className="max-w-[92vw] sm:max-w-2xl max-h-[90vh] flex flex-col py-[17px] px-3 sm:px-6 text-xs sm:text-sm" style={{
+      overflow: 'visible'
+    }} onPointerDownOutside={e => {
       // Prevenir fechamento do modal quando clicar no popover
       const target = e.target as Element;
       if (target.closest('[data-radix-popover-content]') || target.closest('[cmdk-item]')) {
@@ -268,49 +250,34 @@ export function GerenciarProdutosModal({
             <Label className="text-sm font-normal ">Adicionar Novo Produto</Label>
             <div className="flex items-center gap-2">
               <div className="flex-1">
-                <Popover 
-                  open={novoProductOpen} 
-                  onOpenChange={(open) => {
-                    setNovoProductOpen(open);
-                    dialogContext?.setHasOpenDropdown(open);
-                  }}
-                >
+                <Popover open={novoProductOpen} onOpenChange={setNovoProductOpen}>
                   <PopoverTrigger asChild>
                     <Button variant="outline" role="combobox" aria-expanded={novoProductOpen} className="w-full justify-between h-7 text-xs">
                       {selectedProduct || "Selecione um produto..."}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent 
-                    className="w-[--radix-popover-trigger-width] p-0 z-[9999]" 
-                    align="start"
-                    sideOffset={4}
-                    onCloseAutoFocus={e => e.preventDefault()}
-                  >
-                    <Command shouldFilter={false}>
-                      <CommandInput 
-                        placeholder="Buscar produto..." 
-                        className="h-9"
-                        value={searchTerm}
-                        onValueChange={setSearchTerm}
-                      />
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start" style={{
+                  zIndex: 99999,
+                  position: 'fixed',
+                  pointerEvents: 'auto'
+                }} onOpenAutoFocus={e => e.preventDefault()}>
+                    <Command>
+                      <CommandInput placeholder="Buscar produto..." className="h-9" />
                       <CommandList>
                         <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
                         <CommandGroup>
-                          {filteredProducts.map(product => (
-                            <CommandItem 
-                              key={product.id} 
-                              value={product.nome}
-                              onSelect={() => handleAdicionarProduto(product.nome)}
-                              className="cursor-pointer"
-                            >
+                          {productOptions.map(product => <CommandItem key={product.id} value={product.nome} onSelect={(currentValue) => {
+                          handleAdicionarProduto(currentValue);
+                        }} className="cursor-pointer hover:bg-accent" style={{
+                          pointerEvents: 'auto'
+                        }}>
                               <Check className={cn("mr-2 h-4 w-4", selectedProduct === product.nome ? "opacity-100" : "opacity-0")} />
                               <div className="flex flex-col">
                                 <span className="font-medium">{product.nome}</span>
                                 <span className="text-xs text-muted-foreground">{product.valor}</span>
                               </div>
-                            </CommandItem>
-                          ))}
+                            </CommandItem>)}
                         </CommandGroup>
                       </CommandList>
                     </Command>
