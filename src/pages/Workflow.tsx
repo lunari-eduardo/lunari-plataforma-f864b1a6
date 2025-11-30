@@ -195,7 +195,11 @@ export default function Workflow() {
           case 'status':
             (cacheSafeUpdates as any)[field] = value;
             break;
-          // pacote e produtosList: deixar serem atualizados pelo realtime do backend
+          case 'produtosList':
+            // Persistir produtosList (contém produzido/entregue checkboxes)
+            cacheSafeUpdates.produtos_incluidos = value;
+            break;
+          // pacote: deixar ser atualizado pelo realtime do backend
           default:
             break;
         }
