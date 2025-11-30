@@ -56,8 +56,20 @@ export function GerenciarProdutosModal({
   // FASE 1: Usar ref para controlar inicialização e evitar reset
   const isInitialized = useRef(false);
   
+  // FASE 2: Ref para focar o input de pesquisa
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  
   // FASE 2: Usar contexto do Dialog para notificar sobre dropdowns abertos
   const dialogContext = useDialogDropdownContext();
+
+  // FASE 2: Focar manualmente quando o Popover abre
+  useEffect(() => {
+    if (novoProductOpen && searchInputRef.current) {
+      setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 50);
+    }
+  }, [novoProductOpen]);
 
   // CORREÇÃO: Inicializar produtos locais APENAS quando modal abre
   useEffect(() => {
@@ -278,10 +290,20 @@ export function GerenciarProdutosModal({
                     className="w-[--radix-popover-trigger-width] p-0 z-[100]" 
                     align="start"
                     sideOffset={4}
+                    onOpenAutoFocus={(e) => {
+                      // Permitir auto-focus no input de pesquisa
+                    }}
                     onCloseAutoFocus={e => e.preventDefault()}
+                    onInteractOutside={(e) => {
+                      // FASE 3: Não fechar se clicar no input de pesquisa
+                      const target = e.target as Element;
+                      if (target.closest('[cmdk-input]') || target.closest('[cmdk-input-wrapper]')) {
+                        e.preventDefault();
+                      }
+                    }}
                   >
                     <Command>
-                      <CommandInput placeholder="Buscar produto..." className="h-9" />
+                      <CommandInput ref={searchInputRef} placeholder="Buscar produto..." className="h-9" />
                       <CommandList>
                         <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
                         <CommandGroup>
