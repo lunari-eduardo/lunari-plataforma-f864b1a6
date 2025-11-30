@@ -14,10 +14,24 @@ const Dialog = DialogPrimitive.Root;
 const DialogTrigger = DialogPrimitive.Trigger;
 const DialogPortal = DialogPrimitive.Portal;
 const DialogClose = DialogPrimitive.Close;
-const DialogOverlay = React.forwardRef<React.ElementRef<typeof DialogPrimitive.Overlay>, React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>>(({
+const DialogOverlay = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Overlay>, 
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay> & { hasOpenDropdown?: boolean }
+>(({
   className,
+  hasOpenDropdown,
   ...props
-}, ref) => <DialogPrimitive.Overlay ref={ref} className={cn("fixed inset-0 z-40 bg-black/80  data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0", className)} {...props} />);
+}, ref) => (
+  <DialogPrimitive.Overlay 
+    ref={ref} 
+    className={cn(
+      "fixed inset-0 z-40 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+      hasOpenDropdown && "pointer-events-none",
+      className
+    )} 
+    {...props} 
+  />
+));
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 const DialogContent = React.forwardRef<React.ElementRef<typeof DialogPrimitive.Content>, React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>>(({
   className,
@@ -40,16 +54,22 @@ const DialogContent = React.forwardRef<React.ElementRef<typeof DialogPrimitive.C
       return;
     }
 
-    // Check if interaction is with dropdown/command menu elements
-    const target = event.detail?.originalEvent?.target || event.target as Element;
-    if (target && (
-      target.closest('[data-radix-popover-content]') ||
-      target.closest('[cmdk-item]') ||
-      target.getAttribute('cmdk-item') !== null ||
-      target.closest('[data-radix-command-item]') ||
-      target.closest('[data-radix-select-content]') ||
-      target.closest('[data-radix-popover-trigger]')
-    )) {
+    // Use composedPath to detect clicks in Portals (works across shadow DOM boundaries)
+    const path = (event.nativeEvent?.composedPath?.() || event.composedPath?.() || []) as Element[];
+    const isInsidePopover = path.some((el: Element) => {
+      if (el instanceof HTMLElement) {
+        return (
+          el.hasAttribute('data-radix-popover-content') ||
+          el.hasAttribute('cmdk-item') ||
+          el.hasAttribute('data-radix-select-content') ||
+          el.closest?.('[data-radix-popover-content]') ||
+          el.closest?.('[cmdk-item]')
+        );
+      }
+      return false;
+    });
+
+    if (isInsidePopover) {
       event.preventDefault();
       return;
     }
@@ -65,8 +85,8 @@ const DialogContent = React.forwardRef<React.ElementRef<typeof DialogPrimitive.C
     setHasOpenDropdown
   }), []);
   return <DialogPortal>
-      <DialogOverlay />
-      <DialogPrimitive.Content ref={ref} className={cn("fixed left-1/2 top-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 border bg-background p-6 shadow-lg sm:rounded-lg outline-none focus:outline-none max-h-[85vh] overflow-auto scrollbar-elegant will-change-transform data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0", className)} onInteractOutside={handleInteractOutside} {...props}>
+      <DialogOverlay hasOpenDropdown={hasOpenDropdown} />
+      <DialogPrimitive.Content ref={ref} className={cn("fixed left-1/2 top-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 border bg-background p-6 shadow-lg sm:rounded-lg outline-none focus:outline-none max-h-[85vh] overflow-auto scrollbar-elegant data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0", className)} onInteractOutside={handleInteractOutside} {...props}>
         <DialogDropdownContext.Provider value={contextValue}>
           {children}
         </DialogDropdownContext.Provider>

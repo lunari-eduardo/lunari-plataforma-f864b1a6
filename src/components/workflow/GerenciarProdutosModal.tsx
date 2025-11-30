@@ -287,7 +287,7 @@ export function GerenciarProdutosModal({
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent 
-                    className="w-[--radix-popover-trigger-width] p-0 z-[100]" 
+                    className="w-[--radix-popover-trigger-width] p-0" 
                     align="start"
                     sideOffset={4}
                     onOpenAutoFocus={(e) => {
