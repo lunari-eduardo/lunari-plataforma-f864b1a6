@@ -294,13 +294,6 @@ export function GerenciarProdutosModal({
                       // Permitir auto-focus no input de pesquisa
                     }}
                     onCloseAutoFocus={e => e.preventDefault()}
-                    onInteractOutside={(e) => {
-                      // FASE 3: Não fechar se clicar no input de pesquisa
-                      const target = e.target as Element;
-                      if (target.closest('[cmdk-input]') || target.closest('[cmdk-input-wrapper]')) {
-                        e.preventDefault();
-                      }
-                    }}
                   >
                     <Command>
                       <CommandInput ref={searchInputRef} placeholder="Buscar produto..." className="h-9" />
