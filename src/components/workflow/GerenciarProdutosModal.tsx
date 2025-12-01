@@ -1,16 +1,21 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, useDialogDropdownContext } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Package } from "lucide-react";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Check, ChevronsUpDown } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Trash2, Package, ChevronDown } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useRealtimeConfiguration } from '@/hooks/useRealtimeConfiguration';
+
+// Função para normalizar texto (remover acentos e caracteres especiais)
+const normalizeText = (text: string): string => {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove diacríticos
+    .replace(/[^a-z0-9\s]/g, ''); // Remove caracteres especiais
+};
 
 interface ProdutoWorkflow {
   nome: string;
@@ -47,17 +52,17 @@ export function GerenciarProdutosModal({
   onSave
 }: GerenciarProdutosModalProps) {
   const [localProdutos, setLocalProdutos] = useState<ProdutoWorkflow[]>([]);
-  const [novoProductOpen, setNovoProductOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<string>("");
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   
   // CORREÇÃO: Usar dados real-time do Supabase (sem loops de sync)
   const { produtos: produtosConfig } = useRealtimeConfiguration();
   
   // FASE 1: Usar ref para controlar inicialização e evitar reset
   const isInitialized = useRef(false);
-  
-  // FASE 2: Usar contexto do Dialog para notificar sobre dropdowns abertos
-  const dialogContext = useDialogDropdownContext();
 
   // CORREÇÃO: Inicializar produtos locais APENAS quando modal abre
   useEffect(() => {
@@ -107,6 +112,30 @@ export function GerenciarProdutosModal({
     }
   }, [open, produtos, produtosConfig, productOptions]);
 
+  // Filtrar produtos baseado no termo de busca
+  const filteredProducts = useMemo(() => {
+    if (!searchTerm.trim()) return productOptions;
+    
+    const normalizedSearch = normalizeText(searchTerm);
+    return productOptions.filter(product => {
+      const normalizedName = normalizeText(product.nome);
+      return normalizedName.includes(normalizedSearch);
+    });
+  }, [productOptions, searchTerm]);
+
+  // Fechar dropdown quando clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+        setIsEditing(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   // Calcular totais dos produtos
   const totais = useMemo(() => {
     const produtosManuais = localProdutos.filter(p => p.tipo === 'manual');
@@ -140,9 +169,19 @@ export function GerenciarProdutosModal({
     setLocalProdutos(prev => prev.map((p, i) => (i === index ? { ...p, [key]: value } : p)));
   };
 
-  const handleAdicionarProduto = (productName?: string) => {
-    const name = productName ?? selectedProduct;
-    if (!name) return;
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+    setIsEditing(true);
+    setIsDropdownOpen(true);
+  };
+
+  const handleInputFocus = () => {
+    setIsDropdownOpen(true);
+    setIsEditing(true);
+  };
+
+  const handleSelectProduct = (product: ProductOption) => {
+    const name = product.nome;
     const productData = productOptions.find(p => p.nome === name);
     if (!productData) return;
 
@@ -152,10 +191,10 @@ export function GerenciarProdutosModal({
       // Se já existe, incrementar quantidade
       setLocalProdutos(prev => prev.map(p => (p.nome === name ? { ...p, quantidade: p.quantidade + 1 } : p)));
     } else {
-    // Adicionar novo produto - converter valor corretamente
-    const valorString = productData.valor || 'R$ 0,00';
-    const valorUnitario = parseFloat(valorString.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-    console.log('💰 Valor do produto:', { valorString, valorUnitario });
+      // Adicionar novo produto - converter valor corretamente
+      const valorString = productData.valor || 'R$ 0,00';
+      const valorUnitario = parseFloat(valorString.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+      console.log('💰 Valor do produto:', { valorString, valorUnitario });
       const novoProduto: ProdutoWorkflow = {
         nome: name,
         quantidade: 1,
@@ -166,8 +205,10 @@ export function GerenciarProdutosModal({
       };
       setLocalProdutos(prev => [...prev, novoProduto]);
     }
-    setSelectedProduct("");
-    setNovoProductOpen(false);
+    setSearchTerm('');
+    setIsEditing(false);
+    setIsDropdownOpen(false);
+    inputRef.current?.blur();
   };
   const handleSave = () => {
     console.log('🔄 GerenciarProdutosModal - Salvando produtos:', localProdutos);
@@ -259,52 +300,47 @@ export function GerenciarProdutosModal({
           {/* Seção Adicionar Novo Produto */}
           <div className="space-y-3 border-t pt-4">
             <Label className="text-sm font-normal ">Adicionar Novo Produto</Label>
-            <div className="flex items-center gap-2">
-              <div className="flex-1">
-                <Popover 
-                  open={novoProductOpen} 
-                  onOpenChange={(open) => {
-                    setNovoProductOpen(open);
-                    dialogContext?.setHasOpenDropdown(open);
-                  }}
-                >
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" role="combobox" aria-expanded={novoProductOpen} className="w-full justify-between h-7 text-xs">
-                      {selectedProduct || "Selecione um produto..."}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent 
-                    className="w-[--radix-popover-trigger-width] p-0 z-[9999]" 
-                    align="start"
-                    sideOffset={4}
-                  >
-                    <Command>
-                      <CommandInput placeholder="Buscar produto..." className="h-9 text-xs border-0 bg-background focus:ring-0" />
-                      <CommandList>
-                        <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
-                        <CommandGroup>
-                          {productOptions.map(product => (
-                            <CommandItem 
-                              key={product.id} 
-                              value={product.nome}
-                              onSelect={() => handleAdicionarProduto(product.nome)}
-                              className="cursor-pointer"
-                            >
-                              <Check className={cn("mr-2 h-4 w-4", selectedProduct === product.nome ? "opacity-100" : "opacity-0")} />
-                              <div className="flex flex-col">
-                                <span className="font-medium">{product.nome}</span>
-                                <span className="text-xs text-muted-foreground">{product.valor}</span>
-                              </div>
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
+            <div ref={containerRef} className="relative w-full">
+              <div className="relative">
+                <Input
+                  ref={inputRef}
+                  value={searchTerm}
+                  onChange={handleInputChange}
+                  onFocus={handleInputFocus}
+                  placeholder="Buscar produto por nome..."
+                  className="pr-8 text-xs h-9"
+                  autoComplete="off"
+                />
+                <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               </div>
-              
+
+              {isDropdownOpen && (
+                <div className="absolute z-[9999] w-full mt-1 dropdown-solid border border-border rounded-md shadow-lg max-h-48 overflow-auto scrollbar-minimal">
+                  {filteredProducts.length > 0 ? (
+                    filteredProducts.map((product) => (
+                      <div
+                        key={product.id}
+                        onClick={() => handleSelectProduct(product)}
+                        className="px-3 py-2 dropdown-solid-item cursor-pointer text-xs border-b border-border last:border-b-0 hover:bg-accent"
+                      >
+                        <div className="flex items-center">
+                          <Package className="h-3 w-3 mr-2 text-muted-foreground" />
+                          <div className="flex-1">
+                            <span className="font-medium">{product.nome}</span>
+                            <div className="text-[11px] text-muted-foreground">
+                              {product.valor}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="px-3 py-2 text-xs text-muted-foreground">
+                      Nenhum produto encontrado
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
