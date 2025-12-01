@@ -65,9 +65,12 @@ export function GerenciarProdutosModal({
   // FASE 2: Focar manualmente quando o Popover abre
   useEffect(() => {
     if (novoProductOpen && searchInputRef.current) {
-      setTimeout(() => {
-        searchInputRef.current?.focus();
-      }, 50);
+      // Usar requestAnimationFrame para garantir que o DOM está pronto
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          searchInputRef.current?.focus();
+        });
+      });
     }
   }, [novoProductOpen]);
 
@@ -290,10 +293,7 @@ export function GerenciarProdutosModal({
                     className="w-[--radix-popover-trigger-width] p-0" 
                     align="start"
                     sideOffset={4}
-                    onOpenAutoFocus={(e) => {
-                      // Permitir auto-focus no input de pesquisa
-                    }}
-                    onCloseAutoFocus={e => e.preventDefault()}
+              onCloseAutoFocus={e => e.preventDefault()}
                   >
                     <Command>
                       <CommandInput ref={searchInputRef} placeholder="Buscar produto..." className="h-9" />
