@@ -257,9 +257,15 @@ export function GerenciarProdutosModal({
     inputRef.current?.blur();
   };
   const handleSave = () => {
-    console.log('🔄 GerenciarProdutosModal - Salvando produtos:', localProdutos);
-    console.log('📊 Total de produtos:', localProdutos.length);
-    onSave(localProdutos);
+    // Garantir que checkboxes (produzido/entregue) são incluídos corretamente
+    const produtosParaSalvar = localProdutos.map(p => ({
+      ...p,
+      produzido: !!p.produzido,
+      entregue: !!p.entregue
+    }));
+    console.log('🔄 GerenciarProdutosModal - Salvando produtos:', produtosParaSalvar);
+    console.log('📊 Total de produtos:', produtosParaSalvar.length);
+    onSave(produtosParaSalvar);
     onOpenChange(false);
   };
 
@@ -381,7 +387,7 @@ export function GerenciarProdutosModal({
                         }}
                         className="px-3 py-2 cursor-pointer text-xs border-b border-border last:border-b-0 hover:bg-accent bg-popover"
                       >
-                        <div className="flex items-center pointer-events-none">
+                        <div className="flex items-center">
                           <Package className="h-3 w-3 mr-2 text-muted-foreground" />
                           <div className="flex-1">
                             <span className="font-medium">{product.nome}</span>
