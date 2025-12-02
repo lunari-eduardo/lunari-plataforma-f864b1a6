@@ -63,18 +63,23 @@ export function GerenciarProdutosModal({
   // CORREÇÃO: Usar dados real-time do Supabase (sem loops de sync)
   const { produtos: produtosConfig } = useRealtimeConfiguration();
   
-  // FASE 1: Usar ref para controlar inicialização e evitar reset
+  // FASE 1: Usar refs para controlar inicialização e evitar reset
   const isInitialized = useRef(false);
+  const wasOpen = useRef(false);
 
-  // CORREÇÃO: Inicializar produtos locais APENAS quando modal abre
+  // CORREÇÃO: Resetar dropdown APENAS quando modal ABRE (transição false -> true)
   useEffect(() => {
-    // Resetar estado do dropdown ao abrir modal para evitar posicionamento incorreto
-    if (open) {
+    if (open && !wasOpen.current) {
+      // Transição de fechado para aberto - resetar dropdown
       setIsDropdownOpen(false);
       setSearchTerm('');
       setDropdownPosition(null);
     }
-    
+    wasOpen.current = open;
+  }, [open]);
+
+  // CORREÇÃO: Inicializar produtos locais separadamente (sem afetar searchTerm)
+  useEffect(() => {
     // Só inicializar quando o modal ABRIR e não estiver inicializado
     if (open && !isInitialized.current) {
       console.log('🔄 GerenciarProdutosModal - Inicializando produtos:', produtos);
@@ -218,11 +223,11 @@ export function GerenciarProdutosModal({
   };
 
   const handleInputFocus = () => {
-    setIsDropdownOpen(true);
     setIsEditing(true);
-    // Usar requestAnimationFrame para garantir que o DOM está pintado antes de calcular posição
+    // Calcular posição ANTES de abrir dropdown para evitar posicionamento incorreto
     requestAnimationFrame(() => {
       updateDropdownPosition();
+      setIsDropdownOpen(true);  // Abrir DEPOIS de calcular posição
     });
   };
 
@@ -375,13 +380,13 @@ export function GerenciarProdutosModal({
                     left: dropdownPosition.left,
                     width: dropdownPosition.width
                   }}
+                  onWheel={(e) => e.stopPropagation()}
                 >
                   {filteredProducts.length > 0 ? (
                     filteredProducts.map((product) => (
                       <div
                         key={product.id}
                         onMouseDown={(e) => {
-                          e.preventDefault();
                           e.stopPropagation();
                           handleSelectProduct(product);
                         }}
