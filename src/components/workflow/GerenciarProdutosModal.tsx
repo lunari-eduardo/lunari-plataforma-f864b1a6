@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,6 +56,7 @@ export function GerenciarProdutosModal({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [isEditing, setIsEditing] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number; width: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   
@@ -123,10 +125,27 @@ export function GerenciarProdutosModal({
     });
   }, [productOptions, searchTerm]);
 
+  // Atualizar posição do dropdown baseado no input
+  const updateDropdownPosition = () => {
+    if (inputRef.current) {
+      const rect = inputRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + 4, // 4px de espaçamento
+        left: rect.left,
+        width: rect.width
+      });
+    }
+  };
+
   // Fechar dropdown quando clicar fora
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      // Verificar se o clique foi fora do container E fora do dropdown portal
+      const isOutsideContainer = containerRef.current && !containerRef.current.contains(target);
+      const isOutsideDropdown = !(target as Element).closest?.('[data-product-dropdown]');
+      
+      if (isOutsideContainer && isOutsideDropdown) {
         setIsDropdownOpen(false);
         setIsEditing(false);
       }
@@ -135,6 +154,21 @@ export function GerenciarProdutosModal({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Reposicionar dropdown em scroll/resize
+  useEffect(() => {
+    if (!isDropdownOpen) return;
+    
+    const handlePositionUpdate = () => updateDropdownPosition();
+    
+    window.addEventListener('scroll', handlePositionUpdate, true);
+    window.addEventListener('resize', handlePositionUpdate);
+    
+    return () => {
+      window.removeEventListener('scroll', handlePositionUpdate, true);
+      window.removeEventListener('resize', handlePositionUpdate);
+    };
+  }, [isDropdownOpen]);
 
   // Calcular totais dos produtos
   const totais = useMemo(() => {
@@ -173,11 +207,13 @@ export function GerenciarProdutosModal({
     setSearchTerm(e.target.value);
     setIsEditing(true);
     setIsDropdownOpen(true);
+    updateDropdownPosition();
   };
 
   const handleInputFocus = () => {
     setIsDropdownOpen(true);
     setIsEditing(true);
+    updateDropdownPosition();
   };
 
   const handleSelectProduct = (product: ProductOption) => {
@@ -314,14 +350,22 @@ export function GerenciarProdutosModal({
                 <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               </div>
 
-              {isDropdownOpen && (
-                <div className="absolute z-[9999] w-full mt-1 dropdown-solid border border-border rounded-md shadow-lg max-h-48 overflow-auto scrollbar-minimal">
+              {isDropdownOpen && dropdownPosition && createPortal(
+                <div 
+                  data-product-dropdown
+                  className="fixed z-[99999] bg-popover border border-border rounded-md shadow-lg max-h-48 overflow-auto scrollbar-minimal"
+                  style={{
+                    top: dropdownPosition.top,
+                    left: dropdownPosition.left,
+                    width: dropdownPosition.width
+                  }}
+                >
                   {filteredProducts.length > 0 ? (
                     filteredProducts.map((product) => (
                       <div
                         key={product.id}
                         onClick={() => handleSelectProduct(product)}
-                        className="px-3 py-2 dropdown-solid-item cursor-pointer text-xs border-b border-border last:border-b-0 hover:bg-accent"
+                        className="px-3 py-2 cursor-pointer text-xs border-b border-border last:border-b-0 hover:bg-accent bg-popover"
                       >
                         <div className="flex items-center">
                           <Package className="h-3 w-3 mr-2 text-muted-foreground" />
@@ -335,11 +379,12 @@ export function GerenciarProdutosModal({
                       </div>
                     ))
                   ) : (
-                    <div className="px-3 py-2 text-xs text-muted-foreground">
+                    <div className="px-3 py-2 text-xs text-muted-foreground bg-popover">
                       Nenhum produto encontrado
                     </div>
                   )}
-                </div>
+                </div>,
+                document.body
               )}
             </div>
           </div>
