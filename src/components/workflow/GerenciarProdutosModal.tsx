@@ -68,6 +68,13 @@ export function GerenciarProdutosModal({
 
   // CORREÇÃO: Inicializar produtos locais APENAS quando modal abre
   useEffect(() => {
+    // Resetar estado do dropdown ao abrir modal para evitar posicionamento incorreto
+    if (open) {
+      setIsDropdownOpen(false);
+      setSearchTerm('');
+      setDropdownPosition(null);
+    }
+    
     // Só inicializar quando o modal ABRIR e não estiver inicializado
     if (open && !isInitialized.current) {
       console.log('🔄 GerenciarProdutosModal - Inicializando produtos:', produtos);
@@ -213,7 +220,10 @@ export function GerenciarProdutosModal({
   const handleInputFocus = () => {
     setIsDropdownOpen(true);
     setIsEditing(true);
-    updateDropdownPosition();
+    // Usar requestAnimationFrame para garantir que o DOM está pintado antes de calcular posição
+    requestAnimationFrame(() => {
+      updateDropdownPosition();
+    });
   };
 
   const handleSelectProduct = (product: ProductOption) => {
@@ -259,9 +269,9 @@ export function GerenciarProdutosModal({
 
     return <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[92vw] sm:max-w-2xl max-h-[90vh] flex flex-col py-[17px] px-3 sm:px-6 text-xs sm:text-sm" onPointerDownOutside={e => {
-      // Prevenir fechamento do modal quando clicar no popover
+      // Prevenir fechamento do modal quando clicar no popover ou dropdown portal
       const target = e.target as Element;
-      if (target.closest('[data-radix-popover-content]') || target.closest('[cmdk-item]')) {
+      if (target.closest('[data-radix-popover-content]') || target.closest('[cmdk-item]') || target.closest('[data-product-dropdown]')) {
         e.preventDefault();
       }
     }}>
@@ -353,7 +363,7 @@ export function GerenciarProdutosModal({
               {isDropdownOpen && dropdownPosition && createPortal(
                 <div 
                   data-product-dropdown
-                  className="fixed z-[99999] bg-popover border border-border rounded-md shadow-lg max-h-48 overflow-auto scrollbar-minimal"
+                  className="fixed z-[99999] bg-popover border border-border rounded-md shadow-lg max-h-48 overflow-auto scrollbar-minimal pointer-events-auto"
                   style={{
                     top: dropdownPosition.top,
                     left: dropdownPosition.left,
@@ -364,10 +374,14 @@ export function GerenciarProdutosModal({
                     filteredProducts.map((product) => (
                       <div
                         key={product.id}
-                        onClick={() => handleSelectProduct(product)}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleSelectProduct(product);
+                        }}
                         className="px-3 py-2 cursor-pointer text-xs border-b border-border last:border-b-0 hover:bg-accent bg-popover"
                       >
-                        <div className="flex items-center">
+                        <div className="flex items-center pointer-events-none">
                           <Package className="h-3 w-3 mr-2 text-muted-foreground" />
                           <div className="flex-1">
                             <span className="font-medium">{product.nome}</span>
