@@ -45,9 +45,22 @@ export const useWorkflowPackageData = () => {
     return (session: WorkflowSession): SessionData => {
       const packageData = resolvePackageData(session);
       
-      // Check for frozen product data
+      // Check for frozen product data with fallback merge for checkbox states
       const frozenProducts = session.regras_congeladas?.produtos || [];
-      const produtosList = frozenProducts.length > 0 ? frozenProducts : (session.produtos_incluidos || []);
+      const produtosIncluidos = session.produtos_incluidos || [];
+      
+      // Mesclar status de produzido/entregue de produtos_incluidos com dados congelados
+      // Isso garante retrocompatibilidade com sessões antigas que não tinham esses campos
+      const produtosList = frozenProducts.length > 0 
+        ? frozenProducts.map((fp: any) => {
+            const produtoAtual = produtosIncluidos.find((pi: any) => pi.id === fp.id || pi.nome === fp.nome);
+            return {
+              ...fp,
+              produzido: produtoAtual?.produzido ?? fp.produzido ?? false,
+              entregue: produtoAtual?.entregue ?? fp.entregue ?? false
+            };
+          })
+        : produtosIncluidos;
       
       // ✅ FASE 4: Log de debug para sessões sem cliente
       if (!session.clientes || !session.clientes.nome) {
