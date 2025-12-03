@@ -23,6 +23,8 @@ export interface RegrasCongeladas extends Record<string, any> {
     valorUnitario: number;
     quantidade: number;
     tipo: 'incluso' | 'manual';
+    produzido?: boolean;
+    entregue?: boolean;
   }>;
   precificacaoFotoExtra: {
     modelo: 'fixo' | 'global' | 'categoria';
@@ -326,7 +328,9 @@ class PricingFreezingService {
               nome: produto.nome,
               valorUnitario: Number(produto.preco_venda) || 0,
               quantidade: produtoItem.quantidade || 1,
-              tipo: produtoItem.tipo || 'incluso'
+              tipo: produtoItem.tipo || 'incluso',
+              produzido: produtoItem.produzido || false,
+              entregue: produtoItem.entregue || false
             });
           }
         } else {
@@ -336,7 +340,9 @@ class PricingFreezingService {
             nome: produtoItem.nome || produtoItem.produto || 'Produto',
             valorUnitario: Number(produtoItem.valorUnitario) || Number(produtoItem.valor) || 0,
             quantidade: produtoItem.quantidade || 1,
-            tipo: produtoItem.tipo || 'manual'
+            tipo: produtoItem.tipo || 'manual',
+            produzido: produtoItem.produzido || false,
+            entregue: produtoItem.entregue || false
           });
         }
       }
