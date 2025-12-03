@@ -416,6 +416,29 @@ export function WorkflowTable({
       };
     }
   }, [handleScroll]);
+
+  // FASE 4: ResizeObserver para calcular maxScroll imediatamente após layout
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const observer = new ResizeObserver(() => {
+      // Recalcular maxScroll quando o container ou seu conteúdo redimensionar
+      const maxScrollLeft = container.scrollWidth - container.clientWidth;
+      setMaxScroll(maxScrollLeft);
+      console.log('📐 [ResizeObserver] maxScroll recalculado:', maxScrollLeft);
+    });
+
+    observer.observe(container);
+    
+    // Também observar a tabela interna se existir
+    const table = container.querySelector('table');
+    if (table) {
+      observer.observe(table);
+    }
+
+    return () => observer.disconnect();
+  }, [sessions]);
   useEffect(() => {
     return () => {
       stopContinuousScroll();

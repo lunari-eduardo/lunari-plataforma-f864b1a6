@@ -168,6 +168,10 @@ export default function Workflow() {
         delete validUpdates.created_at;
       }
       
+      // FASE 2: Identificar campos que precisam de recongelamento (não fazer merge otimista)
+      const fieldsNeedingRefreeze = ['pacote', 'categoria'];
+      const needsRefreeze = fieldsNeedingRefreeze.some(f => f in validUpdates);
+      
       // BLOCO C: Criar cacheSafeUpdates - normalizar valores numéricos
       const cacheSafeUpdates: Partial<WorkflowSession> = {};
       
@@ -199,15 +203,15 @@ export default function Workflow() {
             // Persistir produtosList (contém produzido/entregue checkboxes)
             cacheSafeUpdates.produtos_incluidos = value;
             break;
-          // pacote: deixar ser atualizado pelo realtime do backend
+          // pacote e categoria: NÃO fazer merge otimista - deixar realtime atualizar após recongelamento
           default:
             break;
         }
       }
       
-      // 1. Optimistic update no cache com dados normalizados (apenas se houver algo)
-      // FASE 2: Garantir que updated_at seja sempre atualizado para detecção de mudanças
-      if (Object.keys(cacheSafeUpdates).length > 0) {
+      // 1. Optimistic update no cache com dados normalizados (apenas se houver algo E não precisar recongelar)
+      // FASE 2: Para campos que precisam recongelamento, deixar o realtime fazer o update completo
+      if (Object.keys(cacheSafeUpdates).length > 0 && !needsRefreeze) {
         mergeUpdate({ 
           ...currentSession, 
           ...cacheSafeUpdates,

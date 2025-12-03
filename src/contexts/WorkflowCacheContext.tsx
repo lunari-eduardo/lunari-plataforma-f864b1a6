@@ -241,7 +241,7 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
         table: 'clientes_sessoes',
         filter: `user_id=eq.${userId}`
       }, (payload) => {
-        console.log('📡 Realtime event:', payload.eventType, (payload.new as any)?.id);
+        console.log('📡 Realtime event (sessoes):', payload.eventType, (payload.new as any)?.id);
         
         // Debounce de 300ms para evitar flickering
         if (realtimeDebounce) clearTimeout(realtimeDebounce);
@@ -272,6 +272,33 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
             removeSession((payload.old as any).id);
           }
         }, 300);
+      })
+      // FASE 1: Subscription para clientes_transacoes (pagamentos)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'clientes_transacoes',
+        filter: `user_id=eq.${userId}`
+      }, async (payload) => {
+        console.log('💰 Realtime event (transacoes):', payload.eventType);
+        
+        // Quando pagamento muda, buscar a sessão atualizada com valor_pago recalculado
+        const sessionId = (payload.new as any)?.session_id || (payload.old as any)?.session_id;
+        if (sessionId) {
+          // Pequeno delay para garantir que trigger do DB calculou valor_pago
+          setTimeout(async () => {
+            const { data: updatedSession } = await supabase
+              .from('clientes_sessoes')
+              .select(`*, clientes(nome, email, telefone, whatsapp)`)
+              .eq('session_id', sessionId)
+              .single();
+            
+            if (updatedSession) {
+              console.log('💰 [Realtime] Sessão atualizada após pagamento:', updatedSession.id, 'valor_pago:', updatedSession.valor_pago);
+              mergeUpdate(updatedSession as WorkflowSession);
+            }
+          }, 200);
+        }
       })
       .subscribe();
 

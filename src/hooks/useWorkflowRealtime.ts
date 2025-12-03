@@ -420,7 +420,21 @@ export const useWorkflowRealtime = () => {
               : Number(value) || 0;
             break;
           case 'qtdFotosExtra':
-            sanitizedUpdates.qtd_fotos_extra = Number(value) || 0;
+            // FASE 3: Cálculo atômico de fotos extras
+            const qtd = Number(value) || 0;
+            sanitizedUpdates.qtd_fotos_extra = qtd;
+            
+            // Calcular valores imediatamente usando regras congeladas
+            if (currentSession?.regras_congeladas) {
+              const { pricingFreezingService } = await import('@/services/PricingFreezingService');
+              const { valorUnitario, valorTotal } = pricingFreezingService.calcularValorFotoExtraComRegrasCongeladas(
+                qtd,
+                currentSession.regras_congeladas
+              );
+              sanitizedUpdates.valor_foto_extra = valorUnitario;
+              sanitizedUpdates.valor_total_foto_extra = valorTotal;
+              console.log('📸 [Atomic] Fotos extras calculadas: qtd=', qtd, 'unit=', valorUnitario, 'total=', valorTotal);
+            }
             break;
           case 'valorTotalFotoExtra':
             sanitizedUpdates.valor_total_foto_extra = typeof value === 'string' 
