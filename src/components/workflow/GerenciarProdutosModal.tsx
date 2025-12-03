@@ -218,16 +218,31 @@ export function GerenciarProdutosModal({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
     setIsEditing(true);
-    setIsDropdownOpen(true);
-    updateDropdownPosition();
+    
+    // Calcular posição antes de abrir (caso ainda não esteja aberto)
+    if (!isDropdownOpen) {
+      requestAnimationFrame(() => {
+        updateDropdownPosition();
+        setIsDropdownOpen(true);
+      });
+    } else {
+      // Se já está aberto, apenas atualizar posição
+      updateDropdownPosition();
+    }
   };
 
+  // REFATORAÇÃO: handleInputFocus NÃO abre dropdown automaticamente
+  // Isso evita posicionamento incorreto quando modal ainda está animando
   const handleInputFocus = () => {
     setIsEditing(true);
-    // Calcular posição ANTES de abrir dropdown para evitar posicionamento incorreto
+    // NÃO abrir dropdown no focus - apenas preparar estado
+  };
+
+  // REFATORAÇÃO: handleInputClick abre dropdown intencionalmente via clique
+  const handleInputClick = () => {
     requestAnimationFrame(() => {
       updateDropdownPosition();
-      setIsDropdownOpen(true);  // Abrir DEPOIS de calcular posição
+      setIsDropdownOpen(true);
     });
   };
 
@@ -364,6 +379,7 @@ export function GerenciarProdutosModal({
                   value={searchTerm}
                   onChange={handleInputChange}
                   onFocus={handleInputFocus}
+                  onClick={handleInputClick}
                   placeholder="Buscar produto por nome..."
                   className="pr-8 text-xs h-9"
                   autoComplete="off"
