@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { WorkflowTable } from "@/components/workflow/WorkflowTable";
 import { QuickSessionAdd } from "@/components/workflow/QuickSessionAdd";
 import { ColumnSettings } from "@/components/workflow/ColumnSettings";
-import { ChevronLeft, ChevronRight, Eye, EyeOff, Search, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, EyeOff, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useWorkflowStatus } from "@/hooks/useWorkflowStatus";
@@ -17,9 +17,7 @@ import { useWorkflowRealtime } from '@/hooks/useWorkflowRealtime';
 import { parseDateFromStorage } from "@/utils/dateUtils";
 import { useWorkflowMetrics } from '@/hooks/useWorkflowMetrics';
 import { useWorkflowMetricsRealtime } from '@/hooks/useWorkflowMetricsRealtime';
-import { WorkflowSyncButton } from '@/components/workflow/WorkflowSyncButton';
 import { usePricingMigration } from '@/hooks/usePricingMigration';
-import { Snowflake } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { SessionData, CategoryOption, PackageOption, ProductOption } from '@/types/workflow';
@@ -680,124 +678,86 @@ export default function Workflow() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <h1 className="text-3xl font-bold">Workflow</h1>
-          <WorkflowSyncButton />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={recongelarTodasSessoes}
-            className="gap-2"
-          >
-            <Snowflake className="w-4 h-4" />
-            Recongelar Dados
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              forceRefresh();
-              toast({
-                title: "Cache limpo",
-                description: "Recarregando dados do servidor...",
-              });
-            }}
-            className="gap-2"
-          >
-            <Trash2 className="w-4 h-4" />
-            Limpar Cache
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowMetrics(!showMetrics)}
-          >
-            {showMetrics ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            {showMetrics ? 'Ocultar' : 'Mostrar'} Métricas
-          </Button>
-        </div>
-        <ColumnSettings
-          visibleColumns={visibleColumns}
-          onColumnVisibilityChange={(columns) => {
-            setVisibleColumns(columns);
-            window.localStorage.setItem('workflow_visible_columns', JSON.stringify(columns));
-          }}
-        />
-      </div>
-
-      {/* Navigation and Metrics */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handlePreviousMonth}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <span className="font-medium text-lg">
-            {getMonthName(currentMonth.month)} {currentMonth.year}
-          </span>
-          {isPreloading && (
-            <Badge variant="outline" className="ml-2">
-              ⏳ Atualizando...
-            </Badge>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleNextMonth}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+    <div className="space-y-4">
+      {/* Métricas compactas + Toggle */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        {showMetrics ? (
+          <>
+            <div className="flex items-center gap-4 sm:gap-6 flex-wrap">
+              <div className="flex flex-col">
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Receita</span>
+                <span className="text-sm font-bold text-green-400">{formatCurrency(financials.paidMonth)}</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Previsto</span>
+                <span className="text-sm font-bold text-blue-400">{formatCurrency(financials.totalMonth)}</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wide">A Receber</span>
+                <span className="text-sm font-bold text-orange-400">{formatCurrency(financials.remainingMonth)}</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Sessões</span>
+                <span className="text-sm font-bold">{filteredSessions.length}</span>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowMetrics(false)}
+              className="h-7 w-7 shrink-0"
+              title="Ocultar métricas"
+            >
+              <EyeOff className="h-4 w-4" />
+            </Button>
+          </>
+        ) : (
           <Button
             variant="ghost"
-            size="sm"
-            onClick={() => setCurrentMonth({
-              month: new Date().getMonth() + 1,
-              year: new Date().getFullYear()
-            })}
+            size="icon"
+            onClick={() => setShowMetrics(true)}
+            className="h-7 w-7"
+            title="Mostrar métricas"
           >
-            Hoje
+            <Eye className="h-4 w-4" />
           </Button>
-        </div>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              type="text"
-              placeholder="Buscar por cliente ou e-mail..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 w-80"
-            />
-          </div>
-        </div>
-
-        {showMetrics && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-card border rounded-lg p-4">
-              <div className="text-sm text-muted-foreground font-medium mb-2">RECEITA</div>
-              <div className="text-2xl font-bold text-green-400">{formatCurrency(financials.paidMonth)}</div>
-              {renderPercentageChange(financials.paidMonth, prevMonthFinancials.paidMonth)}
-            </div>
-            <div className="bg-card border rounded-lg p-4">
-              <div className="text-sm text-muted-foreground font-medium mb-2">PREVISTO</div>
-              <div className="text-2xl font-bold text-blue-400">{formatCurrency(financials.totalMonth)}</div>
-              {renderPercentageChange(financials.totalMonth, prevMonthFinancials.totalMonth)}
-            </div>
-            <div className="bg-card border rounded-lg p-4">
-              <div className="text-sm text-muted-foreground font-medium mb-2">A RECEBER</div>
-              <div className="text-2xl font-bold text-orange-400">{formatCurrency(financials.remainingMonth)}</div>
-            </div>
-            <div className="bg-card border rounded-lg p-4">
-              <div className="text-sm text-muted-foreground font-medium mb-2">SESSÕES</div>
-              <div className="text-2xl font-bold">{filteredSessions.length}</div>
-            </div>
-          </div>
         )}
+      </div>
+
+      {/* Seletor de mês centralizado */}
+      <div className="flex items-center justify-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handlePreviousMonth}
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <span className="font-medium text-lg min-w-[160px] text-center">
+          {getMonthName(currentMonth.month)} {currentMonth.year}
+        </span>
+        {isPreloading && (
+          <Badge variant="outline" className="absolute">
+            ⏳
+          </Badge>
+        )}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleNextMonth}
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setCurrentMonth({
+            month: new Date().getMonth() + 1,
+            year: new Date().getFullYear()
+          })}
+        >
+          Hoje
+        </Button>
       </div>
 
       {/* Debug Info */}
@@ -829,6 +789,27 @@ export default function Workflow() {
         {/* Quick Add Session - Always visible */}
         <div className="p-4 border-b">
           <QuickSessionAdd onSubmit={handleQuickSessionAdd} />
+        </div>
+
+        {/* Busca e Configuração de Colunas */}
+        <div className="flex items-center justify-between p-3 border-b gap-4 flex-wrap">
+          <div className="relative flex-1 max-w-sm min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              type="text"
+              placeholder="Buscar por cliente ou e-mail..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 h-9"
+            />
+          </div>
+          <ColumnSettings
+            visibleColumns={visibleColumns}
+            onColumnVisibilityChange={(columns) => {
+              setVisibleColumns(columns);
+              window.localStorage.setItem('workflow_visible_columns', JSON.stringify(columns));
+            }}
+          />
         </div>
 
         {sortedSessions.length === 0 ? (
