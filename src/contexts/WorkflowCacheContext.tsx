@@ -247,26 +247,25 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
         if (realtimeDebounce) clearTimeout(realtimeDebounce);
         
         realtimeDebounce = setTimeout(async () => {
-          // FASE 3: Hidratar dados do cliente se não estiverem presentes
+          // SEMPRE buscar sessão completa após INSERT/UPDATE para garantir dados recongelados
           if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
             const session = payload.new as WorkflowSession;
             
-            // Se não tem dados do cliente, buscar completo
-            if (!session.clientes && session.cliente_id) {
-              console.log('🔄 [Realtime] Hidratando dados do cliente...');
-              const { data: fullSession } = await supabase
-                .from('clientes_sessoes')
-                .select(`*, clientes(nome, email, telefone, whatsapp)`)
-                .eq('id', session.id)
-                .single();
-              
-              if (fullSession) {
-                mergeUpdate(fullSession as WorkflowSession);
-                return;
-              }
-            }
+            console.log('🔄 [Realtime] Buscando sessão completa após', payload.eventType, '...');
+            const { data: fullSession } = await supabase
+              .from('clientes_sessoes')
+              .select(`*, clientes(nome, email, telefone, whatsapp)`)
+              .eq('id', session.id)
+              .single();
             
-            mergeUpdate(session);
+            if (fullSession) {
+              console.log('✅ [Realtime] Sessão completa obtida:', fullSession.id, 'pacote:', fullSession.pacote);
+              mergeUpdate(fullSession as WorkflowSession);
+            } else {
+              // Fallback: usar payload se busca falhar
+              console.warn('⚠️ [Realtime] Busca falhou, usando payload');
+              mergeUpdate(session);
+            }
           }
           if (payload.eventType === 'DELETE' && payload.old) {
             removeSession((payload.old as any).id);

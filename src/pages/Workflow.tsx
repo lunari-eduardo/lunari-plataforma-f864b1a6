@@ -111,13 +111,17 @@ export default function Workflow() {
           filtered.some((s, i) => {
             const prev = prevSessions.find(p => p.id === s.id);
             if (!prev) return true; // Sessão nova
-            // Comparar updated_at ou campos críticos
+            // Comparar updated_at ou campos críticos (incluindo pacote e recongelação)
             return s.updated_at !== prev.updated_at ||
                    s.valor_total !== prev.valor_total ||
                    s.status !== prev.status ||
                    s.desconto !== prev.desconto ||
                    s.valor_adicional !== prev.valor_adicional ||
-                   s.qtd_fotos_extra !== prev.qtd_fotos_extra;
+                   s.qtd_fotos_extra !== prev.qtd_fotos_extra ||
+                   s.pacote !== prev.pacote ||
+                   s.categoria !== prev.categoria ||
+                   JSON.stringify(s.regras_congeladas) !== JSON.stringify(prev.regras_congeladas) ||
+                   JSON.stringify(s.produtos_incluidos) !== JSON.stringify(prev.produtos_incluidos);
           });
         
         if (hasChanges) {
