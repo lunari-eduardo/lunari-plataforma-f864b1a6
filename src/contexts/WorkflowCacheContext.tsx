@@ -299,9 +299,19 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
           }, 200);
         }
       })
-      .subscribe();
+      .subscribe((status) => {
+        console.log('📡 [Realtime] Subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ [Realtime] Successfully subscribed to clientes_sessoes & clientes_transacoes');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ [Realtime] Subscription error - may need retry');
+        } else if (status === 'TIMED_OUT') {
+          console.warn('⚠️ [Realtime] Subscription timed out - reconnecting...');
+        }
+      });
 
     return () => {
+      console.log('🔌 [Realtime] Cleaning up subscription');
       if (realtimeDebounce) clearTimeout(realtimeDebounce);
       supabase.removeChannel(channel);
     };
