@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import debounce from 'lodash.debounce';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +27,115 @@ import type { SessionData } from '@/types/workflow';
 import { useRealtimeConfiguration } from '@/hooks/useRealtimeConfiguration';
 import { useWorkflowStatus } from '@/hooks/useWorkflowStatus';
 import { usePricingMigration } from '@/hooks/usePricingMigration';
+
+// ============================================================================
+// COMPONENTE MEMOIZADO EXTRAÍDO - ExtraPhotoQtyInput
+// Definido FORA do WorkflowTable para evitar re-criação a cada render
+// ============================================================================
+interface ExtraPhotoQtyInputProps {
+  sessionId: string;
+  initialValue: number;
+  onUpdate: (sessionId: string, field: string, value: any, silent?: boolean) => void;
+}
+
+const ExtraPhotoQtyInput = React.memo(({ 
+  sessionId, 
+  initialValue, 
+  onUpdate 
+}: ExtraPhotoQtyInputProps) => {
+  const [localValue, setLocalValue] = useState(String(initialValue || ''));
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const initialValueRef = useRef(initialValue);
+  const isEditingRef = useRef(false);
+
+  // Sincronizar quando valor externo muda (mas NÃO durante edição ativa)
+  useEffect(() => {
+    if (!isEditingRef.current && initialValue !== initialValueRef.current) {
+      console.log('📸 [ExtraPhotoQtyInput] Syncing external value:', initialValue, 'for session:', sessionId);
+      setLocalValue(String(initialValue || ''));
+      initialValueRef.current = initialValue;
+      setHasUnsavedChanges(false);
+    }
+  }, [initialValue, sessionId]);
+
+  // Debounced save function
+  const debouncedSave = useMemo(() => debounce((qtd: number) => {
+    console.log('📸 [ExtraPhotoQtyInput] Debounced save:', qtd, 'for session:', sessionId);
+    onUpdate(sessionId, 'qtdFotosExtra', qtd);
+    initialValueRef.current = qtd;
+    setHasUnsavedChanges(false);
+    isEditingRef.current = false;
+  }, 800), [sessionId, onUpdate]);
+
+  // Cleanup debounce on unmount
+  useEffect(() => {
+    return () => {
+      debouncedSave.cancel();
+    };
+  }, [debouncedSave]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    isEditingRef.current = true;
+    setLocalValue(value);
+    setHasUnsavedChanges(true);
+    
+    const qtd = parseInt(value) || 0;
+    debouncedSave(qtd);
+  };
+
+  const handleFocus = () => {
+    isEditingRef.current = true;
+    // Selecionar todo o texto ao focar
+    setTimeout(() => {
+      const input = document.activeElement as HTMLInputElement;
+      if (input && input.select) {
+        input.select();
+      }
+    }, 0);
+  };
+
+  const handleBlur = () => {
+    if (hasUnsavedChanges) {
+      debouncedSave.cancel();
+      const qtd = parseInt(localValue) || 0;
+      console.log('📸 [ExtraPhotoQtyInput] Blur save:', qtd, 'for session:', sessionId);
+      onUpdate(sessionId, 'qtdFotosExtra', qtd);
+      initialValueRef.current = qtd;
+      setHasUnsavedChanges(false);
+    }
+    isEditingRef.current = false;
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      debouncedSave.cancel();
+      const qtd = parseInt(localValue) || 0;
+      onUpdate(sessionId, 'qtdFotosExtra', qtd);
+      initialValueRef.current = qtd;
+      setHasUnsavedChanges(false);
+      isEditingRef.current = false;
+      (e.target as HTMLInputElement).blur();
+    }
+  };
+
+  return (
+    <Input 
+      type="number" 
+      value={localValue} 
+      onChange={handleChange}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
+      onKeyDown={handleKeyDown}
+      className={`h-6 text-xs p-1 w-full border-none bg-transparent focus:bg-lunar-accent/10 transition-colors duration-150 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${hasUnsavedChanges ? 'bg-yellow-50' : ''}`}
+      placeholder=""
+      autoComplete="off"
+    />
+  );
+});
+
+ExtraPhotoQtyInput.displayName = 'ExtraPhotoQtyInput';
 interface WorkflowTableProps {
   sessions: SessionData[];
   statusOptions: string[];
@@ -871,85 +980,35 @@ export function WorkflowTable({
                   }
                 })())}
 
-                {renderCell('extraPhotoQty', (() => {
-                  const ExtraPhotoQtyInput = () => {
-                    const [localValue, setLocalValue] = useState(String(session.qtdFotosExtra || ''));
-                    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-
-                    // Debounced save function for real-time updates
-                    const debouncedSave = useMemo(() => debounce((qtd: number) => {
-                      console.log('📸 Debounced save extra photo qty:', qtd, 'for session:', session.id);
-                      if (qtd !== session.qtdFotosExtra) {
-                        handleFieldUpdateStable(session.id, 'qtdFotosExtra', qtd);
-                      }
-                    }, 800),
-                    // Increased debounce time to prevent excessive calls
-                    [session.id, handleFieldUpdateStable] // Removed session.qtdFotosExtra to prevent recreation
-                    );
-
-                    // Cleanup debounce on unmount
-                    useEffect(() => {
-                      return () => {
-                        debouncedSave.cancel();
-                      };
-                    }, [debouncedSave]);
-                    const {
-                      displayValue,
-                      handleFocus,
-                      handleChange
-                    } = useNumberInput({
-                      value: localValue,
-                      onChange: value => {
-                        setLocalValue(value);
-                        setHasUnsavedChanges(value !== String(session.qtdFotosExtra || ''));
-
-                        // Trigger debounced save for real-time updates only if value actually changed
-                        const qtd = parseInt(value) || 0;
-                        if (qtd !== session.qtdFotosExtra) {
-                          debouncedSave(qtd);
-                        }
-                      }
-                    });
-                    const saveValue = () => {
-                      const qtd = parseInt(localValue) || 0;
-                      console.log('📸 Manual save extra photo qty:', qtd, 'for session:', session.id);
-                      if (qtd !== session.qtdFotosExtra) {
-                        // Cancel any pending debounced save
-                        debouncedSave.cancel();
-                        handleFieldUpdateStable(session.id, 'qtdFotosExtra', qtd);
-                      }
-                      setHasUnsavedChanges(false);
-                    };
-                    const handleKeyDown = (e: React.KeyboardEvent) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        saveValue();
-                        (e.target as HTMLInputElement).blur();
-                      }
-                    };
-                    const handleBlur = () => {
-                      if (hasUnsavedChanges) {
-                        saveValue();
-                      }
-                    };
-                    return <Input key={`photoQty-${session.id}`} type="number" value={displayValue} onChange={handleChange} onFocus={handleFocus} onKeyDown={handleKeyDown} onBlur={handleBlur} className={`h-6 text-xs p-1 w-full border-none bg-transparent focus:bg-lunar-accent/10 transition-colors duration-150 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${hasUnsavedChanges ? 'bg-yellow-50' : ''}`} placeholder="" autoComplete="off" />;
-                  };
-                  return <>
-                    <ExtraPhotoQtyInput />
-                    <AutoPhotoCalculator sessionId={session.id} quantidade={session.qtdFotosExtra || 0} regrasCongeladas={session.regrasDePrecoFotoExtraCongeladas} currentValorFotoExtra={Number(session.valorFotoExtra) || 0} currentValorTotalFotoExtra={Number(session.valorTotalFotoExtra) || 0} categoria={session.categoria} categoriaId={(() => {
-                      // Find category ID from category name
-                      const categoria = categorias.find(cat => cat.nome === session.categoria);
-                      return categoria?.id;
-                    })()} valorFotoExtraPacote={(() => {
-                      // Find package extra photo value
-                      const pacote = packageOptions.find(pkg => pkg.nome === session.pacote);
-                      return pacote?.valorFotoExtra || 0;
-                    })()} onValueUpdate={updates => {
-                      handleFieldUpdateStable(session.id, 'valorFotoExtra', updates.valorFotoExtra, true);
-                      handleFieldUpdateStable(session.id, 'valorTotalFotoExtra', updates.valorTotalFotoExtra, true);
-                    }} />
-                  </>;
-                })())}
+                {renderCell('extraPhotoQty', (
+                  <>
+                    <ExtraPhotoQtyInput 
+                      sessionId={session.id}
+                      initialValue={session.qtdFotosExtra || 0}
+                      onUpdate={handleFieldUpdateStable}
+                    />
+                    <AutoPhotoCalculator 
+                      sessionId={session.id} 
+                      quantidade={session.qtdFotosExtra || 0} 
+                      regrasCongeladas={session.regrasDePrecoFotoExtraCongeladas} 
+                      currentValorFotoExtra={Number(session.valorFotoExtra) || 0} 
+                      currentValorTotalFotoExtra={Number(session.valorTotalFotoExtra) || 0} 
+                      categoria={session.categoria} 
+                      categoriaId={(() => {
+                        const categoria = categorias.find(cat => cat.nome === session.categoria);
+                        return categoria?.id;
+                      })()} 
+                      valorFotoExtraPacote={(() => {
+                        const pacote = packageOptions.find(pkg => pkg.nome === session.pacote);
+                        return pacote?.valorFotoExtra || 0;
+                      })()} 
+                      onValueUpdate={updates => {
+                        handleFieldUpdateStable(session.id, 'valorFotoExtra', updates.valorFotoExtra, true);
+                        handleFieldUpdateStable(session.id, 'valorTotalFotoExtra', updates.valorTotalFotoExtra, true);
+                      }} 
+                    />
+                  </>
+                ))}
 
                 {renderCell('extraPhotoTotal', (() => {
                   // Calcular o valor real baseado nas regras
