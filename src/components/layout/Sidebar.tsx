@@ -163,7 +163,7 @@ export default function Sidebar() {
   // Mobile bottom navigation
   if (isMobile) {
     return <>
-        <div className="fixed bottom-0 left-0 right-0 backdrop-blur-sm shadow-lunar-md z-10 p-2 border-t border-border bg-background/80">
+        <div className="fixed bottom-0 left-0 right-0 backdrop-blur-sm shadow-lunar-md z-40 p-2 border-t border-border bg-background/80">
           <div className="grid grid-cols-5 h-12 gap-1">
             {navItems.slice(0, 4).map(item => <NavLink key={item.to} to={item.to} className={({
             isActive
