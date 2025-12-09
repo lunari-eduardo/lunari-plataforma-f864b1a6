@@ -48,6 +48,18 @@ const queryClient = new QueryClient({
   },
 });
 
+// Componente interno que executa hooks DENTRO do WorkflowCacheProvider
+// Isso garante que eventos customizados são disparados APÓS listeners estarem prontos
+function AppContent() {
+  // Initialize workflow cache manager (non-blocking)
+  useWorkflowCacheInit();
+  
+  // Global appointment→workflow sync - DEVE estar DENTRO do WorkflowCacheProvider
+  useAppointmentWorkflowSync();
+  
+  return null;
+}
+
 // Define App as a proper function component
 function App() {
   // Bootstrap pricing system early
@@ -58,12 +70,6 @@ function App() {
   
   // Enable force update mechanism for all devices
   useAppForceUpdate();
-  
-  // Initialize workflow cache manager (non-blocking)
-  useWorkflowCacheInit();
-  
-  // FASE 1: Global appointment→workflow sync (works on any route)
-  useAppointmentWorkflowSync();
 
   // Log app version for debugging
   React.useEffect(() => {
@@ -80,6 +86,7 @@ function App() {
           <AuthProvider>
             <ConfigurationProvider>
               <WorkflowCacheProvider>
+                <AppContent />
                 <AppProvider>
                   <AgendaProvider>
                   <TooltipProvider>

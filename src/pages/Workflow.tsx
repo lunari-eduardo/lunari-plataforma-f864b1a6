@@ -10,7 +10,6 @@ import { useWorkflowStatus } from "@/hooks/useWorkflowStatus";
 import { useOrcamentoData } from "@/hooks/useOrcamentoData";
 import { useWorkflowCache } from "@/contexts/WorkflowCacheContext";
 import { useWorkflowPackageData } from "@/hooks/useWorkflowPackageData";
-import { useAppointmentWorkflowSync } from "@/hooks/useAppointmentWorkflowSync";
 import { useClientesRealtime } from "@/hooks/useClientesRealtime";
 import { useSessionsRealtime } from "@/hooks/useSessionsRealtime";
 import { useWorkflowRealtime } from '@/hooks/useWorkflowRealtime';
@@ -256,10 +255,7 @@ export default function Workflow() {
   }, []);
   
   const { clientes } = useClientesRealtime();
-  
-  // Initialize appointment-workflow sync
-  useAppointmentWorkflowSync();
-  
+
   // Initialize pricing migration for existing sessions
   usePricingMigration();
 
