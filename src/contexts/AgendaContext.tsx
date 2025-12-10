@@ -98,73 +98,82 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
     autoConfirmAppointments: false
   });
 
-  // Load initial data + FASE 1: Real-time subscriptions
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [appointmentsData, availabilityData, typesData, settingsData] = await Promise.all([
-          agendaService.loadAppointments(),
-          agendaService.loadAvailabilitySlots(),
-          agendaService.loadAvailabilityTypes(),
-          agendaService.loadSettings()
-        ]);
+  // Load initial data
+  const loadData = useCallback(async () => {
+    try {
+      const [appointmentsData, availabilityData, typesData, settingsData] = await Promise.all([
+        agendaService.loadAppointments(),
+        agendaService.loadAvailabilitySlots(),
+        agendaService.loadAvailabilityTypes(),
+        agendaService.loadSettings()
+      ]);
 
-        setAppointments(appointmentsData);
-        setAvailability(availabilityData);
-        setAvailabilityTypes(typesData);
-        setSettings(settingsData);
+      setAppointments(appointmentsData);
+      setAvailability(availabilityData);
+      setAvailabilityTypes(typesData);
+      setSettings(settingsData);
 
-        // Migrar horários personalizados do localStorage (uma vez)
-        const hasMigrated = localStorage.getItem('custom_slots_migrated');
-        if (!hasMigrated) {
-          await CustomTimeSlotsService.migrateFromLocalStorage();
-          localStorage.setItem('custom_slots_migrated', 'true');
-        }
-      } catch (error) {
-        console.error('❌ Erro ao carregar dados da agenda:', error);
+      // Migrar horários personalizados do localStorage (uma vez)
+      const hasMigrated = localStorage.getItem('custom_slots_migrated');
+      if (!hasMigrated) {
+        await CustomTimeSlotsService.migrateFromLocalStorage();
+        localStorage.setItem('custom_slots_migrated', 'true');
       }
-    };
+    } catch (error) {
+      console.error('❌ Erro ao carregar dados da agenda:', error);
+    }
+  }, [agendaService]);
+
+  // Real-time subscriptions with proper cleanup
+  useEffect(() => {
+    let cleanupRealtime: (() => void) | undefined;
+    let isMounted = true;
 
     const setupRealtime = async () => {
-      // FASE 2: Subscrever a mudanças em tempo real (appointments + availability)
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user || !isMounted) return;
+
+      // IDs únicos para evitar conflitos de canal
+      const channelId = Date.now();
 
       const availabilityChannel = supabase
-        .channel('availability_realtime')
+        .channel(`availability_realtime_${channelId}`)
         .on('postgres_changes', {
           event: '*',
           schema: 'public',
-          table: 'availability_slots'
+          table: 'availability_slots',
+          filter: `user_id=eq.${user.id}`
         }, (payload) => {
-          console.log('🔄 Mudança detectada em availability_slots:', payload);
+          console.log('🔄 [Agenda] Mudança em availability_slots:', payload.eventType);
           
-          // Recarregar availability slots
           agendaService.loadAvailabilitySlots().then(slots => {
-            setAvailability(slots);
+            if (isMounted) setAvailability(slots);
           });
         })
-        .subscribe();
+        .subscribe((status) => {
+          console.log(`📡 [Agenda] availability_slots subscription: ${status}`);
+        });
 
-      // FASE 2: Subscrição específica para appointments (multi-dispositivo)
       const appointmentsChannel = supabase
-        .channel('appointments_realtime')
+        .channel(`appointments_realtime_${channelId}`)
         .on('postgres_changes', {
           event: '*',
           schema: 'public',
           table: 'appointments',
           filter: `user_id=eq.${user.id}`
         }, (payload) => {
-          console.log('🔄 [AgendaContext] Mudança detectada em appointments:', payload.eventType);
+          console.log('🔄 [Agenda] Mudança em appointments:', payload.eventType);
           
-          // Recarregar appointments para sincronizar multi-dispositivo
           agendaService.loadAppointments().then(apps => {
-            setAppointments(apps);
+            if (isMounted) setAppointments(apps);
           });
         })
-        .subscribe();
+        .subscribe((status) => {
+          console.log(`📡 [Agenda] appointments subscription: ${status}`);
+        });
 
-      return () => {
+      cleanupRealtime = () => {
+        console.log('🧹 [Agenda] Cleaning up realtime subscriptions');
         supabase.removeChannel(availabilityChannel);
         supabase.removeChannel(appointmentsChannel);
       };
@@ -172,7 +181,25 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
 
     loadData();
     setupRealtime();
-  }, []);
+
+    return () => {
+      isMounted = false;
+      if (cleanupRealtime) cleanupRealtime();
+    };
+  }, [agendaService, loadData]);
+
+  // Reconexão automática quando app volta do background (PWA)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('👁️ [Agenda] App visible - reloading data');
+        loadData();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [loadData]);
 
   // Critical: Convert confirmed appointments to workflow items
   useEffect(() => {
