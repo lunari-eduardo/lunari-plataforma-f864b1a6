@@ -1,1 +1,10 @@
 project_id = "tlnjspsywycbudhewsfv"
+
+[functions.stripe-create-checkout]
+verify_jwt = false
+
+[functions.stripe-webhook]
+verify_jwt = false
+
+[functions.stripe-manage-subscription]
+verify_jwt = false

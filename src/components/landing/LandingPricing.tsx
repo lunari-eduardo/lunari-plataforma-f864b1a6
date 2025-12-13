@@ -1,23 +1,32 @@
 import { Button } from "@/components/ui/button";
 import { Check, Star } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 const plans = [{
   name: "Starter",
   monthlyPrice: "19,90",
-  annualPrice: "214,92",
+  annualPrice: "209,90",
   description: "Ideal para começar",
-  features: ["Agenda", "CRM", "Workflow", "Tutoriais", "Suporte por WhatsApp"],
+  features: ["Agenda completa", "CRM de clientes", "Workflow de produção", "Tutoriais", "Suporte por WhatsApp"],
   popular: false
 }, {
   name: "Pro",
   monthlyPrice: "37,90",
-  annualPrice: "409,32",
+  annualPrice: "389,90",
   description: "Funcionalidades completas",
-  features: ["Tudo do Starter", "Gestão de Leads", "Gestão de tarefas", "Financeiro completo", "Precificação e metas", "Análise de vendas detalhada", "Feed Preview", "Exportação de relatórios financeiros", "Notificações de tarefas e produção"],
+  features: ["Tudo do Starter", "Gestão de Leads", "Gestão de tarefas", "Financeiro completo", "Precificação e metas", "Análise de vendas detalhada", "Feed Preview", "Exportação de relatórios", "Notificações avançadas"],
   popular: true
 }];
+
 export default function LandingPricing() {
   const [isAnnual, setIsAnnual] = useState(false);
+  const navigate = useNavigate();
+
+  const handleStartTrial = () => {
+    navigate("/auth");
+  };
+
   return <section className="py-20 bg-white/50">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
@@ -32,11 +41,12 @@ export default function LandingPricing() {
             </button>
             <button onClick={() => setIsAnnual(true)} className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${isAnnual ? "bg-landing-brand text-white" : "text-landing-text/70 hover:text-landing-text"}`}>
               Anual
+              <span className="ml-1 text-xs opacity-75">(~8% off)</span>
             </button>
           </div>
           
           <p className="text-landing-text/70">
-            Sem compromisso • Cancele quando quiser
+            30 dias grátis • Sem compromisso • Cancele quando quiser
           </p>
         </div>
 
@@ -75,7 +85,9 @@ export default function LandingPricing() {
                   </div>)}
               </div>
 
-              <Button className={`w-full py-3 rounded-xl text-base font-medium transition-all mt-auto ${plan.popular ? "bg-landing-brand hover:bg-landing-brand/90 text-white" : "bg-white border-2 border-landing-brand text-landing-brand hover:bg-landing-brand hover:text-white"}`}>
+              <Button 
+                onClick={handleStartTrial}
+                className={`w-full py-3 rounded-xl text-base font-medium transition-all mt-auto ${plan.popular ? "bg-landing-brand hover:bg-landing-brand/90 text-white" : "bg-white border-2 border-landing-brand text-landing-brand hover:bg-landing-brand hover:text-white"}`}>
                 Começar Teste Grátis
               </Button>
             </div>)}
