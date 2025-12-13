@@ -33,6 +33,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { ConfigurationProvider } from "./contexts/ConfigurationContext";
 import { WorkflowCacheProvider } from "./contexts/WorkflowCacheContext";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
+import { AdminRoute } from "./components/auth/AdminRoute";
 import ThemeProvider from "./components/theme/ThemeProvider";
 import { BuildMonitor } from "./components/shared/BuildMonitor";
 import { usePricingBootstrap } from "./hooks/usePricingBootstrap";
@@ -140,7 +141,11 @@ function App() {
                       <Route path="/preferencias" element={<Preferencias />} />
                       <Route path="/tarefas" element={<Tarefas />} />
                       <Route path="/feed-test" element={<FeedTest />} />
-                      <Route path="/admin/usuarios" element={<AdminUsuarios />} />
+                      <Route path="/admin/usuarios" element={
+                        <AdminRoute>
+                          <AdminUsuarios />
+                        </AdminRoute>
+                      } />
                       <Route path="*" element={<NotFound />} />
                     </Route>
                   </Routes>
