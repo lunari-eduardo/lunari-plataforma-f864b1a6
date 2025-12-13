@@ -3,13 +3,20 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
 export interface AccessState {
-  status: 'ok' | 'suspended' | 'no_subscription' | 'not_authenticated' | 'loading';
+  status: 'ok' | 'suspended' | 'no_subscription' | 'not_authenticated' | 'loading' | 'trial_expired';
   reason?: string;
   isAdmin?: boolean;
+  isVip?: boolean;
+  isTrial?: boolean;
+  daysRemaining?: number;
+  trialEndsAt?: string;
   subscriptionId?: string;
   planId?: string;
+  planCode?: string;
+  planName?: string;
   currentPeriodEnd?: string;
   expiredAt?: string;
+  cancelAtPeriodEnd?: boolean;
 }
 
 export const useAccessControl = () => {
@@ -60,5 +67,12 @@ export const useAccessControl = () => {
     checkAccess();
   }, [user, authLoading]);
 
-  return { accessState, loading };
+  // Helper para verificar se usuário tem acesso PRO
+  const hasPro = accessState.status === 'ok' && 
+    (accessState.isAdmin || 
+     accessState.isVip || 
+     accessState.planCode?.startsWith('pro') ||
+     accessState.isTrial);
+
+  return { accessState, loading, hasPro };
 };

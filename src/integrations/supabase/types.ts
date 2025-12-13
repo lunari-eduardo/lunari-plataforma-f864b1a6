@@ -952,6 +952,7 @@ export type Database = {
           is_active: boolean | null
           name: string
           price_cents: number
+          stripe_price_id: string | null
           updated_at: string
         }
         Insert: {
@@ -964,6 +965,7 @@ export type Database = {
           is_active?: boolean | null
           name: string
           price_cents: number
+          stripe_price_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -976,6 +978,7 @@ export type Database = {
           is_active?: boolean | null
           name?: string
           price_cents?: number
+          stripe_price_id?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -1103,6 +1106,8 @@ export type Database = {
           id: string
           plan_id: string
           status: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
           updated_at: string
           user_id: string
         }
@@ -1114,6 +1119,8 @@ export type Database = {
           id?: string
           plan_id: string
           status: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -1125,6 +1132,8 @@ export type Database = {
           id?: string
           plan_id?: string
           status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -1283,6 +1292,33 @@ export type Database = {
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      vip_users: {
+        Row: {
+          created_at: string | null
+          expires_at: string | null
+          granted_by: string | null
+          id: string
+          reason: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string | null
+          granted_by?: string | null
+          id?: string
+          reason?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string | null
+          granted_by?: string | null
+          id?: string
+          reason?: string | null
           user_id?: string
         }
         Relationships: []
