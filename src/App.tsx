@@ -24,6 +24,8 @@ import LandingPage from "./pages/LandingPage";
 import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
 import NotFound from "./pages/NotFound";
+import EscolherPlano from "./pages/EscolherPlano";
+import MinhaAssinatura from "./pages/MinhaAssinatura";
 import { AppProvider } from "./contexts/AppContext";
 import { AgendaProvider } from "./contexts/AgendaContext";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -97,6 +99,18 @@ function App() {
                     {/* Public routes */}
                     <Route path="/landing" element={<LandingPage />} />
                     <Route path="/auth" element={<Auth />} />
+                    
+                    {/* Protected subscription routes (outside main layout) */}
+                    <Route path="/escolher-plano" element={
+                      <ProtectedRoute>
+                        <EscolherPlano />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/minha-assinatura" element={
+                      <ProtectedRoute>
+                        <MinhaAssinatura />
+                      </ProtectedRoute>
+                    } />
                     
                     {/* Semi-protected: onboarding (requires auth but not complete profile) */}
                     <Route path="/onboarding" element={

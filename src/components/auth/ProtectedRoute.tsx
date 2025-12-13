@@ -34,21 +34,42 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     return <Navigate to="/auth?reason=suspended" replace />;
   }
 
+  // 3. Verificar trial expirado - redirecionar para escolher plano
+  if (accessState.status === 'trial_expired') {
+    // Permitir acesso à página de escolher plano
+    if (location.pathname === '/escolher-plano' || location.pathname === '/minha-assinatura') {
+      return <>{children}</>;
+    }
+    return <Navigate to="/escolher-plano" replace />;
+  }
+
   if (accessState.status === 'no_subscription') {
+    // Permitir acesso à página de escolher plano
+    if (location.pathname === '/escolher-plano' || location.pathname === '/minha-assinatura') {
+      return <>{children}</>;
+    }
     return (
       <div className="min-h-screen flex items-center justify-center bg-lunar-bg p-4">
         <Card className="max-w-md w-full p-6 bg-black/20 border-white/10">
           <div className="text-center space-y-4">
             <h2 className="text-2xl font-bold text-white">Acesso Restrito</h2>
             <p className="text-white/80">
-              Sua conta não possui uma assinatura ativa. Entre em contato com o suporte para ativar seu acesso.
+              Sua conta não possui uma assinatura ativa.
             </p>
-            <button
-              onClick={() => signOut()}
-              className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
-            >
-              Sair
-            </button>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={() => window.location.href = '/escolher-plano'}
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg transition-colors"
+              >
+                Escolher Plano
+              </button>
+              <button
+                onClick={() => signOut()}
+                className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
+              >
+                Sair
+              </button>
+            </div>
           </div>
         </Card>
       </div>
