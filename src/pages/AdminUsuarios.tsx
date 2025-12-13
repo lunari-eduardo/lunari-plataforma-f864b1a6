@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Table, 
   TableBody, 
@@ -33,10 +34,12 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  Loader2
+  Loader2,
+  Mail
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import AllowedEmailsManager from '@/components/admin/AllowedEmailsManager';
 
 interface UserWithSubscription {
   id: string;
@@ -303,178 +306,194 @@ export default function AdminUsuarios() {
           <h1 className="text-2xl font-bold text-foreground">Painel Administrativo</h1>
           <p className="text-sm text-muted-foreground">Gerenciamento de usuários e assinaturas</p>
         </div>
-        <Button variant="outline" onClick={loadUsers} disabled={loading}>
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Atualizar'}
-        </Button>
       </div>
 
-      {/* Metrics Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <Card className="bg-card/50 border-border/50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <Users className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="text-2xl font-bold">{metrics.total}</p>
-                <p className="text-xs text-muted-foreground">Total</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-blue-500/10 border-blue-500/20">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <Clock className="h-5 w-5 text-blue-400" />
-              <div>
-                <p className="text-2xl font-bold text-blue-400">{metrics.trial}</p>
-                <p className="text-xs text-muted-foreground">Em Trial</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-green-500/10 border-green-500/20">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <CheckCircle className="h-5 w-5 text-green-400" />
-              <div>
-                <p className="text-2xl font-bold text-green-400">{metrics.active}</p>
-                <p className="text-xs text-muted-foreground">Ativos</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-red-500/10 border-red-500/20">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <XCircle className="h-5 w-5 text-red-400" />
-              <div>
-                <p className="text-2xl font-bold text-red-400">{metrics.expired}</p>
-                <p className="text-xs text-muted-foreground">Expirados</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-amber-500/10 border-amber-500/20">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <Crown className="h-5 w-5 text-amber-400" />
-              <div>
-                <p className="text-2xl font-bold text-amber-400">{metrics.vip}</p>
-                <p className="text-xs text-muted-foreground">VIP</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <Tabs defaultValue="users" className="space-y-6">
+        <TabsList className="bg-card/50 border border-border/50">
+          <TabsTrigger value="users" className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Usuários
+          </TabsTrigger>
+          <TabsTrigger value="emails" className="flex items-center gap-2">
+            <Mail className="h-4 w-4" />
+            Emails Autorizados
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Filters and Search */}
-      <Card className="bg-card/50 border-border/50">
-        <CardContent className="p-4">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por nome ou email..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-background"
-              />
-            </div>
-            <div className="flex gap-2 flex-wrap">
-              {(['all', 'trial', 'active', 'expired', 'vip'] as const).map((f) => (
-                <Button
-                  key={f}
-                  variant={filter === f ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setFilter(f)}
-                  className="text-xs"
-                >
-                  {f === 'all' && 'Todos'}
-                  {f === 'trial' && 'Trial'}
-                  {f === 'active' && 'Ativos'}
-                  {f === 'expired' && 'Expirados'}
-                  {f === 'vip' && 'VIP'}
-                </Button>
-              ))}
-            </div>
+        <TabsContent value="users" className="space-y-6">
+          {/* Metrics Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <Card className="bg-card/50 border-border/50">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <Users className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-2xl font-bold">{metrics.total}</p>
+                    <p className="text-xs text-muted-foreground">Total</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-blue-500/10 border-blue-500/20">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <Clock className="h-5 w-5 text-blue-400" />
+                  <div>
+                    <p className="text-2xl font-bold text-blue-400">{metrics.trial}</p>
+                    <p className="text-xs text-muted-foreground">Em Trial</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-green-500/10 border-green-500/20">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <CheckCircle className="h-5 w-5 text-green-400" />
+                  <div>
+                    <p className="text-2xl font-bold text-green-400">{metrics.active}</p>
+                    <p className="text-xs text-muted-foreground">Ativos</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-red-500/10 border-red-500/20">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <XCircle className="h-5 w-5 text-red-400" />
+                  <div>
+                    <p className="text-2xl font-bold text-red-400">{metrics.expired}</p>
+                    <p className="text-xs text-muted-foreground">Expirados</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-amber-500/10 border-amber-500/20">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <Crown className="h-5 w-5 text-amber-400" />
+                  <div>
+                    <p className="text-2xl font-bold text-amber-400">{metrics.vip}</p>
+                    <p className="text-xs text-muted-foreground">VIP</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Users Table */}
-      <Card className="bg-card/50 border-border/50">
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-border/50">
-                <TableHead className="text-xs">Usuário</TableHead>
-                <TableHead className="text-xs">Status</TableHead>
-                <TableHead className="text-xs">Plano</TableHead>
-                <TableHead className="text-xs">Expira em</TableHead>
-                <TableHead className="text-xs text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredUsers.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                    Nenhum usuário encontrado
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredUsers.map((user) => (
-                  <TableRow key={user.id} className="border-border/50">
-                    <TableCell>
-                      <div>
-                        <p className="font-medium text-sm">{user.nome || 'Sem nome'}</p>
-                        <p className="text-xs text-muted-foreground">{user.email}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>{getStatusBadge(user)}</TableCell>
-                    <TableCell className="text-sm">
-                      {user.plan_name || '-'}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {user.current_period_end 
-                        ? format(new Date(user.current_period_end), 'dd/MM/yyyy', { locale: ptBR })
-                        : '-'}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {!user.is_admin && (
-                        user.is_vip ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleVipAction(user, 'remove')}
-                            className="text-xs text-amber-400 border-amber-500/30 hover:bg-amber-500/10"
-                          >
-                            <Crown className="h-3 w-3 mr-1" />
-                            Remover VIP
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleVipAction(user, 'add')}
-                            className="text-xs"
-                          >
-                            <Star className="h-3 w-3 mr-1" />
-                            Conceder VIP
-                          </Button>
-                        )
-                      )}
-                    </TableCell>
+          {/* Filters and Search */}
+          <Card className="bg-card/50 border-border/50">
+            <CardContent className="p-4">
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por nome ou email..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 bg-background"
+                  />
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  {(['all', 'trial', 'active', 'expired', 'vip'] as const).map((f) => (
+                    <Button
+                      key={f}
+                      variant={filter === f ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setFilter(f)}
+                      className="text-xs"
+                    >
+                      {f === 'all' && 'Todos'}
+                      {f === 'trial' && 'Trial'}
+                      {f === 'active' && 'Ativos'}
+                      {f === 'expired' && 'Expirados'}
+                      {f === 'vip' && 'VIP'}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Users Table */}
+          <Card className="bg-card/50 border-border/50">
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-border/50">
+                    <TableHead className="text-xs">Usuário</TableHead>
+                    <TableHead className="text-xs">Status</TableHead>
+                    <TableHead className="text-xs">Plano</TableHead>
+                    <TableHead className="text-xs">Expira em</TableHead>
+                    <TableHead className="text-xs text-right">Ações</TableHead>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                </TableHeader>
+                <TableBody>
+                  {filteredUsers.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                        Nenhum usuário encontrado
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredUsers.map((user) => (
+                      <TableRow key={user.id} className="border-border/50">
+                        <TableCell>
+                          <div>
+                            <p className="font-medium text-sm">{user.nome || 'Sem nome'}</p>
+                            <p className="text-xs text-muted-foreground">{user.email}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>{getStatusBadge(user)}</TableCell>
+                        <TableCell className="text-sm">
+                          {user.plan_name || '-'}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {user.current_period_end 
+                            ? format(new Date(user.current_period_end), 'dd/MM/yyyy', { locale: ptBR })
+                            : '-'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {!user.is_admin && (
+                            user.is_vip ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleVipAction(user, 'remove')}
+                                className="text-xs text-amber-400 border-amber-500/30 hover:bg-amber-500/10"
+                              >
+                                <Crown className="h-3 w-3 mr-1" />
+                                Remover VIP
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleVipAction(user, 'add')}
+                                className="text-xs"
+                              >
+                                <Star className="h-3 w-3 mr-1" />
+                                Conceder VIP
+                              </Button>
+                            )
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="emails">
+          <AllowedEmailsManager />
+        </TabsContent>
+      </Tabs>
 
       {/* VIP Modal */}
       <Dialog open={vipModalOpen} onOpenChange={setVipModalOpen}>
