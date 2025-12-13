@@ -26,6 +26,7 @@ import Onboarding from "./pages/Onboarding";
 import NotFound from "./pages/NotFound";
 import EscolherPlano from "./pages/EscolherPlano";
 import MinhaAssinatura from "./pages/MinhaAssinatura";
+import AdminUsuarios from "./pages/AdminUsuarios";
 import { AppProvider } from "./contexts/AppContext";
 import { AgendaProvider } from "./contexts/AgendaContext";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -139,6 +140,7 @@ function App() {
                       <Route path="/preferencias" element={<Preferencias />} />
                       <Route path="/tarefas" element={<Tarefas />} />
                       <Route path="/feed-test" element={<FeedTest />} />
+                      <Route path="/admin/usuarios" element={<AdminUsuarios />} />
                       <Route path="*" element={<NotFound />} />
                     </Route>
                   </Routes>

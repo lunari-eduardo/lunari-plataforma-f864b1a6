@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Calendar, Users, Settings, FileText, DollarSign, Menu, X, User, TrendingUp, Workflow, ChevronRight, ChevronLeft, BarChart3, Home, CheckSquare, Image as ImageIcon } from 'lucide-react';
+import { Calendar, Users, Settings, FileText, DollarSign, Menu, X, User, TrendingUp, Workflow, ChevronRight, ChevronLeft, BarChart3, Home, CheckSquare, Image as ImageIcon, CreditCard, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useUserProfile, useUserBranding } from '@/hooks/useUserProfile';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAccessControl } from '@/hooks/useAccessControl';
 import { cn } from '@/lib/utils';
 interface NavItemProps {
   to: string;
@@ -32,6 +33,7 @@ export default function Sidebar() {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const { signOut } = useAuth();
+  const { accessState } = useAccessControl();
   const [isOpen, setIsOpen] = useState(false);
   const [isDesktopExpanded, setIsDesktopExpanded] = useState(false);
   const { profile, getProfileOrDefault } = useUserProfile();
@@ -91,9 +93,22 @@ export default function Sidebar() {
         >
           Preferências
         </DropdownMenuItem>
-        <DropdownMenuItem className="text-xs text-lunar-text hover:bg-lunar-surface/50 rounded">
-          Plano de Assinatura
+        <DropdownMenuItem 
+          className="text-xs text-lunar-text hover:bg-lunar-surface/50 rounded cursor-pointer"
+          onClick={() => navigate('/minha-assinatura')}
+        >
+          <CreditCard className="mr-2 h-3 w-3" />
+          <span>Minha Assinatura</span>
         </DropdownMenuItem>
+        {accessState.isAdmin && (
+          <DropdownMenuItem 
+            className="text-xs text-lunar-text hover:bg-lunar-surface/50 rounded cursor-pointer"
+            onClick={() => navigate('/admin/usuarios')}
+          >
+            <Shield className="mr-2 h-3 w-3" />
+            <span>Painel Admin</span>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSeparator className="bg-lunar-border/30" />
         <DropdownMenuItem 
           className="text-xs text-lunar-text hover:bg-lunar-surface/50 rounded cursor-pointer"
