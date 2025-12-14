@@ -10,12 +10,24 @@ const corsHeaders = {
 interface MunicipioIBGE {
   id: number;
   nome: string;
-  microrregiao: {
-    mesorregiao: {
-      UF: {
+  microrregiao?: {
+    mesorregiao?: {
+      UF?: {
         sigla: string;
         nome: string;
-        regiao: {
+        regiao?: {
+          nome: string;
+        };
+      };
+    };
+  };
+  // Estrutura alternativa da API
+  "regiao-imediata"?: {
+    "regiao-intermediaria"?: {
+      UF?: {
+        sigla: string;
+        nome: string;
+        regiao?: {
           nome: string;
         };
       };
@@ -50,27 +62,33 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Buscar dados da API do IBGE
+    // Buscar dados da API do IBGE - usando endpoint que retorna estrutura completa
     console.log('Buscando municípios da API do IBGE...');
     const response = await fetch(
-      'https://servicodados.ibge.gov.br/api/v1/localidades/municipios?orderBy=nome'
+      'https://servicodados.ibge.gov.br/api/v1/localidades/municipios?view=nivelado&orderBy=nome'
     );
 
     if (!response.ok) {
       throw new Error(`Erro ao buscar IBGE: ${response.statusText}`);
     }
 
-    const municipios: MunicipioIBGE[] = await response.json();
+    const municipios = await response.json();
     console.log(`Recebidos ${municipios.length} municípios`);
 
-    // Transformar para o formato do banco
-    const dados = municipios.map((m) => ({
-      id: m.id,
-      nome: m.nome,
-      uf: m.microrregiao.mesorregiao.UF.sigla,
-      estado: m.microrregiao.mesorregiao.UF.nome,
-      regiao: m.microrregiao.mesorregiao.UF.regiao.nome,
-    }));
+    // Transformar para o formato do banco usando estrutura nivelada
+    const dados = municipios.map((m: any) => ({
+      id: m.id || m["municipio-id"],
+      nome: m.nome || m["municipio-nome"],
+      uf: m["UF-sigla"] || m.uf || '',
+      estado: m["UF-nome"] || m.estado || '',
+      regiao: m["regiao-nome"] || m.regiao || '',
+    })).filter((m: any) => m.id && m.nome && m.uf);
+
+    console.log(`Processados ${dados.length} municípios válidos`);
+
+    if (dados.length === 0) {
+      throw new Error('Nenhum município válido encontrado na resposta da API');
+    }
 
     // Inserir em lotes de 500
     const BATCH_SIZE = 500;

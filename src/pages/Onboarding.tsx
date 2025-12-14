@@ -118,21 +118,6 @@ export default function Onboarding() {
     }
   };
 
-  const handleSkip = async () => {
-    if (!user) return;
-
-    setIsLoading(true);
-    try {
-      await updateProfileAsync({ is_onboarding_complete: true });
-      await queryClient.refetchQueries({ queryKey: ['profile', user.id] });
-      navigate('/');
-    } catch (error) {
-      console.error('Erro ao pular onboarding:', error);
-      toast.error('Erro ao pular onboarding');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   // Mapear currentStep (0-based) para StepIndicator (1-based, começando em 2)
   const stepIndicatorValue = (currentStep + 2) as 1 | 2 | 3 | 4;
@@ -235,14 +220,6 @@ export default function Onboarding() {
               </Button>
             </div>
 
-            {/* Link para pular */}
-            <button
-              onClick={handleSkip}
-              disabled={isLoading}
-              className="w-full text-sm text-white/80 hover:text-white font-light transition-colors duration-150"
-            >
-              Pular por enquanto
-            </button>
           </CardContent>
         </Card>
       </div>

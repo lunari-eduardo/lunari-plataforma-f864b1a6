@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.stripe-manage-subscription]
 verify_jwt = false
+
+[functions.populate-municipios-ibge]
+verify_jwt = false
