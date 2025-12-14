@@ -132,16 +132,40 @@ function App() {
                       <Route path="/agenda" element={<Agenda />} />
                       <Route path="/clientes" element={<Clientes />} />
                       <Route path="/clientes/:id" element={<ClienteDetalhe />} />
-                      <Route path="/leads" element={<Leads />} />
-                      <Route path="/financas" element={<NovaFinancas />} />
-                      <Route path="/precificacao" element={<Precificacao />} />
+                      <Route path="/leads" element={
+                        <PlanRestrictionGuard requiredPlan="pro">
+                          <Leads />
+                        </PlanRestrictionGuard>
+                      } />
+                      <Route path="/financas" element={
+                        <PlanRestrictionGuard requiredPlan="pro">
+                          <NovaFinancas />
+                        </PlanRestrictionGuard>
+                      } />
+                      <Route path="/precificacao" element={
+                        <PlanRestrictionGuard requiredPlan="pro">
+                          <Precificacao />
+                        </PlanRestrictionGuard>
+                      } />
                       <Route path="/workflow" element={<Workflow />} />
-                      <Route path="/analise-vendas" element={<AnaliseVendas />} />
+                      <Route path="/analise-vendas" element={
+                        <PlanRestrictionGuard requiredPlan="pro">
+                          <AnaliseVendas />
+                        </PlanRestrictionGuard>
+                      } />
                       <Route path="/configuracoes" element={<Configuracoes />} />
                       <Route path="/minha-conta" element={<MinhaConta />} />
                       <Route path="/preferencias" element={<Preferencias />} />
-                      <Route path="/tarefas" element={<Tarefas />} />
-                      <Route path="/feed-test" element={<FeedTest />} />
+                      <Route path="/tarefas" element={
+                        <PlanRestrictionGuard requiredPlan="pro">
+                          <Tarefas />
+                        </PlanRestrictionGuard>
+                      } />
+                      <Route path="/feed-test" element={
+                        <PlanRestrictionGuard requiredPlan="pro">
+                          <FeedTest />
+                        </PlanRestrictionGuard>
+                      } />
                       <Route path="/admin/usuarios" element={
                         <AdminRoute>
                           <AdminUsuarios />
