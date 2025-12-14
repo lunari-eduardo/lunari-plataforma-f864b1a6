@@ -1,83 +1,82 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, MapPin } from 'lucide-react';
+import { User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { OnboardingStep } from '@/components/onboarding/OnboardingStep';
+import { NichoCombobox } from '@/components/onboarding/NichoCombobox';
+import { CidadeIBGECombobox, CidadeIBGE } from '@/components/onboarding/CidadeIBGECombobox';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { toast } from 'sonner';
 import { StepIndicator } from '@/components/auth/StepIndicator';
+import { useQueryClient } from '@tanstack/react-query';
 import authBackground from '@/assets/auth-background.jpg';
 import lunariLogo from '@/assets/lunari-logo.png';
 
 export default function Onboarding() {
   const { user } = useAuth();
-  const { updateProfile } = useUserProfile();
+  const { updateProfileAsync } = useUserProfile();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   
   const [formData, setFormData] = useState({
     nome: '',
-    cidade: ''
+    nicho: '',
+    cidade: null as CidadeIBGE | null
   });
 
   const [errors, setErrors] = useState({
     nome: '',
+    nicho: '',
     cidade: ''
   });
 
-  const steps = [
-    {
-      title: 'Como você quer ser chamado(a)?',
-      subtitle: 'Digite seu nome ou apelido',
-      icon: User,
-      field: 'nome' as const,
-      placeholder: 'Seu nome',
-      autoFocus: true
-    },
-    {
-      title: 'Onde você mora?',
-      subtitle: 'Sua cidade ajuda a personalizar sua experiência',
-      icon: MapPin,
-      field: 'cidade' as const,
-      placeholder: 'Sua cidade',
-      autoFocus: true
-    }
-  ];
-
-  const currentStepConfig = steps[currentStep];
-  const progress = ((currentStep + 1) / steps.length) * 100;
-
   const validateStep = () => {
-    const field = currentStepConfig.field;
-    const value = formData[field].trim();
-
-    if (!value) {
-      setErrors(prev => ({
-        ...prev,
-        [field]: 'Este campo é obrigatório'
-      }));
-      return false;
+    if (currentStep === 0) {
+      // Validar nome
+      const nome = formData.nome.trim();
+      if (!nome) {
+        setErrors(prev => ({ ...prev, nome: 'Este campo é obrigatório' }));
+        return false;
+      }
+      if (nome.length < 2) {
+        setErrors(prev => ({ ...prev, nome: 'Precisa ter pelo menos 2 caracteres' }));
+        return false;
+      }
+      setErrors(prev => ({ ...prev, nome: '' }));
+      return true;
     }
 
-    if (value.length < 2) {
-      setErrors(prev => ({
-        ...prev,
-        [field]: 'Precisa ter pelo menos 2 caracteres'
-      }));
-      return false;
+    if (currentStep === 1) {
+      // Validar nicho
+      if (!formData.nicho) {
+        setErrors(prev => ({ ...prev, nicho: 'Selecione um nicho' }));
+        return false;
+      }
+      setErrors(prev => ({ ...prev, nicho: '' }));
+      return true;
     }
 
-    setErrors(prev => ({ ...prev, [field]: '' }));
+    if (currentStep === 2) {
+      // Validar cidade
+      if (!formData.cidade) {
+        setErrors(prev => ({ ...prev, cidade: 'Selecione uma cidade' }));
+        return false;
+      }
+      setErrors(prev => ({ ...prev, cidade: '' }));
+      return true;
+    }
+
     return true;
   };
 
   const handleNext = async () => {
     if (!validateStep()) return;
 
-    if (currentStep < steps.length - 1) {
+    if (currentStep < 2) {
       setCurrentStep(prev => prev + 1);
     } else {
       await handleComplete();
@@ -85,19 +84,23 @@ export default function Onboarding() {
   };
 
   const handleComplete = async () => {
-    if (!user) return;
+    if (!user || !formData.cidade) return;
 
     setIsLoading(true);
     try {
-      // Usar mutation do React Query que invalida cache automaticamente
-      await updateProfile({
+      // Usar mutateAsync para aguardar a conclusão
+      await updateProfileAsync({
         nome: formData.nome.trim(),
-        cidade: formData.cidade.trim(),
+        nicho: formData.nicho,
+        cidade_ibge_id: formData.cidade.id,
+        cidade_nome: formData.cidade.nome,
+        cidade_uf: formData.cidade.uf,
+        cidade: `${formData.cidade.nome} - ${formData.cidade.uf}`, // Legacy
         is_onboarding_complete: true
       });
 
-      // Aguardar um momento para o cache ser invalidado
-      await new Promise(resolve => setTimeout(resolve, 300));
+      // Aguardar cache ser atualizado antes de navegar
+      await queryClient.refetchQueries({ queryKey: ['profile', user.id] });
 
       toast.success('Bem-vindo(a)! 🎉');
       navigate('/');
@@ -120,8 +123,8 @@ export default function Onboarding() {
 
     setIsLoading(true);
     try {
-      await updateProfile({ is_onboarding_complete: true });
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await updateProfileAsync({ is_onboarding_complete: true });
+      await queryClient.refetchQueries({ queryKey: ['profile', user.id] });
       navigate('/');
     } catch (error) {
       console.error('Erro ao pular onboarding:', error);
@@ -130,6 +133,9 @@ export default function Onboarding() {
       setIsLoading(false);
     }
   };
+
+  // Mapear currentStep (0-based) para StepIndicator (1-based, começando em 2)
+  const stepIndicatorValue = (currentStep + 2) as 1 | 2 | 3 | 4;
 
   return (
     <div className="min-h-screen relative">
@@ -156,26 +162,50 @@ export default function Onboarding() {
         <div className="absolute inset-0 bg-gradient-to-br from-[#CD7F5E]/60 via-[#E89A7A]/50 to-[#CD7F5E]/60" />
         
         <Card className="relative z-10 w-full max-w-md bg-black/20 backdrop-blur-md border-white/20 shadow-2xl overflow-hidden">
-          {/* Step Indicator - Etapa 2 (Nome) ou Etapa 3 (Cidade) */}
-          <StepIndicator currentStep={currentStep === 0 ? 2 : 3} />
+          {/* Step Indicator */}
+          <StepIndicator currentStep={stepIndicatorValue} />
 
           <CardContent className="p-6 md:p-8 space-y-6">
-            <OnboardingStep
-              title={currentStepConfig.title}
-              subtitle={currentStepConfig.subtitle}
-              icon={currentStepConfig.icon}
-              value={formData[currentStepConfig.field]}
-              onChange={(value) => {
-                setFormData(prev => ({
-                  ...prev,
-                  [currentStepConfig.field]: value
-                }));
-                setErrors(prev => ({ ...prev, [currentStepConfig.field]: '' }));
-              }}
-              placeholder={currentStepConfig.placeholder}
-              error={errors[currentStepConfig.field]}
-              autoFocus={currentStepConfig.autoFocus}
-            />
+            {/* Step 0: Nome */}
+            {currentStep === 0 && (
+              <OnboardingStep
+                title="Como você quer ser chamado(a)?"
+                subtitle="Digite seu nome ou apelido"
+                icon={User}
+                value={formData.nome}
+                onChange={(value) => {
+                  setFormData(prev => ({ ...prev, nome: value }));
+                  setErrors(prev => ({ ...prev, nome: '' }));
+                }}
+                placeholder="Seu nome"
+                error={errors.nome}
+                autoFocus
+              />
+            )}
+
+            {/* Step 1: Nicho */}
+            {currentStep === 1 && (
+              <NichoCombobox
+                value={formData.nicho}
+                onChange={(value) => {
+                  setFormData(prev => ({ ...prev, nicho: value }));
+                  setErrors(prev => ({ ...prev, nicho: '' }));
+                }}
+                error={errors.nicho}
+              />
+            )}
+
+            {/* Step 2: Cidade */}
+            {currentStep === 2 && (
+              <CidadeIBGECombobox
+                value={formData.cidade}
+                onChange={(value) => {
+                  setFormData(prev => ({ ...prev, cidade: value }));
+                  setErrors(prev => ({ ...prev, cidade: '' }));
+                }}
+                error={errors.cidade}
+              />
+            )}
 
             {/* Botões de Navegação */}
             <div className="flex gap-3 pt-4">
@@ -197,7 +227,7 @@ export default function Onboarding() {
               >
                 {isLoading ? (
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                ) : currentStep === steps.length - 1 ? (
+                ) : currentStep === 2 ? (
                   'Começar! 🚀'
                 ) : (
                   'Continuar'

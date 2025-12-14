@@ -897,6 +897,30 @@ export type Database = {
         }
         Relationships: []
       }
+      municipios_ibge: {
+        Row: {
+          estado: string
+          id: number
+          nome: string
+          regiao: string
+          uf: string
+        }
+        Insert: {
+          estado: string
+          id: number
+          nome: string
+          regiao: string
+          uf: string
+        }
+        Update: {
+          estado?: string
+          id?: number
+          nome?: string
+          regiao?: string
+          uf?: string
+        }
+        Relationships: []
+      }
       pacotes: {
         Row: {
           categoria_id: string
@@ -1044,6 +1068,9 @@ export type Database = {
         Row: {
           avatar_url: string | null
           cidade: string | null
+          cidade_ibge_id: number | null
+          cidade_nome: string | null
+          cidade_uf: string | null
           cpf_cnpj: string | null
           created_at: string
           email: string | null
@@ -1052,6 +1079,7 @@ export type Database = {
           id: string
           is_onboarding_complete: boolean | null
           logo_url: string | null
+          nicho: string | null
           nome: string | null
           site_redes_sociais: string[] | null
           telefone: string | null
@@ -1062,6 +1090,9 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           cidade?: string | null
+          cidade_ibge_id?: number | null
+          cidade_nome?: string | null
+          cidade_uf?: string | null
           cpf_cnpj?: string | null
           created_at?: string
           email?: string | null
@@ -1070,6 +1101,7 @@ export type Database = {
           id?: string
           is_onboarding_complete?: boolean | null
           logo_url?: string | null
+          nicho?: string | null
           nome?: string | null
           site_redes_sociais?: string[] | null
           telefone?: string | null
@@ -1080,6 +1112,9 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           cidade?: string | null
+          cidade_ibge_id?: number | null
+          cidade_nome?: string | null
+          cidade_uf?: string | null
           cpf_cnpj?: string | null
           created_at?: string
           email?: string | null
@@ -1088,6 +1123,7 @@ export type Database = {
           id?: string
           is_onboarding_complete?: boolean | null
           logo_url?: string | null
+          nicho?: string | null
           nome?: string | null
           site_redes_sociais?: string[] | null
           telefone?: string | null
