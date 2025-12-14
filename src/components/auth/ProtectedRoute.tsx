@@ -81,7 +81,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     const needsOnboarding = !profile || 
       !profile.is_onboarding_complete || 
       !profile.nome?.trim() || 
-      !profile.cidade?.trim();
+      !profile.nicho?.trim() ||
+      !profile.cidade_ibge_id;
       
     if (needsOnboarding) {
       return <Navigate to="/onboarding" replace />;

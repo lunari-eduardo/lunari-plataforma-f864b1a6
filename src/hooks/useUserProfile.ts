@@ -120,6 +120,10 @@ export function useUserProfile() {
       telefones: null,
       site_redes_sociais: null,
       is_onboarding_complete: false,
+      nicho: null,
+      cidade_ibge_id: null,
+      cidade_nome: null,
+      cidade_uf: null,
       created_at: now,
       updated_at: now
     };
@@ -129,6 +133,7 @@ export function useUserProfile() {
     profile,
     loading,
     updateProfile: updateProfileMutation.mutate,
+    updateProfileAsync: updateProfileMutation.mutateAsync,
     saveProfile: updateProfileMutation.mutate, // Alias for compatibility
     uploadAvatar,
     deleteAvatar,

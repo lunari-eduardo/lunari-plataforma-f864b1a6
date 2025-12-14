@@ -15,6 +15,10 @@ export interface UserProfile {
   telefones: string[] | null;
   site_redes_sociais: string[] | null;
   is_onboarding_complete: boolean;
+  nicho: string | null;
+  cidade_ibge_id: number | null;
+  cidade_nome: string | null;
+  cidade_uf: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -155,10 +159,23 @@ export class ProfileService {
   /**
    * Completar onboarding
    */
-  static async completeOnboarding(userId: string, data: { nome: string; cidade: string }): Promise<UserProfile> {
+  static async completeOnboarding(
+    userId: string, 
+    data: { 
+      nome: string; 
+      nicho: string;
+      cidade_ibge_id: number;
+      cidade_nome: string;
+      cidade_uf: string;
+    }
+  ): Promise<UserProfile> {
     return await this.updateProfile(userId, {
       nome: data.nome,
-      cidade: data.cidade,
+      nicho: data.nicho,
+      cidade_ibge_id: data.cidade_ibge_id,
+      cidade_nome: data.cidade_nome,
+      cidade_uf: data.cidade_uf,
+      cidade: `${data.cidade_nome} - ${data.cidade_uf}`, // Legacy compatibility
       is_onboarding_complete: true
     });
   }
