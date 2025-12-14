@@ -8,6 +8,7 @@ export interface AccessState {
   isAdmin?: boolean;
   isVip?: boolean;
   isTrial?: boolean;
+  isAuthorized?: boolean;
   daysRemaining?: number;
   trialEndsAt?: string;
   subscriptionId?: string;
@@ -71,6 +72,7 @@ export const useAccessControl = () => {
   const hasPro = accessState.status === 'ok' && 
     (accessState.isAdmin || 
      accessState.isVip || 
+     accessState.isAuthorized ||
      accessState.planCode?.startsWith('pro') ||
      accessState.isTrial);
 

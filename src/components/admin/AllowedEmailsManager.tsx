@@ -207,7 +207,7 @@ export default function AllowedEmailsManager() {
               Autorizar Novo Email
             </DialogTitle>
             <DialogDescription>
-              Este email poderá se cadastrar no sistema e receberá um trial de 30 dias.
+              Este email terá acesso permanente e gratuito ao sistema, sem período de teste ou cobrança.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -255,7 +255,7 @@ export default function AllowedEmailsManager() {
             <DialogDescription>
               Tem certeza que deseja remover <strong>{deleteEmail}</strong> da lista de emails autorizados?
               <br /><br />
-              Se este email ainda não se cadastrou, não poderá mais fazer isso.
+              <span className="text-destructive font-medium">⚠️ Se o usuário já estiver cadastrado, ele perderá o acesso gratuito e precisará assinar um plano para continuar usando o sistema.</span>
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
