@@ -59,6 +59,7 @@ export default function MinhaAssinatura() {
 
   const getPlanDisplayName = () => {
     if (accessState.isAdmin) return "Admin (Acesso Total)";
+    if (accessState.isAuthorized) return "Conta Autorizada";
     if (accessState.isVip) return "VIP (Acesso Total)";
     if (accessState.planName) return accessState.planName;
     if (accessState.planCode?.includes("pro")) return "Pro";
@@ -68,8 +69,14 @@ export default function MinhaAssinatura() {
   };
 
   const getStatusBadge = () => {
-    if (accessState.isAdmin || accessState.isVip) {
-      return <Badge className="bg-purple-500">Acesso Especial</Badge>;
+    if (accessState.isAdmin) {
+      return <Badge className="bg-purple-500">Administrador</Badge>;
+    }
+    if (accessState.isAuthorized) {
+      return <Badge className="bg-emerald-500">Conta Autorizada</Badge>;
+    }
+    if (accessState.isVip) {
+      return <Badge className="bg-purple-500">VIP</Badge>;
     }
     if (accessState.status === "ok" && !accessState.isTrial) {
       return <Badge className="bg-green-500">Ativo</Badge>;
@@ -117,6 +124,19 @@ export default function MinhaAssinatura() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Authorized users message */}
+          {accessState.isAuthorized && (
+            <div className="flex items-start gap-3 p-4 bg-emerald-50 dark:bg-emerald-950/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
+              <CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium text-emerald-700 dark:text-emerald-300">Acesso autorizado pelo administrador</p>
+                <p className="text-sm text-emerald-600 dark:text-emerald-400">
+                  Você tem acesso completo e gratuito ao sistema. Nenhuma cobrança será realizada.
+                </p>
+              </div>
+            </div>
+          )}
+
           {accessState.cancelAtPeriodEnd && (
             <div className="flex items-start gap-3 p-4 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-800">
               <AlertTriangle className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
@@ -129,7 +149,8 @@ export default function MinhaAssinatura() {
             </div>
           )}
 
-          {/* Actions */}
+          {/* Actions - hide for authorized users */}
+          {!accessState.isAuthorized && !accessState.isAdmin && !accessState.isVip && (
           <div className="flex flex-wrap gap-3 pt-4">
             {/* Trial users - show upgrade button */}
             {(accessState.isTrial || accessState.status === "trial_expired" || accessState.status === "no_subscription") && (
@@ -185,6 +206,7 @@ export default function MinhaAssinatura() {
               </>
             )}
           </div>
+          )}
         </CardContent>
       </Card>
 
