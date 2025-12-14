@@ -34,6 +34,7 @@ import { ConfigurationProvider } from "./contexts/ConfigurationContext";
 import { WorkflowCacheProvider } from "./contexts/WorkflowCacheContext";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { AdminRoute } from "./components/auth/AdminRoute";
+import { PlanRestrictionGuard } from "./components/auth/PlanRestrictionGuard";
 import ThemeProvider from "./components/theme/ThemeProvider";
 import { BuildMonitor } from "./components/shared/BuildMonitor";
 import { usePricingBootstrap } from "./hooks/usePricingBootstrap";
