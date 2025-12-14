@@ -104,52 +104,92 @@ export default function Produtos({ pacotes }: ProdutosProps) {
   
   return (
     <div className="mt-4 space-y-6">
-      <div>
-        <h3 className="font-medium text-sm">Novo Produto</h3>
-        <p className="text-muted-foreground mt-1 mb-3 text-xs">
-          Configure os produtos adicionais disponíveis para venda.
-        </p>
+      {/* ============= NOVO PRODUTO ============= */}
+      <div className="space-y-4">
+        <div>
+          <h3 className="font-medium text-sm">Novo Produto</h3>
+          <p className="text-muted-foreground mt-1 text-xs">
+            Configure os produtos adicionais disponíveis para venda.
+          </p>
+        </div>
         
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div>
-            <label htmlFor="produto-nome" className="block text-sm font-medium mb-1">
-              Nome<span className="text-red-500">*</span>
+        {/* Bloco 1 — Identidade do Produto (Destaque) */}
+        <div className="bg-card/50 border-l-4 border-l-primary rounded-lg p-3">
+          <div className="space-y-1">
+            <label htmlFor="produto-nome" className="text-2xs font-medium text-muted-foreground">
+              Nome do Produto <span className="text-destructive">*</span>
             </label>
-            <Input id="produto-nome" placeholder="Nome do produto" value={novoProduto.nome} onChange={e => setNovoProduto({
-            ...novoProduto,
-            nome: e.target.value
-          })} className="bg-lunar-surface" />
-          </div>
-          
-          <div>
-            <label htmlFor="produto-custo" className="block text-sm font-medium mb-1">
-              Preço de Custo (R$)
-            </label>
-            <Input id="produto-custo" type="number" placeholder="0,00" value={novoProduto.preco_custo || ''} onChange={e => setNovoProduto({
-            ...novoProduto,
-            preco_custo: Number(e.target.value)
-          })} className="bg-lunar-surface" />
-          </div>
-          
-          <div>
-            <label htmlFor="produto-venda" className="block text-sm font-medium mb-1">
-              Preço de Venda (R$)
-            </label>
-            <Input id="produto-venda" type="number" placeholder="0,00" value={novoProduto.preco_venda || ''} onChange={e => setNovoProduto({
-            ...novoProduto,
-            preco_venda: Number(e.target.value)
-          })} className="bg-lunar-surface" />
+            <Input 
+              id="produto-nome" 
+              autoFocus
+              placeholder="Ex: Álbum 20x30cm" 
+              value={novoProduto.nome} 
+              onChange={e => setNovoProduto({
+                ...novoProduto,
+                nome: e.target.value
+              })} 
+              className="h-10 text-base font-medium bg-background"
+            />
           </div>
         </div>
         
-        <div className="mt-3">
+        {/* Bloco 2 — Precificação (Compacto) */}
+        <div className="flex flex-wrap gap-3">
+          <div className="flex-1 min-w-[140px] max-w-[180px]">
+            <label htmlFor="produto-custo" className="text-2xs font-medium text-muted-foreground mb-1 block">
+              Preço de Custo
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">
+                R$
+              </span>
+              <Input 
+                id="produto-custo" 
+                type="number" 
+                placeholder="0,00" 
+                value={novoProduto.preco_custo || ''} 
+                onChange={e => setNovoProduto({
+                  ...novoProduto,
+                  preco_custo: Number(e.target.value)
+                })} 
+                className="h-8 pl-8 text-sm bg-background"
+              />
+            </div>
+          </div>
+          
+          <div className="flex-1 min-w-[140px] max-w-[180px]">
+            <label htmlFor="produto-venda" className="text-2xs font-medium text-muted-foreground mb-1 block">
+              Preço de Venda
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">
+                R$
+              </span>
+              <Input 
+                id="produto-venda" 
+                type="number" 
+                placeholder="0,00" 
+                value={novoProduto.preco_venda || ''} 
+                onChange={e => setNovoProduto({
+                  ...novoProduto,
+                  preco_venda: Number(e.target.value)
+                })} 
+                className="h-8 pl-8 text-sm bg-background"
+              />
+            </div>
+          </div>
+        </div>
+        
+        {/* Bloco 3 — CTA Único */}
+        <div className="flex justify-end pt-1">
           <Button 
             onClick={handleAdicionarProduto} 
-            className="flex items-center gap-2"
+            size="sm"
+            className="px-6 text-xs font-medium"
             disabled={isLoading || novoProduto.nome.trim() === ''}
           >
-            <Plus className="h-4 w-4" />
-            <span>Adicionar Produto</span>
+            <Plus className="h-3.5 w-3.5 mr-1.5" />
+            Adicionar Produto
           </Button>
         </div>
       </div>

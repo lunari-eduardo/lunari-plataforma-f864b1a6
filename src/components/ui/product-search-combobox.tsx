@@ -1,9 +1,10 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useDialogDropdownContext } from "@/components/ui/dialog";
 
 // Função para normalizar texto (remover acentos e caracteres especiais)
 const normalizeText = (text: string): string => {
@@ -40,6 +41,13 @@ export function ProductSearchCombobox({
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedValue, setSelectedValue] = useState("");
+  
+  // Integrar com DialogDropdownContext para evitar conflitos de z-index
+  const dialogContext = useDialogDropdownContext();
+  
+  useEffect(() => {
+    dialogContext?.setHasOpenDropdown(open);
+  }, [open, dialogContext]);
 
   const selectedProduct = products.find(product => product.nome === selectedValue);
 
@@ -75,8 +83,7 @@ export function ProductSearchCombobox({
         </Button>
       </PopoverTrigger>
       <PopoverContent 
-        className="w-[300px] p-0 z-[60] dropdown-solid border shadow-lg"
-        onOpenAutoFocus={(e) => e.preventDefault()}
+        className="w-[300px] p-0 z-[9999] bg-popover border shadow-lg pointer-events-auto"
         sideOffset={4}
       >
         <Command shouldFilter={false}>
@@ -87,7 +94,7 @@ export function ProductSearchCombobox({
             onValueChange={setSearchTerm}
             autoFocus
           />
-          <CommandList>
+          <CommandList className="max-h-[200px] overflow-y-auto">
             <CommandEmpty className="text-xs py-2">
               Nenhum produto encontrado.
             </CommandEmpty>
