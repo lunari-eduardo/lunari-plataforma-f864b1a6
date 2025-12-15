@@ -1361,6 +1361,15 @@ export type Database = {
       }
     }
     Views: {
+      crescimento_mensal: {
+        Row: {
+          faturamento: number | null
+          fotografos_ativos: number | null
+          mes: string | null
+          total_transacoes: number | null
+        }
+        Relationships: []
+      }
       extrato_unificado: {
         Row: {
           cartao: string | null
@@ -1381,6 +1390,38 @@ export type Database = {
           tipo: string | null
           user_id: string | null
           valor: number | null
+        }
+        Relationships: []
+      }
+      faturamento_por_cidade: {
+        Row: {
+          cidade: string | null
+          estado: string | null
+          faturamento_total: number | null
+          mes: string | null
+          ticket_medio: number | null
+          total_fotografos: number | null
+        }
+        Relationships: []
+      }
+      faturamento_por_cidade_nicho: {
+        Row: {
+          cidade: string | null
+          estado: string | null
+          faturamento_total: number | null
+          mes: string | null
+          nicho: string | null
+          total_usuarios: number | null
+        }
+        Relationships: []
+      }
+      faturamento_por_nicho: {
+        Row: {
+          faturamento_total: number | null
+          mes: string | null
+          nicho: string | null
+          ticket_medio: number | null
+          total_usuarios: number | null
         }
         Relationships: []
       }
