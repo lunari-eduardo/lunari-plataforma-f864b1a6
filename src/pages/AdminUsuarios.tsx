@@ -35,11 +35,14 @@ import {
   CheckCircle,
   XCircle,
   Loader2,
-  Mail
+  Mail,
+  TrendingUp,
+  UserCheck
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import AllowedEmailsManager from '@/components/admin/AllowedEmailsManager';
+import { AdminStrategyTab } from '@/components/admin/AdminStrategyTab';
 
 interface UserWithSubscription {
   id: string;
@@ -52,6 +55,7 @@ interface UserWithSubscription {
   current_period_end: string | null;
   is_vip: boolean;
   is_admin: boolean;
+  is_authorized: boolean;
 }
 
 interface VipUser {
@@ -66,7 +70,7 @@ export default function AdminUsuarios() {
   const [users, setUsers] = useState<UserWithSubscription[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filter, setFilter] = useState<'all' | 'trial' | 'active' | 'expired' | 'vip'>('all');
+  const [filter, setFilter] = useState<'all' | 'trial' | 'active' | 'expired' | 'vip' | 'authorized'>('all');
   
   // VIP Modal state
   const [vipModalOpen, setVipModalOpen] = useState(false);
@@ -81,7 +85,8 @@ export default function AdminUsuarios() {
     trial: 0,
     active: 0,
     expired: 0,
-    vip: 0
+    vip: 0,
+    authorized: 0
   });
 
   useEffect(() => {
@@ -146,16 +151,25 @@ export default function AdminUsuarios() {
 
       if (rolesError) throw rolesError;
 
+      // Fetch authorized emails
+      const { data: allowedEmails, error: allowedError } = await supabase
+        .from('allowed_emails')
+        .select('email');
+
+      if (allowedError) throw allowedError;
+
       // Create lookup maps
       const subsMap = new Map(subscriptions?.map(s => [s.user_id, s]) || []);
       const vipMap = new Map(vipUsers?.map(v => [v.user_id, v]) || []);
       const adminSet = new Set(adminRoles?.map(r => r.user_id) || []);
+      const authorizedEmailsSet = new Set(allowedEmails?.map(e => e.email.toLowerCase()) || []);
 
       // Combine data
       const combinedUsers: UserWithSubscription[] = (profiles || []).map(profile => {
         const sub = subsMap.get(profile.user_id);
         const vip = vipMap.get(profile.user_id);
         const isAdmin = adminSet.has(profile.user_id);
+        const isAuthorized = authorizedEmailsSet.has((profile.email || '').toLowerCase());
 
         return {
           id: profile.user_id,
@@ -167,7 +181,8 @@ export default function AdminUsuarios() {
           plan_name: (sub?.plans as any)?.name || null,
           current_period_end: sub?.current_period_end || null,
           is_vip: !!vip && (!vip.expires_at || new Date(vip.expires_at) > new Date()),
-          is_admin: isAdmin
+          is_admin: isAdmin,
+          is_authorized: isAuthorized
         };
       });
 
@@ -184,7 +199,8 @@ export default function AdminUsuarios() {
           u.current_period_end && 
           new Date(u.current_period_end) < now
         ).length,
-        vip: combinedUsers.filter(u => u.is_vip).length
+        vip: combinedUsers.filter(u => u.is_vip).length,
+        authorized: combinedUsers.filter(u => u.is_authorized).length
       });
 
     } catch (error) {
@@ -243,6 +259,9 @@ export default function AdminUsuarios() {
     if (user.is_admin) {
       return <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">Admin</Badge>;
     }
+    if (user.is_authorized) {
+      return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Autorizado</Badge>;
+    }
     if (user.is_vip) {
       return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">VIP</Badge>;
     }
@@ -282,6 +301,8 @@ export default function AdminUsuarios() {
           new Date(user.current_period_end) < now;
       case 'vip':
         return user.is_vip;
+      case 'authorized':
+        return user.is_authorized;
       default:
         return true;
     }
@@ -314,6 +335,10 @@ export default function AdminUsuarios() {
             <Users className="h-4 w-4" />
             Usuários
           </TabsTrigger>
+          <TabsTrigger value="strategy" className="flex items-center gap-2">
+            <TrendingUp className="h-4 w-4" />
+            Estratégia
+          </TabsTrigger>
           <TabsTrigger value="emails" className="flex items-center gap-2">
             <Mail className="h-4 w-4" />
             Emails Autorizados
@@ -322,7 +347,7 @@ export default function AdminUsuarios() {
 
         <TabsContent value="users" className="space-y-6">
           {/* Metrics Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
             <Card className="bg-card/50 border-border/50">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
@@ -382,6 +407,18 @@ export default function AdminUsuarios() {
                 </div>
               </CardContent>
             </Card>
+            
+            <Card className="bg-emerald-500/10 border-emerald-500/20">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <UserCheck className="h-5 w-5 text-emerald-400" />
+                  <div>
+                    <p className="text-2xl font-bold text-emerald-400">{metrics.authorized}</p>
+                    <p className="text-xs text-muted-foreground">Autorizados</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Filters and Search */}
@@ -398,7 +435,7 @@ export default function AdminUsuarios() {
                   />
                 </div>
                 <div className="flex gap-2 flex-wrap">
-                  {(['all', 'trial', 'active', 'expired', 'vip'] as const).map((f) => (
+                  {(['all', 'trial', 'active', 'expired', 'vip', 'authorized'] as const).map((f) => (
                     <Button
                       key={f}
                       variant={filter === f ? 'default' : 'outline'}
@@ -411,6 +448,7 @@ export default function AdminUsuarios() {
                       {f === 'active' && 'Ativos'}
                       {f === 'expired' && 'Expirados'}
                       {f === 'vip' && 'VIP'}
+                      {f === 'authorized' && 'Autorizados'}
                     </Button>
                   ))}
                 </div>
@@ -488,6 +526,10 @@ export default function AdminUsuarios() {
               </Table>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="strategy">
+          <AdminStrategyTab />
         </TabsContent>
 
         <TabsContent value="emails">
