@@ -14,19 +14,37 @@ interface NavItemProps {
   icon: React.ReactNode;
   label: string;
   iconOnly?: boolean;
+  isPro?: boolean;
+  showProBadge?: boolean;
 }
 const NavItem = ({
   to,
   icon,
   label,
-  iconOnly = false
+  iconOnly = false,
+  isPro = false,
+  showProBadge = false
 }: NavItemProps) => {
   const isMobile = useIsMobile();
   return <NavLink to={to} className={({
     isActive
-  }) => cn("nav-item-lunar mb-1 flex items-center transition-all duration-200", iconOnly ? "w-12 h-12 rounded-lg justify-center" : "gap-3 px-3 py-2 justify-start", isActive && "active bg-lunar-surface text-lunar-accent")} title={iconOnly ? label : undefined}>
+  }) => cn("nav-item-lunar mb-1 flex items-center transition-all duration-200 relative", iconOnly ? "w-12 h-12 rounded-lg justify-center" : "gap-3 px-3 py-2 justify-start", isActive && "active bg-lunar-surface text-lunar-accent")} title={iconOnly ? label : undefined}>
       <span className="text-sm flex-shrink-0">{icon}</span>
-      {!iconOnly && <span className="text-xs font-medium whitespace-nowrap">{label}</span>}
+      {!iconOnly && (
+        <span className="text-xs font-medium whitespace-nowrap flex items-center gap-2">
+          {label}
+          {isPro && showProBadge && (
+            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-lunar-accent/20 text-lunar-accent">
+              PRO
+            </span>
+          )}
+        </span>
+      )}
+      {iconOnly && isPro && showProBadge && (
+        <span className="absolute -top-1 -right-1 text-[8px] font-bold px-1 rounded bg-lunar-accent text-lunar-bg">
+          PRO
+        </span>
+      )}
     </NavLink>;
 };
 export default function Sidebar() {
@@ -130,7 +148,8 @@ export default function Sidebar() {
   }, {
     to: "/leads",
     icon: <FileText size={14} />,
-    label: "Leads"
+    label: "Leads",
+    isPro: true
   }, /* {
     to: "/orcamentos",
     icon: <FileText size={14} />,
@@ -142,11 +161,13 @@ export default function Sidebar() {
   }, {
     to: "/tarefas",
     icon: <CheckSquare size={14} />,
-    label: "Tarefas"
+    label: "Tarefas",
+    isPro: true
   }, {
     to: "/financas",
     icon: <DollarSign size={14} />,
-    label: "Finanças"
+    label: "Finanças",
+    isPro: true
   }, {
     to: "/clientes",
     icon: <Users size={14} />,
@@ -154,20 +175,30 @@ export default function Sidebar() {
   }, {
     to: "/precificacao",
     icon: <TrendingUp size={14} />,
-    label: "Precificação"
+    label: "Precificação",
+    isPro: true
   }, {
     to: "/analise-vendas",
     icon: <BarChart3 size={14} />,
-    label: "Análise de Vendas"
+    label: "Análise de Vendas",
+    isPro: true
   }, {
     to: "/feed-test",
     icon: <ImageIcon size={14} />,
-    label: "Feed Test"
+    label: "Feed Test",
+    isPro: true
   }, {
     to: "/configuracoes",
     icon: <Settings size={14} />,
     label: "Configurações"
   }];
+
+  // Determine if user should see PRO badges (Starter plan without special access)
+  const isStarterPlan = accessState.planCode?.startsWith('starter') && 
+    !accessState.isAdmin && 
+    !accessState.isVip && 
+    !accessState.isAuthorized;
+
   const toggleDesktopSidebar = () => {
     setIsDesktopExpanded(!isDesktopExpanded);
   };
@@ -212,7 +243,7 @@ export default function Sidebar() {
               </Button>
             </div>
             <div className="p-3 space-y-1">
-              {navItems.map(item => <NavItem key={item.to} {...item} />)}
+              {navItems.map(item => <NavItem key={item.to} {...item} showProBadge={isStarterPlan} />)}
             </div>
           </div>
         </div>
@@ -240,7 +271,7 @@ export default function Sidebar() {
 
       <div className="flex-1">
         <div className="space-y-2">
-          {navItems.map(item => <NavItem key={item.to} {...item} iconOnly={!isDesktopExpanded} />)}
+          {navItems.map(item => <NavItem key={item.to} {...item} iconOnly={!isDesktopExpanded} showProBadge={isStarterPlan} />)}
         </div>
       </div>
       
