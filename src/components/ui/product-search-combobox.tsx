@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,7 @@ export function ProductSearchCombobox({
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedValue, setSelectedValue] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
   
   // Integrar com DialogDropdownContext para evitar conflitos de z-index
   const dialogContext = useDialogDropdownContext();
@@ -48,6 +49,17 @@ export function ProductSearchCombobox({
   useEffect(() => {
     dialogContext?.setHasOpenDropdown(open);
   }, [open, dialogContext]);
+
+  // Foco confiável usando double requestAnimationFrame (aguarda Portal montar)
+  useEffect(() => {
+    if (open) {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          inputRef.current?.focus();
+        });
+      });
+    }
+  }, [open]);
 
   const selectedProduct = products.find(product => product.nome === selectedValue);
 
@@ -83,18 +95,25 @@ export function ProductSearchCombobox({
         </Button>
       </PopoverTrigger>
       <PopoverContent 
-        className="w-[300px] p-0 z-[9999] bg-popover border shadow-lg pointer-events-auto"
+        className="w-[300px] p-0 z-[9999] bg-popover border shadow-lg"
         sideOffset={4}
+        onOpenAutoFocus={(e) => {
+          e.preventDefault();
+          inputRef.current?.focus();
+        }}
       >
-        <Command shouldFilter={false}>
+        <Command shouldFilter={false} className="flex flex-col">
           <CommandInput 
+            ref={inputRef}
             placeholder="Buscar produto..." 
             className="h-8 text-xs" 
             value={searchTerm}
             onValueChange={setSearchTerm}
-            autoFocus
           />
-          <CommandList className="max-h-[200px] overflow-y-auto">
+          <CommandList 
+            className="max-h-[200px] overflow-y-auto overscroll-contain touch-pan-y"
+            onWheel={(e) => e.stopPropagation()}
+          >
             <CommandEmpty className="text-xs py-2">
               Nenhum produto encontrado.
             </CommandEmpty>
