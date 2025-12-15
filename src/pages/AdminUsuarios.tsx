@@ -190,17 +190,41 @@ export default function AdminUsuarios() {
 
       // Calculate metrics
       const now = new Date();
+      
+      // Contar usuários em trial ativo (não expirado)
+      const trialUsers = combinedUsers.filter(u => 
+        u.subscription_status === 'trialing' && 
+        (!u.current_period_end || new Date(u.current_period_end) > now) &&
+        !u.is_admin && !u.is_vip && !u.is_authorized
+      );
+      
+      // Contar usuários com assinatura ativa (paga)
+      const activeUsers = combinedUsers.filter(u => 
+        u.subscription_status === 'active' &&
+        !u.is_admin && !u.is_vip && !u.is_authorized
+      );
+      
+      // Contar usuários com trial expirado (sem outra forma de acesso)
+      const expiredUsers = combinedUsers.filter(u => 
+        u.subscription_status === 'trialing' && 
+        u.current_period_end && 
+        new Date(u.current_period_end) < now &&
+        !u.is_admin && !u.is_vip && !u.is_authorized
+      );
+      
+      // VIP ativos
+      const activeVipUsers = combinedUsers.filter(u => u.is_vip && !u.is_admin);
+      
+      // Autorizados (emails na lista)
+      const authorizedUsersCount = combinedUsers.filter(u => u.is_authorized && !u.is_admin);
+      
       setMetrics({
         total: combinedUsers.length,
-        trial: combinedUsers.filter(u => u.subscription_status === 'trialing').length,
-        active: combinedUsers.filter(u => u.subscription_status === 'active').length,
-        expired: combinedUsers.filter(u => 
-          u.subscription_status === 'trialing' && 
-          u.current_period_end && 
-          new Date(u.current_period_end) < now
-        ).length,
-        vip: combinedUsers.filter(u => u.is_vip).length,
-        authorized: combinedUsers.filter(u => u.is_authorized).length
+        trial: trialUsers.length,
+        active: activeUsers.length,
+        expired: expiredUsers.length,
+        vip: activeVipUsers.length,
+        authorized: authorizedUsersCount.length
       });
 
     } catch (error) {
