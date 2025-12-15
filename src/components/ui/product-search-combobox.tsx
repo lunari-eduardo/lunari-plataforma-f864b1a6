@@ -1,9 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Input } from "@/components/ui/input";
 import { useDialogDropdownContext } from "@/components/ui/dialog";
 
 // Função para normalizar texto (remover acentos e caracteres especiais)
@@ -38,30 +36,28 @@ export function ProductSearchCombobox({
   placeholder = "Selecionar produto...",
   className
 }: ProductSearchComboboxProps) {
-  const [open, setOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedValue, setSelectedValue] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   
   // Integrar com DialogDropdownContext para evitar conflitos de z-index
   const dialogContext = useDialogDropdownContext();
   
   useEffect(() => {
-    dialogContext?.setHasOpenDropdown(open);
-  }, [open, dialogContext]);
+    dialogContext?.setHasOpenDropdown(isOpen);
+  }, [isOpen, dialogContext]);
 
-  // Foco confiável usando double requestAnimationFrame (aguarda Portal montar)
+  // Click-outside handler
   useEffect(() => {
-    if (open) {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          inputRef.current?.focus();
-        });
-      });
-    }
-  }, [open]);
-
-  const selectedProduct = products.find(product => product.nome === selectedValue);
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const getProductValue = (product: Product): number => {
     return product.valorVenda || product.preco_venda || product.valor || 0;
@@ -80,79 +76,57 @@ export function ProductSearchCombobox({
     });
   }, [products, searchTerm]);
 
+  const handleSelect = (product: Product) => {
+    onSelect(product);
+    setSearchTerm("");
+    setIsOpen(false);
+  };
+
+  const handleInputFocus = () => {
+    setIsOpen(true);
+  };
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className={cn("w-full justify-between text-xs h-7", className)}
-          onFocus={() => setOpen(true)}
-        >
-          {selectedProduct ? selectedProduct.nome : placeholder}
-          <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent 
-        className="w-[300px] p-0 z-[9999] bg-popover border shadow-lg"
-        sideOffset={4}
-        onOpenAutoFocus={(e) => {
-          e.preventDefault();
-          inputRef.current?.focus();
-        }}
-      >
-        <Command shouldFilter={false} className="flex flex-col">
-          <CommandInput 
-            ref={inputRef}
-            placeholder="Buscar produto..." 
-            className="h-8 text-xs" 
-            value={searchTerm}
-            onValueChange={setSearchTerm}
-          />
-          <CommandList 
-            className="max-h-[200px] overflow-y-auto overscroll-contain touch-pan-y"
-            onWheel={(e) => e.stopPropagation()}
-          >
-            <CommandEmpty className="text-xs py-2">
+    <div ref={containerRef} className={cn("relative w-full", className)}>
+      <div className="relative">
+        <Input
+          ref={inputRef}
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          onFocus={handleInputFocus}
+          placeholder={placeholder}
+          className="pr-8 text-xs h-7"
+        />
+        <ChevronsUpDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
+      </div>
+      
+      {isOpen && (
+        <div className="absolute z-[9999] w-full mt-1 bg-popover border rounded-md shadow-lg max-h-[200px] overflow-y-auto">
+          {filteredProducts.length > 0 ? (
+            filteredProducts.map((product) => {
+              const valorProduto = getProductValue(product);
+              
+              return (
+                <div
+                  key={product.id}
+                  onClick={() => handleSelect(product)}
+                  className="px-3 py-2 hover:bg-accent cursor-pointer text-xs"
+                >
+                  <div className="font-medium">{product.nome}</div>
+                  <div className="text-2xs text-muted-foreground">
+                    R$ {valorProduto.toFixed(2)}
+                    {product.categoria && ` • ${product.categoria}`}
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="px-3 py-2 text-xs text-muted-foreground">
               Nenhum produto encontrado.
-            </CommandEmpty>
-            <CommandGroup>
-              {filteredProducts.map((product) => {
-                const valorProduto = getProductValue(product);
-                
-                return (
-                  <CommandItem
-                    key={product.id}
-                    value={product.nome}
-                    onSelect={() => {
-                      onSelect(product);
-                      setSelectedValue("");
-                      setSearchTerm("");
-                      setOpen(false);
-                    }}
-                    className="text-xs cursor-pointer"
-                  >
-                    <Check
-                      className={cn(
-                        "mr-2 h-3 w-3",
-                        selectedValue === product.nome ? "opacity-100" : "opacity-0"
-                      )}
-                    />
-                    <div className="flex flex-col">
-                      <span className="font-medium">{product.nome}</span>
-                      <span className="text-2xs text-muted-foreground">
-                        R$ {valorProduto.toFixed(2)}
-                        {product.categoria && ` • ${product.categoria}`}
-                      </span>
-                    </div>
-                  </CommandItem>
-                );
-              })}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
