@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Calendar, Users, Settings, FileText, DollarSign, Menu, X, User, TrendingUp, Workflow, ChevronRight, ChevronLeft, BarChart3, Home, CheckSquare, Image as ImageIcon, CreditCard, Shield } from 'lucide-react';
+import { Calendar, Users, Settings, FileText, DollarSign, Menu, X, User, TrendingUp, Workflow, ChevronRight, ChevronLeft, BarChart3, Home, CheckSquare, Image as ImageIcon, CreditCard, Shield, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -9,6 +9,12 @@ import { useUserProfile, useUserBranding } from '@/hooks/useUserProfile';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAccessControl } from '@/hooks/useAccessControl';
 import { cn } from '@/lib/utils';
+
+// Crown badge component for PRO features
+const ProCrown = ({ className }: { className?: string }) => (
+  <Crown size={8} className={cn("text-lunar-accent fill-lunar-accent", className)} />
+);
+
 interface NavItemProps {
   to: string;
   icon: React.ReactNode;
@@ -17,6 +23,7 @@ interface NavItemProps {
   isPro?: boolean;
   showProBadge?: boolean;
 }
+
 const NavItem = ({
   to,
   icon,
@@ -25,26 +32,18 @@ const NavItem = ({
   isPro = false,
   showProBadge = false
 }: NavItemProps) => {
-  const isMobile = useIsMobile();
   return <NavLink to={to} className={({
     isActive
-  }) => cn("nav-item-lunar mb-1 flex items-center transition-all duration-200 relative", iconOnly ? "w-12 h-12 rounded-lg justify-center" : "gap-3 px-3 py-2 justify-start", isActive && "active bg-lunar-surface text-lunar-accent")} title={iconOnly ? label : undefined}>
-      <span className="text-sm flex-shrink-0">{icon}</span>
-      {!iconOnly && (
-        <span className="text-xs font-medium whitespace-nowrap flex items-center gap-2">
-          {label}
-          {isPro && showProBadge && (
-            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-lunar-accent/20 text-lunar-accent">
-              PRO
-            </span>
-          )}
-        </span>
-      )}
-      {iconOnly && isPro && showProBadge && (
-        <span className="absolute -top-1 -right-1 text-[8px] font-bold px-1 rounded bg-lunar-accent text-lunar-bg">
-          PRO
-        </span>
-      )}
+  }) => cn("nav-item-lunar mb-1 flex items-center transition-all duration-200", iconOnly ? "w-12 h-12 rounded-lg justify-center" : "gap-3 px-3 py-2 justify-start", isActive && "active bg-lunar-surface text-lunar-accent")} title={iconOnly ? label : undefined}>
+      <span className="text-sm flex-shrink-0 relative">
+        {icon}
+        {isPro && showProBadge && (
+          <span className="absolute -top-1 -right-1">
+            <ProCrown />
+          </span>
+        )}
+      </span>
+      {!iconOnly && <span className="text-xs font-medium whitespace-nowrap">{label}</span>}
     </NavLink>;
 };
 export default function Sidebar() {
@@ -214,7 +213,14 @@ export default function Sidebar() {
             {navItems.slice(0, 4).map(item => <NavLink key={item.to} to={item.to} className={({
             isActive
           }) => cn("flex flex-col items-center justify-center py-1 rounded-md text-lunar-text transition-all duration-150 text-center", isActive ? "text-lunar-accent bg-lunar-surface shadow-sm" : "hover:bg-lunar-surface/30 hover:shadow-lunar-sm hover:translate-y-[-1px]")}>
-                <div className="mb-0.5">{item.icon}</div>
+                <div className="mb-0.5 relative">
+                  {item.icon}
+                  {item.isPro && isStarterPlan && (
+                    <span className="absolute -top-1 -right-1">
+                      <ProCrown />
+                    </span>
+                  )}
+                </div>
                 <span className="text-2xs font-medium leading-tight">{item.label}</span>
               </NavLink>)}
 
