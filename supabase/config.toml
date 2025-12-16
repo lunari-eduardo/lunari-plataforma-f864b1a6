@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.populate-municipios-ibge]
 verify_jwt = false
+
+[functions.sync-user-subscription]
+verify_jwt = false
