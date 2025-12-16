@@ -21,6 +21,23 @@ const PLAN_PRIORITY: Record<string, number> = {
   'starter_monthly': 1,
 };
 
+// Helper function to safely convert Stripe timestamps to ISO strings
+const safeTimestampToISO = (timestamp: number | null | undefined, fallbackDays: number = 0): string => {
+  if (timestamp && typeof timestamp === 'number' && timestamp > 0) {
+    try {
+      return new Date(timestamp * 1000).toISOString();
+    } catch (e) {
+      logStep("WARNING: Invalid timestamp, using fallback", { timestamp, error: String(e) });
+    }
+  }
+  // Fallback: current date + fallbackDays
+  const fallbackDate = new Date();
+  if (fallbackDays > 0) {
+    fallbackDate.setDate(fallbackDate.getDate() + fallbackDays);
+  }
+  return fallbackDate.toISOString();
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -181,14 +198,15 @@ serve(async (req) => {
     }
 
     // Update local database with the best subscription
+    // Use safe timestamp conversion to prevent "Invalid time value" errors
     const subscriptionData = {
       user_id: user.id,
       plan_id: bestPlan?.id,
       status: bestSubscription.status,
       stripe_subscription_id: bestSubscription.id,
       stripe_customer_id: customerId,
-      current_period_start: new Date(bestSubscription.current_period_start * 1000).toISOString(),
-      current_period_end: new Date(bestSubscription.current_period_end * 1000).toISOString(),
+      current_period_start: safeTimestampToISO(bestSubscription.current_period_start, 0),
+      current_period_end: safeTimestampToISO(bestSubscription.current_period_end, 30),
       cancel_at_period_end: bestSubscription.cancel_at_period_end,
       updated_at: new Date().toISOString(),
     };
@@ -212,7 +230,7 @@ serve(async (req) => {
         stripeSubscriptionId: bestSubscription.id,
         status: bestSubscription.status,
         planCode: bestPlan?.code,
-        currentPeriodEnd: new Date(bestSubscription.current_period_end * 1000).toISOString(),
+        currentPeriodEnd: safeTimestampToISO(bestSubscription.current_period_end, 30),
       },
       cancelledDuplicates: subscriptionsToCancel.length,
       message: `Synced to ${bestPlan?.code} plan, cancelled ${subscriptionsToCancel.length} duplicate(s)`

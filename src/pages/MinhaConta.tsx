@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -14,10 +14,17 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
+// Sync with retry configuration
+const MAX_RETRIES = 3;
+const INITIAL_RETRY_DELAY = 1000; // 1 second
+
 export default function MinhaConta() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [isSyncing, setIsSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState('Ativando sua assinatura...');
+  const syncAttemptedRef = useRef(false);
+  
   const { profile, saveProfile, getProfileOrDefault } = useUserProfile();
   const { branding, saveBranding, removeLogo, getBrandingOrDefault } = useUserBranding();
   
@@ -26,43 +33,86 @@ export default function MinhaConta() {
   // Validação em tempo real
   const validation = useFormValidation(formData);
 
+  // Sync with Stripe with retry logic
+  const syncWithStripe = useCallback(async (retryCount = 0): Promise<boolean> => {
+    try {
+      setSyncMessage(retryCount > 0 
+        ? `Tentativa ${retryCount + 1}/${MAX_RETRIES + 1}...` 
+        : 'Ativando sua assinatura...');
+      
+      const { data, error } = await supabase.functions.invoke('sync-user-subscription');
+      
+      if (error) {
+        console.error(`Sync error (attempt ${retryCount + 1}):`, error);
+        
+        // Retry with exponential backoff
+        if (retryCount < MAX_RETRIES) {
+          const delay = INITIAL_RETRY_DELAY * Math.pow(2, retryCount);
+          setSyncMessage(`Aguarde, tentando novamente em ${delay / 1000}s...`);
+          await new Promise(r => setTimeout(r, delay));
+          return syncWithStripe(retryCount + 1);
+        }
+        
+        toast.error('Erro ao sincronizar assinatura. Por favor, acesse "Minha Assinatura" para verificar.');
+        return false;
+      }
+      
+      if (data?.synced) {
+        toast.success('Assinatura ativada com sucesso!');
+        return true;
+      } else if (data?.message) {
+        // Handle specific messages from sync function
+        toast.info(data.message);
+        return true;
+      } else {
+        toast.success('Pagamento processado! Verificando ativação...');
+        return true;
+      }
+    } catch (err) {
+      console.error(`Sync exception (attempt ${retryCount + 1}):`, err);
+      
+      if (retryCount < MAX_RETRIES) {
+        const delay = INITIAL_RETRY_DELAY * Math.pow(2, retryCount);
+        await new Promise(r => setTimeout(r, delay));
+        return syncWithStripe(retryCount + 1);
+      }
+      
+      toast.error('Erro na sincronização. Verifique sua assinatura.');
+      return false;
+    }
+  }, []);
+
   // Auto-sync com Stripe quando retornar do checkout
   useEffect(() => {
     const checkoutStatus = searchParams.get('checkout');
-    if (checkoutStatus === 'success') {
-      // Limpar parâmetro da URL
-      setSearchParams({});
+    
+    // Prevent duplicate sync attempts
+    if (checkoutStatus === 'success' && !syncAttemptedRef.current) {
+      syncAttemptedRef.current = true;
       
-      // Sincronizar com Stripe
-      const syncWithStripe = async () => {
+      // Limpar parâmetro da URL immediately
+      setSearchParams({}, { replace: true });
+      
+      // Start sync process
+      const runSync = async () => {
         setIsSyncing(true);
-        toast.info('Sincronizando pagamento...', { duration: 3000 });
         
         try {
-          const { data, error } = await supabase.functions.invoke('sync-user-subscription');
+          const success = await syncWithStripe();
           
-          if (error) {
-            console.error('Sync error:', error);
-            toast.error('Erro ao sincronizar. Tente novamente em alguns minutos.');
-          } else if (data?.synced) {
-            toast.success('Assinatura ativada com sucesso!');
-            // Redirecionar para ver detalhes da assinatura
-            setTimeout(() => navigate('/minha-assinatura'), 1500);
-          } else {
-            toast.success('Pagamento processado! Aguarde a ativação.');
-            setTimeout(() => navigate('/minha-assinatura'), 1500);
-          }
-        } catch (err) {
-          console.error('Sync exception:', err);
-          toast.error('Erro na sincronização. O sistema tentará novamente automaticamente.');
+          // Always redirect to subscription page after sync
+          setTimeout(() => {
+            // Force a full page reload to refresh access state
+            window.location.href = '/minha-assinatura';
+          }, 1500);
         } finally {
           setIsSyncing(false);
         }
       };
       
-      syncWithStripe();
+      runSync();
     }
-  }, [searchParams, setSearchParams, navigate]);
+  }, [searchParams, setSearchParams, syncWithStripe]);
   
   // Sincronizar formData quando profile carrega
   useEffect(() => {
@@ -70,6 +120,7 @@ export default function MinhaConta() {
       setFormData(profile);
     }
   }, [profile]);
+
   const handleInputChange = useCallback((field: keyof UserProfile, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   }, []);
@@ -81,6 +132,7 @@ export default function MinhaConta() {
   const handleSitesChange = useCallback((siteRedesSociais: string[]) => {
     setFormData(prev => ({ ...prev, siteRedesSociais }));
   }, []);
+
   const handleSaveProfile = useCallback(async () => {
     if (!validation.isValid) {
       const firstError = Object.values(validation.errors)[0];
@@ -107,6 +159,7 @@ export default function MinhaConta() {
     
     await saveProfile(cleanedData);
   }, [formData, validation, saveProfile]);
+
   const handleLogoSave = useCallback((logoUrl: string, fileName: string) => {
     saveBranding({ logoUrl, logoFileName: fileName });
     toast.success('Logo salvo com sucesso!');
@@ -115,20 +168,22 @@ export default function MinhaConta() {
   const handleLogoRemove = useCallback(() => {
     removeLogo();
   }, [removeLogo]);
+
   // Loading overlay durante sincronização
   if (isSyncing) {
     return (
       <div className="min-h-screen bg-lunar-bg flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-primary" />
-          <p className="text-lg font-medium">Ativando sua assinatura...</p>
+          <p className="text-lg font-medium">{syncMessage}</p>
           <p className="text-muted-foreground">Aguarde enquanto sincronizamos seu pagamento</p>
         </div>
       </div>
     );
   }
 
-  return <div className="min-h-screen bg-lunar-bg">
+  return (
+    <div className="min-h-screen bg-lunar-bg">
       <ScrollArea className="h-screen">
         <div className="container mx-auto p-4 max-w-4xl">
           <div className="mb-6">
@@ -181,5 +236,6 @@ export default function MinhaConta() {
           </Card>
         </div>
       </ScrollArea>
-    </div>;
+    </div>
+  );
 }

@@ -9,6 +9,13 @@ interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
+// Routes that are allowed even without an active subscription
+const SUBSCRIPTION_EXEMPT_ROUTES = [
+  '/escolher-plano',
+  '/minha-assinatura',
+  '/minha-conta', // Needed for post-checkout sync
+];
+
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { user, loading: authLoading, signOut } = useAuth();
   const { profile, loading: profileLoading } = useUserProfile();
@@ -36,16 +43,17 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
   // 3. Verificar trial expirado - redirecionar para escolher plano
   if (accessState.status === 'trial_expired') {
-    // Permitir acesso à página de escolher plano
-    if (location.pathname === '/escolher-plano' || location.pathname === '/minha-assinatura') {
+    // Permitir acesso às páginas isentas
+    if (SUBSCRIPTION_EXEMPT_ROUTES.includes(location.pathname)) {
       return <>{children}</>;
     }
     return <Navigate to="/escolher-plano" replace />;
   }
 
+  // 4. Verificar sem subscription - permitir páginas de assinatura e conta
   if (accessState.status === 'no_subscription') {
-    // Permitir acesso à página de escolher plano
-    if (location.pathname === '/escolher-plano' || location.pathname === '/minha-assinatura') {
+    // Permitir acesso às páginas isentas (inclui /minha-conta para sync pós-checkout)
+    if (SUBSCRIPTION_EXEMPT_ROUTES.includes(location.pathname)) {
       return <>{children}</>;
     }
     return (
@@ -76,7 +84,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     );
   }
 
-  // 3. Verificar onboarding (exceto se já estiver na rota /onboarding)
+  // 5. Verificar onboarding (exceto se já estiver na rota /onboarding)
   if (location.pathname !== '/onboarding') {
     const needsOnboarding = !profile || 
       !profile.is_onboarding_complete || 

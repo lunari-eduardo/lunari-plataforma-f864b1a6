@@ -16,6 +16,23 @@ const PLAN_HIERARCHY: Record<string, number> = {
   'starter_monthly': 1,
 };
 
+// Helper function to safely convert Stripe timestamps to ISO strings
+const safeTimestampToISO = (timestamp: number | null | undefined, fallbackDays: number = 0): string => {
+  if (timestamp && typeof timestamp === 'number' && timestamp > 0) {
+    try {
+      return new Date(timestamp * 1000).toISOString();
+    } catch (e) {
+      logStep("WARNING: Invalid timestamp, using fallback", { timestamp, error: String(e) });
+    }
+  }
+  // Fallback: current date + fallbackDays
+  const fallbackDate = new Date();
+  if (fallbackDays > 0) {
+    fallbackDate.setDate(fallbackDate.getDate() + fallbackDays);
+  }
+  return fallbackDate.toISOString();
+};
+
 serve(async (req) => {
   try {
     logStep("=== WEBHOOK RECEIVED ===");
@@ -113,7 +130,9 @@ serve(async (req) => {
         logStep("New subscription details", {
           subscriptionId: newSubscription.id,
           status: newSubscription.status,
-          priceId: newPriceId
+          priceId: newPriceId,
+          currentPeriodStart: newSubscription.current_period_start,
+          currentPeriodEnd: newSubscription.current_period_end
         });
 
         // ========================================
@@ -212,14 +231,15 @@ serve(async (req) => {
         }
 
         // Update or insert subscription with ACTIVE status (not trialing!)
+        // Use safe timestamp conversion to prevent "Invalid time value" errors
         const subscriptionData = {
           user_id: userId,
           plan_id: planId,
           status: newSubscription.status, // Should be 'active' for paid subscriptions
           stripe_subscription_id: newSubscription.id,
           stripe_customer_id: session.customer as string,
-          current_period_start: new Date(newSubscription.current_period_start * 1000).toISOString(),
-          current_period_end: new Date(newSubscription.current_period_end * 1000).toISOString(),
+          current_period_start: safeTimestampToISO(newSubscription.current_period_start, 0),
+          current_period_end: safeTimestampToISO(newSubscription.current_period_end, 30),
           cancel_at_period_end: newSubscription.cancel_at_period_end,
           updated_at: new Date().toISOString(),
         };
@@ -251,7 +271,9 @@ serve(async (req) => {
           subscriptionId: subscription.id, 
           status: subscription.status,
           priceId,
-          cancelAtPeriodEnd: subscription.cancel_at_period_end
+          cancelAtPeriodEnd: subscription.cancel_at_period_end,
+          currentPeriodStart: subscription.current_period_start,
+          currentPeriodEnd: subscription.current_period_end
         });
 
         // Get current plan_id from price_id (for plan changes/upgrades)
@@ -269,10 +291,11 @@ serve(async (req) => {
           }
         }
 
+        // Use safe timestamp conversion
         const updateData: Record<string, any> = {
           status: subscription.status,
-          current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-          current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+          current_period_start: safeTimestampToISO(subscription.current_period_start, 0),
+          current_period_end: safeTimestampToISO(subscription.current_period_end, 30),
           cancel_at_period_end: subscription.cancel_at_period_end,
           updated_at: new Date().toISOString(),
         };
@@ -332,6 +355,13 @@ serve(async (req) => {
           const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string);
           const priceId = subscription.items.data[0]?.price?.id;
           
+          logStep("Invoice subscription details", {
+            subscriptionId: subscription.id,
+            status: subscription.status,
+            currentPeriodStart: subscription.current_period_start,
+            currentPeriodEnd: subscription.current_period_end
+          });
+          
           // Get plan_id for the subscription
           let planId: string | null = null;
           if (priceId) {
@@ -344,10 +374,11 @@ serve(async (req) => {
             if (plan) planId = plan.id;
           }
           
+          // Use safe timestamp conversion
           const updateData: Record<string, any> = {
             status: subscription.status,
-            current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-            current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+            current_period_start: safeTimestampToISO(subscription.current_period_start, 0),
+            current_period_end: safeTimestampToISO(subscription.current_period_end, 30),
             updated_at: new Date().toISOString(),
           };
           
