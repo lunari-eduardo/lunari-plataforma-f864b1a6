@@ -244,16 +244,37 @@ serve(async (req) => {
           updated_at: new Date().toISOString(),
         };
         
-        logStep("Upserting subscription data", subscriptionData);
+        logStep("Saving subscription data", subscriptionData);
 
-        const { error: upsertError } = await supabaseAdmin
+        // Use SELECT + UPDATE/INSERT pattern (more reliable than upsert)
+        const { data: existingSub } = await supabaseAdmin
           .from("subscriptions")
-          .upsert(subscriptionData, { onConflict: "user_id" });
+          .select("id")
+          .eq("user_id", userId)
+          .single();
 
-        if (upsertError) {
-          logStep("ERROR upserting subscription", { error: upsertError });
+        let saveError;
+        if (existingSub) {
+          // UPDATE existing subscription
+          const { error: updateError } = await supabaseAdmin
+            .from("subscriptions")
+            .update(subscriptionData)
+            .eq("user_id", userId);
+          saveError = updateError;
+          logStep("Performed UPDATE on existing subscription");
         } else {
-          logStep("✓ SUBSCRIPTION UPDATED SUCCESSFULLY", { 
+          // INSERT new subscription
+          const { error: insertError } = await supabaseAdmin
+            .from("subscriptions")
+            .insert(subscriptionData);
+          saveError = insertError;
+          logStep("Performed INSERT for new subscription");
+        }
+
+        if (saveError) {
+          logStep("ERROR saving subscription", { error: saveError });
+        } else {
+          logStep("✓ SUBSCRIPTION SAVED SUCCESSFULLY", { 
             userId, 
             planCode: resolvedPlanCode,
             status: newSubscription.status,
