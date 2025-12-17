@@ -12,6 +12,17 @@ const logStep = (step: string, details?: any) => {
   console.log(`[STRIPE-MANAGE-SUBSCRIPTION] ${step}${detailsStr}`);
 };
 
+const safeTimestampToISO = (timestamp: number | null | undefined): string | null => {
+  if (timestamp && typeof timestamp === 'number' && timestamp > 0) {
+    try {
+      return new Date(timestamp * 1000).toISOString();
+    } catch (e) {
+      logStep("WARNING: Invalid timestamp", { timestamp, error: String(e) });
+    }
+  }
+  return null;
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -82,15 +93,17 @@ serve(async (req) => {
         cancel_at_period_end: true,
       });
 
+      const periodEnd = safeTimestampToISO(updatedSub.current_period_end);
       logStep("Subscription set to cancel at period end", { 
         subscriptionId: updatedSub.id,
-        cancelAt: updatedSub.cancel_at 
+        cancelAt: updatedSub.cancel_at,
+        currentPeriodEnd: periodEnd
       });
 
       return new Response(JSON.stringify({ 
         success: true, 
         cancelAtPeriodEnd: updatedSub.cancel_at_period_end,
-        currentPeriodEnd: new Date(updatedSub.current_period_end * 1000).toISOString()
+        currentPeriodEnd: periodEnd
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
