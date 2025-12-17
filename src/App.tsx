@@ -42,6 +42,7 @@ import { useWorkflowCacheInit } from "./hooks/useWorkflowCacheInit";
 import { useAppointmentWorkflowSync } from "./hooks/useAppointmentWorkflowSync";
 import { useVersionCheck } from "./hooks/useVersionCheck";
 import { useAppForceUpdate } from "./hooks/useAppForceUpdate";
+import { useTrialWelcomeToast } from "./components/subscription/TrialWelcomeToast";
 
 // Create a stable QueryClient instance
 const queryClient = new QueryClient({
@@ -61,6 +62,9 @@ function AppContent() {
   
   // Global appointment→workflow sync - DEVE estar DENTRO do WorkflowCacheProvider
   useAppointmentWorkflowSync();
+  
+  // Show trial welcome toast on first access
+  useTrialWelcomeToast();
   
   return null;
 }
