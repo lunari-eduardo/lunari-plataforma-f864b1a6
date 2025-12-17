@@ -211,15 +211,36 @@ serve(async (req) => {
       updated_at: new Date().toISOString(),
     };
 
-    logStep("Upserting subscription to database", subscriptionData);
+    logStep("Saving subscription to database", subscriptionData);
 
-    const { error: upsertError } = await supabaseAdmin
+    // Use SELECT + UPDATE/INSERT pattern (more reliable than upsert)
+    const { data: existingSub } = await supabaseAdmin
       .from("subscriptions")
-      .upsert(subscriptionData, { onConflict: "user_id" });
+      .select("id")
+      .eq("user_id", user.id)
+      .single();
 
-    if (upsertError) {
-      logStep("ERROR upserting subscription", { error: upsertError });
-      throw new Error(`Failed to update subscription: ${upsertError.message}`);
+    let saveError;
+    if (existingSub) {
+      // UPDATE existing subscription
+      const { error: updateError } = await supabaseAdmin
+        .from("subscriptions")
+        .update(subscriptionData)
+        .eq("user_id", user.id);
+      saveError = updateError;
+      logStep("Performed UPDATE on existing subscription");
+    } else {
+      // INSERT new subscription
+      const { error: insertError } = await supabaseAdmin
+        .from("subscriptions")
+        .insert(subscriptionData);
+      saveError = insertError;
+      logStep("Performed INSERT for new subscription");
+    }
+
+    if (saveError) {
+      logStep("ERROR saving subscription", { error: saveError });
+      throw new Error(`Failed to save subscription: ${saveError.message}`);
     }
 
     logStep("=== SYNC COMPLETED SUCCESSFULLY ===");
