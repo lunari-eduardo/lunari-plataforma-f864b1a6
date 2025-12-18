@@ -1,0 +1,188 @@
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
+
+interface Integracao {
+  id: string;
+  user_id: string;
+  provedor: string;
+  mp_user_id: string | null;
+  status: string;
+  conectado_em: string | null;
+  expira_em: string | null;
+  dados_extras: Record<string, unknown>;
+}
+
+interface UseIntegracoesReturn {
+  integracoes: Integracao[];
+  loading: boolean;
+  connecting: boolean;
+  mercadoPagoStatus: 'conectado' | 'desconectado' | 'pendente' | 'erro';
+  connectMercadoPago: () => void;
+  disconnectMercadoPago: () => Promise<void>;
+  handleOAuthCallback: (code: string) => Promise<boolean>;
+  refetch: () => Promise<void>;
+}
+
+// Mercado Pago OAuth configuration
+const MP_AUTH_URL = 'https://auth.mercadopago.com.br/authorization';
+
+export function useIntegracoes(): UseIntegracoesReturn {
+  const { user } = useAuth();
+  const [integracoes, setIntegracoes] = useState<Integracao[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [connecting, setConnecting] = useState(false);
+
+  const fetchIntegracoes = useCallback(async () => {
+    if (!user) {
+      setIntegracoes([]);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('usuarios_integracoes')
+        .select('*')
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('[useIntegracoes] Error fetching:', error);
+        throw error;
+      }
+
+      // Type assertion since we know the structure
+      setIntegracoes((data || []) as unknown as Integracao[]);
+    } catch (error) {
+      console.error('[useIntegracoes] Fetch error:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchIntegracoes();
+  }, [fetchIntegracoes]);
+
+  const mercadoPagoIntegration = integracoes.find(i => i.provedor === 'mercadopago');
+  const mercadoPagoStatus = mercadoPagoIntegration?.status === 'ativo' 
+    ? 'conectado' 
+    : mercadoPagoIntegration?.status === 'pendente'
+      ? 'pendente'
+      : mercadoPagoIntegration?.status === 'erro'
+        ? 'erro'
+        : 'desconectado';
+
+  const connectMercadoPago = useCallback(() => {
+    if (!user) {
+      toast.error('Você precisa estar logado');
+      return;
+    }
+
+    // Get the APP_ID from environment - this needs to be set
+    const appId = import.meta.env.VITE_MERCADOPAGO_APP_ID;
+    
+    if (!appId) {
+      // Fallback: use a placeholder that will trigger configuration
+      toast.error('Configure VITE_MERCADOPAGO_APP_ID no ambiente');
+      return;
+    }
+
+    // Generate OAuth URL
+    const redirectUri = `${window.location.origin}/integracoes/callback`;
+    const state = user.id; // Use user ID as state to verify on callback
+    
+    const authUrl = new URL(MP_AUTH_URL);
+    authUrl.searchParams.set('client_id', appId);
+    authUrl.searchParams.set('response_type', 'code');
+    authUrl.searchParams.set('platform_id', 'mp');
+    authUrl.searchParams.set('state', state);
+    authUrl.searchParams.set('redirect_uri', redirectUri);
+
+    console.log('[useIntegracoes] Redirecting to MP OAuth:', authUrl.toString());
+    
+    // Redirect to Mercado Pago
+    window.location.href = authUrl.toString();
+  }, [user]);
+
+  const handleOAuthCallback = useCallback(async (code: string): Promise<boolean> => {
+    if (!user) {
+      toast.error('Você precisa estar logado');
+      return false;
+    }
+
+    setConnecting(true);
+
+    try {
+      const redirectUri = `${window.location.origin}/integracoes/callback`;
+      
+      console.log('[useIntegracoes] Exchanging code for token');
+      
+      const { data, error } = await supabase.functions.invoke('mercadopago-connect', {
+        body: { 
+          code,
+          redirectUri,
+        },
+      });
+
+      if (error) {
+        console.error('[useIntegracoes] Connect error:', error);
+        throw new Error(error.message || 'Erro ao conectar');
+      }
+
+      if (!data.success) {
+        throw new Error(data.error || 'Erro ao conectar conta');
+      }
+
+      toast.success('Conta Mercado Pago conectada com sucesso!');
+      await fetchIntegracoes();
+      return true;
+
+    } catch (error) {
+      console.error('[useIntegracoes] OAuth callback error:', error);
+      toast.error(error instanceof Error ? error.message : 'Erro ao conectar conta');
+      return false;
+    } finally {
+      setConnecting(false);
+    }
+  }, [user, fetchIntegracoes]);
+
+  const disconnectMercadoPago = useCallback(async () => {
+    if (!user) {
+      toast.error('Você precisa estar logado');
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke('mercadopago-disconnect', {});
+
+      if (error) {
+        console.error('[useIntegracoes] Disconnect error:', error);
+        throw new Error(error.message || 'Erro ao desconectar');
+      }
+
+      if (!data.success) {
+        throw new Error(data.error || 'Erro ao desconectar conta');
+      }
+
+      toast.success('Conta Mercado Pago desconectada');
+      await fetchIntegracoes();
+
+    } catch (error) {
+      console.error('[useIntegracoes] Disconnect error:', error);
+      toast.error(error instanceof Error ? error.message : 'Erro ao desconectar conta');
+    }
+  }, [user, fetchIntegracoes]);
+
+  return {
+    integracoes,
+    loading,
+    connecting,
+    mercadoPagoStatus,
+    connectMercadoPago,
+    disconnectMercadoPago,
+    handleOAuthCallback,
+    refetch: fetchIntegracoes,
+  };
+}

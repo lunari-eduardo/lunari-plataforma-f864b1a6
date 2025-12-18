@@ -15,6 +15,8 @@ const SUBSCRIPTION_EXEMPT_ROUTES = [
   '/minha-assinatura',
   '/minha-conta', // Needed for post-checkout sync
   '/onboarding', // Allow new users to complete onboarding
+  '/integracoes', // Allow connecting payment providers
+  '/integracoes/callback', // OAuth callback
 ];
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {

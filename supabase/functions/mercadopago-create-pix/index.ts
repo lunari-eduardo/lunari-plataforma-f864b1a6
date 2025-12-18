@@ -6,6 +6,24 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Helper function to get user's Mercado Pago token
+async function getUserMpToken(supabase: any, userId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('usuarios_integracoes')
+    .select('access_token, status')
+    .eq('user_id', userId)
+    .eq('provedor', 'mercadopago')
+    .eq('status', 'ativo')
+    .single();
+
+  if (error || !data?.access_token) {
+    console.log('[mercadopago-create-pix] No active MP integration for user:', userId);
+    return null;
+  }
+
+  return data.access_token;
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -15,26 +33,64 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const mercadoPagoToken = Deno.env.get('MERCADOPAGO_ACCESS_TOKEN')!;
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Get user from auth header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      console.error('[mercadopago-create-pix] Missing authorization header');
       throw new Error('Missing authorization header');
     }
 
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
     if (userError || !user) {
+      console.error('[mercadopago-create-pix] Invalid user token:', userError);
       throw new Error('Invalid user token');
     }
 
-    const { clienteId, sessionId, valor, descricao } = await req.json();
+    console.log('[mercadopago-create-pix] User authenticated:', user.id);
 
-    if (!clienteId || !valor) {
-      throw new Error('clienteId and valor are required');
+    // Get user's Mercado Pago token - REQUIRED, no fallback
+    const mercadoPagoToken = await getUserMpToken(supabase, user.id);
+    
+    if (!mercadoPagoToken) {
+      console.error('[mercadopago-create-pix] User has no active MP integration');
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Conecte sua conta Mercado Pago antes de cobrar',
+          errorCode: 'MP_NOT_CONNECTED'
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Parse request body
+    const rawBody = await req.clone().text();
+    console.log('[mercadopago-create-pix] Raw request body:', rawBody);
+
+    let body;
+    try {
+      body = await req.json();
+    } catch (parseError) {
+      console.error('[mercadopago-create-pix] Failed to parse body:', parseError);
+      throw new Error('Invalid request body - could not parse JSON');
+    }
+
+    console.log('[mercadopago-create-pix] Parsed body:', JSON.stringify(body));
+
+    const { clienteId, sessionId, valor, descricao } = body;
+
+    if (!clienteId) {
+      console.error('[mercadopago-create-pix] Missing clienteId');
+      throw new Error('clienteId é obrigatório');
+    }
+    
+    if (!valor || valor <= 0) {
+      console.error('[mercadopago-create-pix] Invalid valor:', valor);
+      throw new Error('valor deve ser maior que zero');
     }
 
     // Fetch client info
@@ -46,23 +102,26 @@ serve(async (req) => {
       .single();
 
     if (clienteError || !cliente) {
-      throw new Error('Client not found');
+      console.error('[mercadopago-create-pix] Client not found:', clienteError);
+      throw new Error('Cliente não encontrado');
     }
+
+    console.log('[mercadopago-create-pix] Client found:', cliente.nome);
 
     // Create Pix payment in Mercado Pago
     const paymentData = {
-      transaction_amount: valor,
+      transaction_amount: Number(valor),
       description: descricao || `Cobrança - ${cliente.nome}`,
       payment_method_id: 'pix',
       payer: {
-        email: cliente.email || `${user.id}@cliente.lunari.app`,
+        email: cliente.email || `cliente-${clienteId.substring(0, 8)}@lunari.app`,
         first_name: cliente.nome.split(' ')[0],
         last_name: cliente.nome.split(' ').slice(1).join(' ') || 'Cliente',
       },
       external_reference: `${user.id}|${clienteId}|${sessionId || 'avulso'}`,
     };
 
-    console.log('Creating Pix payment:', paymentData);
+    console.log('[mercadopago-create-pix] Sending to MP:', JSON.stringify(paymentData));
 
     const mpResponse = await fetch('https://api.mercadopago.com/v1/payments', {
       method: 'POST',
@@ -75,13 +134,16 @@ serve(async (req) => {
     });
 
     const mpResult = await mpResponse.json();
+    console.log('[mercadopago-create-pix] MP Response status:', mpResponse.status);
+    console.log('[mercadopago-create-pix] MP Response:', JSON.stringify(mpResult));
 
     if (!mpResponse.ok) {
-      console.error('Mercado Pago error:', mpResult);
-      throw new Error(mpResult.message || 'Failed to create Pix payment');
+      console.error('[mercadopago-create-pix] Mercado Pago error:', JSON.stringify(mpResult));
+      const errorMessage = mpResult.message || mpResult.cause?.[0]?.description || 'Falha ao criar Pix';
+      throw new Error(errorMessage);
     }
 
-    console.log('Mercado Pago Pix created:', mpResult.id);
+    console.log('[mercadopago-create-pix] Mercado Pago Pix created:', mpResult.id);
 
     // Extract Pix data
     const qrCode = mpResult.point_of_interaction?.transaction_data?.qr_code;
@@ -96,7 +158,7 @@ serve(async (req) => {
         user_id: user.id,
         cliente_id: clienteId,
         session_id: sessionId || null,
-        valor,
+        valor: Number(valor),
         descricao: descricao || `Cobrança Pix - ${cliente.nome}`,
         tipo_cobranca: 'pix',
         status: 'pendente',
@@ -110,9 +172,11 @@ serve(async (req) => {
       .single();
 
     if (insertError) {
-      console.error('Database insert error:', insertError);
-      throw new Error('Failed to save charge');
+      console.error('[mercadopago-create-pix] Database insert error:', insertError);
+      throw new Error('Falha ao salvar cobrança');
     }
+
+    console.log('[mercadopago-create-pix] Charge saved:', cobranca.id);
 
     return new Response(
       JSON.stringify({
@@ -132,9 +196,12 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error creating Pix:', error);
+    console.error('[mercadopago-create-pix] Error:', error);
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
+      JSON.stringify({ 
+        success: false, 
+        error: error.message || 'Erro ao criar Pix' 
+      }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

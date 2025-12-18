@@ -19,7 +19,8 @@ const pageTitles: Record<string, string> = {
   "/tarefas": "Tarefas",
   "/analise-vendas": "Análise de Vendas",
   "/minha-conta": "Minha Conta",
-  "/preferencias": "Preferências"
+  "/preferencias": "Preferências",
+  "/integracoes": "Integrações e Conexões"
 };
 
 const getPageTitleFromPath = (pathname: string): string => {

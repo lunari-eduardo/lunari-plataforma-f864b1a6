@@ -1403,6 +1403,54 @@ export type Database = {
         }
         Relationships: []
       }
+      usuarios_integracoes: {
+        Row: {
+          access_token: string | null
+          conectado_em: string | null
+          created_at: string | null
+          dados_extras: Json | null
+          expira_em: string | null
+          id: string
+          mp_public_key: string | null
+          mp_user_id: string | null
+          provedor: string
+          refresh_token: string | null
+          status: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          access_token?: string | null
+          conectado_em?: string | null
+          created_at?: string | null
+          dados_extras?: Json | null
+          expira_em?: string | null
+          id?: string
+          mp_public_key?: string | null
+          mp_user_id?: string | null
+          provedor: string
+          refresh_token?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          access_token?: string | null
+          conectado_em?: string | null
+          created_at?: string | null
+          dados_extras?: Json | null
+          expira_em?: string | null
+          id?: string
+          mp_public_key?: string | null
+          mp_user_id?: string | null
+          provedor?: string
+          refresh_token?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       vip_users: {
         Row: {
           created_at: string | null
