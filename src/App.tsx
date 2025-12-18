@@ -27,6 +27,8 @@ import NotFound from "./pages/NotFound";
 import EscolherPlano from "./pages/EscolherPlano";
 import MinhaAssinatura from "./pages/MinhaAssinatura";
 import AdminUsuarios from "./pages/AdminUsuarios";
+import Integracoes from "./pages/Integracoes";
+import IntegracoesCallback from "./pages/IntegracoesCallback";
 import { AppProvider } from "./contexts/AppContext";
 import { AgendaProvider } from "./contexts/AgendaContext";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -170,6 +172,8 @@ function App() {
                           <FeedTest />
                         </PlanRestrictionGuard>
                       } />
+                      <Route path="/integracoes" element={<Integracoes />} />
+                      <Route path="/integracoes/callback" element={<IntegracoesCallback />} />
                       <Route path="/admin/usuarios" element={
                         <AdminRoute>
                           <AdminUsuarios />

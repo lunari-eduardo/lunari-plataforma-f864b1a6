@@ -6,8 +6,18 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Get MP token for a specific user
+async function getUserMpToken(supabase: any, mpUserId: string): Promise<string | null> {
+  const { data } = await supabase
+    .from('usuarios_integracoes')
+    .select('access_token, user_id')
+    .eq('mp_user_id', mpUserId)
+    .eq('status', 'ativo')
+    .single();
+  return data?.access_token || null;
+}
+
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -15,62 +25,64 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const mercadoPagoToken = Deno.env.get('MERCADOPAGO_ACCESS_TOKEN')!;
-
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body = await req.json();
-    console.log('Webhook received:', JSON.stringify(body));
+    console.log('[mercadopago-webhook] Received:', JSON.stringify(body));
 
-    // Mercado Pago sends different notification types
     const { type, data, action } = body;
 
-    // Handle payment notifications
     if (type === 'payment' || action?.includes('payment')) {
       const paymentId = data?.id;
-      
       if (!paymentId) {
-        console.log('No payment ID in webhook');
-        return new Response(JSON.stringify({ received: true }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        return new Response(JSON.stringify({ received: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
-      // Fetch payment details from Mercado Pago
+      // First, find the charge to get the user
+      const { data: cobranca } = await supabase
+        .from('cobrancas')
+        .select('user_id')
+        .eq('mp_payment_id', String(paymentId))
+        .single();
+
+      let mpToken: string | null = null;
+      
+      if (cobranca?.user_id) {
+        const { data: integration } = await supabase
+          .from('usuarios_integracoes')
+          .select('access_token')
+          .eq('user_id', cobranca.user_id)
+          .eq('provedor', 'mercadopago')
+          .eq('status', 'ativo')
+          .single();
+        mpToken = integration?.access_token;
+      }
+
+      if (!mpToken) {
+        console.log('[mercadopago-webhook] No token found for payment, skipping');
+        return new Response(JSON.stringify({ received: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
       const mpResponse = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-        headers: {
-          'Authorization': `Bearer ${mercadoPagoToken}`,
-        },
+        headers: { 'Authorization': `Bearer ${mpToken}` },
       });
 
       if (!mpResponse.ok) {
-        console.error('Failed to fetch payment:', await mpResponse.text());
-        return new Response(JSON.stringify({ received: true }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        console.error('[mercadopago-webhook] Failed to fetch payment');
+        return new Response(JSON.stringify({ received: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
       const payment = await mpResponse.json();
-      console.log('Payment details:', JSON.stringify(payment));
+      console.log('[mercadopago-webhook] Payment status:', payment.status);
 
-      // Map Mercado Pago status to our status
-      let newStatus: string;
-      switch (payment.status) {
-        case 'approved':
-          newStatus = 'pago';
-          break;
-        case 'cancelled':
-        case 'refunded':
-          newStatus = 'cancelado';
-          break;
-        case 'rejected':
-          newStatus = 'cancelado';
-          break;
-        default:
-          newStatus = 'pendente';
-      }
+      const statusMap: Record<string, string> = {
+        approved: 'pago',
+        cancelled: 'cancelado',
+        refunded: 'cancelado',
+        rejected: 'cancelado',
+      };
+      const newStatus = statusMap[payment.status] || 'pendente';
 
-      // Update charge in database
       const { data: updatedCobranca, error: updateError } = await supabase
         .from('cobrancas')
         .update({
@@ -82,91 +94,24 @@ serve(async (req) => {
         .select()
         .single();
 
-      if (updateError) {
-        console.error('Error updating charge:', updateError);
-        
-        // Try to find by preference_id if payment_id doesn't match
-        const externalRef = payment.external_reference;
-        if (externalRef) {
-          console.log('Trying to find by external_reference:', externalRef);
-        }
-      } else if (updatedCobranca && newStatus === 'pago') {
-        console.log('Charge updated to paid:', updatedCobranca.id);
-
-        // Register payment in clientes_transacoes
-        if (updatedCobranca.session_id) {
-          const { error: transactionError } = await supabase
-            .from('clientes_transacoes')
-            .insert({
-              user_id: updatedCobranca.user_id,
-              cliente_id: updatedCobranca.cliente_id,
-              session_id: updatedCobranca.session_id,
-              valor: updatedCobranca.valor,
-              data_transacao: new Date().toISOString().split('T')[0],
-              tipo: 'pagamento',
-              descricao: `Pagamento via ${updatedCobranca.tipo_cobranca.toUpperCase()} - MP #${paymentId}`,
-            });
-
-          if (transactionError) {
-            console.error('Error creating transaction:', transactionError);
-          } else {
-            console.log('Transaction created for session:', updatedCobranca.session_id);
-          }
-        }
-      }
-    }
-
-    // Handle merchant_order notifications (for preferences/links)
-    if (type === 'merchant_order') {
-      const orderId = data?.id;
-      
-      if (orderId) {
-        const mpResponse = await fetch(`https://api.mercadopago.com/merchant_orders/${orderId}`, {
-          headers: {
-            'Authorization': `Bearer ${mercadoPagoToken}`,
-          },
+      if (!updateError && updatedCobranca && newStatus === 'pago' && updatedCobranca.session_id) {
+        await supabase.from('clientes_transacoes').insert({
+          user_id: updatedCobranca.user_id,
+          cliente_id: updatedCobranca.cliente_id,
+          session_id: updatedCobranca.session_id,
+          valor: updatedCobranca.valor,
+          data_transacao: new Date().toISOString().split('T')[0],
+          tipo: 'pagamento',
+          descricao: `Pagamento via ${updatedCobranca.tipo_cobranca.toUpperCase()} - MP #${paymentId}`,
         });
-
-        if (mpResponse.ok) {
-          const order = await mpResponse.json();
-          console.log('Merchant order:', JSON.stringify(order));
-
-          // Check if fully paid
-          if (order.status === 'closed' && order.payments?.length > 0) {
-            const approvedPayment = order.payments.find((p: any) => p.status === 'approved');
-            
-            if (approvedPayment) {
-              // Update charge by preference_id
-              const { error: updateError } = await supabase
-                .from('cobrancas')
-                .update({
-                  status: 'pago',
-                  mp_payment_id: String(approvedPayment.id),
-                  data_pagamento: new Date().toISOString(),
-                  updated_at: new Date().toISOString(),
-                })
-                .eq('mp_preference_id', order.preference_id);
-
-              if (updateError) {
-                console.error('Error updating charge from merchant_order:', updateError);
-              }
-            }
-          }
-        }
+        console.log('[mercadopago-webhook] Transaction created');
       }
     }
 
-    return new Response(
-      JSON.stringify({ received: true }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ received: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
   } catch (error) {
-    console.error('Webhook error:', error);
-    // Always return 200 to acknowledge receipt
-    return new Response(
-      JSON.stringify({ received: true, error: error.message }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    console.error('[mercadopago-webhook] Error:', error);
+    return new Response(JSON.stringify({ received: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 });

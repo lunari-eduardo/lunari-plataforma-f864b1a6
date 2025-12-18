@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Calendar, Users, Settings, FileText, DollarSign, Menu, X, User, TrendingUp, Workflow, ChevronRight, ChevronLeft, BarChart3, Home, CheckSquare, Image as ImageIcon, CreditCard, Shield, Crown } from 'lucide-react';
+import { Calendar, Users, Settings, FileText, DollarSign, Menu, X, User, TrendingUp, Workflow, ChevronRight, ChevronLeft, BarChart3, Home, CheckSquare, Image as ImageIcon, CreditCard, Shield, Crown, Plug } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -186,6 +186,10 @@ export default function Sidebar() {
     icon: <ImageIcon size={14} />,
     label: "Feed Test",
     isPro: true
+  }, {
+    to: "/integracoes",
+    icon: <Plug size={14} />,
+    label: "Integrações"
   }, {
     to: "/configuracoes",
     icon: <Settings size={14} />,

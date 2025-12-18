@@ -23,3 +23,9 @@ verify_jwt = false
 
 [functions.mercadopago-webhook]
 verify_jwt = false
+
+[functions.mercadopago-connect]
+verify_jwt = false
+
+[functions.mercadopago-disconnect]
+verify_jwt = false
