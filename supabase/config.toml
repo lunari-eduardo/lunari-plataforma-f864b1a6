@@ -14,3 +14,12 @@ verify_jwt = false
 
 [functions.sync-user-subscription]
 verify_jwt = false
+
+[functions.mercadopago-create-pix]
+verify_jwt = false
+
+[functions.mercadopago-create-link]
+verify_jwt = false
+
+[functions.mercadopago-webhook]
+verify_jwt = false

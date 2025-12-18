@@ -480,6 +480,77 @@ export type Database = {
           },
         ]
       }
+      cobrancas: {
+        Row: {
+          cliente_id: string
+          created_at: string | null
+          data_pagamento: string | null
+          descricao: string | null
+          id: string
+          mp_expiration_date: string | null
+          mp_payment_id: string | null
+          mp_payment_link: string | null
+          mp_pix_copia_cola: string | null
+          mp_preference_id: string | null
+          mp_qr_code: string | null
+          mp_qr_code_base64: string | null
+          session_id: string | null
+          status: string | null
+          tipo_cobranca: string
+          updated_at: string | null
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          cliente_id: string
+          created_at?: string | null
+          data_pagamento?: string | null
+          descricao?: string | null
+          id?: string
+          mp_expiration_date?: string | null
+          mp_payment_id?: string | null
+          mp_payment_link?: string | null
+          mp_pix_copia_cola?: string | null
+          mp_preference_id?: string | null
+          mp_qr_code?: string | null
+          mp_qr_code_base64?: string | null
+          session_id?: string | null
+          status?: string | null
+          tipo_cobranca: string
+          updated_at?: string | null
+          user_id: string
+          valor: number
+        }
+        Update: {
+          cliente_id?: string
+          created_at?: string | null
+          data_pagamento?: string | null
+          descricao?: string | null
+          id?: string
+          mp_expiration_date?: string | null
+          mp_payment_id?: string | null
+          mp_payment_link?: string | null
+          mp_pix_copia_cola?: string | null
+          mp_preference_id?: string | null
+          mp_qr_code?: string | null
+          mp_qr_code_base64?: string | null
+          session_id?: string | null
+          status?: string | null
+          tipo_cobranca?: string
+          updated_at?: string | null
+          user_id?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cobrancas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       custom_time_slots: {
         Row: {
           created_at: string | null

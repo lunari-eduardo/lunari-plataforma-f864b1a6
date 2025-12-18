@@ -4,13 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { CreditCard, Plus, Edit, Trash2, CheckCircle2, Calendar, DollarSign, Package } from 'lucide-react';
+import { CreditCard, Plus, Edit, Trash2, CheckCircle2, Calendar, DollarSign, Package, Send } from 'lucide-react';
 import { formatCurrency } from '@/utils/financialUtils';
 import { formatDateForDisplay } from '@/utils/dateUtils';
 import { useSessionPayments } from '@/hooks/useSessionPayments';
 import { SessionPaymentExtended } from '@/types/sessionPayments';
 import { PaymentConfigModalExpanded } from '@/components/crm/PaymentConfigModalExpanded';
 import { EditPaymentModal } from '@/components/crm/EditPaymentModal';
+import { ChargeModal } from '@/components/cobranca/ChargeModal';
 
 interface SessionPaymentsManagerProps {
   sessionData: any;
@@ -28,6 +29,7 @@ export function SessionPaymentsManager({
   onClose
 }: SessionPaymentsManagerProps) {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showChargeModal, setShowChargeModal] = useState(false);
   const [editingPayment, setEditingPayment] = useState<SessionPaymentExtended | null>(null);
 
   // Convert existing payments to extended format
@@ -195,14 +197,25 @@ export function SessionPaymentsManager({
               <CreditCard className="h-4 w-4 md:h-5 md:w-5 text-primary" />
               Histórico de Movimentações
             </CardTitle>
-            <Button 
-              onClick={() => setShowPaymentModal(true)} 
-              className="gap-2 w-full sm:w-auto h-8 text-xs" 
-              size="sm"
-            >
-              <Plus className="h-3 w-3 md:h-4 md:w-4" />
-              Adicionar Pagamento
-            </Button>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Button 
+                onClick={() => setShowChargeModal(true)} 
+                variant="outline"
+                className="gap-2 flex-1 sm:flex-none h-8 text-xs border-primary text-primary hover:bg-primary/10" 
+                size="sm"
+              >
+                <Send className="h-3 w-3 md:h-4 md:w-4" />
+                Cobrar
+              </Button>
+              <Button 
+                onClick={() => setShowPaymentModal(true)} 
+                className="gap-2 flex-1 sm:flex-none h-8 text-xs" 
+                size="sm"
+              >
+                <Plus className="h-3 w-3 md:h-4 md:w-4" />
+                Adicionar Pagamento
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -345,6 +358,17 @@ export function SessionPaymentsManager({
           }}
         />
       )}
+
+      {/* Charge Modal */}
+      <ChargeModal
+        isOpen={showChargeModal}
+        onClose={() => setShowChargeModal(false)}
+        clienteId={sessionData.clienteId || ''}
+        clienteNome={sessionData.nome || 'Cliente'}
+        clienteWhatsapp={sessionData.whatsapp}
+        sessionId={sessionData.id}
+        valorSugerido={valorRestante}
+      />
     </>
   );
 
