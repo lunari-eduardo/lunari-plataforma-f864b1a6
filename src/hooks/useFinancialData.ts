@@ -1,9 +1,10 @@
 /**
  * Hook centralizado para gerenciar dados financeiros no Supabase
  * Implementa Realtime subscriptions para sincronização multi-dispositivo
+ * Inclui auto-atualização de status de transações vencidas
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { 
   SupabaseFinancialItemsAdapter,
@@ -23,6 +24,9 @@ import {
 } from '@/adapters/SupabaseRecurringBlueprintsAdapter';
 import { GrupoPrincipal } from '@/types/financas';
 import { toast } from '@/hooks/use-toast';
+
+// Intervalo de verificação periódica: 1 hora
+const STATUS_CHECK_INTERVAL_MS = 60 * 60 * 1000;
 
 export interface UseFinancialDataReturn {
   // Data
@@ -146,13 +150,64 @@ export function useFinancialData(): UseFinancialDataReturn {
     }
   }, []);
   
-  // Carregar tudo na montagem
+  // Flag para evitar múltiplas execuções da atualização de status
+  const statusUpdateDone = useRef(false);
+  
+  // Carregar tudo na montagem (com atualização de status primeiro)
   useEffect(() => {
-    loadItems();
-    loadTransactions();
-    loadCards();
-    loadBlueprints();
+    const initializeData = async () => {
+      // 1. Atualizar status de transações vencidas ANTES de carregar dados
+      if (!statusUpdateDone.current) {
+        try {
+          const updated = await SupabaseFinancialTransactionsAdapter.updateStatusByDate();
+          statusUpdateDone.current = true;
+          
+          if (updated > 0) {
+            console.log(`📅 ${updated} transações atualizadas para 'Faturado'`);
+            toast({
+              title: 'Transações atualizadas',
+              description: `${updated} ${updated === 1 ? 'transação foi atualizada' : 'transações foram atualizadas'} para "Faturado".`,
+            });
+          }
+        } catch (error) {
+          console.error('Erro ao atualizar status por data:', error);
+        }
+      }
+      
+      // 2. Carregar dados já atualizados
+      await Promise.all([
+        loadItems(),
+        loadTransactions(),
+        loadCards(),
+        loadBlueprints()
+      ]);
+    };
+    
+    initializeData();
   }, [loadItems, loadTransactions, loadCards, loadBlueprints]);
+  
+  // Verificação periódica para transações que vencem enquanto app está aberto
+  useEffect(() => {
+    const intervalId = setInterval(async () => {
+      try {
+        const updated = await SupabaseFinancialTransactionsAdapter.updateStatusByDate();
+        
+        if (updated > 0) {
+          console.log(`📅 Verificação periódica: ${updated} transações atualizadas para 'Faturado'`);
+          toast({
+            title: 'Transações atualizadas',
+            description: `${updated} ${updated === 1 ? 'transação venceu' : 'transações venceram'} e ${updated === 1 ? 'foi atualizada' : 'foram atualizadas'} para "Faturado".`,
+          });
+          // Recarregar para refletir mudanças
+          loadTransactions();
+        }
+      } catch (error) {
+        console.error('Erro na verificação periódica de status:', error);
+      }
+    }, STATUS_CHECK_INTERVAL_MS);
+    
+    return () => clearInterval(intervalId);
+  }, [loadTransactions]);
   
   // ============= REALTIME SUBSCRIPTIONS =============
   
