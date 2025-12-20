@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Layout from "./components/layout/Layout";
 import Index from "./pages/Index";
 import Agenda from "./pages/Agenda";
@@ -27,8 +27,6 @@ import NotFound from "./pages/NotFound";
 import EscolherPlano from "./pages/EscolherPlano";
 import MinhaAssinatura from "./pages/MinhaAssinatura";
 import AdminUsuarios from "./pages/AdminUsuarios";
-import Integracoes from "./pages/Integracoes";
-import IntegracoesCallback from "./pages/IntegracoesCallback";
 import { AppProvider } from "./contexts/AppContext";
 import { AgendaProvider } from "./contexts/AgendaContext";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -172,8 +170,7 @@ function App() {
                           <FeedTest />
                         </PlanRestrictionGuard>
                       } />
-                      <Route path="/integracoes" element={<Integracoes />} />
-                      <Route path="/integracoes/callback" element={<IntegracoesCallback />} />
+                      <Route path="/integracoes" element={<Navigate to="/preferencias?tab=integracoes" replace />} />
                       <Route path="/admin/usuarios" element={
                         <AdminRoute>
                           <AdminUsuarios />

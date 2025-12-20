@@ -89,8 +89,8 @@ export function useIntegracoes(): UseIntegracoesReturn {
       return;
     }
 
-    // Generate OAuth URL
-    const redirectUri = `${window.location.origin}/integracoes/callback`;
+    // Generate OAuth URL - callback vai para preferencias com tab=integracoes
+    const redirectUri = `${window.location.origin}/preferencias?tab=integracoes`;
     const state = user.id; // Use user ID as state to verify on callback
     
     const authUrl = new URL(MP_AUTH_URL);
@@ -115,7 +115,7 @@ export function useIntegracoes(): UseIntegracoesReturn {
     setConnecting(true);
 
     try {
-      const redirectUri = `${window.location.origin}/integracoes/callback`;
+      const redirectUri = `${window.location.origin}/preferencias?tab=integracoes`;
       
       console.log('[useIntegracoes] Exchanging code for token');
       
