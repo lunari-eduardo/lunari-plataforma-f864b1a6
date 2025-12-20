@@ -150,17 +150,19 @@ export function useFinancialData(): UseFinancialDataReturn {
     }
   }, []);
   
-  // Flag para evitar múltiplas execuções da atualização de status
-  const statusUpdateDone = useRef(false);
+  // Flag para evitar múltiplas execuções simultâneas da atualização de status
+  const isUpdatingStatus = useRef(false);
   
   // Carregar tudo na montagem (com atualização de status primeiro)
   useEffect(() => {
     const initializeData = async () => {
       // 1. Atualizar status de transações vencidas ANTES de carregar dados
-      if (!statusUpdateDone.current) {
+      // Sempre tenta atualizar no carregamento (não usa flag persistente)
+      if (!isUpdatingStatus.current) {
+        isUpdatingStatus.current = true;
         try {
+          console.log('🔄 Verificando transações vencidas para atualizar...');
           const updated = await SupabaseFinancialTransactionsAdapter.updateStatusByDate();
-          statusUpdateDone.current = true;
           
           if (updated > 0) {
             console.log(`📅 ${updated} transações atualizadas para 'Faturado'`);
@@ -168,9 +170,13 @@ export function useFinancialData(): UseFinancialDataReturn {
               title: 'Transações atualizadas',
               description: `${updated} ${updated === 1 ? 'transação foi atualizada' : 'transações foram atualizadas'} para "Faturado".`,
             });
+          } else {
+            console.log('✅ Nenhuma transação vencida para atualizar');
           }
         } catch (error) {
           console.error('Erro ao atualizar status por data:', error);
+        } finally {
+          isUpdatingStatus.current = false;
         }
       }
       

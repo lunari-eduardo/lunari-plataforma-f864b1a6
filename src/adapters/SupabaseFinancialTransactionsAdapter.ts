@@ -175,14 +175,39 @@ export class SupabaseFinancialTransactionsAdapter {
   
   /**
    * Atualizar status automaticamente baseado na data
+   * Transações com data_vencimento <= hoje e status 'Agendado' -> 'Faturado'
    */
   static async updateStatusByDate(): Promise<number> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Usuário não autenticado');
+      if (!user) {
+        console.warn('updateStatusByDate: Usuário não autenticado');
+        return 0;
+      }
       
       const hoje = getCurrentDateString();
+      console.log(`📅 updateStatusByDate: Verificando transações com vencimento <= ${hoje}`);
       
+      // Primeiro, verificar quantas transações precisam ser atualizadas
+      const { data: pendingData, error: pendingError } = await supabase
+        .from('fin_transactions')
+        .select('id, data_vencimento')
+        .eq('user_id', user.id)
+        .eq('status', 'Agendado')
+        .lte('data_vencimento', hoje);
+      
+      if (pendingError) {
+        console.error('Erro ao verificar transações pendentes:', pendingError);
+        throw pendingError;
+      }
+      
+      console.log(`📋 Encontradas ${pendingData?.length || 0} transações para atualizar`);
+      
+      if (!pendingData || pendingData.length === 0) {
+        return 0;
+      }
+      
+      // Executar o UPDATE
       const { data, error } = await supabase
         .from('fin_transactions')
         .update({ status: 'Faturado' })
@@ -191,8 +216,12 @@ export class SupabaseFinancialTransactionsAdapter {
         .lte('data_vencimento', hoje)
         .select();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao atualizar status:', error);
+        throw error;
+      }
       
+      console.log(`✅ Atualizadas ${data?.length || 0} transações para 'Faturado'`);
       return data?.length || 0;
     } catch (error) {
       console.error('Erro ao atualizar status por data:', error);
