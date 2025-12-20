@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { CreditCard, Plug } from 'lucide-react';
 import { IntegrationCard } from '@/components/integracoes/IntegrationCard';
 import { useIntegracoes } from '@/hooks/useIntegracoes';
@@ -12,9 +12,8 @@ const MercadoPagoIcon = () => (
   </svg>
 );
 
-export default function Integracoes() {
+export function IntegracoesTab() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
   const {
     loading,
     connecting,
@@ -28,24 +27,20 @@ export default function Integracoes() {
   // Handle OAuth callback
   useEffect(() => {
     const code = searchParams.get('code');
-    const state = searchParams.get('state');
     const error = searchParams.get('error');
 
     if (error) {
-      console.error('[Integracoes] OAuth error:', error);
-      // Clear params
-      setSearchParams({});
+      console.error('[IntegracoesTab] OAuth error:', error);
+      // Keep tab param, clear others
+      setSearchParams({ tab: 'integracoes' });
       return;
     }
 
     if (code) {
-      console.log('[Integracoes] Processing OAuth callback with code');
+      console.log('[IntegracoesTab] Processing OAuth callback with code');
       handleOAuthCallback(code).then((success) => {
-        // Clear the URL params after processing
-        setSearchParams({});
-        if (success) {
-          // Stay on integracoes page to show success
-        }
+        // Clear the URL params after processing, keep tab
+        setSearchParams({ tab: 'integracoes' });
       });
     }
   }, [searchParams, setSearchParams, handleOAuthCallback]);
@@ -57,9 +52,8 @@ export default function Integracoes() {
 
   if (loading) {
     return (
-      <div className="container max-w-4xl py-6 space-y-6">
+      <div className="space-y-6">
         <div className="space-y-2">
-          <Skeleton className="h-8 w-64" />
           <Skeleton className="h-4 w-96" />
         </div>
         <div className="grid gap-4 md:grid-cols-2">
@@ -71,14 +65,14 @@ export default function Integracoes() {
   }
 
   return (
-    <div className="container max-w-4xl py-6 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="space-y-2">
         <div className="flex items-center gap-2">
-          <Plug className="h-6 w-6 text-primary" />
-          <h1 className="text-2xl font-bold">Integrações e Conexões</h1>
+          <Plug className="h-5 w-5 text-primary" />
+          <h2 className="text-lg font-semibold">Integrações e Conexões</h2>
         </div>
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           Conecte suas contas para automatizar cobranças e pagamentos
         </p>
       </div>
