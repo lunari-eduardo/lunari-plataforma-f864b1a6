@@ -83,7 +83,25 @@ serve(async (req) => {
 
     const { clienteId, sessionId, valor, descricao } = body;
 
-    if (!clienteId) {
+    // FALLBACK: Se clienteId vazio mas temos sessionId, buscar do banco
+    let clienteIdFinal = clienteId;
+    if (!clienteIdFinal && sessionId) {
+      console.log('[mercadopago-create-pix] clienteId vazio, buscando via sessionId:', sessionId);
+      
+      const { data: session } = await supabase
+        .from('clientes_sessoes')
+        .select('cliente_id')
+        .or(`id.eq.${sessionId},session_id.eq.${sessionId}`)
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      if (session?.cliente_id) {
+        clienteIdFinal = session.cliente_id;
+        console.log('[mercadopago-create-pix] clienteId resolvido via sessão:', clienteIdFinal);
+      }
+    }
+
+    if (!clienteIdFinal) {
       console.error('[mercadopago-create-pix] Missing clienteId');
       throw new Error('clienteId é obrigatório');
     }
@@ -97,7 +115,7 @@ serve(async (req) => {
     const { data: cliente, error: clienteError } = await supabase
       .from('clientes')
       .select('nome, email')
-      .eq('id', clienteId)
+      .eq('id', clienteIdFinal)
       .eq('user_id', user.id)
       .single();
 
@@ -114,11 +132,11 @@ serve(async (req) => {
       description: descricao || `Cobrança - ${cliente.nome}`,
       payment_method_id: 'pix',
       payer: {
-        email: cliente.email || `cliente-${clienteId.substring(0, 8)}@lunari.app`,
+        email: cliente.email || `cliente-${clienteIdFinal.substring(0, 8)}@lunari.app`,
         first_name: cliente.nome.split(' ')[0],
         last_name: cliente.nome.split(' ').slice(1).join(' ') || 'Cliente',
       },
-      external_reference: `${user.id}|${clienteId}|${sessionId || 'avulso'}`,
+      external_reference: `${user.id}|${clienteIdFinal}|${sessionId || 'avulso'}`,
     };
 
     console.log('[mercadopago-create-pix] Sending to MP:', JSON.stringify(paymentData));
@@ -156,7 +174,7 @@ serve(async (req) => {
       .from('cobrancas')
       .insert({
         user_id: user.id,
-        cliente_id: clienteId,
+        cliente_id: clienteIdFinal,
         session_id: sessionId || null,
         valor: Number(valor),
         descricao: descricao || `Cobrança Pix - ${cliente.nome}`,

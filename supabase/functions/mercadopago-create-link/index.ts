@@ -72,13 +72,31 @@ serve(async (req) => {
 
     const { clienteId, sessionId, valor, descricao, installments } = body;
 
-    if (!clienteId) throw new Error('clienteId é obrigatório');
+    // FALLBACK: Se clienteId vazio mas temos sessionId, buscar do banco
+    let clienteIdFinal = clienteId;
+    if (!clienteIdFinal && sessionId) {
+      console.log('[mercadopago-create-link] clienteId vazio, buscando via sessionId:', sessionId);
+      
+      const { data: session } = await supabase
+        .from('clientes_sessoes')
+        .select('cliente_id')
+        .or(`id.eq.${sessionId},session_id.eq.${sessionId}`)
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      if (session?.cliente_id) {
+        clienteIdFinal = session.cliente_id;
+        console.log('[mercadopago-create-link] clienteId resolvido via sessão:', clienteIdFinal);
+      }
+    }
+
+    if (!clienteIdFinal) throw new Error('clienteId é obrigatório');
     if (!valor || valor <= 0) throw new Error('valor deve ser maior que zero');
 
     const { data: cliente, error: clienteError } = await supabase
       .from('clientes')
       .select('nome, email')
-      .eq('id', clienteId)
+      .eq('id', clienteIdFinal)
       .eq('user_id', user.id)
       .single();
 
@@ -92,10 +110,10 @@ serve(async (req) => {
         currency_id: 'BRL',
       }],
       payer: {
-        email: cliente.email || `cliente-${clienteId.substring(0, 8)}@lunari.app`,
+        email: cliente.email || `cliente-${clienteIdFinal.substring(0, 8)}@lunari.app`,
         name: cliente.nome,
       },
-      external_reference: `${user.id}|${clienteId}|${sessionId || 'avulso'}`,
+      external_reference: `${user.id}|${clienteIdFinal}|${sessionId || 'avulso'}`,
       payment_methods: {
         installments: installments || 12,
         excluded_payment_types: [],
@@ -128,7 +146,7 @@ serve(async (req) => {
       .from('cobrancas')
       .insert({
         user_id: user.id,
-        cliente_id: clienteId,
+        cliente_id: clienteIdFinal,
         session_id: sessionId || null,
         valor: Number(valor),
         descricao: descricao || `Link de pagamento - ${cliente.nome}`,

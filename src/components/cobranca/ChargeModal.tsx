@@ -8,7 +8,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { QrCode, Link2, CreditCard, Smartphone, History, X } from 'lucide-react';
+import { QrCode, Link2, CreditCard, History } from 'lucide-react';
 import { formatCurrency } from '@/utils/financialUtils';
 import { useCobranca } from '@/hooks/useCobranca';
 import { TipoCobranca, Cobranca } from '@/types/cobranca';
@@ -16,7 +16,6 @@ import { ChargeMethodCard } from './ChargeMethodCard';
 import { ChargePixSection } from './ChargePixSection';
 import { ChargeLinkSection } from './ChargeLinkSection';
 import { ChargeCardSection } from './ChargeCardSection';
-import { ChargePresentialSection } from './ChargePresentialSection';
 import { ChargeHistory } from './ChargeHistory';
 
 interface ChargeModalProps {
@@ -149,11 +148,13 @@ export function ChargeModal({
     setActiveTab('cobrar');
   };
 
+  // DEBUG: Log clienteId para rastrear problema
+  console.log('🔍 ChargeModal props:', { clienteId, sessionId, clienteNome, valorSugerido });
+
   const methods: { type: TipoCobranca; icon: React.ReactNode; title: string; description: string }[] = [
     { type: 'pix', icon: <QrCode className="h-5 w-5" />, title: 'Pix', description: 'Imediato' },
     { type: 'link', icon: <Link2 className="h-5 w-5" />, title: 'Link', description: 'Enviar' },
     { type: 'card', icon: <CreditCard className="h-5 w-5" />, title: 'Cartão', description: 'Online' },
-    { type: 'presencial', icon: <Smartphone className="h-5 w-5" />, title: 'Tap', description: 'App MP' },
   ];
 
   return (
@@ -285,10 +286,6 @@ export function ChargeModal({
                     loading={creatingCharge}
                     onGenerate={handleGenerateCard}
                   />
-                )}
-
-                {selectedMethod === 'presencial' && (
-                  <ChargePresentialSection valor={valor} />
                 )}
               </div>
             </TabsContent>
