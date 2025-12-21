@@ -106,9 +106,93 @@ const savePaymentsToStorage = (sessionId: string, payments: SessionPaymentExtend
 
 export function useSessionPayments(sessionId: string, initialPayments: SessionPaymentExtended[] = []) {
   const [payments, setPayments] = useState<SessionPaymentExtended[]>(initialPayments);
+  const [loadedFromSupabase, setLoadedFromSupabase] = useState(false);
 
-  // Listener para eventos do AppContext (pagamentos rápidos)
+  // NOVO: Buscar pagamentos do Supabase ao iniciar (fonte primária de dados)
   useEffect(() => {
+    const fetchPaymentsFromSupabase = async () => {
+      if (!sessionId || loadedFromSupabase) return;
+
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        // Buscar transações por session_id (suporta UUID e texto)
+        const { data: transacoes, error } = await supabase
+          .from('clientes_transacoes')
+          .select('*')
+          .or(`session_id.eq.${sessionId}`)
+          .eq('user_id', user.id)
+          .order('data_transacao', { ascending: false });
+
+        if (error) {
+          console.error('❌ [useSessionPayments] Erro ao buscar do Supabase:', error);
+          return;
+        }
+
+        if (transacoes && transacoes.length > 0) {
+          console.log('✅ [useSessionPayments] Pagamentos carregados do Supabase:', transacoes.length);
+
+          const supabasePayments: SessionPaymentExtended[] = transacoes.map(t => {
+            // Extrair paymentId do [ID:...] na descrição
+            const match = t.descricao?.match(/\[ID:([^\]]+)\]/);
+            const paymentId = match ? match[1] : t.id;
+
+            // Determinar tipo e status
+            const isPaid = t.tipo === 'pagamento';
+            const isPending = t.tipo === 'ajuste';
+
+            // Extrair parcelas
+            const parcelaMatch = t.descricao?.match(/Parcela (\d+)\/(\d+)/);
+            const numeroParcela = parcelaMatch ? parseInt(parcelaMatch[1]) : undefined;
+            const totalParcelas = parcelaMatch ? parseInt(parcelaMatch[2]) : undefined;
+
+            let tipo: 'pago' | 'agendado' | 'parcelado' = 'pago';
+            if (isPending) {
+              tipo = totalParcelas ? 'parcelado' : 'agendado';
+            }
+
+            let statusPagamento: 'pendente' | 'pago' | 'atrasado' | 'cancelado' = 'pago';
+            if (isPending) {
+              statusPagamento = 'pendente';
+              if (t.data_vencimento) {
+                const hoje = new Date();
+                const vencimento = new Date(t.data_vencimento);
+                if (vencimento < hoje) statusPagamento = 'atrasado';
+              }
+            }
+
+            return {
+              id: paymentId,
+              valor: Number(t.valor) || 0,
+              data: isPaid ? t.data_transacao : '',
+              dataVencimento: t.data_vencimento || undefined,
+              tipo,
+              statusPagamento,
+              numeroParcela,
+              totalParcelas,
+              origem: 'supabase' as const,
+              editavel: isPending, // Apenas pendentes são editáveis
+              observacoes: t.descricao?.replace(/\s*\[ID:[^\]]+\]/, '') || ''
+            };
+          });
+
+          setPayments(supabasePayments);
+          setLoadedFromSupabase(true);
+        }
+      } catch (error) {
+        console.error('❌ [useSessionPayments] Erro geral:', error);
+      }
+    };
+
+    fetchPaymentsFromSupabase();
+  }, [sessionId, loadedFromSupabase]);
+
+  // Listener para eventos do AppContext (pagamentos rápidos) - como fallback
+  useEffect(() => {
+    // Se já carregou do Supabase, não sobrescrever com localStorage
+    if (loadedFromSupabase) return;
+
     const handleWorkflowUpdate = () => {
       const sessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
       const currentSession = sessions.find((s: any) => s.id === sessionId);
@@ -146,16 +230,6 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
             }
           }
           
-          console.log('💰 [useSessionPayments] Convertendo pagamento:', {
-            id: p.id,
-            originalTipo: p.tipo,
-            originalStatus: p.statusPagamento,
-            finalTipo: tipo,
-            finalStatus: statusPagamento,
-            data: p.data,
-            dataVencimento: p.dataVencimento
-          });
-          
           return {
             id: p.id,
             valor: p.valor,
@@ -182,7 +256,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
     handleWorkflowUpdate();
 
     return () => window.removeEventListener('workflowSessionsUpdated', handleWorkflowUpdate);
-  }, [sessionId]);
+  }, [sessionId, loadedFromSupabase]);
 
   // Remove auto-save useEffect to prevent loops
   // Payments will be saved explicitly in each action function

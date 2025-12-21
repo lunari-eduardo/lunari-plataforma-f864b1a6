@@ -59,10 +59,11 @@ export function useClientSessionsRealtime(clienteId: string) {
       // Buscar transações/pagamentos para cada sessão
       const sessionsWithPayments = await Promise.all(
         (sessionsData || []).map(async (session) => {
+          // Buscar transações por AMBOS os session_id (texto e UUID)
           const { data: transacoesData, error: transacoesError } = await supabase
             .from('clientes_transacoes')
             .select('*')
-            .eq('session_id', session.session_id)
+            .or(`session_id.eq.${session.session_id},session_id.eq.${session.id}`)
             .eq('user_id', user.id)
             .in('tipo', ['pagamento', 'ajuste'])
             .order('data_transacao', { ascending: false });

@@ -7,7 +7,7 @@ export interface SessionPaymentExtended {
   statusPagamento: 'pendente' | 'pago' | 'atrasado' | 'cancelado';
   numeroParcela?: number;
   totalParcelas?: number;
-  origem: 'agenda' | 'workflow_rapido' | 'manual' | 'parcelado';
+  origem: 'agenda' | 'workflow_rapido' | 'manual' | 'parcelado' | 'supabase' | 'mercadopago';
   editavel: boolean;
   forma_pagamento?: string;
   observacoes?: string;
