@@ -301,13 +301,16 @@ export function useClientSessionsRealtime(clienteId: string) {
   useEffect(() => {
     if (!clienteId) return;
 
+    let sessionsChannel: any = null;
+    let transactionsChannel: any = null;
+
     const setupRealtime = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Subscribe to sessions changes
-      const sessionsChannel = supabase
-        .channel('client_sessions_realtime')
+      // Subscribe to sessions changes (incluindo atualizações de valor_pago)
+      sessionsChannel = supabase
+        .channel(`client_sessions_realtime_${clienteId}`)
         .on(
           'postgres_changes',
           {
@@ -316,16 +319,16 @@ export function useClientSessionsRealtime(clienteId: string) {
             table: 'clientes_sessoes',
             filter: `cliente_id=eq.${clienteId}`,
           },
-          () => {
-            console.log('🔄 Sessão alterada, usando debounce...');
+          (payload) => {
+            console.log('🔄 Sessão alterada (CRM):', payload.eventType);
             debouncedRefetch();
           }
         )
         .subscribe();
 
       // Subscribe to transactions changes
-      const transactionsChannel = supabase
-        .channel('client_transactions_realtime')
+      transactionsChannel = supabase
+        .channel(`client_transactions_realtime_${clienteId}`)
         .on(
           'postgres_changes',
           {
@@ -334,23 +337,31 @@ export function useClientSessionsRealtime(clienteId: string) {
             table: 'clientes_transacoes',
             filter: `cliente_id=eq.${clienteId}`,
           },
-          () => {
-            console.log('🔄 Transação alterada, usando debounce...');
+          (payload) => {
+            console.log('🔄 Transação alterada (CRM):', payload.eventType);
             debouncedRefetch();
           }
         )
         .subscribe();
-
-      return () => {
-        if (refetchTimerRef.current) {
-          clearTimeout(refetchTimerRef.current);
-        }
-        supabase.removeChannel(sessionsChannel);
-        supabase.removeChannel(transactionsChannel);
-      };
     };
 
     setupRealtime();
+
+    // ✅ Listener para evento payment-created (sincronização bidirecional)
+    const handlePaymentCreated = () => {
+      console.log('💰 [CRM] Received payment-created event, refetching...');
+      debouncedRefetch();
+    };
+    window.addEventListener('payment-created', handlePaymentCreated as any);
+
+    return () => {
+      if (refetchTimerRef.current) {
+        clearTimeout(refetchTimerRef.current);
+      }
+      if (sessionsChannel) supabase.removeChannel(sessionsChannel);
+      if (transactionsChannel) supabase.removeChannel(transactionsChannel);
+      window.removeEventListener('payment-created', handlePaymentCreated as any);
+    };
   }, [clienteId, debouncedRefetch]);
 
   // Carregar dados iniciais
