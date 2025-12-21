@@ -80,13 +80,13 @@ export const useWorkflowPackageData = () => {
       const valorTotalNum = Number(session.valor_total) || 0;
       const valorBasePacoteNum = Number(packageData.packageValue || session.valor_base_pacote) || 0;
       
-      // BLOCO D: Calcular valorPago a partir dos pagamentos reais
-      const pagamentos = (session as any).pagamentos || [];
-      const totalPagamentos = pagamentos
-        .filter((p: any) => p.statusPagamento === 'pago')
-        .reduce((sum: number, p: any) => sum + (Number(p.valor) || 0), 0);
-      const valorPagoNum = totalPagamentos || Number(session.valor_pago) || 0;
+      // BLOCO D: PRIORIZAR valor_pago do banco de dados
+      // O trigger recompute_session_paid atualiza valor_pago automaticamente
+      // quando um pagamento é adicionado/modificado/removido
+      const valorPagoNum = Number(session.valor_pago) || 0;
       const restanteNum = valorTotalNum - valorPagoNum;
+
+      console.log('💰 Session valor_pago:', session.id, 'valor_pago:', valorPagoNum, 'restante:', restanteNum);
 
       const converted: SessionData = {
         id: session.id,
