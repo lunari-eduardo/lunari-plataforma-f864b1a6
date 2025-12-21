@@ -504,7 +504,7 @@ export class PaymentSupabaseService {
 
   /**
    * Deletar um pagamento específico do Supabase
-   * FASE 2: Suporte para migração de dados antigos
+   * FASE 2: Suporte para IDs não-UUID (como scheduled-timestamp-hash)
    */
   static async deletePaymentFromSupabase(sessionKey: string, paymentId: string): Promise<boolean> {
     try {
@@ -522,8 +522,12 @@ export class PaymentSupabaseService {
         return false;
       }
 
-      // FASE 2: Buscar com fallback para dados antigos
-      // Tentar formato novo primeiro: [ID:paymentId]
+      // Verificar se paymentId é um UUID válido
+      const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(paymentId);
+
+      let idsParaDeletar: string[] = [];
+
+      // 1. Buscar por tracking [ID:paymentId]
       const { data: transacoesComTracking, error: errorTracking } = await supabase
         .from('clientes_transacoes')
         .select('id, descricao')
@@ -534,26 +538,40 @@ export class PaymentSupabaseService {
         console.error('❌ Erro ao buscar transações com tracking:', errorTracking);
       }
 
-      // Se não encontrou, tentar buscar por paymentId diretamente (formato antigo)
-      let { data: transacoesSemTracking, error: errorSemTracking } = await supabase
-        .from('clientes_transacoes')
-        .select('id, descricao')
-        .eq('session_id', sessao.session_id)
-        .or(`descricao.ilike.%${paymentId}%,id.eq.${paymentId}`);
-
-      if (errorSemTracking) {
-        console.error('❌ Erro ao buscar transações sem tracking:', errorSemTracking);
+      if (transacoesComTracking && transacoesComTracking.length > 0) {
+        idsParaDeletar = transacoesComTracking.map(t => t.id);
+        console.log('✅ Encontrado via tracking [ID:]:', idsParaDeletar.length);
       }
 
-      // Combinar resultados e remover duplicatas
-      const todasTransacoes = [
-        ...(transacoesComTracking || []),
-        ...(transacoesSemTracking || [])
-      ];
-      
-      const idsUnicos = [...new Set(todasTransacoes.map(t => t.id))];
+      // 2. Se não encontrou com tracking, tentar busca por descrição contendo paymentId
+      if (idsParaDeletar.length === 0) {
+        const { data: transacoesPorDescricao, error: errorDescricao } = await supabase
+          .from('clientes_transacoes')
+          .select('id, descricao')
+          .eq('session_id', sessao.session_id)
+          .ilike('descricao', `%${paymentId}%`);
 
-      if (idsUnicos.length === 0) {
+        if (!errorDescricao && transacoesPorDescricao && transacoesPorDescricao.length > 0) {
+          idsParaDeletar = transacoesPorDescricao.map(t => t.id);
+          console.log('✅ Encontrado via descrição:', idsParaDeletar.length);
+        }
+      }
+
+      // 3. Se é UUID válido, tentar buscar diretamente pelo id
+      if (idsParaDeletar.length === 0 && isValidUUID) {
+        const { data: transacaoPorId, error: errorId } = await supabase
+          .from('clientes_transacoes')
+          .select('id')
+          .eq('id', paymentId)
+          .maybeSingle();
+
+        if (!errorId && transacaoPorId) {
+          idsParaDeletar = [transacaoPorId.id];
+          console.log('✅ Encontrado via UUID direto:', paymentId);
+        }
+      }
+
+      if (idsParaDeletar.length === 0) {
         console.warn('⚠️ Nenhuma transação encontrada para deletar:', paymentId);
         return true; // Considerar sucesso se já não existe
       }
@@ -562,14 +580,20 @@ export class PaymentSupabaseService {
       const { error: deleteError } = await supabase
         .from('clientes_transacoes')
         .delete()
-        .in('id', idsUnicos);
+        .in('id', idsParaDeletar);
 
       if (deleteError) {
         console.error('❌ Erro ao deletar transações:', deleteError);
         return false;
       }
 
-      console.log(`✅ ${idsUnicos.length} transação(ões) deletada(s) com sucesso`);
+      console.log(`✅ ${idsParaDeletar.length} transação(ões) deletada(s) com sucesso`);
+
+      // Disparar evento para atualizar UI
+      window.dispatchEvent(new CustomEvent('payment-deleted', {
+        detail: { sessionId: sessao.session_id, paymentId }
+      }));
+
       return true;
     } catch (error) {
       console.error('❌ Erro ao deletar pagamento:', error);
