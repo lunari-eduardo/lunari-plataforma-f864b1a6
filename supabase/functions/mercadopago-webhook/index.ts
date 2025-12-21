@@ -28,14 +28,126 @@ serve(async (req) => {
         return new Response(JSON.stringify({ received: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
-      // Buscar a cobrança para obter o user_id
-      const { data: cobranca, error: cobrancaError } = await supabase
+      console.log('[mercadopago-webhook] Processing payment:', paymentId);
+
+      // ===== ESTRATÉGIA 1: Buscar cobrança diretamente por mp_payment_id (PIX) =====
+      let { data: cobranca } = await supabase
         .from('cobrancas')
         .select('*')
         .eq('mp_payment_id', String(paymentId))
-        .single();
+        .maybeSingle();
 
-      if (cobrancaError || !cobranca) {
+      let payment: any = null;
+      let accessToken: string | null = null;
+
+      // ===== ESTRATÉGIA 2: Se não encontrou, consultar MP e buscar por preference_id (LINK) =====
+      if (!cobranca) {
+        console.log('[mercadopago-webhook] Cobrança não encontrada por mp_payment_id, tentando outras estratégias...');
+
+        // Buscar TODAS as integrações ativas para tentar consultar o pagamento
+        const { data: integrations } = await supabase
+          .from('usuarios_integracoes')
+          .select('user_id, access_token')
+          .eq('provedor', 'mercadopago')
+          .eq('status', 'ativo');
+
+        console.log('[mercadopago-webhook] Encontradas', integrations?.length || 0, 'integrações ativas');
+
+        // Tentar cada token até conseguir consultar o pagamento
+        for (const integration of (integrations || [])) {
+          if (!integration.access_token) continue;
+
+          try {
+            const mpResp = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+              headers: { 'Authorization': `Bearer ${integration.access_token}` }
+            });
+
+            if (mpResp.ok) {
+              payment = await mpResp.json();
+              accessToken = integration.access_token;
+              console.log('[mercadopago-webhook] Pagamento consultado com sucesso:', {
+                status: payment.status,
+                preference_id: payment.preference_id,
+                external_reference: payment.external_reference,
+                amount: payment.transaction_amount
+              });
+              break;
+            }
+          } catch (e) {
+            console.log('[mercadopago-webhook] Erro ao consultar com token:', e);
+          }
+        }
+
+        if (!payment) {
+          console.log('[mercadopago-webhook] Não foi possível consultar pagamento no MP');
+          return new Response(JSON.stringify({ received: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+
+        // ===== ESTRATÉGIA 2A: Buscar por preference_id =====
+        if (payment.preference_id) {
+          console.log('[mercadopago-webhook] Buscando por preference_id:', payment.preference_id);
+          
+          const { data: byPref } = await supabase
+            .from('cobrancas')
+            .select('*')
+            .eq('mp_preference_id', payment.preference_id)
+            .maybeSingle();
+
+          if (byPref) {
+            console.log('[mercadopago-webhook] Cobrança encontrada por preference_id:', byPref.id);
+            cobranca = byPref;
+          }
+        }
+
+        // ===== ESTRATÉGIA 2B: Buscar por external_reference =====
+        if (!cobranca && payment.external_reference) {
+          console.log('[mercadopago-webhook] Buscando por external_reference:', payment.external_reference);
+          
+          // external_reference formato: user_id|cliente_id|session_id
+          const parts = payment.external_reference.split('|');
+          if (parts.length >= 2) {
+            const [userId, clienteId, sessionId] = parts;
+            
+            let query = supabase
+              .from('cobrancas')
+              .select('*')
+              .eq('user_id', userId)
+              .eq('cliente_id', clienteId)
+              .eq('status', 'pendente')
+              .eq('tipo_cobranca', 'link');
+
+            // Adicionar filtro de session_id se existir
+            if (sessionId) {
+              query = query.eq('session_id', sessionId);
+            }
+
+            const { data: byRef } = await query
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+
+            if (byRef) {
+              console.log('[mercadopago-webhook] Cobrança encontrada por external_reference:', byRef.id);
+              cobranca = byRef;
+            }
+          }
+        }
+
+        // ===== IMPORTANTE: Atualizar mp_payment_id para referência futura =====
+        if (cobranca && !cobranca.mp_payment_id) {
+          console.log('[mercadopago-webhook] Atualizando mp_payment_id na cobrança:', cobranca.id);
+          await supabase
+            .from('cobrancas')
+            .update({ 
+              mp_payment_id: String(paymentId),
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', cobranca.id);
+        }
+      }
+
+      // Se ainda não encontrou cobrança, encerrar
+      if (!cobranca) {
         console.log('[mercadopago-webhook] Cobrança não encontrada para payment_id:', paymentId);
         return new Response(JSON.stringify({ received: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
@@ -44,34 +156,40 @@ serve(async (req) => {
         id: cobranca.id,
         session_id: cobranca.session_id,
         cliente_id: cobranca.cliente_id,
-        valor: cobranca.valor
+        valor: cobranca.valor,
+        tipo_cobranca: cobranca.tipo_cobranca
       });
 
-      // Buscar token do MP para este usuário
-      const { data: integration } = await supabase
-        .from('usuarios_integracoes')
-        .select('access_token')
-        .eq('user_id', cobranca.user_id)
-        .eq('provedor', 'mercadopago')
-        .eq('status', 'ativo')
-        .single();
+      // Se ainda não consultamos o pagamento, buscar agora
+      if (!payment) {
+        // Buscar token do MP para este usuário
+        const { data: integration } = await supabase
+          .from('usuarios_integracoes')
+          .select('access_token')
+          .eq('user_id', cobranca.user_id)
+          .eq('provedor', 'mercadopago')
+          .eq('status', 'ativo')
+          .single();
 
-      if (!integration?.access_token) {
-        console.log('[mercadopago-webhook] No MP token found for user, skipping');
-        return new Response(JSON.stringify({ received: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        if (!integration?.access_token) {
+          console.log('[mercadopago-webhook] No MP token found for user, skipping');
+          return new Response(JSON.stringify({ received: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+
+        accessToken = integration.access_token;
+
+        const mpResponse = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+          headers: { 'Authorization': `Bearer ${accessToken}` },
+        });
+
+        if (!mpResponse.ok) {
+          console.error('[mercadopago-webhook] Failed to fetch payment from MP');
+          return new Response(JSON.stringify({ received: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+
+        payment = await mpResponse.json();
       }
 
-      // Consultar status do pagamento no MP
-      const mpResponse = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-        headers: { 'Authorization': `Bearer ${integration.access_token}` },
-      });
-
-      if (!mpResponse.ok) {
-        console.error('[mercadopago-webhook] Failed to fetch payment from MP');
-        return new Response(JSON.stringify({ received: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-      }
-
-      const payment = await mpResponse.json();
       console.log('[mercadopago-webhook] Payment status:', payment.status);
 
       // Mapear status do MP para status interno
@@ -88,10 +206,11 @@ serve(async (req) => {
         .from('cobrancas')
         .update({
           status: newStatus,
+          mp_payment_id: String(paymentId), // Garantir que está atualizado
           data_pagamento: payment.status === 'approved' ? new Date().toISOString() : null,
           updated_at: new Date().toISOString(),
         })
-        .eq('mp_payment_id', String(paymentId))
+        .eq('id', cobranca.id)
         .select()
         .single();
 
@@ -105,13 +224,12 @@ serve(async (req) => {
       // Se pagamento aprovado, criar transação e atualizar valor_pago
       if (newStatus === 'pago' && updatedCobranca.session_id) {
         
-        // IMPORTANTE: Buscar o session_id TEXTO correto da tabela clientes_sessoes
-        // A cobrança pode ter o UUID, mas precisamos do session_id texto para a transação
+        // Buscar o session_id TEXTO correto da tabela clientes_sessoes
         const { data: sessaoData, error: sessaoError } = await supabase
           .from('clientes_sessoes')
           .select('session_id, id')
           .or(`id.eq.${updatedCobranca.session_id},session_id.eq.${updatedCobranca.session_id}`)
-          .single();
+          .maybeSingle();
 
         if (sessaoError) {
           console.error('[mercadopago-webhook] Erro ao buscar sessão:', sessaoError);
@@ -121,13 +239,17 @@ serve(async (req) => {
         const sessionIdParaTransacao = sessaoData?.session_id || updatedCobranca.session_id;
         console.log('[mercadopago-webhook] Session ID para transação:', sessionIdParaTransacao);
 
+        // Descrição da transação baseada no tipo de cobrança
+        const tipoCobrancaLabel = updatedCobranca.tipo_cobranca === 'link' ? 'LINK' : 'PIX';
+        const descricaoTransacao = `Pagamento via ${tipoCobrancaLabel} - MP #${paymentId}`;
+
         // Verificar se já existe transação para este pagamento (evitar duplicatas)
         const { data: existingTx } = await supabase
           .from('clientes_transacoes')
           .select('id')
-          .eq('descricao', `Pagamento via ${updatedCobranca.tipo_cobranca.toUpperCase()} - MP #${paymentId}`)
           .eq('session_id', sessionIdParaTransacao)
-          .single();
+          .ilike('descricao', `%MP #${paymentId}%`)
+          .maybeSingle();
 
         if (existingTx) {
           console.log('[mercadopago-webhook] Transação já existe, pulando criação');
@@ -140,13 +262,13 @@ serve(async (req) => {
             valor: updatedCobranca.valor,
             data_transacao: new Date().toISOString().split('T')[0],
             tipo: 'pagamento',
-            descricao: `Pagamento via ${updatedCobranca.tipo_cobranca.toUpperCase()} - MP #${paymentId}`,
+            descricao: descricaoTransacao,
           });
 
           if (insertError) {
             console.error('[mercadopago-webhook] Erro ao criar transação:', insertError);
           } else {
-            console.log('[mercadopago-webhook] Transação criada com sucesso');
+            console.log('[mercadopago-webhook] Transação criada com sucesso:', descricaoTransacao);
           }
         }
 
