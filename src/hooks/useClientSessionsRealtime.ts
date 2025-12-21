@@ -56,7 +56,7 @@ export function useClientSessionsRealtime(clienteId: string) {
 
       if (sessionsError) throw sessionsError;
 
-      // Buscar transações/pagamentos para cada sessão
+      // Buscar transações/pagamentos + cobranças MP para cada sessão
       const sessionsWithPayments = await Promise.all(
         (sessionsData || []).map(async (session) => {
           // Buscar transações por AMBOS os session_id (texto e UUID)
@@ -72,32 +72,41 @@ export function useClientSessionsRealtime(clienteId: string) {
             console.warn('Erro ao buscar transações:', transacoesError);
           }
 
+          // Buscar cobranças MP pagas para esta sessão
+          const { data: cobrancasPagas } = await supabase
+            .from('cobrancas')
+            .select('*')
+            .or(`session_id.eq.${session.session_id},session_id.eq.${session.id}`)
+            .eq('user_id', user.id)
+            .eq('status', 'pago')
+            .order('data_pagamento', { ascending: false });
+
+          const pagamentos: any[] = [];
+          const addedIds = new Set<string>();
+
           // Converter transações para formato de pagamentos (incluir pendentes)
-          const pagamentos = (transacoesData || []).map(t => {
-            // Extrair paymentId do [ID:...] na descrição, senão usar UUID do Supabase
+          for (const t of (transacoesData || [])) {
             const match = t.descricao?.match(/\[ID:([^\]]+)\]/);
             const paymentId = match ? match[1] : t.id;
+            
+            if (addedIds.has(paymentId)) continue;
+            addedIds.add(paymentId);
 
-            // Determinar se é pago ou pendente
             const isPaid = t.tipo === 'pagamento';
             const isPending = t.tipo === 'ajuste';
 
-            // Extrair número da parcela se existir (ex: "Parcela 2/3")
             const parcelaMatch = t.descricao?.match(/Parcela (\d+)\/(\d+)/);
             const numeroParcela = parcelaMatch ? parseInt(parcelaMatch[1]) : undefined;
             const totalParcelas = parcelaMatch ? parseInt(parcelaMatch[2]) : undefined;
 
-            // Determinar tipo de pagamento
             let tipo: 'pago' | 'agendado' | 'parcelado' = 'pago';
             if (isPending) {
               tipo = totalParcelas ? 'parcelado' : 'agendado';
             }
 
-            // Determinar status
             let statusPagamento: 'pago' | 'pendente' | 'atrasado' = 'pago';
             if (isPending) {
               statusPagamento = 'pendente';
-              // Verificar se está atrasado
               if (t.data_vencimento) {
                 const hoje = new Date();
                 const vencimento = new Date(t.data_vencimento);
@@ -107,7 +116,13 @@ export function useClientSessionsRealtime(clienteId: string) {
               }
             }
 
-            return {
+            // Detectar origem MP pela descrição
+            const isMercadoPago = t.descricao?.toLowerCase().includes('mercado pago') || 
+                                   t.descricao?.toLowerCase().includes('mp #') ||
+                                   t.descricao?.toLowerCase().includes('pix -') ||
+                                   t.descricao?.toLowerCase().includes('link -');
+
+            pagamentos.push({
               id: paymentId,
               valor: Number(t.valor) || 0,
               data: isPaid ? t.data_transacao : '',
@@ -118,10 +133,39 @@ export function useClientSessionsRealtime(clienteId: string) {
               statusPagamento,
               numeroParcela,
               totalParcelas,
-              origem: 'manual' as const,
-              editavel: true
-            };
-          });
+              origem: isMercadoPago ? 'mercadopago' : 'manual',
+              editavel: !isMercadoPago && isPending
+            });
+          }
+
+          // Adicionar cobranças MP pagas que não têm transação correspondente
+          for (const c of (cobrancasPagas || [])) {
+            const paymentId = `mp-${c.mp_payment_id || c.id}`;
+            
+            if (addedIds.has(paymentId)) continue;
+            
+            // Verificar se já existe transação correspondente
+            const hasMatchingTransaction = transacoesData?.some(t => 
+              t.descricao?.includes(`MP #${c.mp_payment_id}`) ||
+              (t.valor === c.valor && t.data_transacao === c.data_pagamento?.split('T')[0])
+            );
+            
+            if (hasMatchingTransaction) continue;
+            
+            addedIds.add(paymentId);
+
+            pagamentos.push({
+              id: paymentId,
+              valor: Number(c.valor) || 0,
+              data: c.data_pagamento ? c.data_pagamento.split('T')[0] : '',
+              forma_pagamento: c.tipo_cobranca === 'pix' ? 'Pix' : 'Link',
+              observacoes: `${c.tipo_cobranca === 'pix' ? 'Pix' : 'Link'} Mercado Pago${c.descricao ? ` - ${c.descricao}` : ''}`,
+              tipo: 'pago' as const,
+              statusPagamento: 'pago' as const,
+              origem: 'mercadopago',
+              editavel: false
+            });
+          }
 
           // ✅ FASE 5: Validação visual - detectar pacote vazio
           if (!session.pacote || session.pacote === '') {

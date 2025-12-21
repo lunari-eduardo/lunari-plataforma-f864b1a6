@@ -15,7 +15,6 @@ import { TipoCobranca, Cobranca } from '@/types/cobranca';
 import { ChargeMethodCard } from './ChargeMethodCard';
 import { ChargePixSection } from './ChargePixSection';
 import { ChargeLinkSection } from './ChargeLinkSection';
-import { ChargeCardSection } from './ChargeCardSection';
 import { ChargeHistory } from './ChargeHistory';
 
 interface ChargeModalProps {
@@ -117,23 +116,6 @@ export function ChargeModal({
     }
   };
 
-  const handleGenerateCard = async () => {
-    // Card checkout uses the same link endpoint but could have specific card config
-    const result = await createLinkCharge({
-      clienteId,
-      sessionId,
-      valor,
-      descricao: descricao || undefined,
-      tipoCobranca: 'card',
-    });
-
-    if (result.success) {
-      setCurrentCharge({
-        checkoutUrl: result.paymentLink,
-        status: 'pendente',
-      });
-    }
-  };
 
   const handleViewCharge = (cobranca: Cobranca) => {
     setSelectedMethod(cobranca.tipoCobranca);
@@ -153,8 +135,7 @@ export function ChargeModal({
 
   const methods: { type: TipoCobranca; icon: React.ReactNode; title: string; description: string }[] = [
     { type: 'pix', icon: <QrCode className="h-5 w-5" />, title: 'Pix', description: 'Imediato' },
-    { type: 'link', icon: <Link2 className="h-5 w-5" />, title: 'Link', description: 'Enviar' },
-    { type: 'card', icon: <CreditCard className="h-5 w-5" />, title: 'Cartão', description: 'Online' },
+    { type: 'link', icon: <Link2 className="h-5 w-5" />, title: 'Link', description: 'Pix + Cartão' },
   ];
 
   return (
@@ -278,15 +259,6 @@ export function ChargeModal({
                   />
                 )}
 
-                {selectedMethod === 'card' && (
-                  <ChargeCardSection
-                    valor={valor}
-                    checkoutUrl={currentCharge?.checkoutUrl}
-                    status={currentCharge?.status}
-                    loading={creatingCharge}
-                    onGenerate={handleGenerateCard}
-                  />
-                )}
               </div>
             </TabsContent>
 

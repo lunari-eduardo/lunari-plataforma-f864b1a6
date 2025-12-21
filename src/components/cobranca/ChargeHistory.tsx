@@ -15,15 +15,11 @@ interface ChargeHistoryProps {
 const tipoIcons: Record<TipoCobranca, React.ReactNode> = {
   pix: <QrCode className="h-4 w-4" />,
   link: <Link2 className="h-4 w-4" />,
-  card: <CreditCard className="h-4 w-4" />,
-  presencial: <Smartphone className="h-4 w-4" />,
 };
 
 const tipoLabels: Record<TipoCobranca, string> = {
   pix: 'Pix',
   link: 'Link',
-  card: 'Cartão',
-  presencial: 'Presencial',
 };
 
 const statusBadges: Record<StatusCobranca, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string }> = {

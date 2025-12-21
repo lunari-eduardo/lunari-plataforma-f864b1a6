@@ -1,4 +1,4 @@
-export type TipoCobranca = 'pix' | 'link' | 'card' | 'presencial';
+export type TipoCobranca = 'pix' | 'link';
 export type StatusCobranca = 'pendente' | 'pago' | 'cancelado' | 'expirado';
 
 export interface Cobranca {
