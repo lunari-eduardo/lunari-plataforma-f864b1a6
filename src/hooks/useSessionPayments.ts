@@ -109,6 +109,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
   const [loadedFromSupabase, setLoadedFromSupabase] = useState(false);
 
   // NOVO: Buscar pagamentos UNIFICADOS do Supabase + Cobranças MP ao iniciar
+  // E CRIAR TRANSAÇÕES AUTOMATICAMENTE para cobranças pagas sem transação
   useEffect(() => {
     const fetchUnifiedPayments = async () => {
       if (!sessionId || loadedFromSupabase) return;
@@ -117,17 +118,34 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        // 1. Buscar session_id texto se sessionId for UUID
+        // 1. Buscar session_id texto e cliente_id se sessionId for UUID
         let textSessionId = sessionId;
+        let clienteId: string | null = null;
+        
         const { data: sessaoData } = await supabase
           .from('clientes_sessoes')
-          .select('session_id')
+          .select('session_id, cliente_id')
           .eq('id', sessionId)
-          .single();
+          .maybeSingle();
         
         if (sessaoData?.session_id) {
           textSessionId = sessaoData.session_id;
+          clienteId = sessaoData.cliente_id;
+        } else {
+          // Tentar buscar pelo session_id como texto
+          const { data: sessaoTexto } = await supabase
+            .from('clientes_sessoes')
+            .select('session_id, cliente_id')
+            .eq('session_id', sessionId)
+            .maybeSingle();
+          
+          if (sessaoTexto) {
+            textSessionId = sessaoTexto.session_id;
+            clienteId = sessaoTexto.cliente_id;
+          }
         }
+
+        console.log('🔍 [useSessionPayments] Session IDs:', { sessionId, textSessionId, clienteId });
 
         // 2. Buscar transações por AMBOS os session_id (UUID e texto)
         const { data: transacoes, error: transError } = await supabase
@@ -156,6 +174,15 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
 
         const allPayments: SessionPaymentExtended[] = [];
         const addedIds = new Set<string>();
+        const transacoesACriar: Array<{
+          user_id: string;
+          cliente_id: string;
+          session_id: string;
+          valor: number;
+          data_transacao: string;
+          tipo: string;
+          descricao: string;
+        }> = [];
 
         // 4. Converter transações para formato de pagamentos
         if (transacoes && transacoes.length > 0) {
@@ -191,10 +218,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
             }
 
             // Detectar origem MP pela descrição
-            const isMercadoPago = t.descricao?.toLowerCase().includes('mercado pago') || 
-                                   t.descricao?.toLowerCase().includes('mp #') ||
-                                   t.descricao?.toLowerCase().includes('pix') ||
-                                   t.descricao?.toLowerCase().includes('link');
+            const isMercadoPago = t.descricao?.toLowerCase().includes('mp #');
             
             allPayments.push({
               id: paymentId,
@@ -212,21 +236,38 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
           }
         }
 
-        // 5. Converter cobranças MP pagas para formato de pagamentos (evitando duplicatas)
+        // 5. Processar cobranças MP pagas - CRIAR TRANSAÇÕES SE FALTAREM
         if (cobrancasPagas && cobrancasPagas.length > 0) {
           console.log('✅ [useSessionPayments] Cobranças MP pagas:', cobrancasPagas.length);
 
           for (const c of cobrancasPagas) {
-            // Usar mp_payment_id como ID para evitar duplicatas
             const paymentId = `mp-${c.mp_payment_id || c.id}`;
             
             if (addedIds.has(paymentId)) continue;
             
             // Verificar se já existe uma transação correspondente pela descrição
             const hasMatchingTransaction = transacoes?.some(t => 
-              t.descricao?.includes(`MP #${c.mp_payment_id}`) ||
-              (t.valor === c.valor && t.data_transacao === c.data_pagamento?.split('T')[0])
+              t.descricao?.includes(`MP #${c.mp_payment_id}`)
             );
+            
+            // Se NÃO tem transação correspondente, criar uma para sincronizar valor_pago
+            if (!hasMatchingTransaction && clienteId && c.mp_payment_id) {
+              const dataPagamento = c.data_pagamento 
+                ? c.data_pagamento.split('T')[0] 
+                : new Date().toISOString().split('T')[0];
+              
+              transacoesACriar.push({
+                user_id: user.id,
+                cliente_id: clienteId,
+                session_id: textSessionId, // Usar session_id TEXTO
+                valor: c.valor,
+                data_transacao: dataPagamento,
+                tipo: 'pagamento',
+                descricao: `Pagamento via ${c.tipo_cobranca === 'pix' ? 'PIX' : 'LINK'} - MP #${c.mp_payment_id}`
+              });
+              
+              console.log('🔄 [useSessionPayments] Transação a criar para cobrança MP:', c.mp_payment_id);
+            }
             
             if (hasMatchingTransaction) continue;
             
@@ -242,6 +283,21 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
               editavel: false,
               observacoes: `${c.tipo_cobranca === 'pix' ? 'Pix' : 'Link'} Mercado Pago${c.descricao ? ` - ${c.descricao}` : ''}`
             });
+          }
+        }
+
+        // 6. CRIAR TRANSAÇÕES FALTANTES para atualizar valor_pago
+        if (transacoesACriar.length > 0) {
+          console.log('📝 [useSessionPayments] Criando', transacoesACriar.length, 'transações MP faltantes...');
+          
+          const { error: insertError } = await supabase
+            .from('clientes_transacoes')
+            .insert(transacoesACriar);
+          
+          if (insertError) {
+            console.error('❌ [useSessionPayments] Erro ao criar transações MP:', insertError);
+          } else {
+            console.log('✅ [useSessionPayments] Transações MP criadas! Trigger irá atualizar valor_pago');
           }
         }
 
