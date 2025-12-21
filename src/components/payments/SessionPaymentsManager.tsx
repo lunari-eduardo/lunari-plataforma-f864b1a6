@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { CreditCard, Plus, Edit, Trash2, CheckCircle2, Calendar, DollarSign, Package, Send, QrCode, Link2 } from 'lucide-react';
+import { CreditCard, Plus, Edit, Trash2, CheckCircle2, Calendar, DollarSign, Package, Send, QrCode, Link2, Loader2 } from 'lucide-react';
 import { formatCurrency } from '@/utils/financialUtils';
 import { formatDateForDisplay } from '@/utils/dateUtils';
 import { useSessionPayments } from '@/hooks/useSessionPayments';
@@ -12,6 +12,7 @@ import { SessionPaymentExtended } from '@/types/sessionPayments';
 import { PaymentConfigModalExpanded } from '@/components/crm/PaymentConfigModalExpanded';
 import { EditPaymentModal } from '@/components/crm/EditPaymentModal';
 import { ChargeModal } from '@/components/cobranca/ChargeModal';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface SessionPaymentsManagerProps {
   sessionData: any;
@@ -78,6 +79,7 @@ export function SessionPaymentsManager({
     totalPago,
     totalAgendado,
     totalPendente,
+    isLoading,
     addPayment,
     editPayment,
     deletePayment,
@@ -237,16 +239,26 @@ export function SessionPaymentsManager({
           </div>
         </CardHeader>
         <CardContent>
-          {payments.length === 0 ? (
+          {isLoading ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Loader2 className="h-8 w-8 mx-auto mb-4 animate-spin text-primary" />
+              <p>Carregando pagamentos...</p>
+              <div className="mt-4 space-y-2">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            </div>
+          ) : payments.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <CreditCard className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>Nenhum pagamento registrado</p>
               <p className="text-sm">Clique em "Adicionar Pagamento" para começar</p>
             </div>
           ) : (
-            <div className="-mx-2 px-2 overflow-x-auto">
+            <div className="-mx-2 px-2 overflow-y-auto max-h-[350px]">
               <Table>
-                <TableHeader>
+                <TableHeader className="sticky top-0 bg-background z-10">
                   <TableRow>
                     <TableHead className="text-xs md:text-sm">Data / Vencimento</TableHead>
                     <TableHead className="text-xs md:text-sm">Valor</TableHead>
@@ -394,11 +406,13 @@ export function SessionPaymentsManager({
   if (displayMode === 'modal') {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-w-6xl h-[85vh] flex flex-col overflow-hidden">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle className="text-lg md:text-xl">Gerenciamento de Pagamentos</DialogTitle>
           </DialogHeader>
-          {content}
+          <div className="flex-1 overflow-y-auto pr-2">
+            {content}
+          </div>
         </DialogContent>
       </Dialog>
     );

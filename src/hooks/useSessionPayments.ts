@@ -107,6 +107,7 @@ const savePaymentsToStorage = (sessionId: string, payments: SessionPaymentExtend
 export function useSessionPayments(sessionId: string, initialPayments: SessionPaymentExtended[] = []) {
   const [payments, setPayments] = useState<SessionPaymentExtended[]>(initialPayments);
   const [loadedFromSupabase, setLoadedFromSupabase] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // NOVO: Buscar pagamentos UNIFICADOS do Supabase + Cobranças MP ao iniciar
   // E CRIAR TRANSAÇÕES AUTOMATICAMENTE para cobranças pagas sem transação
@@ -114,9 +115,14 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
     const fetchUnifiedPayments = async () => {
       if (!sessionId || loadedFromSupabase) return;
 
+      setIsLoading(true);
+
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!user) {
+          setIsLoading(false);
+          return;
+        }
 
         // 1. Buscar session_id texto e cliente_id se sessionId for UUID
         let textSessionId = sessionId;
@@ -125,51 +131,42 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
         const { data: sessaoData } = await supabase
           .from('clientes_sessoes')
           .select('session_id, cliente_id')
-          .eq('id', sessionId)
+          .or(`id.eq.${sessionId},session_id.eq.${sessionId}`)
           .maybeSingle();
         
         if (sessaoData?.session_id) {
           textSessionId = sessaoData.session_id;
           clienteId = sessaoData.cliente_id;
-        } else {
-          // Tentar buscar pelo session_id como texto
-          const { data: sessaoTexto } = await supabase
-            .from('clientes_sessoes')
-            .select('session_id, cliente_id')
-            .eq('session_id', sessionId)
-            .maybeSingle();
-          
-          if (sessaoTexto) {
-            textSessionId = sessaoTexto.session_id;
-            clienteId = sessaoTexto.cliente_id;
-          }
         }
 
         console.log('🔍 [useSessionPayments] Session IDs:', { sessionId, textSessionId, clienteId });
 
-        // 2. Buscar transações por AMBOS os session_id (UUID e texto)
-        const { data: transacoes, error: transError } = await supabase
-          .from('clientes_transacoes')
-          .select('*')
-          .or(`session_id.eq.${sessionId},session_id.eq.${textSessionId}`)
-          .eq('user_id', user.id)
-          .order('data_transacao', { ascending: false });
+        // 2. Buscar transações E cobranças MP EM PARALELO
+        const [transacoesResult, cobrancasResult] = await Promise.all([
+          supabase
+            .from('clientes_transacoes')
+            .select('*')
+            .or(`session_id.eq.${sessionId},session_id.eq.${textSessionId}`)
+            .eq('user_id', user.id)
+            .order('data_transacao', { ascending: false }),
+          supabase
+            .from('cobrancas')
+            .select('*')
+            .or(`session_id.eq.${sessionId},session_id.eq.${textSessionId}`)
+            .eq('user_id', user.id)
+            .eq('status', 'pago')
+            .order('data_pagamento', { ascending: false })
+        ]);
 
-        if (transError) {
-          console.error('❌ [useSessionPayments] Erro ao buscar transações:', transError);
+        const transacoes = transacoesResult.data;
+        const cobrancasPagas = cobrancasResult.data;
+
+        if (transacoesResult.error) {
+          console.error('❌ [useSessionPayments] Erro ao buscar transações:', transacoesResult.error);
         }
 
-        // 3. Buscar cobranças MP pagas para esta sessão
-        const { data: cobrancasPagas, error: cobrancasError } = await supabase
-          .from('cobrancas')
-          .select('*')
-          .or(`session_id.eq.${sessionId},session_id.eq.${textSessionId}`)
-          .eq('user_id', user.id)
-          .eq('status', 'pago')
-          .order('data_pagamento', { ascending: false });
-
-        if (cobrancasError) {
-          console.error('❌ [useSessionPayments] Erro ao buscar cobranças:', cobrancasError);
+        if (cobrancasResult.error) {
+          console.error('❌ [useSessionPayments] Erro ao buscar cobranças:', cobrancasResult.error);
         }
 
         const allPayments: SessionPaymentExtended[] = [];
@@ -307,9 +304,11 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
         }
         
         setLoadedFromSupabase(true);
+        setIsLoading(false);
       } catch (error) {
         console.error('❌ [useSessionPayments] Erro geral:', error);
         setLoadedFromSupabase(true);
+        setIsLoading(false);
       }
     };
 
@@ -620,6 +619,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
     totalPago,
     totalAgendado,
     totalPendente,
+    isLoading,
     setPayments,
     addPayment,
     editPayment,
