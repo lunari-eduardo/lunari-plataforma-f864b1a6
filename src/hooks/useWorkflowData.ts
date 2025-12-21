@@ -216,22 +216,25 @@ export function useWorkflowData(options: UseWorkflowDataOptions) {
     const unsubscribeTransactions = realtimeSubscriptionManager.subscribe(
       'clientes_transacoes',
       {
-        onInsert: (payload) => {
+        onInsert: async (payload) => {
           console.log('💰 useWorkflowData: Payment inserted', payload.new);
-          // Recarregar sessão afetada para atualizar valor_pago
+          // Aguardar trigger completar antes de recarregar (500ms delay)
           if (payload.new.session_id) {
+            await new Promise(resolve => setTimeout(resolve, 500));
             loadData(true);
           }
         },
-        onUpdate: (payload) => {
+        onUpdate: async (payload) => {
           console.log('💰 useWorkflowData: Payment updated', payload.new);
           if (payload.new.session_id) {
+            await new Promise(resolve => setTimeout(resolve, 500));
             loadData(true);
           }
         },
-        onDelete: (payload) => {
+        onDelete: async (payload) => {
           console.log('💰 useWorkflowData: Payment deleted', payload.old);
           if (payload.old.session_id) {
+            await new Promise(resolve => setTimeout(resolve, 500));
             loadData(true);
           }
         }
@@ -260,10 +263,20 @@ export function useWorkflowData(options: UseWorkflowDataOptions) {
       loadData(true);
     };
 
+    // ✅ Listener para pagamentos criados (sincronização em tempo real)
+    const handlePaymentCreated = async (event: CustomEvent) => {
+      console.log('💰 [useWorkflowData] Received payment-created event:', event.detail);
+      // Aguardar trigger completar antes de recarregar
+      await new Promise(resolve => setTimeout(resolve, 500));
+      loadData(true);
+    };
+
     window.addEventListener('workflow-session-created' as any, handleSessionCreated);
+    window.addEventListener('payment-created' as any, handlePaymentCreated);
     
     return () => {
       window.removeEventListener('workflow-session-created' as any, handleSessionCreated);
+      window.removeEventListener('payment-created' as any, handlePaymentCreated);
     };
   }, [loadData]);
 

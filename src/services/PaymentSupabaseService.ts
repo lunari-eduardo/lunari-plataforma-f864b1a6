@@ -108,7 +108,16 @@ export class PaymentSupabaseService {
         cliente_id: sessao.cliente_id
       });
 
-      // 4. O trigger trigger_recompute_session_paid() irá automaticamente:
+      // 4. Disparar evento para sincronização imediata da UI
+      window.dispatchEvent(new CustomEvent('payment-created', {
+        detail: { 
+          sessionId: sessao.session_id, 
+          amount: payment.valor,
+          clienteId: sessao.cliente_id
+        }
+      }));
+
+      // 5. O trigger trigger_recompute_session_paid() irá automaticamente:
       //    - Recalcular valor_pago em clientes_sessoes
       //    - Atualizar updated_at
       //    - Disparar evento realtime para sincronização automática
@@ -444,6 +453,15 @@ export class PaymentSupabaseService {
           observacoes
         });
       }
+
+      // ✅ Disparar evento para sincronização imediata da UI
+      window.dispatchEvent(new CustomEvent('payment-created', {
+        detail: { 
+          sessionId: binding.session_id, 
+          paymentId,
+          clienteId: binding.cliente_id
+        }
+      }));
 
       console.log('✅ Payment marked as paid successfully');
       return true;
