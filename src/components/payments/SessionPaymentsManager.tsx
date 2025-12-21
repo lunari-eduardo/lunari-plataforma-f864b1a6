@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { CreditCard, Plus, Edit, Trash2, CheckCircle2, Calendar, DollarSign, Package, Send } from 'lucide-react';
+import { CreditCard, Plus, Edit, Trash2, CheckCircle2, Calendar, DollarSign, Package, Send, QrCode, Link2 } from 'lucide-react';
 import { formatCurrency } from '@/utils/financialUtils';
 import { formatDateForDisplay } from '@/utils/dateUtils';
 import { useSessionPayments } from '@/hooks/useSessionPayments';
@@ -126,6 +126,13 @@ export function SessionPaymentsManager({
   };
 
   const getOriginIcon = (origem: string, observacoes?: string) => {
+    // Detectar Mercado Pago pela origem ou observações
+    if (origem === 'mercadopago' || observacoes?.toLowerCase().includes('mercado pago')) {
+      if (observacoes?.toLowerCase().includes('pix')) {
+        return <QrCode className="h-3 w-3 text-primary" />;
+      }
+      return <Link2 className="h-3 w-3 text-primary" />;
+    }
     if (observacoes && observacoes.toLowerCase().includes('entrada')) {
       return <DollarSign className="h-3 w-3" />;
     }
@@ -136,12 +143,21 @@ export function SessionPaymentsManager({
         return <CreditCard className="h-3 w-3" />;
       case 'parcelado':
         return <Package className="h-3 w-3" />;
+      case 'supabase':
+        return <DollarSign className="h-3 w-3" />;
       default:
         return <DollarSign className="h-3 w-3" />;
     }
   };
 
   const getOriginLabel = (origem: string, observacoes?: string) => {
+    // Detectar Mercado Pago pela origem ou observações
+    if (origem === 'mercadopago' || observacoes?.toLowerCase().includes('mercado pago')) {
+      if (observacoes?.toLowerCase().includes('pix')) {
+        return 'Pix MP';
+      }
+      return 'Link MP';
+    }
     if (observacoes && observacoes.toLowerCase().includes('entrada')) {
       return 'Entrada';
     }
@@ -149,9 +165,11 @@ export function SessionPaymentsManager({
       case 'agenda':
         return 'Agenda';
       case 'workflow_rapido':
-        return 'Workflow Rápido';
+        return 'Workflow';
       case 'parcelado':
         return 'Parcelado';
+      case 'supabase':
+        return 'Manual';
       default:
         return 'Manual';
     }

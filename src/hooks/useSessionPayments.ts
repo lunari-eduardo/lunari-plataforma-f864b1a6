@@ -108,41 +108,69 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
   const [payments, setPayments] = useState<SessionPaymentExtended[]>(initialPayments);
   const [loadedFromSupabase, setLoadedFromSupabase] = useState(false);
 
-  // NOVO: Buscar pagamentos do Supabase ao iniciar (fonte primária de dados)
+  // NOVO: Buscar pagamentos UNIFICADOS do Supabase + Cobranças MP ao iniciar
   useEffect(() => {
-    const fetchPaymentsFromSupabase = async () => {
+    const fetchUnifiedPayments = async () => {
       if (!sessionId || loadedFromSupabase) return;
 
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        // Buscar transações por session_id (suporta UUID e texto)
-        const { data: transacoes, error } = await supabase
+        // 1. Buscar session_id texto se sessionId for UUID
+        let textSessionId = sessionId;
+        const { data: sessaoData } = await supabase
+          .from('clientes_sessoes')
+          .select('session_id')
+          .eq('id', sessionId)
+          .single();
+        
+        if (sessaoData?.session_id) {
+          textSessionId = sessaoData.session_id;
+        }
+
+        // 2. Buscar transações por AMBOS os session_id (UUID e texto)
+        const { data: transacoes, error: transError } = await supabase
           .from('clientes_transacoes')
           .select('*')
-          .or(`session_id.eq.${sessionId}`)
+          .or(`session_id.eq.${sessionId},session_id.eq.${textSessionId}`)
           .eq('user_id', user.id)
           .order('data_transacao', { ascending: false });
 
-        if (error) {
-          console.error('❌ [useSessionPayments] Erro ao buscar do Supabase:', error);
-          return;
+        if (transError) {
+          console.error('❌ [useSessionPayments] Erro ao buscar transações:', transError);
         }
 
-        if (transacoes && transacoes.length > 0) {
-          console.log('✅ [useSessionPayments] Pagamentos carregados do Supabase:', transacoes.length);
+        // 3. Buscar cobranças MP pagas para esta sessão
+        const { data: cobrancasPagas, error: cobrancasError } = await supabase
+          .from('cobrancas')
+          .select('*')
+          .or(`session_id.eq.${sessionId},session_id.eq.${textSessionId}`)
+          .eq('user_id', user.id)
+          .eq('status', 'pago')
+          .order('data_pagamento', { ascending: false });
 
-          const supabasePayments: SessionPaymentExtended[] = transacoes.map(t => {
-            // Extrair paymentId do [ID:...] na descrição
+        if (cobrancasError) {
+          console.error('❌ [useSessionPayments] Erro ao buscar cobranças:', cobrancasError);
+        }
+
+        const allPayments: SessionPaymentExtended[] = [];
+        const addedIds = new Set<string>();
+
+        // 4. Converter transações para formato de pagamentos
+        if (transacoes && transacoes.length > 0) {
+          console.log('✅ [useSessionPayments] Transações do Supabase:', transacoes.length);
+
+          for (const t of transacoes) {
             const match = t.descricao?.match(/\[ID:([^\]]+)\]/);
             const paymentId = match ? match[1] : t.id;
+            
+            if (addedIds.has(paymentId)) continue;
+            addedIds.add(paymentId);
 
-            // Determinar tipo e status
             const isPaid = t.tipo === 'pagamento';
             const isPending = t.tipo === 'ajuste';
 
-            // Extrair parcelas
             const parcelaMatch = t.descricao?.match(/Parcela (\d+)\/(\d+)/);
             const numeroParcela = parcelaMatch ? parseInt(parcelaMatch[1]) : undefined;
             const totalParcelas = parcelaMatch ? parseInt(parcelaMatch[2]) : undefined;
@@ -162,7 +190,13 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
               }
             }
 
-            return {
+            // Detectar origem MP pela descrição
+            const isMercadoPago = t.descricao?.toLowerCase().includes('mercado pago') || 
+                                   t.descricao?.toLowerCase().includes('mp #') ||
+                                   t.descricao?.toLowerCase().includes('pix') ||
+                                   t.descricao?.toLowerCase().includes('link');
+            
+            allPayments.push({
               id: paymentId,
               valor: Number(t.valor) || 0,
               data: isPaid ? t.data_transacao : '',
@@ -171,21 +205,59 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
               statusPagamento,
               numeroParcela,
               totalParcelas,
-              origem: 'supabase' as const,
-              editavel: isPending, // Apenas pendentes são editáveis
+              origem: isMercadoPago ? 'mercadopago' : 'supabase',
+              editavel: isPending,
               observacoes: t.descricao?.replace(/\s*\[ID:[^\]]+\]/, '') || ''
-            };
-          });
-
-          setPayments(supabasePayments);
-          setLoadedFromSupabase(true);
+            });
+          }
         }
+
+        // 5. Converter cobranças MP pagas para formato de pagamentos (evitando duplicatas)
+        if (cobrancasPagas && cobrancasPagas.length > 0) {
+          console.log('✅ [useSessionPayments] Cobranças MP pagas:', cobrancasPagas.length);
+
+          for (const c of cobrancasPagas) {
+            // Usar mp_payment_id como ID para evitar duplicatas
+            const paymentId = `mp-${c.mp_payment_id || c.id}`;
+            
+            if (addedIds.has(paymentId)) continue;
+            
+            // Verificar se já existe uma transação correspondente pela descrição
+            const hasMatchingTransaction = transacoes?.some(t => 
+              t.descricao?.includes(`MP #${c.mp_payment_id}`) ||
+              (t.valor === c.valor && t.data_transacao === c.data_pagamento?.split('T')[0])
+            );
+            
+            if (hasMatchingTransaction) continue;
+            
+            addedIds.add(paymentId);
+
+            allPayments.push({
+              id: paymentId,
+              valor: Number(c.valor) || 0,
+              data: c.data_pagamento ? c.data_pagamento.split('T')[0] : '',
+              tipo: 'pago',
+              statusPagamento: 'pago',
+              origem: 'mercadopago',
+              editavel: false,
+              observacoes: `${c.tipo_cobranca === 'pix' ? 'Pix' : 'Link'} Mercado Pago${c.descricao ? ` - ${c.descricao}` : ''}`
+            });
+          }
+        }
+
+        if (allPayments.length > 0) {
+          console.log('✅ [useSessionPayments] Total pagamentos unificados:', allPayments.length);
+          setPayments(allPayments);
+        }
+        
+        setLoadedFromSupabase(true);
       } catch (error) {
         console.error('❌ [useSessionPayments] Erro geral:', error);
+        setLoadedFromSupabase(true);
       }
     };
 
-    fetchPaymentsFromSupabase();
+    fetchUnifiedPayments();
   }, [sessionId, loadedFromSupabase]);
 
   // Listener para eventos do AppContext (pagamentos rápidos) - como fallback
