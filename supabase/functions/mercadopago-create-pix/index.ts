@@ -83,21 +83,29 @@ serve(async (req) => {
 
     const { clienteId, sessionId, valor, descricao } = body;
 
-    // FALLBACK: Se clienteId vazio mas temos sessionId, buscar do banco
+    // Buscar cliente e session_id texto
     let clienteIdFinal = clienteId;
-    if (!clienteIdFinal && sessionId) {
-      console.log('[mercadopago-create-pix] clienteId vazio, buscando via sessionId:', sessionId);
+    let textSessionId = sessionId || null;
+    
+    if (sessionId) {
+      console.log('[mercadopago-create-pix] Buscando session_id texto para:', sessionId);
       
-      const { data: session } = await supabase
+      const { data: sessaoData } = await supabase
         .from('clientes_sessoes')
-        .select('cliente_id')
+        .select('cliente_id, session_id')
         .or(`id.eq.${sessionId},session_id.eq.${sessionId}`)
         .eq('user_id', user.id)
         .maybeSingle();
       
-      if (session?.cliente_id) {
-        clienteIdFinal = session.cliente_id;
-        console.log('[mercadopago-create-pix] clienteId resolvido via sessão:', clienteIdFinal);
+      if (sessaoData) {
+        // Usar session_id texto (ex: workflow-xxx)
+        textSessionId = sessaoData.session_id;
+        console.log('[mercadopago-create-pix] session_id texto resolvido:', textSessionId);
+        
+        if (!clienteIdFinal && sessaoData.cliente_id) {
+          clienteIdFinal = sessaoData.cliente_id;
+          console.log('[mercadopago-create-pix] clienteId resolvido via sessão:', clienteIdFinal);
+        }
       }
     }
 
@@ -136,7 +144,7 @@ serve(async (req) => {
         first_name: cliente.nome.split(' ')[0],
         last_name: cliente.nome.split(' ').slice(1).join(' ') || 'Cliente',
       },
-      external_reference: `${user.id}|${clienteIdFinal}|${sessionId || 'avulso'}`,
+      external_reference: `${user.id}|${clienteIdFinal}|${textSessionId || 'avulso'}`,
     };
 
     console.log('[mercadopago-create-pix] Sending to MP:', JSON.stringify(paymentData));
@@ -146,7 +154,7 @@ serve(async (req) => {
       headers: {
         'Authorization': `Bearer ${mercadoPagoToken}`,
         'Content-Type': 'application/json',
-        'X-Idempotency-Key': `${user.id}-${clienteId}-${Date.now()}`,
+        'X-Idempotency-Key': `${user.id}-${clienteIdFinal}-${Date.now()}`,
       },
       body: JSON.stringify(paymentData),
     });
@@ -169,13 +177,13 @@ serve(async (req) => {
     const pixCopiaCola = mpResult.point_of_interaction?.transaction_data?.qr_code;
     const expirationDate = mpResult.date_of_expiration;
 
-    // Save to database
+    // Salvar cobrança com session_id TEXTO
     const { data: cobranca, error: insertError } = await supabase
       .from('cobrancas')
       .insert({
         user_id: user.id,
         cliente_id: clienteIdFinal,
-        session_id: sessionId || null,
+        session_id: textSessionId,
         valor: Number(valor),
         descricao: descricao || `Cobrança Pix - ${cliente.nome}`,
         tipo_cobranca: 'pix',
@@ -194,7 +202,7 @@ serve(async (req) => {
       throw new Error('Falha ao salvar cobrança');
     }
 
-    console.log('[mercadopago-create-pix] Charge saved:', cobranca.id);
+    console.log('[mercadopago-create-pix] Cobrança salva com session_id:', textSessionId);
 
     return new Response(
       JSON.stringify({

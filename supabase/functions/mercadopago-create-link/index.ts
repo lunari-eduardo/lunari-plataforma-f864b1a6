@@ -74,19 +74,27 @@ serve(async (req) => {
 
     // FALLBACK: Se clienteId vazio mas temos sessionId, buscar do banco
     let clienteIdFinal = clienteId;
-    if (!clienteIdFinal && sessionId) {
-      console.log('[mercadopago-create-link] clienteId vazio, buscando via sessionId:', sessionId);
+    let textSessionId = sessionId || null;
+    
+    if (sessionId) {
+      console.log('[mercadopago-create-link] Buscando session_id texto para:', sessionId);
       
-      const { data: session } = await supabase
+      const { data: sessaoData } = await supabase
         .from('clientes_sessoes')
-        .select('cliente_id')
+        .select('cliente_id, session_id')
         .or(`id.eq.${sessionId},session_id.eq.${sessionId}`)
         .eq('user_id', user.id)
         .maybeSingle();
       
-      if (session?.cliente_id) {
-        clienteIdFinal = session.cliente_id;
-        console.log('[mercadopago-create-link] clienteId resolvido via sessão:', clienteIdFinal);
+      if (sessaoData) {
+        // Usar session_id texto (ex: workflow-xxx)
+        textSessionId = sessaoData.session_id;
+        console.log('[mercadopago-create-link] session_id texto resolvido:', textSessionId);
+        
+        if (!clienteIdFinal && sessaoData.cliente_id) {
+          clienteIdFinal = sessaoData.cliente_id;
+          console.log('[mercadopago-create-link] clienteId resolvido via sessão:', clienteIdFinal);
+        }
       }
     }
 
@@ -102,6 +110,9 @@ serve(async (req) => {
 
     if (clienteError || !cliente) throw new Error('Cliente não encontrado');
 
+    // URLs de retorno para o Mercado Pago
+    const baseUrl = 'https://lunari.app';
+    
     const preferenceData = {
       items: [{
         title: descricao || `Cobrança - ${cliente.nome}`,
@@ -113,12 +124,17 @@ serve(async (req) => {
         email: cliente.email || `cliente-${clienteIdFinal.substring(0, 8)}@lunari.app`,
         name: cliente.nome,
       },
-      external_reference: `${user.id}|${clienteIdFinal}|${sessionId || 'avulso'}`,
+      back_urls: {
+        success: `${baseUrl}/pagamento/sucesso`,
+        failure: `${baseUrl}/pagamento/falha`,
+        pending: `${baseUrl}/pagamento/pendente`,
+      },
+      auto_return: 'approved',
+      external_reference: `${user.id}|${clienteIdFinal}|${textSessionId || 'avulso'}`,
       payment_methods: {
         installments: installments || 12,
         excluded_payment_types: [],
       },
-      auto_return: 'approved',
       expires: true,
       expiration_date_from: new Date().toISOString(),
       expiration_date_to: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
@@ -142,12 +158,13 @@ serve(async (req) => {
       throw new Error(mpResult.message || 'Falha ao criar link de pagamento');
     }
 
+    // Salvar cobrança com session_id TEXTO
     const { data: cobranca, error: insertError } = await supabase
       .from('cobrancas')
       .insert({
         user_id: user.id,
         cliente_id: clienteIdFinal,
-        session_id: sessionId || null,
+        session_id: textSessionId,
         valor: Number(valor),
         descricao: descricao || `Link de pagamento - ${cliente.nome}`,
         tipo_cobranca: 'link',
@@ -160,6 +177,8 @@ serve(async (req) => {
       .single();
 
     if (insertError) throw new Error('Falha ao salvar cobrança');
+
+    console.log('[mercadopago-create-link] Cobrança salva com session_id:', textSessionId);
 
     return new Response(
       JSON.stringify({
