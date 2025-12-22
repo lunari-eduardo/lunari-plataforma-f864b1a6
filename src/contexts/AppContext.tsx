@@ -814,6 +814,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       console.log('✅ Pagamento salvo no Supabase - trigger irá recalcular valor_pago automaticamente');
 
+      // ✅ Disparar evento para forçar atualização em tempo real da tabela workflow
+      window.dispatchEvent(new CustomEvent('payment-created', {
+        detail: { sessionId: id, paymentId, valor }
+      }));
+      console.log('📢 Evento payment-created disparado para sessão:', id);
+
       // 2. OPCIONAL: Atualizar localStorage SE a sessão existir lá (compatibilidade)
       try {
         const savedSessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
