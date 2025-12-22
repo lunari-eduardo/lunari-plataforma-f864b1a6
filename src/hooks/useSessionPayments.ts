@@ -215,7 +215,13 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
             }
 
             // Detectar origem MP pela descrição
-            const isMercadoPago = t.descricao?.toLowerCase().includes('mp #');
+            const isMercadoPago = t.descricao?.toLowerCase().includes('mp #') || 
+                                   t.descricao?.toLowerCase().includes('mercado pago');
+            
+            // Permitir edição/exclusão para:
+            // - Pagamentos pendentes (sempre)
+            // - Pagamentos pagos manuais que NÃO são de integração MP
+            const canEdit = isPending || (!isMercadoPago && isPaid);
             
             allPayments.push({
               id: paymentId,
@@ -227,7 +233,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
               numeroParcela,
               totalParcelas,
               origem: isMercadoPago ? 'mercadopago' : 'supabase',
-              editavel: isPending,
+              editavel: canEdit,
               observacoes: t.descricao?.replace(/\s*\[ID:[^\]]+\]/, '') || ''
             });
           }
