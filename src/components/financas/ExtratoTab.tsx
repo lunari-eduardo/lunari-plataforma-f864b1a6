@@ -13,6 +13,8 @@ export default function ExtratoTab() {
     resumo,
     demonstrativo,
     filtros,
+    paginacao,
+    isLoading,
     atualizarFiltros,
     limparFiltros,
     abrirOrigem,
@@ -56,6 +58,8 @@ export default function ExtratoTab() {
             linhas={linhas}
             onAbrirOrigem={abrirOrigem}
             dadosExportacao={prepararDadosExportacao()}
+            paginacao={paginacao}
+            isLoading={isLoading}
           />
         </TabsContent>
         

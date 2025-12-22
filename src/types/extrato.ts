@@ -74,6 +74,14 @@ export interface PreferenciasExtrato {
   };
 }
 
+// Controle de paginação
+export interface ExtratoPaginacao {
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+}
+
 // Dados para exportação
 export interface DadosExportacaoExtrato {
   periodo: {

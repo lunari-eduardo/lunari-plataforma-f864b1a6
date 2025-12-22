@@ -1,19 +1,35 @@
 /**
  * Hook para carregamento e processamento de dados do extrato
- * MIGRADO PARA 100% SUPABASE
+ * MIGRADO PARA 100% SUPABASE COM PAGINAÇÃO
  */
 
 import { useExtratoSupabase } from './useExtratoSupabase';
 
-export function useExtratoData() {
-  // ============= USAR HOOK SUPABASE =============
-  const { linhasExtrato, isLoading } = useExtratoSupabase();
+interface UseExtratoDataParams {
+  dataInicio?: string;
+  dataFim?: string;
+  page?: number;
+  pageSize?: number;
+}
 
-  // ============= DADOS JÁ VÊM DO SUPABASE =============
-  // Não precisa mais carregar de localStorage ou processar manualmente
+export function useExtratoData({
+  dataInicio,
+  dataFim,
+  page,
+  pageSize
+}: UseExtratoDataParams = {}) {
+  // ============= USAR HOOK SUPABASE COM PAGINAÇÃO =============
+  const { 
+    linhasExtrato, 
+    totalCount, 
+    totalPages, 
+    isLoading 
+  } = useExtratoSupabase({ dataInicio, dataFim, page, pageSize });
 
   return {
     linhasExtrato,
+    totalCount,
+    totalPages,
     isLoading,
     // Mantém compatibilidade com hooks que usam esses dados
     transacoesFinanceiras: [],
