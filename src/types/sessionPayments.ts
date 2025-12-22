@@ -3,6 +3,7 @@ export interface SessionPaymentExtended {
   valor: number;
   data: string;
   dataVencimento?: string;
+  createdAt?: string; // Timestamp completo para ordenação e exibição (YYYY-MM-DDTHH:MM:SS)
   tipo: 'pago' | 'agendado' | 'parcelado';
   statusPagamento: 'pendente' | 'pago' | 'atrasado' | 'cancelado';
   numeroParcela?: number;
