@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { CreditCard, Plus, Edit, Trash2, CheckCircle2, Calendar, DollarSign, Package, Send, QrCode, Link2, Loader2 } from 'lucide-react';
 import { formatCurrency } from '@/utils/financialUtils';
-import { formatDateForDisplay } from '@/utils/dateUtils';
+import { formatDateForDisplay, formatDateTimeForDisplay } from '@/utils/dateUtils';
 import { useSessionPayments } from '@/hooks/useSessionPayments';
 import { SessionPaymentExtended } from '@/types/sessionPayments';
 import { PaymentConfigModalExpanded } from '@/components/crm/PaymentConfigModalExpanded';
@@ -271,19 +271,20 @@ export function SessionPaymentsManager({
                 <TableBody>
                   {payments
                     .sort((a, b) => {
-                      const dateA = new Date(a.dataVencimento || a.data || '1970-01-01');
-                      const dateB = new Date(b.dataVencimento || b.data || '1970-01-01');
-                      return dateB.getTime() - dateA.getTime();
+                      // Ordenar por timestamp completo (createdAt) para precisão por hora
+                      const timestampA = a.createdAt || a.dataVencimento || a.data || '';
+                      const timestampB = b.createdAt || b.dataVencimento || b.data || '';
+                      return timestampB.localeCompare(timestampA);
                     })
                     .map(payment => (
                       <TableRow key={payment.id}>
                         <TableCell>
                           <div className="space-y-1">
-                            {payment.statusPagamento === 'pago' && payment.data && (
+                            {payment.statusPagamento === 'pago' && (payment.createdAt || payment.data) && (
                               <div className="flex items-center gap-1 text-sm">
                                 <CheckCircle2 className="h-3 w-3 text-green-600" />
                                 <span className="font-medium">
-                                  {formatDateForDisplay(payment.data)}
+                                  {formatDateTimeForDisplay(payment.createdAt || payment.data)}
                                 </span>
                               </div>
                             )}

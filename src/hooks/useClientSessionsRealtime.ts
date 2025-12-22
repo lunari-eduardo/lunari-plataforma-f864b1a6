@@ -127,6 +127,7 @@ export function useClientSessionsRealtime(clienteId: string) {
               valor: Number(t.valor) || 0,
               data: isPaid ? t.data_transacao : '',
               dataVencimento: t.data_vencimento || undefined,
+              createdAt: t.created_at || undefined, // Timestamp completo para ordenação
               forma_pagamento: '',
               observacoes: t.descricao?.replace(/\s*\[ID:[^\]]+\]/, '') || '',
               tipo,
@@ -167,11 +168,12 @@ export function useClientSessionsRealtime(clienteId: string) {
             });
           }
 
-          // Ordenar pagamentos por data decrescente (mais recente primeiro)
+          // Ordenar pagamentos por timestamp decrescente (mais recente primeiro)
+          // Prioriza createdAt (timestamp completo) para ordenação precisa
           pagamentos.sort((a, b) => {
-            const dateA = a.data || a.dataVencimento || '';
-            const dateB = b.data || b.dataVencimento || '';
-            return dateB.localeCompare(dateA);
+            const timestampA = a.createdAt || a.data || a.dataVencimento || '';
+            const timestampB = b.createdAt || b.data || b.dataVencimento || '';
+            return timestampB.localeCompare(timestampA);
           });
 
           // ✅ FASE 5: Validação visual - detectar pacote vazio

@@ -228,6 +228,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
               valor: Number(t.valor) || 0,
               data: isPaid ? t.data_transacao : '',
               dataVencimento: t.data_vencimento || undefined,
+              createdAt: t.created_at || undefined, // Timestamp completo para ordenação
               tipo,
               statusPagamento,
               numeroParcela,
@@ -307,11 +308,12 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
         if (allPayments.length > 0) {
           console.log('✅ [useSessionPayments] Total pagamentos unificados:', allPayments.length);
           
-          // Ordenar por data decrescente (mais recente primeiro)
+          // Ordenar por timestamp decrescente (mais recente primeiro)
+          // Prioriza createdAt (timestamp completo) para ordenação precisa
           allPayments.sort((a, b) => {
-            const dateA = a.data || a.dataVencimento || '';
-            const dateB = b.data || b.dataVencimento || '';
-            return dateB.localeCompare(dateA);
+            const timestampA = a.createdAt || a.data || a.dataVencimento || '';
+            const timestampB = b.createdAt || b.data || b.dataVencimento || '';
+            return timestampB.localeCompare(timestampA);
           });
           
           setPayments(allPayments);

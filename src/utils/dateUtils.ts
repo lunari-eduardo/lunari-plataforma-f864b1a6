@@ -321,3 +321,33 @@ export function formatDateForInput(date: Date | string): string {
   
   return format(date, 'yyyy-MM-dd');
 }
+
+/**
+ * Formata um timestamp ISO para exibição no padrão brasileiro com hora (DD/MM/YYYY HH:MM)
+ * Suporta tanto formato date-only (YYYY-MM-DD) quanto timestamp completo
+ */
+export function formatDateTimeForDisplay(timestamp: string): string {
+  if (!timestamp) return '';
+  
+  // Se for apenas data (YYYY-MM-DD), retornar formato simples sem hora
+  if (timestamp.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    const [ano, mes, dia] = timestamp.split('-');
+    return `${dia}/${mes}/${ano}`;
+  }
+  
+  // Se for timestamp completo (com T ou espaço), extrair data e hora
+  try {
+    const date = new Date(timestamp);
+    if (isNaN(date.getTime())) return '';
+    
+    const dia = String(date.getDate()).padStart(2, '0');
+    const mes = String(date.getMonth() + 1).padStart(2, '0');
+    const ano = date.getFullYear();
+    const hora = String(date.getHours()).padStart(2, '0');
+    const minuto = String(date.getMinutes()).padStart(2, '0');
+    
+    return `${dia}/${mes}/${ano} ${hora}:${minuto}`;
+  } catch {
+    return '';
+  }
+}
