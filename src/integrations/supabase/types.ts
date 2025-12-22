@@ -1559,6 +1559,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_admin: { Args: never; Returns: boolean }
       recompute_session_paid: {
         Args: { p_session_id: string }
         Returns: undefined
