@@ -110,9 +110,6 @@ serve(async (req) => {
 
     if (clienteError || !cliente) throw new Error('Cliente não encontrado');
 
-    // URLs de retorno para o Mercado Pago
-    const baseUrl = 'https://lunari.app';
-    
     const preferenceData = {
       items: [{
         title: descricao || `Cobrança - ${cliente.nome}`,
@@ -121,15 +118,11 @@ serve(async (req) => {
         currency_id: 'BRL',
       }],
       payer: {
-        email: cliente.email || `cliente-${clienteIdFinal.substring(0, 8)}@lunari.app`,
+        email: cliente.email || `cliente-${clienteIdFinal.substring(0, 8)}@example.com`,
         name: cliente.nome,
       },
-      back_urls: {
-        success: `${baseUrl}/pagamento/sucesso`,
-        failure: `${baseUrl}/pagamento/falha`,
-        pending: `${baseUrl}/pagamento/pendente`,
-      },
-      auto_return: 'approved',
+      // Sem back_urls - cliente permanece na página de sucesso do Mercado Pago
+      // Sem auto_return - evita redirecionamento para domínio inexistente
       external_reference: `${user.id}|${clienteIdFinal}|${textSessionId || 'avulso'}`,
       payment_methods: {
         installments: installments || 12,
