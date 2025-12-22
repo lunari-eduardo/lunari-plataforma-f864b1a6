@@ -266,8 +266,8 @@ export function useWorkflowData(options: UseWorkflowDataOptions) {
     // ✅ Listener para pagamentos criados (sincronização em tempo real)
     const handlePaymentCreated = async (event: CustomEvent) => {
       console.log('💰 [useWorkflowData] Received payment-created event:', event.detail);
-      // Aguardar trigger completar antes de recarregar
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Aguardar trigger SQL completar antes de recarregar (300ms é suficiente)
+      await new Promise(resolve => setTimeout(resolve, 300));
       loadData(true);
     };
 
