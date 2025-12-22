@@ -284,7 +284,7 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
         // Quando pagamento muda, buscar a sessão atualizada com valor_pago recalculado
         const sessionId = (payload.new as any)?.session_id || (payload.old as any)?.session_id;
         if (sessionId) {
-          // Pequeno delay para garantir que trigger do DB calculou valor_pago
+          // Delay aumentado para garantir que trigger do DB calculou valor_pago
           setTimeout(async () => {
             const { data: updatedSession } = await supabase
               .from('clientes_sessoes')
@@ -296,7 +296,7 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
               console.log('💰 [Realtime] Sessão atualizada após pagamento:', updatedSession.id, 'valor_pago:', updatedSession.valor_pago);
               mergeUpdate(updatedSession as WorkflowSession);
             }
-          }, 200);
+          }, 350);
         }
       })
       .subscribe((status) => {
@@ -424,6 +424,58 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
     window.addEventListener('workflow-cache-invalidate', handleInvalidate as EventListener);
     return () => window.removeEventListener('workflow-cache-invalidate', handleInvalidate as EventListener);
   }, [invalidateMonth]);
+
+  // FASE 6: Listener direto para payment-created (backup ao realtime - garante atualização imediata)
+  useEffect(() => {
+    if (!userId) return;
+
+    const handlePaymentCreated = async (event: CustomEvent) => {
+      const { sessionId } = event.detail || {};
+      console.log('💰 [WorkflowCache] payment-created event received:', sessionId);
+      
+      if (!sessionId) return;
+      
+      // Aguardar trigger SQL completar (350ms é seguro para o trigger recompute_session_paid)
+      await new Promise(resolve => setTimeout(resolve, 350));
+      
+      // Buscar sessão atualizada com valor_pago recalculado
+      // Tentar busca por session_id TEXT primeiro, depois por UUID (id)
+      let fullSession = null;
+      
+      const { data: bySessionId } = await supabase
+        .from('clientes_sessoes')
+        .select(`*, clientes(nome, email, telefone, whatsapp)`)
+        .eq('session_id', sessionId)
+        .maybeSingle();
+      
+      if (bySessionId) {
+        fullSession = bySessionId;
+      } else {
+        // Fallback: tentar por UUID (id)
+        const { data: byId } = await supabase
+          .from('clientes_sessoes')
+          .select(`*, clientes(nome, email, telefone, whatsapp)`)
+          .eq('id', sessionId)
+          .maybeSingle();
+        
+        if (byId) fullSession = byId;
+      }
+      
+      if (fullSession) {
+        console.log('✅ [WorkflowCache] Sessão atualizada após pagamento:', 
+          fullSession.id, 'valor_pago:', fullSession.valor_pago);
+        mergeUpdate(fullSession as WorkflowSession);
+      } else {
+        console.warn('⚠️ [WorkflowCache] Sessão não encontrada para sessionId:', sessionId);
+      }
+    };
+    
+    window.addEventListener('payment-created' as any, handlePaymentCreated);
+    
+    return () => {
+      window.removeEventListener('payment-created' as any, handlePaymentCreated);
+    };
+  }, [userId, mergeUpdate]);
 
   const value: WorkflowCacheContextType = {
     getSessionsForMonthSync,
