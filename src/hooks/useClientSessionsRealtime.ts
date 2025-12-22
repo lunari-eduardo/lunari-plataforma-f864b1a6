@@ -167,6 +167,13 @@ export function useClientSessionsRealtime(clienteId: string) {
             });
           }
 
+          // Ordenar pagamentos por data decrescente (mais recente primeiro)
+          pagamentos.sort((a, b) => {
+            const dateA = a.data || a.dataVencimento || '';
+            const dateB = b.data || b.dataVencimento || '';
+            return dateB.localeCompare(dateA);
+          });
+
           // ✅ FASE 5: Validação visual - detectar pacote vazio
           if (!session.pacote || session.pacote === '') {
             console.warn('⚠️ [CRM] Sessão sem pacote definido:', {

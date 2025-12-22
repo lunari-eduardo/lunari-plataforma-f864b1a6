@@ -306,6 +306,14 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
 
         if (allPayments.length > 0) {
           console.log('✅ [useSessionPayments] Total pagamentos unificados:', allPayments.length);
+          
+          // Ordenar por data decrescente (mais recente primeiro)
+          allPayments.sort((a, b) => {
+            const dateA = a.data || a.dataVencimento || '';
+            const dateB = b.data || b.dataVencimento || '';
+            return dateB.localeCompare(dateA);
+          });
+          
           setPayments(allPayments);
         }
         
