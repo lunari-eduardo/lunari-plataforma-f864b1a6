@@ -814,11 +814,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       console.log('✅ Pagamento salvo no Supabase - trigger irá recalcular valor_pago automaticamente');
 
+      // ✅ Buscar session_id TEXT para garantir compatibilidade com WorkflowCacheContext
+      const binding = await PaymentSupabaseService.getSessionBinding(id);
+      const textSessionId = binding?.session_id || id;
+
       // ✅ Disparar evento para forçar atualização em tempo real da tabela workflow
       window.dispatchEvent(new CustomEvent('payment-created', {
-        detail: { sessionId: id, paymentId, valor }
+        detail: { sessionId: textSessionId, paymentId, valor }
       }));
-      console.log('📢 Evento payment-created disparado para sessão:', id);
+      console.log('📢 Evento payment-created disparado para sessão (TEXT):', textSessionId);
 
       // 2. OPCIONAL: Atualizar localStorage SE a sessão existir lá (compatibilidade)
       try {

@@ -255,6 +255,7 @@ export function useWorkflowData(options: UseWorkflowDataOptions) {
 
   /**
    * ✅ FASE 4: Listener para evento de criação de sessão
+   * Nota: payment-created é tratado diretamente no WorkflowCacheContext para evitar reload completo
    */
   useEffect(() => {
     const handleSessionCreated = (event: CustomEvent) => {
@@ -263,20 +264,10 @@ export function useWorkflowData(options: UseWorkflowDataOptions) {
       loadData(true);
     };
 
-    // ✅ Listener para pagamentos criados (sincronização em tempo real)
-    const handlePaymentCreated = async (event: CustomEvent) => {
-      console.log('💰 [useWorkflowData] Received payment-created event:', event.detail);
-      // Aguardar trigger SQL completar antes de recarregar (300ms é suficiente)
-      await new Promise(resolve => setTimeout(resolve, 300));
-      loadData(true);
-    };
-
     window.addEventListener('workflow-session-created' as any, handleSessionCreated);
-    window.addEventListener('payment-created' as any, handlePaymentCreated);
     
     return () => {
       window.removeEventListener('workflow-session-created' as any, handleSessionCreated);
-      window.removeEventListener('payment-created' as any, handlePaymentCreated);
     };
   }, [loadData]);
 
