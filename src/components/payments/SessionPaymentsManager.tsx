@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,7 +14,6 @@ import { PaymentConfigModalExpanded } from '@/components/crm/PaymentConfigModalE
 import { EditPaymentModal } from '@/components/crm/EditPaymentModal';
 import { ChargeModal } from '@/components/cobranca/ChargeModal';
 import { Skeleton } from '@/components/ui/skeleton';
-
 interface SessionPaymentsManagerProps {
   sessionData: any;
   onPaymentUpdate: (sessionId: string, totalPaid: number, fullPaymentsArray?: any[]) => void;
@@ -32,6 +32,7 @@ export function SessionPaymentsManager({
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showChargeModal, setShowChargeModal] = useState(false);
   const [editingPayment, setEditingPayment] = useState<SessionPaymentExtended | null>(null);
+  const [paymentToDelete, setPaymentToDelete] = useState<SessionPaymentExtended | null>(null);
 
   // Convert existing payments to extended format
   const convertExistingPayments = (payments: any[]): SessionPaymentExtended[] => {
@@ -345,7 +346,14 @@ export function SessionPaymentsManager({
                                 <Button
                                   size="sm"
                                   variant="ghost"
-                                  onClick={() => deletePayment(payment.id)}
+                                  onClick={() => {
+                                    // Se pagamento já está pago, pedir confirmação
+                                    if (payment.statusPagamento === 'pago') {
+                                      setPaymentToDelete(payment);
+                                    } else {
+                                      deletePayment(payment.id);
+                                    }
+                                  }}
                                   className="h-8 w-8 p-0 text-destructive hover:text-destructive"
                                 >
                                   <Trash2 className="h-3 w-3 md:h-4 md:w-4" />
@@ -388,6 +396,33 @@ export function SessionPaymentsManager({
           }}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!paymentToDelete} onOpenChange={(open) => !open && setPaymentToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir pagamento confirmado?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Este pagamento de <strong>{paymentToDelete ? formatCurrency(paymentToDelete.valor) : ''}</strong> já foi marcado como pago.
+              Tem certeza que deseja excluí-lo? Esta ação não pode ser desfeita e o valor será removido do total pago.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (paymentToDelete) {
+                  deletePayment(paymentToDelete.id);
+                  setPaymentToDelete(null);
+                }
+              }}
+            >
+              Excluir Pagamento
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Charge Modal */}
       <ChargeModal
