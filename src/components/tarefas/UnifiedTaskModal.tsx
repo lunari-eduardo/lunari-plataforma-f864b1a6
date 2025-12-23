@@ -14,8 +14,8 @@ import {
   SelectModalValue as SelectValue 
 } from '@/components/ui/select-in-modal';
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { useTaskPeople } from '@/hooks/useTaskPeople';
-import { useTaskTags } from '@/hooks/useTaskTags';
+import { useSupabaseTaskPeople } from '@/hooks/useSupabaseTaskPeople';
+import { useSupabaseTaskTags } from '@/hooks/useSupabaseTaskTags';
 import { formatDateForInput, formatDateForStorage } from '@/utils/dateUtils';
 import type { Task, TaskPriority, TaskStatus, TaskType, TaskSection, ChecklistItem } from '@/types/tasks';
 
@@ -112,8 +112,8 @@ export default function UnifiedTaskModal({ open, onOpenChange, onSubmit, initial
     };
   }, [dropdownContext]);
 
-  const { people } = useTaskPeople();
-  const { tags: tagDefs } = useTaskTags();
+  const { people } = useSupabaseTaskPeople();
+  const { tags: tagDefs } = useSupabaseTaskTags();
 
   const handleSelectOpenChange = useCallback((open: boolean, selectType: string) => {
     setOpenDropdowns(prev => ({

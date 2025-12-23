@@ -1307,43 +1307,196 @@ export type Database = {
           },
         ]
       }
+      task_people: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          id: string
+          name: string
+          sort_order: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          name: string
+          sort_order?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          sort_order?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      task_statuses: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          id: string
+          is_done: boolean | null
+          key: string
+          name: string
+          sort_order: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          is_done?: boolean | null
+          key: string
+          name: string
+          sort_order?: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          is_done?: boolean | null
+          key?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      task_tags: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          id: string
+          name: string
+          sort_order: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          name: string
+          sort_order?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          sort_order?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
+          active_sections: Json | null
+          assignee_id: string | null
+          assignee_name: string | null
+          attachments: Json | null
+          call_to_action: string | null
+          captions: Json | null
           category: string | null
+          checked: boolean | null
+          checklist_items: Json | null
           completed_at: string | null
           created_at: string
           description: string | null
           due_date: string | null
+          estimated_hours: number | null
           id: string
+          last_notified_at: string | null
+          notes: string | null
           priority: string | null
+          related_budget_id: string | null
+          related_cliente_id: string | null
+          related_session_id: string | null
+          snooze_until: string | null
+          social_platforms: string[] | null
+          source: string | null
           status: string | null
+          tags: string[] | null
           title: string
+          type: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          active_sections?: Json | null
+          assignee_id?: string | null
+          assignee_name?: string | null
+          attachments?: Json | null
+          call_to_action?: string | null
+          captions?: Json | null
           category?: string | null
+          checked?: boolean | null
+          checklist_items?: Json | null
           completed_at?: string | null
           created_at?: string
           description?: string | null
           due_date?: string | null
+          estimated_hours?: number | null
           id?: string
+          last_notified_at?: string | null
+          notes?: string | null
           priority?: string | null
+          related_budget_id?: string | null
+          related_cliente_id?: string | null
+          related_session_id?: string | null
+          snooze_until?: string | null
+          social_platforms?: string[] | null
+          source?: string | null
           status?: string | null
+          tags?: string[] | null
           title: string
+          type?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          active_sections?: Json | null
+          assignee_id?: string | null
+          assignee_name?: string | null
+          attachments?: Json | null
+          call_to_action?: string | null
+          captions?: Json | null
           category?: string | null
+          checked?: boolean | null
+          checklist_items?: Json | null
           completed_at?: string | null
           created_at?: string
           description?: string | null
           due_date?: string | null
+          estimated_hours?: number | null
           id?: string
+          last_notified_at?: string | null
+          notes?: string | null
           priority?: string | null
+          related_budget_id?: string | null
+          related_cliente_id?: string | null
+          related_session_id?: string | null
+          snooze_until?: string | null
+          social_platforms?: string[] | null
+          source?: string | null
           status?: string | null
+          tags?: string[] | null
           title?: string
+          type?: string | null
           updated_at?: string
           user_id?: string
         }

@@ -16,8 +16,8 @@ import {
   SelectModalValue as SelectValue 
 } from '@/components/ui/select-in-modal';
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { useTaskPeople } from '@/hooks/useTaskPeople';
-import { useTaskTags } from '@/hooks/useTaskTags';
+import { useSupabaseTaskPeople } from '@/hooks/useSupabaseTaskPeople';
+import { useSupabaseTaskTags } from '@/hooks/useSupabaseTaskTags';
 import { formatDateForInput, formatDateForStorage } from '@/utils/dateUtils';
 import type { Task, TaskPriority, TaskStatus } from '@/types/tasks';
 
@@ -87,8 +87,8 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
     };
   }, [dropdownContext]);
 
-  const { people } = useTaskPeople();
-  const { tags: tagDefs } = useTaskTags();
+  const { people } = useSupabaseTaskPeople();
+  const { tags: tagDefs } = useSupabaseTaskTags();
 
   // Prevent modal from closing when clicking on dropdowns
   const handleSelectOpenChange = useCallback((open: boolean, selectType: string) => {
