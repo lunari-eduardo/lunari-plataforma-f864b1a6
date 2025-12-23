@@ -1,7 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
-import { useTasks } from '@/hooks/useTasks';
+import { useSupabaseTasks } from '@/hooks/useSupabaseTasks';
 import { useUserPreferences } from '@/hooks/useUserProfile';
 import { useOrcamentos } from '@/hooks/useOrcamentos';
 import { useAgenda } from '@/hooks/useAgenda';
@@ -12,11 +12,22 @@ function diffInDays(a: Date, b: Date) {
 }
 
 export function useAutomationEngine() {
-  const { addTask } = useTasks();
+  const { addTask } = useSupabaseTasks();
   const { preferences, getPreferencesOrDefault } = useUserPreferences();
   const { orcamentos } = useOrcamentos();
   const { appointments } = useAgenda();
   const timerRef = useRef<number | null>(null);
+
+  // Wrapper para addTask que trata a Promise
+  const createTask = useCallback(async (taskData: Parameters<typeof addTask>[0]) => {
+    try {
+      await addTask(taskData);
+      return true;
+    } catch (error) {
+      console.error('Erro ao criar tarefa automatizada:', error);
+      return false;
+    }
+  }, [addTask]);
 
   useEffect(() => {
     const prefs = preferences ?? getPreferencesOrDefault();
