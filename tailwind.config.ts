@@ -21,6 +21,8 @@ export default {
 		extend: {
 			fontFamily: {
 				sans: ['Inter', 'sans-serif'],
+				serif: ['Playfair Display', 'Georgia', 'serif'],
+				body: ['Source Sans 3', 'Inter', 'sans-serif'],
 			},
 			fontSize: {
 				'2xs': ['0.625rem', { lineHeight: '0.75rem' }],
