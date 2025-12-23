@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import RichTextEditor from '@/components/ui/rich-text-editor';
+import { BlogRichTextEditor } from '@/components/blog/BlogRichTextEditor';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -196,7 +196,7 @@ export default function AdminConteudoEditar() {
           
           <div className="space-y-2">
             <Label>Conteúdo</Label>
-            <RichTextEditor
+            <BlogRichTextEditor
               value={content}
               onChange={setContent}
               placeholder="Escreva o conteúdo do artigo..."
