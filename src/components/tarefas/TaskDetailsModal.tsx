@@ -242,10 +242,7 @@ export default function TaskDetailsModal({
             {/* Actions */}
             <div className="flex gap-2 pt-4">
               <Button
-                onClick={() => {
-                  onOpenChange(false); // Fechar modal de detalhes primeiro
-                  setTimeout(() => setEditOpen(true), 150); // Abrir edição após animação
-                }}
+                onClick={() => setEditOpen(true)}
                 className="flex-1"
               >
                 <Edit3 className="w-4 h-4 mr-2" />
