@@ -1,6 +1,21 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { ReactNode } from 'react';
+import { ReactNode, createContext, useContext } from 'react';
+
+interface SortableBlockContextValue {
+  listeners: Record<string, any> | undefined;
+  attributes: Record<string, any>;
+}
+
+const SortableBlockContext = createContext<SortableBlockContextValue | null>(null);
+
+export function useDragHandle() {
+  const context = useContext(SortableBlockContext);
+  if (!context) {
+    throw new Error('useDragHandle must be used within a SortableBlock');
+  }
+  return context;
+}
 
 interface SortableBlockProps {
   id: string;
@@ -24,8 +39,10 @@ export function SortableBlock({ id, children }: SortableBlockProps) {
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      {children}
-    </div>
+    <SortableBlockContext.Provider value={{ listeners, attributes }}>
+      <div ref={setNodeRef} style={style}>
+        {children}
+      </div>
+    </SortableBlockContext.Provider>
   );
 }
