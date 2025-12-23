@@ -118,13 +118,22 @@ export default function Sidebar() {
           <span>Minha Assinatura</span>
         </DropdownMenuItem>
         {accessState.isAdmin && (
-          <DropdownMenuItem 
-            className="text-xs text-lunar-text hover:bg-lunar-surface/50 rounded cursor-pointer"
-            onClick={() => navigate('/admin/usuarios')}
-          >
-            <Shield className="mr-2 h-3 w-3" />
-            <span>Painel Admin</span>
-          </DropdownMenuItem>
+          <>
+            <DropdownMenuItem 
+              className="text-xs text-lunar-text hover:bg-lunar-surface/50 rounded cursor-pointer"
+              onClick={() => navigate('/admin/usuarios')}
+            >
+              <Shield className="mr-2 h-3 w-3" />
+              <span>Painel Admin</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              className="text-xs text-lunar-text hover:bg-lunar-surface/50 rounded cursor-pointer"
+              onClick={() => navigate('/admin/conteudos')}
+            >
+              <FileText className="mr-2 h-3 w-3" />
+              <span>Conteúdos</span>
+            </DropdownMenuItem>
+          </>
         )}
         <DropdownMenuSeparator className="bg-lunar-border/30" />
         <DropdownMenuItem 

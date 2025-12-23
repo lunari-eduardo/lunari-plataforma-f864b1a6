@@ -197,9 +197,10 @@ export default function AdminConteudoEditar() {
           <div className="space-y-2">
             <Label>Conteúdo</Label>
             <RichTextEditor
-              content={content}
+              value={content}
               onChange={setContent}
               placeholder="Escreva o conteúdo do artigo..."
+              minHeight="400px"
             />
           </div>
         </div>

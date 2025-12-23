@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.mp-create-validation-payment]
 verify_jwt = false
+
+[functions.sitemap]
+verify_jwt = false
