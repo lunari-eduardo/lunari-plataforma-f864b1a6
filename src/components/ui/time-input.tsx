@@ -87,6 +87,10 @@ const TimeInput = React.forwardRef<HTMLInputElement, TimeInputProps>(
         onChange={handleChange}
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
+        // Prevenir propagação em touch devices para evitar que cliques no input disparem eventos no container pai
+        onMouseDown={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
         placeholder={placeholder}
         maxLength={5}
         className={cn(
