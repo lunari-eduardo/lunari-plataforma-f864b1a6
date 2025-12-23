@@ -18,7 +18,7 @@ export default {
 				'2xl': '1400px'
 			}
 		},
-		extend: {
+	extend: {
 			fontFamily: {
 				sans: ['Inter', 'sans-serif'],
 				serif: ['Playfair Display', 'Georgia', 'serif'],
@@ -34,6 +34,64 @@ export default {
 				'0.25': '0.0625rem',
 				'1.25': '0.3125rem',
 				'2.25': '0.5625rem',
+			},
+			// Configuração editorial para tipografia do blog
+			typography: {
+				DEFAULT: {
+					css: {
+						// Espaçamento generoso para parágrafos
+						p: {
+							marginTop: '1.5em',
+							marginBottom: '1.5em',
+							lineHeight: '1.8',
+						},
+						// Hierarquia clara para títulos
+						h2: {
+							marginTop: '2.5em',
+							marginBottom: '1em',
+							fontWeight: '600',
+						},
+						h3: {
+							marginTop: '2em',
+							marginBottom: '0.75em',
+							fontWeight: '600',
+						},
+						// Respiro visual generoso para imagens
+						figure: {
+							marginTop: '2.5em',
+							marginBottom: '2.5em',
+						},
+						figcaption: {
+							marginTop: '0.75em',
+							textAlign: 'center',
+							fontStyle: 'italic',
+						},
+						// Imagens com espaçamento adequado
+						img: {
+							marginTop: '0',
+							marginBottom: '0',
+						},
+						// Blockquotes elegantes
+						blockquote: {
+							paddingLeft: '1.5em',
+							borderLeftWidth: '4px',
+							fontStyle: 'italic',
+						},
+						// Listas com espaçamento
+						ul: {
+							marginTop: '1.25em',
+							marginBottom: '1.25em',
+						},
+						ol: {
+							marginTop: '1.25em',
+							marginBottom: '1.25em',
+						},
+						li: {
+							marginTop: '0.5em',
+							marginBottom: '0.5em',
+						},
+					},
+				},
 			},
 			colors: {
 				// Using HSL variables for proper theme switching
@@ -217,5 +275,8 @@ export default {
 			}
 		}
 	},
-	plugins: [require("tailwindcss-animate")],
+	plugins: [
+		require("tailwindcss-animate"),
+		require("@tailwindcss/typography"),
+	],
 } satisfies Config;
