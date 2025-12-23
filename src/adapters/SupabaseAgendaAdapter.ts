@@ -599,16 +599,27 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
         throw error;
       }
 
+      // Carregar tipos de disponibilidade para buscar cores cadastradas
+      const availabilityTypes = await this.loadAvailabilityTypes();
+      
       // Converter formato Supabase para o formato da aplicação
-      const slots: AvailabilitySlot[] = (data || []).map(slot => ({
-        id: slot.id,
-        date: slot.date,
-        time: slot.start_time,
-        duration: this.calculateDuration(slot.start_time, slot.end_time),
-        typeId: slot.type || 'disponivel',
-        label: slot.description || this.getLabelFromType(slot.type),
-        color: this.getColorFromType(slot.type)
-      }));
+      const slots: AvailabilitySlot[] = (data || []).map(slot => {
+        // Buscar cor do tipo cadastrado pelo usuário
+        const matchingType = availabilityTypes.find(t => t.id === slot.type || t.name.toLowerCase() === slot.type?.toLowerCase());
+        
+        return {
+          id: slot.id,
+          date: slot.date,
+          time: slot.start_time,
+          duration: this.calculateDuration(slot.start_time, slot.end_time),
+          typeId: slot.type || 'disponivel',
+          label: slot.description || matchingType?.name || this.getLabelFromType(slot.type),
+          // Prioridade: cor salva no slot > cor do tipo cadastrado > fallback
+          color: (slot as any).color || matchingType?.color || this.getColorFromType(slot.type),
+          isFullDay: (slot as any).is_full_day || false,
+          fullDayDescription: (slot as any).full_day_description || undefined
+        };
+      });
 
       console.log(`✅ ${slots.length} availability slots carregados do Supabase`);
       return slots;
@@ -672,7 +683,10 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
         start_time: slot.time,
         end_time: this.calculateEndTime(slot.time, slot.duration || 60),
         type: slot.typeId || 'disponivel',
-        description: slot.label || null
+        description: slot.label || null,
+        color: slot.color || null,
+        is_full_day: slot.isFullDay || false,
+        full_day_description: slot.fullDayDescription || null
       }));
 
       // Insert (não upsert, pois são novos registros)
