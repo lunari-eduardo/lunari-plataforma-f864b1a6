@@ -74,7 +74,11 @@ export default function TaskFiltersBar({
         {/* Status Filter */}
         <Select value={filters.status} onValueChange={v => updateFilter('status', v as any)}>
           <SelectTrigger className="h-8 w-32 text-sm">
-            <SelectValue placeholder="Status" />
+            {filters.status === 'all' ? (
+              <span className="text-muted-foreground">Status</span>
+            ) : (
+              <span>{statusOptions.find(s => s.value === filters.status)?.label}</span>
+            )}
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
@@ -86,10 +90,14 @@ export default function TaskFiltersBar({
         <Select value={filters.priority} onValueChange={v => updateFilter('priority', v as any)}>
           <SelectTrigger className="h-8 w-32 text-sm">
             <Flag className="w-3 h-3 mr-1" />
-            <SelectValue placeholder="Prioridade" />
+            {filters.priority === 'all' ? (
+              <span className="text-muted-foreground">Prioridade</span>
+            ) : (
+              <span>{priorityLabels[filters.priority]}</span>
+            )}
           </SelectTrigger>
           <SelectContent>
-            {Object.entries(priorityLabels).map(([key, label]) => <SelectItem key={key} value={key}>{label}</SelectItem>)}
+            {Object.entries(priorityLabels).map(([key, label]) => <SelectItem key={key} value={key}>{key === 'all' ? 'Todas' : label}</SelectItem>)}
           </SelectContent>
         </Select>
 
@@ -97,7 +105,11 @@ export default function TaskFiltersBar({
         <Select value={filters.assignee} onValueChange={v => updateFilter('assignee', v as any)}>
           <SelectTrigger className="h-8 w-36 text-sm">
             <User className="w-3 h-3 mr-1" />
-            <SelectValue placeholder="Responsável" />
+            {filters.assignee === 'all' ? (
+              <span className="text-muted-foreground">Responsável</span>
+            ) : (
+              <span>{assigneeOptions.find(a => a.value === filters.assignee)?.label}</span>
+            )}
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
@@ -109,10 +121,14 @@ export default function TaskFiltersBar({
         <Select value={filters.dateRange} onValueChange={v => updateFilter('dateRange', v as any)}>
           <SelectTrigger className="h-8 w-32 text-sm">
             <Calendar className="w-3 h-3 mr-1" />
-            <SelectValue placeholder="Prazo" />
+            {filters.dateRange === 'all' ? (
+              <span className="text-muted-foreground">Prazo</span>
+            ) : (
+              <span>{dateRangeLabels[filters.dateRange]}</span>
+            )}
           </SelectTrigger>
           <SelectContent>
-            {Object.entries(dateRangeLabels).map(([key, label]) => <SelectItem key={key} value={key}>{label}</SelectItem>)}
+            {Object.entries(dateRangeLabels).map(([key, label]) => <SelectItem key={key} value={key}>{key === 'all' ? 'Todos' : label}</SelectItem>)}
           </SelectContent>
         </Select>
 
@@ -152,7 +168,11 @@ export default function TaskFiltersBar({
               <div className="grid grid-cols-2 gap-2">
                 <Select value={filters.status} onValueChange={v => updateFilter('status', v as any)}>
                   <SelectTrigger className="h-8 text-sm">
-                    <SelectValue placeholder="Status" />
+                    {filters.status === 'all' ? (
+                      <span className="text-muted-foreground">Status</span>
+                    ) : (
+                      <span>{statusOptions.find(s => s.value === filters.status)?.label}</span>
+                    )}
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos</SelectItem>
@@ -163,17 +183,25 @@ export default function TaskFiltersBar({
                 <Select value={filters.priority} onValueChange={v => updateFilter('priority', v as any)}>
                   <SelectTrigger className="h-8 text-sm">
                     <Flag className="w-3 h-3 mr-1" />
-                    <SelectValue placeholder="Prioridade" />
+                    {filters.priority === 'all' ? (
+                      <span className="text-muted-foreground">Prioridade</span>
+                    ) : (
+                      <span>{priorityLabels[filters.priority]}</span>
+                    )}
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.entries(priorityLabels).map(([key, label]) => <SelectItem key={key} value={key}>{label}</SelectItem>)}
+                    {Object.entries(priorityLabels).map(([key, label]) => <SelectItem key={key} value={key}>{key === 'all' ? 'Todas' : label}</SelectItem>)}
                   </SelectContent>
                 </Select>
 
                 <Select value={filters.assignee} onValueChange={v => updateFilter('assignee', v as any)}>
                   <SelectTrigger className="h-8 text-sm">
                     <User className="w-3 h-3 mr-1" />
-                    <SelectValue placeholder="Responsável" />
+                    {filters.assignee === 'all' ? (
+                      <span className="text-muted-foreground">Responsável</span>
+                    ) : (
+                      <span>{assigneeOptions.find(a => a.value === filters.assignee)?.label}</span>
+                    )}
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos</SelectItem>
@@ -184,10 +212,14 @@ export default function TaskFiltersBar({
                 <Select value={filters.dateRange} onValueChange={v => updateFilter('dateRange', v as any)}>
                   <SelectTrigger className="h-8 text-sm">
                     <Calendar className="w-3 h-3 mr-1" />
-                    <SelectValue placeholder="Prazo" />
+                    {filters.dateRange === 'all' ? (
+                      <span className="text-muted-foreground">Prazo</span>
+                    ) : (
+                      <span>{dateRangeLabels[filters.dateRange]}</span>
+                    )}
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.entries(dateRangeLabels).map(([key, label]) => <SelectItem key={key} value={key}>{label}</SelectItem>)}
+                    {Object.entries(dateRangeLabels).map(([key, label]) => <SelectItem key={key} value={key}>{key === 'all' ? 'Todos' : label}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
