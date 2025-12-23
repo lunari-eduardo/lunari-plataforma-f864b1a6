@@ -1,18 +1,12 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import DOMPurify from 'dompurify';
-import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 import { Toggle } from '@/components/ui/toggle';
 import { 
   Bold, 
   Italic, 
   Underline, 
-  List, 
-  ListOrdered, 
-  Link,
   Eye,
-  Edit,
-  Type
+  Edit
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -90,8 +84,8 @@ export default function RichTextEditor({
   const handleInput = useCallback(() => {
     if (editorRef.current) {
       const sanitized = DOMPurify.sanitize(editorRef.current.innerHTML, {
-        ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'ul', 'ol', 'li', 'b', 'i', 'div', 'a'],
-        ALLOWED_ATTR: ['href', 'target']
+        ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'b', 'i', 'div'],
+        ALLOWED_ATTR: []
       });
       onChange(sanitized);
     }
@@ -116,20 +110,6 @@ export default function RichTextEditor({
       }
     }
   }, [execCommand]);
-
-  const convertToMarkdown = (html: string): string => {
-    return html
-      .replace(/<b>|<strong>/g, '**')
-      .replace(/<\/b>|<\/strong>/g, '**')
-      .replace(/<i>|<em>/g, '_')
-      .replace(/<\/i>|<\/em>/g, '_')
-      .replace(/<u>/g, '<u>')
-      .replace(/<\/u>/g, '</u>')
-      .replace(/<br>/g, '\n')
-      .replace(/<div>/g, '\n')
-      .replace(/<\/div>/g, '')
-      .replace(/<[^>]*>/g, '');
-  };
 
   const formatPreview = (html: string): string => {
     if (!html || html.trim() === '') return placeholder;
@@ -170,40 +150,6 @@ export default function RichTextEditor({
           <Underline className="h-4 w-4" />
         </Toggle>
         
-        <Separator orientation="vertical" className="h-6 mx-1" />
-        
-        <Toggle
-          pressed={false}
-          onPressedChange={() => execCommand('insertUnorderedList')}
-          size="sm"
-          aria-label="Bullet List"
-        >
-          <List className="h-4 w-4" />
-        </Toggle>
-        
-        <Toggle
-          pressed={false}
-          onPressedChange={() => execCommand('insertOrderedList')}
-          size="sm"
-          aria-label="Numbered List"
-        >
-          <ListOrdered className="h-4 w-4" />
-        </Toggle>
-        
-        <Separator orientation="vertical" className="h-6 mx-1" />
-        
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => {
-            const url = prompt('Digite a URL:');
-            if (url) execCommand('createLink', url);
-          }}
-        >
-          <Link className="h-4 w-4" />
-        </Button>
-        
         <div className="ml-auto flex items-center gap-1">
           <Toggle
             pressed={isPreview}
@@ -225,7 +171,7 @@ export default function RichTextEditor({
             dangerouslySetInnerHTML={{ 
               __html: DOMPurify.sanitize(
                 formatPreview(value) || `<span class="text-lunar-textSecondary">${placeholder}</span>`,
-                { ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'ul', 'ol', 'li', 'b', 'i', 'span', 'a'], ALLOWED_ATTR: ['href', 'target', 'class'] }
+                { ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'b', 'i', 'span'], ALLOWED_ATTR: ['class'] }
               )
             }}
           />
@@ -241,12 +187,6 @@ export default function RichTextEditor({
             data-placeholder={placeholder}
           />
         )}
-      </div>
-      
-      {/* Helper text */}
-      <div className="px-3 py-1 text-xs text-lunar-textSecondary bg-lunar-background/30 border-t border-lunar-border">
-        <Type className="inline h-3 w-3 mr-1" />
-        Use Ctrl+B para <strong>negrito</strong>, Ctrl+I para <em>itálico</em>, Ctrl+U para <u>sublinhado</u>
       </div>
     </div>
   );
