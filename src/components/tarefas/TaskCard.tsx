@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import type { Task, TaskPriority } from '@/types/tasks';
 import { differenceInCalendarDays } from 'date-fns';
 import { formatDateForDisplay } from '@/utils/dateUtils';
-import { useTaskStatuses } from '@/hooks/useTaskStatuses';
+import { useSupabaseTaskStatuses } from '@/hooks/useSupabaseTaskStatuses';
 
 function daysUntil(dateIso?: string) {
   if (!dateIso) return undefined;
@@ -60,7 +60,7 @@ export default function TaskCard({
   dndStyle?: any;
   isDragging?: boolean;
 }) {
-  const { statuses } = useTaskStatuses();
+  const { statuses } = useSupabaseTaskStatuses();
   
   const dueInfo = useMemo(() => {
     if (isDone || t.completedAt) return null;

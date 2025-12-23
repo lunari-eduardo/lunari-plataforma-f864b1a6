@@ -4,19 +4,16 @@ import { Button } from '@/components/ui/button';
 import { Calendar } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useMemo } from 'react';
-import { useTasks } from '@/hooks/useTasks';
-import { useTaskStatuses } from '@/hooks/useTaskStatuses';
+import { useSupabaseTasks } from '@/hooks/useSupabaseTasks';
+import { useSupabaseTaskStatuses } from '@/hooks/useSupabaseTaskStatuses';
 import { differenceInCalendarDays } from 'date-fns';
 import { parseDateFromStorage, formatDateForDisplay } from '@/utils/dateUtils';
+
 export function HighPriorityDueSoonCard() {
-  const {
-    tasks
-  } = useTasks();
-  const {
-    getDoneKey,
-    statuses
-  } = useTaskStatuses();
+  const { tasks } = useSupabaseTasks();
+  const { getDoneKey, statuses } = useSupabaseTaskStatuses();
   const doneKey = getDoneKey();
+  
   const items = useMemo(() => {
     const today = new Date();
     const todayLocal = new Date(today.getFullYear(), today.getMonth(), today.getDate());
@@ -34,17 +31,22 @@ export function HighPriorityDueSoonCard() {
       days: differenceInCalendarDays(x.due as Date, todayLocal)
     })).filter(x => x.days >= 0 && x.days <= 5).sort((a, b) => (a.due as Date).getTime() - (b.due as Date).getTime());
   }, [tasks, doneKey]);
+  
   const count = items.length;
+  
   const daysLabel = (d: number) => {
     if (d === 0) return 'Hoje';
     if (d === 1) return 'Amanhã';
     return `Em ${d} dias`;
   };
+  
   const getStatusName = (statusKey: string) => {
     const status = statuses.find(s => s.key === statusKey);
     return status?.name || statusKey;
   };
-  return <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300">
+  
+  return (
+    <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300">
       <CardHeader className="pb-3 flex flex-row items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-brand-gradient">
@@ -58,20 +60,23 @@ export function HighPriorityDueSoonCard() {
         </Link>
       </CardHeader>
       <CardContent>
-        {count === 0 ? <p className="text-2xs text-lunar-textSecondary">Nenhuma tarefa vence nos próximos 5 dias.</p> : <ul className="max-h-64 overflow-y-auto space-y-3">
-             {items.map(({
-          t,
-          due,
-          days
-        }) => <li key={t.id} className="p-3 rounded-xl bg-card-gradient shadow-none hover:shadow-card-subtle transition-shadow duration-300">
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-lunar-text truncate" title={t.title}>{t.title}</p>
-                    <p className="text-xs text-lunar-textSecondary mt-1">
-                      {getStatusName(t.status)} • Prazo: {formatDateForDisplay(t.dueDate!)} • {daysLabel(days)}
-                    </p>
-                  </div>
-                </li>)}
-           </ul>}
+        {count === 0 ? (
+          <p className="text-2xs text-lunar-textSecondary">Nenhuma tarefa vence nos próximos 5 dias.</p>
+        ) : (
+          <ul className="max-h-64 overflow-y-auto space-y-3">
+            {items.map(({ t, due, days }) => (
+              <li key={t.id} className="p-3 rounded-xl bg-card-gradient shadow-none hover:shadow-card-subtle transition-shadow duration-300">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-lunar-text truncate" title={t.title}>{t.title}</p>
+                  <p className="text-xs text-lunar-textSecondary mt-1">
+                    {getStatusName(t.status)} • Prazo: {formatDateForDisplay(t.dueDate!)} • {daysLabel(days)}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </CardContent>
-    </Card>;
+    </Card>
+  );
 }

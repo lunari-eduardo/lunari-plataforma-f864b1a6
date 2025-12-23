@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useAgenda } from "@/hooks/useAgenda";
-import { useTasks } from "@/hooks/useTasks";
-import { useTaskStatuses } from "@/hooks/useTaskStatuses";
+import { useSupabaseTasks } from "@/hooks/useSupabaseTasks";
+import { useSupabaseTaskStatuses } from "@/hooks/useSupabaseTaskStatuses";
 import { differenceInCalendarDays } from 'date-fns';
 import { parseDateFromStorage } from '@/utils/dateUtils';
 
@@ -11,11 +11,10 @@ function isSameDay(a: Date, b: Date) {
 
 export default function useTodayOverview() {
   const { appointments } = useAgenda();
-  const { tasks } = useTasks();
-  const { getDoneKey } = useTaskStatuses();
+  const { tasks } = useSupabaseTasks();
+  const { getDoneKey } = useSupabaseTaskStatuses();
 
   const today = new Date();
-  const todayYMD = today.toISOString().slice(0, 10);
 
   const sessionsToday = useMemo(() => {
     return appointments.filter((a) => isSameDay(a.date instanceof Date ? a.date : new Date(a.date), today)).length;
@@ -56,7 +55,7 @@ export default function useTodayOverview() {
         ...x,
         days: differenceInCalendarDays(x.due as Date, todayLocal),
       }))
-      .filter((x) => x.days === 0) // Only tasks due today
+      .filter((x) => x.days === 0)
       .length;
   }, [tasks, getDoneKey, today]);
 

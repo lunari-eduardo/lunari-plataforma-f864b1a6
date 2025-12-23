@@ -4,14 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useTasks } from '@/hooks/useTasks';
-import { useTaskPeople } from '@/hooks/useTaskPeople';
+import { useSupabaseTasks } from '@/hooks/useSupabaseTasks';
+import { useSupabaseTaskPeople } from '@/hooks/useSupabaseTaskPeople';
 import type { Task, TaskStatus } from '@/types/tasks';
 import UnifiedTaskModal from '@/components/tarefas/UnifiedTaskModal';
 import TaskCard from '@/components/tarefas/TaskCard';
 import PriorityLegend from '@/components/tarefas/PriorityLegend';
 import { cn } from '@/lib/utils';
-import { useTaskStatuses } from '@/hooks/useTaskStatuses';
+import { useSupabaseTaskStatuses } from '@/hooks/useSupabaseTaskStatuses';
 import ManageTaskStatusesModal from '@/components/tarefas/ManageTaskStatusesModal';
 import ChecklistPanel from '@/components/tarefas/ChecklistPanel';
 import TaskDetailsModal from '@/components/tarefas/TaskDetailsModal';
@@ -75,13 +75,14 @@ function filterTasks(tasks: Task[], filters: TaskFilters): Task[] {
 export default function Tarefas() {
   const {
     tasks,
+    loading: tasksLoading,
     addTask,
     updateTask,
     deleteTask
-  } = useTasks();
+  } = useSupabaseTasks();
   const {
     people
-  } = useTaskPeople();
+  } = useSupabaseTaskPeople();
   const {
     toast
   } = useToast();
@@ -99,9 +100,10 @@ export default function Tarefas() {
   });
   const {
     statuses,
+    loading: statusesLoading,
     getDoneKey,
     getDefaultOpenKey
-  } = useTaskStatuses();
+  } = useSupabaseTaskStatuses();
   const doneKey = getDoneKey();
   const defaultOpenKey = getDefaultOpenKey();
   const statusOptions = useMemo(() => statuses.map(s => ({
@@ -315,14 +317,14 @@ export default function Tarefas() {
         )}
       </div>
 
-      <UnifiedTaskModal open={createOpen} onOpenChange={setCreateOpen} mode="create" onSubmit={(data: any) => {
-      const t = addTask({
+      <UnifiedTaskModal open={createOpen} onOpenChange={setCreateOpen} mode="create" onSubmit={async (data: any) => {
+      const t = await addTask({
         ...data,
         source: 'manual'
       });
       toast({
         title: 'Tarefa criada',
-        description: t.title
+        description: t?.title || 'Nova tarefa'
       });
     }} />
 

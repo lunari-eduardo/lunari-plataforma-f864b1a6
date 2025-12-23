@@ -5,16 +5,16 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { useTaskStatuses } from '@/hooks/useTaskStatuses';
-import { useTaskPeople } from '@/hooks/useTaskPeople';
-import { useTaskTags } from '@/hooks/useTaskTags';
+import { useSupabaseTaskStatuses } from '@/hooks/useSupabaseTaskStatuses';
+import { useSupabaseTaskPeople } from '@/hooks/useSupabaseTaskPeople';
+import { useSupabaseTaskTags } from '@/hooks/useSupabaseTaskTags';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useMemo, useState } from 'react';
 import { ChevronUp, ChevronDown, X, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 function ManagePeopleSection() {
-  const { people, addPerson, updatePerson, removePerson, movePerson } = useTaskPeople();
+  const { people, addPerson, updatePerson, removePerson, movePerson } = useSupabaseTaskPeople();
   const [name, setName] = useState('');
   const isMobile = useIsMobile();
   
@@ -84,7 +84,7 @@ function ManagePeopleSection() {
 }
 
 function ManageTagsSection() {
-  const { tags, addTag, updateTag, removeTag, moveTag } = useTaskTags();
+  const { tags, addTag, updateTag, removeTag, moveTag } = useSupabaseTaskTags();
   const [name, setName] = useState('');
   const isMobile = useIsMobile();
   
@@ -154,7 +154,7 @@ function ManageTagsSection() {
 }
 
 export default function ManageTaskStatusesModal({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void; }) {
-  const { statuses, addStatus, updateStatus, removeStatus, moveStatus } = useTaskStatuses();
+  const { statuses, addStatus, updateStatus, removeStatus, moveStatus } = useSupabaseTaskStatuses();
   const [newName, setNewName] = useState('');
   const isMobile = useIsMobile();
 
