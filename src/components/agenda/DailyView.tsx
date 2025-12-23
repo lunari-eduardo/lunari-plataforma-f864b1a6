@@ -137,9 +137,6 @@ export default function DailyView({
       {/* Header com botão de adicionar horário */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <span className="font-medium text-sm capitalize">
-            {format(date, 'EEEE', { locale: ptBR })}
-          </span>
           <Popover open={showAddTimeSlot} onOpenChange={setShowAddTimeSlot}>
             <PopoverTrigger asChild>
               <Button variant="outline" size="icon" className="h-7 w-7 rounded-full">
