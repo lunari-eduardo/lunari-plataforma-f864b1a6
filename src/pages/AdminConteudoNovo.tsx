@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { BlogRichTextEditor } from '@/components/blog/BlogRichTextEditor';
+import { BlockEditor } from '@/components/blog/BlockEditor';
 import { ArrowLeft, Save, Eye, Loader2 } from 'lucide-react';
 
 /**
@@ -127,11 +127,10 @@ export default function AdminConteudoNovo() {
           
           <div className="space-y-2">
             <Label>Conteúdo</Label>
-            <BlogRichTextEditor
+            <BlockEditor
               value={content}
               onChange={setContent}
-              placeholder="Escreva o conteúdo do artigo..."
-              minHeight="400px"
+              placeholder="Comece a escrever seu artigo..."
             />
           </div>
         </div>

@@ -62,9 +62,10 @@ export default function ConteudoDetalhe() {
       'strong', 'em', 'u', 'b', 'i',
       'ul', 'ol', 'li',
       'blockquote',
-      'a', 'img'
+      'a', 'img',
+      'figure', 'figcaption'
     ],
-    ALLOWED_ATTR: ['href', 'src', 'alt', 'class', 'target', 'rel']
+    ALLOWED_ATTR: ['href', 'src', 'alt', 'class', 'target', 'rel', 'loading']
   });
 
   return (
@@ -82,7 +83,7 @@ export default function ConteudoDetalhe() {
         <article className="max-w-3xl mx-auto">
           {/* Header do artigo */}
           <header className="mb-8">
-            <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-4 leading-tight">
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold font-serif text-foreground mb-4 leading-tight">
               {post.title}
             </h1>
             
@@ -111,16 +112,21 @@ export default function ConteudoDetalhe() {
             </div>
           )}
           
-          {/* Conteúdo do artigo */}
+          {/* Conteúdo do artigo com tipografia elegante */}
           <div 
-            className="prose prose-lg dark:prose-invert max-w-none
-              prose-headings:text-foreground prose-headings:font-bold
-              prose-p:text-foreground/90 prose-p:leading-relaxed
+            className="prose prose-lg dark:prose-invert max-w-none font-body
+              prose-headings:font-serif prose-headings:text-foreground prose-headings:font-semibold
+              prose-h1:text-3xl prose-h1:mt-12 prose-h1:mb-6
+              prose-h2:text-2xl prose-h2:mt-10 prose-h2:mb-4 prose-h2:border-b prose-h2:border-border prose-h2:pb-2
+              prose-h3:text-xl prose-h3:mt-8 prose-h3:mb-3
+              prose-p:text-foreground/90 prose-p:leading-relaxed prose-p:text-base prose-p:my-4
               prose-a:text-primary prose-a:no-underline hover:prose-a:underline
               prose-strong:text-foreground prose-strong:font-semibold
-              prose-ul:text-foreground/90 prose-ol:text-foreground/90
-              prose-blockquote:border-primary prose-blockquote:bg-muted/50 prose-blockquote:rounded-r-lg prose-blockquote:py-1
-              prose-img:rounded-lg"
+              prose-ul:text-foreground/90 prose-ol:text-foreground/90 prose-li:my-1
+              prose-blockquote:border-l-4 prose-blockquote:border-primary prose-blockquote:bg-muted/30 prose-blockquote:rounded-r-lg prose-blockquote:py-3 prose-blockquote:px-4 prose-blockquote:italic prose-blockquote:font-serif prose-blockquote:text-lg
+              prose-figure:my-8 prose-figure:mx-0
+              prose-figcaption:text-center prose-figcaption:text-sm prose-figcaption:text-muted-foreground prose-figcaption:mt-3 prose-figcaption:italic prose-figcaption:font-body
+              prose-img:rounded-xl prose-img:shadow-lg prose-img:mx-auto"
             dangerouslySetInnerHTML={{ __html: sanitizedContent }}
           />
           
