@@ -156,7 +156,7 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
 
   return (
     <Dialog open={open} onOpenChange={handleModalClose}>
-        <DialogContent className="sm:max-w-xl bg-lunar-surface border-lunar-border">
+        <DialogContent className="sm:max-w-xl bg-lunar-surface border-lunar-border z-[100]">
           <DialogHeader className="space-y-3">
             <DialogTitle className="text-xl font-bold text-lunar-text">
               {mode === 'create' ? 'Nova tarefa' : 'Editar tarefa'}
