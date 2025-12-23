@@ -25,6 +25,7 @@ export default function DailyView({
   onEventClick
 }: DailyViewProps) {
   const [editingTimeSlot, setEditingTimeSlot] = useState<number | null>(null);
+  const [isSavingTimeSlot, setIsSavingTimeSlot] = useState(false);
   const dateKey = format(date, 'yyyy-MM-dd');
   
   const {
@@ -82,12 +83,18 @@ export default function DailyView({
   };
   
   const handleSaveTimeSlot = async (index: number, newTime: string) => {
+    setIsSavingTimeSlot(true);
     const oldTime = timeSlots[index];
     const success = await editTimeSlot(oldTime, newTime);
     
     if (success) {
       setEditingTimeSlot(null);
     }
+    
+    // Delay de segurança para garantir que o estado atualize antes de permitir cliques
+    setTimeout(() => {
+      setIsSavingTimeSlot(false);
+    }, 150);
   };
   return <div className="bg-lunar-bg pb-16 md:pb-4">
       <div className="hidden md:flex justify-center mb-4">
@@ -109,18 +116,41 @@ export default function DailyView({
         const isEditing = editingTimeSlot === index;
         return <div key={`${time}-${index}`} className="flex border border-border rounded-md overflow-hidden py-0 my-[2px] mx-0 px-0">
               <div className="p-3 w-16 flex-shrink-0 text-right text-sm text-muted-foreground relative bg-muted">
-                {isEditing ? <TimeInput value={time} onChange={newTime => handleSaveTimeSlot(index, newTime)} onBlur={() => setEditingTimeSlot(null)} /> : <span onClick={() => events.length === 0 && handleEditTimeSlot(index, time)} className={`block text-xs ${events.length === 0 ? 'cursor-pointer hover:bg-accent/30 rounded px-1 py-0.5' : ''}`} title={events.length === 0 ? 'Clique para editar' : ''}>
+                {isEditing ? (
+                  <div 
+                    onClick={(e) => e.stopPropagation()}
+                    onTouchEnd={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
+                  >
+                    <TimeInput 
+                      value={time} 
+                      onChange={newTime => handleSaveTimeSlot(index, newTime)} 
+                      onBlur={() => setEditingTimeSlot(null)} 
+                    />
+                  </div>
+                ) : (
+                  <span 
+                    onClick={() => events.length === 0 && handleEditTimeSlot(index, time)} 
+                    className={`block text-xs ${events.length === 0 ? 'cursor-pointer hover:bg-accent/30 rounded px-1 py-0.5' : ''}`} 
+                    title={events.length === 0 ? 'Clique para editar' : ''}
+                  >
                     {time}
-                    {events.length > 1 && <span className="block text-[10px] text-muted-foreground/70">
+                    {events.length > 1 && (
+                      <span className="block text-[10px] text-muted-foreground/70">
                         ({events.length})
-                      </span>}
-                  </span>}
+                      </span>
+                    )}
+                  </span>
+                )}
               </div>
               
-              <div onClick={() => events.length === 0 && onCreateSlot({
-            date,
-            time
-          })} className="flex-1 p-2 min-h-[50px] cursor-pointer bg-lunar-surface">
+              <div onClick={() => {
+                // Bloquear clique durante edição ou salvamento (fix para touch devices)
+                if (isEditing || isSavingTimeSlot) return;
+                if (events.length === 0) {
+                  onCreateSlot({ date, time });
+                }
+              }} className="flex-1 p-2 min-h-[50px] cursor-pointer bg-lunar-surface">
                 {events.length > 0 ? <div className="space-y-2">
                     {events.map((event, eventIndex) => <div key={event.id} className="flex items-center gap-2">
                         <div className="flex-1" onClick={e => e.stopPropagation()}>
