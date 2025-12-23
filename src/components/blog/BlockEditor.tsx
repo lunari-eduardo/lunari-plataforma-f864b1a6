@@ -8,7 +8,7 @@ import { ListBlock } from './blocks/ListBlock';
 import { QuoteBlock } from './blocks/QuoteBlock';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { SortableBlock } from './blocks/SortableBlock';
+import { SortableBlock, useDragHandle } from './blocks/SortableBlock';
 
 export interface ContentBlock {
   id: string;
@@ -128,7 +128,11 @@ export function BlockEditor({ value, onChange, placeholder }: BlockEditorProps) 
   const [blocks, setBlocks] = useState<ContentBlock[]>(() => parseHtmlToBlocks(value));
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Só inicia drag após mover 8px
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
@@ -186,13 +190,13 @@ export function BlockEditor({ value, onChange, placeholder }: BlockEditorProps) 
     }
   };
 
-  const BlockTypeSelector = ({ blockId, currentType, onAdd }: { blockId: string; currentType: ContentBlock['type']; onAdd: () => void }) => (
-    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+  const BlockTypeSelector = ({ blockId, currentType }: { blockId: string; currentType: ContentBlock['type'] }) => (
+    <div className="flex items-center gap-1">
       <Button
         variant="ghost"
         size="icon"
         className="h-7 w-7"
-        onClick={() => changeBlockType(blockId, 'paragraph')}
+        onClick={(e) => { e.stopPropagation(); changeBlockType(blockId, 'paragraph'); }}
         title="Parágrafo"
       >
         <Type className={`h-4 w-4 ${currentType === 'paragraph' ? 'text-primary' : ''}`} />
@@ -201,7 +205,7 @@ export function BlockEditor({ value, onChange, placeholder }: BlockEditorProps) 
         variant="ghost"
         size="icon"
         className="h-7 w-7"
-        onClick={() => changeBlockType(blockId, 'h1')}
+        onClick={(e) => { e.stopPropagation(); changeBlockType(blockId, 'h1'); }}
         title="Título H1"
       >
         <Heading1 className={`h-4 w-4 ${currentType === 'h1' ? 'text-primary' : ''}`} />
@@ -210,7 +214,7 @@ export function BlockEditor({ value, onChange, placeholder }: BlockEditorProps) 
         variant="ghost"
         size="icon"
         className="h-7 w-7"
-        onClick={() => changeBlockType(blockId, 'h2')}
+        onClick={(e) => { e.stopPropagation(); changeBlockType(blockId, 'h2'); }}
         title="Título H2"
       >
         <Heading2 className={`h-4 w-4 ${currentType === 'h2' ? 'text-primary' : ''}`} />
@@ -219,7 +223,7 @@ export function BlockEditor({ value, onChange, placeholder }: BlockEditorProps) 
         variant="ghost"
         size="icon"
         className="h-7 w-7"
-        onClick={() => changeBlockType(blockId, 'h3')}
+        onClick={(e) => { e.stopPropagation(); changeBlockType(blockId, 'h3'); }}
         title="Título H3"
       >
         <Heading3 className={`h-4 w-4 ${currentType === 'h3' ? 'text-primary' : ''}`} />
@@ -228,7 +232,7 @@ export function BlockEditor({ value, onChange, placeholder }: BlockEditorProps) 
         variant="ghost"
         size="icon"
         className="h-7 w-7"
-        onClick={() => changeBlockType(blockId, 'image')}
+        onClick={(e) => { e.stopPropagation(); changeBlockType(blockId, 'image'); }}
         title="Imagem"
       >
         <Image className={`h-4 w-4 ${currentType === 'image' ? 'text-primary' : ''}`} />
@@ -237,7 +241,7 @@ export function BlockEditor({ value, onChange, placeholder }: BlockEditorProps) 
         variant="ghost"
         size="icon"
         className="h-7 w-7"
-        onClick={() => changeBlockType(blockId, 'list')}
+        onClick={(e) => { e.stopPropagation(); changeBlockType(blockId, 'list'); }}
         title="Lista"
       >
         <List className={`h-4 w-4 ${currentType === 'list' ? 'text-primary' : ''}`} />
@@ -246,7 +250,7 @@ export function BlockEditor({ value, onChange, placeholder }: BlockEditorProps) 
         variant="ghost"
         size="icon"
         className="h-7 w-7"
-        onClick={() => changeBlockType(blockId, 'quote')}
+        onClick={(e) => { e.stopPropagation(); changeBlockType(blockId, 'quote'); }}
         title="Citação"
       >
         <Quote className={`h-4 w-4 ${currentType === 'quote' ? 'text-primary' : ''}`} />
@@ -256,13 +260,48 @@ export function BlockEditor({ value, onChange, placeholder }: BlockEditorProps) 
         variant="ghost"
         size="icon"
         className="h-7 w-7 text-destructive hover:text-destructive"
-        onClick={() => deleteBlock(blockId)}
+        onClick={(e) => { e.stopPropagation(); deleteBlock(blockId); }}
         title="Remover bloco"
       >
         <Trash2 className="h-4 w-4" />
       </Button>
     </div>
   );
+
+  // Componente interno para usar o hook useDragHandle dentro do contexto
+  const BlockWrapper = ({ block, index }: { block: ContentBlock; index: number }) => {
+    const { listeners, attributes } = useDragHandle();
+    
+    return (
+      <div className="group flex items-start gap-2 p-3">
+        <div 
+          {...listeners} 
+          {...attributes}
+          className="flex items-center gap-1 pt-2 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground touch-none"
+        >
+          <GripVertical className="h-4 w-4" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <span className="text-xs font-medium text-muted-foreground uppercase">
+              {block.type === 'paragraph' && 'Parágrafo'}
+              {block.type === 'h1' && 'Título H1'}
+              {block.type === 'h2' && 'Título H2'}
+              {block.type === 'h3' && 'Título H3'}
+              {block.type === 'image' && 'Imagem'}
+              {block.type === 'list' && 'Lista'}
+              {block.type === 'quote' && 'Citação'}
+            </span>
+            <BlockTypeSelector
+              blockId={block.id}
+              currentType={block.type}
+            />
+          </div>
+          {renderBlock(block, index)}
+        </div>
+      </div>
+    );
+  };
 
   const renderBlock = (block: ContentBlock, index: number) => {
     const commonProps = {
@@ -314,30 +353,7 @@ export function BlockEditor({ value, onChange, placeholder }: BlockEditorProps) 
           <div className="divide-y divide-border">
             {blocks.map((block, index) => (
               <SortableBlock key={block.id} id={block.id}>
-                <div className="group flex items-start gap-2 p-3">
-                  <div className="flex items-center gap-1 pt-2 cursor-grab active:cursor-grabbing text-muted-foreground">
-                    <GripVertical className="h-4 w-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2 mb-2">
-                      <span className="text-xs font-medium text-muted-foreground uppercase">
-                        {block.type === 'paragraph' && 'Parágrafo'}
-                        {block.type === 'h1' && 'Título H1'}
-                        {block.type === 'h2' && 'Título H2'}
-                        {block.type === 'h3' && 'Título H3'}
-                        {block.type === 'image' && 'Imagem'}
-                        {block.type === 'list' && 'Lista'}
-                        {block.type === 'quote' && 'Citação'}
-                      </span>
-                      <BlockTypeSelector
-                        blockId={block.id}
-                        currentType={block.type}
-                        onAdd={() => addBlock('paragraph', index)}
-                      />
-                    </div>
-                    {renderBlock(block, index)}
-                  </div>
-                </div>
+                <BlockWrapper block={block} index={index} />
               </SortableBlock>
             ))}
           </div>

@@ -64,6 +64,7 @@ export function ImageBlock({ imageUrl, imageCaption, imageAlt, onUpdate }: Image
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     const file = e.dataTransfer.files[0];
     if (file) handleFileUpload(file);
   }, [handleFileUpload]);
@@ -95,7 +96,7 @@ export function ImageBlock({ imageUrl, imageCaption, imageAlt, onUpdate }: Image
             variant="destructive"
             size="icon"
             className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-            onClick={removeImage}
+            onClick={(e) => { e.stopPropagation(); removeImage(); }}
           >
             <X className="h-4 w-4" />
           </Button>
@@ -141,14 +142,15 @@ export function ImageBlock({ imageUrl, imageCaption, imageAlt, onUpdate }: Image
       <TabsContent value="upload" className="mt-3">
         <div
           onDrop={handleDrop}
-          onDragOver={(e) => e.preventDefault()}
+          onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
           className="border-2 border-dashed rounded-lg p-8 text-center hover:border-primary/50 transition-colors cursor-pointer"
-          onClick={() => {
+          onClick={(e) => {
+            e.stopPropagation();
             const input = document.createElement('input');
             input.type = 'file';
             input.accept = 'image/*';
-            input.onchange = (e) => {
-              const file = (e.target as HTMLInputElement).files?.[0];
+            input.onchange = (ev) => {
+              const file = (ev.target as HTMLInputElement).files?.[0];
               if (file) handleFileUpload(file);
             };
             input.click();
@@ -181,7 +183,7 @@ export function ImageBlock({ imageUrl, imageCaption, imageAlt, onUpdate }: Image
             placeholder="https://exemplo.com/imagem.jpg"
             onKeyDown={(e) => e.key === 'Enter' && handleUrlSubmit()}
           />
-          <Button onClick={handleUrlSubmit} disabled={!urlInput.trim()}>
+          <Button onClick={(e) => { e.stopPropagation(); handleUrlSubmit(); }} disabled={!urlInput.trim()}>
             Adicionar
           </Button>
         </div>
