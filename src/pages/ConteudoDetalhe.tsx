@@ -34,8 +34,28 @@ export default function ConteudoDetalhe() {
 
   const canonicalUrl = `https://www.lunariplataforma.com.br/conteudos/${post.slug}`;
   
+  // Decodificar HTML entities caso o conteúdo tenha sido escapado incorretamente
+  const decodeHtmlEntities = (text: string): string => {
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = text;
+    return textarea.value;
+  };
+
+  // Remover tags wrapper indesejadas (h2 com data-attributes) e limpar conteúdo
+  const cleanContent = (html: string): string => {
+    // Decodificar entities escapadas
+    let cleaned = decodeHtmlEntities(html);
+    // Remover tags h2 vazias com atributos data-*
+    cleaned = cleaned.replace(/<h2[^>]*data-[^>]*>(\s*<br\s*\/?>\s*)?<\/h2>/gi, '');
+    // Remover <br> soltos entre tags
+    cleaned = cleaned.replace(/<\/h[1-6]>\s*<br\s*\/?>\s*<h[1-6]/gi, (match) => 
+      match.replace(/<br\s*\/?>/gi, '')
+    );
+    return cleaned;
+  };
+  
   // Sanitizar conteúdo HTML com tags semânticas permitidas para SEO
-  const sanitizedContent = DOMPurify.sanitize(post.content, {
+  const sanitizedContent = DOMPurify.sanitize(cleanContent(post.content), {
     ALLOWED_TAGS: [
       'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
       'p', 'br', 'div', 'span',
