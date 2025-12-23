@@ -108,9 +108,11 @@ function App() {
                     <Toaster />
                     <Sonner />
                   <Routes>
-                    {/* Public routes */}
+                    {/* Public routes - no auth required */}
                     <Route path="/landing" element={<LandingPage />} />
                     <Route path="/auth" element={<Auth />} />
+                    <Route path="/conteudos" element={<Conteudos />} />
+                    <Route path="/conteudos/:slug" element={<ConteudoDetalhe />} />
                     
                     {/* Protected subscription routes (outside main layout) */}
                     <Route path="/escolher-plano" element={
@@ -179,6 +181,21 @@ function App() {
                       <Route path="/admin/usuarios" element={
                         <AdminRoute>
                           <AdminUsuarios />
+                        </AdminRoute>
+                      } />
+                      <Route path="/admin/conteudos" element={
+                        <AdminRoute>
+                          <AdminConteudos />
+                        </AdminRoute>
+                      } />
+                      <Route path="/admin/conteudos/novo" element={
+                        <AdminRoute>
+                          <AdminConteudoNovo />
+                        </AdminRoute>
+                      } />
+                      <Route path="/admin/conteudos/editar/:id" element={
+                        <AdminRoute>
+                          <AdminConteudoEditar />
                         </AdminRoute>
                       } />
                       <Route path="*" element={<NotFound />} />
