@@ -34,8 +34,18 @@ export default function ConteudoDetalhe() {
 
   const canonicalUrl = `https://www.lunariplataforma.com.br/conteudos/${post.slug}`;
   
-  // Sanitizar conteúdo HTML
-  const sanitizedContent = DOMPurify.sanitize(post.content);
+  // Sanitizar conteúdo HTML com tags semânticas permitidas para SEO
+  const sanitizedContent = DOMPurify.sanitize(post.content, {
+    ALLOWED_TAGS: [
+      'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+      'p', 'br', 'div', 'span',
+      'strong', 'em', 'u', 'b', 'i',
+      'ul', 'ol', 'li',
+      'blockquote',
+      'a', 'img'
+    ],
+    ALLOWED_ATTR: ['href', 'src', 'alt', 'class', 'target', 'rel']
+  });
 
   return (
     <div className="min-h-screen bg-background">
