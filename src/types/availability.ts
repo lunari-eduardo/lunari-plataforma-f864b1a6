@@ -15,4 +15,6 @@ export interface AvailabilitySlot {
   typeId?: string; // ID do tipo de disponibilidade
   label?: string; // Cache do nome do tipo
   color?: string; // Cache da cor do tipo
+  isFullDay?: boolean; // Indica se é dia todo
+  fullDayDescription?: string; // Descrição para exibir no banner de dia todo
 }

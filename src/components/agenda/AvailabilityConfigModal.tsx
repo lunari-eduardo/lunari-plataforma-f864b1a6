@@ -7,6 +7,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { format, addDays } from 'date-fns';
 import { useEffect, useMemo, useState } from 'react';
 import { useAvailability } from '@/hooks/useAvailability';
@@ -50,6 +51,8 @@ export default function AvailabilityConfigModal({
   const [editingTypeId, setEditingTypeId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
   const [editingColor, setEditingColor] = useState('');
+  const [isFullDay, setIsFullDay] = useState(false);
+  const [fullDayDescription, setFullDayDescription] = useState('');
   const weekDaysLabels = useMemo(() => ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'], []);
   const allWeekdays = useMemo(() => [0, 1, 2, 3, 4, 5, 6], []);
   const allSelected = selectedWeekdays.length === 7;
@@ -61,6 +64,8 @@ export default function AvailabilityConfigModal({
     setTimesList(initialTime ? [initialTime] : []);
     setStartDate(date);
     setEndDate(date);
+    setIsFullDay(false);
+    setFullDayDescription('');
     // Select first available type or default
     if (availabilityTypes.length > 0 && !selectedTypeId) {
       setSelectedTypeId(availabilityTypes[0].id);
@@ -108,16 +113,62 @@ export default function AvailabilityConfigModal({
   // Sem sincronização automática de término/duração: usando lista manual de horários
 
   const handleSave = async () => {
+    if (startDate > endDate) {
+      toast.error('Data inicial não pode ser maior que a final.');
+      return;
+    }
+
+    const selectedType = availabilityTypes.find(type => type.id === selectedTypeId);
+    const targetDates = computeTargetDatesBetween(startDate, endDate, selectedWeekdays);
+    
+    // Se é dia todo, criar slot especial
+    if (isFullDay) {
+      const toAdd: AvailabilitySlot[] = [];
+      
+      for (const d of targetDates) {
+        const ds = format(d, 'yyyy-MM-dd');
+        
+        // Remover slots existentes do dia se "substituir existentes" estiver marcado
+        if (clearExisting) {
+          availability.filter(a => a.date === ds).forEach(a => deleteAvailabilitySlot(a.id));
+        }
+        
+        toAdd.push({
+          id: '',
+          date: ds,
+          time: '00:00',
+          duration: 1440, // 24 horas em minutos
+          typeId: selectedTypeId,
+          label: selectedType?.name,
+          color: selectedType?.color,
+          isFullDay: true,
+          fullDayDescription: fullDayDescription.trim() || undefined
+        });
+      }
+      
+      if (toAdd.length === 0) {
+        toast.error('Nenhum dia selecionado.');
+        return;
+      }
+      
+      try {
+        await addAvailabilitySlots(toAdd);
+        toast.success(`Dia todo marcado em ${toAdd.length} dia(s).`);
+        onClose();
+      } catch (error) {
+        console.error('❌ Erro ao salvar dia todo:', error);
+        toast.error('Erro ao salvar. Verifique o console.');
+      }
+      return;
+    }
+
+    // Fluxo normal para horários específicos
     const times = normalizeTimes(timesList);
     if (times.length === 0) {
       toast.error('Adicione pelo menos um horário válido (HH:mm).');
       return;
     }
-    if (startDate > endDate) {
-      toast.error('Data inicial não pode ser maior que a final.');
-      return;
-    }
-    const targetDates = computeTargetDatesBetween(startDate, endDate, selectedWeekdays);
+    
     const appointmentKeys = new Set(appointments.map(a => {
       // ✅ CORREÇÃO TIMEZONE: Usar formatDateForInput para evitar desvio
       const dateStr = typeof a.date === 'string' ? a.date : formatDateForInput(a.date);
@@ -140,7 +191,6 @@ export default function AvailabilityConfigModal({
           availability.filter(a => a.date === ds && a.time === t).forEach(a => deleteAvailabilitySlot(a.id));
         }
         if (!existingAvailabilitySet.has(key) && !addedKeys.has(key)) {
-          const selectedType = availabilityTypes.find(type => type.id === selectedTypeId);
           toAdd.push({
             id: '',
             date: ds,
@@ -366,25 +416,56 @@ export default function AvailabilityConfigModal({
             
           </div>
 
-          <div className="col-span-1 md:col-span-2 space-y-2">
-            <Label>Horários a liberar</Label>
-            <div className="space-y-2">
-              {timesList.length === 0}
-              {timesList.map((t, idx) => <div key={idx} className="flex items-center gap-2">
-                  <div className="w-28">
-                    <TimeInput value={t} onChange={v => updateTimeAt(idx, v)} />
-                  </div>
-                  <Button variant="ghost" onClick={() => removeTimeAt(idx)}>Remover</Button>
-                </div>)}
-              <Button variant="secondary" onClick={addTimeRow}>+ Adicionar horário</Button>
-              <p className="text-[11px] text-muted-foreground">Os horários serão criados apenas onde não houver agendamento.</p>
+          {/* Opção Dia Todo */}
+          <div className="col-span-1 md:col-span-2 flex items-center justify-between rounded-md border p-3">
+            <div>
+              <p className="text-sm font-medium">Dia todo</p>
+              <p className="text-xs text-muted-foreground">Marcar como ocupado o dia inteiro</p>
             </div>
+            <Switch checked={isFullDay} onCheckedChange={setIsFullDay} />
           </div>
+
+          {isFullDay && (
+            <div className="col-span-1 md:col-span-2 space-y-2">
+              <Label>Descrição (exibida no topo da agenda)</Label>
+              <Textarea 
+                value={fullDayDescription}
+                onChange={(e) => setFullDayDescription(e.target.value)}
+                placeholder="Ex: Feriado, Férias, Atendimento externo..."
+                className="resize-none"
+                rows={2}
+              />
+            </div>
+          )}
+
+          {/* Horários a liberar - escondido quando é dia todo */}
+          {!isFullDay && (
+            <div className="col-span-1 md:col-span-2 space-y-2">
+              <Label>Horários a liberar</Label>
+              <div className="space-y-2">
+                {timesList.map((t, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <div className="w-28">
+                      <TimeInput value={t} onChange={v => updateTimeAt(idx, v)} />
+                    </div>
+                    <Button variant="ghost" onClick={() => removeTimeAt(idx)}>Remover</Button>
+                  </div>
+                ))}
+                <Button variant="secondary" onClick={addTimeRow}>+ Adicionar horário</Button>
+                <p className="text-[11px] text-muted-foreground">Os horários serão criados apenas onde não houver agendamento.</p>
+              </div>
+            </div>
+          )}
 
           <div className="col-span-1 md:col-span-2 flex items-center justify-between rounded-md border p-3">
             <div>
               <p className="text-sm font-medium">Substituir existentes</p>
-              <p className="text-xs text-muted-foreground">Remove apenas os mesmos horários que já existirem nestes dias</p>
+              <p className="text-xs text-muted-foreground">
+                {isFullDay 
+                  ? 'Remove todas as disponibilidades existentes nos dias selecionados'
+                  : 'Remove apenas os mesmos horários que já existirem nestes dias'
+                }
+              </p>
             </div>
             <Switch checked={clearExisting} onCheckedChange={setClearExisting} />
           </div>

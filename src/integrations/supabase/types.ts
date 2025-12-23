@@ -120,33 +120,42 @@ export type Database = {
       }
       availability_slots: {
         Row: {
+          color: string | null
           created_at: string
           date: string
           description: string | null
           end_time: string
+          full_day_description: string | null
           id: string
+          is_full_day: boolean | null
           start_time: string
           type: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          color?: string | null
           created_at?: string
           date: string
           description?: string | null
           end_time: string
+          full_day_description?: string | null
           id?: string
+          is_full_day?: boolean | null
           start_time: string
           type?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          color?: string | null
           created_at?: string
           date?: string
           description?: string | null
           end_time?: string
+          full_day_description?: string | null
           id?: string
+          is_full_day?: boolean | null
           start_time?: string
           type?: string | null
           updated_at?: string
