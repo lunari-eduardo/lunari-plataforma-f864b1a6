@@ -71,50 +71,34 @@ const SelectModalContent = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Content>,
   SelectModalContentProps
 >(({ className, children, position = "popper", container, ...props }, ref) => {
-  // Find the modal container or use document.body as fallback
+  const triggerRef = React.useRef<HTMLElement | null>(null);
+
+  // Find the closest modal container to the trigger, not the first in DOM
   const modalContainer = React.useMemo(() => {
     if (container) return container;
     
-    // Try to find the modal dialog element in the DOM
-    const dialogElement = document.querySelector('[role="dialog"]');
-    if (dialogElement) return dialogElement as HTMLElement;
+    // Find the trigger element first, then its closest dialog
+    const trigger = document.querySelector('[data-radix-select-trigger][data-state]');
+    if (trigger) {
+      const closestDialog = trigger.closest('[role="dialog"]');
+      if (closestDialog) return closestDialog as HTMLElement;
+    }
+    
+    // Fallback: find the last (topmost) dialog in DOM order
+    const dialogs = document.querySelectorAll('[role="dialog"]');
+    if (dialogs.length > 0) {
+      return dialogs[dialogs.length - 1] as HTMLElement;
+    }
     
     return document.body;
   }, [container]);
-
-  // Auto-cleanup on unmount
-  React.useEffect(() => {
-    return () => {
-      // Force cleanup any event listeners or state
-      const activeElement = document.activeElement as HTMLElement;
-      if (activeElement && activeElement.blur) {
-        activeElement.blur();
-      }
-      
-      // Aggressive cleanup of select portals that might be stuck
-      setTimeout(() => {
-        const portals = document.querySelectorAll('[data-radix-select-content]');
-        portals.forEach(portal => {
-          if (portal.parentNode) {
-            portal.parentNode.removeChild(portal);
-          }
-        });
-        
-        // Reset pointer events on overlays
-        const overlays = document.querySelectorAll('.radix-select-overlay, [data-radix-select-trigger]');
-        overlays.forEach(overlay => {
-          (overlay as HTMLElement).style.pointerEvents = '';
-        });
-      }, 100);
-    };
-  }, []);
 
   return (
     <SelectPrimitive.Portal container={modalContainer}>
       <SelectPrimitive.Content
         ref={ref}
         className={cn(
-          "relative z-[60] max-h-96 min-w-[8rem] overflow-hidden rounded-md bg-lunar-bg text-lunar-text shadow-lunar-md border border-lunar-border/50 scrollbar-minimal data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+          "relative z-[10000] max-h-96 min-w-[8rem] overflow-hidden rounded-md bg-lunar-surface text-lunar-text shadow-lg border border-lunar-border scrollbar-minimal data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
           position === "popper" &&
             "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
           className
