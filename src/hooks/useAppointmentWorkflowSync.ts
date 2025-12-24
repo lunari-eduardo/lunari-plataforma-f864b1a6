@@ -140,14 +140,21 @@ export const useAppointmentWorkflowSync = () => {
                   const year = sessionDate.getFullYear();
                   const month = sessionDate.getMonth() + 1;
                   
-                  // FASE 1: Apenas fazer merge (cache invalidation pode causar flickering)
-                  // O merge já atualiza o cache corretamente
+                  // 1. Merge otimista (UI instantânea)
                   window.dispatchEvent(new CustomEvent('workflow-cache-merge', {
                     detail: { session: newSession }
                   }));
                   console.log('💾 [AppointmentSync] Session merged to cache:', newSession.id);
                   
-                  // CONSOLIDADO: Único evento de criação (removido duplicação)
+                  // 2. Silent refresh em background (garantia de consistência)
+                  setTimeout(() => {
+                    window.dispatchEvent(new CustomEvent('workflow-cache-silent-refresh', {
+                      detail: { year, month }
+                    }));
+                    console.log('🔇 [AppointmentSync] Silent refresh dispatched for', year, month);
+                  }, 500);
+                  
+                  // 3. Evento de criação para outros listeners
                   window.dispatchEvent(new CustomEvent('workflow-session-created', {
                     detail: { 
                       sessionId: newSession.id,
@@ -205,13 +212,21 @@ export const useAppointmentWorkflowSync = () => {
                   const year = sessionDate.getFullYear();
                   const month = sessionDate.getMonth() + 1;
                   
-                  // FASE 1: Apenas fazer merge (evitar invalidação que causa flickering)
+                  // 1. Merge otimista (UI instantânea)
                   window.dispatchEvent(new CustomEvent('workflow-cache-merge', {
                     detail: { session: newSession }
                   }));
                   console.log('💾 [AppointmentSync] Session merged to cache:', newSession.id);
                   
-                  // CONSOLIDADO: Único evento de criação
+                  // 2. Silent refresh em background (garantia de consistência)
+                  setTimeout(() => {
+                    window.dispatchEvent(new CustomEvent('workflow-cache-silent-refresh', {
+                      detail: { year, month }
+                    }));
+                    console.log('🔇 [AppointmentSync] Silent refresh dispatched for', year, month);
+                  }, 500);
+                  
+                  // 3. Evento de criação para outros listeners
                   window.dispatchEvent(new CustomEvent('workflow-session-created', {
                     detail: { 
                       sessionId: newSession.id,

@@ -443,6 +443,56 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
     return () => window.removeEventListener('workflow-cache-invalidate', handleInvalidate as EventListener);
   }, [invalidateMonth]);
 
+  // SILENT REFRESH: Atualiza dados do Supabase sem limpar cache existente (sem loading)
+  const silentRefreshMonth = useCallback(async (year: number, month: number) => {
+    if (!userId) return;
+    
+    console.log(`🔇 [WorkflowCache] Silent refresh for ${year}-${month}`);
+    
+    try {
+      const startDate = new Date(year, month - 1, 1);
+      const endDate = new Date(year, month, 0);
+
+      const { data, error } = await supabase
+        .from('clientes_sessoes')
+        .select(`
+          *,
+          clientes (
+            nome,
+            email,
+            telefone,
+            whatsapp
+          )
+        `)
+        .eq('user_id', userId)
+        .gte('data_sessao', startDate.toISOString().split('T')[0])
+        .lte('data_sessao', endDate.toISOString().split('T')[0])
+        .order('data_sessao', { ascending: false });
+
+      if (error) throw error;
+
+      const sessions = (data || []) as WorkflowSession[];
+      
+      // Atualizar cache sem notificar múltiplas vezes (setMonthData já notifica)
+      setMonthData(year, month, sessions);
+      console.log(`✅ [WorkflowCache] Silent refresh complete: ${sessions.length} sessions`);
+    } catch (error) {
+      console.error('❌ [WorkflowCache] Silent refresh error:', error);
+    }
+  }, [userId, setMonthData]);
+
+  // SILENT REFRESH LISTENER
+  useEffect(() => {
+    const handleSilentRefresh = async (event: CustomEvent) => {
+      const { year, month } = event.detail;
+      console.log('🔇 [WorkflowCache] Silent refresh event for:', year, month);
+      await silentRefreshMonth(year, month);
+    };
+    
+    window.addEventListener('workflow-cache-silent-refresh', handleSilentRefresh as EventListener);
+    return () => window.removeEventListener('workflow-cache-silent-refresh', handleSilentRefresh as EventListener);
+  }, [silentRefreshMonth]);
+
   // FASE 6: Listener direto para payment-created (backup ao realtime - garante atualização imediata)
   useEffect(() => {
     if (!userId) return;
