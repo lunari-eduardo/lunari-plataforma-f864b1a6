@@ -259,39 +259,22 @@ export default function AppointmentDetails({
           <DollarSign className="h-4 w-4 text-lunar-accent" /> Financeiro
         </h3>
         
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-lunar-muted">Total</span>
-            <span className="font-medium text-lunar-text">R$ {valorTotal.toFixed(2)}</span>
-          </div>
-          
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-lunar-muted">Pago</span>
-            <div className="flex items-center gap-2">
-              <Input 
-                id="paidAmount" 
-                name="paidAmount" 
-                type="number" 
-                min="0" 
-                step="0.01" 
-                value={paidAmountInput.displayValue} 
-                onChange={paidAmountInput.handleChange} 
-                onFocus={paidAmountInput.handleFocus}
-                className={`w-28 h-7 text-sm text-right ${!isEditable ? 'bg-muted cursor-not-allowed' : ''}`} 
-                disabled={!isEditable} 
-              />
-            </div>
-          </div>
-          
-          <Separator className="bg-lunar-border/30" />
-          
-          <div className="flex justify-between text-sm">
-            <span className={isPendente ? "text-lunar-warning font-medium" : "text-lunar-success font-medium"}>
-              {isPendente ? "Saldo em aberto" : "Quitado"}
-            </span>
-            <span className={isPendente ? "text-lunar-warning font-bold" : "text-lunar-success font-bold"}>
-              R$ {Math.abs(saldo).toFixed(2)}
-            </span>
+        <div className="flex justify-between items-center text-sm">
+          <span className="text-lunar-muted">Valor de entrada</span>
+          <div className="flex items-center gap-1">
+            <span className="text-lunar-muted text-xs">R$</span>
+            <Input 
+              id="paidAmount" 
+              name="paidAmount" 
+              type="number" 
+              min="0" 
+              step="0.01" 
+              value={paidAmountInput.displayValue} 
+              onChange={paidAmountInput.handleChange} 
+              onFocus={paidAmountInput.handleFocus}
+              className={`w-24 h-7 text-sm text-right ${!isEditable ? 'bg-muted cursor-not-allowed' : ''}`} 
+              disabled={!isEditable} 
+            />
           </div>
         </div>
       </div>
