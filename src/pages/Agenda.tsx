@@ -248,7 +248,9 @@ export default function Agenda() {
         <AgendaTasksSection
           selectedDate={date}
           tasks={tasks}
+          viewMode={view}
           onCreateTask={() => setIsTaskModalOpen(true)}
+          onDayClick={handleDayClick}
         />
         
         {/* Data integrity panel */}
