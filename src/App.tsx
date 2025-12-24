@@ -29,6 +29,7 @@ import MinhaAssinatura from "./pages/MinhaAssinatura";
 import AdminUsuarios from "./pages/AdminUsuarios";
 import Conteudos from "./pages/Conteudos";
 import ConteudoDetalhe from "./pages/ConteudoDetalhe";
+import SitemapProxy from "./pages/SitemapProxy";
 import AdminConteudos from "./pages/AdminConteudos";
 import AdminConteudoNovo from "./pages/AdminConteudoNovo";
 import AdminConteudoEditar from "./pages/AdminConteudoEditar";
@@ -113,6 +114,7 @@ function App() {
                     <Route path="/auth" element={<Auth />} />
                     <Route path="/conteudos" element={<Conteudos />} />
                     <Route path="/conteudos/:slug" element={<ConteudoDetalhe />} />
+                    <Route path="/sitemap.xml" element={<SitemapProxy />} />
                     
                     {/* Protected subscription routes (outside main layout) */}
                     <Route path="/escolher-plano" element={

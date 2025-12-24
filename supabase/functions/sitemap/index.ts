@@ -32,9 +32,15 @@ Deno.serve(async (req) => {
     const baseUrl = 'https://www.lunariplataforma.com.br';
     const today = new Date().toISOString().split('T')[0];
 
-    // Build sitemap XML
+    // Build sitemap XML with all public pages
     let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>${baseUrl}/landing</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>1.0</priority>
+  </url>
   <url>
     <loc>${baseUrl}/conteudos</loc>
     <lastmod>${today}</lastmod>

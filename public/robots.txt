@@ -22,4 +22,4 @@ Disallow: /admin/
 Disallow: /auth
 Disallow: /onboarding
 
-Sitemap: https://tlnjspsywycbudhewsfv.supabase.co/functions/v1/sitemap
+Sitemap: https://www.lunariplataforma.com.br/sitemap.xml
