@@ -17,21 +17,30 @@ interface MonthlyViewProps {
 const useDayMetrics = (day: Date, unifiedEvents: UnifiedEvent[], availability: any[]) => {
   return useMemo(() => {
     const dayKey = format(day, 'yyyy-MM-dd');
+    
+    // Detectar slot de dia todo
+    const fullDaySlot = availability.find(
+      (a: any) => a.date === dayKey && a.isFullDay
+    );
+    
     const sessionCount = unifiedEvents.filter(e => 
       isSameDay(e.date, day) && e.type === 'appointment'
     ).length;
+    
     const takenTimes = new Set(
       unifiedEvents
         .filter(e => isSameDay(e.date, day) && e.type === 'appointment')
         .map(e => e.time || '')
     );
-    const availCount = new Set(
+    
+    // Não contar disponibilidade se for dia todo
+    const availCount = fullDaySlot ? 0 : new Set(
       availability
-        .filter(a => a.date === dayKey && !takenTimes.has(a.time))
-        .map(a => a.time)
+        .filter((a: any) => a.date === dayKey && !takenTimes.has(a.time) && !a.isFullDay)
+        .map((a: any) => a.time)
     ).size;
     
-    return { sessionCount, availCount, dayKey };
+    return { sessionCount, availCount, dayKey, fullDaySlot };
   }, [day, unifiedEvents, availability]);
 };
 
@@ -141,12 +150,27 @@ const DayCell = ({
   onEventClick: (event: UnifiedEvent) => void;
   classes: any;
 }) => {
-  const { sessionCount, availCount, dayKey } = useDayMetrics(day, unifiedEvents, availability);
+  const { sessionCount, availCount, dayKey, fullDaySlot } = useDayMetrics(day, unifiedEvents, availability);
+
+  // Estilos dinâmicos para dia todo
+  const cellStyle = fullDaySlot ? {
+    backgroundColor: fullDaySlot.color 
+      ? `${fullDaySlot.color}15`  // Cor esmaecida (15% opacidade)
+      : 'hsl(var(--muted))',
+    borderColor: fullDaySlot.color || 'hsl(var(--border))'
+  } : {};
+
+  const cellClassName = `${classes.calendarCell} cursor-pointer transition-colors ${
+    fullDaySlot 
+      ? 'border-2' 
+      : 'bg-lunar-surface hover:bg-lunar-surface/80 border border-lunar-border/20 hover:border-lunar-border/40'
+  }`;
 
   return (
     <div 
       onClick={() => onDayClick(day)} 
-      className={`${classes.calendarCell} cursor-pointer transition-colors bg-lunar-surface hover:bg-lunar-surface/80 border border-lunar-border/20 hover:border-lunar-border/40`}
+      className={cellClassName}
+      style={cellStyle}
     >
       <div className="flex justify-between items-center mb-1 md:mb-2">
         <span className={`
@@ -155,8 +179,8 @@ const DayCell = ({
         `}>
           {format(day, 'd')}
         </span>
-        {/* Availability count badge (desktop only) */}
-        {!isMobile && availCount > 0 && (
+        {/* Availability count badge (desktop only) - não mostrar se for dia todo */}
+        {!isMobile && !fullDaySlot && availCount > 0 && (
           <span className="text-[10px] px-1.5 py-0.5 rounded bg-availability/20 border border-availability/50 text-lunar-text">
             {availCount}
           </span>
@@ -164,34 +188,51 @@ const DayCell = ({
       </div>
 
       <div className="space-y-px md:space-y-1">
-        {isMobile ? (
-          <div className="flex items-center gap-2">
-            {sessionCount > 0 && (
-              <span className="inline-flex items-center gap-1 text-[10px]">
-                <span className="h-2.5 w-2.5 rounded-full bg-primary" aria-hidden />
-                {sessionCount}
-              </span>
-            )}
-            {availCount > 0 && (
-              <span className="inline-flex items-center gap-1 text-[10px]">
-                <span className="h-2.5 w-2.5 rounded-full bg-availability" aria-hidden />
-                {availCount}
-              </span>
-            )}
+        {/* Label do dia todo */}
+        {fullDaySlot && (
+          <div className="flex items-center gap-1">
+            <div 
+              className="w-2 h-2 rounded-full flex-shrink-0" 
+              style={{ backgroundColor: fullDaySlot.color || 'hsl(var(--muted-foreground))' }}
+            />
+            <span className="text-[10px] md:text-xs font-medium truncate">
+              {fullDaySlot.label || 'Dia todo'}
+            </span>
           </div>
+        )}
+        
+        {isMobile ? (
+          !fullDaySlot && (
+            <div className="flex items-center gap-2">
+              {sessionCount > 0 && (
+                <span className="inline-flex items-center gap-1 text-[10px]">
+                  <span className="h-2.5 w-2.5 rounded-full bg-primary" aria-hidden />
+                  {sessionCount}
+                </span>
+              )}
+              {availCount > 0 && (
+                <span className="inline-flex items-center gap-1 text-[10px]">
+                  <span className="h-2.5 w-2.5 rounded-full bg-availability" aria-hidden />
+                  {availCount}
+                </span>
+              )}
+            </div>
+          )
         ) : (
-          <>
-            {displayEvents.map(event => (
-              <div key={event.id} onClick={e => e.stopPropagation()}>
-                <UnifiedEventCard event={event} onClick={onEventClick} variant="monthly" />
-              </div>
-            ))}
-            {hasMoreEvents && (
-              <div className="text-xs p-0.5 md:p-1 text-muted-foreground font-medium">
-                +{dayEvents.length - maxDisplayEvents} mais
-              </div>
-            )}
-          </>
+          !fullDaySlot && (
+            <>
+              {displayEvents.map(event => (
+                <div key={event.id} onClick={e => e.stopPropagation()}>
+                  <UnifiedEventCard event={event} onClick={onEventClick} variant="monthly" />
+                </div>
+              ))}
+              {hasMoreEvents && (
+                <div className="text-xs p-0.5 md:p-1 text-muted-foreground font-medium">
+                  +{dayEvents.length - maxDisplayEvents} mais
+                </div>
+              )}
+            </>
+          )
         )}
       </div>
     </div>
