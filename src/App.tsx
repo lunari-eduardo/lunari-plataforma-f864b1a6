@@ -46,9 +46,9 @@ import { BuildMonitor } from "./components/shared/BuildMonitor";
 import { usePricingBootstrap } from "./hooks/usePricingBootstrap";
 import { useWorkflowCacheInit } from "./hooks/useWorkflowCacheInit";
 import { useAppointmentWorkflowSync } from "./hooks/useAppointmentWorkflowSync";
-import { useVersionCheck } from "./hooks/useVersionCheck";
 import { useAppForceUpdate } from "./hooks/useAppForceUpdate";
 import { useTrialWelcomeToast } from "./components/subscription/TrialWelcomeToast";
+import { usePWAUpdate } from "./hooks/usePWAUpdate";
 
 // Create a stable QueryClient instance
 const queryClient = new QueryClient({
@@ -80,10 +80,10 @@ function App() {
   // Bootstrap pricing system early
   const { isInitialized: pricingInitialized, error: pricingError } = usePricingBootstrap();
   
-  // Check for version updates
-  useVersionCheck();
+  // PWA auto-update via vite-plugin-pwa (detecta novas versões automaticamente)
+  usePWAUpdate();
   
-  // Enable force update mechanism for all devices
+  // Enable force update mechanism for all devices (botão manual via Supabase)
   useAppForceUpdate();
 
   // Log app version for debugging
