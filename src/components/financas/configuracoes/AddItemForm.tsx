@@ -29,7 +29,7 @@ export function AddItemForm({
   };
 
   return (
-    <Card className="bg-card rounded-lg">
+    <Card className="bg-gradient-to-r from-lunar-accent/10 via-lunar-accent/5 to-transparent border-2 border-lunar-accent/40 shadow-md rounded-lg">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-sm">
           <Plus className="h-5 w-5" />

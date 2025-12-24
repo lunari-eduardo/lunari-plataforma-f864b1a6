@@ -42,10 +42,10 @@ export function ItemsList({
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
       {FINANCIAL_GROUPS.map(grupo => (
         <Card key={grupo} className="h-fit rounded-lg bg-card">
-          <CardHeader className="pb-2 bg-card rounded-lg">
+          <CardHeader className="py-2 px-3">
             <CardTitle className="text-sm">
               <div className="flex items-center justify-between">
                 <Badge className={`${getCorGrupo(grupo)} text-xs font-medium`}>
@@ -74,7 +74,7 @@ export function ItemsList({
               </div>
             </CardTitle>
           </CardHeader>
-          <CardContent className="pt-0 bg-card rounded-lg">
+          <CardContent className="pt-0 px-3 pb-3">
             {itensPorGrupo[grupo].length === 0 ? (
               <p className="text-lunar-textSecondary text-xs italic text-center py-2">
                 Nenhum item cadastrado neste grupo.
@@ -84,7 +84,7 @@ export function ItemsList({
                 {itensPorGrupo[grupo].map(item => (
                   <div 
                     key={item.id} 
-                    className="flex items-center justify-between p-2 bg-lunar-surface/50 border border-lunar-border/30 rounded-lg hover:bg-lunar-surface/80 transition-colors py-0"
+                    className="flex items-center gap-2 p-1.5 bg-lunar-surface/50 border border-lunar-border/30 rounded-md hover:bg-lunar-surface/80 transition-colors"
                   >
                     {itemEditando === item.id ? (
                       <div className="flex items-center gap-2 flex-1">
@@ -112,10 +112,10 @@ export function ItemsList({
                       </div>
                     ) : (
                       <>
-                        <span className="text-lunar-text text-xs font-medium flex-1 min-w-0 truncate pr-2">
+                        <span className="text-lunar-text text-xs font-medium flex-1 min-w-0 truncate">
                           {item?.nome || 'Item sem nome'}
                         </span>
-                        <div className="flex items-center gap-1 flex-shrink-0">
+                        <div className="flex items-center gap-0.5 flex-shrink-0">
                           <Button 
                             size="sm" 
                             variant="ghost" 
