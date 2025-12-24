@@ -240,37 +240,55 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
         schema: 'public',
         table: 'clientes_sessoes',
         filter: `user_id=eq.${userId}`
-      }, (payload) => {
+      }, async (payload) => {
         console.log('📡 Realtime event (sessoes):', payload.eventType, (payload.new as any)?.id);
         
-        // Debounce de 300ms para evitar flickering
-        if (realtimeDebounce) clearTimeout(realtimeDebounce);
-        
-        realtimeDebounce = setTimeout(async () => {
-          // SEMPRE buscar sessão completa após INSERT/UPDATE para garantir dados recongelados
-          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-            const session = payload.new as WorkflowSession;
-            
-            console.log('🔄 [Realtime] Buscando sessão completa após', payload.eventType, '...');
-            const { data: fullSession } = await supabase
-              .from('clientes_sessoes')
-              .select(`*, clientes(nome, email, telefone, whatsapp)`)
-              .eq('id', session.id)
-              .single();
-            
-            if (fullSession) {
-              console.log('✅ [Realtime] Sessão completa obtida:', fullSession.id, 'pacote:', fullSession.pacote);
-              mergeUpdate(fullSession as WorkflowSession);
-            } else {
-              // Fallback: usar payload se busca falhar
-              console.warn('⚠️ [Realtime] Busca falhou, usando payload');
-              mergeUpdate(session);
+        // FASE 6: Para INSERT, processar imediatamente (sem debounce)
+        // Para UPDATE/DELETE, usar debounce reduzido de 150ms
+        if (payload.eventType === 'INSERT') {
+          const session = payload.new as WorkflowSession;
+          console.log('🆕 [Realtime] INSERT detectado, processando imediatamente...');
+          
+          const { data: fullSession } = await supabase
+            .from('clientes_sessoes')
+            .select(`*, clientes(nome, email, telefone, whatsapp)`)
+            .eq('id', session.id)
+            .single();
+          
+          if (fullSession) {
+            console.log('✅ [Realtime] Sessão nova inserida:', fullSession.id);
+            mergeUpdate(fullSession as WorkflowSession);
+          } else {
+            console.log('⚠️ [Realtime] INSERT: usando payload como fallback');
+            mergeUpdate(session);
+          }
+        } else {
+          // UPDATE/DELETE com debounce reduzido
+          if (realtimeDebounce) clearTimeout(realtimeDebounce);
+          
+          realtimeDebounce = setTimeout(async () => {
+            if (payload.eventType === 'UPDATE') {
+              const session = payload.new as WorkflowSession;
+              
+              console.log('🔄 [Realtime] Buscando sessão completa após UPDATE...');
+              const { data: fullSession } = await supabase
+                .from('clientes_sessoes')
+                .select(`*, clientes(nome, email, telefone, whatsapp)`)
+                .eq('id', session.id)
+                .single();
+              
+              if (fullSession) {
+                console.log('✅ [Realtime] Sessão atualizada:', fullSession.id);
+                mergeUpdate(fullSession as WorkflowSession);
+              } else {
+                mergeUpdate(session);
+              }
             }
-          }
-          if (payload.eventType === 'DELETE' && payload.old) {
-            removeSession((payload.old as any).id);
-          }
-        }, 300);
+            if (payload.eventType === 'DELETE' && payload.old) {
+              removeSession((payload.old as any).id);
+            }
+          }, 150);
+        }
       })
       // FASE 1: Subscription para clientes_transacoes (pagamentos)
       .on('postgres_changes', {

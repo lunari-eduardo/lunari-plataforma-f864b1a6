@@ -19,11 +19,42 @@ export class PaymentSupabaseService {
     try {
       console.log('🔍 Buscando sessão por chave:', sessionKey);
       
-      const { data, error } = await supabase
-        .from('clientes_sessoes')
-        .select('id, session_id, cliente_id')
-        .or(`id.eq.${sessionKey},session_id.eq.${sessionKey}`)
-        .maybeSingle();
+      // Verificar se parece um UUID válido
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sessionKey);
+      
+      let data = null;
+      let error = null;
+      
+      // FASE 3: Buscar separadamente para evitar erro no .or() com formatos diferentes
+      if (isUUID) {
+        // Buscar por UUID (id) primeiro
+        const result = await supabase
+          .from('clientes_sessoes')
+          .select('id, session_id, cliente_id')
+          .eq('id', sessionKey)
+          .maybeSingle();
+        data = result.data;
+        error = result.error;
+        
+        if (data) {
+          console.log('✅ Sessão encontrada por UUID (id):', data.id);
+        }
+      }
+      
+      // Se não encontrou por UUID ou não é UUID, buscar por session_id (TEXT)
+      if (!data) {
+        const result = await supabase
+          .from('clientes_sessoes')
+          .select('id, session_id, cliente_id')
+          .eq('session_id', sessionKey)
+          .maybeSingle();
+        data = result.data;
+        error = result.error;
+        
+        if (data) {
+          console.log('✅ Sessão encontrada por session_id (TEXT):', data.session_id);
+        }
+      }
 
       if (error) {
         console.error('❌ Erro ao buscar sessão:', error);

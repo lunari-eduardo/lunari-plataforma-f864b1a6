@@ -134,33 +134,31 @@ export const useAppointmentWorkflowSync = () => {
                 const newSession = await WorkflowSupabaseService.createSessionFromAppointment(appointment.id, appointment);
                 console.log('✅ [AppointmentSync] Session created for confirmed appointment:', newSession?.id);
                 
-                // FASE 5: Invalidar cache do mês antes de adicionar nova sessão
+                // FASE 5: Invalidar cache e adicionar nova sessão
                 if (newSession) {
                   const sessionDate = new Date(newSession.data_sessao);
                   const year = sessionDate.getFullYear();
                   const month = sessionDate.getMonth() + 1;
                   
-                  // Disparar evento de invalidação para garantir dados frescos
-                  window.dispatchEvent(new CustomEvent('workflow-cache-invalidate', {
-                    detail: { year, month }
-                  }));
-                  console.log('🗑️ [AppointmentSync] Cache invalidation triggered for:', year, month);
-                  
-                  // Adicionar ao cache via evento customizado
+                  // FASE 1: Apenas fazer merge (cache invalidation pode causar flickering)
+                  // O merge já atualiza o cache corretamente
                   window.dispatchEvent(new CustomEvent('workflow-cache-merge', {
                     detail: { session: newSession }
                   }));
-                  console.log('💾 [AppointmentSync] Session sent to WorkflowCacheContext via event');
+                  console.log('💾 [AppointmentSync] Session merged to cache:', newSession.id);
                   
-                  // Manter evento de criação para outros listeners
+                  // CONSOLIDADO: Único evento de criação (removido duplicação)
                   window.dispatchEvent(new CustomEvent('workflow-session-created', {
                     detail: { 
                       sessionId: newSession.id,
+                      sessionIdText: newSession.session_id,
                       appointmentId: appointment.id,
+                      year,
+                      month,
                       timestamp: new Date().toISOString()
                     }
                   }));
-                  console.log('📢 [AppointmentSync] Dispatched workflow-session-created event');
+                  console.log('📢 [AppointmentSync] Session created event dispatched');
                 }
               } catch (error) {
                 console.error('❌ [AppointmentSync] Error creating session from confirmed appointment:', error);
@@ -201,33 +199,30 @@ export const useAppointmentWorkflowSync = () => {
                 const newSession = await WorkflowSupabaseService.createSessionFromAppointment(appointment.id, appointment);
                 console.log('✅ [AppointmentSync] Session created for new confirmed appointment:', newSession?.id);
                 
-                // FASE 5: Invalidar cache do mês antes de adicionar nova sessão
+                // FASE 5: Adicionar nova sessão ao cache
                 if (newSession) {
                   const sessionDate = new Date(newSession.data_sessao);
                   const year = sessionDate.getFullYear();
                   const month = sessionDate.getMonth() + 1;
                   
-                  // Disparar evento de invalidação para garantir dados frescos
-                  window.dispatchEvent(new CustomEvent('workflow-cache-invalidate', {
-                    detail: { year, month }
-                  }));
-                  console.log('🗑️ [AppointmentSync] Cache invalidation triggered for:', year, month);
-                  
-                  // Adicionar ao cache via evento customizado
+                  // FASE 1: Apenas fazer merge (evitar invalidação que causa flickering)
                   window.dispatchEvent(new CustomEvent('workflow-cache-merge', {
                     detail: { session: newSession }
                   }));
-                  console.log('💾 [AppointmentSync] Session sent to WorkflowCacheContext via event');
+                  console.log('💾 [AppointmentSync] Session merged to cache:', newSession.id);
                   
-                  // Manter evento de criação para outros listeners
+                  // CONSOLIDADO: Único evento de criação
                   window.dispatchEvent(new CustomEvent('workflow-session-created', {
                     detail: { 
                       sessionId: newSession.id,
+                      sessionIdText: newSession.session_id,
                       appointmentId: appointment.id,
+                      year,
+                      month,
                       timestamp: new Date().toISOString()
                     }
                   }));
-                  console.log('📢 [AppointmentSync] Dispatched workflow-session-created event');
+                  console.log('📢 [AppointmentSync] Session created event dispatched');
                 }
               } catch (error) {
                 console.error('❌ [AppointmentSync] Error creating session from new confirmed appointment:', error);

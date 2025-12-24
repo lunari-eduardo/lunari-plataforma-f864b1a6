@@ -790,12 +790,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     console.log('💰 Adicionando pagamento rápido:', { id, valor });
     
     try {
-      // 1. PRIMEIRO: Gerar ID único para rastreamento
+      // FASE 5: Importar serviço primeiro
+      const { PaymentSupabaseService } = await import('@/services/PaymentSupabaseService');
+      
+      // FASE 5: Verificar se a sessão existe antes de prosseguir
+      const binding = await PaymentSupabaseService.getSessionBinding(id);
+      
+      if (!binding) {
+        console.warn('⚠️ Sessão ainda não encontrada, pode estar sendo criada...');
+        toast({
+          title: "Aguarde",
+          description: "A sessão ainda está sendo criada. Tente novamente em alguns segundos.",
+          variant: "default"
+        });
+        return;
+      }
+      
+      // 1. Gerar ID único para rastreamento
       const paymentId = `quick-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       
-      // 2. Salvar no Supabase COM tracking ID
-      const { PaymentSupabaseService } = await import('@/services/PaymentSupabaseService');
-      const success = await PaymentSupabaseService.saveSinglePaymentTracked(id, paymentId, {
+      // 2. Salvar no Supabase COM tracking ID (usar binding.session_id diretamente)
+      const success = await PaymentSupabaseService.saveSinglePaymentTracked(binding.session_id, paymentId, {
         valor,
         data: getCurrentDateString(),
         observacoes: 'Pagamento rápido',
@@ -814,9 +829,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       console.log('✅ Pagamento salvo no Supabase - trigger irá recalcular valor_pago automaticamente');
 
-      // ✅ Buscar session_id TEXT para garantir compatibilidade com WorkflowCacheContext
-      const binding = await PaymentSupabaseService.getSessionBinding(id);
-      const textSessionId = binding?.session_id || id;
+      // ✅ Usar session_id TEXT do binding já obtido
+      const textSessionId = binding.session_id;
 
       // ✅ Disparar evento para forçar atualização em tempo real da tabela workflow
       window.dispatchEvent(new CustomEvent('payment-created', {
@@ -833,7 +847,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         
         if (sessionIndex !== -1) {
           const session = savedSessions[sessionIndex];
-          const currentPaid = parseFloat((session.valorPago || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+          // FASE 3: Tratar valorPago que pode ser número ou string
+          let currentPaid = 0;
+          if (typeof session.valorPago === 'number') {
+            currentPaid = session.valorPago;
+          } else if (typeof session.valorPago === 'string') {
+            currentPaid = parseFloat((session.valorPago || '0').replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+          }
           const newPaidTotal = currentPaid + valor;
 
           const novoPagamento = {
