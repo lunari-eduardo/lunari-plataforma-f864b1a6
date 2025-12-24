@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { format } from 'date-fns';
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import MonthlyView from "@/components/agenda/MonthlyView";
@@ -7,10 +8,13 @@ import DailyView from "@/components/agenda/DailyView";
 import AnnualView from "@/components/agenda/AnnualView";
 import AgendaHeader from "@/components/agenda/AgendaHeader";
 import AgendaModals from "@/components/agenda/AgendaModals";
+import AgendaTasksSection from "@/components/agenda/AgendaTasksSection";
+import UnifiedTaskModal from "@/components/tarefas/UnifiedTaskModal";
 import { useUnifiedCalendar, UnifiedEvent } from "@/hooks/useUnifiedCalendar";
 import { useAgenda, Appointment } from "@/hooks/useAgenda";
 import { useIntegration } from "@/hooks/useIntegration";
 import { useOrcamentos } from "@/hooks/useOrcamentos";
+import { useSupabaseTasks } from "@/hooks/useSupabaseTasks";
 import { useSwipeNavigation } from "@/hooks/useSwipeNavigation";
 import { useAgendaNavigation } from "@/hooks/useAgendaNavigation";
 import { useAgendaModals } from "@/hooks/useAgendaModals";
@@ -23,7 +27,11 @@ export default function Agenda() {
   const { addAppointment, updateAppointment, deleteAppointment } = useAgenda();
   const { isFromBudget, getBudgetId } = useIntegration();
   const { orcamentos } = useOrcamentos();
+  const { tasks, addTask } = useSupabaseTasks();
   const { isMobile, isTablet, classes } = useResponsiveLayout();
+  
+  // Task modal state
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   
   // Navigation hook
   const {
@@ -236,11 +244,31 @@ export default function Agenda() {
           {renderView()}
         </div>
         
+        {/* Tasks section */}
+        <AgendaTasksSection
+          selectedDate={date}
+          tasks={tasks}
+          onCreateTask={() => setIsTaskModalOpen(true)}
+        />
+        
         {/* Data integrity panel */}
         <div className="mt-4">
           <DataIntegrityPanel />
         </div>
       </Card>
+
+      {/* Task creation modal */}
+      <UnifiedTaskModal
+        open={isTaskModalOpen}
+        onOpenChange={setIsTaskModalOpen}
+        mode="create"
+        initial={{ dueDate: format(date, 'yyyy-MM-dd') }}
+        onSubmit={async (data) => {
+          await addTask({ ...data, source: 'manual' });
+          setIsTaskModalOpen(false);
+          toast.success('Tarefa criada com sucesso');
+        }}
+      />
 
       <AgendaModals
         // Modal states
