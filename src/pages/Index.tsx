@@ -3,15 +3,12 @@ import { Link } from "react-router-dom";
 import { Calendar } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { KPIGroupCard } from "@/components/dashboard/KPIGroupCard";
 import { ProductionRemindersCard } from "@/components/dashboard/ProductionRemindersCard";
 import { HighPriorityDueSoonCard } from "@/components/tarefas/HighPriorityDueSoonCard";
 import { useIsTablet } from "@/hooks/useIsTablet";
 import { FinancialRemindersCard } from "@/components/dashboard/FinancialRemindersCard";
 import { InstallPWAButton } from "@/components/pwa/InstallPWAButton";
 import DailyHero from "@/components/dashboard/DailyHero";
-import DailyKPIs from "@/components/dashboard/DailyKPIs";
-import FollowUpNotificationCard from "@/components/leads/FollowUpNotificationCard";
 import { useSalesAnalytics } from "@/hooks/useSalesAnalytics";
 import { useAgenda } from "@/hooks/useAgenda";
 import { useAvailability } from "@/hooks/useAvailability";
@@ -21,6 +18,8 @@ import { normalizeWorkflowItems } from "@/utils/salesDataNormalizer";
 import { useWorkflowMetrics } from "@/hooks/useWorkflowMetrics";
 import { storage, STORAGE_KEYS } from "@/utils/localStorage";
 import { GoalsIntegrationService } from "@/services/GoalsIntegrationService";
+import { useProductionReminders } from "@/hooks/useProductionReminders";
+
 export default function Index() {
   const isTablet = useIsTablet();
 
@@ -181,29 +180,8 @@ export default function Index() {
     };
   }, [appointments, availability]);
 
-  // Lembretes de Produção
-  const lembretesProducao = useMemo(() => {
-    const reminders: Array<{
-      id: string;
-      cliente: string;
-      produto: string;
-      tipo: string;
-    }> = [];
-    workflowItemsAll.forEach(item => {
-      (item.produtosList || []).forEach(p => {
-        // Inclusos e manuais geram lembrete até serem marcados como produzidos
-        if (!p.produzido) {
-          reminders.push({
-            id: `${item.id}-${p.nome}`,
-            cliente: item.nome,
-            produto: p.nome,
-            tipo: p.tipo
-          });
-        }
-      });
-    });
-    return reminders;
-  }, [workflowItemsAll]);
+  // Lembretes de Produção - usando hook dedicado com dados do Supabase
+  const lembretesProducao = useProductionReminders();
   // Próximos agendamentos confirmados (top 5)
   const proximosAgendamentos = useMemo(() => {
     const now = new Date();
