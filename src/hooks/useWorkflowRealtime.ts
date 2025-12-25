@@ -316,10 +316,19 @@ export const useWorkflowRealtime = () => {
                 );
                 sanitizedUpdates.regras_congeladas = novasRegrasCongeladas as any;
                 
-                // Sync produtos_incluidos with frozen products
-                sanitizedUpdates.produtos_incluidos = novasRegrasCongeladas.produtos || [];
+                // ✅ FASE 8: Preservar produtos MANUAIS existentes ao trocar pacote
+                const produtosAtuais = currentSession?.produtos_incluidos || [];
+                const produtosManuais = Array.isArray(produtosAtuais) 
+                  ? produtosAtuais.filter((p: any) => p.tipo === 'manual')
+                  : [];
+
+                // Combinar: produtos do novo pacote + produtos manuais preservados
+                const produtosNovoPacote = novasRegrasCongeladas.produtos || [];
+                sanitizedUpdates.produtos_incluidos = [...produtosNovoPacote, ...produtosManuais];
+                
                 console.log('❄️ Frozen rules applied:', Object.keys(novasRegrasCongeladas));
-                console.log('📦 Products synced:', sanitizedUpdates.produtos_incluidos.length);
+                console.log('📦 Products synced:', sanitizedUpdates.produtos_incluidos.length, 
+                            '(incluindo', produtosManuais.length, 'manuais preservados)');
                 
                 // Initialize extra photo values from frozen rules
                 const valorFotoExtraInicial = pricingFreezingService.calcularValorFotoExtraComRegrasCongeladas(1, novasRegrasCongeladas).valorUnitario;
@@ -644,9 +653,16 @@ export const useWorkflowRealtime = () => {
         const { workflowCacheManager } = await import('@/services/WorkflowCacheManager');
         workflowCacheManager.updateSession(id, fullUpdatedSession);
         
-        console.log('✅ [FASE 7] Sessão atualizada no cache central:', id);
+        console.log('✅ [FASE 8] Sessão atualizada no cache central:', id);
         
-        // FASE 6: Emitir evento COM dados completos
+        // ✅ FASE 8: CRÍTICO - Notificar WorkflowCacheContext via evento customizado
+        // O WorkflowCacheContext já tem listener para 'workflow-cache-merge'
+        window.dispatchEvent(new CustomEvent('workflow-cache-merge', {
+          detail: { session: fullUpdatedSession }
+        }));
+        console.log('✅ [FASE 8] Evento workflow-cache-merge emitido');
+        
+        // Emitir evento COM dados completos para outros listeners
         window.dispatchEvent(new CustomEvent('workflow-session-updated', {
           detail: { 
             sessionId: id, 
