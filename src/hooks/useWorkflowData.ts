@@ -199,10 +199,30 @@ export function useWorkflowData(options: UseWorkflowDataOptions) {
             console.log('⏭️ Session skipped - belongs to different month');
           }
         },
-        onUpdate: (payload) => {
-          console.log('📝 useWorkflowData: Session updated', payload.new);
-          const updatedSession = payload.new as WorkflowSession;
-          workflowCacheManager.updateSession(updatedSession.id, updatedSession);
+        onUpdate: async (payload) => {
+          console.log('📝 useWorkflowData: Session updated via realtime', payload.new);
+          const partialSession = payload.new as WorkflowSession;
+          
+          // ✅ FASE 7: Buscar sessão COMPLETA com JOIN antes de atualizar cache
+          // O payload do realtime NÃO inclui dados do JOIN (clientes)
+          try {
+            const { data: fullSession } = await supabase
+              .from('clientes_sessoes')
+              .select(`*, clientes(nome, email, telefone, whatsapp)`)
+              .eq('id', partialSession.id)
+              .single();
+            
+            if (fullSession) {
+              workflowCacheManager.updateSession(fullSession.id, fullSession);
+              console.log('✅ [Realtime] Cache updated with complete session data');
+            } else {
+              // Fallback para dados parciais
+              workflowCacheManager.updateSession(partialSession.id, partialSession);
+            }
+          } catch (error) {
+            console.warn('⚠️ [Realtime] Error fetching full session, using partial:', error);
+            workflowCacheManager.updateSession(partialSession.id, partialSession);
+          }
         },
         onDelete: (payload) => {
           console.log('🗑️ useWorkflowData: Session deleted', payload.old);

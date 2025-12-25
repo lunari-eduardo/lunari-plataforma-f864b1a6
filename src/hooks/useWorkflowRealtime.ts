@@ -627,14 +627,44 @@ export const useWorkflowRealtime = () => {
         }
       }
 
-      setSessions(prev => prev.map(session => 
-        session.id === id ? { ...session, ...sanitizedUpdates } : session
-      ));
-      
-      // FASE 6: Emitir evento para atualização de UIs (CRM, etc.)
-      window.dispatchEvent(new CustomEvent('workflow-session-updated', {
-        detail: { sessionId: id, updates: sanitizedUpdates, timestamp: new Date().toISOString() }
-      }));
+      // ✅ FASE 7: CRÍTICO - Buscar sessão COMPLETA com dados do cliente após update
+      const { data: fullUpdatedSession } = await supabase
+        .from('clientes_sessoes')
+        .select(`*, clientes(nome, email, telefone, whatsapp)`)
+        .eq('id', id)
+        .single();
+
+      if (fullUpdatedSession) {
+        // Atualizar estado local com dados completos
+        setSessions(prev => prev.map(session => 
+          session.id === id ? fullUpdatedSession : session
+        ));
+        
+        // ✅ CRÍTICO: Atualizar cache central diretamente (não depender do realtime)
+        const { workflowCacheManager } = await import('@/services/WorkflowCacheManager');
+        workflowCacheManager.updateSession(id, fullUpdatedSession);
+        
+        console.log('✅ [FASE 7] Sessão atualizada no cache central:', id);
+        
+        // FASE 6: Emitir evento COM dados completos
+        window.dispatchEvent(new CustomEvent('workflow-session-updated', {
+          detail: { 
+            sessionId: id, 
+            updates: sanitizedUpdates, 
+            fullSession: fullUpdatedSession, 
+            timestamp: new Date().toISOString() 
+          }
+        }));
+      } else {
+        // Fallback: usar sanitizedUpdates se falhar busca
+        setSessions(prev => prev.map(session => 
+          session.id === id ? { ...session, ...sanitizedUpdates } : session
+        ));
+        
+        window.dispatchEvent(new CustomEvent('workflow-session-updated', {
+          detail: { sessionId: id, updates: sanitizedUpdates, timestamp: new Date().toISOString() }
+        }));
+      }
 
       // Only show toast if not silent (user-initiated action)
       if (!silent) {
