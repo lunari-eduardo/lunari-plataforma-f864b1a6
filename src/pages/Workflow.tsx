@@ -140,6 +140,27 @@ export default function Workflow() {
     return unsubscribe;
   }, [currentMonth, subscribe]);
   
+  // ✅ FASE 8: Listener de fallback para garantir updates quando cache-merge falhar
+  useEffect(() => {
+    const handleSessionUpdated = (event: CustomEvent) => {
+      const { fullSession } = event.detail;
+      if (fullSession) {
+        console.log('🔄 [Workflow] Fallback listener: updating session', fullSession.id);
+        // Verificar se sessão pertence ao mês atual
+        const sessionDate = new Date(fullSession.data_sessao);
+        if (sessionDate.getFullYear() === currentMonth.year && 
+            sessionDate.getMonth() + 1 === currentMonth.month) {
+          mergeUpdate(fullSession);
+        }
+      }
+    };
+    
+    window.addEventListener('workflow-session-updated', handleSessionUpdated as EventListener);
+    return () => {
+      window.removeEventListener('workflow-session-updated', handleSessionUpdated as EventListener);
+    };
+  }, [currentMonth, mergeUpdate]);
+  
   // Verificar se o mês está sendo carregado
   const isLoadingCurrentMonth = isLoadingMonth(currentMonth.year, currentMonth.month);
   
@@ -175,9 +196,10 @@ export default function Workflow() {
         delete validUpdates.created_at;
       }
       
-      // FASE 2: Identificar campos que precisam de recongelamento (não fazer merge otimista)
-      const fieldsNeedingRefreeze = ['pacote', 'categoria'];
-      const needsRefreeze = fieldsNeedingRefreeze.some(f => f in validUpdates);
+      // ✅ FASE 8: Não bloquear mais merge otimista - updates são propagados imediatamente
+      // via evento workflow-cache-merge após o update no Supabase
+      const fieldsNeedingRefreeze: string[] = []; // Vazio - todos campos podem usar merge otimista
+      const needsRefreeze = false;
       
       // BLOCO C: Criar cacheSafeUpdates - normalizar valores numéricos
       const cacheSafeUpdates: Partial<WorkflowSession> = {};
