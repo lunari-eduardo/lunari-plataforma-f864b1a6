@@ -25,12 +25,18 @@ export function ProductionRemindersCard({
           Ir para Workflow
         </Link>
       </CardHeader>
-      <CardContent>
-        {lembretes.length === 0 ? <p className="text-2xs text-lunar-textSecondary">Sem pendências de produção.</p> : <div className="max-h-64 overflow-y-auto space-y-2">
-            {lembretes.map(r => <div key={r.id} className="text-xs p-3 rounded-xl bg-card-gradient shadow-none hover:shadow-card-subtle transition-shadow duration-300">
+      <CardContent className="flex-1 overflow-hidden">
+        {lembretes.length === 0 ? (
+          <p className="text-2xs text-lunar-textSecondary">Sem pendências de produção.</p>
+        ) : (
+          <div className="max-h-[280px] overflow-y-auto space-y-2 pr-1">
+            {lembretes.map(r => (
+              <div key={r.id} className="text-xs p-3 rounded-xl bg-card-gradient shadow-none hover:shadow-card-subtle transition-shadow duration-300">
                 <span className="font-semibold">{r.produto}</span> de <span className="font-semibold">{r.cliente}</span> ainda não foi para produção!
-              </div>)}
-          </div>}
+              </div>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>;
 }

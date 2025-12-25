@@ -5,6 +5,7 @@ import { WorkflowSession } from '@/hooks/useWorkflowRealtime';
 
 interface WorkflowCacheContextType {
   getSessionsForMonthSync: (year: number, month: number) => WorkflowSession[] | null;
+  getAllCachedSessionsSync: () => WorkflowSession[];
   isPreloading: boolean;
   invalidateMonth: (year: number, month: number) => Promise<void>;
   setMonthData: (year: number, month: number, sessions: WorkflowSession[]) => void;
@@ -96,6 +97,10 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
   const getSessionsForMonthSync = useCallback((year: number, month: number): WorkflowSession[] | null => {
     const key = getCacheKey(year, month);
     return memoryCache.current.get(key) || null;
+  }, []);
+
+  const getAllCachedSessionsSync = useCallback((): WorkflowSession[] => {
+    return Array.from(memoryCache.current.values()).flat();
   }, []);
 
   const setMonthData = useCallback((year: number, month: number, sessions: WorkflowSession[]) => {
@@ -565,6 +570,7 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const value: WorkflowCacheContextType = {
     getSessionsForMonthSync,
+    getAllCachedSessionsSync,
     isPreloading,
     invalidateMonth,
     setMonthData,
