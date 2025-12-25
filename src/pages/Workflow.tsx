@@ -210,7 +210,14 @@ export default function Workflow() {
             // Persistir produtosList (contém produzido/entregue checkboxes)
             cacheSafeUpdates.produtos_incluidos = value;
             break;
-          // pacote e categoria: NÃO fazer merge otimista - deixar realtime atualizar após recongelamento
+          case 'pacote':
+            // ✅ FASE 7: Agora é seguro fazer merge otimista pois o cache será atualizado
+            // diretamente após o update no Supabase (não depende mais do realtime)
+            cacheSafeUpdates.pacote = value;
+            break;
+          case 'categoria':
+            cacheSafeUpdates.categoria = value;
+            break;
           default:
             break;
         }
