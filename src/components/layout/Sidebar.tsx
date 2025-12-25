@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Calendar, Users, Settings, FileText, DollarSign, Menu, X, User, TrendingUp, Workflow, ChevronRight, ChevronLeft, BarChart3, Home, CheckSquare, Image as ImageIcon, CreditCard, Shield, Crown } from 'lucide-react';
+import { CalendarClock, UserCheck, Settings, UserPlus, Wallet, Menu, X, User, Tag, GitBranch, ChevronRight, ChevronLeft, PieChart, LayoutGrid, CheckSquare, FlaskConical, CreditCard, Shield, Crown, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -147,24 +147,20 @@ export default function Sidebar() {
   );
   const navItems = [{
     to: "/",
-    icon: <Home size={14} />,
+    icon: <LayoutGrid size={14} />,
     label: "Início"
   }, {
     to: "/agenda",
-    icon: <Calendar size={14} />,
+    icon: <CalendarClock size={14} />,
     label: "Agenda"
   }, {
     to: "/leads",
-    icon: <FileText size={14} />,
+    icon: <UserPlus size={14} />,
     label: "Leads",
     isPro: true
-  }, /* {
-    to: "/orcamentos",
-    icon: <FileText size={14} />,
-    label: "Orçamentos"
-  }, */ {
+  }, {
     to: "/workflow",
-    icon: <Workflow size={14} />,
+    icon: <GitBranch size={14} />,
     label: "Workflow"
   }, {
     to: "/tarefas",
@@ -173,26 +169,26 @@ export default function Sidebar() {
     isPro: true
   }, {
     to: "/financas",
-    icon: <DollarSign size={14} />,
+    icon: <Wallet size={14} />,
     label: "Finanças",
     isPro: true
   }, {
     to: "/clientes",
-    icon: <Users size={14} />,
+    icon: <UserCheck size={14} />,
     label: "Clientes"
   }, {
     to: "/precificacao",
-    icon: <TrendingUp size={14} />,
+    icon: <Tag size={14} />,
     label: "Precificação",
     isPro: true
   }, {
     to: "/analise-vendas",
-    icon: <BarChart3 size={14} />,
+    icon: <PieChart size={14} />,
     label: "Análise de Vendas",
     isPro: true
   }, {
     to: "/feed-test",
-    icon: <ImageIcon size={14} />,
+    icon: <FlaskConical size={14} />,
     label: "Feed Test",
     isPro: true
   }, {
