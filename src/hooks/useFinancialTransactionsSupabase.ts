@@ -9,7 +9,7 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { SupabaseFinancialTransactionsAdapter } from '@/adapters/SupabaseFinancialTransactionsAdapter';
 import { SupabaseFinancialItemsAdapter } from '@/adapters/SupabaseFinancialItemsAdapter';
@@ -70,6 +70,13 @@ export function useFinancialTransactionsSupabase(filtroMesAno: { mes: number; an
   const { data: transacoes = [], isLoading } = useQuery({
     queryKey: ['financial-transactions', filtroMesAno.ano, filtroMesAno.mes],
     queryFn: async () => {
+      // IMPORTANTE: Atualizar status de transações vencidas ANTES de buscar
+      try {
+        await SupabaseFinancialTransactionsAdapter.updateStatusByDate();
+      } catch (error) {
+        console.error('Erro ao atualizar status por data:', error);
+      }
+
       // Calcular range de datas do mês
       const startDate = `${filtroMesAno.ano}-${filtroMesAno.mes.toString().padStart(2, '0')}-01`;
       const ultimoDiaMes = new Date(filtroMesAno.ano, filtroMesAno.mes, 0).getDate();
@@ -134,6 +141,30 @@ export function useFinancialTransactionsSupabase(filtroMesAno: { mes: number; an
       supabase.removeChannel(channel);
     };
   }, [queryClient]);
+
+  // ============= VERIFICAÇÃO PERIÓDICA DE STATUS VENCIDO =============
+  const lastPeriodicCheck = useRef<number>(Date.now());
+  
+  useEffect(() => {
+    // Verificar a cada 5 minutos se há transações que venceram
+    const intervalId = setInterval(async () => {
+      try {
+        const updated = await SupabaseFinancialTransactionsAdapter.updateStatusByDate();
+        if (updated > 0) {
+          queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
+          toast({
+            title: 'Transações atualizadas',
+            description: `${updated} transação(ões) atualizada(s) para "Faturado".`,
+          });
+        }
+        lastPeriodicCheck.current = Date.now();
+      } catch (error) {
+        console.error('Erro na verificação periódica:', error);
+      }
+    }, 5 * 60 * 1000); // 5 minutos
+
+    return () => clearInterval(intervalId);
+  }, [queryClient, toast]);
 
   // ============= MUTATION: CRIAR TRANSAÇÃO =============
   const criarTransacaoMutation = useMutation({
