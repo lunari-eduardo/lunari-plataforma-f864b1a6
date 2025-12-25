@@ -12,7 +12,7 @@ interface WorkflowCacheContextType {
   removeSession: (sessionId: string) => void;
   subscribe: (callback: (sessions: WorkflowSession[]) => void) => () => void;
   forceRefresh: () => Promise<void>;
-  ensureMonthLoaded: (year: number, month: number) => Promise<void>;
+  ensureMonthLoaded: (year: number, month: number, forceRefresh?: boolean) => Promise<void>;
   isLoadingMonth: (year: number, month: number) => boolean;
 }
 
@@ -249,6 +249,18 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
           const session = payload.new as WorkflowSession;
           console.log('🆕 [Realtime] INSERT detectado, processando imediatamente...');
           
+          // Verificar se já existe no cache (evitar duplicação com merge otimista)
+          const sessionDate = new Date(session.data_sessao);
+          const year = sessionDate.getFullYear();
+          const month = sessionDate.getMonth() + 1;
+          const key = `${year}-${String(month).padStart(2, '0')}`;
+          const existingSessions = memoryCache.current.get(key) || [];
+          
+          if (existingSessions.some(s => s.id === session.id)) {
+            console.log('⚠️ [Realtime] INSERT: sessão já existe no cache, atualizando...');
+            // Atualizar ao invés de adicionar
+          }
+          
           const { data: fullSession } = await supabase
             .from('clientes_sessoes')
             .select(`*, clientes(nome, email, telefone, whatsapp)`)
@@ -355,14 +367,58 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
     await preloadMonths();
   }, [userId]);
 
+  // SILENT REFRESH: Atualiza dados do Supabase sem limpar cache existente (sem loading)
+  // Definido ANTES de ensureMonthLoaded para evitar erro de referência
+  const silentRefreshMonth = useCallback(async (year: number, month: number) => {
+    if (!userId) return;
+    
+    console.log(`🔇 [WorkflowCache] Silent refresh for ${year}-${month}`);
+    
+    try {
+      const startDate = new Date(year, month - 1, 1);
+      const endDate = new Date(year, month, 0);
+
+      const { data, error } = await supabase
+        .from('clientes_sessoes')
+        .select(`
+          *,
+          clientes (
+            nome,
+            email,
+            telefone,
+            whatsapp
+          )
+        `)
+        .eq('user_id', userId)
+        .gte('data_sessao', startDate.toISOString().split('T')[0])
+        .lte('data_sessao', endDate.toISOString().split('T')[0])
+        .order('data_sessao', { ascending: false });
+
+      if (error) throw error;
+
+      const sessions = (data || []) as WorkflowSession[];
+      
+      // Atualizar cache sem notificar múltiplas vezes (setMonthData já notifica)
+      setMonthData(year, month, sessions);
+      console.log(`✅ [WorkflowCache] Silent refresh complete: ${sessions.length} sessions`);
+    } catch (error) {
+      console.error('❌ [WorkflowCache] Silent refresh error:', error);
+    }
+  }, [userId, setMonthData]);
+
   // FASE 1: Método para garantir que um mês específico está carregado
-  const ensureMonthLoaded = useCallback(async (year: number, month: number) => {
+  // forceRefresh = true: ignora cache e busca do Supabase
+  const ensureMonthLoaded = useCallback(async (year: number, month: number, forceRefresh = false) => {
     const key = getCacheKey(year, month);
     
-    // Se já está em cache, retornar imediatamente
-    if (memoryCache.current.has(key)) {
+    // Se já está em cache e NÃO é forceRefresh
+    if (!forceRefresh && memoryCache.current.has(key)) {
       const cachedSessions = memoryCache.current.get(key) || [];
       console.log(`⚡ [WorkflowCache] Cache hit for ${key} (${cachedSessions.length} sessions)`);
+      
+      // NOVO: Fazer refresh silencioso em background para garantir dados frescos
+      // Isso é especialmente importante para PWA e multi-dispositivo
+      silentRefreshMonth(year, month);
       return;
     }
     
@@ -394,7 +450,7 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
     } finally {
       loadingMonths.current.delete(key);
     }
-  }, [userId]);
+  }, [userId, silentRefreshMonth]);
 
   const isLoadingMonth = useCallback((year: number, month: number): boolean => {
     const key = getCacheKey(year, month);
@@ -443,45 +499,7 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
     return () => window.removeEventListener('workflow-cache-invalidate', handleInvalidate as EventListener);
   }, [invalidateMonth]);
 
-  // SILENT REFRESH: Atualiza dados do Supabase sem limpar cache existente (sem loading)
-  const silentRefreshMonth = useCallback(async (year: number, month: number) => {
-    if (!userId) return;
-    
-    console.log(`🔇 [WorkflowCache] Silent refresh for ${year}-${month}`);
-    
-    try {
-      const startDate = new Date(year, month - 1, 1);
-      const endDate = new Date(year, month, 0);
-
-      const { data, error } = await supabase
-        .from('clientes_sessoes')
-        .select(`
-          *,
-          clientes (
-            nome,
-            email,
-            telefone,
-            whatsapp
-          )
-        `)
-        .eq('user_id', userId)
-        .gte('data_sessao', startDate.toISOString().split('T')[0])
-        .lte('data_sessao', endDate.toISOString().split('T')[0])
-        .order('data_sessao', { ascending: false });
-
-      if (error) throw error;
-
-      const sessions = (data || []) as WorkflowSession[];
-      
-      // Atualizar cache sem notificar múltiplas vezes (setMonthData já notifica)
-      setMonthData(year, month, sessions);
-      console.log(`✅ [WorkflowCache] Silent refresh complete: ${sessions.length} sessions`);
-    } catch (error) {
-      console.error('❌ [WorkflowCache] Silent refresh error:', error);
-    }
-  }, [userId, setMonthData]);
-
-  // SILENT REFRESH LISTENER
+  // SILENT REFRESH LISTENER (usa silentRefreshMonth já definido anteriormente)
   useEffect(() => {
     const handleSilentRefresh = async (event: CustomEvent) => {
       const { year, month } = event.detail;
