@@ -72,7 +72,8 @@ export default function Workflow() {
       console.log(`🔄 [Workflow] Loading month ${currentMonth.month}/${currentMonth.year}...`);
       
       try {
-        await ensureMonthLoaded(currentMonth.year, currentMonth.month);
+        // Forçar refresh do Supabase para garantir dados frescos (especialmente para PWA)
+        await ensureMonthLoaded(currentMonth.year, currentMonth.month, true);
         console.log(`✅ [Workflow] Month ${currentMonth.month}/${currentMonth.year} loaded`);
       } catch (error) {
         console.error(`❌ [Workflow] Error loading month:`, error);
@@ -82,6 +83,19 @@ export default function Workflow() {
     };
     
     loadMonth();
+  }, [currentMonth.year, currentMonth.month, ensureMonthLoaded]);
+  
+  // FASE 2: Refresh ao ganhar foco (tab/app fica visível) - crítico para PWA
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('👁️ [Workflow] Tab became visible, refreshing...');
+        ensureMonthLoaded(currentMonth.year, currentMonth.month, true);
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [currentMonth.year, currentMonth.month, ensureMonthLoaded]);
   
   // FASE 1: Leitura direta do cache ao navegar entre meses
