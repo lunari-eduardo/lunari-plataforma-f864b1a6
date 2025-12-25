@@ -240,56 +240,52 @@ export default function Index() {
       <DailyHero />
     </section>
 
-    {/* Próximos Agendamentos */}
-    <section>
-      <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300 animate-fade-in">
-        <CardHeader className="pb-3 flex flex-row items-center justify-between py-[6px]">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-brand-gradient">
-              <Calendar className="h-5 w-5 text-white" />
+    {/* Próximos Agendamentos + Lembretes de Produção - Layout lado a lado em desktop */}
+    <section className="grid gap-6 grid-cols-1 lg:grid-cols-5 animate-fade-in">
+      {/* Coluna esquerda - Próximos Agendamentos (3/5 = 60%) */}
+      <div className="lg:col-span-3">
+        <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300 h-full">
+          <CardHeader className="pb-3 flex flex-row items-center justify-between py-[6px]">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-brand-gradient">
+                <Calendar className="h-5 w-5 text-white" />
+              </div>
+              <CardTitle className="font-semibold text-base">Próximos Agendamentos</CardTitle>
             </div>
-            <CardTitle className="font-semibold text-base">Próximos Agendamentos</CardTitle>
-          </div>
-          <Link to="/agenda">
-            <Button variant="ghost" size="sm">Ver todos</Button>
-          </Link>
-        </CardHeader>
-        <CardContent>
-          {proximosAgendamentos.length === 0 ? <div className="flex items-center justify-center py-[7px]">
-              <p className="text-lunar-textSecondary text-xs">Nenhum agendamento confirmado</p>
-            </div> : <div className="space-y-3">
-              {proximosAgendamentos.map(ev => <div key={ev.id} className="border-b pb-3 last:border-b-0 last:pb-0">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="font-medium text-xs">{ev.cliente}</p>
-                      <p className="text-lunar-textSecondary mt-0.5 text-2xs">{ev.tipo}</p>
+            <Link to="/agenda">
+              <Button variant="ghost" size="sm">Ver todos</Button>
+            </Link>
+          </CardHeader>
+          <CardContent>
+            {proximosAgendamentos.length === 0 ? <div className="flex items-center justify-center py-[7px]">
+                <p className="text-lunar-textSecondary text-xs">Nenhum agendamento confirmado</p>
+              </div> : <div className="space-y-3">
+                {proximosAgendamentos.map(ev => <div key={ev.id} className="border-b pb-3 last:border-b-0 last:pb-0">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="font-medium text-xs">{ev.cliente}</p>
+                        <p className="text-lunar-textSecondary mt-0.5 text-2xs">{ev.tipo}</p>
+                      </div>
+                      <div className="text-right text-2xs text-lunar-textSecondary">
+                        <div>{ev.data.toLocaleDateString("pt-BR")}</div>
+                        <div className="mt-0.5">{ev.hora}</div>
+                      </div>
                     </div>
-                    <div className="text-right text-2xs text-lunar-textSecondary">
-                      <div>{ev.data.toLocaleDateString("pt-BR")}</div>
-                      <div className="mt-0.5">{ev.hora}</div>
-                    </div>
-                  </div>
-                </div>)}
-            </div>}
-        </CardContent>
-      </Card>
+                  </div>)}
+              </div>}
+          </CardContent>
+        </Card>
+      </div>
+      
+      {/* Coluna direita - Lembretes de Produção (2/5 = 40%) */}
+      <div className="lg:col-span-2">
+        <ProductionRemindersCard lembretes={lembretesProducao} />
+      </div>
     </section>
 
-    {/* KPIs modernizados (mensal) */}
-    <section aria-label="Indicadores principais" className="animate-fade-in">
-      <KPIGroupCard receitaMes={receitaMes} metaMes={metaMes} progressoMeta={progressoMeta} topCategoria={topCategoria} novosClientes60d={novosClientes60d} livresSemana={livresSemana} proximoLivre={proximoLivre} valorPrevisto={valorPrevisto} />
-    </section>
-
-
-    {/* Follow-up Notifications */}
-    <section aria-label="Follow-up de leads" className="animate-fade-in">
-      <FollowUpNotificationCard />
-    </section>
-
-      {/* Critical Cards - Empilhados em tablets */}
-    <section className="grid gap-6 animate-fade-in auto-rows-auto lg:auto-rows-fr grid-cols-1 lg:grid-cols-3">
+    {/* Critical Cards - Agora apenas 2 cards */}
+    <section className="grid gap-6 animate-fade-in auto-rows-auto lg:auto-rows-fr grid-cols-1 lg:grid-cols-2">
       <div className="h-full"><FinancialRemindersCard /></div>
-      <div className="h-full"><ProductionRemindersCard lembretes={lembretesProducao} /></div>
       <div className="h-full"><HighPriorityDueSoonCard /></div>
     </section>
     </main>;
