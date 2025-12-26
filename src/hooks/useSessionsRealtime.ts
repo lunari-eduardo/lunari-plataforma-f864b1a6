@@ -208,6 +208,20 @@ export function useSessionsRealtime(clienteId?: string) {
         (data.valorAdicional || 0) -
         (data.desconto || 0);
 
+      // CORREÇÃO: Criar regras congeladas básicas para sessões manuais
+      // Isso evita o alerta "Migração" na tabela do workflow
+      const regrasCongeladas = {
+        modelo: 'fixo',
+        valorFixo: data.valorFotoExtra || 0,
+        pacote: {
+          nome: data.pacote || null,
+          valorBase: data.valorBasePacote,
+          valorFotoExtra: data.valorFotoExtra || 0
+        },
+        createdAt: new Date().toISOString(),
+        source: 'manual_historical'
+      };
+
       const newSession = {
         cliente_id: data.clienteId,
         user_id: user.id,
@@ -229,7 +243,7 @@ export function useSessionsRealtime(clienteId?: string) {
         valor_pago: data.valorPago || 0,
         detalhes: data.detalhes || null,
         observacoes: data.observacoes || null,
-        regras_congeladas: null, // Historical data doesn't have frozen rules
+        regras_congeladas: regrasCongeladas,
         appointment_id: null,
         orcamento_id: null,
       };

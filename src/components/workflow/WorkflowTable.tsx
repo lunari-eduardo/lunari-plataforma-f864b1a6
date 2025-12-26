@@ -941,14 +941,25 @@ export function WorkflowTable({
                       </div>;
                   } else {
                     // Item sem regras congeladas: calcular valor unitário atual baseado no modelo global
+                    const valorStr = typeof session.valorFotoExtra === 'string' ? session.valorFotoExtra : String(session.valorFotoExtra || '0');
+                    const valorDireto = parseFloat(valorStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+                    
+                    // CORREÇÃO: Se a sessão tem valor_foto_extra definido diretamente, mostrar sem alerta
+                    // Isso acontece em sessões históricas/manuais que não precisam de migração
+                    if (valorDireto > 0) {
+                      return <div className="flex flex-col gap-1">
+                          <span className="text-xs font-medium text-blue-600">
+                            {formatCurrency(valorDireto)}
+                          </span>
+                        </div>;
+                    }
+                    
+                    // Sessões sem valor definido: mostrar alerta de migração
                     const config = obterConfiguracaoPrecificacao();
                     let valorUnitario = 0;
                     if (config.modelo === 'fixo') {
-                      // Modelo fixo por pacote - usar valor já armazenado na sessão
-                      const valorStr = typeof session.valorFotoExtra === 'string' ? session.valorFotoExtra : String(session.valorFotoExtra || '0');
-                      valorUnitario = parseFloat(valorStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+                      valorUnitario = valorDireto;
                     } else if (config.modelo === 'global') {
-                      // Modelo tabela global - calcular valor baseado na quantidade
                       const tabelaGlobal = obterTabelaGlobal();
                       if (tabelaGlobal && session.qtdFotosExtra && session.qtdFotosExtra > 0) {
                         valorUnitario = calcularValorPorFoto(session.qtdFotosExtra, tabelaGlobal);
@@ -956,7 +967,6 @@ export function WorkflowTable({
                         valorUnitario = tabelaGlobal.faixas[0].valor;
                       }
                     } else if (config.modelo === 'categoria') {
-                      // Modelo por categoria - calcular valor baseado na categoria
                       const categoriaObj = categorias.find(cat => cat.nome === session.categoria);
                       const categoriaId = categoriaObj?.id || session.categoria;
                       if (categoriaId) {
