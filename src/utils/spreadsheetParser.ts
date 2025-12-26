@@ -333,19 +333,9 @@ export async function parseWorkflowSpreadsheet(file: File): Promise<ParsedSpread
         session.data_sessao = parsedDate;
       }
       
-      // Hora da sessão (obrigatório)
+      // Hora da sessão (opcional - padrão 00:00)
       const parsedTime = parseTime(rowData.hora_sessao);
-      if (!parsedTime) {
-        errors.push({ 
-          row: rowNumber, 
-          column: 'hora_sessao', 
-          message: `Hora inválida: "${rowData.hora_sessao}"`,
-          value: rowData.hora_sessao
-        });
-        rowHasError = true;
-      } else {
-        session.hora_sessao = parsedTime;
-      }
+      session.hora_sessao = parsedTime || '00:00';
       
       // Categoria (obrigatório)
       if (!rowData.categoria || String(rowData.categoria).trim() === '') {
