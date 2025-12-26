@@ -83,7 +83,8 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     if (userId) {
       preloadMonths();
-      setupRealtimeSubscription();
+      const cleanup = setupRealtimeSubscription();
+      return cleanup; // CRÍTICO: retornar cleanup para limpar subscription
     }
   }, [userId]);
 
