@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -16,7 +15,8 @@ import { useOrcamentos } from '@/hooks/useOrcamentos';
 import { useAppointmentWorkflowInfo } from '@/hooks/useAppointmentWorkflowInfo';
 import { AppointmentDeleteConfirmModal } from './AppointmentDeleteConfirmModal';
 import { Appointment } from '@/hooks/useAgenda';
-import { Calendar, DollarSign, FileText, History, ChevronRight, Loader2, Package } from 'lucide-react';
+import PackageSearchCombobox from './PackageSearchCombobox';
+import { Calendar, DollarSign, FileText, History, ChevronRight, Loader2, Package, AlertCircle } from 'lucide-react';
 
 interface AppointmentDetailsProps {
   appointment: Appointment;
@@ -70,13 +70,14 @@ export default function AppointmentDetails({
   };
 
   // Manipular seleção de pacote
-  const handlePackageSelect = (packageId: string) => {
+  const handlePackageSelect = (packageId: string, packageData?: any) => {
     if (!isEditable) return;
-    const selectedPackage = pacotes.find(p => p.id === packageId);
+    // Usa packageData se disponível, senão busca na lista
+    const selectedPackage = packageData || pacotes.find(p => p.id === packageId);
     setFormData(prev => ({
       ...prev,
       packageId,
-      type: selectedPackage?.nome || prev.type
+      type: selectedPackage?.nome || selectedPackage?.name || prev.type
     }));
   };
 
@@ -212,25 +213,20 @@ export default function AppointmentDetails({
 
         <div>
           <Label htmlFor="package" className="text-xs text-lunar-muted">Pacote</Label>
-          <Select value={formData.packageId} onValueChange={handlePackageSelect} disabled={!isEditable}>
-            <SelectTrigger className={`mt-1 h-9 text-sm ${!isEditable ? 'bg-muted cursor-not-allowed' : ''}`}>
-              <SelectValue placeholder="Selecionar pacote" />
-            </SelectTrigger>
-            <SelectContent>
-              {pacotes.map(pkg => (
-                <SelectItem key={pkg.id} value={pkg.id}>
-                  {pkg.nome} - R$ {(pkg.valor || pkg.valor_base || pkg.valorVenda || 0).toFixed(2)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className={`mt-1 ${!isEditable ? 'opacity-50 pointer-events-none' : ''}`}>
+            <PackageSearchCombobox
+              value={formData.packageId}
+              onSelect={handlePackageSelect}
+              placeholder="Buscar pacote..."
+            />
+          </div>
         </div>
 
-        {/* Toggle de status */}
-        <div className="pt-2 border-t border-lunar-border/20">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-lunar-muted">Alterar status</span>
-            {formData.status === 'a confirmar' ? (
+        {/* Toggle de status - apenas para pendentes */}
+        {formData.status === 'a confirmar' && (
+          <div className="pt-2 border-t border-lunar-border/20">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-lunar-muted">Alterar status</span>
               <Button 
                 variant="outline" 
                 size="sm"
@@ -239,18 +235,19 @@ export default function AppointmentDetails({
               >
                 Confirmar sessão
               </Button>
-            ) : (
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={() => handleStatusSelect('a confirmar')}
-                className="h-7 text-xs text-lunar-muted hover:text-lunar-warning"
-              >
-                Voltar para pendente
-              </Button>
-            )}
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Aviso para confirmados - não pode reverter */}
+        {formData.status === 'confirmado' && (
+          <div className="pt-2 border-t border-lunar-border/20">
+            <p className="text-xs text-lunar-muted italic flex items-center gap-1.5">
+              <AlertCircle className="h-3.5 w-3.5" />
+              Agendamentos confirmados não podem ser revertidos. Se necessário, exclua e reagende.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* BLOCO 2: Financeiro */}
