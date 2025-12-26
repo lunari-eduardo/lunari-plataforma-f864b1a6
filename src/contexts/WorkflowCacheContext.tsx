@@ -35,9 +35,6 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
   const memoryCache = useRef<Map<string, WorkflowSession[]>>(new Map());
   const subscribers = useRef<Set<(sessions: WorkflowSession[]) => void>>(new Set());
   const broadcastChannel = useRef<BroadcastChannel | null>(null);
-  
-  // FASE 1: Rastrear meses sendo carregados (evitar requests duplicados)
-  const loadingMonths = useRef<Set<string>>(new Set());
 
   // Inicializar BroadcastChannel para sync entre tabs
   useEffect(() => {
@@ -411,8 +408,12 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [userId, setMonthData]);
 
+  // Ref para armazenar promises pendentes de carregamento
+  const pendingLoads = useRef<Map<string, Promise<void>>>(new Map());
+
   // FASE 1: Método para garantir que um mês específico está carregado
   // forceRefresh = true: ignora cache e busca do Supabase
+  // OTIMIZAÇÃO: Removido busy-wait blocking, usa Promise-based approach
   const ensureMonthLoaded = useCallback(async (year: number, month: number, forceRefresh = false) => {
     const key = getCacheKey(year, month);
     
@@ -421,45 +422,41 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
       const cachedSessions = memoryCache.current.get(key) || [];
       console.log(`⚡ [WorkflowCache] Cache hit for ${key} (${cachedSessions.length} sessions)`);
       
-      // NOVO: Fazer refresh silencioso em background para garantir dados frescos
-      // Isso é especialmente importante para PWA e multi-dispositivo
+      // Fazer refresh silencioso em background (fire-and-forget)
       silentRefreshMonth(year, month);
       return;
     }
     
-    // Se já está carregando, aguardar
-    if (loadingMonths.current.has(key)) {
-      console.log(`⏳ [WorkflowCache] Already loading ${key}, waiting...`);
-      // Aguardar até que o carregamento termine
-      await new Promise<void>((resolve) => {
-        const checkInterval = setInterval(() => {
-          if (!loadingMonths.current.has(key)) {
-            clearInterval(checkInterval);
-            resolve();
-          }
-        }, 100);
-      });
+    // Se já tem uma Promise pendente para este mês, aguardar ela
+    if (pendingLoads.current.has(key)) {
+      console.log(`⏳ [WorkflowCache] Already loading ${key}, awaiting existing promise...`);
+      await pendingLoads.current.get(key);
       return;
     }
     
-    // Marcar como carregando e buscar do Supabase
-    loadingMonths.current.add(key);
+    // Criar nova Promise de carregamento
     console.log(`🔄 [WorkflowCache] Fetching from Supabase for ${key}`);
     
-    try {
-      await fetchAndCacheMonth(year, month);
-      const sessions = memoryCache.current.get(key) || [];
-      console.log(`✅ [WorkflowCache] Successfully loaded ${key} (${sessions.length} sessions from Supabase)`);
-    } catch (error) {
-      console.error(`❌ [WorkflowCache] Error loading ${key}:`, error);
-    } finally {
-      loadingMonths.current.delete(key);
-    }
+    const loadPromise = (async () => {
+      try {
+        await fetchAndCacheMonth(year, month);
+        const sessions = memoryCache.current.get(key) || [];
+        console.log(`✅ [WorkflowCache] Successfully loaded ${key} (${sessions.length} sessions from Supabase)`);
+      } catch (error) {
+        console.error(`❌ [WorkflowCache] Error loading ${key}:`, error);
+        throw error;
+      } finally {
+        pendingLoads.current.delete(key);
+      }
+    })();
+    
+    pendingLoads.current.set(key, loadPromise);
+    await loadPromise;
   }, [userId, silentRefreshMonth]);
 
   const isLoadingMonth = useCallback((year: number, month: number): boolean => {
     const key = getCacheKey(year, month);
-    return loadingMonths.current.has(key);
+    return pendingLoads.current.has(key);
   }, []);
 
   // FASE 4: Listen for custom cache merge events with client hydration
