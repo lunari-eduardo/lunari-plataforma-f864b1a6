@@ -85,6 +85,14 @@ function mapColumnToKey(columnName: string): string | null {
 function parseDate(value: any): string | null {
   if (!value) return null;
   
+  // Se for objeto Date nativo do JavaScript
+  if (value instanceof Date) {
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, '0');
+    const day = String(value.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+  
   // Se for número do Excel (serial date)
   if (typeof value === 'number') {
     const date = XLSX.SSF.parse_date_code(value);
@@ -97,6 +105,21 @@ function parseDate(value: any): string | null {
   }
   
   const str = String(value).trim();
+  
+  // Formato Date.toString(): "Mon Sep 02 2024 00:00:28 GMT..."
+  const dateToStringMatch = str.match(/^[A-Za-z]{3}\s+([A-Za-z]{3})\s+(\d{1,2})\s+(\d{4})/);
+  if (dateToStringMatch) {
+    const [, monthStr, day, year] = dateToStringMatch;
+    const monthNames: Record<string, string> = {
+      'jan': '01', 'feb': '02', 'mar': '03', 'apr': '04',
+      'may': '05', 'jun': '06', 'jul': '07', 'aug': '08',
+      'sep': '09', 'oct': '10', 'nov': '11', 'dec': '12'
+    };
+    const month = monthNames[monthStr.toLowerCase()];
+    if (month) {
+      return `${year}-${month}-${day.padStart(2, '0')}`;
+    }
+  }
   
   // Formato ISO: YYYY-MM-DD
   if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
