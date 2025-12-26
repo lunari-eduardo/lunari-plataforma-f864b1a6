@@ -47,8 +47,15 @@ export const AutoPhotoCalculator: React.FC<AutoPhotoCalculatorProps> = ({
 
   // Helper function to calculate and update values
   const calcularEAtualizarValores = useCallback(async () => {
-    
     try {
+      // NOVA VERIFICAÇÃO: Sessões históricas manuais NÃO devem ser recalculadas
+      const isManualHistorical = regrasCongeladas?.isManualHistorical === true ||
+                                 regrasCongeladas?.source === 'manual_historical';
+      
+      if (isManualHistorical) {
+        console.log('🚫 AutoPhotoCalculator: Sessão histórica manual - não recalcular', sessionId);
+        return; // Não fazer nada para sessões históricas
+      }
       // CORREÇÃO: Early return reforçado para quantidade 0
       if (!quantidade || quantidade === 0) {
         // Verificar se já computamos isso
