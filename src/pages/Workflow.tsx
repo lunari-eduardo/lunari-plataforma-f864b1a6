@@ -673,6 +673,16 @@ export default function Workflow() {
         if (fullSession && !error) {
           console.log('✅ [Workflow] Merging new session into cache:', fullSession.id);
           mergeUpdate(fullSession as WorkflowSession);
+          
+          // CORREÇÃO: Navegar automaticamente para o mês da sessão criada
+          const sessionDate = new Date(data.dataSessao);
+          const sessionYear = sessionDate.getFullYear();
+          const sessionMonth = sessionDate.getMonth() + 1;
+          
+          if (sessionYear !== currentMonth.year || sessionMonth !== currentMonth.month) {
+            console.log(`📅 [Workflow] Navegando para mês da sessão: ${sessionMonth}/${sessionYear}`);
+            setCurrentMonth({ year: sessionYear, month: sessionMonth });
+          }
         }
       }
       
@@ -688,7 +698,7 @@ export default function Workflow() {
         variant: "destructive",
       });
     }
-  }, [createManualSession, mergeUpdate]);
+  }, [createManualSession, mergeUpdate, currentMonth]);
 
   // FASE 4: Recongelar todas as sessões manualmente
   const recongelarTodasSessoes = useCallback(async () => {
