@@ -18,6 +18,9 @@ import { useOrcamentos } from '@/hooks/useOrcamentos';
 import { ORIGENS_PADRAO } from '@/utils/defaultOrigens';
 import { CategorySelector } from '@/components/ui/category-selector';
 import { configurationService } from '@/services/ConfigurationService';
+import { ChevronDown, Plus, FileText, DollarSign } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 // Tipo de agendamento
 type Appointment = {
@@ -52,13 +55,13 @@ interface AppointmentFormProps {
 // Lista de status disponíveis
 const availableStatus = [{
   value: 'a confirmar',
-  label: 'Pendente'
+  label: 'Pendente',
+  emoji: '🟠'
 }, {
   value: 'confirmado',
-  label: 'Confirmado'
+  label: 'Confirmado',
+  emoji: '🟢'
 }];
-
-// Integrado com hook real de clientes
 
 export default function AppointmentForm({
   initialDate = new Date(),
@@ -94,6 +97,13 @@ export default function AppointmentForm({
   // Definir estado ativo da tab (novo cliente ou cliente existente)
   const [activeTab, setActiveTab] = useState<string>('existing');
 
+  // Estados para campos colapsáveis
+  const [showValorPago, setShowValorPago] = useState(false);
+  const [showDescricao, setShowDescricao] = useState(false);
+  
+  // Estado para animação do valor do pacote
+  const [valorPacoteAnimating, setValorPacoteAnimating] = useState(false);
+
   // Estado para os campos do formulário
   const [formData, setFormData] = useState({
     date: initialDate,
@@ -104,6 +114,7 @@ export default function AppointmentForm({
     packageId: '',
     categoria: '',
     paidAmount: 0,
+    valorPacote: 0,
     // Campos para novo cliente
     newClientName: '',
     newClientPhone: '',
@@ -119,6 +130,15 @@ export default function AppointmentForm({
       paidAmount: parseFloat(value) || 0
     }))
   });
+  
+  // Enhanced number input for package value
+  const valorPacoteInput = useNumberInput({
+    value: formData.valorPacote,
+    onChange: value => setFormData(prev => ({
+      ...prev,
+      valorPacote: parseFloat(value) || 0
+    }))
+  });
 
   // Se estiver editando, preencher com dados existentes
   useEffect(() => {
@@ -127,18 +147,31 @@ export default function AppointmentForm({
 
       // Carregar categoria do pacote existente
       let categoria = '';
+      let valorPacote = 0;
       if (appointment.packageId) {
         const selectedPackage = pacotes.find(p => p.id === appointment.packageId);
-        if (selectedPackage?.categoria_id) {
-          try {
-            const configCategorias = configurationService.loadCategorias();
-            const categoriaObj = configCategorias.find((cat) => cat.id === selectedPackage.categoria_id || cat.id === String(selectedPackage.categoria_id));
-            categoria = categoriaObj?.nome || '';
-          } catch {
-            categoria = '';
+        if (selectedPackage) {
+          valorPacote = selectedPackage.valor_base || 0;
+          if (selectedPackage.categoria_id) {
+            try {
+              const configCategorias = configurationService.loadCategorias();
+              const categoriaObj = configCategorias.find((cat) => cat.id === selectedPackage.categoria_id || cat.id === String(selectedPackage.categoria_id));
+              categoria = categoriaObj?.nome || '';
+            } catch {
+              categoria = '';
+            }
           }
         }
       }
+      
+      // Abrir campos colapsáveis se já tem valor
+      if (appointment.paidAmount && appointment.paidAmount > 0) {
+        setShowValorPago(true);
+      }
+      if (appointment.description) {
+        setShowDescricao(true);
+      }
+      
       setFormData({
         date: appointment.date,
         time: appointment.time,
@@ -148,6 +181,7 @@ export default function AppointmentForm({
         packageId: appointment.packageId || '',
         categoria,
         paidAmount: appointment.paidAmount || 0,
+        valorPacote,
         newClientName: '',
         newClientPhone: '',
         newClientEmail: '',
@@ -173,7 +207,7 @@ export default function AppointmentForm({
     } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'paidAmount' ? parseFloat(value) || 0 : value
+      [name]: name === 'paidAmount' || name === 'valorPacote' ? parseFloat(value) || 0 : value
     }));
   };
 
@@ -194,24 +228,34 @@ export default function AppointmentForm({
     }));
   };
 
-  // Manipular seleção de pacote
+  // Manipular seleção de pacote com animação
   const handlePackageSelect = (packageId: string) => {
     const selectedPackage = pacotes.find(p => p.id === packageId);
     let categoria = '';
-    if (selectedPackage?.categoria_id) {
-      // Buscar nome da categoria baseado no categoria_id
-      try {
-        const configCategorias = configurationService.loadCategorias();
-        const categoriaObj = configCategorias.find((cat) => cat.id === selectedPackage.categoria_id || cat.id === String(selectedPackage.categoria_id));
-        categoria = categoriaObj?.nome || '';
-      } catch {
-        categoria = '';
+    let valorPacote = 0;
+    
+    if (selectedPackage) {
+      valorPacote = selectedPackage.valor_base || 0;
+      if (selectedPackage.categoria_id) {
+        try {
+          const configCategorias = configurationService.loadCategorias();
+          const categoriaObj = configCategorias.find((cat) => cat.id === selectedPackage.categoria_id || cat.id === String(selectedPackage.categoria_id));
+          categoria = categoriaObj?.nome || '';
+        } catch {
+          categoria = '';
+        }
       }
     }
+    
+    // Trigger animation
+    setValorPacoteAnimating(true);
+    setTimeout(() => setValorPacoteAnimating(false), 600);
+    
     setFormData(prev => ({
       ...prev,
       packageId,
-      categoria // Auto-preencher categoria
+      categoria,
+      valorPacote
     }));
   };
 
@@ -243,15 +287,33 @@ export default function AppointmentForm({
   // Função para verificar conflitos de horário
   const checkForConflicts = () => {
     if (formData.status === 'confirmado') {
-      // Buscar agendamentos confirmados existentes no mesmo horário
       const existingConfirmed = appointments.find(app => app.id !== appointment?.id &&
-      // Excluir o próprio agendamento na edição
       app.status === 'confirmado' && app.date.toDateString() === formData.date.toDateString() && app.time === formData.time);
       if (existingConfirmed) {
         return `Já existe um agendamento confirmado para ${existingConfirmed.client} às ${formData.time} neste dia.`;
       }
     }
     return null;
+  };
+
+  // Formatar telefone automaticamente
+  const formatPhone = (value: string) => {
+    const digits = value.replace(/\D/g, '');
+    
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 7) return `(${digits.slice(0,2)}) ${digits.slice(2)}`;
+    if (digits.length <= 11) {
+      return `(${digits.slice(0,2)}) ${digits.slice(2,7)}-${digits.slice(7)}`;
+    }
+    return `(${digits.slice(0,2)}) ${digits.slice(2,7)}-${digits.slice(7,11)}`;
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhone(e.target.value);
+    setFormData(prev => ({
+      ...prev,
+      newClientPhone: formatted
+    }));
   };
 
   // Manipular envio do formulário
@@ -306,11 +368,10 @@ export default function AppointmentForm({
 
     // Obter dados do pacote selecionado para salvar nome e categoria corretos
     const selectedPackage = formData.packageId ? pacotes.find(p => p.id === formData.packageId) : null;
-    let packageType = 'Sessão'; // Fallback padrão
+    let packageType = 'Sessão';
     let packageCategory = '';
     if (selectedPackage) {
       packageType = selectedPackage.nome;
-      // Buscar nome da categoria baseado no categoria_id
       if (selectedPackage.categoria_id) {
         try {
           const configCategorias = configurationService.loadCategorias();
@@ -327,41 +388,41 @@ export default function AppointmentForm({
       date: formData.date,
       time: formData.time,
       title: clientInfo.client,
-      type: packageCategory || 'Sessão',  // ✅ FASE 1: type = CATEGORIA
-      category: packageType,  // ✅ FASE 1: category = NOME DO PACOTE (para compatibilidade)
+      type: packageCategory || 'Sessão',
+      category: packageType,
       status: formData.status as 'confirmado' | 'a confirmar',
       description: formData.description,
       packageId: formData.packageId,
       produtosIncluidos: produtosIncluidos.length > 0 ? produtosIncluidos : undefined,
       paidAmount: formData.paidAmount,
+      valorPacote: formData.valorPacote,
       client: clientInfo.client,
       clientId: clientInfo.clientId,
-      // INCLUIR CLIENTEID
       whatsapp: clientInfo.clientPhone,
-      // INCLUIR WHATSAPP
       email: clientInfo.clientEmail,
-      // INCLUIR EMAIL
       clientPhone: clientInfo.clientPhone,
       clientEmail: clientInfo.clientEmail
     };
     onSave(appointmentData);
   };
-  return <div className="space-y-6">
-      {isFromBudgetAppointment && <div className="p-4 bg-muted border border-border rounded-lg">
+
+  return (
+    <div className="space-y-5">
+      {isFromBudgetAppointment && (
+        <div className="p-4 bg-muted border border-border rounded-lg">
           <p className="text-sm font-medium text-foreground mb-1">📋 Agendamento de Orçamento</p>
           <p className="text-xs text-muted-foreground">
             Este agendamento foi criado automaticamente a partir de um orçamento fechado. 
-            Apenas data e horário podem ser editados aqui. Para alterar outras informações, 
-            vá para a página de Orçamentos ou Workflow.
+            Apenas data e horário podem ser editados aqui.
           </p>
-        </div>}
+        </div>
+      )}
       
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {!isFromBudgetAppointment && <div className="space-y-4">
-            <div>
-              <Label className="text-sm font-medium text-foreground">Cliente</Label>
-              
-            </div>
+      <form onSubmit={handleSubmit} className="space-y-5">
+        {/* ========== SEÇÃO 1: CLIENTE (CRM / Novo) ========== */}
+        {!isFromBudgetAppointment && (
+          <div className="space-y-3">
+            <Label className="text-sm font-medium text-foreground">Cliente</Label>
             
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid grid-cols-2 w-full">
@@ -369,110 +430,279 @@ export default function AppointmentForm({
                 <TabsTrigger value="new" className="text-sm">Novo Cliente</TabsTrigger>
               </TabsList>
               
-              <TabsContent value="existing" className="mt-4 space-y-4">
-                <div className="space-y-2">
-                  <ClientSearchCombobox value={formData.clientId} onSelect={handleClientSelect} placeholder="Buscar cliente no CRM..." />
-                  <p className="text-xs text-muted-foreground">
-                    💡 Clientes são gerenciados na página CRM. <a href="/clientes" className="text-primary hover:underline">Ver todos os clientes</a>
-                  </p>
-                </div>
+              <TabsContent value="existing" className="mt-3 space-y-3">
+                <ClientSearchCombobox 
+                  value={formData.clientId} 
+                  onSelect={handleClientSelect} 
+                  placeholder="Buscar cliente no CRM..." 
+                />
+                <p className="text-xs text-muted-foreground">
+                  💡 Clientes são gerenciados na página CRM. <a href="/clientes" className="text-primary hover:underline">Ver todos</a>
+                </p>
               </TabsContent>
               
-              <TabsContent value="new" className="mt-4 space-y-4">
-                <div className="grid grid-cols-1 gap-4">
-                  <div className="space-y-2">
+              <TabsContent value="new" className="mt-3 space-y-3">
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
                     <Label htmlFor="new-client-name" className="text-sm font-medium">Nome *</Label>
-                    <Input id="new-client-name" name="newClientName" value={formData.newClientName} onChange={handleChange} placeholder="Nome completo" />
+                    <Input 
+                      id="new-client-name" 
+                      name="newClientName" 
+                      value={formData.newClientName} 
+                      onChange={handleChange} 
+                      placeholder="Nome completo" 
+                    />
                   </div>
                   
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     <Label htmlFor="new-client-phone" className="text-sm font-medium">Telefone</Label>
-                    <Input id="new-client-phone" name="newClientPhone" value={formData.newClientPhone} onChange={handleChange} placeholder="(Opcional) +55 (DDD) 00000-0000" />
+                    <Input 
+                      id="new-client-phone" 
+                      name="newClientPhone" 
+                      value={formData.newClientPhone} 
+                      onChange={handlePhoneChange} 
+                      placeholder="(51) 99999-9999" 
+                    />
                   </div>
                   
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     <Label htmlFor="new-client-email" className="text-sm font-medium">E-mail</Label>
-                    <Input id="new-client-email" name="newClientEmail" type="email" value={formData.newClientEmail} onChange={handleChange} placeholder="email@exemplo.com" />
+                    <Input 
+                      id="new-client-email" 
+                      name="newClientEmail" 
+                      type="email" 
+                      value={formData.newClientEmail} 
+                      onChange={handleChange} 
+                      placeholder="email@exemplo.com" 
+                    />
                   </div>
                   
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     <Label htmlFor="new-client-origem" className="text-sm font-medium">Como conheceu?</Label>
-                     <Select value={formData.newClientOrigem} onValueChange={value => setFormData(prev => ({
-                  ...prev,
-                  newClientOrigem: value
-                }))} onOpenChange={open => dropdownContext?.setHasOpenDropdown(open)}>
+                    <Select 
+                      value={formData.newClientOrigem} 
+                      onValueChange={value => setFormData(prev => ({ ...prev, newClientOrigem: value }))} 
+                      onOpenChange={open => dropdownContext?.setHasOpenDropdown(open)}
+                    >
                       <SelectTrigger id="new-client-origem">
                         <SelectValue placeholder="Selecione a origem" />
                       </SelectTrigger>
                       <SelectContent>
-                        {ORIGENS_PADRAO.map(origem => <SelectItem key={origem.id} value={origem.id}>
+                        {ORIGENS_PADRAO.map(origem => (
+                          <SelectItem key={origem.id} value={origem.id}>
                             <div className="flex items-center gap-2">
-                              <div className="w-3 h-3 rounded-full" style={{
-                          backgroundColor: origem.cor
-                        }} />
+                              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: origem.cor }} />
                               {origem.nome}
                             </div>
-                          </SelectItem>)}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
                 
                 <p className="text-xs text-primary">
-                  🆕 Novo cliente será automaticamente adicionado ao CRM
+                  🆕 O cliente será criado no CRM automaticamente.
                 </p>
               </TabsContent>
             </Tabs>
-          </div>}
+          </div>
+        )}
         
-        {!isFromBudgetAppointment && <>
-            <div className="space-y-2">
-              <Label htmlFor="appointment-description" className="text-sm font-medium">Descrição</Label>
-              <Textarea id="appointment-description" name="description" value={formData.description} onChange={handleChange} placeholder="Detalhes da sessão..." className="min-h-[80px] resize-none" />
+        {/* ========== SEÇÃO 2: PACOTE ========== */}
+        {!isFromBudgetAppointment && (
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Categoria (Opcional)</Label>
+              <CategorySelector 
+                categorias={categorias} 
+                value={formData.categoria} 
+                onValueChange={handleCategorySelect} 
+                placeholder="Filtrar pacotes por categoria..." 
+              />
             </div>
             
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Categoria (Opcional)</Label>
-                <CategorySelector categorias={categorias} value={formData.categoria} onValueChange={handleCategorySelect} placeholder="Selecionar categoria para filtrar pacotes..." />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="package-search-input" className="text-sm font-medium">Pacote</Label>
-                <PackageSearchCombobox value={formData.packageId} onSelect={handlePackageSelect} placeholder="Buscar pacote por nome ou categoria..." filtrarPorCategoria={formData.categoria} />
-              </div>
-              
-              {formData.packageId && getIncludedProducts().length > 0 && <div className="p-4 bg-muted border border-border rounded-lg">
-                  <h4 className="text-sm font-medium text-foreground mb-3">📦 Produtos Incluídos neste Pacote</h4>
-                  <div className="space-y-2">
-                    {getIncludedProducts().map((produto, index) => <div key={index} className="flex justify-between items-center text-sm">
-                        <span className="text-foreground">{produto.nome}</span>
-                        <span className="font-medium text-muted-foreground">Qtd: {produto.quantidade}</span>
-                      </div>)}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-3 italic">
-                    Estes produtos serão automaticamente incluídos no agendamento
-                  </p>
-                </div>}
+            <div className="space-y-1.5">
+              <Label htmlFor="package-search-input" className="text-sm font-medium">Pacote</Label>
+              <PackageSearchCombobox 
+                value={formData.packageId} 
+                onSelect={handlePackageSelect} 
+                placeholder="Buscar pacote..." 
+                filtrarPorCategoria={formData.categoria} 
+              />
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="appointment-paid-amount" className="text-sm font-medium">Valor pago</Label>
-                 <Input id="appointment-paid-amount" name="paidAmount" type="number" min="0" step="0.01" value={paidAmountInput.displayValue} onChange={paidAmountInput.handleChange} onFocus={paidAmountInput.handleFocus} placeholder="" />
-              </div>
-              
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Status do Agendamento</Label>
-                <div className="flex gap-2">
-                  {availableStatus.map(status => <Button key={status.value} type="button" variant={formData.status === status.value ? "default" : "outline"} size="sm" onClick={() => handleStatusSelect(status.value)} className={`flex-1 text-sm ${formData.status === status.value ? status.value === 'a confirmar' ? 'bg-destructive hover:bg-destructive/90' : 'bg-green-600 hover:bg-green-700 text-white' : status.value === 'a confirmar' ? 'border-destructive text-destructive hover:bg-destructive/10' : 'border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-950'}`}>
-                      {status.label}
-                    </Button>)}
+            {formData.packageId && getIncludedProducts().length > 0 && (
+              <div className="p-3 bg-muted border border-border rounded-lg">
+                <h4 className="text-sm font-medium text-foreground mb-2">📦 Produtos Incluídos</h4>
+                <div className="space-y-1">
+                  {getIncludedProducts().map((produto, index) => (
+                    <div key={index} className="flex justify-between items-center text-sm">
+                      <span className="text-foreground">{produto.nome}</span>
+                      <span className="font-medium text-muted-foreground">Qtd: {produto.quantidade}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
-            </div>
-          </>}
+            )}
+          </div>
+        )}
         
+        {/* ========== SEÇÃO 3: VALOR DO PACOTE (com animação) ========== */}
+        {!isFromBudgetAppointment && (
+          <div className="space-y-1.5">
+            <Label htmlFor="valor-pacote" className="text-sm font-medium">Valor do pacote</Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+              <Input 
+                id="valor-pacote"
+                name="valorPacote"
+                type="number"
+                min="0"
+                step="0.01"
+                value={valorPacoteInput.displayValue}
+                onChange={valorPacoteInput.handleChange}
+                onFocus={valorPacoteInput.handleFocus}
+                className={cn(
+                  "pl-9 transition-all duration-300",
+                  valorPacoteAnimating && "ring-2 ring-green-500/50 bg-green-50 dark:bg-green-950/20"
+                )}
+                placeholder="0,00"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Preenchido automaticamente pelo pacote. Você pode ajustar.
+            </p>
+          </div>
+        )}
+        
+        {/* ========== SEÇÃO 4: STATUS DO AGENDAMENTO (toggle segmentado full-width) ========== */}
+        {!isFromBudgetAppointment && (
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Status do Agendamento</Label>
+            <div className="grid grid-cols-2 w-full">
+              {availableStatus.map((status, index) => (
+                <Button 
+                  key={status.value} 
+                  type="button" 
+                  variant={formData.status === status.value ? "default" : "outline"} 
+                  onClick={() => handleStatusSelect(status.value)} 
+                  className={cn(
+                    "text-sm h-11",
+                    index === 0 && "rounded-r-none border-r-0",
+                    index === 1 && "rounded-l-none",
+                    formData.status === status.value 
+                      ? status.value === 'a confirmar' 
+                        ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-500' 
+                        : 'bg-green-600 hover:bg-green-700 text-white border-green-600'
+                      : status.value === 'a confirmar' 
+                        ? 'border-amber-400 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/20' 
+                        : 'border-green-500 text-green-600 hover:bg-green-50 dark:hover:bg-green-950/20'
+                  )}
+                >
+                  {status.emoji} {status.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {/* ========== SEÇÃO 5: VALOR PAGO (colapsável) ========== */}
+        {!isFromBudgetAppointment && (
+          <Collapsible open={showValorPago} onOpenChange={setShowValorPago}>
+            {!showValorPago ? (
+              <CollapsibleTrigger asChild>
+                <button 
+                  type="button"
+                  className="flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors"
+                >
+                  <Plus className="h-4 w-4" />
+                  <DollarSign className="h-4 w-4" />
+                  Adicionar valor pago (sinal)
+                </button>
+              </CollapsibleTrigger>
+            ) : (
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="appointment-paid-amount" className="text-sm font-medium">Valor pago (sinal)</Label>
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      setShowValorPago(false);
+                      setFormData(prev => ({ ...prev, paidAmount: 0 }));
+                    }}
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Remover
+                  </button>
+                </div>
+                <CollapsibleContent className="animate-fade-in">
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                    <Input 
+                      id="appointment-paid-amount" 
+                      name="paidAmount" 
+                      type="number" 
+                      min="0" 
+                      step="0.01" 
+                      value={paidAmountInput.displayValue} 
+                      onChange={paidAmountInput.handleChange} 
+                      onFocus={paidAmountInput.handleFocus} 
+                      className="pl-9"
+                      placeholder="Ex: 50,00" 
+                    />
+                  </div>
+                </CollapsibleContent>
+              </div>
+            )}
+          </Collapsible>
+        )}
+        
+        {/* ========== SEÇÃO 6: DESCRIÇÃO (colapsável) ========== */}
+        {!isFromBudgetAppointment && (
+          <Collapsible open={showDescricao} onOpenChange={setShowDescricao}>
+            {!showDescricao ? (
+              <CollapsibleTrigger asChild>
+                <button 
+                  type="button"
+                  className="flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors"
+                >
+                  <Plus className="h-4 w-4" />
+                  <FileText className="h-4 w-4" />
+                  Adicionar descrição da sessão
+                </button>
+              </CollapsibleTrigger>
+            ) : (
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="appointment-description" className="text-sm font-medium">Descrição</Label>
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      setShowDescricao(false);
+                      setFormData(prev => ({ ...prev, description: '' }));
+                    }}
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Remover
+                  </button>
+                </div>
+                <CollapsibleContent className="animate-fade-in">
+                  <Textarea 
+                    id="appointment-description" 
+                    name="description" 
+                    value={formData.description} 
+                    onChange={handleChange} 
+                    placeholder="Detalhes da sessão..." 
+                    className="min-h-[100px] resize-none" 
+                  />
+                </CollapsibleContent>
+              </div>
+            )}
+          </Collapsible>
+        )}
+        
+        {/* ========== BOTÕES DE AÇÃO ========== */}
         <div className="flex justify-end gap-2 pt-4 border-t border-border">
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancelar
@@ -482,5 +712,6 @@ export default function AppointmentForm({
           </Button>
         </div>
       </form>
-    </div>;
+    </div>
+  );
 }
