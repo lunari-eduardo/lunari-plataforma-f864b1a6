@@ -11,6 +11,11 @@ import { useOrcamentoData } from '@/hooks/useOrcamentoData';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
+// Handler para auto-selecionar texto ao focar em inputs numéricos
+const handleNumberInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+  setTimeout(() => e.target.select(), 0);
+};
+
 interface ManualProduct {
   nome: string;
   quantidade: number;
@@ -324,6 +329,7 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
                   min="0"
                   value={valorBasePacote}
                   onChange={(e) => setValorBasePacote(e.target.value)}
+                  onFocus={handleNumberInputFocus}
                   readOnly={autoFilledByPackage}
                   placeholder="0.00"
                   className={cn("h-7 text-xs", autoFilledByPackage && "bg-muted/50 cursor-not-allowed")}
@@ -337,6 +343,7 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
                   min="0"
                   value={qtdFotosExtra}
                   onChange={(e) => setQtdFotosExtra(e.target.value)}
+                  onFocus={handleNumberInputFocus}
                   placeholder="0"
                   className="h-7 text-xs"
                 />
@@ -350,6 +357,7 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
                   min="0"
                   value={totalFotosExtraManual}
                   onChange={(e) => setTotalFotosExtraManual(e.target.value)}
+                  onFocus={handleNumberInputFocus}
                   placeholder="247.00"
                   className="h-7 text-xs border-blue-300 focus:border-blue-500"
                 />
@@ -370,6 +378,7 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
                   min="0"
                   value={desconto}
                   onChange={(e) => setDesconto(e.target.value)}
+                  onFocus={handleNumberInputFocus}
                   placeholder="0.00"
                   className="h-7 text-xs"
                 />
@@ -383,6 +392,7 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
                   min="0"
                   value={valorPago}
                   onChange={(e) => setValorPago(e.target.value)}
+                  onFocus={handleNumberInputFocus}
                   placeholder="0.00"
                   className="h-7 text-xs border-green-300 focus:border-green-500"
                 />
@@ -412,6 +422,7 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
                         min="1"
                         value={produto.quantidade}
                         onChange={(e) => handleProductChange(index, 'quantidade', parseFloat(e.target.value) || 0)}
+                        onFocus={handleNumberInputFocus}
                         placeholder="Qtd"
                         className="h-7 text-xs"
                       />
@@ -423,6 +434,7 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
                         min="0"
                         value={produto.valorUnitario}
                         onChange={(e) => handleProductChange(index, 'valorUnitario', parseFloat(e.target.value) || 0)}
+                        onFocus={handleNumberInputFocus}
                         placeholder="Valor unit."
                         className="h-7 text-xs"
                       />
