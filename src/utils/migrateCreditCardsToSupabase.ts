@@ -42,11 +42,10 @@ export async function migrateCreditCardsToSupabase(): Promise<{
       }
     }
 
-    // Limpar localStorage após migração bem-sucedida
-    if (errors === 0) {
-      storage.remove(STORAGE_KEYS.CARDS);
-      console.log('🗑️ localStorage limpo após migração');
-    }
+    // SEMPRE limpar localStorage após tentativa de migração
+    // (melhor perder 1 cartão do que duplicar infinitamente)
+    storage.remove(STORAGE_KEYS.CARDS);
+    console.log('🗑️ localStorage limpo após tentativa de migração (prevenção de loop)');
 
     console.log(`✅ Migração concluída: ${migrated} sucesso, ${errors} erros`);
 

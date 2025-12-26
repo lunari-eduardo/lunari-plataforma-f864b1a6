@@ -42,8 +42,10 @@ export function useCreditCardsSupabase() {
     staleTime: 60000, // 1 minuto
   });
 
-  // ============= REALTIME SUBSCRIPTION =============
+  // ============= REALTIME SUBSCRIPTION (COM DEBOUNCE) =============
   useEffect(() => {
+    let debounceTimer: ReturnType<typeof setTimeout>;
+    
     const channel = supabase
       .channel('credit-cards-changes')
       .on('postgres_changes', {
@@ -51,11 +53,16 @@ export function useCreditCardsSupabase() {
         schema: 'public',
         table: 'fin_credit_cards'
       }, () => {
-        queryClient.invalidateQueries({ queryKey: ['credit-cards'] });
+        // Debounce de 500ms para evitar múltiplas invalidações em cascata
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          queryClient.invalidateQueries({ queryKey: ['credit-cards'] });
+        }, 500);
       })
       .subscribe();
 
     return () => {
+      clearTimeout(debounceTimer);
       supabase.removeChannel(channel);
     };
   }, [queryClient]);
