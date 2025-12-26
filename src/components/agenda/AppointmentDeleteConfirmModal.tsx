@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { AlertTriangle, Trash2 } from 'lucide-react';
+import { AlertTriangle, Trash2, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface AppointmentDeleteConfirmModalProps {
   isOpen: boolean;
@@ -45,14 +46,32 @@ export function AppointmentDeleteConfirmModal({
   if (!appointmentData) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px] bg-lunar-surface border border-lunar-border">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-semibold text-lunar-text flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-destructive" />
-            Excluir Agendamento
-          </DialogTitle>
-        </DialogHeader>
+    <DialogPrimitive.Root open={isOpen} onOpenChange={onClose}>
+      <DialogPrimitive.Portal>
+        {/* Overlay com z-index alto para sobrepor modal pai */}
+        <DialogPrimitive.Overlay 
+          className="fixed inset-0 z-[200] bg-black/70 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" 
+        />
+        <DialogPrimitive.Content 
+          className={cn(
+            "fixed left-1/2 top-1/2 z-[201] grid w-full max-w-[500px] -translate-x-1/2 -translate-y-1/2 gap-4 border p-6 shadow-2xl sm:rounded-lg outline-none focus:outline-none",
+            "bg-lunar-surface border-lunar-border",
+            "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
+          )}
+        >
+          {/* Header */}
+          <div className="flex flex-col space-y-1.5 text-center sm:text-left">
+            <DialogPrimitive.Title className="text-xl font-semibold text-lunar-text flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Excluir Agendamento
+            </DialogPrimitive.Title>
+          </div>
+
+          {/* Close button */}
+          <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none">
+            <X className="h-4 w-4" />
+            <span className="sr-only">Close</span>
+          </DialogPrimitive.Close>
 
         <div className="space-y-4">
           <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
@@ -126,30 +145,32 @@ export function AppointmentDeleteConfirmModal({
           </div>
         </div>
 
-        <DialogFooter className="gap-3">
-          <Button variant="outline" onClick={onClose} disabled={loading}>
-            Cancelar
-          </Button>
-          <Button 
-            variant="destructive" 
-            onClick={handleConfirm} 
-            disabled={loading}
-            className="flex items-center gap-2"
-          >
-            {loading ? (
-              'Processando...'
-            ) : (
-              <>
-                <Trash2 className="h-4 w-4" />
-                {appointmentData.hasWorkflowSession 
-                  ? (preservePayments === 'preserve' ? 'Cancelar Agendamento' : 'Excluir Tudo')
-                  : 'Confirmar Exclusão'
-                }
-              </>
-            )}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          {/* Footer */}
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 gap-3">
+            <Button variant="outline" onClick={onClose} disabled={loading}>
+              Cancelar
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleConfirm} 
+              disabled={loading}
+              className="flex items-center gap-2"
+            >
+              {loading ? (
+                'Processando...'
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4" />
+                  {appointmentData.hasWorkflowSession 
+                    ? (preservePayments === 'preserve' ? 'Cancelar Agendamento' : 'Excluir Tudo')
+                    : 'Confirmar Exclusão'
+                  }
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   );
 }
