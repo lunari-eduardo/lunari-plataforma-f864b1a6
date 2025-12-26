@@ -66,14 +66,28 @@ export default function Workflow() {
   const [error, setError] = useState<string | null>(null);
   
   
-  // FASE 1: Garantir que o mês está carregado quando mudar
+  // FASE 1: Garantir que o mês está carregado quando mudar (CACHE-FIRST STRATEGY)
   useEffect(() => {
     const loadMonth = async () => {
+      const key = `${currentMonth.year}-${currentMonth.month}`;
+      
+      // 1. Verificar cache primeiro (instantâneo, < 1ms)
+      const cachedSessions = getSessionsForMonthSync(currentMonth.year, currentMonth.month);
+      if (cachedSessions !== null) {
+        console.log(`⚡ [Workflow] Cache hit for ${key} (${cachedSessions.length} sessions)`);
+        setWorkflowSessions(cachedSessions);
+        // NÃO mostrar loading - dados já estão visíveis
+        
+        // Refresh silencioso em background (sem forceRefresh)
+        ensureMonthLoaded(currentMonth.year, currentMonth.month, false);
+        return;
+      }
+      
+      // 2. Sem cache: mostrar loading e buscar do Supabase
       setLoading(true);
-      console.log(`🔄 [Workflow] Loading month ${currentMonth.month}/${currentMonth.year}...`);
+      console.log(`🔄 [Workflow] No cache for ${key}, fetching from Supabase...`);
       
       try {
-        // Forçar refresh do Supabase para garantir dados frescos (especialmente para PWA)
         await ensureMonthLoaded(currentMonth.year, currentMonth.month, true);
         console.log(`✅ [Workflow] Month ${currentMonth.month}/${currentMonth.year} loaded`);
       } catch (error) {
@@ -84,14 +98,15 @@ export default function Workflow() {
     };
     
     loadMonth();
-  }, [currentMonth.year, currentMonth.month, ensureMonthLoaded]);
+  }, [currentMonth.year, currentMonth.month, ensureMonthLoaded, getSessionsForMonthSync]);
   
-  // FASE 2: Refresh ao ganhar foco (tab/app fica visível) - crítico para PWA
+  // FASE 2: Refresh silencioso ao ganhar foco (NÃO força refresh completo)
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        console.log('👁️ [Workflow] Tab became visible, refreshing...');
-        ensureMonthLoaded(currentMonth.year, currentMonth.month, true);
+        console.log('👁️ [Workflow] Tab became visible, silent refresh...');
+        // Usar forceRefresh=false para fazer refresh silencioso em background
+        ensureMonthLoaded(currentMonth.year, currentMonth.month, false);
       }
     };
     
