@@ -272,19 +272,22 @@ export default function Clientes() {
 
   // Filtrar clientes
   const clientesFiltrados = useMemo(() => {
+    const filtroLower = filters.filtro.toLowerCase();
+    
     return clientMetrics.filter(cliente => {
-      // Filtro de busca por nome/email/telefone
-      const nomeMatch = 
-        cliente.nome.toLowerCase().includes(filters.filtro.toLowerCase()) ||
-        cliente.email.toLowerCase().includes(filters.filtro.toLowerCase()) ||
-        cliente.telefone.includes(filters.filtro);
+      // Filtro de busca por nome/email/telefone - com verificação de null
+      const nomeMatch = cliente.nome?.toLowerCase().includes(filtroLower) ?? false;
+      const emailMatch = cliente.email?.toLowerCase().includes(filtroLower) ?? false;
+      const telefoneMatch = cliente.telefone?.includes(filters.filtro) ?? false;
+      
+      const buscaMatch = nomeMatch || emailMatch || telefoneMatch;
 
       // Filtro de sessões por período/categoria
       const sessaoMatch = 
         clientesFiltradosPorSessao === null || // Sem filtro de sessão
         clientesFiltradosPorSessao.has(cliente.id); // Cliente está na lista filtrada
 
-      return nomeMatch && sessaoMatch;
+      return buscaMatch && sessaoMatch;
     });
   }, [clientMetrics, filters.filtro, clientesFiltradosPorSessao]);
 

@@ -458,9 +458,9 @@ export function useClientesRealtime() {
     
     const termoBusca = termo.toLowerCase();
     return clientesCompletos.filter(cliente => 
-      cliente.nome.toLowerCase().includes(termoBusca) ||
+      cliente.nome?.toLowerCase().includes(termoBusca) ||
       cliente.email?.toLowerCase().includes(termoBusca) ||
-      cliente.telefone.includes(termoBusca) ||
+      cliente.telefone?.includes(termoBusca) ||
       cliente.whatsapp?.includes(termoBusca)
     );
   }, [clientesCompletos]);
