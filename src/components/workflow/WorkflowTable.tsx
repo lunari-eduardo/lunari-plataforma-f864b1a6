@@ -1021,7 +1021,21 @@ export function WorkflowTable({
                 ))}
 
                 {renderCell('extraPhotoTotal', (() => {
-                  // Calcular o valor real baseado nas regras
+                  // CORREÇÃO: Sessões históricas manuais - usar valor salvo diretamente sem recalcular
+                  const isManualHistorical = session.regrasDePrecoFotoExtraCongeladas?.isManualHistorical === true ||
+                                             session.regrasDePrecoFotoExtraCongeladas?.source === 'manual_historical';
+                  
+                  if (isManualHistorical) {
+                    // Sessão manual/histórica - NÃO recalcular, usar valor salvo
+                    const valorSalvo = typeof session.valorTotalFotoExtra === 'string'
+                      ? parseFloat(session.valorTotalFotoExtra.replace(/[^\d,]/g, '').replace(',', '.')) || 0
+                      : Number(session.valorTotalFotoExtra) || 0;
+                    return <span className="text-xs font-medium text-blue-600">
+                      {formatCurrency(valorSalvo)}
+                    </span>;
+                  }
+                  
+                  // Sessões normais - calcular com regras
                   let valorCalculado = 0;
                   if (session.regrasDePrecoFotoExtraCongeladas) {
                     // Item com regras congeladas - usar motor de cálculo específico

@@ -200,26 +200,32 @@ export function useSessionsRealtime(clienteId?: string) {
         entregue: false
       }));
 
-      // Calculate valor_total
+      // Calcular valor unitário calculado (total ÷ qtd) e total de fotos extras
+      const qtdFotosExtra = data.qtdFotosExtra || 0;
+      const valorFotoExtraUnitario = data.valorFotoExtra || 0;
+      const totalFotosExtras = qtdFotosExtra * valorFotoExtraUnitario;
+
+      // Calculate valor_total usando o totalFotosExtras calculado
       const valorTotal = 
         data.valorBasePacote +
-        valorTotalFotoExtra +
+        totalFotosExtras +
         produtosComTipo.reduce((sum, p) => sum + (p.quantidade * p.valorUnitario), 0) +
         (data.valorAdicional || 0) -
         (data.desconto || 0);
 
-      // CORREÇÃO: Criar regras congeladas básicas para sessões manuais
-      // Isso evita o alerta "Migração" na tabela do workflow
+      // CORREÇÃO: Criar regras congeladas para sessões manuais
+      // Flag isManualHistorical impede recálculo na tabela
       const regrasCongeladas = {
-        modelo: 'fixo',
-        valorFixo: data.valorFotoExtra || 0,
+        modelo: 'fixo' as const,
+        valorFixo: valorFotoExtraUnitario, // Valor unitário calculado (total/qtd)
+        isManualHistorical: true, // FLAG: Impede recálculo na tabela
         pacote: {
           nome: data.pacote || null,
           valorBase: data.valorBasePacote,
-          valorFotoExtra: data.valorFotoExtra || 0
+          valorFotoExtra: valorFotoExtraUnitario
         },
         createdAt: new Date().toISOString(),
-        source: 'manual_historical'
+        source: 'manual_historical' as const
       };
 
       const newSession = {
@@ -233,9 +239,9 @@ export function useSessionsRealtime(clienteId?: string) {
         descricao: data.descricao || null,
         status: data.status || 'concluído',
         valor_base_pacote: data.valorBasePacote,
-        qtd_fotos_extra: data.qtdFotosExtra || 0,
-        valor_foto_extra: data.valorFotoExtra || 0,
-        valor_total_foto_extra: valorTotalFotoExtra,
+        qtd_fotos_extra: qtdFotosExtra,
+        valor_foto_extra: valorFotoExtraUnitario,
+        valor_total_foto_extra: totalFotosExtras, // Valor exato calculado
         produtos_incluidos: produtosComTipo,
         valor_adicional: data.valorAdicional || 0,
         desconto: data.desconto || 0,

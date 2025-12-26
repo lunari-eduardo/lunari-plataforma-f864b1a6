@@ -433,8 +433,12 @@ export const useWorkflowRealtime = () => {
             const qtd = Number(value) || 0;
             sanitizedUpdates.qtd_fotos_extra = qtd;
             
-            // Calcular valores imediatamente usando regras congeladas
-            if (currentSession?.regras_congeladas) {
+            // CORREÇÃO: Não recalcular para sessões históricas manuais
+            const isManualHistorical = currentSession?.regras_congeladas?.isManualHistorical === true ||
+                                       currentSession?.regras_congeladas?.source === 'manual_historical';
+            
+            // Calcular valores apenas se NÃO for sessão histórica manual
+            if (currentSession?.regras_congeladas && !isManualHistorical) {
               const { pricingFreezingService } = await import('@/services/PricingFreezingService');
               const { valorUnitario, valorTotal } = pricingFreezingService.calcularValorFotoExtraComRegrasCongeladas(
                 qtd,
@@ -443,6 +447,8 @@ export const useWorkflowRealtime = () => {
               sanitizedUpdates.valor_foto_extra = valorUnitario;
               sanitizedUpdates.valor_total_foto_extra = valorTotal;
               console.log('📸 [Atomic] Fotos extras calculadas: qtd=', qtd, 'unit=', valorUnitario, 'total=', valorTotal);
+            } else if (isManualHistorical) {
+              console.log('📸 [Manual] Sessão histórica - mantendo valores originais');
             }
             break;
           case 'valorTotalFotoExtra':
