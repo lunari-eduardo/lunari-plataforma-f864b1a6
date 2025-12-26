@@ -65,9 +65,9 @@ export function useClientMetrics(clientes: Cliente[]): ClientMetrics[] {
 
         metricsMap.set(cliente.id, {
           id: cliente.id,
-          nome: cliente.nome,
-          email: cliente.email,
-          telefone: cliente.telefone,
+          nome: cliente.nome || '',
+          email: cliente.email || '',
+          telefone: cliente.telefone || '',
           origem: cliente.origem,
           sessoes: totalSessoes,
           totalFaturado,
