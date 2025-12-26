@@ -6,6 +6,9 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Plus, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import ClientSearchCombobox from '@/components/agenda/ClientSearchCombobox';
+import { PackageCombobox } from '@/components/workflow/PackageCombobox';
+import { CategoryCombobox } from '@/components/workflow/CategoryCombobox';
+import { useOrcamentoData } from '@/hooks/useOrcamentoData';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -41,28 +44,35 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
+  // Fetch categories from database
+  const { categorias } = useOrcamentoData();
+  
   // Form fields
   const [clienteId, setClienteId] = useState('');
   const [dataSessao, setDataSessao] = useState('');
-  const [horaSessao, setHoraSessao] = useState('');
   const [categoria, setCategoria] = useState('');
   const [pacote, setPacote] = useState('');
-  const [descricao, setDescricao] = useState('');
   const [status, setStatus] = useState('concluído');
   const [valorBasePacote, setValorBasePacote] = useState('0');
   const [qtdFotosExtra, setQtdFotosExtra] = useState('0');
   const [valorFotoExtra, setValorFotoExtra] = useState('0');
-  const [valorAdicional, setValorAdicional] = useState('0');
   const [desconto, setDesconto] = useState('0');
-  const [detalhes, setDetalhes] = useState('');
-  const [observacoes, setObservacoes] = useState('');
   const [produtos, setProdutos] = useState<ManualProduct[]>([]);
+  
+  // Track if category was auto-filled by package
+  const [categoryFromPackage, setCategoryFromPackage] = useState(false);
   
   // Calculated values
   const [totalFotoExtra, setTotalFotoExtra] = useState(0);
   const [totalProdutos, setTotalProdutos] = useState(0);
   const [totalSessao, setTotalSessao] = useState(0);
   const [restante, setRestante] = useState(0);
+
+  // Map categories to options format
+  const categoryOptions = categorias.map((nome, index) => ({
+    id: String(index + 1),
+    nome
+  }));
 
   // Calculate totals in real-time
   useEffect(() => {
@@ -81,13 +91,12 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
 
   useEffect(() => {
     const valorPacote = parseFloat(valorBasePacote) || 0;
-    const adicional = parseFloat(valorAdicional) || 0;
     const desc = parseFloat(desconto) || 0;
     
-    const total = valorPacote + totalFotoExtra + totalProdutos + adicional - desc;
+    const total = valorPacote + totalFotoExtra + totalProdutos - desc;
     setTotalSessao(Math.max(0, total));
     setRestante(Math.max(0, total)); // Sem pagamentos iniciais
-  }, [valorBasePacote, totalFotoExtra, totalProdutos, valorAdicional, desconto]);
+  }, [valorBasePacote, totalFotoExtra, totalProdutos, desconto]);
 
   const handleAddProduct = () => {
     setProdutos([...produtos, { nome: '', quantidade: 1, valorUnitario: 0 }]);
@@ -103,6 +112,35 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
     setProdutos(newProdutos);
   };
 
+  // Handle package selection - auto-fill category and values
+  const handlePackageChange = (packageData: {
+    nome: string;
+    valor: string;
+    valorFotoExtra: string;
+    categoria: string;
+  }) => {
+    setPacote(packageData.nome);
+    
+    // Parse currency strings to numbers
+    const valorNum = parseFloat(packageData.valor.replace('R$ ', '').replace('.', '').replace(',', '.')) || 0;
+    const valorFotoNum = parseFloat(packageData.valorFotoExtra.replace('R$ ', '').replace('.', '').replace(',', '.')) || 0;
+    
+    setValorBasePacote(valorNum.toString());
+    setValorFotoExtra(valorFotoNum.toString());
+    
+    // Auto-fill category
+    if (packageData.categoria) {
+      setCategoria(packageData.categoria);
+      setCategoryFromPackage(true);
+    }
+  };
+
+  // Handle category change - only allow if not auto-filled by package
+  const handleCategoryChange = (newCategory: string) => {
+    setCategoria(newCategory);
+    setCategoryFromPackage(false);
+  };
+
   const validateForm = (): boolean => {
     if (!clienteId) {
       toast.error('Selecione um cliente');
@@ -110,14 +148,6 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
     }
     if (!dataSessao) {
       toast.error('Informe a data da sessão');
-      return false;
-    }
-    if (!horaSessao) {
-      toast.error('Informe a hora da sessão');
-      return false;
-    }
-    if (!/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(horaSessao)) {
-      toast.error('Hora inválida. Use o formato HH:MM');
       return false;
     }
     if (!categoria.trim()) {
@@ -147,19 +177,15 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
   const handleClear = () => {
     setClienteId('');
     setDataSessao('');
-    setHoraSessao('');
     setCategoria('');
     setPacote('');
-    setDescricao('');
     setStatus('concluído');
     setValorBasePacote('0');
     setQtdFotosExtra('0');
     setValorFotoExtra('0');
-    setValorAdicional('0');
     setDesconto('0');
-    setDetalhes('');
-    setObservacoes('');
     setProdutos([]);
+    setCategoryFromPackage(false);
   };
 
   const handleSubmit = async () => {
@@ -171,19 +197,15 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
       const data: QuickSessionData = {
         clienteId,
         dataSessao,
-        horaSessao,
+        horaSessao: '00:00', // Default hour for historical sessions
         categoria,
         pacote: pacote.trim() || undefined,
-        descricao: descricao.trim() || undefined,
         status,
         valorBasePacote: parseFloat(valorBasePacote) || 0,
         qtdFotosExtra: parseFloat(qtdFotosExtra) || 0,
         valorFotoExtra: parseFloat(valorFotoExtra) || 0,
-        valorAdicional: parseFloat(valorAdicional) || 0,
         desconto: parseFloat(desconto) || 0,
         produtosIncluidos: produtos.length > 0 ? produtos : undefined,
-        detalhes: detalhes.trim() || undefined,
-        observacoes: observacoes.trim() || undefined,
       };
       
       await onSubmit(data);
@@ -243,24 +265,20 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
               </div>
               
               <div className="space-y-1">
-                <Label className="text-xs">Hora *</Label>
-                <Input
-                  type="text"
-                  value={horaSessao}
-                  onChange={(e) => setHoraSessao(e.target.value)}
-                  placeholder="HH:MM"
-                  className="h-7 text-xs"
+                <Label className="text-xs">Pacote</Label>
+                <PackageCombobox
+                  value={pacote}
+                  onValueChange={handlePackageChange}
                 />
               </div>
               
               <div className="space-y-1">
                 <Label className="text-xs">Categoria *</Label>
-                <Input
-                  type="text"
+                <CategoryCombobox
                   value={categoria}
-                  onChange={(e) => setCategoria(e.target.value)}
-                  placeholder="Ex: Ensaio"
-                  className="h-7 text-xs"
+                  disabled={categoryFromPackage}
+                  categoryOptions={categoryOptions}
+                  onValueChange={handleCategoryChange}
                 />
               </div>
               
@@ -281,20 +299,9 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
             </div>
 
             {/* Linha 2 - Valores */}
-            <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
               <div className="space-y-1">
-                <Label className="text-xs">Pacote</Label>
-                <Input
-                  type="text"
-                  value={pacote}
-                  onChange={(e) => setPacote(e.target.value)}
-                  placeholder="Nome do pacote"
-                  className="h-7 text-xs"
-                />
-              </div>
-              
-              <div className="space-y-1">
-                <Label className="text-xs">Valor Pacote *</Label>
+                <Label className="text-xs">Valor Pacote</Label>
                 <Input
                   type="number"
                   step="0.01"
@@ -307,7 +314,7 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
               </div>
               
               <div className="space-y-1">
-                <Label className="text-xs">Qtd Fotos</Label>
+                <Label className="text-xs">Qtd Fotos Extra</Label>
                 <Input
                   type="number"
                   min="0"
@@ -319,26 +326,13 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
               </div>
               
               <div className="space-y-1">
-                <Label className="text-xs">Vlr Foto</Label>
+                <Label className="text-xs">Vlr Foto Extra</Label>
                 <Input
                   type="number"
                   step="0.01"
                   min="0"
                   value={valorFotoExtra}
                   onChange={(e) => setValorFotoExtra(e.target.value)}
-                  placeholder="0.00"
-                  className="h-7 text-xs"
-                />
-              </div>
-              
-              <div className="space-y-1">
-                <Label className="text-xs">Adicional</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={valorAdicional}
-                  onChange={(e) => setValorAdicional(e.target.value)}
                   placeholder="0.00"
                   className="h-7 text-xs"
                 />
@@ -355,6 +349,13 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
                   placeholder="0.00"
                   className="h-7 text-xs"
                 />
+              </div>
+              
+              <div className="space-y-1">
+                <Label className="text-xs">Total Fotos Extra</Label>
+                <div className="h-7 flex items-center text-xs font-medium text-muted-foreground bg-muted/50 px-2 rounded border">
+                  {formatCurrency(totalFotoExtra)}
+                </div>
               </div>
             </div>
 
@@ -426,42 +427,6 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
               Adicionar Produto
             </Button>
 
-            {/* Campos Opcionais */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs">Descrição</Label>
-                <Input
-                  type="text"
-                  value={descricao}
-                  onChange={(e) => setDescricao(e.target.value)}
-                  placeholder="Breve descrição da sessão"
-                  className="h-7 text-xs"
-                />
-              </div>
-              
-              <div className="space-y-1">
-                <Label className="text-xs">Detalhes</Label>
-                <Input
-                  type="text"
-                  value={detalhes}
-                  onChange={(e) => setDetalhes(e.target.value)}
-                  placeholder="Detalhes adicionais"
-                  className="h-7 text-xs"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <Label className="text-xs">Observações</Label>
-              <Input
-                type="text"
-                value={observacoes}
-                onChange={(e) => setObservacoes(e.target.value)}
-                placeholder="Observações gerais"
-                className="h-7 text-xs"
-              />
-            </div>
-
             {/* Totais Calculados */}
             <div className="flex items-center justify-end gap-6 p-3 bg-muted/50 rounded-md border">
               <div className="text-xs">
@@ -482,30 +447,32 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
               </div>
             </div>
 
-            {/* Actions */}
-            <div className="flex gap-2">
+            {/* Botões de Ação */}
+            <div className="flex items-center justify-end gap-2 pt-2">
               <Button
-                onClick={handleSubmit}
-                disabled={isSubmitting}
-                className="flex-1"
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsOpen(false)}
               >
-                {isSubmitting ? 'Salvando...' : 'Salvar Sessão'}
+                Cancelar
               </Button>
               <Button
                 type="button"
                 variant="outline"
+                size="sm"
                 onClick={handleClear}
-                disabled={isSubmitting}
               >
                 Limpar
               </Button>
               <Button
                 type="button"
-                variant="ghost"
-                onClick={() => setIsOpen(false)}
+                size="sm"
+                onClick={handleSubmit}
                 disabled={isSubmitting}
+                className="bg-primary hover:bg-primary/90"
               >
-                Cancelar
+                {isSubmitting ? 'Salvando...' : 'Salvar Sessão'}
               </Button>
             </div>
           </div>
