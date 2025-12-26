@@ -48,15 +48,15 @@ export default function ClienteDetalhe() {
         <ClientMetricsGrid metrics={metricas} />
 
         {/* Tabs - Responsivo com scroll em mobile */}
-        <Tabs defaultValue="contacto" className="w-full">
+        <Tabs defaultValue="historico" className="w-full">
           <TabsList className="overflow-x-auto whitespace-nowrap px-1 gap-2 sm:grid sm:grid-cols-3 w-full">
-            <TabsTrigger value="contacto" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm">
-              <User className="h-3 w-3 md:h-4 md:w-4" />
-              Contacto
-            </TabsTrigger>
             <TabsTrigger value="historico" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm">
               <History className="h-3 w-3 md:h-4 md:w-4" />
               Histórico
+            </TabsTrigger>
+            <TabsTrigger value="contacto" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm">
+              <User className="h-3 w-3 md:h-4 md:w-4" />
+              Contacto
             </TabsTrigger>
             <TabsTrigger value="documentos" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm">
               <FileText className="h-3 w-3 md:h-4 md:w-4" />
@@ -64,14 +64,14 @@ export default function ClienteDetalhe() {
             </TabsTrigger>
           </TabsList>
 
-          {/* Aba 1: Dados de Contacto */}
-          <TabsContent value="contacto" className="space-y-6">
-            <ContactoTab cliente={cliente} onUpdate={atualizarCliente} />
-          </TabsContent>
-
-          {/* Aba 2: Histórico & Projetos */}
+          {/* Aba 1: Histórico & Projetos (Principal) */}
           <TabsContent value="historico" className="space-y-6">
             <HistoricoTab cliente={cliente} />
+          </TabsContent>
+
+          {/* Aba 2: Dados de Contacto */}
+          <TabsContent value="contacto" className="space-y-6">
+            <ContactoTab cliente={cliente} onUpdate={atualizarCliente} />
           </TabsContent>
 
           {/* Aba 3: Documentos */}
