@@ -449,12 +449,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const creditCardsHook = useCreditCardsSupabase();
   const cartoes = creditCardsHook.cartoes;
 
-  // ============= MIGRAÇÃO DE CARTÕES (UMA VEZ) =============
+  // ============= MIGRAÇÃO DE CARTÕES (UMA VEZ - COM PROTEÇÃO) =============
+  const migrationExecutedRef = useRef(false);
+  
   useEffect(() => {
     const checkAndMigrate = async () => {
+      // Proteção: já executou nesta sessão? Sair
+      if (migrationExecutedRef.current) return;
+      
       const localCards = storage.load(STORAGE_KEYS.CARDS, []);
-      if (localCards && localCards.length > 0 && !creditCardsHook.isLoading) {
-        console.log('🔄 Detectados cartões no localStorage, iniciando migração...');
+      if (localCards && localCards.length > 0) {
+        // Marcar ANTES de iniciar para evitar re-execução
+        migrationExecutedRef.current = true;
+        console.log('🔄 Detectados cartões no localStorage, iniciando migração única...');
         const result = await migrateCreditCardsToSupabase();
         if (result.success) {
           console.log(`✅ Migração concluída: ${result.migrated} cartões migrados`);
@@ -463,7 +470,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     
     checkAndMigrate();
-  }, [creditCardsHook.isLoading]);
+  }, []); // Sem dependências - executa apenas no mount
 
   // Cliente pré-selecionado State
   const [selectedClientForScheduling, setSelectedClientForScheduling] = useState<string | null>(null);
