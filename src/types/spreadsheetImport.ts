@@ -10,7 +10,7 @@ export interface SpreadsheetSession {
   
   // Dados da sessão
   data_sessao: string; // YYYY-MM-DD
-  hora_sessao: string; // HH:MM
+  hora_sessao?: string; // HH:MM (opcional - padrão 00:00)
   categoria: string;
   pacote?: string;
   status?: string;
@@ -81,7 +81,7 @@ export const EXPECTED_COLUMNS = {
     { key: 'cliente_email', label: 'Email do Cliente', required: false },
     { key: 'cliente_whatsapp', label: 'WhatsApp', required: false },
     { key: 'data_sessao', label: 'Data da Sessão', required: true },
-    { key: 'hora_sessao', label: 'Hora', required: true },
+    { key: 'hora_sessao', label: 'Hora', required: false },
     { key: 'categoria', label: 'Categoria', required: true },
     { key: 'pacote', label: 'Pacote', required: false },
     { key: 'status', label: 'Status', required: false },
