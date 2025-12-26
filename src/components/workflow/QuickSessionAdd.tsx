@@ -52,7 +52,7 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
   const [dataSessao, setDataSessao] = useState('');
   const [categoria, setCategoria] = useState('');
   const [pacote, setPacote] = useState('');
-  const [status, setStatus] = useState('concluído');
+  // Status removido - dados históricos são sempre 'concluído' por padrão
   const [valorBasePacote, setValorBasePacote] = useState('0');
   const [qtdFotosExtra, setQtdFotosExtra] = useState('0');
   const [valorFotoExtra, setValorFotoExtra] = useState('0');
@@ -179,7 +179,6 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
     setDataSessao('');
     setCategoria('');
     setPacote('');
-    setStatus('concluído');
     setValorBasePacote('0');
     setQtdFotosExtra('0');
     setValorFotoExtra('0');
@@ -200,7 +199,7 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
         horaSessao: '00:00', // Default hour for historical sessions
         categoria,
         pacote: pacote.trim() || undefined,
-        status,
+        status: 'concluído', // Dados históricos sempre são concluídos
         valorBasePacote: parseFloat(valorBasePacote) || 0,
         qtdFotosExtra: parseFloat(qtdFotosExtra) || 0,
         valorFotoExtra: parseFloat(valorFotoExtra) || 0,
@@ -243,8 +242,8 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
         
         <CollapsibleContent>
           <div className="p-4 space-y-4">
-            {/* Linha 1 - Dados Básicos */}
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+          {/* Linha 1 - Dados Básicos */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Cliente *</Label>
                 <ClientSearchCombobox
@@ -273,7 +272,7 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
               </div>
               
               <div className="space-y-1">
-                <Label className="text-xs">Categoria *</Label>
+                <Label className="text-xs">Categoria *{categoryFromPackage && ' (auto)'}</Label>
                 <CategoryCombobox
                   value={categoria}
                   disabled={categoryFromPackage}
@@ -281,35 +280,21 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
                   onValueChange={handleCategoryChange}
                 />
               </div>
-              
-              <div className="space-y-1">
-                <Label className="text-xs">Status</Label>
-                <Select value={status} onValueChange={setStatus}>
-                  <SelectTrigger className="h-7 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="agendado">Agendado</SelectItem>
-                    <SelectItem value="confirmado">Confirmado</SelectItem>
-                    <SelectItem value="concluído">Concluído</SelectItem>
-                    <SelectItem value="cancelado">Cancelado</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
 
             {/* Linha 2 - Valores */}
             <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
               <div className="space-y-1">
-                <Label className="text-xs">Valor Pacote</Label>
+                <Label className="text-xs">Valor Pacote{pacote && ' (auto)'}</Label>
                 <Input
                   type="number"
                   step="0.01"
                   min="0"
                   value={valorBasePacote}
-                  onChange={(e) => setValorBasePacote(e.target.value)}
+                  onChange={(e) => !pacote && setValorBasePacote(e.target.value)}
+                  readOnly={!!pacote}
                   placeholder="0.00"
-                  className="h-7 text-xs"
+                  className={cn("h-7 text-xs", pacote && "bg-muted/50 cursor-not-allowed")}
                 />
               </div>
               
@@ -326,15 +311,16 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
               </div>
               
               <div className="space-y-1">
-                <Label className="text-xs">Vlr Foto Extra</Label>
+                <Label className="text-xs">Vlr Foto Extra{pacote && ' (auto)'}</Label>
                 <Input
                   type="number"
                   step="0.01"
                   min="0"
                   value={valorFotoExtra}
-                  onChange={(e) => setValorFotoExtra(e.target.value)}
+                  onChange={(e) => !pacote && setValorFotoExtra(e.target.value)}
+                  readOnly={!!pacote}
                   placeholder="0.00"
-                  className="h-7 text-xs"
+                  className={cn("h-7 text-xs", pacote && "bg-muted/50 cursor-not-allowed")}
                 />
               </div>
               

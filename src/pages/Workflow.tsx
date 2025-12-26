@@ -656,15 +656,39 @@ export default function Workflow() {
     });
   }, []);
 
-  // Handle quick session add
+  // Handle quick session add with optimistic update
   const handleQuickSessionAdd = useCallback(async (data: any) => {
     try {
-      await createManualSession(data);
-      // Real-time will update the list automatically
+      const newSession = await createManualSession(data);
+      
+      // Optimistic update: buscar sessão completa e fazer merge direto no cache
+      if (newSession?.id) {
+        console.log('🆕 [Workflow] Quick add success, fetching full session for cache...');
+        const { data: fullSession, error } = await supabase
+          .from('clientes_sessoes')
+          .select('*, clientes(nome, email, telefone, whatsapp)')
+          .eq('id', newSession.id)
+          .single();
+        
+        if (fullSession && !error) {
+          console.log('✅ [Workflow] Merging new session into cache:', fullSession.id);
+          mergeUpdate(fullSession as WorkflowSession);
+        }
+      }
+      
+      toast({
+        title: "Sessão criada",
+        description: "A sessão foi adicionada com sucesso.",
+      });
     } catch (error) {
       console.error('Erro ao criar sessão rápida:', error);
+      toast({
+        title: "Erro ao criar sessão",
+        description: "Não foi possível criar a sessão. Tente novamente.",
+        variant: "destructive",
+      });
     }
-  }, [createManualSession]);
+  }, [createManualSession, mergeUpdate]);
 
   // FASE 4: Recongelar todas as sessões manualmente
   const recongelarTodasSessoes = useCallback(async () => {
