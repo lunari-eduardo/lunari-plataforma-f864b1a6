@@ -57,7 +57,16 @@ export interface RegrasPrecoFotoExtraCongeladas {
   tabelaGlobal?: TabelaPrecos;
   tabelaCategoria?: TabelaPrecos;
   categoriaId?: string;
-  timestampCongelamento: string;
+  timestampCongelamento?: string;
+  // Flags para sessões históricas manuais
+  isManualHistorical?: boolean;
+  source?: 'manual_historical' | 'appointment' | 'budget';
+  pacote?: {
+    nome: string | null;
+    valorBase: number;
+    valorFotoExtra: number;
+  };
+  createdAt?: string;
 }
 
 // ============= VALIDATION TYPES =============

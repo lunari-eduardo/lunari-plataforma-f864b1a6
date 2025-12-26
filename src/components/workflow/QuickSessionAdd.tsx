@@ -54,7 +54,8 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
   const [pacote, setPacote] = useState('');
   const [valorBasePacote, setValorBasePacote] = useState('0');
   const [qtdFotosExtra, setQtdFotosExtra] = useState('0');
-  const [valorFotoExtra, setValorFotoExtra] = useState('0');
+  const [totalFotosExtraManual, setTotalFotosExtraManual] = useState('0'); // EDITÁVEL pelo usuário
+  const [valorFotoExtraCalculado, setValorFotoExtraCalculado] = useState(0); // CALCULADO (total / qtd)
   const [desconto, setDesconto] = useState('0');
   const [valorPago, setValorPago] = useState('0');
   const [produtos, setProdutos] = useState<ManualProduct[]>([]);
@@ -63,7 +64,6 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
   const [autoFilledByPackage, setAutoFilledByPackage] = useState(false);
   
   // Calculated values
-  const [totalFotoExtra, setTotalFotoExtra] = useState(0);
   const [totalProdutos, setTotalProdutos] = useState(0);
   const [totalSessao, setTotalSessao] = useState(0);
   const [restante, setRestante] = useState(0);
@@ -74,13 +74,20 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
     nome
   }));
 
-  // Calculate totals in real-time
+  // INVERSÃO DE LÓGICA: Total é editável, valor unitário é calculado
+  // Isso permite ao usuário digitar o valor total (ex: 247) e o sistema calcular o unitário (247/13 = 19)
   useEffect(() => {
     const qtd = parseFloat(qtdFotosExtra) || 0;
-    const valorUnit = parseFloat(valorFotoExtra) || 0;
-    const total = qtd * valorUnit;
-    setTotalFotoExtra(total);
-  }, [qtdFotosExtra, valorFotoExtra]);
+    const totalManual = parseFloat(totalFotosExtraManual) || 0;
+    
+    if (qtd > 0 && totalManual > 0) {
+      // Calcular valor unitário: total ÷ quantidade
+      const valorUnit = totalManual / qtd;
+      setValorFotoExtraCalculado(valorUnit);
+    } else {
+      setValorFotoExtraCalculado(0);
+    }
+  }, [qtdFotosExtra, totalFotosExtraManual]);
 
   useEffect(() => {
     const total = produtos.reduce((sum, p) => {
@@ -91,13 +98,14 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
 
   useEffect(() => {
     const valorPacoteNum = parseFloat(valorBasePacote) || 0;
+    const totalFotosExtra = parseFloat(totalFotosExtraManual) || 0;
     const desc = parseFloat(desconto) || 0;
     const pago = parseFloat(valorPago) || 0;
     
-    const total = valorPacoteNum + totalFotoExtra + totalProdutos - desc;
+    const total = valorPacoteNum + totalFotosExtra + totalProdutos - desc;
     setTotalSessao(Math.max(0, total));
     setRestante(Math.max(0, total - pago));
-  }, [valorBasePacote, totalFotoExtra, totalProdutos, desconto, valorPago]);
+  }, [valorBasePacote, totalFotosExtraManual, totalProdutos, desconto, valorPago]);
 
   const handleAddProduct = () => {
     setProdutos([...produtos, { nome: '', quantidade: 1, valorUnitario: 0 }]);
@@ -114,6 +122,7 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
   };
 
   // Handle package selection - auto-fill category and values with NUMBERS directly
+  // NÃO preenche mais o valor de foto extra pois o usuário vai digitar o TOTAL
   const handlePackageChange = (packageData: {
     nome: string;
     valorBase: number;
@@ -122,7 +131,7 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
   }) => {
     setPacote(packageData.nome);
     setValorBasePacote(packageData.valorBase.toString());
-    setValorFotoExtra(packageData.valorFotoExtra.toString());
+    // Não preencher valor foto extra - usuário vai digitar o total manualmente
     
     if (packageData.categoria) {
       setCategoria(packageData.categoria);
@@ -182,7 +191,7 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
     setPacote('');
     setValorBasePacote('0');
     setQtdFotosExtra('0');
-    setValorFotoExtra('0');
+    setTotalFotosExtraManual('0');
     setDesconto('0');
     setValorPago('0');
     setProdutos([]);
@@ -195,6 +204,11 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
     setIsSubmitting(true);
     
     try {
+      // Usar valor unitário CALCULADO (total ÷ quantidade)
+      const qtd = parseFloat(qtdFotosExtra) || 0;
+      const totalFotos = parseFloat(totalFotosExtraManual) || 0;
+      const valorUnitarioCalculado = qtd > 0 ? totalFotos / qtd : 0;
+      
       const data: QuickSessionData = {
         clienteId,
         dataSessao,
@@ -203,8 +217,8 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
         pacote: pacote.trim() || undefined,
         status: 'concluído',
         valorBasePacote: parseFloat(valorBasePacote) || 0,
-        qtdFotosExtra: parseFloat(qtdFotosExtra) || 0,
-        valorFotoExtra: parseFloat(valorFotoExtra) || 0,
+        qtdFotosExtra: qtd,
+        valorFotoExtra: valorUnitarioCalculado, // Valor CALCULADO (total/qtd)
         desconto: parseFloat(desconto) || 0,
         valorPago: parseFloat(valorPago) || 0,
         produtosIncluidos: produtos.length > 0 ? produtos : undefined,
@@ -329,19 +343,23 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
               </div>
               
               <div className="space-y-1">
-                <Label className="text-xs">
-                  Vlr Foto Extra{autoFilledByPackage && ' (auto)'}
-                </Label>
+                <Label className="text-xs text-blue-700 font-medium">Total Fotos Extra *</Label>
                 <Input
                   type="number"
                   step="0.01"
                   min="0"
-                  value={valorFotoExtra}
-                  onChange={(e) => setValorFotoExtra(e.target.value)}
-                  readOnly={autoFilledByPackage}
-                  placeholder="0.00"
-                  className={cn("h-7 text-xs", autoFilledByPackage && "bg-muted/50 cursor-not-allowed")}
+                  value={totalFotosExtraManual}
+                  onChange={(e) => setTotalFotosExtraManual(e.target.value)}
+                  placeholder="247.00"
+                  className="h-7 text-xs border-blue-300 focus:border-blue-500"
                 />
+              </div>
+              
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Vlr Foto (calc)</Label>
+                <div className="h-7 flex items-center text-xs font-medium text-muted-foreground bg-muted/50 px-2 rounded border">
+                  {formatCurrency(valorFotoExtraCalculado)}
+                </div>
               </div>
               
               <div className="space-y-1">
@@ -368,13 +386,6 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
                   placeholder="0.00"
                   className="h-7 text-xs border-green-300 focus:border-green-500"
                 />
-              </div>
-              
-              <div className="space-y-1">
-                <Label className="text-xs">Total Fotos Extra</Label>
-                <div className="h-7 flex items-center text-xs font-medium text-muted-foreground bg-muted/50 px-2 rounded border">
-                  {formatCurrency(totalFotoExtra)}
-                </div>
               </div>
             </div>
 
@@ -450,7 +461,7 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
             <div className="flex items-center justify-end gap-6 p-3 bg-muted/50 rounded-md border">
               <div className="text-xs">
                 <span className="text-muted-foreground">Total Fotos:</span>{' '}
-                <span className="font-semibold">{formatCurrency(totalFotoExtra)}</span>
+                <span className="font-semibold">{formatCurrency(parseFloat(totalFotosExtraManual) || 0)}</span>
               </div>
               <div className="text-xs">
                 <span className="text-muted-foreground">Total Produtos:</span>{' '}
