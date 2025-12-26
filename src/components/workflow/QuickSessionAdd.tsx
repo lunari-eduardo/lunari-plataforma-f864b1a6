@@ -4,7 +4,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Plus, ChevronDown, ChevronUp, X } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import ClientSearchCombobox from '@/components/agenda/ClientSearchCombobox';
 import { PackageCombobox } from '@/components/workflow/PackageCombobox';
 import { CategoryCombobox } from '@/components/workflow/CategoryCombobox';
@@ -18,7 +17,7 @@ interface ManualProduct {
   valorUnitario: number;
 }
 
-interface QuickSessionData {
+export interface QuickSessionData {
   clienteId: string;
   dataSessao: string;
   horaSessao: string;
@@ -31,6 +30,7 @@ interface QuickSessionData {
   valorFotoExtra?: number;
   valorAdicional?: number;
   desconto?: number;
+  valorPago?: number;
   produtosIncluidos?: ManualProduct[];
   detalhes?: string;
   observacoes?: string;
@@ -52,15 +52,15 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
   const [dataSessao, setDataSessao] = useState('');
   const [categoria, setCategoria] = useState('');
   const [pacote, setPacote] = useState('');
-  // Status removido - dados históricos são sempre 'concluído' por padrão
   const [valorBasePacote, setValorBasePacote] = useState('0');
   const [qtdFotosExtra, setQtdFotosExtra] = useState('0');
   const [valorFotoExtra, setValorFotoExtra] = useState('0');
   const [desconto, setDesconto] = useState('0');
+  const [valorPago, setValorPago] = useState('0');
   const [produtos, setProdutos] = useState<ManualProduct[]>([]);
   
-  // Track if category was auto-filled by package
-  const [categoryFromPackage, setCategoryFromPackage] = useState(false);
+  // Track if fields were auto-filled by package
+  const [autoFilledByPackage, setAutoFilledByPackage] = useState(false);
   
   // Calculated values
   const [totalFotoExtra, setTotalFotoExtra] = useState(0);
@@ -90,13 +90,14 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
   }, [produtos]);
 
   useEffect(() => {
-    const valorPacote = parseFloat(valorBasePacote) || 0;
+    const valorPacoteNum = parseFloat(valorBasePacote) || 0;
     const desc = parseFloat(desconto) || 0;
+    const pago = parseFloat(valorPago) || 0;
     
-    const total = valorPacote + totalFotoExtra + totalProdutos - desc;
+    const total = valorPacoteNum + totalFotoExtra + totalProdutos - desc;
     setTotalSessao(Math.max(0, total));
-    setRestante(Math.max(0, total)); // Sem pagamentos iniciais
-  }, [valorBasePacote, totalFotoExtra, totalProdutos, desconto]);
+    setRestante(Math.max(0, total - pago));
+  }, [valorBasePacote, totalFotoExtra, totalProdutos, desconto, valorPago]);
 
   const handleAddProduct = () => {
     setProdutos([...produtos, { nome: '', quantidade: 1, valorUnitario: 0 }]);
@@ -112,33 +113,33 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
     setProdutos(newProdutos);
   };
 
-  // Handle package selection - auto-fill category and values
+  // Handle package selection - auto-fill category and values with NUMBERS directly
   const handlePackageChange = (packageData: {
     nome: string;
-    valor: string;
-    valorFotoExtra: string;
+    valorBase: number;
+    valorFotoExtra: number;
     categoria: string;
   }) => {
     setPacote(packageData.nome);
+    setValorBasePacote(packageData.valorBase.toString());
+    setValorFotoExtra(packageData.valorFotoExtra.toString());
     
-    // Parse currency strings to numbers
-    const valorNum = parseFloat(packageData.valor.replace('R$ ', '').replace('.', '').replace(',', '.')) || 0;
-    const valorFotoNum = parseFloat(packageData.valorFotoExtra.replace('R$ ', '').replace('.', '').replace(',', '.')) || 0;
-    
-    setValorBasePacote(valorNum.toString());
-    setValorFotoExtra(valorFotoNum.toString());
-    
-    // Auto-fill category
     if (packageData.categoria) {
       setCategoria(packageData.categoria);
-      setCategoryFromPackage(true);
     }
+    
+    setAutoFilledByPackage(true);
   };
 
-  // Handle category change - only allow if not auto-filled by package
+  // Handle clearing package to allow manual editing
+  const handleClearPackage = () => {
+    setPacote('');
+    setAutoFilledByPackage(false);
+  };
+
+  // Handle category change
   const handleCategoryChange = (newCategory: string) => {
     setCategoria(newCategory);
-    setCategoryFromPackage(false);
   };
 
   const validateForm = (): boolean => {
@@ -183,8 +184,9 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
     setQtdFotosExtra('0');
     setValorFotoExtra('0');
     setDesconto('0');
+    setValorPago('0');
     setProdutos([]);
-    setCategoryFromPackage(false);
+    setAutoFilledByPackage(false);
   };
 
   const handleSubmit = async () => {
@@ -196,14 +198,15 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
       const data: QuickSessionData = {
         clienteId,
         dataSessao,
-        horaSessao: '00:00', // Default hour for historical sessions
+        horaSessao: '00:00',
         categoria,
         pacote: pacote.trim() || undefined,
-        status: 'concluído', // Dados históricos sempre são concluídos
+        status: 'concluído',
         valorBasePacote: parseFloat(valorBasePacote) || 0,
         qtdFotosExtra: parseFloat(qtdFotosExtra) || 0,
         valorFotoExtra: parseFloat(valorFotoExtra) || 0,
         desconto: parseFloat(desconto) || 0,
+        valorPago: parseFloat(valorPago) || 0,
         produtosIncluidos: produtos.length > 0 ? produtos : undefined,
       };
       
@@ -264,7 +267,18 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
               </div>
               
               <div className="space-y-1">
-                <Label className="text-xs">Pacote</Label>
+                <Label className="text-xs flex items-center justify-between">
+                  <span>Pacote</span>
+                  {pacote && (
+                    <button 
+                      type="button"
+                      onClick={handleClearPackage}
+                      className="text-2xs text-muted-foreground hover:text-destructive"
+                    >
+                      (limpar)
+                    </button>
+                  )}
+                </Label>
                 <PackageCombobox
                   value={pacote}
                   onValueChange={handlePackageChange}
@@ -272,10 +286,12 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
               </div>
               
               <div className="space-y-1">
-                <Label className="text-xs">Categoria *{categoryFromPackage && ' (auto)'}</Label>
+                <Label className="text-xs">
+                  Categoria *{autoFilledByPackage && categoria && ' (auto)'}
+                </Label>
                 <CategoryCombobox
                   value={categoria}
-                  disabled={categoryFromPackage}
+                  disabled={autoFilledByPackage && !!categoria}
                   categoryOptions={categoryOptions}
                   onValueChange={handleCategoryChange}
                 />
@@ -283,18 +299,20 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
             </div>
 
             {/* Linha 2 - Valores */}
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
               <div className="space-y-1">
-                <Label className="text-xs">Valor Pacote{pacote && ' (auto)'}</Label>
+                <Label className="text-xs">
+                  Valor Pacote{autoFilledByPackage && ' (auto)'}
+                </Label>
                 <Input
                   type="number"
                   step="0.01"
                   min="0"
                   value={valorBasePacote}
-                  onChange={(e) => !pacote && setValorBasePacote(e.target.value)}
-                  readOnly={!!pacote}
+                  onChange={(e) => setValorBasePacote(e.target.value)}
+                  readOnly={autoFilledByPackage}
                   placeholder="0.00"
-                  className={cn("h-7 text-xs", pacote && "bg-muted/50 cursor-not-allowed")}
+                  className={cn("h-7 text-xs", autoFilledByPackage && "bg-muted/50 cursor-not-allowed")}
                 />
               </div>
               
@@ -311,16 +329,18 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
               </div>
               
               <div className="space-y-1">
-                <Label className="text-xs">Vlr Foto Extra{pacote && ' (auto)'}</Label>
+                <Label className="text-xs">
+                  Vlr Foto Extra{autoFilledByPackage && ' (auto)'}
+                </Label>
                 <Input
                   type="number"
                   step="0.01"
                   min="0"
                   value={valorFotoExtra}
-                  onChange={(e) => !pacote && setValorFotoExtra(e.target.value)}
-                  readOnly={!!pacote}
+                  onChange={(e) => setValorFotoExtra(e.target.value)}
+                  readOnly={autoFilledByPackage}
                   placeholder="0.00"
-                  className={cn("h-7 text-xs", pacote && "bg-muted/50 cursor-not-allowed")}
+                  className={cn("h-7 text-xs", autoFilledByPackage && "bg-muted/50 cursor-not-allowed")}
                 />
               </div>
               
@@ -334,6 +354,19 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
                   onChange={(e) => setDesconto(e.target.value)}
                   placeholder="0.00"
                   className="h-7 text-xs"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs text-green-700 font-medium">Valor Pago</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={valorPago}
+                  onChange={(e) => setValorPago(e.target.value)}
+                  placeholder="0.00"
+                  className="h-7 text-xs border-green-300 focus:border-green-500"
                 />
               </div>
               
@@ -428,8 +461,14 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
                 <span className="font-bold text-lg">{formatCurrency(totalSessao)}</span>
               </div>
               <div className="text-xs">
+                <span className="text-muted-foreground">Pago:</span>{' '}
+                <span className="font-semibold text-green-600">{formatCurrency(parseFloat(valorPago) || 0)}</span>
+              </div>
+              <div className="text-xs">
                 <span className="text-muted-foreground">Restante:</span>{' '}
-                <span className="font-semibold text-orange-600">{formatCurrency(restante)}</span>
+                <span className={cn("font-semibold", restante > 0 ? "text-orange-600" : "text-green-600")}>
+                  {formatCurrency(restante)}
+                </span>
               </div>
             </div>
 

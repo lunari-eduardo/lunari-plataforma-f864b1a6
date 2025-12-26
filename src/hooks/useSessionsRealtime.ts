@@ -173,6 +173,7 @@ export function useSessionsRealtime(clienteId?: string) {
     valorFotoExtra?: number;
     valorAdicional?: number;
     desconto?: number;
+    valorPago?: number;
     produtosIncluidos?: Array<{
       nome: string;
       quantidade: number;
@@ -225,7 +226,7 @@ export function useSessionsRealtime(clienteId?: string) {
         valor_adicional: data.valorAdicional || 0,
         desconto: data.desconto || 0,
         valor_total: valorTotal,
-        valor_pago: 0, // No initial payments
+        valor_pago: data.valorPago || 0,
         detalhes: data.detalhes || null,
         observacoes: data.observacoes || null,
         regras_congeladas: null, // Historical data doesn't have frozen rules
