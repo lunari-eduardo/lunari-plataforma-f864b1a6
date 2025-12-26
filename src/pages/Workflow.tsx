@@ -3,8 +3,7 @@ import { Button } from "@/components/ui/button";
 import { WorkflowTable } from "@/components/workflow/WorkflowTable";
 import { QuickSessionAdd } from "@/components/workflow/QuickSessionAdd";
 import { ColumnSettings } from "@/components/workflow/ColumnSettings";
-import { WorkflowImportModal } from "@/components/workflow/WorkflowImportModal";
-import { ChevronLeft, ChevronRight, Eye, EyeOff, Search, Upload } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, EyeOff, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useWorkflowStatus } from "@/hooks/useWorkflowStatus";
@@ -65,7 +64,7 @@ export default function Workflow() {
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showImportModal, setShowImportModal] = useState(false);
+  
   
   // FASE 1: Garantir que o mês está carregado quando mudar
   useEffect(() => {
@@ -795,25 +794,7 @@ export default function Workflow() {
         >
           Hoje
         </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowImportModal(true)}
-          title="Importar planilha"
-        >
-          <Upload className="h-4 w-4 mr-1" />
-          Importar
-        </Button>
       </div>
-
-      {/* Modal de Importação */}
-      <WorkflowImportModal
-        open={showImportModal}
-        onOpenChange={setShowImportModal}
-        year={currentMonth.year}
-        month={currentMonth.month}
-        onImportComplete={() => forceRefresh()}
-      />
 
       {/* Debug Info */}
       {process.env.NODE_ENV === 'development' && (
