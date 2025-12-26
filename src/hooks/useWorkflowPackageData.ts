@@ -110,8 +110,10 @@ export const useWorkflowPackageData = () => {
         // CORREÇÃO: Usar valores da sessão, não zerar
         qtdFotosExtra: session.qtd_fotos_extra || 0,
         valorTotalFotoExtra: `R$ ${valorTotalFotoExtraNum.toFixed(2).replace('.', ',')}`,
-        // CORREÇÃO: Mapear regras congeladas - usar apenas precificacaoFotoExtra
-        regrasDePrecoFotoExtraCongeladas: session.regras_congeladas?.precificacaoFotoExtra || null,
+        // CORREÇÃO: Mapear regras congeladas - verificar se é sessão manual histórica
+        regrasDePrecoFotoExtraCongeladas: session.regras_congeladas?.isManualHistorical || session.regras_congeladas?.source === 'manual_historical'
+          ? session.regras_congeladas  // Sessão manual - usar estrutura direta (inclui flag isManualHistorical)
+          : (session.regras_congeladas?.precificacaoFotoExtra || null),
         // CRÍTICO: Adicionar regras_congeladas completo para UI e indicadores
         regras_congeladas: session.regras_congeladas,
         produto: '',

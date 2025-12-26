@@ -910,31 +910,39 @@ export function WorkflowTable({
                 {renderCell('discount', renderEditableInput(session, 'desconto', session.desconto || 'R$ 0,00', 'text', 'R$ 0,00'))}
 
                 {renderCell('extraPhotoValue', (() => {
+                  // NOVA VERIFICAÇÃO: Sessões históricas manuais - usar valor salvo diretamente
+                  const isManualHistorical = session.regrasDePrecoFotoExtraCongeladas?.isManualHistorical === true ||
+                                             session.regrasDePrecoFotoExtraCongeladas?.source === 'manual_historical';
+                  
+                  if (isManualHistorical) {
+                    // Sessão manual/histórica - NÃO recalcular, usar valor unitário salvo
+                    const valorSalvo = typeof session.valorFotoExtra === 'string'
+                      ? parseFloat(session.valorFotoExtra.replace(/[^\d,]/g, '').replace(',', '.')) || 0
+                      : Number(session.valorFotoExtra) || 0;
+                    return <span className="text-xs font-medium text-purple-600" title="Valor histórico fixo (não recalculado)">
+                      {formatCurrency(valorSalvo)}
+                    </span>;
+                  }
+                  
                   if (session.regrasDePrecoFotoExtraCongeladas) {
                     // Item com regras congeladas: mostrar valor e modelo aplicado
                     const regras = session.regrasDePrecoFotoExtraCongeladas;
                     const valorExibido = calcularValorRealPorFoto(session);
-                    let labelModelo = '';
                     let tooltipInfo = '';
                     switch (regras.modelo) {
                       case 'fixo':
-                        labelModelo = 'Fixo';
                         tooltipInfo = `Valor fixo: R$ ${regras.valorFixo?.toFixed(2) || '0,00'}`;
                         break;
                       case 'global':
-                        labelModelo = 'Global';
                         tooltipInfo = `Tabela global: ${regras.tabelaGlobal?.nome || 'N/A'}`;
                         break;
                       case 'categoria':
-                        labelModelo = 'Categoria';
                         tooltipInfo = `Tabela da categoria: ${regras.tabelaCategoria?.nome || 'N/A'}`;
                         break;
                       default:
-                        labelModelo = 'Congelado';
                         tooltipInfo = 'Regras congeladas';
                     }
                     return <div className="flex flex-col gap-1" title={tooltipInfo}>
-                        
                         <span className="text-xs font-medium text-blue-600">
                           {formatCurrency(valorExibido)}
                         </span>
@@ -990,35 +998,44 @@ export function WorkflowTable({
                   }
                 })())}
 
-                {renderCell('extraPhotoQty', (
-                  <>
-                    <ExtraPhotoQtyInput 
-                      sessionId={session.id}
-                      initialValue={session.qtdFotosExtra || 0}
-                      onUpdate={handleFieldUpdateStable}
-                    />
-                    <AutoPhotoCalculator 
-                      sessionId={session.id} 
-                      quantidade={session.qtdFotosExtra || 0} 
-                      regrasCongeladas={session.regrasDePrecoFotoExtraCongeladas} 
-                      currentValorFotoExtra={Number(session.valorFotoExtra) || 0} 
-                      currentValorTotalFotoExtra={Number(session.valorTotalFotoExtra) || 0} 
-                      categoria={session.categoria} 
-                      categoriaId={(() => {
-                        const categoria = categorias.find(cat => cat.nome === session.categoria);
-                        return categoria?.id;
-                      })()} 
-                      valorFotoExtraPacote={(() => {
-                        const pacote = packageOptions.find(pkg => pkg.nome === session.pacote);
-                        return pacote?.valorFotoExtra || 0;
-                      })()} 
-                      onValueUpdate={updates => {
-                        handleFieldUpdateStable(session.id, 'valorFotoExtra', updates.valorFotoExtra, true);
-                        handleFieldUpdateStable(session.id, 'valorTotalFotoExtra', updates.valorTotalFotoExtra, true);
-                      }} 
-                    />
-                  </>
-                ))}
+                {renderCell('extraPhotoQty', (() => {
+                  // Verificar se é sessão histórica manual - NÃO renderizar AutoPhotoCalculator
+                  const isManualHistorical = session.regrasDePrecoFotoExtraCongeladas?.isManualHistorical === true ||
+                                             session.regrasDePrecoFotoExtraCongeladas?.source === 'manual_historical';
+                  
+                  return (
+                    <>
+                      <ExtraPhotoQtyInput 
+                        sessionId={session.id}
+                        initialValue={session.qtdFotosExtra || 0}
+                        onUpdate={handleFieldUpdateStable}
+                      />
+                      {/* Só renderizar AutoPhotoCalculator para sessões NÃO históricas */}
+                      {!isManualHistorical && (
+                        <AutoPhotoCalculator 
+                          sessionId={session.id} 
+                          quantidade={session.qtdFotosExtra || 0} 
+                          regrasCongeladas={session.regrasDePrecoFotoExtraCongeladas} 
+                          currentValorFotoExtra={Number(session.valorFotoExtra) || 0} 
+                          currentValorTotalFotoExtra={Number(session.valorTotalFotoExtra) || 0} 
+                          categoria={session.categoria} 
+                          categoriaId={(() => {
+                            const categoria = categorias.find(cat => cat.nome === session.categoria);
+                            return categoria?.id;
+                          })()} 
+                          valorFotoExtraPacote={(() => {
+                            const pacote = packageOptions.find(pkg => pkg.nome === session.pacote);
+                            return pacote?.valorFotoExtra || 0;
+                          })()} 
+                          onValueUpdate={updates => {
+                            handleFieldUpdateStable(session.id, 'valorFotoExtra', updates.valorFotoExtra, true);
+                            handleFieldUpdateStable(session.id, 'valorTotalFotoExtra', updates.valorTotalFotoExtra, true);
+                          }} 
+                        />
+                      )}
+                    </>
+                  );
+                })())}
 
                 {renderCell('extraPhotoTotal', (() => {
                   // CORREÇÃO: Sessões históricas manuais - usar valor salvo diretamente sem recalcular
