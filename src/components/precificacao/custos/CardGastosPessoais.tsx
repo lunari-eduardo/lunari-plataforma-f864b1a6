@@ -41,7 +41,7 @@ export function CardGastosPessoais({
   };
 
   return (
-    <Card className="border-2 shadow-sm bg-card">
+    <Card className="border shadow-sm bg-primary/5">
       <CardHeader className="pb-3 bg-muted/50 border-b">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">

@@ -18,7 +18,7 @@ export function EtapaColapsavel({
   titulo,
   descricao,
   children,
-  defaultOpen = true,
+  defaultOpen = false,
   statusSalvamento
 }: EtapaColapsavelProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);

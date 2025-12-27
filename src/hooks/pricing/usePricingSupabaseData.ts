@@ -78,60 +78,17 @@ export function usePricingSupabaseData() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Real-time listener para mudanças
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    
-    const setupRealtimeListeners = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      
-      const channel = supabase
-        .channel('pricing-changes')
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'pricing_configuracoes',
-          filter: `user_id=eq.${user.id}`
-        }, () => {
-          loadAllData();
-        })
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'pricing_gastos_pessoais',
-          filter: `user_id=eq.${user.id}`
-        }, () => {
-          loadEstruturaCustos();
-        })
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'pricing_custos_estudio',
-          filter: `user_id=eq.${user.id}`
-        }, () => {
-          loadEstruturaCustos();
-        })
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'pricing_equipamentos',
-          filter: `user_id=eq.${user.id}`
-        }, () => {
-          loadEstruturaCustos();
-        })
-        .subscribe();
-      
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    };
-    
-    setupRealtimeListeners();
-  }, [isAuthenticated]);
-
+  // Funções de carregamento (declaradas antes do real-time listener)
   const loadAllData = useCallback(async () => {
     setLoading(true);
+    
+    // Timeout de segurança para evitar loading infinito
+    const timeoutId = setTimeout(() => {
+      console.warn('⚠️ Timeout no carregamento de dados de precificação');
+      setLoading(false);
+      setStatusSalvamento('erro');
+    }, 10000);
+    
     try {
       const [estrutura, metasData, horasData] = await Promise.all([
         adapterRef.current.loadEstruturaCustos(),
@@ -148,6 +105,7 @@ export function usePricingSupabaseData() {
       console.error('Erro ao carregar dados:', error);
       setStatusSalvamento('erro');
     } finally {
+      clearTimeout(timeoutId);
       setLoading(false);
     }
   }, []);
@@ -160,6 +118,65 @@ export function usePricingSupabaseData() {
       console.error('Erro ao recarregar estrutura:', error);
     }
   }, []);
+
+  // Real-time listener para mudanças - com cleanup correto
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let isMounted = true;
+    
+    const setupRealtimeListeners = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || !isMounted) return;
+      
+      channel = supabase
+        .channel('pricing-changes')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'pricing_configuracoes',
+          filter: `user_id=eq.${user.id}`
+        }, () => {
+          if (isMounted) loadAllData();
+        })
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'pricing_gastos_pessoais',
+          filter: `user_id=eq.${user.id}`
+        }, () => {
+          if (isMounted) loadEstruturaCustos();
+        })
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'pricing_custos_estudio',
+          filter: `user_id=eq.${user.id}`
+        }, () => {
+          if (isMounted) loadEstruturaCustos();
+        })
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'pricing_equipamentos',
+          filter: `user_id=eq.${user.id}`
+        }, () => {
+          if (isMounted) loadEstruturaCustos();
+        })
+        .subscribe();
+    };
+    
+    setupRealtimeListeners();
+    
+    // Cleanup correto
+    return () => {
+      isMounted = false;
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+    };
+  }, [isAuthenticated, loadAllData, loadEstruturaCustos]);
 
   // Função de salvamento com debounce
   const saveWithDebounce = useCallback(async (
