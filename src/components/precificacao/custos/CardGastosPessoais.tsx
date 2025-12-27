@@ -41,12 +41,12 @@ export function CardGastosPessoais({
   };
 
   return (
-    <Card className="border shadow-sm bg-primary/5">
-      <CardHeader className="pb-3 bg-muted/50 border-b">
+    <Card className="border shadow-lg bg-white dark:bg-card">
+      <CardHeader className="pb-3 bg-gradient-to-r from-amber-500/20 to-amber-500/5 border-b border-amber-500/30">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <User className="h-4 w-4 text-muted-foreground" />
-            <CardTitle className="text-base">Gastos Pessoais</CardTitle>
+            <User className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            <CardTitle className="text-base text-amber-800 dark:text-amber-300">Gastos Pessoais</CardTitle>
           </div>
           <span className="font-bold text-lg text-foreground">
             {formatCurrency(totalGastosPessoais)}

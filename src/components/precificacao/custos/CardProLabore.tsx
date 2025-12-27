@@ -25,12 +25,12 @@ export function CardProLabore({
   };
 
   return (
-    <Card className="border shadow-sm bg-primary/5">
-      <CardHeader className="pb-3 bg-muted/50 border-b">
+    <Card className="border shadow-lg bg-white dark:bg-card">
+      <CardHeader className="pb-3 bg-gradient-to-r from-blue-500/20 to-blue-500/5 border-b border-blue-500/30">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Briefcase className="h-4 w-4 text-muted-foreground" />
-            <CardTitle className="text-base">Pró-labore</CardTitle>
+            <Briefcase className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            <CardTitle className="text-base text-blue-800 dark:text-blue-300">Pró-labore</CardTitle>
           </div>
           <span className="font-bold text-lg text-foreground">
             {formatCurrency(proLaboreCalculado)}

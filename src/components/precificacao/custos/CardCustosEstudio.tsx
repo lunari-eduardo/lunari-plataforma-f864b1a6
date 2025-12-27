@@ -121,12 +121,12 @@ export function CardCustosEstudio({
   };
 
   return (
-    <Card className="border shadow-sm bg-primary/5">
-      <CardHeader className="pb-3 bg-muted/50 border-b">
+    <Card className="border shadow-lg bg-white dark:bg-card">
+      <CardHeader className="pb-3 bg-gradient-to-r from-emerald-500/20 to-emerald-500/5 border-b border-emerald-500/30">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Building2 className="h-4 w-4 text-muted-foreground" />
-            <CardTitle className="text-base">Custos do Estúdio</CardTitle>
+            <Building2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            <CardTitle className="text-base text-emerald-800 dark:text-emerald-300">Custos do Estúdio</CardTitle>
           </div>
           <span className="font-bold text-lg text-foreground">
             {formatCurrency(totalCustosEstudio)}

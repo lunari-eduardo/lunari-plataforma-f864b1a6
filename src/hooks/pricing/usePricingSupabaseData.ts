@@ -78,25 +78,29 @@ export function usePricingSupabaseData() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Funções de carregamento (declaradas antes do real-time listener)
+  // Funções de carregamento - otimizado com carregamento progressivo
   const loadAllData = useCallback(async () => {
     setLoading(true);
     
-    // Timeout de segurança para evitar loading infinito
+    // Timeout reduzido para 5 segundos
     const timeoutId = setTimeout(() => {
       console.warn('⚠️ Timeout no carregamento de dados de precificação');
       setLoading(false);
       setStatusSalvamento('erro');
-    }, 10000);
+    }, 5000);
     
     try {
-      const [estrutura, metasData, horasData] = await Promise.all([
-        adapterRef.current.loadEstruturaCustos(),
+      // Carregamento progressivo: estrutura primeiro (mais importante)
+      const estrutura = await adapterRef.current.loadEstruturaCustos();
+      setEstruturaCustos(estrutura);
+      setLoading(false); // Mostrar UI imediatamente
+      
+      // Carregar resto em paralelo (secundário)
+      const [metasData, horasData] = await Promise.all([
         adapterRef.current.loadMetas(),
         adapterRef.current.loadPadraoHoras()
       ]);
       
-      setEstruturaCustos(estrutura);
       setMetas(metasData);
       setPadraoHoras(horasData);
       setStatusSalvamento('salvo');
@@ -104,9 +108,9 @@ export function usePricingSupabaseData() {
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
       setStatusSalvamento('erro');
+      setLoading(false);
     } finally {
       clearTimeout(timeoutId);
-      setLoading(false);
     }
   }, []);
 

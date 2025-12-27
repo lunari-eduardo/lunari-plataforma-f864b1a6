@@ -61,12 +61,12 @@ export function CardEquipamentos({
     : 0;
 
   return (
-    <Card className="border shadow-sm bg-primary/5">
-      <CardHeader className="pb-3 bg-muted/50 border-b">
+    <Card className="border shadow-lg bg-white dark:bg-card">
+      <CardHeader className="pb-3 bg-gradient-to-r from-purple-500/20 to-purple-500/5 border-b border-purple-500/30">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Camera className="h-4 w-4 text-muted-foreground" />
-            <CardTitle className="text-base">Equipamentos</CardTitle>
+            <Camera className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+            <CardTitle className="text-base text-purple-800 dark:text-purple-300">Equipamentos</CardTitle>
           </div>
           <div className="text-right">
             <span className="font-bold text-lg text-foreground">
