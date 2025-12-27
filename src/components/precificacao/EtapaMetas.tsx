@@ -3,9 +3,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
-import { TrendingUp, Target, DollarSign } from 'lucide-react';
+import { Target, TrendingUp } from 'lucide-react';
 import { MetasService, IndicadoresService } from '@/services/PricingService';
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
+import { EtapaColapsavel } from './EtapaColapsavel';
 
 interface EtapaMetasProps {
   custosFixosTotal: number;
@@ -73,20 +74,13 @@ export function EtapaMetas({ custosFixosTotal }: EtapaMetasProps) {
   };
 
   return (
-    <section className="space-y-4">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400 font-bold">
-          2
-        </div>
-        <div>
-          <h2 className="text-lg font-semibold">Suas Metas Financeiras</h2>
-          <p className="text-sm text-muted-foreground">
-            Defina quanto lucro você quer ter no seu negócio
-          </p>
-        </div>
-      </div>
-      
-      <Card className="shadow-md border-2">
+    <EtapaColapsavel
+      numero={2}
+      titulo="Suas Metas Financeiras"
+      descricao="Defina quanto lucro você quer ter no seu negócio"
+      defaultOpen={true}
+    >
+      <Card className="border bg-card">
         <CardContent className="p-6 space-y-6">
           {/* Slider de Margem */}
           <div className="space-y-4">
@@ -118,12 +112,12 @@ export function EtapaMetas({ custosFixosTotal }: EtapaMetasProps) {
           
           {/* Feedback Dinâmico */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="rounded-lg p-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800">
+            <div className="rounded-lg p-4 bg-muted/50 border">
               <div className="flex items-center gap-2 mb-2">
-                <Target className="h-5 w-5 text-green-600 dark:text-green-400" />
-                <span className="text-sm text-green-700 dark:text-green-300">Meta Mensal</span>
+                <Target className="h-5 w-5 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">Meta Mensal</span>
               </div>
-              <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+              <p className="text-2xl font-bold text-foreground">
                 {formatCurrency(metaFaturamentoMensal)}
               </p>
               <p className="text-xs text-muted-foreground mt-1">
@@ -131,12 +125,12 @@ export function EtapaMetas({ custosFixosTotal }: EtapaMetasProps) {
               </p>
             </div>
             
-            <div className="rounded-lg p-4 bg-gradient-to-r from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 border border-purple-200 dark:border-purple-800">
+            <div className="rounded-lg p-4 bg-muted/50 border">
               <div className="flex items-center gap-2 mb-2">
-                <TrendingUp className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                <span className="text-sm text-purple-700 dark:text-purple-300">Lucro Anual Estimado</span>
+                <TrendingUp className="h-5 w-5 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">Lucro Anual Estimado</span>
               </div>
-              <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+              <p className="text-2xl font-bold text-foreground">
                 {formatCurrency(metaLucroAnual)}
               </p>
               <p className="text-xs text-muted-foreground mt-1">
@@ -146,6 +140,6 @@ export function EtapaMetas({ custosFixosTotal }: EtapaMetasProps) {
           </div>
         </CardContent>
       </Card>
-    </section>
+    </EtapaColapsavel>
   );
 }

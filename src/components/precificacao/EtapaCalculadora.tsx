@@ -7,6 +7,7 @@ import { Clock, Package, PlusCircle, Calculator, Trash2, Plus } from 'lucide-rea
 import { SimpleProductSelector } from './SimpleProductSelector';
 import { SalvarPacoteModal } from './SalvarPacoteModal';
 import { FeedbackContextual } from './FeedbackContextual';
+import { EtapaColapsavel } from './EtapaColapsavel';
 import { PadraoHorasService } from '@/services/PricingService';
 import type { ProdutoAdicional, CustoExtra } from '@/types/precificacao';
 import type { NormalizedProduct } from '@/utils/productUtils';
@@ -78,27 +79,22 @@ export function EtapaCalculadora({
   };
 
   return (
-    <section className="space-y-4">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600 dark:text-purple-400 font-bold">
-          3
-        </div>
-        <div>
-          <h2 className="text-lg font-semibold">Calcule o Preço do Seu Serviço</h2>
-          <p className="text-sm text-muted-foreground">O principal resultado de toda sua precificação</p>
-        </div>
-      </div>
-
+    <EtapaColapsavel
+      numero={3}
+      titulo="Calcule o Preço do Seu Serviço"
+      descricao="O principal resultado de toda sua precificação"
+      defaultOpen={true}
+    >
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Card: Tempo do Projeto */}
-        <Card className="shadow-md border-2">
-          <CardHeader className="pb-3">
+        <Card className="border bg-card">
+          <CardHeader className="pb-3 bg-muted/30">
             <CardTitle className="flex items-center gap-2 text-base">
-              <Clock className="h-5 w-5 text-blue-500" />
+              <Clock className="h-5 w-5 text-muted-foreground" />
               Tempo do Projeto
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="pt-4 space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label className="text-sm">Horas/dia</Label>
@@ -113,32 +109,32 @@ export function EtapaCalculadora({
               <Label className="text-sm font-medium">Horas estimadas para este serviço</Label>
               <Input type="number" value={horasEstimadas} onChange={e => setHorasEstimadas(Number(e.target.value))} className="h-14 text-xl font-bold text-center mt-2" />
             </div>
-            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3">
+            <div className="bg-muted/50 rounded-lg p-3">
               <div className="flex justify-between text-sm">
                 <span>Custo da sua hora:</span>
-                <span className="font-bold text-blue-600">{formatCurrency(custoHora)}</span>
+                <span className="font-bold text-foreground">{formatCurrency(custoHora)}</span>
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Card: Produtos */}
-        <Card className="shadow-md border-2">
-          <CardHeader className="pb-3">
+        <Card className="border bg-card">
+          <CardHeader className="pb-3 bg-muted/30">
             <CardTitle className="flex items-center gap-2 text-base">
-              <Package className="h-5 w-5 text-green-500" />
+              <Package className="h-5 w-5 text-muted-foreground" />
               Produtos Adicionais
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-4">
             <SimpleProductSelector value="" onSelect={(product: NormalizedProduct | null) => {
               if (product) {
                 setProdutos([...produtos, { id: Date.now().toString(), nome: product.nome, custo: product.custo || 0, valorVenda: product.valorVenda || 0, quantidade: 1 }]);
               }
             }} />
-            <div className="space-y-2 mt-3">
+            <div className="space-y-2 mt-3 max-h-32 overflow-y-auto">
               {produtos.map(p => (
-                <div key={p.id} className="flex items-center gap-2 p-2 rounded border bg-muted/30">
+                <div key={p.id} className="flex items-center gap-2 p-2 rounded border bg-muted/20">
                   <span className="flex-1 text-sm truncate">{p.nome}</span>
                   <Input type="number" value={p.quantidade} onChange={e => atualizarProduto(p.id, 'quantidade', parseInt(e.target.value) || 1)} className="w-16 h-8 text-sm text-center" min="1" />
                   <span className="text-sm font-medium w-20 text-right">{formatCurrency(p.valorVenda * p.quantidade)}</span>
@@ -150,18 +146,18 @@ export function EtapaCalculadora({
         </Card>
 
         {/* Card: Custos Extras */}
-        <Card className="shadow-md border-2">
-          <CardHeader className="pb-3">
+        <Card className="border bg-card">
+          <CardHeader className="pb-3 bg-muted/30">
             <CardTitle className="flex items-center gap-2 text-base">
-              <PlusCircle className="h-5 w-5 text-orange-500" />
+              <PlusCircle className="h-5 w-5 text-muted-foreground" />
               Custos Adicionais
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-4">
             <Button onClick={adicionarCustoExtra} size="sm" variant="outline" className="w-full mb-3"><Plus className="h-4 w-4 mr-1" />Adicionar Custo</Button>
-            <div className="space-y-2">
+            <div className="space-y-2 max-h-32 overflow-y-auto">
               {custosExtras.map(c => (
-                <div key={c.id} className="flex items-center gap-2 p-2 rounded border bg-muted/30">
+                <div key={c.id} className="flex items-center gap-2 p-2 rounded border bg-muted/20">
                   <Input value={c.descricao} onChange={e => atualizarCustoExtra(c.id, 'descricao', e.target.value)} placeholder="Descrição" className="flex-1 h-8 text-sm" />
                   <Input type="number" value={c.valorUnitario} onChange={e => atualizarCustoExtra(c.id, 'valorUnitario', parseFloat(e.target.value) || 0)} className="w-24 h-8 text-sm" min="0" step="0.01" />
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => removerCustoExtra(c.id)}><Trash2 className="h-4 w-4" /></Button>
@@ -171,15 +167,15 @@ export function EtapaCalculadora({
           </CardContent>
         </Card>
 
-        {/* Card: Resultado Final */}
-        <Card className="shadow-lg border-2 border-purple-200 dark:border-purple-700 bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base text-purple-700 dark:text-purple-300">
-              <Calculator className="h-5 w-5" />
+        {/* Card: Resultado Final - Único destaque com borda primary */}
+        <Card className="border-2 border-primary bg-card">
+          <CardHeader className="pb-3 bg-muted/30">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Calculator className="h-5 w-5 text-primary" />
               Resultado Final
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="pt-4 space-y-4">
             <div className="flex items-center justify-between">
               <Label className="text-sm font-medium">Markup:</Label>
               <div className="flex items-center gap-2">
@@ -188,32 +184,32 @@ export function EtapaCalculadora({
               </div>
             </div>
 
-            <div className="text-center py-4 border-t border-purple-200 dark:border-purple-700">
+            <div className="text-center py-4 border-t border-border">
               <p className="text-sm text-muted-foreground mb-1">Preço Final do Serviço</p>
-              <p className="text-4xl font-black text-purple-600 dark:text-purple-400">{formatCurrency(precoFinal)}</p>
+              <p className="text-4xl font-black text-primary">{formatCurrency(precoFinal)}</p>
             </div>
 
-            <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 space-y-1">
+            <div className="bg-muted/50 rounded-lg p-3 space-y-1">
               <div className="flex justify-between items-center">
                 <span className="text-sm">Lucro Líquido:</span>
-                <span className="text-xl font-bold text-green-600">{formatCurrency(lucroLiquido)}</span>
+                <span className="text-xl font-bold text-foreground">{formatCurrency(lucroLiquido)}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-xs text-muted-foreground">Lucratividade:</span>
-                <span className="font-medium text-green-600">{lucratividade.toFixed(1)}%</span>
+                <span className="font-medium text-foreground">{lucratividade.toFixed(1)}%</span>
               </div>
             </div>
 
             <FeedbackContextual precoFinal={precoFinal} metaMensal={metaFaturamentoMensal} lucratividade={lucratividade} custoHora={custoHora} />
 
             <Button className="w-full" size="lg" onClick={() => setSalvarPacoteModalOpen(true)} disabled={precoFinal <= 0}>
-              📦 Salvar como Pacote
+              Salvar como Pacote
             </Button>
           </CardContent>
         </Card>
       </div>
 
       <SalvarPacoteModal isOpen={salvarPacoteModalOpen} onClose={() => setSalvarPacoteModalOpen(false)} precoFinal={precoFinal} produtos={produtos} horasEstimadas={horasEstimadas} markup={markup} />
-    </section>
+    </EtapaColapsavel>
   );
 }

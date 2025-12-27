@@ -7,6 +7,7 @@ import { CardGastosPessoais } from './custos/CardGastosPessoais';
 import { CardProLabore } from './custos/CardProLabore';
 import { CardCustosEstudio } from './custos/CardCustosEstudio';
 import { CardEquipamentos } from './custos/CardEquipamentos';
+import { EtapaColapsavel } from './EtapaColapsavel';
 
 interface EtapaCustosFixosProps {
   onTotalChange: (total: number) => void;
@@ -83,24 +84,13 @@ export function EtapaCustosFixos({ onTotalChange }: EtapaCustosFixosProps) {
   };
 
   return (
-    <section className="space-y-4">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold">
-          1
-        </div>
-        <div className="flex-1">
-          <h2 className="text-lg font-semibold">Custos Fixos Mensais</h2>
-          <p className="text-sm text-muted-foreground">
-            Quanto custa manter seu negócio funcionando
-          </p>
-        </div>
-        <div className="flex items-center gap-1 text-xs">
-          {statusSalvamento === 'salvo' && <CheckCircle className="h-3 w-3 text-green-600" />}
-          {statusSalvamento === 'erro' && <AlertCircle className="h-3 w-3 text-red-600" />}
-          {statusSalvamento === 'salvando' && <div className="animate-spin h-3 w-3 border border-blue-600 border-t-transparent rounded-full" />}
-        </div>
-      </div>
-      
+    <EtapaColapsavel
+      numero={1}
+      titulo="Custos Fixos Mensais"
+      descricao="Quanto custa manter seu negócio funcionando"
+      defaultOpen={true}
+      statusSalvamento={statusSalvamento}
+    >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <CardGastosPessoais 
           gastosPessoais={gastosPessoais}
@@ -126,16 +116,16 @@ export function EtapaCustosFixos({ onTotalChange }: EtapaCustosFixosProps) {
       </div>
       
       {/* Resumo da Etapa */}
-      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-800">
+      <Card className="bg-muted/50 border">
         <CardContent className="py-4">
           <div className="flex justify-between items-center">
             <span className="font-medium">Total de Custos Fixos Mensais</span>
-            <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+            <span className="text-2xl font-bold text-foreground">
               {formatCurrency(totalPrincipal)}
             </span>
           </div>
         </CardContent>
       </Card>
-    </section>
+    </EtapaColapsavel>
   );
 }

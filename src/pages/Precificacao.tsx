@@ -55,7 +55,7 @@ export default function Precificacao() {
 
   return (
     <ScrollArea className="h-[calc(100vh-120px)]">
-      <div className="w-full max-w-7xl mx-auto p-4 md:p-6 lg:p-8 pb-24 lg:pb-8">
+      <div className="w-full max-w-7xl mx-auto p-4 md:p-6 lg:p-8 pb-40 lg:pb-8">
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Sidebar Sticky (Desktop) */}
           <ResumoFinanceiroSticky
@@ -66,7 +66,7 @@ export default function Precificacao() {
           />
           
           {/* Conteúdo Principal */}
-          <main className="flex-1 space-y-8">
+          <main className="flex-1 space-y-6">
             <PricingHeader />
             
             {/* Etapa 1: Custos Fixos */}
