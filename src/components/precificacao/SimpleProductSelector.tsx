@@ -1,16 +1,25 @@
 import { useState, useEffect } from 'react';
-import { Check, ChevronsUpDown } from 'lucide-react';
+import { Check, ChevronsUpDown, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { storage } from '@/utils/localStorage';
-import { processProductList, debugProductData, type NormalizedProduct } from '@/utils/productUtils';
+import { supabase } from '@/integrations/supabase/client';
+import { normalizeString } from '@/utils/stringNormalization';
+
+interface NormalizedProduct {
+  id: string;
+  nome: string;
+  custo: number;
+  valorVenda: number;
+}
+
 interface SimpleProductSelectorProps {
   value?: string;
   onSelect: (product: NormalizedProduct | null) => void;
   className?: string;
 }
+
 export function SimpleProductSelector({
   value,
   onSelect,
@@ -18,49 +27,70 @@ export function SimpleProductSelector({
 }: SimpleProductSelectorProps) {
   const [open, setOpen] = useState(false);
   const [products, setProducts] = useState<NormalizedProduct[]>([]);
-  const [selectedValue, setSelectedValue] = useState(""); // Add internal state like ProductSearchCombobox
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log('📦 [SimpleProductSelector] Carregando produtos...');
-    try {
-      const savedProducts = storage.load('configuracoes_produtos', []);
-      console.log('📊 [SimpleProductSelector] Produtos salvos encontrados:', savedProducts.length);
+    const loadProducts = async () => {
+      try {
+        setLoading(true);
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          console.log('📦 [SimpleProductSelector] Usuário não autenticado');
+          setProducts([]);
+          return;
+        }
 
-      // Debug raw data
-      debugProductData(savedProducts, 'SimpleProductSelector');
+        const { data, error } = await supabase
+          .from('produtos')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('nome');
 
-      // Process using utility function
-      const processedProducts = processProductList(savedProducts);
-      console.log('✅ [SimpleProductSelector] Produtos processados:', processedProducts.length);
-      setProducts(processedProducts);
-    } catch (error) {
-      console.error('❌ [SimpleProductSelector] Erro ao carregar produtos:', error);
-      setProducts([]);
-    }
-  }, []);
-  const selectedProduct = products.find(product => product.nome === value);
-  const handleSelect = (selectedProductName: string) => {
-    console.log('🎯 SimpleProductSelector: handleSelect chamado', {
-      selectedProductName
-    });
-    try {
-      const product = products.find(p => p.nome === selectedProductName);
-      console.log('📦 Produto encontrado:', product);
-      if (product) {
-        console.log('✅ Enviando produto selecionado:', product);
-        onSelect(product);
-        setSelectedValue(""); // Reset after selection like ProductSearchCombobox
-      } else {
-        console.log('⚠️ Produto não encontrado, enviando null');
-        onSelect(null);
+        if (error) {
+          console.error('❌ [SimpleProductSelector] Erro ao carregar produtos:', error);
+          setProducts([]);
+          return;
+        }
+
+        const normalized: NormalizedProduct[] = (data || []).map(p => ({
+          id: p.id,
+          nome: p.nome,
+          custo: Number(p.preco_custo) || 0,
+          valorVenda: Number(p.preco_venda) || 0
+        }));
+
+        console.log('✅ [SimpleProductSelector] Produtos carregados do Supabase:', normalized.length);
+        setProducts(normalized);
+      } catch (error) {
+        console.error('❌ [SimpleProductSelector] Erro ao carregar produtos:', error);
+        setProducts([]);
+      } finally {
+        setLoading(false);
       }
-      setOpen(false);
-    } catch (error) {
-      console.error('❌ Erro na seleção de produto:', error);
-      setOpen(false);
+    };
+
+    loadProducts();
+  }, []);
+
+  const handleSelect = (selectedProductName: string) => {
+    const product = products.find(p => p.nome === selectedProductName);
+    if (product) {
+      onSelect(product);
+    } else {
+      onSelect(null);
     }
+    setOpen(false);
   };
-  return <Popover open={open} onOpenChange={setOpen}>
+
+  // Custom filter function for accent-insensitive search
+  const filterProducts = (value: string, search: string) => {
+    const normalizedValue = normalizeString(value);
+    const normalizedSearch = normalizeString(search);
+    return normalizedValue.includes(normalizedSearch) ? 1 : 0;
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -71,30 +101,52 @@ export function SimpleProductSelector({
             className
           )}
         >
-          {selectedValue || value || "Selecionar produto..."}
+          {value || "Selecionar produto..."}
           <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[300px] p-0 z-[9999] dropdown-solid border shadow-lg">
-        <Command>
+      <PopoverContent className="w-[300px] p-0 z-[9999] bg-popover border shadow-lg">
+        <Command filter={filterProducts}>
           <CommandInput placeholder="Buscar produto..." className="h-8 text-xs" />
-          <CommandList>
-            <CommandEmpty className="text-xs py-2">
-              {products.length === 0 ? "Nenhum produto cadastrado. Configure produtos primeiro." : "Nenhum produto encontrado."}
-            </CommandEmpty>
-            <CommandGroup>
-              {products.map(product => <CommandItem key={product.id} value={product.nome} onSelect={handleSelect} className="text-xs cursor-pointer">
-                  <Check className={cn("mr-2 h-3 w-3", value === product.nome ? "opacity-100" : "opacity-0")} />
-                  <div className="flex flex-col">
-                    <span className="font-medium">{product.nome}</span>
-                    <span className="text-2xs text-muted-foreground">
-                      Custo: R$ {(product.custo || 0).toFixed(2)} | Venda: R$ {(product.valorVenda || 0).toFixed(2)}
-                    </span>
-                  </div>
-                </CommandItem>)}
-            </CommandGroup>
+          <CommandList className="max-h-48 overflow-y-auto">
+            {loading ? (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                <span className="ml-2 text-xs text-muted-foreground">Carregando...</span>
+              </div>
+            ) : (
+              <>
+                <CommandEmpty className="text-xs py-2">
+                  {products.length === 0 
+                    ? "Nenhum produto cadastrado. Configure produtos primeiro." 
+                    : "Nenhum produto encontrado."}
+                </CommandEmpty>
+                <CommandGroup>
+                  {products.map(product => (
+                    <CommandItem 
+                      key={product.id} 
+                      value={product.nome} 
+                      onSelect={handleSelect} 
+                      className="text-xs cursor-pointer"
+                    >
+                      <Check className={cn("mr-2 h-3 w-3", value === product.nome ? "opacity-100" : "opacity-0")} />
+                      <div className="flex flex-col">
+                        <span className="font-medium">{product.nome}</span>
+                        <span className="text-2xs text-muted-foreground">
+                          Custo: R$ {product.custo.toFixed(2)} | Venda: R$ {product.valorVenda.toFixed(2)}
+                        </span>
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </>
+            )}
           </CommandList>
         </Command>
       </PopoverContent>
-    </Popover>;
+    </Popover>
+  );
 }
+
+// Re-export the type for backwards compatibility
+export type { NormalizedProduct };
