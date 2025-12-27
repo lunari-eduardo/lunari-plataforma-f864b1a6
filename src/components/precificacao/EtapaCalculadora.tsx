@@ -98,16 +98,16 @@ export function EtapaCalculadora({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label className="text-sm">Horas/dia</Label>
-                <Input type="number" value={horasDisponiveis} onChange={e => setHorasDisponiveis(Number(e.target.value))} className="h-12 text-lg font-medium text-center" />
+                <Input type="number" value={horasDisponiveis} onChange={e => setHorasDisponiveis(Number(e.target.value))} onFocus={e => e.target.select()} className="h-12 text-lg font-medium text-center" />
               </div>
               <div>
                 <Label className="text-sm">Dias/semana</Label>
-                <Input type="number" value={diasTrabalhados} onChange={e => setDiasTrabalhados(Number(e.target.value))} className="h-12 text-lg font-medium text-center" />
+                <Input type="number" value={diasTrabalhados} onChange={e => setDiasTrabalhados(Number(e.target.value))} onFocus={e => e.target.select()} className="h-12 text-lg font-medium text-center" />
               </div>
             </div>
             <div>
               <Label className="text-sm font-medium">Horas estimadas para este serviço</Label>
-              <Input type="number" value={horasEstimadas} onChange={e => setHorasEstimadas(Number(e.target.value))} className="h-14 text-xl font-bold text-center mt-2" />
+              <Input type="number" value={horasEstimadas} onChange={e => setHorasEstimadas(Number(e.target.value))} onFocus={e => e.target.select()} className="h-14 text-xl font-bold text-center mt-2" />
             </div>
             <div className="bg-muted/50 rounded-lg p-3">
               <div className="flex justify-between text-sm">
@@ -136,7 +136,7 @@ export function EtapaCalculadora({
               {produtos.map(p => (
                 <div key={p.id} className="flex items-center gap-2 p-2 rounded border bg-muted/20">
                   <span className="flex-1 text-sm truncate">{p.nome}</span>
-                  <Input type="number" value={p.quantidade} onChange={e => atualizarProduto(p.id, 'quantidade', parseInt(e.target.value) || 1)} className="w-16 h-8 text-sm text-center" min="1" />
+                  <Input type="number" value={p.quantidade} onChange={e => atualizarProduto(p.id, 'quantidade', parseInt(e.target.value) || 1)} onFocus={e => e.target.select()} className="w-16 h-8 text-sm text-center" min="1" />
                   <span className="text-sm font-medium w-20 text-right">{formatCurrency(p.valorVenda * p.quantidade)}</span>
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => removerProduto(p.id)}><Trash2 className="h-4 w-4" /></Button>
                 </div>
@@ -155,11 +155,18 @@ export function EtapaCalculadora({
           </CardHeader>
           <CardContent className="pt-4">
             <Button onClick={adicionarCustoExtra} size="sm" variant="outline" className="w-full mb-3"><Plus className="h-4 w-4 mr-1" />Adicionar Custo</Button>
+            {custosExtras.length > 0 && (
+              <div className="flex items-center gap-2 px-2 mb-2 text-xs text-muted-foreground">
+                <span className="flex-1">Descrição</span>
+                <span className="w-24 text-center">Valor (R$)</span>
+                <span className="w-8"></span>
+              </div>
+            )}
             <div className="space-y-2 max-h-32 overflow-y-auto">
               {custosExtras.map(c => (
                 <div key={c.id} className="flex items-center gap-2 p-2 rounded border bg-muted/20">
-                  <Input value={c.descricao} onChange={e => atualizarCustoExtra(c.id, 'descricao', e.target.value)} placeholder="Descrição" className="flex-1 h-8 text-sm" />
-                  <Input type="number" value={c.valorUnitario} onChange={e => atualizarCustoExtra(c.id, 'valorUnitario', parseFloat(e.target.value) || 0)} className="w-24 h-8 text-sm" min="0" step="0.01" />
+                  <Input value={c.descricao} onChange={e => atualizarCustoExtra(c.id, 'descricao', e.target.value)} placeholder="Ex: Deslocamento" className="flex-1 h-8 text-sm" />
+                  <Input type="number" value={c.valorUnitario} onChange={e => atualizarCustoExtra(c.id, 'valorUnitario', parseFloat(e.target.value) || 0)} onFocus={e => e.target.select()} placeholder="0,00" className="w-24 h-8 text-sm" min="0" step="0.01" />
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => removerCustoExtra(c.id)}><Trash2 className="h-4 w-4" /></Button>
                 </div>
               ))}
@@ -179,7 +186,7 @@ export function EtapaCalculadora({
             <div className="flex items-center justify-between">
               <Label className="text-sm font-medium">Markup:</Label>
               <div className="flex items-center gap-2">
-                <Input type="number" value={markup} onChange={e => setMarkup(Number(e.target.value) || 1)} className="w-20 h-10 text-lg font-bold text-center" min="1" step="0.1" />
+                <Input type="number" value={markup} onChange={e => setMarkup(Number(e.target.value) || 1)} onFocus={e => e.target.select()} className="w-20 h-10 text-lg font-bold text-center" min="1" step="0.1" />
                 <span className="text-lg">x</span>
               </div>
             </div>
