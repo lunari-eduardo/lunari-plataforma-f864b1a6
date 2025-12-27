@@ -48,8 +48,8 @@ export function CardGastosPessoais({
   };
 
   return (
-    <Card className="border bg-card">
-      <CardHeader className="pb-3 bg-muted/30">
+    <Card className="border-2 shadow-sm bg-card">
+      <CardHeader className="pb-3 bg-muted/50 border-b">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <User className="h-4 w-4 text-muted-foreground" />
@@ -63,7 +63,7 @@ export function CardGastosPessoais({
       
       <CardContent className="pt-4 space-y-4">
         {/* Formulário de adição */}
-        <div className="bg-muted/30 border border-border rounded-lg p-3">
+        <div className="bg-background border-2 border-dashed border-border rounded-lg p-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <Label className="text-xs text-muted-foreground">Descrição</Label>
@@ -71,7 +71,7 @@ export function CardGastosPessoais({
                 placeholder="Ex: Alimentação, Transporte..." 
                 value={novoGasto.descricao}
                 onChange={e => setNovoGasto(prev => ({ ...prev, descricao: e.target.value }))}
-                className="h-9"
+                className="h-9 bg-background border-input"
               />
             </div>
             <div>
@@ -83,7 +83,7 @@ export function CardGastosPessoais({
                 placeholder="0,00" 
                 value={novoGasto.valor}
                 onChange={e => setNovoGasto(prev => ({ ...prev, valor: e.target.value }))}
-                className="h-9"
+                className="h-9 bg-background border-input"
               />
             </div>
           </div>
@@ -108,12 +108,12 @@ export function CardGastosPessoais({
             gastosPessoais.map(gasto => (
               <div 
                 key={gasto.id} 
-                className="flex items-center gap-2 p-2 rounded-lg border border-border bg-muted/20"
+                className="flex items-center gap-2 p-3 rounded-lg border border-border bg-muted/40 shadow-sm"
               >
                 <Input 
                   value={gasto.descricao}
                   onChange={e => atualizarGasto(gasto.id, 'descricao', e.target.value)}
-                  className="flex-1 h-8 text-sm"
+                  className="flex-1 h-8 text-sm bg-background border-input"
                   placeholder="Descrição"
                 />
                 <div className="flex items-center gap-1">
@@ -124,7 +124,7 @@ export function CardGastosPessoais({
                     step="0.01"
                     value={gasto.valor}
                     onChange={e => atualizarGasto(gasto.id, 'valor', parseFloat(e.target.value) || 0)}
-                    className="w-24 h-8 text-sm text-right"
+                    className="w-24 h-8 text-sm text-right bg-background border-input"
                   />
                 </div>
                 <Button 

@@ -68,8 +68,8 @@ export function CardEquipamentos({
     : 0;
 
   return (
-    <Card className="border bg-card">
-      <CardHeader className="pb-3 bg-muted/30">
+    <Card className="border-2 shadow-sm bg-card">
+      <CardHeader className="pb-3 bg-muted/50 border-b">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Camera className="h-4 w-4 text-muted-foreground" />
@@ -86,15 +86,15 @@ export function CardEquipamentos({
       
       <CardContent className="pt-4 space-y-4">
         {/* Formulário de adição */}
-        <div className="bg-muted/30 border border-border rounded-lg p-3">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="bg-background border-2 border-dashed border-border rounded-lg p-4">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
             <div className="col-span-2">
               <Label className="text-xs text-muted-foreground">Nome do Equipamento</Label>
               <Input 
                 placeholder="Ex: Câmera Canon R6..." 
                 value={novoEquipamento.nome}
                 onChange={e => setNovoEquipamento(prev => ({ ...prev, nome: e.target.value }))}
-                className="h-9"
+                className="h-9 bg-background border-input"
               />
             </div>
             <div>
@@ -106,7 +106,16 @@ export function CardEquipamentos({
                 placeholder="0,00" 
                 value={novoEquipamento.valorPago}
                 onChange={e => setNovoEquipamento(prev => ({ ...prev, valorPago: e.target.value }))}
-                className="h-9"
+                className="h-9 bg-background border-input"
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Data Compra</Label>
+              <Input 
+                type="date"
+                value={novoEquipamento.dataCompra}
+                onChange={e => setNovoEquipamento(prev => ({ ...prev, dataCompra: e.target.value }))}
+                className="h-9 bg-background border-input"
               />
             </div>
             <div>
@@ -116,7 +125,7 @@ export function CardEquipamentos({
                 min="1" 
                 value={novoEquipamento.vidaUtil}
                 onChange={e => setNovoEquipamento(prev => ({ ...prev, vidaUtil: e.target.value }))}
-                className="h-9"
+                className="h-9 bg-background border-input"
               />
             </div>
           </div>
@@ -150,14 +159,14 @@ export function CardEquipamentos({
               return (
                 <div 
                   key={eq.id} 
-                  className="p-3 rounded-lg border border-border bg-muted/20"
+                  className="p-3 rounded-lg border border-border bg-muted/40 shadow-sm"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <Input 
                         value={eq.nome}
                         onChange={e => atualizarEquipamento(eq.id, 'nome', e.target.value)}
-                        className="h-8 text-sm font-medium"
+                        className="h-8 text-sm font-medium bg-background border-input"
                         placeholder="Nome do equipamento"
                       />
                     </div>
@@ -171,7 +180,7 @@ export function CardEquipamentos({
                     </Button>
                   </div>
                   
-                  <div className="grid grid-cols-3 gap-2 mt-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
                     <div>
                       <Label className="text-[10px] text-muted-foreground">Valor Pago</Label>
                       <Input 
@@ -180,7 +189,16 @@ export function CardEquipamentos({
                         step="0.01"
                         value={eq.valorPago}
                         onChange={e => atualizarEquipamento(eq.id, 'valorPago', parseFloat(e.target.value) || 0)}
-                        className="h-7 text-xs"
+                        className="h-7 text-xs bg-background border-input"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-[10px] text-muted-foreground">Data Compra</Label>
+                      <Input 
+                        type="date"
+                        value={eq.dataCompra}
+                        onChange={e => atualizarEquipamento(eq.id, 'dataCompra', e.target.value)}
+                        className="h-7 text-xs bg-background border-input"
                       />
                     </div>
                     <div>
@@ -191,7 +209,7 @@ export function CardEquipamentos({
                           min="1"
                           value={eq.vidaUtil}
                           onChange={e => atualizarEquipamento(eq.id, 'vidaUtil', parseInt(e.target.value) || 1)}
-                          className="h-7 text-xs"
+                          className="h-7 text-xs bg-background border-input"
                         />
                         <span className="text-[10px] text-muted-foreground">anos</span>
                       </div>
