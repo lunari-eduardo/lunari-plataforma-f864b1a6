@@ -6,14 +6,14 @@ import { Slider } from '@/components/ui/slider';
 
 interface CardProLaboreProps {
   percentualProLabore: number;
-  setPercentualProLabore: (value: number) => void;
+  onPercentualChange: (value: number) => void;
   totalGastosPessoais: number;
   proLaboreCalculado: number;
 }
 
 export function CardProLabore({
   percentualProLabore,
-  setPercentualProLabore,
+  onPercentualChange,
   totalGastosPessoais,
   proLaboreCalculado
 }: CardProLaboreProps) {
@@ -58,7 +58,7 @@ export function CardProLabore({
                 min="0"
                 max="100"
                 value={percentualProLabore}
-                onChange={e => setPercentualProLabore(Number(e.target.value))}
+                onChange={e => onPercentualChange(Number(e.target.value))}
                 className="w-16 h-8 text-center text-sm font-bold bg-background border-input"
               />
               <span className="text-sm font-medium">%</span>
@@ -67,7 +67,7 @@ export function CardProLabore({
           
           <Slider
             value={[percentualProLabore]}
-            onValueChange={(values) => setPercentualProLabore(values[0])}
+            onValueChange={(values) => onPercentualChange(values[0])}
             max={100}
             step={5}
             className="w-full"

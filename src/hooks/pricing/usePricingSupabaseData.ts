@@ -226,6 +226,24 @@ export function usePricingSupabaseData() {
     return true;
   }, [estruturaCustos, saveWithDebounce]);
 
+  const atualizarGastoPessoal = useCallback(async (gastoId: string, campo: keyof GastoItem, valor: any) => {
+    if (!estruturaCustos) return false;
+    
+    const novosDados = {
+      ...estruturaCustos,
+      gastosPessoais: estruturaCustos.gastosPessoais.map(g => 
+        g.id === gastoId ? { ...g, [campo]: valor } : g
+      )
+    };
+    
+    saveWithDebounce(
+      () => adapterRef.current.saveEstruturaCustos(novosDados),
+      () => setEstruturaCustos(novosDados)
+    );
+    
+    return true;
+  }, [estruturaCustos, saveWithDebounce]);
+
   const adicionarCustoEstudio = useCallback(async (custo: Omit<GastoItem, 'id'>) => {
     if (!estruturaCustos) return false;
     
@@ -263,6 +281,24 @@ export function usePricingSupabaseData() {
     return true;
   }, [estruturaCustos, saveWithDebounce]);
 
+  const atualizarCustoEstudio = useCallback(async (custoId: string, campo: keyof GastoItem, valor: any) => {
+    if (!estruturaCustos) return false;
+    
+    const novosDados = {
+      ...estruturaCustos,
+      custosEstudio: estruturaCustos.custosEstudio.map(c => 
+        c.id === custoId ? { ...c, [campo]: valor } : c
+      )
+    };
+    
+    saveWithDebounce(
+      () => adapterRef.current.saveEstruturaCustos(novosDados),
+      () => setEstruturaCustos(novosDados)
+    );
+    
+    return true;
+  }, [estruturaCustos, saveWithDebounce]);
+
   const adicionarEquipamento = useCallback(async (equipamento: Omit<Equipamento, 'id'>) => {
     if (!estruturaCustos) return false;
     
@@ -290,6 +326,24 @@ export function usePricingSupabaseData() {
     const novosDados = {
       ...estruturaCustos,
       equipamentos: estruturaCustos.equipamentos.filter(e => e.id !== equipamentoId)
+    };
+    
+    saveWithDebounce(
+      () => adapterRef.current.saveEstruturaCustos(novosDados),
+      () => setEstruturaCustos(novosDados)
+    );
+    
+    return true;
+  }, [estruturaCustos, saveWithDebounce]);
+
+  const atualizarEquipamento = useCallback(async (equipamentoId: string, campo: keyof Equipamento, valor: any) => {
+    if (!estruturaCustos) return false;
+    
+    const novosDados = {
+      ...estruturaCustos,
+      equipamentos: estruturaCustos.equipamentos.map(e => 
+        e.id === equipamentoId ? { ...e, [campo]: valor } : e
+      )
     };
     
     saveWithDebounce(
@@ -381,10 +435,13 @@ export function usePricingSupabaseData() {
     // Ações de estrutura
     adicionarGastoPessoal,
     removerGastoPessoal,
+    atualizarGastoPessoal,
     adicionarCustoEstudio,
     removerCustoEstudio,
+    atualizarCustoEstudio,
     adicionarEquipamento,
     removerEquipamento,
+    atualizarEquipamento,
     atualizarPercentualProLabore,
     salvarEstruturaCustos,
     

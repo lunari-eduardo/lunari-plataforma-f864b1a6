@@ -8,14 +8,18 @@ import type { Equipamento } from '@/types/precificacao';
 
 interface CardEquipamentosProps {
   equipamentos: Equipamento[];
-  setEquipamentos: React.Dispatch<React.SetStateAction<Equipamento[]>>;
   totalDepreciacaoMensal: number;
+  onAdicionar: (equipamento: Omit<Equipamento, 'id'>) => void;
+  onRemover: (id: string) => void;
+  onAtualizar: (id: string, campo: keyof Equipamento, valor: any) => void;
 }
 
 export function CardEquipamentos({
   equipamentos,
-  setEquipamentos,
-  totalDepreciacaoMensal
+  totalDepreciacaoMensal,
+  onAdicionar,
+  onRemover,
+  onAtualizar
 }: CardEquipamentosProps) {
   const [novoEquipamento, setNovoEquipamento] = useState({
     nome: '',
@@ -37,13 +41,12 @@ export function CardEquipamentos({
 
   const adicionarEquipamento = () => {
     if (novoEquipamento.nome && novoEquipamento.valorPago) {
-      setEquipamentos(prev => [...prev, {
-        id: Date.now().toString(),
+      onAdicionar({
         nome: novoEquipamento.nome,
         valorPago: parseFloat(novoEquipamento.valorPago) || 0,
         dataCompra: novoEquipamento.dataCompra || new Date().toISOString().split('T')[0],
         vidaUtil: parseInt(novoEquipamento.vidaUtil) || 5
-      }]);
+      });
       setNovoEquipamento({
         nome: '',
         valorPago: '',
@@ -51,16 +54,6 @@ export function CardEquipamentos({
         vidaUtil: '5'
       });
     }
-  };
-
-  const atualizarEquipamento = (id: string, campo: keyof Equipamento, valor: any) => {
-    setEquipamentos(prev => prev.map(item => 
-      item.id === id ? { ...item, [campo]: valor } : item
-    ));
-  };
-
-  const removerEquipamento = (id: string) => {
-    setEquipamentos(prev => prev.filter(item => item.id !== id));
   };
 
   const depreciacaoPreview = novoEquipamento.valorPago && novoEquipamento.vidaUtil
@@ -165,7 +158,7 @@ export function CardEquipamentos({
                     <div className="flex-1 min-w-0">
                       <Input 
                         value={eq.nome}
-                        onChange={e => atualizarEquipamento(eq.id, 'nome', e.target.value)}
+                        onChange={e => onAtualizar(eq.id, 'nome', e.target.value)}
                         className="h-8 text-sm font-medium bg-background border-input"
                         placeholder="Nome do equipamento"
                       />
@@ -174,7 +167,7 @@ export function CardEquipamentos({
                       variant="ghost" 
                       size="icon"
                       className="h-8 w-8 text-muted-foreground hover:text-destructive flex-shrink-0"
-                      onClick={() => removerEquipamento(eq.id)}
+                      onClick={() => onRemover(eq.id)}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -188,7 +181,7 @@ export function CardEquipamentos({
                         min="0"
                         step="0.01"
                         value={eq.valorPago}
-                        onChange={e => atualizarEquipamento(eq.id, 'valorPago', parseFloat(e.target.value) || 0)}
+                        onChange={e => onAtualizar(eq.id, 'valorPago', parseFloat(e.target.value) || 0)}
                         className="h-7 text-xs bg-background border-input"
                       />
                     </div>
@@ -197,7 +190,7 @@ export function CardEquipamentos({
                       <Input 
                         type="date"
                         value={eq.dataCompra}
-                        onChange={e => atualizarEquipamento(eq.id, 'dataCompra', e.target.value)}
+                        onChange={e => onAtualizar(eq.id, 'dataCompra', e.target.value)}
                         className="h-7 text-xs bg-background border-input"
                       />
                     </div>
@@ -208,7 +201,7 @@ export function CardEquipamentos({
                           type="number"
                           min="1"
                           value={eq.vidaUtil}
-                          onChange={e => atualizarEquipamento(eq.id, 'vidaUtil', parseInt(e.target.value) || 1)}
+                          onChange={e => onAtualizar(eq.id, 'vidaUtil', parseInt(e.target.value) || 1)}
                           className="h-7 text-xs bg-background border-input"
                         />
                         <span className="text-[10px] text-muted-foreground">anos</span>
