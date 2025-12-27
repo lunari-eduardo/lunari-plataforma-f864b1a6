@@ -8,6 +8,9 @@ export { type PricingStorageAdapter, type StorageConfig } from './PricingStorage
 export { LocalPricingAdapter } from './LocalPricingAdapter';
 export { SupabasePricingAdapter } from './SupabasePricingAdapter';
 
+// Migration
+export { PricingMigrationToSupabase } from './PricingMigrationToSupabase';
+
 // Specialized Services
 export { EstruturaCustosService } from './EstruturaCustosService';
 export { CalculadoraService } from './CalculadoraService';
