@@ -25,8 +25,8 @@ export function CardProLabore({
   };
 
   return (
-    <Card className="border bg-card">
-      <CardHeader className="pb-3 bg-muted/30">
+    <Card className="border-2 shadow-sm bg-card">
+      <CardHeader className="pb-3 bg-muted/50 border-b">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Briefcase className="h-4 w-4 text-muted-foreground" />
@@ -40,7 +40,7 @@ export function CardProLabore({
       
       <CardContent className="pt-4 space-y-4">
         {/* Explicação */}
-        <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/30 border border-border">
+        <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/40 border border-border">
           <Info className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
           <p className="text-xs text-muted-foreground">
             O pró-labore é a remuneração mínima que você deve tirar do negócio. 
@@ -49,7 +49,7 @@ export function CardProLabore({
         </div>
 
         {/* Slider de percentual */}
-        <div className="space-y-4">
+        <div className="bg-background border-2 border-dashed border-border rounded-lg p-4 space-y-4">
           <div className="flex items-center justify-between">
             <Label className="text-sm font-medium">Margem sobre Gastos</Label>
             <div className="flex items-center gap-2">
@@ -59,7 +59,7 @@ export function CardProLabore({
                 max="100"
                 value={percentualProLabore}
                 onChange={e => setPercentualProLabore(Number(e.target.value))}
-                className="w-16 h-8 text-center text-sm font-bold"
+                className="w-16 h-8 text-center text-sm font-bold bg-background border-input"
               />
               <span className="text-sm font-medium">%</span>
             </div>
@@ -75,7 +75,7 @@ export function CardProLabore({
         </div>
 
         {/* Resumo do cálculo */}
-        <div className="rounded-lg p-4 bg-muted/30 space-y-2">
+        <div className="rounded-lg p-4 bg-muted/40 border border-border space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Gastos Pessoais:</span>
             <span className="font-medium">{formatCurrency(totalGastosPessoais)}</span>
