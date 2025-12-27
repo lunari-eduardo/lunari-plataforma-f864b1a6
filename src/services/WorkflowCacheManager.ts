@@ -320,9 +320,12 @@ class WorkflowCacheManager {
    * Adiciona uma sessão ao cache
    */
   addSession(session: WorkflowSession) {
-    const sessionDate = new Date(session.data_sessao);
-    const year = sessionDate.getFullYear();
-    const month = sessionDate.getMonth() + 1;
+    // CORREÇÃO: Parse direto da string para evitar bug de timezone
+    const [year, month] = (session.data_sessao || '').split('-').map(Number);
+    if (!year || !month) {
+      console.warn('⚠️ addSession: data_sessao inválida:', session.data_sessao);
+      return;
+    }
     const key = this.getCacheKey(year, month);
     
     const cached = this.cache.get(key);

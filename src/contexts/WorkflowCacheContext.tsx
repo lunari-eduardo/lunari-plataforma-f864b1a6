@@ -3,6 +3,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { indexedDBCache } from '@/services/IndexedDBCache';
 import { WorkflowSession } from '@/hooks/useWorkflowRealtime';
 
+// Helper para extrair ano/mês de string YYYY-MM-DD sem conversão de timezone
+const getYearMonthFromDateString = (dateString: string): { year: number; month: number } => {
+  if (!dateString || typeof dateString !== 'string') {
+    const now = new Date();
+    return { year: now.getFullYear(), month: now.getMonth() + 1 };
+  }
+  const [year, month] = dateString.split('-').map(Number);
+  return { year: year || new Date().getFullYear(), month: month || (new Date().getMonth() + 1) };
+};
+
 interface WorkflowCacheContextType {
   getSessionsForMonthSync: (year: number, month: number) => WorkflowSession[] | null;
   getAllCachedSessionsSync: () => WorkflowSession[];
@@ -115,9 +125,8 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const mergeUpdate = useCallback((session: WorkflowSession) => {
     console.log('🔀 [WorkflowCache] mergeUpdate called for session:', session.id, 'updated_at:', session.updated_at);
-    const date = new Date(session.data_sessao);
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1;
+    // CORREÇÃO: Parse direto da string para evitar bug de timezone
+    const { year, month } = getYearMonthFromDateString(session.data_sessao);
     const key = getCacheKey(year, month);
     
     const currentSessions = memoryCache.current.get(key) || [];
@@ -253,9 +262,8 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
           console.log('🆕 [Realtime] INSERT detectado, processando imediatamente...');
           
           // Verificar se já existe no cache (evitar duplicação com merge otimista)
-          const sessionDate = new Date(session.data_sessao);
-          const year = sessionDate.getFullYear();
-          const month = sessionDate.getMonth() + 1;
+          // CORREÇÃO: Parse direto da string para evitar bug de timezone
+          const { year, month } = getYearMonthFromDateString(session.data_sessao);
           const key = `${year}-${String(month).padStart(2, '0')}`;
           const existingSessions = memoryCache.current.get(key) || [];
           
