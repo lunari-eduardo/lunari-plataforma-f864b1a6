@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { ClientesSessaoSupabase, generateUniversalSessionId } from '@/types/appointments-supabase';
 import { toast } from 'sonner';
+import { formatDateForStorage } from '@/utils/dateUtils';
 
 export function useSessionsRealtime(clienteId?: string) {
   const [sessions, setSessions] = useState<ClientesSessaoSupabase[]>([]);
@@ -261,6 +262,28 @@ export function useSessionsRealtime(clienteId?: string) {
         .single();
 
       if (error) throw error;
+
+      // Criar transação se valorPago > 0
+      if ((data.valorPago || 0) > 0 && data.clienteId) {
+        const { error: transactionError } = await supabase
+          .from('clientes_transacoes')
+          .insert({
+            user_id: user.id,
+            cliente_id: data.clienteId,
+            session_id: sessionId,
+            tipo: 'pagamento',
+            valor: data.valorPago,
+            descricao: 'Pagamento via adição rápida',
+            data_transacao: formatDateForStorage(new Date()),
+            updated_by: user.id
+          });
+        
+        if (transactionError) {
+          console.error('⚠️ Erro ao criar transação:', transactionError);
+        } else {
+          console.log('✅ Transação criada para sessão:', sessionId);
+        }
+      }
 
       toast.success('Sessão histórica criada com sucesso');
       return insertedSession;
