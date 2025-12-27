@@ -50,7 +50,8 @@ export function EtapaCalculadora({
   const valorCustosExtras = custosExtras.reduce((total, c) => total + c.valorUnitario * c.quantidade, 0);
   const custoBaseProjeto = custoHorasServico + valorCustosExtras;
   const precoBaseComMarkup = custoBaseProjeto * markup;
-  const precoFinal = precoBaseComMarkup + valorProdutos;
+  const precoFinalBruto = precoBaseComMarkup + valorProdutos;
+  const precoFinal = Math.round(precoFinalBruto / 10) * 10; // Arredonda para dezena
   const custoProdutos = produtos.reduce((total, p) => total + (p.custo || 0) * p.quantidade, 0);
   const custoTotalReal = custoHorasServico + custoProdutos + valorCustosExtras;
   const lucroLiquido = precoFinal - custoTotalReal;
