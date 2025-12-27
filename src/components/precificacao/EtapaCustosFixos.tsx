@@ -1,87 +1,73 @@
-import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { CheckCircle, AlertCircle } from 'lucide-react';
-import { EstruturaCustosService, IndicadoresService } from '@/services/PricingService';
-import type { GastoItem, Equipamento, StatusSalvamento } from '@/types/precificacao';
+import { usePricingSupabaseData } from '@/hooks/pricing/usePricingSupabaseData';
 import { CardGastosPessoais } from './custos/CardGastosPessoais';
 import { CardProLabore } from './custos/CardProLabore';
 import { CardCustosEstudio } from './custos/CardCustosEstudio';
 import { CardEquipamentos } from './custos/CardEquipamentos';
 import { EtapaColapsavel } from './EtapaColapsavel';
+import { useEffect } from 'react';
 
 interface EtapaCustosFixosProps {
   onTotalChange: (total: number) => void;
 }
 
 export function EtapaCustosFixos({ onTotalChange }: EtapaCustosFixosProps) {
-  const [gastosPessoais, setGastosPessoais] = useState<GastoItem[]>([]);
-  const [percentualProLabore, setPercentualProLabore] = useState(30);
-  const [custosEstudio, setCustosEstudio] = useState<GastoItem[]>([]);
-  const [equipamentos, setEquipamentos] = useState<Equipamento[]>([]);
-  const [statusSalvamento, setStatusSalvamento] = useState<StatusSalvamento>('nao_salvo');
+  const {
+    estruturaCustos,
+    loading,
+    statusSalvamento,
+    adicionarGastoPessoal,
+    removerGastoPessoal,
+    atualizarGastoPessoal,
+    adicionarCustoEstudio,
+    removerCustoEstudio,
+    atualizarCustoEstudio,
+    adicionarEquipamento,
+    removerEquipamento,
+    atualizarEquipamento,
+    atualizarPercentualProLabore,
+    totalCustosFixos
+  } = usePricingSupabaseData();
 
-  // Carregar dados salvos
-  useEffect(() => {
-    try {
-      setStatusSalvamento('salvando');
-      const dados = EstruturaCustosService.carregar();
-      setGastosPessoais(dados.gastosPessoais);
-      setPercentualProLabore(dados.percentualProLabore);
-      setCustosEstudio(dados.custosEstudio);
-      setEquipamentos(dados.equipamentos);
-      setStatusSalvamento('salvo');
-      IndicadoresService.atualizarIndicador('estrutura_custos', 'salvo', 'Dados carregados');
-    } catch (error) {
-      console.error('Erro ao carregar estrutura de custos:', error);
-      setStatusSalvamento('erro');
-    }
-  }, []);
+  // Dados derivados
+  const gastosPessoais = estruturaCustos?.gastosPessoais || [];
+  const custosEstudio = estruturaCustos?.custosEstudio || [];
+  const equipamentos = estruturaCustos?.equipamentos || [];
+  const percentualProLabore = estruturaCustos?.percentualProLabore || 30;
 
   // Cálculos
-  const totalGastosPessoais = (gastosPessoais || []).reduce((total, item) => total + item.valor, 0);
+  const totalGastosPessoais = gastosPessoais.reduce((total, item) => total + item.valor, 0);
   const proLaboreCalculado = totalGastosPessoais * (1 + percentualProLabore / 100);
-  const totalCustosEstudio = (custosEstudio || []).reduce((total, item) => total + item.valor, 0);
-  const totalDepreciacaoMensal = (equipamentos || []).reduce((total, eq) => {
+  const totalCustosEstudio = custosEstudio.reduce((total, item) => total + item.valor, 0);
+  const totalDepreciacaoMensal = equipamentos.reduce((total, eq) => {
     const depreciacaoMensal = eq.valorPago / (eq.vidaUtil * 12);
     return total + depreciacaoMensal;
   }, 0);
-  const totalPrincipal = proLaboreCalculado + totalCustosEstudio + totalDepreciacaoMensal;
-
-  // Salvar automaticamente
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      try {
-        setStatusSalvamento('salvando');
-        const dadosParaSalvar = {
-          gastosPessoais,
-          percentualProLabore,
-          custosEstudio,
-          equipamentos,
-          totalCalculado: totalPrincipal
-        };
-        const sucesso = EstruturaCustosService.salvar(dadosParaSalvar);
-        if (sucesso) {
-          setStatusSalvamento('salvo');
-          IndicadoresService.atualizarIndicador('estrutura_custos', 'salvo', 'Salvo automaticamente');
-        } else {
-          setStatusSalvamento('erro');
-        }
-      } catch (error) {
-        console.error('Erro no auto-save:', error);
-        setStatusSalvamento('erro');
-      }
-    }, 1000);
-    return () => clearTimeout(timeoutId);
-  }, [gastosPessoais, percentualProLabore, custosEstudio, equipamentos, totalPrincipal]);
 
   // Notificar mudança no total
   useEffect(() => {
-    onTotalChange(totalPrincipal);
-  }, [totalPrincipal, onTotalChange]);
+    onTotalChange(totalCustosFixos);
+  }, [totalCustosFixos, onTotalChange]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
   };
+
+  if (loading) {
+    return (
+      <EtapaColapsavel
+        numero={1}
+        titulo="Custos Fixos Mensais"
+        descricao="Quanto custa manter seu negócio funcionando"
+        defaultOpen={true}
+        statusSalvamento="salvando"
+      >
+        <div className="flex items-center justify-center py-8">
+          <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
+        </div>
+      </EtapaColapsavel>
+    );
+  }
 
   return (
     <EtapaColapsavel
@@ -94,24 +80,30 @@ export function EtapaCustosFixos({ onTotalChange }: EtapaCustosFixosProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <CardGastosPessoais 
           gastosPessoais={gastosPessoais}
-          setGastosPessoais={setGastosPessoais}
           totalGastosPessoais={totalGastosPessoais}
+          onAdicionar={adicionarGastoPessoal}
+          onRemover={removerGastoPessoal}
+          onAtualizar={atualizarGastoPessoal}
         />
         <CardProLabore 
           percentualProLabore={percentualProLabore}
-          setPercentualProLabore={setPercentualProLabore}
+          onPercentualChange={atualizarPercentualProLabore}
           totalGastosPessoais={totalGastosPessoais}
           proLaboreCalculado={proLaboreCalculado}
         />
         <CardCustosEstudio 
           custosEstudio={custosEstudio}
-          setCustosEstudio={setCustosEstudio}
           totalCustosEstudio={totalCustosEstudio}
+          onAdicionar={adicionarCustoEstudio}
+          onRemover={removerCustoEstudio}
+          onAtualizar={atualizarCustoEstudio}
         />
         <CardEquipamentos 
           equipamentos={equipamentos}
-          setEquipamentos={setEquipamentos}
           totalDepreciacaoMensal={totalDepreciacaoMensal}
+          onAdicionar={adicionarEquipamento}
+          onRemover={removerEquipamento}
+          onAtualizar={atualizarEquipamento}
         />
       </div>
       
@@ -121,7 +113,7 @@ export function EtapaCustosFixos({ onTotalChange }: EtapaCustosFixosProps) {
           <div className="flex justify-between items-center">
             <span className="font-medium">Total de Custos Fixos Mensais</span>
             <span className="text-2xl font-bold text-foreground">
-              {formatCurrency(totalPrincipal)}
+              {formatCurrency(totalCustosFixos)}
             </span>
           </div>
         </CardContent>

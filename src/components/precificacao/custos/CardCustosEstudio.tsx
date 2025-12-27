@@ -13,14 +13,18 @@ import type { GastoItem } from '@/types/precificacao';
 
 interface CardCustosEstudioProps {
   custosEstudio: GastoItem[];
-  setCustosEstudio: React.Dispatch<React.SetStateAction<GastoItem[]>>;
   totalCustosEstudio: number;
+  onAdicionar: (custo: Omit<GastoItem, 'id'>) => void;
+  onRemover: (id: string) => void;
+  onAtualizar: (id: string, campo: keyof GastoItem, valor: any) => void;
 }
 
 export function CardCustosEstudio({
   custosEstudio,
-  setCustosEstudio,
-  totalCustosEstudio
+  totalCustosEstudio,
+  onAdicionar,
+  onRemover,
+  onAtualizar
 }: CardCustosEstudioProps) {
   const { toast } = useToast();
   const [novoCusto, setNovoCusto] = useState({ descricao: '', valor: '' });
@@ -40,23 +44,12 @@ export function CardCustosEstudio({
 
   const adicionarCusto = () => {
     if (novoCusto.descricao && novoCusto.valor) {
-      setCustosEstudio(prev => [...prev, {
-        id: Date.now().toString(),
+      onAdicionar({
         descricao: novoCusto.descricao,
         valor: parseFloat(novoCusto.valor) || 0
-      }]);
+      });
       setNovoCusto({ descricao: '', valor: '' });
     }
-  };
-
-  const atualizarCusto = (id: string, campo: keyof GastoItem, valor: any) => {
-    setCustosEstudio(prev => prev.map(item => 
-      item.id === id ? { ...item, [campo]: valor } : item
-    ));
-  };
-
-  const removerCusto = (id: string) => {
-    setCustosEstudio(prev => prev.filter(item => item.id !== id));
   };
 
   // Funções de sincronização
@@ -94,11 +87,15 @@ export function CardCustosEstudio({
       const result = pricingFinancialIntegrationService.executeSyncronization(selectedItems, true);
       if (result.success) {
         const custosAtualizados = pricingFinancialIntegrationService.getCustosEstudioFromPricing();
-        setCustosEstudio(custosAtualizados.map(custo => ({
-          id: custo.id,
-          descricao: custo.descricao,
-          valor: custo.valor
-        })));
+        // Adicionar custos sincronizados via hook
+        for (const custo of custosAtualizados) {
+          if (!custosEstudio.find(c => c.id === custo.id)) {
+            onAdicionar({
+              descricao: custo.descricao,
+              valor: custo.valor
+            });
+          }
+        }
         toast({
           title: "Sincronização concluída",
           description: `${result.imported} itens importados, ${result.updated} itens atualizados.`
@@ -297,7 +294,7 @@ export function CardCustosEstudio({
               >
                 <Input 
                   value={custo.descricao}
-                  onChange={e => atualizarCusto(custo.id, 'descricao', e.target.value)}
+                  onChange={e => onAtualizar(custo.id, 'descricao', e.target.value)}
                   className="flex-1 h-8 text-sm bg-background border-input"
                   placeholder="Descrição"
                 />
@@ -308,7 +305,7 @@ export function CardCustosEstudio({
                     min="0"
                     step="0.01"
                     value={custo.valor}
-                    onChange={e => atualizarCusto(custo.id, 'valor', parseFloat(e.target.value) || 0)}
+                    onChange={e => onAtualizar(custo.id, 'valor', parseFloat(e.target.value) || 0)}
                     className="w-24 h-8 text-sm text-right bg-background border-input"
                   />
                 </div>
@@ -316,7 +313,7 @@ export function CardCustosEstudio({
                   variant="ghost" 
                   size="icon"
                   className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                  onClick={() => removerCusto(custo.id)}
+                  onClick={() => onRemover(custo.id)}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>

@@ -8,14 +8,18 @@ import type { GastoItem } from '@/types/precificacao';
 
 interface CardGastosPessoaisProps {
   gastosPessoais: GastoItem[];
-  setGastosPessoais: React.Dispatch<React.SetStateAction<GastoItem[]>>;
   totalGastosPessoais: number;
+  onAdicionar: (gasto: Omit<GastoItem, 'id'>) => void;
+  onRemover: (id: string) => void;
+  onAtualizar: (id: string, campo: keyof GastoItem, valor: any) => void;
 }
 
 export function CardGastosPessoais({
   gastosPessoais,
-  setGastosPessoais,
-  totalGastosPessoais
+  totalGastosPessoais,
+  onAdicionar,
+  onRemover,
+  onAtualizar
 }: CardGastosPessoaisProps) {
   const [novoGasto, setNovoGasto] = useState({ descricao: '', valor: '' });
 
@@ -28,23 +32,12 @@ export function CardGastosPessoais({
 
   const adicionarGasto = () => {
     if (novoGasto.descricao && novoGasto.valor) {
-      setGastosPessoais(prev => [...prev, {
-        id: Date.now().toString(),
+      onAdicionar({
         descricao: novoGasto.descricao,
         valor: parseFloat(novoGasto.valor) || 0
-      }]);
+      });
       setNovoGasto({ descricao: '', valor: '' });
     }
-  };
-
-  const atualizarGasto = (id: string, campo: keyof GastoItem, valor: any) => {
-    setGastosPessoais(prev => prev.map(item => 
-      item.id === id ? { ...item, [campo]: valor } : item
-    ));
-  };
-
-  const removerGasto = (id: string) => {
-    setGastosPessoais(prev => prev.filter(item => item.id !== id));
   };
 
   return (
@@ -112,7 +105,7 @@ export function CardGastosPessoais({
               >
                 <Input 
                   value={gasto.descricao}
-                  onChange={e => atualizarGasto(gasto.id, 'descricao', e.target.value)}
+                  onChange={e => onAtualizar(gasto.id, 'descricao', e.target.value)}
                   className="flex-1 h-8 text-sm bg-background border-input"
                   placeholder="Descrição"
                 />
@@ -123,7 +116,7 @@ export function CardGastosPessoais({
                     min="0"
                     step="0.01"
                     value={gasto.valor}
-                    onChange={e => atualizarGasto(gasto.id, 'valor', parseFloat(e.target.value) || 0)}
+                    onChange={e => onAtualizar(gasto.id, 'valor', parseFloat(e.target.value) || 0)}
                     className="w-24 h-8 text-sm text-right bg-background border-input"
                   />
                 </div>
@@ -131,7 +124,7 @@ export function CardGastosPessoais({
                   variant="ghost" 
                   size="icon"
                   className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                  onClick={() => removerGasto(gasto.id)}
+                  onClick={() => onRemover(gasto.id)}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
