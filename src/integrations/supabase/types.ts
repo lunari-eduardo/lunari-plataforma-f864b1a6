@@ -1132,6 +1132,54 @@ export type Database = {
         }
         Relationships: []
       }
+      pricing_calculadora_estados: {
+        Row: {
+          created_at: string | null
+          custo_total_calculado: number | null
+          custos_extras: Json | null
+          horas_estimadas: number | null
+          id: string
+          is_default: boolean | null
+          lucratividade: number | null
+          markup: number | null
+          nome: string | null
+          preco_final_calculado: number | null
+          produtos: Json | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          custo_total_calculado?: number | null
+          custos_extras?: Json | null
+          horas_estimadas?: number | null
+          id?: string
+          is_default?: boolean | null
+          lucratividade?: number | null
+          markup?: number | null
+          nome?: string | null
+          preco_final_calculado?: number | null
+          produtos?: Json | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          custo_total_calculado?: number | null
+          custos_extras?: Json | null
+          horas_estimadas?: number | null
+          id?: string
+          is_default?: boolean | null
+          lucratividade?: number | null
+          markup?: number | null
+          nome?: string | null
+          preco_final_calculado?: number | null
+          produtos?: Json | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       pricing_configs: {
         Row: {
           config_data: Json
@@ -1156,6 +1204,160 @@ export type Database = {
           id?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      pricing_configuracoes: {
+        Row: {
+          ano_meta: number | null
+          created_at: string | null
+          dias_trabalhados: number | null
+          horas_disponiveis: number | null
+          id: string
+          margem_lucro_desejada: number | null
+          meta_faturamento_anual: number | null
+          meta_lucro_anual: number | null
+          percentual_pro_labore: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          ano_meta?: number | null
+          created_at?: string | null
+          dias_trabalhados?: number | null
+          horas_disponiveis?: number | null
+          id?: string
+          margem_lucro_desejada?: number | null
+          meta_faturamento_anual?: number | null
+          meta_lucro_anual?: number | null
+          percentual_pro_labore?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          ano_meta?: number | null
+          created_at?: string | null
+          dias_trabalhados?: number | null
+          horas_disponiveis?: number | null
+          id?: string
+          margem_lucro_desejada?: number | null
+          meta_faturamento_anual?: number | null
+          meta_lucro_anual?: number | null
+          percentual_pro_labore?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      pricing_custos_estudio: {
+        Row: {
+          created_at: string | null
+          descricao: string
+          fin_item_id: string | null
+          id: string
+          origem: string | null
+          updated_at: string | null
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          created_at?: string | null
+          descricao: string
+          fin_item_id?: string | null
+          id?: string
+          origem?: string | null
+          updated_at?: string | null
+          user_id: string
+          valor?: number
+        }
+        Update: {
+          created_at?: string | null
+          descricao?: string
+          fin_item_id?: string | null
+          id?: string
+          origem?: string | null
+          updated_at?: string | null
+          user_id?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pricing_custos_estudio_fin_item_id_fkey"
+            columns: ["fin_item_id"]
+            isOneToOne: false
+            referencedRelation: "fin_items_master"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pricing_equipamentos: {
+        Row: {
+          created_at: string | null
+          data_compra: string
+          fin_transaction_id: string | null
+          id: string
+          nome: string
+          updated_at: string | null
+          user_id: string
+          valor_pago: number
+          vida_util: number
+        }
+        Insert: {
+          created_at?: string | null
+          data_compra?: string
+          fin_transaction_id?: string | null
+          id?: string
+          nome: string
+          updated_at?: string | null
+          user_id: string
+          valor_pago?: number
+          vida_util?: number
+        }
+        Update: {
+          created_at?: string | null
+          data_compra?: string
+          fin_transaction_id?: string | null
+          id?: string
+          nome?: string
+          updated_at?: string | null
+          user_id?: string
+          valor_pago?: number
+          vida_util?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pricing_equipamentos_fin_transaction_id_fkey"
+            columns: ["fin_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "fin_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pricing_gastos_pessoais: {
+        Row: {
+          created_at: string | null
+          descricao: string
+          id: string
+          updated_at: string | null
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          created_at?: string | null
+          descricao: string
+          id?: string
+          updated_at?: string | null
+          user_id: string
+          valor?: number
+        }
+        Update: {
+          created_at?: string | null
+          descricao?: string
+          id?: string
+          updated_at?: string | null
+          user_id?: string
+          valor?: number
         }
         Relationships: []
       }
