@@ -72,15 +72,15 @@ export default function Precificacao() {
             {/* Etapa 1: Custos Fixos */}
             <EtapaCustosFixos onTotalChange={handleCustosFixosChange} />
             
-            {/* Etapa 2: Metas */}
-            <EtapaMetas custosFixosTotal={custosFixosTotal} />
-            
-            {/* Etapa 3: Calculadora (Sempre Visível) */}
+            {/* Etapa 2: Calculadora */}
             <EtapaCalculadora 
               custosFixosTotal={custosFixosTotal} 
               metaFaturamentoMensal={metaFaturamentoMensal}
               onPrecoFinalChange={setPrecoFinalServico}
             />
+            
+            {/* Etapa 3: Metas */}
+            <EtapaMetas custosFixosTotal={custosFixosTotal} />
           </main>
         </div>
       </div>
