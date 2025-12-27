@@ -1,12 +1,13 @@
 /**
  * Hook para gerenciar dados de Pricing via Supabase
- * Substitui a lógica de localStorage por Supabase
+ * Com cache em memória e sincronização localStorage
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { SupabasePricingAdapter } from '@/services/pricing/SupabasePricingAdapter';
 import { PricingMigrationToSupabase } from '@/services/pricing/PricingMigrationToSupabase';
+import { MetasService } from '@/services/PricingService';
 import { toast } from 'sonner';
 import type { 
   EstruturaCustosFixos, 
@@ -17,16 +18,123 @@ import type {
   StatusSalvamento 
 } from '@/types/precificacao';
 
+// ============= SINGLETON CACHE =============
+// Persiste entre navegações de página
+const pricingCache = {
+  estruturaCustos: null as EstruturaCustosFixos | null,
+  metas: null as MetasPrecificacao | null,
+  padraoHoras: null as PadraoHoras | null,
+  lastFetch: 0,
+  isLoading: false,
+  CACHE_TTL: 5 * 60 * 1000 // 5 minutos
+};
+
+// Verificar se cache ainda é válido
+const isCacheValid = () => {
+  return pricingCache.lastFetch > 0 && 
+         Date.now() - pricingCache.lastFetch < pricingCache.CACHE_TTL;
+};
+
+// Invalidar cache (para forçar reload)
+export const invalidatePricingCache = () => {
+  pricingCache.lastFetch = 0;
+};
+
 export function usePricingSupabaseData() {
-  const [estruturaCustos, setEstruturaCustos] = useState<EstruturaCustosFixos | null>(null);
-  const [metas, setMetas] = useState<MetasPrecificacao | null>(null);
-  const [padraoHoras, setPadraoHoras] = useState<PadraoHoras | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [statusSalvamento, setStatusSalvamento] = useState<StatusSalvamento>('nao_salvo');
+  const [estruturaCustos, setEstruturaCustos] = useState<EstruturaCustosFixos | null>(
+    pricingCache.estruturaCustos
+  );
+  const [metas, setMetas] = useState<MetasPrecificacao | null>(pricingCache.metas);
+  const [padraoHoras, setPadraoHoras] = useState<PadraoHoras | null>(pricingCache.padraoHoras);
+  const [loading, setLoading] = useState(!isCacheValid());
+  const [statusSalvamento, setStatusSalvamento] = useState<StatusSalvamento>('salvo');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   
   const adapterRef = useRef(new SupabasePricingAdapter());
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const loadAllDataRef = useRef<() => Promise<void>>();
+
+  // Funções de carregamento - com cache
+  const loadAllData = useCallback(async () => {
+    // Se cache ainda válido e temos dados, usar cache
+    if (isCacheValid() && pricingCache.estruturaCustos) {
+      console.log('📦 Usando cache de precificação');
+      setEstruturaCustos(pricingCache.estruturaCustos);
+      setMetas(pricingCache.metas);
+      setPadraoHoras(pricingCache.padraoHoras);
+      setLoading(false);
+      setStatusSalvamento('salvo');
+      return;
+    }
+
+    // Evitar múltiplas requisições simultâneas
+    if (pricingCache.isLoading) {
+      console.log('⏳ Já está carregando dados de precificação...');
+      return;
+    }
+
+    pricingCache.isLoading = true;
+    setLoading(true);
+    
+    // Timeout de 5 segundos
+    const timeoutId = setTimeout(() => {
+      console.warn('⚠️ Timeout no carregamento de dados de precificação');
+      setLoading(false);
+      setStatusSalvamento('erro');
+      pricingCache.isLoading = false;
+    }, 5000);
+    
+    try {
+      // Carregamento progressivo: estrutura primeiro (mais importante)
+      const estrutura = await adapterRef.current.loadEstruturaCustos();
+      setEstruturaCustos(estrutura);
+      pricingCache.estruturaCustos = estrutura;
+      setLoading(false); // Mostrar UI imediatamente
+      
+      // Carregar resto em paralelo (secundário)
+      const [metasData, horasData] = await Promise.all([
+        adapterRef.current.loadMetas(),
+        adapterRef.current.loadPadraoHoras()
+      ]);
+      
+      setMetas(metasData);
+      setPadraoHoras(horasData);
+      
+      // Atualizar cache
+      pricingCache.metas = metasData;
+      pricingCache.padraoHoras = horasData;
+      pricingCache.lastFetch = Date.now();
+      
+      // Sincronizar com localStorage para GoalsIntegrationService
+      if (metasData) {
+        MetasService.salvar(metasData);
+        console.log('✅ Metas sincronizadas com localStorage');
+      }
+      
+      setStatusSalvamento('salvo');
+      
+    } catch (error) {
+      console.error('Erro ao carregar dados:', error);
+      setStatusSalvamento('erro');
+      setLoading(false);
+    } finally {
+      clearTimeout(timeoutId);
+      pricingCache.isLoading = false;
+    }
+  }, []);
+
+  // Manter referência atualizada para o realtime listener
+  loadAllDataRef.current = loadAllData;
+
+  const loadEstruturaCustos = useCallback(async () => {
+    try {
+      const estrutura = await adapterRef.current.loadEstruturaCustos();
+      setEstruturaCustos(estrutura);
+      pricingCache.estruturaCustos = estrutura;
+    } catch (error) {
+      console.error('Erro ao recarregar estrutura:', error);
+    }
+  }, []);
 
   // Verificar autenticação e migrar dados se necessário
   useEffect(() => {
@@ -48,6 +156,7 @@ export function usePricingSupabaseData() {
           const result = await PricingMigrationToSupabase.executeMigration();
           if (result.success) {
             toast.success('Dados de precificação migrados para a nuvem');
+            invalidatePricingCache(); // Forçar reload após migração
           }
         }
         
@@ -66,62 +175,19 @@ export function usePricingSupabaseData() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
         setIsAuthenticated(true);
+        invalidatePricingCache();
         await loadAllData();
       } else if (event === 'SIGNED_OUT') {
         setIsAuthenticated(false);
         setEstruturaCustos(null);
         setMetas(null);
         setPadraoHoras(null);
+        invalidatePricingCache();
       }
     });
     
     return () => subscription.unsubscribe();
-  }, []);
-
-  // Funções de carregamento - otimizado com carregamento progressivo
-  const loadAllData = useCallback(async () => {
-    setLoading(true);
-    
-    // Timeout reduzido para 5 segundos
-    const timeoutId = setTimeout(() => {
-      console.warn('⚠️ Timeout no carregamento de dados de precificação');
-      setLoading(false);
-      setStatusSalvamento('erro');
-    }, 5000);
-    
-    try {
-      // Carregamento progressivo: estrutura primeiro (mais importante)
-      const estrutura = await adapterRef.current.loadEstruturaCustos();
-      setEstruturaCustos(estrutura);
-      setLoading(false); // Mostrar UI imediatamente
-      
-      // Carregar resto em paralelo (secundário)
-      const [metasData, horasData] = await Promise.all([
-        adapterRef.current.loadMetas(),
-        adapterRef.current.loadPadraoHoras()
-      ]);
-      
-      setMetas(metasData);
-      setPadraoHoras(horasData);
-      setStatusSalvamento('salvo');
-      
-    } catch (error) {
-      console.error('Erro ao carregar dados:', error);
-      setStatusSalvamento('erro');
-      setLoading(false);
-    } finally {
-      clearTimeout(timeoutId);
-    }
-  }, []);
-
-  const loadEstruturaCustos = useCallback(async () => {
-    try {
-      const estrutura = await adapterRef.current.loadEstruturaCustos();
-      setEstruturaCustos(estrutura);
-    } catch (error) {
-      console.error('Erro ao recarregar estrutura:', error);
-    }
-  }, []);
+  }, []); // loadAllData removido das deps para evitar loop
 
   // Real-time listener para mudanças - com cleanup correto
   useEffect(() => {
@@ -142,7 +208,10 @@ export function usePricingSupabaseData() {
           table: 'pricing_configuracoes',
           filter: `user_id=eq.${user.id}`
         }, () => {
-          if (isMounted) loadAllData();
+          if (isMounted) {
+            invalidatePricingCache();
+            loadAllDataRef.current?.();
+          }
         })
         .on('postgres_changes', {
           event: '*',
@@ -180,7 +249,7 @@ export function usePricingSupabaseData() {
         supabase.removeChannel(channel);
       }
     };
-  }, [isAuthenticated, loadAllData, loadEstruturaCustos]);
+  }, [isAuthenticated, loadEstruturaCustos]);
 
   // Função de salvamento com debounce
   const saveWithDebounce = useCallback(async (
@@ -201,6 +270,11 @@ export function usePricingSupabaseData() {
       try {
         const success = await saveFn();
         setStatusSalvamento(success ? 'salvo' : 'erro');
+        
+        // Atualizar cache após salvar
+        if (success) {
+          pricingCache.lastFetch = Date.now();
+        }
       } catch (error) {
         console.error('Erro ao salvar:', error);
         setStatusSalvamento('erro');
@@ -225,7 +299,10 @@ export function usePricingSupabaseData() {
     
     saveWithDebounce(
       () => adapterRef.current.saveEstruturaCustos(novosDados),
-      () => setEstruturaCustos(novosDados)
+      () => {
+        setEstruturaCustos(novosDados);
+        pricingCache.estruturaCustos = novosDados;
+      }
     );
     
     return true;
@@ -241,7 +318,10 @@ export function usePricingSupabaseData() {
     
     saveWithDebounce(
       () => adapterRef.current.saveEstruturaCustos(novosDados),
-      () => setEstruturaCustos(novosDados)
+      () => {
+        setEstruturaCustos(novosDados);
+        pricingCache.estruturaCustos = novosDados;
+      }
     );
     
     return true;
@@ -259,7 +339,10 @@ export function usePricingSupabaseData() {
     
     saveWithDebounce(
       () => adapterRef.current.saveEstruturaCustos(novosDados),
-      () => setEstruturaCustos(novosDados)
+      () => {
+        setEstruturaCustos(novosDados);
+        pricingCache.estruturaCustos = novosDados;
+      }
     );
     
     return true;
@@ -280,7 +363,10 @@ export function usePricingSupabaseData() {
     
     saveWithDebounce(
       () => adapterRef.current.saveEstruturaCustos(novosDados),
-      () => setEstruturaCustos(novosDados)
+      () => {
+        setEstruturaCustos(novosDados);
+        pricingCache.estruturaCustos = novosDados;
+      }
     );
     
     return true;
@@ -296,7 +382,10 @@ export function usePricingSupabaseData() {
     
     saveWithDebounce(
       () => adapterRef.current.saveEstruturaCustos(novosDados),
-      () => setEstruturaCustos(novosDados)
+      () => {
+        setEstruturaCustos(novosDados);
+        pricingCache.estruturaCustos = novosDados;
+      }
     );
     
     return true;
@@ -314,7 +403,10 @@ export function usePricingSupabaseData() {
     
     saveWithDebounce(
       () => adapterRef.current.saveEstruturaCustos(novosDados),
-      () => setEstruturaCustos(novosDados)
+      () => {
+        setEstruturaCustos(novosDados);
+        pricingCache.estruturaCustos = novosDados;
+      }
     );
     
     return true;
@@ -335,7 +427,10 @@ export function usePricingSupabaseData() {
     
     saveWithDebounce(
       () => adapterRef.current.saveEstruturaCustos(novosDados),
-      () => setEstruturaCustos(novosDados)
+      () => {
+        setEstruturaCustos(novosDados);
+        pricingCache.estruturaCustos = novosDados;
+      }
     );
     
     return true;
@@ -351,7 +446,10 @@ export function usePricingSupabaseData() {
     
     saveWithDebounce(
       () => adapterRef.current.saveEstruturaCustos(novosDados),
-      () => setEstruturaCustos(novosDados)
+      () => {
+        setEstruturaCustos(novosDados);
+        pricingCache.estruturaCustos = novosDados;
+      }
     );
     
     return true;
@@ -369,7 +467,10 @@ export function usePricingSupabaseData() {
     
     saveWithDebounce(
       () => adapterRef.current.saveEstruturaCustos(novosDados),
-      () => setEstruturaCustos(novosDados)
+      () => {
+        setEstruturaCustos(novosDados);
+        pricingCache.estruturaCustos = novosDados;
+      }
     );
     
     return true;
@@ -385,7 +486,10 @@ export function usePricingSupabaseData() {
     
     saveWithDebounce(
       () => adapterRef.current.saveEstruturaCustos(novosDados),
-      () => setEstruturaCustos(novosDados)
+      () => {
+        setEstruturaCustos(novosDados);
+        pricingCache.estruturaCustos = novosDados;
+      }
     );
     
     return true;
@@ -394,7 +498,10 @@ export function usePricingSupabaseData() {
   const salvarEstruturaCustos = useCallback(async (dados: EstruturaCustosFixos) => {
     saveWithDebounce(
       () => adapterRef.current.saveEstruturaCustos(dados),
-      () => setEstruturaCustos(dados)
+      () => {
+        setEstruturaCustos(dados);
+        pricingCache.estruturaCustos = dados;
+      }
     );
     return true;
   }, [saveWithDebounce]);
@@ -403,8 +510,18 @@ export function usePricingSupabaseData() {
 
   const atualizarMetas = useCallback(async (novasMetas: MetasPrecificacao) => {
     saveWithDebounce(
-      () => adapterRef.current.saveMetas(novasMetas),
-      () => setMetas(novasMetas)
+      async () => {
+        const success = await adapterRef.current.saveMetas(novasMetas);
+        if (success) {
+          // Sincronizar com localStorage
+          MetasService.salvar(novasMetas);
+        }
+        return success;
+      },
+      () => {
+        setMetas(novasMetas);
+        pricingCache.metas = novasMetas;
+      }
     );
     return true;
   }, [saveWithDebounce]);

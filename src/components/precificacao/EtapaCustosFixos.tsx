@@ -59,7 +59,7 @@ export function EtapaCustosFixos({ onTotalChange }: EtapaCustosFixosProps) {
         numero={1}
         titulo="Custos Fixos Mensais"
         descricao="Quanto custa manter seu negócio funcionando"
-        defaultOpen={true}
+        defaultOpen={false}
         statusSalvamento="salvando"
       >
         <div className="flex items-center justify-center py-8">
@@ -74,7 +74,7 @@ export function EtapaCustosFixos({ onTotalChange }: EtapaCustosFixosProps) {
       numero={1}
       titulo="Custos Fixos Mensais"
       descricao="Quanto custa manter seu negócio funcionando"
-      defaultOpen={true}
+      defaultOpen={false}
       statusSalvamento={statusSalvamento}
     >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
