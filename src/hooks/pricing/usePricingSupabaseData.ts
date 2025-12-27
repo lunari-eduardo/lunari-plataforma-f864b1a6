@@ -52,6 +52,7 @@ export function usePricingSupabaseData() {
   
   const adapterRef = useRef(new SupabasePricingAdapter());
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingSaveRef = useRef<(() => Promise<boolean>) | null>(null);
   const loadAllDataRef = useRef<() => Promise<void>>();
 
   // Funções de carregamento - com cache
@@ -251,6 +252,25 @@ export function usePricingSupabaseData() {
     };
   }, [isAuthenticated, loadEstruturaCustos]);
 
+  // Função para executar save pendente imediatamente
+  const flushPendingSave = useCallback(async () => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+    
+    if (pendingSaveRef.current) {
+      try {
+        console.log('🔄 Executando save pendente...');
+        await pendingSaveRef.current();
+        console.log('✅ Save pendente executado');
+      } catch (error) {
+        console.error('❌ Erro no save pendente:', error);
+      }
+      pendingSaveRef.current = null;
+    }
+  }, []);
+
   // Função de salvamento com debounce
   const saveWithDebounce = useCallback(async (
     saveFn: () => Promise<boolean>,
@@ -265,21 +285,43 @@ export function usePricingSupabaseData() {
       clearTimeout(saveTimeoutRef.current);
     }
     
+    // Guardar referência ao save pendente
+    pendingSaveRef.current = saveFn;
+    
     // Debounce de 500ms
     saveTimeoutRef.current = setTimeout(async () => {
       try {
+        console.log('💾 Salvando dados de precificação...');
         const success = await saveFn();
+        console.log(success ? '✅ Dados salvos com sucesso' : '❌ Falha ao salvar');
         setStatusSalvamento(success ? 'salvo' : 'erro');
+        
+        // Limpar referência pendente
+        pendingSaveRef.current = null;
         
         // Atualizar cache após salvar
         if (success) {
           pricingCache.lastFetch = Date.now();
         }
       } catch (error) {
-        console.error('Erro ao salvar:', error);
+        console.error('❌ Erro ao salvar:', error);
         setStatusSalvamento('erro');
+        pendingSaveRef.current = null;
       }
     }, 500);
+  }, []);
+
+  // Cleanup: executar saves pendentes ao desmontar
+  useEffect(() => {
+    return () => {
+      if (pendingSaveRef.current) {
+        console.log('🔄 Componente desmontando, executando save pendente...');
+        pendingSaveRef.current();
+      }
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
   }, []);
 
   // ============= AÇÕES DE ESTRUTURA DE CUSTOS =============
@@ -589,6 +631,7 @@ export function usePricingSupabaseData() {
     
     // Utilitários
     recarregar: loadAllData,
-    calcularTotal
+    calcularTotal,
+    flushPendingSave
   };
 }
