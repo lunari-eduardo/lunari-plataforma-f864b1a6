@@ -155,10 +155,11 @@ export function useWorkflowData(options: UseWorkflowDataOptions) {
   useEffect(() => {
     const unsubscribe = workflowCacheManager.subscribe((updatedSessions) => {
       // Filtrar para o mês atual
+      // CORREÇÃO: Parse direto da string para evitar bug de timezone
       const filtered = updatedSessions.filter(session => {
-        const sessionDate = new Date(session.data_sessao);
-        return sessionDate.getFullYear() === year && 
-               sessionDate.getMonth() + 1 === month;
+        if (!session.data_sessao) return false;
+        const [sessionYear, sessionMonth] = session.data_sessao.split('-').map(Number);
+        return sessionYear === year && sessionMonth === month;
       });
       
       // ✅ FASE 1: SEMPRE atualizar estado (mesmo com array vazio ou 1 item)

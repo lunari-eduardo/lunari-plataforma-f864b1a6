@@ -127,10 +127,11 @@ export default function Workflow() {
   useEffect(() => {
     const unsubscribe = subscribe((allSessions) => {
       // Filtrar apenas sessões do mês atual
+      // CORREÇÃO: Parse direto da string para evitar bug de timezone
       const filtered = allSessions.filter(s => {
-        const date = new Date(s.data_sessao);
-        return date.getFullYear() === currentMonth.year && 
-               date.getMonth() + 1 === currentMonth.month;
+        if (!s.data_sessao) return false;
+        const [year, month] = s.data_sessao.split('-').map(Number);
+        return year === currentMonth.year && month === currentMonth.month;
       });
       
       // FASE 1: Detectar mudanças por quantidade, IDs OU conteúdo (updated_at e campos críticos)
