@@ -674,15 +674,8 @@ export default function Workflow() {
           console.log('✅ [Workflow] Merging new session into cache:', fullSession.id);
           mergeUpdate(fullSession as WorkflowSession);
           
-          // CORREÇÃO: Navegar automaticamente para o mês da sessão criada
-          const sessionDate = new Date(data.dataSessao);
-          const sessionYear = sessionDate.getFullYear();
-          const sessionMonth = sessionDate.getMonth() + 1;
-          
-          if (sessionYear !== currentMonth.year || sessionMonth !== currentMonth.month) {
-            console.log(`📅 [Workflow] Navegando para mês da sessão: ${sessionMonth}/${sessionYear}`);
-            setCurrentMonth({ year: sessionYear, month: sessionMonth });
-          }
+          // Sessão agora é sempre criada no mês atual (não precisa navegar)
+          console.log(`✅ [Workflow] Sessão criada no mês atual: ${currentMonth.month}/${currentMonth.year}`);
         }
       }
       
@@ -873,7 +866,7 @@ export default function Workflow() {
       <div className="border rounded-lg">
         {/* Quick Add Session - Always visible */}
         <div className="p-4 border-b">
-          <QuickSessionAdd onSubmit={handleQuickSessionAdd} />
+          <QuickSessionAdd onSubmit={handleQuickSessionAdd} currentMonth={currentMonth} />
         </div>
 
         {/* Busca e Configuração de Colunas */}
