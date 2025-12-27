@@ -1,5 +1,5 @@
 import { Card, CardContent } from '@/components/ui/card';
-import { usePricingSupabaseData } from '@/hooks/pricing/usePricingSupabaseData';
+import { usePricing } from '@/contexts/PricingContext';
 import { CardGastosPessoais } from './custos/CardGastosPessoais';
 import { CardProLabore } from './custos/CardProLabore';
 import { CardCustosEstudio } from './custos/CardCustosEstudio';
@@ -27,7 +27,7 @@ export function EtapaCustosFixos({ onTotalChange }: EtapaCustosFixosProps) {
     atualizarEquipamento,
     atualizarPercentualProLabore,
     totalCustosFixos
-  } = usePricingSupabaseData();
+  } = usePricing();
 
   // Dados derivados
   const gastosPessoais = estruturaCustos?.gastosPessoais || [];
