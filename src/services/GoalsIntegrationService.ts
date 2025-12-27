@@ -1,8 +1,10 @@
 /**
  * Serviço de Integração de Metas
  * Centraliza acesso às metas de precificação para toda a aplicação
+ * Com suporte a localStorage (sync) e Supabase (async)
  */
 
+import { supabase } from '@/integrations/supabase/client';
 import { MetasService } from '@/services/PricingService';
 import type { MetasPrecificacao } from '@/types/precificacao';
 
@@ -27,7 +29,7 @@ interface GoalsStatus {
 
 export class GoalsIntegrationService {
   /**
-   * Verifica se as metas estão configuradas
+   * Verifica se as metas estão configuradas (síncrono - localStorage)
    */
   static hasConfiguredGoals(): boolean {
     try {
@@ -39,7 +41,7 @@ export class GoalsIntegrationService {
   }
 
   /**
-   * Obtém status detalhado da configuração
+   * Obtém status detalhado da configuração (síncrono - localStorage)
    */
   static getConfigurationStatus(): GoalsStatus {
     try {
@@ -64,7 +66,7 @@ export class GoalsIntegrationService {
   }
 
   /**
-   * Obtém metas mensais baseadas nas configurações anuais
+   * Obtém metas mensais baseadas nas configurações anuais (síncrono - localStorage)
    */
   static getMonthlyGoals(): MonthlyGoals {
     try {
@@ -85,7 +87,48 @@ export class GoalsIntegrationService {
   }
 
   /**
-   * Obtém metas anuais
+   * Obtém metas mensais do Supabase com fallback para localStorage (assíncrono)
+   */
+  static async getMonthlyGoalsAsync(): Promise<MonthlyGoals> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        const { data, error } = await supabase
+          .from('pricing_configuracoes')
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (!error && data) {
+          const goals: MonthlyGoals = {
+            revenue: (data.meta_faturamento_anual || 0) / 12,
+            profit: (data.meta_lucro_anual || 0) / 12,
+            profitMargin: data.margem_lucro_desejada || 0
+          };
+
+          // Sincronizar localStorage para acesso futuro rápido
+          const metasForLocalStorage: MetasPrecificacao = {
+            margemLucroDesejada: data.margem_lucro_desejada || 30,
+            ano: data.ano_meta || new Date().getFullYear(),
+            metaFaturamentoAnual: data.meta_faturamento_anual || 0,
+            metaLucroAnual: data.meta_lucro_anual || 0
+          };
+          MetasService.salvar(metasForLocalStorage);
+
+          return goals;
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao buscar metas do Supabase:', error);
+    }
+
+    // Fallback para localStorage
+    return this.getMonthlyGoals();
+  }
+
+  /**
+   * Obtém metas anuais (síncrono - localStorage)
    */
   static getAnnualGoals(): AnnualGoals {
     try {
@@ -103,6 +146,36 @@ export class GoalsIntegrationService {
         profitMargin: 0
       };
     }
+  }
+
+  /**
+   * Obtém metas anuais do Supabase com fallback para localStorage (assíncrono)
+   */
+  static async getAnnualGoalsAsync(): Promise<AnnualGoals> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        const { data, error } = await supabase
+          .from('pricing_configuracoes')
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (!error && data) {
+          return {
+            revenue: data.meta_faturamento_anual || 0,
+            profit: data.meta_lucro_anual || 0,
+            profitMargin: data.margem_lucro_desejada || 0
+          };
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao buscar metas anuais do Supabase:', error);
+    }
+
+    // Fallback para localStorage
+    return this.getAnnualGoals();
   }
 
   /**
@@ -140,13 +213,13 @@ export class GoalsIntegrationService {
    * Determina o status baseado no progresso
    */
   static getProgressStatus(progress: number): 'on-track' | 'behind' | 'ahead' {
-    if (progress >= 90) return 'on-track';
     if (progress >= 100) return 'ahead';
+    if (progress >= 90) return 'on-track';
     return 'behind';
   }
 
   /**
-   * Obtém metas configuradas diretamente do serviço
+   * Obtém metas configuradas diretamente do serviço (síncrono - localStorage)
    */
   static getRawGoals(): MetasPrecificacao {
     return MetasService.carregar();

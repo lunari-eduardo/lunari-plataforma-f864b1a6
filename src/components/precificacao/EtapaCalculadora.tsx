@@ -84,7 +84,7 @@ export function EtapaCalculadora({
       numero={3}
       titulo="Calcule o Preço do Seu Serviço"
       descricao="O principal resultado de toda sua precificação"
-      defaultOpen={true}
+      defaultOpen={false}
     >
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Card: Tempo do Projeto */}
