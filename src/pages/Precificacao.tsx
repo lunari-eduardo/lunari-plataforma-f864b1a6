@@ -1,31 +1,41 @@
 import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronDown, ChevronUp, Database, CheckCircle2, AlertTriangle } from 'lucide-react';
-import { CalculadoraServicos } from '@/components/precificacao/CalculadoraServicos';
-import { EstruturaCustosFixos } from '@/components/precificacao/EstruturaCustosFixos';
-import { MetasIndicadores } from '@/components/precificacao/MetasIndicadores';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { inicializarSistemaPrecificacao } from '@/utils/pricingMigration';
 import { PricingServiceFactory } from '@/services/pricing';
+import { MetasService } from '@/services/PricingService';
+import { PricingHeader } from '@/components/precificacao/PricingHeader';
+import { ResumoFinanceiroSticky } from '@/components/precificacao/ResumoFinanceiroSticky';
+import { EtapaCustosFixos } from '@/components/precificacao/EtapaCustosFixos';
+import { EtapaMetas } from '@/components/precificacao/EtapaMetas';
+import { EtapaCalculadora } from '@/components/precificacao/EtapaCalculadora';
+
 export default function Precificacao() {
-  const [calculadoraAberta, setCalculadoraAberta] = useState(false);
   const [custosFixosTotal, setCustosFixosTotal] = useState(0);
+  const [precoFinalServico, setPrecoFinalServico] = useState(0);
+  const [margemLucroDesejada, setMargemLucroDesejada] = useState(30);
   const [sistemaInicializado, setSistemaInicializado] = useState(false);
-  
+
+  // Cálculos derivados
+  const horasMensais = 8 * 5 * 4; // Padrão: 8h/dia * 5 dias * 4 semanas
+  const custoHora = horasMensais > 0 ? custosFixosTotal / horasMensais : 0;
+  const faturamentoMinimoAnual = custosFixosTotal * 12;
+  const metaFaturamentoAnual = faturamentoMinimoAnual / (1 - margemLucroDesejada / 100);
+  const metaFaturamentoMensal = metaFaturamentoAnual / 12;
+
   const handleCustosFixosChange = (total: number) => {
     setCustosFixosTotal(total);
   };
 
-  // Inicializar sistema de precificação ao carregar a página
+  // Inicializar sistema
   useEffect(() => {
     console.log('🚀 Inicializando página de precificação...');
-    
     try {
       inicializarSistemaPrecificacao();
       setSistemaInicializado(true);
-      console.log('✅ Sistema de precificação inicializado');
+      
+      // Carregar margem de lucro salva
+      const metas = MetasService.carregar();
+      setMargemLucroDesejada(metas.margemLucroDesejada);
     } catch (error) {
       console.error('❌ Erro na inicialização:', error);
       setSistemaInicializado(false);
@@ -37,35 +47,43 @@ export default function Precificacao() {
     if (sistemaInicializado) {
       const services = PricingServiceFactory.createLocalServices();
       const intervalId = setInterval(async () => {
-        const validacao = await services.validation.validarTodosSistemas();
-        console.log('🔍 Validação periódica:', validacao);
-      }, 30000); // A cada 30 segundos
-
+        await services.validation.validarTodosSistemas();
+      }, 30000);
       return () => clearInterval(intervalId);
     }
   }, [sistemaInicializado]);
-  return <ScrollArea className="h-[calc(100vh-120px)]">
-      <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 p-3 md:p-6 space-y-4 md:space-y-6 bg-lunar-bg min-h-screen">
-      {/* Header da Página */}
-      <div className="px-1 mb-4">
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-lg md:text-xl font-bold text-foreground mb-1">Precificação e Metas</h1>
-            <p className="text-sm text-muted-foreground">
-              Sistema aprimorado com salvamento automático e compatibilidade multi-usuário
-            </p>
-          </div>
+
+  return (
+    <ScrollArea className="h-[calc(100vh-120px)]">
+      <div className="w-full max-w-7xl mx-auto p-4 md:p-6 lg:p-8 pb-24 lg:pb-8">
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Sidebar Sticky (Desktop) */}
+          <ResumoFinanceiroSticky
+            custoFixoMensal={custosFixosTotal}
+            custoHora={custoHora}
+            metaFaturamentoMensal={metaFaturamentoMensal}
+            precoFinalServico={precoFinalServico}
+          />
+          
+          {/* Conteúdo Principal */}
+          <main className="flex-1 space-y-8">
+            <PricingHeader />
+            
+            {/* Etapa 1: Custos Fixos */}
+            <EtapaCustosFixos onTotalChange={handleCustosFixosChange} />
+            
+            {/* Etapa 2: Metas */}
+            <EtapaMetas custosFixosTotal={custosFixosTotal} />
+            
+            {/* Etapa 3: Calculadora (Sempre Visível) */}
+            <EtapaCalculadora 
+              custosFixosTotal={custosFixosTotal} 
+              metaFaturamentoMensal={metaFaturamentoMensal}
+              onPrecoFinalChange={setPrecoFinalServico}
+            />
+          </main>
         </div>
       </div>
-
-      {/* 1. Calculadora de Serviços */}
-      <CalculadoraServicos custosFixosTotal={custosFixosTotal} />
-
-      {/* 2. Estrutura de Custos Fixos */}
-      <EstruturaCustosFixos onTotalChange={handleCustosFixosChange} />
-
-      {/* 3. Metas e Indicadores de Lucro */}
-      <MetasIndicadores custosFixosTotal={custosFixosTotal} />
-      </div>
-    </ScrollArea>;
+    </ScrollArea>
+  );
 }
