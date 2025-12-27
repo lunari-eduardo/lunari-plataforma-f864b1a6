@@ -26,7 +26,7 @@ export function EtapaColapsavel({
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <CollapsibleTrigger className="w-full">
-        <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+        <div className="flex items-center gap-3 p-4 rounded-lg bg-primary/40 hover:bg-primary/50 transition-colors border border-primary/30">
           <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center font-bold text-foreground">
             {numero}
           </div>
