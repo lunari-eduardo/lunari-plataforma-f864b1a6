@@ -42,6 +42,13 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
   async saveEstruturaCustos(dados: EstruturaCustosFixos): Promise<boolean> {
     try {
       const userId = await this.ensureUser();
+      console.log('💾 Salvando estrutura de custos para user:', userId);
+      console.log('📊 Dados:', {
+        percentualProLabore: dados.percentualProLabore,
+        gastosPessoais: dados.gastosPessoais?.length,
+        custosEstudio: dados.custosEstudio?.length,
+        equipamentos: dados.equipamentos?.length
+      });
       
       // 1. Upsert configurações (pró-labore)
       const { error: configError } = await supabase
@@ -51,7 +58,11 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
           percentual_pro_labore: dados.percentualProLabore
         }, { onConflict: 'user_id' });
       
-      if (configError) throw configError;
+      if (configError) {
+        console.error('❌ Erro ao salvar pró-labore:', configError);
+        throw configError;
+      }
+      console.log('✅ Pró-labore salvo:', dados.percentualProLabore);
       
       // 2. Sincronizar gastos pessoais
       await this.syncGastosPessoais(userId, dados.gastosPessoais);
@@ -137,6 +148,8 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
   }
 
   private async syncEquipamentos(userId: string, equipamentos: Equipamento[]): Promise<void> {
+    console.log('🔄 Sincronizando equipamentos:', equipamentos?.length || 0);
+    
     // Buscar IDs existentes
     const { data: existentes } = await supabase
       .from('pricing_equipamentos')
@@ -149,6 +162,7 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
     // Remover itens que não existem mais
     const idsParaRemover = [...idsExistentes].filter(id => !idsNovos.has(id));
     if (idsParaRemover.length > 0) {
+      console.log('🗑️ Removendo equipamentos:', idsParaRemover);
       await supabase
         .from('pricing_equipamentos')
         .delete()
@@ -157,7 +171,7 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
     
     // Upsert todos os equipamentos
     for (const eq of equipamentos) {
-      await supabase
+      const { error } = await supabase
         .from('pricing_equipamentos')
         .upsert({
           id: eq.id,
@@ -167,6 +181,12 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
           data_compra: eq.dataCompra || new Date().toISOString().split('T')[0],
           vida_util: eq.vidaUtil || 5
         }, { onConflict: 'id' });
+      
+      if (error) {
+        console.error('❌ Erro ao salvar equipamento:', eq.nome, error);
+      } else {
+        console.log('✅ Equipamento salvo:', eq.nome);
+      }
     }
   }
 
