@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,6 +10,15 @@ import { CategoryCombobox } from '@/components/workflow/CategoryCombobox';
 import { useOrcamentoData } from '@/hooks/useOrcamentoData';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+
+// Helper para nome do mês
+const getMonthName = (month: number) => {
+  const monthNames = [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+  ];
+  return monthNames[month - 1];
+};
 
 // Handler para auto-selecionar texto ao focar em inputs numéricos
 const handleNumberInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
@@ -43,9 +52,10 @@ export interface QuickSessionData {
 
 interface QuickSessionAddProps {
   onSubmit: (data: QuickSessionData) => Promise<void>;
+  currentMonth: { month: number; year: number };
 }
 
-export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
+export function QuickSessionAdd({ onSubmit, currentMonth }: QuickSessionAddProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -54,7 +64,15 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
   
   // Form fields
   const [clienteId, setClienteId] = useState('');
-  const [dataSessao, setDataSessao] = useState('');
+  const [diaSessao, setDiaSessao] = useState('');
+  
+  // Compor data completa: ano-mes-dia (baseado no mês atual do workflow)
+  const dataSessaoCompleta = useMemo(() => {
+    if (!diaSessao) return '';
+    const dia = diaSessao.padStart(2, '0');
+    const mes = String(currentMonth.month).padStart(2, '0');
+    return `${currentMonth.year}-${mes}-${dia}`;
+  }, [diaSessao, currentMonth]);
   const [categoria, setCategoria] = useState('');
   const [pacote, setPacote] = useState('');
   const [valorBasePacote, setValorBasePacote] = useState('0');
@@ -161,10 +179,21 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
       toast.error('Selecione um cliente');
       return false;
     }
-    if (!dataSessao) {
-      toast.error('Informe a data da sessão');
+    
+    // Validar dia (1-31) 
+    const diaNum = parseInt(diaSessao);
+    if (!diaSessao || isNaN(diaNum) || diaNum < 1 || diaNum > 31) {
+      toast.error('Informe um dia válido (1-31)');
       return false;
     }
+    
+    // Validar se o dia existe no mês atual
+    const daysInMonth = new Date(currentMonth.year, currentMonth.month, 0).getDate();
+    if (diaNum > daysInMonth) {
+      toast.error(`${getMonthName(currentMonth.month)} só tem ${daysInMonth} dias`);
+      return false;
+    }
+    
     if (!categoria.trim()) {
       toast.error('Informe a categoria');
       return false;
@@ -191,7 +220,7 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
 
   const handleClear = () => {
     setClienteId('');
-    setDataSessao('');
+    setDiaSessao('');
     setCategoria('');
     setPacote('');
     setValorBasePacote('0');
@@ -216,7 +245,7 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
       
       const data: QuickSessionData = {
         clienteId,
-        dataSessao,
+        dataSessao: dataSessaoCompleta,
         horaSessao: '00:00',
         categoria,
         pacote: pacote.trim() || undefined,
@@ -276,13 +305,31 @@ export function QuickSessionAdd({ onSubmit }: QuickSessionAddProps) {
               </div>
               
               <div className="space-y-1">
-                <Label className="text-xs">Data *</Label>
-                <Input
-                  type="date"
-                  value={dataSessao}
-                  onChange={(e) => setDataSessao(e.target.value)}
-                  className="h-7 text-xs"
-                />
+                <Label className="text-xs">
+                  Dia * <span className="text-muted-foreground font-normal">
+                    ({getMonthName(currentMonth.month)} {currentMonth.year})
+                  </span>
+                </Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min="1"
+                    max="31"
+                    value={diaSessao}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      // Permitir campo vazio ou valores de 1 a 31
+                      if (val === '' || (parseInt(val) >= 1 && parseInt(val) <= 31)) {
+                        setDiaSessao(val);
+                      }
+                    }}
+                    placeholder="DD"
+                    className="h-7 text-xs w-16"
+                  />
+                  <span className="text-xs text-muted-foreground">
+                    / {String(currentMonth.month).padStart(2, '0')} / {currentMonth.year}
+                  </span>
+                </div>
               </div>
               
               <div className="space-y-1">
