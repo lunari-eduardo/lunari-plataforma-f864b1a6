@@ -8,6 +8,7 @@ import { ResumoFinanceiroSticky } from '@/components/precificacao/ResumoFinancei
 import { EtapaCustosFixos } from '@/components/precificacao/EtapaCustosFixos';
 import { EtapaMetas } from '@/components/precificacao/EtapaMetas';
 import { EtapaCalculadora } from '@/components/precificacao/EtapaCalculadora';
+import { PricingProvider } from '@/contexts/PricingContext';
 
 export default function Precificacao() {
   const [custosFixosTotal, setCustosFixosTotal] = useState(0);
@@ -54,36 +55,38 @@ export default function Precificacao() {
   }, [sistemaInicializado]);
 
   return (
-    <ScrollArea className="h-[calc(100vh-120px)]">
-      <div className="w-full max-w-7xl mx-auto p-4 md:p-6 lg:p-8 pb-40 lg:pb-8">
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* Sidebar Sticky (Desktop) */}
-          <ResumoFinanceiroSticky
-            custoFixoMensal={custosFixosTotal}
-            custoHora={custoHora}
-            metaFaturamentoMensal={metaFaturamentoMensal}
-            precoFinalServico={precoFinalServico}
-          />
-          
-          {/* Conteúdo Principal */}
-          <main className="flex-1 space-y-6">
-            <PricingHeader />
-            
-            {/* Etapa 1: Custos Fixos */}
-            <EtapaCustosFixos onTotalChange={handleCustosFixosChange} />
-            
-            {/* Etapa 2: Calculadora */}
-            <EtapaCalculadora 
-              custosFixosTotal={custosFixosTotal} 
+    <PricingProvider>
+      <ScrollArea className="h-[calc(100vh-120px)]">
+        <div className="w-full max-w-7xl mx-auto p-4 md:p-6 lg:p-8 pb-40 lg:pb-8">
+          <div className="flex flex-col lg:flex-row gap-6">
+            {/* Sidebar Sticky (Desktop) */}
+            <ResumoFinanceiroSticky
+              custoFixoMensal={custosFixosTotal}
+              custoHora={custoHora}
               metaFaturamentoMensal={metaFaturamentoMensal}
-              onPrecoFinalChange={setPrecoFinalServico}
+              precoFinalServico={precoFinalServico}
             />
             
-            {/* Etapa 3: Metas */}
-            <EtapaMetas custosFixosTotal={custosFixosTotal} />
-          </main>
+            {/* Conteúdo Principal */}
+            <main className="flex-1 space-y-6">
+              <PricingHeader />
+              
+              {/* Etapa 1: Custos Fixos */}
+              <EtapaCustosFixos onTotalChange={handleCustosFixosChange} />
+              
+              {/* Etapa 2: Calculadora */}
+              <EtapaCalculadora 
+                custosFixosTotal={custosFixosTotal} 
+                metaFaturamentoMensal={metaFaturamentoMensal}
+                onPrecoFinalChange={setPrecoFinalServico}
+              />
+              
+              {/* Etapa 3: Metas */}
+              <EtapaMetas custosFixosTotal={custosFixosTotal} />
+            </main>
+          </div>
         </div>
-      </div>
-    </ScrollArea>
+      </ScrollArea>
+    </PricingProvider>
   );
 }

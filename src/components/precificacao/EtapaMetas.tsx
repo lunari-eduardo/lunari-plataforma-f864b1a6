@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Target, TrendingUp, Calculator, Calendar } from 'lucide-react';
-import { usePricingSupabaseData } from '@/hooks/pricing/usePricingSupabaseData';
+import { usePricing } from '@/contexts/PricingContext';
 import { EtapaColapsavel } from './EtapaColapsavel';
 
 interface EtapaMetasProps {
@@ -12,7 +12,7 @@ interface EtapaMetasProps {
 }
 
 export function EtapaMetas({ custosFixosTotal }: EtapaMetasProps) {
-  const { metas, atualizarMetas, statusSalvamento } = usePricingSupabaseData();
+  const { metas, atualizarMetas, statusSalvamento } = usePricing();
   
   const margemLucroDesejada = metas?.margemLucroDesejada ?? 30;
 

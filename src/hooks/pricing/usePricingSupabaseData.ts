@@ -26,6 +26,8 @@ const pricingCache = {
   padraoHoras: null as PadraoHoras | null,
   lastFetch: 0,
   isLoading: false,
+  hasLoadedOnce: false, // Nova flag: já carregou pelo menos uma vez
+  statusSalvamento: 'salvo' as StatusSalvamento, // Persistir status no cache
   CACHE_TTL: 5 * 60 * 1000 // 5 minutos
 };
 
@@ -41,31 +43,54 @@ export const invalidatePricingCache = () => {
 };
 
 export function usePricingSupabaseData() {
+  // Inicializar estado com cache para evitar loading desnecessário
   const [estruturaCustos, setEstruturaCustos] = useState<EstruturaCustosFixos | null>(
     pricingCache.estruturaCustos
   );
   const [metas, setMetas] = useState<MetasPrecificacao | null>(pricingCache.metas);
   const [padraoHoras, setPadraoHoras] = useState<PadraoHoras | null>(pricingCache.padraoHoras);
-  const [loading, setLoading] = useState(!isCacheValid());
-  const [statusSalvamento, setStatusSalvamento] = useState<StatusSalvamento>('salvo');
+  
+  // Loading só é true se NUNCA carregou e não tem dados no cache
+  const [loading, setLoading] = useState(
+    !pricingCache.hasLoadedOnce && !pricingCache.estruturaCustos
+  );
+  
+  // Status de salvamento vem do cache para persistir entre navegações
+  const [statusSalvamento, setStatusSalvamentoLocal] = useState<StatusSalvamento>(
+    pricingCache.statusSalvamento
+  );
+  
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   
   const adapterRef = useRef(new SupabasePricingAdapter());
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pendingSaveRef = useRef<(() => Promise<boolean>) | null>(null);
   const loadAllDataRef = useRef<() => Promise<void>>();
+  const realtimeDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Funções de carregamento - com cache
+  // Wrapper para setStatusSalvamento que também atualiza o cache
+  const setStatusSalvamento = useCallback((status: StatusSalvamento) => {
+    setStatusSalvamentoLocal(status);
+    pricingCache.statusSalvamento = status;
+  }, []);
+
+  // Funções de carregamento - com cache inteligente
   const loadAllData = useCallback(async () => {
-    // Se cache ainda válido e temos dados, usar cache
-    if (isCacheValid() && pricingCache.estruturaCustos) {
-      console.log('📦 Usando cache de precificação');
+    // Se já tem dados no cache, usar imediatamente (sem loading spinner)
+    if (pricingCache.estruturaCustos) {
       setEstruturaCustos(pricingCache.estruturaCustos);
       setMetas(pricingCache.metas);
       setPadraoHoras(pricingCache.padraoHoras);
       setLoading(false);
-      setStatusSalvamento('salvo');
-      return;
+      
+      // Se cache ainda válido, não precisa recarregar
+      if (isCacheValid()) {
+        console.log('📦 Cache válido, usando dados existentes');
+        return;
+      }
+      
+      // Recarregar em background silenciosamente
+      console.log('🔄 Atualizando dados em background...');
     }
 
     // Evitar múltiplas requisições simultâneas
@@ -75,7 +100,11 @@ export function usePricingSupabaseData() {
     }
 
     pricingCache.isLoading = true;
-    setLoading(true);
+    
+    // Só mostrar loading se não tem dados ainda
+    if (!pricingCache.estruturaCustos) {
+      setLoading(true);
+    }
     
     // Timeout de 5 segundos
     const timeoutId = setTimeout(() => {
@@ -105,6 +134,7 @@ export function usePricingSupabaseData() {
       pricingCache.metas = metasData;
       pricingCache.padraoHoras = horasData;
       pricingCache.lastFetch = Date.now();
+      pricingCache.hasLoadedOnce = true; // Marcar que já carregou
       
       // Sincronizar com localStorage para GoalsIntegrationService
       if (metasData) {
@@ -122,7 +152,7 @@ export function usePricingSupabaseData() {
       clearTimeout(timeoutId);
       pricingCache.isLoading = false;
     }
-  }, []);
+  }, [setStatusSalvamento]);
 
   // Manter referência atualizada para o realtime listener
   loadAllDataRef.current = loadAllData;
@@ -135,6 +165,19 @@ export function usePricingSupabaseData() {
     } catch (error) {
       console.error('Erro ao recarregar estrutura:', error);
     }
+  }, []);
+
+  // Handler para mudanças realtime com debounce
+  const handleRealtimeChange = useCallback(() => {
+    if (realtimeDebounceRef.current) {
+      clearTimeout(realtimeDebounceRef.current);
+    }
+    
+    realtimeDebounceRef.current = setTimeout(() => {
+      console.log('🔄 Realtime: recarregando dados...');
+      invalidatePricingCache();
+      loadAllDataRef.current?.();
+    }, 1000); // 1 segundo de debounce
   }, []);
 
   // Verificar autenticação e migrar dados se necessário
@@ -157,7 +200,7 @@ export function usePricingSupabaseData() {
           const result = await PricingMigrationToSupabase.executeMigration();
           if (result.success) {
             toast.success('Dados de precificação migrados para a nuvem');
-            invalidatePricingCache(); // Forçar reload após migração
+            invalidatePricingCache();
           }
         }
         
@@ -177,6 +220,7 @@ export function usePricingSupabaseData() {
       if (event === 'SIGNED_IN' && session?.user) {
         setIsAuthenticated(true);
         invalidatePricingCache();
+        pricingCache.hasLoadedOnce = false; // Reset para forçar novo load
         await loadAllData();
       } else if (event === 'SIGNED_OUT') {
         setIsAuthenticated(false);
@@ -184,13 +228,14 @@ export function usePricingSupabaseData() {
         setMetas(null);
         setPadraoHoras(null);
         invalidatePricingCache();
+        pricingCache.hasLoadedOnce = false;
       }
     });
     
     return () => subscription.unsubscribe();
   }, []); // loadAllData removido das deps para evitar loop
 
-  // Real-time listener para mudanças - com cleanup correto
+  // Real-time listener para mudanças - com debounce
   useEffect(() => {
     if (!isAuthenticated) return;
     
@@ -209,10 +254,7 @@ export function usePricingSupabaseData() {
           table: 'pricing_configuracoes',
           filter: `user_id=eq.${user.id}`
         }, () => {
-          if (isMounted) {
-            invalidatePricingCache();
-            loadAllDataRef.current?.();
-          }
+          if (isMounted) handleRealtimeChange();
         })
         .on('postgres_changes', {
           event: '*',
@@ -220,7 +262,7 @@ export function usePricingSupabaseData() {
           table: 'pricing_gastos_pessoais',
           filter: `user_id=eq.${user.id}`
         }, () => {
-          if (isMounted) loadEstruturaCustos();
+          if (isMounted) handleRealtimeChange();
         })
         .on('postgres_changes', {
           event: '*',
@@ -228,7 +270,7 @@ export function usePricingSupabaseData() {
           table: 'pricing_custos_estudio',
           filter: `user_id=eq.${user.id}`
         }, () => {
-          if (isMounted) loadEstruturaCustos();
+          if (isMounted) handleRealtimeChange();
         })
         .on('postgres_changes', {
           event: '*',
@@ -236,7 +278,7 @@ export function usePricingSupabaseData() {
           table: 'pricing_equipamentos',
           filter: `user_id=eq.${user.id}`
         }, () => {
-          if (isMounted) loadEstruturaCustos();
+          if (isMounted) handleRealtimeChange();
         })
         .subscribe();
     };
@@ -246,11 +288,14 @@ export function usePricingSupabaseData() {
     // Cleanup correto
     return () => {
       isMounted = false;
+      if (realtimeDebounceRef.current) {
+        clearTimeout(realtimeDebounceRef.current);
+      }
       if (channel) {
         supabase.removeChannel(channel);
       }
     };
-  }, [isAuthenticated, loadEstruturaCustos]);
+  }, [isAuthenticated, handleRealtimeChange]);
 
   // Função para executar save pendente imediatamente
   const flushPendingSave = useCallback(async () => {
@@ -309,7 +354,7 @@ export function usePricingSupabaseData() {
         pendingSaveRef.current = null;
       }
     }, 500);
-  }, []);
+  }, [setStatusSalvamento]);
 
   // Cleanup: executar saves pendentes ao desmontar
   useEffect(() => {
