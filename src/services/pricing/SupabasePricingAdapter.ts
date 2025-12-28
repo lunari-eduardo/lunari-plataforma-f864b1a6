@@ -42,13 +42,17 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
   async saveEstruturaCustos(dados: EstruturaCustosFixos): Promise<boolean> {
     try {
       const userId = await this.ensureUser();
-      console.log('💾 Salvando estrutura de custos para user:', userId);
-      console.log('📊 Dados:', {
-        percentualProLabore: dados.percentualProLabore,
-        gastosPessoais: dados.gastosPessoais?.length,
-        custosEstudio: dados.custosEstudio?.length,
-        equipamentos: dados.equipamentos?.length
-      });
+      
+      console.log('💾 ====== INÍCIO SALVAMENTO ESTRUTURA DE CUSTOS ======');
+      console.log('💾 User ID:', userId);
+      console.log('💾 Pró-labore:', dados.percentualProLabore, '%');
+      console.log('💾 Gastos Pessoais:', dados.gastosPessoais?.length || 0);
+      console.log('💾 Custos Estúdio:', dados.custosEstudio?.length || 0);
+      console.log('💾 Equipamentos:', dados.equipamentos?.length || 0);
+      
+      if (dados.equipamentos && dados.equipamentos.length > 0) {
+        console.log('💾 Detalhes equipamentos:', JSON.stringify(dados.equipamentos, null, 2));
+      }
       
       // 1. Upsert configurações (pró-labore)
       const { error: configError } = await supabase
@@ -62,7 +66,7 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
         console.error('❌ Erro ao salvar pró-labore:', configError);
         throw configError;
       }
-      console.log('✅ Pró-labore salvo:', dados.percentualProLabore);
+      console.log('✅ Pró-labore salvo:', dados.percentualProLabore, '%');
       
       // 2. Sincronizar gastos pessoais
       await this.syncGastosPessoais(userId, dados.gastosPessoais);
@@ -73,11 +77,12 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
       // 4. Sincronizar equipamentos
       await this.syncEquipamentos(userId, dados.equipamentos);
       
-      console.log('✅ Estrutura de custos salva no Supabase');
+      console.log('💾 ====== FIM SALVAMENTO - SUCESSO ======');
       return true;
       
     } catch (error) {
-      console.error('❌ Erro ao salvar estrutura de custos:', error);
+      console.error('❌ ====== ERRO NO SALVAMENTO ======');
+      console.error('❌ Erro:', error);
       return false;
     }
   }
@@ -154,7 +159,9 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
   }
 
   private async syncEquipamentos(userId: string, equipamentos: Equipamento[]): Promise<void> {
-    console.log('🔄 Sincronizando equipamentos:', equipamentos?.length || 0);
+    console.log('🔧 ====== SYNC EQUIPAMENTOS ======');
+    console.log('🔧 User ID:', userId);
+    console.log('🔧 Quantidade:', equipamentos?.length || 0);
     
     // Estratégia: delete-all + insert-all (mais confiável que upsert com onConflict)
     const { error: deleteError } = await supabase
@@ -166,6 +173,7 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
       console.error('❌ Erro ao deletar equipamentos:', deleteError);
       throw deleteError;
     }
+    console.log('🗑️ Equipamentos antigos deletados');
     
     // Inserir todos novamente
     if (equipamentos && equipamentos.length > 0) {
@@ -178,18 +186,23 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
         vida_util: eq.vidaUtil || 5
       }));
       
-      console.log('📦 Inserindo equipamentos:', equipamentosParaInserir);
+      console.log('📦 Equipamentos a inserir:', JSON.stringify(equipamentosParaInserir, null, 2));
       
-      const { error: insertError } = await supabase
+      const { data: insertedData, error: insertError } = await supabase
         .from('pricing_equipamentos')
-        .insert(equipamentosParaInserir);
+        .insert(equipamentosParaInserir)
+        .select();
       
       if (insertError) {
         console.error('❌ Erro ao inserir equipamentos:', insertError);
         throw insertError;
       }
-      console.log('✅ Equipamentos salvos:', equipamentos.length);
+      console.log('✅ Equipamentos inseridos com sucesso:', insertedData?.length || 0);
+      console.log('✅ Dados inseridos:', JSON.stringify(insertedData, null, 2));
+    } else {
+      console.log('ℹ️ Nenhum equipamento para inserir');
     }
+    console.log('🔧 ====== FIM SYNC EQUIPAMENTOS ======');
   }
 
   async loadEstruturaCustos(): Promise<EstruturaCustosFixos> {

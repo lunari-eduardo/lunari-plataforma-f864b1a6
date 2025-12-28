@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { EstruturaCustosService } from '@/services/PricingService';
+import { usePricingSupabaseData } from '@/hooks/pricing/usePricingSupabaseData';
 
 interface AddEquipmentFromTransactionModalProps {
   isOpen: boolean;
@@ -23,15 +23,28 @@ export function AddEquipmentFromTransactionModal({
   equipmentData
 }: AddEquipmentFromTransactionModalProps) {
   const { toast } = useToast();
+  const { adicionarEquipamento, isAuthenticated, loading } = usePricingSupabaseData();
   
   const [formData, setFormData] = useState({
-    nome: equipmentData?.nome || '',
-    valorPago: equipmentData?.valor?.toString() || '0',
-    dataCompra: equipmentData?.data || new Date().toISOString().split('T')[0],
+    nome: '',
+    valorPago: '0',
+    dataCompra: new Date().toISOString().split('T')[0],
     vidaUtil: '5'
   });
 
   const [isSaving, setIsSaving] = useState(false);
+
+  // Atualizar form quando equipmentData mudar
+  useEffect(() => {
+    if (equipmentData) {
+      setFormData({
+        nome: equipmentData.nome || '',
+        valorPago: equipmentData.valor?.toString() || '0',
+        dataCompra: equipmentData.data || new Date().toISOString().split('T')[0],
+        vidaUtil: '5'
+      });
+    }
+  }, [equipmentData]);
 
   const handleSave = async () => {
     if (!formData.nome || !formData.valorPago) {
@@ -43,11 +56,22 @@ export function AddEquipmentFromTransactionModal({
       return;
     }
 
+    if (!isAuthenticated) {
+      toast({
+        title: "Não autenticado",
+        description: "Faça login para salvar equipamentos.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsSaving(true);
 
     try {
-      // Usar a nova função simplificada do EstruturaCustosService
-      const sucesso = EstruturaCustosService.adicionarEquipamento({
+      console.log('🔧 [Modal] Adicionando equipamento via Supabase:', formData);
+      
+      // USAR O HOOK DO SUPABASE (não mais localStorage!)
+      const sucesso = await adicionarEquipamento({
         nome: formData.nome,
         valorPago: parseFloat(formData.valorPago) || 0,
         dataCompra: formData.dataCompra || new Date().toISOString().split('T')[0],
@@ -62,7 +86,7 @@ export function AddEquipmentFromTransactionModal({
           localStorage.setItem('equipment_processed_ids', JSON.stringify(updatedIds));
         }
         
-        console.log('🔧 [EquipmentModal] Transações marcadas como processadas:', equipmentData?.allTransactionIds || []);
+        console.log('✅ [Modal] Equipamento salvo no Supabase!');
         
         toast({
           title: "Equipamento adicionado",
@@ -70,11 +94,11 @@ export function AddEquipmentFromTransactionModal({
         });
         onClose();
       } else {
-        throw new Error('Falha ao salvar equipamento');
+        throw new Error('Falha ao salvar equipamento no Supabase');
       }
 
     } catch (error) {
-      console.error('Erro ao salvar equipamento:', error);
+      console.error('❌ [Modal] Erro ao salvar equipamento:', error);
       toast({
         title: "Erro ao salvar",
         description: "Não foi possível adicionar o equipamento.",
@@ -93,6 +117,10 @@ export function AddEquipmentFromTransactionModal({
         </DialogHeader>
         
         <div className="space-y-4">
+          {loading && (
+            <div className="text-sm text-muted-foreground">Carregando dados...</div>
+          )}
+          
           <div>
             <Label htmlFor="nome">Nome do Equipamento</Label>
             <Input
@@ -150,7 +178,7 @@ export function AddEquipmentFromTransactionModal({
             </Button>
             <Button
               onClick={handleSave}
-              disabled={isSaving}
+              disabled={isSaving || loading}
               className="flex-1"
             >
               {isSaving ? 'Salvando...' : 'Adicionar à Precificação'}
