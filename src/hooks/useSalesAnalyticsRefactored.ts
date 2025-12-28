@@ -61,7 +61,19 @@ export function useSalesAnalyticsRefactored(
 
   // Override conversion rate with real data
   const salesMetrics = useMemo(() => {
-    if (!analyticsResult) return null;
+    const defaultMetrics = {
+      totalRevenue: 0,
+      totalSessions: 0,
+      averageTicket: 0,
+      conversionRate: 0,
+      extraPhotosRevenue: 0,
+      additionalRevenue: 0,
+      totalDiscount: 0,
+      newClients: 0,
+      monthlyGoalProgress: 0
+    };
+    
+    if (!analyticsResult) return defaultMetrics;
     
     return {
       ...analyticsResult.metrics,
