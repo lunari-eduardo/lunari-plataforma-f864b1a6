@@ -356,9 +356,22 @@ export function usePricingSupabaseData() {
     }, 500);
   }, [setStatusSalvamento]);
 
-  // Cleanup: executar saves pendentes ao desmontar
+  // Cleanup: executar saves pendentes ao desmontar e ao sair da página
   useEffect(() => {
+    const handleBeforeUnload = () => {
+      // Executar save pendente ao fechar/navegar para fora da página
+      if (pendingSaveRef.current) {
+        console.log('🔄 Página fechando, executando save pendente...');
+        // Executar de forma síncrona (melhor esforço)
+        pendingSaveRef.current();
+      }
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
     return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      
       if (pendingSaveRef.current) {
         console.log('🔄 Componente desmontando, executando save pendente...');
         pendingSaveRef.current();

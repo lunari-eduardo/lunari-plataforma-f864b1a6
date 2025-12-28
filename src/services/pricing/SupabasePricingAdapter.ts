@@ -83,110 +83,112 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
   }
 
   private async syncGastosPessoais(userId: string, gastos: GastoItem[]): Promise<void> {
-    // Buscar IDs existentes
-    const { data: existentes } = await supabase
+    console.log('🔄 Sincronizando gastos pessoais:', gastos?.length || 0);
+    
+    // Estratégia: delete-all + insert-all (mais confiável que upsert)
+    const { error: deleteError } = await supabase
       .from('pricing_gastos_pessoais')
-      .select('id')
+      .delete()
       .eq('user_id', userId);
     
-    const idsExistentes = new Set((existentes || []).map(e => e.id));
-    const idsNovos = new Set(gastos.map(g => g.id));
-    
-    // Remover itens que não existem mais
-    const idsParaRemover = [...idsExistentes].filter(id => !idsNovos.has(id));
-    if (idsParaRemover.length > 0) {
-      await supabase
-        .from('pricing_gastos_pessoais')
-        .delete()
-        .in('id', idsParaRemover);
+    if (deleteError) {
+      console.error('❌ Erro ao deletar gastos pessoais:', deleteError);
+      throw deleteError;
     }
     
-    // Upsert todos os gastos
-    for (const gasto of gastos) {
-      await supabase
+    // Inserir todos novamente
+    if (gastos && gastos.length > 0) {
+      const gastosParaInserir = gastos.map(g => ({
+        id: g.id,
+        user_id: userId,
+        descricao: g.descricao,
+        valor: g.valor
+      }));
+      
+      const { error: insertError } = await supabase
         .from('pricing_gastos_pessoais')
-        .upsert({
-          id: gasto.id,
-          user_id: userId,
-          descricao: gasto.descricao,
-          valor: gasto.valor
-        }, { onConflict: 'id' });
+        .insert(gastosParaInserir);
+      
+      if (insertError) {
+        console.error('❌ Erro ao inserir gastos pessoais:', insertError);
+        throw insertError;
+      }
+      console.log('✅ Gastos pessoais salvos:', gastos.length);
     }
   }
 
   private async syncCustosEstudio(userId: string, custos: GastoItem[]): Promise<void> {
-    // Buscar IDs existentes
-    const { data: existentes } = await supabase
+    console.log('🔄 Sincronizando custos de estúdio:', custos?.length || 0);
+    
+    // Estratégia: delete-all + insert-all (mais confiável que upsert)
+    const { error: deleteError } = await supabase
       .from('pricing_custos_estudio')
-      .select('id')
+      .delete()
       .eq('user_id', userId);
     
-    const idsExistentes = new Set((existentes || []).map(e => e.id));
-    const idsNovos = new Set(custos.map(c => c.id));
-    
-    // Remover itens que não existem mais
-    const idsParaRemover = [...idsExistentes].filter(id => !idsNovos.has(id));
-    if (idsParaRemover.length > 0) {
-      await supabase
-        .from('pricing_custos_estudio')
-        .delete()
-        .in('id', idsParaRemover);
+    if (deleteError) {
+      console.error('❌ Erro ao deletar custos de estúdio:', deleteError);
+      throw deleteError;
     }
     
-    // Upsert todos os custos
-    for (const custo of custos) {
-      await supabase
+    // Inserir todos novamente
+    if (custos && custos.length > 0) {
+      const custosParaInserir = custos.map(c => ({
+        id: c.id,
+        user_id: userId,
+        descricao: c.descricao,
+        valor: c.valor,
+        origem: 'manual'
+      }));
+      
+      const { error: insertError } = await supabase
         .from('pricing_custos_estudio')
-        .upsert({
-          id: custo.id,
-          user_id: userId,
-          descricao: custo.descricao,
-          valor: custo.valor,
-          origem: 'manual'
-        }, { onConflict: 'id' });
+        .insert(custosParaInserir);
+      
+      if (insertError) {
+        console.error('❌ Erro ao inserir custos de estúdio:', insertError);
+        throw insertError;
+      }
+      console.log('✅ Custos de estúdio salvos:', custos.length);
     }
   }
 
   private async syncEquipamentos(userId: string, equipamentos: Equipamento[]): Promise<void> {
     console.log('🔄 Sincronizando equipamentos:', equipamentos?.length || 0);
     
-    // Buscar IDs existentes
-    const { data: existentes } = await supabase
+    // Estratégia: delete-all + insert-all (mais confiável que upsert com onConflict)
+    const { error: deleteError } = await supabase
       .from('pricing_equipamentos')
-      .select('id')
+      .delete()
       .eq('user_id', userId);
     
-    const idsExistentes = new Set((existentes || []).map(e => e.id));
-    const idsNovos = new Set(equipamentos.map(eq => eq.id));
-    
-    // Remover itens que não existem mais
-    const idsParaRemover = [...idsExistentes].filter(id => !idsNovos.has(id));
-    if (idsParaRemover.length > 0) {
-      console.log('🗑️ Removendo equipamentos:', idsParaRemover);
-      await supabase
-        .from('pricing_equipamentos')
-        .delete()
-        .in('id', idsParaRemover);
+    if (deleteError) {
+      console.error('❌ Erro ao deletar equipamentos:', deleteError);
+      throw deleteError;
     }
     
-    // Upsert todos os equipamentos
-    for (const eq of equipamentos) {
-      const { error } = await supabase
-        .from('pricing_equipamentos')
-        .upsert({
-          id: eq.id,
-          user_id: userId,
-          nome: eq.nome,
-          valor_pago: eq.valorPago,
-          data_compra: eq.dataCompra || new Date().toISOString().split('T')[0],
-          vida_util: eq.vidaUtil || 5
-        }, { onConflict: 'id' });
+    // Inserir todos novamente
+    if (equipamentos && equipamentos.length > 0) {
+      const equipamentosParaInserir = equipamentos.map(eq => ({
+        id: eq.id,
+        user_id: userId,
+        nome: eq.nome,
+        valor_pago: eq.valorPago,
+        data_compra: eq.dataCompra || new Date().toISOString().split('T')[0],
+        vida_util: eq.vidaUtil || 5
+      }));
       
-      if (error) {
-        console.error('❌ Erro ao salvar equipamento:', eq.nome, error);
-      } else {
-        console.log('✅ Equipamento salvo:', eq.nome);
+      console.log('📦 Inserindo equipamentos:', equipamentosParaInserir);
+      
+      const { error: insertError } = await supabase
+        .from('pricing_equipamentos')
+        .insert(equipamentosParaInserir);
+      
+      if (insertError) {
+        console.error('❌ Erro ao inserir equipamentos:', insertError);
+        throw insertError;
       }
+      console.log('✅ Equipamentos salvos:', equipamentos.length);
     }
   }
 
