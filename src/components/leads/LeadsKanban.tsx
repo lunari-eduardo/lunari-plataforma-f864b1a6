@@ -250,15 +250,15 @@ export default function LeadsKanban({
       });
     }
   };
-  const handleConvertToClient = (leadId: string) => {
-    const cliente = convertToClient(leadId);
+  const handleConvertToClient = async (leadId: string) => {
+    const cliente = await convertToClient(leadId);
     if (cliente) {
       updateLead(leadId, {
         status: "fechado",
       });
       toast({
         title: "Lead Convertido",
-        description: `${cliente.nome} foi convertido em cliente.`,
+        description: `${(cliente as { nome?: string }).nome || 'Cliente'} foi convertido em cliente.`,
       });
     }
   };
@@ -481,9 +481,9 @@ export default function LeadsKanban({
         open={createModalOpen}
         onOpenChange={setCreateModalOpen}
         mode="create"
-        onSubmit={(data) => {
+        onSubmit={async (data) => {
           try {
-            const newLead = addLead(data);
+            const newLead = await addLead(data);
 
             // Add creation interaction
             addInteraction(
