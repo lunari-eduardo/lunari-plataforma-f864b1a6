@@ -1,7 +1,7 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { Card, CardContent } from '@/components/ui/card';
+import { ChartContainer, ChartTooltip } from '@/components/ui/chart';
 import { LineChart, Line, XAxis, YAxis, Legend } from 'recharts';
-import { TrendingUp } from 'lucide-react';
+import { TrendingUp, BarChart3 } from 'lucide-react';
 import { MonthlyOriginData } from '@/services/RevenueAnalyticsService';
 import { ORIGENS_PADRAO } from '@/utils/defaultOrigens';
 
@@ -10,7 +10,7 @@ interface OriginTimelineChartProps {
 }
 
 export function OriginTimelineChart({ monthlyOriginData }: OriginTimelineChartProps) {
-  // Identificar origens ativas (que têm pelo menos uma sessão)
+  // Identify active origins
   const activeOrigins = new Set<string>();
   monthlyOriginData.forEach(monthData => {
     Object.keys(monthData).forEach(key => {
@@ -25,7 +25,6 @@ export function OriginTimelineChart({ monthlyOriginData }: OriginTimelineChartPr
 
   const originsList = Array.from(activeOrigins);
 
-  // Configurar paleta monocromática para as linhas
   const monochromaticColors = [
     'hsl(var(--chart-primary))',
     'hsl(var(--chart-secondary))',
@@ -51,19 +50,20 @@ export function OriginTimelineChart({ monthlyOriginData }: OriginTimelineChartPr
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-lunar-surface border border-lunar-border rounded-lg p-3 shadow-lg">
-          <p className="text-sm font-medium text-lunar-text mb-2">{label}</p>
+        <div className="bg-lunar-surface border border-lunar-border rounded-lg p-2 shadow-lg">
+          <p className="text-xs font-medium text-lunar-text mb-1">{label}</p>
           {payload
             .filter((entry: any) => entry.value > 0)
             .sort((a: any, b: any) => b.value - a.value)
+            .slice(0, 5)
             .map((entry: any, index: number) => (
-              <div key={index} className="flex items-center gap-2 text-xs">
+              <div key={index} className="flex items-center gap-1.5 text-2xs">
                 <div 
-                  className="w-2 h-2 rounded-full" 
+                  className="w-1.5 h-1.5 rounded-full" 
                   style={{ backgroundColor: entry.color }}
                 />
-                <span className="text-lunar-text">
-                  {entry.name}: {entry.value} sessões
+                <span className="text-lunar-textSecondary">
+                  {chartConfig[entry.dataKey]?.label || entry.name}: {entry.value}
                 </span>
               </div>
             ))}
@@ -75,16 +75,15 @@ export function OriginTimelineChart({ monthlyOriginData }: OriginTimelineChartPr
 
   if (originsList.length === 0) {
     return (
-      <Card className="rounded-lg ring-1 ring-lunar-border/60 shadow-brand bg-lunar-surface">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-lunar-text flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-lunar-warning" />
-            Timeline de Sessões por Origem
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <p className="text-xs text-lunar-textSecondary">Nenhum dado de origem disponível para exibir a timeline</p>
+      <Card className="border border-lunar-border/30 bg-lunar-surface/50 shadow-none">
+        <CardContent className="p-3">
+          <div className="flex items-center gap-2 mb-2">
+            <TrendingUp className="h-3.5 w-3.5 text-lunar-textSecondary" />
+            <h3 className="text-xs font-medium text-lunar-text">Timeline por Origem</h3>
+          </div>
+          <div className="flex flex-col items-center justify-center h-[200px]">
+            <BarChart3 className="h-6 w-6 text-lunar-textSecondary/40 mb-1" />
+            <p className="text-2xs text-lunar-textSecondary">Sem dados para timeline</p>
           </div>
         </CardContent>
       </Card>
@@ -92,32 +91,25 @@ export function OriginTimelineChart({ monthlyOriginData }: OriginTimelineChartPr
   }
 
   return (
-    <Card className="rounded-lg ring-1 ring-lunar-border/60 shadow-brand bg-lunar-surface">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium text-lunar-text flex items-center gap-2">
-          <TrendingUp className="h-4 w-4 text-lunar-warning" />
-          Timeline de Sessões por Origem
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <ChartContainer config={chartConfig} className="w-full h-[300px] sm:h-[340px] lg:h-[380px]">
-          <LineChart data={monthlyOriginData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+    <Card className="border border-lunar-border/30 bg-lunar-surface/50 shadow-none">
+      <CardContent className="p-3">
+        <div className="flex items-center gap-2 mb-2">
+          <TrendingUp className="h-3.5 w-3.5 text-lunar-textSecondary" />
+          <h3 className="text-xs font-medium text-lunar-text">Timeline por Origem</h3>
+        </div>
+        
+        <ChartContainer config={chartConfig} className="w-full h-[200px] lg:h-[240px]">
+          <LineChart data={monthlyOriginData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
             <XAxis 
               dataKey="month" 
-              tick={{ fontSize: 11, fill: 'hsl(var(--lunar-textSecondary))' }}
-              axisLine={{ stroke: 'hsl(var(--lunar-border))' }}
-              tickLine={{ stroke: 'hsl(var(--lunar-border))' }}
+              tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+              axisLine={false}
+              tickLine={false}
             />
             <YAxis 
-              tick={{ fontSize: 11, fill: 'hsl(var(--lunar-textSecondary))' }}
-              axisLine={{ stroke: 'hsl(var(--lunar-border))' }}
-              tickLine={{ stroke: 'hsl(var(--lunar-border))' }}
-              label={{ 
-                value: 'Sessões', 
-                angle: -90, 
-                position: 'insideLeft',
-                style: { textAnchor: 'middle', fontSize: '11px', fill: 'hsl(var(--lunar-textSecondary))' }
-              }}
+              tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+              axisLine={false}
+              tickLine={false}
             />
             
             {originsList.map((originId) => (
@@ -126,10 +118,10 @@ export function OriginTimelineChart({ monthlyOriginData }: OriginTimelineChartPr
                 type="monotone"
                 dataKey={originId}
                 stroke={chartConfig[originId]?.color || 'hsl(var(--muted-foreground))'}
-                strokeWidth={3}
-                dot={{ fill: chartConfig[originId]?.color || 'hsl(var(--muted-foreground))', strokeWidth: 0, r: 4 }}
+                strokeWidth={2}
+                dot={{ fill: chartConfig[originId]?.color || 'hsl(var(--muted-foreground))', strokeWidth: 0, r: 2 }}
                 activeDot={{ 
-                  r: 7, 
+                  r: 4, 
                   stroke: chartConfig[originId]?.color || 'hsl(var(--muted-foreground))', 
                   strokeWidth: 2,
                   fill: 'hsl(var(--lunar-surface))'
@@ -141,9 +133,9 @@ export function OriginTimelineChart({ monthlyOriginData }: OriginTimelineChartPr
             <ChartTooltip content={<CustomTooltip />} />
             
             <Legend 
-              wrapperStyle={{ fontSize: '11px', paddingTop: '20px' }}
+              wrapperStyle={{ fontSize: '10px', paddingTop: '8px' }}
               formatter={(value) => (
-                <span className="text-lunar-text">
+                <span className="text-lunar-textSecondary text-2xs">
                   {chartConfig[value]?.label || value}
                 </span>
               )}
