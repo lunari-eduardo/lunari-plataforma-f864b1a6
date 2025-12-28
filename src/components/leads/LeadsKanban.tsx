@@ -271,7 +271,7 @@ export default function LeadsKanban({
     // Set client for pre-selection in Agenda
     setSelectedClientForScheduling(lead.clienteId);
     // Navigate to Agenda page
-    navigate("/agenda");
+    navigate("/app/agenda");
   };
 
   const handleLossReasonConfirm = (leadId: string, reason: string) => {
@@ -325,7 +325,7 @@ export default function LeadsKanban({
   const handleViewAppointment = (lead: Lead) => {
     if (lead.scheduledAppointmentId) {
       // Future: Navigate to agenda with appointment highlighted
-      window.location.href = "/agenda";
+      window.location.href = "/app/agenda";
     }
   };
   const StatusColumn = ({ title, statusKey }: { title: string; statusKey: string }) => {

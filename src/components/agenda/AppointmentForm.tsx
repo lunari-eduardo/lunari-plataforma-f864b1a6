@@ -437,7 +437,7 @@ export default function AppointmentForm({
                   placeholder="Buscar cliente no CRM..." 
                 />
                 <p className="text-xs text-muted-foreground">
-                  💡 Clientes são gerenciados na página CRM. <a href="/clientes" className="text-primary hover:underline">Ver todos</a>
+                  💡 Clientes são gerenciados na página CRM. <a href="/app/clientes" className="text-primary hover:underline">Ver todos</a>
                 </p>
               </TabsContent>
               

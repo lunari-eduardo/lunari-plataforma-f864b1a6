@@ -109,12 +109,15 @@ function App() {
                     <Toaster />
                     <Sonner />
                   <Routes>
-                    {/* Public routes - no auth required */}
-                    <Route path="/landing" element={<LandingPage />} />
+                    {/* ============ PUBLIC ROUTES (SEO) ============ */}
+                    <Route path="/" element={<LandingPage />} />
                     <Route path="/auth" element={<Auth />} />
                     <Route path="/conteudos" element={<Conteudos />} />
                     <Route path="/conteudos/:slug" element={<ConteudoDetalhe />} />
                     <Route path="/sitemap.xml" element={<SitemapProxy />} />
+                    
+                    {/* Redirect antigo /landing para / */}
+                    <Route path="/landing" element={<Navigate to="/" replace />} />
                     
                     {/* Protected subscription routes (outside main layout) */}
                     <Route path="/escolher-plano" element={
@@ -135,73 +138,76 @@ function App() {
                       </ProtectedRoute>
                     } />
                     
-                    {/* Protected routes with layout */}
-                    <Route path="/" element={
+                    {/* ============ PROTECTED ROUTES (/app) ============ */}
+                    <Route path="/app" element={
                       <ProtectedRoute>
                         <Layout />
                       </ProtectedRoute>
                     }>
-                      <Route path="/" element={<Index />} />
-                      <Route path="/agenda" element={<Agenda />} />
-                      <Route path="/clientes" element={<Clientes />} />
-                      <Route path="/clientes/:id" element={<ClienteDetalhe />} />
-                      <Route path="/leads" element={
+                      <Route index element={<Index />} />
+                      <Route path="agenda" element={<Agenda />} />
+                      <Route path="clientes" element={<Clientes />} />
+                      <Route path="clientes/:id" element={<ClienteDetalhe />} />
+                      <Route path="leads" element={
                         <PlanRestrictionGuard requiredPlan="pro">
                           <Leads />
                         </PlanRestrictionGuard>
                       } />
-                      <Route path="/financas" element={
+                      <Route path="financas" element={
                         <PlanRestrictionGuard requiredPlan="pro">
                           <NovaFinancas />
                         </PlanRestrictionGuard>
                       } />
-                      <Route path="/precificacao" element={
+                      <Route path="precificacao" element={
                         <PlanRestrictionGuard requiredPlan="pro">
                           <Precificacao />
                         </PlanRestrictionGuard>
                       } />
-                      <Route path="/workflow" element={<Workflow />} />
-                      <Route path="/analise-vendas" element={
+                      <Route path="workflow" element={<Workflow />} />
+                      <Route path="analise-vendas" element={
                         <PlanRestrictionGuard requiredPlan="pro">
                           <AnaliseVendas />
                         </PlanRestrictionGuard>
                       } />
-                      <Route path="/configuracoes" element={<Configuracoes />} />
-                      <Route path="/minha-conta" element={<MinhaConta />} />
-                      <Route path="/preferencias" element={<Preferencias />} />
-                      <Route path="/tarefas" element={
+                      <Route path="configuracoes" element={<Configuracoes />} />
+                      <Route path="minha-conta" element={<MinhaConta />} />
+                      <Route path="preferencias" element={<Preferencias />} />
+                      <Route path="tarefas" element={
                         <PlanRestrictionGuard requiredPlan="pro">
                           <Tarefas />
                         </PlanRestrictionGuard>
                       } />
-                      <Route path="/feed-test" element={
+                      <Route path="feed-test" element={
                         <PlanRestrictionGuard requiredPlan="pro">
                           <FeedTest />
                         </PlanRestrictionGuard>
                       } />
-                      <Route path="/integracoes" element={<Navigate to="/preferencias?tab=integracoes" replace />} />
-                      <Route path="/admin/usuarios" element={
+                      <Route path="integracoes" element={<Navigate to="/app/preferencias?tab=integracoes" replace />} />
+                      <Route path="admin/usuarios" element={
                         <AdminRoute>
                           <AdminUsuarios />
                         </AdminRoute>
                       } />
-                      <Route path="/admin/conteudos" element={
+                      <Route path="admin/conteudos" element={
                         <AdminRoute>
                           <AdminConteudos />
                         </AdminRoute>
                       } />
-                      <Route path="/admin/conteudos/novo" element={
+                      <Route path="admin/conteudos/novo" element={
                         <AdminRoute>
                           <AdminConteudoNovo />
                         </AdminRoute>
                       } />
-                      <Route path="/admin/conteudos/editar/:id" element={
+                      <Route path="admin/conteudos/editar/:id" element={
                         <AdminRoute>
                           <AdminConteudoEditar />
                         </AdminRoute>
                       } />
                       <Route path="*" element={<NotFound />} />
                     </Route>
+                    
+                    {/* Catch-all para rotas não encontradas */}
+                    <Route path="*" element={<NotFound />} />
                   </Routes>
                   </TooltipProvider>
                   </AgendaProvider>

@@ -111,7 +111,7 @@ export function SalesGoalsCard() {
           variant="ghost" 
           size="sm" 
           className="h-6 text-2xs px-2"
-          onClick={() => navigate('/precificacao')}
+          onClick={() => navigate('/app/precificacao')}
         >
           <Settings className="h-3 w-3 mr-1" />
           Configurar

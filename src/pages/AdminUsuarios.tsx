@@ -91,7 +91,7 @@ export default function AdminUsuarios() {
 
   useEffect(() => {
     if (!accessLoading && !accessState.isAdmin) {
-      navigate('/');
+      navigate('/app');
       toast.error('Acesso negado. Apenas administradores podem acessar esta página.');
     }
   }, [accessState, accessLoading, navigate]);

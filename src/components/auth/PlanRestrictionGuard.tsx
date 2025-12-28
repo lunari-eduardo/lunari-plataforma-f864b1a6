@@ -10,18 +10,18 @@ interface PlanRestrictionGuardProps {
   requiredPlan?: "pro" | "starter";
 }
 
-// Rotas permitidas para plano Starter
+// Rotas permitidas para plano Starter (agora com prefixo /app)
 const STARTER_ALLOWED_ROUTES = [
-  "/",
-  "/agenda",
-  "/clientes",
-  "/workflow",
-  "/configuracoes",
-  "/minha-conta",
+  "/app",
+  "/app/agenda",
+  "/app/clientes",
+  "/app/workflow",
+  "/app/configuracoes",
+  "/app/minha-conta",
+  "/app/preferencias",
   "/minha-assinatura",
   "/escolher-plano",
   "/onboarding",
-  "/preferencias",
 ];
 
 export function PlanRestrictionGuard({ 

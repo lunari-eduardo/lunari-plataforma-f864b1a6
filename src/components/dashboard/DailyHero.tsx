@@ -80,8 +80,8 @@ export default function DailyHero() {
                 </div>
                 
                 <div className="flex gap-2">
-                  <Link to="/agenda"><Button size="sm" variant="secondary" className="text-2xs px-3">Agenda</Button></Link>
-                  <Link to="/tarefas"><Button size="sm" variant="ghost" className="text-2xs px-3">Tarefas</Button></Link>
+                  <Link to="/app/agenda"><Button size="sm" variant="secondary" className="text-2xs px-3">Agenda</Button></Link>
+                  <Link to="/app/tarefas"><Button size="sm" variant="ghost" className="text-2xs px-3">Tarefas</Button></Link>
                 </div>
                 
                 <div className="text-right">
@@ -131,8 +131,8 @@ export default function DailyHero() {
                 </div>
 
                 <div className="mt-3 flex gap-2">
-                  <Link to="/agenda"><Button size="sm" variant="secondary">Abrir Agenda</Button></Link>
-                  <Link to="/tarefas"><Button size="sm" variant="ghost">Ver Tarefas</Button></Link>
+                  <Link to="/app/agenda"><Button size="sm" variant="secondary">Abrir Agenda</Button></Link>
+                  <Link to="/app/tarefas"><Button size="sm" variant="ghost">Ver Tarefas</Button></Link>
                 </div>
               </div>
 

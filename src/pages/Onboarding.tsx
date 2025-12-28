@@ -103,7 +103,7 @@ export default function Onboarding() {
       await queryClient.refetchQueries({ queryKey: ['profile', user.id] });
 
       toast.success('Bem-vindo(a)! 🎉');
-      navigate('/');
+      navigate('/app');
     } catch (error) {
       console.error('Erro ao completar onboarding:', error);
       toast.error('Erro ao salvar informações');

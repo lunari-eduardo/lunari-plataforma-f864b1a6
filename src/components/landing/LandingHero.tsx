@@ -1,6 +1,9 @@
 import { HeroSection } from "./HeroSection";
+import { useNavigate } from "react-router-dom";
 
 export default function LandingHero() {
+  const navigate = useNavigate();
+  
   return (
     <HeroSection
       title="CHEGA DE PLANILHAS!"
@@ -11,8 +14,7 @@ export default function LandingHero() {
           text: "TESTE GRÁTIS POR 30 DIAS",
           variant: "default",
           onClick: () => {
-            // Lógica para teste grátis
-            console.log("Iniciar teste grátis");
+            navigate('/auth');
           },
         },
       ]}

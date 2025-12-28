@@ -55,7 +55,7 @@ export function HighPriorityDueSoonCard() {
           <CardTitle className="font-semibold text-base">Próximas Tarefas</CardTitle>
           <Badge variant="secondary" className="dashboard-badge bg-card-gradient border-0 shadow-theme-subtle hover:shadow-theme text-sm font-semibold transition-shadow duration-300" aria-label={`Quantidade de tarefas: ${count}`}>{count}</Badge>
         </div>
-        <Link to="/tarefas">
+        <Link to="/app/tarefas">
           <Button variant="ghost" size="sm">Ver todas</Button>
         </Link>
       </CardHeader>

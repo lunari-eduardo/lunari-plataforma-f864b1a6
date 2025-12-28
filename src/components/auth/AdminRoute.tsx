@@ -19,7 +19,7 @@ export const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
 
   // Apenas usuários com isAdmin podem acessar
   if (!accessState.isAdmin) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/app" replace />;
   }
 
   return <>{children}</>;
