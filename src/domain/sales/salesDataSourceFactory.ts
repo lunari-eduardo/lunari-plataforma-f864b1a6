@@ -41,27 +41,10 @@ export class SalesDataSourceFactory {
   }
 
   private static getDefaultDataSourceType(): SalesDataSourceType {
-    // Check environment variable for data source preference
-    const envDataSource = import.meta.env.VITE_SALES_DATA_SOURCE as SalesDataSourceType;
-    
-    if (envDataSource && ['localStorage', 'supabase'].includes(envDataSource)) {
-      return envDataSource;
-    }
-
-    // Check if Supabase is configured
-    const hasSupabaseConfig = !!(
-      import.meta.env.VITE_SUPABASE_URL && 
-      import.meta.env.VITE_SUPABASE_ANON_KEY
-    );
-
-    if (hasSupabaseConfig) {
-      console.log('🔌 [SalesDataSourceFactory] Supabase configuration detected, using Supabase data source');
-      return 'supabase';
-    }
-
-    // Default to localStorage
-    console.log('🏪 [SalesDataSourceFactory] No Supabase configuration, using LocalStorage data source');
-    return 'localStorage';
+    // ALWAYS use Supabase - this is the primary data source
+    // The project is connected to Supabase, so always use it
+    console.log('🔌 [SalesDataSourceFactory] Usando Supabase como fonte de dados');
+    return 'supabase';
   }
 
   static getSupportedDataSources(): SalesDataSourceType[] {
