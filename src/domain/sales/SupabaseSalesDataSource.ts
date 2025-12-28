@@ -1,128 +1,177 @@
 /**
- * Supabase Sales Data Source (Stub)
- * Future implementation for Supabase integration
+ * Supabase Sales Data Source
+ * Fetches sales data from clientes_sessoes table
  */
 
 import { SalesDataSource, SalesDataSourceConfig } from './SalesDataSource';
 import { SalesSession, SalesFilters } from './sales-domain';
+import { supabase } from '@/integrations/supabase/client';
 
 export class SupabaseSalesDataSource implements SalesDataSource {
   private config: SalesDataSourceConfig;
 
   constructor(config: SalesDataSourceConfig = {}) {
     this.config = {
-      enableCache: false, // Supabase handles caching
+      enableCache: false,
       enableDebugLogs: false,
       ...config
     };
   }
 
   async getSessions(filters?: Partial<SalesFilters>): Promise<SalesSession[]> {
-    // TODO: Implement Supabase queries
-    console.warn('🚧 [SupabaseDataSource] Supabase integration not yet implemented - falling back to empty array');
-    return [];
+    try {
+      let query = supabase
+        .from('clientes_sessoes')
+        .select(`
+          *,
+          clientes (
+            id,
+            nome,
+            email,
+            telefone,
+            whatsapp,
+            origem
+          )
+        `)
+        .neq('status', 'cancelado');
+
+      // Apply year filter
+      if (filters?.year) {
+        const startDate = `${filters.year}-01-01`;
+        const endDate = `${filters.year + 1}-01-01`;
+        query = query.gte('data_sessao', startDate).lt('data_sessao', endDate);
+      }
+
+      // Apply month filter
+      if (filters?.month !== undefined && filters?.month !== null) {
+        const year = filters.year || new Date().getFullYear();
+        const month = filters.month + 1; // Convert 0-indexed to 1-indexed
+        const startDate = `${year}-${month.toString().padStart(2, '0')}-01`;
+        
+        // Calculate end date (first day of next month)
+        const endMonth = month === 12 ? 1 : month + 1;
+        const endYear = month === 12 ? year + 1 : year;
+        const endDate = `${endYear}-${endMonth.toString().padStart(2, '0')}-01`;
+        
+        query = query.gte('data_sessao', startDate).lt('data_sessao', endDate);
+      }
+
+      // Apply category filter
+      if (filters?.category && filters.category !== 'all') {
+        query = query.eq('categoria', filters.category);
+      }
+
+      const { data, error } = await query.order('data_sessao', { ascending: false });
+      
+      if (error) {
+        console.error('[SupabaseDataSource] Error fetching sessions:', error);
+        return [];
+      }
+
+      if (this.config.enableDebugLogs) {
+        console.log(`[SupabaseDataSource] Fetched ${data?.length || 0} sessions`);
+      }
+
+      return this.mapSupabaseToSessions(data || []);
+    } catch (error) {
+      console.error('[SupabaseDataSource] Unexpected error:', error);
+      return [];
+    }
   }
 
   async getAvailableYears(): Promise<number[]> {
-    // TODO: Implement Supabase queries
-    console.warn('🚧 [SupabaseDataSource] Supabase integration not yet implemented');
-    return [new Date().getFullYear()];
+    try {
+      const { data, error } = await supabase
+        .from('clientes_sessoes')
+        .select('data_sessao')
+        .neq('status', 'cancelado');
+      
+      if (error) {
+        console.error('[SupabaseDataSource] Error fetching years:', error);
+        return [new Date().getFullYear()];
+      }
+
+      const years = new Set<number>();
+      data?.forEach(row => {
+        if (row.data_sessao) {
+          const year = new Date(row.data_sessao).getFullYear();
+          if (!isNaN(year)) years.add(year);
+        }
+      });
+
+      // Add current year if no data
+      if (years.size === 0) {
+        years.add(new Date().getFullYear());
+      }
+
+      return Array.from(years).sort((a, b) => b - a);
+    } catch (error) {
+      console.error('[SupabaseDataSource] Unexpected error:', error);
+      return [new Date().getFullYear()];
+    }
   }
 
   async getAvailableCategories(): Promise<string[]> {
-    // TODO: Implement Supabase queries
-    console.warn('🚧 [SupabaseDataSource] Supabase integration not yet implemented');
-    return [];
-  }
-}
+    try {
+      const { data, error } = await supabase
+        .from('clientes_sessoes')
+        .select('categoria')
+        .neq('status', 'cancelado');
+      
+      if (error) {
+        console.error('[SupabaseDataSource] Error fetching categories:', error);
+        return [];
+      }
 
-/* 
-Future Supabase Implementation:
+      const categories = new Set<string>();
+      data?.forEach(row => {
+        if (row.categoria && row.categoria.trim()) {
+          categories.add(row.categoria);
+        }
+      });
 
-import { createClient } from '@supabase/supabase-js';
-
-export class SupabaseSalesDataSource implements SalesDataSource {
-  private supabase;
-
-  constructor(config: SalesDataSourceConfig = {}) {
-    this.supabase = createClient(
-      import.meta.env.VITE_SUPABASE_URL!,
-      import.meta.env.VITE_SUPABASE_ANON_KEY!
-    );
-  }
-
-  async getSessions(filters?: Partial<SalesFilters>): Promise<SalesSession[]> {
-    let query = this.supabase
-      .from('workflow_sessions')
-      .select(`
-        *,
-        clients (
-          id,
-          nome,
-          email,
-          telefone,
-          origem
-        )
-      `)
-      .neq('status', 'Cancelado');
-
-    if (filters?.year) {
-      query = query.gte('data', `${filters.year}-01-01`)
-                   .lt('data', `${filters.year + 1}-01-01`);
-    }
-
-    if (filters?.month !== undefined && filters?.month !== null) {
-      const year = filters.year || new Date().getFullYear();
-      const startDate = new Date(year, filters.month, 1);
-      const endDate = new Date(year, filters.month + 1, 1);
-      query = query.gte('data', startDate.toISOString().split('T')[0])
-                   .lt('data', endDate.toISOString().split('T')[0]);
-    }
-
-    if (filters?.category && filters.category !== 'all') {
-      query = query.eq('categoria', filters.category);
-    }
-
-    const { data, error } = await query;
-    
-    if (error) {
-      console.error('Error fetching sessions:', error);
+      return Array.from(categories).sort();
+    } catch (error) {
+      console.error('[SupabaseDataSource] Unexpected error:', error);
       return [];
     }
-
-    return this.mapSupabaseToSessions(data || []);
   }
 
   private mapSupabaseToSessions(data: any[]): SalesSession[] {
-    return data.map(item => ({
-      id: item.id,
-      sessionId: item.session_id,
-      date: item.data,
-      time: item.hora || '',
-      clientName: item.clients?.nome || '',
-      clientPhone: item.clients?.telefone || '',
-      clientEmail: item.clients?.email || '',
-      description: item.descricao || '',
-      status: item.status || '',
-      category: item.categoria || '',
-      package: item.pacote || '',
-      packageValue: item.valor_pacote || 0,
-      discount: item.desconto || 0,
-      extraPhotoValue: item.valor_foto_extra || 0,
-      extraPhotoCount: item.qtd_fotos_extra || 0,
-      totalExtraPhotoValue: item.valor_total_foto_extra || 0,
-      additionalValue: item.valor_adicional || 0,
-      details: item.detalhes || '',
-      total: item.total || 0,
-      amountPaid: item.valor_pago || 0,
-      remaining: (item.total || 0) - (item.valor_pago || 0),
-      source: item.fonte || 'agenda',
-      clientId: item.client_id,
-      origin: item.origem || item.clients?.origem || 'nao-especificado',
-      month: new Date(item.data).getMonth(),
-      year: new Date(item.data).getFullYear(),
-      parsedDate: new Date(item.data)
-    }));
+    return data.map(item => {
+      const parsedDate = new Date(item.data_sessao);
+      const valorPago = Number(item.valor_pago) || 0;
+      const valorTotal = Number(item.valor_total) || 0;
+      
+      return {
+        id: item.id,
+        sessionId: item.session_id,
+        date: item.data_sessao,
+        time: item.hora_sessao || '',
+        clientName: item.clientes?.nome || '',
+        clientPhone: item.clientes?.telefone || item.clientes?.whatsapp || '',
+        clientEmail: item.clientes?.email || '',
+        description: item.descricao || '',
+        status: item.status || '',
+        category: item.categoria || '',
+        package: item.pacote || '',
+        packageValue: Number(item.valor_base_pacote) || 0,
+        discount: Number(item.desconto) || 0,
+        extraPhotoValue: Number(item.valor_foto_extra) || 0,
+        extraPhotoCount: Number(item.qtd_fotos_extra) || 0,
+        totalExtraPhotoValue: Number(item.valor_total_foto_extra) || 0,
+        additionalValue: Number(item.valor_adicional) || 0,
+        details: item.detalhes || '',
+        total: valorTotal,
+        amountPaid: valorPago,
+        remaining: valorTotal - valorPago,
+        source: 'agenda' as const,
+        clientId: item.cliente_id,
+        origin: item.clientes?.origem || 'nao-especificado',
+        month: parsedDate.getMonth(),
+        year: parsedDate.getFullYear(),
+        parsedDate
+      };
+    });
   }
 }
-*/

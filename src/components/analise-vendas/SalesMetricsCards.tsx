@@ -1,4 +1,4 @@
-import { DollarSign, Camera, TrendingUp, Target } from 'lucide-react';
+import { DollarSign, Camera, TrendingUp } from 'lucide-react';
 import { SalesMetrics } from '@/hooks/useSalesAnalytics';
 import { cn } from '@/lib/utils';
 
@@ -31,16 +31,11 @@ export function SalesMetricsCards({ metrics }: SalesMetricsCardsProps) {
       title: 'Ticket Médio',
       value: formatCurrency(metrics.averageTicket),
       icon: TrendingUp
-    },
-    {
-      title: 'Conversão',
-      value: `${metrics.conversionRate.toFixed(1)}%`,
-      icon: Target
     }
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <div className="grid grid-cols-3 gap-3">
       {metricsCards.map((metric, index) => {
         const Icon = metric.icon;
         return (
