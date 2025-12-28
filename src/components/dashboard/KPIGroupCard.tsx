@@ -36,7 +36,7 @@ export function KPIGroupCard({
   // Verificar se há metas configuradas
   const hasConfiguredGoals = GoalsIntegrationService.hasConfiguredGoals();
   const handleConfigureGoals = () => {
-    navigate('/precificacao');
+    navigate('/app/precificacao');
   };
 
   // Definir os cards como componentes reutilizáveis
@@ -101,7 +101,7 @@ export function KPIGroupCard({
             hour: "2-digit",
             minute: "2-digit"
           })}</> : <>
-              Sem horários livres. <Link to="/agenda" className="underline">Configurar disponibilidade</Link>
+              Sem horários livres. <Link to="/app/agenda" className="underline">Configurar disponibilidade</Link>
             </>}
         </p>
       </div>

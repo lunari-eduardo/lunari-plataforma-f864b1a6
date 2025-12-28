@@ -15,7 +15,7 @@ export default function LandingPage() {
       <SEOHead
         title="Lunari | Plataforma de Gestão para Fotógrafos"
         description="Simplifique sua vida como fotógrafo: gerencie clientes, agenda, financeiro e precificação em um só lugar. Experimente grátis por 7 dias."
-        canonical="https://www.lunariplataforma.com.br/landing"
+        canonical="https://www.lunariplataforma.com.br/"
         ogType="website"
       />
       <LandingHero />

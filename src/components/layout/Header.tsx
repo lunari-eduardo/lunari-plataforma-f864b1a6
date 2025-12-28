@@ -6,21 +6,21 @@ import { Button } from '@/components/ui/button';
 import { useTheme } from '@/hooks/useTheme';
 
 const pageTitles: Record<string, string> = {
-  "/": "Dashboard",
-  "/workflow": "Workflow",
-  "/agenda": "Agenda",
-  "/leads": "Leads",
-  "/orcamentos": "Orçamentos",
-  "/clientes": "Clientes",
-  "/financas": "Finanças",
-  "/nova-financas": "Nova Finanças",
-  "/precificacao": "Precificação",
-  "/configuracoes": "Configurações",
-  "/tarefas": "Tarefas",
-  "/analise-vendas": "Análise de Vendas",
-  "/minha-conta": "Minha Conta",
-  "/preferencias": "Preferências",
-  "/integracoes": "Integrações e Conexões"
+  "/app": "Dashboard",
+  "/app/workflow": "Workflow",
+  "/app/agenda": "Agenda",
+  "/app/leads": "Leads",
+  "/app/orcamentos": "Orçamentos",
+  "/app/clientes": "Clientes",
+  "/app/financas": "Finanças",
+  "/app/nova-financas": "Nova Finanças",
+  "/app/precificacao": "Precificação",
+  "/app/configuracoes": "Configurações",
+  "/app/tarefas": "Tarefas",
+  "/app/analise-vendas": "Análise de Vendas",
+  "/app/minha-conta": "Minha Conta",
+  "/app/preferencias": "Preferências",
+  "/app/integracoes": "Integrações e Conexões"
 };
 
 const getPageTitleFromPath = (pathname: string): string => {

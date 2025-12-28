@@ -229,6 +229,6 @@ export class GoalsIntegrationService {
    * URL para configuração de metas
    */
   static getConfigurationUrl(): string {
-    return '/precificacao';
+    return '/app/precificacao';
   }
 }

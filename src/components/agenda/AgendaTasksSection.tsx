@@ -67,11 +67,11 @@ export default function AgendaTasksSection({
   const hasMoreTasks = dayTasks.length > 5;
   
   const handleTaskClick = (taskId: string) => {
-    navigate(`/tarefas?taskId=${taskId}`);
+    navigate(`/app/tarefas?taskId=${taskId}`);
   };
   
   const handleViewAllTasks = () => {
-    navigate('/tarefas');
+    navigate('/app/tarefas');
   };
   
   const handleDayItemClick = (day: number) => {

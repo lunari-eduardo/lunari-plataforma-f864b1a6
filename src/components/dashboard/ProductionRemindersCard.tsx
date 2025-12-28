@@ -41,7 +41,7 @@ export function ProductionRemindersCard({
             )}
           </CardTitle>
         </div>
-        <Link to="/workflow" className="text-2xs text-lunar-textSecondary underline">
+        <Link to="/app/workflow" className="text-2xs text-lunar-textSecondary underline">
           Ir para Workflow
         </Link>
       </CardHeader>

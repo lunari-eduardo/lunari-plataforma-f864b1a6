@@ -24,7 +24,7 @@ export function BirthdayAlertCard() {
               {totalAniversariantes} aniversariante{totalAniversariantes !== 1 ? 's' : ''}
             </span>
           </div>
-          <Link to="/clientes?openBirthdays=true">
+          <Link to="/app/clientes?openBirthdays=true">
             <Button variant="outline" size="sm" className="text-xs">
               Ver Aniversariantes
             </Button>

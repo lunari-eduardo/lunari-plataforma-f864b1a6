@@ -22,7 +22,7 @@ const NotFound = () => {
         <p className="text-muted-foreground mb-8">
           Parece que você está tentando acessar uma página que não existe ou foi movida.
         </p>
-        <Link to="/">
+        <Link to="/app">
           <Button className="bg-violet-600 hover:bg-violet-700">
             Voltar ao início
           </Button>

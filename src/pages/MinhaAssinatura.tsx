@@ -210,7 +210,7 @@ export default function MinhaAssinatura() {
         </CardContent>
       </Card>
 
-      <Button variant="ghost" onClick={() => navigate("/minha-conta")}>
+      <Button variant="ghost" onClick={() => navigate("/app/minha-conta")}>
         ← Voltar para Minha Conta
       </Button>
     </div>

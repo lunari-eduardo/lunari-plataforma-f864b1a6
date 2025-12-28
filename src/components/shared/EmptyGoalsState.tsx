@@ -17,7 +17,7 @@ export function EmptyGoalsState({
   const navigate = useNavigate();
 
   const handleConfigure = () => {
-    navigate('/precificacao');
+    navigate('/app/precificacao');
   };
 
   return (

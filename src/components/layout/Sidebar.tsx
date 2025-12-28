@@ -99,14 +99,14 @@ export default function Sidebar() {
         <DropdownMenuSeparator className="bg-lunar-border/30" />
         <DropdownMenuItem 
           className="text-xs text-lunar-text hover:bg-lunar-surface/50 rounded cursor-pointer"
-          onClick={() => navigate('/minha-conta')}
+          onClick={() => navigate('/app/minha-conta')}
         >
           <User className="mr-2 h-3 w-3" />
           <span>Minha Conta</span>
         </DropdownMenuItem>
         <DropdownMenuItem 
           className="text-xs text-lunar-text hover:bg-lunar-surface/50 rounded cursor-pointer"
-          onClick={() => navigate('/preferencias')}
+          onClick={() => navigate('/app/preferencias')}
         >
           Preferências
         </DropdownMenuItem>
@@ -121,14 +121,14 @@ export default function Sidebar() {
           <>
             <DropdownMenuItem 
               className="text-xs text-lunar-text hover:bg-lunar-surface/50 rounded cursor-pointer"
-              onClick={() => navigate('/admin/usuarios')}
+              onClick={() => navigate('/app/admin/usuarios')}
             >
               <Shield className="mr-2 h-3 w-3" />
               <span>Painel Admin</span>
             </DropdownMenuItem>
             <DropdownMenuItem 
               className="text-xs text-lunar-text hover:bg-lunar-surface/50 rounded cursor-pointer"
-              onClick={() => navigate('/admin/conteudos')}
+              onClick={() => navigate('/app/admin/conteudos')}
             >
               <FileText className="mr-2 h-3 w-3" />
               <span>Conteúdos</span>
@@ -145,54 +145,56 @@ export default function Sidebar() {
       </DropdownMenuContent>
     </DropdownMenu>
   );
+
+  // Rotas agora são relativas ao /app (sem barra inicial = relativo)
   const navItems = [{
-    to: "/",
+    to: "/app",
     icon: <LayoutGrid size={14} />,
     label: "Início"
   }, {
-    to: "/agenda",
+    to: "/app/agenda",
     icon: <CalendarClock size={14} />,
     label: "Agenda"
   }, {
-    to: "/leads",
+    to: "/app/leads",
     icon: <UserPlus size={14} />,
     label: "Leads",
     isPro: true
   }, {
-    to: "/workflow",
+    to: "/app/workflow",
     icon: <GitBranch size={14} />,
     label: "Workflow"
   }, {
-    to: "/tarefas",
+    to: "/app/tarefas",
     icon: <CheckSquare size={14} />,
     label: "Tarefas",
     isPro: true
   }, {
-    to: "/financas",
+    to: "/app/financas",
     icon: <Wallet size={14} />,
     label: "Finanças",
     isPro: true
   }, {
-    to: "/clientes",
+    to: "/app/clientes",
     icon: <UserCheck size={14} />,
     label: "Clientes"
   }, {
-    to: "/precificacao",
+    to: "/app/precificacao",
     icon: <Tag size={14} />,
     label: "Precificação",
     isPro: true
   }, {
-    to: "/analise-vendas",
+    to: "/app/analise-vendas",
     icon: <PieChart size={14} />,
     label: "Análise de Vendas",
     isPro: true
   }, {
-    to: "/feed-test",
+    to: "/app/feed-test",
     icon: <FlaskConical size={14} />,
     label: "Feed Test",
     isPro: true
   }, {
-    to: "/configuracoes",
+    to: "/app/configuracoes",
     icon: <Settings size={14} />,
     label: "Configurações"
   }];

@@ -230,7 +230,7 @@ export default function Index() {
               </div>
               <CardTitle className="font-semibold text-base">Próximos Agendamentos</CardTitle>
             </div>
-            <Link to="/agenda">
+            <Link to="/app/agenda">
               <Button variant="ghost" size="sm">Ver todos</Button>
             </Link>
           </CardHeader>

@@ -846,7 +846,7 @@ export function WorkflowTable({
                 {renderCell('date', <div className="font-medium">{formatToDayMonth(session.data)}</div>, true)}
                 
                 {renderCell('client', <div className="flex items-center gap-2">
-                    {session.clienteId ? <Link to={`/clientes/${session.clienteId}`} className="font-medium text-blue-600 hover:text-orange-800 cursor-pointer">
+                    {session.clienteId ? <Link to={`/app/clientes/${session.clienteId}`} className="font-medium text-blue-600 hover:text-orange-800 cursor-pointer">
                         {session.nome}
                       </Link> : <span className="font-medium text-gray-600">{session.nome}</span>}
                     {session.produtosList && session.produtosList.length > 0 && <Badge variant="secondary" className="h-5 text-[10px] px-1.5">Prod.</Badge>}
