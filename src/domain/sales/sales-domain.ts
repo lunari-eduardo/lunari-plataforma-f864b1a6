@@ -10,6 +10,10 @@ export interface SalesDomainMetrics {
   newClients: number;
   monthlyGoalProgress: number;
   conversionRate: number;
+  // Extended metrics
+  extraPhotosRevenue?: number;
+  additionalRevenue?: number;
+  totalDiscount?: number;
 }
 
 export interface SalesMonthlyData {

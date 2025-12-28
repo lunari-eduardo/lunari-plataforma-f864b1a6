@@ -13,8 +13,36 @@ export class SupabaseSalesDataSource implements SalesDataSource {
   constructor(config: SalesDataSourceConfig = {}) {
     this.config = {
       enableCache: false,
-      enableDebugLogs: false,
+      enableDebugLogs: true, // Always enable for debugging
       ...config
+    };
+  }
+
+  private log(message: string, ...args: any[]) {
+    console.log(`📊 [SupabaseDataSource] ${message}`, ...args);
+  }
+
+  private parseNumericValue(value: any): number {
+    if (value === null || value === undefined) return 0;
+    if (typeof value === 'number') return isNaN(value) ? 0 : value;
+    if (typeof value === 'string') {
+      const parsed = parseFloat(value);
+      return isNaN(parsed) ? 0 : parsed;
+    }
+    return 0;
+  }
+
+  private parseDateSafe(dateStr: string): { date: Date; month: number; year: number } {
+    // Parse YYYY-MM-DD format without timezone issues
+    const parts = dateStr.split('-');
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1; // 0-indexed for JS
+    const day = parseInt(parts[2], 10);
+    
+    return {
+      date: new Date(year, month, day),
+      month,
+      year
     };
   }
 
@@ -64,17 +92,39 @@ export class SupabaseSalesDataSource implements SalesDataSource {
       const { data, error } = await query.order('data_sessao', { ascending: false });
       
       if (error) {
-        console.error('[SupabaseDataSource] Error fetching sessions:', error);
+        this.log('❌ Error fetching sessions:', error);
         return [];
       }
 
-      if (this.config.enableDebugLogs) {
-        console.log(`[SupabaseDataSource] Fetched ${data?.length || 0} sessions`);
+      const sessions = this.mapSupabaseToSessions(data || []);
+      
+      // Debug logging
+      this.log(`✅ ${sessions.length} sessões carregadas`);
+      
+      if (sessions.length > 0) {
+        const sample = sessions[0];
+        this.log('📋 Amostra de sessão:', {
+          sessionId: sample.sessionId,
+          date: sample.date,
+          month: sample.month,
+          year: sample.year,
+          amountPaid: sample.amountPaid,
+          total: sample.total,
+          category: sample.category
+        });
+        
+        const totalRevenue = sessions.reduce((sum, s) => sum + s.amountPaid, 0);
+        const totalValue = sessions.reduce((sum, s) => sum + s.total, 0);
+        this.log('💰 Totais calculados:', { 
+          totalRevenue, 
+          totalValue,
+          sessionsCount: sessions.length 
+        });
       }
 
-      return this.mapSupabaseToSessions(data || []);
+      return sessions;
     } catch (error) {
-      console.error('[SupabaseDataSource] Unexpected error:', error);
+      this.log('❌ Unexpected error:', error);
       return [];
     }
   }
@@ -139,9 +189,12 @@ export class SupabaseSalesDataSource implements SalesDataSource {
 
   private mapSupabaseToSessions(data: any[]): SalesSession[] {
     return data.map(item => {
-      const parsedDate = new Date(item.data_sessao);
-      const valorPago = Number(item.valor_pago) || 0;
-      const valorTotal = Number(item.valor_total) || 0;
+      // Parse date safely without timezone issues
+      const { date: parsedDate, month, year } = this.parseDateSafe(item.data_sessao);
+      
+      // Parse numeric values safely
+      const valorPago = this.parseNumericValue(item.valor_pago);
+      const valorTotal = this.parseNumericValue(item.valor_total);
       
       return {
         id: item.id,
@@ -155,12 +208,12 @@ export class SupabaseSalesDataSource implements SalesDataSource {
         status: item.status || '',
         category: item.categoria || '',
         package: item.pacote || '',
-        packageValue: Number(item.valor_base_pacote) || 0,
-        discount: Number(item.desconto) || 0,
-        extraPhotoValue: Number(item.valor_foto_extra) || 0,
-        extraPhotoCount: Number(item.qtd_fotos_extra) || 0,
-        totalExtraPhotoValue: Number(item.valor_total_foto_extra) || 0,
-        additionalValue: Number(item.valor_adicional) || 0,
+        packageValue: this.parseNumericValue(item.valor_base_pacote),
+        discount: this.parseNumericValue(item.desconto),
+        extraPhotoValue: this.parseNumericValue(item.valor_foto_extra),
+        extraPhotoCount: this.parseNumericValue(item.qtd_fotos_extra),
+        totalExtraPhotoValue: this.parseNumericValue(item.valor_total_foto_extra),
+        additionalValue: this.parseNumericValue(item.valor_adicional),
         details: item.detalhes || '',
         total: valorTotal,
         amountPaid: valorPago,
@@ -168,8 +221,8 @@ export class SupabaseSalesDataSource implements SalesDataSource {
         source: 'agenda' as const,
         clientId: item.cliente_id,
         origin: item.clientes?.origem || 'nao-especificado',
-        month: parsedDate.getMonth(),
-        year: parsedDate.getFullYear(),
+        month,
+        year,
         parsedDate
       };
     });

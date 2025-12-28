@@ -61,6 +61,11 @@ export class SalesRepositoryImpl implements SalesRepository {
     const totalSessions = sessions.length;
     const averageTicket = totalSessions > 0 ? totalRevenue / totalSessions : 0;
     
+    // Calculate extended metrics
+    const extraPhotosRevenue = sessions.reduce((sum, session) => sum + session.totalExtraPhotoValue, 0);
+    const additionalRevenue = sessions.reduce((sum, session) => sum + session.additionalValue, 0);
+    const totalDiscount = sessions.reduce((sum, session) => sum + session.discount, 0);
+    
     // Count unique clients
     const uniqueClients = new Set(
       sessions.map(session => session.clientEmail || session.clientPhone).filter(Boolean)
@@ -93,13 +98,25 @@ export class SalesRepositoryImpl implements SalesRepository {
     // For now, we'll use a default value and let the hook override it
     const conversionRate = 0; // Will be overridden by the hook
 
+    this.log('📈 Métricas calculadas:', { 
+      totalRevenue, 
+      totalSessions, 
+      averageTicket, 
+      extraPhotosRevenue,
+      additionalRevenue,
+      totalDiscount
+    });
+
     return {
       totalRevenue,
       totalSessions,
       averageTicket,
       newClients: uniqueClients,
       monthlyGoalProgress,
-      conversionRate
+      conversionRate,
+      extraPhotosRevenue,
+      additionalRevenue,
+      totalDiscount
     };
   }
 
