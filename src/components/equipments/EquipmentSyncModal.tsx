@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,16 +9,16 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Wrench, Calculator, Calendar, DollarSign } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { usePricingSupabaseData } from '@/hooks/pricing/usePricingSupabaseData';
 
 import { formatDateForDisplay } from '@/utils/dateUtils';
-import { EstruturaCustosService } from '@/services/PricingService';
 
 interface EquipmentSyncModalProps {
   equipment: {
     transacaoId: string;
     nome: string;
     valor: number;
-    data: string; // Data original da compra (corrigida pelo PricingFinancialIntegrationService)
+    data: string; // Data original da compra
     observacoes?: string;
     allTransactionIds?: string[];
   };
@@ -36,15 +36,23 @@ export function EquipmentSyncModal({
   onClose 
 }: EquipmentSyncModalProps) {
   const { toast } = useToast();
+  const { adicionarEquipamento, isAuthenticated, loading } = usePricingSupabaseData();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
-    nome: (equipment.observacoes || equipment.nome || `Equipamento R$ ${equipment.valor.toFixed(2)}`)
-      .replace(/\s*\(Cartão:.*?\)/i, ''), // Remove informações do cartão
+    nome: '',
     vidaUtil: '5'
   });
 
-  // Modal aberto - não precisa mais de migração automática
-  // Os dados já estão no Supabase
+  // Atualizar form quando equipment mudar
+  useEffect(() => {
+    if (equipment) {
+      setFormData({
+        nome: (equipment.observacoes || equipment.nome || `Equipamento R$ ${equipment.valor.toFixed(2)}`)
+          .replace(/\s*\(Cartão:.*?\)/i, ''), // Remove informações do cartão
+        vidaUtil: '5'
+      });
+    }
+  }, [equipment]);
 
   // Identificar se é parcelado
   const isInstallment = equipment.observacoes?.includes('parcelado') || false;
@@ -72,10 +80,26 @@ export function EquipmentSyncModal({
       return;
     }
 
+    if (!isAuthenticated) {
+      toast({
+        title: "Não autenticado",
+        description: "Faça login para salvar equipamentos.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
-      // Usar diretamente o EstruturaCustosService
-      const sucesso = EstruturaCustosService.adicionarEquipamento({
+      console.log('🔧 [EquipmentSyncModal] Adicionando equipamento via Supabase:', {
+        nome: formData.nome.trim(),
+        valor: equipment.valor,
+        data: equipment.data,
+        vidaUtil: vidaUtilAnos
+      });
+      
+      // USAR O HOOK DO SUPABASE (não mais localStorage!)
+      const sucesso = await adicionarEquipamento({
         nome: formData.nome.trim(),
         valorPago: equipment.valor,
         dataCompra: equipment.data,
@@ -94,7 +118,7 @@ export function EquipmentSyncModal({
           description: `${formData.nome} foi adicionado à precificação com depreciação de R$ ${depreciacaoMensal.toFixed(2)}/mês.`
         });
         
-        console.log('🔧 [EquipmentModal] Equipamento criado com sucesso, transações marcadas:', allIds);
+        console.log('✅ [EquipmentSyncModal] Equipamento salvo no Supabase!');
         onSuccess();
       } else {
         toast({
@@ -104,7 +128,7 @@ export function EquipmentSyncModal({
         });
       }
     } catch (error) {
-      console.error('Erro ao criar equipamento:', error);
+      console.error('❌ [EquipmentSyncModal] Erro ao criar equipamento:', error);
       toast({
         title: "Erro inesperado",
         description: "Falha ao processar a solicitação.",
@@ -137,6 +161,10 @@ export function EquipmentSyncModal({
         </DialogHeader>
 
         <div className="space-y-4">
+          {loading && (
+            <div className="text-sm text-muted-foreground">Carregando dados...</div>
+          )}
+          
           {/* Dados Automáticos */}
           <Card>
             <CardContent className="pt-4">
@@ -192,7 +220,7 @@ export function EquipmentSyncModal({
                 id="nome"
                 value={formData.nome}
                 onChange={(e) => setFormData(prev => ({ ...prev, nome: e.target.value }))}
-                placeholder="Ex: C��mera Canon EOS R5, Tripé Manfrotto..."
+                placeholder="Ex: Câmera Canon EOS R5, Tripé Manfrotto..."
                 className="mt-1"
               />
             </div>
@@ -258,7 +286,7 @@ export function EquipmentSyncModal({
             <Button 
               onClick={handleConfirm}
               className="flex-1"
-              disabled={isLoading}
+              disabled={isLoading || loading}
             >
               {isLoading ? (
                 <div className="flex items-center gap-2">

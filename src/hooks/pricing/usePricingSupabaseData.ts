@@ -316,7 +316,46 @@ export function usePricingSupabaseData() {
     }
   }, []);
 
-  // Função de salvamento com debounce
+  // ============= SAVE IMEDIATO (SEM DEBOUNCE) =============
+  // Para ações críticas como adicionar equipamento ou alterar pró-labore
+  const saveImmediate = useCallback(async (
+    saveFn: () => Promise<boolean>,
+    optimisticUpdate: () => void
+  ): Promise<boolean> => {
+    // Cancelar qualquer debounce pendente
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+    pendingSaveRef.current = null;
+    
+    // Update otimista imediato
+    optimisticUpdate();
+    setStatusSalvamento('salvando');
+    
+    try {
+      console.log('💾 [IMMEDIATE] Salvando dados IMEDIATAMENTE...');
+      const success = await saveFn();
+      console.log(success ? '✅ [IMMEDIATE] Dados salvos com sucesso!' : '❌ [IMMEDIATE] Falha ao salvar');
+      setStatusSalvamento(success ? 'salvo' : 'erro');
+      
+      if (success) {
+        pricingCache.lastFetch = Date.now();
+        toast.success('Dados salvos com sucesso');
+      } else {
+        toast.error('Erro ao salvar dados');
+      }
+      
+      return success;
+    } catch (error) {
+      console.error('❌ [IMMEDIATE] Erro ao salvar:', error);
+      setStatusSalvamento('erro');
+      toast.error('Erro ao salvar dados');
+      return false;
+    }
+  }, [setStatusSalvamento]);
+
+  // Função de salvamento com debounce (para edições contínuas)
   const saveWithDebounce = useCallback(async (
     saveFn: () => Promise<boolean>,
     optimisticUpdate: () => void
@@ -333,12 +372,12 @@ export function usePricingSupabaseData() {
     // Guardar referência ao save pendente
     pendingSaveRef.current = saveFn;
     
-    // Debounce de 500ms
+    // Debounce reduzido para 200ms
     saveTimeoutRef.current = setTimeout(async () => {
       try {
-        console.log('💾 Salvando dados de precificação...');
+        console.log('💾 [DEBOUNCE] Salvando dados de precificação...');
         const success = await saveFn();
-        console.log(success ? '✅ Dados salvos com sucesso' : '❌ Falha ao salvar');
+        console.log(success ? '✅ [DEBOUNCE] Dados salvos' : '❌ [DEBOUNCE] Falha ao salvar');
         setStatusSalvamento(success ? 'salvo' : 'erro');
         
         // Limpar referência pendente
@@ -349,20 +388,22 @@ export function usePricingSupabaseData() {
           pricingCache.lastFetch = Date.now();
         }
       } catch (error) {
-        console.error('❌ Erro ao salvar:', error);
+        console.error('❌ [DEBOUNCE] Erro ao salvar:', error);
         setStatusSalvamento('erro');
         pendingSaveRef.current = null;
       }
-    }, 500);
+    }, 200);
   }, [setStatusSalvamento]);
 
   // Cleanup: executar saves pendentes ao desmontar e ao sair da página
   useEffect(() => {
-    const handleBeforeUnload = () => {
-      // Executar save pendente ao fechar/navegar para fora da página
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      // Se há save pendente, avisar usuário e tentar salvar
       if (pendingSaveRef.current) {
         console.log('🔄 Página fechando, executando save pendente...');
-        // Executar de forma síncrona (melhor esforço)
+        e.preventDefault();
+        e.returnValue = 'Há alterações não salvas. Deseja sair?';
+        // Executar save de forma síncrona (melhor esforço)
         pendingSaveRef.current();
       }
     };
@@ -372,12 +413,14 @@ export function usePricingSupabaseData() {
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       
+      // Ao desmontar, forçar execução do save pendente
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
       if (pendingSaveRef.current) {
         console.log('🔄 Componente desmontando, executando save pendente...');
         pendingSaveRef.current();
-      }
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
+        pendingSaveRef.current = null;
       }
     };
   }, []);
@@ -512,50 +555,56 @@ export function usePricingSupabaseData() {
     return true;
   }, [estruturaCustos, saveWithDebounce]);
 
-  const adicionarEquipamento = useCallback(async (equipamento: Omit<Equipamento, 'id'>) => {
-    if (!estruturaCustos) return false;
+  // ============= EQUIPAMENTOS (SAVE IMEDIATO) =============
+  const adicionarEquipamento = useCallback(async (equipamento: Omit<Equipamento, 'id'>): Promise<boolean> => {
+    if (!estruturaCustos) {
+      console.error('❌ [EQUIPAMENTO] estruturaCustos é null');
+      return false;
+    }
     
     const novoEquipamento: Equipamento = {
       ...equipamento,
       id: crypto.randomUUID()
     };
     
+    console.log('🔧 [EQUIPAMENTO] Adicionando:', novoEquipamento);
+    
     const novosDados = {
       ...estruturaCustos,
       equipamentos: [...estruturaCustos.equipamentos, novoEquipamento]
     };
     
-    saveWithDebounce(
+    // USAR SAVE IMEDIATO (não debounce!) para equipamentos
+    return saveImmediate(
       () => adapterRef.current.saveEstruturaCustos(novosDados),
       () => {
         setEstruturaCustos(novosDados);
         pricingCache.estruturaCustos = novosDados;
       }
     );
-    
-    return true;
-  }, [estruturaCustos, saveWithDebounce]);
+  }, [estruturaCustos, saveImmediate]);
 
-  const removerEquipamento = useCallback(async (equipamentoId: string) => {
+  const removerEquipamento = useCallback(async (equipamentoId: string): Promise<boolean> => {
     if (!estruturaCustos) return false;
+    
+    console.log('🗑️ [EQUIPAMENTO] Removendo:', equipamentoId);
     
     const novosDados = {
       ...estruturaCustos,
       equipamentos: estruturaCustos.equipamentos.filter(e => e.id !== equipamentoId)
     };
     
-    saveWithDebounce(
+    // USAR SAVE IMEDIATO
+    return saveImmediate(
       () => adapterRef.current.saveEstruturaCustos(novosDados),
       () => {
         setEstruturaCustos(novosDados);
         pricingCache.estruturaCustos = novosDados;
       }
     );
-    
-    return true;
-  }, [estruturaCustos, saveWithDebounce]);
+  }, [estruturaCustos, saveImmediate]);
 
-  const atualizarEquipamento = useCallback(async (equipamentoId: string, campo: keyof Equipamento, valor: any) => {
+  const atualizarEquipamento = useCallback(async (equipamentoId: string, campo: keyof Equipamento, valor: any): Promise<boolean> => {
     if (!estruturaCustos) return false;
     
     const novosDados = {
@@ -565,6 +614,7 @@ export function usePricingSupabaseData() {
       )
     };
     
+    // Debounce para edições contínuas
     saveWithDebounce(
       () => adapterRef.current.saveEstruturaCustos(novosDados),
       () => {
@@ -576,24 +626,29 @@ export function usePricingSupabaseData() {
     return true;
   }, [estruturaCustos, saveWithDebounce]);
 
-  const atualizarPercentualProLabore = useCallback(async (percentual: number) => {
-    if (!estruturaCustos) return false;
+  // ============= PRÓ-LABORE (SAVE IMEDIATO) =============
+  const atualizarPercentualProLabore = useCallback(async (percentual: number): Promise<boolean> => {
+    if (!estruturaCustos) {
+      console.error('❌ [PRO-LABORE] estruturaCustos é null');
+      return false;
+    }
+    
+    console.log('💰 [PRO-LABORE] Atualizando para:', percentual, '%');
     
     const novosDados = {
       ...estruturaCustos,
       percentualProLabore: percentual
     };
     
-    saveWithDebounce(
+    // USAR SAVE IMEDIATO para pró-labore
+    return saveImmediate(
       () => adapterRef.current.saveEstruturaCustos(novosDados),
       () => {
         setEstruturaCustos(novosDados);
         pricingCache.estruturaCustos = novosDados;
       }
     );
-    
-    return true;
-  }, [estruturaCustos, saveWithDebounce]);
+  }, [estruturaCustos, saveImmediate]);
 
   const salvarEstruturaCustos = useCallback(async (dados: EstruturaCustosFixos) => {
     saveWithDebounce(
