@@ -944,59 +944,172 @@ export type Database = {
         }
         Relationships: []
       }
+      lead_follow_up_config: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          dias_para_follow_up: number | null
+          id: string
+          status_monitorado: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          dias_para_follow_up?: number | null
+          id?: string
+          status_monitorado?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          dias_para_follow_up?: number | null
+          id?: string
+          status_monitorado?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      lead_statuses: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          id: string
+          is_converted: boolean | null
+          is_lost: boolean | null
+          key: string
+          name: string
+          sort_order: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          is_converted?: boolean | null
+          is_lost?: boolean | null
+          key: string
+          name: string
+          sort_order?: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          is_converted?: boolean | null
+          is_lost?: boolean | null
+          key?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       leads: {
         Row: {
+          arquivado: boolean | null
+          cliente_id: string | null
           created_at: string
           data_contato: string | null
           data_nascimento: string | null
+          dias_sem_interacao: number | null
           email: string | null
           endereco: string | null
+          historico_status: Json | null
           id: string
+          interacoes: Json | null
+          motivo_perda: string | null
+          needs_follow_up: boolean | null
+          needs_scheduling: boolean | null
           nome: string
           observacoes: string | null
           origem: string | null
+          perdido_em: string | null
+          scheduled_appointment_id: string | null
           status: string | null
+          status_timestamp: string | null
           tags: string[] | null
           telefone: string | null
+          ultima_interacao: string | null
           updated_at: string
           user_id: string
           whatsapp: string | null
         }
         Insert: {
+          arquivado?: boolean | null
+          cliente_id?: string | null
           created_at?: string
           data_contato?: string | null
           data_nascimento?: string | null
+          dias_sem_interacao?: number | null
           email?: string | null
           endereco?: string | null
+          historico_status?: Json | null
           id?: string
+          interacoes?: Json | null
+          motivo_perda?: string | null
+          needs_follow_up?: boolean | null
+          needs_scheduling?: boolean | null
           nome: string
           observacoes?: string | null
           origem?: string | null
+          perdido_em?: string | null
+          scheduled_appointment_id?: string | null
           status?: string | null
+          status_timestamp?: string | null
           tags?: string[] | null
           telefone?: string | null
+          ultima_interacao?: string | null
           updated_at?: string
           user_id: string
           whatsapp?: string | null
         }
         Update: {
+          arquivado?: boolean | null
+          cliente_id?: string | null
           created_at?: string
           data_contato?: string | null
           data_nascimento?: string | null
+          dias_sem_interacao?: number | null
           email?: string | null
           endereco?: string | null
+          historico_status?: Json | null
           id?: string
+          interacoes?: Json | null
+          motivo_perda?: string | null
+          needs_follow_up?: boolean | null
+          needs_scheduling?: boolean | null
           nome?: string
           observacoes?: string | null
           origem?: string | null
+          perdido_em?: string | null
+          scheduled_appointment_id?: string | null
           status?: string | null
+          status_timestamp?: string | null
           tags?: string[] | null
           telefone?: string | null
+          ultima_interacao?: string | null
           updated_at?: string
           user_id?: string
           whatsapp?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "leads_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       modelo_de_preco: {
         Row: {
