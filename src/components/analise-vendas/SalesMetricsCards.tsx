@@ -7,6 +7,23 @@ interface SalesMetricsCardsProps {
 }
 
 export function SalesMetricsCards({ metrics }: SalesMetricsCardsProps) {
+  // Skeleton loading quando metrics é null
+  if (!metrics) {
+    return (
+      <div className="grid grid-cols-3 gap-3">
+        {[1, 2, 3].map(i => (
+          <div 
+            key={i} 
+            className="bg-lunar-surface/80 rounded-xl p-3 border border-lunar-border/30 animate-pulse"
+          >
+            <div className="h-3 w-16 bg-lunar-border/30 rounded mb-2" />
+            <div className="h-6 w-24 bg-lunar-border/30 rounded" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
