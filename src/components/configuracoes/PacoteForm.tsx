@@ -215,32 +215,34 @@ export default function PacoteForm({
           </div>
         </div>
 
-        {/* Valor Foto Extra */}
+        {/* Valor Foto Extra - SEMPRE editável para sistema híbrido */}
         <div className="flex-1 min-w-[140px] max-w-[180px]">
           <Label htmlFor="valor_foto_extra" className="text-2xs font-medium text-muted-foreground mb-1 block">
             Foto Extra
+            {!isFixedPricing && (
+              <span className="ml-1 text-amber-500">(opcional)</span>
+            )}
           </Label>
-          {isFixedPricing ? (
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">
-                R$
-              </span>
-              <Input
-                id="valor_foto_extra"
-                type="number"
-                step="0.01"
-                min="0"
-                value={valorFotoExtraInput.displayValue}
-                onChange={valorFotoExtraInput.handleChange}
-                onFocus={valorFotoExtraInput.handleFocus}
-                placeholder="0,00"
-                className="h-8 pl-8 text-sm [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              />
-            </div>
-          ) : (
-            <div className="h-8 flex items-center text-xs text-muted-foreground px-3 bg-muted/50 rounded-md border">
-              {configPrecificacao.modelo === 'global' ? 'Tabela Global' : 'Por Categoria'}
-            </div>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">
+              R$
+            </span>
+            <Input
+              id="valor_foto_extra"
+              type="number"
+              step="0.01"
+              min="0"
+              value={valorFotoExtraInput.displayValue}
+              onChange={valorFotoExtraInput.handleChange}
+              onFocus={valorFotoExtraInput.handleFocus}
+              placeholder="0,00"
+              className="h-8 pl-8 text-sm [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            />
+          </div>
+          {!isFixedPricing && (
+            <span className="text-2xs text-muted-foreground mt-0.5 block">
+              Modelo ativo: {configPrecificacao.modelo === 'global' ? 'Tabela Global' : 'Por Categoria'}
+            </span>
           )}
         </div>
       </div>
