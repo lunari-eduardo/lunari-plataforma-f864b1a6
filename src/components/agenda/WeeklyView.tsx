@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Share2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatTimeBr, formatDayName } from '@/utils/agendaUtils';
+import { cn } from '@/lib/utils';
 interface WeeklyViewProps {
   date: Date;
   unifiedEvents: UnifiedEvent[];
@@ -33,6 +34,17 @@ export default function WeeklyView({
   const timeSlots = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"];
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
+  // Mapa de dias com isFullDay
+  const fullDaySlots = useMemo(() => {
+    const map = new Map<string, any>();
+    weekDays.forEach(day => {
+      const dayKey = format(day, 'yyyy-MM-dd');
+      const slot = availability.find(a => a.date === dayKey && a.isFullDay);
+      if (slot) map.set(dayKey, slot);
+    });
+    return map;
+  }, [availability, weekDays]);
+
   // Otimização: Maps indexadas para lookups O(1)
   const { eventMap, availabilityMap, dayCounts } = useMemo(() => {
     // Criar Maps para eventos por slot
@@ -52,13 +64,15 @@ export default function WeeklyView({
       }
     });
     
-    // Indexar disponibilidades por dia+hora
-    availability.forEach(slot => {
-      const key = `${slot.date}_${slot.time}`;
-      if (!eventMap.has(key)) { // Não mostrar se há agendamento
-        availabilityMap.set(key, slot);
-      }
-    });
+    // Indexar disponibilidades por dia+hora (excluindo isFullDay)
+    availability
+      .filter(slot => !slot.isFullDay)
+      .forEach(slot => {
+        const key = `${slot.date}_${slot.time}`;
+        if (!eventMap.has(key)) { // Não mostrar se há agendamento
+          availabilityMap.set(key, slot);
+        }
+      });
     
     // Calcular contadores por dia
     weekDays.forEach(day => {
@@ -69,7 +83,7 @@ export default function WeeklyView({
       const takenTimes = new Set(dayAppointments.map(e => e.time));
       const availCount = new Set(
         availability
-          .filter(a => a.date === dayKey && !takenTimes.has(a.time))
+          .filter(a => a.date === dayKey && !a.isFullDay && !takenTimes.has(a.time))
           .map(a => a.time)
       ).size;
       
@@ -146,23 +160,43 @@ export default function WeeklyView({
           <div className="bg-muted"></div>
           
           {/* Day headers */}
-          {weekDays.map((day, index) => <div 
-              key={index} 
-              className={`text-center bg-muted cursor-pointer hover:bg-muted/80 transition-colors ${isTablet ? 'p-1' : 'p-1 md:p-2'}`}
-              onClick={() => onDayClick?.(day)}
-              role="button"
-              tabIndex={0}
-              title={`Ver agenda do dia ${format(day, 'd')}`}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  onDayClick?.(day);
-                }
-              }}
-            >
-              <p className={`text-muted-foreground font-medium ${isTablet ? 'text-[10px]' : 'text-xs'}`}>{formatDayName(day)}</p>
-              <p className={`font-semibold ${isTablet ? 'text-xs' : 'text-xs md:text-sm'}`}>{format(day, 'd')}</p>
-            </div>)}
+          {weekDays.map((day, index) => {
+            const dayKey = format(day, 'yyyy-MM-dd');
+            const fullDaySlot = fullDaySlots.get(dayKey);
+            
+            return (
+              <div 
+                key={index} 
+                className={cn(
+                  "text-center cursor-pointer hover:opacity-80 transition-all",
+                  isTablet ? 'p-1' : 'p-1 md:p-2',
+                  fullDaySlot ? "border-b-2" : "bg-muted"
+                )}
+                style={fullDaySlot ? {
+                  backgroundColor: `${fullDaySlot.color || 'hsl(var(--lunar-accent))'}15`,
+                  borderBottomColor: fullDaySlot.color || 'hsl(var(--lunar-accent))'
+                } : undefined}
+                onClick={() => onDayClick?.(day)}
+                role="button"
+                tabIndex={0}
+                title={fullDaySlot ? `${fullDaySlot.fullDayDescription || fullDaySlot.label || 'Dia todo'} - Ver agenda` : `Ver agenda do dia ${format(day, 'd')}`}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onDayClick?.(day);
+                  }
+                }}
+              >
+                <p className={`text-muted-foreground font-medium ${isTablet ? 'text-[10px]' : 'text-xs'}`}>{formatDayName(day)}</p>
+                <p className={`font-semibold ${isTablet ? 'text-xs' : 'text-xs md:text-sm'}`}>{format(day, 'd')}</p>
+                {fullDaySlot && (
+                  <p className={`truncate ${isTablet ? 'text-[8px]' : 'text-[10px]'}`} style={{ color: fullDaySlot.color }}>
+                    {fullDaySlot.label || 'Dia todo'}
+                  </p>
+                )}
+              </div>
+            );
+          })}
           
           {/* Time slots */}
           {timeSlots.map(time => (
