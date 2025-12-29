@@ -23,7 +23,9 @@ serve(async (req) => {
       console.error('[google-calendar-callback] Failed to parse state:', e);
     }
 
-    const redirectUri = stateData?.redirectUri || '/preferencias?tab=integracoes';
+    // Use absolute URL for redirect - fallback to production URL
+    const defaultRedirect = 'https://www.lunariplataforma.com.br/app/preferencias?tab=integracoes';
+    const redirectUri = stateData?.redirectUri || defaultRedirect;
 
     if (error) {
       console.error('[google-calendar-callback] OAuth error:', error);
@@ -117,6 +119,6 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('[google-calendar-callback] Error:', error);
-    return Response.redirect('/preferencias?tab=integracoes&google_error=unknown', 302);
+    return Response.redirect('https://www.lunariplataforma.com.br/app/preferencias?tab=integracoes&google_error=unknown', 302);
   }
 });
