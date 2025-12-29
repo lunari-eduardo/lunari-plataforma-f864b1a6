@@ -556,15 +556,21 @@ export function usePricingSupabaseData() {
   }, [estruturaCustos, saveWithDebounce]);
 
   // ============= EQUIPAMENTOS (SAVE IMEDIATO) =============
-  const adicionarEquipamento = useCallback(async (equipamento: Omit<Equipamento, 'id'>): Promise<boolean> => {
+  const adicionarEquipamento = useCallback(async (
+    equipamento: Omit<Equipamento, 'id'> & { fin_transaction_id?: string }
+  ): Promise<boolean> => {
     if (!estruturaCustos) {
       console.error('❌ [EQUIPAMENTO] estruturaCustos é null');
       return false;
     }
     
     const novoEquipamento: Equipamento = {
-      ...equipamento,
-      id: crypto.randomUUID()
+      id: crypto.randomUUID(),
+      nome: equipamento.nome,
+      valorPago: equipamento.valorPago,
+      dataCompra: equipamento.dataCompra,
+      vidaUtil: equipamento.vidaUtil,
+      fin_transaction_id: equipamento.fin_transaction_id
     };
     
     console.log('🔧 [EQUIPAMENTO] Adicionando:', novoEquipamento);

@@ -21,6 +21,7 @@ export interface Equipamento {
   valorPago: number;
   dataCompra: string;
   vidaUtil: number;
+  fin_transaction_id?: string; // Vínculo com transação financeira
   created_at?: string;
   updated_at?: string;
 }

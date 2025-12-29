@@ -183,7 +183,8 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
         nome: eq.nome,
         valor_pago: eq.valorPago,
         data_compra: eq.dataCompra || new Date().toISOString().split('T')[0],
-        vida_util: eq.vidaUtil || 5
+        vida_util: eq.vidaUtil || 5,
+        fin_transaction_id: eq.fin_transaction_id || null
       }));
       
       console.log('📦 Equipamentos a inserir:', JSON.stringify(equipamentosParaInserir, null, 2));
@@ -242,6 +243,7 @@ export class SupabasePricingAdapter implements PricingStorageAdapter {
         valorPago: Number(eq.valor_pago),
         dataCompra: eq.data_compra,
         vidaUtil: eq.vida_util,
+        fin_transaction_id: eq.fin_transaction_id || undefined,
         user_id: eq.user_id,
         created_at: eq.created_at,
         updated_at: eq.updated_at
