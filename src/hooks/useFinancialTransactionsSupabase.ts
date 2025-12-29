@@ -17,6 +17,7 @@ import { SupabaseFinancialItemsAdapter } from '@/adapters/SupabaseFinancialItems
 import { NovaTransacaoFinanceira, GrupoPrincipal, StatusTransacao } from '@/types/financas';
 import { useToast } from '@/hooks/use-toast';
 import { emitEquipmentCandidate, EQUIPMENT_FORCE_SCAN_EVENT } from '@/hooks/useEquipmentSync';
+import { roundToTwoDecimals } from '@/utils/financialPrecision';
 
 // Adapters - usar métodos estáticos
 
@@ -405,10 +406,11 @@ export function useFinancialTransactionsSupabase(filtroMesAno: { mes: number; an
   const calcularMetricasPorGrupo = (grupo: GrupoPrincipal) => {
     const transacoesGrupo = gruposCompletos[grupo] || [];
     
-    const total = transacoesGrupo.reduce((sum, t) => sum + t.valor, 0);
-    const pago = transacoesGrupo.filter(t => t.status === 'Pago').reduce((sum, t) => sum + t.valor, 0);
-    const faturado = transacoesGrupo.filter(t => t.status === 'Faturado').reduce((sum, t) => sum + t.valor, 0);
-    const agendado = transacoesGrupo.filter(t => t.status === 'Agendado').reduce((sum, t) => sum + t.valor, 0);
+    // Aplicar arredondamento para evitar erros de precisão de ponto flutuante
+    const total = roundToTwoDecimals(transacoesGrupo.reduce((sum, t) => sum + t.valor, 0));
+    const pago = roundToTwoDecimals(transacoesGrupo.filter(t => t.status === 'Pago').reduce((sum, t) => sum + t.valor, 0));
+    const faturado = roundToTwoDecimals(transacoesGrupo.filter(t => t.status === 'Faturado').reduce((sum, t) => sum + t.valor, 0));
+    const agendado = roundToTwoDecimals(transacoesGrupo.filter(t => t.status === 'Agendado').reduce((sum, t) => sum + t.valor, 0));
 
     return { total, pago, faturado, agendado };
   };

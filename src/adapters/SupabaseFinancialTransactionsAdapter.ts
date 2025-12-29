@@ -6,6 +6,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { StatusTransacao } from '@/types/financas';
 import { getCurrentDateString } from '@/utils/dateUtils';
+import { roundToTwoDecimals } from '@/utils/financialPrecision';
 
 export interface FinancialTransactionDB {
   id: string;
@@ -87,7 +88,8 @@ export class SupabaseFinancialTransactionsAdapter {
         .from('fin_transactions')
         .insert({
           user_id: user.id,
-          ...transaction
+          ...transaction,
+          valor: roundToTwoDecimals(transaction.valor) // Garantir precisão de 2 casas
         })
         .select()
         .single();
@@ -133,9 +135,15 @@ export class SupabaseFinancialTransactionsAdapter {
    */
   static async updateTransaction(id: string, updates: Partial<FinancialTransactionDB>): Promise<FinancialTransactionDB> {
     try {
+      // Garantir precisão de 2 casas decimais se valor estiver sendo atualizado
+      const updatesToApply = {
+        ...updates,
+        ...(updates.valor !== undefined && { valor: roundToTwoDecimals(updates.valor) })
+      };
+      
       const { data, error } = await supabase
         .from('fin_transactions')
-        .update(updates)
+        .update(updatesToApply)
         .eq('id', id)
         .select()
         .single();
@@ -241,6 +249,7 @@ export class SupabaseFinancialTransactionsAdapter {
     observacoes?: string;
   }): Promise<FinancialTransactionDB[]> {
     const { itemId, valor, diaVencimento, dataInicio, isValorFixo, observacoes } = params;
+    const valorArredondado = roundToTwoDecimals(valor); // Garantir precisão
     const [ano, mes] = dataInicio.split('-').map(Number);
     
     // Gerar 12 transações (uma para cada mês restante do ano)
@@ -253,7 +262,7 @@ export class SupabaseFinancialTransactionsAdapter {
       
       transactions.push({
         item_id: itemId,
-        valor: isValorFixo ? valor : 0, // Se valor variável, criar com 0
+        valor: isValorFixo ? valorArredondado : 0, // Se valor variável, criar com 0
         data_vencimento: dataVencimento,
         status: (dataVencimento <= getCurrentDateString() ? 'Faturado' : 'Agendado') as StatusTransacao,
         observacoes: isValorFixo 
@@ -282,7 +291,7 @@ export class SupabaseFinancialTransactionsAdapter {
     observacoes?: string;
   }): Promise<FinancialTransactionDB[]> {
     const { itemId, valorTotal, dataPrimeiraOcorrencia, numeroDeParcelas, observacoes } = params;
-    const valorParcela = valorTotal / numeroDeParcelas;
+    const valorParcela = roundToTwoDecimals(valorTotal / numeroDeParcelas); // Garantir precisão
     const parentId = `parcela_${Date.now()}`;
 
     const transactions: Omit<FinancialTransactionDB, 'id' | 'user_id' | 'created_at' | 'updated_at'>[] = [];
@@ -334,7 +343,7 @@ export class SupabaseFinancialTransactionsAdapter {
 
     if (cartaoError || !cartaoData) throw new Error('Cartão de crédito não encontrado');
 
-    const valorParcela = valorTotal / numeroDeParcelas;
+    const valorParcela = roundToTwoDecimals(valorTotal / numeroDeParcelas); // Garantir precisão
     const parentId = `cartao_${Date.now()}`;
 
     const transactions: Omit<FinancialTransactionDB, 'id' | 'user_id' | 'created_at' | 'updated_at'>[] = [];

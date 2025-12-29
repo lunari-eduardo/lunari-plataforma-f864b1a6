@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { NovaTransacaoFinanceira } from '@/types/financas';
+import { parseFinancialInput } from '@/utils/financialPrecision';
 
 interface EditTransactionModalProps {
   isOpen: boolean;
@@ -29,9 +30,9 @@ export default function EditTransactionModal({
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSave = async () => {
-    // Validações
-    const valorNumerico = parseFloat(valor);
-    if (isNaN(valorNumerico) || valorNumerico <= 0) {
+    // Validações com precisão financeira
+    const valorNumerico = parseFinancialInput(valor);
+    if (valorNumerico <= 0) {
       alert('Por favor, insira um valor válido maior que zero');
       return;
     }
