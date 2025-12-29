@@ -10,7 +10,7 @@ import { CreateTransactionInput } from '@/hooks/useFinancialTransactionsSupabase
 import { calculateTotals, calculateTotalsNew } from '@/services/FinancialCalculationEngine';
 import { initializeApp, needsInitialization } from '@/utils/initializeApp';
 import { useCreditCardsSupabase } from '@/hooks/useCreditCardsSupabase';
-import { migrateCreditCardsToSupabase } from '@/utils/migrateCreditCardsToSupabase';
+import { SupabaseCreditCardsAdapter } from '@/adapters/SupabaseCreditCardsAdapter';
 import { Projeto, CriarProjetoInput } from '@/types/projeto';
 import { ProjetoService } from '@/services/ProjetoService';
 import { corrigirClienteIdSessoes, corrigirClienteIdAgendamentos } from '@/utils/corrigirClienteIdSessoes';
@@ -449,22 +449,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const creditCardsHook = useCreditCardsSupabase();
   const cartoes = creditCardsHook.cartoes;
 
-  // ============= MIGRAÇÃO DE CARTÕES (UMA VEZ - COM PROTEÇÃO) =============
-  const migrationExecutedRef = useRef(false);
+  // ============= MIGRAÇÃO DE CARTÕES (UMA VEZ - COM FLAG PERSISTENTE) =============
+  const MIGRATION_FLAG = 'credit_cards_migration_v3_done';
   
   useEffect(() => {
     const checkAndMigrate = async () => {
-      // Proteção: já executou nesta sessão? Sair
-      if (migrationExecutedRef.current) return;
+      // Verificar flag PERSISTENTE no localStorage (sobrevive hot reload)
+      if (localStorage.getItem(MIGRATION_FLAG)) return;
       
       const localCards = storage.load(STORAGE_KEYS.CARDS, []);
       if (localCards && localCards.length > 0) {
         // Marcar ANTES de iniciar para evitar re-execução
-        migrationExecutedRef.current = true;
-        console.log('🔄 Detectados cartões no localStorage, iniciando migração única...');
-        const result = await migrateCreditCardsToSupabase();
-        if (result.success) {
-          console.log(`✅ Migração concluída: ${result.migrated} cartões migrados`);
+        localStorage.setItem(MIGRATION_FLAG, 'true');
+        
+        // Copiar e limpar localStorage PRIMEIRO
+        const cardsToMigrate = [...localCards];
+        storage.remove(STORAGE_KEYS.CARDS);
+        
+        console.log('🔄 Iniciando migração única de cartões...');
+        
+        for (const card of cardsToMigrate) {
+          try {
+            await SupabaseCreditCardsAdapter.createCard(
+              card.nome,
+              card.diaVencimento,
+              card.diaFechamento
+            );
+            console.log(`✅ Cartão migrado: ${card.nome}`);
+          } catch (error) {
+            console.error(`❌ Erro ao migrar cartão ${card.nome}:`, error);
+          }
         }
       }
     };

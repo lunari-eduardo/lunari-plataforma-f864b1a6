@@ -3,30 +3,46 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Trash2, Plus, CreditCard } from 'lucide-react';
-import { useAppContext } from '@/contexts/AppContext';
+import { Trash2, Plus, CreditCard, Loader2 } from 'lucide-react';
+import { useCreditCardsSupabase } from '@/hooks/useCreditCardsSupabase';
+
 interface ConfiguracaoCartoesProps {
-  // Props removidas - agora usa AppContext diretamente
+  // Props removidas - agora usa hook diretamente
 }
+
 export default function ConfiguracaoCartoes({}: ConfiguracaoCartoesProps) {
   const {
     cartoes,
     adicionarCartao,
-    removerCartao
-  } = useAppContext();
+    removerCartao,
+    isCreating,
+    isDeleting
+  } = useCreditCardsSupabase();
+  
   const [novoCartao, setNovoCartao] = useState({
     nome: '',
     diaVencimento: '',
     diaFechamento: ''
   });
+
   const adicionarNovoCartao = () => {
     if (!novoCartao.nome || !novoCartao.diaVencimento || !novoCartao.diaFechamento) return;
+    if (isCreating) return; // Prevenir duplo clique
+    
     const diaVencimento = parseInt(novoCartao.diaVencimento);
     const diaFechamento = parseInt(novoCartao.diaFechamento);
     if (diaVencimento < 1 || diaVencimento > 31 || diaFechamento < 1 || diaFechamento > 31) {
       alert('Dias devem estar entre 1 e 31');
       return;
     }
+    
+    // Verificar duplicata no frontend também
+    const jaExiste = cartoes.some(c => c.nome.toLowerCase() === novoCartao.nome.toLowerCase());
+    if (jaExiste) {
+      alert(`Cartão "${novoCartao.nome}" já existe!`);
+      return;
+    }
+    
     try {
       adicionarCartao({
         nome: novoCartao.nome,
@@ -43,7 +59,9 @@ export default function ConfiguracaoCartoes({}: ConfiguracaoCartoesProps) {
       alert('Erro ao adicionar cartão');
     }
   };
+
   const removerCartaoLocal = (id: string) => {
+    if (isDeleting) return; // Prevenir duplo clique
     try {
       removerCartao(id);
     } catch (error) {
@@ -96,9 +114,17 @@ export default function ConfiguracaoCartoes({}: ConfiguracaoCartoesProps) {
             </div>
           </div>
           <div className="mt-4">
-            <Button onClick={adicionarNovoCartao} disabled={!novoCartao.nome || !novoCartao.diaVencimento || !novoCartao.diaFechamento} className="bg-lunar-accent">
-              <Plus className="h-4 w-4 mr-2" />
-              Adicionar Cartão
+            <Button 
+              onClick={adicionarNovoCartao} 
+              disabled={!novoCartao.nome || !novoCartao.diaVencimento || !novoCartao.diaFechamento || isCreating} 
+              className="bg-lunar-accent"
+            >
+              {isCreating ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Plus className="h-4 w-4 mr-2" />
+              )}
+              {isCreating ? 'Adicionando...' : 'Adicionar Cartão'}
             </Button>
           </div>
         </CardContent>
