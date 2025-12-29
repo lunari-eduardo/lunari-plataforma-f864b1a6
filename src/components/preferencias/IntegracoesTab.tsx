@@ -2,8 +2,11 @@ import { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { CreditCard, Plug } from 'lucide-react';
 import { IntegrationCard } from '@/components/integracoes/IntegrationCard';
+import { GoogleCalendarCard } from '@/components/integracoes/GoogleCalendarCard';
 import { useIntegracoes } from '@/hooks/useIntegracoes';
+import { useGoogleCalendarIntegration } from '@/hooks/useGoogleCalendarIntegration';
 import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from 'sonner';
 
 // Mercado Pago icon as SVG
 const MercadoPagoIcon = () => (
@@ -24,14 +27,38 @@ export function IntegracoesTab() {
     integracoes,
   } = useIntegracoes();
 
-  // Handle OAuth callback
+  const { refetch: refetchGoogleCalendar } = useGoogleCalendarIntegration();
+
+  // Handle OAuth callbacks (Mercado Pago and Google Calendar)
   useEffect(() => {
     const code = searchParams.get('code');
     const error = searchParams.get('error');
+    const googleSuccess = searchParams.get('google_success');
+    const googleError = searchParams.get('google_error');
 
+    // Handle Google Calendar callback
+    if (googleSuccess) {
+      toast.success('Google Calendar conectado com sucesso');
+      refetchGoogleCalendar();
+      setSearchParams({ tab: 'integracoes' });
+      return;
+    }
+
+    if (googleError) {
+      const errorMessages: Record<string, string> = {
+        'access_denied': 'Acesso negado pelo usuário',
+        'missing_params': 'Parâmetros inválidos',
+        'token_exchange_failed': 'Falha na autenticação',
+        'database_error': 'Erro ao salvar integração',
+      };
+      toast.error(errorMessages[googleError] || 'Erro ao conectar Google Calendar');
+      setSearchParams({ tab: 'integracoes' });
+      return;
+    }
+
+    // Handle Mercado Pago callback
     if (error) {
       console.error('[IntegracoesTab] OAuth error:', error);
-      // Keep tab param, clear others
       setSearchParams({ tab: 'integracoes' });
       return;
     }
@@ -39,11 +66,10 @@ export function IntegracoesTab() {
     if (code) {
       console.log('[IntegracoesTab] Processing OAuth callback with code');
       handleOAuthCallback(code).then((success) => {
-        // Clear the URL params after processing, keep tab
         setSearchParams({ tab: 'integracoes' });
       });
     }
-  }, [searchParams, setSearchParams, handleOAuthCallback]);
+  }, [searchParams, setSearchParams, handleOAuthCallback, refetchGoogleCalendar]);
 
   const mpIntegration = integracoes.find(i => i.provedor === 'mercadopago');
   const connectedInfo = mpIntegration?.conectado_em 
@@ -57,6 +83,7 @@ export function IntegracoesTab() {
           <Skeleton className="h-4 w-96" />
         </div>
         <div className="grid gap-4 md:grid-cols-2">
+          <Skeleton className="h-48" />
           <Skeleton className="h-48" />
           <Skeleton className="h-48" />
         </div>
@@ -73,12 +100,15 @@ export function IntegracoesTab() {
           <h2 className="text-lg font-semibold">Integrações e Conexões</h2>
         </div>
         <p className="text-muted-foreground text-sm">
-          Conecte suas contas para automatizar cobranças e pagamentos
+          Conecte suas contas para automatizar cobranças, pagamentos e agenda
         </p>
       </div>
 
       {/* Integration Cards */}
       <div className="grid gap-4 md:grid-cols-2">
+        {/* Google Calendar */}
+        <GoogleCalendarCard />
+
         {/* Mercado Pago */}
         <IntegrationCard
           title="Mercado Pago"
@@ -105,9 +135,9 @@ export function IntegracoesTab() {
         <h3 className="font-medium">Como funciona?</h3>
         <ul className="text-sm text-muted-foreground space-y-1">
           <li>• Clique em "Conectar" para autorizar o Lunari a usar sua conta</li>
-          <li>• Você será redirecionado para o Mercado Pago para autorizar</li>
-          <li>• Após autorizar, você poderá criar cobranças Pix e Links de pagamento</li>
-          <li>• Os pagamentos vão diretamente para sua conta Mercado Pago</li>
+          <li>• Você será redirecionado para autorizar o acesso</li>
+          <li>• Após autorizar, a integração será ativada automaticamente</li>
+          <li>• Você pode desconectar a qualquer momento</li>
         </ul>
       </div>
     </div>

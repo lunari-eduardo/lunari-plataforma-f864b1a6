@@ -59,6 +59,8 @@ export type Database = {
           created_at: string | null
           date: string
           description: string | null
+          google_event_id: string | null
+          google_sync_status: string | null
           id: string
           orcamento_id: string | null
           origem: string | null
@@ -77,6 +79,8 @@ export type Database = {
           created_at?: string | null
           date: string
           description?: string | null
+          google_event_id?: string | null
+          google_sync_status?: string | null
           id?: string
           orcamento_id?: string | null
           origem?: string | null
@@ -95,6 +99,8 @@ export type Database = {
           created_at?: string | null
           date?: string
           description?: string | null
+          google_event_id?: string | null
+          google_sync_status?: string | null
           id?: string
           orcamento_id?: string | null
           origem?: string | null
