@@ -6,6 +6,7 @@ import { MetasService } from '@/services/PricingService';
 import { PricingHeader } from '@/components/precificacao/PricingHeader';
 import { ResumoFinanceiroSticky } from '@/components/precificacao/ResumoFinanceiroSticky';
 import { EtapaCustosFixos } from '@/components/precificacao/EtapaCustosFixos';
+import { EtapaEquipamentos } from '@/components/precificacao/EtapaEquipamentos';
 import { EtapaMetas } from '@/components/precificacao/EtapaMetas';
 import { EtapaCalculadora } from '@/components/precificacao/EtapaCalculadora';
 import { PricingProvider } from '@/contexts/PricingContext';
@@ -74,14 +75,17 @@ export default function Precificacao() {
               {/* Etapa 1: Custos Fixos */}
               <EtapaCustosFixos onTotalChange={handleCustosFixosChange} />
               
-              {/* Etapa 2: Calculadora */}
+              {/* Etapa 2: Equipamentos */}
+              <EtapaEquipamentos />
+              
+              {/* Etapa 3: Calculadora */}
               <EtapaCalculadora 
                 custosFixosTotal={custosFixosTotal} 
                 metaFaturamentoMensal={metaFaturamentoMensal}
                 onPrecoFinalChange={setPrecoFinalServico}
               />
               
-              {/* Etapa 3: Metas */}
+              {/* Etapa 4: Metas */}
               <EtapaMetas custosFixosTotal={custosFixosTotal} />
             </main>
           </div>
