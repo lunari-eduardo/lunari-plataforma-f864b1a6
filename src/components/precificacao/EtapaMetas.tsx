@@ -60,7 +60,7 @@ export function EtapaMetas({ custosFixosTotal }: EtapaMetasProps) {
 
   return (
     <EtapaColapsavel
-      numero={2}
+      numero={4}
       titulo="Suas Metas Financeiras"
       descricao="Defina sua margem de lucro e veja suas metas de faturamento"
       defaultOpen={false}
