@@ -56,7 +56,7 @@ export function EquipmentSyncNotification() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         await supabase
-          .from('pricing_ignored_transactions')
+          .from('pricing_ignored_transactions' as any)
           .insert({
             user_id: user.id,
             transaction_id: equipment.transacaoId
@@ -132,7 +132,7 @@ export function EquipmentSyncNotification() {
                     <Plus className="h-3 w-3 mr-1" />
                     Configurar
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => handleIgnore(equipment.id)} className="h-7 w-7 p-0">
+                  <Button size="sm" variant="ghost" onClick={() => handleIgnore(equipment)} className="h-7 w-7 p-0">
                     <X className="h-3 w-3" />
                   </Button>
                 </div>

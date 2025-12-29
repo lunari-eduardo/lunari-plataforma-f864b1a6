@@ -1474,6 +1474,27 @@ export type Database = {
         }
         Relationships: []
       }
+      pricing_ignored_transactions: {
+        Row: {
+          created_at: string | null
+          id: string
+          transaction_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          transaction_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          transaction_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       produtos: {
         Row: {
           created_at: string

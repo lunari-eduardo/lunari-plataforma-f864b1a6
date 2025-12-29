@@ -94,12 +94,12 @@ export function useEquipmentSync() {
 
       // Buscar transações ignoradas persistidas no Supabase
       const { data: ignoredTransactions } = await supabase
-        .from('pricing_ignored_transactions')
+        .from('pricing_ignored_transactions' as any)
         .select('transaction_id')
         .eq('user_id', user.id);
       
       const ignoredIds = new Set(
-        ignoredTransactions?.map(t => t.transaction_id) || []
+        (ignoredTransactions as any[] || []).map((t: any) => t.transaction_id)
       );
 
       // Filtrar transações não processadas
