@@ -81,9 +81,34 @@ export function useEquipmentSync() {
         return;
       }
 
+      // Buscar equipamentos já criados com fin_transaction_id
+      const { data: equipamentosExistentes } = await supabase
+        .from('pricing_equipamentos')
+        .select('fin_transaction_id')
+        .eq('user_id', user.id)
+        .not('fin_transaction_id', 'is', null);
+      
+      const existingFinIds = new Set(
+        equipamentosExistentes?.map(e => e.fin_transaction_id) || []
+      );
+
+      // Buscar transações ignoradas persistidas no Supabase
+      const { data: ignoredTransactions } = await supabase
+        .from('pricing_ignored_transactions')
+        .select('transaction_id')
+        .eq('user_id', user.id);
+      
+      const ignoredIds = new Set(
+        ignoredTransactions?.map(t => t.transaction_id) || []
+      );
+
       // Filtrar transações não processadas
       const processedIds = getProcessedIds();
-      const novasTransacoes = transacoes.filter(t => !processedIds.includes(t.id));
+      const novasTransacoes = transacoes.filter(t => 
+        !processedIds.includes(t.id) && 
+        !existingFinIds.has(t.id) &&
+        !ignoredIds.has(t.id)
+      );
 
       if (novasTransacoes.length === 0) {
         return;

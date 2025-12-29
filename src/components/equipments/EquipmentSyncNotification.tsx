@@ -4,17 +4,21 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Wrench, Plus, X } from 'lucide-react';
-import { EQUIPMENT_SYNC_EVENT, type EquipmentCandidate } from '@/hooks/useEquipmentSync';
+import { EQUIPMENT_SYNC_EVENT, type EquipmentCandidate, markTransactionAsProcessed } from '@/hooks/useEquipmentSync';
 import { EquipmentSyncModal } from './EquipmentSyncModal';
+import { supabase } from '@/integrations/supabase/client';
+
 interface QueuedEquipment extends EquipmentCandidate {
   id: string;
   timestamp: number;
 }
+
 export function EquipmentSyncNotification() {
   const navigate = useNavigate();
   const [queuedEquipments, setQueuedEquipments] = useState<QueuedEquipment[]>([]);
   const [selectedEquipment, setSelectedEquipment] = useState<QueuedEquipment | null>(null);
   const [showModal, setShowModal] = useState(false);
+
   useEffect(() => {
     const handleEquipmentCandidate = (event: any) => {
       const candidate = event.detail as EquipmentCandidate;
@@ -37,24 +41,50 @@ export function EquipmentSyncNotification() {
       window.removeEventListener(EQUIPMENT_SYNC_EVENT, handleEquipmentCandidate);
     };
   }, []);
+
   const handleAddToPricing = (equipment: QueuedEquipment) => {
     setSelectedEquipment(equipment);
     setShowModal(true);
   };
-  const handleIgnore = (equipmentId: string) => {
-    setQueuedEquipments(prev => prev.filter(eq => eq.id !== equipmentId));
+
+  const handleIgnore = async (equipment: QueuedEquipment) => {
+    // Marcar no localStorage para não aparecer novamente nesta sessão
+    markTransactionAsProcessed(equipment.transacaoId);
+    
+    // Persistir no Supabase para multi-dispositivo
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase
+          .from('pricing_ignored_transactions')
+          .insert({
+            user_id: user.id,
+            transaction_id: equipment.transacaoId
+          });
+      }
+    } catch (error) {
+      console.error('Erro ao persistir transação ignorada:', error);
+    }
+    
+    // Remover da fila visual
+    setQueuedEquipments(prev => prev.filter(eq => eq.id !== equipment.id));
   };
+
   const handleGoToPricing = () => {
     navigate('/precificacao');
   };
+
   const handleModalSuccess = () => {
     if (selectedEquipment) {
+      // Marcar como processada para não aparecer novamente
+      markTransactionAsProcessed(selectedEquipment.transacaoId);
       // Remover da fila após sucesso
       setQueuedEquipments(prev => prev.filter(eq => eq.id !== selectedEquipment.id));
       setSelectedEquipment(null);
     }
     setShowModal(false);
   };
+
   const handleModalClose = () => {
     setSelectedEquipment(null);
     setShowModal(false);
