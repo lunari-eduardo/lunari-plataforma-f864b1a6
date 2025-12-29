@@ -1,22 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
-import { TrendingDown, AlertTriangle } from 'lucide-react';
+import { TrendingDown, AlertTriangle, BarChart3 } from 'lucide-react';
 import { useLeadLossReasons } from '@/hooks/useLeadLossReasons';
-
-// Paleta personalizada para gráficos de pizza/donut (10 cores sequenciais)
-const COLORS = [
-  'hsl(var(--chart-primary))',
-  'hsl(var(--chart-secondary))',
-  'hsl(var(--chart-tertiary))',
-  'hsl(var(--chart-quaternary))',
-  'hsl(var(--chart-quinary))',
-  'hsl(var(--chart-senary))',
-  'hsl(var(--chart-7))',
-  'hsl(var(--chart-8))',
-  'hsl(var(--chart-9))',
-  'hsl(var(--chart-10))'
-];
+import { cn } from '@/lib/utils';
 
 export function LeadLossReasonsChart() {
   const { lossReasonStats, totalLostLeads, leadsWithoutReason, hasData } = useLeadLossReasons();
@@ -45,7 +31,12 @@ export function LeadLossReasonsChart() {
     );
   }
 
-  const chartData = lossReasonStats.filter(stat => stat.count > 0);
+  // Filter and sort by count descending
+  const chartData = lossReasonStats
+    .filter(stat => stat.count > 0)
+    .sort((a, b) => b.count - a.count);
+
+  const maxCount = Math.max(...chartData.map(d => d.count), 1);
 
   return (
     <Card className="border-0 shadow-lg bg-lunar-surface">
@@ -70,66 +61,47 @@ export function LeadLossReasonsChart() {
             </div>
           )}
 
-          {/* Chart */}
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={chartData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={45}
-                  outerRadius={85}
-                  paddingAngle={3}
-                  cornerRadius={12}
-                  dataKey="count"
-                >
-                  {chartData.map((entry, index) => (
-                    <Cell 
-                      key={`cell-${index}`} 
-                      fill={COLORS[index % COLORS.length]} 
-                    />
-                  ))}
-                </Pie>
-                <Tooltip 
-                  formatter={(value: number, name: string, props) => [
-                    `${value} leads (${props.payload?.percentage}%)`,
-                    props.payload?.label
-                  ]}
-                  contentStyle={{
-                    backgroundColor: 'hsl(var(--lunar-surface))',
-                    border: '1px solid hsl(var(--lunar-border))',
-                    borderRadius: '6px',
-                    fontSize: '12px'
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Stats List */}
+          {/* Ranked Bar List */}
           <div className="space-y-2">
-            {chartData.map((stat, index) => (
-              <div key={stat.id} className="flex items-center justify-between p-2 bg-lunar-bg rounded-md">
-                <div className="flex items-center gap-2">
-                  <div 
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                  />
-                  <span className="text-xs font-medium text-lunar-text">
-                    {stat.label}
-                  </span>
+            {chartData.map((stat, index) => {
+              const barWidth = Math.max((stat.count / maxCount) * 100, 2);
+              const opacity = 1 - (index * 0.1);
+              
+              return (
+                <div key={stat.id} className="group">
+                  {/* Row: Rank + Label + Count + Percentage */}
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="w-4 text-2xs font-medium text-lunar-text text-right shrink-0">
+                      {index + 1}.
+                    </span>
+                    <span className="text-2xs text-lunar-text font-medium truncate flex-1 min-w-0">
+                      {stat.label}
+                    </span>
+                    <Badge variant="secondary" className="text-2xs shrink-0">
+                      {stat.count}
+                    </Badge>
+                    <span className="text-2xs text-lunar-textSecondary w-8 text-right shrink-0">
+                      {stat.percentage}%
+                    </span>
+                  </div>
+                  
+                  {/* Bar */}
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 shrink-0" />
+                    <div className="flex-1 h-1.5 bg-lunar-border/30 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full rounded-full bg-destructive transition-all duration-300"
+                        style={{ 
+                          width: `${barWidth}%`,
+                          opacity: Math.max(opacity, 0.4)
+                        }}
+                      />
+                    </div>
+                    <div className="w-8 shrink-0" />
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="secondary" className="text-2xs">
-                    {stat.count}
-                  </Badge>
-                  <span className="text-xs text-lunar-textSecondary">
-                    {stat.percentage}%
-                  </span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </CardContent>

@@ -1,10 +1,11 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { TrendingUp, Calendar, Camera, DollarSign, Package, PieChart as PieChartIcon, BarChart3 } from 'lucide-react';
 import { MonthlyData, CategoryData, PackageDistributionData, OriginData } from '@/hooks/useSalesAnalytics';
 import { OriginChartsSection } from './OriginChartsSection';
-import { OriginDonutCard } from './OriginDonutCard';
+import { OriginHighlightCard } from './OriginHighlightCard';
+import { RankedBarList, RankedBarItem } from './RankedBarList';
 import { MonthlyOriginData } from '@/services/RevenueAnalyticsService';
 
 interface SalesChartsGridProps {
@@ -33,20 +34,26 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
     extraPhotoRevenue: { label: 'Fotos Extras', color: 'hsl(var(--chart-quaternary))' }
   };
 
-  const PIE_COLORS = [
-    'hsl(var(--chart-primary))',
-    'hsl(var(--chart-secondary))',
-    'hsl(var(--chart-tertiary))',
-    'hsl(var(--chart-quaternary))',
-    'hsl(var(--chart-quinary))',
-    'hsl(var(--chart-senary))'
-  ];
-
   // Check if data has meaningful values
   const hasRevenueData = monthlyData.some(d => d.revenue > 0);
   const hasSessionsData = monthlyData.some(d => d.sessions > 0);
   const hasTicketData = monthlyData.some(d => d.averageTicket > 0);
   const hasExtraData = monthlyData.some(d => d.extraPhotoRevenue > 0);
+
+  // Transform data for RankedBarList
+  const categoryBarData: RankedBarItem[] = categoryData.map(cat => ({
+    name: cat.name,
+    value: cat.revenue,
+    percentage: cat.percentage,
+    secondary: `${cat.sessions} sessões`
+  }));
+
+  const packageBarData: RankedBarItem[] = packageDistributionData.map(pkg => ({
+    name: pkg.name,
+    value: pkg.revenue,
+    percentage: pkg.percentage,
+    secondary: `${pkg.sessions} sessões`
+  }));
 
   return (
     <div className="space-y-4">
@@ -214,33 +221,31 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
         </ChartCard>
       </div>
 
-      {/* Row 3: Donuts - Categoria, Origem, Pacote */}
+      {/* Row 3: Ranked Bar Lists - Categoria, Origem, Pacote */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {/* Categoria */}
-        <DonutCard 
+        <RankedBarList
           icon={PieChartIcon}
           title="Por Categoria"
-          data={categoryData}
-          dataKey="percentage"
-          colors={PIE_COLORS}
-          formatTooltip={(value: any, props: any) => 
-            `${value.toFixed(1)}% (${formatCurrency(props.payload.revenue)})`
-          }
+          data={categoryBarData}
+          maxItems={4}
+          showOthers={true}
+          valueFormatter={formatCurrency}
+          colorClass="bg-chart-primary"
         />
 
-        {/* Origem */}
-        <OriginDonutCard originData={originData} />
+        {/* Origem - Card especial ou lista */}
+        <OriginHighlightCard originData={originData} />
 
         {/* Pacote */}
-        <DonutCard 
+        <RankedBarList
           icon={Package}
-          title={selectedCategory === 'all' ? 'Por Pacote' : `Pacotes`}
-          data={packageDistributionData}
-          dataKey="percentage"
-          colors={PIE_COLORS}
-          formatTooltip={(value: any, props: any) => 
-            `${value.toFixed(1)}% - ${props.payload.sessions} sessões`
-          }
+          title={selectedCategory === 'all' ? 'Por Pacote' : 'Pacotes'}
+          data={packageBarData}
+          maxItems={5}
+          showOthers={true}
+          valueFormatter={formatCurrency}
+          colorClass="bg-chart-secondary"
         />
       </div>
 
@@ -272,98 +277,6 @@ function ChartCard({ icon: Icon, title, hasData, children }: ChartCardProps) {
         ) : (
           <div className="flex flex-col items-center justify-center h-[180px] lg:h-[200px]">
             <BarChart3 className="h-6 w-6 text-lunar-textSecondary/40 mb-1" />
-            <p className="text-2xs text-lunar-textSecondary">Sem dados</p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-// Compact Donut Card Component
-interface DonutCardProps {
-  icon: React.ElementType;
-  title: string;
-  data: any[];
-  dataKey: string;
-  colors: string[];
-  formatTooltip: (value: any, props: any) => string;
-}
-
-function DonutCard({ icon: Icon, title, data, dataKey, colors, formatTooltip }: DonutCardProps) {
-  const hasData = data && data.length > 0 && data.some(d => d[dataKey] > 0);
-  
-  // Get top item for center label
-  const topItem = hasData ? data.reduce((a, b) => a[dataKey] > b[dataKey] ? a : b) : null;
-  
-  return (
-    <Card className="border border-lunar-border/30 bg-lunar-surface/50 shadow-none">
-      <CardContent className="p-3">
-        <div className="flex items-center gap-2 mb-2">
-          <Icon className="h-3.5 w-3.5 text-lunar-textSecondary" />
-          <h3 className="text-xs font-medium text-lunar-text">{title}</h3>
-        </div>
-        
-        {hasData ? (
-          <div className="flex flex-col items-center">
-            <div className="w-[140px] h-[140px] relative">
-              <ChartContainer config={{}} className="w-full h-full">
-                <PieChart>
-                  <Pie
-                    data={data}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius="55%"
-                    outerRadius="85%"
-                    paddingAngle={2}
-                    cornerRadius={8}
-                    dataKey={dataKey}
-                  >
-                    {data.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
-                    ))}
-                  </Pie>
-                  <ChartTooltip 
-                    content={<ChartTooltipContent />}
-                    formatter={(value: any, name: any, props: any) => [
-                      formatTooltip(value, props),
-                      ''
-                    ]}
-                  />
-                </PieChart>
-              </ChartContainer>
-              
-              {/* Center Label */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-lg font-bold text-lunar-text">
-                  {topItem?.[dataKey]?.toFixed(0)}%
-                </span>
-              </div>
-            </div>
-            
-            {/* Legend */}
-            <div className="mt-2 space-y-1 w-full max-h-[80px] overflow-y-auto">
-              {data.slice(0, 4).map((item, index) => (
-                <div key={index} className="flex items-center justify-between text-2xs">
-                  <div className="flex items-center gap-1.5">
-                    <div 
-                      className="w-2 h-2 rounded-full shrink-0" 
-                      style={{ backgroundColor: colors[index % colors.length] }}
-                    />
-                    <span className="text-lunar-textSecondary truncate max-w-[80px]">
-                      {item.name}
-                    </span>
-                  </div>
-                  <span className="text-lunar-text font-medium">
-                    {item[dataKey]?.toFixed(0)}%
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center h-[180px]">
-            <PieChartIcon className="h-6 w-6 text-lunar-textSecondary/40 mb-1" />
             <p className="text-2xs text-lunar-textSecondary">Sem dados</p>
           </div>
         )}
