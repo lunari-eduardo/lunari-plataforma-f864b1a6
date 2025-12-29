@@ -1,8 +1,11 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { useAppContext } from '@/contexts/AppContext';
 import { useNovoFinancas } from '@/hooks/useNovoFinancas';
 import { useWorkflowMetrics } from '@/hooks/useWorkflowMetrics';
 import { useWorkflowMetricsRealtime } from '@/hooks/useWorkflowMetricsRealtime';
+import { useWorkflowMetricsByYear } from '@/hooks/useWorkflowMetricsByYear';
 import { getCurrentDateString, parseDateFromStorage } from '@/utils/dateUtils';
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
 import { GoalsIntegrationService } from '@/services/GoalsIntegrationService';
@@ -56,6 +59,20 @@ interface HistoricalGoal {
   margemLucroDesejada: number;
 }
 
+interface TransacaoComItem {
+  id: string;
+  itemId: string;
+  valor: number;
+  dataVencimento: string;
+  status: string;
+  observacoes?: string;
+  item?: {
+    id: string;
+    nome: string;
+    grupo_principal: string;
+  } | null;
+}
+
 export function useDashboardFinanceiro() {
   // Estados para modal de equipamentos
   const [equipmentModalOpen, setEquipmentModalOpen] = useState(false);
@@ -66,7 +83,7 @@ export function useDashboardFinanceiro() {
     allTransactionIds: string[];
   } | null>(null);
   
-  // ✅ Estado para forçar recálculo quando cache for atualizado
+  // Estado para forçar recálculo quando cache for atualizado
   const [cacheVersion, setCacheVersion] = useState(0);
 
   // Listener para equipamentos detectados + cache updates
@@ -84,7 +101,6 @@ export function useDashboardFinanceiro() {
       setEquipmentModalOpen(true);
     };
 
-    // ✅ Listener para atualizações do cache do workflow
     const handleCacheUpdate = () => {
       console.log('📊 [Dashboard] Cache do workflow foi atualizado, recalculando...');
       setCacheVersion(prev => prev + 1);
@@ -103,7 +119,6 @@ export function useDashboardFinanceiro() {
 
   const handleEquipmentModalClose = useCallback(() => {
     if (equipmentData?.allTransactionIds) {
-      // Marcar transações como processadas quando modal é fechado
       pricingFinancialIntegrationService.markEquipmentTransactionsAsProcessed(
         equipmentData.allTransactionIds
       );
@@ -112,7 +127,6 @@ export function useDashboardFinanceiro() {
     setEquipmentData(null);
   }, [equipmentData]);
 
-  // Force scan após criação de nova transação
   const triggerEquipmentScan = useCallback(() => {
     const event = new CustomEvent(EQUIPMENT_FORCE_SCAN_EVENT);
     window.dispatchEvent(event);
@@ -120,12 +134,10 @@ export function useDashboardFinanceiro() {
 
   // ============= FUNÇÕES DE TRANSFORMAÇÃO DE DADOS =============
   
-  // Função para converter valores monetários formatados para números
   const parseMonetaryValue = (value: string | number): number => {
     if (typeof value === 'number') return value;
     if (!value || typeof value !== 'string') return 0;
     
-    // Remove "R$", espaços, pontos (milhares) e substitui vírgula por ponto
     const cleanValue = value
       .replace(/R\$\s*/g, '')
       .replace(/\./g, '')
@@ -136,40 +148,22 @@ export function useDashboardFinanceiro() {
     return isNaN(parsed) ? 0 : parsed;
   };
 
-  // ============= CARREGAMENTO DE DADOS SIMPLIFICADO =============
+  // ============= CARREGAMENTO DE DADOS =============
   
-  // ✅ Usar métricas em tempo real do workflow (substituindo cache localStorage)
-  // ✅ DEPRECATED: Manter apenas para anos disponíveis (será removido depois)
   const { getAvailableYears } = useWorkflowMetrics();
+  const { itensFinanceiros, transacoes: transacoesFinanceiras } = useNovoFinancas();
 
-  // Otimizar carregamento de dados com cache
-  const { itensFinanceiros } = useNovoFinancas();
-  
-  // Usar transações do hook useNovoFinancas (já vem do Supabase)
-  const { transacoes: transacoesFinanceiras } = useNovoFinancas();
-
-  // Criar Maps para lookup O(1) ao invés de find() O(n)
+  // Criar Maps para lookup O(1)
   const itensMap = useMemo(() => {
     return new Map(itensFinanceiros.map(item => [item.id, item]));
   }, [itensFinanceiros]);
 
-  // Memoizar transações com itens usando Map otimizada
-  const transacoesComItens = useMemo(() => {
-    return transacoesFinanceiras.map(transacao => ({
-      ...transacao,
-      valor: parseMonetaryValue(transacao.valor),
-      item: itensMap.get(transacao.itemId) || null
-    }));
-  }, [transacoesFinanceiras, itensMap]);
-
   // ============= NOVO SISTEMA DE FILTROS =============
 
-  // Seletor de ano dinâmico - usar anos disponíveis do cache de métricas + transações
   const anosDisponiveis = useMemo(() => {
     const anosWorkflow = getAvailableYears();
     const anosTransacoes = new Set<number>();
     
-    // Extrair anos das transações financeiras
     transacoesFinanceiras.forEach(transacao => {
       if (!transacao.dataVencimento || typeof transacao.dataVencimento !== 'string') {
         return;
@@ -180,7 +174,6 @@ export function useDashboardFinanceiro() {
       }
     });
     
-    // Combinar anos únicos e ordenar
     const todosAnos = new Set([...anosWorkflow, ...anosTransacoes]);
     
     if (todosAnos.size === 0) {
@@ -190,23 +183,80 @@ export function useDashboardFinanceiro() {
     return Array.from(todosAnos).sort((a, b) => b - a);
   }, [getAvailableYears, transacoesFinanceiras]);
 
-  // Estados dos filtros com memoização
   const [anoSelecionado, setAnoSelecionado] = useState(() => {
     return anosDisponiveis[0]?.toString() || new Date().getFullYear().toString();
   });
 
   const [mesSelecionado, setMesSelecionado] = useState<string>('ano-completo');
 
-  // ============= MÉTRICAS EM TEMPO REAL DO WORKFLOW =============
+  // ============= QUERY DEDICADA PARA TRANSAÇÕES DO ANO (DASHBOARD) =============
   
-  // ✅ Calcular ano e mês para o hook de métricas
   const ano = parseInt(anoSelecionado);
   const mesNumero = mesSelecionado !== 'ano-completo' ? parseInt(mesSelecionado) : undefined;
+
+  // Query dedicada para transações do ano inteiro (independente do filtro de mês das abas)
+  const { data: transacoesDoAno = [] } = useQuery({
+    queryKey: ['dashboard-transactions-year', ano],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      
+      const startDate = `${ano}-01-01`;
+      const endDate = `${ano}-12-31`;
+      
+      const { data, error } = await supabase
+        .from('fin_transactions')
+        .select(`
+          id,
+          item_id,
+          valor,
+          data_vencimento,
+          status,
+          observacoes,
+          fin_items_master (
+            id,
+            nome,
+            grupo_principal
+          )
+        `)
+        .eq('user_id', user.id)
+        .gte('data_vencimento', startDate)
+        .lte('data_vencimento', endDate)
+        .order('data_vencimento', { ascending: true });
+      
+      if (error) {
+        console.error('Erro ao buscar transações do ano:', error);
+        return [];
+      }
+      
+      // Transformar para formato interno
+      return (data || []).map(t => ({
+        id: t.id,
+        itemId: t.item_id,
+        valor: t.valor,
+        dataVencimento: t.data_vencimento,
+        status: t.status,
+        observacoes: t.observacoes,
+        item: t.fin_items_master ? {
+          id: (t.fin_items_master as any).id,
+          nome: (t.fin_items_master as any).nome,
+          grupo_principal: (t.fin_items_master as any).grupo_principal
+        } : null
+      })) as TransacaoComItem[];
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutos
+    refetchOnWindowFocus: false
+  });
+
+  // ============= MÉTRICAS EM TEMPO REAL DO WORKFLOW =============
   
-  // ✅ Hook de métricas em tempo real (sempre no topo, nunca dentro de useMemo)
+  // Hook de métricas do workflow por mês (para gráficos anuais)
+  const workflowMetricsByYear = useWorkflowMetricsByYear(ano);
+  
+  // Hook de métricas em tempo real (para KPIs dinâmicos)
   const workflowMetrics = useWorkflowMetricsRealtime(ano, mesNumero);
 
-  // ✅ Calcular período anterior para comparação
+  // Calcular período anterior para comparação
   const periodoAnterior = useMemo(() => {
     if (mesSelecionado && mesSelecionado !== 'ano-completo') {
       const mesAtual = parseInt(mesSelecionado);
@@ -220,61 +270,52 @@ export function useDashboardFinanceiro() {
     }
   }, [ano, mesSelecionado]);
 
-  // ✅ Hook de métricas do período anterior para comparação
   const workflowMetricsAnterior = useWorkflowMetricsRealtime(
     periodoAnterior.ano, 
     periodoAnterior.mes
   );
 
-  // ============= FILTROS POR PERÍODO =============
+  // ============= FILTROS POR PERÍODO (PARA KPIs DINÂMICOS) =============
 
-  const transacoesFiltradas = useMemo(() => {
-    const ano = parseInt(anoSelecionado);
-    let filtradas = transacoesComItens.filter(transacao => {
-      if (!transacao.dataVencimento || typeof transacao.dataVencimento !== 'string') {
-        return false;
-      }
-      const anoTransacao = parseInt(transacao.dataVencimento.split('-')[0]);
-      return anoTransacao === ano;
-    });
+  // Transações filtradas pelo período selecionado (para KPIs)
+  const transacoesFiltradasPorPeriodo = useMemo(() => {
+    let filtradas = transacoesDoAno;
 
     // Aplicar filtro de mês se selecionado
     if (mesSelecionado && mesSelecionado !== 'ano-completo') {
-      const mesNumero = parseInt(mesSelecionado);
+      const mesNum = parseInt(mesSelecionado);
       filtradas = filtradas.filter(transacao => {
-        if (!transacao.dataVencimento || typeof transacao.dataVencimento !== 'string') {
-          return false;
-        }
+        if (!transacao.dataVencimento) return false;
         const mesTransacao = parseInt(transacao.dataVencimento.split('-')[1]);
-        return mesTransacao === mesNumero;
+        return mesTransacao === mesNum;
       });
     }
 
     return filtradas;
-  }, [transacoesComItens, anoSelecionado, mesSelecionado]);
+  }, [transacoesDoAno, mesSelecionado]);
 
-  // ============= CÁLCULOS DE MÉTRICAS =============
+  // ============= CÁLCULOS DE MÉTRICAS (KPIs DINÂMICOS) =============
   
   const kpisData = useMemo((): KPIsData => {
-    // ============= ✅ FONTE ÚNICA: SUPABASE EM TEMPO REAL =============
+    // FONTE: Workflow em tempo real (filtrado por período)
     const receitaOperacional = workflowMetrics.receita;
     const valorPrevisto = workflowMetrics.previsto;
     const aReceber = workflowMetrics.aReceber;
     
-    // ============= RECEITAS EXTRAS DAS TRANSAÇÕES (NÃO OPERACIONAIS) =============
-    const receitasExtras = transacoesFiltradas
+    // RECEITAS NÃO OPERACIONAIS (filtradas pelo período)
+    const receitasExtras = transacoesFiltradasPorPeriodo
       .filter(t => t.status === 'Pago' && t.item?.grupo_principal === 'Receita Não Operacional')
       .reduce((sum, t) => sum + t.valor, 0);
 
-    // ✅ TOTAL DE RECEITAS: Operacionais (do cache) + Extras (das transações)
+    // TOTAL DE RECEITAS
     const totalReceita = receitaOperacional + receitasExtras;
 
-    // ============= DESPESAS DAS TRANSAÇÕES =============
-    const totalDespesas = transacoesFiltradas
+    // DESPESAS (filtradas pelo período)
+    const totalDespesas = transacoesFiltradasPorPeriodo
       .filter(t => t.status === 'Pago' && t.item && ['Despesa Fixa', 'Despesa Variável', 'Investimento'].includes(t.item.grupo_principal))
       .reduce((sum, t) => sum + t.valor, 0);
 
-    // ============= CÁLCULOS FINAIS =============
+    // CÁLCULOS FINAIS
     const totalLucro = totalReceita - totalDespesas;
     const saldoTotal = totalLucro;
 
@@ -283,7 +324,7 @@ export function useDashboardFinanceiro() {
       receitasExtras: receitasExtras.toFixed(2), 
       totalReceita: totalReceita.toFixed(2),
       totalDespesas: totalDespesas.toFixed(2),
-      fonte: 'supabase-realtime'
+      fonte: 'supabase-realtime + query-anual'
     });
 
     return {
@@ -294,29 +335,39 @@ export function useDashboardFinanceiro() {
       totalLucro,
       saldoTotal
     };
-  }, [workflowMetrics, transacoesFiltradas]);
+  }, [workflowMetrics, transacoesFiltradasPorPeriodo, anoSelecionado, mesSelecionado]);
 
-  // ============= CÁLCULOS ESPECÍFICOS PARA ROI =============
+  // ============= ROI (SEMPRE DADOS ANUAIS) =============
   
   const roiData = useMemo(() => {
-    // Despesas de investimento (somente)
-    const totalInvestimento = transacoesFiltradas
+    // Usar transações do ANO INTEIRO (não filtradas por mês)
+    const totalInvestimento = transacoesDoAno
       .filter(t => t.status === 'Pago' && t.item?.grupo_principal === 'Investimento')
       .reduce((sum, t) => sum + t.valor, 0);
 
-    // ROI = (Lucro Total / Despesas de Investimento) * 100
-    const roi = totalInvestimento > 0 ? (kpisData.totalLucro / totalInvestimento) * 100 : 0;
+    // Calcular lucro anual para ROI
+    const receitaAnual = workflowMetricsByYear.totalAnual.receita + 
+      transacoesDoAno
+        .filter(t => t.status === 'Pago' && t.item?.grupo_principal === 'Receita Não Operacional')
+        .reduce((sum, t) => sum + t.valor, 0);
+    
+    const despesasAnuais = transacoesDoAno
+      .filter(t => t.status === 'Pago' && t.item && ['Despesa Fixa', 'Despesa Variável', 'Investimento'].includes(t.item.grupo_principal))
+      .reduce((sum, t) => sum + t.valor, 0);
+    
+    const lucroAnual = receitaAnual - despesasAnuais;
+
+    const roi = totalInvestimento > 0 ? (lucroAnual / totalInvestimento) * 100 : 0;
 
     return {
       totalInvestimento,
-      roi: Math.max(0, roi) // Garante que não seja negativo
+      roi: Math.max(0, roi)
     };
-  }, [transacoesFiltradas, kpisData.totalLucro]);
+  }, [transacoesDoAno, workflowMetricsByYear]);
 
   // ============= COMPARAÇÕES PERÍODO ANTERIOR =============
   
   const comparisonData = useMemo(() => {
-    // Definir período anterior baseado no filtro atual
     let labelComparacao = '';
     
     if (mesSelecionado && mesSelecionado !== 'ano-completo') {
@@ -325,15 +376,12 @@ export function useDashboardFinanceiro() {
       labelComparacao = 'em comparação ao ano anterior';
     }
     
-    // Buscar dados do período anterior
     let receitaAnterior = workflowMetricsAnterior.receita;
     let despesasAnterior = 0;
     
-    // Transações do período anterior
-    const transacoesAnterior = transacoesComItens.filter(transacao => {
-      if (!transacao.dataVencimento || typeof transacao.dataVencimento !== 'string') {
-        return false;
-      }
+    // Transações do período anterior (buscar da query de transações do ano)
+    const transacoesAnterior = transacoesDoAno.filter(transacao => {
+      if (!transacao.dataVencimento) return false;
       const [anoTransacao, mesTransacao] = transacao.dataVencimento.split('-').map(Number);
       
       if (periodoAnterior.mes) {
@@ -343,21 +391,18 @@ export function useDashboardFinanceiro() {
       }
     });
     
-    // Receitas extras do período anterior
     const receitasExtrasAnterior = transacoesAnterior
       .filter(t => t.status === 'Pago' && t.item?.grupo_principal === 'Receita Não Operacional')
       .reduce((sum, t) => sum + t.valor, 0);
     
     receitaAnterior += receitasExtrasAnterior;
     
-    // Despesas do período anterior  
     despesasAnterior = transacoesAnterior
       .filter(t => t.status === 'Pago' && t.item && ['Despesa Fixa', 'Despesa Variável', 'Investimento'].includes(t.item.grupo_principal))
       .reduce((sum, t) => sum + t.valor, 0);
     
     const lucroAnterior = receitaAnterior - despesasAnterior;
     
-    // Calcular variações percentuais
     const calcularVariacao = (atual: number, anterior: number): number | null => {
       if (anterior === 0) return atual > 0 ? 100 : null;
       return ((atual - anterior) / anterior) * 100;
@@ -369,14 +414,13 @@ export function useDashboardFinanceiro() {
       variacaoLucro: calcularVariacao(kpisData.totalLucro, lucroAnterior),
       variacaoDespesas: calcularVariacao(kpisData.totalDespesas, despesasAnterior)
     };
-  }, [anoSelecionado, mesSelecionado, kpisData, transacoesComItens, workflowMetricsAnterior, periodoAnterior]);
+  }, [anoSelecionado, mesSelecionado, kpisData, transacoesDoAno, workflowMetricsAnterior, periodoAnterior]);
 
-  // ============= METAS INTEGRADAS COM PRECIFICAÇÃO =============
+  // ============= METAS =============
   
   const metasData = useMemo((): MetasData => {
     const anoSelecionadoNum = parseInt(anoSelecionado);
     
-    // Carregar metas históricas primeiro
     const historicalGoals: HistoricalGoal[] = storage.load(STORAGE_KEYS.HISTORICAL_GOALS, []);
     const metaDoAno = historicalGoals.find(goal => goal.ano === anoSelecionadoNum);
     
@@ -384,27 +428,24 @@ export function useDashboardFinanceiro() {
     let metaLucro = 0;
     
     if (metaDoAno) {
-      // Usar meta histórica se disponível
       metaReceita = metaDoAno.metaFaturamento;
       metaLucro = metaDoAno.metaLucro;
     } else {
-      // Usar dados da precificação como fallback
       try {
         const goalsData = GoalsIntegrationService.getAnnualGoals();
         metaReceita = goalsData.revenue;
         metaLucro = goalsData.profit;
       } catch (error) {
         console.warn('Erro ao carregar metas da precificação:', error);
-        // Valores padrão apenas se não conseguir carregar
         metaReceita = 100000;
         metaLucro = 30000;
       }
     }
     
-    // Ajustar metas se filtro de mês específico estiver ativo
+    // Ajustar metas se filtro de mês específico
     if (mesSelecionado && mesSelecionado !== 'ano-completo') {
-      metaReceita = metaReceita / 12; // Meta proporcional do mês
-      metaLucro = metaLucro / 12; // Meta proporcional do mês
+      metaReceita = metaReceita / 12;
+      metaLucro = metaLucro / 12;
     }
     
     return {
@@ -415,7 +456,7 @@ export function useDashboardFinanceiro() {
     };
   }, [kpisData, anoSelecionado, mesSelecionado]);
 
-  // ============= DADOS PARA GRÁFICOS =============
+  // ============= DADOS PARA GRÁFICOS (SEMPRE ANUAIS) =============
   
   const dadosMensais = useMemo((): DadosMensais[] => {
     const meses = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
@@ -426,46 +467,14 @@ export function useDashboardFinanceiro() {
       dadosPorMes[i] = { receita: 0, despesas: 0 };
     }
 
-    const ano = parseInt(anoSelecionado);
-    
-    // ✅ RECEITA OPERACIONAL: usar sempre Supabase em tempo real
-    if (mesSelecionado && mesSelecionado !== 'ano-completo') {
-      // Mês específico - usar métricas já calculadas
-      const mesNumero = parseInt(mesSelecionado);
-      dadosPorMes[mesNumero].receita += workflowMetrics.receita;
-    } else {
-      // Ano completo - distribuir receita total proporcionalmente
-      // TODO: Implementar busca individual por mês em versão futura
-      const receitaTotal = workflowMetrics.receita;
-      const receitaPorMes = receitaTotal / 12;
-      for (let mes = 1; mes <= 12; mes++) {
-        dadosPorMes[mes].receita += receitaPorMes;
-      }
-    }
-    
-    // Filtrar transações baseado na seleção de mês/ano
-    let transacoesFiltradas = transacoesComItens.filter(transacao => {
-      if (!transacao.dataVencimento || typeof transacao.dataVencimento !== 'string') {
-        return false;
-      }
-      const anoTransacao = parseInt(transacao.dataVencimento.split('-')[0]);
-      return anoTransacao === ano;
+    // RECEITA OPERACIONAL: usar dados reais por mês do workflow
+    workflowMetricsByYear.metricsPorMes.forEach(m => {
+      dadosPorMes[m.mes].receita += m.receita;
     });
-
-    // Se um mês específico está selecionado, filtrar também por mês
-    if (mesSelecionado && mesSelecionado !== 'ano-completo') {
-      const mesNumero = parseInt(mesSelecionado);
-      transacoesFiltradas = transacoesFiltradas.filter(transacao => {
-        const mesTransacao = parseInt(transacao.dataVencimento.split('-')[1]);
-        return mesTransacao === mesNumero;
-      });
-    }
-
-    // Agregar transações por mês
-    transacoesFiltradas.filter(t => t.status === 'Pago').forEach(transacao => {
-      if (!transacao.dataVencimento || typeof transacao.dataVencimento !== 'string') {
-        return;
-      }
+    
+    // RECEITAS NÃO OPERACIONAIS + DESPESAS: usar transações do ano inteiro
+    transacoesDoAno.filter(t => t.status === 'Pago').forEach(transacao => {
+      if (!transacao.dataVencimento) return;
       const mes = parseInt(transacao.dataVencimento.split('-')[1]);
       
       if (transacao.item?.grupo_principal === 'Receita Não Operacional') {
@@ -475,17 +484,8 @@ export function useDashboardFinanceiro() {
       }
     });
 
-    // Se mês específico selecionado, mostrar apenas esse mês no gráfico
-    if (mesSelecionado && mesSelecionado !== 'ano-completo') {
-      const mesNumero = parseInt(mesSelecionado);
-      const dadosMes = dadosPorMes[mesNumero];
-      return [{
-        mes: meses[mesNumero - 1],
-        receita: dadosMes.receita,
-        lucro: dadosMes.receita - dadosMes.despesas
-      }];
-    }
-
+    // Se mês específico selecionado, ainda mostrar todos os meses para contexto
+    // mas destacar o mês selecionado no componente de gráfico
     return meses.map((nome, index) => {
       const dadosMes = dadosPorMes[index + 1];
       return {
@@ -494,9 +494,9 @@ export function useDashboardFinanceiro() {
         lucro: dadosMes.receita - dadosMes.despesas
       };
     });
-  }, [anoSelecionado, mesSelecionado, transacoesComItens, workflowMetrics]);
+  }, [workflowMetricsByYear, transacoesDoAno]);
 
-  // ============= COMPOSIÇÃO DE DESPESAS =============
+  // ============= COMPOSIÇÃO DE DESPESAS (SEMPRE ANUAL) =============
   
   const composicaoDespesas = useMemo((): ComposicaoDespesas[] => {
     const grupos: Record<string, number> = {
@@ -505,7 +505,8 @@ export function useDashboardFinanceiro() {
       'Investimentos': 0
     };
 
-    transacoesFiltradas
+    // Usar transações do ANO INTEIRO (não filtradas por mês)
+    transacoesDoAno
       .filter(t => t.status === 'Pago' && t.item)
       .forEach(transacao => {
         if (transacao.item?.grupo_principal === 'Despesa Fixa') {
@@ -527,22 +528,12 @@ export function useDashboardFinanceiro() {
         percentual: totalDespesas > 0 ? (valor / totalDespesas) * 100 : 0
       }))
       .sort((a, b) => b.valor - a.valor);
-  }, [transacoesFiltradas]);
+  }, [transacoesDoAno]);
 
   // ============= EVOLUÇÃO DE CATEGORIA ESPECÍFICA =============
   
   const categoriasDisponiveis = useMemo(() => {
     const categorias = new Set<string>();
-    
-    // Usar transações do ano inteiro (não filtradas por mês) para ter todas as categorias
-    const ano = parseInt(anoSelecionado);
-    const transacoesDoAno = transacoesComItens.filter(transacao => {
-      if (!transacao.dataVencimento || typeof transacao.dataVencimento !== 'string') {
-        return false;
-      }
-      const anoTransacao = parseInt(transacao.dataVencimento.split('-')[0]);
-      return anoTransacao === ano;
-    });
     
     transacoesDoAno.forEach(transacao => {
       if (transacao.item?.nome) {
@@ -552,7 +543,7 @@ export function useDashboardFinanceiro() {
 
     const categoriasArray = Array.from(categorias);
     return categoriasArray.length > 0 ? categoriasArray : ['Aluguel'];
-  }, [transacoesComItens, anoSelecionado]);
+  }, [transacoesDoAno]);
 
   const [categoriaSelecionada, setCategoriaSelecionada] = useState(() => 
     categoriasDisponiveis[0] || 'Aluguel'
@@ -562,31 +553,17 @@ export function useDashboardFinanceiro() {
     const meses = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
     const evolucoes: Record<string, EvolucaoCategoria[]> = {};
 
-    // Usar transações do ano inteiro para gráfico de evolução
-    const ano = parseInt(anoSelecionado);
-    const transacoesDoAno = transacoesComItens.filter(transacao => {
-      if (!transacao.dataVencimento || typeof transacao.dataVencimento !== 'string') {
-        return false;
-      }
-      const anoTransacao = parseInt(transacao.dataVencimento.split('-')[0]);
-      return anoTransacao === ano;
-    });
-
     categoriasDisponiveis.forEach(categoria => {
       const dadosPorMes: Record<number, number> = {};
       
-      // Inicializar todos os meses
       for (let i = 1; i <= 12; i++) {
         dadosPorMes[i] = 0;
       }
 
-      // Agregar dados por mês para esta categoria
       transacoesDoAno
         .filter(t => t.status === 'Pago' && t.item?.nome === categoria)
         .forEach(transacao => {
-          if (!transacao.dataVencimento || typeof transacao.dataVencimento !== 'string') {
-            return;
-          }
+          if (!transacao.dataVencimento) return;
           const mes = parseInt(transacao.dataVencimento.split('-')[1]);
           if (!isNaN(mes) && mes >= 1 && mes <= 12) {
             dadosPorMes[mes] += transacao.valor;
@@ -600,14 +577,15 @@ export function useDashboardFinanceiro() {
     });
 
     return evolucoes;
-  }, [transacoesComItens, categoriasDisponiveis, anoSelecionado]);
+  }, [transacoesDoAno, categoriasDisponiveis]);
 
   // ============= DESPESAS POR CATEGORIA DETALHADA =============
   
   const categoriasDetalhadas = useMemo(() => {
     const categoriaMap: Record<string, number> = {};
 
-    transacoesFiltradas
+    // Usar dados anuais para ranking de categorias
+    transacoesDoAno
       .filter(t => t.status === 'Pago' && t.item?.nome && 
         ['Despesa Fixa', 'Despesa Variável', 'Investimento'].includes(t.item.grupo_principal || ''))
       .forEach(transacao => {
@@ -618,8 +596,11 @@ export function useDashboardFinanceiro() {
     return Object.entries(categoriaMap)
       .map(([categoria, valor]) => ({ categoria, valor }))
       .sort((a, b) => b.valor - a.valor)
-      .slice(0, 10); // Top 10 categorias
-  }, [transacoesFiltradas]);
+      .slice(0, 10);
+  }, [transacoesDoAno]);
+
+  // Transações filtradas para exportar (compatibilidade)
+  const transacoesFiltradas = transacoesFiltradasPorPeriodo;
 
   // ============= FUNÇÕES AUXILIARES =============
   
@@ -637,15 +618,12 @@ export function useDashboardFinanceiro() {
     return meses[numero - 1] || '';
   };
 
-  // Função para excluir meta anual
   const excluirMetaAnual = useCallback(() => {
     const anoSelecionadoNum = parseInt(anoSelecionado);
     const historicalGoals: HistoricalGoal[] = storage.load(STORAGE_KEYS.HISTORICAL_GOALS, []);
     
-    // Remover meta do ano selecionado
     const novasMetasHistoricas = historicalGoals.filter(goal => goal.ano !== anoSelecionadoNum);
     
-    // Salvar no localStorage
     storage.save(STORAGE_KEYS.HISTORICAL_GOALS, novasMetasHistoricas);
   }, [anoSelecionado]);
 

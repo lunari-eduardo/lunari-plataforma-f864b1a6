@@ -50,6 +50,35 @@ export class SupabaseFinancialTransactionsAdapter {
       throw error;
     }
   }
+
+  /**
+   * Buscar todas as transações de um ano específico
+   * Útil para dashboard financeiro que precisa de dados anuais
+   */
+  static async getTransactionsByYear(year: number): Promise<FinancialTransactionDB[]> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Usuário não autenticado');
+      
+      const startDate = `${year}-01-01`;
+      const endDate = `${year}-12-31`;
+      
+      const { data, error } = await supabase
+        .from('fin_transactions')
+        .select('*')
+        .eq('user_id', user.id)
+        .gte('data_vencimento', startDate)
+        .lte('data_vencimento', endDate)
+        .order('data_vencimento', { ascending: true });
+      
+      if (error) throw error;
+      
+      return (data || []) as FinancialTransactionDB[];
+    } catch (error) {
+      console.error('Erro ao buscar transações do ano:', error);
+      throw error;
+    }
+  }
   
   /**
    * Buscar transações por período
