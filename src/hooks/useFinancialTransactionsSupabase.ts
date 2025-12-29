@@ -6,6 +6,7 @@
  * - Motor unificado de criação (detecta tipo automaticamente)
  * - Realtime updates via Supabase subscriptions
  * - Integração com Extrato e Demonstrativo
+ * - Integração com detecção de equipamentos para precificação
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -15,6 +16,7 @@ import { SupabaseFinancialTransactionsAdapter } from '@/adapters/SupabaseFinanci
 import { SupabaseFinancialItemsAdapter } from '@/adapters/SupabaseFinancialItemsAdapter';
 import { NovaTransacaoFinanceira, GrupoPrincipal, StatusTransacao } from '@/types/financas';
 import { useToast } from '@/hooks/use-toast';
+import { emitEquipmentCandidate, EQUIPMENT_FORCE_SCAN_EVENT } from '@/hooks/useEquipmentSync';
 
 // Adapters - usar métodos estáticos
 
@@ -62,6 +64,50 @@ export interface TransacaoComItem extends NovaTransacaoFinanceira {
 /**
  * Hook principal para gerenciamento de transações financeiras
  */
+// Função auxiliar para verificar se transação é de Equipamento e emitir notificação
+async function checkIfEquipmentAndNotify(
+  itemId: string, 
+  result: any, 
+  variables: CreateTransactionParams | CreateTransactionInput
+) {
+  try {
+    const { data: item } = await supabase
+      .from('fin_items_master')
+      .select('nome, grupo_principal')
+      .eq('id', itemId)
+      .maybeSingle();
+    
+    if (item?.nome === 'Equipamentos' && item?.grupo_principal === 'Investimento') {
+      console.log('🔧 [FinancialTransactions] Transação de equipamento detectada!');
+      
+      // Extrair dados da transação
+      const transactionId = Array.isArray(result) ? result[0]?.id : result?.id;
+      const valor = 'valor' in variables ? variables.valor : (variables as any).valorTotal;
+      const observacoes = variables.observacoes;
+      const dataCompra = 'data_compra' in variables ? variables.data_compra : 
+                         'data_vencimento' in variables ? variables.data_vencimento :
+                         (variables as any).dataPrimeiraOcorrencia;
+      
+      if (transactionId) {
+        // Emitir candidato diretamente (mais rápido que force-scan)
+        emitEquipmentCandidate({
+          transacaoId: transactionId,
+          nome: observacoes?.trim() || `Novo Equipamento R$ ${valor.toFixed(2)}`,
+          valor,
+          data: dataCompra || new Date().toISOString().split('T')[0],
+          observacoes,
+          allTransactionIds: [transactionId]
+        });
+      } else {
+        // Fallback: disparar force-scan
+        window.dispatchEvent(new CustomEvent(EQUIPMENT_FORCE_SCAN_EVENT));
+      }
+    }
+  } catch (error) {
+    console.error('🔧 [FinancialTransactions] Erro ao verificar equipamento:', error);
+  }
+}
+
 export function useFinancialTransactionsSupabase(filtroMesAno: { mes: number; ano: number }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -241,9 +287,14 @@ export function useFinancialTransactionsSupabase(filtroMesAno: { mes: number; an
         observacoes: observacoes || null
       });
     },
-    onSuccess: () => {
+    onSuccess: async (result, variables) => {
       queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
       queryClient.invalidateQueries({ queryKey: ['extrato-unificado'] });
+      
+      // Verificar se é transação de Equipamento e emitir evento
+      const itemId = 'item_id' in variables ? variables.item_id : (variables as any).itemId;
+      await checkIfEquipmentAndNotify(itemId, result, variables);
+      
       toast({
         title: "Sucesso",
         description: "Transação criada com sucesso"

@@ -10,6 +10,7 @@ interface AddEquipmentFromTransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
   equipmentData: {
+    transacaoId?: string;
     nome: string;
     valor: number;
     data: string;
@@ -70,12 +71,13 @@ export function AddEquipmentFromTransactionModal({
     try {
       console.log('🔧 [Modal] Adicionando equipamento via Supabase:', formData);
       
-      // USAR O HOOK DO SUPABASE (não mais localStorage!)
+      // USAR O HOOK DO SUPABASE com fin_transaction_id para rastreabilidade
       const sucesso = await adicionarEquipamento({
         nome: formData.nome,
         valorPago: parseFloat(formData.valorPago) || 0,
         dataCompra: formData.dataCompra || new Date().toISOString().split('T')[0],
-        vidaUtil: parseInt(formData.vidaUtil) || 5
+        vidaUtil: parseInt(formData.vidaUtil) || 5,
+        fin_transaction_id: equipmentData?.transacaoId
       });
 
       if (sucesso) {
