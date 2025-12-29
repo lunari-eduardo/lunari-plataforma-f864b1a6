@@ -9,6 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { GrupoPrincipal, ItemFinanceiro } from '@/types/financas';
 import { CreateTransactionInput } from '@/hooks/useFinancialTransactionsSupabase';
 import OpcoesLancamento, { OpcoesLancamentoState } from './OpcoesLancamento';
+import { parseFinancialInput } from '@/utils/financialPrecision';
 
 type TipoLancamento = 'despesa' | 'receita';
 
@@ -63,8 +64,8 @@ export default function ModalNovoLancamentoRefatorado({
   const handleSubmit = () => {
     if (!formData.item_id || !formData.valor) return;
 
-    const valor = parseFloat(formData.valor);
-    if (isNaN(valor) || valor <= 0) return;
+    const valor = parseFinancialInput(formData.valor);
+    if (valor <= 0) return;
 
     // Validação específica para cartão de crédito
     if (opcoes.cartaoCredito && !opcoes.cartaoCreditoId) {
