@@ -76,7 +76,7 @@ export function useGoogleCalendarIntegration(): UseGoogleCalendarReturn {
     setConnecting(true);
     try {
       // Use production URL for redirect
-      const redirectUri = 'https://www.lunariplataforma.com.br/app/preferencias?tab=integracoes';
+      const redirectUri = 'https://www.lunariplataforma.com.br/app/integracoes';
 
       const { data, error } = await supabase.functions.invoke('google-calendar-connect', {
         body: { redirectUri },

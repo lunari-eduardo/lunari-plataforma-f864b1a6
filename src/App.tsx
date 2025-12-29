@@ -17,7 +17,7 @@ import ClienteDetalhe from "./pages/ClienteDetalhe";
 import Workflow from "./pages/Workflow";
 import AnaliseVendas from "./pages/AnaliseVendas";
 import MinhaConta from "./pages/MinhaConta";
-import Preferencias from "./pages/Preferencias";
+import Integracoes from "./pages/Integracoes";
 import Tarefas from "./pages/Tarefas";
 import FeedTest from "./pages/FeedTest";
 import LandingPage from "./pages/LandingPage";
@@ -171,7 +171,7 @@ function App() {
                       } />
                       <Route path="configuracoes" element={<Configuracoes />} />
                       <Route path="minha-conta" element={<MinhaConta />} />
-                      <Route path="preferencias" element={<Preferencias />} />
+                      <Route path="integracoes" element={<Integracoes />} />
                       <Route path="tarefas" element={
                         <PlanRestrictionGuard requiredPlan="pro">
                           <Tarefas />
@@ -182,7 +182,8 @@ function App() {
                           <FeedTest />
                         </PlanRestrictionGuard>
                       } />
-                      <Route path="integracoes" element={<Navigate to="/app/preferencias?tab=integracoes" replace />} />
+                      {/* Legacy redirect for old preferencias route */}
+                      <Route path="preferencias" element={<Navigate to="/app/integracoes" replace />} />
                       <Route path="admin/usuarios" element={
                         <AdminRoute>
                           <AdminUsuarios />
