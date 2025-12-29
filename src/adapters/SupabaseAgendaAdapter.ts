@@ -306,6 +306,14 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
       } catch (sessionError) {
         console.error('⚠️ [SupabaseAdapter] Erro ao criar sessão (não fatal):', sessionError);
       }
+
+      // Google Calendar sync for confirmed appointments
+      try {
+        const { syncAppointmentToGoogleCalendar } = await import('@/services/googleCalendarSync');
+        syncAppointmentToGoogleCalendar(data.id, 'create');
+      } catch (syncError) {
+        console.warn('⚠️ [SupabaseAdapter] Google Calendar sync failed (non-fatal):', syncError);
+      }
     }
 
     return converted;
@@ -415,8 +423,24 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
             }, 2000);
           }
         }
+
+        // Google Calendar sync for confirmed appointments
+        try {
+          const { syncAppointmentToGoogleCalendar } = await import('@/services/googleCalendarSync');
+          syncAppointmentToGoogleCalendar(id, 'update');
+        } catch (syncError) {
+          console.warn('⚠️ [SupabaseAdapter] Google Calendar sync failed (non-fatal):', syncError);
+        }
       } catch (sessionError) {
         console.error('⚠️ [SupabaseAdapter] Erro ao criar sessão (não fatal):', sessionError);
+      }
+    } else if (updates.date || updates.time) {
+      // If date/time changed but not status, still sync
+      try {
+        const { syncAppointmentToGoogleCalendar } = await import('@/services/googleCalendarSync');
+        syncAppointmentToGoogleCalendar(id, 'update');
+      } catch (syncError) {
+        console.warn('⚠️ [SupabaseAdapter] Google Calendar sync failed (non-fatal):', syncError);
       }
     }
   }
@@ -564,6 +588,16 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
       }
     } else {
       console.log('ℹ️ No related workflow session found for appointment');
+    }
+
+    // Google Calendar sync - delete before removing from database
+    if (appointment.google_event_id) {
+      try {
+        const { syncAppointmentToGoogleCalendar } = await import('@/services/googleCalendarSync');
+        await syncAppointmentToGoogleCalendar(id, 'delete');
+      } catch (syncError) {
+        console.warn('⚠️ [SupabaseAdapter] Google Calendar delete sync failed (non-fatal):', syncError);
+      }
     }
 
     // Finally, delete the appointment
