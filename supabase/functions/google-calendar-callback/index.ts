@@ -24,7 +24,7 @@ serve(async (req) => {
     }
 
     // Use absolute URL for redirect - fallback to production URL
-    const defaultRedirect = 'https://www.lunariplataforma.com.br/app/preferencias?tab=integracoes';
+    const defaultRedirect = 'https://www.lunariplataforma.com.br/app/integracoes';
     const redirectUri = stateData?.redirectUri || defaultRedirect;
 
     if (error) {
@@ -119,6 +119,6 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('[google-calendar-callback] Error:', error);
-    return Response.redirect('https://www.lunariplataforma.com.br/app/preferencias?tab=integracoes&google_error=unknown', 302);
+    return Response.redirect('https://www.lunariplataforma.com.br/app/integracoes?google_error=unknown', 302);
   }
 });

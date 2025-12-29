@@ -18,7 +18,7 @@ const STARTER_ALLOWED_ROUTES = [
   "/app/workflow",
   "/app/configuracoes",
   "/app/minha-conta",
-  "/app/preferencias",
+  "/app/integracoes",
   "/minha-assinatura",
   "/escolher-plano",
   "/onboarding",

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { CalendarClock, UserCheck, Settings, UserPlus, Wallet, Menu, X, User, Tag, GitBranch, ChevronRight, ChevronLeft, PieChart, LayoutGrid, CheckSquare, FlaskConical, CreditCard, Shield, Crown, FileText } from 'lucide-react';
+import { CalendarClock, UserCheck, Settings, UserPlus, Wallet, Menu, X, User, Tag, GitBranch, ChevronRight, ChevronLeft, PieChart, LayoutGrid, CheckSquare, FlaskConical, CreditCard, Shield, Crown, FileText, Plug } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -106,12 +106,6 @@ export default function Sidebar() {
         </DropdownMenuItem>
         <DropdownMenuItem 
           className="text-xs text-lunar-text hover:bg-lunar-surface/50 rounded cursor-pointer"
-          onClick={() => navigate('/app/preferencias')}
-        >
-          Preferências
-        </DropdownMenuItem>
-        <DropdownMenuItem 
-          className="text-xs text-lunar-text hover:bg-lunar-surface/50 rounded cursor-pointer"
           onClick={() => navigate('/minha-assinatura')}
         >
           <CreditCard className="mr-2 h-3 w-3" />
@@ -197,6 +191,10 @@ export default function Sidebar() {
     to: "/app/configuracoes",
     icon: <Settings size={14} />,
     label: "Configurações"
+  }, {
+    to: "/app/integracoes",
+    icon: <Plug size={14} />,
+    label: "Integrações"
   }];
 
   // Determine if user should see PRO badges (Starter plan without special access)
