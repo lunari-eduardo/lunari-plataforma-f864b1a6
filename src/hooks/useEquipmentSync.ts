@@ -64,13 +64,14 @@ export function useEquipmentSync() {
           observacoes,
           created_at,
           item_id,
+          parent_id,
           fin_items_master!inner(nome, grupo_principal)
         `)
         .eq('fin_items_master.nome', 'Equipamentos')
         .eq('fin_items_master.grupo_principal', 'Investimento')
         .gte('created_at', dataLimiteStr)
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        .order('data_vencimento', { ascending: true });
 
       if (error) {
         console.error('🔧 [EquipmentSync] Erro ao buscar transações:', error);
@@ -114,19 +115,44 @@ export function useEquipmentSync() {
         return;
       }
 
-      console.log(`🔧 [EquipmentSync] ${novasTransacoes.length} equipamentos detectados`);
+      console.log(`🔧 [EquipmentSync] ${novasTransacoes.length} transações de equipamento detectadas`);
 
-      // Emitir evento para cada nova transação
+      // Agrupar transações por parent_id (parcelas do mesmo equipamento)
+      const groupedByParent = new Map<string, typeof novasTransacoes>();
+      
       novasTransacoes.forEach(t => {
-        const nomeEquipamento = t.observacoes?.trim() || `Equipamento R$ ${t.valor.toFixed(2)}`;
+        // Se tem parent_id, usa ele como chave do grupo; senão, usa próprio id
+        const groupKey = (t as any).parent_id || t.id;
+        if (!groupedByParent.has(groupKey)) {
+          groupedByParent.set(groupKey, []);
+        }
+        groupedByParent.get(groupKey)!.push(t);
+      });
+
+      console.log(`🔧 [EquipmentSync] ${groupedByParent.size} equipamento(s) agrupado(s)`);
+
+      // Emitir UM evento por GRUPO (não por transação individual)
+      groupedByParent.forEach((transactions, groupKey) => {
+        // Somar valores de todas as parcelas para obter valor TOTAL
+        const valorTotal = transactions.reduce((sum, t) => sum + t.valor, 0);
+        
+        // Usar dados da primeira parcela (já ordenado por data_vencimento)
+        const primeiraParcela = transactions[0];
+        
+        // Coletar todos os IDs do grupo
+        const allIds = transactions.map(t => t.id);
+        
+        // Limpar sufixo de parcela do nome se houver (ex: "Câmera (1/2)" -> "Câmera")
+        const nomeLimpo = primeiraParcela.observacoes?.replace(/\s*\(\d+\/\d+\)$/, '').trim();
+        const nomeEquipamento = nomeLimpo || `Equipamento R$ ${valorTotal.toFixed(2)}`;
         
         const candidate: EquipmentCandidate = {
-          transacaoId: t.id,
+          transacaoId: primeiraParcela.id,
           nome: nomeEquipamento,
-          valor: t.valor,
-          data: t.data_compra || t.data_vencimento,
-          observacoes: t.observacoes || undefined,
-          allTransactionIds: [t.id]
+          valor: valorTotal,
+          data: primeiraParcela.data_compra || primeiraParcela.data_vencimento,
+          observacoes: nomeLimpo || undefined,
+          allTransactionIds: allIds
         };
 
         const event = new CustomEvent(EQUIPMENT_SYNC_EVENT, {
