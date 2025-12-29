@@ -12,6 +12,7 @@ import AgendaTasksSection from "@/components/agenda/AgendaTasksSection";
 import UnifiedTaskModal from "@/components/tarefas/UnifiedTaskModal";
 import { useUnifiedCalendar, UnifiedEvent } from "@/hooks/useUnifiedCalendar";
 import { useAgenda, Appointment } from "@/hooks/useAgenda";
+import { useAvailability } from "@/hooks/useAvailability";
 import { useIntegration } from "@/hooks/useIntegration";
 import { useOrcamentos } from "@/hooks/useOrcamentos";
 import { useSupabaseTasks } from "@/hooks/useSupabaseTasks";
@@ -25,6 +26,7 @@ import { Orcamento } from '@/types/orcamento';
 export default function Agenda() {
   const { unifiedEvents } = useUnifiedCalendar();
   const { addAppointment, updateAppointment, deleteAppointment } = useAgenda();
+  const { availability } = useAvailability();
   const { isFromBudget, getBudgetId } = useIntegration();
   const { orcamentos } = useOrcamentos();
   const { tasks, addTask } = useSupabaseTasks();
@@ -198,6 +200,7 @@ export default function Agenda() {
           <AnnualView
             date={date}
             unifiedEvents={unifiedEvents}
+            availability={availability}
             onDayClick={handleDayClick}
             onEventClick={handleEventClick}
           />
