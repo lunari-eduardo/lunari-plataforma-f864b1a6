@@ -89,8 +89,8 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
                 tickLine={false}
               />
               <ChartTooltip 
-                content={<ChartTooltipContent />}
-                formatter={(value: any) => [formatCurrency(value), 'Receita']}
+                content={<ChartTooltipContent hideIndicator />}
+                formatter={(value: any) => formatCurrency(value)}
               />
               <Bar dataKey="revenue" fill="url(#revenueGradient)" radius={[4, 4, 0, 0]} />
             </BarChart>
@@ -126,8 +126,8 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
                 tickLine={false}
               />
               <ChartTooltip 
-                content={<ChartTooltipContent />}
-                formatter={(value: any) => [`${value} sessões`, 'Quantidade']}
+                content={<ChartTooltipContent hideIndicator />}
+                formatter={(value: any) => `${value} sessões`}
               />
               <Bar dataKey="sessions" fill="url(#sessionsGradient)" radius={[4, 4, 0, 0]} />
             </BarChart>
@@ -161,8 +161,8 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
                 tickLine={false}
               />
               <ChartTooltip 
-                content={<ChartTooltipContent />}
-                formatter={(value: any) => [formatCurrency(value), 'Ticket Médio']}
+                content={<ChartTooltipContent hideIndicator />}
+                formatter={(value: any) => formatCurrency(value)}
               />
               <Line
                 type="monotone"
@@ -206,8 +206,8 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
                 tickLine={false}
               />
               <ChartTooltip 
-                content={<ChartTooltipContent />}
-                formatter={(value: any) => [formatCurrency(value), 'Receita Extra']}
+                content={<ChartTooltipContent hideIndicator />}
+                formatter={(value: any) => formatCurrency(value)}
               />
               <Area
                 type="monotone"
