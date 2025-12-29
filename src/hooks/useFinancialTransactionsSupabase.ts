@@ -81,23 +81,34 @@ async function checkIfEquipmentAndNotify(
     if (item?.nome === 'Equipamentos' && item?.grupo_principal === 'Investimento') {
       console.log('🔧 [FinancialTransactions] Transação de equipamento detectada!');
       
-      // Extrair dados da transação
-      const transactionId = Array.isArray(result) ? result[0]?.id : result?.id;
-      const valor = 'valor' in variables ? variables.valor : (variables as any).valorTotal;
+      // Extrair TODOS os IDs quando for parcelado
+      const allIds: string[] = Array.isArray(result) 
+        ? result.map((r: any) => r.id).filter(Boolean) 
+        : [result?.id].filter(Boolean);
+
+      const transactionId = allIds[0]; // ID principal (primeira parcela)
+      
+      // Usar valor TOTAL, não da parcela
+      const valorTotal = 'valor' in variables ? variables.valor : (variables as any).valorTotal;
       const observacoes = variables.observacoes;
+      
+      // A data deve ser da primeira ocorrência
       const dataCompra = 'data_compra' in variables ? variables.data_compra : 
                          'data_vencimento' in variables ? variables.data_vencimento :
                          (variables as any).dataPrimeiraOcorrencia;
+
+      // Limpar sufixo de parcela do nome se houver (ex: "Câmera (1/2)" -> "Câmera")
+      const nomeLimpo = observacoes?.replace(/\s*\(\d+\/\d+\)$/, '').trim();
       
       if (transactionId) {
-        // Emitir candidato diretamente (mais rápido que force-scan)
+        // Emitir candidato com valor TOTAL e TODOS os IDs
         emitEquipmentCandidate({
           transacaoId: transactionId,
-          nome: observacoes?.trim() || `Novo Equipamento R$ ${valor.toFixed(2)}`,
-          valor,
+          nome: nomeLimpo || `Novo Equipamento R$ ${valorTotal.toFixed(2)}`,
+          valor: valorTotal,
           data: dataCompra || new Date().toISOString().split('T')[0],
-          observacoes,
-          allTransactionIds: [transactionId]
+          observacoes: nomeLimpo,
+          allTransactionIds: allIds
         });
       } else {
         // Fallback: disparar force-scan
@@ -296,10 +307,7 @@ export function useFinancialTransactionsSupabase(filtroMesAno: { mes: number; an
       const itemId = 'item_id' in variables ? variables.item_id : (variables as any).itemId;
       await checkIfEquipmentAndNotify(itemId, result, variables);
       
-      toast({
-        title: "Sucesso",
-        description: "Transação criada com sucesso"
-      });
+      // Toast removido - feedback visual ocorre pela atualização da tabela
     },
     onError: (error) => {
       console.error('Erro ao criar transação:', error);
@@ -324,10 +332,7 @@ export function useFinancialTransactionsSupabase(filtroMesAno: { mes: number; an
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
       queryClient.invalidateQueries({ queryKey: ['extrato-unificado'] });
-      toast({
-        title: "Sucesso",
-        description: "Transação atualizada"
-      });
+      // Toast removido - feedback visual ocorre pela atualização da tabela
     },
     onError: (error) => {
       console.error('Erro ao atualizar transação:', error);
@@ -347,10 +352,7 @@ export function useFinancialTransactionsSupabase(filtroMesAno: { mes: number; an
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
       queryClient.invalidateQueries({ queryKey: ['extrato-unificado'] });
-      toast({
-        title: "Sucesso",
-        description: "Transação removida"
-      });
+      // Toast removido - feedback visual ocorre pela atualização da tabela
     },
     onError: (error) => {
       console.error('Erro ao remover transação:', error);
@@ -370,10 +372,7 @@ export function useFinancialTransactionsSupabase(filtroMesAno: { mes: number; an
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
       queryClient.invalidateQueries({ queryKey: ['extrato-unificado'] });
-      toast({
-        title: "Sucesso",
-        description: "Transação marcada como paga"
-      });
+      // Toast removido - feedback visual ocorre pela atualização da tabela
     },
     onError: (error) => {
       console.error('Erro ao marcar como pago:', error);

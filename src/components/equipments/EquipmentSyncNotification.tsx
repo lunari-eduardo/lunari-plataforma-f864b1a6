@@ -48,22 +48,27 @@ export function EquipmentSyncNotification() {
   };
 
   const handleIgnore = async (equipment: QueuedEquipment) => {
-    // Marcar no localStorage para não aparecer novamente nesta sessão
-    markTransactionAsProcessed(equipment.transacaoId);
+    // Marcar TODOS os IDs do grupo no localStorage para não aparecer novamente
+    equipment.allTransactionIds.forEach(id => {
+      markTransactionAsProcessed(id);
+    });
     
-    // Persistir no Supabase para multi-dispositivo
+    // Persistir no Supabase para multi-dispositivo (todos os IDs)
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
+        // Inserir todos os IDs de uma vez
+        const inserts = equipment.allTransactionIds.map(transactionId => ({
+          user_id: user.id,
+          transaction_id: transactionId
+        }));
+        
         await supabase
           .from('pricing_ignored_transactions' as any)
-          .insert({
-            user_id: user.id,
-            transaction_id: equipment.transacaoId
-          });
+          .insert(inserts);
       }
     } catch (error) {
-      console.error('Erro ao persistir transação ignorada:', error);
+      console.error('Erro ao persistir transações ignoradas:', error);
     }
     
     // Remover da fila visual
@@ -76,8 +81,10 @@ export function EquipmentSyncNotification() {
 
   const handleModalSuccess = () => {
     if (selectedEquipment) {
-      // Marcar como processada para não aparecer novamente
-      markTransactionAsProcessed(selectedEquipment.transacaoId);
+      // Marcar TODOS os IDs do grupo como processados
+      selectedEquipment.allTransactionIds.forEach(id => {
+        markTransactionAsProcessed(id);
+      });
       // Remover da fila após sucesso
       setQueuedEquipments(prev => prev.filter(eq => eq.id !== selectedEquipment.id));
       setSelectedEquipment(null);
