@@ -43,12 +43,26 @@ export class SupabaseCreditCardsAdapter {
   }
   
   /**
-   * Criar novo cartão
+   * Criar novo cartão (com verificação de duplicata)
    */
   static async createCard(nome: string, dia_vencimento: number, dia_fechamento: number): Promise<CreditCardDB> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
+      
+      // Verificar se já existe cartão com mesmo nome
+      const { data: existing } = await supabase
+        .from('fin_credit_cards')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('nome', nome)
+        .eq('ativo', true)
+        .maybeSingle();
+      
+      if (existing) {
+        console.log(`⚠️ Cartão "${nome}" já existe, retornando existente`);
+        return existing;
+      }
       
       const { data, error } = await supabase
         .from('fin_credit_cards')
