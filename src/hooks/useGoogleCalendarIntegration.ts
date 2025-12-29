@@ -14,15 +14,24 @@ interface GoogleCalendarIntegration {
   } | null;
 }
 
+interface SyncResult {
+  total: number;
+  synced: number;
+  failed: number;
+  errors?: string[];
+}
+
 interface UseGoogleCalendarReturn {
   status: GoogleCalendarStatus;
   loading: boolean;
   connecting: boolean;
+  syncing: boolean;
   syncEnabled: boolean;
   connectedAt: string | null;
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
   toggleSync: (enabled: boolean) => Promise<void>;
+  syncExisting: () => Promise<SyncResult | null>;
   refetch: () => Promise<void>;
 }
 
@@ -30,6 +39,7 @@ export function useGoogleCalendarIntegration(): UseGoogleCalendarReturn {
   const [integration, setIntegration] = useState<GoogleCalendarIntegration | null>(null);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   const fetchIntegration = useCallback(async () => {
     try {
@@ -158,15 +168,38 @@ export function useGoogleCalendarIntegration(): UseGoogleCalendarReturn {
     }
   }, [integration]);
 
+  const syncExisting = useCallback(async (): Promise<SyncResult | null> => {
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('google-calendar-sync-all');
+
+      if (error) {
+        console.error('[useGoogleCalendarIntegration] Sync existing error:', error);
+        toast.error('Erro ao sincronizar agendamentos');
+        return null;
+      }
+
+      return data as SyncResult;
+    } catch (error) {
+      console.error('[useGoogleCalendarIntegration] Sync existing error:', error);
+      toast.error('Erro ao sincronizar agendamentos');
+      return null;
+    } finally {
+      setSyncing(false);
+    }
+  }, []);
+
   return {
     status,
     loading,
     connecting,
+    syncing,
     syncEnabled,
     connectedAt,
     connect,
     disconnect,
     toggleSync,
+    syncExisting,
     refetch: fetchIntegration,
   };
 }

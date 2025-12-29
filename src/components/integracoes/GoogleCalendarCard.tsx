@@ -1,4 +1,5 @@
-import { Calendar, Info, Loader2 } from 'lucide-react';
+import { Calendar, Info, Loader2, RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -22,12 +23,32 @@ export function GoogleCalendarCard() {
     status,
     loading,
     connecting,
+    syncing,
     syncEnabled,
     connectedAt,
     connect,
     disconnect,
     toggleSync,
+    syncExisting,
   } = useGoogleCalendarIntegration();
+
+  const handleSyncExisting = async () => {
+    const result = await syncExisting();
+    if (!result) return;
+
+    if (result.total === 0) {
+      toast.info('Nenhum agendamento pendente para sincronizar');
+      return;
+    }
+
+    if (result.synced > 0) {
+      toast.success(`${result.synced} agendamento(s) sincronizado(s) com sucesso!`);
+    }
+
+    if (result.failed > 0) {
+      toast.error(`${result.failed} agendamento(s) falharam ao sincronizar`);
+    }
+  };
 
   const isConnected = status === 'conectado';
 
@@ -160,6 +181,33 @@ export function GoogleCalendarCard() {
                 </li>
               </ul>
             </div>
+
+            {/* Botão sincronizar agendamentos existentes */}
+            {syncEnabled && (
+              <div className="pt-2 border-t">
+                <Button 
+                  variant="outline"
+                  onClick={handleSyncExisting}
+                  disabled={syncing}
+                  className="w-full"
+                >
+                  {syncing ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Sincronizando...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Sincronizar agendamentos futuros
+                    </>
+                  )}
+                </Button>
+                <p className="text-xs text-muted-foreground mt-2 text-center">
+                  Sincroniza todos os agendamentos confirmados a partir de hoje
+                </p>
+              </div>
+            )}
 
             {/* Botão desconectar */}
             <Button 
