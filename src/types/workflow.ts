@@ -63,6 +63,9 @@ export interface SessionData {
   regras_congeladas?: any;
   // Campo para relacionar com cliente específico (CRM)
   clienteId?: string;
+  // Campos para integração com Galeria
+  galeriaId?: string;
+  galeriaStatus?: 'rascunho' | 'publicada' | 'em_selecao' | 'finalizada';
 }
 
 export interface CategoryOption {

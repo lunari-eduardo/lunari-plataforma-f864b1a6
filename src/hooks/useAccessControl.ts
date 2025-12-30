@@ -18,6 +18,7 @@ export interface AccessState {
   currentPeriodEnd?: string;
   expiredAt?: string;
   cancelAtPeriodEnd?: boolean;
+  hasGaleryAccess?: boolean;
 }
 
 export const useAccessControl = () => {
@@ -76,5 +77,12 @@ export const useAccessControl = () => {
      accessState.planCode?.startsWith('pro') ||
      accessState.isTrial);
 
-  return { accessState, loading, hasPro };
+  // Helper para verificar se usuário tem acesso à Galeria
+  const hasGaleryAccess = accessState.status === 'ok' && 
+    (accessState.hasGaleryAccess === true ||
+     accessState.isAdmin ||
+     accessState.isVip ||
+     accessState.planCode?.startsWith('pro_galery'));
+
+  return { accessState, loading, hasPro, hasGaleryAccess };
 };
