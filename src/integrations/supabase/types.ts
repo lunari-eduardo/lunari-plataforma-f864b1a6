@@ -378,6 +378,7 @@ export type Database = {
           desconto: number | null
           descricao: string | null
           detalhes: string | null
+          galeria_id: string | null
           hora_sessao: string
           id: string
           observacoes: string | null
@@ -407,6 +408,7 @@ export type Database = {
           desconto?: number | null
           descricao?: string | null
           detalhes?: string | null
+          galeria_id?: string | null
           hora_sessao: string
           id?: string
           observacoes?: string | null
@@ -436,6 +438,7 @@ export type Database = {
           desconto?: number | null
           descricao?: string | null
           detalhes?: string | null
+          galeria_id?: string | null
           hora_sessao?: string
           id?: string
           observacoes?: string | null
@@ -469,6 +472,13 @@ export type Database = {
             columns: ["cliente_id"]
             isOneToOne: false
             referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clientes_sessoes_galeria_id_fkey"
+            columns: ["galeria_id"]
+            isOneToOne: false
+            referencedRelation: "galerias"
             referencedColumns: ["id"]
           },
         ]
@@ -949,6 +959,74 @@ export type Database = {
           valor?: number
         }
         Relationships: []
+      }
+      galerias: {
+        Row: {
+          cliente_id: string
+          created_at: string
+          finalized_at: string | null
+          fotos_incluidas: number
+          id: string
+          orcamento_id: string | null
+          prazo_selecao_dias: number | null
+          published_at: string | null
+          regras_selecao: Json | null
+          session_id: string | null
+          status: string
+          status_pagamento: string | null
+          total_fotos_extras_vendidas: number | null
+          updated_at: string
+          user_id: string
+          valor_foto_extra: number
+          valor_total_vendido: number | null
+        }
+        Insert: {
+          cliente_id: string
+          created_at?: string
+          finalized_at?: string | null
+          fotos_incluidas?: number
+          id?: string
+          orcamento_id?: string | null
+          prazo_selecao_dias?: number | null
+          published_at?: string | null
+          regras_selecao?: Json | null
+          session_id?: string | null
+          status?: string
+          status_pagamento?: string | null
+          total_fotos_extras_vendidas?: number | null
+          updated_at?: string
+          user_id: string
+          valor_foto_extra?: number
+          valor_total_vendido?: number | null
+        }
+        Update: {
+          cliente_id?: string
+          created_at?: string
+          finalized_at?: string | null
+          fotos_incluidas?: number
+          id?: string
+          orcamento_id?: string | null
+          prazo_selecao_dias?: number | null
+          published_at?: string | null
+          regras_selecao?: Json | null
+          session_id?: string | null
+          status?: string
+          status_pagamento?: string | null
+          total_fotos_extras_vendidas?: number | null
+          updated_at?: string
+          user_id?: string
+          valor_foto_extra?: number
+          valor_total_vendido?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "galerias_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       lead_follow_up_config: {
         Row: {

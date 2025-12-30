@@ -37,7 +37,8 @@ import {
   Loader2,
   Mail,
   TrendingUp,
-  UserCheck
+  UserCheck,
+  Images
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -56,6 +57,7 @@ interface UserWithSubscription {
   is_vip: boolean;
   is_admin: boolean;
   is_authorized: boolean;
+  has_galery: boolean;
 }
 
 interface VipUser {
@@ -78,6 +80,10 @@ export default function AdminUsuarios() {
   const [vipReason, setVipReason] = useState('');
   const [vipAction, setVipAction] = useState<'add' | 'remove'>('add');
   const [submitting, setSubmitting] = useState(false);
+  
+  // Galery Plan Modal state
+  const [galeryModalOpen, setGaleryModalOpen] = useState(false);
+  const [galeryAction, setGaleryAction] = useState<'add' | 'remove'>('add');
 
   // Metrics
   const [metrics, setMetrics] = useState({
@@ -182,7 +188,8 @@ export default function AdminUsuarios() {
           current_period_end: sub?.current_period_end || null,
           is_vip: !!vip && (!vip.expires_at || new Date(vip.expires_at) > new Date()),
           is_admin: isAdmin,
-          is_authorized: isAuthorized
+          is_authorized: isAuthorized,
+          has_galery: ((sub?.plans as any)?.code || '').startsWith('pro_galery')
         };
       });
 
@@ -242,6 +249,98 @@ export default function AdminUsuarios() {
     setVipModalOpen(true);
   };
 
+  const handleGaleryAction = (user: UserWithSubscription, action: 'add' | 'remove') => {
+    setSelectedUser(user);
+    setGaleryAction(action);
+    setGaleryModalOpen(true);
+  };
+
+  const submitGaleryAction = async () => {
+    if (!selectedUser) return;
+
+    try {
+      setSubmitting(true);
+
+      // Buscar o plano pro_galery_monthly
+      const { data: galeryPlan, error: planError } = await supabase
+        .from('plans')
+        .select('id')
+        .eq('code', 'pro_galery_monthly')
+        .single();
+
+      if (planError || !galeryPlan) {
+        toast.error('Plano Pro + Galery não encontrado');
+        return;
+      }
+
+      if (galeryAction === 'add') {
+        // Verificar se já existe subscription
+        const { data: existingSub } = await supabase
+          .from('subscriptions')
+          .select('id')
+          .eq('user_id', selectedUser.id)
+          .single();
+
+        if (existingSub) {
+          // Atualizar subscription existente
+          const { error } = await supabase
+            .from('subscriptions')
+            .update({
+              plan_id: galeryPlan.id,
+              status: 'active',
+              updated_at: new Date().toISOString()
+            })
+            .eq('user_id', selectedUser.id);
+
+          if (error) throw error;
+        } else {
+          // Criar nova subscription
+          const { error } = await supabase
+            .from('subscriptions')
+            .insert({
+              user_id: selectedUser.id,
+              plan_id: galeryPlan.id,
+              status: 'active',
+              current_period_start: new Date().toISOString(),
+              current_period_end: null // Sem expiração para atribuição manual
+            });
+
+          if (error) throw error;
+        }
+
+        toast.success(`Pro + Galery atribuído para ${selectedUser.nome || selectedUser.email}`);
+      } else {
+        // Remover = voltar para pro_monthly
+        const { data: proPlan } = await supabase
+          .from('plans')
+          .select('id')
+          .eq('code', 'pro_monthly')
+          .single();
+
+        if (proPlan) {
+          const { error } = await supabase
+            .from('subscriptions')
+            .update({
+              plan_id: proPlan.id,
+              updated_at: new Date().toISOString()
+            })
+            .eq('user_id', selectedUser.id);
+
+          if (error) throw error;
+          toast.success(`Pro + Galery removido de ${selectedUser.nome || selectedUser.email}`);
+        }
+      }
+
+      setGaleryModalOpen(false);
+      loadUsers();
+    } catch (error) {
+      console.error('Error managing Galery plan:', error);
+      toast.error('Erro ao gerenciar plano Pro + Galery');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const submitVipAction = async () => {
     if (!selectedUser) return;
 
@@ -280,15 +379,25 @@ export default function AdminUsuarios() {
   };
 
   const getStatusBadge = (user: UserWithSubscription) => {
+    const badges = [];
+    
     if (user.is_admin) {
-      return <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">Admin</Badge>;
+      badges.push(<Badge key="admin" className="bg-purple-500/20 text-purple-400 border-purple-500/30">Admin</Badge>);
     }
     if (user.is_authorized) {
-      return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Autorizado</Badge>;
+      badges.push(<Badge key="auth" className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Autorizado</Badge>);
     }
     if (user.is_vip) {
-      return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">VIP</Badge>;
+      badges.push(<Badge key="vip" className="bg-amber-500/20 text-amber-400 border-amber-500/30">VIP</Badge>);
     }
+    if (user.has_galery) {
+      badges.push(<Badge key="galery" className="bg-pink-500/20 text-pink-400 border-pink-500/30"><Images className="h-3 w-3 mr-1" />Galery</Badge>);
+    }
+    
+    if (badges.length > 0) {
+      return <div className="flex gap-1 flex-wrap">{badges}</div>;
+    }
+    
     if (user.subscription_status === 'active') {
       return <Badge className="bg-green-500/20 text-green-400 border-green-500/30">Ativo</Badge>;
     }
@@ -519,29 +628,57 @@ export default function AdminUsuarios() {
                             : '-'}
                         </TableCell>
                         <TableCell className="text-right">
-                          {!user.is_admin && (
-                            user.is_vip ? (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleVipAction(user, 'remove')}
-                                className="text-xs text-amber-400 border-amber-500/30 hover:bg-amber-500/10"
-                              >
-                                <Crown className="h-3 w-3 mr-1" />
-                                Remover VIP
-                              </Button>
-                            ) : (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleVipAction(user, 'add')}
-                                className="text-xs"
-                              >
-                                <Star className="h-3 w-3 mr-1" />
-                                Conceder VIP
-                              </Button>
-                            )
-                          )}
+                          <div className="flex items-center justify-end gap-1">
+                            {!user.is_admin && (
+                              <>
+                                {/* VIP Actions */}
+                                {user.is_vip ? (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleVipAction(user, 'remove')}
+                                    className="text-xs text-amber-400 border-amber-500/30 hover:bg-amber-500/10"
+                                  >
+                                    <Crown className="h-3 w-3 mr-1" />
+                                    VIP
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleVipAction(user, 'add')}
+                                    className="text-xs"
+                                  >
+                                    <Star className="h-3 w-3 mr-1" />
+                                    VIP
+                                  </Button>
+                                )}
+                                
+                                {/* Galery Actions */}
+                                {user.has_galery ? (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleGaleryAction(user, 'remove')}
+                                    className="text-xs text-pink-400 border-pink-500/30 hover:bg-pink-500/10"
+                                  >
+                                    <Images className="h-3 w-3 mr-1" />
+                                    Galery
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleGaleryAction(user, 'add')}
+                                    className="text-xs"
+                                  >
+                                    <Images className="h-3 w-3 mr-1" />
+                                    Galery
+                                  </Button>
+                                )}
+                              </>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))
@@ -609,6 +746,48 @@ export default function AdminUsuarios() {
             >
               {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               {vipAction === 'add' ? 'Conceder VIP' : 'Remover VIP'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Galery Plan Modal */}
+      <Dialog open={galeryModalOpen} onOpenChange={setGaleryModalOpen}>
+        <DialogContent className="bg-card border-border">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {galeryAction === 'add' ? (
+                <>
+                  <Images className="h-5 w-5 text-pink-400" />
+                  Atribuir Pro + Galery
+                </>
+              ) : (
+                <>
+                  <XCircle className="h-5 w-5 text-red-400" />
+                  Remover Pro + Galery
+                </>
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              {galeryAction === 'add' 
+                ? `Atribuir plano Pro + Galery para ${selectedUser?.nome || selectedUser?.email}. Este plano dá acesso às funcionalidades de Galeria.`
+                : `Remover plano Pro + Galery de ${selectedUser?.nome || selectedUser?.email}. O usuário voltará ao plano Pro padrão.`
+              }
+            </DialogDescription>
+          </DialogHeader>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setGaleryModalOpen(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={submitGaleryAction}
+              disabled={submitting}
+              variant={galeryAction === 'remove' ? 'destructive' : 'default'}
+              className={galeryAction === 'add' ? 'bg-pink-600 hover:bg-pink-700' : ''}
+            >
+              {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {galeryAction === 'add' ? 'Atribuir Pro + Galery' : 'Remover'}
             </Button>
           </DialogFooter>
         </DialogContent>

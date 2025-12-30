@@ -15,6 +15,8 @@ const logStep = (step: string, details?: any) => {
 
 // Plan hierarchy: higher value = higher priority
 const PLAN_PRIORITY: Record<string, number> = {
+  'pro_galery_yearly': 6,  // Máxima prioridade - Pro + Galeria Anual
+  'pro_galery_monthly': 5, // Pro + Galeria Mensal
   'pro_yearly': 4,
   'pro_monthly': 3,
   'starter_yearly': 2,

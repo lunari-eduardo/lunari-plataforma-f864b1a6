@@ -62,6 +62,7 @@ export default function MinhaAssinatura() {
     if (accessState.isAuthorized) return "Conta Autorizada";
     if (accessState.isVip) return "VIP (Acesso Total)";
     if (accessState.planName) return accessState.planName;
+    if (accessState.planCode?.includes("pro_galery")) return "Pro + Galery";
     if (accessState.planCode?.includes("pro")) return "Pro";
     if (accessState.planCode?.includes("starter")) return "Starter";
     if (accessState.isTrial) return "Período de Teste (Pro)";
