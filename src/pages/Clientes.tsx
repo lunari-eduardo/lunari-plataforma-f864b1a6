@@ -553,7 +553,7 @@ export default function Clientes() {
               <TableBody>
                 {clientesOrdenados.map(cliente => <TableRow key={cliente.id}>
                     <TableCell>
-                      <Link to={`/clientes/${cliente.id}`} className="font-medium text-primary hover:text-primary/80">
+                      <Link to={`/app/clientes/${cliente.id}`} className="font-medium text-primary hover:text-primary/80">
                         {cliente.nome}
                       </Link>
                       {(cliente as any).origem && <div className="mt-1">
@@ -604,7 +604,7 @@ export default function Clientes() {
                 {/* Header do Card */}
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
-                    <Link to={`/clientes/${cliente.id}`} className="text-lg font-semibold text-primary hover:text-primary/80 block">
+                    <Link to={`/app/clientes/${cliente.id}`} className="text-lg font-semibold text-primary hover:text-primary/80 block">
                       {cliente.nome}
                     </Link>
                     
