@@ -14,6 +14,7 @@ import { AuditInfo } from "./AuditInfo";
 import { QuickSessionAdd } from "./QuickSessionAdd";
 import { MessageCircle, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Package, Plus, CreditCard, Calendar, CheckCircle, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { GaleriaActions } from "@/components/galeria/GaleriaActions";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAppContext } from '@/contexts/AppContext';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -853,6 +854,13 @@ export function WorkflowTable({
                     {session.whatsapp && <a href={`https://wa.me/${session.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
                         <MessageCircle className="h-3 w-3 text-green-600 hover:text-green-700 cursor-pointer" />
                       </a>}
+                    <GaleriaActions
+                      sessionId={session.id}
+                      clienteId={session.clienteId || ''}
+                      fotosIncluidas={(session.regras_congeladas as any)?.fotosIncluidas || 0}
+                      valorFotoExtra={parseFloat(String(session.valorFotoExtra || 0).replace(/[^\d,]/g, '').replace(',', '.')) || 0}
+                      compact={true}
+                    />
                   </div>, true)}
 
                 {renderCell('description', renderEditableInput(session, 'descricao', session.descricao || '', 'text', 'Descrição...'))}
