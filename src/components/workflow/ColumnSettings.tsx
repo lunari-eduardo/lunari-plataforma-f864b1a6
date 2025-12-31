@@ -18,6 +18,7 @@ export function ColumnSettings({
   availableColumns = {
     date: "Data e Hora",
     client: "Cliente",
+    galeria: "Galeria",
     description: "Descrição",
     email: "E-mail",
     status: "Status",

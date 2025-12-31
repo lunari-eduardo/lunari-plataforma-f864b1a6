@@ -159,6 +159,7 @@ interface WorkflowTableProps {
 const desktopColumnWidths = {
   date: 80,
   client: 200,
+  galeria: 100,
   description: 200,
   email: 180,
   status: 150,
@@ -182,6 +183,7 @@ const desktopColumnWidths = {
 const tabletColumnWidths = {
   date: 70,
   client: 140,
+  galeria: 80,
   description: 140,
   email: 140,
   status: 120,
@@ -205,6 +207,7 @@ const tabletColumnWidths = {
 const mobileColumnWidths = {
   date: 60,
   client: 100,
+  galeria: 70,
   description: 100,
   email: 100,
   status: 100,
@@ -818,6 +821,7 @@ export function WorkflowTable({
             <tr>
               {renderHeaderCell('date', 'Data', true, true)}
               {renderHeaderCell('client', 'Nome', true, true)}
+              {renderHeaderCell('galeria', 'Galeria')}
               {renderHeaderCell('description', 'Descrição')}
               {renderHeaderCell('email', 'E-mail')}
               {renderHeaderCell('status', 'Status', true)}
@@ -854,14 +858,17 @@ export function WorkflowTable({
                     {session.whatsapp && <a href={`https://wa.me/${session.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
                         <MessageCircle className="h-3 w-3 text-green-600 hover:text-green-700 cursor-pointer" />
                       </a>}
-                    <GaleriaActions
-                      sessionId={session.id}
-                      clienteId={session.clienteId || ''}
-                      fotosIncluidas={(session.regras_congeladas as any)?.fotosIncluidas || 0}
-                      valorFotoExtra={parseFloat(String(session.valorFotoExtra || 0).replace(/[^\d,]/g, '').replace(',', '.')) || 0}
-                      compact={true}
-                    />
                   </div>, true)}
+
+                {renderCell('galeria', 
+                  <GaleriaActions
+                    sessionId={session.id}
+                    clienteId={session.clienteId || ''}
+                    fotosIncluidas={(session.regras_congeladas as any)?.fotosIncluidas || 0}
+                    valorFotoExtra={parseFloat(String(session.valorFotoExtra || 0).replace(/[^\d,]/g, '').replace(',', '.')) || 0}
+                    compact={true}
+                  />
+                )}
 
                 {renderCell('description', renderEditableInput(session, 'descricao', session.descricao || '', 'text', 'Descrição...'))}
                 
