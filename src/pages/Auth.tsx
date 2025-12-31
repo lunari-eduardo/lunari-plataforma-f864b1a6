@@ -20,6 +20,8 @@ export default function Auth() {
 
     if (reason === 'suspended') {
       toast.error('Sua assinatura está inativa ou expirada. Entre em contato com o suporte.');
+    } else if (reason === 'session_expired') {
+      toast.info('Sua sessão expirou. Por favor, faça login novamente.');
     } else if (error === 'access_denied') {
       toast.error('Acesso negado. Seu e-mail não está autorizado.');
     }
