@@ -346,6 +346,7 @@ export default function Workflow() {
       return saved ? JSON.parse(saved) : {
         date: true,
         client: true,
+        galeria: true,
         description: true,
         email: true,
         status: true,
@@ -370,6 +371,7 @@ export default function Workflow() {
       return {
         date: true,
         client: true,
+        galeria: true,
         description: true,
         email: true,
         status: true,
