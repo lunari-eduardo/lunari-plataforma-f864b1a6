@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useOnlineStatus } from './useOnlineStatus';
 
 export interface AccessState {
-  status: 'ok' | 'suspended' | 'no_subscription' | 'not_authenticated' | 'loading' | 'trial_expired' | 'network_error';
+  status: 'ok' | 'suspended' | 'no_subscription' | 'not_authenticated' | 'loading' | 'trial_expired' | 'network_error' | 'session_expired';
   reason?: string;
   isAdmin?: boolean;
   isVip?: boolean;
@@ -41,6 +41,29 @@ const isNetworkError = (error: any): boolean => {
   );
 };
 
+// Helper para detectar erros de autenticação/sessão
+const isAuthError = (error: any): boolean => {
+  if (!error) return false;
+  const message = error.message?.toLowerCase() || '';
+  const code = String(error.code || '').toLowerCase();
+  const status = error.status || error.statusCode;
+  
+  return (
+    message.includes('jwt') ||
+    message.includes('token') ||
+    message.includes('expired') ||
+    message.includes('invalid claim') ||
+    message.includes('not authenticated') ||
+    message.includes('refresh_token') ||
+    message.includes('invalid_grant') ||
+    message.includes('session') ||
+    code === '401' ||
+    code === 'pgrst301' ||
+    status === 401 ||
+    status === 403
+  );
+};
+
 // Helper para delay
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -61,6 +84,26 @@ export const useAccessControl = () => {
         if (error) {
           console.error(`Access check attempt ${i + 1} failed:`, error);
           
+          // Primeiro verificar se é erro de autenticação
+          if (isAuthError(error)) {
+            console.log('🔐 Erro de autenticação detectado, tentando refresh...');
+            
+            // Tentar renovar sessão
+            const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+            
+            if (refreshError || !refreshData.session) {
+              console.log('❌ Refresh falhou, sessão expirada');
+              return { status: 'session_expired', reason: 'Session refresh failed' };
+            }
+            
+            console.log('✅ Sessão renovada, tentando novamente...');
+            // Sessão renovada - tentar a chamada novamente
+            if (i < attempts - 1) {
+              await delay(500);
+              continue;
+            }
+          }
+          
           if (isNetworkError(error)) {
             // Se é erro de rede e temos cache válido, usar cache
             if (lastValidState.current?.status === 'ok') {
@@ -80,7 +123,7 @@ export const useAccessControl = () => {
             return { status: 'network_error', reason: 'Network error after retries' };
           }
           
-          // Erro não é de rede - não tentar novamente
+          // Erro não é de rede nem auth - não tentar novamente
           return { status: 'no_subscription', reason: error.message || 'Error checking access' };
         }
 
@@ -96,6 +139,29 @@ export const useAccessControl = () => {
         return { status: 'no_subscription', reason: 'No data returned' };
       } catch (error: any) {
         console.error(`Access check exception attempt ${i + 1}:`, error);
+        
+        // Primeiro verificar se é erro de autenticação
+        if (isAuthError(error)) {
+          console.log('🔐 Exceção de autenticação detectada, tentando refresh...');
+          
+          try {
+            const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+            
+            if (refreshError || !refreshData.session) {
+              console.log('❌ Refresh falhou após exceção');
+              return { status: 'session_expired', reason: 'Session refresh failed after exception' };
+            }
+            
+            console.log('✅ Sessão renovada após exceção, tentando novamente...');
+            if (i < attempts - 1) {
+              await delay(500);
+              continue;
+            }
+          } catch (refreshException) {
+            console.error('❌ Exceção durante refresh:', refreshException);
+            return { status: 'session_expired', reason: 'Exception during session refresh' };
+          }
+        }
         
         if (isNetworkError(error)) {
           // Usar cache se disponível

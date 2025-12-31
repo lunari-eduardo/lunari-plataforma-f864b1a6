@@ -6,6 +6,7 @@ import { useAccessControl } from '@/hooks/useAccessControl';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { Card } from '@/components/ui/card';
 import { OfflineScreen } from '@/components/OfflineScreen';
+import { SessionExpiredScreen } from '@/components/SessionExpiredScreen';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -52,13 +53,22 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     );
   }
 
-  // 3. Verificar controle de acesso (assinatura)
+  // 3. Verificar sessão expirada
+  if (accessState.status === 'session_expired') {
+    const handleRelogin = async () => {
+      await signOut();
+      window.location.href = '/auth?reason=session_expired';
+    };
+    return <SessionExpiredScreen onRelogin={handleRelogin} />;
+  }
+
+  // 4. Verificar controle de acesso (assinatura)
   if (accessState.status === 'suspended') {
     signOut();
     return <Navigate to="/auth?reason=suspended" replace />;
   }
 
-  // 4. Verificar trial expirado - redirecionar para escolher plano
+  // 5. Verificar trial expirado - redirecionar para escolher plano
   if (accessState.status === 'trial_expired') {
     // Permitir acesso às páginas isentas
     if (SUBSCRIPTION_EXEMPT_ROUTES.includes(location.pathname)) {
@@ -67,7 +77,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     return <Navigate to="/escolher-plano" replace />;
   }
 
-  // 5. Verificar sem subscription - permitir páginas de assinatura e conta
+  // 6. Verificar sem subscription - permitir páginas de assinatura e conta
   if (accessState.status === 'no_subscription') {
     // Permitir acesso às páginas isentas (inclui /minha-conta para sync pós-checkout)
     if (SUBSCRIPTION_EXEMPT_ROUTES.includes(location.pathname)) {
@@ -101,7 +111,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     );
   }
 
-  // 6. Verificar onboarding (exceto se já estiver na rota /onboarding)
+  // 7. Verificar onboarding (exceto se já estiver na rota /onboarding)
   if (location.pathname !== '/onboarding') {
     const needsOnboarding = !profile || 
       !profile.is_onboarding_complete || 

@@ -33,6 +33,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+        
+        // Tratar eventos específicos
+        if (event === 'TOKEN_REFRESHED') {
+          console.log('✅ Token renovado automaticamente');
+        }
+        
+        if (event === 'SIGNED_OUT') {
+          console.log('👋 Usuário deslogado');
+        }
       }
     );
 
@@ -46,9 +55,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, []);
 
+  // Refresh proativo - verificar token a cada minuto
+  useEffect(() => {
+    const checkTokenExpiry = async () => {
+      if (!session?.expires_at) return;
+      
+      const expiresAt = session.expires_at * 1000; // converter para ms
+      const now = Date.now();
+      const fiveMinutes = 5 * 60 * 1000;
+      
+      // Se falta menos de 5 minutos para expirar, forçar refresh
+      if (expiresAt - now < fiveMinutes && expiresAt > now) {
+        console.log('⏰ Token expirando em breve, forçando refresh...');
+        const { error } = await supabase.auth.refreshSession();
+        if (error) {
+          console.error('❌ Erro ao renovar sessão proativamente:', error);
+        } else {
+          console.log('✅ Sessão renovada proativamente');
+        }
+      }
+    };
+    
+    // Verificar imediatamente e depois a cada minuto
+    checkTokenExpiry();
+    const interval = setInterval(checkTokenExpiry, 60000);
+    
+    return () => clearInterval(interval);
+  }, [session?.expires_at]);
+
   const signInWithGoogle = async () => {
-    // Usar domínio fixo para garantir persistência de sessão
-    const siteUrl = import.meta.env.VITE_SITE_URL || window.location.origin;
+    // Usar domínio fixo para produção, garantindo redirect correto
+    const isProduction = window.location.hostname.includes('lunariplataforma');
+    const siteUrl = isProduction 
+      ? 'https://www.lunariplataforma.com.br'
+      : window.location.origin;
+    
+    console.log('🔑 Iniciando login com Google, redirect para:', `${siteUrl}/app`);
     
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
