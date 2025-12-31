@@ -3,7 +3,9 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAccessControl } from '@/hooks/useAccessControl';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { Card } from '@/components/ui/card';
+import { OfflineScreen } from '@/components/OfflineScreen';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -22,14 +24,15 @@ const SUBSCRIPTION_EXEMPT_ROUTES = [
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { user, loading: authLoading, signOut } = useAuth();
   const { profile, loading: profileLoading } = useUserProfile();
-  const { accessState, loading: accessLoading } = useAccessControl();
+  const { accessState, loading: accessLoading, refetchAccess } = useAccessControl();
+  const { isOnline, lastOnlineAt } = useOnlineStatus();
   const location = useLocation();
 
   // 1. Verificar autenticação
   if (authLoading || profileLoading || accessLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-lunar-bg">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-lunar-accent"></div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -38,13 +41,24 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
-  // 2. Verificar controle de acesso (assinatura)
+  // 2. Verificar conectividade - ANTES de verificar subscription
+  if (!isOnline || accessState.status === 'network_error') {
+    return (
+      <OfflineScreen 
+        onRetry={refetchAccess} 
+        lastOnlineAt={lastOnlineAt}
+        isNetworkError={accessState.status === 'network_error'}
+      />
+    );
+  }
+
+  // 3. Verificar controle de acesso (assinatura)
   if (accessState.status === 'suspended') {
     signOut();
     return <Navigate to="/auth?reason=suspended" replace />;
   }
 
-  // 3. Verificar trial expirado - redirecionar para escolher plano
+  // 4. Verificar trial expirado - redirecionar para escolher plano
   if (accessState.status === 'trial_expired') {
     // Permitir acesso às páginas isentas
     if (SUBSCRIPTION_EXEMPT_ROUTES.includes(location.pathname)) {
@@ -53,18 +67,18 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     return <Navigate to="/escolher-plano" replace />;
   }
 
-  // 4. Verificar sem subscription - permitir páginas de assinatura e conta
+  // 5. Verificar sem subscription - permitir páginas de assinatura e conta
   if (accessState.status === 'no_subscription') {
     // Permitir acesso às páginas isentas (inclui /minha-conta para sync pós-checkout)
     if (SUBSCRIPTION_EXEMPT_ROUTES.includes(location.pathname)) {
       return <>{children}</>;
     }
     return (
-      <div className="min-h-screen flex items-center justify-center bg-lunar-bg p-4">
-        <Card className="max-w-md w-full p-6 bg-black/20 border-white/10">
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="max-w-md w-full p-6 bg-card border-border">
           <div className="text-center space-y-4">
-            <h2 className="text-2xl font-bold text-white">Acesso Restrito</h2>
-            <p className="text-white/80">
+            <h2 className="text-2xl font-bold text-foreground">Acesso Restrito</h2>
+            <p className="text-muted-foreground">
               Sua conta não possui uma assinatura ativa.
             </p>
             <div className="flex gap-3 justify-center">
@@ -76,7 +90,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
               </button>
               <button
                 onClick={() => signOut()}
-                className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
+                className="px-4 py-2 bg-muted hover:bg-muted/80 text-muted-foreground rounded-lg transition-colors"
               >
                 Sair
               </button>
@@ -87,7 +101,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     );
   }
 
-  // 5. Verificar onboarding (exceto se já estiver na rota /onboarding)
+  // 6. Verificar onboarding (exceto se já estiver na rota /onboarding)
   if (location.pathname !== '/onboarding') {
     const needsOnboarding = !profile || 
       !profile.is_onboarding_complete || 
