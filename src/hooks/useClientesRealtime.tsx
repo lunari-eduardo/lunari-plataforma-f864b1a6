@@ -173,6 +173,22 @@ export const useClientesRealtime = () => {
 
       if (error) throw error;
       
+      // Se o nome foi alterado, sincronizar appointments.title
+      if (updates.nome) {
+        console.log('🔄 Sincronizando nome do cliente nos appointments...');
+        const { error: syncError } = await supabase
+          .from('appointments')
+          .update({ title: updates.nome })
+          .eq('cliente_id', id);
+        
+        if (syncError) {
+          console.error('⚠️ Erro ao sincronizar appointments:', syncError);
+          // Não falhar a operação principal
+        } else {
+          console.log('✅ Appointments sincronizados com novo nome:', updates.nome);
+        }
+      }
+      
       toast.success('Cliente atualizado com sucesso');
     } catch (error) {
       console.error('❌ Erro ao atualizar cliente:', error);
