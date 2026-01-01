@@ -26,9 +26,15 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
     const { data: user } = await supabase.auth.getUser();
     if (!user?.user) throw new Error('User not authenticated');
 
+    // JOIN com clientes para obter nome atualizado
     const { data, error } = await supabase
       .from('appointments')
-      .select('*')
+      .select(`
+        *,
+        clientes (
+          nome
+        )
+      `)
       .eq('user_id', user.user.id)
       .order('date', { ascending: false })
       .order('time', { ascending: true });
@@ -42,7 +48,8 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
       date: this.parseDateFromStorage(appointment.date),
       time: appointment.time,
       type: appointment.type,
-      client: appointment.title, // Using title as client name
+      // Priorizar nome do cliente (JOIN) sobre title estático
+      client: (appointment.clientes as any)?.nome || appointment.title,
       status: appointment.status as any,
       description: appointment.description || '',
       packageId: appointment.package_id || '',
