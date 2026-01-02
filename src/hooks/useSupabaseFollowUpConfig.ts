@@ -5,7 +5,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import type { FollowUpConfig } from '@/types/leadInteractions';
 import {
   supabaseConfigToFrontend,
-  frontendConfigToSupabase,
   DEFAULT_FOLLOW_UP_CONFIG,
 } from '@/utils/leadTransformers';
 
@@ -26,20 +25,35 @@ export function useSupabaseFollowUpConfig() {
     queryFn: async () => {
       if (!userId) return DEFAULT_FOLLOW_UP_CONFIG;
 
+      console.log('🔍 [FollowUpConfig] Buscando config para usuário:', userId);
+
       const { data, error } = await supabase
         .from('lead_follow_up_config')
         .select('*')
         .eq('user_id', userId)
         .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ [FollowUpConfig] Erro ao buscar config:', error);
+        throw error;
+      }
 
       // If no config exists, create default
       if (!data) {
-        console.log('📝 [FollowUpConfig] Criando config default para usuário');
+        console.log('📝 [FollowUpConfig] Config não encontrada, criando default...');
+        
+        const insertData = {
+          user_id: userId,
+          dias_para_follow_up: DEFAULT_FOLLOW_UP_CONFIG.diasParaFollowUp,
+          ativo: DEFAULT_FOLLOW_UP_CONFIG.ativo,
+          status_monitorado: DEFAULT_FOLLOW_UP_CONFIG.statusMonitorado,
+        };
+        
+        console.log('📝 [FollowUpConfig] Inserindo:', insertData);
+        
         const { data: inserted, error: insertError } = await supabase
           .from('lead_follow_up_config')
-          .insert(frontendConfigToSupabase(DEFAULT_FOLLOW_UP_CONFIG, userId))
+          .insert(insertData)
           .select()
           .single();
 
@@ -48,9 +62,11 @@ export function useSupabaseFollowUpConfig() {
           return DEFAULT_FOLLOW_UP_CONFIG;
         }
 
+        console.log('✅ [FollowUpConfig] Config criada:', inserted);
         return supabaseConfigToFrontend(inserted);
       }
 
+      console.log('✅ [FollowUpConfig] Config encontrada:', data);
       return supabaseConfigToFrontend(data);
     },
     enabled: !!userId,
@@ -83,22 +99,37 @@ export function useSupabaseFollowUpConfig() {
     };
   }, [userId, refetch]);
 
-  // Update config mutation
+  // Update config mutation - usar UPSERT para garantir que a config existe
   const updateConfigMutation = useMutation({
     mutationFn: async (updates: Partial<FollowUpConfig>) => {
       if (!userId) throw new Error('Usuário não autenticado');
 
-      const dbUpdates: Record<string, unknown> = {};
-      if (updates.diasParaFollowUp !== undefined) dbUpdates.dias_para_follow_up = updates.diasParaFollowUp;
-      if (updates.ativo !== undefined) dbUpdates.ativo = updates.ativo;
-      if (updates.statusMonitorado !== undefined) dbUpdates.status_monitorado = updates.statusMonitorado;
+      console.log('🔄 [FollowUpConfig] Atualizando config:', updates);
 
+      // Preparar dados com valores atuais + updates
+      const upsertData = {
+        user_id: userId,
+        dias_para_follow_up: updates.diasParaFollowUp ?? config.diasParaFollowUp,
+        ativo: updates.ativo ?? config.ativo,
+        status_monitorado: updates.statusMonitorado ?? config.statusMonitorado,
+        updated_at: new Date().toISOString(),
+      };
+
+      console.log('📝 [FollowUpConfig] Upsert data:', upsertData);
+
+      // Usar upsert para criar ou atualizar
       const { error } = await supabase
         .from('lead_follow_up_config')
-        .update(dbUpdates)
-        .eq('user_id', userId);
+        .upsert(upsertData, {
+          onConflict: 'user_id',
+        });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ [FollowUpConfig] Erro ao atualizar:', error);
+        throw error;
+      }
+
+      console.log('✅ [FollowUpConfig] Config atualizada com sucesso');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY, userId] });
