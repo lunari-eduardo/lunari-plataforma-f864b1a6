@@ -1,37 +1,19 @@
 import { useState, useEffect, useCallback } from 'react';
-import { storage, STORAGE_KEYS } from '@/utils/localStorage';
 import { useLeads } from './useLeads';
-import { useLeadInteractions } from './useLeadInteractions';
-import type { FollowUpConfig, FollowUpNotification } from '@/types/leadInteractions';
+import { useLeadStatuses } from './useLeadStatuses';
+import { useSupabaseFollowUpConfig } from './useSupabaseFollowUpConfig';
+import type { FollowUpNotification, LeadInteraction } from '@/types/leadInteractions';
 import type { Lead } from '@/types/leads';
-
-const DEFAULT_CONFIG: FollowUpConfig = {
-  diasParaFollowUp: 3,
-  ativo: true,
-  statusMonitorado: 'orcamento_enviado'
-};
 
 export function useFollowUpSystem() {
   const { leads, updateLead } = useLeads();
-  const { addInteraction } = useLeadInteractions();
+  const { statuses } = useLeadStatuses();
   
-  const [config, setConfig] = useState<FollowUpConfig>(() => 
-    storage.load(`${STORAGE_KEYS.LEADS}_followup_config`, DEFAULT_CONFIG)
-  );
+  // Usar configuração do Supabase (persistida)
+  const { config, updateConfig, isLoading: configLoading } = useSupabaseFollowUpConfig();
 
-  const [notifications, setNotifications] = useState<FollowUpNotification[]>(() =>
-    storage.load(`${STORAGE_KEYS.LEADS}_followup_notifications`, [])
-  );
-
-  // Save config changes
-  useEffect(() => {
-    storage.save(`${STORAGE_KEYS.LEADS}_followup_config`, config);
-  }, [config]);
-
-  // Save notifications changes
-  useEffect(() => {
-    storage.save(`${STORAGE_KEYS.LEADS}_followup_notifications`, notifications);
-  }, [notifications]);
+  // Notificações locais (podem ser migradas para Supabase no futuro)
+  const [notifications, setNotifications] = useState<FollowUpNotification[]>([]);
 
   const calculateDaysSinceLastChange = useCallback((lead: Lead): number => {
     const statusChangeDate = lead.statusTimestamp || lead.dataCriacao;
@@ -42,59 +24,109 @@ export function useFollowUpSystem() {
   }, []);
 
   const checkForFollowUps = useCallback(() => {
-    if (!config.ativo) return;
+    if (!config.ativo || configLoading) {
+      console.log('🔍 [FollowUp] Sistema inativo ou carregando config');
+      return;
+    }
+
+    // Verificar se o status de destino 'followup' existe
+    const followupStatus = statuses.find(s => s.key === 'followup');
+    if (!followupStatus) {
+      console.warn('⚠️ [FollowUp] Status "followup" não encontrado nos statuses do usuário');
+      return;
+    }
+
+    console.log('🔍 [FollowUp] Verificando leads para follow-up...', {
+      ativo: config.ativo,
+      statusMonitorado: config.statusMonitorado,
+      diasParaFollowUp: config.diasParaFollowUp,
+      totalLeads: leads.length
+    });
 
     const leadsNeedingFollowUp = leads.filter(lead => {
+      // Ignorar leads arquivados
+      if (lead.arquivado) return false;
+      
+      // Deve estar no status monitorado
       if (lead.status !== config.statusMonitorado) return false;
       
+      // Já marcado como needsFollowUp? Ignorar
+      if (lead.needsFollowUp) return false;
+      
       const daysSinceChange = calculateDaysSinceLastChange(lead);
-      return daysSinceChange >= config.diasParaFollowUp && !lead.needsFollowUp;
+      return daysSinceChange >= config.diasParaFollowUp;
     });
+
+    console.log('📋 [FollowUp] Leads elegíveis:', leadsNeedingFollowUp.map(l => ({
+      id: l.id,
+      nome: l.nome,
+      status: l.status,
+      diasNoStatus: calculateDaysSinceLastChange(l)
+    })));
 
     leadsNeedingFollowUp.forEach(lead => {
       const daysSinceChange = calculateDaysSinceLastChange(lead);
+      const now = new Date().toISOString();
       
-      // Mark lead as needing follow-up and move to follow-up column
-      updateLead(lead.id, {
-        needsFollowUp: true,
-        diasSemInteracao: daysSinceChange,
-        status: 'followup' // Auto-move to follow-up column
+      // Criar interação de follow-up
+      const interaction: LeadInteraction = {
+        id: `followup_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        leadId: lead.id,
+        tipo: 'followup',
+        descricao: `Sistema detectou necessidade de follow-up após ${daysSinceChange} dias sem interação`,
+        timestamp: now,
+        automatica: true,
+        detalhes: `Lead foi automaticamente movido para coluna "Follow-up" após ${daysSinceChange} dias em "${config.statusMonitorado}"`
+      };
+
+      console.log('🚀 [FollowUp] Movendo lead para follow-up:', {
+        leadId: lead.id,
+        nome: lead.nome,
+        diasSemInteracao: daysSinceChange
       });
 
-      // Create notification
+      // UMA ÚNICA CHAMADA para evitar race condition
+      // Inclui: status, needsFollowUp, diasSemInteracao, statusTimestamp, interacoes, ultimaInteracao
+      updateLead(lead.id, (currentLead) => ({
+        ...currentLead,
+        needsFollowUp: true,
+        diasSemInteracao: daysSinceChange,
+        status: 'followup',
+        statusTimestamp: now,
+        interacoes: [interaction, ...(currentLead.interacoes || [])],
+        ultimaInteracao: now,
+        historicoStatus: [
+          ...(currentLead.historicoStatus || []),
+          { status: 'followup', data: now }
+        ]
+      }));
+
+      // Criar notificação local
       const notification: FollowUpNotification = {
-        id: `followup_${Date.now()}_${lead.id}`,
+        id: `notification_${Date.now()}_${lead.id}`,
         leadId: lead.id,
         leadNome: lead.nome,
         diasSemInteracao: daysSinceChange,
-        timestamp: new Date().toISOString(),
+        timestamp: now,
         visualizada: false
       };
 
       setNotifications(prev => [notification, ...prev.filter(n => n.leadId !== lead.id)]);
-
-      // Add interaction
-      addInteraction(
-        lead.id,
-        'followup',
-        `Sistema detectou necessidade de follow-up após ${daysSinceChange} dias sem interação`,
-        true,
-        `Lead foi automaticamente movido para coluna "Follow-up" após ${daysSinceChange} dias em "${config.statusMonitorado}"`
-      );
     });
-  }, [leads, config, calculateDaysSinceLastChange, updateLead, addInteraction]);
+  }, [leads, config, configLoading, statuses, calculateDaysSinceLastChange, updateLead]);
 
-  // Run follow-up check periodically
+  // Executar verificação periodicamente
   useEffect(() => {
+    // Aguardar config carregar
+    if (configLoading) return;
+    
+    // Verificar imediatamente
     checkForFollowUps();
     
-    const interval = setInterval(checkForFollowUps, 60000 * 60); // Check every hour
+    // Verificar a cada hora
+    const interval = setInterval(checkForFollowUps, 60000 * 60);
     return () => clearInterval(interval);
-  }, [checkForFollowUps]);
-
-  const updateConfig = useCallback((newConfig: Partial<FollowUpConfig>) => {
-    setConfig(prev => ({ ...prev, ...newConfig }));
-  }, []);
+  }, [checkForFollowUps, configLoading]);
 
   const markNotificationAsViewed = useCallback((notificationId: string) => {
     setNotifications(prev => 
@@ -127,6 +159,7 @@ export function useFollowUpSystem() {
     getLeadsNeedingFollowUp,
     markNotificationAsViewed,
     dismissFollowUp,
-    checkForFollowUps
+    checkForFollowUps,
+    isLoading: configLoading
   };
 }

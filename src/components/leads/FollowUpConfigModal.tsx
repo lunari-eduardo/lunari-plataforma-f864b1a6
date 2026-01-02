@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,9 +6,10 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useFollowUpSystem } from '@/hooks/useFollowUpSystem';
+import { useSupabaseFollowUpConfig } from '@/hooks/useSupabaseFollowUpConfig';
 import { useLeadStatuses } from '@/hooks/useLeadStatuses';
-import { Clock, Settings } from 'lucide-react';
+import { Clock, Settings, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface FollowUpConfigModalProps {
   open: boolean;
@@ -16,20 +17,48 @@ interface FollowUpConfigModalProps {
 }
 
 export default function FollowUpConfigModal({ open, onOpenChange }: FollowUpConfigModalProps) {
-  const { config, updateConfig } = useFollowUpSystem();
+  // Usar hook do Supabase diretamente
+  const { config, updateConfig, isLoading } = useSupabaseFollowUpConfig();
   const { statuses } = useLeadStatuses();
   
   const [formData, setFormData] = useState(config);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = () => {
-    updateConfig(formData);
-    onOpenChange(false);
+  // Sincronizar formData quando config mudar
+  useEffect(() => {
+    setFormData(config);
+  }, [config]);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await updateConfig(formData);
+      toast.success('Configuração salva com sucesso');
+      onOpenChange(false);
+    } catch (error) {
+      console.error('❌ Erro ao salvar config:', error);
+      toast.error('Erro ao salvar configuração');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleCancel = () => {
     setFormData(config);
     onOpenChange(false);
   };
+
+  if (isLoading) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-md">
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin" />
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -86,7 +115,7 @@ export default function FollowUpConfigModal({ open, onOpenChange }: FollowUpConf
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-lunar-textSecondary">
+                <p className="text-xs text-muted-foreground">
                   Leads neste status serão monitorados para follow-up
                 </p>
               </div>
@@ -111,23 +140,23 @@ export default function FollowUpConfigModal({ open, onOpenChange }: FollowUpConf
                     }
                     className="w-20"
                   />
-                  <span className="text-sm text-lunar-textSecondary">dias</span>
+                  <span className="text-sm text-muted-foreground">dias</span>
                 </div>
-                <p className="text-xs text-lunar-textSecondary">
+                <p className="text-xs text-muted-foreground">
                   Notificação será criada após este período sem mudança de status
                 </p>
               </div>
 
               {/* Preview */}
-              <Card className="bg-blue-50 border-blue-200">
+              <Card className="bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800">
                 <CardContent className="pt-4">
                   <div className="flex items-start gap-2">
-                    <Clock className="h-4 w-4 text-blue-600 mt-0.5" />
+                    <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5" />
                     <div className="text-sm">
-                      <p className="font-medium text-blue-900">Como funciona:</p>
-                      <p className="text-blue-700 mt-1">
-                        Quando um lead estiver em <strong>"{statuses.find(s => s.key === formData.statusMonitorado)?.name}"</strong> por <strong>{formData.diasParaFollowUp} dias</strong> sem interação, 
-                        uma notificação aparecerá no dashboard e o card receberá uma tag vermelha "Follow-up".
+                      <p className="font-medium text-blue-900 dark:text-blue-100">Como funciona:</p>
+                      <p className="text-blue-700 dark:text-blue-300 mt-1">
+                        Quando um lead estiver em <strong>"{statuses.find(s => s.key === formData.statusMonitorado)?.name || formData.statusMonitorado}"</strong> por <strong>{formData.diasParaFollowUp} dias</strong> sem interação, 
+                        ele será automaticamente movido para a coluna "Follow-up".
                       </p>
                     </div>
                   </div>
@@ -138,10 +167,17 @@ export default function FollowUpConfigModal({ open, onOpenChange }: FollowUpConf
         </div>
 
         <div className="flex gap-2 pt-4">
-          <Button onClick={handleSave} className="flex-1">
-            Salvar Configuração
+          <Button onClick={handleSave} className="flex-1" disabled={isSaving}>
+            {isSaving ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Salvando...
+              </>
+            ) : (
+              'Salvar Configuração'
+            )}
           </Button>
-          <Button variant="outline" onClick={handleCancel}>
+          <Button variant="outline" onClick={handleCancel} disabled={isSaving}>
             Cancelar
           </Button>
         </div>
