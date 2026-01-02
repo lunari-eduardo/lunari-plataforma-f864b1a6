@@ -27,11 +27,12 @@ export function useSupabaseLeads() {
     queryFn: async () => {
       if (!userId) return [];
 
+      // Usar .or() para incluir leads onde arquivado é false OU null
       const { data, error } = await supabase
         .from('leads')
         .select('*')
         .eq('user_id', userId)
-        .eq('arquivado', false)
+        .or('arquivado.eq.false,arquivado.is.null')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -113,7 +114,7 @@ export function useSupabaseLeads() {
     },
   });
 
-  // Update lead mutation
+  // Update lead mutation with retry logic
   const updateLeadMutation = useMutation({
     mutationFn: async ({
       id,
@@ -124,34 +125,57 @@ export function useSupabaseLeads() {
     }) => {
       if (!userId) throw new Error('Usuário não autenticado');
 
-      // Get current lead if using function updater
+      console.log('🔄 [Leads] Atualizando lead:', id);
+
+      // Get current lead - para function updaters, buscar do banco para garantir estado fresco
       let finalUpdates: Partial<Lead>;
       if (typeof updates === 'function') {
-        const currentLead = leads.find((l) => l.id === id);
-        if (!currentLead) throw new Error('Lead não encontrado');
+        // Buscar lead fresco do banco para evitar race conditions
+        const { data: freshLead, error: fetchError } = await supabase
+          .from('leads')
+          .select('*')
+          .eq('id', id)
+          .eq('user_id', userId)
+          .single();
+
+        if (fetchError || !freshLead) {
+          console.error('❌ [Leads] Lead não encontrado no banco:', id);
+          throw new Error('Lead não encontrado');
+        }
+
+        const currentLead = supabaseLeadToFrontend(freshLead);
         const updated = updates(currentLead);
         finalUpdates = updated;
       } else {
         finalUpdates = updates;
       }
 
-      // Handle status change tracking
-      if (finalUpdates.status) {
+      // Handle status change tracking (apenas se não veio do function updater que já inclui)
+      if (finalUpdates.status && !finalUpdates.statusTimestamp) {
         const currentLead = leads.find((l) => l.id === id);
         if (currentLead && finalUpdates.status !== currentLead.status) {
           const now = new Date().toISOString();
           finalUpdates.statusTimestamp = now;
-          finalUpdates.needsFollowUp = false;
+          
+          // Só resetar needsFollowUp se não estiver sendo definido explicitamente
+          if (finalUpdates.needsFollowUp === undefined) {
+            finalUpdates.needsFollowUp = false;
+          }
 
-          const currentHistory = currentLead.historicoStatus || [];
-          finalUpdates.historicoStatus = [
-            ...currentHistory,
-            { status: finalUpdates.status, data: now },
-          ];
+          // Só adicionar ao histórico se não vier do function updater
+          if (!finalUpdates.historicoStatus) {
+            const currentHistory = currentLead.historicoStatus || [];
+            finalUpdates.historicoStatus = [
+              ...currentHistory,
+              { status: finalUpdates.status, data: now },
+            ];
+          }
         }
       }
 
       const dbUpdates = frontendLeadUpdatesToSupabase(finalUpdates);
+
+      console.log('📝 [Leads] Enviando updates para Supabase:', Object.keys(dbUpdates));
 
       const { error } = await supabase
         .from('leads')
@@ -160,15 +184,19 @@ export function useSupabaseLeads() {
         .eq('user_id', userId);
 
       if (error) throw error;
+
+      console.log('✅ [Leads] Lead atualizado com sucesso:', id);
     },
+    retry: 2, // Tentar novamente até 2 vezes em caso de falha
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 3000),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY, userId] });
     },
-    onError: (error) => {
-      console.error('❌ [Leads] Erro ao atualizar lead:', error);
+    onError: (error, variables) => {
+      console.error('❌ [Leads] Erro ao atualizar lead:', error, 'ID:', variables.id);
       toast({
-        title: 'Erro',
-        description: 'Não foi possível atualizar o lead',
+        title: 'Erro ao mover lead',
+        description: `Não foi possível atualizar o lead. Tente novamente.`,
         variant: 'destructive',
       });
     },
