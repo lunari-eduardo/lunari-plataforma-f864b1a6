@@ -17,6 +17,7 @@ import { parseDateFromStorage } from "@/utils/dateUtils";
 import { useWorkflowMetrics } from '@/hooks/useWorkflowMetrics';
 import { useWorkflowMetricsRealtime } from '@/hooks/useWorkflowMetricsRealtime';
 import { usePricingMigration } from '@/hooks/usePricingMigration';
+import { usePersistedState } from '@/hooks/usePersistedState';
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { SessionData, CategoryOption, PackageOption, ProductOption } from '@/types/workflow';
@@ -36,11 +37,14 @@ export default function Workflow() {
     categorias
   } = useOrcamentoData();
   
-  // Estado local para UI - MOVER ANTES dos hooks que dependem dele
-  const [currentMonth, setCurrentMonth] = useState({
-    month: new Date().getMonth() + 1,
-    year: new Date().getFullYear()
-  });
+  // Estado local para UI - Persistir em sessionStorage para manter ao minimizar/reabrir PWA
+  const [currentMonth, setCurrentMonth] = usePersistedState(
+    'workflow_current_month',
+    {
+      month: new Date().getMonth() + 1,
+      year: new Date().getFullYear()
+    }
+  );
   
   // ⚡ NOVO: Usar Context Provider com cache IndexedDB
   const {
@@ -100,19 +104,25 @@ export default function Workflow() {
     loadMonth();
   }, [currentMonth.year, currentMonth.month, ensureMonthLoaded, getSessionsForMonthSync]);
   
-  // FASE 2: Refresh silencioso ao ganhar foco (NÃO força refresh completo)
+  // FASE 2: Ao retomar do background, NÃO forçar refresh - manter estado
+  // O estado do mês já está persistido em sessionStorage
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        console.log('👁️ [Workflow] Tab became visible, silent refresh...');
-        // Usar forceRefresh=false para fazer refresh silencioso em background
-        ensureMonthLoaded(currentMonth.year, currentMonth.month, false);
+        console.log('👁️ [Workflow] Tab became visible');
+        // Verificar se o cache do mês atual está carregado
+        const cachedSessions = getSessionsForMonthSync(currentMonth.year, currentMonth.month);
+        if (!cachedSessions) {
+          console.log('🔄 [Workflow] Cache missing, reloading...');
+          ensureMonthLoaded(currentMonth.year, currentMonth.month, true);
+        }
+        // Se cache existe, não fazer nada - manter estado como está
       }
     };
     
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [currentMonth.year, currentMonth.month, ensureMonthLoaded]);
+  }, [currentMonth.year, currentMonth.month, ensureMonthLoaded, getSessionsForMonthSync]);
   
   // FASE 1: Leitura direta do cache ao navegar entre meses
   useEffect(() => {
