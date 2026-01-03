@@ -1,6 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { addMonths, addWeeks, addDays, subMonths, subWeeks, subDays, addYears, subYears } from "date-fns";
 import { ViewType } from '@/utils/dateFormatters';
+import { usePersistedState } from './usePersistedState';
 
 export const useAgendaNavigation = () => {
   // View and navigation state
@@ -9,7 +10,22 @@ export const useAgendaNavigation = () => {
     return savedView || 'month';
   });
   
-  const [date, setDate] = useState<Date>(new Date());
+  // Persistir data selecionada em sessionStorage para manter ao minimizar/reabrir PWA
+  const [dateISO, setDateISO] = usePersistedState<string>(
+    'agenda_current_date',
+    new Date().toISOString()
+  );
+  
+  // Converter de/para Date
+  const date = useMemo(() => new Date(dateISO), [dateISO]);
+  
+  const setDate = useCallback((newDate: Date | ((prev: Date) => Date)) => {
+    setDateISO(prev => {
+      const prevDate = new Date(prev);
+      const nextDate = typeof newDate === 'function' ? newDate(prevDate) : newDate;
+      return nextDate.toISOString();
+    });
+  }, [setDateISO]);
 
   // Save view preference when changed
   const updateView = useCallback((newView: ViewType) => {
@@ -28,7 +44,7 @@ export const useAgendaNavigation = () => {
         default: return currentDate;
       }
     });
-  }, [view]);
+  }, [view, setDate]);
 
   const navigateNext = useCallback(() => {
     setDate(currentDate => {
@@ -40,15 +56,15 @@ export const useAgendaNavigation = () => {
         default: return currentDate;
       }
     });
-  }, [view]);
+  }, [view, setDate]);
 
   const navigateToday = useCallback(() => {
     setDate(new Date());
-  }, []);
+  }, [setDate]);
 
   const navigateToDate = useCallback((targetDate: Date) => {
     setDate(targetDate);
-  }, []);
+  }, [setDate]);
 
   return {
     view,

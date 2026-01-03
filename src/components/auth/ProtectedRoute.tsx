@@ -26,7 +26,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { user, loading: authLoading, signOut } = useAuth();
   const { profile, loading: profileLoading } = useUserProfile();
   const { accessState, loading: accessLoading, refetchAccess } = useAccessControl();
-  const { isOnline, lastOnlineAt } = useOnlineStatus();
+  const { isOnline, lastOnlineAt, isInitializing } = useOnlineStatus();
   const location = useLocation();
 
   // 1. Verificar autenticação
@@ -43,7 +43,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   }
 
   // 2. Verificar conectividade - ANTES de verificar subscription
-  if (!isOnline || accessState.status === 'network_error') {
+  // IMPORTANTE: Ignorar durante inicialização para evitar flash de "sem conexão"
+  if (!isInitializing && (!isOnline || accessState.status === 'network_error')) {
     return (
       <OfflineScreen 
         onRetry={refetchAccess} 
