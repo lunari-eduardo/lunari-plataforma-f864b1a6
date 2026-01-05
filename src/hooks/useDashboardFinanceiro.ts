@@ -158,6 +158,47 @@ export function useDashboardFinanceiro() {
     return new Map(itensFinanceiros.map(item => [item.id, item]));
   }, [itensFinanceiros]);
 
+  // ============= QUERY DIRETA PARA ANOS DISPONÍVEIS =============
+  
+  const { data: anosFromDB = [] } = useQuery({
+    queryKey: ['dashboard-available-years'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      
+      // Buscar anos de sessões
+      const { data: sessoesYears } = await supabase
+        .from('clientes_sessoes')
+        .select('data_sessao')
+        .eq('user_id', user.id);
+      
+      // Buscar anos de transações financeiras
+      const { data: transacoesYears } = await supabase
+        .from('fin_transactions')
+        .select('data_vencimento')
+        .eq('user_id', user.id);
+      
+      const anos = new Set<number>();
+      
+      sessoesYears?.forEach(s => {
+        if (s.data_sessao) {
+          const ano = parseInt(s.data_sessao.split('-')[0]);
+          if (!isNaN(ano)) anos.add(ano);
+        }
+      });
+      
+      transacoesYears?.forEach(t => {
+        if (t.data_vencimento) {
+          const ano = parseInt(t.data_vencimento.split('-')[0]);
+          if (!isNaN(ano)) anos.add(ano);
+        }
+      });
+      
+      return Array.from(anos).sort((a, b) => b - a);
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutos
+  });
+
   // ============= NOVO SISTEMA DE FILTROS =============
 
   const anosDisponiveis = useMemo(() => {
@@ -174,35 +215,53 @@ export function useDashboardFinanceiro() {
       }
     });
     
-    const todosAnos = new Set([...anosWorkflow, ...anosTransacoes]);
+    // Combinar todas as fontes: workflow, transações locais e query do banco
+    const todosAnos = new Set([...anosWorkflow, ...anosTransacoes, ...anosFromDB]);
     
     if (todosAnos.size === 0) {
       todosAnos.add(new Date().getFullYear());
     }
     
     return Array.from(todosAnos).sort((a, b) => b - a);
-  }, [getAvailableYears, transacoesFinanceiras]);
+  }, [getAvailableYears, transacoesFinanceiras, anosFromDB]);
 
   const [anoSelecionado, setAnoSelecionado] = useState(() => {
-    return anosDisponiveis[0]?.toString() || new Date().getFullYear().toString();
+    return new Date().getFullYear().toString();
   });
 
   const [mesSelecionado, setMesSelecionado] = useState<string>('ano-completo');
+  
+  // Estados para período personalizado
+  const [dataInicio, setDataInicio] = useState<string>('');
+  const [dataFim, setDataFim] = useState<string>('');
 
   // ============= QUERY DEDICADA PARA TRANSAÇÕES DO ANO (DASHBOARD) =============
   
   const ano = parseInt(anoSelecionado);
-  const mesNumero = mesSelecionado !== 'ano-completo' ? parseInt(mesSelecionado) : undefined;
+  const mesNumero = mesSelecionado !== 'ano-completo' && mesSelecionado !== 'personalizado' 
+    ? parseInt(mesSelecionado) 
+    : undefined;
 
-  // Query dedicada para transações do ano inteiro (independente do filtro de mês das abas)
+  // Calcular datas de filtro baseado no período selecionado
+  const { startDate, endDate } = useMemo(() => {
+    if (mesSelecionado === 'personalizado' && dataInicio && dataFim) {
+      return { startDate: dataInicio, endDate: dataFim };
+    } else if (mesSelecionado !== 'ano-completo' && mesSelecionado !== 'personalizado') {
+      const mes = parseInt(mesSelecionado);
+      const primeiroDia = `${ano}-${String(mes).padStart(2, '0')}-01`;
+      const ultimoDia = new Date(ano, mes, 0).getDate();
+      const ultimoDiaStr = `${ano}-${String(mes).padStart(2, '0')}-${String(ultimoDia).padStart(2, '0')}`;
+      return { startDate: primeiroDia, endDate: ultimoDiaStr };
+    }
+    return { startDate: `${ano}-01-01`, endDate: `${ano}-12-31` };
+  }, [ano, mesSelecionado, dataInicio, dataFim]);
+
+  // Query dedicada para transações do período selecionado
   const { data: transacoesDoAno = [] } = useQuery({
-    queryKey: ['dashboard-transactions-year', ano],
+    queryKey: ['dashboard-transactions-period', startDate, endDate],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
-      
-      const startDate = `${ano}-01-01`;
-      const endDate = `${ano}-12-31`;
       
       const { data, error } = await supabase
         .from('fin_transactions')
@@ -225,7 +284,7 @@ export function useDashboardFinanceiro() {
         .order('data_vencimento', { ascending: true });
       
       if (error) {
-        console.error('Erro ao buscar transações do ano:', error);
+        console.error('Erro ao buscar transações do período:', error);
         return [];
       }
       
@@ -258,7 +317,10 @@ export function useDashboardFinanceiro() {
 
   // Calcular período anterior para comparação
   const periodoAnterior = useMemo(() => {
-    if (mesSelecionado && mesSelecionado !== 'ano-completo') {
+    if (mesSelecionado === 'personalizado') {
+      // Para período personalizado, não calculamos comparação
+      return { ano: ano - 1, mes: undefined };
+    } else if (mesSelecionado && mesSelecionado !== 'ano-completo') {
       const mesAtual = parseInt(mesSelecionado);
       if (mesAtual === 1) {
         return { ano: ano - 1, mes: 12 };
@@ -277,22 +339,11 @@ export function useDashboardFinanceiro() {
 
   // ============= FILTROS POR PERÍODO (PARA KPIs DINÂMICOS) =============
 
-  // Transações filtradas pelo período selecionado (para KPIs)
+  // Transações já vêm filtradas pela query - usar diretamente
   const transacoesFiltradasPorPeriodo = useMemo(() => {
-    let filtradas = transacoesDoAno;
-
-    // Aplicar filtro de mês se selecionado
-    if (mesSelecionado && mesSelecionado !== 'ano-completo') {
-      const mesNum = parseInt(mesSelecionado);
-      filtradas = filtradas.filter(transacao => {
-        if (!transacao.dataVencimento) return false;
-        const mesTransacao = parseInt(transacao.dataVencimento.split('-')[1]);
-        return mesTransacao === mesNum;
-      });
-    }
-
-    return filtradas;
-  }, [transacoesDoAno, mesSelecionado]);
+    // A query já filtra por período, então retornamos diretamente
+    return transacoesDoAno;
+  }, [transacoesDoAno]);
 
   // ============= CÁLCULOS DE MÉTRICAS (KPIs DINÂMICOS) =============
   
@@ -636,6 +687,10 @@ export function useDashboardFinanceiro() {
     mesSelecionado,
     setMesSelecionado,
     anosDisponiveis,
+    dataInicio,
+    setDataInicio,
+    dataFim,
+    setDataFim,
     categoriaSelecionada,
     setCategoriaSelecionada,
     categoriasDisponiveis,
