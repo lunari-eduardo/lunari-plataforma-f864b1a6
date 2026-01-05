@@ -456,9 +456,14 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
     const { data: user } = await supabase.auth.getUser();
     if (!user?.user) throw new Error('User not authenticated');
 
+    // ✅ FASE 5: Log estruturado no início
+    console.log('🗑️ [DELETE-START]', {
+      timestamp: new Date().toISOString(),
+      appointmentId: id,
+      preservePayments: preservePayments ?? false
+    });
+
     // FASE 3: Validar parâmetro
-    console.log(`🔍 [DeleteAppointment] preservePayments = ${preservePayments} (${typeof preservePayments})`);
-    
     if (preservePayments !== undefined && typeof preservePayments !== 'boolean') {
       console.error('❌ Parâmetro preservePayments inválido:', preservePayments);
       throw new Error('preservePayments deve ser boolean (true/false)');
@@ -477,27 +482,68 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
       throw appointmentError;
     }
 
-    console.log('🗑️ [DeleteAppointment] Starting deletion process:', {
-      appointmentId: id,
+    console.log('📋 [DeleteAppointment] Appointment data:', {
+      id: appointment.id,
+      title: appointment.title,
+      clienteId: appointment.cliente_id,
       sessionId: appointment.session_id,
-      preservePayments: preservePayments ?? false
+      status: appointment.status
     });
 
-    // Find related workflow session by appointment_id or session_id
-    const { data: workflowSession } = await supabase
+    // ✅ FASE 2: CORRIGIDO - Busca de sessão em duas etapas (evita OR perigoso)
+    let workflowSession: any = null;
+    
+    // Etapa 1: Buscar por appointment_id (relação 1:1 garantida)
+    const { data: sessionByAppointment } = await supabase
       .from('clientes_sessoes')
       .select('*')
       .eq('user_id', user.user.id)
-      .or(`appointment_id.eq.${id},session_id.eq.${appointment.session_id}`)
+      .eq('appointment_id', id)
       .maybeSingle();
+    
+    if (sessionByAppointment) {
+      workflowSession = sessionByAppointment;
+      console.log('✅ Sessão encontrada por appointment_id:', workflowSession.id);
+    } else if (appointment.session_id) {
+      // Etapa 2: Verificar se session_id não está compartilhado com outro appointment ATIVO
+      const { data: otherAppointments } = await supabase
+        .from('appointments')
+        .select('id, title')
+        .eq('session_id', appointment.session_id)
+        .eq('user_id', user.user.id)
+        .neq('id', id)
+        .limit(5);
+      
+      if (otherAppointments && otherAppointments.length > 0) {
+        console.warn('⚠️ [DeleteAppointment] session_id compartilhado com outros appointments:', 
+          otherAppointments.map(a => a.id)
+        );
+        console.warn('⚠️ NÃO deletando sessão para evitar afetar outros appointments');
+        // NÃO buscar sessão - deixar workflowSession como null
+      } else {
+        // Seguro buscar por session_id
+        const { data: sessionBySessionId } = await supabase
+          .from('clientes_sessoes')
+          .select('*')
+          .eq('user_id', user.user.id)
+          .eq('session_id', appointment.session_id)
+          .maybeSingle();
+        
+        if (sessionBySessionId) {
+          workflowSession = sessionBySessionId;
+          console.log('✅ Sessão encontrada por session_id (seguro):', workflowSession.id);
+        }
+      }
+    }
 
     if (workflowSession) {
       // FASE 4: Log detalhado da sessão encontrada
-      console.log('🔍 Sessão encontrada:', {
+      console.log('🔍 Sessão vinculada:', {
         id: workflowSession.id,
         session_id: workflowSession.session_id,
         appointment_id: workflowSession.appointment_id,
-        status: workflowSession.status
+        status: workflowSession.status,
+        cliente_id: workflowSession.cliente_id
       });
       
       // Contar pagamentos vinculados
@@ -616,7 +662,14 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
 
     if (error) throw error;
 
-    console.log('✅ Appointment deleted successfully');
+    // ✅ FASE 5: Log estruturado no final
+    console.log('✅ [DELETE-COMPLETE]', {
+      timestamp: new Date().toISOString(),
+      appointmentId: id,
+      appointmentTitle: appointment.title,
+      sessionDeleted: !preservePayments && !!workflowSession,
+      preserved: preservePayments
+    });
   }
 
   // Availability - FASE 1: Migração para Supabase
