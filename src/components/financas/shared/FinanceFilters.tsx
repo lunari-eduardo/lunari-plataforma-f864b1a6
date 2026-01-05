@@ -170,65 +170,6 @@ export default function FinanceFilters({
           </>
         )}
 
-        {/* Type Filter - Only for Extrato */}
-        <div className={cn("space-y-1.5", isDashboard && "opacity-40 pointer-events-none")}>
-          <Label className="text-xs text-muted-foreground">Tipo</Label>
-          <Select 
-            value={tipo || 'todos'} 
-            onValueChange={(v) => onTipoChange?.(v)}
-            disabled={isDashboard}
-          >
-            <SelectTrigger className="w-28">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos</SelectItem>
-              <SelectItem value="entrada">Entradas</SelectItem>
-              <SelectItem value="saida">Saídas</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Origin Filter - Only for Extrato */}
-        <div className={cn("space-y-1.5", isDashboard && "opacity-40 pointer-events-none")}>
-          <Label className="text-xs text-muted-foreground">Origem</Label>
-          <Select 
-            value={origem || 'todos'} 
-            onValueChange={(v) => onOrigemChange?.(v)}
-            disabled={isDashboard}
-          >
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todas</SelectItem>
-              <SelectItem value="workflow">Workflow</SelectItem>
-              <SelectItem value="financeiro">Financeiro</SelectItem>
-              <SelectItem value="cartao">Cartão</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Status Filter - Only for Extrato */}
-        <div className={cn("space-y-1.5", isDashboard && "opacity-40 pointer-events-none")}>
-          <Label className="text-xs text-muted-foreground">Status</Label>
-          <Select 
-            value={status || 'todos'} 
-            onValueChange={(v) => onStatusChange?.(v)}
-            disabled={isDashboard}
-          >
-            <SelectTrigger className="w-28">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos</SelectItem>
-              <SelectItem value="Pago">Pago</SelectItem>
-              <SelectItem value="Faturado">Faturado</SelectItem>
-              <SelectItem value="Agendado">Agendado</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
         {/* Search Filter - Only for Extrato */}
         <div className={cn("space-y-1.5", isDashboard && "opacity-40 pointer-events-none")}>
           <Label className="text-xs text-muted-foreground">Busca</Label>

@@ -78,10 +78,13 @@ const LancamentosTab = memo(function LancamentosTab({
       {/* Linha 2: Barra de Controles */}
       <div className="space-y-4">
         {/* Desktop Layout */}
-        {!isMobile && <div className="flex items-center justify-between">
-            {/* Grupo da Esquerda: Sub-abas */}
-            <Tabs value={activeSubTab} onValueChange={value => setActiveSubTab(value as GrupoPrincipal)}>
-              <TabsList className="flex h-10 p-1 bg-card border border-border rounded-lg py-0 px-0">
+        {!isMobile && <div className="flex items-center justify-between gap-4">
+            {/* Espaço para equilibrar o botão da direita */}
+            <div className="w-[140px]" />
+            
+            {/* Sub-abas Centralizadas */}
+            <Tabs value={activeSubTab} onValueChange={value => setActiveSubTab(value as GrupoPrincipal)} className="flex-1 flex justify-center">
+              <TabsList className="inline-flex h-10 p-1 bg-card border border-border rounded-lg py-0 px-0">
                 <TabsTrigger value="Despesa Fixa" className="flex items-center gap-2 px-4 data-[state=active]:bg-muted data-[state=active]:text-destructive py-[7px] text-xs">
                   <Receipt className="h-4 w-4" />
                   Fixas

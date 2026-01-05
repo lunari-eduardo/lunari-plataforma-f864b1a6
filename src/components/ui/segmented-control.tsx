@@ -44,7 +44,7 @@ export function SegmentedControl({
             className={cn(
               "inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200",
               isActive
-                ? "bg-background text-foreground shadow-sm border border-border/50"
+                ? "bg-primary text-primary-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground hover:bg-background/50"
             )}
           >

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ItemFinanceiro, GrupoPrincipal } from '@/types/financas';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
@@ -31,10 +31,6 @@ export default function ConfiguracoesFinanceirasTab({
   removerItemFinanceiro,
   atualizarItemFinanceiro
 }: ConfiguracoesFinanceirasTabProps) {
-  // Supabase connection state (sempre conectado agora)
-  const [isSupabaseConnected] = useState(true);
-  const [isSyncing, setIsSyncing] = useState(false);
-
   // Specialized hooks for different concerns
   const itemsManagement = useFinancialItemsManagement({
     itensFinanceiros,
@@ -45,27 +41,6 @@ export default function ConfiguracoesFinanceirasTab({
 
   const pricingSync = usePricingSync();
   const { dialogState, confirm, handleConfirm, handleCancel, handleClose } = useConfirmDialog();
-  
-
-  // Memoized handlers for better performance
-  const handleSyncSupabase = useCallback(async () => {
-    if (!isSupabaseConnected) {
-      sonnerToast.error(TOAST_MESSAGES.SYNC_NOT_CONNECTED);
-      return;
-    }
-
-    setIsSyncing(true);
-    try {
-      // TODO: [SUPABASE] Implement real sync when Supabase is properly connected
-      // This will replace localStorage operations with Supabase queries
-      // Add RLS policies for security and real-time sync for multiple users
-      sonnerToast.success(TOAST_MESSAGES.SYNC_SUCCESS);
-    } catch (error) {
-      sonnerToast.error(TOAST_MESSAGES.SYNC_ERROR);
-    } finally {
-      setIsSyncing(false);
-    }
-  }, [isSupabaseConnected]);
 
   // Enhanced confirm dialog for item deletion
   const handleRemoverItemWithConfirmation = useCallback(async (id: string, nome: string) => {
@@ -90,23 +65,19 @@ export default function ConfiguracoesFinanceirasTab({
   // All business logic is now handled by specialized hooks
   return (
     <div className="space-y-6">
-      <FinancialConfigHeader 
-        isSupabaseConnected={isSupabaseConnected}
-        isSyncing={isSyncing}
-        onSyncSupabase={handleSyncSupabase}
-      />
+      <FinancialConfigHeader />
 
       <Tabs defaultValue="itens" className="w-full">
-        <TabsList className="grid w-full bg-gradient-to-r from-lunar-accent/10 to-lunar-accent/5 backdrop-blur-sm border border-lunar-border/20 rounded-xl p-1 grid-cols-2">
+        <TabsList className="inline-flex p-1 bg-muted/50 border border-border rounded-lg">
           <TabsTrigger 
             value="itens" 
-            className="text-xs font-medium transition-all duration-300 ease-out rounded-lg data-[state=active]:bg-white/90 data-[state=active]:text-lunar-accent data-[state=active]:shadow-lg data-[state=active]:shadow-lunar-accent/15 data-[state=active]:border data-[state=active]:border-lunar-accent/20 data-[state=inactive]:text-lunar-text data-[state=inactive]:hover:bg-lunar-accent/10 data-[state=inactive]:hover:text-lunar-accent"
+            className="px-4 py-2 text-xs font-medium rounded-md transition-all duration-200 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground data-[state=inactive]:hover:bg-background/50"
           >
             Itens Financeiros
           </TabsTrigger>
           <TabsTrigger 
             value="cartoes" 
-            className="text-xs font-medium transition-all duration-300 ease-out rounded-lg data-[state=active]:bg-white/90 data-[state=active]:text-lunar-accent data-[state=active]:shadow-lg data-[state=active]:shadow-lunar-accent/15 data-[state=active]:border data-[state=active]:border-lunar-accent/20 data-[state=inactive]:text-lunar-text data-[state=inactive]:hover:bg-lunar-accent/10 data-[state=inactive]:hover:text-lunar-accent"
+            className="px-4 py-2 text-xs font-medium rounded-md transition-all duration-200 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground data-[state=inactive]:hover:bg-background/50"
           >
             Cartões de Crédito
           </TabsTrigger>
