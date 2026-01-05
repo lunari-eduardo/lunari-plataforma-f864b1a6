@@ -47,6 +47,10 @@ export function useFollowUpSystem() {
       // Ignorar leads arquivados
       if (lead.arquivado) return false;
       
+      // CRÍTICO: Ignorar leads em status finais (nunca devem voltar para followup)
+      const finalStatuses = ['fechado', 'perdido'];
+      if (finalStatuses.includes(lead.status)) return false;
+      
       // Deve estar no status monitorado
       if (lead.status !== config.statusMonitorado) return false;
       
