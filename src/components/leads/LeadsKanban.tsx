@@ -154,34 +154,12 @@ export default function LeadsKanban({
     const statusName = statuses.find((s) => s.key === newStatus)?.name || newStatus;
     const convertedKey = getConvertedKey();
 
-    // Check if moving to lost status
+    // Check if moving to lost status - NÃO atualizar aqui, apenas abrir modal
     if (newStatus === "perdido") {
-      // Open loss reason modal
+      console.log('🔴 [Kanban] Abrindo modal de motivo de perda para:', lead.nome);
       setLeadForLossReason(lead);
       setLossReasonModalOpen(true);
-
-      // Update lead status but wait for reason
-      updateLead(lead.id, {
-        status: newStatus,
-        perdidoEm: new Date().toISOString(),
-      });
-
-      // Add interaction for status change
-      addInteraction(
-        lead.id,
-        "mudanca_status",
-        `Status alterado para "${statusName}"`,
-        true,
-        `Movido via Kanban`,
-        lead.status,
-        newStatus,
-      );
-
-      toast({
-        title: "Lead movido",
-        description: `${lead.nome} movido para ${statusName}`,
-      });
-      return;
+      return; // A atualização será feita no modal após seleção do motivo
     }
 
     // Update lead status for non-lost statuses
@@ -275,32 +253,66 @@ export default function LeadsKanban({
   };
 
   const handleLossReasonConfirm = (leadId: string, reason: string) => {
+    const lead = leadForLossReason || leads.find((l) => l.id === leadId);
+    const previousStatus = lead?.status || 'desconhecido';
+    const now = new Date().toISOString();
+    
+    console.log('🔴 [Kanban] Confirmando perda com motivo:', { leadId, reason, previousStatus });
+
+    // UMA ÚNICA chamada com todos os campos
     updateLead(leadId, {
+      status: "perdido",
+      perdidoEm: now,
       motivoPerda: reason,
+      needsFollowUp: false,
+      statusTimestamp: now,
     });
 
-    const lead = leads.find((l) => l.id === leadId);
-    if (lead) {
-      addInteraction(leadId, "manual", `Motivo da perda definido: ${reason}`, false, "Motivo selecionado pelo usuário");
-      toast({
-        title: "Motivo Registrado",
-        description: `Motivo da perda foi registrado para ${lead.nome}`,
-      });
-    }
+    addInteraction(
+      leadId,
+      "mudanca_status",
+      `Status alterado para "Perdido"`,
+      true,
+      `Motivo: ${reason}`,
+      previousStatus,
+      "perdido",
+    );
+
+    toast({
+      title: "Lead Perdido",
+      description: `${lead?.nome} marcado como perdido. Motivo: ${reason}`,
+    });
   };
 
   const handleLossReasonSkip = (leadId: string) => {
-    // Lead already marked as lost, just close modal
-    const lead = leads.find((l) => l.id === leadId);
-    if (lead) {
-      addInteraction(
-        leadId,
-        "manual",
-        "Motivo da perda será definido posteriormente",
-        false,
-        "Usuário optou por definir motivo mais tarde",
-      );
-    }
+    const lead = leadForLossReason || leads.find((l) => l.id === leadId);
+    const previousStatus = lead?.status || 'desconhecido';
+    const now = new Date().toISOString();
+
+    console.log('🔴 [Kanban] Perda sem motivo:', { leadId, previousStatus });
+
+    // Mover para perdido mesmo sem motivo
+    updateLead(leadId, {
+      status: "perdido",
+      perdidoEm: now,
+      needsFollowUp: false,
+      statusTimestamp: now,
+    });
+
+    addInteraction(
+      leadId,
+      "mudanca_status",
+      `Status alterado para "Perdido"`,
+      true,
+      `Motivo a definir posteriormente`,
+      previousStatus,
+      "perdido",
+    );
+
+    toast({
+      title: "Lead Perdido",
+      description: `${lead?.nome} marcado como perdido (sem motivo definido)`,
+    });
   };
   const handleMarkAsScheduled = (leadId: string) => {
     updateLead(leadId, {
