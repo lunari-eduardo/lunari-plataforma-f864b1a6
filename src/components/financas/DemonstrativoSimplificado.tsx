@@ -3,10 +3,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Download, TrendingUp, TrendingDown, DollarSign, Percent, User, AlertCircle } from 'lucide-react';
+import { Download, TrendingUp, TrendingDown, DollarSign, User, AlertCircle, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
-import { formatCurrency } from '@/utils/financialUtils';
+import { formatCurrency } from '@/utils/currencyUtils';
 import { formatDateForPDF } from '@/utils/dateUtils';
 import { DemonstrativoSimplificado as DemonstrativoType } from '@/types/extrato';
 import { useUserProfile, useUserBranding } from '@/hooks/useUserProfile';
@@ -14,6 +14,8 @@ import { generateDemonstrativePDF, DemonstrativeExportData } from '@/utils/newDe
 import { TransacaoComItem } from '@/types/financas';
 import PeriodSelectionModal from './PeriodSelectionModal';
 import { useExtrato } from '@/hooks/useExtrato';
+import { cn } from '@/lib/utils';
+
 interface DemonstrativoSimplificadoProps {
   demonstrativo: DemonstrativoType;
   periodo: {
@@ -22,6 +24,61 @@ interface DemonstrativoSimplificadoProps {
   };
   transactions?: TransacaoComItem[];
 }
+
+// Component for a single line item with dotted line
+function LineItem({ 
+  label, 
+  value, 
+  isTotal = false,
+  isSubtotal = false,
+  isNegative = false,
+  indent = false,
+}: { 
+  label: string; 
+  value: number; 
+  isTotal?: boolean;
+  isSubtotal?: boolean;
+  isNegative?: boolean;
+  indent?: boolean;
+}) {
+  const valueColor = isNegative 
+    ? 'text-red-600 dark:text-red-400' 
+    : 'text-emerald-600 dark:text-emerald-400';
+
+  return (
+    <div className={cn(
+      "flex items-baseline gap-2",
+      indent && "pl-4",
+      (isTotal || isSubtotal) && "pt-2"
+    )}>
+      <span className={cn(
+        "shrink-0",
+        isTotal ? "font-bold text-base" : isSubtotal ? "font-semibold text-sm" : "text-sm text-muted-foreground"
+      )}>
+        {label}
+      </span>
+      <span className="flex-1 border-b border-dotted border-muted-foreground/30 min-w-8" />
+      <span className={cn(
+        "shrink-0 tabular-nums text-right",
+        isTotal ? "font-bold text-base" : isSubtotal ? "font-semibold" : "font-medium text-sm",
+        valueColor
+      )}>
+        {formatCurrency(value)}
+      </span>
+    </div>
+  );
+}
+
+// Section header component
+function SectionHeader({ icon: Icon, title, iconColor }: { icon: React.ElementType; title: string; iconColor: string }) {
+  return (
+    <div className="flex items-center gap-2 pb-2 border-b-2 border-border mb-4">
+      <Icon className={cn("h-5 w-5", iconColor)} />
+      <h3 className="font-bold text-base uppercase tracking-wide">{title}</h3>
+    </div>
+  );
+}
+
 export default function DemonstrativoSimplificado({
   demonstrativo,
   periodo,
@@ -33,11 +90,8 @@ export default function DemonstrativoSimplificado({
   const navigate = useNavigate();
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showPeriodModal, setShowPeriodModal] = useState(false);
-  const {
-    receitas,
-    despesas,
-    resumoFinal
-  } = demonstrativo;
+  
+  const { receitas, despesas, resumoFinal } = demonstrativo;
 
   const validateProfileData = () => {
     const profile = getProfileOrDefault();
@@ -65,24 +119,16 @@ export default function DemonstrativoSimplificado({
     try {
       const profile = getProfileOrDefault();
       const branding = getBrandingOrDefault();
-      
-      // Calculate demonstrative for the selected period
       const demonstrativoPeriodo = calcularDemonstrativoParaPeriodo(startDate, endDate);
       
-      // Preparar dados para o PDF do demonstrativo
       const exportData: DemonstrativeExportData = {
         profile,
         branding,
-        period: {
-          startDate,
-          endDate
-        },
+        period: { startDate, endDate },
         demonstrativo: demonstrativoPeriodo
       };
 
-      // Usar a nova função específica para demonstrativo
       await generateDemonstrativePDF(exportData);
-
       const periodText = `${formatDateForPDF(startDate)} a ${formatDateForPDF(endDate)}`;
       toast.success(`PDF do demonstrativo gerado com sucesso para o período ${periodText}!`);
     } catch (error) {
@@ -95,166 +141,156 @@ export default function DemonstrativoSimplificado({
     setShowProfileModal(false);
     navigate('/minha-conta');
   };
-  const renderSecaoReceitas = () => <Card>
-      <CardHeader>
-        <CardTitle className="text-lg flex items-center">
-          <TrendingUp className="h-5 w-5 mr-2 text-green-600" />
-          Receitas
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="flex justify-between items-center">
-          <span className="text-sm text-muted-foreground">Receita com sessões</span>
-          <span className="font-medium text-green-600">
-            {formatCurrency(receitas.sessoes)}
-          </span>
-        </div>
-        
-        <div className="flex justify-between items-center">
-          <span className="text-sm text-muted-foreground">Receita com produtos</span>
-          <span className="font-medium text-green-600">
-            {formatCurrency(receitas.produtos)}
-          </span>
-        </div>
-        
-        <div className="flex justify-between items-center">
-          <span className="text-sm text-muted-foreground">Receitas não operacionais</span>
-          <span className="font-medium text-green-600">
-            {formatCurrency(receitas.naoOperacionais)}
-          </span>
-        </div>
-        
-        <Separator />
-        
-        <div className="flex justify-between items-center">
-          <span className="font-semibold">Total de Receitas</span>
-          <span className="font-bold text-lg text-green-600">
-            {formatCurrency(receitas.totalReceitas)}
-          </span>
-        </div>
-      </CardContent>
-    </Card>;
-  const renderSecaoDespesas = () => <Card>
-      <CardHeader>
-        <CardTitle className="text-lg flex items-center">
-          <TrendingDown className="h-5 w-5 mr-2 text-red-600" />
-          Despesas
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {despesas.categorias.map((categoria, index) => <div key={index} className="space-y-2">
-            <div className="font-medium text-sm text-muted-foreground border-b pb-1">
-              {categoria.grupo}
-            </div>
-            
-            {categoria.itens.map((item, itemIndex) => <div key={itemIndex} className="flex justify-between items-center pl-4">
-                <span className="text-xs text-muted-foreground">{item.nome}</span>
-                <span className="text-sm font-medium text-red-600">
-                  {formatCurrency(item.valor)}
-                </span>
-              </div>)}
-            
-            <div className="flex justify-between items-center pl-4 border-t pt-1">
-              <span className="text-sm font-medium">Total {categoria.grupo}</span>
-              <span className="font-semibold text-red-600">
-                {formatCurrency(categoria.total)}
-              </span>
-            </div>
-            
-            {index < despesas.categorias.length - 1 && <Separator className="mt-3" />}
-          </div>)}
-        
-        <Separator />
-        
-        <div className="flex justify-between items-center">
-          <span className="font-semibold">Total de Despesas</span>
-          <span className="font-bold text-lg text-red-600">
-            {formatCurrency(despesas.totalDespesas)}
-          </span>
-        </div>
-      </CardContent>
-    </Card>;
-  const renderResumoFinal = () => <Card className="bg-gradient-to-r from-background to-muted/30">
-      <CardHeader>
-        <CardTitle className="text-lg flex items-center">
-          <DollarSign className="h-5 w-5 mr-2" />
-          Resumo Final
-        </CardTitle>
-        <CardDescription>
-          Período: {formatDateForPDF(periodo.inicio)} a{' '}
-          {formatDateForPDF(periodo.fim)}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <span className="text-sm">Receita total</span>
-              <span className="font-medium text-green-600">
-                {formatCurrency(resumoFinal.receitaTotal)}
-              </span>
-            </div>
-            
-            <div className="flex justify-between items-center">
-              <span className="text-sm">(-) Total de despesas</span>
-              <span className="font-medium text-red-600">
-                {formatCurrency(resumoFinal.despesaTotal)}
-              </span>
-            </div>
-          </div>
-          
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <span className="text-sm flex items-center">
-                <Percent className="h-3 w-3 mr-1" />
-                Margem líquida
-              </span>
-              <span className={`font-medium ${resumoFinal.margemLiquida >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {resumoFinal.margemLiquida.toFixed(1)}%
-              </span>
-            </div>
-          </div>
-        </div>
-        
-        <Separator />
-        
-        <div className="flex justify-between items-center p-4 bg-muted/50 rounded-lg">
-          <span className="font-bold text-lg">= Resultado líquido do período</span>
-          <span className={`font-bold text-2xl ${resumoFinal.resultadoLiquido >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {formatCurrency(resumoFinal.resultadoLiquido)}
-          </span>
-        </div>
-      </CardContent>
-    </Card>;
-  return <div className="space-y-6">
-      {/* Header com botão de exportação */}
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="font-bold text-xl">Demonstrativo Financeiro</h2>
-          <p className="text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Resumo categorizado para análise contábil
           </p>
         </div>
         
-        <Button 
-          onClick={handleExportRequest}
-          className="flex items-center space-x-2"
-        >
+        <Button onClick={handleExportRequest} className="gap-2">
           <Download className="h-4 w-4" />
-          <span>Exportar PDF</span>
+          Exportar PDF
         </Button>
       </div>
 
-      {/* Grid de seções */}
+      {/* Main Content - Two Column Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {renderSecaoReceitas()}
-        {renderSecaoDespesas()}
+        {/* RECEITAS */}
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-6">
+            <SectionHeader icon={TrendingUp} title="Receitas" iconColor="text-emerald-600" />
+            
+            <div className="space-y-3">
+              <LineItem label="Receita com sessões" value={receitas.sessoes} />
+              <LineItem label="Receita com produtos" value={receitas.produtos} />
+              <LineItem label="Receitas não operacionais" value={receitas.naoOperacionais} />
+              
+              <Separator className="my-4" />
+              
+              <LineItem 
+                label="TOTAL DE RECEITAS" 
+                value={receitas.totalReceitas} 
+                isTotal 
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* DESPESAS */}
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-6">
+            <SectionHeader icon={TrendingDown} title="Despesas" iconColor="text-red-600" />
+            
+            <div className="space-y-4">
+              {despesas.categorias.map((categoria, index) => (
+                <div key={index} className="space-y-2">
+                  {/* Category Header */}
+                  <div className="flex items-center gap-1 text-sm font-semibold text-muted-foreground">
+                    <ChevronRight className="h-4 w-4" />
+                    {categoria.grupo}
+                  </div>
+                  
+                  {/* Category Items */}
+                  <div className="space-y-2">
+                    {categoria.itens.map((item, itemIndex) => (
+                      <LineItem 
+                        key={itemIndex} 
+                        label={item.nome} 
+                        value={item.valor} 
+                        indent 
+                        isNegative 
+                      />
+                    ))}
+                  </div>
+                  
+                  {/* Subtotal */}
+                  <LineItem 
+                    label={`Subtotal ${categoria.grupo}`} 
+                    value={categoria.total} 
+                    isSubtotal 
+                    indent 
+                    isNegative 
+                  />
+                  
+                  {index < despesas.categorias.length - 1 && (
+                    <Separator className="my-3" />
+                  )}
+                </div>
+              ))}
+              
+              <Separator className="my-4" />
+              
+              <LineItem 
+                label="TOTAL DE DESPESAS" 
+                value={despesas.totalDespesas} 
+                isTotal 
+                isNegative 
+              />
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Resumo final */}
-      {renderResumoFinal()}
+      {/* RESUMO FINAL */}
+      <Card className="border-0 shadow-sm bg-muted/30">
+        <CardContent className="p-6">
+          <div className="flex items-center gap-2 pb-2 border-b-2 border-border mb-4">
+            <DollarSign className="h-5 w-5 text-primary" />
+            <h3 className="font-bold text-base uppercase tracking-wide">Resumo Final</h3>
+            <span className="ml-auto text-sm text-muted-foreground">
+              Período: {formatDateForPDF(periodo.inicio)} a {formatDateForPDF(periodo.fim)}
+            </span>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div className="space-y-3">
+              <LineItem label="Receita total" value={resumoFinal.receitaTotal} />
+              <LineItem label="(-) Total de despesas" value={resumoFinal.despesaTotal} isNegative />
+            </div>
+            
+            <div className="space-y-3">
+              <div className="flex items-baseline gap-2">
+                <span className="text-sm text-muted-foreground">Margem líquida</span>
+                <span className="flex-1 border-b border-dotted border-muted-foreground/30 min-w-8" />
+                <span className={cn(
+                  "font-semibold tabular-nums",
+                  resumoFinal.margemLiquida >= 0 
+                    ? "text-emerald-600 dark:text-emerald-400" 
+                    : "text-red-600 dark:text-red-400"
+                )}>
+                  {resumoFinal.margemLiquida.toFixed(1)}%
+                </span>
+              </div>
+            </div>
+          </div>
+          
+          {/* Hero Result */}
+          <div className={cn(
+            "flex items-center justify-between p-6 rounded-xl",
+            resumoFinal.resultadoLiquido >= 0 
+              ? "bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800" 
+              : "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800"
+          )}>
+            <span className="font-bold text-lg">= Resultado Líquido do Período</span>
+            <span className={cn(
+              "font-bold text-2xl tabular-nums",
+              resumoFinal.resultadoLiquido >= 0 
+                ? "text-emerald-600 dark:text-emerald-400" 
+                : "text-red-600 dark:text-red-400"
+            )}>
+              {formatCurrency(resumoFinal.resultadoLiquido)}
+            </span>
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* Modal de seleção de período */}
+      {/* Modals */}
       <PeriodSelectionModal
         isOpen={showPeriodModal}
         onClose={() => setShowPeriodModal(false)}
@@ -264,7 +300,6 @@ export default function DemonstrativoSimplificado({
         description="Selecione o período que deseja incluir no demonstrativo"
       />
 
-      {/* Modal de redirecionamento para perfil */}
       <Dialog open={showProfileModal} onOpenChange={setShowProfileModal}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -306,5 +341,6 @@ export default function DemonstrativoSimplificado({
           </div>
         </DialogContent>
       </Dialog>
-    </div>;
+    </div>
+  );
 }

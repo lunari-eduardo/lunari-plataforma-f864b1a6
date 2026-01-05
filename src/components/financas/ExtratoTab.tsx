@@ -1,11 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useExtrato } from '@/hooks/useExtrato';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { TrendingUp, Search } from 'lucide-react';
-import ExtratoFilters from '@/components/extrato/ExtratoFilters';
+import { Search, TrendingUp } from 'lucide-react';
+import FinanceFilters from '@/components/financas/shared/FinanceFilters';
 import ExtratoSummaryCards from '@/components/extrato/ExtratoSummaryCards';
 import ExtratoTable from '@/components/extrato/ExtratoTable';
 import DemonstrativoSection from '@/components/extrato/DemonstrativoSection';
+import { SegmentedControl, SegmentOption } from '@/components/ui/segmented-control';
+
+const VIEW_OPTIONS: SegmentOption[] = [
+  { value: 'detalhado', label: 'Vista Detalhada', icon: Search },
+  { value: 'demonstrativo', label: 'Demonstrativo', icon: TrendingUp },
+];
 
 export default function ExtratoTab() {
   const {
@@ -21,39 +26,50 @@ export default function ExtratoTab() {
     prepararDadosExportacao
   } = useExtrato();
 
+  const [activeView, setActiveView] = useState('detalhado');
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="mb-6">
+      <div className="mb-2">
         <p className="text-muted-foreground">
           Visão unificada de todas as movimentações financeiras
         </p>
       </div>
 
-      {/* Filtros */}
-      <ExtratoFilters 
-        filtros={filtros}
-        onFiltrosChange={atualizarFiltros}
+      {/* Unified Filters */}
+      <FinanceFilters 
+        variant="extrato"
+        dataInicio={filtros.dataInicio}
+        dataFim={filtros.dataFim}
+        onDataInicioChange={(v) => atualizarFiltros({ dataInicio: v })}
+        onDataFimChange={(v) => atualizarFiltros({ dataFim: v })}
+        tipo={filtros.tipo}
+        onTipoChange={(v) => atualizarFiltros({ tipo: v as any })}
+        origem={filtros.origem}
+        onOrigemChange={(v) => atualizarFiltros({ origem: v as any })}
+        status={filtros.status}
+        onStatusChange={(v) => atualizarFiltros({ status: v as any })}
+        busca={filtros.busca}
+        onBuscaChange={(v) => atualizarFiltros({ busca: v })}
         onLimparFiltros={limparFiltros}
       />
 
-      {/* Cards de Resumo */}
+      {/* Summary Cards */}
       <ExtratoSummaryCards resumo={resumo} />
 
-      {/* Tabs para alternar entre vista detalhada e demonstrativo */}
-      <Tabs defaultValue="detalhado" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="detalhado" className="flex items-center space-x-2">
-            <Search className="h-4 w-4" />
-            <span>Vista Detalhada</span>
-          </TabsTrigger>
-          <TabsTrigger value="demonstrativo" className="flex items-center space-x-2">
-            <TrendingUp className="h-4 w-4" />
-            <span>Demonstrativo</span>
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="detalhado" className="mt-6">
+      {/* Segmented Control for Views */}
+      <div className="flex justify-center">
+        <SegmentedControl
+          options={VIEW_OPTIONS}
+          value={activeView}
+          onValueChange={setActiveView}
+        />
+      </div>
+
+      {/* Content based on active view */}
+      <div className="mt-6">
+        {activeView === 'detalhado' && (
           <ExtratoTable 
             linhas={linhas}
             onAbrirOrigem={abrirOrigem}
@@ -61,9 +77,9 @@ export default function ExtratoTab() {
             paginacao={paginacao}
             isLoading={isLoading}
           />
-        </TabsContent>
+        )}
         
-        <TabsContent value="demonstrativo" className="mt-6">
+        {activeView === 'demonstrativo' && (
           <DemonstrativoSection 
             demonstrativo={demonstrativo} 
             periodo={{
@@ -71,8 +87,8 @@ export default function ExtratoTab() {
               fim: filtros.dataFim
             }}
           />
-        </TabsContent>
-      </Tabs>
+        )}
+      </div>
     </div>
   );
 }
