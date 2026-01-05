@@ -1,12 +1,16 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { WorkflowSupabaseService } from '@/services/WorkflowSupabaseService';
 
 /**
  * Hook to automatically sync confirmed appointments with workflow sessions
  * Also handles manual synchronization for existing appointments
+ * 
+ * ✅ FASE 3: Este é o ÚNICO ponto de criação de sessões (unificado)
  */
 export const useAppointmentWorkflowSync = () => {
+  // ✅ FASE 3: Lock para prevenir criação duplicada de sessões
+  const sessionCreationInProgress = useRef<Set<string>>(new Set());
   
   // Function to manually sync existing confirmed appointments
   const syncExistingAppointments = async () => {
@@ -121,15 +125,24 @@ export const useAppointmentWorkflowSync = () => {
           if (newStatus === 'confirmado' && oldStatus !== 'confirmado') {
             console.log('🆕 [AppointmentSync] Appointment confirmed, checking for existing session...');
             
+            // ✅ FASE 3: Verificar lock antes de criar
+            if (sessionCreationInProgress.current.has(appointment.id)) {
+              console.log('⚠️ [AppointmentSync] Criação já em andamento para:', appointment.id);
+              return;
+            }
+            
             // Check if session already exists before creating
             const { data: existingSession } = await supabase
               .from('clientes_sessoes')
               .select('id')
               .eq('user_id', appointment.user_id)
-              .or(`appointment_id.eq.${appointment.id},session_id.eq.${appointment.session_id}`)
+              .eq('appointment_id', appointment.id) // ✅ FASE 3: Busca apenas por appointment_id (mais seguro)
               .maybeSingle();
 
             if (!existingSession) {
+              // ✅ FASE 3: Adicionar ao lock
+              sessionCreationInProgress.current.add(appointment.id);
+              
               try {
                 const newSession = await WorkflowSupabaseService.createSessionFromAppointment(appointment.id, appointment);
                 console.log('✅ [AppointmentSync] Session created for confirmed appointment:', newSession?.id);
@@ -169,6 +182,11 @@ export const useAppointmentWorkflowSync = () => {
                 }
               } catch (error) {
                 console.error('❌ [AppointmentSync] Error creating session from confirmed appointment:', error);
+              } finally {
+                // ✅ FASE 3: Remover do lock após delay
+                setTimeout(() => {
+                  sessionCreationInProgress.current.delete(appointment.id);
+                }, 3000);
               }
             } else {
               console.log('ℹ️ [AppointmentSync] Session already exists for appointment:', appointment.id);
@@ -193,15 +211,24 @@ export const useAppointmentWorkflowSync = () => {
           if (appointment.status === 'confirmado') {
             console.log('🆕 [AppointmentSync] New confirmed appointment, checking for existing session...');
             
+            // ✅ FASE 3: Verificar lock antes de criar
+            if (sessionCreationInProgress.current.has(appointment.id)) {
+              console.log('⚠️ [AppointmentSync] Criação já em andamento para novo appointment:', appointment.id);
+              return;
+            }
+            
             // Check if session already exists before creating
             const { data: existingSession } = await supabase
               .from('clientes_sessoes')
               .select('id')
               .eq('user_id', appointment.user_id)
-              .or(`appointment_id.eq.${appointment.id},session_id.eq.${appointment.session_id}`)
+              .eq('appointment_id', appointment.id) // ✅ FASE 3: Busca apenas por appointment_id (mais seguro)
               .maybeSingle();
 
             if (!existingSession) {
+              // ✅ FASE 3: Adicionar ao lock
+              sessionCreationInProgress.current.add(appointment.id);
+              
               try {
                 const newSession = await WorkflowSupabaseService.createSessionFromAppointment(appointment.id, appointment);
                 console.log('✅ [AppointmentSync] Session created for new confirmed appointment:', newSession?.id);
@@ -241,6 +268,11 @@ export const useAppointmentWorkflowSync = () => {
                 }
               } catch (error) {
                 console.error('❌ [AppointmentSync] Error creating session from new confirmed appointment:', error);
+              } finally {
+                // ✅ FASE 3: Remover do lock após delay
+                setTimeout(() => {
+                  sessionCreationInProgress.current.delete(appointment.id);
+                }, 3000);
               }
             } else {
               console.log('ℹ️ [AppointmentSync] Session already exists for new appointment:', appointment.id);
