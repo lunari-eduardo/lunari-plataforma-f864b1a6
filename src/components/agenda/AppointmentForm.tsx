@@ -103,6 +103,9 @@ export default function AppointmentForm({
   
   // Estado para animação do valor do pacote
   const [valorPacoteAnimating, setValorPacoteAnimating] = useState(false);
+  
+  // ✅ FASE 2: Estado para prevenir cliques duplos no submit
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Estado para os campos do formulário
   const [formData, setFormData] = useState({
@@ -320,22 +323,33 @@ export default function AppointmentForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validar campos obrigatórios
-    if (activeTab === 'new' && !formData.newClientName) {
-      toast.error('Nome do cliente é obrigatório');
+    // ✅ FASE 2: Prevenir submissões duplicadas
+    if (isSubmitting) {
+      console.log('⚠️ [AppointmentForm] Submissão já em andamento - ignorando');
       return;
     }
-    if (activeTab === 'existing' && !formData.clientId) {
-      toast.error('Selecione um cliente');
-      return;
-    }
+    setIsSubmitting(true);
 
-    // Verificar conflitos de horário
-    const conflictError = checkForConflicts();
-    if (conflictError) {
-      toast.error(conflictError);
-      return;
-    }
+    try {
+      // Validar campos obrigatórios
+      if (activeTab === 'new' && !formData.newClientName) {
+        toast.error('Nome do cliente é obrigatório');
+        setIsSubmitting(false);
+        return;
+      }
+      if (activeTab === 'existing' && !formData.clientId) {
+        toast.error('Selecione um cliente');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Verificar conflitos de horário
+      const conflictError = checkForConflicts();
+      if (conflictError) {
+        toast.error(conflictError);
+        setIsSubmitting(false);
+        return;
+      }
     let clientInfo;
     if (activeTab === 'new') {
       // Criar novo cliente no CRM automaticamente usando Supabase
@@ -383,27 +397,34 @@ export default function AppointmentForm({
       }
     }
 
-    // Preparar dados do agendamento
-    const appointmentData = {
-      date: formData.date,
-      time: formData.time,
-      title: clientInfo.client,
-      type: packageCategory || 'Sessão',
-      category: packageType,
-      status: formData.status as 'confirmado' | 'a confirmar',
-      description: formData.description,
-      packageId: formData.packageId,
-      produtosIncluidos: produtosIncluidos.length > 0 ? produtosIncluidos : undefined,
-      paidAmount: formData.paidAmount,
-      valorPacote: formData.valorPacote,
-      client: clientInfo.client,
-      clientId: clientInfo.clientId,
-      whatsapp: clientInfo.clientPhone,
-      email: clientInfo.clientEmail,
-      clientPhone: clientInfo.clientPhone,
-      clientEmail: clientInfo.clientEmail
-    };
-    onSave(appointmentData);
+      // Preparar dados do agendamento
+      const appointmentData = {
+        date: formData.date,
+        time: formData.time,
+        title: clientInfo.client,
+        type: packageCategory || 'Sessão',
+        category: packageType,
+        status: formData.status as 'confirmado' | 'a confirmar',
+        description: formData.description,
+        packageId: formData.packageId,
+        produtosIncluidos: produtosIncluidos.length > 0 ? produtosIncluidos : undefined,
+        paidAmount: formData.paidAmount,
+        valorPacote: formData.valorPacote,
+        client: clientInfo.client,
+        clientId: clientInfo.clientId,
+        whatsapp: clientInfo.clientPhone,
+        email: clientInfo.clientEmail,
+        clientPhone: clientInfo.clientPhone,
+        clientEmail: clientInfo.clientEmail
+      };
+      onSave(appointmentData);
+    } catch (error) {
+      console.error('❌ [AppointmentForm] Erro ao salvar:', error);
+      toast.error('Erro ao salvar agendamento');
+    } finally {
+      // ✅ FASE 2: Reset após um delay para permitir animação de fechamento
+      setTimeout(() => setIsSubmitting(false), 1000);
+    }
   };
 
   return (
@@ -704,11 +725,11 @@ export default function AppointmentForm({
         
         {/* ========== BOTÕES DE AÇÃO ========== */}
         <div className="flex justify-end gap-2 pt-4 border-t border-border">
-          <Button type="button" variant="outline" onClick={onCancel}>
+          <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
             Cancelar
           </Button>
-          <Button type="submit">
-            Salvar
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Salvando...' : 'Salvar'}
           </Button>
         </div>
       </form>

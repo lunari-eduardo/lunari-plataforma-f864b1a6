@@ -38,10 +38,13 @@ export const useAgendaRealtime = () => {
 
       if (error) throw error;
 
+      // ✅ FASE 4: Usar parseDateFromStorage para evitar bugs de timezone
+      const { parseDateFromStorage } = await import('@/utils/dateUtils');
+      
       const appointmentsMapped: Appointment[] = (data || []).map(app => ({
         id: app.id,
         title: app.title,
-        date: new Date(app.date),
+        date: parseDateFromStorage(app.date), // ✅ CORRIGIDO: Evita bug de timezone
         time: app.time,
         status: app.status as AppointmentStatus,
         type: app.type,

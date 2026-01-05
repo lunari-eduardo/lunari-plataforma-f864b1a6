@@ -124,6 +124,9 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
     }
   }, [agendaService]);
 
+  // ✅ FASE 1: Flag para ignorar real-time durante operações manuais
+  const isManualOperationRef = useRef(false);
+  
   // Real-time subscriptions with proper cleanup
   useEffect(() => {
     let cleanupRealtime: (() => void) | undefined;
@@ -154,6 +157,7 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
           console.log(`📡 [Agenda] availability_slots subscription: ${status}`);
         });
 
+      // ✅ FASE 1: Real-time para appointments com proteção contra operações manuais
       const appointmentsChannel = supabase
         .channel(`appointments_realtime_${channelId}`)
         .on('postgres_changes', {
@@ -162,6 +166,12 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
           table: 'appointments',
           filter: `user_id=eq.${user.id}`
         }, (payload) => {
+          // ✅ FASE 1: Ignorar se operação manual em andamento
+          if (isManualOperationRef.current) {
+            console.log('🔇 [Agenda] Real-time ignorado - operação manual em andamento');
+            return;
+          }
+          
           console.log('🔄 [Agenda] Mudança em appointments:', payload.eventType);
           
           agendaService.loadAppointments().then(apps => {
@@ -247,9 +257,22 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
 
   // Appointment operations - FASE 2 e 3
   const addAppointment = useCallback(async (appointmentData: Omit<Appointment, 'id'>) => {
+    // ✅ FASE 1: Bloquear real-time durante operação manual
+    isManualOperationRef.current = true;
+    console.log('🔒 [Agenda] addAppointment - bloqueando real-time');
+    
     try {
       const newAppointment = await agendaService.addAppointment(appointmentData);
-      setAppointments(prev => [...prev, newAppointment]);
+      
+      // ✅ FASE 1: Atualização local única (sem duplicação pelo real-time)
+      setAppointments(prev => {
+        // Evitar duplicatas verificando se já existe
+        if (prev.some(app => app.id === newAppointment.id)) {
+          console.log('⚠️ [Agenda] Appointment já existe localmente, ignorando');
+          return prev;
+        }
+        return [...prev, newAppointment];
+      });
 
       // FASE 2: Se agendamento confirmado, ocupar slot
       if (newAppointment.status === 'confirmado') {
@@ -263,6 +286,12 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
     } catch (error) {
       console.error('❌ Erro ao adicionar appointment:', error);
       throw error;
+    } finally {
+      // ✅ FASE 1: Reabilitar real-time após delay
+      setTimeout(() => {
+        isManualOperationRef.current = false;
+        console.log('🔓 [Agenda] addAppointment - real-time reabilitado');
+      }, 1500);
     }
   }, []);
 
