@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode, useRef } from 'react';
 import { AgendaService } from '@/services/AgendaService';
 import { SupabaseAgendaAdapter } from '@/adapters/SupabaseAgendaAdapter';
 import { AgendaWorkflowIntegrationService } from '@/services/AgendaWorkflowIntegrationService';
@@ -329,7 +329,24 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
     }
   }, [appointments, findNextAvailableSlot]);
 
+  // ✅ FASE 4: Lock para prevenir deleções duplicadas
+  const deletionInProgressRef = useRef<Set<string>>(new Set());
+  
   const deleteAppointment = useCallback(async (id: string, preservePayments?: boolean) => {
+    // ✅ FASE 4: Verificar se já está deletando este appointment
+    if (deletionInProgressRef.current.has(id)) {
+      console.warn(`⚠️ [AgendaContext] Deleção já em andamento para ${id} - ignorando chamada duplicada`);
+      return;
+    }
+    
+    // Adicionar ao lock
+    deletionInProgressRef.current.add(id);
+    console.log('🗑️ [AgendaContext] Iniciando deleção:', { 
+      id, 
+      preservePayments,
+      timestamp: new Date().toISOString() 
+    });
+    
     try {
       // FASE 2: Buscar dados antes de deletar
       const appointment = appointments.find(app => app.id === id);
@@ -345,9 +362,16 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
       // }
       
       setAppointments(prev => prev.filter(app => app.id !== id));
+      
+      console.log('✅ [AgendaContext] Deleção concluída:', { id });
     } catch (error) {
-      console.error('❌ Erro ao deletar appointment:', error);
+      console.error('❌ [AgendaContext] Erro ao deletar appointment:', error);
       throw error;
+    } finally {
+      // ✅ FASE 4: Remover do lock após um delay para evitar race conditions
+      setTimeout(() => {
+        deletionInProgressRef.current.delete(id);
+      }, 2000);
     }
   }, [appointments]);
 

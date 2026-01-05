@@ -137,8 +137,12 @@ export const useIntegration = () => {
   }, [orcamentos, appointments, addAppointment, updateAppointment, shouldSync]);
 
   // Monitor agendamentos removidos de orçamentos cancelados ou não fechados
+  // ✅ FASE 6: Adicionar flag para evitar execução durante deleção manual
+  const manualDeletionInProgressRef = useRef(false);
+  
   useEffect(() => {
-    if (!isReady || syncInProgressRef.current) return;
+    // ✅ CORREÇÃO: Não executar se há deleção manual em andamento
+    if (!isReady || syncInProgressRef.current || manualDeletionInProgressRef.current) return;
 
     const orcamentosPerdidos = orcamentos.filter(orc => orc.status === 'perdido');
     
@@ -155,6 +159,10 @@ export const useIntegration = () => {
         syncInProgressRef.current = true;
         
         try {
+          console.log('🔵 [useIntegration] Auto-deletando appointment de orçamento perdido:', {
+            orcamentoId: orcamento.id,
+            appointmentId: relatedAppointment.id
+          });
           await deleteAppointment(relatedAppointment.id);
           toast({
             title: "Agendamento removido",
@@ -162,7 +170,7 @@ export const useIntegration = () => {
             variant: "destructive"
           });
         } catch (error) {
-          console.error('Erro ao remover agendamento:', error);
+          console.error('❌ Erro ao remover agendamento:', error);
         }
         
         // Reset flag após um pequeno delay
@@ -213,8 +221,15 @@ export const useIntegration = () => {
   // REMOVIDO: Esta sincronização bidirecional estava causando o loop infinito
   // Agora a sincronização é apenas Orçamento → Agendamento
 
-  // Função para limpar agendamentos órfãos
+  // Função para limpar agendamentos órfãos - FASE 1: APENAS MANUAL (não automático)
+  // Esta função agora só é executada quando chamada explicitamente pelo usuário
   const cleanupOrphanedAppointments = useCallback(() => {
+    // ✅ CORREÇÃO: Não executar se orçamentos não carregaram completamente
+    if (orcamentos.length === 0) {
+      console.warn('⚠️ [useIntegration] Orçamentos não carregados, cancelando limpeza automática');
+      return 0;
+    }
+    
     const orphanedAppointments = appointments.filter(appointment => {
       // Se não é de orçamento, não é órfão
       if (!isFromBudget(appointment)) return false;
@@ -226,6 +241,13 @@ export const useIntegration = () => {
       const correspondingBudget = orcamentos.find(orc => orc.id === budgetId);
       return !correspondingBudget; // Órfão se não encontrou o orçamento
     });
+    
+    // ✅ CORREÇÃO: Log antes de deletar para debug
+    if (orphanedAppointments.length > 0) {
+      console.log('🗑️ [useIntegration] Removendo agendamentos órfãos:', 
+        orphanedAppointments.map(a => ({ id: a.id, client: a.client }))
+      );
+    }
     
     // Remover agendamentos órfãos
     orphanedAppointments.forEach(appointment => {
@@ -240,17 +262,9 @@ export const useIntegration = () => {
     return orphanedAppointments.length;
   }, [appointments, orcamentos, isFromBudget, getBudgetId, deleteAppointment]);
 
-  // Executar limpeza na inicialização
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const removedCount = cleanupOrphanedAppointments();
-      if (removedCount > 0) {
-        console.log(`Limpeza executada: ${removedCount} agendamentos órfãos removidos`);
-      }
-    }, 1000); // Delay para garantir que tudo foi carregado
-
-    return () => clearTimeout(timer);
-  }, [cleanupOrphanedAppointments]);
+  // ✅ FASE 1: REMOVIDO - Limpeza automática agressiva
+  // A limpeza agora só é executada manualmente via cleanupOrphanedAppointments()
+  // Isso evita deleções não intencionais quando orçamentos ainda estão carregando
 
   return {
     // Funções de utilidade para identificar origem dos agendamentos
