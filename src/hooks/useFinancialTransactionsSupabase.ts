@@ -10,7 +10,7 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { SupabaseFinancialTransactionsAdapter } from '@/adapters/SupabaseFinancialTransactionsAdapter';
 import { SupabaseFinancialItemsAdapter } from '@/adapters/SupabaseFinancialItemsAdapter';
@@ -177,28 +177,66 @@ export function useFinancialTransactionsSupabase(filtroMesAno: { mes: number; an
     staleTime: 30000, // Cache por 30 segundos
   });
 
-  // ============= REALTIME SUBSCRIPTIONS =============
+  // ============= REALTIME SUBSCRIPTIONS COM DEBOUNCE =============
+  // Ref para controlar debounce de invalidações
+  const invalidationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+  // Função debounced para invalidar cache (evita múltiplas invalidações)
+  const debouncedInvalidate = useCallback(() => {
+    if (invalidationTimeoutRef.current) {
+      clearTimeout(invalidationTimeoutRef.current);
+    }
+    invalidationTimeoutRef.current = setTimeout(() => {
+      queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
+      invalidationTimeoutRef.current = null;
+    }, 150); // 150ms debounce
+  }, [queryClient]);
+
   useEffect(() => {
-    const channel = supabase
-      .channel('financial-transactions-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'fin_transactions'
-        },
-        () => {
-          // Invalidar query quando houver mudanças
-          queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
-        }
-      )
-      .subscribe();
+    // Obter user_id para filtrar apenas eventos do usuário atual
+    let userId: string | null = null;
+    
+    const setupChannel = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      userId = user?.id || null;
+      
+      if (!userId) {
+        console.warn('⚠️ [FinTransactions] Sem user_id para filtrar real-time');
+        return;
+      }
+
+      const channel = supabase
+        .channel(`fin-transactions-${userId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'fin_transactions',
+            filter: `user_id=eq.${userId}` // ✅ FILTRAR POR USER_ID
+          },
+          () => {
+            // Usar debounce para evitar múltiplas invalidações
+            debouncedInvalidate();
+          }
+        )
+        .subscribe();
+
+      return channel;
+    };
+
+    let channel: any = null;
+    setupChannel().then(ch => { channel = ch; });
 
     return () => {
-      supabase.removeChannel(channel);
+      if (invalidationTimeoutRef.current) {
+        clearTimeout(invalidationTimeoutRef.current);
+      }
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
     };
-  }, [queryClient]);
+  }, [queryClient, debouncedInvalidate]);
 
   // ============= VERIFICAÇÃO PERIÓDICA DE STATUS VENCIDO =============
   const lastPeriodicCheck = useRef<number>(Date.now());
