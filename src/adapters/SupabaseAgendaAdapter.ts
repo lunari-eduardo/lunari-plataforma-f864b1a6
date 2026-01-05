@@ -469,6 +469,51 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
       throw new Error('preservePayments deve ser boolean (true/false)');
     }
 
+    // ✅ FASE 3 (ESCABILIDADE): Usar RPC atômica para exclusão simples
+    if (!preservePayments) {
+      console.log('🚀 [DeleteAppointment] Usando RPC atômica para exclusão em cascata');
+      
+      // Primeiro, buscar appointment para Google Calendar sync
+      const { data: appointment } = await supabase
+        .from('appointments')
+        .select('google_event_id, title')
+        .eq('id', id)
+        .eq('user_id', user.user.id)
+        .maybeSingle();
+      
+      // Google Calendar sync - delete antes de remover do banco
+      if (appointment?.google_event_id) {
+        try {
+          const { syncAppointmentToGoogleCalendar } = await import('@/services/googleCalendarSync');
+          await syncAppointmentToGoogleCalendar(id, 'delete');
+        } catch (syncError) {
+          console.warn('⚠️ [SupabaseAdapter] Google Calendar delete sync failed (non-fatal):', syncError);
+        }
+      }
+      
+      // Chamar RPC atômica
+      const { data: result, error } = await supabase
+        .rpc('delete_appointment_cascade', {
+          p_appointment_id: id,
+          p_keep_payments: false
+        });
+      
+      if (error) {
+        console.error('❌ [DeleteAppointment] Erro na RPC:', error);
+        throw error;
+      }
+      
+      console.log('✅ [DELETE-COMPLETE-ATOMIC]', {
+        timestamp: new Date().toISOString(),
+        result: result
+      });
+      
+      return;
+    }
+
+    // ============== FLUXO LEGADO: preservePayments === true ==============
+    // Mantém lógica anterior para preservar pagamentos como histórico
+    
     // First, find the appointment to get its session data
     const { data: appointment, error: appointmentError } = await supabase
       .from('appointments')
@@ -519,7 +564,6 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
           otherAppointments.map(a => a.id)
         );
         console.warn('⚠️ NÃO deletando sessão para evitar afetar outros appointments');
-        // NÃO buscar sessão - deixar workflowSession como null
       } else {
         // Seguro buscar por session_id
         const { data: sessionBySessionId } = await supabase
@@ -537,108 +581,48 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
     }
 
     if (workflowSession) {
-      // FASE 4: Log detalhado da sessão encontrada
-      console.log('🔍 Sessão vinculada:', {
-        id: workflowSession.id,
-        session_id: workflowSession.session_id,
-        appointment_id: workflowSession.appointment_id,
-        status: workflowSession.status,
-        cliente_id: workflowSession.cliente_id
-      });
+      // preservePayments === true: marcar como histórico
+      console.log('💾 Preserving payments - marking session as historical (payments only)');
       
-      // Contar pagamentos vinculados
-      const { count } = await supabase
-        .from('clientes_transacoes')
-        .select('*', { count: 'exact', head: true })
-        .eq('session_id', workflowSession.session_id)
-        .eq('user_id', user.user.id);
-        
-      console.log(`💰 ${count || 0} pagamento(s) vinculado(s) a esta sessão`);
+      // Ler valor pago atual ANTES de zerar tudo
+      const valorPagoAtual = Number(workflowSession.valor_pago) || 0;
+      
+      const { data: updatedSession, error: updateError } = await supabase
+        .from('clientes_sessoes')
+        .update({ 
+          appointment_id: null,
+          status: 'historico',
+          
+          // ✅ ZERAR TODOS OS VALORES (exceto valor_pago)
+          valor_total: valorPagoAtual, // Total = apenas o que foi pago
+          valor_base_pacote: 0,
+          valor_total_foto_extra: 0,
+          qtd_fotos_extra: 0,
+          valor_foto_extra: 0,
+          valor_adicional: 0,
+          desconto: 0,
+          produtos_incluidos: [], // Esvaziar array de produtos
+          regras_congeladas: null, // Limpar regras
+          
+          // ✅ MANTER contexto descritivo
+          descricao: `${workflowSession.pacote || workflowSession.descricao || ''} (Agendamento cancelado)`.trim(),
+          observacoes: workflowSession.observacoes 
+            ? `${workflowSession.observacoes}\n\n[${new Date().toLocaleDateString()}] Agendamento cancelado - preservado apenas valor pago de ${formatCurrency(valorPagoAtual)}` 
+            : `[${new Date().toLocaleDateString()}] Agendamento cancelado - preservado apenas valor pago de ${formatCurrency(valorPagoAtual)}`,
+          
+          updated_at: new Date().toISOString(),
+          updated_by: user.user.id
+        })
+        .eq('id', workflowSession.id)
+        .eq('user_id', user.user.id)
+        .select();
 
-      if (preservePayments) {
-        console.log('💾 Preserving payments - marking session as historical (payments only)');
-        
-        // Ler valor pago atual ANTES de zerar tudo
-        const valorPagoAtual = Number(workflowSession.valor_pago) || 0;
-        
-        const { data: updatedSession, error: updateError } = await supabase
-          .from('clientes_sessoes')
-          .update({ 
-            appointment_id: null,
-            status: 'historico',
-            
-            // ✅ ZERAR TODOS OS VALORES (exceto valor_pago)
-            valor_total: valorPagoAtual, // Total = apenas o que foi pago
-            valor_base_pacote: 0,
-            valor_total_foto_extra: 0,
-            qtd_fotos_extra: 0,
-            valor_foto_extra: 0,
-            valor_adicional: 0,
-            desconto: 0,
-            produtos_incluidos: [], // Esvaziar array de produtos
-            regras_congeladas: null, // Limpar regras
-            
-            // ✅ MANTER contexto descritivo
-            descricao: `${workflowSession.pacote || workflowSession.descricao || ''} (Agendamento cancelado)`.trim(),
-            observacoes: workflowSession.observacoes 
-              ? `${workflowSession.observacoes}\n\n[${new Date().toLocaleDateString()}] Agendamento cancelado - preservado apenas valor pago de ${formatCurrency(valorPagoAtual)}` 
-              : `[${new Date().toLocaleDateString()}] Agendamento cancelado - preservado apenas valor pago de ${formatCurrency(valorPagoAtual)}`,
-            
-            updated_at: new Date().toISOString(),
-            updated_by: user.user.id
-          })
-          .eq('id', workflowSession.id)
-          .eq('user_id', user.user.id)
-          .select();
-
-        if (updateError) {
-          console.error('❌ Erro ao marcar sessão como histórico:', updateError);
-          throw new Error(`Falha ao preservar histórico: ${updateError.message}`);
-        }
-
-        if (!updatedSession || updatedSession.length === 0) {
-          console.warn('⚠️ Sessão não encontrada para atualização');
-        }
-
-        console.log(`✅ Session marked as historical - preserved only R$ ${valorPagoAtual.toFixed(2)} paid`);
-      } else {
-        // FASE 1: Delete everything with robust error handling
-        console.log('🗑️ Deleting session and all related data');
-        
-        // Delete transactions first (foreign key constraint)
-        const { data: deletedTransactions, error: transacoesError } = await supabase
-          .from('clientes_transacoes')
-          .delete()
-          .eq('session_id', workflowSession.session_id)
-          .eq('user_id', user.user.id)
-          .select();
-
-        if (transacoesError) {
-          console.error('❌ Erro ao deletar transações:', transacoesError);
-          throw new Error(`Falha ao deletar pagamentos: ${transacoesError.message}`);
-        }
-
-        console.log(`🗑️ ${deletedTransactions?.length || 0} transação(ões) deletada(s)`);
-
-        // Delete the session
-        const { data: deletedSession, error: sessionError } = await supabase
-          .from('clientes_sessoes')
-          .delete()
-          .eq('id', workflowSession.id)
-          .eq('user_id', user.user.id)
-          .select();
-
-        if (sessionError) {
-          console.error('❌ Erro ao deletar sessão:', sessionError);
-          throw new Error(`Falha ao deletar sessão: ${sessionError.message}`);
-        }
-
-        if (!deletedSession || deletedSession.length === 0) {
-          console.warn('⚠️ Sessão não foi encontrada ou já foi deletada');
-        }
-
-        console.log(`✅ Exclusão completa: ${deletedTransactions?.length || 0} pagamento(s) + 1 sessão deletados`);
+      if (updateError) {
+        console.error('❌ Erro ao marcar sessão como histórico:', updateError);
+        throw new Error(`Falha ao preservar histórico: ${updateError.message}`);
       }
+
+      console.log(`✅ Session marked as historical - preserved only R$ ${valorPagoAtual.toFixed(2)} paid`);
     } else {
       console.log('ℹ️ No related workflow session found for appointment');
     }
@@ -667,8 +651,8 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
       timestamp: new Date().toISOString(),
       appointmentId: id,
       appointmentTitle: appointment.title,
-      sessionDeleted: !preservePayments && !!workflowSession,
-      preserved: preservePayments
+      sessionDeleted: false,
+      preserved: true
     });
   }
 
