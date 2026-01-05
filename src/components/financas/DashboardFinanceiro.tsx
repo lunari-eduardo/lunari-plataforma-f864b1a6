@@ -16,6 +16,10 @@ const DashboardFinanceiro = memo(function DashboardFinanceiro() {
     mesSelecionado,
     setMesSelecionado,
     anosDisponiveis,
+    dataInicio,
+    setDataInicio,
+    dataFim,
+    setDataFim,
     kpisData,
     metasData,
     dadosMensais,
@@ -49,6 +53,10 @@ const DashboardFinanceiro = memo(function DashboardFinanceiro() {
           setMesSelecionado={setMesSelecionado}
           anosDisponiveis={anosDisponiveis}
           getNomeMes={getNomeMes}
+          dataInicio={dataInicio}
+          dataFim={dataFim}
+          onDataInicioChange={setDataInicio}
+          onDataFimChange={setDataFim}
         />
 
         {/* KPIs Cards */}
