@@ -4,9 +4,10 @@
  */
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { LinhaExtrato, ExtratoTipo, ExtratoStatus } from '@/types/extrato';
+import { debounce } from '@/utils/debounce';
 
 // Função para mapear dados do Supabase para LinhaExtrato
 function mapLinhasExtrato(data: any[]): LinhaExtrato[] {
@@ -88,37 +89,71 @@ export function useExtratoSupabase({
     staleTime: 30000, // Cache por 30 segundos
   });
 
-  // ============= REALTIME SUBSCRIPTIONS =============
+  // ============= REALTIME SUBSCRIPTIONS COM DEBOUNCE =============
+  // Ref para controlar debounce
+  const invalidationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+  // Função debounced para invalidar cache
+  const debouncedInvalidate = useCallback(() => {
+    if (invalidationTimeoutRef.current) {
+      clearTimeout(invalidationTimeoutRef.current);
+    }
+    invalidationTimeoutRef.current = setTimeout(() => {
+      queryClient.invalidateQueries({ queryKey: ['extrato-unificado'] });
+      invalidationTimeoutRef.current = null;
+    }, 150); // 150ms debounce
+  }, [queryClient]);
+  
   useEffect(() => {
     console.log('📡 Configurando realtime para extrato...');
     
-    const channel = supabase
-      .channel('extrato-changes')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'clientes_transacoes',
-        filter: 'tipo=eq.pagamento'
-      }, (payload) => {
-        console.log('💰 Pagamento alterado:', payload);
-        // Invalidar queries do extrato
-        queryClient.invalidateQueries({ queryKey: ['extrato-unificado'] });
-      })
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'fin_transactions'
-      }, (payload) => {
-        console.log('💸 Despesa alterada:', payload);
-        queryClient.invalidateQueries({ queryKey: ['extrato-unificado'] });
-      })
-      .subscribe();
+    let userId: string | null = null;
+    let channel: any = null;
+    
+    const setupChannel = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      userId = user?.id || null;
+      
+      if (!userId) {
+        console.warn('⚠️ [Extrato] Sem user_id para filtrar real-time');
+        return;
+      }
+
+      channel = supabase
+        .channel(`extrato-changes-${userId}`)
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'clientes_transacoes',
+          filter: `user_id=eq.${userId}` // ✅ FILTRAR POR USER_ID
+        }, (payload) => {
+          console.log('💰 Transação cliente alterada:', payload.eventType);
+          debouncedInvalidate();
+        })
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'fin_transactions',
+          filter: `user_id=eq.${userId}` // ✅ FILTRAR POR USER_ID
+        }, (payload) => {
+          console.log('💸 Transação financeira alterada:', payload.eventType);
+          debouncedInvalidate();
+        })
+        .subscribe();
+    };
+    
+    setupChannel();
 
     return () => {
       console.log('🔌 Removendo canal de realtime');
-      supabase.removeChannel(channel);
+      if (invalidationTimeoutRef.current) {
+        clearTimeout(invalidationTimeoutRef.current);
+      }
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
     };
-  }, [queryClient]);
+  }, [queryClient, debouncedInvalidate]);
 
   return {
     linhasExtrato: resultado?.linhas || [],

@@ -774,55 +774,70 @@ export const useWorkflowRealtime = () => {
     }
   }, [createSession]);
 
-  // Real-time subscription
+  // Real-time subscription com filtro user_id
   useEffect(() => {
     loadSessions();
+    
+    let channel: any = null;
+    
+    const setupRealtimeChannel = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.id) {
+        console.warn('⚠️ [WorkflowRealtime] Sem user_id para filtrar real-time');
+        return;
+      }
 
-    const channel = supabase
-      .channel('workflow-sessions')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'clientes_sessoes'
-        },
-        async (payload) => {
-          console.log('🔄 [WorkflowRealtime] Real-time workflow session change:', payload.eventType, payload);
-          
-          if (payload.eventType === 'INSERT') {
-            console.log('➕ [WorkflowRealtime] Adding new session via realtime:', payload.new);
+      channel = supabase
+        .channel(`workflow-sessions-${user.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'clientes_sessoes',
+            filter: `user_id=eq.${user.id}` // ✅ FILTRAR POR USER_ID
+          },
+          async (payload) => {
+            console.log('🔄 [WorkflowRealtime] Real-time workflow session change:', payload.eventType);
             
-            // FASE 3: Enriquecer INSERT com dados do cliente (JOIN)
-            const { data: enrichedSession } = await supabase
-              .from('clientes_sessoes')
-              .select(`
-                *,
-                clientes (
-                  nome,
-                  email,
-                  telefone,
-                  whatsapp
-                )
-              `)
-              .eq('id', payload.new.id)
-              .single();
-            
-            if (enrichedSession) {
-              console.log('✅ [WorkflowRealtime] Sessão enriquecida com cliente:', enrichedSession.clientes?.nome);
-              setSessions(prev => [enrichedSession as WorkflowSession, ...prev]);
-            } else {
-              // Fallback para payload.new se não conseguir enriquecer
-              setSessions(prev => [payload.new as WorkflowSession, ...prev]);
-            }
-          } else if (payload.eventType === 'UPDATE') {
-            console.log('✏️ [WorkflowRealtime] Updating session via realtime:', payload.new.id);
-            
-            // FASE 2: Fetch payments selectively for the updated session only
-            const sessionId = (payload.new as any).session_id;
-            if (sessionId) {
-              const { data: { user } } = await supabase.auth.getUser();
-              if (user) {
+            if (payload.eventType === 'INSERT') {
+              console.log('➕ [WorkflowRealtime] Adding new session via realtime:', payload.new);
+              
+              // FASE 3: Enriquecer INSERT com dados do cliente (JOIN)
+              const { data: enrichedSession } = await supabase
+                .from('clientes_sessoes')
+                .select(`
+                  *,
+                  clientes (
+                    nome,
+                    email,
+                    telefone,
+                    whatsapp
+                  )
+                `)
+                .eq('id', payload.new.id)
+                .single();
+              
+              if (enrichedSession) {
+                console.log('✅ [WorkflowRealtime] Sessão enriquecida com cliente:', enrichedSession.clientes?.nome);
+                setSessions(prev => {
+                  // Evitar duplicatas
+                  if (prev.some(s => s.id === enrichedSession.id)) return prev;
+                  return [enrichedSession as WorkflowSession, ...prev];
+                });
+              } else {
+                // Fallback para payload.new se não conseguir enriquecer
+                setSessions(prev => {
+                  if (prev.some(s => s.id === (payload.new as any).id)) return prev;
+                  return [payload.new as WorkflowSession, ...prev];
+                });
+              }
+            } else if (payload.eventType === 'UPDATE') {
+              console.log('✏️ [WorkflowRealtime] Updating session via realtime:', payload.new.id);
+              
+              // FASE 2: Fetch payments selectively for the updated session only
+              const sessionId = (payload.new as any).session_id;
+              if (sessionId) {
                 const { data: transacoesData } = await supabase
                   .from('clientes_transacoes')
                   .select('*')
@@ -885,30 +900,33 @@ export const useWorkflowRealtime = () => {
                 console.log('💰 [WorkflowRealtime] Session updated with fresh payments:', pagamentos.length);
                 return;
               }
+              
+              // Fallback: update without payments if sessionId is missing
+              setSessions(prev => prev.map((session: any) => {
+                if (session.id !== payload.new.id) return session;
+                const incoming = payload.new as any;
+                const preservedCliente = session?.clientes && !('clientes' in incoming) ? session.clientes : incoming?.clientes;
+                return {
+                  ...session,
+                  ...incoming,
+                  ...(preservedCliente ? { clientes: preservedCliente } : {})
+                } as WorkflowSession;
+              }));
+            } else if (payload.eventType === 'DELETE') {
+              console.log('🗑️ [WorkflowRealtime] Deleting session via realtime:', payload.old.id);
+              setSessions(prev => prev.filter(session => session.id !== payload.old.id));
             }
-            
-            // Fallback: update without payments if sessionId is missing
-            setSessions(prev => prev.map((session: any) => {
-              if (session.id !== payload.new.id) return session;
-              const incoming = payload.new as any;
-              const preservedCliente = session?.clientes && !('clientes' in incoming) ? session.clientes : incoming?.clientes;
-              return {
-                ...session,
-                ...incoming,
-                ...(preservedCliente ? { clientes: preservedCliente } : {})
-              } as WorkflowSession;
-            }));
-            // No toast here - realtime updates should be silent
-          } else if (payload.eventType === 'DELETE') {
-            console.log('🗑️ [WorkflowRealtime] Deleting session via realtime:', payload.old.id);
-            setSessions(prev => prev.filter(session => session.id !== payload.old.id));
           }
-        }
-      )
-      .subscribe(); // FASE 1: Removed redundant clientes_transacoes listener
+        )
+        .subscribe();
+    };
+    
+    setupRealtimeChannel();
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
     };
   }, [loadSessions]);
 
