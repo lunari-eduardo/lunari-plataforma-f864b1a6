@@ -2173,9 +2173,26 @@ export type Database = {
       }
     }
     Functions: {
+      add_session_payment: {
+        Args: {
+          p_data_transacao: string
+          p_descricao?: string
+          p_session_id: string
+          p_valor: number
+        }
+        Returns: Json
+      }
       calculate_manual_products_total: {
         Args: { produtos: Json }
         Returns: number
+      }
+      create_session_from_appointment: {
+        Args: { p_appointment_id: string }
+        Returns: Json
+      }
+      delete_appointment_cascade: {
+        Args: { p_appointment_id: string; p_keep_payments?: boolean }
+        Returns: Json
       }
       get_access_state: { Args: never; Returns: Json }
       has_active_subscription: { Args: { _user_id: string }; Returns: boolean }
