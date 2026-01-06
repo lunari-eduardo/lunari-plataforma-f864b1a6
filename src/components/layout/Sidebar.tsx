@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { CalendarClock, UserCheck, Settings, UserPlus, Wallet, Menu, X, User, Tag, GitBranch, ChevronRight, ChevronLeft, PieChart, LayoutGrid, CheckSquare, FlaskConical, CreditCard, Shield, Crown, FileText, Plug } from 'lucide-react';
+import { CalendarClock, UserCheck, Settings, Filter, Wallet, Menu, X, User, Tag, GitBranch, ChevronRight, ChevronLeft, PieChart, LayoutGrid, CheckSquare, FlaskConical, CreditCard, Shield, Crown, FileText, Plug } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -151,7 +151,7 @@ export default function Sidebar() {
     label: "Agenda"
   }, {
     to: "/app/leads",
-    icon: <UserPlus size={14} />,
+    icon: <Filter size={14} />,
     label: "Leads",
     isPro: true
   }, {
