@@ -1,17 +1,14 @@
 /**
  * Componente Categorias Refatorado
- * Padronizado conforme guia de UX
+ * Padronizado conforme guia de UX - Edição inline
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { 
   Plus, 
-  Edit, 
   Trash2, 
-  Save, 
-  X, 
   AlertTriangle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -35,11 +32,10 @@ export default function Categorias({
 }: CategoriasProps) {
   const [novaCategoria, setNovaCategoria] = useState('');
   const [novaCor, setNovaCor] = useState('#7950F2');
-  const [editandoCategoria, setEditandoCategoria] = useState<string | null>(null);
-  const [validationError, setValidationError] = useState<string>('');
+  const [addValidationError, setAddValidationError] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const validateCategoria = useCallback((nome: string): string => {
+  const validateNewCategoria = useCallback((nome: string): string => {
     if (!nome.trim()) {
       return 'O nome da categoria é obrigatório';
     }
@@ -61,14 +57,14 @@ export default function Categorias({
 
   const handleNomeCategoriaChange = useCallback((value: string) => {
     setNovaCategoria(value);
-    const error = validateCategoria(value);
-    setValidationError(error);
-  }, [validateCategoria]);
+    const error = validateNewCategoria(value);
+    setAddValidationError(error);
+  }, [validateNewCategoria]);
 
   const adicionarCategoria = useCallback(async () => {
-    const error = validateCategoria(novaCategoria);
+    const error = validateNewCategoria(novaCategoria);
     if (error) {
-      setValidationError(error);
+      setAddValidationError(error);
       return;
     }
     setIsLoading(true);
@@ -79,35 +75,11 @@ export default function Categorias({
       });
       setNovaCategoria('');
       setNovaCor('#7950F2');
-      setValidationError('');
+      setAddValidationError('');
     } finally {
       setIsLoading(false);
     }
-  }, [novaCategoria, novaCor, onAdd, validateCategoria]);
-
-  const iniciarEdicaoCategoria = useCallback((id: string) => {
-    setEditandoCategoria(id);
-  }, []);
-
-  const salvarEdicaoCategoria = useCallback(async (id: string, nome: string, cor: string) => {
-    const error = validateCategoria(nome);
-    if (error) {
-      setValidationError(error);
-      return;
-    }
-    try {
-      await onUpdate(id, { nome: nome.trim(), cor });
-      setEditandoCategoria(null);
-      setValidationError('');
-    } catch (error) {
-      console.error('Erro ao atualizar categoria:', error);
-    }
-  }, [onUpdate, validateCategoria]);
-
-  const cancelarEdicao = useCallback(() => {
-    setEditandoCategoria(null);
-    setValidationError('');
-  }, []);
+  }, [novaCategoria, novaCor, onAdd, validateNewCategoria]);
 
   const removerCategoria = useCallback(async (id: string) => {
     if (!podeRemoverCategoria(id)) {
@@ -120,7 +92,7 @@ export default function Categorias({
     }
   }, [onDelete, podeRemoverCategoria]);
 
-  const canAddNew = novaCategoria.trim().length >= 2 && !validationError && !isLoading;
+  const canAddNew = novaCategoria.trim().length >= 2 && !addValidationError && !isLoading;
 
   return (
     <div className="space-y-6 py-4">
@@ -143,14 +115,14 @@ export default function Categorias({
               onChange={(e) => handleNomeCategoriaChange(e.target.value)}
               className={cn(
                 "h-10",
-                validationError && "border-destructive focus-visible:ring-destructive"
+                addValidationError && "border-destructive focus-visible:ring-destructive"
               )}
               disabled={isLoading}
             />
-            {validationError && (
+            {addValidationError && (
               <p className="text-xs text-destructive flex items-center gap-1">
                 <AlertTriangle className="h-3 w-3" />
-                {validationError}
+                {addValidationError}
               </p>
             )}
           </div>
@@ -201,62 +173,18 @@ export default function Categorias({
         ) : (
           <div className="border border-border rounded-lg overflow-hidden">
             {categorias.map((categoria, index) => {
-              const isEditing = editandoCategoria === categoria.id;
               const podeRemover = podeRemoverCategoria(categoria.id);
               
               return (
-                <div 
-                  key={categoria.id} 
-                  className={cn(
-                    "flex items-center gap-3 px-4 py-3 transition-colors",
-                    index % 2 === 0 ? "bg-background" : "bg-muted/30",
-                    "hover:bg-accent/50"
-                  )}
-                >
-                  {isEditing ? (
-                    <EditingCategoriaRow
-                      categoria={categoria}
-                      onSave={salvarEdicaoCategoria}
-                      onCancel={cancelarEdicao}
-                      isLoading={isLoading}
-                      validationError={validationError}
-                    />
-                  ) : (
-                    <>
-                      <div
-                        className="w-3 h-3 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: categoria.cor }}
-                      />
-                      <div className="flex-1">
-                        <span className="font-medium text-sm">{categoria.nome}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => iniciarEdicaoCategoria(categoria.id)}
-                          disabled={isLoading}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => removerCategoria(categoria.id)}
-                          disabled={isLoading || !podeRemover}
-                          className={cn(
-                            podeRemover 
-                              ? "text-destructive hover:text-destructive hover:bg-destructive/10" 
-                              : "opacity-50 cursor-not-allowed"
-                          )}
-                          title={!podeRemover ? 'Categoria vinculada a pacotes' : 'Remover categoria'}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </>
-                  )}
-                </div>
+                <InlineEditCategoriaRow
+                  key={categoria.id}
+                  categoria={categoria}
+                  index={index}
+                  categorias={categorias}
+                  onUpdate={onUpdate}
+                  onDelete={removerCategoria}
+                  podeRemover={podeRemover}
+                />
               );
             })}
           </div>
@@ -266,74 +194,182 @@ export default function Categorias({
   );
 }
 
-function EditingCategoriaRow({ 
+function InlineEditCategoriaRow({ 
   categoria, 
-  onSave, 
-  onCancel, 
-  isLoading, 
-  validationError 
+  index,
+  categorias,
+  onUpdate,
+  onDelete,
+  podeRemover
 }: {
   categoria: Categoria;
-  onSave: (id: string, nome: string, cor: string) => void;
-  onCancel: () => void;
-  isLoading: boolean;
-  validationError: string;
+  index: number;
+  categorias: Categoria[];
+  onUpdate: (id: string, dados: Partial<Categoria>) => Promise<void>;
+  onDelete: (id: string) => void;
+  podeRemover: boolean;
 }) {
-  const [editData, setEditData] = useState({
-    nome: categoria.nome,
-    cor: categoria.cor
-  });
+  const [editNome, setEditNome] = useState(categoria.nome);
+  const [editCor, setEditCor] = useState(categoria.cor);
+  const [isEditing, setIsEditing] = useState(false);
+  const [error, setError] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleSave = useCallback(() => {
-    onSave(categoria.id, editData.nome, editData.cor);
-  }, [categoria.id, editData, onSave]);
+  // Sync with prop changes
+  useEffect(() => {
+    if (!isEditing) {
+      setEditNome(categoria.nome);
+      setEditCor(categoria.cor);
+    }
+  }, [categoria.nome, categoria.cor, isEditing]);
 
-  const canSave = editData.nome.trim().length >= 2 && !validationError && !isLoading;
+  const validateEdit = useCallback((nome: string): string => {
+    if (!nome.trim()) {
+      return 'O nome é obrigatório';
+    }
+    if (nome.trim().length < 2) {
+      return 'Mínimo 2 caracteres';
+    }
+    // Check for duplicates excluding current category
+    const nomeExists = categorias.some(cat => 
+      cat.id !== categoria.id && 
+      cat.nome.toLowerCase() === nome.trim().toLowerCase()
+    );
+    if (nomeExists) {
+      return 'Nome já existe';
+    }
+    return '';
+  }, [categorias, categoria.id]);
+
+  const handleStartEdit = useCallback(() => {
+    setIsEditing(true);
+    setError('');
+    setTimeout(() => inputRef.current?.focus(), 0);
+  }, []);
+
+  const handleSave = useCallback(async () => {
+    const trimmedNome = editNome.trim();
+    const validationError = validateEdit(trimmedNome);
+    
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    // No changes? Just exit edit mode
+    if (trimmedNome === categoria.nome && editCor === categoria.cor) {
+      setIsEditing(false);
+      setError('');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await onUpdate(categoria.id, { nome: trimmedNome, cor: editCor });
+      setIsEditing(false);
+      setError('');
+    } catch (err) {
+      console.error('Erro ao salvar:', err);
+      setError('Erro ao salvar');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [editNome, editCor, categoria, onUpdate, validateEdit]);
+
+  const handleCancel = useCallback(() => {
+    setEditNome(categoria.nome);
+    setEditCor(categoria.cor);
+    setIsEditing(false);
+    setError('');
+  }, [categoria.nome, categoria.cor]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSave();
+    } else if (e.key === 'Escape') {
+      handleCancel();
+    }
+  }, [handleSave, handleCancel]);
+
+  const handleBlur = useCallback((e: React.FocusEvent) => {
+    // Check if focus is moving to the color input or delete button
+    const relatedTarget = e.relatedTarget as HTMLElement;
+    if (relatedTarget?.closest('[data-inline-edit-row]')) {
+      return;
+    }
+    handleSave();
+  }, [handleSave]);
 
   return (
-    <>
+    <div 
+      data-inline-edit-row
+      className={cn(
+        "flex items-center gap-3 px-4 py-3 transition-colors",
+        index % 2 === 0 ? "bg-background" : "bg-muted/30",
+        "hover:bg-accent/50"
+      )}
+    >
       <Input
         type="color"
-        value={editData.cor}
-        onChange={(e) => setEditData(prev => ({ ...prev, cor: e.target.value }))}
-        className="w-10 h-8 p-1 cursor-pointer flex-shrink-0"
-        disabled={isLoading}
+        value={editCor}
+        onChange={(e) => setEditCor(e.target.value)}
+        onBlur={isEditing ? handleBlur : undefined}
+        className="w-8 h-8 p-0.5 cursor-pointer flex-shrink-0 rounded"
+        disabled={isSaving}
       />
+      
       <div className="flex-1">
-        <Input
-          value={editData.nome}
-          onChange={(e) => setEditData(prev => ({ ...prev, nome: e.target.value }))}
-          className={cn(
-            "h-8",
-            validationError && "border-destructive"
-          )}
-          placeholder="Nome da categoria"
-          disabled={isLoading}
-        />
-        {validationError && (
-          <p className="text-xs text-destructive mt-1 flex items-center gap-1">
-            <AlertTriangle className="h-3 w-3" />
-            {validationError}
-          </p>
+        {isEditing ? (
+          <div className="space-y-1">
+            <Input
+              ref={inputRef}
+              value={editNome}
+              onChange={(e) => {
+                setEditNome(e.target.value);
+                setError('');
+              }}
+              onKeyDown={handleKeyDown}
+              onBlur={handleBlur}
+              className={cn(
+                "h-8 text-sm",
+                error && "border-destructive"
+              )}
+              placeholder="Nome da categoria"
+              disabled={isSaving}
+            />
+            {error && (
+              <p className="text-xs text-destructive flex items-center gap-1">
+                <AlertTriangle className="h-3 w-3" />
+                {error}
+              </p>
+            )}
+          </div>
+        ) : (
+          <span 
+            className="font-medium text-sm cursor-pointer hover:text-primary"
+            onClick={handleStartEdit}
+          >
+            {categoria.nome}
+          </span>
         )}
       </div>
-      <div className="flex gap-2">
-        <Button
-          size="sm"
-          onClick={handleSave}
-          disabled={!canSave}
-        >
-          <Save className="h-4 w-4" />
-        </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={onCancel}
-          disabled={isLoading}
-        >
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
-    </>
+
+      <Button
+        size="sm"
+        variant="ghost"
+        onClick={() => onDelete(categoria.id)}
+        disabled={isSaving || !podeRemover}
+        className={cn(
+          podeRemover 
+            ? "text-destructive hover:text-destructive hover:bg-destructive/10" 
+            : "opacity-50 cursor-not-allowed"
+        )}
+        title={!podeRemover ? 'Categoria vinculada a pacotes' : 'Remover categoria'}
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
+    </div>
   );
 }
