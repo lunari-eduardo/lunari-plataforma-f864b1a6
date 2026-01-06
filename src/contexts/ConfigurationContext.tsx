@@ -373,15 +373,15 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
       throw new Error('Categoria não encontrada');
     }
     
-    const updatedItem = { ...currentItem, ...dados };
+    suppress(id);
     
     return categoriasOps.update(
       id,
       dados,
       async () => {
-        // Usar o item já mesclado, não reprocessar do ref
-        await configurationService.saveCategorias([updatedItem]);
-        console.log('✅ [atualizarCategoria] Salvo:', updatedItem);
+        // Use the specific update method that persists to Supabase
+        await configurationService.updateCategoriaById(id, dados);
+        console.log('✅ [atualizarCategoria] Salvo:', { id, dados });
       }
     );
   }, [suppress]);
