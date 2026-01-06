@@ -23,22 +23,36 @@ export function HighPriorityDueSoonCard() {
       const d = new Date(iso);
       return isNaN(d.getTime()) ? undefined : d;
     };
-    return tasks.filter(t => t.dueDate).filter(t => t.status !== doneKey && !t.completedAt).map(t => ({
-      t,
-      due: parseDue(t.dueDate)
-    })).filter(x => !!x.due).map(x => ({
-      ...x,
-      days: differenceInCalendarDays(x.due as Date, todayLocal)
-    })).filter(x => x.days >= 0 && x.days <= 5).sort((a, b) => (a.due as Date).getTime() - (b.due as Date).getTime());
+    return tasks
+      .filter(t => t.dueDate)
+      .filter(t => t.status !== doneKey && !t.completedAt)
+      .map(t => ({
+        t,
+        due: parseDue(t.dueDate)
+      }))
+      .filter(x => !!x.due)
+      .map(x => ({
+        ...x,
+        days: differenceInCalendarDays(x.due as Date, todayLocal)
+      }))
+      .filter(x => x.days <= 5) // Include overdue (days < 0) and up to 5 days ahead
+      .sort((a, b) => (a.due as Date).getTime() - (b.due as Date).getTime());
   }, [tasks, doneKey]);
   
   const count = items.length;
+  const overdueCount = items.filter(x => x.days < 0).length;
   
   const daysLabel = (d: number) => {
+    if (d < 0) {
+      const absDays = Math.abs(d);
+      return `Atrasada ${absDays} dia${absDays > 1 ? 's' : ''}`;
+    }
     if (d === 0) return 'Hoje';
     if (d === 1) return 'Amanhã';
     return `Em ${d} dias`;
   };
+  
+  const isOverdue = (days: number) => days < 0;
   
   const getStatusName = (statusKey: string) => {
     const status = statuses.find(s => s.key === statusKey);
@@ -52,8 +66,13 @@ export function HighPriorityDueSoonCard() {
           <div className="p-2 rounded-xl bg-brand-gradient">
             <Calendar className="h-5 w-5 text-white" />
           </div>
-          <CardTitle className="font-semibold text-base">Próximas Tarefas</CardTitle>
+          <CardTitle className="font-semibold text-base">Tarefas Pendentes</CardTitle>
           <Badge variant="secondary" className="dashboard-badge bg-card-gradient border-0 shadow-theme-subtle hover:shadow-theme text-sm font-semibold transition-shadow duration-300" aria-label={`Quantidade de tarefas: ${count}`}>{count}</Badge>
+          {overdueCount > 0 && (
+            <Badge variant="destructive" className="text-2xs" aria-label={`${overdueCount} tarefas atrasadas`}>
+              {overdueCount} atrasada{overdueCount > 1 ? 's' : ''}
+            </Badge>
+          )}
         </div>
         <Link to="/app/tarefas">
           <Button variant="ghost" size="sm">Ver todas</Button>
@@ -61,15 +80,24 @@ export function HighPriorityDueSoonCard() {
       </CardHeader>
       <CardContent>
         {count === 0 ? (
-          <p className="text-2xs text-lunar-textSecondary">Nenhuma tarefa vence nos próximos 5 dias.</p>
+          <p className="text-2xs text-lunar-textSecondary">Nenhuma tarefa pendente ou próxima.</p>
         ) : (
           <ul className="max-h-64 overflow-y-auto space-y-3">
             {items.map(({ t, due, days }) => (
-              <li key={t.id} className="p-3 rounded-xl bg-card-gradient shadow-none hover:shadow-card-subtle transition-shadow duration-300">
+              <li 
+                key={t.id} 
+                className={`p-3 rounded-xl shadow-none hover:shadow-card-subtle transition-shadow duration-300 ${
+                  isOverdue(days) 
+                    ? 'bg-destructive/10 border border-destructive/20' 
+                    : 'bg-card-gradient'
+                }`}
+              >
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-lunar-text truncate" title={t.title}>{t.title}</p>
-                  <p className="text-xs text-lunar-textSecondary mt-1">
-                    {getStatusName(t.status)} • Prazo: {formatDateForDisplay(t.dueDate!)} • {daysLabel(days)}
+                  <p className={`text-sm font-semibold truncate ${isOverdue(days) ? 'text-destructive' : 'text-lunar-text'}`} title={t.title}>
+                    {t.title}
+                  </p>
+                  <p className={`text-xs mt-1 ${isOverdue(days) ? 'text-destructive/80' : 'text-lunar-textSecondary'}`}>
+                    {getStatusName(t.status)} • Prazo: {formatDateForDisplay(t.dueDate!)} • <span className={isOverdue(days) ? 'font-semibold' : ''}>{daysLabel(days)}</span>
                   </p>
                 </div>
               </li>

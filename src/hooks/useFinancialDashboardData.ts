@@ -9,7 +9,7 @@ interface CriticalFinancialItem {
   dueDate: string;
   status: 'Agendado' | 'Faturado' | 'Pago';
   daysUntilDue: number;
-  urgency: 'today' | 'tomorrow' | 'soon';
+  urgency: 'overdue' | 'today' | 'tomorrow' | 'soon';
 }
 
 interface TodayBilledSummary {
@@ -36,6 +36,39 @@ export function useFinancialDashboardData() {
       };
     });
   }, [transacoes, itensFinanceiros]);
+
+  // Overdue accounts (past due date, not paid)
+  const overdueAccounts = useMemo((): CriticalFinancialItem[] => {
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+
+    return transacoesComItens
+      .filter(t => 
+        t.item && 
+        (t.status === 'Agendado' || t.status === 'Faturado') &&
+        t.dataVencimento < todayStr // Past due date
+      )
+      .map(t => {
+        const dueDate = new Date(t.dataVencimento + 'T00:00:00');
+        const diffTime = dueDate.getTime() - today.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        const amount = typeof t.valor === 'string' 
+          ? parseFloat((t.valor as string).replace(/[^\d,.-]/g, '').replace(',', '.')) 
+          : (t.valor as number);
+
+        return {
+          id: t.id,
+          itemName: t.item?.nome || 'Item sem nome',
+          amount: isNaN(amount) ? 0 : amount,
+          dueDate: t.dataVencimento,
+          status: t.status as 'Agendado' | 'Faturado' | 'Pago',
+          daysUntilDue: diffDays,
+          urgency: 'overdue' as const
+        };
+      })
+      .sort((a, b) => a.daysUntilDue - b.daysUntilDue); // Most overdue first
+  }, [transacoesComItens]);
 
   // Critical data: upcoming scheduled/billed accounts (next 3 days)
   const upcomingAccounts = useMemo((): CriticalFinancialItem[] => {
@@ -147,8 +180,9 @@ export function useFinancialDashboardData() {
     return formatToDayMonth(dateStr);
   };
 
-  const getUrgencyColor = (urgency: 'today' | 'tomorrow' | 'soon') => {
+  const getUrgencyColor = (urgency: 'overdue' | 'today' | 'tomorrow' | 'soon') => {
     switch (urgency) {
+      case 'overdue': return 'text-destructive font-bold';
       case 'today': return 'text-destructive';
       case 'tomorrow': return 'text-lunar-warning';
       case 'soon': return 'text-primary';
@@ -156,8 +190,9 @@ export function useFinancialDashboardData() {
     }
   };
 
-  const getUrgencyBgColor = (urgency: 'today' | 'tomorrow' | 'soon') => {
+  const getUrgencyBgColor = (urgency: 'overdue' | 'today' | 'tomorrow' | 'soon') => {
     switch (urgency) {
+      case 'overdue': return 'bg-destructive/15 border-destructive/30';
       case 'today': return 'bg-destructive/10 border-destructive/20';
       case 'tomorrow': return 'bg-lunar-warning/10 border-lunar-warning/20';
       case 'soon': return 'bg-primary/10 border-primary/20';
@@ -165,13 +200,21 @@ export function useFinancialDashboardData() {
     }
   };
 
+  const getOverdueDaysLabel = (days: number) => {
+    const absDays = Math.abs(days);
+    if (absDays === 1) return '1 dia atrasado';
+    return `${absDays} dias atrasado`;
+  };
+
   return {
     upcomingAccounts,
+    overdueAccounts,
     todayBilledSummary,
     markAsPaidQuick,
     formatCurrency,
     formatDate,
     getUrgencyColor,
-    getUrgencyBgColor
+    getUrgencyBgColor,
+    getOverdueDaysLabel
   };
 }
