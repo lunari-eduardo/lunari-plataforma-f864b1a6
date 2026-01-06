@@ -100,10 +100,19 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
   }, []);
 
   const atualizarCategoria = useCallback(async (id: string, dados: Partial<Categoria>): Promise<void> => {
-    setCategorias(prev => prev.map(cat => 
-      cat.id === id ? { ...cat, ...dados } : cat
-    ));
-    toast.success('Categoria atualizada com sucesso!');
+    try {
+      // Persist to Supabase first
+      await configurationService.updateCategoriaById(id, dados);
+      // Then update local state
+      setCategorias(prev => prev.map(cat => 
+        cat.id === id ? { ...cat, ...dados } : cat
+      ));
+      toast.success('Categoria atualizada com sucesso!');
+    } catch (error) {
+      console.error('Error updating categoria:', error);
+      toast.error('Erro ao atualizar categoria');
+      throw error;
+    }
   }, []);
 
   const removerCategoria = useCallback(async (id: string): Promise<boolean> => {

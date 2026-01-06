@@ -218,11 +218,11 @@ function InlineEditCategoriaRow({
 
   // Sync with prop changes
   useEffect(() => {
-    if (!isEditing) {
+    if (!isEditing && !isSaving) {
       setEditNome(categoria.nome);
       setEditCor(categoria.cor);
     }
-  }, [categoria.nome, categoria.cor, isEditing]);
+  }, [categoria.nome, categoria.cor, isEditing, isSaving]);
 
   const validateEdit = useCallback((nome: string): string => {
     if (!nome.trim()) {
@@ -277,6 +277,25 @@ function InlineEditCategoriaRow({
     }
   }, [editNome, editCor, categoria, onUpdate, validateEdit]);
 
+  // Save color immediately when changed (no edit mode needed)
+  const handleColorChange = useCallback(async (newColor: string) => {
+    setEditCor(newColor);
+    
+    // If the color is different from the original, save it immediately
+    if (newColor !== categoria.cor) {
+      setIsSaving(true);
+      try {
+        await onUpdate(categoria.id, { cor: newColor });
+      } catch (err) {
+        console.error('Erro ao salvar cor:', err);
+        // Revert on error
+        setEditCor(categoria.cor);
+      } finally {
+        setIsSaving(false);
+      }
+    }
+  }, [categoria.id, categoria.cor, onUpdate]);
+
   const handleCancel = useCallback(() => {
     setEditNome(categoria.nome);
     setEditCor(categoria.cor);
@@ -314,8 +333,7 @@ function InlineEditCategoriaRow({
       <Input
         type="color"
         value={editCor}
-        onChange={(e) => setEditCor(e.target.value)}
-        onBlur={isEditing ? handleBlur : undefined}
+        onChange={(e) => handleColorChange(e.target.value)}
         className="w-8 h-8 p-0.5 cursor-pointer flex-shrink-0 rounded"
         disabled={isSaving}
       />

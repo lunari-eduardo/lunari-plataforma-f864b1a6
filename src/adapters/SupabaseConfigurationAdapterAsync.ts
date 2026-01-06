@@ -98,6 +98,34 @@ export class SupabaseConfigurationAdapterAsync {
     }
   }
 
+  async updateCategoriaById(id: string, dados: Partial<Categoria>): Promise<void> {
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) {
+        throw new Error('User not authenticated');
+      }
+
+      const { error } = await supabase
+        .from('categorias')
+        .update({
+          ...dados,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .eq('user_id', user.user.id);
+
+      if (error) {
+        console.error('Error updating categoria in Supabase:', error);
+        throw error;
+      }
+
+      console.log(`Successfully updated categoria ${id} in Supabase`);
+    } catch (error) {
+      console.error('Failed to update categoria:', error);
+      throw error;
+    }
+  }
+
   async deleteCategoriaById(id: string): Promise<void> {
     try {
       const { data: user } = await supabase.auth.getUser();

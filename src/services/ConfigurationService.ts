@@ -109,6 +109,15 @@ class ConfigurationService {
     }
   }
 
+  async updateCategoriaById(id: string, dados: Partial<Categoria>): Promise<void> {
+    await this.initialize();
+    if (this.asyncAdapter) {
+      await this.asyncAdapter.updateCategoriaById(id, dados);
+    } else {
+      throw new Error('Update operation requires Supabase authentication');
+    }
+  }
+
   async deleteCategoriaById(id: string): Promise<void> {
     await this.initialize();
     if (this.asyncAdapter) {
