@@ -1,8 +1,11 @@
 import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Edit, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, Edit, Trash2, ArrowUp, ArrowDown, Save, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import ConfigSectionHeader from './ConfigSectionHeader';
 import type { EtapaTrabalho } from '@/types/configuration';
+
 interface FluxoTrabalhoProps {
   etapas: EtapaTrabalho[];
   onAdd: (etapa: Omit<EtapaTrabalho, 'id' | 'ordem'>) => void;
@@ -10,6 +13,7 @@ interface FluxoTrabalhoProps {
   onDelete: (id: string) => Promise<boolean>;
   onMove: (id: string, direcao: 'cima' | 'baixo') => void;
 }
+
 export default function FluxoTrabalho({
   etapas,
   onAdd,
@@ -17,38 +21,29 @@ export default function FluxoTrabalho({
   onDelete,
   onMove
 }: FluxoTrabalhoProps) {
-  const [novaEtapa, setNovaEtapa] = useState({
-    nome: '',
-    cor: '#7950F2'
-  });
+  const [novaEtapa, setNovaEtapa] = useState({ nome: '', cor: '#7950F2' });
   const [editandoEtapa, setEditandoEtapa] = useState<string | null>(null);
   const [editData, setEditData] = useState<Partial<EtapaTrabalho>>({});
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // Memorizar lista ordenada para evitar mutação in-place
   const etapasOrdenadas = useMemo(() => {
     return [...etapas].sort((a, b) => a.ordem - b.ordem);
   }, [etapas]);
+
   const adicionarEtapa = () => {
-    if (novaEtapa.nome.trim() === '') {
-      return; // Error handled by service
-    }
+    if (novaEtapa.nome.trim() === '') return;
     onAdd(novaEtapa);
-    setNovaEtapa({
-      nome: '',
-      cor: '#7950F2'
-    });
+    setNovaEtapa({ nome: '', cor: '#7950F2' });
   };
+
   const iniciarEdicaoEtapa = (id: string) => {
     const etapa = etapas.find(e => e.id === id);
     if (etapa) {
-      setEditData({
-        nome: etapa.nome,
-        cor: etapa.cor
-      });
+      setEditData({ nome: etapa.nome, cor: etapa.cor });
     }
     setEditandoEtapa(id);
   };
+
   const salvarEdicaoEtapa = async (id: string) => {
     try {
       await onUpdate(id, editData);
@@ -56,9 +51,9 @@ export default function FluxoTrabalho({
       setEditData({});
     } catch (error) {
       console.error('Erro ao atualizar etapa:', error);
-      // Error toast já mostrado pelo context, edição permanece aberta
     }
   };
+
   const removerEtapa = async (id: string) => {
     setDeletingId(id);
     try {
@@ -67,122 +62,171 @@ export default function FluxoTrabalho({
       setDeletingId(null);
     }
   };
+
   const moverEtapa = async (id: string, direcao: 'cima' | 'baixo') => {
     await onMove(id, direcao);
   };
-  return <div className="mt-4 space-y-6">
-      <div>
-        <h3 className="font-medium text-sm">Nova Etapa de Fluxo</h3>
-        <p className="text-muted-foreground mt-1 mb-3 text-xs">Configure as etapas personalizadas para o fluxo de trabalho dos seus projetos.</p>
-        
-        <div className="grid grid-cols-2 sm:grid-cols-2 gap-3">
-          <div>
-            <label htmlFor="etapa-nome" className="block text-sm font-medium mb-1">
-              Nome<span className="text-red-500">*</span>
+
+  return (
+    <div className="space-y-6 py-4">
+      <ConfigSectionHeader
+        title="Etapas do Fluxo"
+        subtitle="Configure as etapas do fluxo de trabalho dos seus projetos."
+      />
+
+      {/* Formulário Nova Etapa */}
+      <div className="space-y-4 p-4 border border-border rounded-lg bg-card">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex-1 space-y-1.5">
+            <label htmlFor="etapa-nome" className="text-sm font-medium text-foreground">
+              Nome da Etapa <span className="text-destructive">*</span>
             </label>
-            <Input id="etapa-nome" placeholder="Nome da etapa" value={novaEtapa.nome} onChange={e => setNovaEtapa({
-            ...novaEtapa,
-            nome: e.target.value
-          })} className="bg-lunar-surface" />
+            <Input
+              id="etapa-nome"
+              placeholder="Ex: Edição, Entrega..."
+              value={novaEtapa.nome}
+              onChange={e => setNovaEtapa({ ...novaEtapa, nome: e.target.value })}
+              className="h-10"
+            />
           </div>
           
-          <div>
-            <label htmlFor="etapa-cor" className="block text-sm font-medium mb-1">
-              Cor<span className="text-red-500">*</span>
+          <div className="w-24 space-y-1.5">
+            <label htmlFor="etapa-cor" className="text-sm font-medium text-foreground">
+              Cor
             </label>
-            <div className="flex items-center gap-2">
-              
-              <Input id="etapa-cor" type="color" value={novaEtapa.cor} onChange={e => setNovaEtapa({
-              ...novaEtapa,
-              cor: e.target.value
-            })} className="w-20 h-7 bg-muted" />
-            </div>
+            <Input
+              id="etapa-cor"
+              type="color"
+              value={novaEtapa.cor}
+              onChange={e => setNovaEtapa({ ...novaEtapa, cor: e.target.value })}
+              className="h-10 p-1 cursor-pointer"
+            />
           </div>
-        </div>
-        
-        <div className="mt-3">
-          <Button onClick={adicionarEtapa} className="flex items-center gap-1 bg-lunar-accent">
-            <Plus className="h-4 w-4" />
-            <span>Adicionar Etapa</span>
-          </Button>
+          
+          <div className="flex items-end">
+            <Button
+              onClick={adicionarEtapa}
+              disabled={novaEtapa.nome.trim() === ''}
+              className="h-10"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Adicionar
+            </Button>
+          </div>
         </div>
       </div>
-      
-      <div>
-        <div className="space-y-2 mb-4">
-          
-          <p className="text-muted-foreground text-xs">Lista de todas as etapas do fluxo de trabalho em ordem de execução. </p>
-        </div>
-        
-        <div className="bg-card rounded-lg border border-border overflow-hidden shadow-sm">
-          <div className="grid grid-cols-12 bg-muted/50 px-4 py-2 border-b border-border text-sm font-medium">
-            <div className="col-span-1 hidden sm:block text-card-foreground">Ordem</div>
-            <div className="col-span-7 sm:col-span-5 text-card-foreground">Etapa</div>
-            
-            <div className="col-span-5 sm:col-span-2 text-right text-card-foreground">Ações</div>
+
+      {/* Lista de Etapas */}
+      <div className="space-y-3">
+        {etapasOrdenadas.length === 0 ? (
+          <div className="text-center py-8 border border-dashed border-border rounded-lg">
+            <p className="text-sm text-muted-foreground">
+              Nenhuma etapa cadastrada. Adicione sua primeira etapa acima.
+            </p>
           </div>
-          
-          <div className="divide-y divide-border">
-            {etapasOrdenadas.map((etapa, index) => <div key={etapa.id} className={`grid grid-cols-12 px-4 py-2 text-sm ${index % 2 === 0 ? 'bg-card' : 'bg-muted/30'} hover:bg-accent/50 transition-colors`}>
-                {editandoEtapa === etapa.id ? <>
-                    <div className="col-span-1 hidden sm:block">{etapa.ordem}</div>
-                    <div className="col-span-7 sm:col-span-5 pr-2">
-                        <Input defaultValue={etapa.nome} onChange={e => {
-                  setEditData(prev => ({
-                    ...prev,
-                    nome: e.target.value
-                  }));
-                }} className="h-8 text-sm" />
+        ) : (
+          <div className="border border-border rounded-lg overflow-hidden">
+            {/* Header */}
+            <div className="grid grid-cols-12 px-4 py-2 border-b border-border bg-muted/50 text-sm font-medium">
+              <div className="col-span-1 hidden sm:block text-foreground">#</div>
+              <div className="col-span-7 sm:col-span-7 text-foreground">Etapa</div>
+              <div className="col-span-5 sm:col-span-4 text-right text-foreground">Ações</div>
+            </div>
+            
+            {/* Rows */}
+            {etapasOrdenadas.map((etapa, index) => (
+              <div
+                key={etapa.id}
+                className={cn(
+                  "grid grid-cols-12 px-4 py-3 text-sm transition-colors",
+                  index % 2 === 0 ? 'bg-background' : 'bg-muted/30',
+                  "hover:bg-accent/50"
+                )}
+              >
+                {editandoEtapa === etapa.id ? (
+                  <>
+                    <div className="col-span-1 hidden sm:flex items-center text-muted-foreground">
+                      {etapa.ordem}
                     </div>
-                    <div className="col-span-4 hidden sm:flex items-center">
-                      <Input type="color" defaultValue={etapa.cor} onChange={e => {
-                  setEditData(prev => ({
-                    ...prev,
-                    cor: e.target.value
-                  }));
-                }} className="w-20 h-8" />
+                    <div className="col-span-7 sm:col-span-7 flex items-center gap-2 pr-2">
+                      <Input
+                        type="color"
+                        defaultValue={etapa.cor}
+                        onChange={e => setEditData(prev => ({ ...prev, cor: e.target.value }))}
+                        className="w-8 h-8 p-1 cursor-pointer flex-shrink-0"
+                      />
+                      <Input
+                        defaultValue={etapa.nome}
+                        onChange={e => setEditData(prev => ({ ...prev, nome: e.target.value }))}
+                        className="h-8 text-sm flex-1"
+                      />
                     </div>
-                    <div className="flex justify-end items-center gap-2 col-span-5 sm:col-span-2">
-                      <Button variant="outline" size="sm" onClick={() => salvarEdicaoEtapa(etapa.id)}>
-                        Salvar
+                    <div className="flex justify-end items-center gap-2 col-span-5 sm:col-span-4">
+                      <Button size="sm" onClick={() => salvarEdicaoEtapa(etapa.id)}>
+                        <Save className="h-3.5 w-3.5" />
                       </Button>
-                      <Button variant="outline" size="sm" onClick={() => setEditandoEtapa(null)}>
-                        Cancelar
+                      <Button size="sm" variant="ghost" onClick={() => setEditandoEtapa(null)}>
+                        <X className="h-3.5 w-3.5" />
                       </Button>
                     </div>
-                  </> : <>
-                    <div className="col-span-1 hidden sm:block">{etapa.ordem}</div>
-                    <div className="col-span-7 sm:col-span-5 flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full border border-border" style={{
-                  backgroundColor: etapa.cor
-                }} title={etapa.cor} />
-                      {etapa.nome}
+                  </>
+                ) : (
+                  <>
+                    <div className="col-span-1 hidden sm:flex items-center text-muted-foreground">
+                      {etapa.ordem}
                     </div>
-                    <div className="col-span-4 hidden sm:flex items-center">
-                      
+                    <div className="col-span-7 sm:col-span-7 flex items-center gap-2">
+                      <div
+                        className="w-3 h-3 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: etapa.cor }}
+                      />
+                      <span className="font-medium">{etapa.nome}</span>
                     </div>
-                    <div className="flex justify-end gap-1 col-span-5 sm:col-span-2">
-                      <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => moverEtapa(etapa.id, 'cima')} disabled={index === 0 || deletingId === etapa.id}>
+                    <div className="flex justify-end gap-1 col-span-5 sm:col-span-4">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => moverEtapa(etapa.id, 'cima')}
+                        disabled={index === 0 || deletingId === etapa.id}
+                      >
                         <ArrowUp className="h-3.5 w-3.5" />
                       </Button>
-                      <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => moverEtapa(etapa.id, 'baixo')} disabled={index === etapasOrdenadas.length - 1 || deletingId === etapa.id}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => moverEtapa(etapa.id, 'baixo')}
+                        disabled={index === etapasOrdenadas.length - 1 || deletingId === etapa.id}
+                      >
                         <ArrowDown className="h-3.5 w-3.5" />
                       </Button>
-                      <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => iniciarEdicaoEtapa(etapa.id)} disabled={deletingId === etapa.id}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => iniciarEdicaoEtapa(etapa.id)}
+                        disabled={deletingId === etapa.id}
+                      >
                         <Edit className="h-3.5 w-3.5" />
                       </Button>
-                      <Button variant="outline" size="icon" className="h-7 w-7 text-red-500 hover:text-red-600 hover:border-red-200" onClick={() => removerEtapa(etapa.id)} disabled={deletingId === etapa.id}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => removerEtapa(etapa.id)}
+                        disabled={deletingId === etapa.id}
+                      >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
-                  </>}
-              </div>)}
-            
-            {etapasOrdenadas.length === 0 && <div className="px-4 py-8 text-center text-sm text-muted-foreground bg-card">
-                Nenhuma etapa cadastrada. Adicione sua primeira etapa acima.
-              </div>}
+                  </>
+                )}
+              </div>
+            ))}
           </div>
-        </div>
+        )}
       </div>
-    </div>;
+    </div>
+  );
 }
