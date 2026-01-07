@@ -528,6 +528,7 @@ export class WorkflowSupabaseService {
         .eq('user_id', user.user.id)
         .gte('data_sessao', startDate)
         .lt('data_sessao', endDate)
+        .neq('status', 'historico')
         .order('data_sessao', { ascending: true })
         .order('hora_sessao', { ascending: true });
 
