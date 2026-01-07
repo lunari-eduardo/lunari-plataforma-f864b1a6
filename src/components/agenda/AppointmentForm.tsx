@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { toTitleCase } from '@/hooks/useTitleCase';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -470,7 +471,10 @@ export default function AppointmentForm({
                       id="new-client-name" 
                       name="newClientName" 
                       value={formData.newClientName} 
-                      onChange={handleChange} 
+                      onChange={e => {
+                        const titleCaseValue = toTitleCase(e.target.value);
+                        setFormData(prev => ({ ...prev, newClientName: titleCaseValue }));
+                      }}
                       placeholder="Nome completo" 
                     />
                   </div>
