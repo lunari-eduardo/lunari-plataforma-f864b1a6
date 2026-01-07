@@ -187,7 +187,7 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
         .eq('user_id', userId)
         .gte('data_sessao', startDate.toISOString().split('T')[0])
         .lte('data_sessao', endDate.toISOString().split('T')[0])
-        .order('data_sessao', { ascending: false });
+        .order('data_sessao', { ascending: true });
 
       if (error) throw error;
 
@@ -403,7 +403,7 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
         .eq('user_id', userId)
         .gte('data_sessao', startDate.toISOString().split('T')[0])
         .lte('data_sessao', endDate.toISOString().split('T')[0])
-        .order('data_sessao', { ascending: false });
+        .order('data_sessao', { ascending: true });
 
       if (error) throw error;
 
