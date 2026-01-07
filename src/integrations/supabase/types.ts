@@ -247,11 +247,14 @@ export type Database = {
           data_nascimento: string | null
           email: string | null
           endereco: string | null
+          gallery_password: string | null
+          gallery_status: string | null
           id: string
           nome: string
           observacoes: string | null
           origem: string | null
           telefone: string | null
+          total_galerias: number | null
           updated_at: string | null
           user_id: string
           whatsapp: string | null
@@ -261,11 +264,14 @@ export type Database = {
           data_nascimento?: string | null
           email?: string | null
           endereco?: string | null
+          gallery_password?: string | null
+          gallery_status?: string | null
           id?: string
           nome: string
           observacoes?: string | null
           origem?: string | null
           telefone?: string | null
+          total_galerias?: number | null
           updated_at?: string | null
           user_id: string
           whatsapp?: string | null
@@ -275,11 +281,14 @@ export type Database = {
           data_nascimento?: string | null
           email?: string | null
           endereco?: string | null
+          gallery_password?: string | null
+          gallery_status?: string | null
           id?: string
           nome?: string
           observacoes?: string | null
           origem?: string | null
           telefone?: string | null
+          total_galerias?: number | null
           updated_at?: string | null
           user_id?: string
           whatsapp?: string | null
@@ -960,61 +969,197 @@ export type Database = {
         }
         Relationships: []
       }
+      galeria_acoes: {
+        Row: {
+          created_at: string
+          descricao: string | null
+          galeria_id: string
+          id: string
+          tipo: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          descricao?: string | null
+          galeria_id: string
+          id?: string
+          tipo: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          descricao?: string | null
+          galeria_id?: string
+          id?: string
+          tipo?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "galeria_acoes_galeria_id_fkey"
+            columns: ["galeria_id"]
+            isOneToOne: false
+            referencedRelation: "galerias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      galeria_fotos: {
+        Row: {
+          comment: string | null
+          created_at: string
+          file_size: number | null
+          filename: string
+          galeria_id: string
+          height: number | null
+          id: string
+          is_selected: boolean | null
+          mime_type: string | null
+          order_index: number | null
+          original_filename: string
+          storage_key: string
+          updated_at: string
+          user_id: string
+          width: number | null
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          file_size?: number | null
+          filename: string
+          galeria_id: string
+          height?: number | null
+          id?: string
+          is_selected?: boolean | null
+          mime_type?: string | null
+          order_index?: number | null
+          original_filename: string
+          storage_key: string
+          updated_at?: string
+          user_id: string
+          width?: number | null
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          file_size?: number | null
+          filename?: string
+          galeria_id?: string
+          height?: number | null
+          id?: string
+          is_selected?: boolean | null
+          mime_type?: string | null
+          order_index?: number | null
+          original_filename?: string
+          storage_key?: string
+          updated_at?: string
+          user_id?: string
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "galeria_fotos_galeria_id_fkey"
+            columns: ["galeria_id"]
+            isOneToOne: false
+            referencedRelation: "galerias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       galerias: {
         Row: {
+          cliente_email: string | null
           cliente_id: string
+          cliente_nome: string | null
+          configuracoes: Json | null
           created_at: string
+          enviado_em: string | null
           finalized_at: string | null
           fotos_incluidas: number
+          fotos_selecionadas: number | null
           id: string
+          mensagem_boas_vindas: string | null
+          nome_pacote: string | null
+          nome_sessao: string | null
           orcamento_id: string | null
+          permissao: string | null
+          prazo_selecao: string | null
           prazo_selecao_dias: number | null
           published_at: string | null
           regras_selecao: Json | null
           session_id: string | null
           status: string
           status_pagamento: string | null
+          status_selecao: string | null
+          total_fotos: number | null
           total_fotos_extras_vendidas: number | null
           updated_at: string
           user_id: string
+          valor_extras: number | null
           valor_foto_extra: number
           valor_total_vendido: number | null
         }
         Insert: {
+          cliente_email?: string | null
           cliente_id: string
+          cliente_nome?: string | null
+          configuracoes?: Json | null
           created_at?: string
+          enviado_em?: string | null
           finalized_at?: string | null
           fotos_incluidas?: number
+          fotos_selecionadas?: number | null
           id?: string
+          mensagem_boas_vindas?: string | null
+          nome_pacote?: string | null
+          nome_sessao?: string | null
           orcamento_id?: string | null
+          permissao?: string | null
+          prazo_selecao?: string | null
           prazo_selecao_dias?: number | null
           published_at?: string | null
           regras_selecao?: Json | null
           session_id?: string | null
           status?: string
           status_pagamento?: string | null
+          status_selecao?: string | null
+          total_fotos?: number | null
           total_fotos_extras_vendidas?: number | null
           updated_at?: string
           user_id: string
+          valor_extras?: number | null
           valor_foto_extra?: number
           valor_total_vendido?: number | null
         }
         Update: {
+          cliente_email?: string | null
           cliente_id?: string
+          cliente_nome?: string | null
+          configuracoes?: Json | null
           created_at?: string
+          enviado_em?: string | null
           finalized_at?: string | null
           fotos_incluidas?: number
+          fotos_selecionadas?: number | null
           id?: string
+          mensagem_boas_vindas?: string | null
+          nome_pacote?: string | null
+          nome_sessao?: string | null
           orcamento_id?: string | null
+          permissao?: string | null
+          prazo_selecao?: string | null
           prazo_selecao_dias?: number | null
           published_at?: string | null
           regras_selecao?: Json | null
           session_id?: string | null
           status?: string
           status_pagamento?: string | null
+          status_selecao?: string | null
+          total_fotos?: number | null
           total_fotos_extras_vendidas?: number | null
           updated_at?: string
           user_id?: string
+          valor_extras?: number | null
           valor_foto_extra?: number
           valor_total_vendido?: number | null
         }
@@ -1027,6 +1172,194 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      gallery_clientes: {
+        Row: {
+          created_at: string
+          email: string
+          gallery_password: string
+          id: string
+          nome: string
+          status: string
+          telefone: string | null
+          total_galerias: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          gallery_password: string
+          id?: string
+          nome: string
+          status?: string
+          telefone?: string | null
+          total_galerias?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          gallery_password?: string
+          id?: string
+          nome?: string
+          status?: string
+          telefone?: string | null
+          total_galerias?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      gallery_discount_presets: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          packages: Json
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          packages?: Json
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          packages?: Json
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      gallery_email_templates: {
+        Row: {
+          body: string
+          created_at: string | null
+          id: string
+          name: string
+          subject: string
+          type: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string | null
+          id?: string
+          name: string
+          subject: string
+          type: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string | null
+          id?: string
+          name?: string
+          subject?: string
+          type?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      gallery_settings: {
+        Row: {
+          active_theme_id: string | null
+          client_theme: string | null
+          created_at: string | null
+          default_expiration_days: number | null
+          default_gallery_permission: string | null
+          default_watermark: Json | null
+          favicon_url: string | null
+          studio_logo_url: string | null
+          studio_name: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          active_theme_id?: string | null
+          client_theme?: string | null
+          created_at?: string | null
+          default_expiration_days?: number | null
+          default_gallery_permission?: string | null
+          default_watermark?: Json | null
+          favicon_url?: string | null
+          studio_logo_url?: string | null
+          studio_name?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          active_theme_id?: string | null
+          client_theme?: string | null
+          created_at?: string | null
+          default_expiration_days?: number | null
+          default_gallery_permission?: string | null
+          default_watermark?: Json | null
+          favicon_url?: string | null
+          studio_logo_url?: string | null
+          studio_name?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_active_theme"
+            columns: ["active_theme_id"]
+            isOneToOne: false
+            referencedRelation: "gallery_themes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gallery_themes: {
+        Row: {
+          accent_color: string
+          background_color: string
+          created_at: string | null
+          id: string
+          is_default: boolean | null
+          name: string
+          primary_color: string
+          text_color: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          accent_color?: string
+          background_color?: string
+          created_at?: string | null
+          id?: string
+          is_default?: boolean | null
+          name: string
+          primary_color?: string
+          text_color?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          accent_color?: string
+          background_color?: string
+          created_at?: string | null
+          id?: string
+          is_default?: boolean | null
+          name?: string
+          primary_color?: string
+          text_color?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       lead_follow_up_config: {
         Row: {
