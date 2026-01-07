@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
+import { toTitleCase } from '@/hooks/useTitleCase';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useAppContext } from '@/contexts/AppContext';
 import { Cliente } from '@/types/cliente';
@@ -693,12 +694,12 @@ export default function Clientes() {
                   onChange={e => {
                     setFormData(prev => ({
                       ...prev,
-                      nome: e.target.value
+                      nome: toTitleCase(e.target.value)
                     }));
                     // Resetar flag de criação forçada quando usuário muda o nome
                     setForceCreate(false);
                     setShowSuggestions(true);
-                  }} 
+                  }}
                   placeholder="Nome completo"
                   className={duplicateCheck.isDuplicata ? 'border-destructive' : ''}
                 />
