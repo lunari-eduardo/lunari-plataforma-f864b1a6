@@ -80,7 +80,7 @@ export const useWorkflowRealtime = () => {
         `)
         .eq('user_id', user.user.id)
         .neq('status', 'historico') // Excluir sessões históricas do workflow
-        .order('data_sessao', { ascending: false })
+        .order('data_sessao', { ascending: true })
         .order('hora_sessao', { ascending: true });
 
       if (fetchError) {

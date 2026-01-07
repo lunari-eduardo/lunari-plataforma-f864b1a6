@@ -281,7 +281,7 @@ class WorkflowCacheManager {
       .gte('data_sessao', startDate)
       .lte('data_sessao', endDate)
       .neq('status', 'historico')
-      .order('data_sessao', { ascending: false })
+      .order('data_sessao', { ascending: true })
       .order('hora_sessao', { ascending: true });
 
     if (error) {
