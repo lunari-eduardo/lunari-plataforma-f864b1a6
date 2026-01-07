@@ -835,6 +835,14 @@ export const useWorkflowRealtime = () => {
             } else if (payload.eventType === 'UPDATE') {
               console.log('✏️ [WorkflowRealtime] Updating session via realtime:', payload.new.id);
               
+              // Se status mudou para 'historico', remover do workflow em vez de atualizar
+              const newStatus = (payload.new as any).status;
+              if (newStatus === 'historico') {
+                console.log('🗃️ [WorkflowRealtime] Session marked as historical, removing from workflow:', payload.new.id);
+                setSessions(prev => prev.filter(session => session.id !== (payload.new as any).id));
+                return;
+              }
+              
               // FASE 2: Fetch payments selectively for the updated session only
               const sessionId = (payload.new as any).session_id;
               if (sessionId) {
