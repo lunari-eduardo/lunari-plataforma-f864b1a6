@@ -255,6 +255,11 @@ export const useClientesRealtime = () => {
     }
   }, []);
 
+  // Buscar cliente por ID no estado local
+  const getClienteById = useCallback((id: string): Cliente | undefined => {
+    return state.clientes.find(cliente => cliente.id === id);
+  }, [state.clientes]);
+
   return {
     clientes: state.clientes,
     isLoading: state.isLoading,
@@ -263,6 +268,7 @@ export const useClientesRealtime = () => {
     atualizarCliente,
     removerCliente,
     verificarClienteTemDados,
-    reloadClientes: loadClientes
+    reloadClientes: loadClientes,
+    getClienteById
   };
 };
