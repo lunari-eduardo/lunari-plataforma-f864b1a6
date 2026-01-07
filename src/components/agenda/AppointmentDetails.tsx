@@ -14,9 +14,10 @@ import { useNumberInput } from '@/hooks/useNumberInput';
 import { useOrcamentos } from '@/hooks/useOrcamentos';
 import { useAppointmentWorkflowInfo } from '@/hooks/useAppointmentWorkflowInfo';
 import { AppointmentDeleteConfirmModal } from './AppointmentDeleteConfirmModal';
+import { ClientEditModal } from './ClientEditModal';
 import { Appointment } from '@/hooks/useAgenda';
 import PackageSearchCombobox from './PackageSearchCombobox';
-import { Calendar, DollarSign, FileText, History, ChevronRight, Loader2, Package, AlertCircle } from 'lucide-react';
+import { Calendar, DollarSign, FileText, History, ChevronRight, Loader2, Package, AlertCircle, UserRoundPen } from 'lucide-react';
 
 interface AppointmentDetailsProps {
   appointment: Appointment;
@@ -35,6 +36,7 @@ export default function AppointmentDetails({
   const { workflowInfo, sessionDetails, loadingDetails, fetchSessionDetails } = useAppointmentWorkflowInfo(appointment.id);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [showClientEditModal, setShowClientEditModal] = useState(false);
   const [formData, setFormData] = useState({
     date: appointment.date,
     time: appointment.time,
@@ -162,7 +164,23 @@ export default function AppointmentDetails({
     <div className="space-y-4">
       {/* HEADER: Nome do cliente + data + status badge */}
       <div className="border-b border-lunar-border/30 pb-4">
-        <h2 className="text-xl font-semibold text-lunar-text">{formData.title}</h2>
+        <div className="flex items-center gap-2">
+          <h2 
+            className="text-xl font-semibold text-lunar-text cursor-pointer hover:text-lunar-accent transition-colors"
+            onClick={() => setShowClientEditModal(true)}
+            title="Clique para editar cliente"
+          >
+            {formData.title}
+          </h2>
+          <button
+            type="button"
+            onClick={() => setShowClientEditModal(true)}
+            className="text-lunar-muted hover:text-lunar-accent transition-colors"
+            title="Editar cliente"
+          >
+            <UserRoundPen className="h-4 w-4" />
+          </button>
+        </div>
         <p className="text-sm text-lunar-muted mt-1">
           {format(formData.date, "EEEE, dd 'de' MMMM", { locale: ptBR })} às {formData.time}
         </p>
@@ -417,6 +435,13 @@ export default function AppointmentDetails({
           hasWorkflowSession: workflowInfo.hasSession,
           hasPayments: workflowInfo.hasPayments
         }}
+      />
+
+      <ClientEditModal
+        open={showClientEditModal}
+        onOpenChange={setShowClientEditModal}
+        clienteId={appointment.clienteId || ''}
+        clienteNome={appointment.client}
       />
     </div>
   );
