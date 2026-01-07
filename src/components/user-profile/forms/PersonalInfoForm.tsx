@@ -8,9 +8,10 @@ interface PersonalInfoFormProps {
   formData: Partial<UserProfile>;
   onChange: (field: keyof UserProfile, value: string) => void;
   errors?: Record<string, string>;
+  userEmail?: string;
 }
 
-export function PersonalInfoForm({ formData, onChange, errors }: PersonalInfoFormProps) {
+export function PersonalInfoForm({ formData, onChange, errors, userEmail }: PersonalInfoFormProps) {
   const handleCpfCnpjChange = (value: string) => {
     const formatted = formatCpfCnpj(value);
     onChange('cpf_cnpj', formatted);
@@ -60,18 +61,17 @@ export function PersonalInfoForm({ formData, onChange, errors }: PersonalInfoFor
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="email">E-mail Principal de Contato</Label>
+        <Label htmlFor="email">E-mail</Label>
         <Input 
           id="email" 
           type="email" 
-          value={formData.email || ''} 
-          onChange={e => onChange('email', e.target.value)} 
-          placeholder="seu@email.com"
-          className={errors?.email ? 'border-destructive' : ''}
+          value={userEmail || formData.email || ''} 
+          disabled
+          className="bg-muted/50 cursor-not-allowed"
         />
-        {errors?.email && (
-          <p className="text-sm text-destructive">{errors.email}</p>
-        )}
+        <p className="text-xs text-muted-foreground">
+          Este é o email usado para login e não pode ser alterado
+        </p>
       </div>
 
       <div className="space-y-2">

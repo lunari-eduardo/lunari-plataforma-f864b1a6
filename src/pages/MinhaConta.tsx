@@ -4,7 +4,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
-import { useUserProfile, useUserBranding } from '@/hooks/useUserProfile';
+import { useUserProfile } from '@/hooks/useUserProfile';
+import { useAuth } from '@/contexts/AuthContext';
 import { useFormValidation } from '@/hooks/user-profile/useFormValidation';
 import { PersonalInfoForm } from '@/components/user-profile/forms/PersonalInfoForm';
 import { ContactInfoSection } from '@/components/user-profile/forms/ContactInfoSection';
@@ -25,8 +26,8 @@ export default function MinhaConta() {
   const [syncMessage, setSyncMessage] = useState('Ativando sua assinatura...');
   const syncAttemptedRef = useRef(false);
   
-  const { profile, saveProfile, getProfileOrDefault } = useUserProfile();
-  const { branding, saveBranding, removeLogo, getBrandingOrDefault } = useUserBranding();
+  const { user } = useAuth();
+  const { profile, saveProfile, getProfileOrDefault, uploadLogo, deleteLogo } = useUserProfile();
   
   const [formData, setFormData] = useState<Partial<UserProfile>>(() => getProfileOrDefault());
   
@@ -160,14 +161,21 @@ export default function MinhaConta() {
     await saveProfile(cleanedData);
   }, [formData, validation, saveProfile]);
 
-  const handleLogoSave = useCallback((logoUrl: string, fileName: string) => {
-    saveBranding({ logoUrl, logoFileName: fileName });
-    toast.success('Logo salvo com sucesso!');
-  }, [saveBranding]);
+  const handleLogoSave = useCallback(async (file: File) => {
+    try {
+      await uploadLogo(file);
+    } catch (error) {
+      // Error already handled in uploadLogo
+    }
+  }, [uploadLogo]);
 
-  const handleLogoRemove = useCallback(() => {
-    removeLogo();
-  }, [removeLogo]);
+  const handleLogoRemove = useCallback(async () => {
+    try {
+      await deleteLogo();
+    } catch (error) {
+      // Error already handled in deleteLogo
+    }
+  }, [deleteLogo]);
 
   // Loading overlay durante sincronização
   if (isSyncing) {
@@ -204,6 +212,7 @@ export default function MinhaConta() {
                     formData={formData}
                     onChange={handleInputChange}
                     errors={validation.errors}
+                    userEmail={user?.email || ''}
                   />
                   
                   <ContactInfoSection
@@ -225,8 +234,7 @@ export default function MinhaConta() {
 
                 <TabsContent value="marca" className="space-y-6 mt-6">
                   <LogoUploadSection
-                    logoUrl={getBrandingOrDefault().logoUrl}
-                    logoFileName={getBrandingOrDefault().logoFileName}
+                    logoUrl={getProfileOrDefault().logo_url || undefined}
                     onLogoSave={handleLogoSave}
                     onLogoRemove={handleLogoRemove}
                   />

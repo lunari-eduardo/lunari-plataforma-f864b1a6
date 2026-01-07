@@ -101,6 +101,33 @@ export function useUserProfile() {
     }
   };
 
+  const uploadLogo = async (file: File) => {
+    if (!user) throw new Error('Usuário não autenticado');
+    try {
+      const logoUrl = await ProfileService.uploadLogo(user.id, file);
+      queryClient.invalidateQueries({ queryKey: ['profile', user.id] });
+      toast.success('Logo atualizado com sucesso!');
+      return logoUrl;
+    } catch (error) {
+      console.error('Erro ao fazer upload do logo:', error);
+      toast.error('Erro ao fazer upload do logo');
+      throw error;
+    }
+  };
+
+  const deleteLogo = async () => {
+    if (!user) throw new Error('Usuário não autenticado');
+    try {
+      await ProfileService.deleteLogo(user.id, profile?.logo_url || null);
+      queryClient.invalidateQueries({ queryKey: ['profile', user.id] });
+      toast.success('Logo removido com sucesso!');
+    } catch (error) {
+      console.error('Erro ao remover logo:', error);
+      toast.error('Erro ao remover logo');
+      throw error;
+    }
+  };
+
   const getProfileOrDefault = (): SupabaseProfile => {
     if (profile) return profile;
     
@@ -137,6 +164,8 @@ export function useUserProfile() {
     saveProfile: updateProfileMutation.mutate, // Alias for compatibility
     uploadAvatar,
     deleteAvatar,
+    uploadLogo,
+    deleteLogo,
     getProfileOrDefault
   };
 }
