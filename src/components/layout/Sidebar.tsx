@@ -5,7 +5,7 @@ import { CalendarClock, UserCheck, Settings, Filter, Wallet, Menu, X, User, Tag,
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { useUserProfile, useUserBranding } from '@/hooks/useUserProfile';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAccessControl } from '@/hooks/useAccessControl';
 import { cn } from '@/lib/utils';
@@ -54,10 +54,8 @@ export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
   const [isDesktopExpanded, setIsDesktopExpanded] = useState(false);
   const { profile, getProfileOrDefault } = useUserProfile();
-  const { branding, getBrandingOrDefault } = useUserBranding();
   
   const currentProfile = getProfileOrDefault();
-  const currentBranding = getBrandingOrDefault();
   
   // Get user initials for fallback
   const getInitials = (name: string) => {
@@ -84,9 +82,9 @@ export default function Sidebar() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className={cn("rounded-full hover:bg-lunar-surface/50", className)} size="icon">
-          <Avatar className="h-8 w-8">
-            <AvatarImage src={currentBranding.logoUrl} />
-            <AvatarFallback className="bg-lunar-accent text-lunar-text text-xs font-medium">
+          <Avatar className="h-10 w-10">
+            <AvatarImage src={currentProfile.logo_url || currentProfile.avatar_url || undefined} />
+            <AvatarFallback className="bg-lunar-accent text-lunar-text text-sm font-medium">
               {userInitials}
             </AvatarFallback>
           </Avatar>

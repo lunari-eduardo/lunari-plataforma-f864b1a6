@@ -157,6 +157,72 @@ export class ProfileService {
   }
 
   /**
+   * Fazer upload de logo da empresa
+   */
+  static async uploadLogo(userId: string, file: File): Promise<string> {
+    // Validate file type
+    const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      throw new Error('Tipo de arquivo inválido. Apenas JPG, PNG e WEBP são permitidos.');
+    }
+
+    // Validate file size (5MB max)
+    const MAX_SIZE = 5 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      throw new Error('Arquivo muito grande. Tamanho máximo: 5MB');
+    }
+
+    // Sanitize file extension
+    const fileExt = file.name.split('.').pop()?.toLowerCase();
+    if (!fileExt || !['jpg', 'jpeg', 'png', 'webp'].includes(fileExt)) {
+      throw new Error('Extensão de arquivo inválida');
+    }
+
+    const fileName = `${userId}/logo_${Date.now()}.${fileExt}`;
+
+    // Upload do arquivo
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(fileName, file, { upsert: true });
+
+    if (uploadError) {
+      console.error('Erro ao fazer upload do logo:', uploadError);
+      throw uploadError;
+    }
+
+    // Obter URL pública
+    const { data } = supabase.storage
+      .from('avatars')
+      .getPublicUrl(fileName);
+
+    // Atualizar perfil com a nova URL
+    await this.updateProfile(userId, { logo_url: data.publicUrl });
+
+    return data.publicUrl;
+  }
+
+  /**
+   * Remover logo
+   */
+  static async deleteLogo(userId: string, currentUrl: string | null): Promise<void> {
+    if (!currentUrl) return;
+
+    // Extrair o path do arquivo da URL
+    const urlParts = currentUrl.split('/avatars/');
+    if (urlParts.length >= 2) {
+      const filePath = urlParts[1];
+
+      // Deletar arquivo do storage
+      await supabase.storage
+        .from('avatars')
+        .remove([filePath]);
+    }
+
+    // Atualizar perfil removendo a URL
+    await this.updateProfile(userId, { logo_url: null });
+  }
+
+  /**
    * Completar onboarding
    */
   static async completeOnboarding(
