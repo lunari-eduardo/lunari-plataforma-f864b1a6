@@ -22,23 +22,32 @@ const pageTitles: Record<string, string> = {
   "/app/integracoes": "Integrações"
 };
 
+// Patterns for dynamic routes
+const dynamicRoutePatterns: { pattern: RegExp; title: string }[] = [
+  { pattern: /^\/app\/clientes\/[^/]+$/, title: 'Clientes' },
+  { pattern: /^\/app\/orcamentos\/[^/]+$/, title: 'Orçamentos' },
+  { pattern: /^\/app\/galerias\/[^/]+$/, title: 'Galerias' },
+];
+
 const getPageTitleFromPath = (pathname: string): string => {
   // Exact match first
   if (pageTitles[pathname]) return pageTitles[pathname];
   
-  // Handle dynamic routes like /clientes/:id
+  // Check dynamic route patterns
+  for (const { pattern, title } of dynamicRoutePatterns) {
+    if (pattern.test(pathname)) {
+      return title;
+    }
+  }
+  
+  // Handle dynamic routes like /app/clientes/:id - fallback using base path
   const pathSegments = pathname.split('/').filter(Boolean);
-  if (pathSegments.length > 1) {
-    const basePath = `/${pathSegments[0]}`;
+  if (pathSegments.length >= 2) {
+    const basePath = `/${pathSegments[0]}/${pathSegments[1]}`;
     if (pageTitles[basePath]) return pageTitles[basePath];
   }
   
-  // Fallback: capitalize first segment
-  if (pathSegments.length > 0) {
-    const segment = pathSegments[0];
-    return segment.charAt(0).toUpperCase() + segment.slice(1);
-  }
-  
+  // Fallback
   return "Dashboard";
 };
 

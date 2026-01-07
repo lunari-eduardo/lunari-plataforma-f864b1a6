@@ -31,7 +31,7 @@ export default function ClienteDetalhe() {
         <User className="h-16 w-16 text-muted-foreground mb-4" />
         <h2 className="text-xl font-semibold mb-2">Cliente não encontrado</h2>
         <p className="text-muted-foreground mb-4">O cliente solicitado não existe ou foi removido.</p>
-        <Button onClick={() => navigate('/clientes')} variant="outline">
+        <Button onClick={() => navigate('/app/clientes')} variant="outline">
           Voltar para Clientes
         </Button>
       </div>
@@ -42,7 +42,7 @@ export default function ClienteDetalhe() {
     <ScrollArea className="min-h-[calc(100vh-100px)] md:h-[calc(100vh-120px)]">
       <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 space-y-4 md:space-y-6">
         {/* Header - Mobile First Layout */}
-        <ClientHeader cliente={cliente} onBack={() => navigate('/clientes')} />
+        <ClientHeader cliente={cliente} onBack={() => navigate('/app/clientes')} />
 
         {/* Métricas Rápidas - Grid 2x2 em mobile */}
         <ClientMetricsGrid metrics={metricas} />
