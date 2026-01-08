@@ -11,6 +11,8 @@ interface GoogleCalendarIntegration {
   dados_extras: {
     calendar_id?: string;
     sync_enabled?: boolean;
+    error?: string;
+    error_at?: string;
   } | null;
 }
 
@@ -19,6 +21,11 @@ interface SyncResult {
   synced: number;
   failed: number;
   errors?: string[];
+  needs_reconnect?: boolean;
+}
+
+interface PendingCount {
+  count: number;
 }
 
 interface UseGoogleCalendarReturn {
@@ -28,6 +35,8 @@ interface UseGoogleCalendarReturn {
   syncing: boolean;
   syncEnabled: boolean;
   connectedAt: string | null;
+  pendingCount: number;
+  hasTokenError: boolean;
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
   toggleSync: (enabled: boolean) => Promise<void>;
@@ -40,6 +49,7 @@ export function useGoogleCalendarIntegration(): UseGoogleCalendarReturn {
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
 
   const fetchIntegration = useCallback(async () => {
     try {
@@ -49,6 +59,7 @@ export function useGoogleCalendarIntegration(): UseGoogleCalendarReturn {
         return;
       }
 
+      // Fetch integration status
       const { data, error } = await supabase
         .from('usuarios_integracoes')
         .select('*')
@@ -61,6 +72,20 @@ export function useGoogleCalendarIntegration(): UseGoogleCalendarReturn {
       }
 
       setIntegration(data as GoogleCalendarIntegration | null);
+
+      // Fetch count of pending appointments
+      if (data?.status === 'ativo') {
+        const today = new Date().toISOString().split('T')[0];
+        const { count } = await supabase
+          .from('appointments')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('status', 'confirmado')
+          .gte('date', today)
+          .or('google_event_id.is.null,google_sync_status.eq.pending,google_sync_status.eq.error');
+        
+        setPendingCount(count || 0);
+      }
     } catch (error) {
       console.error('[useGoogleCalendarIntegration] Error:', error);
     } finally {
@@ -81,6 +106,7 @@ export function useGoogleCalendarIntegration(): UseGoogleCalendarReturn {
 
   const syncEnabled = integration?.dados_extras?.sync_enabled !== false;
   const connectedAt = integration?.conectado_em || null;
+  const hasTokenError = integration?.dados_extras?.error === 'token_revoked';
 
   const connect = useCallback(async () => {
     setConnecting(true);
@@ -123,6 +149,7 @@ export function useGoogleCalendarIntegration(): UseGoogleCalendarReturn {
       }
 
       setIntegration(null);
+      setPendingCount(0);
       toast.success('Integração com Google Calendar desativada');
     } catch (error) {
       console.error('[useGoogleCalendarIntegration] Disconnect error:', error);
@@ -179,6 +206,16 @@ export function useGoogleCalendarIntegration(): UseGoogleCalendarReturn {
         return null;
       }
 
+      // Check if reconnection is needed
+      if (data?.needs_reconnect) {
+        toast.error('Token expirado. Por favor, reconecte o Google Calendar.');
+        await fetchIntegration(); // Refresh status
+        return null;
+      }
+
+      // Refresh pending count after sync
+      await fetchIntegration();
+
       return data as SyncResult;
     } catch (error) {
       console.error('[useGoogleCalendarIntegration] Sync existing error:', error);
@@ -187,7 +224,7 @@ export function useGoogleCalendarIntegration(): UseGoogleCalendarReturn {
     } finally {
       setSyncing(false);
     }
-  }, []);
+  }, [fetchIntegration]);
 
   return {
     status,
@@ -196,6 +233,8 @@ export function useGoogleCalendarIntegration(): UseGoogleCalendarReturn {
     syncing,
     syncEnabled,
     connectedAt,
+    pendingCount,
+    hasTokenError,
     connect,
     disconnect,
     toggleSync,

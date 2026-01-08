@@ -10,6 +10,49 @@ interface SyncResult {
   synced: number;
   failed: number;
   errors: string[];
+  needs_reconnect?: boolean;
+}
+
+interface TokenRefreshResult {
+  accessToken: string | null;
+  error?: 'token_revoked' | 'refresh_failed';
+}
+
+async function refreshAccessToken(
+  refreshToken: string,
+  clientId: string,
+  clientSecret: string
+): Promise<TokenRefreshResult> {
+  try {
+    const response = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        refresh_token: refreshToken,
+        grant_type: 'refresh_token',
+      }),
+    });
+
+    const data = await response.json();
+    
+    if (data.access_token) {
+      return { accessToken: data.access_token };
+    }
+    
+    // Check for revoked token
+    if (data.error === 'invalid_grant') {
+      console.error('[google-calendar-sync-all] Token revoked by user:', data.error_description);
+      return { accessToken: null, error: 'token_revoked' };
+    }
+    
+    console.error('[google-calendar-sync-all] Token refresh failed:', data);
+    return { accessToken: null, error: 'refresh_failed' };
+  } catch (error) {
+    console.error('[google-calendar-sync-all] Token refresh error:', error);
+    return { accessToken: null, error: 'refresh_failed' };
+  }
 }
 
 Deno.serve(async (req) => {
@@ -88,18 +131,40 @@ Deno.serve(async (req) => {
       const clientId = Deno.env.get('GOOGLE_CALENDAR_CLIENT_ID')!;
       const clientSecret = Deno.env.get('GOOGLE_CALENDAR_CLIENT_SECRET')!;
       
-      const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          client_id: clientId,
-          client_secret: clientSecret,
-          refresh_token: integration.refresh_token!,
-          grant_type: 'refresh_token',
-        }),
-      });
+      const refreshResult = await refreshAccessToken(
+        integration.refresh_token!,
+        clientId,
+        clientSecret
+      );
 
-      if (!tokenResponse.ok) {
+      if (!refreshResult.accessToken) {
+        // Handle token revocation
+        if (refreshResult.error === 'token_revoked') {
+          console.error('[google-calendar-sync-all] Token revoked, marking integration as error');
+          
+          // Update integration status to error
+          await supabase
+            .from('usuarios_integracoes')
+            .update({ 
+              status: 'erro',
+              dados_extras: {
+                ...(integration.dados_extras as any),
+                error: 'token_revoked',
+                error_at: new Date().toISOString(),
+              },
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', integration.id);
+          
+          return new Response(
+            JSON.stringify({ 
+              error: 'Token revogado. Por favor, reconecte o Google Calendar.',
+              needs_reconnect: true 
+            }),
+            { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
         console.error('[google-calendar-sync-all] Token refresh failed');
         return new Response(
           JSON.stringify({ error: 'Falha ao renovar token do Google' }),
@@ -107,15 +172,14 @@ Deno.serve(async (req) => {
         );
       }
 
-      const tokenData = await tokenResponse.json();
-      accessToken = tokenData.access_token;
+      accessToken = refreshResult.accessToken;
 
       // Update token in database
       await supabase
         .from('usuarios_integracoes')
         .update({
           access_token: accessToken,
-          expira_em: new Date(Date.now() + tokenData.expires_in * 1000).toISOString(),
+          expira_em: new Date(Date.now() + 3600 * 1000).toISOString(),
           updated_at: new Date().toISOString(),
         })
         .eq('id', integration.id);
@@ -125,13 +189,14 @@ Deno.serve(async (req) => {
     const today = new Date().toISOString().split('T')[0];
 
     // Fetch confirmed appointments from today onwards that don't have google_event_id
+    // Also include appointments with pending or error status
     const { data: appointments, error: appointmentsError } = await supabase
       .from('appointments')
-      .select('*, clientes(nome, email)')
+      .select('*, clientes(nome, email, telefone)')
       .eq('user_id', user.id)
       .eq('status', 'confirmado')
       .gte('date', today)
-      .is('google_event_id', null)
+      .or('google_event_id.is.null,google_sync_status.eq.pending,google_sync_status.eq.error')
       .order('date', { ascending: true });
 
     if (appointmentsError) {
@@ -168,15 +233,22 @@ Deno.serve(async (req) => {
         const startDate = new Date(`${appointment.date}T${appointment.time}:00`);
         const endDate = new Date(startDate.getTime() + 60 * 60 * 1000); // +1 hour
 
+        // Use client name as summary for cleaner display (consistent with google-calendar-sync)
+        const clientName = appointment.clientes?.nome || appointment.title;
+
         // Build event description
-        let description = appointment.description || '';
-        if (appointment.clientes?.nome) {
-          description = `Cliente: ${appointment.clientes.nome}\n${description}`;
-        }
+        const descriptionParts = [
+          `📋 ${appointment.type}`,
+          appointment.description,
+          appointment.clientes?.telefone ? `📞 ${appointment.clientes.telefone}` : '',
+          appointment.clientes?.email ? `📧 ${appointment.clientes.email}` : '',
+          '',
+          '⚠️ Este evento é gerenciado pelo Lunari. Alterações aqui não afetam o Lunari.',
+        ].filter(Boolean);
 
         const event = {
-          summary: appointment.title,
-          description: description.trim(),
+          summary: clientName,
+          description: descriptionParts.join('\n'),
           start: {
             dateTime: startDate.toISOString(),
             timeZone: 'America/Sao_Paulo',
@@ -184,6 +256,14 @@ Deno.serve(async (req) => {
           end: {
             dateTime: endDate.toISOString(),
             timeZone: 'America/Sao_Paulo',
+          },
+          colorId: '9', // Blue
+          reminders: {
+            useDefault: false,
+            overrides: [
+              { method: 'popup', minutes: 60 },
+              { method: 'popup', minutes: 1440 }, // 1 day
+            ],
           },
         };
 
@@ -204,7 +284,17 @@ Deno.serve(async (req) => {
           const errorText = await createResponse.text();
           console.error(`[google-calendar-sync-all] Failed to create event for ${appointment.id}:`, errorText);
           result.failed++;
-          result.errors.push(`${appointment.title}: ${errorText}`);
+          result.errors.push(`${clientName}: ${errorText}`);
+          
+          // Mark as error
+          await supabase
+            .from('appointments')
+            .update({
+              google_sync_status: 'error',
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', appointment.id);
+          
           continue;
         }
 
@@ -224,14 +314,14 @@ Deno.serve(async (req) => {
         if (updateError) {
           console.error(`[google-calendar-sync-all] Failed to update appointment ${appointment.id}:`, updateError);
           result.failed++;
-          result.errors.push(`${appointment.title}: Erro ao atualizar banco de dados`);
+          result.errors.push(`${clientName}: Erro ao atualizar banco de dados`);
         } else {
           result.synced++;
         }
       } catch (error) {
         console.error(`[google-calendar-sync-all] Error syncing appointment ${appointment.id}:`, error);
         result.failed++;
-        result.errors.push(`${appointment.title}: ${error.message}`);
+        result.errors.push(`${appointment.clientes?.nome || appointment.title}: ${error.message}`);
       }
     }
 
