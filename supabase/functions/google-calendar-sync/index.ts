@@ -11,7 +11,12 @@ const GOOGLE_CLIENT_SECRET = Deno.env.get('GOOGLE_CALENDAR_CLIENT_SECRET');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-async function refreshAccessToken(refreshToken: string): Promise<string | null> {
+interface TokenRefreshResult {
+  accessToken: string | null;
+  error?: 'token_revoked' | 'refresh_failed';
+}
+
+async function refreshAccessToken(refreshToken: string): Promise<TokenRefreshResult> {
   try {
     const response = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
@@ -25,14 +30,22 @@ async function refreshAccessToken(refreshToken: string): Promise<string | null> 
     });
 
     const data = await response.json();
+    
     if (data.access_token) {
-      return data.access_token;
+      return { accessToken: data.access_token };
     }
+    
+    // Check for revoked token
+    if (data.error === 'invalid_grant') {
+      console.error('[google-calendar-sync] Token revoked by user:', data.error_description);
+      return { accessToken: null, error: 'token_revoked' };
+    }
+    
     console.error('[google-calendar-sync] Token refresh failed:', data);
-    return null;
+    return { accessToken: null, error: 'refresh_failed' };
   } catch (error) {
     console.error('[google-calendar-sync] Token refresh error:', error);
-    return null;
+    return { accessToken: null, error: 'refresh_failed' };
   }
 }
 
@@ -78,7 +91,7 @@ serve(async (req) => {
       });
     }
 
-    // Get appointment
+    // Get appointment with client data
     const { data: appointment, error: appointmentError } = await supabase
       .from('appointments')
       .select('*, clientes(nome, telefone, email)')
@@ -106,13 +119,56 @@ serve(async (req) => {
     const expiresAt = new Date(integration.expira_em);
     if (expiresAt <= new Date()) {
       console.log('[google-calendar-sync] Token expired, refreshing...');
-      accessToken = await refreshAccessToken(integration.refresh_token);
-      if (!accessToken) {
+      const refreshResult = await refreshAccessToken(integration.refresh_token);
+      
+      if (!refreshResult.accessToken) {
+        // Handle token revocation
+        if (refreshResult.error === 'token_revoked') {
+          console.error('[google-calendar-sync] Token revoked, marking integration as error');
+          
+          // Update integration status to error
+          await supabase
+            .from('usuarios_integracoes')
+            .update({ 
+              status: 'erro',
+              dados_extras: {
+                ...integration.dados_extras,
+                error: 'token_revoked',
+                error_at: new Date().toISOString(),
+              },
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', integration.id);
+          
+          // Mark appointment for retry
+          await supabase
+            .from('appointments')
+            .update({ google_sync_status: 'pending' })
+            .eq('id', appointmentId);
+          
+          return new Response(JSON.stringify({ 
+            error: 'Token revoked, user needs to reconnect',
+            needs_reconnect: true 
+          }), {
+            status: 401,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        
+        // Mark for retry on other failures
+        await supabase
+          .from('appointments')
+          .update({ google_sync_status: 'pending' })
+          .eq('id', appointmentId);
+        
         return new Response(JSON.stringify({ error: 'Token refresh failed' }), {
           status: 401,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
+      
+      accessToken = refreshResult.accessToken;
+      
       // Update token in database
       await supabase
         .from('usuarios_integracoes')
@@ -126,11 +182,12 @@ serve(async (req) => {
     const calendarId = integration.dados_extras?.calendar_id || 'primary';
     const googleEventId = appointment.google_event_id;
 
-    // Format event data
+    // Format event data - Use client name as title for consistency
     const clientName = appointment.clientes?.nome || appointment.title;
     const eventData = {
-      summary: `${appointment.type} - ${clientName}`,
+      summary: clientName, // Just the client name for cleaner display
       description: [
+        `📋 ${appointment.type}`,
         appointment.description,
         appointment.clientes?.telefone ? `📞 ${appointment.clientes.telefone}` : '',
         appointment.clientes?.email ? `📧 ${appointment.clientes.email}` : '',

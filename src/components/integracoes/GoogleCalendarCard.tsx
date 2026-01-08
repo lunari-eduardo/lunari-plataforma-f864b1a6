@@ -1,10 +1,11 @@
-import { Calendar, Info, Loader2, RefreshCw } from 'lucide-react';
+import { AlertTriangle, Calendar, Info, Loader2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Badge } from '@/components/ui/badge';
 import { useGoogleCalendarIntegration } from '@/hooks/useGoogleCalendarIntegration';
 import { cn } from '@/lib/utils';
 
@@ -31,6 +32,8 @@ export function GoogleCalendarCard() {
     syncing,
     syncEnabled,
     connectedAt,
+    pendingCount,
+    hasTokenError,
     connect,
     disconnect,
     toggleSync,
@@ -56,6 +59,7 @@ export function GoogleCalendarCard() {
   };
 
   const isConnected = status === 'conectado';
+  const hasError = status === 'erro' || hasTokenError;
 
   const connectedInfo = connectedAt 
     ? `Conectado em ${new Date(connectedAt).toLocaleDateString('pt-BR')}`
@@ -79,31 +83,50 @@ export function GoogleCalendarCard() {
           <div className="flex items-center gap-3">
             <div className={cn(
               "p-2 rounded-lg",
-              isConnected ? "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400" : "bg-muted"
+              hasError 
+                ? "bg-destructive/10 text-destructive" 
+                : isConnected 
+                  ? "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400" 
+                  : "bg-muted"
             )}>
               <GoogleCalendarIcon />
             </div>
             <div>
               <CardTitle className="text-base flex items-center gap-2">
                 Google Calendar
-                {isConnected && (
+                {hasError ? (
+                  <Badge variant="destructive" className="text-xs font-normal">
+                    <AlertTriangle className="h-3 w-3 mr-1" />
+                    Reconexão necessária
+                  </Badge>
+                ) : isConnected ? (
                   <span className="text-xs font-normal px-2 py-0.5 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded-full">
                     Conectado
                   </span>
-                )}
+                ) : null}
               </CardTitle>
-              {connectedInfo && (
+              {connectedInfo && !hasError && (
                 <CardDescription className="text-xs mt-0.5">
                   {connectedInfo}
                 </CardDescription>
               )}
+              {hasError && (
+                <CardDescription className="text-xs mt-0.5 text-destructive">
+                  Token expirado ou revogado. Reconecte para continuar sincronizando.
+                </CardDescription>
+              )}
             </div>
           </div>
+          {pendingCount > 0 && (
+            <Badge variant="secondary" className="text-xs">
+              {pendingCount} pendente{pendingCount > 1 ? 's' : ''}
+            </Badge>
+          )}
         </div>
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {!isConnected ? (
+        {!isConnected && !hasError ? (
           <>
             {/* Estado não conectado */}
             <p className="text-sm text-muted-foreground">
@@ -125,6 +148,53 @@ export function GoogleCalendarCard() {
                   Conectar Google Calendar
                 </>
               )}
+            </Button>
+          </>
+        ) : hasError ? (
+          <>
+            {/* Estado com erro - precisa reconectar */}
+            <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="h-5 w-5 text-destructive mt-0.5" />
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-destructive">
+                    Conexão perdida com o Google Calendar
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    O token de acesso expirou ou foi revogado. Isso pode acontecer se você removeu a permissão do app nas configurações do Google.
+                  </p>
+                  {pendingCount > 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      <strong>{pendingCount} agendamento(s)</strong> estão aguardando sincronização.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+            <Button 
+              onClick={connect} 
+              disabled={connecting}
+              className="w-full"
+            >
+              {connecting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Reconectando...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Reconectar Google Calendar
+                </>
+              )}
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={disconnect}
+              disabled={connecting}
+              className="w-full"
+            >
+              Remover integração
             </Button>
           </>
         ) : (
@@ -205,6 +275,11 @@ export function GoogleCalendarCard() {
                     <>
                       <RefreshCw className="h-4 w-4 mr-2" />
                       Sincronizar agendamentos futuros
+                      {pendingCount > 0 && (
+                        <Badge variant="secondary" className="ml-2">
+                          {pendingCount}
+                        </Badge>
+                      )}
                     </>
                   )}
                 </Button>
