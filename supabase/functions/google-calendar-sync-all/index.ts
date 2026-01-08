@@ -223,16 +223,16 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Helper function to add 1 hour to time string (HH:mm)
+    function addHour(time: string): string {
+      const [hours, minutes] = time.split(':').map(Number);
+      const newHours = (hours + 1) % 24;
+      return `${String(newHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    }
+
     // Sync each appointment
     for (const appointment of appointments) {
       try {
-        // Parse time (HH:mm format)
-        const [hours, minutes] = appointment.time.split(':').map(Number);
-        
-        // Create start and end datetime
-        const startDate = new Date(`${appointment.date}T${appointment.time}:00`);
-        const endDate = new Date(startDate.getTime() + 60 * 60 * 1000); // +1 hour
-
         // Use client name as summary for cleaner display (consistent with google-calendar-sync)
         const clientName = appointment.clientes?.nome || appointment.title;
 
@@ -246,15 +246,16 @@ Deno.serve(async (req) => {
           '⚠️ Este evento é gerenciado pelo Lunari. Alterações aqui não afetam o Lunari.',
         ].filter(Boolean);
 
+        // Use local time format (without UTC conversion) - same as google-calendar-sync
         const event = {
           summary: clientName,
           description: descriptionParts.join('\n'),
           start: {
-            dateTime: startDate.toISOString(),
+            dateTime: `${appointment.date}T${appointment.time}:00`,
             timeZone: 'America/Sao_Paulo',
           },
           end: {
-            dateTime: endDate.toISOString(),
+            dateTime: `${appointment.date}T${addHour(appointment.time)}:00`,
             timeZone: 'America/Sao_Paulo',
           },
           colorId: '9', // Blue
