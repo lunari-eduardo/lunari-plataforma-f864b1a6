@@ -1,11 +1,27 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Cobranca, TipoCobranca, CobrancaResponse, CreateCobrancaRequest } from '@/types/cobranca';
+import { Cobranca, TipoCobranca, CobrancaResponse, CreateCobrancaRequest, ProvedorPagamento } from '@/types/cobranca';
 import { toast } from 'sonner';
 
 interface UseCobrancaOptions {
   clienteId?: string;
   sessionId?: string;
+}
+
+// Helper to get active payment provider for current user
+async function getActivePaymentProvider(): Promise<ProvedorPagamento | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data } = await supabase
+    .from('usuarios_integracoes')
+    .select('provedor')
+    .eq('user_id', user.id)
+    .eq('status', 'ativo')
+    .in('provedor', ['mercadopago', 'infinitepay'])
+    .single();
+
+  return (data?.provedor as ProvedorPagamento) || null;
 }
 
 export function useCobranca(options: UseCobrancaOptions = {}) {
@@ -43,6 +59,8 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
         descricao: c.descricao || undefined,
         tipoCobranca: c.tipo_cobranca as TipoCobranca,
         status: c.status as Cobranca['status'],
+        provedor: (c.provedor as ProvedorPagamento) || 'mercadopago',
+        // Mercado Pago fields
         mpPaymentId: c.mp_payment_id || undefined,
         mpPreferenceId: c.mp_preference_id || undefined,
         mpQrCode: c.mp_qr_code || undefined,
@@ -50,6 +68,12 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
         mpPixCopiaCola: c.mp_pix_copia_cola || undefined,
         mpPaymentLink: c.mp_payment_link || undefined,
         mpExpirationDate: c.mp_expiration_date || undefined,
+        // InfinitePay fields
+        ipCheckoutUrl: c.ip_checkout_url || undefined,
+        ipOrderNsu: c.ip_order_nsu || undefined,
+        ipTransactionNsu: c.ip_transaction_nsu || undefined,
+        ipReceiptUrl: c.ip_receipt_url || undefined,
+        // Common fields
         dataPagamento: c.data_pagamento || undefined,
         createdAt: c.created_at,
         updatedAt: c.updated_at,
@@ -63,12 +87,18 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
     }
   }, [options.clienteId, options.sessionId]);
 
-  // Create Pix charge
+  // Create Pix charge (Mercado Pago only)
   const createPixCharge = async (request: CreateCobrancaRequest): Promise<CobrancaResponse> => {
     setCreatingCharge(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
+
+      // Check if user has Mercado Pago active (Pix is MP only)
+      const provedor = await getActivePaymentProvider();
+      if (provedor !== 'mercadopago') {
+        throw new Error('Pix está disponível apenas com Mercado Pago');
+      }
 
       const response = await supabase.functions.invoke('mercadopago-create-pix', {
         body: {
@@ -100,22 +130,44 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
     }
   };
 
-  // Create payment link
+  // Create payment link (routes to correct provider)
   const createLinkCharge = async (request: CreateCobrancaRequest, installments?: number): Promise<CobrancaResponse> => {
     setCreatingCharge(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
 
-      const response = await supabase.functions.invoke('mercadopago-create-link', {
-        body: {
-          clienteId: request.clienteId,
-          sessionId: request.sessionId,
-          valor: request.valor,
-          descricao: request.descricao,
-          installments,
-        },
-      });
+      // Determine which provider to use
+      const provedor = await getActivePaymentProvider();
+      
+      if (!provedor) {
+        throw new Error('Nenhum provedor de pagamento configurado. Vá em Integrações para conectar.');
+      }
+
+      let response;
+      
+      if (provedor === 'infinitepay') {
+        // Use InfinitePay
+        response = await supabase.functions.invoke('infinitepay-create-link', {
+          body: {
+            clienteId: request.clienteId,
+            sessionId: request.sessionId,
+            valor: request.valor,
+            descricao: request.descricao,
+          },
+        });
+      } else {
+        // Use Mercado Pago
+        response = await supabase.functions.invoke('mercadopago-create-link', {
+          body: {
+            clienteId: request.clienteId,
+            sessionId: request.sessionId,
+            valor: request.valor,
+            descricao: request.descricao,
+            installments,
+          },
+        });
+      }
 
       if (response.error) throw response.error;
       
@@ -128,7 +180,12 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
         throw new Error(result.error || 'Failed to create link');
       }
       
-      return result;
+      return {
+        ...result,
+        provedor,
+        // Normalize checkout URL
+        checkoutUrl: result.checkoutUrl || result.paymentLink,
+      };
     } catch (error: any) {
       console.error('Error creating link:', error);
       toast.error(error.message || 'Erro ao gerar link');
@@ -157,6 +214,11 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
       return false;
     }
   };
+
+  // Get active provider (expose for UI)
+  const getProvedor = useCallback(async () => {
+    return await getActivePaymentProvider();
+  }, []);
 
   // Real-time subscription
   useEffect(() => {
@@ -192,6 +254,7 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
     createPixCharge,
     createLinkCharge,
     cancelCharge,
+    getProvedor,
     refetch: fetchCobrancas,
   };
 }

@@ -1,11 +1,13 @@
 import { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plug } from 'lucide-react';
+import { Plug, AlertCircle } from 'lucide-react';
 import { IntegrationCard } from '@/components/integracoes/IntegrationCard';
 import { GoogleCalendarCard } from '@/components/integracoes/GoogleCalendarCard';
+import { InfinitePayCard } from '@/components/integracoes/InfinitePayCard';
 import { useIntegracoes } from '@/hooks/useIntegracoes';
 import { useGoogleCalendarIntegration } from '@/hooks/useGoogleCalendarIntegration';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { toast } from 'sonner';
 
 // Mercado Pago official logo
@@ -22,9 +24,14 @@ export function IntegracoesTab() {
     loading,
     connecting,
     mercadoPagoStatus,
+    infinitePayStatus,
+    infinitePayHandle,
+    provedorAtivo,
     connectMercadoPago,
     disconnectMercadoPago,
     handleOAuthCallback,
+    saveInfinitePayHandle,
+    disconnectInfinitePay,
     integracoes,
   } = useIntegracoes();
 
@@ -105,32 +112,62 @@ export function IntegracoesTab() {
         </p>
       </div>
 
-      {/* Integration Cards */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Google Calendar */}
-        <GoogleCalendarCard />
+      {/* Exclusivity Alert */}
+      {provedorAtivo && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Provedor ativo: {provedorAtivo === 'mercadopago' ? 'Mercado Pago' : 'InfinitePay'}</AlertTitle>
+          <AlertDescription>
+            Apenas um provedor de pagamento pode estar ativo. Ao conectar outro, o atual será desativado automaticamente.
+          </AlertDescription>
+        </Alert>
+      )}
 
-        {/* Mercado Pago */}
-        <IntegrationCard
-          title="Mercado Pago"
-          description="Permita que o Lunari envie cobranças via Pix e link de pagamento usando sua conta Mercado Pago. Os pagamentos vão diretamente para sua conta."
-          icon={<MercadoPagoIcon />}
-          status={mercadoPagoStatus}
-          onConnect={connectMercadoPago}
-          onDisconnect={disconnectMercadoPago}
-          loading={connecting}
-          connectedInfo={connectedInfo}
-        />
+      {/* Integration Cards - Payment Providers */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-medium text-muted-foreground">Provedores de Pagamento</h3>
+        <div className="grid gap-4 md:grid-cols-2">
+          {/* InfinitePay */}
+          <InfinitePayCard
+            status={infinitePayStatus}
+            handle={infinitePayHandle || undefined}
+            loading={loading}
+            onSave={saveInfinitePayHandle}
+            onDisconnect={disconnectInfinitePay}
+            otherProviderActive={mercadoPagoStatus === 'conectado'}
+          />
+
+          {/* Mercado Pago */}
+          <IntegrationCard
+            title="Mercado Pago"
+            description="Cobranças via Pix e link de pagamento. Os pagamentos vão diretamente para sua conta."
+            icon={<MercadoPagoIcon />}
+            status={mercadoPagoStatus}
+            onConnect={connectMercadoPago}
+            onDisconnect={disconnectMercadoPago}
+            loading={connecting}
+            connectedInfo={connectedInfo}
+          />
+        </div>
+      </div>
+
+      {/* Other Integrations */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-medium text-muted-foreground">Outras Integrações</h3>
+        <div className="grid gap-4 md:grid-cols-2">
+          {/* Google Calendar */}
+          <GoogleCalendarCard />
+        </div>
       </div>
 
       {/* Instructions */}
       <div className="bg-muted/50 rounded-lg p-4 space-y-2">
         <h3 className="font-medium">Como funciona?</h3>
         <ul className="text-sm text-muted-foreground space-y-1">
-          <li>• Clique em "Conectar" para autorizar o Lunari a usar sua conta</li>
-          <li>• Você será redirecionado para autorizar o acesso</li>
-          <li>• Após autorizar, a integração será ativada automaticamente</li>
-          <li>• Você pode desconectar a qualquer momento</li>
+          <li>• <strong>InfinitePay:</strong> Digite seu handle e o checkout será criado automaticamente</li>
+          <li>• <strong>Mercado Pago:</strong> Clique em "Conectar" para autorizar via OAuth</li>
+          <li>• Apenas um provedor de pagamento pode estar ativo por vez</li>
+          <li>• Os pagamentos vão diretamente para sua conta - o Lunari não processa valores</li>
         </ul>
       </div>
     </div>
