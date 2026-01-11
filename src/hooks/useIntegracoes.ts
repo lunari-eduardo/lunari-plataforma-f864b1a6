@@ -14,14 +14,21 @@ interface Integracao {
   dados_extras: Record<string, unknown>;
 }
 
+export type ProvedorPagamentoAtivo = 'mercadopago' | 'infinitepay' | null;
+
 interface UseIntegracoesReturn {
   integracoes: Integracao[];
   loading: boolean;
   connecting: boolean;
   mercadoPagoStatus: 'conectado' | 'desconectado' | 'pendente' | 'erro';
+  infinitePayStatus: 'conectado' | 'desconectado';
+  infinitePayHandle: string | null;
+  provedorAtivo: ProvedorPagamentoAtivo;
   connectMercadoPago: () => void;
   disconnectMercadoPago: () => Promise<void>;
   handleOAuthCallback: (code: string) => Promise<boolean>;
+  saveInfinitePayHandle: (handle: string) => Promise<void>;
+  disconnectInfinitePay: () => Promise<void>;
   refetch: () => Promise<void>;
 }
 
@@ -65,6 +72,7 @@ export function useIntegracoes(): UseIntegracoesReturn {
     fetchIntegracoes();
   }, [fetchIntegracoes]);
 
+  // Mercado Pago status
   const mercadoPagoIntegration = integracoes.find(i => i.provedor === 'mercadopago');
   const mercadoPagoStatus = mercadoPagoIntegration?.status === 'ativo' 
     ? 'conectado' 
@@ -73,6 +81,17 @@ export function useIntegracoes(): UseIntegracoesReturn {
       : mercadoPagoIntegration?.status === 'erro'
         ? 'erro'
         : 'desconectado';
+
+  // InfinitePay status
+  const infinitePayIntegration = integracoes.find(i => i.provedor === 'infinitepay');
+  const infinitePayStatus: 'conectado' | 'desconectado' = 
+    infinitePayIntegration?.status === 'ativo' ? 'conectado' : 'desconectado';
+  const infinitePayHandle = (infinitePayIntegration?.dados_extras?.handle as string) || null;
+
+  // Determine active payment provider
+  const provedorAtivo: ProvedorPagamentoAtivo = 
+    infinitePayStatus === 'conectado' ? 'infinitepay' :
+    mercadoPagoStatus === 'conectado' ? 'mercadopago' : null;
 
   const connectMercadoPago = useCallback(() => {
     if (!user) {
@@ -135,6 +154,13 @@ export function useIntegracoes(): UseIntegracoesReturn {
         throw new Error(data.error || 'Erro ao conectar conta');
       }
 
+      // Deactivate InfinitePay if connecting Mercado Pago
+      await supabase
+        .from('usuarios_integracoes')
+        .update({ status: 'inativo' })
+        .eq('user_id', user.id)
+        .eq('provedor', 'infinitepay');
+
       toast.success('Conta Mercado Pago conectada com sucesso!');
       await fetchIntegracoes();
       return true;
@@ -175,14 +201,88 @@ export function useIntegracoes(): UseIntegracoesReturn {
     }
   }, [user, fetchIntegracoes]);
 
+  // InfinitePay methods
+  const saveInfinitePayHandle = useCallback(async (handle: string) => {
+    if (!user) {
+      toast.error('Você precisa estar logado');
+      return;
+    }
+
+    try {
+      // First, deactivate Mercado Pago if active
+      await supabase
+        .from('usuarios_integracoes')
+        .update({ status: 'inativo' })
+        .eq('user_id', user.id)
+        .eq('provedor', 'mercadopago');
+
+      // Upsert InfinitePay integration
+      const { error } = await supabase
+        .from('usuarios_integracoes')
+        .upsert({
+          user_id: user.id,
+          provedor: 'infinitepay',
+          status: 'ativo',
+          dados_extras: { handle },
+          conectado_em: new Date().toISOString(),
+        }, {
+          onConflict: 'user_id,provedor',
+        });
+
+      if (error) {
+        console.error('[useIntegracoes] Error saving InfinitePay handle:', error);
+        throw error;
+      }
+
+      toast.success('InfinitePay conectado com sucesso!');
+      await fetchIntegracoes();
+
+    } catch (error) {
+      console.error('[useIntegracoes] Save InfinitePay error:', error);
+      toast.error('Erro ao salvar configuração InfinitePay');
+    }
+  }, [user, fetchIntegracoes]);
+
+  const disconnectInfinitePay = useCallback(async () => {
+    if (!user) {
+      toast.error('Você precisa estar logado');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('usuarios_integracoes')
+        .update({ status: 'inativo' })
+        .eq('user_id', user.id)
+        .eq('provedor', 'infinitepay');
+
+      if (error) {
+        console.error('[useIntegracoes] Error disconnecting InfinitePay:', error);
+        throw error;
+      }
+
+      toast.success('InfinitePay desconectado');
+      await fetchIntegracoes();
+
+    } catch (error) {
+      console.error('[useIntegracoes] Disconnect InfinitePay error:', error);
+      toast.error('Erro ao desconectar InfinitePay');
+    }
+  }, [user, fetchIntegracoes]);
+
   return {
     integracoes,
     loading,
     connecting,
     mercadoPagoStatus,
+    infinitePayStatus,
+    infinitePayHandle,
+    provedorAtivo,
     connectMercadoPago,
     disconnectMercadoPago,
     handleOAuthCallback,
+    saveInfinitePayHandle,
+    disconnectInfinitePay,
     refetch: fetchIntegracoes,
   };
 }

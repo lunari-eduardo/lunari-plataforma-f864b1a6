@@ -1,5 +1,6 @@
 export type TipoCobranca = 'pix' | 'link';
 export type StatusCobranca = 'pendente' | 'pago' | 'cancelado' | 'expirado';
+export type ProvedorPagamento = 'mercadopago' | 'infinitepay';
 
 export interface Cobranca {
   id: string;
@@ -10,6 +11,8 @@ export interface Cobranca {
   descricao?: string;
   tipoCobranca: TipoCobranca;
   status: StatusCobranca;
+  provedor: ProvedorPagamento;
+  // Mercado Pago fields
   mpPaymentId?: string;
   mpPreferenceId?: string;
   mpQrCode?: string;
@@ -17,6 +20,12 @@ export interface Cobranca {
   mpPixCopiaCola?: string;
   mpPaymentLink?: string;
   mpExpirationDate?: string;
+  // InfinitePay fields
+  ipCheckoutUrl?: string;
+  ipOrderNsu?: string;
+  ipTransactionNsu?: string;
+  ipReceiptUrl?: string;
+  // Common fields
   dataPagamento?: string;
   createdAt: string;
   updatedAt: string;
@@ -34,13 +43,14 @@ export interface CobrancaResponse {
   success: boolean;
   cobranca?: Cobranca;
   error?: string;
-  // Pix specific
+  provedor?: ProvedorPagamento;
+  // Pix specific (Mercado Pago only)
   qrCode?: string;
   qrCodeBase64?: string;
   pixCopiaCola?: string;
   // Link specific
   paymentLink?: string;
-  // Card specific
+  // Checkout URL (InfinitePay)
   checkoutUrl?: string;
 }
 
