@@ -145,7 +145,16 @@ export function useSupabaseLeads() {
 
         const currentLead = supabaseLeadToFrontend(freshLead);
         const updated = updates(currentLead);
-        finalUpdates = updated;
+        
+        // Se o retorno é parcial (não tem 'id'), usar diretamente como partial update
+        // Isso evita sobrescrever campos que não foram explicitamente retornados
+        if (!('id' in updated) || !updated.id) {
+          // Update parcial - apenas os campos retornados serão atualizados
+          finalUpdates = updated;
+        } else {
+          // Update completo (spread do lead inteiro) - comportamento antigo
+          finalUpdates = updated;
+        }
       } else {
         finalUpdates = updates;
       }

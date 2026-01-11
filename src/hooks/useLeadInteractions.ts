@@ -27,11 +27,12 @@ export function useLeadInteractions() {
       statusNovo
     };
 
+    // IMPORTANTE: Não espalhar currentLead inteiro para evitar race condition
+    // Apenas atualiza interacoes e ultimaInteracao, preservando status atual no banco
     updateLead(leadId, (currentLead) => ({
-      ...currentLead,
       interacoes: [interaction, ...(currentLead.interacoes || [])],
       ultimaInteracao: new Date().toISOString()
-    }));
+    } as Partial<Lead> as Lead));
 
     return interaction;
   }, [updateLead]);

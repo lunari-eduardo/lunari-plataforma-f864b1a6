@@ -44,7 +44,7 @@ export default function LeadFormModal({
   initial,
   onSubmit
 }: LeadFormModalProps) {
-  const { origens: contextOrigens, clientes } = useAppContext();
+  const { origens: contextOrigens } = useAppContext();
   const { statuses, getDefaultOpenKey } = useLeadStatuses();
   const dropdownContext = useDialogDropdownContext();
   
@@ -191,46 +191,6 @@ export default function LeadFormModal({
     }
   }, [formData, validateForm, onSubmit, handleClose, isSubmitting]);
 
-  const handleAssociateClient = useCallback((clienteId: string) => {
-    if (!clienteId) {
-      setFormData(prev => ({ ...prev, clienteId: '' }));
-      return;
-    }
-
-    const cliente = clientes.find(c => c.id === clienteId);
-    if (!cliente) return;
-
-    // Smart origin lookup
-    let origemEncontrada = '';
-    
-    if (cliente.origem) {
-      // Try finding by name first
-      const origemPorNome = origens.find(o => o.nome === cliente.origem);
-      if (origemPorNome) {
-        origemEncontrada = origemPorNome.nome;
-      } else {
-        // Try by ID
-        const origemPorId = origens.find(o => o.id === cliente.origem);
-        if (origemPorId) {
-          origemEncontrada = origemPorId.nome;
-        } else {
-          // Use original string
-          origemEncontrada = cliente.origem;
-        }
-      }
-    }
-    
-    
-    setFormData(prev => ({
-      ...prev,
-      clienteId,
-      nome: cliente.nome,
-      email: cliente.email || '',
-      telefone: cliente.telefone || cliente.whatsapp || '',
-      origem: origemEncontrada
-    }));
-  }, [clientes, origens]);
-
   const handleInputChange = useCallback((field: keyof FormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     // Clear error when user starts typing
@@ -269,27 +229,6 @@ export default function LeadFormModal({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Cliente Existente */}
-          <div className="space-y-2">
-            <Label>Cliente Existente (Opcional)</Label>
-            <Select 
-              value={formData.clienteId} 
-              onValueChange={handleAssociateClient}
-              onOpenChange={(open) => handleSelectOpenChange(open, 'cliente')}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Selecionar cliente existente" />
-              </SelectTrigger>
-              <SelectContent className="max-h-[200px]">
-                {clientes.map(cliente => (
-                  <SelectItem key={cliente.id} value={cliente.id}>
-                    {cliente.nome} - {cliente.email}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
           {/* Nome */}
           <div className="space-y-2">
             <Label htmlFor="nome">Nome *</Label>
