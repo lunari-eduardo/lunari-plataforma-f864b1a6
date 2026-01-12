@@ -180,11 +180,13 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
         throw new Error(result.error || 'Failed to create link');
       }
       
+      // Normalize the response to always have both checkoutUrl and paymentLink
+      const normalizedUrl = result.checkoutUrl || result.paymentLink;
       return {
         ...result,
         provedor,
-        // Normalize checkout URL
-        checkoutUrl: result.checkoutUrl || result.paymentLink,
+        checkoutUrl: normalizedUrl,
+        paymentLink: normalizedUrl,
       };
     } catch (error: any) {
       console.error('Error creating link:', error);
