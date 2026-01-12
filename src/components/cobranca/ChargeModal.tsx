@@ -8,10 +8,11 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { QrCode, Link2, CreditCard, History } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { QrCode, Link2, CreditCard, History, AlertCircle } from 'lucide-react';
 import { formatCurrency } from '@/utils/financialUtils';
 import { useCobranca } from '@/hooks/useCobranca';
-import { TipoCobranca, Cobranca } from '@/types/cobranca';
+import { TipoCobranca, Cobranca, ProvedorPagamento } from '@/types/cobranca';
 import { ChargeMethodCard } from './ChargeMethodCard';
 import { ChargePixSection } from './ChargePixSection';
 import { ChargeLinkSection } from './ChargeLinkSection';
@@ -52,6 +53,8 @@ export function ChargeModal({
     status?: Cobranca['status'];
   } | null>(null);
 
+  const [provedorAtivo, setProvedorAtivo] = useState<ProvedorPagamento | null>(null);
+
   const {
     cobrancas,
     loading,
@@ -59,7 +62,19 @@ export function ChargeModal({
     createPixCharge,
     createLinkCharge,
     cancelCharge,
+    getProvedor,
   } = useCobranca({ clienteId, sessionId });
+
+  // Check active provider when modal opens
+  useEffect(() => {
+    const checkProvedor = async () => {
+      const provedor = await getProvedor();
+      setProvedorAtivo(provedor);
+    };
+    if (isOpen) {
+      checkProvedor();
+    }
+  }, [isOpen, getProvedor]);
 
   // Reset state when modal opens
   useEffect(() => {
@@ -67,11 +82,12 @@ export function ChargeModal({
       setValor(valorSugerido);
       setValorType('total');
       setDescricao('');
-      setSelectedMethod('pix');
+      // Default to 'link' when InfinitePay is active (no isolated Pix)
+      setSelectedMethod(provedorAtivo === 'infinitepay' ? 'link' : 'pix');
       setCurrentCharge(null);
       setActiveTab('cobrar');
     }
-  }, [isOpen, valorSugerido]);
+  }, [isOpen, valorSugerido, provedorAtivo]);
 
   // Update valor when type changes
   useEffect(() => {
@@ -109,34 +125,40 @@ export function ChargeModal({
     });
 
     if (result.success) {
+      // Use checkoutUrl (InfinitePay) or paymentLink (Mercado Pago)
+      const linkUrl = result.checkoutUrl || result.paymentLink;
       setCurrentCharge({
-        paymentLink: result.paymentLink,
+        paymentLink: linkUrl,
+        checkoutUrl: linkUrl,
         status: 'pendente',
       });
     }
   };
 
-
   const handleViewCharge = (cobranca: Cobranca) => {
     setSelectedMethod(cobranca.tipoCobranca);
+    // Prioritize InfinitePay checkout URL over Mercado Pago
+    const linkUrl = cobranca.ipCheckoutUrl || cobranca.mpPaymentLink;
     setCurrentCharge({
       qrCode: cobranca.mpQrCode,
       qrCodeBase64: cobranca.mpQrCodeBase64,
       pixCopiaCola: cobranca.mpPixCopiaCola,
-      paymentLink: cobranca.mpPaymentLink,
-      checkoutUrl: cobranca.mpPaymentLink,
+      paymentLink: linkUrl,
+      checkoutUrl: linkUrl,
       status: cobranca.status,
     });
     setActiveTab('cobrar');
   };
 
-  // DEBUG: Log clienteId para rastrear problema
-  console.log('🔍 ChargeModal props:', { clienteId, sessionId, clienteNome, valorSugerido });
-
-  const methods: { type: TipoCobranca; icon: React.ReactNode; title: string; description: string }[] = [
-    { type: 'pix', icon: <QrCode className="h-5 w-5" />, title: 'Pix', description: 'Imediato' },
-    { type: 'link', icon: <Link2 className="h-5 w-5" />, title: 'Link', description: 'Pix + Cartão' },
-  ];
+  // Build methods based on active provider
+  // InfinitePay only supports link checkout (Pix + Card in one), not isolated Pix
+  const methods: { type: TipoCobranca; icon: React.ReactNode; title: string; description: string }[] = 
+    provedorAtivo === 'infinitepay'
+      ? [{ type: 'link', icon: <Link2 className="h-5 w-5" />, title: 'Link', description: 'Pix + Cartão' }]
+      : [
+          { type: 'pix', icon: <QrCode className="h-5 w-5" />, title: 'Pix', description: 'Imediato' },
+          { type: 'link', icon: <Link2 className="h-5 w-5" />, title: 'Link', description: 'Pix + Cartão' },
+        ];
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -145,6 +167,11 @@ export function ChargeModal({
           <DialogTitle className="flex items-center gap-2">
             <CreditCard className="h-5 w-5 text-primary" />
             Cobrar cliente
+            {provedorAtivo && (
+              <Badge variant="secondary" className="ml-2 text-xs">
+                {provedorAtivo === 'infinitepay' ? 'InfinitePay' : 'Mercado Pago'}
+              </Badge>
+            )}
           </DialogTitle>
           <p className="text-sm text-muted-foreground">{clienteNome}</p>
         </DialogHeader>
