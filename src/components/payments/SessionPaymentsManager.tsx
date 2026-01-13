@@ -129,6 +129,10 @@ export function SessionPaymentsManager({
   };
 
   const getOriginIcon = (origem: string, observacoes?: string) => {
+    // Detectar InfinitePay
+    if (origem === 'infinitepay' || observacoes?.toLowerCase().includes('infinitepay')) {
+      return <Link2 className="h-3 w-3 text-green-600" />;
+    }
     // Detectar Mercado Pago pela origem ou observações
     if (origem === 'mercadopago' || observacoes?.toLowerCase().includes('mercado pago')) {
       if (observacoes?.toLowerCase().includes('pix')) {
@@ -154,6 +158,10 @@ export function SessionPaymentsManager({
   };
 
   const getOriginLabel = (origem: string, observacoes?: string) => {
+    // Detectar InfinitePay
+    if (origem === 'infinitepay' || observacoes?.toLowerCase().includes('infinitepay')) {
+      return 'InfinitePay';
+    }
     // Detectar Mercado Pago pela origem ou observações
     if (origem === 'mercadopago' || observacoes?.toLowerCase().includes('mercado pago')) {
       if (observacoes?.toLowerCase().includes('pix')) {
@@ -425,14 +433,14 @@ export function SessionPaymentsManager({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Charge Modal */}
+      {/* Charge Modal - Passar sessionId TEXTO para garantir vínculo correto */}
       <ChargeModal
         isOpen={showChargeModal}
         onClose={() => setShowChargeModal(false)}
         clienteId={sessionData.clienteId || ''}
         clienteNome={sessionData.nome || 'Cliente'}
         clienteWhatsapp={sessionData.whatsapp}
-        sessionId={sessionData.id}
+        sessionId={sessionData.sessionId || sessionData.id}
         valorSugerido={valorRestante}
       />
     </>

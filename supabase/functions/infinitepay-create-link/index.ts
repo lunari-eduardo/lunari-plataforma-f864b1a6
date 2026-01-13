@@ -51,7 +51,7 @@ serve(async (req) => {
 
     console.log(`[infinitepay-create-link] Creating link for user ${userId}, cliente ${clienteId}, valor ${valor}`);
 
-    // Get user's InfinitePay handle
+    // Get user's InfinitePay handle from usuarios_integracoes (multi-tenant)
     const { data: integracao, error: intError } = await supabase
       .from("usuarios_integracoes")
       .select("dados_extras")
@@ -69,13 +69,32 @@ serve(async (req) => {
       throw new Error("Handle InfinitePay não encontrado");
     }
 
+    // NORMALIZE session_id: buscar o session_id TEXTO correto da tabela
+    let normalizedSessionId: string | null = null;
+    if (sessionId) {
+      const { data: sessaoData } = await supabase
+        .from("clientes_sessoes")
+        .select("session_id")
+        .or(`id.eq.${sessionId},session_id.eq.${sessionId}`)
+        .maybeSingle();
+      
+      if (sessaoData?.session_id) {
+        normalizedSessionId = sessaoData.session_id;
+        console.log(`[infinitepay-create-link] Normalized session_id: ${sessionId} -> ${normalizedSessionId}`);
+      } else {
+        // Se não encontrar, usar o sessionId original
+        normalizedSessionId = sessionId;
+        console.log(`[infinitepay-create-link] Session not found, using original: ${sessionId}`);
+      }
+    }
+
     // Create cobranca record first to get ID for order_nsu
     const { data: cobranca, error: cobError } = await supabase
       .from("cobrancas")
       .insert({
         user_id: userId,
         cliente_id: clienteId,
-        session_id: sessionId || null,
+        session_id: normalizedSessionId, // USAR session_id NORMALIZADO
         valor: valor,
         descricao: descricao || "Pagamento via InfinitePay",
         tipo_cobranca: "link",
@@ -90,12 +109,12 @@ serve(async (req) => {
       throw new Error("Erro ao criar registro de cobrança");
     }
 
-    console.log(`[infinitepay-create-link] Cobranca created: ${cobranca.id}`);
+    console.log(`[infinitepay-create-link] Cobranca created: ${cobranca.id}, session_id: ${normalizedSessionId}`);
 
     // Create InfinitePay checkout link
     const valorEmCentavos = Math.round(valor * 100);
     const webhookUrl = `${SUPABASE_URL}/functions/v1/infinitepay-webhook`;
-    const redirectUrl = "https://www.lunariplataforma.com.br/pagamento-confirmado";
+    // NÃO usar redirect_url - InfinitePay tem sua própria tela de confirmação
 
     const infinitePayPayload = {
       handle: handle,
@@ -108,7 +127,7 @@ serve(async (req) => {
       ],
       order_nsu: cobranca.id, // UUID da cobrança como NSU
       webhook_url: webhookUrl,
-      redirect_url: redirectUrl,
+      // redirect_url REMOVIDO - InfinitePay usa tela própria de confirmação
     };
 
     console.log(`[infinitepay-create-link] Calling InfinitePay API with payload:`, JSON.stringify(infinitePayPayload));
