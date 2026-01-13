@@ -171,15 +171,6 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
 
         const allPayments: SessionPaymentExtended[] = [];
         const addedIds = new Set<string>();
-        const transacoesACriar: Array<{
-          user_id: string;
-          cliente_id: string;
-          session_id: string;
-          valor: number;
-          data_transacao: string;
-          tipo: string;
-          descricao: string;
-        }> = [];
 
         // 4. Converter transações para formato de pagamentos
         if (transacoes && transacoes.length > 0) {
@@ -240,42 +231,37 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
           }
         }
 
-        // 5. Processar cobranças MP pagas - CRIAR TRANSAÇÕES SE FALTAREM
+        // 5. Processar cobranças pagas (MP e InfinitePay) - NÃO criar transações automaticamente
+        // As transações são criadas pelo WEBHOOK, não pelo frontend
+        // Isso evita loops de reload e duplicação
         if (cobrancasPagas && cobrancasPagas.length > 0) {
-          console.log('✅ [useSessionPayments] Cobranças MP pagas:', cobrancasPagas.length);
+          console.log('✅ [useSessionPayments] Cobranças pagas encontradas:', cobrancasPagas.length);
 
           for (const c of cobrancasPagas) {
-            const paymentId = `mp-${c.mp_payment_id || c.id}`;
+            // Gerar ID único baseado no provedor
+            const paymentId = c.provedor === 'infinitepay' 
+              ? `ip-${c.ip_transaction_nsu || c.id}`
+              : `mp-${c.mp_payment_id || c.id}`;
             
             if (addedIds.has(paymentId)) continue;
             
-            // Verificar se já existe uma transação correspondente pela descrição
-            const hasMatchingTransaction = transacoes?.some(t => 
-              t.descricao?.includes(`MP #${c.mp_payment_id}`)
-            );
+            // Verificar se já existe uma transação correspondente
+            const hasMatchingTransaction = transacoes?.some(t => {
+              if (c.provedor === 'infinitepay') {
+                return t.descricao?.includes('InfinitePay');
+              }
+              return t.descricao?.includes(`MP #${c.mp_payment_id}`);
+            });
             
-            // Se NÃO tem transação correspondente, criar uma para sincronizar valor_pago
-            if (!hasMatchingTransaction && clienteId && c.mp_payment_id) {
-              const dataPagamento = c.data_pagamento 
-                ? c.data_pagamento.split('T')[0] 
-                : new Date().toISOString().split('T')[0];
-              
-              transacoesACriar.push({
-                user_id: user.id,
-                cliente_id: clienteId,
-                session_id: textSessionId, // Usar session_id TEXTO
-                valor: c.valor,
-                data_transacao: dataPagamento,
-                tipo: 'pagamento',
-                descricao: `Pagamento via ${c.tipo_cobranca === 'pix' ? 'PIX' : 'LINK'} - MP #${c.mp_payment_id}`
-              });
-              
-              console.log('🔄 [useSessionPayments] Transação a criar para cobrança MP:', c.mp_payment_id);
-            }
-            
+            // Se já tem transação, pular (não duplicar no histórico)
             if (hasMatchingTransaction) continue;
             
             addedIds.add(paymentId);
+
+            // Determinar label do provedor
+            const provedorLabel = c.provedor === 'infinitepay' 
+              ? 'InfinitePay' 
+              : `${c.tipo_cobranca === 'pix' ? 'Pix' : 'Link'} Mercado Pago`;
 
             allPayments.push({
               id: paymentId,
@@ -283,27 +269,15 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
               data: c.data_pagamento ? c.data_pagamento.split('T')[0] : '',
               tipo: 'pago',
               statusPagamento: 'pago',
-              origem: 'mercadopago',
+              origem: c.provedor === 'infinitepay' ? 'infinitepay' : 'mercadopago',
               editavel: false,
-              observacoes: `${c.tipo_cobranca === 'pix' ? 'Pix' : 'Link'} Mercado Pago${c.descricao ? ` - ${c.descricao}` : ''}`
+              observacoes: `${provedorLabel}${c.descricao ? ` - ${c.descricao}` : ''}`
             });
           }
         }
 
-        // 6. CRIAR TRANSAÇÕES FALTANTES para atualizar valor_pago
-        if (transacoesACriar.length > 0) {
-          console.log('📝 [useSessionPayments] Criando', transacoesACriar.length, 'transações MP faltantes...');
-          
-          const { error: insertError } = await supabase
-            .from('clientes_transacoes')
-            .insert(transacoesACriar);
-          
-          if (insertError) {
-            console.error('❌ [useSessionPayments] Erro ao criar transações MP:', insertError);
-          } else {
-            console.log('✅ [useSessionPayments] Transações MP criadas! Trigger irá atualizar valor_pago');
-          }
-        }
+        // NÃO criar transações automaticamente aqui - deixar para o webhook
+        // Remover bloco de transacoesACriar que causava loop de reload
 
         if (allPayments.length > 0) {
           console.log('✅ [useSessionPayments] Total pagamentos unificados:', allPayments.length);
