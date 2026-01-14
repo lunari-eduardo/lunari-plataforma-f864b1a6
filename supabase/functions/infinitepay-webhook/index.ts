@@ -176,26 +176,10 @@ serve(async (req) => {
           console.log(`[infinitepay-webhook] Transaction created for session ${textSessionId}`);
         }
 
-        // Update session valor_pago
-        const { data: sessionData } = await supabase
-          .from("clientes_sessoes")
-          .select("valor_pago")
-          .eq("session_id", textSessionId)
-          .single();
-
-        if (sessionData) {
-          const novoValorPago = (sessionData.valor_pago || 0) + valorPago;
-          
-          await supabase
-            .from("clientes_sessoes")
-            .update({
-              valor_pago: novoValorPago,
-              updated_at: now,
-            })
-            .eq("session_id", textSessionId);
-
-          console.log(`[infinitepay-webhook] Session ${textSessionId} valor_pago updated to ${novoValorPago}`);
-        }
+        // NOTE: NÃO atualizamos valor_pago manualmente aqui!
+        // O trigger 'recompute_session_paid' no banco de dados faz isso automaticamente
+        // quando uma transação é inserida na tabela clientes_transacoes.
+        console.log(`[infinitepay-webhook] Transaction created. Database trigger will recalculate valor_pago automatically.`);
       } else {
         console.warn(`[infinitepay-webhook] Session not found for session_id: ${cobranca.session_id}`);
         
