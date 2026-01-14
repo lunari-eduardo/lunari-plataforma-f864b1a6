@@ -72,19 +72,32 @@ serve(async (req) => {
     // NORMALIZE session_id: buscar o session_id TEXTO correto da tabela
     let normalizedSessionId: string | null = null;
     if (sessionId) {
-      const { data: sessaoData } = await supabase
+      // Primeiro tentar buscar pelo session_id texto (formato workflow-*)
+      const { data: byText } = await supabase
         .from("clientes_sessoes")
         .select("session_id")
-        .or(`id.eq.${sessionId},session_id.eq.${sessionId}`)
+        .eq("session_id", sessionId)
         .maybeSingle();
       
-      if (sessaoData?.session_id) {
-        normalizedSessionId = sessaoData.session_id;
-        console.log(`[infinitepay-create-link] Normalized session_id: ${sessionId} -> ${normalizedSessionId}`);
+      if (byText?.session_id) {
+        normalizedSessionId = byText.session_id;
+        console.log(`[infinitepay-create-link] Found by text session_id: ${normalizedSessionId}`);
       } else {
-        // Se não encontrar, usar o sessionId original
-        normalizedSessionId = sessionId;
-        console.log(`[infinitepay-create-link] Session not found, using original: ${sessionId}`);
+        // Fallback: buscar pelo UUID
+        const { data: byUuid } = await supabase
+          .from("clientes_sessoes")
+          .select("session_id")
+          .eq("id", sessionId)
+          .maybeSingle();
+        
+        if (byUuid?.session_id) {
+          normalizedSessionId = byUuid.session_id;
+          console.log(`[infinitepay-create-link] Found by UUID, text session_id: ${normalizedSessionId}`);
+        } else {
+          // Sessão não existe - NÃO usar sessionId original
+          console.warn(`[infinitepay-create-link] Session not found for: ${sessionId}`);
+          normalizedSessionId = null;
+        }
       }
     }
 

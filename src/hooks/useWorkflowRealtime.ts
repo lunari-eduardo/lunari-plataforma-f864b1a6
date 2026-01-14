@@ -346,6 +346,17 @@ export const useWorkflowRealtime = () => {
                   console.log('📸 Recalculated photo extra - unit:', valorUnitario, 'total:', valorTotal);
                 }
                 
+                // CRÍTICO: Recalcular valor_total IMEDIATAMENTE após mudança de pacote
+                const novoValorTotal = calculateSessionTotal({
+                  valorBase: sanitizedUpdates.valor_base_pacote || 0,
+                  valorFotoExtra: sanitizedUpdates.valor_total_foto_extra || 0,
+                  valorProdutos: calculateManualProductsTotal(produtosManuais),
+                  valorAdicional: Number(currentSession?.valor_adicional) || 0,
+                  desconto: Number(currentSession?.desconto) || 0
+                });
+                sanitizedUpdates.valor_total = novoValorTotal;
+                console.log('💰 [PACOTE] valor_total recalculado imediatamente:', novoValorTotal, 'base:', sanitizedUpdates.valor_base_pacote);
+                
                 console.log('✅ Package change processed successfully with frozen rules');
               } else {
                 console.warn('⚠️ Package not found:', value);
