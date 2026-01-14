@@ -109,15 +109,41 @@ serve(async (req) => {
 
     // If there's a session_id, create transaction and update session
     if (cobranca.session_id) {
-      // BUSCAR sessão por AMBOS os identificadores (id UUID ou session_id texto)
-      const { data: session, error: sessionError } = await supabase
+      console.log(`[infinitepay-webhook] Looking for session with: ${cobranca.session_id}`);
+      
+      // BUSCAR sessão - primeiro tentar por session_id texto (workflow-*), depois por UUID
+      let session = null;
+      
+      // Tentar buscar como session_id texto (formato workflow-*)
+      const { data: byText, error: textError } = await supabase
         .from("clientes_sessoes")
         .select("session_id, cliente_id, id")
-        .or(`id.eq.${cobranca.session_id},session_id.eq.${cobranca.session_id}`)
+        .eq("session_id", cobranca.session_id)
         .maybeSingle();
-
-      if (sessionError) {
-        console.error("[infinitepay-webhook] Error finding session:", sessionError);
+      
+      if (textError) {
+        console.error("[infinitepay-webhook] Error searching by text:", textError);
+      }
+      
+      if (byText) {
+        session = byText;
+        console.log(`[infinitepay-webhook] Found session by text session_id: ${byText.session_id}`);
+      } else {
+        // Fallback: buscar por UUID (caso session_id na cobrança seja UUID)
+        const { data: byUuid, error: uuidError } = await supabase
+          .from("clientes_sessoes")
+          .select("session_id, cliente_id, id")
+          .eq("id", cobranca.session_id)
+          .maybeSingle();
+        
+        if (uuidError) {
+          console.error("[infinitepay-webhook] Error searching by UUID:", uuidError);
+        }
+        
+        if (byUuid) {
+          session = byUuid;
+          console.log(`[infinitepay-webhook] Found session by UUID: ${byUuid.session_id}`);
+        }
       }
 
       if (session) {

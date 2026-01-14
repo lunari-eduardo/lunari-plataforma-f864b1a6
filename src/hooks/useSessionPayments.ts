@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { SessionPaymentExtended } from '@/types/sessionPayments';
 import { SessionPayment } from '@/types/workflow';
 import { formatDateForStorage } from '@/utils/dateUtils';
@@ -108,12 +108,21 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
   const [payments, setPayments] = useState<SessionPaymentExtended[]>(initialPayments);
   const [loadedFromSupabase, setLoadedFromSupabase] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // GUARD: Prevenir fetch múltiplo e loop infinito
+  const fetchInitiatedRef = useRef(false);
+  const lastSessionIdRef = useRef<string | null>(null);
 
   // NOVO: Buscar pagamentos UNIFICADOS do Supabase + Cobranças MP ao iniciar
-  // E CRIAR TRANSAÇÕES AUTOMATICAMENTE para cobranças pagas sem transação
   useEffect(() => {
     const fetchUnifiedPayments = async () => {
-      if (!sessionId || loadedFromSupabase) return;
+      // Guard contra loops: só executar se sessionId mudou E não foi iniciado
+      if (!sessionId) return;
+      if (sessionId === lastSessionIdRef.current && fetchInitiatedRef.current) return;
+      
+      // Marcar como iniciado ANTES de fazer qualquer coisa
+      fetchInitiatedRef.current = true;
+      lastSessionIdRef.current = sessionId;
 
       setIsLoading(true);
 
