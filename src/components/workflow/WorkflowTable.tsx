@@ -1132,6 +1132,10 @@ export function WorkflowTable({
                 {renderCell('remaining', (() => {
                   const restante = calculateRestante(session);
                   const paymentInfo = getPaymentPlanInfo(session.id);
+                  // ✅ FASE 4: Usar status_financeiro computado do banco se disponível
+                  const statusFinanceiro = (session as any).status_financeiro || 
+                    (restante === 0 ? 'pago' : restante < calculateTotal(session) ? 'parcial' : 'pendente');
+                  
                   return <div className="flex items-center gap-1">
                       <span className="font-bold text-orange-600 text-xs">{formatCurrency(restante)}</span>
                       {restante > 0 && paymentInfo.hasScheduled && <div className="flex items-center gap-1">
@@ -1142,7 +1146,7 @@ export function WorkflowTable({
                               <CreditCard className="h-3 w-3 text-blue-500" />
                             </div>}
                         </div>}
-                      {restante === 0 && <div title="Totalmente pago">
+                      {statusFinanceiro === 'pago' && <div title="Totalmente pago">
                           <CheckCircle className="h-3 w-3 text-green-500" />
                         </div>}
                     </div>;

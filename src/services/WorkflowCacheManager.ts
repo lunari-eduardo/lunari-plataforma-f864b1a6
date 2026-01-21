@@ -252,7 +252,7 @@ class WorkflowCacheManager {
   }
 
   /**
-   * Busca sessões do Supabase com filtros otimizados
+   * ✅ FASE 1: Busca sessões do Supabase com BATCH query para transações
    */
   private async fetchFromSupabase(year: number, month: number): Promise<WorkflowSession[]> {
     const { data: user } = await supabase.auth.getUser();
@@ -291,8 +291,78 @@ class WorkflowCacheManager {
 
     console.log(`✅ WorkflowCacheManager: Fetched ${data?.length || 0} sessions for ${year}-${month}`);
     
-    // ✅ FASE 2: Cast explícito para preservar dados do JOIN (incluindo clientes)
-    return (data || []) as WorkflowSession[];
+    // ✅ FASE 1: BATCH QUERY - Buscar todas as transações de uma vez
+    const sessionIds = (data || []).map(s => s.session_id);
+    
+    const { data: allTransacoes } = sessionIds.length > 0 
+      ? await supabase
+          .from('clientes_transacoes')
+          .select('*')
+          .in('session_id', sessionIds)
+          .eq('user_id', user.user.id)
+          .in('tipo', ['pagamento', 'ajuste'])
+          .order('data_transacao', { ascending: false })
+      : { data: [] };
+
+    console.log(`✅ BATCH: Loaded ${allTransacoes?.length || 0} transactions for ${sessionIds.length} sessions`);
+
+    // Agrupar transações por session_id em memória
+    const transacoesPorSessao = (allTransacoes || []).reduce((acc, t) => {
+      if (!acc[t.session_id]) acc[t.session_id] = [];
+      acc[t.session_id].push(t);
+      return acc;
+    }, {} as Record<string, any[]>);
+
+    // Mapear sessões com pagamentos anexados
+    const sessionsWithPayments = (data || []).map(session => {
+      const transacoesData = transacoesPorSessao[session.session_id] || [];
+      
+      const pagamentos = transacoesData.map((t: any) => {
+        const match = t.descricao?.match(/\[ID:([^\]]+)\]/);
+        const paymentId = match ? match[1] : t.id;
+        
+        const isPaid = t.tipo === 'pagamento';
+        const isPending = t.tipo === 'ajuste';
+        
+        const parcelaMatch = t.descricao?.match(/Parcela (\d+)\/(\d+)/);
+        const numeroParcela = parcelaMatch ? parseInt(parcelaMatch[1]) : undefined;
+        const totalParcelas = parcelaMatch ? parseInt(parcelaMatch[2]) : undefined;
+        
+        let tipo: 'pago' | 'agendado' | 'parcelado' = 'pago';
+        if (isPending) {
+          tipo = totalParcelas ? 'parcelado' : 'agendado';
+        }
+        
+        let statusPagamento: 'pago' | 'pendente' | 'atrasado' = 'pago';
+        if (isPending) {
+          statusPagamento = 'pendente';
+          if (t.data_vencimento && new Date(t.data_vencimento) < new Date()) {
+            statusPagamento = 'atrasado';
+          }
+        }
+        
+        return {
+          id: paymentId,
+          valor: Number(t.valor) || 0,
+          data: isPaid ? t.data_transacao : '',
+          dataVencimento: t.data_vencimento || undefined,
+          observacoes: t.descricao?.replace(/\s*\[ID:[^\]]+\]/, '') || '',
+          tipo,
+          statusPagamento,
+          numeroParcela,
+          totalParcelas,
+          origem: 'manual' as const,
+          editavel: true
+        };
+      });
+      
+      return {
+        ...session,
+        pagamentos
+      };
+    });
+    
+    return sessionsWithPayments as WorkflowSession[];
   }
 
   /**
