@@ -71,7 +71,9 @@ export function WorkflowCard({
           session={session}
           packageOptions={packageOptions}
           productOptions={productOptions}
+          statusOptions={statusOptions}
           onFieldUpdate={onFieldUpdate}
+          onStatusChange={onStatusChange}
         />
       )}
     </div>

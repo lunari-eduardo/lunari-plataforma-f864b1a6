@@ -190,7 +190,7 @@ export function WorkflowCardCollapsed({
 
   return (
     <div className="px-4 py-3 md:px-6 md:py-4">
-      {/* Grid fixo para alinhamento consistente entre cards - clicável para expandir */}
+      {/* Grid DESKTOP (≥1024px) - Layout completo */}
       <div 
         className="hidden lg:grid grid-cols-[40px_50px_180px_1fr_140px_130px_90px_90px_120px] gap-3 items-start cursor-pointer"
         onClick={onToggleExpand}
@@ -327,9 +327,138 @@ export function WorkflowCardCollapsed({
         </div>
       </div>
 
-      {/* Layout mobile - flex wrap - clicável para expandir */}
+      {/* Grid TABLET (768-1023px) - Layout compacto mas completo */}
       <div 
-        className="flex lg:hidden items-center gap-2 flex-wrap cursor-pointer"
+        className="hidden md:grid lg:hidden grid-cols-[36px_44px_140px_1fr_110px_100px_60px_70px_100px] gap-2 items-start cursor-pointer"
+        onClick={onToggleExpand}
+      >
+        
+        {/* Zona 1: Expand */}
+        <div className="h-7 w-7 flex items-center justify-center shrink-0 hover:bg-primary/10 rounded">
+          {isExpanded ? (
+            <ChevronUp className="h-3.5 w-3.5 text-primary" />
+          ) : (
+            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+          )}
+        </div>
+
+        {/* Zona 2: Data */}
+        <div className="text-[11px] font-medium text-foreground pt-1">
+          {formatToDayMonth(session.data)}
+        </div>
+
+        {/* Zona 3: Nome + WhatsApp */}
+        <div className="flex items-start gap-1 min-w-0 pt-1" onClick={(e) => e.stopPropagation()}>
+          {session.clienteId ? (
+            <Link 
+              to={`/app/clientes/${session.clienteId}`} 
+              className="text-[11px] font-medium text-blue-600 hover:text-blue-800 hover:underline break-words leading-tight"
+            >
+              {session.nome}
+            </Link>
+          ) : (
+            <span className="text-[11px] font-medium text-foreground break-words leading-tight">{session.nome}</span>
+          )}
+          {session.whatsapp && (
+            <a
+              href={`https://wa.me/${session.whatsapp.replace(/\D/g, '')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0"
+            >
+              <MessageCircle className="h-3 w-3 text-green-600" />
+            </a>
+          )}
+        </div>
+
+        {/* Zona 4: Descrição */}
+        <div className="flex flex-col gap-0.5" onClick={(e) => e.stopPropagation()}>
+          <Input
+            value={descriptionValue}
+            onChange={(e) => setDescriptionValue(e.target.value)}
+            onBlur={handleDescriptionBlur}
+            placeholder="Descrição..."
+            className="h-6 text-[11px] border border-border/50 rounded bg-background/50 focus:bg-background"
+          />
+        </div>
+
+        {/* Zona 5: Pacote */}
+        <div className="flex flex-col gap-0.5" onClick={(e) => e.stopPropagation()}>
+          <WorkflowPackageCombobox
+            key={`package-tablet-${session.id}-${session.pacote}`}
+            value={session.pacote}
+            displayName={displayPackageName}
+            onValueChange={(packageData) => {
+              onFieldUpdate(session.id, 'pacote', packageData.id || packageData.nome);
+            }}
+          />
+        </div>
+
+        {/* Zona 6: Status */}
+        <div className="flex flex-col gap-0.5" onClick={(e) => e.stopPropagation()}>
+          <Select
+            value={session.status || ''}
+            onValueChange={handleStatusChange}
+          >
+            <SelectTrigger 
+              className="h-6 text-[11px] border-0 bg-transparent p-0 focus:ring-0 [&>svg]:hidden justify-center"
+            >
+              <SelectValue placeholder="Status">
+                {session.status ? (
+                  <ColoredStatusBadge status={session.status} showBackground={true} />
+                ) : (
+                  <span className="text-muted-foreground italic text-[10px]">--</span>
+                )}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent className="bg-popover border shadow-lg z-50">
+              <SelectItem value="__CLEAR__" className="text-muted-foreground italic text-xs">
+                Limpar
+              </SelectItem>
+              {statusOptions.map(status => (
+                <SelectItem key={status} value={status}>
+                  <ColoredStatusBadge status={status} showBackground={true} />
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Zona 7: Fotos Extras */}
+        <div className="flex justify-center" onClick={(e) => e.stopPropagation()}>
+          <Input 
+            type="number" 
+            value={session.qtdFotosExtra || ''} 
+            onChange={(e) => onFieldUpdate(session.id, 'qtdFotosExtra', parseInt(e.target.value) || 0)}
+            className="h-6 text-[11px] p-1 w-10 text-center border border-border/50 rounded bg-background/50 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            placeholder="0"
+          />
+        </div>
+
+        {/* Zona 8: Produtos */}
+        <div className="flex justify-center" onClick={(e) => e.stopPropagation()}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setModalAberto(true)}
+            className="h-6 px-2 text-[10px] border rounded bg-background hover:bg-muted"
+          >
+            <Package className={`h-3 w-3 mr-0.5 ${hasProdutos ? 'text-blue-600' : 'text-muted-foreground'}`} />
+            {hasProdutos ? session.produtosList.length : 0}
+          </Button>
+        </div>
+
+        {/* Zona 9: PENDENTE */}
+        <div className="flex flex-col items-end">
+          <span className={`text-[11px] font-bold ${pendente > 0 ? 'text-red-600' : 'text-green-600'}`}>
+            {formatCurrency(pendente)}
+          </span>
+        </div>
+      </div>
+
+      {/* Layout MOBILE (<768px) - Simplificado */}
+      <div 
+        className="flex md:hidden items-center gap-2 flex-wrap cursor-pointer"
         onClick={onToggleExpand}
       >
         {/* Expand indicator */}
