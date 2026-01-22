@@ -3,8 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { WorkflowPaymentsModal } from "./WorkflowPaymentsModal";
-import { CreditCard, Package } from "lucide-react";
+import { CreditCard, Plus } from "lucide-react";
 import type { SessionData } from "@/types/workflow";
+import { useAppContext } from "@/contexts/AppContext";
 
 interface WorkflowCardExpandedProps {
   session: SessionData;
@@ -19,7 +20,9 @@ export function WorkflowCardExpanded({
   productOptions,
   onFieldUpdate,
 }: WorkflowCardExpandedProps) {
+  const { addPayment } = useAppContext();
   const [workflowPaymentsOpen, setWorkflowPaymentsOpen] = useState(false);
+  const [paymentInput, setPaymentInput] = useState('');
   
   // Estados locais para edição inline
   const [descontoValue, setDescontoValue] = useState(session.desconto || '');
@@ -65,7 +68,6 @@ export function WorkflowCardExpanded({
 
   // Handlers para campos editáveis
   const handleDescontoBlur = useCallback(() => {
-    // Formatar como moeda ao sair
     const numValue = parseCurrency(descontoValue);
     const formatted = formatCurrency(numValue);
     setDescontoValue(formatted);
@@ -85,6 +87,26 @@ export function WorkflowCardExpanded({
     }
   }, [obsValue, session.observacoes, session.id, onFieldUpdate]);
 
+  // Handler pagamento rápido
+  const handlePaymentAdd = useCallback(async () => {
+    if (paymentInput && !isNaN(parseFloat(paymentInput))) {
+      const paymentValue = parseFloat(paymentInput);
+      try {
+        await addPayment(session.id, paymentValue);
+        setPaymentInput('');
+      } catch (error) {
+        console.error('❌ Erro ao adicionar pagamento:', error);
+      }
+    }
+  }, [paymentInput, addPayment, session.id]);
+
+  const handlePaymentKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handlePaymentAdd();
+    }
+  }, [handlePaymentAdd]);
+
   // Dados para exibição
   const valorPacoteDisplay = formatCurrency(parseCurrency(String(session.valorPacote || '0')));
   const valorFotoExtraUnit = formatCurrency(parseCurrency(String(session.valorFotoExtra || '0')));
@@ -100,17 +122,17 @@ export function WorkflowCardExpanded({
   const pacoteNome = session.regras_congeladas?.pacote?.nome || session.pacote || 'Não definido';
 
   return (
-    <div className="border-t border-border/30 bg-muted/20 px-4 py-4">
-      {/* Grid de 3 blocos */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+    <div className="border-t border-border/30 bg-muted/10 px-4 py-5 md:px-6">
+      {/* Grid de 3 blocos com divisórias */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         
         {/* BLOCO 1 - Dados da Sessão */}
-        <div className="space-y-3">
+        <div className="space-y-3 md:border-r md:border-border/20 md:pr-6">
           <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
             Dados da Sessão
           </h4>
           
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             <div className="flex justify-between items-center">
               <span className="text-xs text-muted-foreground">Pacote:</span>
               <span className="text-sm font-medium text-foreground">{pacoteNome}</span>
@@ -140,12 +162,12 @@ export function WorkflowCardExpanded({
         </div>
 
         {/* BLOCO 2 - Adicionais */}
-        <div className="space-y-3">
+        <div className="space-y-3 md:border-r md:border-border/20 md:pr-6">
           <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
             Adicionais
           </h4>
           
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             <div className="flex justify-between items-center">
               <span className="text-xs text-muted-foreground">Total fotos extras:</span>
               <span className="text-sm font-medium text-foreground">{valorFotoExtraTotal}</span>
@@ -167,7 +189,7 @@ export function WorkflowCardExpanded({
               />
             </div>
             
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1.5">
               <span className="text-xs text-muted-foreground">Obs:</span>
               <Textarea
                 value={obsValue}
@@ -181,45 +203,66 @@ export function WorkflowCardExpanded({
         </div>
 
         {/* BLOCO 3 - Ações */}
-        <div className="space-y-3">
-          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-            Ações
-          </h4>
-          
-          <div className="flex flex-col gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setWorkflowPaymentsOpen(true)}
-              className="w-full justify-start gap-2 h-9"
-            >
-              <CreditCard className="h-4 w-4 text-primary" />
-              <span>Gerenciar pagamentos</span>
-            </Button>
-          </div>
+        <div className="space-y-3 flex flex-col items-center justify-center py-4">
+          <CreditCard className="h-10 w-10 text-muted-foreground/40" />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setWorkflowPaymentsOpen(true)}
+            className="gap-2"
+          >
+            <CreditCard className="h-4 w-4" />
+            Gerenciar pagamentos
+          </Button>
         </div>
       </div>
 
-      {/* Footer Financeiro */}
+      {/* Footer Financeiro com input de pagamento rápido */}
       <div className="mt-6 pt-4 border-t border-border/30">
         <div className="flex flex-wrap items-center justify-between gap-4">
+          {/* Resumo financeiro à esquerda */}
           <div className="flex items-center gap-6 md:gap-8">
             <div className="flex flex-col">
-              <span className="text-xs text-muted-foreground">TOTAL</span>
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Total</span>
               <span className="text-lg font-bold text-blue-700">{formatCurrency(total)}</span>
             </div>
             
             <div className="flex flex-col">
-              <span className="text-xs text-muted-foreground">PAGO</span>
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Pago</span>
               <span className="text-lg font-bold text-green-600">{formatCurrency(valorPago)}</span>
             </div>
             
             <div className="flex flex-col">
-              <span className="text-xs text-muted-foreground">PENDENTE</span>
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Pendente</span>
               <span className={`text-lg font-bold ${pendente > 0 ? 'text-red-600' : 'text-green-600'}`}>
                 {formatCurrency(pendente)}
               </span>
             </div>
+          </div>
+          
+          {/* Input pagamento rápido à direita */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground hidden md:inline">Adic. Pag. Rápido</span>
+            <div className="flex items-center border border-border/50 rounded-md bg-background/50">
+              <span className="text-sm text-muted-foreground pl-2">R$</span>
+              <Input
+                type="number"
+                placeholder="0,00"
+                value={paymentInput}
+                onChange={(e) => setPaymentInput(e.target.value)}
+                onKeyDown={handlePaymentKeyDown}
+                className="h-8 text-sm w-20 border-0 focus-visible:ring-0 bg-transparent [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                autoComplete="off"
+              />
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePaymentAdd}
+              className="h-8 w-8 p-0 hover:bg-green-50 hover:border-green-300 hover:text-green-600"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </div>

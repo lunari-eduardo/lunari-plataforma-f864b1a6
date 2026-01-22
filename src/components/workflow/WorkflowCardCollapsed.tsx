@@ -189,11 +189,11 @@ export function WorkflowCardCollapsed({
   const displayPackageName = session.regras_congeladas?.pacote?.nome || session.pacote || '';
 
   return (
-    <div className="p-3 md:p-4">
-      {/* Layout horizontal em linha única */}
-      <div className="flex items-center gap-2 md:gap-3 flex-wrap lg:flex-nowrap">
+    <div className="px-4 py-3 md:px-6 md:py-4">
+      {/* Grid fixo para alinhamento consistente entre cards */}
+      <div className="hidden lg:grid grid-cols-[40px_50px_160px_1fr_140px_130px_70px_80px_120px] gap-3 items-center">
         
-        {/* Botão Expand */}
+        {/* Zona 1: Expand */}
         <Button
           variant="ghost"
           size="sm"
@@ -207,13 +207,13 @@ export function WorkflowCardCollapsed({
           )}
         </Button>
 
-        {/* Data */}
-        <div className="shrink-0 w-12 md:w-14 text-sm font-medium text-foreground">
+        {/* Zona 2: Data */}
+        <div className="text-sm font-medium text-foreground">
           {formatToDayMonth(session.data)}
         </div>
 
-        {/* Nome + WhatsApp */}
-        <div className="flex items-center gap-1 min-w-[100px] max-w-[160px] md:max-w-[200px]">
+        {/* Zona 3: Nome + WhatsApp */}
+        <div className="flex items-center gap-1.5 min-w-0">
           {session.clienteId ? (
             <Link 
               to={`/app/clientes/${session.clienteId}`} 
@@ -236,56 +236,56 @@ export function WorkflowCardCollapsed({
           )}
         </div>
 
-        {/* Descrição - editável inline */}
+        {/* Zona 4: Descrição - editável inline */}
         <Input
           value={descriptionValue}
           onChange={(e) => setDescriptionValue(e.target.value)}
           onBlur={handleDescriptionBlur}
           placeholder="Descrição..."
-          className="h-7 text-xs flex-1 min-w-[80px] max-w-[150px] md:max-w-[200px] border border-border/50 rounded bg-background/50 focus:bg-background"
+          className="h-7 text-xs border border-border/50 rounded bg-background/50 focus:bg-background"
         />
 
-        {/* Pacote - Dropdown */}
-        <div className="shrink-0 w-[120px] md:w-[150px]">
-          <WorkflowPackageCombobox
-            key={`package-${session.id}-${session.pacote}`}
-            value={session.pacote}
-            displayName={displayPackageName}
-            onValueChange={(packageData) => {
-              onFieldUpdate(session.id, 'pacote', packageData.id || packageData.nome);
-            }}
-          />
-        </div>
+        {/* Zona 5: Pacote - Dropdown */}
+        <WorkflowPackageCombobox
+          key={`package-${session.id}-${session.pacote}`}
+          value={session.pacote}
+          displayName={displayPackageName}
+          onValueChange={(packageData) => {
+            onFieldUpdate(session.id, 'pacote', packageData.id || packageData.nome);
+          }}
+        />
 
-        {/* Status - Dropdown */}
-        <div className="shrink-0 w-[110px] md:w-[130px]">
-          <Select
-            value={session.status || ''}
-            onValueChange={handleStatusChange}
+        {/* Zona 6: Status como pílula - Dropdown */}
+        <Select
+          value={session.status || ''}
+          onValueChange={handleStatusChange}
+        >
+          <SelectTrigger 
+            className="h-8 text-xs border-0 bg-transparent p-0 focus:ring-0 [&>svg]:hidden justify-center"
           >
-            <SelectTrigger className="h-7 text-xs border border-border/50 rounded bg-background/50">
-              <SelectValue placeholder="Status">
-                {session.status && (
-                  <ColoredStatusBadge status={session.status} />
-                )}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent className="bg-popover border shadow-lg z-50">
-              <SelectItem value="__CLEAR__" className="text-muted-foreground italic">
-                Limpar status
+            <SelectValue placeholder="Status">
+              {session.status ? (
+                <ColoredStatusBadge status={session.status} showBackground={true} />
+              ) : (
+                <span className="text-muted-foreground italic text-xs">Sem status</span>
+              )}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent className="bg-popover border shadow-lg z-50">
+            <SelectItem value="__CLEAR__" className="text-muted-foreground italic">
+              Limpar status
+            </SelectItem>
+            {statusOptions.map(status => (
+              <SelectItem key={status} value={status}>
+                <ColoredStatusBadge status={status} showBackground={true} />
               </SelectItem>
-              {statusOptions.map(status => (
-                <SelectItem key={status} value={status}>
-                  <ColoredStatusBadge status={status} />
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+            ))}
+          </SelectContent>
+        </Select>
 
-        {/* Fotos Extras - input numérico */}
-        <div className="shrink-0 flex items-center gap-1">
-          <span className="text-xs text-muted-foreground hidden md:inline">Fotos:</span>
+        {/* Zona 7: Fotos Extras */}
+        <div className="flex items-center justify-center gap-1">
+          <span className="text-xs text-muted-foreground">📷</span>
           <ExtraPhotoQtyInput
             sessionId={session.id}
             initialValue={session.qtdFotosExtra || 0}
@@ -293,60 +293,80 @@ export function WorkflowCardCollapsed({
           />
         </div>
 
-        {/* Produtos - botão com indicador */}
+        {/* Zona 8: Produtos */}
         <Button
-          variant="ghost"
+          variant="outline"
           size="sm"
           onClick={() => setModalAberto(true)}
-          className="h-7 px-2 text-xs shrink-0 hover:bg-primary/10"
+          className="h-7 px-3 text-xs border rounded-md bg-background hover:bg-muted"
         >
           <Package className={`h-3.5 w-3.5 mr-1 ${hasProdutos ? 'text-blue-600' : 'text-muted-foreground'}`} />
-          {hasProdutos ? (
-            <span className="text-blue-700 font-medium">{session.produtosList.length}</span>
-          ) : (
-            <Plus className="h-3 w-3 text-muted-foreground" />
-          )}
-          {todosCompletos && <div className="w-2 h-2 bg-green-500 rounded-full ml-1" />}
-          {parcialmenteCompletos && <div className="w-2 h-2 bg-yellow-500 rounded-full ml-1" />}
+          {hasProdutos ? session.produtosList.length : 0}
+          {todosCompletos && <span className="ml-1 w-2 h-2 bg-green-500 rounded-full" />}
+          {parcialmenteCompletos && <span className="ml-1 w-2 h-2 bg-yellow-500 rounded-full" />}
         </Button>
 
-        {/* PENDENTE - valor em vermelho */}
-        <div className="shrink-0 flex items-center gap-1">
-          <span className="text-xs text-muted-foreground hidden md:inline">Pendente:</span>
+        {/* Zona 9: PENDENTE */}
+        <div className="flex flex-col items-end">
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Pendente</span>
           <span className={`text-sm font-bold ${pendente > 0 ? 'text-red-600' : 'text-green-600'}`}>
             {formatCurrency(pendente)}
           </span>
         </div>
+      </div>
 
-        {/* Input pagamento rápido */}
-        <div className="shrink-0 flex items-center gap-1">
-          <Input
-            type="number"
-            placeholder="0,00"
-            value={paymentInput}
-            onChange={(e) => setPaymentInput(e.target.value)}
-            onKeyDown={handlePaymentKeyDown}
-            className="h-7 text-xs p-1 w-16 md:w-20 border border-border/50 rounded bg-background/50 focus:bg-background [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-            autoComplete="off"
-          />
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handlePaymentAdd}
-            className="h-7 w-7 p-0 shrink-0 hover:bg-green-100 text-green-600"
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setWorkflowPaymentsOpen(true)}
-            className="h-7 w-7 p-0 shrink-0 hover:bg-primary/10 text-primary"
-            title="Gerenciar pagamentos"
-          >
-            <CreditCard className="h-4 w-4" />
-          </Button>
+      {/* Layout mobile - flex wrap */}
+      <div className="flex lg:hidden items-center gap-2 flex-wrap">
+        {/* Expand button */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onToggleExpand}
+          className="h-8 w-8 p-0 shrink-0 hover:bg-primary/10"
+        >
+          {isExpanded ? (
+            <ChevronUp className="h-4 w-4 text-primary" />
+          ) : (
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          )}
+        </Button>
+
+        {/* Data */}
+        <span className="text-sm font-medium text-foreground w-12">
+          {formatToDayMonth(session.data)}
+        </span>
+
+        {/* Nome + WhatsApp */}
+        <div className="flex items-center gap-1 flex-1 min-w-0">
+          {session.clienteId ? (
+            <Link 
+              to={`/app/clientes/${session.clienteId}`} 
+              className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline truncate"
+            >
+              {session.nome}
+            </Link>
+          ) : (
+            <span className="text-sm font-medium text-foreground truncate">{session.nome}</span>
+          )}
+          {session.whatsapp && (
+            <a
+              href={`https://wa.me/${session.whatsapp.replace(/\D/g, '')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0"
+            >
+              <MessageCircle className="h-3.5 w-3.5 text-green-600" />
+            </a>
+          )}
         </div>
+
+        {/* Status como pílula */}
+        <ColoredStatusBadge status={session.status || ''} showBackground={true} />
+
+        {/* Pendente */}
+        <span className={`text-sm font-bold ${pendente > 0 ? 'text-red-600' : 'text-green-600'}`}>
+          {formatCurrency(pendente)}
+        </span>
       </div>
 
       {/* Modal de Gerenciamento de Produtos */}
