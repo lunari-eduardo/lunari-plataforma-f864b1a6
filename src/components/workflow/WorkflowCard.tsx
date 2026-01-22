@@ -30,9 +30,10 @@ export function WorkflowCard({
   return (
     <div
       data-card-id={session.id}
+      onClick={onToggleExpand}
       className={cn(
         // Base styles - mais arredondado e premium
-        "rounded-2xl transition-all duration-200 ease-in-out",
+        "rounded-2xl transition-all duration-200 ease-in-out cursor-pointer",
         // Background sólido
         "bg-[#fdfdfd]",
         // Sombra mais presente
