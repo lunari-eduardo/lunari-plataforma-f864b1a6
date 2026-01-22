@@ -191,45 +191,42 @@ export function WorkflowCardCollapsed({
   return (
     <div className="px-4 py-3 md:px-6 md:py-4">
       {/* Grid fixo para alinhamento consistente entre cards */}
-      <div className="hidden lg:grid grid-cols-[40px_50px_160px_1fr_140px_130px_70px_80px_120px] gap-3 items-center">
+      <div className="hidden lg:grid grid-cols-[40px_50px_180px_1fr_140px_130px_90px_90px_120px] gap-3 items-start">
         
         {/* Zona 1: Expand */}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onToggleExpand}
-          className="h-8 w-8 p-0 shrink-0 hover:bg-primary/10"
+        <div 
+          className="h-8 w-8 flex items-center justify-center shrink-0 hover:bg-primary/10 rounded"
         >
           {isExpanded ? (
             <ChevronUp className="h-4 w-4 text-primary" />
           ) : (
             <ChevronDown className="h-4 w-4 text-muted-foreground" />
           )}
-        </Button>
+        </div>
 
         {/* Zona 2: Data */}
-        <div className="text-sm font-medium text-foreground">
+        <div className="text-sm font-medium text-foreground pt-1">
           {formatToDayMonth(session.data)}
         </div>
 
         {/* Zona 3: Nome + WhatsApp */}
-        <div className="flex items-center gap-1.5 min-w-0">
+        <div className="flex items-start gap-1.5 min-w-0 pt-1" onClick={(e) => e.stopPropagation()}>
           {session.clienteId ? (
             <Link 
               to={`/app/clientes/${session.clienteId}`} 
-              className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline truncate"
+              className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline break-words leading-tight"
             >
               {session.nome}
             </Link>
           ) : (
-            <span className="text-sm font-medium text-foreground truncate">{session.nome}</span>
+            <span className="text-sm font-medium text-foreground break-words leading-tight">{session.nome}</span>
           )}
           {session.whatsapp && (
             <a
               href={`https://wa.me/${session.whatsapp.replace(/\D/g, '')}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="shrink-0"
+              className="shrink-0 mt-0.5"
             >
               <MessageCircle className="h-3.5 w-3.5 text-green-600 hover:text-green-700" />
             </a>
@@ -237,55 +234,64 @@ export function WorkflowCardCollapsed({
         </div>
 
         {/* Zona 4: Descrição - editável inline */}
-        <Input
-          value={descriptionValue}
-          onChange={(e) => setDescriptionValue(e.target.value)}
-          onBlur={handleDescriptionBlur}
-          placeholder="Descrição..."
-          className="h-7 text-xs border border-border/50 rounded bg-background/50 focus:bg-background"
-        />
+        <div className="flex flex-col gap-0.5" onClick={(e) => e.stopPropagation()}>
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Descrição</span>
+          <Input
+            value={descriptionValue}
+            onChange={(e) => setDescriptionValue(e.target.value)}
+            onBlur={handleDescriptionBlur}
+            placeholder="Descrição..."
+            className="h-7 text-xs border border-border/50 rounded bg-background/50 focus:bg-background"
+          />
+        </div>
 
         {/* Zona 5: Pacote - Dropdown */}
-        <WorkflowPackageCombobox
-          key={`package-${session.id}-${session.pacote}`}
-          value={session.pacote}
-          displayName={displayPackageName}
-          onValueChange={(packageData) => {
-            onFieldUpdate(session.id, 'pacote', packageData.id || packageData.nome);
-          }}
-        />
+        <div className="flex flex-col gap-0.5" onClick={(e) => e.stopPropagation()}>
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Pacote</span>
+          <WorkflowPackageCombobox
+            key={`package-${session.id}-${session.pacote}`}
+            value={session.pacote}
+            displayName={displayPackageName}
+            onValueChange={(packageData) => {
+              onFieldUpdate(session.id, 'pacote', packageData.id || packageData.nome);
+            }}
+          />
+        </div>
 
         {/* Zona 6: Status como pílula - Dropdown */}
-        <Select
-          value={session.status || ''}
-          onValueChange={handleStatusChange}
-        >
-          <SelectTrigger 
-            className="h-8 text-xs border-0 bg-transparent p-0 focus:ring-0 [&>svg]:hidden justify-center"
+        <div className="flex flex-col gap-0.5" onClick={(e) => e.stopPropagation()}>
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Status</span>
+          <Select
+            value={session.status || ''}
+            onValueChange={handleStatusChange}
           >
-            <SelectValue placeholder="Status">
-              {session.status ? (
-                <ColoredStatusBadge status={session.status} showBackground={true} />
-              ) : (
-                <span className="text-muted-foreground italic text-xs">Sem status</span>
-              )}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent className="bg-popover border shadow-lg z-50">
-            <SelectItem value="__CLEAR__" className="text-muted-foreground italic">
-              Limpar status
-            </SelectItem>
-            {statusOptions.map(status => (
-              <SelectItem key={status} value={status}>
-                <ColoredStatusBadge status={status} showBackground={true} />
+            <SelectTrigger 
+              className="h-8 text-xs border-0 bg-transparent p-0 focus:ring-0 [&>svg]:hidden justify-center"
+            >
+              <SelectValue placeholder="Status">
+                {session.status ? (
+                  <ColoredStatusBadge status={session.status} showBackground={true} />
+                ) : (
+                  <span className="text-muted-foreground italic text-xs">Sem status</span>
+                )}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent className="bg-popover border shadow-lg z-50">
+              <SelectItem value="__CLEAR__" className="text-muted-foreground italic">
+                Limpar status
               </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+              {statusOptions.map(status => (
+                <SelectItem key={status} value={status}>
+                  <ColoredStatusBadge status={status} showBackground={true} />
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
         {/* Zona 7: Fotos Extras */}
-        <div className="flex items-center justify-center gap-1">
-          <span className="text-xs text-muted-foreground">📷</span>
+        <div className="flex flex-col items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Fotos extras</span>
           <ExtraPhotoQtyInput
             sessionId={session.id}
             initialValue={session.qtdFotosExtra || 0}
@@ -294,17 +300,20 @@ export function WorkflowCardCollapsed({
         </div>
 
         {/* Zona 8: Produtos */}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setModalAberto(true)}
-          className="h-7 px-3 text-xs border rounded-md bg-background hover:bg-muted"
-        >
-          <Package className={`h-3.5 w-3.5 mr-1 ${hasProdutos ? 'text-blue-600' : 'text-muted-foreground'}`} />
-          {hasProdutos ? session.produtosList.length : 0}
-          {todosCompletos && <span className="ml-1 w-2 h-2 bg-green-500 rounded-full" />}
-          {parcialmenteCompletos && <span className="ml-1 w-2 h-2 bg-yellow-500 rounded-full" />}
-        </Button>
+        <div className="flex flex-col items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Produtos</span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setModalAberto(true)}
+            className="h-7 px-3 text-xs border rounded-md bg-background hover:bg-muted"
+          >
+            <Package className={`h-3.5 w-3.5 mr-1 ${hasProdutos ? 'text-blue-600' : 'text-muted-foreground'}`} />
+            {hasProdutos ? session.produtosList.length : 0}
+            {todosCompletos && <span className="ml-1 w-2 h-2 bg-green-500 rounded-full" />}
+            {parcialmenteCompletos && <span className="ml-1 w-2 h-2 bg-yellow-500 rounded-full" />}
+          </Button>
+        </div>
 
         {/* Zona 9: PENDENTE */}
         <div className="flex flex-col items-end">
@@ -317,19 +326,14 @@ export function WorkflowCardCollapsed({
 
       {/* Layout mobile - flex wrap */}
       <div className="flex lg:hidden items-center gap-2 flex-wrap">
-        {/* Expand button */}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onToggleExpand}
-          className="h-8 w-8 p-0 shrink-0 hover:bg-primary/10"
-        >
+        {/* Expand indicator */}
+        <div className="h-8 w-8 flex items-center justify-center shrink-0">
           {isExpanded ? (
             <ChevronUp className="h-4 w-4 text-primary" />
           ) : (
             <ChevronDown className="h-4 w-4 text-muted-foreground" />
           )}
-        </Button>
+        </div>
 
         {/* Data */}
         <span className="text-sm font-medium text-foreground w-12">
@@ -337,16 +341,16 @@ export function WorkflowCardCollapsed({
         </span>
 
         {/* Nome + WhatsApp */}
-        <div className="flex items-center gap-1 flex-1 min-w-0">
+        <div className="flex items-center gap-1 flex-1 min-w-0" onClick={(e) => e.stopPropagation()}>
           {session.clienteId ? (
             <Link 
               to={`/app/clientes/${session.clienteId}`} 
-              className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline truncate"
+              className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline break-words leading-tight"
             >
               {session.nome}
             </Link>
           ) : (
-            <span className="text-sm font-medium text-foreground truncate">{session.nome}</span>
+            <span className="text-sm font-medium text-foreground break-words leading-tight">{session.nome}</span>
           )}
           {session.whatsapp && (
             <a
