@@ -43,7 +43,7 @@ export function ColoredStatusBadge({
   if (showBackground) {
     return (
       <div 
-        className={`px-2 py-1 rounded text-xs font-medium w-full text-center ${className}`}
+        className={`px-3 py-1 rounded-full text-xs font-medium text-center inline-flex items-center justify-center ${className}`}
         style={{ 
           backgroundColor: statusColor,
           color: textColor
