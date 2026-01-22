@@ -339,9 +339,22 @@ export default function Workflow() {
   const [filteredSessions, setFilteredSessions] = useState<SessionData[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showMetrics, setShowMetrics] = useState(true);
-  const [categoryFilter, setCategoryFilter] = useState<string>(''); // '' = todas
-  const [sortField, setSortField] = useState<string>(''); // Vazio para usar ordenação padrão
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  // Filtros persistidos no localStorage para manter entre sessões
+  const [categoryFilter, setCategoryFilter] = usePersistedState<string>(
+    'lunari_workflow_filter_category',
+    '',
+    localStorage
+  );
+  const [sortField, setSortField] = usePersistedState<string>(
+    'lunari_workflow_filter_sort_field',
+    '',
+    localStorage
+  );
+  const [sortDirection, setSortDirection] = usePersistedState<'asc' | 'desc'>(
+    'lunari_workflow_filter_sort_direction',
+    'asc',
+    localStorage
+  );
   const [scrollLeft, setScrollLeft] = useState(0);
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
     try {
