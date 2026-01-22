@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { WorkflowTable } from "@/components/workflow/WorkflowTable";
 import { QuickSessionAdd } from "@/components/workflow/QuickSessionAdd";
 import { ColumnSettings } from "@/components/workflow/ColumnSettings";
+import { WorkflowFilters } from "@/components/workflow/WorkflowFilters";
 import { ChevronLeft, ChevronRight, Eye, EyeOff, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -338,6 +339,7 @@ export default function Workflow() {
   const [filteredSessions, setFilteredSessions] = useState<SessionData[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showMetrics, setShowMetrics] = useState(true);
+  const [categoryFilter, setCategoryFilter] = useState<string>(''); // '' = todas
   const [sortField, setSortField] = useState<string>(''); // Vazio para usar ordenação padrão
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [scrollLeft, setScrollLeft] = useState(0);
@@ -431,21 +433,28 @@ export default function Workflow() {
     valor: `R$ ${(produto.preco_venda || 0).toFixed(2).replace('.', ',')}`
   }));
 
-  // Filter sessions by search term
+  // Filter sessions by category and search term
   useEffect(() => {
-    if (!searchTerm.trim()) {
-      setFilteredSessions(sessionDataList);
-    } else {
+    let result = sessionDataList;
+    
+    // 1. Filtro por categoria
+    if (categoryFilter) {
+      result = result.filter(session => session.categoria === categoryFilter);
+    }
+    
+    // 2. Filtro por busca textual
+    if (searchTerm.trim()) {
       const searchTermNormalized = removeAccents(searchTerm.toLowerCase());
-      const filtered = sessionDataList.filter(session => {
+      result = result.filter(session => {
         const nomeNormalized = removeAccents((session.nome || '').toLowerCase());
         const emailNormalized = removeAccents((session.email || '').toLowerCase());
         return nomeNormalized.includes(searchTermNormalized) || 
                emailNormalized.includes(searchTermNormalized);
       });
-      setFilteredSessions(filtered);
     }
-  }, [searchTerm, sessionDataList]);
+    
+    setFilteredSessions(result);
+  }, [searchTerm, categoryFilter, sessionDataList]);
 
   // FASE 3: Removido filtro duplicado - filteredSessions já está filtrado pelo mês correto
   // O useEffect acima já filtra pelo mês ao buscar do cache
@@ -549,6 +558,25 @@ export default function Workflow() {
     }
     if (headerKey === 'remaining') {
       return calculateRestante(session);
+    }
+    
+    // Handle financial status (situacao) - custom numeric ordering based on valorPago vs total
+    if (headerKey === 'situacao') {
+      const statusOrder: Record<string, number> = { 'pago': 1, 'parcial': 2, 'pendente': 3 };
+      const total = calculateTotal(session);
+      const pago = parseFloat((session.valorPago || '0').toString().replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+      let financialStatus = 'pendente';
+      if (total > 0 && pago >= total) {
+        financialStatus = 'pago';
+      } else if (pago > 0) {
+        financialStatus = 'parcial';
+      }
+      return statusOrder[financialStatus] || 3;
+    }
+    
+    // Handle name field
+    if (headerKey === 'nome' || field === 'nome') {
+      return removeAccents((session.nome || '').toLowerCase());
     }
     
     // Handle dates - convert to timestamp
@@ -894,6 +922,20 @@ export default function Workflow() {
               className="pl-10 h-9"
             />
           </div>
+          
+          {/* Filtros de ordenação e categoria */}
+          <WorkflowFilters
+            sortField={sortField}
+            sortDirection={sortDirection}
+            onSortChange={(field, dir) => {
+              setSortField(field);
+              setSortDirection(dir);
+            }}
+            categoryFilter={categoryFilter}
+            onCategoryFilterChange={setCategoryFilter}
+            categoryOptions={categoryOptions}
+          />
+          
           <ColumnSettings
             visibleColumns={visibleColumns}
             onColumnVisibilityChange={(columns) => {
