@@ -122,7 +122,7 @@ export function WorkflowCardExpanded({
   const pacoteNome = session.regras_congeladas?.pacote?.nome || session.pacote || 'Não definido';
 
   return (
-    <div className="border-t border-border/30 bg-muted/10 px-4 py-5 md:px-6">
+    <div className="bg-muted/5 dark:bg-muted/10 px-4 py-5 md:px-6">
       {/* Grid de 3 blocos com divisórias */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         
@@ -150,7 +150,7 @@ export function WorkflowCardExpanded({
                 onChange={(e) => setDescontoValue(e.target.value)}
                 onBlur={handleDescontoBlur}
                 placeholder="R$ 0,00"
-                className="h-7 text-xs text-right w-24 border border-border/50 rounded bg-background/50 focus:bg-background"
+                className="h-7 text-xs text-right w-24 border border-border/50 dark:border-border rounded bg-background/50 dark:bg-background/80 focus:bg-background"
               />
             </div>
             
@@ -185,7 +185,7 @@ export function WorkflowCardExpanded({
                 onChange={(e) => setAdicionalValue(e.target.value)}
                 onBlur={handleAdicionalBlur}
                 placeholder="R$ 0,00"
-                className="h-7 text-xs text-right w-24 border border-border/50 rounded bg-background/50 focus:bg-background"
+                className="h-7 text-xs text-right w-24 border border-border/50 dark:border-border rounded bg-background/50 dark:bg-background/80 focus:bg-background"
               />
             </div>
             
@@ -196,7 +196,7 @@ export function WorkflowCardExpanded({
                 onChange={(e) => setObsValue(e.target.value)}
                 onBlur={handleObsBlur}
                 placeholder="Observações..."
-                className="text-xs min-h-[60px] border border-border/50 rounded bg-background/50 focus:bg-background resize-none"
+                className="text-xs min-h-[60px] border border-border/50 dark:border-border rounded bg-background/50 dark:bg-background/80 focus:bg-background resize-none"
               />
             </div>
           </div>
@@ -218,7 +218,7 @@ export function WorkflowCardExpanded({
       </div>
 
       {/* Footer Financeiro com input de pagamento rápido */}
-      <div className="mt-6 pt-4 border-t border-border/30">
+      <div className="mt-6 pt-4 border-t border-border/30 dark:border-border/50">
         <div className="flex flex-wrap items-center justify-between gap-4">
           {/* Resumo financeiro à esquerda */}
           <div className="flex items-center gap-6 md:gap-8">
@@ -243,7 +243,7 @@ export function WorkflowCardExpanded({
           {/* Input pagamento rápido à direita */}
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground hidden md:inline">Adic. Pag. Rápido</span>
-            <div className="flex items-center border border-border/50 rounded-md bg-background/50">
+            <div className="flex items-center border border-border/50 dark:border-border rounded-md bg-background/50 dark:bg-background/80">
               <span className="text-sm text-muted-foreground pl-2">R$</span>
               <Input
                 type="number"

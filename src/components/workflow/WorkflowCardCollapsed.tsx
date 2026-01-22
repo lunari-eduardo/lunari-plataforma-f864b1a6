@@ -190,8 +190,11 @@ export function WorkflowCardCollapsed({
 
   return (
     <div className="px-4 py-3 md:px-6 md:py-4">
-      {/* Grid fixo para alinhamento consistente entre cards */}
-      <div className="hidden lg:grid grid-cols-[40px_50px_180px_1fr_140px_130px_90px_90px_120px] gap-3 items-start">
+      {/* Grid fixo para alinhamento consistente entre cards - clicável para expandir */}
+      <div 
+        className="hidden lg:grid grid-cols-[40px_50px_180px_1fr_140px_130px_90px_90px_120px] gap-3 items-start cursor-pointer"
+        onClick={onToggleExpand}
+      >
         
         {/* Zona 1: Expand */}
         <div 
@@ -324,8 +327,11 @@ export function WorkflowCardCollapsed({
         </div>
       </div>
 
-      {/* Layout mobile - flex wrap */}
-      <div className="flex lg:hidden items-center gap-2 flex-wrap">
+      {/* Layout mobile - flex wrap - clicável para expandir */}
+      <div 
+        className="flex lg:hidden items-center gap-2 flex-wrap cursor-pointer"
+        onClick={onToggleExpand}
+      >
         {/* Expand indicator */}
         <div className="h-8 w-8 flex items-center justify-center shrink-0">
           {isExpanded ? (
