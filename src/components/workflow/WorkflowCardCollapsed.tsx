@@ -207,6 +207,8 @@ export function WorkflowCardCollapsed({
       sessionId: session.id,
       clienteId: session.clienteId,
       clienteNome: session.nome,
+      clienteEmail: session.email || '',
+      clienteTelefone: session.whatsapp || '',
       pacoteNome: session.regras_congeladas?.pacote?.nome || session.pacote,
       pacoteCategoria: session.regras_congeladas?.pacote?.categoria || session.categoria,
       fotosIncluidas: session.regras_congeladas?.pacote?.fotosIncluidas,

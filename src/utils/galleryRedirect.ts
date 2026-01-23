@@ -4,6 +4,8 @@ export interface GalleryRedirectParams {
   sessionId: string;
   clienteId?: string;
   clienteNome: string;
+  clienteEmail?: string;
+  clienteTelefone?: string;
   pacoteNome?: string;
   pacoteCategoria?: string;
   fotosIncluidas?: number;
@@ -26,6 +28,14 @@ export function buildGalleryNewUrl(params: GalleryRedirectParams): string {
   }
   
   searchParams.set('cliente_nome', params.clienteNome);
+  
+  if (params.clienteEmail) {
+    searchParams.set('cliente_email', params.clienteEmail);
+  }
+  
+  if (params.clienteTelefone) {
+    searchParams.set('cliente_telefone', params.clienteTelefone);
+  }
   
   if (params.pacoteNome) {
     searchParams.set('pacote_nome', params.pacoteNome);
