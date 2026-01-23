@@ -5,11 +5,14 @@ import { WorkflowPackageCombobox } from "./WorkflowPackageCombobox";
 import { ColoredStatusBadge } from "./ColoredStatusBadge";
 import { GerenciarProdutosModal } from "./GerenciarProdutosModal";
 import { WorkflowPaymentsModal } from "./WorkflowPaymentsModal";
+import { GalleryUpgradeModal } from "./GalleryUpgradeModal";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MessageCircle, ChevronDown, ChevronUp, Package, Plus, CreditCard } from "lucide-react";
+import { MessageCircle, ChevronDown, ChevronUp, Package, Plus, CreditCard, Image } from "lucide-react";
 import { Link } from "react-router-dom";
 import { formatToDayMonth } from "@/utils/dateUtils";
 import { useAppContext } from "@/contexts/AppContext";
+import { useAccessControl } from "@/hooks/useAccessControl";
+import { buildGalleryNewUrl } from "@/utils/galleryRedirect";
 import debounce from 'lodash.debounce';
 import type { SessionData } from "@/types/workflow";
 
@@ -103,10 +106,12 @@ export function WorkflowCardCollapsed({
   onFieldUpdate,
 }: WorkflowCardCollapsedProps) {
   const { addPayment } = useAppContext();
+  const { hasGaleryAccess, accessState } = useAccessControl();
   
   const [paymentInput, setPaymentInput] = useState('');
   const [modalAberto, setModalAberto] = useState(false);
   const [workflowPaymentsOpen, setWorkflowPaymentsOpen] = useState(false);
+  const [galleryModalOpen, setGalleryModalOpen] = useState(false);
   const [descriptionValue, setDescriptionValue] = useState(session.descricao || '');
   
   // Sync description when session changes
@@ -188,11 +193,37 @@ export function WorkflowCardCollapsed({
   // Obter nome do pacote das regras congeladas ou do pacote atual
   const displayPackageName = session.regras_congeladas?.pacote?.nome || session.pacote || '';
 
+  // Handler para botão Gallery
+  const handleGalleryClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (!hasGaleryAccess) {
+      setGalleryModalOpen(true);
+      return;
+    }
+    
+    // Construir URL com dados da sessão
+    const url = buildGalleryNewUrl({
+      sessionId: session.id,
+      clienteId: session.clienteId,
+      clienteNome: session.nome,
+      pacoteNome: session.regras_congeladas?.pacote?.nome || session.pacote,
+      pacoteCategoria: session.regras_congeladas?.pacote?.categoria || session.categoria,
+      fotosIncluidas: session.regras_congeladas?.pacote?.fotosIncluidas,
+      modeloCobranca: session.regras_congeladas?.precificacaoFotoExtra?.modelo,
+      precoExtra: session.regras_congeladas?.pacote?.valorFotoExtra,
+      tipoAssinatura: accessState.planCode
+    });
+    
+    // Abrir em nova aba
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }, [session, hasGaleryAccess, accessState.planCode]);
+
   return (
     <div className="px-4 py-3 md:px-6 md:py-4">
       {/* Grid DESKTOP (≥1024px) - Layout completo */}
       <div 
-        className="hidden lg:grid grid-cols-[40px_50px_180px_1fr_140px_130px_90px_90px_120px] gap-3 items-start cursor-pointer"
+        className="hidden lg:grid grid-cols-[40px_50px_180px_1fr_140px_130px_90px_90px_100px_36px] gap-3 items-start cursor-pointer"
         onClick={onToggleExpand}
       >
         
@@ -321,15 +352,28 @@ export function WorkflowCardCollapsed({
         {/* Zona 9: PENDENTE */}
         <div className="flex flex-col items-end">
           <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Pendente</span>
-          <span className={`text-sm font-bold ${pendente > 0 ? 'text-red-600' : 'text-green-600'}`}>
+          <span className={`text-sm font-bold ${pendente > 0 ? 'text-destructive' : 'text-green-600'}`}>
             {formatCurrency(pendente)}
           </span>
+        </div>
+
+        {/* Zona 10: Botão Gallery */}
+        <div className="flex items-center justify-center pt-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleGalleryClick}
+            className="h-7 w-7 text-muted-foreground hover:text-primary hover:bg-primary/10"
+            title="Criar Galeria"
+          >
+            <Image className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
       {/* Grid TABLET (768-1023px) - Layout compacto mas completo */}
       <div 
-        className="hidden md:grid lg:hidden grid-cols-[36px_44px_140px_1fr_110px_100px_60px_70px_100px] gap-2 items-start cursor-pointer"
+        className="hidden md:grid lg:hidden grid-cols-[36px_44px_140px_1fr_100px_90px_50px_60px_80px_32px] gap-2 items-start cursor-pointer"
         onClick={onToggleExpand}
       >
         
@@ -450,9 +494,22 @@ export function WorkflowCardCollapsed({
 
         {/* Zona 9: PENDENTE */}
         <div className="flex flex-col items-end">
-          <span className={`text-[11px] font-bold ${pendente > 0 ? 'text-red-600' : 'text-green-600'}`}>
+          <span className={`text-[11px] font-bold ${pendente > 0 ? 'text-destructive' : 'text-green-600'}`}>
             {formatCurrency(pendente)}
           </span>
+        </div>
+
+        {/* Zona 10: Botão Gallery */}
+        <div className="flex items-center justify-center">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleGalleryClick}
+            className="h-6 w-6 text-muted-foreground hover:text-primary hover:bg-primary/10"
+            title="Criar Galeria"
+          >
+            <Image className="h-3.5 w-3.5" />
+          </Button>
         </div>
       </div>
 
@@ -503,9 +560,20 @@ export function WorkflowCardCollapsed({
         <ColoredStatusBadge status={session.status || ''} showBackground={true} />
 
         {/* Pendente */}
-        <span className={`text-sm font-bold ${pendente > 0 ? 'text-red-600' : 'text-green-600'}`}>
+        <span className={`text-sm font-bold ${pendente > 0 ? 'text-destructive' : 'text-green-600'}`}>
           {formatCurrency(pendente)}
         </span>
+
+        {/* Botão Gallery (Mobile) */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleGalleryClick}
+          className="h-7 w-7 text-muted-foreground hover:text-primary hover:bg-primary/10"
+          title="Criar Galeria"
+        >
+          <Image className="h-4 w-4" />
+        </Button>
       </div>
 
       {/* Modal de Gerenciamento de Produtos */}
@@ -565,6 +633,12 @@ export function WorkflowCardCollapsed({
           }}
         />
       )}
+
+      {/* Modal de Upgrade Gallery */}
+      <GalleryUpgradeModal
+        isOpen={galleryModalOpen}
+        onClose={() => setGalleryModalOpen(false)}
+      />
     </div>
   );
 }
