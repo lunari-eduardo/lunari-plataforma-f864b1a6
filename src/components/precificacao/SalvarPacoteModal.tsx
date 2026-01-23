@@ -44,6 +44,7 @@ export function SalvarPacoteModal({
     categoria_id: '',
     valor_base: precoFinal,
     valor_foto_extra: 35,
+    fotos_incluidas: 50, // Valor padrão sugerido
     observacoes: ''
   });
 
@@ -56,6 +57,11 @@ export function SalvarPacoteModal({
   const valorFotoExtraInput = useNumberInput({
     value: formData.valor_foto_extra,
     onChange: (value) => setFormData(prev => ({ ...prev, valor_foto_extra: parseFloat(value) || 0 }))
+  });
+
+  const fotosIncluidasInput = useNumberInput({
+    value: formData.fotos_incluidas,
+    onChange: (value) => setFormData(prev => ({ ...prev, fotos_incluidas: parseInt(value) || 0 }))
   });
 
   // Atualizar valor base quando precoFinal mudar
@@ -88,6 +94,15 @@ export function SalvarPacoteModal({
       return;
     }
 
+    if (!formData.fotos_incluidas || formData.fotos_incluidas < 1) {
+      toast({
+        title: "Erro",
+        description: "Número de fotos incluídas é obrigatório (mín. 1)",
+        variant: "destructive"
+      });
+      return;
+    }
+
     // Mapear produtos para o formato esperado
     const produtosIncluidos = produtos.map(produto => ({
       produtoId: produto.id,
@@ -101,6 +116,7 @@ export function SalvarPacoteModal({
       categoria_id: formData.categoria_id || '1', // Default para primeira categoria
       valor_base: formData.valor_base,
       valor_foto_extra: formData.valor_foto_extra,
+      fotos_incluidas: formData.fotos_incluidas,
       produtosIncluidos,
       // Metadados da precificação para referência
       metadata: {
@@ -127,6 +143,7 @@ export function SalvarPacoteModal({
       categoria_id: '',
       valor_base: precoFinal,
       valor_foto_extra: 35,
+      fotos_incluidas: 50,
       observacoes: ''
     });
     onClose();
@@ -138,6 +155,7 @@ export function SalvarPacoteModal({
       categoria_id: '',
       valor_base: precoFinal,
       valor_foto_extra: 35,
+      fotos_incluidas: 50,
       observacoes: ''
     });
   };
@@ -221,6 +239,25 @@ export function SalvarPacoteModal({
               onFocus={valorFotoExtraInput.handleFocus}
               className="mt-1"
             />
+          </div>
+
+          {/* Fotos Incluídas - NOVO CAMPO */}
+          <div>
+            <Label htmlFor="fotos_incluidas">Fotos Incluídas no Pacote *</Label>
+            <Input
+              id="fotos_incluidas"
+              type="number"
+              min="1"
+              step="1"
+              value={fotosIncluidasInput.displayValue}
+              onChange={fotosIncluidasInput.handleChange}
+              onFocus={fotosIncluidasInput.handleFocus}
+              placeholder="Ex: 50, 100, 300"
+              className="mt-1"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Quantidade máxima de fotos que o cliente pode selecionar
+            </p>
           </div>
 
           {/* Resumo dos produtos inclusos */}

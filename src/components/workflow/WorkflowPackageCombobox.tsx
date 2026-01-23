@@ -68,6 +68,7 @@ const WorkflowPackageComboboxComponent = ({
         valor: pacote.valor_base || pacote.valorVenda || pacote.valor || 0,
         categoria,
         valorFotoExtra: pacote.valor_foto_extra || pacote.valorFotoExtra || 35,
+        fotosIncluidas: pacote.fotos_incluidas || pacote.fotosIncluidas || 0,
         produtosIncluidos: pacote.produtos_incluidos || pacote.produtosIncluidos || []
       };
     });
@@ -150,8 +151,13 @@ const WorkflowPackageComboboxComponent = ({
                   <div className="flex flex-col">
                     <span className="font-medium">{pkg.nome}</span>
                     <span className="text-2xs text-muted-foreground">
-                      R$ {(pkg.valor || 0).toFixed(2).replace('.', ',')} • Categoria: {pkg.categoria}
+                      R$ {(pkg.valor || 0).toFixed(2).replace('.', ',')} • {pkg.categoria}
                     </span>
+                    {pkg.fotosIncluidas > 0 && (
+                      <span className="text-2xs text-primary/80 font-medium">
+                        ({pkg.fotosIncluidas} fotos)
+                      </span>
+                    )}
                   </div>
                 </CommandItem>
               ))}

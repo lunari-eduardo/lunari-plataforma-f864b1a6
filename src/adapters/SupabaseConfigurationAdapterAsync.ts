@@ -237,6 +237,7 @@ export class SupabaseConfigurationAdapterAsync {
         categoria_id: item.categoria_id,
         valor_base: Number(item.valor_base),
         valor_foto_extra: Number(item.valor_foto_extra),
+        fotos_incluidas: Number(item.fotos_incluidas) || 0,
         produtosIncluidos: Array.isArray(item.produtos_incluidos) ? item.produtos_incluidos : [],
         created_at: item.created_at,
         updated_at: item.updated_at
@@ -279,6 +280,7 @@ export class SupabaseConfigurationAdapterAsync {
         categoria_id: pacote.categoria_id,
         valor_base: pacote.valor_base,
         valor_foto_extra: pacote.valor_foto_extra,
+        fotos_incluidas: pacote.fotos_incluidas || 0,
         produtos_incluidos: pacote.produtosIncluidos,
         created_at: pacote.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString()

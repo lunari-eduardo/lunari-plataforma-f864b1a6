@@ -167,6 +167,12 @@ export function WorkflowCardExpanded({
                 onFieldUpdate(session.id, 'pacote', packageData.id || packageData.nome);
               }}
             />
+            {/* Tag informativa - Fotos Incluídas */}
+            {session.regras_congeladas?.pacote?.fotosIncluidas > 0 && (
+              <span className="text-[10px] text-primary/80 font-medium">
+                ({session.regras_congeladas.pacote.fotosIncluidas} fotos incluídas)
+              </span>
+            )}
           </div>
           
           {/* Status */}

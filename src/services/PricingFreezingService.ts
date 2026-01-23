@@ -13,6 +13,7 @@ export interface RegrasCongeladas extends Record<string, any> {
     nome: string;
     valorBase: number;
     valorFotoExtra: number;
+    fotosIncluidas?: number; // Número máximo de fotos que o cliente pode selecionar
     categoria: string;
     categoriaId?: string;
     produtosIncluidos?: any[];
@@ -90,6 +91,7 @@ class PricingFreezingService {
               nome: pacote.nome,
               valorBase: Number(pacote.valor_base) || 0,
               valorFotoExtra: Number(pacote.valor_foto_extra) || 0,
+              fotosIncluidas: Number(pacote.fotos_incluidas) || 0,
               categoria: (pacote as any).categorias?.nome || categoria || '',
               categoriaId: pacote.categoria_id,
               produtosIncluidos: Array.isArray(pacote.produtos_incluidos) ? pacote.produtos_incluidos : []

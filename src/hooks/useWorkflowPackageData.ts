@@ -24,6 +24,7 @@ export const useWorkflowPackageData = () => {
           packageName: frozenPackage.nome,
           packageValue: frozenPackage.valorBase,
           packageFotoExtraValue: frozenPackage.valorFotoExtra,
+          fotosIncluidas: frozenPackage.fotosIncluidas || 0,
           categoria: frozenPackage.categoria || session.categoria
         };
       }
@@ -35,6 +36,7 @@ export const useWorkflowPackageData = () => {
         packageName: session.pacote || '⚠️ Pacote Indisponível',
         packageValue: 0,
         packageFotoExtraValue: 0,
+        fotosIncluidas: 0,
         categoria: session.categoria || ''
       };
     };

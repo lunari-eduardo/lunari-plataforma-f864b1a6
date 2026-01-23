@@ -97,7 +97,7 @@ export default function PacoteCard({
         </div>
 
         {/* Pricing */}
-        <div className="grid grid-cols-2 gap-3 mb-3">
+        <div className="grid grid-cols-3 gap-3 mb-3">
           <div>
             <span className="text-xs text-muted-foreground block mb-0.5">Valor Base</span>
             <span className="text-sm font-medium text-foreground">
@@ -108,6 +108,12 @@ export default function PacoteCard({
             <span className="text-xs text-muted-foreground block mb-0.5">Foto Extra</span>
             <span className="text-sm font-medium text-foreground">
               {formatarMoeda(pacote.valor_foto_extra || 0)}
+            </span>
+          </div>
+          <div>
+            <span className="text-xs text-muted-foreground block mb-0.5">Fotos Incluídas</span>
+            <span className="text-sm font-medium text-primary">
+              {pacote.fotos_incluidas || 0}
             </span>
           </div>
         </div>

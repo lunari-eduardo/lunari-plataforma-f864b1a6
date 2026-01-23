@@ -36,6 +36,7 @@ export interface Pacote {
   categoria_id: string;
   valor_base: number;
   valor_foto_extra: number;
+  fotos_incluidas: number; // Número máximo de fotos que o cliente pode selecionar
   produtosIncluidos: ProdutoIncluido[];
   created_at?: string;
   updated_at?: string;
@@ -58,6 +59,7 @@ export interface PacoteFormData {
   categoria_id: string;
   valor_base: number;
   valor_foto_extra: number;
+  fotos_incluidas: number; // Número máximo de fotos que o cliente pode selecionar
   produtosIncluidos: ProdutoIncluido[];
 }
 
@@ -148,6 +150,7 @@ export const DEFAULT_PACOTES: Pacote[] = [
     categoria_id: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c8f", // Família
     valor_base: 450,
     valor_foto_extra: 25,
+    fotos_incluidas: 30,
     produtosIncluidos: []
   },
   {
@@ -156,6 +159,7 @@ export const DEFAULT_PACOTES: Pacote[] = [
     categoria_id: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c90", // Casamento
     valor_base: 980,
     valor_foto_extra: 35,
+    fotos_incluidas: 100,
     produtosIncluidos: [
       { produtoId: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c94", quantidade: 1 }
     ]
@@ -166,6 +170,7 @@ export const DEFAULT_PACOTES: Pacote[] = [
     categoria_id: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c91", // Aniversário
     valor_base: 890,
     valor_foto_extra: 30,
+    fotos_incluidas: 50,
     produtosIncluidos: [
       { produtoId: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c94", quantidade: 1 },
       { produtoId: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c96", quantidade: 1 }
