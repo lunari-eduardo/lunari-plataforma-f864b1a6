@@ -41,6 +41,7 @@ export default function PacoteEditModal({
     categoria_id: pacote.categoria_id,
     valor_base: pacote.valor_base,
     valor_foto_extra: pacote.valor_foto_extra || 0,
+    fotos_incluidas: pacote.fotos_incluidas || 0,
     produtosIncluidos: pacote.produtosIncluidos
   };
 

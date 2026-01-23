@@ -158,6 +158,7 @@ export class ConfigurationMigrationService {
         categoria_id: this.generateOrKeepUUID(pacote.categoria_id),
         valor_base: pacote.valor_base,
         valor_foto_extra: pacote.valor_foto_extra,
+        fotos_incluidas: pacote.fotos_incluidas || 0,
         produtos_incluidos: pacote.produtosIncluidos.map(p => ({
           produtoId: this.generateOrKeepUUID(p.produtoId),
           quantidade: p.quantidade

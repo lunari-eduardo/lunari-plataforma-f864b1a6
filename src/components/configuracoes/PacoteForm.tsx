@@ -31,6 +31,7 @@ export default function PacoteForm({
     categoria_id: initialData?.categoria_id || '',
     valor_base: initialData?.valor_base || 0,
     valor_foto_extra: initialData?.valor_foto_extra || 0,
+    fotos_incluidas: initialData?.fotos_incluidas || 0,
     produtosIncluidos: initialData?.produtosIncluidos || []
   });
 
@@ -59,6 +60,16 @@ export default function PacoteForm({
     onChange: (value) => setFormData(prev => ({ ...prev, valor_foto_extra: parseFloat(value) || 0 }))
   });
 
+  const fotosIncluidasInput = useNumberInput({
+    value: formData.fotos_incluidas,
+    onChange: (value) => {
+      setFormData(prev => ({ ...prev, fotos_incluidas: parseInt(value) || 0 }));
+      if (errors.fotos_incluidas) {
+        setErrors(prev => ({ ...prev, fotos_incluidas: '' }));
+      }
+    }
+  });
+
   const handleSubmit = () => {
     const newErrors: {[key: string]: string} = {};
 
@@ -68,6 +79,10 @@ export default function PacoteForm({
 
     if (!formData.categoria_id) {
       newErrors.categoria_id = 'Categoria é obrigatória';
+    }
+
+    if (!formData.fotos_incluidas || formData.fotos_incluidas < 1) {
+      newErrors.fotos_incluidas = 'Número de fotos é obrigatório (mín. 1)';
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -83,6 +98,7 @@ export default function PacoteForm({
         categoria_id: '',
         valor_base: 0,
         valor_foto_extra: 0,
+        fotos_incluidas: 0,
         produtosIncluidos: []
       });
       setErrors({});
@@ -243,6 +259,30 @@ export default function PacoteForm({
             <span className="text-2xs text-muted-foreground mt-0.5 block">
               Modelo ativo: {configPrecificacao.modelo === 'global' ? 'Tabela Global' : 'Por Categoria'}
             </span>
+          )}
+        </div>
+
+        {/* Fotos Incluídas - NOVO CAMPO */}
+        <div className="flex-1 min-w-[140px] max-w-[180px]">
+          <Label htmlFor="fotos_incluidas" className="text-2xs font-medium text-muted-foreground mb-1 block">
+            Fotos Incluídas *
+          </Label>
+          <Input
+            id="fotos_incluidas"
+            type="number"
+            step="1"
+            min="1"
+            value={fotosIncluidasInput.displayValue}
+            onChange={fotosIncluidasInput.handleChange}
+            onFocus={fotosIncluidasInput.handleFocus}
+            placeholder="Ex: 50"
+            className={cn(
+              "h-8 text-sm [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
+              errors.fotos_incluidas && "border-destructive focus:border-destructive"
+            )}
+          />
+          {errors.fotos_incluidas && (
+            <span className="text-2xs text-destructive">{errors.fotos_incluidas}</span>
           )}
         </div>
       </div>

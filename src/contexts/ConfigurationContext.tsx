@@ -181,6 +181,7 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
         valor_base: payload.new.valor_base,
         categoria_id: payload.new.categoria_id,
         valor_foto_extra: payload.new.valor_foto_extra,
+        fotos_incluidas: payload.new.fotos_incluidas || 0,
         produtosIncluidos: payload.new.produtos_incluidos || []
       };
       pacotesOps.set(upsertById(pacotesRef.current, pacote));
@@ -197,6 +198,7 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
         valor_base: payload.new.valor_base,
         categoria_id: payload.new.categoria_id,
         valor_foto_extra: payload.new.valor_foto_extra,
+        fotos_incluidas: payload.new.fotos_incluidas || 0,
         produtosIncluidos: payload.new.produtos_incluidos || []
       };
       pacotesOps.set(upsertById(pacotesRef.current, pacote));
