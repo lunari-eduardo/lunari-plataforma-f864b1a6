@@ -399,6 +399,7 @@ export type Database = {
           session_id: string
           status: string | null
           status_financeiro: string | null
+          status_galeria: string | null
           updated_at: string | null
           updated_by: string | null
           user_id: string
@@ -430,6 +431,7 @@ export type Database = {
           session_id: string
           status?: string | null
           status_financeiro?: string | null
+          status_galeria?: string | null
           updated_at?: string | null
           updated_by?: string | null
           user_id: string
@@ -461,6 +463,7 @@ export type Database = {
           session_id?: string
           status?: string | null
           status_financeiro?: string | null
+          status_galeria?: string | null
           updated_at?: string | null
           updated_by?: string | null
           user_id?: string
@@ -1126,6 +1129,7 @@ export type Database = {
           prazo_selecao_dias: number | null
           public_token: string | null
           published_at: string | null
+          regras_congeladas: Json | null
           regras_selecao: Json | null
           session_id: string | null
           status: string
@@ -1162,6 +1166,7 @@ export type Database = {
           prazo_selecao_dias?: number | null
           public_token?: string | null
           published_at?: string | null
+          regras_congeladas?: Json | null
           regras_selecao?: Json | null
           session_id?: string | null
           status?: string
@@ -1198,6 +1203,7 @@ export type Database = {
           prazo_selecao_dias?: number | null
           public_token?: string | null
           published_at?: string | null
+          regras_congeladas?: Json | null
           regras_selecao?: Json | null
           session_id?: string | null
           status?: string

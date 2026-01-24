@@ -134,7 +134,9 @@ export const useWorkflowPackageData = () => {
         produtosList: session.regras_congeladas?.produtos?.length > 0 ? 
           session.regras_congeladas.produtos : 
           (session.produtos_incluidos || []),
-        clienteId: session.cliente_id
+        clienteId: session.cliente_id,
+        // Campo session_id texto (formato workflow-*) para integração Gallery
+        sessionId: session.session_id
       };
 
       console.log('✅ Converted session to SessionData:', converted.id, 'package:', converted.pacote, 'category:', converted.categoria, 'frozen data:', !!session.regras_congeladas?.pacote);

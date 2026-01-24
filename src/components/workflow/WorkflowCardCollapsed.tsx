@@ -203,8 +203,11 @@ export function WorkflowCardCollapsed({
     }
     
     // Construir URL com dados da sessão
+    // sessionId: formato texto (workflow-*) para busca principal
+    // sessionUuid: UUID para busca alternativa
     const url = buildGalleryNewUrl({
-      sessionId: session.id,
+      sessionId: session.sessionId || session.id,  // Preferir formato texto
+      sessionUuid: session.id,                      // UUID como backup
       clienteId: session.clienteId,
       clienteNome: session.nome,
       clienteEmail: session.email || '',

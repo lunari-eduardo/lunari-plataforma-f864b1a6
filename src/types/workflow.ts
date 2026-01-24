@@ -63,6 +63,8 @@ export interface SessionData {
   regras_congeladas?: any;
   // Campo para relacionar com cliente específico (CRM)
   clienteId?: string;
+  // Campo session_id texto (formato workflow-*) para integração Gallery
+  sessionId?: string;
   // Campos para integração com Galeria
   galeriaId?: string;
   galeriaStatus?: 'rascunho' | 'publicada' | 'em_selecao' | 'finalizada';

@@ -1,7 +1,8 @@
 import { EXTERNAL_URLS } from '@/config/externalUrls';
 
 export interface GalleryRedirectParams {
-  sessionId: string;
+  sessionId: string;      // session_id formato texto (workflow-*)
+  sessionUuid?: string;   // UUID da sessão (id da clientes_sessoes)
   clienteId?: string;
   clienteNome: string;
   clienteEmail?: string;
@@ -21,7 +22,13 @@ export interface GalleryRedirectParams {
 export function buildGalleryNewUrl(params: GalleryRedirectParams): string {
   const searchParams = new URLSearchParams();
   
+  // session_id texto como identificador principal
   searchParams.set('session_id', params.sessionId);
+  
+  // UUID como backup para o Gallery buscar por qualquer um
+  if (params.sessionUuid) {
+    searchParams.set('session_uuid', params.sessionUuid);
+  }
   
   if (params.clienteId) {
     searchParams.set('cliente_id', params.clienteId);
