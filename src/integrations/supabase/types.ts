@@ -1677,6 +1677,39 @@ export type Database = {
           },
         ]
       }
+      photographer_accounts: {
+        Row: {
+          account_status: Database["public"]["Enums"]["account_status"]
+          account_type: Database["public"]["Enums"]["account_type"]
+          created_at: string
+          galleries_published_total: number
+          gallery_credits: number
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_status?: Database["public"]["Enums"]["account_status"]
+          account_type?: Database["public"]["Enums"]["account_type"]
+          created_at?: string
+          galleries_published_total?: number
+          gallery_credits?: number
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_status?: Database["public"]["Enums"]["account_status"]
+          account_type?: Database["public"]["Enums"]["account_type"]
+          created_at?: string
+          galleries_published_total?: number
+          gallery_credits?: number
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       plans: {
         Row: {
           code: string
@@ -2118,6 +2151,30 @@ export type Database = {
           },
         ]
       }
+      system_cache: {
+        Row: {
+          created_at: string
+          expires_at: string
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          key: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
       tabelas_precos: {
         Row: {
           categoria_id: string | null
@@ -2428,6 +2485,7 @@ export type Database = {
           dados_extras: Json | null
           expira_em: string | null
           id: string
+          is_default: boolean | null
           mp_public_key: string | null
           mp_user_id: string | null
           provedor: string
@@ -2443,6 +2501,7 @@ export type Database = {
           dados_extras?: Json | null
           expira_em?: string | null
           id?: string
+          is_default?: boolean | null
           mp_public_key?: string | null
           mp_user_id?: string | null
           provedor: string
@@ -2458,6 +2517,7 @@ export type Database = {
           dados_extras?: Json | null
           expira_em?: string | null
           id?: string
+          is_default?: boolean | null
           mp_public_key?: string | null
           mp_user_id?: string | null
           provedor?: string
@@ -2563,6 +2623,10 @@ export type Database = {
       }
     }
     Functions: {
+      add_gallery_credits: {
+        Args: { _amount: number; _user_id: string }
+        Returns: number
+      }
       add_session_payment: {
         Args: {
           p_data_transacao: string
@@ -2580,6 +2644,7 @@ export type Database = {
         Args: { p_appointment_id: string }
         Returns: Json
       }
+      deduct_gallery_credit: { Args: { _user_id: string }; Returns: boolean }
       delete_appointment_cascade: {
         Args: { p_appointment_id: string; p_keep_payments?: boolean }
         Returns: Json
@@ -2587,6 +2652,18 @@ export type Database = {
       fix_all_valor_pago: { Args: never; Returns: number }
       generate_public_token: { Args: never; Returns: string }
       get_access_state: { Args: never; Returns: Json }
+      get_photographer_account: {
+        Args: { _user_id: string }
+        Returns: {
+          account_id: string
+          account_status: Database["public"]["Enums"]["account_status"]
+          account_type: Database["public"]["Enums"]["account_type"]
+          galleries_published_total: number
+          gallery_credits: number
+          has_gestao_integration: boolean
+          is_active: boolean
+        }[]
+      }
       has_active_subscription: { Args: { _user_id: string }; Returns: boolean }
       has_role: {
         Args: {
@@ -2595,6 +2672,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_gallery_photo_count: {
+        Args: { gallery_id: string }
+        Returns: undefined
+      }
       is_admin: { Args: never; Returns: boolean }
       recompute_session_paid: {
         Args: { p_session_id: string }
@@ -2602,6 +2683,8 @@ export type Database = {
       }
     }
     Enums: {
+      account_status: "active" | "suspended" | "canceled"
+      account_type: "gallery_solo" | "starter" | "pro" | "pro_gallery"
       app_role: "admin" | "moderator" | "user"
     }
     CompositeTypes: {
@@ -2730,6 +2813,8 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      account_status: ["active", "suspended", "canceled"],
+      account_type: ["gallery_solo", "starter", "pro", "pro_gallery"],
       app_role: ["admin", "moderator", "user"],
     },
   },
