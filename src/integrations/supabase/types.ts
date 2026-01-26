@@ -683,6 +683,7 @@ export type Database = {
           cor: string
           created_at: string
           id: string
+          is_system_status: boolean | null
           nome: string
           ordem: number
           updated_at: string
@@ -692,6 +693,7 @@ export type Database = {
           cor: string
           created_at?: string
           id?: string
+          is_system_status?: boolean | null
           nome: string
           ordem: number
           updated_at?: string
@@ -701,6 +703,7 @@ export type Database = {
           cor?: string
           created_at?: string
           id?: string
+          is_system_status?: boolean | null
           nome?: string
           ordem?: number
           updated_at?: string

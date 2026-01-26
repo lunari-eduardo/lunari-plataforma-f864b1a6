@@ -48,9 +48,16 @@ export interface EtapaTrabalho {
   nome: string;
   cor: string;
   ordem: number;
+  is_system_status?: boolean; // Status de sistema (PRO + Gallery)
   created_at?: string;
   updated_at?: string;
 }
+
+// Constantes para status de sistema do Gallery
+export const GALLERY_SYSTEM_STATUSES = {
+  SENT: 'Enviado para seleção',
+  FINALIZED: 'Seleção finalizada'
+} as const;
 
 // ============= TIPOS PARA FORMULÁRIOS =============
 
