@@ -285,6 +285,10 @@ export const useWorkflowRealtime = () => {
 
       // Create sanitized update map
       const sanitizedUpdates: Partial<WorkflowSession> = {};
+      
+      // ✅ SYNC: Armazenar package ID para sincronização com appointments
+      let syncPackageId: string | null = null;
+      let syncCategoryName: string | null = null;
 
       // Import services for package lookup
       const { configurationService } = await import('@/services/ConfigurationService');
@@ -306,6 +310,9 @@ export const useWorkflowRealtime = () => {
                 sanitizedUpdates.pacote = pkg.nome; // ✅ FASE 3: Always store NAME in database
                 console.log('📦 Salvando NOME do pacote no banco:', pkg.nome);
                 
+                // ✅ SYNC: Armazenar IDs para sincronização com appointments
+                syncPackageId = pkg.id;
+                
                 // FASE 2: Save valor_base_pacote separately
                 if (pkg.valor_base) {
                   sanitizedUpdates.valor_base_pacote = Number(pkg.valor_base);
@@ -320,6 +327,7 @@ export const useWorkflowRealtime = () => {
                   if (cat) {
                     novaCategoria = cat.nome;
                     sanitizedUpdates.categoria = cat.nome; // Also update session category
+                    syncCategoryName = cat.nome; // ✅ SYNC: Armazenar para sincronização
                     console.log('📂 Updated categoria:', novaCategoria);
                   }
                 }
@@ -630,33 +638,28 @@ export const useWorkflowRealtime = () => {
       if (error) throw error;
 
       // ✅ SYNC: Atualizar appointments.package_id quando pacote mudar no Workflow
-      if (sanitizedUpdates.pacote && currentSession?.appointment_id) {
+      // Usa syncPackageId já capturado durante processamento do case 'pacote'
+      if (syncPackageId && currentSession?.appointment_id) {
         try {
-          // Buscar pacotes para encontrar o ID do novo pacote
-          const { data: pacotes } = await supabase
-            .from('pacotes')
-            .select('id, nome')
-            .eq('user_id', user.user.id);
+          console.log('📅 [SYNC] Sincronizando pacote com appointment:', {
+            appointmentId: currentSession.appointment_id,
+            packageId: syncPackageId,
+            category: syncCategoryName || currentSession.categoria
+          });
           
-          const pkg = pacotes?.find(p => p.nome === sanitizedUpdates.pacote);
+          const { error: appointmentError } = await supabase
+            .from('appointments')
+            .update({
+              package_id: syncPackageId,
+              type: syncCategoryName || currentSession.categoria,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', currentSession.appointment_id);
           
-          if (pkg) {
-            const { error: appointmentError } = await supabase
-              .from('appointments')
-              .update({
-                package_id: pkg.id,
-                type: sanitizedUpdates.categoria || currentSession.categoria,
-                updated_at: new Date().toISOString()
-              })
-              .eq('id', currentSession.appointment_id);
-            
-            if (appointmentError) {
-              console.error('❌ [SYNC] Erro ao atualizar appointment:', appointmentError);
-            } else {
-              console.log('📅 [SYNC] Appointment package_id atualizado:', pkg.id, '→', sanitizedUpdates.pacote);
-            }
+          if (appointmentError) {
+            console.error('❌ [SYNC] Erro ao atualizar appointment:', appointmentError);
           } else {
-            console.warn('⚠️ [SYNC] Pacote não encontrado para sincronizar:', sanitizedUpdates.pacote);
+            console.log('📅 [SYNC] Appointment package_id atualizado com sucesso:', syncPackageId);
           }
         } catch (syncError) {
           console.error('❌ [SYNC] Erro na sincronização Workflow → Agenda:', syncError);
