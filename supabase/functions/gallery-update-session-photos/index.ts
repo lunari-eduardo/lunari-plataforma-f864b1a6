@@ -33,6 +33,9 @@ interface UpdateSessionPhotosRequest {
   
   // Status da galeria
   statusGaleria?: string;
+  
+  // Flag para indicar que a seleção foi finalizada
+  selecaoFinalizada?: boolean;
 }
 
 serve(async (req) => {
@@ -63,6 +66,29 @@ serve(async (req) => {
       });
     }
 
+    // Primeiro, buscar a sessão para obter user_id (necessário para verificar system status)
+    let sessionUserId: string | null = null;
+    let sessionId: string | null = null;
+    
+    // Buscar a sessão primeiro
+    let findQuery = supabase.from('clientes_sessoes').select('id, session_id, user_id');
+    
+    if (body.sessionUuid) {
+      findQuery = findQuery.eq('id', body.sessionUuid);
+    } else if (body.sessionId) {
+      findQuery = findQuery.eq('session_id', body.sessionId);
+    } else if (body.galeriaId) {
+      findQuery = findQuery.eq('galeria_id', body.galeriaId);
+    }
+    
+    const { data: sessionData } = await findQuery.maybeSingle();
+    
+    if (sessionData) {
+      sessionUserId = sessionData.user_id;
+      sessionId = sessionData.id;
+      console.log('📍 Sessão encontrada, user_id:', sessionUserId);
+    }
+
     // Montar objeto de atualização
     const updateData: Record<string, any> = {
       updated_at: new Date().toISOString()
@@ -83,9 +109,32 @@ serve(async (req) => {
     if (body.statusGaleria !== undefined) {
       updateData.status_galeria = body.statusGaleria;
     }
+    
+    // Lógica de seleção finalizada - atualizar status da sessão automaticamente
+    if (body.selecaoFinalizada === true && sessionUserId) {
+      console.log('🎯 Seleção finalizada detectada, verificando status de sistema...');
+      
+      // Verificar se o usuário tem o status de sistema "Seleção finalizada"
+      const { data: systemStatus } = await supabase
+        .from('etapas_trabalho')
+        .select('nome')
+        .eq('user_id', sessionUserId)
+        .eq('nome', 'Seleção finalizada')
+        .eq('is_system_status', true)
+        .maybeSingle();
+      
+      if (systemStatus) {
+        console.log('✅ Status de sistema encontrado, atualizando status da sessão para "Seleção finalizada"');
+        updateData.status = 'Seleção finalizada';
+        updateData.status_galeria = 'selecao_completa';
+      } else {
+        console.log('ℹ️ Usuário não tem status de sistema PRO + Gallery, ignorando atualização automática de status');
+      }
+    }
 
-    // Verificar se há campos para atualizar
-    if (Object.keys(updateData).length === 1) { // Apenas updated_at
+    // Verificar se há campos para atualizar além de updated_at
+    const fieldsToUpdate = Object.keys(updateData).filter(k => k !== 'updated_at');
+    if (fieldsToUpdate.length === 0) {
       console.warn('⚠️ Nenhum campo para atualizar');
       return new Response(JSON.stringify({
         success: false,

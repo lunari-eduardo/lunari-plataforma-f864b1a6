@@ -5,6 +5,7 @@ import { Package, Box, Workflow, Shapes, DollarSign } from 'lucide-react';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { TableSyncStatus } from '@/components/ui/sync-indicator';
 import { useRealtimeConfiguration } from '@/hooks/useRealtimeConfiguration';
+import { useAccessControl } from '@/hooks/useAccessControl';
 
 import Categorias from '@/components/configuracoes/Categorias';
 import Pacotes from '@/components/configuracoes/Pacotes';
@@ -14,6 +15,7 @@ import PrecificacaoFotos from '@/components/configuracoes/PrecificacaoFotos';
 
 export default function Configuracoes() {
   const configuration = useRealtimeConfiguration();
+  const { hasGaleryAccess } = useAccessControl();
   const [tabAtiva, setTabAtiva] = useState('categorias');
   
   return (
@@ -100,6 +102,7 @@ export default function Configuracoes() {
                   onUpdate={configuration.atualizarEtapa}
                   onDelete={configuration.removerEtapa}
                   onMove={configuration.moverEtapa}
+                  hasGalleryAccess={hasGaleryAccess}
                 />
               </TabsContent>
             </Tabs>
