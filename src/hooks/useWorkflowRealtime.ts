@@ -629,6 +629,40 @@ export const useWorkflowRealtime = () => {
 
       if (error) throw error;
 
+      // ✅ SYNC: Atualizar appointments.package_id quando pacote mudar no Workflow
+      if (sanitizedUpdates.pacote && currentSession?.appointment_id) {
+        try {
+          // Buscar pacotes para encontrar o ID do novo pacote
+          const { data: pacotes } = await supabase
+            .from('pacotes')
+            .select('id, nome')
+            .eq('user_id', user.user.id);
+          
+          const pkg = pacotes?.find(p => p.nome === sanitizedUpdates.pacote);
+          
+          if (pkg) {
+            const { error: appointmentError } = await supabase
+              .from('appointments')
+              .update({
+                package_id: pkg.id,
+                type: sanitizedUpdates.categoria || currentSession.categoria,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', currentSession.appointment_id);
+            
+            if (appointmentError) {
+              console.error('❌ [SYNC] Erro ao atualizar appointment:', appointmentError);
+            } else {
+              console.log('📅 [SYNC] Appointment package_id atualizado:', pkg.id, '→', sanitizedUpdates.pacote);
+            }
+          } else {
+            console.warn('⚠️ [SYNC] Pacote não encontrado para sincronizar:', sanitizedUpdates.pacote);
+          }
+        } catch (syncError) {
+          console.error('❌ [SYNC] Erro na sincronização Workflow → Agenda:', syncError);
+        }
+      }
+
       // FASE 4: Read-back para garantir consistência (correção automática se necessário)
       if (hasTotalAffectingChanges && currentSession) {
         const { data: updatedSession } = await supabase
