@@ -1,189 +1,183 @@
 
 
-# Diagnóstico: Conflito entre Gestão e Gallery no Sistema de Cobranças
+# Plano: Correção de Atualização de Pacote no Workflow e Integração Gallery
 
-## Problema Identificado
+## Diagnóstico do Problema
 
-Após análise detalhada dos logs e código, identifiquei que:
+### Problema 1: Pacote não atualizado no banco de dados
 
-### 1. Edge Function Desatualizada no Supabase
-
-A versão deployada da `infinitepay-create-link` está **desatualizada** em relação ao código do repositório:
-
-| Aspecto | Código no Repositório | Versão Deployada |
-|---------|----------------------|------------------|
-| Autenticação | Extrai `userId` do JWT (linha 43) | Exige `userId` no body |
-| Extração de URL | `ipData.checkout_url \|\| ipData.url \|\| ipData.link` (linha 170) | Só procura `checkout_url` |
-| order_nsu | UUID da cobrança (`cobranca.id`) | Formato `gallery-timestamp-random` |
-
-**Evidência nos logs:**
+**Evidência:**
+```sql
+-- Consulta realizada na sessão a5c87748-6ab6-4277-842e-e1db48d07900
+pacote: "Smash 10f"  -- ❌ ANTIGO
+categoria: "Smash"   -- ❌ ANTIGO
+regras_congeladas.pacote.nome: "Teste"  -- ✅ NOVO (congelado corretamente)
+regras_congeladas.pacote.categoria: "Teste"  -- ✅ NOVO
 ```
-ERROR: No checkout_url in InfinitePay response: { url: "https://checkout.infinitepay.io/..." }
-```
-→ A API retorna `url`, mas a versão deployada só procura `checkout_url`
 
-**Evidência no curl:**
-```
-{"error":"clienteId, valor e userId são obrigatórios"}
-```
-→ A versão deployada espera `userId` no body, código atual não
+**Causa Raiz:**
+O fluxo de atualização de pacote no `useWorkflowRealtime.ts` está executando corretamente o congelamento das regras (`regras_congeladas`), mas há uma condição que pode estar impedindo o UPDATE do campo `pacote` e `categoria` no banco de dados.
 
-### 2. Separação de Responsabilidades
+**Análise Detalhada:**
+1. `WorkflowCardCollapsed` chama `onFieldUpdate(session.id, 'pacote', packageData.id)`
+2. `useWorkflowRealtime.updateSession` processa o campo `pacote`:
+   - Busca pacote via `configurationService.loadPacotesAsync()`
+   - Define `sanitizedUpdates.pacote = pkg.nome`
+   - Define `sanitizedUpdates.categoria = cat.nome`
+   - Congela regras corretamente
+3. **PROBLEMA POTENCIAL**: O diff check na linha 590-608 pode estar falhando em detectar mudanças ou o UPDATE não está sendo executado
 
-O sistema foi projetado com duas Edge Functions distintas:
-
-| Função | Uso | Autenticação |
-|--------|-----|--------------|
-| `infinitepay-create-link` | Gestão (Workflow/CRM) | JWT do fotógrafo |
-| `gallery-create-payment` | Gallery | Service Role (sem auth) |
-
-**O Gallery deve usar `gallery-create-payment`, NÃO `infinitepay-create-link`**
+**Verificação adicional necessária:**
+O campo `pacote` na sessão **em cache** pode já estar mostrando o novo valor, fazendo o diff check retornar "sem mudanças", enquanto o banco ainda tem o valor antigo.
 
 ---
 
 ## Correções Necessárias
 
-### FASE 1: Redeploy da Edge Function do Gestão
+### FASE 1: Correção do fluxo de atualização de pacote
 
-A `infinitepay-create-link` precisa ser redeployada para usar o código atual do repositório, que já tem as correções:
+**Arquivo:** `src/hooks/useWorkflowRealtime.ts`
 
-**Linha 170 (já correta no repo):**
+**Problema:** O diff check compara contra `currentSession` que vem do cache local, não do banco. Se o cache já foi atualizado otimisticamente, o diff retorna "sem mudanças".
+
+**Solução:** Garantir que o UPDATE sempre execute quando `regras_congeladas` é modificado, já que isso indica uma mudança real de pacote.
+
 ```typescript
-const checkoutUrl = ipData.checkout_url || ipData.url || ipData.link;
+// Linha ~593 - Adicionar regras_congeladas ao check de forma mais robusta
+const fieldsToCheck = ['pacote', 'valor_total', 'valor_pago', 'qtd_fotos_extra', 
+                       'valor_foto_extra', 'valor_total_foto_extra', 'produtos_incluidos', 
+                       'categoria', 'descricao', 'status', 'regras_congeladas', 
+                       'desconto', 'valor_adicional', 'observacoes', 'detalhes'];
+
+// CORREÇÃO: Forçar update quando pacote mudou (regras_congeladas indica mudança real)
+if (sanitizedUpdates.regras_congeladas) {
+  hasChanges = true; // Regras congeladas sempre indica mudança real
+}
 ```
 
-### FASE 2: Verificar gallery-create-payment
+### FASE 2: Garantir persistência atômica de pacote e categoria
 
-A função `gallery-create-payment` já está correta no repositório (linha 206):
+**Arquivo:** `src/hooks/useWorkflowRealtime.ts` (linhas 304-384)
+
+**Melhoria:** Adicionar log de debug e verificação após o UPDATE
+
 ```typescript
-checkoutUrl = ipData.checkout_url || ipData.url || ipData.link;
+// Após linha 378, adicionar verificação
+if (sanitizedUpdates.pacote && sanitizedUpdates.pacote !== currentSession?.pacote) {
+  console.log('🔄 PACOTE MUDOU:', currentSession?.pacote, '→', sanitizedUpdates.pacote);
+}
 ```
-
-Mas nunca foi chamada (logs vazios), então precisa ser deployada também.
 
 ---
 
-## Plano do Gallery - Análise de Impacto
+## Parte 2: Como o Gallery pode modificar valores de fotos extras
 
-### O plano do Gallery NÃO afeta o Gestão porque:
-
-1. **Funções separadas**: Gallery usa `gallery-create-payment`, Gestão usa `infinitepay-create-link`
-2. **Banco compartilhado**: Ambos salvam em `cobrancas`, mas isso é intencional para sincronização
-3. **Webhooks unificados**: `infinitepay-webhook` processa pagamentos de ambas as fontes
-
-### Correções que o Gallery precisa fazer:
-
-1. **Corrigir `saleSettings.paymentMethod`** (não afeta Gestão)
-2. **Usar `gallery-create-payment`** em vez de tentar chamar `infinitepay-create-link` diretamente
-
----
-
-## Diagrama de Arquitetura Correta
+### Arquitetura de Sincronização
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                        GESTÃO                                    │
+│                    GALLERY PROJECT                               │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
-│  ChargeModal → useCobranca → infinitepay-create-link            │
-│                               (requer JWT do fotógrafo)         │
+│  Cliente seleciona fotos → Calcula fotos extras → Confirma     │
+│                                                                 │
+│  Ao confirmar seleção:                                          │
+│  1. Atualiza qtd_fotos_extra diretamente na sessão              │
+│  2. Cria cobrança via gallery-create-payment                    │
+│  3. Redireciona para checkout InfinitePay/MercadoPago           │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
                               │
-                              │ Salva em 'cobrancas'
-                              │ com session_id (texto)
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                    BANCO DE DADOS                                │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
-│  • cobrancas (registro de todas as cobranças)                   │
-│  • clientes_transacoes (pagamentos confirmados)                 │
-│  • clientes_sessoes (valores totais via trigger)                │
+│  clientes_sessoes:                                              │
+│  ├─ qtd_fotos_extra (int)                                       │
+│  ├─ valor_foto_extra (numeric) - preço unitário                 │
+│  ├─ valor_total_foto_extra (numeric) - total fotos extras       │
+│  ├─ valor_total (numeric) - calculado via trigger               │
+│  ├─ valor_pago (numeric) - atualizado via trigger de transações │
+│  └─ regras_congeladas (jsonb) - regras de precificação          │
 │                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-                              ▲
-                              │ Salva em 'cobrancas'
-                              │ com session_id (texto)
-                              │
-┌─────────────────────────────────────────────────────────────────┐
-│                        GALLERY                                   │
-├─────────────────────────────────────────────────────────────────┤
+│  Trigger: recalculate_fotos_extras_total                        │
+│  - Executado quando qtd_fotos_extra ou valor_foto_extra muda    │
+│  - Recalcula valor_total_foto_extra = qtd × valor_unitário      │
 │                                                                 │
-│  ClientGallery → gallery-create-payment                         │
-│                  (Service Role, sem auth do cliente)            │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    INFINITEPAY API                               │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  Retorna: { url: "https://checkout.infinitepay.io/..." }        │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              │ Webhook quando pago
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                 infinitepay-webhook                              │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  1. Atualiza cobrancas.status = 'pago'                          │
-│  2. Cria clientes_transacoes                                    │
-│  3. Trigger recompute_session_paid atualiza valor_pago          │
-│                                                                 │
-│  ✓ Funciona igual para Gestão e Gallery                         │
+│  Trigger: recalculate_valor_total                               │
+│  - Executado quando valor_total_foto_extra muda                 │
+│  - Recalcula valor_total da sessão inteira                      │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
----
+### Implementação no Gallery
 
-## Ações a Executar
+O Gallery deve atualizar diretamente a tabela `clientes_sessoes` com os valores calculados:
 
-### No Gestão (este projeto):
-
-1. **Redeploy `infinitepay-create-link`** - corrigir versão desatualizada
-2. **Deploy `gallery-create-payment`** - garantir que está disponível
-
-### Instruções para o Gallery:
-
-O Gallery deve:
-
-1. **Usar `gallery-create-payment`** para criar cobranças:
 ```typescript
-const { data } = await supabase.functions.invoke('gallery-create-payment', {
-  body: {
-    galleryId: "uuid-da-galeria",    // Ou sessionId (texto)
-    clienteId: "uuid-do-cliente",
-    valor: 168.00,
-    descricao: "8 fotos extras - Galeria"
-  }
-});
+// No Gallery - ao confirmar seleção de fotos
 
-if (data.success && data.checkoutUrl) {
-  window.location.href = data.checkoutUrl;
+async function updateSessionExtraPhotos(params: {
+  sessionId: string;        // Formato texto: "workflow-xxx"
+  sessionUuid: string;      // UUID da sessão
+  qtdFotosExtra: number;
+  valorFotoExtra: number;   // Preço unitário já calculado com desconto
+  valorTotalFotoExtra: number; // Total calculado
+}) {
+  // Opção 1: UPDATE direto via Supabase (requer service role ou RLS permitir)
+  const { error } = await supabase
+    .from('clientes_sessoes')
+    .update({
+      qtd_fotos_extra: params.qtdFotosExtra,
+      valor_foto_extra: params.valorFotoExtra,
+      valor_total_foto_extra: params.valorTotalFotoExtra,
+      // NÃO atualizar valor_total - trigger faz isso
+      updated_at: new Date().toISOString()
+    })
+    .or(`id.eq.${params.sessionUuid},session_id.eq.${params.sessionId}`);
+
+  if (error) {
+    console.error('Erro ao atualizar fotos extras:', error);
+    throw error;
+  }
 }
 ```
 
-2. **Corrigir mapeamento de `paymentMethod`** no `saleSettings` (problema interno do Gallery)
+### Considerações de Segurança (RLS)
 
-3. **NÃO tentar chamar `infinitepay-create-link` diretamente** - essa função requer JWT do fotógrafo
+O Gallery precisa de uma das seguintes abordagens:
+
+**Opção A - Edge Function intermediária (RECOMENDADO):**
+Criar `gallery-update-session-photos` que usa Service Role para atualizar a sessão.
+
+**Opção B - RLS Policy específica:**
+Criar policy que permite UPDATE limitado em clientes_sessoes para campos específicos.
+
+### Resumo de Campos que o Gallery pode/deve modificar
+
+| Campo | Pode Modificar | Via |
+|-------|----------------|-----|
+| `qtd_fotos_extra` | ✅ Sim | UPDATE direto ou Edge Function |
+| `valor_foto_extra` | ✅ Sim | Calculado com descontos progressivos |
+| `valor_total_foto_extra` | ✅ Sim | qtd × valor unitário |
+| `valor_total` | ❌ Não | Trigger automático |
+| `valor_pago` | ❌ Não | Trigger de transações |
+| `status_galeria` | ✅ Sim | Status da galeria na sessão |
 
 ---
 
-## Resumo de Onde Salvar Pagamentos
+## Resumo das Correções
 
-| Origem | Tabela | session_id | Sincronização |
-|--------|--------|------------|---------------|
-| Gestão (Workflow/CRM) | `cobrancas` | `"workflow-xxx"` (texto) | Automática via webhook |
-| Gallery (vinculada) | `cobrancas` | `"workflow-xxx"` (texto) | Automática via webhook |
-| Gallery (avulsa) | `cobrancas` | `null` | Sem vínculo com sessão |
+| Arquivo | Problema | Correção |
+|---------|----------|----------|
+| `src/hooks/useWorkflowRealtime.ts` | Diff check pode ignorar mudanças de pacote | Forçar `hasChanges = true` quando `regras_congeladas` é atualizado |
+| `supabase/functions/gallery-update-session` | Não existe | Criar Edge Function para Gallery atualizar fotos extras |
 
-O webhook `infinitepay-webhook` processa todos igualmente:
-- Atualiza `cobrancas.status`
-- Cria `clientes_transacoes` com `session_id`
-- Trigger recalcula `clientes_sessoes.valor_pago`
+## Próximos Passos
+
+1. **Correção imediata**: Forçar UPDATE quando regras_congeladas mudar
+2. **Criar Edge Function**: `gallery-update-session-photos` para Gallery
+3. **Testar fluxo completo**: Mudar pacote → verificar banco → confirmar sincronização
 
