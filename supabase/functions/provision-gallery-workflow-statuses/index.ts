@@ -26,7 +26,8 @@ const GALLERY_SYSTEM_STATUSES = [
 ];
 
 interface ProvisionRequest {
-  userId: string;
+  userId?: string;
+  email?: string;  // Alternativa quando userId não é conhecido
   action: 'provision' | 'deprovision';
 }
 
@@ -44,17 +45,51 @@ serve(async (req) => {
     const body: ProvisionRequest = await req.json();
     console.log('🔧 [provision-gallery-workflow-statuses] Request:', body);
 
-    if (!body.userId) {
+    let userId = body.userId;
+    const { action = 'provision' } = body;
+
+    // Se email fornecido, buscar userId
+    if (!userId && body.email) {
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', body.email.toLowerCase())
+        .maybeSingle();
+      
+      if (profileError) {
+        console.error('❌ Erro ao buscar profile:', profileError);
+        return new Response(JSON.stringify({
+          success: false,
+          error: profileError.message
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      if (!profile?.id) {
+        console.log('ℹ️ Usuário ainda não cadastrado:', body.email);
+        return new Response(JSON.stringify({
+          success: true,
+          message: 'Usuário ainda não cadastrado - provisionamento será feito no primeiro acesso'
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      
+      userId = profile.id;
+    }
+
+    if (!userId) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'userId é obrigatório'
+        error: 'userId ou email é obrigatório'
       }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
-
-    const { userId, action = 'provision' } = body;
 
     if (action === 'deprovision') {
       // Remover flag is_system_status (status vira editável novamente)

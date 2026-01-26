@@ -154,11 +154,12 @@ export default function AllowedEmailsManager() {
     try {
       setSubmitting(true);
       const { data: userData } = await supabase.auth.getUser();
+      const emailLower = newEmail.trim().toLowerCase();
       
       const { error } = await supabase
         .from('allowed_emails')
         .insert({
-          email: newEmail.trim().toLowerCase(),
+          email: emailLower,
           note: newNote.trim() || null,
           created_by: userData.user?.id || null,
           plan_code: selectedPlan
@@ -171,6 +172,14 @@ export default function AllowedEmailsManager() {
           throw error;
         }
         return;
+      }
+
+      // Se plano inclui Gallery, provisionar status de sistema
+      if (selectedPlan.startsWith('pro_galery')) {
+        console.log('🔧 Provisionando status de sistema para:', emailLower);
+        await supabase.functions.invoke('provision-gallery-workflow-statuses', {
+          body: { email: emailLower, action: 'provision' }
+        });
       }
 
       toast.success('Email autorizado com sucesso');
@@ -199,6 +208,14 @@ export default function AllowedEmailsManager() {
         .eq('email', editingEmail);
 
       if (error) throw error;
+
+      // Se novo plano inclui Gallery, provisionar status de sistema
+      if (selectedPlan.startsWith('pro_galery')) {
+        console.log('🔧 Provisionando status de sistema para:', editingEmail);
+        await supabase.functions.invoke('provision-gallery-workflow-statuses', {
+          body: { email: editingEmail, action: 'provision' }
+        });
+      }
 
       toast.success('Plano atualizado com sucesso');
       setEditPlanModalOpen(false);

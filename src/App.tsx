@@ -49,6 +49,7 @@ import { useAppointmentWorkflowSync } from "./hooks/useAppointmentWorkflowSync";
 import { useAppForceUpdate } from "./hooks/useAppForceUpdate";
 import { useTrialWelcomeToast } from "./components/subscription/TrialWelcomeToast";
 import { usePWAUpdate } from "./hooks/usePWAUpdate";
+import { useProvisionGalleryStatuses } from "./hooks/useProvisionGalleryStatuses";
 
 // Create a stable QueryClient instance
 const queryClient = new QueryClient({
@@ -71,6 +72,9 @@ function AppContent() {
   
   // Show trial welcome toast on first access
   useTrialWelcomeToast();
+  
+  // Auto-provisionar status de sistema Gallery para usuários PRO + Gallery
+  useProvisionGalleryStatuses();
   
   return null;
 }
