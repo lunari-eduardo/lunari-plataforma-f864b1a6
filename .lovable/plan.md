@@ -1,183 +1,278 @@
 
+# Plano de Correção: Sincronização Pacote Workflow → Agenda e Retorno de Pagamento Gallery
 
-# Plano: Correção de Atualização de Pacote no Workflow e Integração Gallery
+## Problema 1: Agenda não reflete mudança de pacote do Workflow
 
-## Diagnóstico do Problema
+### Diagnóstico Técnico
 
-### Problema 1: Pacote não atualizado no banco de dados
-
-**Evidência:**
-```sql
--- Consulta realizada na sessão a5c87748-6ab6-4277-842e-e1db48d07900
-pacote: "Smash 10f"  -- ❌ ANTIGO
-categoria: "Smash"   -- ❌ ANTIGO
-regras_congeladas.pacote.nome: "Teste"  -- ✅ NOVO (congelado corretamente)
-regras_congeladas.pacote.categoria: "Teste"  -- ✅ NOVO
-```
-
-**Causa Raiz:**
-O fluxo de atualização de pacote no `useWorkflowRealtime.ts` está executando corretamente o congelamento das regras (`regras_congeladas`), mas há uma condição que pode estar impedindo o UPDATE do campo `pacote` e `categoria` no banco de dados.
-
-**Análise Detalhada:**
-1. `WorkflowCardCollapsed` chama `onFieldUpdate(session.id, 'pacote', packageData.id)`
-2. `useWorkflowRealtime.updateSession` processa o campo `pacote`:
-   - Busca pacote via `configurationService.loadPacotesAsync()`
-   - Define `sanitizedUpdates.pacote = pkg.nome`
-   - Define `sanitizedUpdates.categoria = cat.nome`
-   - Congela regras corretamente
-3. **PROBLEMA POTENCIAL**: O diff check na linha 590-608 pode estar falhando em detectar mudanças ou o UPDATE não está sendo executado
-
-**Verificação adicional necessária:**
-O campo `pacote` na sessão **em cache** pode já estar mostrando o novo valor, fazendo o diff check retornar "sem mudanças", enquanto o banco ainda tem o valor antigo.
-
----
-
-## Correções Necessárias
-
-### FASE 1: Correção do fluxo de atualização de pacote
-
-**Arquivo:** `src/hooks/useWorkflowRealtime.ts`
-
-**Problema:** O diff check compara contra `currentSession` que vem do cache local, não do banco. Se o cache já foi atualizado otimisticamente, o diff retorna "sem mudanças".
-
-**Solução:** Garantir que o UPDATE sempre execute quando `regras_congeladas` é modificado, já que isso indica uma mudança real de pacote.
-
-```typescript
-// Linha ~593 - Adicionar regras_congeladas ao check de forma mais robusta
-const fieldsToCheck = ['pacote', 'valor_total', 'valor_pago', 'qtd_fotos_extra', 
-                       'valor_foto_extra', 'valor_total_foto_extra', 'produtos_incluidos', 
-                       'categoria', 'descricao', 'status', 'regras_congeladas', 
-                       'desconto', 'valor_adicional', 'observacoes', 'detalhes'];
-
-// CORREÇÃO: Forçar update quando pacote mudou (regras_congeladas indica mudança real)
-if (sanitizedUpdates.regras_congeladas) {
-  hasChanges = true; // Regras congeladas sempre indica mudança real
-}
-```
-
-### FASE 2: Garantir persistência atômica de pacote e categoria
-
-**Arquivo:** `src/hooks/useWorkflowRealtime.ts` (linhas 304-384)
-
-**Melhoria:** Adicionar log de debug e verificação após o UPDATE
-
-```typescript
-// Após linha 378, adicionar verificação
-if (sanitizedUpdates.pacote && sanitizedUpdates.pacote !== currentSession?.pacote) {
-  console.log('🔄 PACOTE MUDOU:', currentSession?.pacote, '→', sanitizedUpdates.pacote);
-}
-```
-
----
-
-## Parte 2: Como o Gallery pode modificar valores de fotos extras
-
-### Arquitetura de Sincronização
+O problema foi identificado através da consulta SQL:
 
 ```
+appointment_package_id: ce7313d9-1ce1-4b07-a9c8-c0e8bf886853 (ID do pacote "Teste")
+session_pacote: "Gest. Estúdio 10f" (atualizado corretamente)
+```
+
+**Causa Raiz:** O Workflow atualiza a tabela `clientes_sessoes`, mas **não propaga a alteração para a tabela `appointments`**. A Agenda lê o `package_id` diretamente de `appointments`, que permanece com o valor antigo.
+
+### Arquitetura Atual (incompleta)
+
+```text
 ┌─────────────────────────────────────────────────────────────────┐
-│                    GALLERY PROJECT                               │
+│                        WORKFLOW                                  │
+├─────────────────────────────────────────────────────────────────┤
+│  useWorkflowRealtime.ts → updateSession()                       │
+│                                                                 │
+│  Atualiza clientes_sessoes:                                     │
+│  ├─ pacote (nome) ✅                                            │
+│  ├─ categoria (nome) ✅                                         │
+│  ├─ regras_congeladas ✅                                        │
+│  └─ valor_base_pacote ✅                                        │
+│                                                                 │
+│  ❌ NÃO ATUALIZA appointments.package_id                        │
+└─────────────────────────────────────────────────────────────────┘
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                        AGENDA                                    │
+├─────────────────────────────────────────────────────────────────┤
+│  UnifiedEventCard.tsx → getPackageInfo()                        │
+│                                                                 │
+│  Lê de appointments:                                            │
+│  ├─ package_id → Busca em pacotes[] (PRIORIDADE)                │
+│  └─ type → Fallback (nome antigo)                               │
+│                                                                 │
+│  ❌ EXIBE PACOTE ANTIGO porque package_id não foi atualizado    │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Solução Proposta
+
+Adicionar sincronização Workflow → Appointments após atualização de pacote em `useWorkflowRealtime.ts`.
+
+**Localização:** Após a linha 630, onde o update em `clientes_sessoes` é executado com sucesso.
+
+**Lógica:**
+```typescript
+// Após update bem-sucedido em clientes_sessoes
+if (sanitizedUpdates.pacote && currentSession?.appointment_id) {
+  const pkg = packages.find(p => p.nome === sanitizedUpdates.pacote);
+  if (pkg) {
+    await supabase
+      .from('appointments')
+      .update({
+        package_id: pkg.id,
+        type: sanitizedUpdates.categoria || currentSession.categoria,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', currentSession.appointment_id);
+    
+    console.log('📅 [SYNC] Appointment package_id atualizado:', pkg.id);
+  }
+}
+```
+
+### Campos a Atualizar no appointments
+
+| Campo | Valor | Descrição |
+|-------|-------|-----------|
+| `package_id` | UUID do novo pacote | Usado pela Agenda para exibir nome do pacote |
+| `type` | Nome da categoria | Campo texto de fallback (exibido como "tipo de sessão") |
+| `updated_at` | timestamp | Controle de versão |
+
+---
+
+## Problema 2: Gallery não recebe confirmação de pagamento
+
+### Fluxo Técnico Atual (já implementado no Gestão)
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│              GALLERY → CRIA COBRANÇA                             │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
-│  Cliente seleciona fotos → Calcula fotos extras → Confirma     │
+│  gallery-create-payment (Edge Function)                         │
+│  ├─ Recebe: sessionId (texto), clienteId, valor                 │
+│  ├─ Cria registro em cobrancas (status='pendente')              │
+│  ├─ Chama InfinitePay API                                       │
+│  └─ Retorna: checkoutUrl para redirecionamento                  │
 │                                                                 │
-│  Ao confirmar seleção:                                          │
-│  1. Atualiza qtd_fotos_extra diretamente na sessão              │
-│  2. Cria cobrança via gallery-create-payment                    │
-│  3. Redireciona para checkout InfinitePay/MercadoPago           │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              │ Cliente paga no checkout InfinitePay
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│              INFINITEPAY → WEBHOOK                               │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  infinitepay-webhook (Edge Function)                            │
+│  ├─ Recebe: order_nsu (= cobranca.id), paid_amount              │
+│  ├─ Atualiza cobrancas SET status='pago', data_pagamento=now    │
+│  ├─ Cria registro em clientes_transacoes                        │
+│  └─ Trigger recompute_session_paid atualiza valor_pago          │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Como o Gallery DEVE verificar pagamento
+
+O Gallery tem **duas opções** para confirmar pagamento:
+
+**Opção A: Polling na tabela `cobrancas` (Recomendado para UI simples)**
+
+```typescript
+// No Gallery - após redirecionar cliente para checkout
+async function verificarPagamento(cobrancaId: string): Promise<boolean> {
+  const { data } = await supabase
+    .from('cobrancas')
+    .select('status, valor, data_pagamento')
+    .eq('id', cobrancaId)
+    .single();
+  
+  return data?.status === 'pago';
+}
+
+// Usar em intervalo
+const pollInterval = setInterval(async () => {
+  const pago = await verificarPagamento(cobrancaId);
+  if (pago) {
+    clearInterval(pollInterval);
+    // Exibir confirmação para o cliente
+    showPaymentSuccessMessage();
+    // Atualizar status da galeria
+    await updateGalleryStatus(galeriaId, 'pago');
+  }
+}, 3000); // Verificar a cada 3 segundos
+```
+
+**Opção B: Real-time subscription (Melhor UX)**
+
+```typescript
+// No Gallery - escutar mudanças em tempo real
+const subscription = supabase
+  .channel('cobranca-payment')
+  .on(
+    'postgres_changes',
+    {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'cobrancas',
+      filter: `id=eq.${cobrancaId}`
+    },
+    (payload) => {
+      if (payload.new.status === 'pago') {
+        // Pagamento confirmado!
+        showPaymentSuccessMessage();
+        updateGalleryStatus(galeriaId, 'pago');
+        subscription.unsubscribe();
+      }
+    }
+  )
+  .subscribe();
+```
+
+**Opção C: Verificar via session_id (para galleries vinculadas)**
+
+```typescript
+// Se a galeria tem session_id vinculado
+async function verificarPagamentoSessao(sessionId: string): Promise<{pago: boolean, valorPago: number}> {
+  const { data } = await supabase
+    .from('clientes_sessoes')
+    .select('valor_pago, valor_total')
+    .or(`session_id.eq.${sessionId},id.eq.${sessionId}`)
+    .single();
+  
+  return {
+    pago: data?.valor_pago >= data?.valor_total,
+    valorPago: data?.valor_pago || 0
+  };
+}
+```
+
+### Diagrama do Fluxo Completo
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                        GALLERY                                   │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  1. Cliente seleciona fotos extras (8 fotos × R$21 = R$168)     │
+│                                                                 │
+│  2. Chama: gallery-create-payment                               │
+│     body: {                                                     │
+│       sessionId: "workflow-xxx",  // Vínculo com Gestão         │
+│       clienteId: "uuid-cliente",                                │
+│       valor: 168.00,                                            │
+│       descricao: "8 fotos extras"                               │
+│     }                                                           │
+│                                                                 │
+│  3. Recebe: { success: true, checkoutUrl: "https://..." }       │
+│                                                                 │
+│  4. Redireciona cliente para checkoutUrl                        │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                    BANCO DE DADOS                                │
+│                   CHECKOUT INFINITEPAY                           │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
-│  clientes_sessoes:                                              │
-│  ├─ qtd_fotos_extra (int)                                       │
-│  ├─ valor_foto_extra (numeric) - preço unitário                 │
-│  ├─ valor_total_foto_extra (numeric) - total fotos extras       │
-│  ├─ valor_total (numeric) - calculado via trigger               │
-│  ├─ valor_pago (numeric) - atualizado via trigger de transações │
-│  └─ regras_congeladas (jsonb) - regras de precificação          │
+│  Cliente paga (Pix, Cartão, etc.)                               │
 │                                                                 │
-│  Trigger: recalculate_fotos_extras_total                        │
-│  - Executado quando qtd_fotos_extra ou valor_foto_extra muda    │
-│  - Recalcula valor_total_foto_extra = qtd × valor_unitário      │
+│  Após pagamento confirmado:                                     │
+│  → InfinitePay envia webhook para infinitepay-webhook           │
 │                                                                 │
-│  Trigger: recalculate_valor_total                               │
-│  - Executado quando valor_total_foto_extra muda                 │
-│  - Recalcula valor_total da sessão inteira                      │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                   INFINITEPAY-WEBHOOK                            │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  • Atualiza cobrancas.status = 'pago'                           │
+│  • Cria clientes_transacoes com valor e session_id              │
+│  • Trigger recompute_session_paid → valor_pago atualizado       │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                GALLERY DETECTA PAGAMENTO                         │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  Via: subscription em 'cobrancas' WHERE id = cobrancaId         │
+│  OU: polling em 'cobrancas' a cada 3s                           │
+│                                                                 │
+│  Quando status = 'pago':                                        │
+│  • Exibir mensagem de sucesso                                   │
+│  • Atualizar status da galeria                                  │
+│  • Liberar download ou próxima etapa                            │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### Implementação no Gallery
+---
 
-O Gallery deve atualizar diretamente a tabela `clientes_sessoes` com os valores calculados:
+## Resumo das Alterações
 
-```typescript
-// No Gallery - ao confirmar seleção de fotos
+### No Gestão (este projeto)
 
-async function updateSessionExtraPhotos(params: {
-  sessionId: string;        // Formato texto: "workflow-xxx"
-  sessionUuid: string;      // UUID da sessão
-  qtdFotosExtra: number;
-  valorFotoExtra: number;   // Preço unitário já calculado com desconto
-  valorTotalFotoExtra: number; // Total calculado
-}) {
-  // Opção 1: UPDATE direto via Supabase (requer service role ou RLS permitir)
-  const { error } = await supabase
-    .from('clientes_sessoes')
-    .update({
-      qtd_fotos_extra: params.qtdFotosExtra,
-      valor_foto_extra: params.valorFotoExtra,
-      valor_total_foto_extra: params.valorTotalFotoExtra,
-      // NÃO atualizar valor_total - trigger faz isso
-      updated_at: new Date().toISOString()
-    })
-    .or(`id.eq.${params.sessionUuid},session_id.eq.${params.sessionId}`);
+| Arquivo | Alteração | Descrição |
+|---------|-----------|-----------|
+| `src/hooks/useWorkflowRealtime.ts` | Adicionar sync Workflow → Appointments | Atualizar `package_id` e `type` na tabela `appointments` após mudança de pacote |
 
-  if (error) {
-    console.error('Erro ao atualizar fotos extras:', error);
-    throw error;
-  }
-}
-```
+### Instruções para o Gallery
 
-### Considerações de Segurança (RLS)
+O Gallery deve implementar **verificação de pagamento** usando uma das três opções:
 
-O Gallery precisa de uma das seguintes abordagens:
+1. **Polling** na tabela `cobrancas` (mais simples)
+2. **Real-time subscription** em `cobrancas` (melhor UX)
+3. **Verificar `valor_pago`** em `clientes_sessoes` (para galerias vinculadas)
 
-**Opção A - Edge Function intermediária (RECOMENDADO):**
-Criar `gallery-update-session-photos` que usa Service Role para atualizar a sessão.
-
-**Opção B - RLS Policy específica:**
-Criar policy que permite UPDATE limitado em clientes_sessoes para campos específicos.
-
-### Resumo de Campos que o Gallery pode/deve modificar
-
-| Campo | Pode Modificar | Via |
-|-------|----------------|-----|
-| `qtd_fotos_extra` | ✅ Sim | UPDATE direto ou Edge Function |
-| `valor_foto_extra` | ✅ Sim | Calculado com descontos progressivos |
-| `valor_total_foto_extra` | ✅ Sim | qtd × valor unitário |
-| `valor_total` | ❌ Não | Trigger automático |
-| `valor_pago` | ❌ Não | Trigger de transações |
-| `status_galeria` | ✅ Sim | Status da galeria na sessão |
+**Importante:** O Gallery NÃO precisa implementar webhook próprio. O `infinitepay-webhook` do Gestão já processa todos os pagamentos e atualiza as tabelas compartilhadas.
 
 ---
 
-## Resumo das Correções
-
-| Arquivo | Problema | Correção |
-|---------|----------|----------|
-| `src/hooks/useWorkflowRealtime.ts` | Diff check pode ignorar mudanças de pacote | Forçar `hasChanges = true` quando `regras_congeladas` é atualizado |
-| `supabase/functions/gallery-update-session` | Não existe | Criar Edge Function para Gallery atualizar fotos extras |
-
 ## Próximos Passos
 
-1. **Correção imediata**: Forçar UPDATE quando regras_congeladas mudar
-2. **Criar Edge Function**: `gallery-update-session-photos` para Gallery
-3. **Testar fluxo completo**: Mudar pacote → verificar banco → confirmar sincronização
-
+1. **Implementar correção no useWorkflowRealtime.ts** - Adicionar sync para appointments após mudança de pacote
+2. **Testar fluxo** - Mudar pacote no Workflow → Verificar se Agenda atualiza
+3. **Documentar para Gallery** - Enviar instruções de como verificar pagamento via Supabase
