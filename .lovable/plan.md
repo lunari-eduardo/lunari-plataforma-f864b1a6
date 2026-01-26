@@ -1,429 +1,342 @@
 
-# Plano: Sistema de Status Fixos para PRO + Gallery com Triggers Automáticos
+# Plano: Gerenciamento de Planos para Usuários Autorizados pelo Admin
 
 ## Visão Geral
 
-Implementar um sistema onde os status "Enviado para seleção" e "Seleção finalizada" são fixos e automáticos **apenas** para usuários no plano PRO + Gallery. Para outros planos, esses status (se existirem) comportam-se como quaisquer outros status personalizáveis.
+Implementar seleção de plano ao adicionar usuários autorizados (emails). Atualmente, usuários na tabela `allowed_emails` recebem acesso PRO fixo sem Gallery. A nova funcionalidade permitirá ao admin escolher qual plano liberar para cada usuário.
+
+---
+
+## Diagnóstico Atual
+
+### Tabela `allowed_emails` (existente)
+```sql
+CREATE TABLE allowed_emails (
+  email CITEXT PRIMARY KEY,
+  note TEXT,
+  created_by UUID,
+  created_at TIMESTAMPTZ
+);
+-- ❌ Não tem campo para especificar plano
+```
+
+### Função `get_access_state()` (atual)
+```sql
+-- Para usuários autorizados:
+RETURN jsonb_build_object(
+  'planCode', 'pro_monthly',     -- ❌ Fixo
+  'hasGaleryAccess', false       -- ❌ Fixo
+);
+```
+
+### Comportamento Esperado
+| Tipo de Usuário | planCode | hasGaleryAccess |
+|-----------------|----------|-----------------|
+| Admin | pro_galery_monthly | true |
+| Autorizado (PRO+Gallery) | pro_galery_monthly | true |
+| Autorizado (PRO) | pro_monthly | false |
+| Autorizado (Starter) | starter_monthly | false |
 
 ---
 
 ## Arquitetura da Solução
 
 ```text
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                         PLANOS SEM GALLERY                                       │
-├─────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                 │
-│  Etapas do Workflow: TOTALMENTE PERSONALIZÁVEIS                                 │
-│  ├─ Editar ✅                                                                   │
-│  ├─ Excluir ✅                                                                  │
-│  ├─ Renomear ✅                                                                 │
-│  └─ Reorganizar ✅                                                              │
-│                                                                                 │
-│  Nenhuma automação. Fluxo 100% manual.                                          │
-│                                                                                 │
-└─────────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                     ANTES (Fixo)                                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  allowed_emails: email, note, created_at, created_by                        │
+│                                                                             │
+│  get_access_state():                                                        │
+│    → planCode = 'pro_monthly' (sempre)                                      │
+│    → hasGaleryAccess = false (sempre)                                       │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
 
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                         PLANO PRO + GALLERY                                      │
-├─────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                 │
-│  Etapas Personalizáveis: ✅ Podem editar/excluir/reorganizar                    │
-│                                                                                 │
-│  Etapas de Sistema (FIXAS):                                                     │
-│  ├─ "Enviado para seleção" (is_system_status = true)                            │
-│  │   ├─ Acionado automaticamente quando galeria é publicada                     │
-│  │   ├─ NÃO pode ser editado                                                    │
-│  │   ├─ NÃO pode ser excluído                                                   │
-│  │   └─ Identificado visualmente como "Automático"                              │
-│  │                                                                              │
-│  └─ "Seleção finalizada" (is_system_status = true)                              │
-│      ├─ Acionado automaticamente quando cliente finaliza seleção                │
-│      ├─ NÃO pode ser editado                                                    │
-│      ├─ NÃO pode ser excluído                                                   │
-│      └─ Identificado visualmente como "Automático"                              │
-│                                                                                 │
-└─────────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                     DEPOIS (Configurável)                                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  allowed_emails: email, note, created_at, created_by, plan_code             │
+│                           ↑ NOVO CAMPO                                      │
+│                                                                             │
+│  get_access_state():                                                        │
+│    → Busca plan_code da tabela allowed_emails                               │
+│    → hasGaleryAccess = (plan_code LIKE 'pro_galery%')                       │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## FASE 1: Alterações no Banco de Dados
 
-### 1.1 Adicionar coluna `is_system_status` na tabela `etapas_trabalho`
+### 1.1 Adicionar coluna `plan_code` na tabela `allowed_emails`
 
 ```sql
-ALTER TABLE etapas_trabalho
-ADD COLUMN is_system_status BOOLEAN DEFAULT false;
+-- Adicionar coluna com valor padrão PRO + Gallery (acesso total)
+ALTER TABLE allowed_emails
+ADD COLUMN plan_code TEXT DEFAULT 'pro_galery_monthly';
 
--- Índice para performance
-CREATE INDEX idx_etapas_system_status ON etapas_trabalho(user_id, is_system_status);
+-- Atualizar registros existentes para PRO + Gallery (admin e autorizados têm acesso total)
+UPDATE allowed_emails
+SET plan_code = 'pro_galery_monthly'
+WHERE plan_code IS NULL;
+
+-- Criar constraint para validar códigos de plano
+ALTER TABLE allowed_emails
+ADD CONSTRAINT allowed_emails_plan_code_check
+CHECK (plan_code IN (
+  'starter_monthly', 'starter_yearly',
+  'pro_monthly', 'pro_yearly', 
+  'pro_galery_monthly', 'pro_galery_yearly'
+));
 ```
 
-**Propósito:** Identificar etapas que são controladas pelo sistema vs. personalizáveis.
-
-### 1.2 Adicionar constantes para nomes de status do sistema
-
-Definir os nomes exatos dos status do sistema que serão usados nas automações:
-- `GALLERY_STATUS_SENT = 'Enviado para seleção'`
-- `GALLERY_STATUS_FINALIZED = 'Seleção finalizada'`
-
-### 1.3 Criar trigger para mudança de status da galeria
+### 1.2 Atualizar função `get_access_state()`
 
 ```sql
--- Trigger function que atualiza status da sessão quando galeria muda de status
-CREATE OR REPLACE FUNCTION sync_gallery_status_to_session()
-RETURNS TRIGGER AS $$
-DECLARE
-  session_record RECORD;
-  target_status TEXT;
-  status_exists BOOLEAN;
-BEGIN
-  -- Só processar se status mudou
-  IF NEW.status = OLD.status THEN
-    RETURN NEW;
-  END IF;
-
-  -- Buscar sessão vinculada
-  SELECT id, session_id, status INTO session_record
-  FROM clientes_sessoes
-  WHERE (session_id = NEW.session_id OR galeria_id = NEW.id)
-    AND user_id = NEW.user_id
-  LIMIT 1;
-
-  IF session_record IS NULL THEN
-    RETURN NEW; -- Sem sessão vinculada, ignorar
-  END IF;
-
-  -- Mapear status da galeria para status da sessão
-  CASE NEW.status
-    WHEN 'enviado' THEN
-      target_status := 'Enviado para seleção';
-    WHEN 'selecao_iniciada' THEN
-      target_status := 'Enviado para seleção'; -- Mantém mesmo status
-    WHEN 'selecao_completa' THEN
-      target_status := 'Seleção finalizada';
-    ELSE
-      RETURN NEW; -- Outros status não afetam a sessão
-  END CASE;
-
-  -- Verificar se o status de destino existe nas etapas do usuário
-  SELECT EXISTS(
-    SELECT 1 FROM etapas_trabalho
-    WHERE user_id = NEW.user_id 
-      AND nome = target_status
-      AND is_system_status = true
-  ) INTO status_exists;
-
-  -- Só atualizar se o status de sistema existe (usuário tem PRO + Gallery ativo)
-  IF status_exists THEN
-    UPDATE clientes_sessoes
-    SET status = target_status,
-        status_galeria = NEW.status,
-        updated_at = NOW()
-    WHERE id = session_record.id;
-    
-    RAISE NOTICE '[Gallery Trigger] Session % status updated to %', session_record.id, target_status;
-  END IF;
-
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Trigger na tabela galerias
-CREATE TRIGGER trigger_sync_gallery_status
-AFTER UPDATE OF status ON galerias
-FOR EACH ROW
-EXECUTE FUNCTION sync_gallery_status_to_session();
-```
-
----
-
-## FASE 2: Provisionamento Automático de Status do Sistema
-
-### 2.1 Edge Function: `provision-gallery-workflow-statuses`
-
-Será chamada quando o usuário adquire o plano PRO + Gallery para criar automaticamente os status do sistema.
-
-```typescript
-// Pseudocódigo da lógica
-async function provisionGalleryStatuses(userId: string) {
-  const systemStatuses = [
-    { nome: 'Enviado para seleção', cor: '#3B82F6', is_system_status: true },
-    { nome: 'Seleção finalizada', cor: '#10B981', is_system_status: true }
-  ];
-
-  for (const status of systemStatuses) {
-    // Verificar se já existe
-    const existing = await supabase
-      .from('etapas_trabalho')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('nome', status.nome)
-      .single();
-
-    if (existing.data) {
-      // Já existe, apenas marcar como system status
-      await supabase
-        .from('etapas_trabalho')
-        .update({ is_system_status: true })
-        .eq('id', existing.data.id);
-    } else {
-      // Criar novo status de sistema
-      const maxOrdem = await getMaxOrdem(userId);
-      await supabase
-        .from('etapas_trabalho')
-        .insert({
-          user_id: userId,
-          nome: status.nome,
-          cor: status.cor,
-          ordem: maxOrdem + 1,
-          is_system_status: true
-        });
-    }
-  }
-}
-```
-
-### 2.2 Remoção de Status de Sistema ao Downgrade
-
-Quando o usuário faz downgrade para um plano sem Gallery:
-```typescript
-// Remover flag is_system_status (status vira editável)
-await supabase
-  .from('etapas_trabalho')
-  .update({ is_system_status: false })
-  .eq('user_id', userId)
-  .eq('is_system_status', true);
-```
-
----
-
-## FASE 3: Alterações no Frontend
-
-### 3.1 Atualizar tipo `EtapaTrabalho`
-
-```typescript
-// src/types/configuration.ts
-export interface EtapaTrabalho {
-  id: string;
-  user_id?: string;
-  nome: string;
-  cor: string;
-  ordem: number;
-  is_system_status?: boolean; // ← NOVO CAMPO
-  created_at?: string;
-  updated_at?: string;
-}
-```
-
-### 3.2 Atualizar componente `FluxoTrabalho.tsx`
-
-```typescript
-interface FluxoTrabalhoProps {
-  etapas: EtapaTrabalho[];
-  onAdd: (etapa: Omit<EtapaTrabalho, 'id' | 'ordem'>) => void;
-  onUpdate: (id: string, dados: Partial<EtapaTrabalho>) => Promise<void>;
-  onDelete: (id: string) => Promise<boolean>;
-  onMove: (id: string, direcao: 'cima' | 'baixo') => void;
-  hasGalleryAccess?: boolean; // ← NOVO PROP
-}
-
-// Na renderização de cada etapa:
-{etapasOrdenadas.map((etapa, index) => {
-  const isSystemStatus = hasGalleryAccess && etapa.is_system_status;
+-- Para usuários autorizados, buscar o plan_code da tabela
+IF v_is_authorized THEN
+  -- Buscar o plano configurado
+  SELECT ae.plan_code INTO v_authorized_plan
+  FROM public.allowed_emails ae
+  WHERE ae.email = v_user_email;
   
-  return (
-    <div key={etapa.id} className={cn(...)}>
-      {/* Coluna do nome */}
-      <div className="col-span-7 flex items-center gap-2">
-        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: etapa.cor }} />
-        <span className="font-medium">{etapa.nome}</span>
-        
-        {/* Badge de status automático */}
-        {isSystemStatus && (
-          <Badge variant="secondary" className="text-xs ml-2">
-            <Zap className="h-3 w-3 mr-1" />
-            Automático
-          </Badge>
-        )}
-      </div>
-      
-      {/* Coluna de ações - desabilitada para status de sistema */}
-      <div className="flex justify-end gap-1">
-        {!isSystemStatus && (
-          <>
-            <Button onClick={() => moverEtapa(etapa.id, 'cima')} disabled={...}>
-              <ArrowUp />
-            </Button>
-            <Button onClick={() => moverEtapa(etapa.id, 'baixo')} disabled={...}>
-              <ArrowDown />
-            </Button>
-            <Button onClick={() => iniciarEdicaoEtapa(etapa.id)}>
-              <Edit />
-            </Button>
-            <Button onClick={() => removerEtapa(etapa.id)}>
-              <Trash2 />
-            </Button>
-          </>
-        )}
-        
-        {isSystemStatus && (
-          <Tooltip content="Etapa controlada automaticamente pela integração Gallery">
-            <div className="flex items-center text-muted-foreground text-xs px-2">
-              <Lock className="h-3.5 w-3.5 mr-1" />
-              Protegido
-            </div>
-          </Tooltip>
-        )}
-      </div>
-    </div>
+  -- Determinar acesso à galeria baseado no plano
+  v_has_galery_access := v_authorized_plan LIKE 'pro_galery%';
+  
+  RETURN jsonb_build_object(
+    'status', 'ok',
+    'reason', 'Authorized email access',
+    'isAdmin', false,
+    'isVip', false,
+    'isTrial', false,
+    'isAuthorized', true,
+    'planCode', COALESCE(v_authorized_plan, 'pro_galery_monthly'),
+    'hasGaleryAccess', v_has_galery_access
   );
-})}
+END IF;
 ```
 
-### 3.3 Mensagem Explicativa na UI
+---
 
-Quando `hasGalleryAccess === true`, exibir no topo da seção de Etapas:
+## FASE 2: Alterações na UI do Admin
+
+### 2.1 Atualizar tipo TypeScript
+
+```typescript
+interface AllowedEmail {
+  email: string;
+  note: string | null;
+  created_at: string;
+  created_by: string | null;
+  plan_code: string | null; // ← NOVO CAMPO
+}
+```
+
+### 2.2 Atualizar modal de adicionar email
+
+Adicionar seletor de plano no formulário:
 
 ```tsx
-{hasGalleryAccess && (
-  <div className="flex items-center gap-2 p-3 bg-primary/5 border border-primary/20 rounded-lg mb-4">
-    <Zap className="h-4 w-4 text-primary" />
-    <p className="text-sm text-muted-foreground">
-      As etapas <strong>"Enviado para seleção"</strong> e <strong>"Seleção finalizada"</strong> 
-      são automáticas e fazem parte da integração com o Gallery.
-    </p>
-  </div>
-)}
+<div className="space-y-2">
+  <label className="text-sm font-medium">Plano de Acesso *</label>
+  <Select value={selectedPlan} onValueChange={setSelectedPlan}>
+    <SelectTrigger>
+      <SelectValue placeholder="Selecione o plano" />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="pro_galery_monthly">
+        <div className="flex items-center gap-2">
+          <Crown className="h-4 w-4 text-amber-500" />
+          PRO + Gallery (Acesso Total)
+        </div>
+      </SelectItem>
+      <SelectItem value="pro_monthly">
+        <div className="flex items-center gap-2">
+          <Crown className="h-4 w-4 text-primary" />
+          PRO
+        </div>
+      </SelectItem>
+      <SelectItem value="starter_monthly">
+        <div className="flex items-center gap-2">
+          <User className="h-4 w-4 text-muted-foreground" />
+          Starter
+        </div>
+      </SelectItem>
+    </SelectContent>
+  </Select>
+</div>
+```
+
+### 2.3 Atualizar tabela para exibir plano
+
+Adicionar coluna "Plano" na listagem:
+
+```tsx
+<TableHeader>
+  <TableRow>
+    <TableHead>Email</TableHead>
+    <TableHead>Plano</TableHead>       {/* ← NOVA COLUNA */}
+    <TableHead>Observação</TableHead>
+    <TableHead>Adicionado em</TableHead>
+    <TableHead>Ações</TableHead>
+  </TableRow>
+</TableHeader>
+
+<TableBody>
+  {emails.map((item) => (
+    <TableRow key={item.email}>
+      <TableCell>{item.email}</TableCell>
+      <TableCell>
+        <PlanBadge planCode={item.plan_code} />
+      </TableCell>
+      {/* ... */}
+    </TableRow>
+  ))}
+</TableBody>
+```
+
+### 2.4 Componente PlanBadge
+
+```tsx
+function PlanBadge({ planCode }: { planCode: string | null }) {
+  const plan = planCode || 'pro_galery_monthly';
+  
+  if (plan.startsWith('pro_galery')) {
+    return (
+      <Badge className="bg-amber-500/20 text-amber-500 border-amber-500/30">
+        <Crown className="h-3 w-3 mr-1" />
+        PRO + Gallery
+      </Badge>
+    );
+  }
+  
+  if (plan.startsWith('pro')) {
+    return (
+      <Badge className="bg-primary/20 text-primary border-primary/30">
+        <Crown className="h-3 w-3 mr-1" />
+        PRO
+      </Badge>
+    );
+  }
+  
+  return (
+    <Badge variant="secondary">
+      Starter
+    </Badge>
+  );
+}
+```
+
+### 2.5 Permitir editar plano de usuário existente
+
+Adicionar botão de edição para alterar plano sem remover o usuário:
+
+```tsx
+<DropdownMenu>
+  <DropdownMenuTrigger asChild>
+    <Button variant="ghost" size="sm">
+      <MoreVertical className="h-4 w-4" />
+    </Button>
+  </DropdownMenuTrigger>
+  <DropdownMenuContent>
+    <DropdownMenuItem onClick={() => openEditPlanModal(item.email)}>
+      <Edit className="h-4 w-4 mr-2" />
+      Alterar Plano
+    </DropdownMenuItem>
+    <DropdownMenuSeparator />
+    <DropdownMenuItem 
+      onClick={() => setDeleteEmail(item.email)}
+      className="text-destructive"
+    >
+      <Trash2 className="h-4 w-4 mr-2" />
+      Remover
+    </DropdownMenuItem>
+  </DropdownMenuContent>
+</DropdownMenu>
 ```
 
 ---
 
-## FASE 4: Integração com `gallery-update-session-photos`
+## FASE 3: Provisionamento de Status do Sistema
 
-Atualizar a Edge Function existente para também acionar mudança de status quando a seleção é finalizada:
+Quando um email autorizado recebe plano PRO + Gallery, provisionar automaticamente os status de sistema no workflow:
 
 ```typescript
-// supabase/functions/gallery-update-session-photos/index.ts
-
-// Adicionar novo campo ao request
-interface UpdateSessionPhotosRequest {
-  // ... campos existentes
-  selecaoFinalizada?: boolean; // Flag para indicar que seleção foi concluída
-}
-
-// Na lógica de processamento:
-if (body.selecaoFinalizada === true) {
-  // Verificar se usuário tem status de sistema configurado
-  const { data: systemStatus } = await supabase
-    .from('etapas_trabalho')
-    .select('nome')
-    .eq('user_id', session.user_id)
-    .eq('nome', 'Seleção finalizada')
-    .eq('is_system_status', true)
-    .single();
-
-  if (systemStatus) {
-    // Atualizar status da sessão automaticamente
-    await supabase
-      .from('clientes_sessoes')
-      .update({ 
-        status: 'Seleção finalizada',
-        status_galeria: 'selecao_completa'
-      })
-      .eq('id', session.id);
-  }
+// Na função handleAddEmail ou handleUpdatePlan
+if (selectedPlan.startsWith('pro_galery')) {
+  // Chamar edge function para provisionar status do sistema
+  await supabase.functions.invoke('provision-gallery-workflow-statuses', {
+    body: { userId: userIdDoEmailAutorizado }
+  });
 }
 ```
 
 ---
 
-## FASE 5: Validações de Backend
-
-### 5.1 RLS Policy para proteger status de sistema
-
-```sql
--- Impedir DELETE de status de sistema
-CREATE POLICY "Prevent delete of system statuses"
-ON etapas_trabalho
-FOR DELETE
-USING (
-  is_system_status = false
-  OR is_system_status IS NULL
-);
-
--- Impedir UPDATE de nome/cor em status de sistema
-CREATE POLICY "Prevent update of system status attributes"
-ON etapas_trabalho
-FOR UPDATE
-USING (true)
-WITH CHECK (
-  -- Se é status de sistema, só permite alterar ordem
-  (is_system_status = true AND nome = OLD.nome AND cor = OLD.cor)
-  OR is_system_status = false
-  OR is_system_status IS NULL
-);
-```
-
----
-
-## Resumo de Arquivos a Criar/Modificar
+## Resumo de Arquivos a Modificar
 
 | Arquivo | Ação | Descrição |
 |---------|------|-----------|
-| `src/types/configuration.ts` | Modificar | Adicionar `is_system_status` ao tipo |
-| `src/components/configuracoes/FluxoTrabalho.tsx` | Modificar | Adicionar prop `hasGalleryAccess`, desabilitar ações para status de sistema, badge "Automático" |
-| `src/pages/Configuracoes.tsx` | Modificar | Passar `hasGalleryAccess` para `FluxoTrabalho` |
-| `supabase/functions/gallery-update-session-photos/index.ts` | Modificar | Adicionar lógica de `selecaoFinalizada` |
-| `supabase/functions/provision-gallery-workflow-statuses/index.ts` | Criar | Edge Function para provisionar status de sistema |
-| Migration SQL | Criar | Adicionar coluna, trigger e policies |
+| Migration SQL | Criar | Adicionar `plan_code` à tabela + atualizar `get_access_state()` |
+| `src/integrations/supabase/types.ts` | Auto-gerado | Refletirá nova coluna |
+| `src/components/admin/AllowedEmailsManager.tsx` | Modificar | Adicionar seletor de plano, coluna na tabela, edição de plano |
 
 ---
 
-## Fluxo Completo PRO + Gallery
+## Comportamento Final
+
+### Admin e Usuários Autorizados (PRO + Gallery por padrão)
+- Acesso a **todas** as funcionalidades
+- `hasGaleryAccess: true`
+- Status de sistema do workflow provisionados automaticamente
+- Integração Gallery completa
+
+### Usuários com plano específico configurado
+- Acesso conforme plano selecionado pelo admin
+- Starter: apenas Agenda, CRM, Workflow, Configurações
+- PRO: tudo exceto Gallery
+- PRO + Gallery: acesso total
+
+---
+
+## Fluxo do Admin
 
 ```text
 ┌───────────────────────────────────────────────────────────────────────────────┐
-│ 1. USUÁRIO ADQUIRE PRO + GALLERY                                               │
+│  1. ADMIN ADICIONA NOVO EMAIL                                                  │
 ├───────────────────────────────────────────────────────────────────────────────┤
 │                                                                               │
-│  stripe-webhook detecta upgrade                                               │
-│       ↓                                                                       │
-│  Chama provision-gallery-workflow-statuses                                    │
-│       ↓                                                                       │
-│  Cria/marca status de sistema:                                                │
-│    • "Enviado para seleção" (is_system_status=true)                           │
-│    • "Seleção finalizada" (is_system_status=true)                             │
+│  Modal "Autorizar Novo Email":                                                │
+│  ├─ Email: [_____________________]                                            │
+│  ├─ Plano: [PRO + Gallery (Acesso Total) ▼]  ← Seletor de plano               │
+│  ├─ Observação: [_____________________]                                       │
+│  └─ [Autorizar Email]                                                         │
 │                                                                               │
 └───────────────────────────────────────────────────────────────────────────────┘
         ↓
 ┌───────────────────────────────────────────────────────────────────────────────┐
-│ 2. FOTÓGRAFO PUBLICA GALERIA                                                   │
+│  2. LISTAGEM COM COLUNA DE PLANO                                               │
 ├───────────────────────────────────────────────────────────────────────────────┤
 │                                                                               │
-│  Gestão: updateGaleriaStatus(id, 'enviado')                                   │
-│       ↓                                                                       │
-│  Trigger sync_gallery_status_to_session                                       │
-│       ↓                                                                       │
-│  clientes_sessoes.status = 'Enviado para seleção'                             │
-│       ↓                                                                       │
-│  Workflow exibe card na coluna "Enviado para seleção"                         │
+│  | Email                    | Plano           | Observação | Ações     |      │
+│  |--------------------------|-----------------|------------|-----------|      │
+│  | filipe@gmail.com         | 🏆 PRO+Gallery  | Teste      | ⋮ 🗑️     |      │
+│  | eduardo@gmail.com        | 👑 PRO          | -          | ⋮ 🗑️     |      │
+│  | cliente@gmail.com        | Starter         | Cliente    | ⋮ 🗑️     |      │
 │                                                                               │
 └───────────────────────────────────────────────────────────────────────────────┘
         ↓
 ┌───────────────────────────────────────────────────────────────────────────────┐
-│ 3. CLIENTE FINALIZA SELEÇÃO NO GALLERY                                         │
+│  3. MENU DE AÇÕES                                                              │
 ├───────────────────────────────────────────────────────────────────────────────┤
 │                                                                               │
-│  Gallery: Chama gallery-update-session-photos                                 │
-│    { selecaoFinalizada: true }                                                │
-│       ↓                                                                       │
-│  Edge Function verifica status de sistema existe                              │
-│       ↓                                                                       │
-│  clientes_sessoes.status = 'Seleção finalizada'                               │
-│       ↓                                                                       │
-│  Workflow exibe card na coluna "Seleção finalizada"                           │
+│  ⋮ Dropdown:                                                                  │
+│  ├─ ✏️ Alterar Plano                                                         │
+│  └─ 🗑️ Remover                                                                │
 │                                                                               │
 └───────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -432,10 +345,7 @@ WITH CHECK (
 
 ## Próximos Passos
 
-1. Executar migration para adicionar coluna `is_system_status`
-2. Criar trigger de sincronização galeria → sessão
-3. Atualizar tipos TypeScript
-4. Modificar componente `FluxoTrabalho.tsx`
-5. Atualizar Edge Function `gallery-update-session-photos`
-6. Criar Edge Function `provision-gallery-workflow-statuses`
-7. Testar fluxo completo
+1. **Executar migration** para adicionar `plan_code` e atualizar `get_access_state()`
+2. **Atualizar tipos TypeScript** (auto-gerado após migration)
+3. **Modificar AllowedEmailsManager.tsx** com seletor de plano e nova coluna
+4. **Testar fluxo completo** - adicionar email com diferentes planos e verificar acesso
