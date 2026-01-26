@@ -20,9 +20,23 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { Mail, Plus, Trash2, Loader2, UserPlus } from 'lucide-react';
+import { Mail, Plus, Trash2, Loader2, UserPlus, Crown, User, MoreVertical, Edit, Image } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -31,14 +45,74 @@ interface AllowedEmail {
   note: string | null;
   created_at: string;
   created_by: string | null;
+  plan_code: string | null;
+}
+
+const PLAN_OPTIONS = [
+  {
+    value: 'pro_galery_monthly',
+    label: 'PRO + Gallery',
+    description: 'Acesso total ao sistema + integração Gallery',
+    icon: Image,
+    color: 'text-amber-500',
+    badgeClass: 'bg-amber-500/20 text-amber-500 border-amber-500/30'
+  },
+  {
+    value: 'pro_monthly',
+    label: 'PRO',
+    description: 'Todas as funcionalidades exceto Gallery',
+    icon: Crown,
+    color: 'text-primary',
+    badgeClass: 'bg-primary/20 text-primary border-primary/30'
+  },
+  {
+    value: 'starter_monthly',
+    label: 'Starter',
+    description: 'Agenda, CRM, Workflow e Configurações',
+    icon: User,
+    color: 'text-muted-foreground',
+    badgeClass: 'bg-secondary text-secondary-foreground'
+  }
+];
+
+function PlanBadge({ planCode }: { planCode: string | null }) {
+  const plan = planCode || 'pro_galery_monthly';
+  
+  if (plan.startsWith('pro_galery')) {
+    return (
+      <Badge className="bg-amber-500/20 text-amber-500 border-amber-500/30 gap-1">
+        <Image className="h-3 w-3" />
+        PRO + Gallery
+      </Badge>
+    );
+  }
+  
+  if (plan.startsWith('pro')) {
+    return (
+      <Badge className="bg-primary/20 text-primary border-primary/30 gap-1">
+        <Crown className="h-3 w-3" />
+        PRO
+      </Badge>
+    );
+  }
+  
+  return (
+    <Badge variant="secondary" className="gap-1">
+      <User className="h-3 w-3" />
+      Starter
+    </Badge>
+  );
 }
 
 export default function AllowedEmailsManager() {
   const [emails, setEmails] = useState<AllowedEmail[]>([]);
   const [loading, setLoading] = useState(true);
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [editPlanModalOpen, setEditPlanModalOpen] = useState(false);
+  const [editingEmail, setEditingEmail] = useState<string | null>(null);
   const [newEmail, setNewEmail] = useState('');
   const [newNote, setNewNote] = useState('');
+  const [selectedPlan, setSelectedPlan] = useState('pro_galery_monthly');
   const [submitting, setSubmitting] = useState(false);
   const [deleteEmail, setDeleteEmail] = useState<string | null>(null);
 
@@ -86,7 +160,8 @@ export default function AllowedEmailsManager() {
         .insert({
           email: newEmail.trim().toLowerCase(),
           note: newNote.trim() || null,
-          created_by: userData.user?.id || null
+          created_by: userData.user?.id || null,
+          plan_code: selectedPlan
         });
 
       if (error) {
@@ -102,10 +177,36 @@ export default function AllowedEmailsManager() {
       setAddModalOpen(false);
       setNewEmail('');
       setNewNote('');
+      setSelectedPlan('pro_galery_monthly');
       loadEmails();
     } catch (error) {
       console.error('Error adding email:', error);
       toast.error('Erro ao adicionar email');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleUpdatePlan = async () => {
+    if (!editingEmail) return;
+
+    try {
+      setSubmitting(true);
+      
+      const { error } = await supabase
+        .from('allowed_emails')
+        .update({ plan_code: selectedPlan })
+        .eq('email', editingEmail);
+
+      if (error) throw error;
+
+      toast.success('Plano atualizado com sucesso');
+      setEditPlanModalOpen(false);
+      setEditingEmail(null);
+      loadEmails();
+    } catch (error) {
+      console.error('Error updating plan:', error);
+      toast.error('Erro ao atualizar plano');
     } finally {
       setSubmitting(false);
     }
@@ -132,6 +233,12 @@ export default function AllowedEmailsManager() {
     }
   };
 
+  const openEditPlanModal = (email: string, currentPlan: string | null) => {
+    setEditingEmail(email);
+    setSelectedPlan(currentPlan || 'pro_galery_monthly');
+    setEditPlanModalOpen(true);
+  };
+
   return (
     <Card className="bg-card/50 border-border/50">
       <CardHeader className="pb-3">
@@ -147,7 +254,7 @@ export default function AllowedEmailsManager() {
           </Button>
         </div>
         <p className="text-xs text-muted-foreground mt-1">
-          Apenas emails nesta lista podem se cadastrar no sistema
+          Gerencie usuários com acesso gratuito ao sistema e seus planos
         </p>
       </CardHeader>
       <CardContent className="p-0">
@@ -166,6 +273,7 @@ export default function AllowedEmailsManager() {
             <TableHeader>
               <TableRow className="border-border/50">
                 <TableHead className="text-xs">Email</TableHead>
+                <TableHead className="text-xs">Plano</TableHead>
                 <TableHead className="text-xs">Observação</TableHead>
                 <TableHead className="text-xs">Adicionado em</TableHead>
                 <TableHead className="text-xs text-right">Ações</TableHead>
@@ -175,6 +283,9 @@ export default function AllowedEmailsManager() {
               {emails.map((item) => (
                 <TableRow key={item.email} className="border-border/50">
                   <TableCell className="font-medium text-sm">{item.email}</TableCell>
+                  <TableCell>
+                    <PlanBadge planCode={item.plan_code} />
+                  </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {item.note || '-'}
                   </TableCell>
@@ -182,14 +293,27 @@ export default function AllowedEmailsManager() {
                     {format(new Date(item.created_at), 'dd/MM/yyyy', { locale: ptBR })}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setDeleteEmail(item.email)}
-                      className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => openEditPlanModal(item.email, item.plan_code)}>
+                          <Edit className="h-4 w-4 mr-2" />
+                          Alterar Plano
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem 
+                          onClick={() => setDeleteEmail(item.email)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Remover
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               ))}
@@ -207,7 +331,7 @@ export default function AllowedEmailsManager() {
               Autorizar Novo Email
             </DialogTitle>
             <DialogDescription>
-              Este email terá acesso permanente e gratuito ao sistema, sem período de teste ou cobrança.
+              Este email terá acesso permanente e gratuito ao sistema conforme o plano selecionado.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -220,6 +344,32 @@ export default function AllowedEmailsManager() {
                 onChange={(e) => setNewEmail(e.target.value)}
                 className="bg-background"
               />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Plano de Acesso *</label>
+              <Select value={selectedPlan} onValueChange={setSelectedPlan}>
+                <SelectTrigger className="bg-background">
+                  <SelectValue placeholder="Selecione o plano" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PLAN_OPTIONS.map((plan) => {
+                    const Icon = plan.icon;
+                    return (
+                      <SelectItem key={plan.value} value={plan.value}>
+                        <div className="flex items-center gap-2">
+                          <Icon className={`h-4 w-4 ${plan.color}`} />
+                          <div>
+                            <span className="font-medium">{plan.label}</span>
+                            <span className="text-xs text-muted-foreground ml-2">
+                              {plan.description}
+                            </span>
+                          </div>
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Observação (opcional)</label>
@@ -239,6 +389,58 @@ export default function AllowedEmailsManager() {
             <Button onClick={handleAddEmail} disabled={submitting}>
               {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Autorizar Email
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Plan Modal */}
+      <Dialog open={editPlanModalOpen} onOpenChange={setEditPlanModalOpen}>
+        <DialogContent className="bg-card border-border">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit className="h-5 w-5 text-primary" />
+              Alterar Plano
+            </DialogTitle>
+            <DialogDescription>
+              Alterar o plano de acesso para <strong>{editingEmail}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Novo Plano</label>
+              <Select value={selectedPlan} onValueChange={setSelectedPlan}>
+                <SelectTrigger className="bg-background">
+                  <SelectValue placeholder="Selecione o plano" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PLAN_OPTIONS.map((plan) => {
+                    const Icon = plan.icon;
+                    return (
+                      <SelectItem key={plan.value} value={plan.value}>
+                        <div className="flex items-center gap-2">
+                          <Icon className={`h-4 w-4 ${plan.color}`} />
+                          <div>
+                            <span className="font-medium">{plan.label}</span>
+                            <span className="text-xs text-muted-foreground ml-2">
+                              {plan.description}
+                            </span>
+                          </div>
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditPlanModalOpen(false)} disabled={submitting}>
+              Cancelar
+            </Button>
+            <Button onClick={handleUpdatePlan} disabled={submitting}>
+              {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Salvar
             </Button>
           </DialogFooter>
         </DialogContent>
