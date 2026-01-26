@@ -1,278 +1,441 @@
 
-# Plano de Correção: Sincronização Pacote Workflow → Agenda e Retorno de Pagamento Gallery
+# Plano: Sistema de Status Fixos para PRO + Gallery com Triggers Automáticos
 
-## Problema 1: Agenda não reflete mudança de pacote do Workflow
+## Visão Geral
 
-### Diagnóstico Técnico
+Implementar um sistema onde os status "Enviado para seleção" e "Seleção finalizada" são fixos e automáticos **apenas** para usuários no plano PRO + Gallery. Para outros planos, esses status (se existirem) comportam-se como quaisquer outros status personalizáveis.
 
-O problema foi identificado através da consulta SQL:
+---
 
-```
-appointment_package_id: ce7313d9-1ce1-4b07-a9c8-c0e8bf886853 (ID do pacote "Teste")
-session_pacote: "Gest. Estúdio 10f" (atualizado corretamente)
-```
-
-**Causa Raiz:** O Workflow atualiza a tabela `clientes_sessoes`, mas **não propaga a alteração para a tabela `appointments`**. A Agenda lê o `package_id` diretamente de `appointments`, que permanece com o valor antigo.
-
-### Arquitetura Atual (incompleta)
+## Arquitetura da Solução
 
 ```text
-┌─────────────────────────────────────────────────────────────────┐
-│                        WORKFLOW                                  │
-├─────────────────────────────────────────────────────────────────┤
-│  useWorkflowRealtime.ts → updateSession()                       │
-│                                                                 │
-│  Atualiza clientes_sessoes:                                     │
-│  ├─ pacote (nome) ✅                                            │
-│  ├─ categoria (nome) ✅                                         │
-│  ├─ regras_congeladas ✅                                        │
-│  └─ valor_base_pacote ✅                                        │
-│                                                                 │
-│  ❌ NÃO ATUALIZA appointments.package_id                        │
-└─────────────────────────────────────────────────────────────────┘
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                        AGENDA                                    │
-├─────────────────────────────────────────────────────────────────┤
-│  UnifiedEventCard.tsx → getPackageInfo()                        │
-│                                                                 │
-│  Lê de appointments:                                            │
-│  ├─ package_id → Busca em pacotes[] (PRIORIDADE)                │
-│  └─ type → Fallback (nome antigo)                               │
-│                                                                 │
-│  ❌ EXIBE PACOTE ANTIGO porque package_id não foi atualizado    │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                         PLANOS SEM GALLERY                                       │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                 │
+│  Etapas do Workflow: TOTALMENTE PERSONALIZÁVEIS                                 │
+│  ├─ Editar ✅                                                                   │
+│  ├─ Excluir ✅                                                                  │
+│  ├─ Renomear ✅                                                                 │
+│  └─ Reorganizar ✅                                                              │
+│                                                                                 │
+│  Nenhuma automação. Fluxo 100% manual.                                          │
+│                                                                                 │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                         PLANO PRO + GALLERY                                      │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                 │
+│  Etapas Personalizáveis: ✅ Podem editar/excluir/reorganizar                    │
+│                                                                                 │
+│  Etapas de Sistema (FIXAS):                                                     │
+│  ├─ "Enviado para seleção" (is_system_status = true)                            │
+│  │   ├─ Acionado automaticamente quando galeria é publicada                     │
+│  │   ├─ NÃO pode ser editado                                                    │
+│  │   ├─ NÃO pode ser excluído                                                   │
+│  │   └─ Identificado visualmente como "Automático"                              │
+│  │                                                                              │
+│  └─ "Seleção finalizada" (is_system_status = true)                              │
+│      ├─ Acionado automaticamente quando cliente finaliza seleção                │
+│      ├─ NÃO pode ser editado                                                    │
+│      ├─ NÃO pode ser excluído                                                   │
+│      └─ Identificado visualmente como "Automático"                              │
+│                                                                                 │
+└─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Solução Proposta
+---
 
-Adicionar sincronização Workflow → Appointments após atualização de pacote em `useWorkflowRealtime.ts`.
+## FASE 1: Alterações no Banco de Dados
 
-**Localização:** Após a linha 630, onde o update em `clientes_sessoes` é executado com sucesso.
+### 1.1 Adicionar coluna `is_system_status` na tabela `etapas_trabalho`
 
-**Lógica:**
-```typescript
-// Após update bem-sucedido em clientes_sessoes
-if (sanitizedUpdates.pacote && currentSession?.appointment_id) {
-  const pkg = packages.find(p => p.nome === sanitizedUpdates.pacote);
-  if (pkg) {
-    await supabase
-      .from('appointments')
-      .update({
-        package_id: pkg.id,
-        type: sanitizedUpdates.categoria || currentSession.categoria,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', currentSession.appointment_id);
+```sql
+ALTER TABLE etapas_trabalho
+ADD COLUMN is_system_status BOOLEAN DEFAULT false;
+
+-- Índice para performance
+CREATE INDEX idx_etapas_system_status ON etapas_trabalho(user_id, is_system_status);
+```
+
+**Propósito:** Identificar etapas que são controladas pelo sistema vs. personalizáveis.
+
+### 1.2 Adicionar constantes para nomes de status do sistema
+
+Definir os nomes exatos dos status do sistema que serão usados nas automações:
+- `GALLERY_STATUS_SENT = 'Enviado para seleção'`
+- `GALLERY_STATUS_FINALIZED = 'Seleção finalizada'`
+
+### 1.3 Criar trigger para mudança de status da galeria
+
+```sql
+-- Trigger function que atualiza status da sessão quando galeria muda de status
+CREATE OR REPLACE FUNCTION sync_gallery_status_to_session()
+RETURNS TRIGGER AS $$
+DECLARE
+  session_record RECORD;
+  target_status TEXT;
+  status_exists BOOLEAN;
+BEGIN
+  -- Só processar se status mudou
+  IF NEW.status = OLD.status THEN
+    RETURN NEW;
+  END IF;
+
+  -- Buscar sessão vinculada
+  SELECT id, session_id, status INTO session_record
+  FROM clientes_sessoes
+  WHERE (session_id = NEW.session_id OR galeria_id = NEW.id)
+    AND user_id = NEW.user_id
+  LIMIT 1;
+
+  IF session_record IS NULL THEN
+    RETURN NEW; -- Sem sessão vinculada, ignorar
+  END IF;
+
+  -- Mapear status da galeria para status da sessão
+  CASE NEW.status
+    WHEN 'enviado' THEN
+      target_status := 'Enviado para seleção';
+    WHEN 'selecao_iniciada' THEN
+      target_status := 'Enviado para seleção'; -- Mantém mesmo status
+    WHEN 'selecao_completa' THEN
+      target_status := 'Seleção finalizada';
+    ELSE
+      RETURN NEW; -- Outros status não afetam a sessão
+  END CASE;
+
+  -- Verificar se o status de destino existe nas etapas do usuário
+  SELECT EXISTS(
+    SELECT 1 FROM etapas_trabalho
+    WHERE user_id = NEW.user_id 
+      AND nome = target_status
+      AND is_system_status = true
+  ) INTO status_exists;
+
+  -- Só atualizar se o status de sistema existe (usuário tem PRO + Gallery ativo)
+  IF status_exists THEN
+    UPDATE clientes_sessoes
+    SET status = target_status,
+        status_galeria = NEW.status,
+        updated_at = NOW()
+    WHERE id = session_record.id;
     
-    console.log('📅 [SYNC] Appointment package_id atualizado:', pkg.id);
-  }
-}
+    RAISE NOTICE '[Gallery Trigger] Session % status updated to %', session_record.id, target_status;
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Trigger na tabela galerias
+CREATE TRIGGER trigger_sync_gallery_status
+AFTER UPDATE OF status ON galerias
+FOR EACH ROW
+EXECUTE FUNCTION sync_gallery_status_to_session();
 ```
-
-### Campos a Atualizar no appointments
-
-| Campo | Valor | Descrição |
-|-------|-------|-----------|
-| `package_id` | UUID do novo pacote | Usado pela Agenda para exibir nome do pacote |
-| `type` | Nome da categoria | Campo texto de fallback (exibido como "tipo de sessão") |
-| `updated_at` | timestamp | Controle de versão |
 
 ---
 
-## Problema 2: Gallery não recebe confirmação de pagamento
+## FASE 2: Provisionamento Automático de Status do Sistema
 
-### Fluxo Técnico Atual (já implementado no Gestão)
+### 2.1 Edge Function: `provision-gallery-workflow-statuses`
 
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│              GALLERY → CRIA COBRANÇA                             │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  gallery-create-payment (Edge Function)                         │
-│  ├─ Recebe: sessionId (texto), clienteId, valor                 │
-│  ├─ Cria registro em cobrancas (status='pendente')              │
-│  ├─ Chama InfinitePay API                                       │
-│  └─ Retorna: checkoutUrl para redirecionamento                  │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              │ Cliente paga no checkout InfinitePay
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│              INFINITEPAY → WEBHOOK                               │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  infinitepay-webhook (Edge Function)                            │
-│  ├─ Recebe: order_nsu (= cobranca.id), paid_amount              │
-│  ├─ Atualiza cobrancas SET status='pago', data_pagamento=now    │
-│  ├─ Cria registro em clientes_transacoes                        │
-│  └─ Trigger recompute_session_paid atualiza valor_pago          │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### Como o Gallery DEVE verificar pagamento
-
-O Gallery tem **duas opções** para confirmar pagamento:
-
-**Opção A: Polling na tabela `cobrancas` (Recomendado para UI simples)**
+Será chamada quando o usuário adquire o plano PRO + Gallery para criar automaticamente os status do sistema.
 
 ```typescript
-// No Gallery - após redirecionar cliente para checkout
-async function verificarPagamento(cobrancaId: string): Promise<boolean> {
-  const { data } = await supabase
-    .from('cobrancas')
-    .select('status, valor, data_pagamento')
-    .eq('id', cobrancaId)
-    .single();
-  
-  return data?.status === 'pago';
-}
+// Pseudocódigo da lógica
+async function provisionGalleryStatuses(userId: string) {
+  const systemStatuses = [
+    { nome: 'Enviado para seleção', cor: '#3B82F6', is_system_status: true },
+    { nome: 'Seleção finalizada', cor: '#10B981', is_system_status: true }
+  ];
 
-// Usar em intervalo
-const pollInterval = setInterval(async () => {
-  const pago = await verificarPagamento(cobrancaId);
-  if (pago) {
-    clearInterval(pollInterval);
-    // Exibir confirmação para o cliente
-    showPaymentSuccessMessage();
-    // Atualizar status da galeria
-    await updateGalleryStatus(galeriaId, 'pago');
-  }
-}, 3000); // Verificar a cada 3 segundos
-```
+  for (const status of systemStatuses) {
+    // Verificar se já existe
+    const existing = await supabase
+      .from('etapas_trabalho')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('nome', status.nome)
+      .single();
 
-**Opção B: Real-time subscription (Melhor UX)**
-
-```typescript
-// No Gallery - escutar mudanças em tempo real
-const subscription = supabase
-  .channel('cobranca-payment')
-  .on(
-    'postgres_changes',
-    {
-      event: 'UPDATE',
-      schema: 'public',
-      table: 'cobrancas',
-      filter: `id=eq.${cobrancaId}`
-    },
-    (payload) => {
-      if (payload.new.status === 'pago') {
-        // Pagamento confirmado!
-        showPaymentSuccessMessage();
-        updateGalleryStatus(galeriaId, 'pago');
-        subscription.unsubscribe();
-      }
+    if (existing.data) {
+      // Já existe, apenas marcar como system status
+      await supabase
+        .from('etapas_trabalho')
+        .update({ is_system_status: true })
+        .eq('id', existing.data.id);
+    } else {
+      // Criar novo status de sistema
+      const maxOrdem = await getMaxOrdem(userId);
+      await supabase
+        .from('etapas_trabalho')
+        .insert({
+          user_id: userId,
+          nome: status.nome,
+          cor: status.cor,
+          ordem: maxOrdem + 1,
+          is_system_status: true
+        });
     }
-  )
-  .subscribe();
-```
-
-**Opção C: Verificar via session_id (para galleries vinculadas)**
-
-```typescript
-// Se a galeria tem session_id vinculado
-async function verificarPagamentoSessao(sessionId: string): Promise<{pago: boolean, valorPago: number}> {
-  const { data } = await supabase
-    .from('clientes_sessoes')
-    .select('valor_pago, valor_total')
-    .or(`session_id.eq.${sessionId},id.eq.${sessionId}`)
-    .single();
-  
-  return {
-    pago: data?.valor_pago >= data?.valor_total,
-    valorPago: data?.valor_pago || 0
-  };
+  }
 }
 ```
 
-### Diagrama do Fluxo Completo
+### 2.2 Remoção de Status de Sistema ao Downgrade
 
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│                        GALLERY                                   │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  1. Cliente seleciona fotos extras (8 fotos × R$21 = R$168)     │
-│                                                                 │
-│  2. Chama: gallery-create-payment                               │
-│     body: {                                                     │
-│       sessionId: "workflow-xxx",  // Vínculo com Gestão         │
-│       clienteId: "uuid-cliente",                                │
-│       valor: 168.00,                                            │
-│       descricao: "8 fotos extras"                               │
-│     }                                                           │
-│                                                                 │
-│  3. Recebe: { success: true, checkoutUrl: "https://..." }       │
-│                                                                 │
-│  4. Redireciona cliente para checkoutUrl                        │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                   CHECKOUT INFINITEPAY                           │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  Cliente paga (Pix, Cartão, etc.)                               │
-│                                                                 │
-│  Após pagamento confirmado:                                     │
-│  → InfinitePay envia webhook para infinitepay-webhook           │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                   INFINITEPAY-WEBHOOK                            │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  • Atualiza cobrancas.status = 'pago'                           │
-│  • Cria clientes_transacoes com valor e session_id              │
-│  • Trigger recompute_session_paid → valor_pago atualizado       │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                GALLERY DETECTA PAGAMENTO                         │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  Via: subscription em 'cobrancas' WHERE id = cobrancaId         │
-│  OU: polling em 'cobrancas' a cada 3s                           │
-│                                                                 │
-│  Quando status = 'pago':                                        │
-│  • Exibir mensagem de sucesso                                   │
-│  • Atualizar status da galeria                                  │
-│  • Liberar download ou próxima etapa                            │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+Quando o usuário faz downgrade para um plano sem Gallery:
+```typescript
+// Remover flag is_system_status (status vira editável)
+await supabase
+  .from('etapas_trabalho')
+  .update({ is_system_status: false })
+  .eq('user_id', userId)
+  .eq('is_system_status', true);
 ```
 
 ---
 
-## Resumo das Alterações
+## FASE 3: Alterações no Frontend
 
-### No Gestão (este projeto)
+### 3.1 Atualizar tipo `EtapaTrabalho`
 
-| Arquivo | Alteração | Descrição |
-|---------|-----------|-----------|
-| `src/hooks/useWorkflowRealtime.ts` | Adicionar sync Workflow → Appointments | Atualizar `package_id` e `type` na tabela `appointments` após mudança de pacote |
+```typescript
+// src/types/configuration.ts
+export interface EtapaTrabalho {
+  id: string;
+  user_id?: string;
+  nome: string;
+  cor: string;
+  ordem: number;
+  is_system_status?: boolean; // ← NOVO CAMPO
+  created_at?: string;
+  updated_at?: string;
+}
+```
 
-### Instruções para o Gallery
+### 3.2 Atualizar componente `FluxoTrabalho.tsx`
 
-O Gallery deve implementar **verificação de pagamento** usando uma das três opções:
+```typescript
+interface FluxoTrabalhoProps {
+  etapas: EtapaTrabalho[];
+  onAdd: (etapa: Omit<EtapaTrabalho, 'id' | 'ordem'>) => void;
+  onUpdate: (id: string, dados: Partial<EtapaTrabalho>) => Promise<void>;
+  onDelete: (id: string) => Promise<boolean>;
+  onMove: (id: string, direcao: 'cima' | 'baixo') => void;
+  hasGalleryAccess?: boolean; // ← NOVO PROP
+}
 
-1. **Polling** na tabela `cobrancas` (mais simples)
-2. **Real-time subscription** em `cobrancas` (melhor UX)
-3. **Verificar `valor_pago`** em `clientes_sessoes` (para galerias vinculadas)
+// Na renderização de cada etapa:
+{etapasOrdenadas.map((etapa, index) => {
+  const isSystemStatus = hasGalleryAccess && etapa.is_system_status;
+  
+  return (
+    <div key={etapa.id} className={cn(...)}>
+      {/* Coluna do nome */}
+      <div className="col-span-7 flex items-center gap-2">
+        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: etapa.cor }} />
+        <span className="font-medium">{etapa.nome}</span>
+        
+        {/* Badge de status automático */}
+        {isSystemStatus && (
+          <Badge variant="secondary" className="text-xs ml-2">
+            <Zap className="h-3 w-3 mr-1" />
+            Automático
+          </Badge>
+        )}
+      </div>
+      
+      {/* Coluna de ações - desabilitada para status de sistema */}
+      <div className="flex justify-end gap-1">
+        {!isSystemStatus && (
+          <>
+            <Button onClick={() => moverEtapa(etapa.id, 'cima')} disabled={...}>
+              <ArrowUp />
+            </Button>
+            <Button onClick={() => moverEtapa(etapa.id, 'baixo')} disabled={...}>
+              <ArrowDown />
+            </Button>
+            <Button onClick={() => iniciarEdicaoEtapa(etapa.id)}>
+              <Edit />
+            </Button>
+            <Button onClick={() => removerEtapa(etapa.id)}>
+              <Trash2 />
+            </Button>
+          </>
+        )}
+        
+        {isSystemStatus && (
+          <Tooltip content="Etapa controlada automaticamente pela integração Gallery">
+            <div className="flex items-center text-muted-foreground text-xs px-2">
+              <Lock className="h-3.5 w-3.5 mr-1" />
+              Protegido
+            </div>
+          </Tooltip>
+        )}
+      </div>
+    </div>
+  );
+})}
+```
 
-**Importante:** O Gallery NÃO precisa implementar webhook próprio. O `infinitepay-webhook` do Gestão já processa todos os pagamentos e atualiza as tabelas compartilhadas.
+### 3.3 Mensagem Explicativa na UI
+
+Quando `hasGalleryAccess === true`, exibir no topo da seção de Etapas:
+
+```tsx
+{hasGalleryAccess && (
+  <div className="flex items-center gap-2 p-3 bg-primary/5 border border-primary/20 rounded-lg mb-4">
+    <Zap className="h-4 w-4 text-primary" />
+    <p className="text-sm text-muted-foreground">
+      As etapas <strong>"Enviado para seleção"</strong> e <strong>"Seleção finalizada"</strong> 
+      são automáticas e fazem parte da integração com o Gallery.
+    </p>
+  </div>
+)}
+```
+
+---
+
+## FASE 4: Integração com `gallery-update-session-photos`
+
+Atualizar a Edge Function existente para também acionar mudança de status quando a seleção é finalizada:
+
+```typescript
+// supabase/functions/gallery-update-session-photos/index.ts
+
+// Adicionar novo campo ao request
+interface UpdateSessionPhotosRequest {
+  // ... campos existentes
+  selecaoFinalizada?: boolean; // Flag para indicar que seleção foi concluída
+}
+
+// Na lógica de processamento:
+if (body.selecaoFinalizada === true) {
+  // Verificar se usuário tem status de sistema configurado
+  const { data: systemStatus } = await supabase
+    .from('etapas_trabalho')
+    .select('nome')
+    .eq('user_id', session.user_id)
+    .eq('nome', 'Seleção finalizada')
+    .eq('is_system_status', true)
+    .single();
+
+  if (systemStatus) {
+    // Atualizar status da sessão automaticamente
+    await supabase
+      .from('clientes_sessoes')
+      .update({ 
+        status: 'Seleção finalizada',
+        status_galeria: 'selecao_completa'
+      })
+      .eq('id', session.id);
+  }
+}
+```
+
+---
+
+## FASE 5: Validações de Backend
+
+### 5.1 RLS Policy para proteger status de sistema
+
+```sql
+-- Impedir DELETE de status de sistema
+CREATE POLICY "Prevent delete of system statuses"
+ON etapas_trabalho
+FOR DELETE
+USING (
+  is_system_status = false
+  OR is_system_status IS NULL
+);
+
+-- Impedir UPDATE de nome/cor em status de sistema
+CREATE POLICY "Prevent update of system status attributes"
+ON etapas_trabalho
+FOR UPDATE
+USING (true)
+WITH CHECK (
+  -- Se é status de sistema, só permite alterar ordem
+  (is_system_status = true AND nome = OLD.nome AND cor = OLD.cor)
+  OR is_system_status = false
+  OR is_system_status IS NULL
+);
+```
+
+---
+
+## Resumo de Arquivos a Criar/Modificar
+
+| Arquivo | Ação | Descrição |
+|---------|------|-----------|
+| `src/types/configuration.ts` | Modificar | Adicionar `is_system_status` ao tipo |
+| `src/components/configuracoes/FluxoTrabalho.tsx` | Modificar | Adicionar prop `hasGalleryAccess`, desabilitar ações para status de sistema, badge "Automático" |
+| `src/pages/Configuracoes.tsx` | Modificar | Passar `hasGalleryAccess` para `FluxoTrabalho` |
+| `supabase/functions/gallery-update-session-photos/index.ts` | Modificar | Adicionar lógica de `selecaoFinalizada` |
+| `supabase/functions/provision-gallery-workflow-statuses/index.ts` | Criar | Edge Function para provisionar status de sistema |
+| Migration SQL | Criar | Adicionar coluna, trigger e policies |
+
+---
+
+## Fluxo Completo PRO + Gallery
+
+```text
+┌───────────────────────────────────────────────────────────────────────────────┐
+│ 1. USUÁRIO ADQUIRE PRO + GALLERY                                               │
+├───────────────────────────────────────────────────────────────────────────────┤
+│                                                                               │
+│  stripe-webhook detecta upgrade                                               │
+│       ↓                                                                       │
+│  Chama provision-gallery-workflow-statuses                                    │
+│       ↓                                                                       │
+│  Cria/marca status de sistema:                                                │
+│    • "Enviado para seleção" (is_system_status=true)                           │
+│    • "Seleção finalizada" (is_system_status=true)                             │
+│                                                                               │
+└───────────────────────────────────────────────────────────────────────────────┘
+        ↓
+┌───────────────────────────────────────────────────────────────────────────────┐
+│ 2. FOTÓGRAFO PUBLICA GALERIA                                                   │
+├───────────────────────────────────────────────────────────────────────────────┤
+│                                                                               │
+│  Gestão: updateGaleriaStatus(id, 'enviado')                                   │
+│       ↓                                                                       │
+│  Trigger sync_gallery_status_to_session                                       │
+│       ↓                                                                       │
+│  clientes_sessoes.status = 'Enviado para seleção'                             │
+│       ↓                                                                       │
+│  Workflow exibe card na coluna "Enviado para seleção"                         │
+│                                                                               │
+└───────────────────────────────────────────────────────────────────────────────┘
+        ↓
+┌───────────────────────────────────────────────────────────────────────────────┐
+│ 3. CLIENTE FINALIZA SELEÇÃO NO GALLERY                                         │
+├───────────────────────────────────────────────────────────────────────────────┤
+│                                                                               │
+│  Gallery: Chama gallery-update-session-photos                                 │
+│    { selecaoFinalizada: true }                                                │
+│       ↓                                                                       │
+│  Edge Function verifica status de sistema existe                              │
+│       ↓                                                                       │
+│  clientes_sessoes.status = 'Seleção finalizada'                               │
+│       ↓                                                                       │
+│  Workflow exibe card na coluna "Seleção finalizada"                           │
+│                                                                               │
+└───────────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
 ## Próximos Passos
 
-1. **Implementar correção no useWorkflowRealtime.ts** - Adicionar sync para appointments após mudança de pacote
-2. **Testar fluxo** - Mudar pacote no Workflow → Verificar se Agenda atualiza
-3. **Documentar para Gallery** - Enviar instruções de como verificar pagamento via Supabase
+1. Executar migration para adicionar coluna `is_system_status`
+2. Criar trigger de sincronização galeria → sessão
+3. Atualizar tipos TypeScript
+4. Modificar componente `FluxoTrabalho.tsx`
+5. Atualizar Edge Function `gallery-update-session-photos`
+6. Criar Edge Function `provision-gallery-workflow-statuses`
+7. Testar fluxo completo
