@@ -56,3 +56,9 @@ verify_jwt = false
 
 [functions.infinitepay-webhook]
 verify_jwt = false
+
+[functions.gallery-update-session-photos]
+verify_jwt = false
+
+[functions.gallery-create-payment]
+verify_jwt = false

@@ -592,13 +592,22 @@ export const useWorkflowRealtime = () => {
         let hasChanges = false;
         const fieldsToCheck = ['pacote', 'valor_total', 'valor_pago', 'qtd_fotos_extra', 'valor_foto_extra', 'valor_total_foto_extra', 'produtos_incluidos', 'categoria', 'descricao', 'status', 'regras_congeladas', 'desconto', 'valor_adicional', 'observacoes', 'detalhes'];
         
-        for (const field of fieldsToCheck) {
-          const newValue = sanitizedUpdates[field as keyof WorkflowSession];
-          const currentValue = currentSession[field as keyof WorkflowSession];
-          
-          if (newValue !== undefined && JSON.stringify(newValue) !== JSON.stringify(currentValue)) {
-            hasChanges = true;
-            break;
+        // ✅ CORREÇÃO: Forçar update quando regras_congeladas é modificado
+        // Isso garante que pacote e categoria sejam persistidos mesmo se o cache local já tiver os novos valores
+        if (sanitizedUpdates.regras_congeladas) {
+          hasChanges = true;
+          console.log('🔄 [FORCE] regras_congeladas modificado - forçando update para persistir pacote/categoria');
+        }
+        
+        if (!hasChanges) {
+          for (const field of fieldsToCheck) {
+            const newValue = sanitizedUpdates[field as keyof WorkflowSession];
+            const currentValue = currentSession[field as keyof WorkflowSession];
+            
+            if (newValue !== undefined && JSON.stringify(newValue) !== JSON.stringify(currentValue)) {
+              hasChanges = true;
+              break;
+            }
           }
         }
         
