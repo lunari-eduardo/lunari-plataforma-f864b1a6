@@ -1,190 +1,193 @@
 
-
-# Plano de Correção: Separação de Cobranças entre Gestão e Gallery
+# Plano de Correção: Webhook InfinitePay Compatível com Gestão e Gallery
 
 ## Diagnóstico do Problema
 
-### Causa Raiz Identificada
+### O que aconteceu
 
-O projeto **Gallery** sobrescreveu a Edge Function `infinitepay-create-link` com uma versão diferente que:
+1. **Pagamento de R$ 2,00 foi feito com sucesso** no checkout InfinitePay
+2. **O webhook NÃO foi chamado** pelo InfinitePay (sem logs, sem registro em `webhook_logs`)
+3. **Status permanece "pendente"** porque só o webhook atualiza para "pago"
 
-**Versão Gallery (incorreta para Gestão):**
+### Evidências encontradas
+
+| Dado | Valor |
+|------|-------|
+| ID da cobrança | `d2c5f4bd-5332-401e-b80b-fe56916792b7` |
+| `ip_order_nsu` | `d2c5f4bd-5332-401e-b80b-fe56916792b7` (UUID) |
+| `ip_transaction_nsu` | `NULL` (deveria ter valor do webhook) |
+| Status | `pendente` |
+| Logs do webhook | **Nenhum** para este order_nsu |
+
+### Por que o webhook não foi chamado?
+
+Possíveis causas (ordem de probabilidade):
+
+1. **Pagamento em modo teste/sandbox** - InfinitePay pode não enviar webhooks para pagamentos simulados
+2. **Delay do webhook** - InfinitePay às vezes demora para enviar
+3. **Falha silenciosa** - A URL do webhook pode ter sido rejeitada pela InfinitePay
+
+### Situação do código atual
+
+O webhook atual está **correto para o Gestão**:
 ```typescript
-// Esperava userId no body da requisição
-if (!clienteId || !valor || !userId) {
-  throw new Error("clienteId, valor e userId são obrigatórios");
+// infinitepay-webhook busca por ID (UUID)
+.eq("id", order_nsu)  // ✅ Funciona para Gestão que envia UUID
+```
+
+Mas **não suporta o Gallery** que envia formato `gallery-*` como NSU.
+
+---
+
+## Solução Proposta
+
+### Atualizar o webhook com busca dual (fallback)
+
+Modificar `infinitepay-webhook` para buscar por duas estratégias:
+
+```typescript
+// 1. Primeiro tentar buscar por ID (UUID) - Gestão
+let cobranca = null;
+
+// Verificar se order_nsu é um UUID válido
+const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const isUuid = uuidRegex.test(order_nsu);
+
+if (isUuid) {
+  // Buscar por ID (padrão Gestão)
+  const { data, error } = await supabase
+    .from("cobrancas")
+    .select("*, clientes(nome)")
+    .eq("id", order_nsu)
+    .eq("provedor", "infinitepay")
+    .maybeSingle();
+  
+  if (data) cobranca = data;
+}
+
+// 2. Se não encontrou, buscar por ip_order_nsu (Gallery)
+if (!cobranca) {
+  const { data, error } = await supabase
+    .from("cobrancas")
+    .select("*, clientes(nome)")
+    .eq("ip_order_nsu", order_nsu)
+    .eq("provedor", "infinitepay")
+    .maybeSingle();
+  
+  if (data) cobranca = data;
+}
+
+// 3. Se ainda não encontrou, erro
+if (!cobranca) {
+  console.error("[infinitepay-webhook] Cobranca not found:", order_nsu);
+  return new Response(
+    JSON.stringify({ error: "Cobranca not found" }),
+    { status: 404 }
+  );
 }
 ```
 
-**Versão Gestão (correta):**
+### Adicionar logging na tabela webhook_logs
+
+Registrar todos os webhooks recebidos para debugging:
+
 ```typescript
-// Extrai userId automaticamente do JWT
-const userId = user.id; // Linha 43
+// Logo após receber o payload
+await supabase.from("webhook_logs").insert({
+  provedor: "infinitepay",
+  order_nsu: order_nsu,
+  payload: payload,
+  headers: Object.fromEntries(req.headers.entries()),
+  status: "received",
+});
 ```
 
-Quando o Gallery fez deploy, **sobrescreveu** a função do Gestão causando erro 400 ao tentar gerar links de pagamento no Workflow.
+### Adicionar verificação manual de status (fallback para webhook falho)
 
-### Solução Imediata ✅ APLICADA
+No ChargeModal do Gestão, adicionar botão "Verificar Status" que chama a API do InfinitePay diretamente ou força a atualização:
 
-Re-deployei a Edge Function `infinitepay-create-link` com a versão correta do Gestão. O teste agora retorna "Não autorizado" (esperado sem JWT) em vez de "userId obrigatório".
+```typescript
+// useCobranca.ts - Nova função
+const checkPaymentStatus = async (cobrancaId: string): Promise<boolean> => {
+  const { data, error } = await supabase.functions.invoke('check-payment-status', {
+    body: { cobrancaId, forceUpdate: true }
+  });
+  
+  if (data?.updated) {
+    toast.success('Pagamento confirmado!');
+    await fetchCobrancas();
+    return true;
+  }
+  return false;
+};
+```
 
 ---
 
-## Arquitetura Atual (Conflituosa)
+## Arquivos a Modificar
+
+| Arquivo | Ação | Descrição |
+|---------|------|-----------|
+| `supabase/functions/infinitepay-webhook/index.ts` | Modificar | Adicionar busca dual (id + ip_order_nsu) e logging |
+| `src/hooks/useCobranca.ts` | Modificar | Adicionar função `checkPaymentStatus` |
+| `src/components/payments/ChargeModal.tsx` | Modificar | Adicionar botão "Verificar Status" |
+
+---
+
+## Fluxo Corrigido
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  GESTÃO e GALLERY usam as MESMAS Edge Functions no MESMO Supabase           │
+│  WEBHOOK RECEBE PAGAMENTO                                                    │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
-│  infinitepay-create-link    ← Gestão usa (c/ JWT)                           │
-│                             ← Gallery também quer usar (sem JWT)            │
-│                                                                             │
-│  infinitepay-webhook        ← Usado por ambos (mesmo webhook URL)           │
-│                                                                             │
-│  gallery-create-payment     ← Wrapper criado para Gallery (correto)         │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-         PROBLEMA: Gallery modificou infinitepay-create-link
-         para funcionar sem JWT, quebrando o Gestão
-```
-
----
-
-## Solução Proposta: Separação de Responsabilidades
-
-### Princípio: "Cada projeto tem seu ponto de entrada"
-
-```text
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           GESTÃO (Fotógrafo logado)                          │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  ChargeModal → useCobranca → infinitepay-create-link                        │
-│                                                                             │
-│  • Usa JWT do fotógrafo (Authorization header)                              │
-│  • Extrai userId automaticamente do token                                   │
-│  • Payload: { clienteId, sessionId, valor, descricao }                      │
-│  • NÃO PODE ser alterado pelo Gallery                                       │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           GALLERY (Cliente final)                            │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  SelectionConfirmation → gallery-create-payment                             │
-│                                                                             │
-│  • SEM JWT (cliente não é usuário autenticado)                              │
-│  • Busca userId via galleryId ou sessionId                                  │
-│  • Usa Service Role internamente                                            │
-│  • Payload: { galleryId, sessionId, clienteId, valor, descricao }           │
-│  • Esta função JÁ EXISTE e deve ser usada pelo Gallery                      │
+│  1. Extrai order_nsu do payload                                             │
+│  2. Verifica se é UUID (regex)                                              │
+│     ├─ SIM: Busca por .eq("id", order_nsu) (Gestão)                         │
+│     └─ NÃO: Busca por .eq("ip_order_nsu", order_nsu) (Gallery)              │
+│  3. Se não encontrou por ID, tenta ip_order_nsu como fallback               │
+│  4. Atualiza status para "pago"                                             │
+│  5. Cria transação em clientes_transacoes                                   │
+│  6. Trigger atualiza valor_pago automaticamente                             │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Ações Necessárias
+## Solução Imediata (Sem código)
 
-### 1. Proteger as Edge Functions do Gestão (JÁ FEITO ✅)
+Para corrigir a cobrança de R$ 2,00 que já está pendente, você pode:
 
-A versão correta de `infinitepay-create-link` foi redeployada com:
-- Autenticação via JWT obrigatória
-- Extração de userId do token
-- Sem necessidade de userId no body
-
-### 2. Orientação para o Projeto Gallery
-
-O Gallery **NÃO DEVE** modificar:
-- `infinitepay-create-link` - exclusivo do Gestão
-- `mercadopago-create-link` - exclusivo do Gestão
-- `mercadopago-create-pix` - exclusivo do Gestão
-
-O Gallery **DEVE** usar:
-- `gallery-create-payment` - wrapper que já existe e funciona sem JWT
-
-### 3. Adicionar Coluna `origem` para Rastreabilidade (Opcional)
-
-Para melhor auditoria, podemos adicionar identificação da origem:
+1. **Aguardar** - O webhook pode chegar com delay
+2. **Verificar manualmente** - Após a correção, usar o botão "Verificar Status"
+3. **Atualizar via SQL** (temporário):
 
 ```sql
-ALTER TABLE cobrancas ADD COLUMN origem TEXT DEFAULT 'gestao';
--- Valores: 'gestao' | 'gallery'
+UPDATE cobrancas 
+SET status = 'pago', 
+    data_pagamento = now(), 
+    ip_transaction_nsu = 'manual-confirmation'
+WHERE id = 'd2c5f4bd-5332-401e-b80b-fe56916792b7';
 ```
 
-E atualizar as funções:
-- `infinitepay-create-link` → insere com `origem: 'gestao'`
-- `gallery-create-payment` → insere com `origem: 'gallery'`
-
-### 4. Prefixar order_nsu por Projeto (Opcional)
-
-Para facilitar debugging:
-- Gestão: usa UUID da cobrança como `order_nsu` (atual)
-- Gallery: usa formato `gallery-{timestamp}-{random}` (já implementado)
-
 ---
 
-## Documentação de Responsabilidades
+## Por que o Gallery funcionou e o Gestão não?
 
-### Edge Functions do GESTÃO (não modificar pelo Gallery)
+Analisando os dados:
 
-| Função | Propósito | Autenticação |
-|--------|-----------|--------------|
-| `infinitepay-create-link` | Criar link de pagamento (fotógrafo) | JWT obrigatório |
-| `mercadopago-create-link` | Criar link Mercado Pago (fotógrafo) | JWT obrigatório |
-| `mercadopago-create-pix` | Criar Pix Mercado Pago (fotógrafo) | JWT obrigatório |
+| Cobrança | `ip_order_nsu` | Webhook recebido? | Status |
+|----------|----------------|-------------------|--------|
+| Gestão R$2 | `d2c5f4bd...` (UUID) | **NÃO** | pendente |
+| Gallery R$5 | `gallery-1769483972062-pj4o1d` | SIM (mas de teste) | pago |
+| Gestão antigo R$5 | `92c90a93...` (UUID) | SIM (real) | pago |
 
-### Edge Functions COMPARTILHADAS
+O Gallery teve um webhook de **teste simulado** (veja `transaction_nsu: test-transaction-123`). Isso sugere que houve uma simulação manual de webhook, não um pagamento real.
 
-| Função | Propósito | Autenticação |
-|--------|-----------|--------------|
-| `gallery-create-payment` | Wrapper para Gallery criar cobranças | Service Role (interno) |
-| `infinitepay-webhook` | Receber confirmação de pagamento | Nenhuma (webhook público) |
-| `mercadopago-webhook` | Receber confirmação de pagamento | Nenhuma (webhook público) |
-| `gallery-update-session-photos` | Atualizar fotos extras da sessão | Service Role (interno) |
+**Conclusão:** O InfinitePay simplesmente não enviou o webhook para seu pagamento de R$2. Isso pode ser:
+- Bug no InfinitePay
+- Pagamento em modo sandbox
+- Problema temporário
 
-### Tabelas Compartilhadas
-
-| Tabela | Escrita | Leitura |
-|--------|---------|---------|
-| `cobrancas` | Gestão + Gallery | Gestão + Gallery |
-| `clientes_sessoes` | Gestão + Gallery (via edge functions) | Gestão + Gallery |
-| `clientes_transacoes` | Gestão + Webhooks | Gestão |
-| `usuarios_integracoes` | Gestão | Gestão + Gallery (via edge functions) |
-
----
-
-## Resumo do Que Foi Corrigido
-
-| Ação | Status |
-|------|--------|
-| Identificar que Gallery sobrescreveu a Edge Function | ✅ Feito |
-| Re-deployar `infinitepay-create-link` com versão do Gestão | ✅ Feito |
-| Verificar que o erro mudou de "userId obrigatório" para "Não autorizado" | ✅ Confirmado |
-| Documentar separação de responsabilidades | ✅ Este plano |
-
----
-
-## Próximos Passos (Ações no Gallery)
-
-1. **Comunicar ao projeto Gallery** que ele deve usar APENAS `gallery-create-payment`
-2. O Gallery **NÃO deve** fazer deploy de funções que existem no Gestão
-3. Se o Gallery precisar de funcionalidade adicional, criar funções novas com prefixo `gallery-*`
-
----
-
-## Teste para Confirmar Correção
-
-Faça o seguinte no Gestão:
-1. Acesse o Workflow
-2. Selecione um cliente (ex: Eduardo Diehl)
-3. Clique em "Cobrar" → Selecione "Link"
-4. Clique em "Gerar Link"
-5. Deve gerar o link normalmente sem erro 400
-
-Se continuar com erro, pode ser cache do navegador - tente hard refresh (Ctrl+Shift+R).
-
+A correção do webhook com busca dual garantirá compatibilidade futura com ambos os projetos.
