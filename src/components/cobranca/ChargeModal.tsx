@@ -42,6 +42,8 @@ export function ChargeModal({
   const [descricao, setDescricao] = useState('');
   const [selectedMethod, setSelectedMethod] = useState<TipoCobranca>('pix');
   const [activeTab, setActiveTab] = useState<'cobrar' | 'historico'>('cobrar');
+  const [checkingStatus, setCheckingStatus] = useState(false);
+  const [currentChargeId, setCurrentChargeId] = useState<string | null>(null);
   
   // Current charge state (after generation)
   const [currentCharge, setCurrentCharge] = useState<{
@@ -63,6 +65,7 @@ export function ChargeModal({
     createLinkCharge,
     cancelCharge,
     getProvedor,
+    checkPaymentStatus,
   } = useCobranca({ clienteId, sessionId });
 
   // Check active provider when modal opens
@@ -85,6 +88,8 @@ export function ChargeModal({
       // Default to 'link' when InfinitePay is active (no isolated Pix)
       setSelectedMethod(provedorAtivo === 'infinitepay' ? 'link' : 'pix');
       setCurrentCharge(null);
+      setCurrentChargeId(null);
+      setCheckingStatus(false);
       setActiveTab('cobrar');
     }
   }, [isOpen, valorSugerido, provedorAtivo]);
@@ -124,7 +129,7 @@ export function ChargeModal({
       tipoCobranca: 'link',
     });
 
-    if (result.success) {
+    if (result.success && result.cobranca) {
       // Use checkoutUrl (InfinitePay) or paymentLink (Mercado Pago)
       const linkUrl = result.checkoutUrl || result.paymentLink;
       setCurrentCharge({
@@ -132,6 +137,21 @@ export function ChargeModal({
         checkoutUrl: linkUrl,
         status: 'pendente',
       });
+      setCurrentChargeId(result.cobranca.id);
+    }
+  };
+
+  const handleCheckStatus = async () => {
+    if (!currentChargeId) return;
+    
+    setCheckingStatus(true);
+    try {
+      const result = await checkPaymentStatus(currentChargeId);
+      if (result.updated || result.status === 'pago') {
+        setCurrentCharge(prev => prev ? { ...prev, status: 'pago' } : null);
+      }
+    } finally {
+      setCheckingStatus(false);
     }
   };
 
@@ -147,8 +167,10 @@ export function ChargeModal({
       checkoutUrl: linkUrl,
       status: cobranca.status,
     });
+    setCurrentChargeId(cobranca.id);
     setActiveTab('cobrar');
   };
+
 
   // Build methods based on active provider
   // InfinitePay only supports link checkout (Pix + Card in one), not isolated Pix
@@ -281,7 +303,9 @@ export function ChargeModal({
                     paymentLink={currentCharge?.paymentLink}
                     status={currentCharge?.status}
                     loading={creatingCharge}
+                    checkingStatus={checkingStatus}
                     onGenerate={handleGenerateLink}
+                    onCheckStatus={currentChargeId ? handleCheckStatus : undefined}
                     clienteWhatsapp={clienteWhatsapp}
                   />
                 )}

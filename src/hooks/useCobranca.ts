@@ -222,6 +222,36 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
     return await getActivePaymentProvider();
   }, []);
 
+  // Check payment status manually (fallback when webhook fails)
+  const checkPaymentStatus = useCallback(async (cobrancaId: string): Promise<{ updated: boolean; status?: string }> => {
+    try {
+      const response = await supabase.functions.invoke('check-payment-status', {
+        body: { cobrancaId, forceUpdate: true },
+      });
+
+      if (response.error) throw response.error;
+
+      const result = response.data;
+
+      if (result?.updated) {
+        toast.success('Pagamento confirmado!');
+        await fetchCobrancas();
+        return { updated: true, status: result.status };
+      } else if (result?.status === 'pago') {
+        toast.info('Pagamento já estava confirmado');
+        await fetchCobrancas();
+        return { updated: false, status: 'pago' };
+      } else {
+        toast.info('Pagamento ainda não confirmado');
+        return { updated: false, status: result?.status };
+      }
+    } catch (error: any) {
+      console.error('Error checking payment status:', error);
+      toast.error('Erro ao verificar status');
+      return { updated: false };
+    }
+  }, [fetchCobrancas]);
+
   // Real-time subscription
   useEffect(() => {
     if (!options.clienteId && !options.sessionId) return;
@@ -257,6 +287,7 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
     createLinkCharge,
     cancelCharge,
     getProvedor,
+    checkPaymentStatus,
     refetch: fetchCobrancas,
   };
 }
