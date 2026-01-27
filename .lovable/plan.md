@@ -1,193 +1,429 @@
 
-# Plano de Correção: Webhook InfinitePay Compatível com Gestão e Gallery
+# Plano de Execução: Conformidade com Contrato Oficial InfinitePay
 
-## Diagnóstico do Problema
+## Resumo das Correções
 
-### O que aconteceu
-
-1. **Pagamento de R$ 2,00 foi feito com sucesso** no checkout InfinitePay
-2. **O webhook NÃO foi chamado** pelo InfinitePay (sem logs, sem registro em `webhook_logs`)
-3. **Status permanece "pendente"** porque só o webhook atualiza para "pago"
-
-### Evidências encontradas
-
-| Dado | Valor |
-|------|-------|
-| ID da cobrança | `d2c5f4bd-5332-401e-b80b-fe56916792b7` |
-| `ip_order_nsu` | `d2c5f4bd-5332-401e-b80b-fe56916792b7` (UUID) |
-| `ip_transaction_nsu` | `NULL` (deveria ter valor do webhook) |
-| Status | `pendente` |
-| Logs do webhook | **Nenhum** para este order_nsu |
-
-### Por que o webhook não foi chamado?
-
-Possíveis causas (ordem de probabilidade):
-
-1. **Pagamento em modo teste/sandbox** - InfinitePay pode não enviar webhooks para pagamentos simulados
-2. **Delay do webhook** - InfinitePay às vezes demora para enviar
-3. **Falha silenciosa** - A URL do webhook pode ter sido rejeitada pela InfinitePay
-
-### Situação do código atual
-
-O webhook atual está **correto para o Gestão**:
-```typescript
-// infinitepay-webhook busca por ID (UUID)
-.eq("id", order_nsu)  // ✅ Funciona para Gestão que envia UUID
-```
-
-Mas **não suporta o Gallery** que envia formato `gallery-*` como NSU.
+Este plano implementa as 4 correções obrigatórias identificadas na auditoria, mantendo compatibilidade total com Gallery e projetos futuros.
 
 ---
 
-## Solução Proposta
+## Correção 1: Remover decisão baseada em formato de order_nsu
 
-### Atualizar o webhook com busca dual (fallback)
+**Arquivo:** `supabase/functions/infinitepay-webhook/index.ts`
 
-Modificar `infinitepay-webhook` para buscar por duas estratégias:
+**Alteração:**
+- Remover linha 29-30 (UUID_REGEX)
+- Remover toda lógica condicional baseada em regex (linhas 79-98)
 
+**Antes:**
 ```typescript
-// 1. Primeiro tentar buscar por ID (UUID) - Gestão
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// ...
+if (UUID_REGEX.test(order_nsu)) {
+  // busca por id
+}
+```
+
+**Depois:**
+- Nenhum regex, nenhuma inferência de formato
+
+---
+
+## Correção 2: Corrigir ordem de busca (fixa conforme contrato)
+
+**Arquivo:** `supabase/functions/infinitepay-webhook/index.ts`
+
+**Ordem contratual obrigatória:**
+```text
+1º → Buscar por ip_order_nsu = order_nsu
+2º → Fallback por id = order_nsu
+```
+
+**Implementação:**
+```typescript
+// ESTRATÉGIA DE BUSCA CONFORME CONTRATO
+// 1º: SEMPRE buscar por ip_order_nsu primeiro
 let cobranca = null;
+let searchMethod = "";
 
-// Verificar se order_nsu é um UUID válido
-const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const isUuid = uuidRegex.test(order_nsu);
+console.log(`[infinitepay-webhook] 1st search: ip_order_nsu = ${order_nsu}`);
+const { data: byNsu, error: nsuError } = await supabase
+  .from("cobrancas")
+  .select("*, clientes(nome)")
+  .eq("ip_order_nsu", order_nsu)
+  .eq("provedor", "infinitepay")
+  .maybeSingle();
 
-if (isUuid) {
-  // Buscar por ID (padrão Gestão)
-  const { data, error } = await supabase
+if (nsuError) {
+  console.error("[infinitepay-webhook] Error searching by ip_order_nsu:", nsuError);
+}
+
+if (byNsu) {
+  cobranca = byNsu;
+  searchMethod = "by_ip_order_nsu";
+  console.log(`[infinitepay-webhook] Found by ip_order_nsu: ${byNsu.id}`);
+}
+
+// 2º: Fallback por id (sem regex!)
+if (!cobranca) {
+  console.log(`[infinitepay-webhook] 2nd search (fallback): id = ${order_nsu}`);
+  const { data: byId, error: idError } = await supabase
     .from("cobrancas")
     .select("*, clientes(nome)")
     .eq("id", order_nsu)
     .eq("provedor", "infinitepay")
     .maybeSingle();
-  
-  if (data) cobranca = data;
-}
 
-// 2. Se não encontrou, buscar por ip_order_nsu (Gallery)
-if (!cobranca) {
-  const { data, error } = await supabase
-    .from("cobrancas")
-    .select("*, clientes(nome)")
-    .eq("ip_order_nsu", order_nsu)
-    .eq("provedor", "infinitepay")
-    .maybeSingle();
-  
-  if (data) cobranca = data;
-}
+  if (idError) {
+    console.error("[infinitepay-webhook] Error searching by id:", idError);
+  }
 
-// 3. Se ainda não encontrou, erro
-if (!cobranca) {
-  console.error("[infinitepay-webhook] Cobranca not found:", order_nsu);
-  return new Response(
-    JSON.stringify({ error: "Cobranca not found" }),
-    { status: 404 }
-  );
+  if (byId) {
+    cobranca = byId;
+    searchMethod = "by_id";
+    console.log(`[infinitepay-webhook] Found by id: ${byId.id}`);
+  }
 }
 ```
 
-### Adicionar logging na tabela webhook_logs
+**Nota:** A busca por `id` com valor não-UUID simplesmente não retorna resultado (sem erro). Não é necessário regex.
 
-Registrar todos os webhooks recebidos para debugging:
+---
 
+## Correção 3: Garantir log do payload bruto ANTES de qualquer falha
+
+**Arquivo:** `supabase/functions/infinitepay-webhook/index.ts`
+
+**Problema atual:**
+- Log acontece DEPOIS de `await req.json()` (linha 49)
+- Se JSON for inválido, erro ocorre antes do log
+
+**Solução:**
 ```typescript
-// Logo após receber o payload
-await supabase.from("webhook_logs").insert({
-  provedor: "infinitepay",
-  order_nsu: order_nsu,
-  payload: payload,
-  headers: Object.fromEntries(req.headers.entries()),
-  status: "received",
+serve(async (req) => {
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  
+  // Handle CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  if (req.method !== "POST") {
+    return new Response(
+      JSON.stringify({ error: "Method not allowed" }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 405 }
+    );
+  }
+
+  // PASSO 1: Ler corpo como texto bruto ANTES de qualquer processamento
+  let rawBody = "";
+  try {
+    rawBody = await req.text();
+  } catch (readError) {
+    rawBody = "FAILED_TO_READ_BODY";
+    console.error("[infinitepay-webhook] Failed to read request body:", readError);
+  }
+
+  // PASSO 2: SEMPRE logar ANTES de tentar parse
+  try {
+    await supabase.from("webhook_logs").insert({
+      provedor: "infinitepay",
+      order_nsu: "pending_parse",
+      payload: { raw: rawBody.substring(0, 10000) }, // Limitar tamanho
+      headers: Object.fromEntries(req.headers.entries()),
+      status: "received",
+    });
+  } catch (logError) {
+    console.warn("[infinitepay-webhook] Failed to log webhook:", logError);
+  }
+
+  // PASSO 3: Agora tentar parse do JSON
+  let payload: InfinitePayWebhookPayload;
+  try {
+    payload = JSON.parse(rawBody);
+  } catch (parseError) {
+    console.error("[infinitepay-webhook] Invalid JSON:", parseError);
+    
+    // Atualizar log com erro
+    await supabase
+      .from("webhook_logs")
+      .update({ status: "error", error_message: "Invalid JSON" })
+      .eq("order_nsu", "pending_parse")
+      .eq("provedor", "infinitepay")
+      .order("created_at", { ascending: false })
+      .limit(1);
+    
+    return new Response(
+      JSON.stringify({ error: "Invalid JSON" }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+    );
+  }
+
+  // PASSO 4: Atualizar log com order_nsu real
+  const { order_nsu } = payload;
+  
+  if (order_nsu) {
+    await supabase
+      .from("webhook_logs")
+      .update({ order_nsu: order_nsu, payload: payload })
+      .eq("order_nsu", "pending_parse")
+      .eq("provedor", "infinitepay")
+      .order("created_at", { ascending: false })
+      .limit(1);
+  }
+
+  // ... resto do processamento ...
 });
 ```
 
-### Adicionar verificação manual de status (fallback para webhook falho)
+---
 
-No ChargeModal do Gestão, adicionar botão "Verificar Status" que chama a API do InfinitePay diretamente ou força a atualização:
+## Correção 4: Criar edge function check-payment-status
 
+**Novo arquivo:** `supabase/functions/check-payment-status/index.ts`
+
+**Propósito:** Fallback obrigatório para quando webhook falha
+
+**Lógica de resolução:** Segue a mesma ordem do webhook (ip_order_nsu → id)
+
+**Implementação:**
 ```typescript
-// useCobranca.ts - Nova função
-const checkPaymentStatus = async (cobrancaId: string): Promise<boolean> => {
-  const { data, error } = await supabase.functions.invoke('check-payment-status', {
-    body: { cobrancaId, forceUpdate: true }
-  });
-  
-  if (data?.updated) {
-    toast.success('Pagamento confirmado!');
-    await fetchCobrancas();
-    return true;
-  }
-  return false;
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+  try {
+    const { cobrancaId, orderNsu, sessionId, forceUpdate } = await req.json();
+
+    console.log("[check-payment-status] Request:", { cobrancaId, orderNsu, sessionId, forceUpdate });
+
+    // RESOLUÇÃO SEGUE MESMA ORDEM DO WEBHOOK: ip_order_nsu → id
+    let cobranca = null;
+    let searchMethod = "";
+
+    // 1. Buscar por cobrancaId (UUID do banco)
+    if (cobrancaId) {
+      // Primeiro tentar por ip_order_nsu
+      const { data: byNsu } = await supabase
+        .from("cobrancas")
+        .select("*")
+        .eq("ip_order_nsu", cobrancaId)
+        .maybeSingle();
+
+      if (byNsu) {
+        cobranca = byNsu;
+        searchMethod = "by_ip_order_nsu";
+      } else {
+        // Fallback por id
+        const { data: byId } = await supabase
+          .from("cobrancas")
+          .select("*")
+          .eq("id", cobrancaId)
+          .maybeSingle();
+
+        if (byId) {
+          cobranca = byId;
+          searchMethod = "by_id";
+        }
+      }
+    }
+
+    // 2. Buscar por orderNsu se não encontrou
+    if (!cobranca && orderNsu) {
+      const { data: byNsu } = await supabase
+        .from("cobrancas")
+        .select("*")
+        .eq("ip_order_nsu", orderNsu)
+        .maybeSingle();
+
+      if (byNsu) {
+        cobranca = byNsu;
+        searchMethod = "by_ip_order_nsu";
+      }
+    }
+
+    // 3. Buscar por sessionId se não encontrou
+    if (!cobranca && sessionId) {
+      const { data: bySession } = await supabase
+        .from("cobrancas")
+        .select("*")
+        .eq("session_id", sessionId)
+        .eq("status", "pendente")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (bySession) {
+        cobranca = bySession;
+        searchMethod = "by_session_id";
+      }
+    }
+
+    if (!cobranca) {
+      return new Response(
+        JSON.stringify({ found: false, error: "Cobranca not found" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 404 }
+      );
+    }
+
+    console.log(`[check-payment-status] Found via ${searchMethod}: ${cobranca.id}, status: ${cobranca.status}`);
+
+    // Se já está pago, retornar status
+    if (cobranca.status === "pago") {
+      return new Response(
+        JSON.stringify({ found: true, status: "pago", updated: false, source: "already_paid" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      );
+    }
+
+    // Se forceUpdate, marcar como pago
+    if (forceUpdate) {
+      const now = new Date().toISOString();
+
+      // Atualizar cobrança
+      const { error: updateError } = await supabase
+        .from("cobrancas")
+        .update({
+          status: "pago",
+          data_pagamento: now,
+          ip_transaction_nsu: "manual-verification",
+          updated_at: now,
+        })
+        .eq("id", cobranca.id);
+
+      if (updateError) {
+        console.error("[check-payment-status] Error updating cobranca:", updateError);
+        throw new Error("Failed to update cobranca");
+      }
+
+      // Se tem sessão vinculada, criar transação
+      if (cobranca.session_id) {
+        // Buscar sessão para obter cliente_id
+        const { data: session } = await supabase
+          .from("clientes_sessoes")
+          .select("session_id, cliente_id")
+          .eq("session_id", cobranca.session_id)
+          .maybeSingle();
+
+        if (session) {
+          const { error: txError } = await supabase
+            .from("clientes_transacoes")
+            .insert({
+              user_id: cobranca.user_id,
+              cliente_id: session.cliente_id || cobranca.cliente_id,
+              session_id: session.session_id,
+              valor: cobranca.valor,
+              tipo: "pagamento",
+              data_transacao: now.split("T")[0],
+              descricao: `Pagamento verificado manualmente - ${cobranca.descricao || "Link"}`,
+            });
+
+          if (txError) {
+            console.error("[check-payment-status] Error creating transaction:", txError);
+          } else {
+            console.log(`[check-payment-status] Transaction created for session ${session.session_id}`);
+          }
+        }
+      }
+
+      console.log(`[check-payment-status] Cobranca ${cobranca.id} updated to 'pago' (manual verification)`);
+
+      return new Response(
+        JSON.stringify({ 
+          found: true, 
+          status: "pago", 
+          updated: true, 
+          source: "manual_verification",
+          cobrancaId: cobranca.id 
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      );
+    }
+
+    // Retornar status atual sem modificar
+    return new Response(
+      JSON.stringify({ 
+        found: true, 
+        status: cobranca.status, 
+        updated: false,
+        cobranca: {
+          id: cobranca.id,
+          valor: cobranca.valor,
+          status: cobranca.status,
+          provedor: cobranca.provedor,
+          createdAt: cobranca.created_at,
+        }
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+    );
+
+  } catch (error) {
+    console.error("[check-payment-status] Error:", error);
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+    );
+  }
+});
 ```
 
 ---
 
-## Arquivos a Modificar
+## Correção 5: Adicionar config para check-payment-status
 
-| Arquivo | Ação | Descrição |
-|---------|------|-----------|
-| `supabase/functions/infinitepay-webhook/index.ts` | Modificar | Adicionar busca dual (id + ip_order_nsu) e logging |
-| `src/hooks/useCobranca.ts` | Modificar | Adicionar função `checkPaymentStatus` |
-| `src/components/payments/ChargeModal.tsx` | Modificar | Adicionar botão "Verificar Status" |
+**Arquivo:** `supabase/config.toml`
 
----
-
-## Fluxo Corrigido
-
-```text
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  WEBHOOK RECEBE PAGAMENTO                                                    │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  1. Extrai order_nsu do payload                                             │
-│  2. Verifica se é UUID (regex)                                              │
-│     ├─ SIM: Busca por .eq("id", order_nsu) (Gestão)                         │
-│     └─ NÃO: Busca por .eq("ip_order_nsu", order_nsu) (Gallery)              │
-│  3. Se não encontrou por ID, tenta ip_order_nsu como fallback               │
-│  4. Atualiza status para "pago"                                             │
-│  5. Cria transação em clientes_transacoes                                   │
-│  6. Trigger atualiza valor_pago automaticamente                             │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
+**Adicionar:**
+```toml
+[functions.check-payment-status]
+verify_jwt = false
 ```
 
 ---
 
-## Solução Imediata (Sem código)
+## Resumo de Arquivos a Modificar
 
-Para corrigir a cobrança de R$ 2,00 que já está pendente, você pode:
-
-1. **Aguardar** - O webhook pode chegar com delay
-2. **Verificar manualmente** - Após a correção, usar o botão "Verificar Status"
-3. **Atualizar via SQL** (temporário):
-
-```sql
-UPDATE cobrancas 
-SET status = 'pago', 
-    data_pagamento = now(), 
-    ip_transaction_nsu = 'manual-confirmation'
-WHERE id = 'd2c5f4bd-5332-401e-b80b-fe56916792b7';
-```
+| Arquivo | Ação | Linhas Afetadas |
+|---------|------|-----------------|
+| `supabase/functions/infinitepay-webhook/index.ts` | Modificar | 29-30 (remover regex), 49-65 (log antes do parse), 79-118 (inverter ordem) |
+| `supabase/functions/check-payment-status/index.ts` | **CRIAR** | Arquivo novo (~150 linhas) |
+| `supabase/config.toml` | Adicionar | 1 seção nova |
 
 ---
 
-## Por que o Gallery funcionou e o Gestão não?
+## Validação Pós-Implementação
 
-Analisando os dados:
+Após deploy, validar:
 
-| Cobrança | `ip_order_nsu` | Webhook recebido? | Status |
-|----------|----------------|-------------------|--------|
-| Gestão R$2 | `d2c5f4bd...` (UUID) | **NÃO** | pendente |
-| Gallery R$5 | `gallery-1769483972062-pj4o1d` | SIM (mas de teste) | pago |
-| Gestão antigo R$5 | `92c90a93...` (UUID) | SIM (real) | pago |
+| Cenário | Entrada | Resultado Esperado |
+|---------|---------|-------------------|
+| order_nsu = UUID (Gestão) | `d2c5f4bd-5332-401e-b80b-fe56916792b7` | Encontra via ip_order_nsu OU fallback id |
+| order_nsu = prefixado (Gallery) | `gallery-1769483972062-pj4o1d` | Encontra via ip_order_nsu |
+| order_nsu inválido | `xyz-invalid` | Retorna 404 após ambas buscas |
+| JSON inválido | `{malformed` | Log registrado, erro 400 |
+| Webhook falhou | Botão "Verificar Status" | check-payment-status atualiza para pago |
 
-O Gallery teve um webhook de **teste simulado** (veja `transaction_nsu: test-transaction-123`). Isso sugere que houve uma simulação manual de webhook, não um pagamento real.
+---
 
-**Conclusão:** O InfinitePay simplesmente não enviou o webhook para seu pagamento de R$2. Isso pode ser:
-- Bug no InfinitePay
-- Pagamento em modo sandbox
-- Problema temporário
+## Compatibilidade
 
-A correção do webhook com busca dual garantirá compatibilidade futura com ambos os projetos.
+- **Gallery:** Funciona normalmente (busca por ip_order_nsu primeiro)
+- **Gestão:** Funciona normalmente (ip_order_nsu = UUID, ou fallback por id)
+- **Projetos futuros:** Qualquer formato de order_nsu será suportado
