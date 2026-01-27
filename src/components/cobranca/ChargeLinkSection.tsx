@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Copy, Check, Link2, ExternalLink, Send } from 'lucide-react';
+import { Copy, Check, Link2, ExternalLink, Send, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { ChargeStatusDisplay, ChargeLoadingStatus } from './ChargeStatusDisplay';
 import { formatCurrency } from '@/utils/financialUtils';
@@ -10,7 +10,9 @@ interface ChargeLinkSectionProps {
   paymentLink?: string;
   status?: 'pendente' | 'pago' | 'cancelado' | 'expirado';
   loading?: boolean;
+  checkingStatus?: boolean;
   onGenerate: () => void;
+  onCheckStatus?: () => void;
   clienteWhatsapp?: string;
 }
 
@@ -19,7 +21,9 @@ export function ChargeLinkSection({
   paymentLink,
   status,
   loading,
+  checkingStatus,
   onGenerate,
+  onCheckStatus,
   clienteWhatsapp,
 }: ChargeLinkSectionProps) {
   const [copied, setCopied] = useState(false);
@@ -102,6 +106,20 @@ export function ChargeLinkSection({
             Abrir
           </Button>
         </div>
+
+        {/* Check Status button - only show for pending payments */}
+        {status === 'pendente' && onCheckStatus && (
+          <Button
+            type="button"
+            onClick={onCheckStatus}
+            variant="outline"
+            className="w-full gap-2"
+            disabled={checkingStatus}
+          >
+            <RefreshCw className={`h-4 w-4 ${checkingStatus ? 'animate-spin' : ''}`} />
+            {checkingStatus ? 'Verificando...' : 'Verificar Status'}
+          </Button>
+        )}
 
         {clienteWhatsapp && (
           <Button

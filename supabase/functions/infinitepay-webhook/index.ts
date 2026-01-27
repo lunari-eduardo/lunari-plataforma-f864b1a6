@@ -26,6 +26,9 @@ interface InfinitePayWebhookPayload {
   event?: string;
 }
 
+// UUID regex for detecting Gestão-style order_nsu
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -40,12 +43,26 @@ serve(async (req) => {
     );
   }
 
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
   try {
     const payload: InfinitePayWebhookPayload = await req.json();
+    const { order_nsu, paid_amount, transaction_nsu, capture_method, receipt_url } = payload;
     
     console.log("[infinitepay-webhook] Received webhook:", JSON.stringify(payload));
 
-    const { order_nsu, paid_amount, transaction_nsu, capture_method, receipt_url } = payload;
+    // Log all webhooks for debugging
+    try {
+      await supabase.from("webhook_logs").insert({
+        provedor: "infinitepay",
+        order_nsu: order_nsu || "unknown",
+        payload: payload,
+        headers: Object.fromEntries(req.headers.entries()),
+        status: "received",
+      });
+    } catch (logError) {
+      console.warn("[infinitepay-webhook] Failed to log webhook:", logError);
+    }
 
     if (!order_nsu) {
       console.error("[infinitepay-webhook] Missing order_nsu");
@@ -55,29 +72,81 @@ serve(async (req) => {
       );
     }
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    // DUAL SEARCH STRATEGY: Support both Gestão (UUID) and Gallery (gallery-*) formats
+    let cobranca = null;
+    let searchMethod = "";
 
-    // Find cobranca by order_nsu (which is the cobranca ID)
-    const { data: cobranca, error: findError } = await supabase
-      .from("cobrancas")
-      .select("*, clientes(nome)")
-      .eq("id", order_nsu)
-      .eq("provedor", "infinitepay")
-      .single();
+    // 1. If order_nsu is a valid UUID, try searching by ID first (Gestão pattern)
+    if (UUID_REGEX.test(order_nsu)) {
+      console.log(`[infinitepay-webhook] order_nsu is UUID, searching by id: ${order_nsu}`);
+      const { data: byId, error: idError } = await supabase
+        .from("cobrancas")
+        .select("*, clientes(nome)")
+        .eq("id", order_nsu)
+        .eq("provedor", "infinitepay")
+        .maybeSingle();
 
-    if (findError || !cobranca) {
-      console.error("[infinitepay-webhook] Cobranca not found:", order_nsu, findError);
+      if (idError) {
+        console.error("[infinitepay-webhook] Error searching by id:", idError);
+      }
+
+      if (byId) {
+        cobranca = byId;
+        searchMethod = "by_id";
+        console.log(`[infinitepay-webhook] Found cobranca by id: ${byId.id}`);
+      }
+    }
+
+    // 2. If not found by ID, try searching by ip_order_nsu (Gallery pattern or fallback)
+    if (!cobranca) {
+      console.log(`[infinitepay-webhook] Searching by ip_order_nsu: ${order_nsu}`);
+      const { data: byNsu, error: nsuError } = await supabase
+        .from("cobrancas")
+        .select("*, clientes(nome)")
+        .eq("ip_order_nsu", order_nsu)
+        .eq("provedor", "infinitepay")
+        .maybeSingle();
+
+      if (nsuError) {
+        console.error("[infinitepay-webhook] Error searching by ip_order_nsu:", nsuError);
+      }
+
+      if (byNsu) {
+        cobranca = byNsu;
+        searchMethod = "by_ip_order_nsu";
+        console.log(`[infinitepay-webhook] Found cobranca by ip_order_nsu: ${byNsu.id}`);
+      }
+    }
+
+    // 3. If still not found, return 404
+    if (!cobranca) {
+      console.error("[infinitepay-webhook] Cobranca not found:", order_nsu);
+      
+      // Update webhook log with error
+      await supabase
+        .from("webhook_logs")
+        .update({ status: "error", error_message: "Cobranca not found" })
+        .eq("order_nsu", order_nsu)
+        .eq("provedor", "infinitepay");
+
       return new Response(
-        JSON.stringify({ error: "Cobranca not found" }),
+        JSON.stringify({ error: "Cobranca not found", order_nsu, searchMethods: ["by_id", "by_ip_order_nsu"] }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 404 }
       );
     }
 
-    console.log(`[infinitepay-webhook] Found cobranca: ${cobranca.id}, current status: ${cobranca.status}`);
+    console.log(`[infinitepay-webhook] Found cobranca via ${searchMethod}: ${cobranca.id}, current status: ${cobranca.status}`);
 
     // If already paid, just acknowledge
     if (cobranca.status === "pago") {
       console.log("[infinitepay-webhook] Cobranca already paid, acknowledging");
+      
+      await supabase
+        .from("webhook_logs")
+        .update({ status: "ignored", error_message: "Already paid" })
+        .eq("order_nsu", order_nsu)
+        .eq("provedor", "infinitepay");
+
       return new Response(
         JSON.stringify({ success: true, message: "Already processed" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
@@ -204,6 +273,13 @@ serve(async (req) => {
       }
     }
 
+    // Update webhook log as processed
+    await supabase
+      .from("webhook_logs")
+      .update({ status: "processed" })
+      .eq("order_nsu", order_nsu)
+      .eq("provedor", "infinitepay");
+
     console.log("[infinitepay-webhook] Webhook processed successfully");
 
     return new Response(
@@ -211,6 +287,7 @@ serve(async (req) => {
         success: true, 
         cobrancaId: cobranca.id,
         valorPago: valorPago,
+        searchMethod: searchMethod,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
