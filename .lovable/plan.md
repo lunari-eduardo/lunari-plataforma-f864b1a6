@@ -1,429 +1,198 @@
 
-# Plano de Execução: Conformidade com Contrato Oficial InfinitePay
 
-## Resumo das Correções
+# Plano: Badge de Status de Pagamento de Fotos Extras no Workflow
 
-Este plano implementa as 4 correções obrigatórias identificadas na auditoria, mantendo compatibilidade total com Gallery e projetos futuros.
-
----
-
-## Correção 1: Remover decisão baseada em formato de order_nsu
-
-**Arquivo:** `supabase/functions/infinitepay-webhook/index.ts`
-
-**Alteração:**
-- Remover linha 29-30 (UUID_REGEX)
-- Remover toda lógica condicional baseada em regex (linhas 79-98)
-
-**Antes:**
-```typescript
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-// ...
-if (UUID_REGEX.test(order_nsu)) {
-  // busca por id
-}
-```
-
-**Depois:**
-- Nenhum regex, nenhuma inferência de formato
+## Objetivo
+Adicionar um badge visual ao lado de "Total fotos extras" mostrando se o valor está pendente, pago ou sem vendas.
 
 ---
 
-## Correção 2: Corrigir ordem de busca (fixa conforme contrato)
+## Análise da Situação Atual
 
-**Arquivo:** `supabase/functions/infinitepay-webhook/index.ts`
+### O que funciona:
+- Quantidade e valor de fotos extras são sincronizados da Gallery
+- O trigger `sync_gallery_status_to_session` sincroniza o `status_galeria`
+- Pagamentos são refletidos no `valor_pago` total da sessão
 
-**Ordem contratual obrigatória:**
-```text
-1º → Buscar por ip_order_nsu = order_nsu
-2º → Fallback por id = order_nsu
-```
-
-**Implementação:**
-```typescript
-// ESTRATÉGIA DE BUSCA CONFORME CONTRATO
-// 1º: SEMPRE buscar por ip_order_nsu primeiro
-let cobranca = null;
-let searchMethod = "";
-
-console.log(`[infinitepay-webhook] 1st search: ip_order_nsu = ${order_nsu}`);
-const { data: byNsu, error: nsuError } = await supabase
-  .from("cobrancas")
-  .select("*, clientes(nome)")
-  .eq("ip_order_nsu", order_nsu)
-  .eq("provedor", "infinitepay")
-  .maybeSingle();
-
-if (nsuError) {
-  console.error("[infinitepay-webhook] Error searching by ip_order_nsu:", nsuError);
-}
-
-if (byNsu) {
-  cobranca = byNsu;
-  searchMethod = "by_ip_order_nsu";
-  console.log(`[infinitepay-webhook] Found by ip_order_nsu: ${byNsu.id}`);
-}
-
-// 2º: Fallback por id (sem regex!)
-if (!cobranca) {
-  console.log(`[infinitepay-webhook] 2nd search (fallback): id = ${order_nsu}`);
-  const { data: byId, error: idError } = await supabase
-    .from("cobrancas")
-    .select("*, clientes(nome)")
-    .eq("id", order_nsu)
-    .eq("provedor", "infinitepay")
-    .maybeSingle();
-
-  if (idError) {
-    console.error("[infinitepay-webhook] Error searching by id:", idError);
-  }
-
-  if (byId) {
-    cobranca = byId;
-    searchMethod = "by_id";
-    console.log(`[infinitepay-webhook] Found by id: ${byId.id}`);
-  }
-}
-```
-
-**Nota:** A busca por `id` com valor não-UUID simplesmente não retorna resultado (sem erro). Não é necessário regex.
+### O que falta:
+- O campo `status_pagamento` da galeria (sem_vendas | pendente | pago) **não** está sincronizado para `clientes_sessoes`
+- A UI não tem como distinguir se o valor de fotos extras especificamente está pago ou pendente
 
 ---
 
-## Correção 3: Garantir log do payload bruto ANTES de qualquer falha
+## Sobre Escalabilidade
 
-**Arquivo:** `supabase/functions/infinitepay-webhook/index.ts`
+O modelo atual é escalável:
 
-**Problema atual:**
-- Log acontece DEPOIS de `await req.json()` (linha 49)
-- Se JSON for inválido, erro ocorre antes do log
+| Aspecto | Implementação | Status |
+|---------|---------------|--------|
+| N+1 Queries | Batch query única para transações | ✅ Escalável |
+| Cálculos | Triggers no banco de dados | ✅ Escalável |
+| Sincronização | BroadcastChannel cross-tab | ✅ Escalável |
+| Cache | WorkflowCacheManager com TTL | ✅ Escalável |
+| Realtime | Postgres Changes subscription | ✅ Escalável |
 
-**Solução:**
+Sugestão de melhoria futura: Implementar paginação virtual para fotógrafos com +500 sessões ativas.
+
+---
+
+## Solução Proposta
+
+### Fase 1: Sincronizar status_pagamento da galeria para a sessão
+
+**1.1 Migração SQL - Adicionar coluna e atualizar trigger**
+
+Adicionar campo `status_pagamento_fotos_extra` em `clientes_sessoes` e modificar o trigger para sincronizar:
+
+```sql
+-- Adicionar coluna para status de pagamento de fotos extras
+ALTER TABLE clientes_sessoes 
+ADD COLUMN IF NOT EXISTS status_pagamento_fotos_extra TEXT DEFAULT 'sem_vendas';
+
+-- Atualizar função de sincronização
+CREATE OR REPLACE FUNCTION sync_gallery_status_to_session()
+RETURNS TRIGGER AS $$
+...
+  -- Agora também sincroniza status_pagamento
+  UPDATE clientes_sessoes
+  SET status = target_status,
+      status_galeria = NEW.status,
+      status_pagamento_fotos_extra = NEW.status_pagamento, -- NOVO
+      updated_at = NOW()
+  WHERE id = session_record.id;
+...
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Criar trigger adicional para mudanças em status_pagamento
+CREATE TRIGGER trigger_sync_gallery_payment_status
+AFTER UPDATE OF status_pagamento ON galerias
+FOR EACH ROW
+EXECUTE FUNCTION sync_gallery_status_to_session();
+```
+
+---
+
+### Fase 2: Atualizar tipos e mapeamento de dados
+
+**2.1 Atualizar interface SessionData (`src/types/workflow.ts`)**
+
+Adicionar campo para status de pagamento de fotos extras:
+
 ```typescript
-serve(async (req) => {
-  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+export interface SessionData {
+  // ... campos existentes ...
   
-  // Handle CORS preflight
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
-
-  if (req.method !== "POST") {
-    return new Response(
-      JSON.stringify({ error: "Method not allowed" }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 405 }
-    );
-  }
-
-  // PASSO 1: Ler corpo como texto bruto ANTES de qualquer processamento
-  let rawBody = "";
-  try {
-    rawBody = await req.text();
-  } catch (readError) {
-    rawBody = "FAILED_TO_READ_BODY";
-    console.error("[infinitepay-webhook] Failed to read request body:", readError);
-  }
-
-  // PASSO 2: SEMPRE logar ANTES de tentar parse
-  try {
-    await supabase.from("webhook_logs").insert({
-      provedor: "infinitepay",
-      order_nsu: "pending_parse",
-      payload: { raw: rawBody.substring(0, 10000) }, // Limitar tamanho
-      headers: Object.fromEntries(req.headers.entries()),
-      status: "received",
-    });
-  } catch (logError) {
-    console.warn("[infinitepay-webhook] Failed to log webhook:", logError);
-  }
-
-  // PASSO 3: Agora tentar parse do JSON
-  let payload: InfinitePayWebhookPayload;
-  try {
-    payload = JSON.parse(rawBody);
-  } catch (parseError) {
-    console.error("[infinitepay-webhook] Invalid JSON:", parseError);
-    
-    // Atualizar log com erro
-    await supabase
-      .from("webhook_logs")
-      .update({ status: "error", error_message: "Invalid JSON" })
-      .eq("order_nsu", "pending_parse")
-      .eq("provedor", "infinitepay")
-      .order("created_at", { ascending: false })
-      .limit(1);
-    
-    return new Response(
-      JSON.stringify({ error: "Invalid JSON" }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
-    );
-  }
-
-  // PASSO 4: Atualizar log com order_nsu real
-  const { order_nsu } = payload;
-  
-  if (order_nsu) {
-    await supabase
-      .from("webhook_logs")
-      .update({ order_nsu: order_nsu, payload: payload })
-      .eq("order_nsu", "pending_parse")
-      .eq("provedor", "infinitepay")
-      .order("created_at", { ascending: false })
-      .limit(1);
-  }
-
-  // ... resto do processamento ...
-});
+  // Campos para integração com Galeria
+  galeriaId?: string;
+  galeriaStatus?: 'rascunho' | 'publicada' | 'em_selecao' | 'finalizada';
+  galeriaStatusPagamento?: 'sem_vendas' | 'pendente' | 'pago'; // NOVO
+}
 ```
 
----
+**2.2 Atualizar hook de conversão (`src/hooks/useWorkflowPackageData.ts`)**
 
-## Correção 4: Criar edge function check-payment-status
+Mapear o novo campo no `convertSessionToData`:
 
-**Novo arquivo:** `supabase/functions/check-payment-status/index.ts`
-
-**Propósito:** Fallback obrigatório para quando webhook falha
-
-**Lógica de resolução:** Segue a mesma ordem do webhook (ip_order_nsu → id)
-
-**Implementação:**
 ```typescript
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+const converted: SessionData = {
+  // ... campos existentes ...
+  
+  galeriaId: session.galeria_id,
+  galeriaStatus: session.status_galeria as any,
+  galeriaStatusPagamento: session.status_pagamento_fotos_extra as any // NOVO
 };
-
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
-
-  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
-  try {
-    const { cobrancaId, orderNsu, sessionId, forceUpdate } = await req.json();
-
-    console.log("[check-payment-status] Request:", { cobrancaId, orderNsu, sessionId, forceUpdate });
-
-    // RESOLUÇÃO SEGUE MESMA ORDEM DO WEBHOOK: ip_order_nsu → id
-    let cobranca = null;
-    let searchMethod = "";
-
-    // 1. Buscar por cobrancaId (UUID do banco)
-    if (cobrancaId) {
-      // Primeiro tentar por ip_order_nsu
-      const { data: byNsu } = await supabase
-        .from("cobrancas")
-        .select("*")
-        .eq("ip_order_nsu", cobrancaId)
-        .maybeSingle();
-
-      if (byNsu) {
-        cobranca = byNsu;
-        searchMethod = "by_ip_order_nsu";
-      } else {
-        // Fallback por id
-        const { data: byId } = await supabase
-          .from("cobrancas")
-          .select("*")
-          .eq("id", cobrancaId)
-          .maybeSingle();
-
-        if (byId) {
-          cobranca = byId;
-          searchMethod = "by_id";
-        }
-      }
-    }
-
-    // 2. Buscar por orderNsu se não encontrou
-    if (!cobranca && orderNsu) {
-      const { data: byNsu } = await supabase
-        .from("cobrancas")
-        .select("*")
-        .eq("ip_order_nsu", orderNsu)
-        .maybeSingle();
-
-      if (byNsu) {
-        cobranca = byNsu;
-        searchMethod = "by_ip_order_nsu";
-      }
-    }
-
-    // 3. Buscar por sessionId se não encontrou
-    if (!cobranca && sessionId) {
-      const { data: bySession } = await supabase
-        .from("cobrancas")
-        .select("*")
-        .eq("session_id", sessionId)
-        .eq("status", "pendente")
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (bySession) {
-        cobranca = bySession;
-        searchMethod = "by_session_id";
-      }
-    }
-
-    if (!cobranca) {
-      return new Response(
-        JSON.stringify({ found: false, error: "Cobranca not found" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 404 }
-      );
-    }
-
-    console.log(`[check-payment-status] Found via ${searchMethod}: ${cobranca.id}, status: ${cobranca.status}`);
-
-    // Se já está pago, retornar status
-    if (cobranca.status === "pago") {
-      return new Response(
-        JSON.stringify({ found: true, status: "pago", updated: false, source: "already_paid" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
-      );
-    }
-
-    // Se forceUpdate, marcar como pago
-    if (forceUpdate) {
-      const now = new Date().toISOString();
-
-      // Atualizar cobrança
-      const { error: updateError } = await supabase
-        .from("cobrancas")
-        .update({
-          status: "pago",
-          data_pagamento: now,
-          ip_transaction_nsu: "manual-verification",
-          updated_at: now,
-        })
-        .eq("id", cobranca.id);
-
-      if (updateError) {
-        console.error("[check-payment-status] Error updating cobranca:", updateError);
-        throw new Error("Failed to update cobranca");
-      }
-
-      // Se tem sessão vinculada, criar transação
-      if (cobranca.session_id) {
-        // Buscar sessão para obter cliente_id
-        const { data: session } = await supabase
-          .from("clientes_sessoes")
-          .select("session_id, cliente_id")
-          .eq("session_id", cobranca.session_id)
-          .maybeSingle();
-
-        if (session) {
-          const { error: txError } = await supabase
-            .from("clientes_transacoes")
-            .insert({
-              user_id: cobranca.user_id,
-              cliente_id: session.cliente_id || cobranca.cliente_id,
-              session_id: session.session_id,
-              valor: cobranca.valor,
-              tipo: "pagamento",
-              data_transacao: now.split("T")[0],
-              descricao: `Pagamento verificado manualmente - ${cobranca.descricao || "Link"}`,
-            });
-
-          if (txError) {
-            console.error("[check-payment-status] Error creating transaction:", txError);
-          } else {
-            console.log(`[check-payment-status] Transaction created for session ${session.session_id}`);
-          }
-        }
-      }
-
-      console.log(`[check-payment-status] Cobranca ${cobranca.id} updated to 'pago' (manual verification)`);
-
-      return new Response(
-        JSON.stringify({ 
-          found: true, 
-          status: "pago", 
-          updated: true, 
-          source: "manual_verification",
-          cobrancaId: cobranca.id 
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
-      );
-    }
-
-    // Retornar status atual sem modificar
-    return new Response(
-      JSON.stringify({ 
-        found: true, 
-        status: cobranca.status, 
-        updated: false,
-        cobranca: {
-          id: cobranca.id,
-          valor: cobranca.valor,
-          status: cobranca.status,
-          provedor: cobranca.provedor,
-          createdAt: cobranca.created_at,
-        }
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
-    );
-
-  } catch (error) {
-    console.error("[check-payment-status] Error:", error);
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
-    );
-  }
-});
 ```
 
 ---
 
-## Correção 5: Adicionar config para check-payment-status
+### Fase 3: Criar componente de badge para fotos extras
 
-**Arquivo:** `supabase/config.toml`
+**3.1 Criar novo componente (`src/components/workflow/FotosExtrasPaymentBadge.tsx`)**
 
-**Adicionar:**
-```toml
-[functions.check-payment-status]
-verify_jwt = false
+Badge compacto específico para status de pagamento de fotos extras:
+
+```typescript
+interface FotosExtrasPaymentBadgeProps {
+  status: 'sem_vendas' | 'pendente' | 'pago' | undefined;
+  valor?: string; // "R$ 9,00"
+}
+
+export function FotosExtrasPaymentBadge({ status, valor }: FotosExtrasPaymentBadgeProps) {
+  // Não mostrar badge se não há vendas ou sem valor
+  if (!status || status === 'sem_vendas') return null;
+  
+  const config = status === 'pago' 
+    ? { icon: CheckCircle2, className: 'bg-emerald-100 text-emerald-700 border-emerald-200', label: 'Pago' }
+    : { icon: Clock, className: 'bg-orange-100 text-orange-700 border-orange-200', label: 'Pendente' };
+  
+  return (
+    <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${config.className}`}>
+      <config.icon className="h-2.5 w-2.5 mr-0.5" />
+      {config.label}
+    </Badge>
+  );
+}
 ```
 
 ---
 
-## Resumo de Arquivos a Modificar
+### Fase 4: Integrar badge no WorkflowCardExpanded
 
-| Arquivo | Ação | Linhas Afetadas |
-|---------|------|-----------------|
-| `supabase/functions/infinitepay-webhook/index.ts` | Modificar | 29-30 (remover regex), 49-65 (log antes do parse), 79-118 (inverter ordem) |
-| `supabase/functions/check-payment-status/index.ts` | **CRIAR** | Arquivo novo (~150 linhas) |
-| `supabase/config.toml` | Adicionar | 1 seção nova |
+**4.1 Modificar bloco de "Total fotos extras" (`src/components/workflow/WorkflowCardExpanded.tsx`)**
 
----
+Adicionar badge ao lado do valor:
 
-## Validação Pós-Implementação
-
-Após deploy, validar:
-
-| Cenário | Entrada | Resultado Esperado |
-|---------|---------|-------------------|
-| order_nsu = UUID (Gestão) | `d2c5f4bd-5332-401e-b80b-fe56916792b7` | Encontra via ip_order_nsu OU fallback id |
-| order_nsu = prefixado (Gallery) | `gallery-1769483972062-pj4o1d` | Encontra via ip_order_nsu |
-| order_nsu inválido | `xyz-invalid` | Retorna 404 após ambas buscas |
-| JSON inválido | `{malformed` | Log registrado, erro 400 |
-| Webhook falhou | Botão "Verificar Status" | check-payment-status atualiza para pago |
+```tsx
+// Linha ~292-295
+<div className="flex justify-between items-center">
+  <span className="text-xs text-muted-foreground">Total fotos extras:</span>
+  <div className="flex items-center gap-2">
+    <span className="text-sm font-medium text-foreground">{valorFotoExtraTotal}</span>
+    {/* Badge de status de pagamento */}
+    <FotosExtrasPaymentBadge 
+      status={session.galeriaStatusPagamento} 
+    />
+  </div>
+</div>
+```
 
 ---
 
-## Compatibilidade
+## Arquivos a Modificar
 
-- **Gallery:** Funciona normalmente (busca por ip_order_nsu primeiro)
-- **Gestão:** Funciona normalmente (ip_order_nsu = UUID, ou fallback por id)
-- **Projetos futuros:** Qualquer formato de order_nsu será suportado
+| Arquivo | Ação | Descrição |
+|---------|------|-----------|
+| Nova migração SQL | Criar | Adicionar coluna + trigger para sincronizar status_pagamento |
+| `src/types/workflow.ts` | Modificar | Adicionar `galeriaStatusPagamento` |
+| `src/hooks/useWorkflowPackageData.ts` | Modificar | Mapear novo campo |
+| `src/components/workflow/FotosExtrasPaymentBadge.tsx` | Criar | Componente de badge |
+| `src/components/workflow/WorkflowCardExpanded.tsx` | Modificar | Integrar badge |
+
+---
+
+## Resultado Esperado
+
+```
+┌────────────────────────────────────────────┐
+│ ADICIONAIS                                 │
+├────────────────────────────────────────────┤
+│ Total fotos extras:    R$ 9,00  [Pendente] │
+│ Total produtos:        R$ 0,00             │
+│ Adicional:            [________]           │
+└────────────────────────────────────────────┘
+```
+
+O badge aparecerá:
+- **Não aparece** - Se `sem_vendas` ou valor = R$ 0,00
+- **🟠 Pendente** - Se há fotos extras vendidas mas não pagas
+- **🟢 Pago** - Se o valor de fotos extras foi pago
+
+---
+
+## Escalabilidade Mantida
+
+Esta solução mantém a escalabilidade porque:
+1. **Trigger no banco** - Sincronização automática sem frontend
+2. **Sem queries adicionais** - Dados já vêm no SELECT existente
+3. **Componente leve** - Badge não faz chamadas de API
+
