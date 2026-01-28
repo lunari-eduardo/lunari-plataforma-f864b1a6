@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { getAppBaseUrl } from '@/utils/domainUtils';
 
 interface AuthContextType {
   user: User | null;
@@ -84,11 +85,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [session?.expires_at]);
 
   const signInWithGoogle = async () => {
-    // Usar domínio fixo para produção, garantindo redirect correto
-    const isProduction = window.location.hostname.includes('lunariplataforma');
-    const siteUrl = isProduction 
-      ? 'https://www.lunariplataforma.com.br'
-      : window.location.origin;
+    // Usar helper para detectar domínio (suporta novos e antigos)
+    const siteUrl = getAppBaseUrl();
     
     console.log('🔑 Iniciando login com Google, redirect para:', `${siteUrl}/app`);
     

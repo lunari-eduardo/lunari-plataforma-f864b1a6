@@ -22,4 +22,4 @@ Disallow: /admin/
 Disallow: /auth
 Disallow: /onboarding
 
-Sitemap: https://www.lunariplataforma.com.br/sitemap.xml
+Sitemap: https://app.lunarihub.com/sitemap.xml

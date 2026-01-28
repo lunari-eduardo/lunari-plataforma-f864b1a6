@@ -23,7 +23,7 @@ export function BlogCTA() {
         <Button
           size="lg"
           className="shrink-0 gap-2"
-          onClick={() => window.open('https://www.lunariplataforma.com.br/escolher-plano', '_blank')}
+          onClick={() => window.open('https://app.lunarihub.com/escolher-plano', '_blank')}
         >
           Começar agora
           <ArrowRight className="h-4 w-4" />

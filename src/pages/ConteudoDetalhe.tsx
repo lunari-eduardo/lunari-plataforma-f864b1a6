@@ -32,7 +32,7 @@ export default function ConteudoDetalhe() {
     ? format(new Date(post.published_at), "d 'de' MMMM 'de' yyyy", { locale: ptBR })
     : null;
 
-  const canonicalUrl = `https://www.lunariplataforma.com.br/conteudos/${post.slug}`;
+  const canonicalUrl = `https://app.lunarihub.com/conteudos/${post.slug}`;
   
   // Decodificar HTML entities caso o conteúdo tenha sido escapado incorretamente
   const decodeHtmlEntities = (text: string): string => {
