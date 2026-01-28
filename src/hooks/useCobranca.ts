@@ -147,8 +147,8 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
       let response;
       
       if (provedor === 'infinitepay') {
-        // Use InfinitePay
-        response = await supabase.functions.invoke('infinitepay-create-link', {
+        // Use Gestão-specific InfinitePay function (isolated from Gallery)
+        response = await supabase.functions.invoke('gestao-infinitepay-create-link', {
           body: {
             clienteId: request.clienteId,
             sessionId: request.sessionId,

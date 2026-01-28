@@ -65,3 +65,6 @@ verify_jwt = false
 
 [functions.check-payment-status]
 verify_jwt = false
+
+[functions.gestao-infinitepay-create-link]
+verify_jwt = false
