@@ -7,6 +7,7 @@ import { WorkflowPaymentsModal } from "./WorkflowPaymentsModal";
 import { WorkflowPackageCombobox } from "./WorkflowPackageCombobox";
 import { ColoredStatusBadge } from "./ColoredStatusBadge";
 import { GerenciarProdutosModal } from "./GerenciarProdutosModal";
+import { FotosExtrasPaymentBadge } from "./FotosExtrasPaymentBadge";
 import { CreditCard, Plus, Package } from "lucide-react";
 import type { SessionData } from "@/types/workflow";
 import { useAppContext } from "@/contexts/AppContext";
@@ -291,7 +292,10 @@ export function WorkflowCardExpanded({
           <div className="space-y-2.5">
             <div className="flex justify-between items-center">
               <span className="text-xs text-muted-foreground">Total fotos extras:</span>
-              <span className="text-sm font-medium text-foreground">{valorFotoExtraTotal}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-foreground">{valorFotoExtraTotal}</span>
+                <FotosExtrasPaymentBadge status={session.galeriaStatusPagamento} />
+              </div>
             </div>
             
             <div className="flex justify-between items-center">

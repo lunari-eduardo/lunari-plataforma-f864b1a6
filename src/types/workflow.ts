@@ -68,6 +68,7 @@ export interface SessionData {
   // Campos para integração com Galeria
   galeriaId?: string;
   galeriaStatus?: 'rascunho' | 'publicada' | 'em_selecao' | 'finalizada';
+  galeriaStatusPagamento?: 'sem_vendas' | 'pendente' | 'pago';
 }
 
 export interface CategoryOption {
