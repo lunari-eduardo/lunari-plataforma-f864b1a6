@@ -129,15 +129,19 @@ export function ChargeModal({
       tipoCobranca: 'link',
     });
 
-    if (result.success && result.cobranca) {
+    if (result.success) {
       // Use checkoutUrl (InfinitePay) or paymentLink (Mercado Pago)
       const linkUrl = result.checkoutUrl || result.paymentLink;
-      setCurrentCharge({
-        paymentLink: linkUrl,
-        checkoutUrl: linkUrl,
-        status: 'pendente',
-      });
-      setCurrentChargeId(result.cobranca.id);
+      if (linkUrl) {
+        setCurrentCharge({
+          paymentLink: linkUrl,
+          checkoutUrl: linkUrl,
+          status: 'pendente',
+        });
+        if (result.cobranca?.id) {
+          setCurrentChargeId(result.cobranca.id);
+        }
+      }
     }
   };
 
