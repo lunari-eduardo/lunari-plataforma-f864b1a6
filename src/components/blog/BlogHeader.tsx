@@ -28,7 +28,7 @@ export function BlogHeader({ showBackButton = false }: BlogHeaderProps) {
         <Button
           variant="default"
           size="sm"
-          onClick={() => window.open('https://www.lunariplataforma.com.br/escolher-plano', '_blank')}
+          onClick={() => window.open('https://app.lunarihub.com/escolher-plano', '_blank')}
         >
           Experimentar grátis
         </Button>

@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
       throw error;
     }
 
-    const baseUrl = 'https://www.lunariplataforma.com.br';
+    const baseUrl = 'https://app.lunarihub.com';
     const today = new Date().toISOString().split('T')[0];
 
     // Build sitemap XML with all public pages
@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
       `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://www.lunariplataforma.com.br/conteudos</loc>
+    <loc>https://app.lunarihub.com/conteudos</loc>
     <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
     <priority>0.8</priority>
   </url>

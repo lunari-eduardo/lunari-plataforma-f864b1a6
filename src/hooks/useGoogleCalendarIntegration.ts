@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { getOAuthRedirectUri } from '@/utils/domainUtils';
 
 type GoogleCalendarStatus = 'conectado' | 'desconectado' | 'pendente' | 'erro';
 
@@ -111,8 +112,8 @@ export function useGoogleCalendarIntegration(): UseGoogleCalendarReturn {
   const connect = useCallback(async () => {
     setConnecting(true);
     try {
-      // Use production URL for redirect
-      const redirectUri = 'https://www.lunariplataforma.com.br/app/integracoes';
+      // Usar helper para suportar novos e antigos domínios
+      const redirectUri = getOAuthRedirectUri();
 
       const { data, error } = await supabase.functions.invoke('google-calendar-connect', {
         body: { redirectUri },

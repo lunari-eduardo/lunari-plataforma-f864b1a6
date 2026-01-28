@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { getOAuthRedirectUri } from '@/utils/domainUtils';
 
 interface Integracao {
   id: string;
@@ -108,8 +109,8 @@ export function useIntegracoes(): UseIntegracoesReturn {
       return;
     }
 
-    // Generate OAuth URL - callback vai para integracoes
-    const redirectUri = 'https://www.lunariplataforma.com.br/app/integracoes';
+    // Generate OAuth URL - callback vai para integracoes (suporta novos domínios)
+    const redirectUri = getOAuthRedirectUri();
     const state = user.id; // Use user ID as state to verify on callback
     
     const authUrl = new URL(MP_AUTH_URL);
@@ -134,7 +135,7 @@ export function useIntegracoes(): UseIntegracoesReturn {
     setConnecting(true);
 
     try {
-      const redirectUri = 'https://www.lunariplataforma.com.br/app/integracoes';
+      const redirectUri = getOAuthRedirectUri();
       
       console.log('[useIntegracoes] Exchanging code for token');
       

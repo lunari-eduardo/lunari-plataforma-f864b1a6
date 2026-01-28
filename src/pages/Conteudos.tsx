@@ -16,7 +16,7 @@ export default function Conteudos() {
       <SEOHead
         title="Conteúdos para Fotógrafos | Lunari"
         description="Dicas, tutoriais e conteúdos exclusivos para fotógrafos que querem crescer no mercado. Aprenda sobre precificação, gestão e muito mais."
-        canonical="https://www.lunariplataforma.com.br/conteudos"
+        canonical="https://app.lunarihub.com/conteudos"
       />
       
       <BlogHeader />
