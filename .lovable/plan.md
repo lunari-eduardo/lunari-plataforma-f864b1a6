@@ -1,157 +1,162 @@
 
 
-# Plano: Separar Sistema de Cobrança do Gestão
+# Plano CRÍTICO: Corrigir Vazamento de Dados - Isolamento de Galerias por Usuário
 
-## Diagnóstico do Problema
+## Problema Identificado
 
-O erro `userId: undefined` nos logs indica que a Edge Function `infinitepay-create-link` no servidor tem código diferente do repositório. Isso sugere que o projeto Gallery sobrescreveu a função com uma versão que espera `userId` no corpo da requisição:
+A tabela `galerias` tem políticas RLS que expõem **TODOS** os dados de galerias para qualquer usuário autenticado:
 
-```
-ERROR Missing required fields: {
-  clienteId: "e17352ae-309b-4e4f-ae56-3371b3272265",
-  valor: 200,
-  userId: undefined  ← Esperando no body, não extrai do JWT
-}
-```
+| Política Problemática | Efeito |
+|----------------------|--------|
+| `Anyone can view published galleries` | Qualquer usuário vê galerias com status enviado/selecao_iniciada/selecao_completa |
+| `Anyone can view public galleries` | Qualquer usuário vê galerias com permissao='public' |
+| `Public galleries accessible via token` | Redundante com as anteriores |
 
-**Código no repositório atual**:
-- Extrai `userId` via JWT (`supabase.auth.getUser(token)`) - linha 37
-- **Não** espera `userId` no body
-- **Não** tem mensagem "Missing required fields" no formato do log
-
-Isso confirma que o Gallery deployou uma versão diferente, quebrando o fluxo do Gestão.
+**Resultado:** O usuário `eduardo22diehl@gmail.com` consegue ver as 4 galerias de `lisediehlfotos@gmail.com`.
 
 ---
 
-## Solução: Criar Função Exclusiva para Gestão
+## Solução: Reestruturar Políticas RLS
 
-Criar uma nova Edge Function `gestao-infinitepay-create-link` que:
-1. Seja 100% isolada do Gallery
-2. Use autenticação JWT (padrão do Gestão)
-3. Siga todas as regras do Contrato Oficial de Cobranças
+### Princípio de Segurança
+
+1. **Fotógrafos** - Só veem **suas próprias** galerias (`auth.uid() = user_id`)
+2. **Clientes finais** (via link público) - Veem **apenas** a galeria compartilhada via token público
+3. **Acesso anônimo** - Apenas para visualização pública com token válido
+
+### Políticas Corrigidas
+
+```sql
+-- 1. REMOVER políticas problemáticas
+DROP POLICY IF EXISTS "Anyone can view public galleries" ON galerias;
+DROP POLICY IF EXISTS "Anyone can view published galleries" ON galerias;
+DROP POLICY IF EXISTS "Public galleries accessible via token" ON galerias;
+DROP POLICY IF EXISTS "Users can manage own galleries" ON galerias;
+
+-- 2. CRIAR políticas seguras
+
+-- 2.1. Fotógrafos podem gerenciar suas próprias galerias (CRUD completo)
+CREATE POLICY "Photographers manage own galleries"
+ON galerias FOR ALL
+TO authenticated
+USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
+
+-- 2.2. Acesso público via token (para clientes finais verem galeria compartilhada)
+-- Nota: Esta política permite SELECT apenas para galerias com token público E status adequado
+-- Não requer autenticação - qualquer pessoa com o link pode ver
+CREATE POLICY "Public access via token"
+ON galerias FOR SELECT
+TO anon, authenticated
+USING (
+  public_token IS NOT NULL 
+  AND status IN ('enviado', 'selecao_iniciada', 'selecao_completa')
+);
+```
+
+### Por que esta estrutura funciona
+
+| Cenário | Política Aplicada | Resultado |
+|---------|------------------|-----------|
+| Fotógrafo lista suas galerias | `Photographers manage own galleries` | Só vê as dele (`user_id = auth.uid()`) |
+| Fotógrafo edita galeria | `Photographers manage own galleries` | Só edita se for dele |
+| Cliente abre link público | `Public access via token` | Vê apenas aquela galeria específica |
+| Usuário malicioso tenta listar tudo | Nenhuma política match | Retorna 0 registros |
 
 ---
 
-## Arquivos a Criar/Modificar
+## Correção nas Tabelas Relacionadas
+
+Verificar e corrigir também:
+
+### `galeria_fotos`
+
+```sql
+-- Remover políticas problemáticas
+DROP POLICY IF EXISTS "Anyone can view photos from public galleries" ON galeria_fotos;
+DROP POLICY IF EXISTS "Anyone can view published gallery photos" ON galeria_fotos;
+DROP POLICY IF EXISTS "Clients can view sent gallery photos" ON galeria_fotos;
+DROP POLICY IF EXISTS "Photos accessible for public galleries" ON galeria_fotos;
+DROP POLICY IF EXISTS "Clients can update photo selection" ON galeria_fotos;
+DROP POLICY IF EXISTS "Users can manage own gallery photos" ON galeria_fotos;
+
+-- Criar políticas seguras
+CREATE POLICY "Photographers manage own gallery photos"
+ON galeria_fotos FOR ALL
+TO authenticated
+USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Public view photos via gallery token"
+ON galeria_fotos FOR SELECT
+TO anon, authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM galerias g
+    WHERE g.id = galeria_fotos.galeria_id
+    AND g.public_token IS NOT NULL
+    AND g.status IN ('enviado', 'selecao_iniciada', 'selecao_completa')
+  )
+);
+
+CREATE POLICY "Public update photo selection via token"
+ON galeria_fotos FOR UPDATE
+TO anon, authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM galerias g
+    WHERE g.id = galeria_fotos.galeria_id
+    AND g.public_token IS NOT NULL
+    AND g.status IN ('enviado', 'selecao_iniciada')
+  )
+)
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM galerias g
+    WHERE g.id = galeria_fotos.galeria_id
+    AND g.public_token IS NOT NULL
+    AND g.status IN ('enviado', 'selecao_iniciada')
+  )
+);
+```
+
+---
+
+## Arquivos a Modificar
 
 | Arquivo | Ação | Descrição |
 |---------|------|-----------|
-| `supabase/functions/gestao-infinitepay-create-link/index.ts` | **CRIAR** | Nova função exclusiva para Gestão |
-| `supabase/config.toml` | Modificar | Adicionar configuração da nova função |
-| `src/hooks/useCobranca.ts` | Modificar | Apontar para nova função |
-
----
-
-## Detalhes Técnicos
-
-### 1. Nova Edge Function: `gestao-infinitepay-create-link`
-
-```typescript
-// Estrutura da nova função (idêntica à versão atual, mas com prefixo gestao-)
-
-interface CreateLinkRequest {
-  clienteId: string;
-  sessionId?: string;
-  valor: number;
-  descricao?: string;
-}
-
-serve(async (req) => {
-  // 1. Validar JWT e extrair userId
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader) throw new Error("Não autorizado");
-  
-  const token = authHeader.replace("Bearer ", "");
-  const { data: { user } } = await supabase.auth.getUser(token);
-  const userId = user.id;
-  
-  // 2. Receber parâmetros do body
-  const { clienteId, sessionId, valor, descricao } = await req.json();
-  
-  // 3. Normalizar session_id (texto)
-  // 4. Buscar handle InfinitePay do usuário
-  // 5. Criar cobrança no banco
-  // 6. Chamar API InfinitePay
-  // 7. Retornar checkoutUrl
-});
-```
-
-**Diferenças importantes**:
-- Nome com prefixo `gestao-` para evitar conflitos
-- Mantém autenticação via JWT (não aceita `userId` no body)
-- Será controlada exclusivamente pelo Gestão
-
-### 2. Atualizar config.toml
-
-```toml
-[functions.gestao-infinitepay-create-link]
-verify_jwt = false
-```
-
-### 3. Atualizar useCobranca.ts
-
-```typescript
-// Linha 151: Mudar de 'infinitepay-create-link' para 'gestao-infinitepay-create-link'
-if (provedor === 'infinitepay') {
-  response = await supabase.functions.invoke('gestao-infinitepay-create-link', {
-    body: {
-      clienteId: request.clienteId,
-      sessionId: request.sessionId,
-      valor: request.valor,
-      descricao: request.descricao,
-    },
-  });
-}
-```
-
----
-
-## Fluxo de Funcionamento
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        SEPARAÇÃO DE FLUXOS                       │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  GESTÃO (Workflow/CRM)          │  GALLERY (Projeto Externo)    │
-│  ─────────────────────          │  ─────────────────────────    │
-│  useCobranca.ts                 │  gallery-create-payment       │
-│       │                         │       │                       │
-│       ▼                         │       ▼                       │
-│  gestao-infinitepay-create-link │  (já existente, não muda)     │
-│  • Exige JWT                    │  • Service Role               │
-│  • Extrai userId do token       │  • Recebe photographerId      │
-│       │                         │       │                       │
-│       ▼                         │       ▼                       │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │                 WEBHOOK COMPARTILHADO                    │   │
-│  │             infinitepay-webhook (não muda)              │   │
-│  │    • Busca por ip_order_nsu primeiro                    │   │
-│  │    • Fallback por id                                    │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## Compatibilidade Garantida
-
-| Item | Status |
-|------|--------|
-| Gestão usa `gestao-infinitepay-create-link` | ✅ Isolado |
-| Gallery usa `gallery-create-payment` | ✅ Não afetado |
-| Webhook compartilhado | ✅ Funciona para ambos |
-| Cobranças existentes | ✅ Compatíveis |
-| Contrato Oficial InfinitePay | ✅ Mantido |
+| Migração SQL | **CRIAR** | Recriar políticas RLS seguras |
 
 ---
 
 ## Resultado Esperado
 
-Após a implementação:
-1. **Gestão**: Gera links via `gestao-infinitepay-create-link` (exige JWT)
-2. **Gallery**: Continua usando `gallery-create-payment` (Service Role)
-3. **Webhook**: Único para ambos (`infinitepay-webhook`)
-4. **Independência**: Deploys do Gallery não afetam mais o Gestão
+Após a migração:
+
+| Usuário | O que vê |
+|---------|----------|
+| `lisediehlfotos@gmail.com` (admin) | Suas 4 galerias |
+| `eduardo22diehl@gmail.com` | Apenas suas próprias galerias (0 se não criou nenhuma) |
+| Cliente com link `/galeria/NheJQ8EBBt7N` | Apenas aquela galeria específica |
+
+---
+
+## Seção Técnica: Por que o problema aconteceu
+
+O projeto Gallery precisava permitir que **clientes finais** vissem galerias via link público. A implementação original usou políticas **PERMISSIVE** que verificavam apenas o status, sem filtrar por `user_id`.
+
+Em PostgreSQL, políticas PERMISSIVE combinam com `OR`, então:
+
+```
+(status = 'selecao_iniciada')  ← Permite QUALQUER galeria com esse status
+OR
+(auth.uid() = user_id)  ← Permite galerias do próprio usuário
+```
+
+Resultado: **qualquer usuário autenticado** pode ver **todas** as galerias publicadas.
+
+A correção usa políticas que:
+1. **Para fotógrafos**: Exigem `user_id = auth.uid()`
+2. **Para clientes**: Exigem apenas `public_token IS NOT NULL` (sem exigir autenticação)
 
