@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { getOAuthRedirectUri } from '@/utils/domainUtils';
+import { PixManualData } from '@/components/integracoes/PixManualCard';
 
 interface Integracao {
   id: string;
@@ -13,23 +14,41 @@ interface Integracao {
   conectado_em: string | null;
   expira_em: string | null;
   dados_extras: Record<string, unknown>;
+  is_default?: boolean;
 }
 
-export type ProvedorPagamentoAtivo = 'mercadopago' | 'infinitepay' | null;
+export type ProvedorPagamento = 'mercadopago' | 'infinitepay' | 'pix_manual';
+export type ProvedorPagamentoAtivo = ProvedorPagamento | null;
 
 interface UseIntegracoesReturn {
   integracoes: Integracao[];
   loading: boolean;
   connecting: boolean;
+  
+  // Mercado Pago
   mercadoPagoStatus: 'conectado' | 'desconectado' | 'pendente' | 'erro';
-  infinitePayStatus: 'conectado' | 'desconectado';
-  infinitePayHandle: string | null;
-  provedorAtivo: ProvedorPagamentoAtivo;
+  mercadoPagoConnectedAt?: string;
+  mercadoPagoUserId?: string;
   connectMercadoPago: () => void;
   disconnectMercadoPago: () => Promise<void>;
   handleOAuthCallback: (code: string) => Promise<boolean>;
+  
+  // InfinitePay
+  infinitePayStatus: 'conectado' | 'desconectado';
+  infinitePayHandle: string | null;
   saveInfinitePayHandle: (handle: string) => Promise<void>;
   disconnectInfinitePay: () => Promise<void>;
+  
+  // PIX Manual
+  pixManualStatus: 'conectado' | 'desconectado';
+  pixManualData: PixManualData | null;
+  savePixManual: (data: PixManualData) => Promise<void>;
+  disconnectPixManual: () => Promise<void>;
+  
+  // Padrão e geral
+  provedorAtivo: ProvedorPagamentoAtivo;
+  provedorPadrao: ProvedorPagamento | null;
+  setProvedorPadrao: (provedor: ProvedorPagamento) => Promise<void>;
   refetch: () => Promise<void>;
 }
 
@@ -60,7 +79,6 @@ export function useIntegracoes(): UseIntegracoesReturn {
         throw error;
       }
 
-      // Type assertion since we know the structure
       setIntegracoes((data || []) as unknown as Integracao[]);
     } catch (error) {
       console.error('[useIntegracoes] Fetch error:', error);
@@ -73,7 +91,7 @@ export function useIntegracoes(): UseIntegracoesReturn {
     fetchIntegracoes();
   }, [fetchIntegracoes]);
 
-  // Mercado Pago status
+  // ================== MERCADO PAGO ==================
   const mercadoPagoIntegration = integracoes.find(i => i.provedor === 'mercadopago');
   const mercadoPagoStatus = mercadoPagoIntegration?.status === 'ativo' 
     ? 'conectado' 
@@ -82,17 +100,85 @@ export function useIntegracoes(): UseIntegracoesReturn {
       : mercadoPagoIntegration?.status === 'erro'
         ? 'erro'
         : 'desconectado';
+  const mercadoPagoConnectedAt = mercadoPagoIntegration?.conectado_em || undefined;
+  const mercadoPagoUserId = mercadoPagoIntegration?.mp_user_id || undefined;
 
-  // InfinitePay status
+  // ================== INFINITEPAY ==================
   const infinitePayIntegration = integracoes.find(i => i.provedor === 'infinitepay');
   const infinitePayStatus: 'conectado' | 'desconectado' = 
     infinitePayIntegration?.status === 'ativo' ? 'conectado' : 'desconectado';
   const infinitePayHandle = (infinitePayIntegration?.dados_extras?.handle as string) || null;
 
-  // Determine active payment provider
+  // ================== PIX MANUAL ==================
+  const pixManualIntegration = integracoes.find(i => i.provedor === 'pix_manual');
+  const pixManualStatus: 'conectado' | 'desconectado' = 
+    pixManualIntegration?.status === 'ativo' ? 'conectado' : 'desconectado';
+  const pixManualData: PixManualData | null = pixManualIntegration?.status === 'ativo' 
+    ? {
+        chavePix: (pixManualIntegration.dados_extras?.chavePix as string) || '',
+        tipoChave: (pixManualIntegration.dados_extras?.tipoChave as PixManualData['tipoChave']) || 'cpf',
+        nomeTitular: (pixManualIntegration.dados_extras?.nomeTitular as string) || '',
+      }
+    : null;
+
+  // ================== PROVEDOR PADRÃO ==================
+  const defaultIntegration = integracoes.find(i => 
+    i.status === 'ativo' && 
+    (i.is_default === true || (i.dados_extras?.is_default === true))
+  );
+  
+  // Fallback: se nenhum tem is_default, pega o primeiro ativo
+  const provedorPadrao: ProvedorPagamento | null = defaultIntegration 
+    ? (defaultIntegration.provedor as ProvedorPagamento)
+    : mercadoPagoStatus === 'conectado' 
+      ? 'mercadopago' 
+      : infinitePayStatus === 'conectado' 
+        ? 'infinitepay'
+        : pixManualStatus === 'conectado'
+          ? 'pix_manual'
+          : null;
+
+  // Determine active payment provider (primeiro ativo)
   const provedorAtivo: ProvedorPagamentoAtivo = 
+    mercadoPagoStatus === 'conectado' ? 'mercadopago' :
     infinitePayStatus === 'conectado' ? 'infinitepay' :
-    mercadoPagoStatus === 'conectado' ? 'mercadopago' : null;
+    pixManualStatus === 'conectado' ? 'pix_manual' : null;
+
+  // ================== ACTIONS ==================
+
+  const setProvedorPadrao = useCallback(async (provedor: ProvedorPagamento) => {
+    if (!user) {
+      toast.error('Você precisa estar logado');
+      return;
+    }
+
+    try {
+      // Remove is_default de todos
+      const paymentProviders = ['mercadopago', 'infinitepay', 'pix_manual'];
+      
+      for (const p of paymentProviders) {
+        const integration = integracoes.find(i => i.provedor === p);
+        if (integration) {
+          await supabase
+            .from('usuarios_integracoes')
+            .update({ 
+              dados_extras: { 
+                ...integration.dados_extras, 
+                is_default: p === provedor 
+              } 
+            })
+            .eq('user_id', user.id)
+            .eq('provedor', p);
+        }
+      }
+
+      toast.success(`${provedor === 'mercadopago' ? 'Mercado Pago' : provedor === 'infinitepay' ? 'InfinitePay' : 'PIX Manual'} definido como padrão`);
+      await fetchIntegracoes();
+    } catch (error) {
+      console.error('[useIntegracoes] Set default error:', error);
+      toast.error('Erro ao definir provedor padrão');
+    }
+  }, [user, integracoes, fetchIntegracoes]);
 
   const connectMercadoPago = useCallback(async () => {
     if (!user) {
@@ -103,7 +189,6 @@ export function useIntegracoes(): UseIntegracoesReturn {
     setConnecting(true);
 
     try {
-      // Buscar APP_ID via Edge Function (não expor no frontend)
       const { data, error } = await supabase.functions.invoke('mercadopago-get-app-id');
       
       if (error || !data?.success || !data?.appId) {
@@ -113,10 +198,8 @@ export function useIntegracoes(): UseIntegracoesReturn {
       }
 
       const appId = data.appId;
-
-      // Generate OAuth URL - callback vai para integracoes (suporta novos domínios)
       const redirectUri = getOAuthRedirectUri();
-      const state = user.id; // Use user ID as state to verify on callback
+      const state = user.id;
       
       const authUrl = new URL(MP_AUTH_URL);
       authUrl.searchParams.set('client_id', appId);
@@ -126,8 +209,6 @@ export function useIntegracoes(): UseIntegracoesReturn {
       authUrl.searchParams.set('redirect_uri', redirectUri);
 
       console.log('[useIntegracoes] Redirecting to MP OAuth:', authUrl.toString());
-      
-      // Redirect to Mercado Pago
       window.location.href = authUrl.toString();
     } catch (err) {
       console.error('[useIntegracoes] Connect error:', err);
@@ -148,13 +229,8 @@ export function useIntegracoes(): UseIntegracoesReturn {
     try {
       const redirectUri = getOAuthRedirectUri();
       
-      console.log('[useIntegracoes] Exchanging code for token');
-      
       const { data, error } = await supabase.functions.invoke('mercadopago-connect', {
-        body: { 
-          code,
-          redirectUri,
-        },
+        body: { code, redirectUri },
       });
 
       if (error) {
@@ -166,12 +242,12 @@ export function useIntegracoes(): UseIntegracoesReturn {
         throw new Error(data.error || 'Erro ao conectar conta');
       }
 
-      // Deactivate InfinitePay if connecting Mercado Pago
+      // Deactivate other providers when connecting MP
       await supabase
         .from('usuarios_integracoes')
         .update({ status: 'inativo' })
         .eq('user_id', user.id)
-        .eq('provedor', 'infinitepay');
+        .in('provedor', ['infinitepay', 'pix_manual']);
 
       toast.success('Conta Mercado Pago conectada com sucesso!');
       await fetchIntegracoes();
@@ -213,7 +289,8 @@ export function useIntegracoes(): UseIntegracoesReturn {
     }
   }, [user, fetchIntegracoes]);
 
-  // InfinitePay methods
+  // ================== INFINITEPAY ACTIONS ==================
+
   const saveInfinitePayHandle = useCallback(async (handle: string) => {
     if (!user) {
       toast.error('Você precisa estar logado');
@@ -221,14 +298,6 @@ export function useIntegracoes(): UseIntegracoesReturn {
     }
 
     try {
-      // First, deactivate Mercado Pago if active
-      await supabase
-        .from('usuarios_integracoes')
-        .update({ status: 'inativo' })
-        .eq('user_id', user.id)
-        .eq('provedor', 'mercadopago');
-
-      // Upsert InfinitePay integration
       const { error } = await supabase
         .from('usuarios_integracoes')
         .upsert({
@@ -282,19 +351,101 @@ export function useIntegracoes(): UseIntegracoesReturn {
     }
   }, [user, fetchIntegracoes]);
 
+  // ================== PIX MANUAL ACTIONS ==================
+
+  const savePixManual = useCallback(async (data: PixManualData) => {
+    if (!user) {
+      toast.error('Você precisa estar logado');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('usuarios_integracoes')
+        .upsert({
+          user_id: user.id,
+          provedor: 'pix_manual',
+          status: 'ativo',
+          dados_extras: {
+            chavePix: data.chavePix,
+            tipoChave: data.tipoChave,
+            nomeTitular: data.nomeTitular,
+          },
+          conectado_em: new Date().toISOString(),
+        }, {
+          onConflict: 'user_id,provedor',
+        });
+
+      if (error) {
+        console.error('[useIntegracoes] Error saving PIX Manual:', error);
+        throw error;
+      }
+
+      toast.success('PIX Manual configurado com sucesso!');
+      await fetchIntegracoes();
+
+    } catch (error) {
+      console.error('[useIntegracoes] Save PIX Manual error:', error);
+      toast.error('Erro ao salvar configuração PIX Manual');
+    }
+  }, [user, fetchIntegracoes]);
+
+  const disconnectPixManual = useCallback(async () => {
+    if (!user) {
+      toast.error('Você precisa estar logado');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('usuarios_integracoes')
+        .update({ status: 'inativo' })
+        .eq('user_id', user.id)
+        .eq('provedor', 'pix_manual');
+
+      if (error) {
+        console.error('[useIntegracoes] Error disconnecting PIX Manual:', error);
+        throw error;
+      }
+
+      toast.success('PIX Manual removido');
+      await fetchIntegracoes();
+
+    } catch (error) {
+      console.error('[useIntegracoes] Disconnect PIX Manual error:', error);
+      toast.error('Erro ao remover PIX Manual');
+    }
+  }, [user, fetchIntegracoes]);
+
   return {
     integracoes,
     loading,
     connecting,
+    
+    // Mercado Pago
     mercadoPagoStatus,
-    infinitePayStatus,
-    infinitePayHandle,
-    provedorAtivo,
+    mercadoPagoConnectedAt,
+    mercadoPagoUserId,
     connectMercadoPago,
     disconnectMercadoPago,
     handleOAuthCallback,
+    
+    // InfinitePay
+    infinitePayStatus,
+    infinitePayHandle,
     saveInfinitePayHandle,
     disconnectInfinitePay,
+    
+    // PIX Manual
+    pixManualStatus,
+    pixManualData,
+    savePixManual,
+    disconnectPixManual,
+    
+    // Padrão e geral
+    provedorAtivo,
+    provedorPadrao,
+    setProvedorPadrao,
     refetch: fetchIntegracoes,
   };
 }

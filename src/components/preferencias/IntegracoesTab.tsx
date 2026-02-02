@@ -1,22 +1,13 @@
 import { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plug, AlertCircle } from 'lucide-react';
-import { IntegrationCard } from '@/components/integracoes/IntegrationCard';
+import { Plug, CreditCard, Calendar } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { PagamentosTab } from '@/components/integracoes/PagamentosTab';
 import { GoogleCalendarCard } from '@/components/integracoes/GoogleCalendarCard';
-import { InfinitePayCard } from '@/components/integracoes/InfinitePayCard';
 import { useIntegracoes } from '@/hooks/useIntegracoes';
 import { useGoogleCalendarIntegration } from '@/hooks/useGoogleCalendarIntegration';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { toast } from 'sonner';
-
-// Mercado Pago official logo
-const MercadoPagoIcon = () => (
-  <svg viewBox="0 0 50 50" className="w-6 h-6">
-    <path fill="#00AEEF" d="M25 2C12.3 2 2 12.3 2 25s10.3 23 23 23 23-10.3 23-23S37.7 2 25 2z"/>
-    <path fill="#fff" d="M36.4 20.2c-1.8-3.2-5.3-5.4-9.3-5.4-3.1 0-5.9 1.3-7.9 3.4-2-2.1-4.8-3.4-7.9-3.4-4 0-7.5 2.2-9.3 5.4-.6 1-.9 2.2-.9 3.4 0 .9.2 1.8.5 2.6 1.3 3.5 4.6 6 8.5 6h.1c.4 2.3 2.4 4.1 4.8 4.1s4.4-1.8 4.8-4.1h.3c.4 2.3 2.4 4.1 4.8 4.1s4.4-1.8 4.8-4.1h.1c3.9 0 7.2-2.5 8.5-6 .3-.8.5-1.7.5-2.6 0-1.2-.3-2.4-.9-3.4zm-25.1 9.1c-2.8 0-5.2-1.8-6.1-4.3-.2-.5-.3-1.1-.3-1.6 0-.8.2-1.5.6-2.2 1.2-2.1 3.4-3.5 6-3.5 2.3 0 4.4 1.2 5.6 3 .1.1.1.2.2.3-.2.5-.3 1.1-.3 1.7 0 2.1 1.2 3.9 2.9 4.8-.3.1-.6.1-.9.1h-.1c-.7-1.8-2.4-3.1-4.4-3.1s-3.7 1.3-4.4 3.1c-.3-.1-.6-.2-.8-.3zm8.7 4.6c-1.6 0-2.9-1.3-2.9-2.9s1.3-2.9 2.9-2.9 2.9 1.3 2.9 2.9-1.3 2.9-2.9 2.9zm10 0c-1.6 0-2.9-1.3-2.9-2.9s1.3-2.9 2.9-2.9 2.9 1.3 2.9 2.9-1.3 2.9-2.9 2.9zm8.7-4.6c-.2.1-.5.2-.8.3-.7-1.8-2.4-3.1-4.4-3.1s-3.7 1.3-4.4 3.1h-.1c-.3 0-.6 0-.9-.1 1.7-.9 2.9-2.7 2.9-4.8 0-.6-.1-1.2-.3-1.7.1-.1.1-.2.2-.3 1.2-1.8 3.3-3 5.6-3 2.6 0 4.8 1.4 6 3.5.4.7.6 1.4.6 2.2 0 .5-.1 1.1-.3 1.6-.9 2.5-3.3 4.3-6.1 4.3z"/>
-  </svg>
-);
 
 export function IntegracoesTab() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -24,15 +15,21 @@ export function IntegracoesTab() {
     loading,
     connecting,
     mercadoPagoStatus,
+    mercadoPagoConnectedAt,
+    mercadoPagoUserId,
     infinitePayStatus,
     infinitePayHandle,
-    provedorAtivo,
+    pixManualStatus,
+    pixManualData,
+    provedorPadrao,
     connectMercadoPago,
     disconnectMercadoPago,
     handleOAuthCallback,
     saveInfinitePayHandle,
     disconnectInfinitePay,
-    integracoes,
+    savePixManual,
+    disconnectPixManual,
+    setProvedorPadrao,
   } = useIntegracoes();
 
   const { refetch: refetchGoogleCalendar } = useGoogleCalendarIntegration();
@@ -73,16 +70,11 @@ export function IntegracoesTab() {
 
     if (code) {
       console.log('[IntegracoesTab] Processing OAuth callback with code');
-      handleOAuthCallback(code).then((success) => {
+      handleOAuthCallback(code).then(() => {
         setSearchParams({ tab: 'integracoes' });
       });
     }
   }, [searchParams, setSearchParams, handleOAuthCallback, refetchGoogleCalendar]);
-
-  const mpIntegration = integracoes.find(i => i.provedor === 'mercadopago');
-  const connectedInfo = mpIntegration?.conectado_em 
-    ? `Conectado em ${new Date(mpIntegration.conectado_em).toLocaleDateString('pt-BR')}`
-    : undefined;
 
   if (loading) {
     return (
@@ -105,71 +97,54 @@ export function IntegracoesTab() {
       <div className="space-y-2">
         <div className="flex items-center gap-2">
           <Plug className="h-5 w-5 text-primary" />
-          <h2 className="text-lg font-semibold">Integrações e Conexões</h2>
+          <h2 className="text-lg font-semibold">Integrações</h2>
         </div>
         <p className="text-muted-foreground text-sm">
-          Conecte suas contas para automatizar cobranças, pagamentos e agenda
+          Gerencie suas integrações de pagamento e calendário
         </p>
       </div>
 
-      {/* Exclusivity Alert */}
-      {provedorAtivo && (
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Provedor ativo: {provedorAtivo === 'mercadopago' ? 'Mercado Pago' : 'InfinitePay'}</AlertTitle>
-          <AlertDescription>
-            Apenas um provedor de pagamento pode estar ativo. Ao conectar outro, o atual será desativado automaticamente.
-          </AlertDescription>
-        </Alert>
-      )}
+      {/* Tabs */}
+      <Tabs defaultValue="pagamentos" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 max-w-md">
+          <TabsTrigger value="pagamentos" className="gap-2">
+            <CreditCard className="h-4 w-4" />
+            Pagamentos
+          </TabsTrigger>
+          <TabsTrigger value="calendar" className="gap-2">
+            <Calendar className="h-4 w-4" />
+            Google Calendar
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Integration Cards - Payment Providers */}
-      <div className="space-y-3">
-        <h3 className="text-sm font-medium text-muted-foreground">Provedores de Pagamento</h3>
-        <div className="grid gap-4 md:grid-cols-2">
-          {/* InfinitePay */}
-          <InfinitePayCard
-            status={infinitePayStatus}
-            handle={infinitePayHandle || undefined}
+        <TabsContent value="pagamentos" className="mt-6">
+          <PagamentosTab
+            mercadoPagoStatus={mercadoPagoStatus}
+            mercadoPagoConnectedAt={mercadoPagoConnectedAt}
+            mercadoPagoUserId={mercadoPagoUserId}
+            onConnectMercadoPago={connectMercadoPago}
+            onDisconnectMercadoPago={disconnectMercadoPago}
+            infinitePayStatus={infinitePayStatus}
+            infinitePayHandle={infinitePayHandle}
+            onSaveInfinitePay={saveInfinitePayHandle}
+            onDisconnectInfinitePay={disconnectInfinitePay}
+            pixManualStatus={pixManualStatus}
+            pixManualData={pixManualData}
+            onSavePixManual={savePixManual}
+            onDisconnectPixManual={disconnectPixManual}
+            provedorPadrao={provedorPadrao}
+            onSetProvedorPadrao={setProvedorPadrao}
             loading={loading}
-            onSave={saveInfinitePayHandle}
-            onDisconnect={disconnectInfinitePay}
-            otherProviderActive={mercadoPagoStatus === 'conectado'}
+            connecting={connecting}
           />
+        </TabsContent>
 
-          {/* Mercado Pago */}
-          <IntegrationCard
-            title="Mercado Pago"
-            description="Cobranças via Pix e link de pagamento. Os pagamentos vão diretamente para sua conta."
-            icon={<MercadoPagoIcon />}
-            status={mercadoPagoStatus}
-            onConnect={connectMercadoPago}
-            onDisconnect={disconnectMercadoPago}
-            loading={connecting}
-            connectedInfo={connectedInfo}
-          />
-        </div>
-      </div>
-
-      {/* Other Integrations */}
-      <div className="space-y-3">
-        <h3 className="text-sm font-medium text-muted-foreground">Outras Integrações</h3>
-        <div className="grid gap-4 md:grid-cols-2">
-          {/* Google Calendar */}
-          <GoogleCalendarCard />
-        </div>
-      </div>
-
-      {/* Instructions */}
-      <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-        <h3 className="font-medium">Como funciona?</h3>
-        <ul className="text-sm text-muted-foreground space-y-1">
-          <li>• <strong>InfinitePay:</strong> Digite seu handle e o checkout será criado automaticamente</li>
-          <li>• <strong>Mercado Pago:</strong> Clique em "Conectar" para autorizar via OAuth</li>
-          <li>• Apenas um provedor de pagamento pode estar ativo por vez</li>
-          <li>• Os pagamentos vão diretamente para sua conta - o Lunari não processa valores</li>
-        </ul>
-      </div>
+        <TabsContent value="calendar" className="mt-6">
+          <div className="max-w-xl">
+            <GoogleCalendarCard />
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
