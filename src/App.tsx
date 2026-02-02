@@ -26,6 +26,7 @@ import Onboarding from "./pages/Onboarding";
 import NotFound from "./pages/NotFound";
 import EscolherPlano from "./pages/EscolherPlano";
 import MinhaAssinatura from "./pages/MinhaAssinatura";
+import ResetPassword from "./pages/ResetPassword";
 import AdminUsuarios from "./pages/AdminUsuarios";
 import Conteudos from "./pages/Conteudos";
 import ConteudoDetalhe from "./pages/ConteudoDetalhe";
@@ -116,6 +117,7 @@ function App() {
                     {/* ============ PUBLIC ROUTES (SEO) ============ */}
                     <Route path="/" element={<LandingPage />} />
                     <Route path="/auth" element={<Auth />} />
+                    <Route path="/reset-password" element={<ResetPassword />} />
                     <Route path="/conteudos" element={<Conteudos />} />
                     <Route path="/conteudos/:slug" element={<ConteudoDetalhe />} />
                     <Route path="/sitemap.xml" element={<SitemapProxy />} />
