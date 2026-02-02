@@ -1,17 +1,24 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Briefcase, Check, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const NICHOS = [
-  'Gestante',
   'Newborn',
-  'Materno-infantil',
-  'Marca Pessoal',
-  'Eventos',
+  'Gestantes',
+  'Família e Infantil',
+  'Eventos Sociais',
+  'Pre-wedding',
+  'Casamentos',
+  'Boudoir',
+  'Pets',
+  'Produtos',
   'Moda',
-  'Editorial',
-  'Publicitária',
-  'Outros'
+  'Retrato Corporativo',
+  'Branding Pessoal',
+  'Eventos Corporativos e Palestras',
+  'Publicidade',
+  'Esportes'
 ] as const;
 
 export type Nicho = typeof NICHOS[number];
@@ -73,7 +80,7 @@ export function NichoCombobox({ value, onChange, error }: NichoComboboxProps) {
         </div>
       </div>
 
-      <div className="space-y-2" ref={containerRef}>
+      <div className="space-y-2 relative" ref={containerRef}>
         <div className="relative">
           <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/60 z-10" />
           <input
@@ -96,35 +103,43 @@ export function NichoCombobox({ value, onChange, error }: NichoComboboxProps) {
           />
           <ChevronDown 
             className={cn(
-              "absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/60 transition-transform",
+              "absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/60 transition-transform duration-200",
               isOpen && "rotate-180"
             )} 
           />
         </div>
 
-        {/* Dropdown */}
+        {/* Dropdown Premium */}
         {isOpen && (
-          <div className="absolute z-50 w-full max-w-md left-1/2 -translate-x-1/2 mt-2 bg-background border border-border rounded-md shadow-lg max-h-60 overflow-y-auto">
-            {filteredNichos.length === 0 ? (
-              <div className="px-4 py-3 text-sm text-muted-foreground text-center">
-                Nenhum nicho encontrado
+          <div className="absolute z-50 w-full mt-2 bg-white/95 backdrop-blur-sm border border-white/20 rounded-xl shadow-xl overflow-hidden">
+            <ScrollArea className="max-h-[320px]">
+              <div className="py-1">
+                {filteredNichos.length === 0 ? (
+                  <div className="px-4 py-3 text-sm text-gray-500 text-center">
+                    Nenhum nicho encontrado
+                  </div>
+                ) : (
+                  filteredNichos.map((nicho) => (
+                    <button
+                      key={nicho}
+                      type="button"
+                      onClick={() => handleSelect(nicho)}
+                      className={cn(
+                        "w-full px-4 py-3 text-left text-sm flex items-center justify-between",
+                        "transition-all duration-150 ease-out",
+                        "hover:bg-[#CD7F5E]/10",
+                        value === nicho 
+                          ? "bg-[#CD7F5E]/15 text-[#CD7F5E] font-medium border-l-2 border-[#CD7F5E]" 
+                          : "text-gray-700"
+                      )}
+                    >
+                      <span>{nicho}</span>
+                      {value === nicho && <Check className="w-4 h-4 text-[#CD7F5E]" />}
+                    </button>
+                  ))
+                )}
               </div>
-            ) : (
-              filteredNichos.map((nicho) => (
-                <button
-                  key={nicho}
-                  type="button"
-                  onClick={() => handleSelect(nicho)}
-                  className={cn(
-                    "w-full px-4 py-3 text-left text-sm hover:bg-accent flex items-center justify-between",
-                    value === nicho && "bg-accent"
-                  )}
-                >
-                  <span>{nicho}</span>
-                  {value === nicho && <Check className="w-4 h-4 text-primary" />}
-                </button>
-              ))
-            )}
+            </ScrollArea>
           </div>
         )}
 
