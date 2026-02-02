@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { MapPin, Check, ChevronDown, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import debounce from 'lodash.debounce';
 
 export interface CidadeIBGE {
@@ -21,6 +23,7 @@ export function CidadeIBGECombobox({ value, onChange, error }: CidadeIBGECombobo
   const [searchTerm, setSearchTerm] = useState('');
   const [cities, setCities] = useState<CidadeIBGE[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -67,10 +70,40 @@ export function CidadeIBGECombobox({ value, onChange, error }: CidadeIBGECombobo
     }
   }, [searchTerm, isOpen, searchCities]);
 
+  // Calcular posição do dropdown
+  const updateDropdownPosition = () => {
+    if (inputRef.current) {
+      const rect = inputRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + 8,
+        left: rect.left,
+        width: rect.width
+      });
+    }
+  };
+
+  // Atualizar posição quando abrir
+  useEffect(() => {
+    if (isOpen) {
+      updateDropdownPosition();
+      window.addEventListener('scroll', updateDropdownPosition, true);
+      window.addEventListener('resize', updateDropdownPosition);
+    }
+    return () => {
+      window.removeEventListener('scroll', updateDropdownPosition, true);
+      window.removeEventListener('resize', updateDropdownPosition);
+    };
+  }, [isOpen]);
+
   // Fechar dropdown ao clicar fora
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        // Também verificar se o clique foi no dropdown do portal
+        const dropdown = document.getElementById('cidade-dropdown-portal');
+        if (dropdown && dropdown.contains(e.target as Node)) {
+          return;
+        }
         setIsOpen(false);
         setSearchTerm('');
       }
@@ -87,6 +120,58 @@ export function CidadeIBGECombobox({ value, onChange, error }: CidadeIBGECombobo
   };
 
   const displayValue = value ? `${value.nome} – ${value.uf}` : '';
+
+  // Dropdown renderizado via Portal
+  const dropdownContent = isOpen ? createPortal(
+    <div 
+      id="cidade-dropdown-portal"
+      className="fixed z-[9999] bg-white/95 backdrop-blur-sm border border-white/20 rounded-xl shadow-2xl overflow-hidden"
+      style={{
+        top: dropdownPosition.top,
+        left: dropdownPosition.left,
+        width: dropdownPosition.width,
+      }}
+    >
+      <ScrollArea className="h-[320px]">
+        <div className="py-1">
+          {isLoading ? (
+            <div className="px-4 py-3 text-sm text-gray-500 text-center flex items-center justify-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Buscando...
+            </div>
+          ) : searchTerm.length < 2 ? (
+            <div className="px-4 py-3 text-sm text-gray-500 text-center">
+              Digite pelo menos 2 caracteres
+            </div>
+          ) : cities.length === 0 ? (
+            <div className="px-4 py-3 text-sm text-gray-500 text-center">
+              Nenhuma cidade encontrada
+            </div>
+          ) : (
+            cities.map((city) => (
+              <button
+                key={city.id}
+                type="button"
+                onClick={() => handleSelect(city)}
+                className={cn(
+                  "w-full px-4 py-3 text-left text-sm flex items-center justify-between",
+                  "transition-all duration-150 ease-out",
+                  "hover:bg-[#CD7F5E]/10",
+                  value?.id === city.id 
+                    ? "bg-[#CD7F5E]/15 text-[#CD7F5E] font-medium border-l-2 border-[#CD7F5E]" 
+                    : "text-gray-700"
+                )}
+              >
+                <span>{city.nome} – {city.uf}</span>
+                {value?.id === city.id && <Check className="w-4 h-4 text-[#CD7F5E]" />}
+              </button>
+            ))
+          )}
+        </div>
+      </ScrollArea>
+    </div>,
+    document.body
+  ) : null;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -127,47 +212,15 @@ export function CidadeIBGECombobox({ value, onChange, error }: CidadeIBGECombobo
           ) : (
             <ChevronDown 
               className={cn(
-                "absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/60 transition-transform",
+                "absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/60 transition-transform duration-200",
                 isOpen && "rotate-180"
               )} 
             />
           )}
         </div>
 
-        {/* Dropdown */}
-        {isOpen && (
-          <div className="absolute z-50 w-full max-w-md left-1/2 -translate-x-1/2 mt-2 bg-background border border-border rounded-md shadow-lg max-h-60 overflow-y-auto">
-            {isLoading ? (
-              <div className="px-4 py-3 text-sm text-muted-foreground text-center flex items-center justify-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Buscando...
-              </div>
-            ) : searchTerm.length < 2 ? (
-              <div className="px-4 py-3 text-sm text-muted-foreground text-center">
-                Digite pelo menos 2 caracteres
-              </div>
-            ) : cities.length === 0 ? (
-              <div className="px-4 py-3 text-sm text-muted-foreground text-center">
-                Nenhuma cidade encontrada
-              </div>
-            ) : (
-              cities.map((city) => (
-                <button
-                  key={city.id}
-                  type="button"
-                  onClick={() => handleSelect(city)}
-                  className={cn(
-                    "w-full px-4 py-3 text-left text-sm hover:bg-accent flex items-center justify-between",
-                    value?.id === city.id && "bg-accent"
-                  )}
-                >
-                  <span>{city.nome} – {city.uf}</span>
-                  {value?.id === city.id && <Check className="w-4 h-4 text-primary" />}
-                </button>
-              ))
-            )}
-          </div>
-        )}
+        {/* Dropdown via Portal */}
+        {dropdownContent}
 
         {error && (
           <p className="text-sm text-red-400 text-center font-light">
