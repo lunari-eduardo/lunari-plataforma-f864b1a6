@@ -614,7 +614,7 @@ export type Database = {
       }
       cobrancas: {
         Row: {
-          cliente_id: string
+          cliente_id: string | null
           created_at: string | null
           data_pagamento: string | null
           descricao: string | null
@@ -641,7 +641,7 @@ export type Database = {
           valor: number
         }
         Insert: {
-          cliente_id: string
+          cliente_id?: string | null
           created_at?: string | null
           data_pagamento?: string | null
           descricao?: string | null
@@ -668,7 +668,7 @@ export type Database = {
           valor: number
         }
         Update: {
-          cliente_id?: string
+          cliente_id?: string | null
           created_at?: string | null
           data_pagamento?: string | null
           descricao?: string | null
@@ -761,6 +761,81 @@ export type Database = {
             columns: ["photo_id"]
             isOneToOne: false
             referencedRelation: "galeria_fotos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      credit_purchases: {
+        Row: {
+          created_at: string
+          credits_amount: number
+          id: string
+          ledger_id: string | null
+          metadata: Json | null
+          mp_payment_id: string | null
+          mp_status: string
+          package_id: string | null
+          paid_at: string | null
+          payment_method: string
+          pix_copia_cola: string | null
+          pix_expiration: string | null
+          pix_qr_code: string | null
+          pix_qr_code_base64: string | null
+          price_cents: number
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          credits_amount: number
+          id?: string
+          ledger_id?: string | null
+          metadata?: Json | null
+          mp_payment_id?: string | null
+          mp_status?: string
+          package_id?: string | null
+          paid_at?: string | null
+          payment_method: string
+          pix_copia_cola?: string | null
+          pix_expiration?: string | null
+          pix_qr_code?: string | null
+          pix_qr_code_base64?: string | null
+          price_cents: number
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          credits_amount?: number
+          id?: string
+          ledger_id?: string | null
+          metadata?: Json | null
+          mp_payment_id?: string | null
+          mp_status?: string
+          package_id?: string | null
+          paid_at?: string | null
+          payment_method?: string
+          pix_copia_cola?: string | null
+          pix_expiration?: string | null
+          pix_qr_code?: string | null
+          pix_qr_code_base64?: string | null
+          price_cents?: number
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_purchases_ledger_id_fkey"
+            columns: ["ledger_id"]
+            isOneToOne: false
+            referencedRelation: "credit_ledger"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_purchases_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "gallery_credit_packages"
             referencedColumns: ["id"]
           },
         ]
@@ -1344,6 +1419,42 @@ export type Database = {
           },
         ]
       }
+      gallery_credit_packages: {
+        Row: {
+          active: boolean
+          created_at: string
+          credits: number
+          description: string | null
+          id: string
+          name: string
+          price_cents: number
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          credits: number
+          description?: string | null
+          id?: string
+          name: string
+          price_cents: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          credits?: number
+          description?: string | null
+          id?: string
+          name?: string
+          price_cents?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       gallery_discount_presets: {
         Row: {
           created_at: string | null
@@ -1415,6 +1526,7 @@ export type Database = {
           favicon_url: string | null
           studio_logo_url: string | null
           studio_name: string | null
+          theme_type: string | null
           updated_at: string | null
           user_id: string
         }
@@ -1428,6 +1540,7 @@ export type Database = {
           favicon_url?: string | null
           studio_logo_url?: string | null
           studio_name?: string | null
+          theme_type?: string | null
           updated_at?: string | null
           user_id: string
         }
@@ -1441,6 +1554,7 @@ export type Database = {
           favicon_url?: string | null
           studio_logo_url?: string | null
           studio_name?: string | null
+          theme_type?: string | null
           updated_at?: string | null
           user_id?: string
         }
@@ -1457,37 +1571,34 @@ export type Database = {
       gallery_themes: {
         Row: {
           accent_color: string
-          background_color: string
+          background_mode: string | null
           created_at: string | null
+          emphasis_color: string
           id: string
-          is_default: boolean | null
           name: string
           primary_color: string
-          text_color: string
           updated_at: string | null
           user_id: string
         }
         Insert: {
           accent_color?: string
-          background_color?: string
+          background_mode?: string | null
           created_at?: string | null
+          emphasis_color?: string
           id?: string
-          is_default?: boolean | null
           name: string
           primary_color?: string
-          text_color?: string
           updated_at?: string | null
           user_id: string
         }
         Update: {
           accent_color?: string
-          background_color?: string
+          background_mode?: string | null
           created_at?: string | null
+          emphasis_color?: string
           id?: string
-          is_default?: boolean | null
           name?: string
           primary_color?: string
-          text_color?: string
           updated_at?: string | null
           user_id?: string
         }
@@ -1760,6 +1871,8 @@ export type Database = {
           account_status: Database["public"]["Enums"]["account_status"]
           account_type: Database["public"]["Enums"]["account_type"]
           created_at: string
+          credits_consumed_total: number | null
+          credits_purchased_total: number | null
           galleries_published_total: number
           gallery_credits: number
           id: string
@@ -1771,6 +1884,8 @@ export type Database = {
           account_status?: Database["public"]["Enums"]["account_status"]
           account_type?: Database["public"]["Enums"]["account_type"]
           created_at?: string
+          credits_consumed_total?: number | null
+          credits_purchased_total?: number | null
           galleries_published_total?: number
           gallery_credits?: number
           id?: string
@@ -1782,6 +1897,8 @@ export type Database = {
           account_status?: Database["public"]["Enums"]["account_status"]
           account_type?: Database["public"]["Enums"]["account_type"]
           created_at?: string
+          credits_consumed_total?: number | null
+          credits_purchased_total?: number | null
           galleries_published_total?: number
           gallery_credits?: number
           id?: string
@@ -2762,7 +2879,7 @@ export type Database = {
         Returns: number
       }
       consume_photo_credits: {
-        Args: { _gallery_id: string; _photo_count?: number; _user_id: string }
+        Args: { _gallery_id: string; _photo_count: number; _user_id: string }
         Returns: boolean
       }
       create_session_from_appointment: {
@@ -2803,18 +2920,18 @@ export type Database = {
         Returns: undefined
       }
       is_admin: { Args: never; Returns: boolean }
-      recompute_session_paid: {
-        Args: { p_session_id: string }
-        Returns: undefined
-      }
-      record_photo_credit_usage: {
+      purchase_credits: {
         Args: {
+          _amount: number
           _description?: string
-          _gallery_id: string
-          _photo_id: string
+          _purchase_id: string
           _user_id: string
         }
         Returns: string
+      }
+      recompute_session_paid: {
+        Args: { p_session_id: string }
+        Returns: undefined
       }
     }
     Enums: {

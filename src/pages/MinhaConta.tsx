@@ -10,6 +10,7 @@ import { useFormValidation } from '@/hooks/user-profile/useFormValidation';
 import { PersonalInfoForm } from '@/components/user-profile/forms/PersonalInfoForm';
 import { ContactInfoSection } from '@/components/user-profile/forms/ContactInfoSection';
 import { LogoUploadSection } from '@/components/user-profile/upload/LogoUploadSection';
+import { SecuritySection } from '@/components/user-profile/forms/SecuritySection';
 import { UserProfile } from '@/services/ProfileService';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -202,9 +203,10 @@ export default function MinhaConta() {
           <Card className="mb-6">
             <CardContent className="p-6">
               <Tabs defaultValue="perfil" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
+                <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="perfil">Perfil</TabsTrigger>
                   <TabsTrigger value="marca">Marca</TabsTrigger>
+                  <TabsTrigger value="seguranca">Segurança</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="perfil" className="space-y-6 mt-6">
@@ -238,6 +240,10 @@ export default function MinhaConta() {
                     onLogoSave={handleLogoSave}
                     onLogoRemove={handleLogoRemove}
                   />
+                </TabsContent>
+
+                <TabsContent value="seguranca" className="space-y-6 mt-6">
+                  <SecuritySection />
                 </TabsContent>
               </Tabs>
             </CardContent>

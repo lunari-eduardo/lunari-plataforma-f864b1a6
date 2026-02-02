@@ -8,6 +8,11 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   signInWithGoogle: () => Promise<{ data: any; error: any }>;
+  signInWithEmail: (email: string, password: string) => Promise<{ data: any; error: any }>;
+  signUpWithEmail: (email: string, password: string, nome: string) => Promise<{ data: any; error: any }>;
+  resetPassword: (email: string) => Promise<{ error: any }>;
+  updatePassword: (newPassword: string) => Promise<{ error: any }>;
+  updateEmail: (newEmail: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
 }
 
@@ -85,7 +90,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [session?.expires_at]);
 
   const signInWithGoogle = async () => {
-    // Usar helper para detectar domínio (suporta novos e antigos)
     const siteUrl = getAppBaseUrl();
     
     console.log('🔑 Iniciando login com Google, redirect para:', `${siteUrl}/app`);
@@ -103,6 +107,103 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { data, error };
   };
 
+  const signInWithEmail = async (email: string, password: string) => {
+    console.log('🔑 Iniciando login com email:', email);
+    
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    
+    if (error) {
+      console.error('❌ Erro no login com email:', error.message);
+    } else {
+      console.log('✅ Login com email realizado com sucesso');
+    }
+    
+    return { data, error };
+  };
+
+  const signUpWithEmail = async (email: string, password: string, nome: string) => {
+    const siteUrl = getAppBaseUrl();
+    
+    console.log('📝 Iniciando cadastro com email:', email);
+    
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${siteUrl}/app`,
+        data: {
+          nome: nome, // Disponível em user.user_metadata.nome
+          full_name: nome,
+        }
+      }
+    });
+    
+    if (error) {
+      console.error('❌ Erro no cadastro:', error.message);
+    } else {
+      console.log('✅ Cadastro realizado, aguardando confirmação de email');
+    }
+    
+    return { data, error };
+  };
+
+  const resetPassword = async (email: string) => {
+    const siteUrl = getAppBaseUrl();
+    
+    console.log('🔄 Enviando email de recuperação de senha para:', email);
+    
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${siteUrl}/reset-password`,
+    });
+    
+    if (error) {
+      console.error('❌ Erro ao enviar email de recuperação:', error.message);
+    } else {
+      console.log('✅ Email de recuperação enviado');
+    }
+    
+    return { error };
+  };
+
+  const updatePassword = async (newPassword: string) => {
+    console.log('🔐 Atualizando senha...');
+    
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+    
+    if (error) {
+      console.error('❌ Erro ao atualizar senha:', error.message);
+    } else {
+      console.log('✅ Senha atualizada com sucesso');
+    }
+    
+    return { error };
+  };
+
+  const updateEmail = async (newEmail: string) => {
+    const siteUrl = getAppBaseUrl();
+    
+    console.log('📧 Solicitando alteração de email para:', newEmail);
+    
+    const { error } = await supabase.auth.updateUser({
+      email: newEmail,
+    }, {
+      emailRedirectTo: `${siteUrl}/app/minha-conta`,
+    });
+    
+    if (error) {
+      console.error('❌ Erro ao solicitar alteração de email:', error.message);
+    } else {
+      console.log('✅ Email de confirmação enviado para o novo endereço');
+    }
+    
+    return { error };
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
   };
@@ -112,6 +213,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     session,
     loading,
     signInWithGoogle,
+    signInWithEmail,
+    signUpWithEmail,
+    resetPassword,
+    updatePassword,
+    updateEmail,
     signOut,
   };
 
