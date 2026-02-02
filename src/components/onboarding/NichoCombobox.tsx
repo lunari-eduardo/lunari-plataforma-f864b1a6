@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Briefcase, Check, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -32,6 +33,7 @@ interface NichoComboboxProps {
 export function NichoCombobox({ value, onChange, error }: NichoComboboxProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -48,10 +50,40 @@ export function NichoCombobox({ value, onChange, error }: NichoComboboxProps) {
     normalizeText(nicho).includes(normalizeText(searchTerm))
   );
 
+  // Calcular posição do dropdown
+  const updateDropdownPosition = () => {
+    if (inputRef.current) {
+      const rect = inputRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + 8,
+        left: rect.left,
+        width: rect.width
+      });
+    }
+  };
+
+  // Atualizar posição quando abrir
+  useEffect(() => {
+    if (isOpen) {
+      updateDropdownPosition();
+      window.addEventListener('scroll', updateDropdownPosition, true);
+      window.addEventListener('resize', updateDropdownPosition);
+    }
+    return () => {
+      window.removeEventListener('scroll', updateDropdownPosition, true);
+      window.removeEventListener('resize', updateDropdownPosition);
+    };
+  }, [isOpen]);
+
   // Fechar dropdown ao clicar fora
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        // Também verificar se o clique foi no dropdown do portal
+        const dropdown = document.getElementById('nicho-dropdown-portal');
+        if (dropdown && dropdown.contains(e.target as Node)) {
+          return;
+        }
         setIsOpen(false);
         setSearchTerm('');
       }
@@ -67,6 +99,49 @@ export function NichoCombobox({ value, onChange, error }: NichoComboboxProps) {
     setSearchTerm('');
   };
 
+  // Dropdown renderizado via Portal
+  const dropdownContent = isOpen ? createPortal(
+    <div 
+      id="nicho-dropdown-portal"
+      className="fixed z-[9999] bg-white/95 backdrop-blur-sm border border-white/20 rounded-xl shadow-2xl overflow-hidden"
+      style={{
+        top: dropdownPosition.top,
+        left: dropdownPosition.left,
+        width: dropdownPosition.width,
+      }}
+    >
+      <ScrollArea className="h-[320px]">
+        <div className="py-1">
+          {filteredNichos.length === 0 ? (
+            <div className="px-4 py-3 text-sm text-gray-500 text-center">
+              Nenhum nicho encontrado
+            </div>
+          ) : (
+            filteredNichos.map((nicho) => (
+              <button
+                key={nicho}
+                type="button"
+                onClick={() => handleSelect(nicho)}
+                className={cn(
+                  "w-full px-4 py-3 text-left text-sm flex items-center justify-between",
+                  "transition-all duration-150 ease-out",
+                  "hover:bg-[#CD7F5E]/10",
+                  value === nicho 
+                    ? "bg-[#CD7F5E]/15 text-[#CD7F5E] font-medium border-l-2 border-[#CD7F5E]" 
+                    : "text-gray-700"
+                )}
+              >
+                <span>{nicho}</span>
+                {value === nicho && <Check className="w-4 h-4 text-[#CD7F5E]" />}
+              </button>
+            ))
+          )}
+        </div>
+      </ScrollArea>
+    </div>,
+    document.body
+  ) : null;
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col items-center text-center space-y-3">
@@ -80,7 +155,7 @@ export function NichoCombobox({ value, onChange, error }: NichoComboboxProps) {
         </div>
       </div>
 
-      <div className="space-y-2 relative" ref={containerRef}>
+      <div className="space-y-2" ref={containerRef}>
         <div className="relative">
           <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/60 z-10" />
           <input
@@ -109,39 +184,8 @@ export function NichoCombobox({ value, onChange, error }: NichoComboboxProps) {
           />
         </div>
 
-        {/* Dropdown Premium */}
-        {isOpen && (
-          <div className="absolute z-50 w-full mt-2 bg-white/95 backdrop-blur-sm border border-white/20 rounded-xl shadow-xl overflow-hidden">
-            <ScrollArea className="max-h-[320px]">
-              <div className="py-1">
-                {filteredNichos.length === 0 ? (
-                  <div className="px-4 py-3 text-sm text-gray-500 text-center">
-                    Nenhum nicho encontrado
-                  </div>
-                ) : (
-                  filteredNichos.map((nicho) => (
-                    <button
-                      key={nicho}
-                      type="button"
-                      onClick={() => handleSelect(nicho)}
-                      className={cn(
-                        "w-full px-4 py-3 text-left text-sm flex items-center justify-between",
-                        "transition-all duration-150 ease-out",
-                        "hover:bg-[#CD7F5E]/10",
-                        value === nicho 
-                          ? "bg-[#CD7F5E]/15 text-[#CD7F5E] font-medium border-l-2 border-[#CD7F5E]" 
-                          : "text-gray-700"
-                      )}
-                    >
-                      <span>{nicho}</span>
-                      {value === nicho && <Check className="w-4 h-4 text-[#CD7F5E]" />}
-                    </button>
-                  ))
-                )}
-              </div>
-            </ScrollArea>
-          </div>
-        )}
+        {/* Dropdown via Portal */}
+        {dropdownContent}
 
         {error && (
           <p className="text-sm text-red-400 text-center font-light">
