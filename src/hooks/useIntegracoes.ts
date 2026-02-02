@@ -94,36 +94,47 @@ export function useIntegracoes(): UseIntegracoesReturn {
     infinitePayStatus === 'conectado' ? 'infinitepay' :
     mercadoPagoStatus === 'conectado' ? 'mercadopago' : null;
 
-  const connectMercadoPago = useCallback(() => {
+  const connectMercadoPago = useCallback(async () => {
     if (!user) {
       toast.error('Você precisa estar logado');
       return;
     }
 
-    // Get the APP_ID from environment - this needs to be set
-    const appId = import.meta.env.VITE_MERCADOPAGO_APP_ID;
-    
-    if (!appId) {
-      // Fallback: use a placeholder that will trigger configuration
-      toast.error('Configure VITE_MERCADOPAGO_APP_ID no ambiente');
-      return;
+    setConnecting(true);
+
+    try {
+      // Buscar APP_ID via Edge Function (não expor no frontend)
+      const { data, error } = await supabase.functions.invoke('mercadopago-get-app-id');
+      
+      if (error || !data?.success || !data?.appId) {
+        console.error('[useIntegracoes] Failed to get MP APP_ID:', error || data?.error);
+        toast.error('Erro ao obter configuração do Mercado Pago');
+        return;
+      }
+
+      const appId = data.appId;
+
+      // Generate OAuth URL - callback vai para integracoes (suporta novos domínios)
+      const redirectUri = getOAuthRedirectUri();
+      const state = user.id; // Use user ID as state to verify on callback
+      
+      const authUrl = new URL(MP_AUTH_URL);
+      authUrl.searchParams.set('client_id', appId);
+      authUrl.searchParams.set('response_type', 'code');
+      authUrl.searchParams.set('platform_id', 'mp');
+      authUrl.searchParams.set('state', state);
+      authUrl.searchParams.set('redirect_uri', redirectUri);
+
+      console.log('[useIntegracoes] Redirecting to MP OAuth:', authUrl.toString());
+      
+      // Redirect to Mercado Pago
+      window.location.href = authUrl.toString();
+    } catch (err) {
+      console.error('[useIntegracoes] Connect error:', err);
+      toast.error('Erro ao conectar com Mercado Pago');
+    } finally {
+      setConnecting(false);
     }
-
-    // Generate OAuth URL - callback vai para integracoes (suporta novos domínios)
-    const redirectUri = getOAuthRedirectUri();
-    const state = user.id; // Use user ID as state to verify on callback
-    
-    const authUrl = new URL(MP_AUTH_URL);
-    authUrl.searchParams.set('client_id', appId);
-    authUrl.searchParams.set('response_type', 'code');
-    authUrl.searchParams.set('platform_id', 'mp');
-    authUrl.searchParams.set('state', state);
-    authUrl.searchParams.set('redirect_uri', redirectUri);
-
-    console.log('[useIntegracoes] Redirecting to MP OAuth:', authUrl.toString());
-    
-    // Redirect to Mercado Pago
-    window.location.href = authUrl.toString();
   }, [user]);
 
   const handleOAuthCallback = useCallback(async (code: string): Promise<boolean> => {

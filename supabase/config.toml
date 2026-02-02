@@ -68,3 +68,6 @@ verify_jwt = false
 
 [functions.gestao-infinitepay-create-link]
 verify_jwt = false
+
+[functions.mercadopago-get-app-id]
+verify_jwt = false
