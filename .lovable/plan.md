@@ -1,67 +1,114 @@
 
-# Plano: Reestruturar Pagina de Integracoes com Visual Premium
 
-## Visao Geral
+# Plano: Completar Configuracoes de Pagamento Mercado Pago
 
-Criar uma nova estrutura para a pagina de Integracoes seguindo o design de referencia fornecido:
-- Duas abas principais: **Pagamentos** e **Google Calendar**
-- Na aba Pagamentos: metodos ativos fixos no topo + cards de configuracao abaixo
-- Visual premium com logotipos oficiais
+## Diagnostico Atual
+
+Apos analise detalhada do codigo, identifiquei o seguinte estado:
+
+### O que JA EXISTE
+
+| Componente | Status | Descricao |
+|------------|--------|-----------|
+| `useIntegracoes.ts` | Parcial | Conecta/desconecta MP mas **NAO salva** habilitarPix, habilitarCartao, maxParcelas |
+| `MercadoPagoCard.tsx` | Parcial | Exibe badges de PIX/Cartao mas **NAO tem formulario** de configuracao |
+| `mercadopago-create-link` | Incompleto | **NAO le** dados_extras do banco - usa valores fixos |
+| `mercadopago-create-pix` | Funcional | Cria PIX corretamente |
+| `ChargeModal.tsx` | Funcional | Interface de cobranca funcionando |
+| `gallery-create-payment` | Referencia | Le dados_extras corretamente (podemos usar como modelo) |
+
+### O que FALTA implementar
+
+| Item | Prioridade | Impacto |
+|------|------------|---------|
+| Modal de configuracoes MP | Alta | Usuario nao consegue configurar parcelas/PIX/Cartao |
+| Funcao updateMercadoPagoSettings no hook | Alta | Nao salva preferencias no banco |
+| Edge Function ler dados_extras | Alta | Ignora configuracoes do fotografo |
+| Passar maxParcelas do modal para edge function | Media | Parcelas nao respeitam limite |
 
 ---
 
-## Estrutura Proposta
+## Solucao Proposta
+
+### 1. Criar Modal de Configuracoes do Mercado Pago
+
+Novo componente `MercadoPagoSettingsModal.tsx`:
 
 ```text
-+---------------------------------------------------------------+
-|  Integracoes                                                  |
-|  Gerencie suas integracoes                                    |
-|                                                               |
-|  [Pagamentos]  [Google Calendar]                              |
-+---------------------------------------------------------------+
-|                                                               |
-|  = Metodos de Pagamento Ativos                                |
-|  Selecione qual sera o metodo padrao para novas cobrancas     |
-|                                                               |
-|  +----------------------------------------------------------+ |
-|  | (logo) PIX Manual          [Definir Padrao] [Editar] [X] | |
-|  |        Eduardo Valmor Diehl                              | |
-|  +----------------------------------------------------------+ |
-|  | (logo) InfinitePay         [Definir Padrao] [Editar] [X] | |
-|  |        @lisediehl                                        | |
-|  +----------------------------------------------------------+ |
-|  | (logo) Mercado Pago  [Padrao]               [Editar] [X] | |
-|  |        ID: 3078306387                                    | |
-|  +----------------------------------------------------------+ |
-|                                                               |
-|  [!] PIX Manual: Voce precisara confirmar manualmente...      |
-|                                                               |
-+---------------------------------------------------------------+
-|                                                               |
-|  MERCADO PAGO                                                 |
-|  Receba pagamentos via PIX e Cartao                           |
-|  +----------------------------------------------------------+ |
-|  | (logo) Conta Conectada     [Configurar] [Desconectar]    | |
-|  |        Conectado em 29/01/2026                           | |
-|  |        [PIX] [Cartao ate 3x]                             | |
-|  +----------------------------------------------------------+ |
-|                                                               |
-|  INFINITEPAY                                                  |
-|  Receba pagamentos com confirmacao automatica                 |
-|  +----------------------------------------------------------+ |
-|  | (logo) @lisediehl - Ativo                    [Editar]    | |
-|  |                                                          | |
-|  |  [!] Quando as taxas da InfinitePay...                   | |
-|  +----------------------------------------------------------+ |
-|                                                               |
-|  PIX MANUAL                                                   |
-|  Receba pagamentos via PIX com confirmacao manual             |
-|  +----------------------------------------------------------+ |
-|  | (logo) Eduardo Valmor Diehl               [Editar]       | |
-|  |        Telefone: 51998287948                             | |
-|  +----------------------------------------------------------+ |
-|                                                               |
-+---------------------------------------------------------------+
++------------------------------------------+
+|  Configuracoes Mercado Pago              |
++------------------------------------------+
+|                                          |
+|  METODOS DE PAGAMENTO                    |
+|  [ ] Habilitar PIX                       |
+|  [ ] Habilitar Cartao de Credito         |
+|                                          |
+|  PARCELAS                                |
+|  [Selecione] 1x, 3x, 6x, 12x             |
+|                                          |
+|  (informativo sobre taxas)               |
+|                                          |
+|         [Cancelar]  [Salvar]             |
++------------------------------------------+
+```
+
+### 2. Adicionar Funcoes ao useIntegracoes
+
+```typescript
+interface MercadoPagoSettings {
+  habilitarPix: boolean;      // default: true
+  habilitarCartao: boolean;   // default: true
+  maxParcelas: number;        // 1, 3, 6 ou 12 (default: 12)
+}
+
+// Novas funcoes:
+mercadoPagoSettings: MercadoPagoSettings | null;
+updateMercadoPagoSettings: (settings: Partial<MercadoPagoSettings>) => Promise<void>;
+```
+
+### 3. Atualizar Edge Function mercadopago-create-link
+
+Adicionar leitura de dados_extras:
+
+```typescript
+// ANTES (atual):
+const preferenceData = {
+  payment_methods: {
+    installments: installments || 12,  // Fixo
+    excluded_payment_types: [],         // Vazio
+  },
+};
+
+// DEPOIS (corrigido):
+const { data: integracao } = await supabase
+  .from('usuarios_integracoes')
+  .select('access_token, dados_extras')
+  .eq('user_id', user.id)
+  .eq('provedor', 'mercadopago')
+  .single();
+
+const settings = integracao.dados_extras as {
+  habilitarPix?: boolean;
+  habilitarCartao?: boolean;
+  maxParcelas?: number;
+};
+
+const pixHabilitado = settings?.habilitarPix !== false;
+const cartaoHabilitado = settings?.habilitarCartao !== false;
+const maxParcelas = Math.min(Math.max(1, settings?.maxParcelas || 12), 24);
+
+const excludedTypes = [{ id: 'ticket' }];
+if (!cartaoHabilitado) {
+  excludedTypes.push({ id: 'credit_card' });
+  excludedTypes.push({ id: 'debit_card' });
+}
+
+const preferenceData = {
+  payment_methods: {
+    excluded_payment_types: excludedTypes,
+    installments: maxParcelas,
+  },
+};
 ```
 
 ---
@@ -70,130 +117,104 @@ Criar uma nova estrutura para a pagina de Integracoes seguindo o design de refer
 
 | Arquivo | Acao | Descricao |
 |---------|------|-----------|
-| `src/assets/pix-logo.png` | Criar | Copiar logo PIX fornecido |
-| `src/assets/infinitepay-logo.png` | Criar | Copiar logo InfinitePay fornecido |
-| `src/assets/mercadopago-logo.png` | Criar | Copiar logo Mercado Pago fornecido |
-| `src/components/preferencias/IntegracoesTab.tsx` | Modificar | Adicionar tabs Pagamentos/Calendar |
-| `src/components/integracoes/PagamentosTab.tsx` | Criar | Nova aba de pagamentos |
-| `src/components/integracoes/ActiveMethodsList.tsx` | Criar | Lista de metodos ativos no topo |
-| `src/components/integracoes/ActiveMethodRow.tsx` | Criar | Row de metodo ativo |
-| `src/components/integracoes/MercadoPagoCard.tsx` | Criar | Card de config MP |
-| `src/components/integracoes/PixManualCard.tsx` | Criar | Card de config PIX Manual |
-| `src/components/integracoes/InfinitePayCard.tsx` | Modificar | Atualizar visual |
-| `src/hooks/useIntegracoes.ts` | Modificar | Adicionar suporte PIX Manual |
+| `src/components/integracoes/MercadoPagoSettingsModal.tsx` | Criar | Modal com switches PIX/Cartao + select parcelas |
+| `src/hooks/useIntegracoes.ts` | Modificar | Adicionar mercadoPagoSettings e updateMercadoPagoSettings |
+| `src/components/integracoes/MercadoPagoCard.tsx` | Modificar | Adicionar botao "Configurar" que abre o modal |
+| `src/components/integracoes/PagamentosTab.tsx` | Modificar | Passar props de settings para MercadoPagoCard |
+| `supabase/functions/mercadopago-create-link/index.ts` | Modificar | Ler dados_extras e aplicar exclusoes |
 
 ---
 
-## Componentes Detalhados
-
-### 1. ActiveMethodRow
-
-Card horizontal para cada metodo ativo no topo:
-- Logo oficial do provedor (32x32px)
-- Nome do provedor + info secundaria
-- Badge "Padrao" (se for o metodo padrao)
-- Botoes: "Definir Padrao", "Editar" (icone lapis), "Desconectar" (icone power)
+## Fluxo Completo Apos Implementacao
 
 ```text
-+----------------------------------------------------------------+
-| [Logo]  PIX Manual              [Definir Padrao] [Editar] [X]  |
-|         Eduardo Valmor Diehl                                   |
-+----------------------------------------------------------------+
+1. Fotografo acessa Integracoes > Pagamentos
+2. Conecta Mercado Pago via OAuth
+3. Clica em "Configurar" no card MP
+4. Modal abre com opcoes:
+   - Switch PIX (on/off)
+   - Switch Cartao (on/off)
+   - Select parcelas (1x, 3x, 6x, 12x)
+5. Ao salvar: dados_extras atualizado no banco
+6. Ao criar cobranca: Edge Function le dados_extras
+   - Monta excluded_payment_types baseado em PIX/Cartao
+   - Define installments conforme maxParcelas
+7. Cliente final ve apenas opcoes habilitadas no checkout
 ```
-
-### 2. ActiveMethodsList
-
-Container com borda arredondada contendo:
-- Header: "Metodos de Pagamento Ativos" + subtitulo
-- Lista de ActiveMethodRow para cada metodo conectado
-- Alert amarelo para PIX Manual (aviso de confirmacao manual)
-
-### 3. Cards de Configuracao
-
-Cada provedor tera um card expandido abaixo da lista ativa:
-
-**Mercado Pago:**
-- Status da conexao + data
-- Badges de metodos habilitados (PIX, Cartao 3x)
-- Botoes Configurar / Desconectar
-
-**InfinitePay:**
-- Handle atual + status
-- Campo de edicao do handle
-- Alert informativo sobre taxas
-
-**PIX Manual:**
-- Nome do titular + tipo/chave
-- Formulario de edicao (tipo chave, chave, nome)
 
 ---
 
-## Hook useIntegracoes - Novas Funcoes
+## Interface do Modal de Configuracoes
 
-```typescript
-interface UseIntegracoesReturn {
-  // ... existentes ...
-  
-  // PIX Manual
-  pixManualStatus: 'conectado' | 'desconectado';
-  pixManualData: { chavePix: string; tipoChave: string; nomeTitular: string } | null;
-  savePixManual: (data: { chavePix: string; tipoChave: string; nomeTitular: string }) => Promise<void>;
-  disconnectPixManual: () => Promise<void>;
-  
-  // Padrao
-  provedorPadrao: ProvedorPagamento | null;
-  setProvedorPadrao: (provedor: ProvedorPagamento) => Promise<void>;
+```text
++------------------------------------------------------------+
+|  Configuracoes do Mercado Pago                        [X]  |
++------------------------------------------------------------+
+|                                                            |
+|  METODOS DE PAGAMENTO ACEITOS                              |
+|  Escolha quais metodos seus clientes poderao usar          |
+|                                                            |
+|  +------------------------------------------------------+  |
+|  |  [Logo PIX]  PIX                        [  Toggle  ] |  |
+|  |              Pagamento instantaneo                   |  |
+|  +------------------------------------------------------+  |
+|  |  [Card Icon] Cartao de Credito          [  Toggle  ] |  |
+|  |              Parcelado ou a vista                    |  |
+|  +------------------------------------------------------+  |
+|                                                            |
+|  LIMITE DE PARCELAS                                        |
+|  Ate quantas vezes o cliente pode parcelar                 |
+|                                                            |
+|  [ 3x sem juros                              v ]           |
+|                                                            |
+|  (i) As taxas do Mercado Pago variam conforme              |
+|      o numero de parcelas selecionado.                     |
+|                                                            |
++------------------------------------------------------------+
+|                        [Cancelar]  [Salvar Configuracoes]  |
++------------------------------------------------------------+
+```
+
+---
+
+## Detalhes Tecnicos
+
+### Estrutura dados_extras no Banco
+
+```json
+{
+  "habilitarPix": true,
+  "habilitarCartao": true,
+  "maxParcelas": 3,
+  "is_default": true,
+  "live_mode": true
 }
 ```
 
----
+### Valores Validos para maxParcelas
 
-## Visual Premium
+| Valor | Exibicao |
+|-------|----------|
+| 1 | A vista |
+| 3 | Ate 3x |
+| 6 | Ate 6x |
+| 12 | Ate 12x |
 
-### Cores e Estilo
-- Cards com `bg-white/95 backdrop-blur-sm border border-border/50 rounded-xl shadow-sm`
-- Hover suave nos botoes de acao
-- Badges coloridos por status (verde = ativo, amarelo = padrao)
-- Transicoes suaves (`transition-all duration-200`)
+### Comportamento de Exclusao no Checkout MP
 
-### Logotipos
-- PIX: Logo teal oficial fornecido
-- InfinitePay: Circulo gradiente verde/amarelo fornecido
-- Mercado Pago: Icone de maos fornecido (azul)
-
-### Espacamento
-- Gap de 16px entre cards
-- Padding de 16-24px interno
-- Bordas arredondadas de 12px (rounded-xl)
+- Se `habilitarCartao = false`: exclui `credit_card` e `debit_card`
+- Se `habilitarPix = false`: nao temos como excluir PIX diretamente no Checkout Pro, mas podemos ocultar a opcao no modal de cobranca do Gestao
 
 ---
 
-## Fluxo de Interacao
+## Resumo
 
-1. **Definir Padrao**: Ao clicar, atualiza `is_default = true` no banco e `false` nos outros
-2. **Editar**: Scroll suave para o card do provedor correspondente, ativa modo edicao
-3. **Desconectar**: Confirma e remove/desativa a integracao
+A implementacao consiste em:
 
----
+1. **Novo Modal**: Formulario visual para configurar preferencias MP
+2. **Atualizar Hook**: Funcoes para ler/salvar dados_extras
+3. **Corrigir Edge Function**: Ler configuracoes do banco antes de criar preferencia
+4. **Atualizar UI**: Botao "Configurar" no MercadoPagoCard abrindo o modal
 
-## Banco de Dados
+Isso permitira que o fotografo escolha se aceita PIX, cartao, e ate quantas parcelas - configuracoes que serao respeitadas em todas as cobrancas geradas via modal no Workflow e CRM.
 
-Campos necessarios em `usuarios_integracoes`:
-- `is_default: boolean` - indica se eh o provedor padrao (se nao existir, adicionar)
-- `provedor: 'mercadopago' | 'infinitepay' | 'pix_manual'`
-- `status: 'ativo' | 'inativo'`
-- `dados_extras: { handle?, chavePix?, tipoChave?, nomeTitular? }`
-
----
-
-## Resumo de Implementacao
-
-1. **Copiar logos** para `src/assets/`
-2. **Criar ActiveMethodsList** e **ActiveMethodRow** com visual premium
-3. **Criar PagamentosTab** organizando lista ativa + cards de config
-4. **Criar PixManualCard** para gerenciar chave PIX
-5. **Modificar IntegracoesTab** para usar Tabs (Pagamentos | Google Calendar)
-6. **Estender useIntegracoes** com suporte a PIX Manual e provedor padrao
-7. **Atualizar cards existentes** (MP, InfinitePay) com novo visual
-
-Resultado: Pagina de integracoes premium, organizada e funcional conforme design de referencia.
