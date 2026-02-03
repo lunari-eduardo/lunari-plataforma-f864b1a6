@@ -8,21 +8,8 @@ interface UseCobrancaOptions {
   sessionId?: string;
 }
 
-// Helper to get active payment provider for current user
-async function getActivePaymentProvider(): Promise<ProvedorPagamento | null> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  const { data } = await supabase
-    .from('usuarios_integracoes')
-    .select('provedor')
-    .eq('user_id', user.id)
-    .eq('status', 'ativo')
-    .in('provedor', ['mercadopago', 'infinitepay'])
-    .single();
-
-  return (data?.provedor as ProvedorPagamento) || null;
-}
+// Note: Provider detection is now explicit via request.provedor
+// Gallery uses gallery-create-payment (Service Role) - NOT affected by these changes
 
 export function useCobranca(options: UseCobrancaOptions = {}) {
   const [cobrancas, setCobrancas] = useState<Cobranca[]>([]);
@@ -87,18 +74,15 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
     }
   }, [options.clienteId, options.sessionId]);
 
-  // Create Pix charge (Mercado Pago only)
+  // Create Pix charge (Mercado Pago only) - kept for legacy/history viewing
   const createPixCharge = async (request: CreateCobrancaRequest): Promise<CobrancaResponse> => {
     setCreatingCharge(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
 
-      // Check if user has Mercado Pago active (Pix is MP only)
-      const provedor = await getActivePaymentProvider();
-      if (provedor !== 'mercadopago') {
-        throw new Error('Pix está disponível apenas com Mercado Pago');
-      }
+      // PIX generation is now done via checkout link (MP checkout includes PIX option)
+      // This function is kept for backward compatibility
 
       const response = await supabase.functions.invoke('mercadopago-create-pix', {
         body: {
@@ -130,18 +114,18 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
     }
   };
 
-  // Create payment link (routes to correct provider)
+  // Create payment link (routes to correct provider based on explicit provedor param)
   const createLinkCharge = async (request: CreateCobrancaRequest, installments?: number): Promise<CobrancaResponse> => {
     setCreatingCharge(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
 
-      // Determine which provider to use
-      const provedor = await getActivePaymentProvider();
+      // Provider comes from the modal selection, NOT auto-detected
+      const provedor = request.provedor;
       
-      if (!provedor) {
-        throw new Error('Nenhum provedor de pagamento configurado. Vá em Integrações para conectar.');
+      if (!provedor || provedor === 'pix_manual') {
+        throw new Error('Selecione um provedor de pagamento válido');
       }
 
       let response;
@@ -217,11 +201,6 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
     }
   };
 
-  // Get active provider (expose for UI)
-  const getProvedor = useCallback(async () => {
-    return await getActivePaymentProvider();
-  }, []);
-
   // Check payment status manually (fallback when webhook fails)
   const checkPaymentStatus = useCallback(async (cobrancaId: string): Promise<{ updated: boolean; status?: string }> => {
     try {
@@ -286,7 +265,6 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
     createPixCharge,
     createLinkCharge,
     cancelCharge,
-    getProvedor,
     checkPaymentStatus,
     refetch: fetchCobrancas,
   };

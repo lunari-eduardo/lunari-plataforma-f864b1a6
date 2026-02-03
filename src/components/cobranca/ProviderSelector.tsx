@@ -55,29 +55,16 @@ export function ProviderSelector({ selectedProvider, onSelect }: ProviderSelecto
         const habilitarCartao = settings.habilitarCartao !== false;
         const maxParcelas = (settings.maxParcelas as number) || 12;
 
-        // Add PIX option if enabled
-        if (habilitarPix) {
-          available.push({
-            id: 'pix_mercadopago',
-            name: 'PIX',
-            description: 'Confirmação automática',
-            logo: pixLogo,
-            isDefault: isDefault && !habilitarCartao, // Only default if no card enabled
-            provedor: 'mercadopago',
-          });
-        }
-
-        // Add Link option (shows both PIX and card when available)
-        const cardDescription = habilitarCartao && habilitarPix
-          ? `Pix + Cartão até ${maxParcelas}x`
-          : habilitarCartao
-            ? `Cartão até ${maxParcelas}x`
-            : 'Pix';
+        // Build description based on enabled payment methods
+        const methods: string[] = [];
+        if (habilitarPix) methods.push('Pix');
+        if (habilitarCartao) methods.push(`Cartão até ${maxParcelas}x`);
+        const description = methods.join(' + ') || 'Checkout';
 
         available.push({
           id: 'mercadopago_link',
           name: 'Mercado Pago',
-          description: cardDescription,
+          description,
           logo: mercadopagoLogo,
           isDefault,
           provedor: 'mercadopago',
