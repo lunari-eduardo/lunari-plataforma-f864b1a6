@@ -49,6 +49,8 @@ export interface CobrancaResponse {
   qrCode?: string;
   qrCodeBase64?: string;
   pixCopiaCola?: string;
+  // PIX Manual specific
+  pixPayload?: string;
   // Link specific
   paymentLink?: string;
   // Checkout URL (InfinitePay)

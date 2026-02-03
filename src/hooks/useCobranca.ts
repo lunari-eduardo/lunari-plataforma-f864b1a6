@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Cobranca, TipoCobranca, CobrancaResponse, CreateCobrancaRequest, ProvedorPagamento } from '@/types/cobranca';
 import { toast } from 'sonner';
+import { generatePixPayload } from '@/utils/pixUtils';
 
 interface UseCobrancaOptions {
   clienteId?: string;
@@ -181,6 +182,119 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
     }
   };
 
+  // Create PIX Manual charge locally (no Edge Function)
+  const createPixManualCharge = async (request: CreateCobrancaRequest): Promise<CobrancaResponse> => {
+    setCreatingCharge(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      // Fetch PIX Manual configuration from user's integrations
+      const { data: integracao, error: integError } = await supabase
+        .from('usuarios_integracoes')
+        .select('dados_extras')
+        .eq('user_id', user.id)
+        .eq('provedor', 'pix_manual')
+        .eq('status', 'ativo')
+        .single();
+
+      if (integError || !integracao?.dados_extras) {
+        throw new Error('PIX Manual não configurado. Configure nas Integrações.');
+      }
+
+      const dadosExtras = integracao.dados_extras as {
+        chavePix: string;
+        nomeTitular: string;
+      };
+
+      if (!dadosExtras.chavePix || !dadosExtras.nomeTitular) {
+        throw new Error('Configuração PIX incompleta. Verifique a chave e nome do titular.');
+      }
+
+      // Generate PIX EMV payload locally
+      const pixPayload = generatePixPayload({
+        chavePix: dadosExtras.chavePix,
+        nomeBeneficiario: dadosExtras.nomeTitular,
+        valor: request.valor,
+        identificador: request.sessionId?.substring(0, 20) || '***',
+      });
+
+      // Save charge to database
+      const { data: cobranca, error } = await supabase
+        .from('cobrancas')
+        .insert({
+          user_id: user.id,
+          cliente_id: request.clienteId,
+          session_id: request.sessionId || null,
+          valor: request.valor,
+          descricao: request.descricao || null,
+          tipo_cobranca: 'pix',
+          provedor: 'pix_manual',
+          status: 'pendente',
+          mp_pix_copia_cola: pixPayload, // Reuse existing field
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast.success('PIX gerado com sucesso!');
+      await fetchCobrancas();
+
+      const mappedCobranca: Cobranca = {
+        id: cobranca.id,
+        userId: cobranca.user_id,
+        clienteId: cobranca.cliente_id,
+        sessionId: cobranca.session_id || undefined,
+        valor: cobranca.valor,
+        descricao: cobranca.descricao || undefined,
+        tipoCobranca: cobranca.tipo_cobranca as TipoCobranca,
+        status: cobranca.status as Cobranca['status'],
+        provedor: 'pix_manual',
+        mpPixCopiaCola: pixPayload,
+        createdAt: cobranca.created_at,
+        updatedAt: cobranca.updated_at,
+      };
+
+      return {
+        success: true,
+        cobranca: mappedCobranca,
+        pixPayload,
+        provedor: 'pix_manual',
+      };
+    } catch (error: any) {
+      console.error('Error creating PIX Manual:', error);
+      toast.error(error.message || 'Erro ao gerar PIX');
+      return { success: false, error: error.message };
+    } finally {
+      setCreatingCharge(false);
+    }
+  };
+
+  // Confirm PIX Manual payment manually
+  const confirmPixManualPayment = async (chargeId: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('cobrancas')
+        .update({ 
+          status: 'pago', 
+          data_pagamento: new Date().toISOString(),
+          updated_at: new Date().toISOString() 
+        })
+        .eq('id', chargeId);
+
+      if (error) throw error;
+
+      toast.success('Pagamento confirmado!');
+      await fetchCobrancas();
+      return true;
+    } catch (error: any) {
+      console.error('Error confirming payment:', error);
+      toast.error('Erro ao confirmar pagamento');
+      return false;
+    }
+  };
+
   // Cancel charge
   const cancelCharge = async (chargeId: string): Promise<boolean> => {
     try {
@@ -264,6 +378,8 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
     creatingCharge,
     createPixCharge,
     createLinkCharge,
+    createPixManualCharge,
+    confirmPixManualPayment,
     cancelCharge,
     checkPaymentStatus,
     refetch: fetchCobrancas,
