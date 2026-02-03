@@ -8,15 +8,15 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
-import { QrCode, Link2, CreditCard, History, AlertCircle } from 'lucide-react';
+import { CreditCard, History } from 'lucide-react';
 import { formatCurrency } from '@/utils/financialUtils';
 import { useCobranca } from '@/hooks/useCobranca';
-import { TipoCobranca, Cobranca, ProvedorPagamento } from '@/types/cobranca';
-import { ChargeMethodCard } from './ChargeMethodCard';
+import { Cobranca } from '@/types/cobranca';
 import { ChargePixSection } from './ChargePixSection';
 import { ChargeLinkSection } from './ChargeLinkSection';
 import { ChargeHistory } from './ChargeHistory';
+import { ProviderSelector } from './ProviderSelector';
+import { SelectedProvider } from './ProviderRow';
 
 interface ChargeModalProps {
   isOpen: boolean;
@@ -40,7 +40,7 @@ export function ChargeModal({
   const [valor, setValor] = useState(valorSugerido);
   const [valorType, setValorType] = useState<'total' | 'parcial'>('total');
   const [descricao, setDescricao] = useState('');
-  const [selectedMethod, setSelectedMethod] = useState<TipoCobranca>('pix');
+  const [selectedProvider, setSelectedProvider] = useState<SelectedProvider | null>(null);
   const [activeTab, setActiveTab] = useState<'cobrar' | 'historico'>('cobrar');
   const [checkingStatus, setCheckingStatus] = useState(false);
   const [currentChargeId, setCurrentChargeId] = useState<string | null>(null);
@@ -55,29 +55,14 @@ export function ChargeModal({
     status?: Cobranca['status'];
   } | null>(null);
 
-  const [provedorAtivo, setProvedorAtivo] = useState<ProvedorPagamento | null>(null);
-
   const {
     cobrancas,
-    loading,
     creatingCharge,
     createPixCharge,
     createLinkCharge,
     cancelCharge,
-    getProvedor,
     checkPaymentStatus,
   } = useCobranca({ clienteId, sessionId });
-
-  // Check active provider when modal opens
-  useEffect(() => {
-    const checkProvedor = async () => {
-      const provedor = await getProvedor();
-      setProvedorAtivo(provedor);
-    };
-    if (isOpen) {
-      checkProvedor();
-    }
-  }, [isOpen, getProvedor]);
 
   // Reset state when modal opens
   useEffect(() => {
@@ -85,14 +70,13 @@ export function ChargeModal({
       setValor(valorSugerido);
       setValorType('total');
       setDescricao('');
-      // Default to 'link' when InfinitePay is active (no isolated Pix)
-      setSelectedMethod(provedorAtivo === 'infinitepay' ? 'link' : 'pix');
+      setSelectedProvider(null); // Will be auto-selected by ProviderSelector
       setCurrentCharge(null);
       setCurrentChargeId(null);
       setCheckingStatus(false);
       setActiveTab('cobrar');
     }
-  }, [isOpen, valorSugerido, provedorAtivo]);
+  }, [isOpen, valorSugerido]);
 
   // Update valor when type changes
   useEffect(() => {
@@ -101,26 +85,40 @@ export function ChargeModal({
     }
   }, [valorType, valorSugerido]);
 
-  const handleGeneratePix = async () => {
-    const result = await createPixCharge({
-      clienteId,
-      sessionId,
-      valor,
-      descricao: descricao || undefined,
-      tipoCobranca: 'pix',
-    });
-
-    if (result.success) {
-      setCurrentCharge({
-        qrCode: result.qrCode,
-        qrCodeBase64: result.qrCodeBase64,
-        pixCopiaCola: result.pixCopiaCola,
-        status: 'pendente',
-      });
-    }
+  const handleProviderSelect = (provider: SelectedProvider) => {
+    setSelectedProvider(provider);
+    setCurrentCharge(null);
+    setCurrentChargeId(null);
   };
 
-  const handleGenerateLink = async () => {
+  const handleGenerateCharge = async () => {
+    if (!selectedProvider) return;
+
+    // PIX Mercado Pago - generates QR Code
+    if (selectedProvider === 'pix_mercadopago') {
+      const result = await createPixCharge({
+        clienteId,
+        sessionId,
+        valor,
+        descricao: descricao || undefined,
+        tipoCobranca: 'pix',
+      });
+
+      if (result.success) {
+        setCurrentCharge({
+          qrCode: result.qrCode,
+          qrCodeBase64: result.qrCodeBase64,
+          pixCopiaCola: result.pixCopiaCola,
+          status: 'pendente',
+        });
+        if (result.cobranca?.id) {
+          setCurrentChargeId(result.cobranca.id);
+        }
+      }
+      return;
+    }
+
+    // All other providers generate links
     const result = await createLinkCharge({
       clienteId,
       sessionId,
@@ -130,7 +128,6 @@ export function ChargeModal({
     });
 
     if (result.success) {
-      // Use checkoutUrl (InfinitePay) or paymentLink (Mercado Pago)
       const linkUrl = result.checkoutUrl || result.paymentLink;
       if (linkUrl) {
         setCurrentCharge({
@@ -160,8 +157,15 @@ export function ChargeModal({
   };
 
   const handleViewCharge = (cobranca: Cobranca) => {
-    setSelectedMethod(cobranca.tipoCobranca);
-    // Prioritize InfinitePay checkout URL over Mercado Pago
+    // Determine provider from cobranca
+    if (cobranca.tipoCobranca === 'pix' && cobranca.provedor === 'mercadopago') {
+      setSelectedProvider('pix_mercadopago');
+    } else if (cobranca.provedor === 'infinitepay') {
+      setSelectedProvider('infinitepay');
+    } else if (cobranca.provedor === 'mercadopago') {
+      setSelectedProvider('mercadopago_link');
+    }
+    
     const linkUrl = cobranca.ipCheckoutUrl || cobranca.mpPaymentLink;
     setCurrentCharge({
       qrCode: cobranca.mpQrCode,
@@ -175,29 +179,19 @@ export function ChargeModal({
     setActiveTab('cobrar');
   };
 
-
-  // Build methods based on active provider
-  // InfinitePay only supports link checkout (Pix + Card in one), not isolated Pix
-  const methods: { type: TipoCobranca; icon: React.ReactNode; title: string; description: string }[] = 
-    provedorAtivo === 'infinitepay'
-      ? [{ type: 'link', icon: <Link2 className="h-5 w-5" />, title: 'Link', description: 'Pix + Cartão' }]
-      : [
-          { type: 'pix', icon: <QrCode className="h-5 w-5" />, title: 'Pix', description: 'Imediato' },
-          { type: 'link', icon: <Link2 className="h-5 w-5" />, title: 'Link', description: 'Pix + Cartão' },
-        ];
+  // Determine which section to show based on selected provider
+  const showPixSection = selectedProvider === 'pix_mercadopago';
+  const showLinkSection = selectedProvider === 'mercadopago_link' || 
+                          selectedProvider === 'infinitepay' ||
+                          selectedProvider === 'pix_manual';
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg max-h-[90vh] p-0 overflow-hidden">
+      <DialogContent className="max-w-lg max-h-[90vh] p-0 overflow-hidden z-[60] shadow-2xl border-2 border-border">
         <DialogHeader className="p-4 pb-2">
           <DialogTitle className="flex items-center gap-2">
             <CreditCard className="h-5 w-5 text-primary" />
             Cobrar cliente
-            {provedorAtivo && (
-              <Badge variant="secondary" className="ml-2 text-xs">
-                {provedorAtivo === 'infinitepay' ? 'InfinitePay' : 'Mercado Pago'}
-              </Badge>
-            )}
           </DialogTitle>
           <p className="text-sm text-muted-foreground">{clienteNome}</p>
         </DialogHeader>
@@ -262,34 +256,23 @@ export function ChargeModal({
 
               <Separator />
 
-              {/* Forma de cobrança */}
+              {/* Provider Selection */}
               <div className="space-y-3">
                 <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                  Forma de cobrança
+                  Meio de cobrança
                 </Label>
                 
-                <div className="grid grid-cols-4 gap-2">
-                  {methods.map((method) => (
-                    <ChargeMethodCard
-                      key={method.type}
-                      icon={method.icon}
-                      title={method.title}
-                      description={method.description}
-                      selected={selectedMethod === method.type}
-                      onClick={() => {
-                        setSelectedMethod(method.type);
-                        setCurrentCharge(null);
-                      }}
-                    />
-                  ))}
-                </div>
+                <ProviderSelector
+                  selectedProvider={selectedProvider}
+                  onSelect={handleProviderSelect}
+                />
               </div>
 
               <Separator />
 
-              {/* Seção expandida do método selecionado */}
+              {/* Charge Generation Section */}
               <div className="min-h-[200px]">
-                {selectedMethod === 'pix' && (
+                {showPixSection && (
                   <ChargePixSection
                     valor={valor}
                     qrCode={currentCharge?.qrCode}
@@ -297,23 +280,28 @@ export function ChargeModal({
                     pixCopiaCola={currentCharge?.pixCopiaCola}
                     status={currentCharge?.status}
                     loading={creatingCharge}
-                    onGenerate={handleGeneratePix}
+                    onGenerate={handleGenerateCharge}
                   />
                 )}
 
-                {selectedMethod === 'link' && (
+                {showLinkSection && (
                   <ChargeLinkSection
                     valor={valor}
                     paymentLink={currentCharge?.paymentLink}
                     status={currentCharge?.status}
                     loading={creatingCharge}
                     checkingStatus={checkingStatus}
-                    onGenerate={handleGenerateLink}
+                    onGenerate={handleGenerateCharge}
                     onCheckStatus={currentChargeId ? handleCheckStatus : undefined}
                     clienteWhatsapp={clienteWhatsapp}
                   />
                 )}
 
+                {!selectedProvider && (
+                  <div className="flex items-center justify-center h-[200px] text-muted-foreground text-sm">
+                    Selecione um meio de cobrança acima
+                  </div>
+                )}
               </div>
             </TabsContent>
 
