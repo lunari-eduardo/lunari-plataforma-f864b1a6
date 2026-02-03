@@ -2,7 +2,7 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Check, Star } from 'lucide-react';
 
-export type SelectedProvider = 'pix_mercadopago' | 'mercadopago_link' | 'infinitepay' | 'pix_manual';
+export type SelectedProvider = 'mercadopago_link' | 'infinitepay' | 'pix_manual';
 
 export interface ProviderOption {
   id: SelectedProvider;

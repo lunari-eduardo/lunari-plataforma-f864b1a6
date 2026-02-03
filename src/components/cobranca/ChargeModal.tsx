@@ -9,10 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreditCard, History } from 'lucide-react';
-import { formatCurrency } from '@/utils/financialUtils';
 import { useCobranca } from '@/hooks/useCobranca';
 import { Cobranca } from '@/types/cobranca';
-import { ChargePixSection } from './ChargePixSection';
 import { ChargeLinkSection } from './ChargeLinkSection';
 import { ChargeHistory } from './ChargeHistory';
 import { ProviderSelector } from './ProviderSelector';
@@ -94,37 +92,17 @@ export function ChargeModal({
   const handleGenerateCharge = async () => {
     if (!selectedProvider) return;
 
-    // PIX Mercado Pago - generates QR Code
-    if (selectedProvider === 'pix_mercadopago') {
-      const result = await createPixCharge({
-        clienteId,
-        sessionId,
-        valor,
-        descricao: descricao || undefined,
-        tipoCobranca: 'pix',
-      });
+    // Determine the actual provider for the Edge Function
+    const provedor = selectedProvider === 'infinitepay' ? 'infinitepay' : 'mercadopago';
 
-      if (result.success) {
-        setCurrentCharge({
-          qrCode: result.qrCode,
-          qrCodeBase64: result.qrCodeBase64,
-          pixCopiaCola: result.pixCopiaCola,
-          status: 'pendente',
-        });
-        if (result.cobranca?.id) {
-          setCurrentChargeId(result.cobranca.id);
-        }
-      }
-      return;
-    }
-
-    // All other providers generate links
+    // All providers generate checkout links (PIX is available inside Mercado Pago checkout)
     const result = await createLinkCharge({
       clienteId,
       sessionId,
       valor,
       descricao: descricao || undefined,
       tipoCobranca: 'link',
+      provedor,
     });
 
     if (result.success) {
@@ -158,12 +136,12 @@ export function ChargeModal({
 
   const handleViewCharge = (cobranca: Cobranca) => {
     // Determine provider from cobranca
-    if (cobranca.tipoCobranca === 'pix' && cobranca.provedor === 'mercadopago') {
-      setSelectedProvider('pix_mercadopago');
-    } else if (cobranca.provedor === 'infinitepay') {
+    if (cobranca.provedor === 'infinitepay') {
       setSelectedProvider('infinitepay');
     } else if (cobranca.provedor === 'mercadopago') {
       setSelectedProvider('mercadopago_link');
+    } else if (cobranca.provedor === 'pix_manual') {
+      setSelectedProvider('pix_manual');
     }
     
     const linkUrl = cobranca.ipCheckoutUrl || cobranca.mpPaymentLink;
@@ -179,8 +157,7 @@ export function ChargeModal({
     setActiveTab('cobrar');
   };
 
-  // Determine which section to show based on selected provider
-  const showPixSection = selectedProvider === 'pix_mercadopago';
+  // All providers now show the link section (PIX is inside checkout)
   const showLinkSection = selectedProvider === 'mercadopago_link' || 
                           selectedProvider === 'infinitepay' ||
                           selectedProvider === 'pix_manual';
@@ -272,18 +249,6 @@ export function ChargeModal({
 
               {/* Charge Generation Section */}
               <div className="min-h-[200px]">
-                {showPixSection && (
-                  <ChargePixSection
-                    valor={valor}
-                    qrCode={currentCharge?.qrCode}
-                    qrCodeBase64={currentCharge?.qrCodeBase64}
-                    pixCopiaCola={currentCharge?.pixCopiaCola}
-                    status={currentCharge?.status}
-                    loading={creatingCharge}
-                    onGenerate={handleGenerateCharge}
-                  />
-                )}
-
                 {showLinkSection && (
                   <ChargeLinkSection
                     valor={valor}
