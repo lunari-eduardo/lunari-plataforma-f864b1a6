@@ -29,8 +29,24 @@ function emvField(id: string, value: string): string {
 function normalizeText(text: string): string {
   return text
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toUpperCase();
+    .replace(/[\u0300-\u036f]/g, '') // Remove accents
+    .replace(/[^A-Za-z0-9 ]/g, '')   // Remove special chars except space
+    .toUpperCase()
+    .trim();
+}
+
+// Sanitize txId - CRITICAL: only alphanumeric allowed per BCB specification
+function sanitizeTxId(id: string): string {
+  if (!id || id === '***') return '***';
+  
+  // Remove everything that is not A-Za-z0-9
+  const sanitized = id.replace(/[^A-Za-z0-9]/g, '');
+  
+  // If empty after sanitization, use default
+  if (!sanitized) return '***';
+  
+  // Max 25 characters per BCB specification
+  return sanitized.substring(0, 25);
 }
 
 // Normalize PIX key - add country code for phone numbers
@@ -77,7 +93,9 @@ export function generatePixPayload({
   const nomeFormatado = normalizeText(nomeBeneficiario).substring(0, 25);
   const cidadeFormatada = normalizeText(cidade).substring(0, 15);
   const valorFormatado = valor.toFixed(2);
-  const txId = identificador.substring(0, 25);
+  
+  // CRITICAL: txId must be alphanumeric only [A-Za-z0-9]
+  const txId = sanitizeTxId(identificador);
 
   // Build EMV payload
   let payload = '';
