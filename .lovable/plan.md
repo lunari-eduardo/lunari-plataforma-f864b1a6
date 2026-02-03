@@ -1,182 +1,317 @@
 
-# Plano: Corrigir Modal de Cobranca Sem Afetar o Gallery
+# Plano: Implementar PIX Manual com Geracao Local de QR Code
 
-## Arquitetura Atual (Isolamento ja Existente)
+## Diagnostico
 
-A separacao entre Gestao e Gallery JA EXISTE e esta correta:
-
-| Projeto | Edge Function | Autenticacao | Deteccao Provedor |
-|---------|--------------|--------------|-------------------|
-| **Gallery** | `gallery-create-payment` | Service Role | Automatica (busca do fotografo) |
-| **Gestao** | `gestao-infinitepay-create-link` | JWT | Explicita (usuario logado) |
-| **Gestao** | `mercadopago-create-link` | JWT | Explicita (usuario logado) |
-
-O Gallery NAO sera afetado pelas mudancas, pois usa uma Edge Function completamente separada.
-
----
-
-## Problema Identificado no Gestao
-
-O hook `useCobranca.ts` tem a funcao `getActivePaymentProvider()` que usa `.single()`:
+O problema esta no `ChargeModal.tsx` linha 96:
 
 ```typescript
-const { data } = await supabase
-  .from('usuarios_integracoes')
-  .in('provedor', ['mercadopago', 'infinitepay'])
-  .single();  // ERRO quando ha 2+ provedores ativos!
+// ERRADO: pix_manual esta sendo convertido para 'mercadopago'
+const provedor = selectedProvider === 'infinitepay' ? 'infinitepay' : 'mercadopago';
 ```
 
-Quando o usuario tem Mercado Pago E InfinitePay ativos, retorna erro e `data = null`.
+Quando o usuario seleciona "PIX Manual", o codigo converte para `mercadopago` e chama a Edge Function, gerando um link do Mercado Pago em vez de usar a chave PIX configurada localmente.
 
-Alem disso, o `createLinkCharge()` NAO recebe qual provedor o usuario selecionou no modal - ele tenta detectar automaticamente (e falha).
+## Dados Disponiveis
 
----
-
-## Solucao Proposta
-
-### Modificacao 1: Remover `getActivePaymentProvider()` do Hook
-
-Esta funcao nao e mais necessaria porque o ProviderSelector ja carrega os provedores ativos e o usuario seleciona qual usar.
-
-### Modificacao 2: `createLinkCharge()` Recebe o Provedor Explicitamente
-
-```typescript
-// Novo parametro no request
-interface CreateCobrancaRequest {
-  clienteId: string;
-  sessionId?: string;
-  valor: number;
-  descricao?: string;
-  tipoCobranca: TipoCobranca;
-  provedor?: 'mercadopago' | 'infinitepay' | 'pix_manual';  // NOVO
+O usuario ja tem PIX Manual configurado no banco:
+```json
+{
+  "chavePix": "51998287948",
+  "nomeTitular": "Eduardo Valmor Diehl",
+  "tipoChave": "telefone"
 }
-
-// Uso no createLinkCharge
-const createLinkCharge = async (request: CreateCobrancaRequest): Promise<CobrancaResponse> => {
-  // Provedor vem do modal, NAO mais do banco
-  const provedor = request.provedor;
-  
-  if (!provedor || provedor === 'pix_manual') {
-    // PIX Manual nao gera link - tratado separadamente
-    throw new Error('Selecione um provedor de pagamento');
-  }
-
-  let response;
-  if (provedor === 'infinitepay') {
-    response = await supabase.functions.invoke('gestao-infinitepay-create-link', { ... });
-  } else {
-    response = await supabase.functions.invoke('mercadopago-create-link', { ... });
-  }
-  // ...
-};
 ```
 
-### Modificacao 3: ChargeModal Passa o Provedor na Chamada
+## Arquitetura da Solucao
+
+```text
+FLUXO PIX MANUAL (local, sem Edge Function):
++-------------------+      +-------------------+      +-------------------+
+|  ChargeModal      | ---> | generatePixPayload| ---> | PixManualSection  |
+|  (detecta pix_    |      | (utils/pixUtils)  |      | (exibe QR + copia)|
+|   manual)         |      |                   |      |                   |
++-------------------+      +-------------------+      +-------------------+
+         |
+         v
++-------------------+
+|  Salva cobranca   |
+|  no banco (local) |
+|  status=pendente  |
++-------------------+
+```
+
+## Arquivos a Criar/Modificar
+
+| Arquivo | Acao | Descricao |
+|---------|------|-----------|
+| `src/utils/pixUtils.ts` | Criar | Gerador de PIX EMV payload (codigo fornecido pelo usuario) |
+| `src/components/cobranca/PixManualSection.tsx` | Criar | UI para exibir QR Code + copia e cola do PIX |
+| `src/components/cobranca/ChargeModal.tsx` | Modificar | Detectar pix_manual e usar fluxo local |
+| `src/hooks/useCobranca.ts` | Modificar | Adicionar funcao `createPixManualCharge()` |
+| `src/types/cobranca.ts` | Modificar | Adicionar campos para PIX Manual no CobrancaResponse |
+
+---
+
+## Detalhes da Implementacao
+
+### 1. Novo Utilitario: `src/utils/pixUtils.ts`
+
+Implementar o gerador de PIX EMV payload conforme codigo fornecido:
+
+- Funcao `crc16()` para calculo do checksum
+- Funcao `emvField()` para formatar campos EMV
+- Funcao `normalizarChavePix()` para adicionar +55 em telefones
+- Funcao principal `generatePixPayload()` que retorna o payload EMV valido
+
+### 2. Novo Componente: `src/components/cobranca/PixManualSection.tsx`
+
+Interface visual para PIX Manual:
+
+```text
++------------------------------------------+
+|                                          |
+|     [QR CODE 200x200]                    |
+|     (gerado via biblioteca qrcode)       |
+|                                          |
+|  PIX Copia e Cola:                       |
+|  +------------------------------------+  |
+|  | 00020126580014br.gov.bcb.pix01... |  |
+|  +------------------------------------+  |
+|         [Copiar Codigo PIX]              |
+|                                          |
+|  (!) Pagamento requer confirmacao manual |
+|                                          |
+|  [Enviar via WhatsApp]                   |
++------------------------------------------+
+```
+
+Props:
+- `pixPayload`: string (codigo EMV gerado)
+- `valor`: number
+- `clienteWhatsapp?`: string
+- `onConfirmPayment?`: () => void (para confirmar manualmente)
+
+### 3. Modificar `ChargeModal.tsx`
+
+Separar o fluxo de geracao baseado no provedor:
 
 ```typescript
 const handleGenerateCharge = async () => {
   if (!selectedProvider) return;
 
-  // Determinar o provedor real para a Edge Function
-  const provedor = selectedProvider === 'infinitepay' ? 'infinitepay' : 'mercadopago';
-
-  const result = await createLinkCharge({
-    clienteId,
-    sessionId,
-    valor,
-    descricao: descricao || undefined,
-    tipoCobranca: 'link',
-    provedor,  // NOVO: passa o provedor selecionado
-  });
+  if (selectedProvider === 'pix_manual') {
+    // Fluxo local: gerar PIX EMV e salvar cobranca no banco
+    const result = await createPixManualCharge({
+      clienteId,
+      sessionId,
+      valor,
+      descricao: descricao || undefined,
+    });
+    
+    if (result.success) {
+      setCurrentCharge({
+        pixCopiaCola: result.pixPayload,
+        status: 'pendente',
+      });
+    }
+  } else {
+    // Fluxo via Edge Function (MP ou InfinitePay)
+    const provedor = selectedProvider === 'infinitepay' ? 'infinitepay' : 'mercadopago';
+    const result = await createLinkCharge({ ... });
+    // ...
+  }
 };
 ```
 
-### Modificacao 4: Remover Opcao PIX Duplicada do ProviderSelector
-
-Remover `pix_mercadopago` da lista. O PIX do Mercado Pago ja aparece dentro do checkout do link.
-
-**Antes:**
-- PIX (Mercado Pago) - Confirmacao automatica
-- Mercado Pago - Pix + Cartao ate 12x
-- InfinitePay - Pix + Cartao
-- PIX Manual - Confirmacao manual
-
-**Depois:**
-- Mercado Pago - Pix + Cartao ate 12x
-- InfinitePay - Pix + Cartao
-- PIX Manual - Confirmacao manual
-
-### Modificacao 5: Atualizar Tipo ProvedorPagamento
-
-Adicionar `pix_manual` ao tipo para compatibilidade:
+Adicionar renderizacao condicional:
 
 ```typescript
-export type ProvedorPagamento = 'mercadopago' | 'infinitepay' | 'pix_manual';
+{selectedProvider === 'pix_manual' && (
+  <PixManualSection
+    pixPayload={currentCharge?.pixCopiaCola}
+    valor={valor}
+    clienteWhatsapp={clienteWhatsapp}
+    status={currentCharge?.status}
+    loading={creatingCharge}
+    onGenerate={handleGenerateCharge}
+    onConfirmPayment={handleConfirmPixManual}
+  />
+)}
+
+{(selectedProvider === 'mercadopago_link' || selectedProvider === 'infinitepay') && (
+  <ChargeLinkSection ... />
+)}
+```
+
+### 4. Modificar `useCobranca.ts`
+
+Adicionar funcao para criar cobranca PIX Manual localmente (sem Edge Function):
+
+```typescript
+const createPixManualCharge = async (request: CreateCobrancaRequest): Promise<CobrancaResponse> => {
+  setCreatingCharge(true);
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    // Buscar configuracao do PIX Manual do usuario
+    const { data: integracao } = await supabase
+      .from('usuarios_integracoes')
+      .select('dados_extras')
+      .eq('user_id', user.id)
+      .eq('provedor', 'pix_manual')
+      .eq('status', 'ativo')
+      .single();
+
+    if (!integracao?.dados_extras) {
+      throw new Error('PIX Manual nao configurado');
+    }
+
+    const { chavePix, nomeTitular } = integracao.dados_extras as {
+      chavePix: string;
+      nomeTitular: string;
+    };
+
+    // Gerar payload EMV localmente
+    const pixPayload = generatePixPayload({
+      chavePix,
+      nomeBeneficiario: nomeTitular,
+      valor: request.valor,
+      identificador: sessionId?.substring(0, 20) || '***',
+    });
+
+    // Salvar cobranca no banco
+    const { data: cobranca, error } = await supabase
+      .from('cobrancas')
+      .insert({
+        user_id: user.id,
+        cliente_id: request.clienteId,
+        session_id: request.sessionId,
+        valor: request.valor,
+        descricao: request.descricao,
+        tipo_cobranca: 'pix',
+        provedor: 'pix_manual',
+        status: 'pendente',
+        mp_pix_copia_cola: pixPayload, // Reutiliza campo existente
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    toast.success('PIX gerado com sucesso!');
+    await fetchCobrancas();
+
+    return {
+      success: true,
+      cobranca: mapCobranca(cobranca),
+      pixPayload,
+    };
+  } catch (error: any) {
+    console.error('Error creating PIX Manual:', error);
+    toast.error(error.message || 'Erro ao gerar PIX');
+    return { success: false, error: error.message };
+  } finally {
+    setCreatingCharge(false);
+  }
+};
+
+// Confirmar pagamento manualmente
+const confirmPixManualPayment = async (chargeId: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('cobrancas')
+      .update({ 
+        status: 'pago', 
+        data_pagamento: new Date().toISOString(),
+        updated_at: new Date().toISOString() 
+      })
+      .eq('id', chargeId);
+
+    if (error) throw error;
+
+    toast.success('Pagamento confirmado!');
+    await fetchCobrancas();
+    return true;
+  } catch (error) {
+    console.error('Error confirming payment:', error);
+    toast.error('Erro ao confirmar pagamento');
+    return false;
+  }
+};
+```
+
+### 5. Modificar `src/types/cobranca.ts`
+
+Adicionar campo para payload do PIX no response:
+
+```typescript
+export interface CobrancaResponse {
+  success: boolean;
+  cobranca?: Cobranca;
+  error?: string;
+  provedor?: ProvedorPagamento;
+  // Pix specific (Mercado Pago)
+  qrCode?: string;
+  qrCodeBase64?: string;
+  pixCopiaCola?: string;
+  // PIX Manual specific
+  pixPayload?: string;  // NOVO
+  // Link specific
+  paymentLink?: string;
+  checkoutUrl?: string;
+}
 ```
 
 ---
 
-## Arquivos a Modificar
+## Biblioteca para QR Code
 
-| Arquivo | Modificacao |
-|---------|-------------|
-| `src/hooks/useCobranca.ts` | Remover `getActivePaymentProvider()`, atualizar `createLinkCharge()` para receber provedor |
-| `src/types/cobranca.ts` | Adicionar `pix_manual` ao tipo, adicionar `provedor` ao CreateCobrancaRequest |
-| `src/components/cobranca/ChargeModal.tsx` | Passar provedor na chamada de `createLinkCharge()` |
-| `src/components/cobranca/ProviderSelector.tsx` | Remover opcao `pix_mercadopago` duplicada |
-| `src/components/cobranca/ProviderRow.tsx` | Atualizar tipo `SelectedProvider` |
+Para renderizar o QR Code no componente `PixManualSection`, usaremos a biblioteca `qrcode` que gera imagens a partir do payload EMV:
 
----
+```typescript
+import QRCode from 'qrcode';
 
-## O Que NAO Sera Tocado
+// Gerar QR Code como Data URL
+const qrCodeDataUrl = await QRCode.toDataURL(pixPayload, {
+  width: 256,
+  margin: 2,
+  color: { dark: '#000000', light: '#ffffff' }
+});
+```
 
-| Arquivo | Motivo |
-|---------|--------|
-| `supabase/functions/gallery-create-payment/index.ts` | Edge Function exclusiva do Gallery |
-| `supabase/functions/infinitepay-webhook/index.ts` | Webhook compartilhado (ja funciona) |
-| `supabase/functions/mercadopago-webhook/index.ts` | Webhook compartilhado (ja funciona) |
-| `supabase/functions/check-payment-status/index.ts` | Fallback compartilhado (ja funciona) |
+Sera necessario adicionar a dependencia: `npm install qrcode @types/qrcode`
 
 ---
 
-## Fluxo Corrigido
+## Fluxo Completo Apos Implementacao
 
 ```text
-1. Usuario abre ChargeModal no Gestao
-2. ProviderSelector carrega provedores ATIVOS (sem duplicatas)
-3. Lista exibe:
-   - Mercado Pago (pix + cartao no checkout)
-   - InfinitePay (pix + cartao)
-   - PIX Manual (se configurado)
-4. Usuario seleciona provedor (ex: InfinitePay)
-5. Usuario clica "Gerar Link"
-6. ChargeModal chama createLinkCharge({ ..., provedor: 'infinitepay' })
-7. Hook roteia para gestao-infinitepay-create-link (isolado do Gallery)
-8. Link gerado com sucesso!
+1. Usuario abre ChargeModal
+2. Seleciona "PIX Manual"
+3. Clica em "Gerar PIX"
+4. Sistema:
+   a) Busca dados_extras do PIX Manual (chavePix, nomeTitular)
+   b) Gera payload EMV com generatePixPayload()
+   c) Salva cobranca no banco com status=pendente
+   d) Renderiza QR Code + codigo copia e cola
+5. Usuario copia ou envia via WhatsApp
+6. Cliente paga fora do sistema
+7. Usuario clica em "Confirmar Pagamento" 
+8. Sistema atualiza status para 'pago' e cria transacao
 ```
-
----
-
-## Garantia de Isolamento
-
-O Gallery continuara funcionando porque:
-
-1. **Usa Edge Function diferente**: `gallery-create-payment` (nao tocada)
-2. **Usa Service Role**: Nao depende de JWT do fotografo
-3. **Detecta provedor automaticamente**: Busca do banco qual provedor o fotografo usa
-4. **Webhooks compartilhados**: `infinitepay-webhook` e `mercadopago-webhook` processam pagamentos de ambos projetos
-
-As modificacoes no Gestao afetam APENAS:
-- O hook `useCobranca.ts` (usado so pelo Gestao)
-- Os componentes em `src/components/cobranca/` (usados so pelo Gestao)
 
 ---
 
 ## Resumo das Mudancas
 
-1. **Tipo**: Adicionar `pix_manual` e `provedor` ao request
-2. **Hook**: Remover funcao problematica, receber provedor explicitamente
-3. **Modal**: Passar provedor selecionado para o hook
-4. **Selector**: Remover PIX duplicado do Mercado Pago
+| Componente | Mudanca |
+|------------|---------|
+| `pixUtils.ts` | Novo - Gerador de payload EMV PIX |
+| `PixManualSection.tsx` | Novo - UI com QR Code e copia/cola |
+| `ChargeModal.tsx` | Separar fluxo para pix_manual |
+| `useCobranca.ts` | Adicionar createPixManualCharge e confirmPixManualPayment |
+| `cobranca.ts` | Adicionar pixPayload ao response |
 
-Resultado: Modal funciona com multiplos provedores ativos, sem afetar o Gallery.
+Resultado: PIX Manual gera QR Code local usando a chave configurada, sem chamar Mercado Pago.
