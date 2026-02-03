@@ -1,202 +1,182 @@
 
-# Plano: Melhorar Modal de Cobrança com Seleção de Provedor
+# Plano: Corrigir Modal de Cobranca Sem Afetar o Gallery
 
-## Diagnóstico do Problema
+## Arquitetura Atual (Isolamento ja Existente)
 
-O modal de cobrança atual tem os seguintes problemas:
+A separacao entre Gestao e Gallery JA EXISTE e esta correta:
 
-1. **Modal não se destaca do modal pai** - O ChargeModal abre sobre o SessionPaymentsManager mas visualmente não fica claro que é um novo modal
-2. **UI confusa** - Exibe "Pix" e "Link" lado a lado, mas o usuário não sabe qual provedor está usando
-3. **Lógica invertida** - Atualmente seleciona o TIPO de cobrança (pix/link), quando deveria selecionar o PROVEDOR (PIX Manual, InfinitePay, Mercado Pago)
-4. **Sem default inteligente** - Não usa o provedor padrão configurado nas integrações
+| Projeto | Edge Function | Autenticacao | Deteccao Provedor |
+|---------|--------------|--------------|-------------------|
+| **Gallery** | `gallery-create-payment` | Service Role | Automatica (busca do fotografo) |
+| **Gestao** | `gestao-infinitepay-create-link` | JWT | Explicita (usuario logado) |
+| **Gestao** | `mercadopago-create-link` | JWT | Explicita (usuario logado) |
 
----
-
-## Arquitetura Proposta
-
-```text
-ANTES (atual):
-┌───────────────────────────────────────┐
-│  Forma de Cobrança                    │
-│  ┌────────┐  ┌────────┐               │
-│  │  PIX   │  │  Link  │               │
-│  │Imediato│  │Pix+Card│               │
-│  └────────┘  └────────┘               │
-└───────────────────────────────────────┘
-
-DEPOIS (proposto):
-┌───────────────────────────────────────┐
-│  Meio de Cobrança                     │
-│                                       │
-│  ┌─────────────────────────────────┐  │
-│  │ [logo] PIX (Mercado Pago) ✓ Pad │  │
-│  │        Confirmação automática   │  │
-│  └─────────────────────────────────┘  │
-│  ┌─────────────────────────────────┐  │
-│  │ [logo] InfinitePay              │  │
-│  │        Pix + Cartão             │  │
-│  └─────────────────────────────────┘  │
-│  ┌─────────────────────────────────┐  │
-│  │ [logo] Mercado Pago             │  │
-│  │        Pix + Cartão até 12x     │  │
-│  └─────────────────────────────────┘  │
-└───────────────────────────────────────┘
-```
+O Gallery NAO sera afetado pelas mudancas, pois usa uma Edge Function completamente separada.
 
 ---
 
-## Arquivos a Modificar/Criar
+## Problema Identificado no Gestao
 
-| Arquivo | Ação | Descrição |
-|---------|------|-----------|
-| `src/components/cobranca/ChargeModal.tsx` | Modificar | Refatorar para usar lista de provedores com logos |
-| `src/components/cobranca/ProviderSelector.tsx` | Criar | Novo componente para lista de provedores |
-| `src/components/cobranca/ProviderRow.tsx` | Criar | Row individual de provedor com logo e badge |
-| `src/hooks/useCobranca.ts` | Modificar | Adicionar `getAvailableProviders()` e `defaultProvider` |
-| `src/types/cobranca.ts` | Modificar | Adicionar `pix_manual` ao tipo ProvedorPagamento |
-
----
-
-## Detalhes da Implementação
-
-### 1. Novo Componente ProviderRow
-
-```text
-┌────────────────────────────────────────────────────────┐
-│ [Logo 32x32]  PIX (Mercado Pago)         [✓ Padrão]   │
-│               Confirmação automática via QR Code       │
-└────────────────────────────────────────────────────────┘
-```
-
-**Props:**
-- `provider`: 'pix_mercadopago' | 'mercadopago' | 'infinitepay' | 'pix_manual'
-- `logo`: string (path do logo)
-- `name`: string (nome exibido)
-- `description`: string (descrição curta)
-- `isDefault`: boolean
-- `selected`: boolean
-- `onClick`: () => void
-
-### 2. Novo Componente ProviderSelector
-
-Lista todos os provedores disponíveis (conectados) com:
-- Logo oficial de cada provedor
-- Nome do provedor
-- Descrição (tipo de pagamento)
-- Badge "Padrão" no provedor configurado como default
-- Estado de seleção visual
-
-### 3. Modificações no ChargeModal
-
-**Novo estado:**
-```typescript
-// Antes
-const [selectedMethod, setSelectedMethod] = useState<TipoCobranca>('pix');
-
-// Depois
-type SelectedProvider = 'pix_mercadopago' | 'mercadopago_link' | 'infinitepay' | 'pix_manual';
-const [selectedProvider, setSelectedProvider] = useState<SelectedProvider | null>(null);
-```
-
-**Lógica de geração:**
-- `pix_mercadopago` → Chama `createPixCharge()` (MP)
-- `mercadopago_link` → Chama `createLinkCharge()` com provedor MP
-- `infinitepay` → Chama `createLinkCharge()` com provedor InfinitePay
-- `pix_manual` → Exibe QR Code manual (sem integração)
-
-### 4. Modal com Maior Destaque
-
-Para resolver o problema de sobreposição visual:
-
-```css
-/* Adicionar ao DialogContent do ChargeModal */
-className="... z-[60] shadow-2xl border-2 border-border"
-```
-
-E adicionar backdrop mais escuro ou overlay visual.
-
-### 5. Modificações no useCobranca
-
-Adicionar função para buscar provedores disponíveis:
+O hook `useCobranca.ts` tem a funcao `getActivePaymentProvider()` que usa `.single()`:
 
 ```typescript
-interface AvailableProvider {
-  id: 'pix_mercadopago' | 'mercadopago_link' | 'infinitepay' | 'pix_manual';
-  name: string;
-  description: string;
-  logo: string;
-  isDefault: boolean;
-  provedor: ProvedorPagamento;
+const { data } = await supabase
+  .from('usuarios_integracoes')
+  .in('provedor', ['mercadopago', 'infinitepay'])
+  .single();  // ERRO quando ha 2+ provedores ativos!
+```
+
+Quando o usuario tem Mercado Pago E InfinitePay ativos, retorna erro e `data = null`.
+
+Alem disso, o `createLinkCharge()` NAO recebe qual provedor o usuario selecionou no modal - ele tenta detectar automaticamente (e falha).
+
+---
+
+## Solucao Proposta
+
+### Modificacao 1: Remover `getActivePaymentProvider()` do Hook
+
+Esta funcao nao e mais necessaria porque o ProviderSelector ja carrega os provedores ativos e o usuario seleciona qual usar.
+
+### Modificacao 2: `createLinkCharge()` Recebe o Provedor Explicitamente
+
+```typescript
+// Novo parametro no request
+interface CreateCobrancaRequest {
+  clienteId: string;
+  sessionId?: string;
+  valor: number;
+  descricao?: string;
+  tipoCobranca: TipoCobranca;
+  provedor?: 'mercadopago' | 'infinitepay' | 'pix_manual';  // NOVO
 }
 
-const getAvailableProviders = async (): Promise<AvailableProvider[]> => {
-  // Busca integrações ativas do usuário
-  // Retorna lista formatada para o seletor
+// Uso no createLinkCharge
+const createLinkCharge = async (request: CreateCobrancaRequest): Promise<CobrancaResponse> => {
+  // Provedor vem do modal, NAO mais do banco
+  const provedor = request.provedor;
+  
+  if (!provedor || provedor === 'pix_manual') {
+    // PIX Manual nao gera link - tratado separadamente
+    throw new Error('Selecione um provedor de pagamento');
+  }
+
+  let response;
+  if (provedor === 'infinitepay') {
+    response = await supabase.functions.invoke('gestao-infinitepay-create-link', { ... });
+  } else {
+    response = await supabase.functions.invoke('mercadopago-create-link', { ... });
+  }
+  // ...
 };
 ```
 
----
-
-## Fluxo de Interação
-
-```text
-1. Usuário clica em "Cobrar" no SessionPaymentsManager
-2. ChargeModal abre com overlay mais escuro
-3. Lista de provedores é carregada (apenas os conectados)
-4. Provedor padrão já vem selecionado
-5. Usuário pode mudar selecionando outro provedor
-6. Baseado na seleção:
-   - Se PIX MP: mostra seção de gerar Pix com QR Code
-   - Se MP Link: mostra seção de gerar Link
-   - Se InfinitePay: mostra seção de gerar Link
-   - Se PIX Manual: mostra chave PIX para copiar (sem QR automático)
-7. Ao gerar, usa a função correta do hook
-```
-
----
-
-## Visual dos Provedores
-
-| Provedor | Logo | Nome | Descrição |
-|----------|------|------|-----------|
-| `pix_mercadopago` | pix-logo.png | PIX | Confirmação automática |
-| `mercadopago_link` | mercadopago-logo.png | Mercado Pago | Pix + Cartão até Xx |
-| `infinitepay` | infinitepay-logo.png | InfinitePay | Pix + Cartão |
-| `pix_manual` | pix-logo.png | PIX Manual | Confirmação manual |
-
----
-
-## Lógica de Disponibilidade
-
-Apenas provedores CONECTADOS aparecem na lista:
+### Modificacao 3: ChargeModal Passa o Provedor na Chamada
 
 ```typescript
-const availableProviders = [];
+const handleGenerateCharge = async () => {
+  if (!selectedProvider) return;
 
-if (mercadoPagoStatus === 'conectado') {
-  // Adiciona PIX MP se habilitarPix === true
-  if (mercadoPagoSettings?.habilitarPix !== false) {
-    availableProviders.push({ id: 'pix_mercadopago', ... });
-  }
-  // Adiciona Link MP se habilitarCartao === true ou habilitarPix === true
-  availableProviders.push({ id: 'mercadopago_link', ... });
-}
+  // Determinar o provedor real para a Edge Function
+  const provedor = selectedProvider === 'infinitepay' ? 'infinitepay' : 'mercadopago';
 
-if (infinitePayStatus === 'conectado') {
-  availableProviders.push({ id: 'infinitepay', ... });
-}
+  const result = await createLinkCharge({
+    clienteId,
+    sessionId,
+    valor,
+    descricao: descricao || undefined,
+    tipoCobranca: 'link',
+    provedor,  // NOVO: passa o provedor selecionado
+  });
+};
+```
 
-if (pixManualStatus === 'conectado') {
-  availableProviders.push({ id: 'pix_manual', ... });
-}
+### Modificacao 4: Remover Opcao PIX Duplicada do ProviderSelector
+
+Remover `pix_mercadopago` da lista. O PIX do Mercado Pago ja aparece dentro do checkout do link.
+
+**Antes:**
+- PIX (Mercado Pago) - Confirmacao automatica
+- Mercado Pago - Pix + Cartao ate 12x
+- InfinitePay - Pix + Cartao
+- PIX Manual - Confirmacao manual
+
+**Depois:**
+- Mercado Pago - Pix + Cartao ate 12x
+- InfinitePay - Pix + Cartao
+- PIX Manual - Confirmacao manual
+
+### Modificacao 5: Atualizar Tipo ProvedorPagamento
+
+Adicionar `pix_manual` ao tipo para compatibilidade:
+
+```typescript
+export type ProvedorPagamento = 'mercadopago' | 'infinitepay' | 'pix_manual';
 ```
 
 ---
 
-## Resultado Esperado
+## Arquivos a Modificar
 
-1. **Modal se destaca** - Overlay mais escuro + borda mais visível
-2. **Provedores claros** - Lista com logos oficiais de cada meio de pagamento
-3. **Default inteligente** - Provedor padrão já vem selecionado
-4. **Comportamento correto** - Cada provedor gera o tipo de cobrança apropriado
-5. **Informativo** - Usuário sabe exatamente qual serviço está usando
+| Arquivo | Modificacao |
+|---------|-------------|
+| `src/hooks/useCobranca.ts` | Remover `getActivePaymentProvider()`, atualizar `createLinkCharge()` para receber provedor |
+| `src/types/cobranca.ts` | Adicionar `pix_manual` ao tipo, adicionar `provedor` ao CreateCobrancaRequest |
+| `src/components/cobranca/ChargeModal.tsx` | Passar provedor na chamada de `createLinkCharge()` |
+| `src/components/cobranca/ProviderSelector.tsx` | Remover opcao `pix_mercadopago` duplicada |
+| `src/components/cobranca/ProviderRow.tsx` | Atualizar tipo `SelectedProvider` |
+
+---
+
+## O Que NAO Sera Tocado
+
+| Arquivo | Motivo |
+|---------|--------|
+| `supabase/functions/gallery-create-payment/index.ts` | Edge Function exclusiva do Gallery |
+| `supabase/functions/infinitepay-webhook/index.ts` | Webhook compartilhado (ja funciona) |
+| `supabase/functions/mercadopago-webhook/index.ts` | Webhook compartilhado (ja funciona) |
+| `supabase/functions/check-payment-status/index.ts` | Fallback compartilhado (ja funciona) |
+
+---
+
+## Fluxo Corrigido
+
+```text
+1. Usuario abre ChargeModal no Gestao
+2. ProviderSelector carrega provedores ATIVOS (sem duplicatas)
+3. Lista exibe:
+   - Mercado Pago (pix + cartao no checkout)
+   - InfinitePay (pix + cartao)
+   - PIX Manual (se configurado)
+4. Usuario seleciona provedor (ex: InfinitePay)
+5. Usuario clica "Gerar Link"
+6. ChargeModal chama createLinkCharge({ ..., provedor: 'infinitepay' })
+7. Hook roteia para gestao-infinitepay-create-link (isolado do Gallery)
+8. Link gerado com sucesso!
+```
+
+---
+
+## Garantia de Isolamento
+
+O Gallery continuara funcionando porque:
+
+1. **Usa Edge Function diferente**: `gallery-create-payment` (nao tocada)
+2. **Usa Service Role**: Nao depende de JWT do fotografo
+3. **Detecta provedor automaticamente**: Busca do banco qual provedor o fotografo usa
+4. **Webhooks compartilhados**: `infinitepay-webhook` e `mercadopago-webhook` processam pagamentos de ambos projetos
+
+As modificacoes no Gestao afetam APENAS:
+- O hook `useCobranca.ts` (usado so pelo Gestao)
+- Os componentes em `src/components/cobranca/` (usados so pelo Gestao)
+
+---
+
+## Resumo das Mudancas
+
+1. **Tipo**: Adicionar `pix_manual` e `provedor` ao request
+2. **Hook**: Remover funcao problematica, receber provedor explicitamente
+3. **Modal**: Passar provedor selecionado para o hook
+4. **Selector**: Remover PIX duplicado do Mercado Pago
+
+Resultado: Modal funciona com multiplos provedores ativos, sem afetar o Gallery.
