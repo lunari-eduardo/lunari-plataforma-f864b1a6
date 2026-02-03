@@ -1,6 +1,7 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useState } from 'react';
 import { ActiveMethodsList } from './ActiveMethodsList';
 import { MercadoPagoCard, MercadoPagoCardRef } from './MercadoPagoCard';
+import { MercadoPagoSettingsModal, MercadoPagoSettings } from './MercadoPagoSettingsModal';
 import { InfinitePayCardNew, InfinitePayCardNewRef } from './InfinitePayCardNew';
 import { PixManualCard, PixManualCardRef, PixManualData } from './PixManualCard';
 import { ProvedorPagamento } from './ActiveMethodRow';
@@ -15,15 +16,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useState } from 'react';
 
 interface PagamentosTabProps {
   // Mercado Pago
   mercadoPagoStatus: 'conectado' | 'desconectado' | 'pendente' | 'erro';
   mercadoPagoConnectedAt?: string;
   mercadoPagoUserId?: string;
+  mercadoPagoSettings?: MercadoPagoSettings | null;
   onConnectMercadoPago: () => void;
   onDisconnectMercadoPago: () => Promise<void>;
+  onUpdateMercadoPagoSettings?: (settings: Partial<MercadoPagoSettings>) => Promise<void>;
   
   // InfinitePay
   infinitePayStatus: 'conectado' | 'desconectado';
@@ -49,8 +51,10 @@ export function PagamentosTab({
   mercadoPagoStatus,
   mercadoPagoConnectedAt,
   mercadoPagoUserId,
+  mercadoPagoSettings,
   onConnectMercadoPago,
   onDisconnectMercadoPago,
+  onUpdateMercadoPagoSettings,
   infinitePayStatus,
   infinitePayHandle,
   onSaveInfinitePay,
@@ -72,6 +76,8 @@ export function PagamentosTab({
     open: boolean;
     provedor: ProvedorPagamento | null;
   }>({ open: false, provedor: null });
+
+  const [mpSettingsOpen, setMpSettingsOpen] = useState(false);
 
   // Build active methods list
   const activeMethods: Array<{
@@ -107,7 +113,8 @@ export function PagamentosTab({
   const handleEdit = useCallback((provedor: ProvedorPagamento) => {
     switch (provedor) {
       case 'mercadopago':
-        mercadoPagoRef.current?.scrollIntoView();
+        // Open settings modal instead of just scrolling
+        setMpSettingsOpen(true);
         break;
       case 'infinitepay':
         infinitePayRef.current?.scrollIntoView();
@@ -169,8 +176,12 @@ export function PagamentosTab({
           status={mercadoPagoStatus}
           connectedAt={mercadoPagoConnectedAt}
           mpUserId={mercadoPagoUserId}
+          habilitarPix={mercadoPagoSettings?.habilitarPix}
+          habilitarCartao={mercadoPagoSettings?.habilitarCartao}
+          maxParcelas={mercadoPagoSettings?.maxParcelas}
           onConnect={onConnectMercadoPago}
           onDisconnect={onDisconnectMercadoPago}
+          onConfigure={() => setMpSettingsOpen(true)}
           loading={connecting}
         />
 
@@ -225,6 +236,19 @@ export function PagamentosTab({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Mercado Pago Settings Modal */}
+      {onUpdateMercadoPagoSettings && (
+        <MercadoPagoSettingsModal
+          open={mpSettingsOpen}
+          onOpenChange={setMpSettingsOpen}
+          settings={mercadoPagoSettings || null}
+          onSave={async (settings) => {
+            await onUpdateMercadoPagoSettings(settings);
+          }}
+          loading={loading}
+        />
+      )}
     </div>
   );
 }

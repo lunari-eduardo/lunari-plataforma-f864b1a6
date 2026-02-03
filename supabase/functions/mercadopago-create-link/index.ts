@@ -6,11 +6,18 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Helper function to get user's Mercado Pago token
-async function getUserMpToken(supabase: any, userId: string): Promise<string | null> {
+// Helper function to get user's Mercado Pago token and settings
+async function getUserMpIntegration(supabase: any, userId: string): Promise<{
+  accessToken: string | null;
+  settings: {
+    habilitarPix?: boolean;
+    habilitarCartao?: boolean;
+    maxParcelas?: number;
+  };
+}> {
   const { data, error } = await supabase
     .from('usuarios_integracoes')
-    .select('access_token, status')
+    .select('access_token, status, dados_extras')
     .eq('user_id', userId)
     .eq('provedor', 'mercadopago')
     .eq('status', 'ativo')
@@ -18,10 +25,17 @@ async function getUserMpToken(supabase: any, userId: string): Promise<string | n
 
   if (error || !data?.access_token) {
     console.log('[mercadopago-create-link] No active MP integration for user:', userId);
-    return null;
+    return { accessToken: null, settings: {} };
   }
 
-  return data.access_token;
+  return {
+    accessToken: data.access_token,
+    settings: (data.dados_extras || {}) as {
+      habilitarPix?: boolean;
+      habilitarCartao?: boolean;
+      maxParcelas?: number;
+    },
+  };
 }
 
 serve(async (req) => {
@@ -50,8 +64,8 @@ serve(async (req) => {
 
     console.log('[mercadopago-create-link] User authenticated:', user.id);
 
-    // Get user's Mercado Pago token - REQUIRED
-    const mercadoPagoToken = await getUserMpToken(supabase, user.id);
+    // Get user's Mercado Pago token and settings
+    const { accessToken: mercadoPagoToken, settings: mpSettings } = await getUserMpIntegration(supabase, user.id);
     
     if (!mercadoPagoToken) {
       return new Response(
@@ -64,13 +78,20 @@ serve(async (req) => {
       );
     }
 
+    // Apply settings with defaults
+    const pixHabilitado = mpSettings?.habilitarPix !== false;
+    const cartaoHabilitado = mpSettings?.habilitarCartao !== false;
+    const maxParcelas = Math.min(Math.max(1, mpSettings?.maxParcelas || 12), 24);
+
+    console.log('[mercadopago-create-link] Settings - PIX:', pixHabilitado, 'Cartao:', cartaoHabilitado, 'Parcelas:', maxParcelas);
+
     const rawBody = await req.clone().text();
     console.log('[mercadopago-create-link] Raw body:', rawBody);
 
     const body = await req.json();
     console.log('[mercadopago-create-link] Parsed body:', JSON.stringify(body));
 
-    const { clienteId, sessionId, valor, descricao, installments } = body;
+    const { clienteId, sessionId, valor, descricao } = body;
 
     // FALLBACK: Se clienteId vazio mas temos sessionId, buscar do banco
     let clienteIdFinal = clienteId;
@@ -110,6 +131,13 @@ serve(async (req) => {
 
     if (clienteError || !cliente) throw new Error('Cliente não encontrado');
 
+    // Build excluded payment types based on settings
+    const excludedTypes: Array<{ id: string }> = [{ id: 'ticket' }]; // Always exclude boleto
+    if (!cartaoHabilitado) {
+      excludedTypes.push({ id: 'credit_card' });
+      excludedTypes.push({ id: 'debit_card' });
+    }
+
     const preferenceData = {
       items: [{
         title: descricao || `Cobrança - ${cliente.nome}`,
@@ -125,8 +153,8 @@ serve(async (req) => {
       // Sem auto_return - evita redirecionamento para domínio inexistente
       external_reference: `${user.id}|${clienteIdFinal}|${textSessionId || 'avulso'}`,
       payment_methods: {
-        installments: installments || 12,
-        excluded_payment_types: [],
+        installments: maxParcelas,
+        excluded_payment_types: excludedTypes,
       },
       expires: true,
       expiration_date_from: new Date().toISOString(),

@@ -10,6 +10,7 @@ interface MercadoPagoCardProps {
   connectedAt?: string;
   mpUserId?: string;
   habilitarPix?: boolean;
+  habilitarCartao?: boolean;
   maxParcelas?: number;
   onConnect: () => void;
   onDisconnect: () => void;
@@ -26,7 +27,8 @@ export const MercadoPagoCard = forwardRef<MercadoPagoCardRef, MercadoPagoCardPro
   connectedAt,
   mpUserId,
   habilitarPix = true,
-  maxParcelas = 3,
+  habilitarCartao = true,
+  maxParcelas = 12,
   onConnect,
   onDisconnect,
   onConfigure,
@@ -87,10 +89,10 @@ export const MercadoPagoCard = forwardRef<MercadoPagoCardRef, MercadoPagoCardPro
                     PIX
                   </Badge>
                 )}
-                {maxParcelas > 1 && (
+                {habilitarCartao && (
                   <Badge variant="secondary" className="text-xs gap-1">
                     <CreditCard className="w-3 h-3" />
-                    Cartão até {maxParcelas}x
+                    {maxParcelas > 1 ? `Cartão até ${maxParcelas}x` : 'Cartão à vista'}
                   </Badge>
                 )}
               </div>
