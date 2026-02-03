@@ -17,6 +17,7 @@ export function IntegracoesTab() {
     mercadoPagoStatus,
     mercadoPagoConnectedAt,
     mercadoPagoUserId,
+    mercadoPagoSettings,
     infinitePayStatus,
     infinitePayHandle,
     pixManualStatus,
@@ -25,6 +26,7 @@ export function IntegracoesTab() {
     connectMercadoPago,
     disconnectMercadoPago,
     handleOAuthCallback,
+    updateMercadoPagoSettings,
     saveInfinitePayHandle,
     disconnectInfinitePay,
     savePixManual,
@@ -122,8 +124,10 @@ export function IntegracoesTab() {
             mercadoPagoStatus={mercadoPagoStatus}
             mercadoPagoConnectedAt={mercadoPagoConnectedAt}
             mercadoPagoUserId={mercadoPagoUserId}
+            mercadoPagoSettings={mercadoPagoSettings}
             onConnectMercadoPago={connectMercadoPago}
             onDisconnectMercadoPago={disconnectMercadoPago}
+            onUpdateMercadoPagoSettings={updateMercadoPagoSettings}
             infinitePayStatus={infinitePayStatus}
             infinitePayHandle={infinitePayHandle}
             onSaveInfinitePay={saveInfinitePayHandle}

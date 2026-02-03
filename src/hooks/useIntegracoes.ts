@@ -20,6 +20,12 @@ interface Integracao {
 export type ProvedorPagamento = 'mercadopago' | 'infinitepay' | 'pix_manual';
 export type ProvedorPagamentoAtivo = ProvedorPagamento | null;
 
+export interface MercadoPagoSettings {
+  habilitarPix: boolean;
+  habilitarCartao: boolean;
+  maxParcelas: number;
+}
+
 interface UseIntegracoesReturn {
   integracoes: Integracao[];
   loading: boolean;
@@ -29,9 +35,11 @@ interface UseIntegracoesReturn {
   mercadoPagoStatus: 'conectado' | 'desconectado' | 'pendente' | 'erro';
   mercadoPagoConnectedAt?: string;
   mercadoPagoUserId?: string;
+  mercadoPagoSettings: MercadoPagoSettings | null;
   connectMercadoPago: () => void;
   disconnectMercadoPago: () => Promise<void>;
   handleOAuthCallback: (code: string) => Promise<boolean>;
+  updateMercadoPagoSettings: (settings: Partial<MercadoPagoSettings>) => Promise<void>;
   
   // InfinitePay
   infinitePayStatus: 'conectado' | 'desconectado';
@@ -102,6 +110,15 @@ export function useIntegracoes(): UseIntegracoesReturn {
         : 'desconectado';
   const mercadoPagoConnectedAt = mercadoPagoIntegration?.conectado_em || undefined;
   const mercadoPagoUserId = mercadoPagoIntegration?.mp_user_id || undefined;
+  
+  // Mercado Pago Settings from dados_extras
+  const mercadoPagoSettings: MercadoPagoSettings | null = mercadoPagoIntegration?.status === 'ativo'
+    ? {
+        habilitarPix: (mercadoPagoIntegration.dados_extras?.habilitarPix as boolean) !== false,
+        habilitarCartao: (mercadoPagoIntegration.dados_extras?.habilitarCartao as boolean) !== false,
+        maxParcelas: (mercadoPagoIntegration.dados_extras?.maxParcelas as number) || 12,
+      }
+    : null;
 
   // ================== INFINITEPAY ==================
   const infinitePayIntegration = integracoes.find(i => i.provedor === 'infinitepay');
@@ -289,6 +306,59 @@ export function useIntegracoes(): UseIntegracoesReturn {
     }
   }, [user, fetchIntegracoes]);
 
+  // ================== MERCADO PAGO SETTINGS ==================
+
+  const updateMercadoPagoSettings = useCallback(async (settings: Partial<MercadoPagoSettings>) => {
+    if (!user) {
+      toast.error('Você precisa estar logado');
+      return;
+    }
+
+    try {
+      const { data: existing, error: fetchError } = await supabase
+        .from('usuarios_integracoes')
+        .select('id, dados_extras')
+        .eq('user_id', user.id)
+        .eq('provedor', 'mercadopago')
+        .single();
+
+      if (fetchError || !existing) {
+        throw new Error('Integração do Mercado Pago não encontrada');
+      }
+
+      const currentSettings = {
+        habilitarPix: (existing.dados_extras as Record<string, unknown>)?.habilitarPix !== false,
+        habilitarCartao: (existing.dados_extras as Record<string, unknown>)?.habilitarCartao !== false,
+        maxParcelas: ((existing.dados_extras as Record<string, unknown>)?.maxParcelas as number) || 12,
+      };
+
+      const newSettings = { ...currentSettings, ...settings };
+
+      const { error: updateError } = await supabase
+        .from('usuarios_integracoes')
+        .update({
+          dados_extras: {
+            ...(existing.dados_extras as Record<string, unknown>),
+            habilitarPix: newSettings.habilitarPix,
+            habilitarCartao: newSettings.habilitarCartao,
+            maxParcelas: newSettings.maxParcelas,
+          },
+        })
+        .eq('id', existing.id);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      toast.success('Configurações do Mercado Pago atualizadas');
+      await fetchIntegracoes();
+
+    } catch (error) {
+      console.error('[useIntegracoes] Update MP settings error:', error);
+      toast.error('Erro ao atualizar configurações');
+    }
+  }, [user, fetchIntegracoes]);
+
   // ================== INFINITEPAY ACTIONS ==================
 
   const saveInfinitePayHandle = useCallback(async (handle: string) => {
@@ -426,9 +496,11 @@ export function useIntegracoes(): UseIntegracoesReturn {
     mercadoPagoStatus,
     mercadoPagoConnectedAt,
     mercadoPagoUserId,
+    mercadoPagoSettings,
     connectMercadoPago,
     disconnectMercadoPago,
     handleOAuthCallback,
+    updateMercadoPagoSettings,
     
     // InfinitePay
     infinitePayStatus,
