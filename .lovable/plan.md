@@ -1,212 +1,153 @@
 
-# Diagnóstico: Webhook Mercado Pago Não Recebe Notificações
+# Plano: Corrigir Edição de Nome do Cliente no Modal de Agendamento
 
-## Resumo do Problema
+## Diagnóstico Detalhado
 
-Você fez um pagamento teste de R$5,00 via checkout PIX do Mercado Pago, mas:
-- O status da cobrança permaneceu "pendente" no banco
-- O pagamento não foi confirmado no checkout nem no workflow
-- **Nenhum log aparece no webhook** (zero chamadas recebidas)
+### Problema 1: Agendamento Pendente - "Cliente não vinculado"
 
-## Evidências Encontradas
+**Causa raiz:** O agendamento pendente da "Maria Eduarda" foi criado com `cliente_id = NULL` no banco de dados, apesar de existir um cliente com esse nome no CRM.
 
-### 1. Cobrança no Banco (status incorreto)
+| Campo | Valor no Banco |
+|-------|----------------|
+| title | Maria Eduarda |
+| cliente_id | NULL |
+| status | a confirmar |
 
-| Campo | Valor |
-|-------|-------|
-| id | 044097b2-8a7a-4504-a822-3a8adcc27e9c |
-| valor | R$ 5,00 |
-| mp_preference_id | 3078306387-b434e3e8-d66e-4019-b540-1f32af0db3e2 |
-| mp_payment_id | NULL (deveria ter sido preenchido pelo webhook) |
-| status | **pendente** (deveria ser "pago") |
-| session_id | workflow-1769982471122-5ax1uk7z2ke |
-
-### 2. Logs do Webhook
-
-```text
-Resultado: ZERO logs encontrados
-```
-
-Isso significa que o Mercado Pago **nunca chamou** a Edge Function `mercadopago-webhook`.
-
-### 3. Código da Preference (mercadopago-create-link)
+O `ClientEditModal` verifica `clienteId` logo no início e exibe a mensagem de erro se estiver vazio:
 
 ```typescript
-const preferenceData = {
-  items: [...],
-  payer: {...},
-  external_reference: `${user.id}|${clienteIdFinal}|${textSessionId || 'avulso'}`,
-  payment_methods: {...},
-  expires: true,
-  // ❌ FALTA: notification_url
-};
+// ClientEditModal.tsx - linha 134
+if (!clienteId) {
+  return (
+    // Modal "Cliente não vinculado"
+  );
+}
 ```
 
-**O campo `notification_url` não está sendo enviado na criação da preference!**
+**Solução:** Buscar cliente por nome quando `clienteId` for vazio, permitindo vincular automaticamente.
 
 ---
 
-## Causa Raiz
+### Problema 2: Cursor Move para o Final ao Digitar
 
-O Mercado Pago oferece **duas formas** de receber notificações:
-
-1. **Webhook Geral (Dashboard)**: Configurado no painel do MP, recebe TODAS as notificações da conta
-2. **notification_url por Preference**: URL específica enviada em cada cobrança
-
-### Problema Atual
-
-- A Edge Function `mercadopago-create-link` **não envia** `notification_url` na preference
-- O webhook do Mercado Pago **não está configurado** no painel do aplicativo OAuth
-- Resultado: Mercado Pago não sabe para onde enviar as notificações
-
-### Comparação: InfinitePay vs Mercado Pago
-
-| Provedor | Webhook Configurado | Funciona? |
-|----------|---------------------|-----------|
-| **InfinitePay** | Sim - `webhook_url` enviado em cada chamada | ✅ Funciona |
-| **Mercado Pago** | Não - `notification_url` ausente | ❌ Não funciona |
-
----
-
-## Solução Proposta
-
-Adicionar `notification_url` na criação de preferences do Mercado Pago:
+**Causa raiz:** A função `handleNomeChange` aplica `toTitleCase()` a cada caractere digitado:
 
 ```typescript
-// Em mercadopago-create-link/index.ts
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-const webhookUrl = `${SUPABASE_URL}/functions/v1/mercadopago-webhook`;
-
-const preferenceData = {
-  items: [...],
-  payer: {...},
-  external_reference: `${user.id}|${clienteIdFinal}|${textSessionId || 'avulso'}`,
-  notification_url: webhookUrl,  // <-- ADICIONAR
-  payment_methods: {...},
-  expires: true,
-  ...
+// ClientEditModal.tsx - linha 69-71
+const handleNomeChange = (value: string) => {
+  setFormData(prev => ({ ...prev, nome: toTitleCase(value) }));
 };
 ```
 
-### Arquivos a Modificar
+A função `toTitleCase()` transforma o texto inteiro, causando re-render que move o cursor para o final.
+
+**Solução:** Aplicar `toTitleCase()` apenas no `onBlur`, não no `onChange`.
+
+---
+
+### Problema 3: Nome Não Atualiza no Modal Após Edição
+
+**Causa raiz:** O `AppointmentDetails` exibe `formData.title` que é inicializado uma vez via `useState`:
+
+```typescript
+// AppointmentDetails.tsx - linha 40-49
+const [formData, setFormData] = useState({
+  title: appointment.title,  // Valor fixo no momento da renderização
+  // ...
+});
+```
+
+Quando o `ClientEditModal` atualiza o cliente no banco, o `formData.title` não é atualizado porque:
+1. O modal não tem callback `onSuccess` que atualize o estado pai
+2. O estado `formData` é local e não reage a mudanças externas
+
+**Solução:** Adicionar callback `onSuccess` que atualiza `formData.title` com o novo nome do cliente.
+
+---
+
+## Alterações Necessárias
+
+### 1. ClientEditModal.tsx
+
+**1.1 - Buscar cliente por nome quando clienteId vazio:**
+
+Modificar a lógica inicial para buscar o cliente pelo nome se `clienteId` estiver vazio.
+
+**1.2 - Corrigir comportamento do cursor:**
+
+Aplicar `toTitleCase` apenas no `onBlur`, manter valor bruto no `onChange`.
+
+```typescript
+// Estado para nome bruto (sem transformação)
+const [nomeRaw, setNomeRaw] = useState('');
+
+// onChange: apenas atualiza o valor bruto
+const handleNomeChange = (value: string) => {
+  setNomeRaw(value);
+  setFormData(prev => ({ ...prev, nome: value }));
+};
+
+// onBlur: aplica Title Case
+const handleNomeBlur = () => {
+  const formatted = toTitleCase(formData.nome);
+  setNomeRaw(formatted);
+  setFormData(prev => ({ ...prev, nome: formatted }));
+};
+```
+
+---
+
+### 2. AppointmentDetails.tsx
+
+**2.1 - Adicionar callback onSuccess ao ClientEditModal:**
+
+```typescript
+<ClientEditModal
+  open={showClientEditModal}
+  onOpenChange={setShowClientEditModal}
+  clienteId={appointment.clienteId || ''}
+  clienteNome={appointment.client}
+  onSuccess={(novoNome) => {
+    // Atualizar formData.title com o novo nome
+    setFormData(prev => ({ ...prev, title: novoNome }));
+  }}
+/>
+```
+
+**2.2 - Modificar interface do ClientEditModal:**
+
+```typescript
+interface ClientEditModalProps {
+  // ... props existentes
+  onSuccess?: (novoNome?: string) => void;  // Adicionar parâmetro novoNome
+}
+```
+
+---
+
+## Resumo das Modificações
 
 | Arquivo | Modificação |
 |---------|-------------|
-| `supabase/functions/mercadopago-create-link/index.ts` | Adicionar `notification_url` na preference |
-| `supabase/functions/gallery-create-payment/index.ts` | Adicionar `notification_url` na seção Mercado Pago |
-
----
-
-## Mudanças Técnicas
-
-### 1. mercadopago-create-link/index.ts
-
-**Antes (linha 141-162):**
-```typescript
-const preferenceData = {
-  items: [{...}],
-  payer: {...},
-  external_reference: `${user.id}|${clienteIdFinal}|${textSessionId || 'avulso'}`,
-  payment_methods: {
-    installments: maxParcelas,
-    excluded_payment_types: excludedTypes,
-  },
-  expires: true,
-  expiration_date_from: new Date().toISOString(),
-  expiration_date_to: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-};
-```
-
-**Depois:**
-```typescript
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const webhookUrl = `${supabaseUrl}/functions/v1/mercadopago-webhook`;
-
-const preferenceData = {
-  items: [{...}],
-  payer: {...},
-  external_reference: `${user.id}|${clienteIdFinal}|${textSessionId || 'avulso'}`,
-  notification_url: webhookUrl,  // <-- NOVO
-  payment_methods: {
-    installments: maxParcelas,
-    excluded_payment_types: excludedTypes,
-  },
-  expires: true,
-  expiration_date_from: new Date().toISOString(),
-  expiration_date_to: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-};
-```
-
-### 2. gallery-create-payment/index.ts
-
-**Antes (linha 234-255):**
-```typescript
-const preferenceData = {
-  items: [{...}],
-  payer: {...},
-  external_reference: `${photographerId}|${clienteId}|${finalSessionId || "avulso"}`,
-  payment_methods: {...},
-  expires: true,
-  ...
-};
-```
-
-**Depois:**
-```typescript
-const webhookUrl = `${SUPABASE_URL}/functions/v1/mercadopago-webhook`;
-
-const preferenceData = {
-  items: [{...}],
-  payer: {...},
-  external_reference: `${photographerId}|${clienteId}|${finalSessionId || "avulso"}`,
-  notification_url: webhookUrl,  // <-- NOVO
-  payment_methods: {...},
-  expires: true,
-  ...
-};
-```
+| `src/components/agenda/ClientEditModal.tsx` | Buscar cliente por nome, corrigir cursor, retornar nome no callback |
+| `src/components/agenda/AppointmentDetails.tsx` | Receber novo nome no onSuccess e atualizar formData.title |
 
 ---
 
 ## Fluxo Corrigido
 
 ```text
-1. Usuario gera link Mercado Pago (ChargeModal)
-2. mercadopago-create-link envia preference COM notification_url
-3. Cliente paga via PIX no checkout
-4. Mercado Pago envia POST para notification_url
-5. mercadopago-webhook recebe e processa:
-   - Atualiza cobranca.status = 'pago'
-   - Cria clientes_transacoes
-   - Atualiza clientes_sessoes.valor_pago
-6. Frontend reflete o pagamento automaticamente
+1. Usuário clica no nome do cliente (pendente ou confirmado)
+2. ClientEditModal abre:
+   - Se clienteId vazio: busca cliente por nome
+   - Se não encontrar: oferece criar vínculo
+3. Usuário edita nome:
+   - onChange: mantém texto como digitado (preserva cursor)
+   - onBlur: aplica Title Case
+4. Usuário clica Salvar:
+   - Atualiza cliente no banco
+   - Chama onSuccess(novoNome)
+5. AppointmentDetails recebe callback:
+   - Atualiza formData.title = novoNome
+   - UI reflete imediatamente o novo nome
 ```
-
----
-
-## Verificação Pós-Implementação
-
-Após o deploy, ao fazer um novo pagamento teste:
-
-1. Verificar logs do webhook:
-   ```
-   [mercadopago-webhook] Received: {"type":"payment","data":{"id":"..."}}
-   [mercadopago-webhook] Cobrança encontrada por preference_id: xxx
-   [mercadopago-webhook] Cobrança atualizada para status: pago
-   ```
-
-2. Verificar banco:
-   ```sql
-   SELECT status, mp_payment_id FROM cobrancas WHERE valor = 5 ORDER BY created_at DESC LIMIT 1;
-   -- Esperado: status='pago', mp_payment_id preenchido
-   ```
-
----
-
-## Resumo
-
-| Problema | Causa | Solução |
-|----------|-------|---------|
-| Webhook não recebe notificações | `notification_url` ausente na preference | Adicionar URL do webhook em cada preference |
-| Cobrança permanece pendente | Mercado Pago não sabe onde notificar | Mesmo que acima |
-| valor_pago não atualiza | Transação não criada (webhook não executou) | Mesmo que acima |
