@@ -1,254 +1,78 @@
 
+# Plano: Re-deploy da Edge Function mercadopago-create-link
 
-# Plano: Corrigir Geração de PIX BR Code Inválido
+## Confirmação de Isolamento
 
-## Diagnóstico Detalhado
+A arquitetura de pagamentos JÁ está completamente isolada entre os projetos:
 
-Analisei o código PIX gerado:
-```
-00020126360014br.gov.bcb.pix0114+555199828794852040000530398654045.005802BR5920EDUARDO VALMOR DIEHL6009SAO PAULO62240520workflow-176998247116304EE6D
-```
+| Projeto | Edge Function | Autenticação | Uso |
+|---------|--------------|--------------|-----|
+| **Gestão** | `mercadopago-create-link` | JWT do usuário | Apenas Gestão |
+| **Gestão** | `gestao-infinitepay-create-link` | JWT do usuário | Apenas Gestão |
+| **Gallery** | `gallery-create-payment` | Service Role | Apenas Gallery |
 
-### Problemas Identificados
+O Gallery **nunca chama** `mercadopago-create-link`. Ele tem sua própria função que:
+1. Recebe `galleryId` ou `sessionId`
+2. Busca o fotógrafo no banco
+3. Busca o provedor ativo do fotógrafo
+4. Chama diretamente as APIs do Mercado Pago ou InfinitePay
 
-| Problema | Campo | Valor Atual | Valor Esperado |
-|----------|-------|-------------|----------------|
-| ❌ Hífen no txId | 62.05 | `workflow-1769982471163` | Apenas `[A-Za-z0-9]` |
-| ❌ txId muito longo | 62.05 | 23 caracteres | Máximo 25, mas sem caracteres especiais |
-
-### Especificação Oficial do txId (Campo 62.05)
-
-Conforme o Manual de Padrões para Iniciação do PIX do Banco Central:
-- **Caracteres permitidos**: Apenas alfanuméricos `[A-Za-z0-9]`
-- **Comprimento**: 1 a 25 caracteres
-- **Não permitidos**: Hífens `-`, underscores `_`, espaços e outros caracteres especiais
-- **Valor padrão**: Se não houver identificador, usar `***`
-
-O sessionId do Supabase é um UUID: `workflow-17699824711...` que contém hífens, causando a invalidação do código.
+Isso significa que qualquer mudança em `mercadopago-create-link` **não afeta o Gallery**.
 
 ---
 
-## Modificações Necessárias
+## Diagnóstico do Erro
 
-### Arquivo: `src/utils/pixUtils.ts`
-
-**1. Criar função para sanitizar o txId:**
+Os logs mostram que a versão deployada da `mercadopago-create-link` está desatualizada. A versão no repositório já está correta e usa autenticação via JWT:
 
 ```typescript
-// Remove caracteres não-alfanuméricos do identificador
-function sanitizeTxId(id: string): string {
-  if (!id || id === '***') return '***';
-  
-  // Remove tudo que não seja A-Za-z0-9
-  const sanitized = id.replace(/[^A-Za-z0-9]/g, '');
-  
-  // Se ficou vazio após sanitização, usar ***
-  if (!sanitized) return '***';
-  
-  // Limitar a 25 caracteres
-  return sanitized.substring(0, 25);
-}
+// Código atual no repositório (CORRETO)
+const token = authHeader.replace('Bearer ', '');
+const { data: { user } } = await supabase.auth.getUser(token);
+// user.id é usado automaticamente
 ```
 
-**2. Atualizar a função `generatePixPayload()`:**
-
-Linha 80 atual:
-```typescript
-const txId = identificador.substring(0, 25);
-```
-
-Nova implementação:
-```typescript
-const txId = sanitizeTxId(identificador);
-```
-
-**3. Validação adicional de campos:**
-
-Garantir que o nome do beneficiário também não tenha caracteres inválidos (já está sendo tratado pela função `normalizeText`, mas podemos reforçar).
+Mas a versão deployada ainda espera `photographer_id` ou `userId` no body (versão antiga).
 
 ---
 
-## Código Corrigido Completo
+## Solução
 
-```typescript
-/**
- * PIX BR Code (EMV) Generator
- * Generates valid PIX payment codes following Brazilian Central Bank standards
- */
+Fazer o **re-deploy** da Edge Function `mercadopago-create-link` para sincronizar o código atual do repositório com o ambiente de produção.
 
-// CRC16-CCITT calculation (required for PIX standard)
-function crc16(str: string): string {
-  let crc = 0xFFFF;
-  for (let i = 0; i < str.length; i++) {
-    crc ^= str.charCodeAt(i) << 8;
-    for (let j = 0; j < 8; j++) {
-      if ((crc & 0x8000) !== 0) {
-        crc = (crc << 1) ^ 0x1021;
-      } else {
-        crc = crc << 1;
-      }
-    }
-  }
-  return (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
-}
+### Ação Necessária
 
-// Format EMV field (ID + length + value)
-function emvField(id: string, value: string): string {
-  const length = value.length.toString().padStart(2, '0');
-  return `${id}${length}${value}`;
-}
+Executar o deploy da função `mercadopago-create-link` para atualizar a versão no Supabase.
 
-// Remove accents and special characters, keep only A-Z 0-9 and allowed chars
-function normalizeText(text: string): string {
-  return text
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Remove accents
-    .replace(/[^A-Za-z0-9 ]/g, '')   // Remove special chars except space
-    .toUpperCase()
-    .trim();
-}
+### Verificação Pós-Deploy
 
-// Sanitize txId - CRITICAL: only alphanumeric allowed
-function sanitizeTxId(id: string): string {
-  if (!id || id === '***') return '***';
-  
-  // Remove everything that is not A-Za-z0-9
-  const sanitized = id.replace(/[^A-Za-z0-9]/g, '');
-  
-  // If empty after sanitization, use default
-  if (!sanitized) return '***';
-  
-  // Max 25 characters
-  return sanitized.substring(0, 25);
-}
+Após o deploy, ao gerar um link Mercado Pago:
 
-// Normalize PIX key - add country code for phone numbers
-function normalizarChavePix(chave: string): string {
-  let chaveLimpa = chave.trim();
-  
-  // If it looks like a phone number (starts with digit), format with country code
-  if (/^[0-9]/.test(chaveLimpa)) {
-    // Remove non-numeric characters
-    chaveLimpa = chaveLimpa.replace(/\D/g, '');
-    
-    // If 10 or 11 digits (Brazilian phone), add +55 country code
-    if (chaveLimpa.length === 10 || chaveLimpa.length === 11) {
-      chaveLimpa = '+55' + chaveLimpa;
-    }
-  }
-  
-  return chaveLimpa;
-}
+**Logs esperados (versão nova):**
+```
+[mercadopago-create-link] User authenticated: db0ca3d8-xxxx
+[mercadopago-create-link] Raw body: {"clienteId":"xxx",...}
+```
 
-export interface PixPayloadParams {
-  chavePix: string;
-  nomeBeneficiario: string;
-  valor: number;
-  cidade?: string;
-  identificador?: string;
-}
-
-/**
- * Generates a valid PIX EMV payload (BR Code)
- * This payload can be used to generate QR codes or as "copia e cola"
- */
-export function generatePixPayload({
-  chavePix,
-  nomeBeneficiario,
-  valor,
-  cidade = 'SAO PAULO',
-  identificador = '***',
-}: PixPayloadParams): string {
-  // Normalize PIX key (add +55 for phone numbers)
-  const chaveNormalizada = normalizarChavePix(chavePix);
-  
-  // Format and sanitize inputs
-  const nomeFormatado = normalizeText(nomeBeneficiario).substring(0, 25);
-  const cidadeFormatada = normalizeText(cidade).substring(0, 15);
-  const valorFormatado = valor.toFixed(2);
-  
-  // CRITICAL: txId must be alphanumeric only [A-Za-z0-9]
-  const txId = sanitizeTxId(identificador);
-
-  // Build EMV payload
-  let payload = '';
-
-  // 00 - Payload Format Indicator (mandatory)
-  payload += emvField('00', '01');
-
-  // 26 - Merchant Account Information (PIX)
-  const pixAccountInfo = emvField('00', 'br.gov.bcb.pix') + emvField('01', chaveNormalizada);
-  payload += emvField('26', pixAccountInfo);
-
-  // 52 - Merchant Category Code (0000 = not specified)
-  payload += emvField('52', '0000');
-
-  // 53 - Transaction Currency (986 = BRL)
-  payload += emvField('53', '986');
-
-  // 54 - Transaction Amount
-  if (valor > 0) {
-    payload += emvField('54', valorFormatado);
-  }
-
-  // 58 - Country Code
-  payload += emvField('58', 'BR');
-
-  // 59 - Merchant Name
-  payload += emvField('59', nomeFormatado);
-
-  // 60 - Merchant City
-  payload += emvField('60', cidadeFormatada);
-
-  // 62 - Additional Data Field (transaction ID)
-  const additionalData = emvField('05', txId);
-  payload += emvField('62', additionalData);
-
-  // 63 - CRC16 (checksum - MUST be the last field)
-  payload += '6304';
-  const checksum = crc16(payload);
-  payload += checksum;
-
-  return payload;
-}
+**Logs da versão antiga (problema atual):**
+```
+Nenhum ID de fotógrafo fornecido (photographer_id ou userId)
 ```
 
 ---
 
-## Exemplo de Resultado Corrigido
+## Impacto
 
-**Antes (inválido):**
-```
-...62240520workflow-176998247116304EE6D
-```
-
-**Depois (válido):**
-```
-...62190515workflow17699826304XXXX
-```
-
-Onde:
-- `62 19` = Campo 62 com 19 caracteres
-- `05 15` = Subcampo 05 com 15 caracteres
-- `workflow1769982` = txId sanitizado (sem hífens)
-- `6304` + CRC recalculado
+| Componente | Status | Impacto |
+|------------|--------|---------|
+| Gestão - ChargeModal | ✅ OK | Código correto, aguardando deploy |
+| Gestão - useCobranca | ✅ OK | Envia dados corretos |
+| Edge Function (repo) | ✅ OK | Código atualizado |
+| Edge Function (deploy) | ❌ Desatualizada | Precisa re-deploy |
+| Gallery | ✅ Não afetado | Usa função separada |
 
 ---
 
-## Resumo das Alterações
+## Resumo
 
-| Arquivo | Modificação |
-|---------|-------------|
-| `src/utils/pixUtils.ts` | Adicionar função `sanitizeTxId()` e atualizar `normalizeText()` |
-
----
-
-## Validação
-
-Após a correção, o código PIX gerado deve:
-
-1. Conter apenas caracteres alfanuméricos no campo txId
-2. Ter comprimento máximo de 25 caracteres no txId
-3. Ser aceito por qualquer aplicativo de banco brasileiro
-4. Ter CRC válido para o payload correto
-
+Não é necessário modificar nenhum arquivo de código. A correção consiste apenas em **fazer o deploy da Edge Function `mercadopago-create-link`** para aplicar a versão atual do repositório no Supabase.
