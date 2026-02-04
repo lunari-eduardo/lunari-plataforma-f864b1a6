@@ -138,6 +138,9 @@ serve(async (req) => {
       excludedTypes.push({ id: 'debit_card' });
     }
 
+    // Webhook URL for payment notifications
+    const webhookUrl = `${supabaseUrl}/functions/v1/mercadopago-webhook`;
+
     const preferenceData = {
       items: [{
         title: descricao || `Cobrança - ${cliente.nome}`,
@@ -152,6 +155,7 @@ serve(async (req) => {
       // Sem back_urls - cliente permanece na página de sucesso do Mercado Pago
       // Sem auto_return - evita redirecionamento para domínio inexistente
       external_reference: `${user.id}|${clienteIdFinal}|${textSessionId || 'avulso'}`,
+      notification_url: webhookUrl,
       payment_methods: {
         installments: maxParcelas,
         excluded_payment_types: excludedTypes,
