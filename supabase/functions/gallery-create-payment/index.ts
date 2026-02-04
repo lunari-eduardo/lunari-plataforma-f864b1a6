@@ -230,6 +230,9 @@ serve(async (req) => {
         throw new Error("Token Mercado Pago não configurado");
       }
 
+      // Webhook URL for payment notifications
+      const webhookUrl = `${SUPABASE_URL}/functions/v1/mercadopago-webhook`;
+
       // Criar preferência de pagamento
       const preferenceData = {
         items: [
@@ -245,6 +248,7 @@ serve(async (req) => {
           name: cliente.nome,
         },
         external_reference: `${photographerId}|${clienteId}|${finalSessionId || "avulso"}`,
+        notification_url: webhookUrl,
         payment_methods: {
           installments: 12,
           excluded_payment_types: [],
