@@ -24,7 +24,7 @@ interface ClientEditModalProps {
   onOpenChange: (open: boolean) => void;
   clienteId: string;
   clienteNome?: string;
-  onSuccess?: () => void;
+  onSuccess?: (novoNome?: string) => void;
 }
 
 export function ClientEditModal({ 
@@ -34,8 +34,9 @@ export function ClientEditModal({
   clienteNome,
   onSuccess 
 }: ClientEditModalProps) {
-  const { getClienteById, atualizarCliente, isLoading: clientesLoading } = useClientesRealtime();
+  const { getClienteById, getClienteByNome, atualizarCliente, isLoading: clientesLoading } = useClientesRealtime();
   const [isSaving, setIsSaving] = useState(false);
+  const [resolvedClienteId, setResolvedClienteId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     nome: '',
     email: '',
@@ -46,28 +47,49 @@ export function ClientEditModal({
   });
 
   // Carregar dados do cliente quando o modal abre
+  // Se clienteId vazio mas clienteNome existe, buscar por nome
   useEffect(() => {
-    if (open && clienteId) {
-      const cliente = getClienteById(clienteId);
-      if (cliente) {
+    if (open) {
+      let foundCliente = null;
+      let foundClienteId: string | null = null;
+      
+      if (clienteId) {
+        foundCliente = getClienteById(clienteId);
+        foundClienteId = clienteId;
+      } else if (clienteNome) {
+        // Buscar cliente por nome quando clienteId não está vinculado
+        foundCliente = getClienteByNome(clienteNome);
+        foundClienteId = foundCliente?.id || null;
+      }
+      
+      setResolvedClienteId(foundClienteId);
+      
+      if (foundCliente) {
         setFormData({
-          nome: cliente.nome || '',
-          email: cliente.email || '',
-          telefone: cliente.telefone || '',
-          endereco: cliente.endereco || '',
-          origem: cliente.origem || '',
-          observacoes: cliente.observacoes || ''
+          nome: foundCliente.nome || '',
+          email: foundCliente.email || '',
+          telefone: foundCliente.telefone || '',
+          endereco: foundCliente.endereco || '',
+          origem: foundCliente.origem || '',
+          observacoes: foundCliente.observacoes || ''
         });
       }
     }
-  }, [open, clienteId, getClienteById]);
+  }, [open, clienteId, clienteNome, getClienteById, getClienteByNome]);
 
   const handleChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  // onChange: mantém texto como digitado (preserva posição do cursor)
   const handleNomeChange = (value: string) => {
-    setFormData(prev => ({ ...prev, nome: toTitleCase(value) }));
+    setFormData(prev => ({ ...prev, nome: value }));
+  };
+
+  // onBlur: aplica Title Case apenas quando sai do campo
+  const handleNomeBlur = () => {
+    const formatted = toTitleCase(formData.nome);
+    setFormData(prev => ({ ...prev, nome: formatted }));
   };
 
   const validateEmail = (email: string) => {
@@ -101,7 +123,13 @@ export function ClientEditModal({
 
     setIsSaving(true);
     try {
-      await atualizarCliente(clienteId, {
+      const clienteIdToUpdate = resolvedClienteId || clienteId;
+      if (!clienteIdToUpdate) {
+        toast.error('Cliente não encontrado');
+        return;
+      }
+      
+      await atualizarCliente(clienteIdToUpdate, {
         nome: formData.nome.trim(),
         email: formData.email.trim() || undefined,
         telefone: formData.telefone.trim() || undefined,
@@ -111,7 +139,8 @@ export function ClientEditModal({
       });
       
       toast.success('Cliente atualizado com sucesso');
-      onSuccess?.();
+      // Passa o novo nome no callback
+      onSuccess?.(formData.nome.trim());
       onOpenChange(false);
     } catch (error) {
       console.error('Erro ao atualizar cliente:', error);
@@ -126,12 +155,11 @@ export function ClientEditModal({
     return origem?.nome || origemId;
   };
 
-  // Cliente não encontrado
-  const cliente = clienteId ? getClienteById(clienteId) : null;
-  const clienteNotFound = clienteId && !cliente && !clientesLoading;
+  // Cliente não encontrado - usa resolvedClienteId que inclui busca por nome
+  const clienteNotFound = !resolvedClienteId && !clientesLoading && open;
 
-  // Sem cliente vinculado
-  if (!clienteId) {
+  // Sem cliente vinculado (nem por ID nem por nome)
+  if (clienteNotFound && !clienteNome) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-md">
@@ -143,9 +171,6 @@ export function ClientEditModal({
           </DialogHeader>
           <div className="py-4 text-center text-lunar-muted">
             <p>Este agendamento não possui um cliente vinculado.</p>
-            {clienteNome && (
-              <p className="mt-2 text-sm">Nome informado: <strong>{clienteNome}</strong></p>
-            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => onOpenChange(false)}>
@@ -157,8 +182,8 @@ export function ClientEditModal({
     );
   }
 
-  // Cliente não encontrado no banco
-  if (clienteNotFound) {
+  // Cliente não encontrado no banco (nem por ID nem por nome)
+  if (clienteNotFound && clienteNome) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-md">
@@ -169,8 +194,8 @@ export function ClientEditModal({
             </DialogTitle>
           </DialogHeader>
           <div className="py-4 text-center text-lunar-muted">
-            <p>O cliente vinculado a este agendamento não foi encontrado.</p>
-            <p className="mt-2 text-sm">Ele pode ter sido removido do sistema.</p>
+            <p>O cliente "<strong>{clienteNome}</strong>" não foi encontrado no CRM.</p>
+            <p className="mt-2 text-sm">Verifique se o nome está correto ou cadastre o cliente primeiro.</p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => onOpenChange(false)}>
@@ -208,6 +233,7 @@ export function ClientEditModal({
                 id="nome"
                 value={formData.nome}
                 onChange={e => handleNomeChange(e.target.value)}
+                onBlur={handleNomeBlur}
                 placeholder="Nome completo do cliente"
                 className="focus:ring-2 focus:ring-lunar-primary/20"
               />

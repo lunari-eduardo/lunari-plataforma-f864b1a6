@@ -453,6 +453,14 @@ export function useClientesRealtime() {
     return clientesCompletos.find(c => c.id === id);
   }, [clientesCompletos]);
 
+  const getClienteByNome = useCallback((nome: string): ClienteCompleto | undefined => {
+    if (!nome?.trim()) return undefined;
+    const nomeNormalizado = nome.trim().toLowerCase();
+    return clientesCompletos.find(c => 
+      c.nome?.toLowerCase().trim() === nomeNormalizado
+    );
+  }, [clientesCompletos]);
+
   const searchClientes = useCallback((termo: string): ClienteCompleto[] => {
     if (!termo.trim()) return clientesCompletos;
     
@@ -556,6 +564,7 @@ export function useClientesRealtime() {
     
     // Utility functions
     getClienteById,
+    getClienteByNome,
     searchClientes,
     
     // Migration
