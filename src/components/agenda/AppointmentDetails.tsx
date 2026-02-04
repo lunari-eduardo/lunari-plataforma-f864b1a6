@@ -442,6 +442,11 @@ export default function AppointmentDetails({
         onOpenChange={setShowClientEditModal}
         clienteId={appointment.clienteId || ''}
         clienteNome={appointment.client}
+        onSuccess={(novoNome) => {
+          if (novoNome) {
+            setFormData(prev => ({ ...prev, title: novoNome }));
+          }
+        }}
       />
     </div>
   );
