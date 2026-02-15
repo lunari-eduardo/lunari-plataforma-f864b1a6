@@ -1239,6 +1239,7 @@ export type Database = {
           storage_key: string
           thumb_path: string | null
           updated_at: string
+          upload_key: string | null
           user_id: string
           width: number | null
         }
@@ -1263,6 +1264,7 @@ export type Database = {
           storage_key: string
           thumb_path?: string | null
           updated_at?: string
+          upload_key?: string | null
           user_id: string
           width?: number | null
         }
@@ -1287,6 +1289,7 @@ export type Database = {
           storage_key?: string
           thumb_path?: string | null
           updated_at?: string
+          upload_key?: string | null
           user_id?: string
           width?: number | null
         }
@@ -1330,6 +1333,7 @@ export type Database = {
           status: string
           status_pagamento: string | null
           status_selecao: string | null
+          tipo: string
           total_fotos: number | null
           total_fotos_extras_vendidas: number | null
           updated_at: string
@@ -1367,6 +1371,7 @@ export type Database = {
           status?: string
           status_pagamento?: string | null
           status_selecao?: string | null
+          tipo?: string
           total_fotos?: number | null
           total_fotos_extras_vendidas?: number | null
           updated_at?: string
@@ -1404,6 +1409,7 @@ export type Database = {
           status?: string
           status_pagamento?: string | null
           status_selecao?: string | null
+          tipo?: string
           total_fotos?: number | null
           total_fotos_extras_vendidas?: number | null
           updated_at?: string
@@ -1526,12 +1532,15 @@ export type Database = {
           default_expiration_days: number | null
           default_gallery_permission: string | null
           default_watermark: Json | null
+          default_welcome_message: string | null
           favicon_url: string | null
+          last_session_font: string | null
           studio_logo_url: string | null
           studio_name: string | null
           theme_type: string | null
           updated_at: string | null
           user_id: string
+          welcome_message_enabled: boolean | null
         }
         Insert: {
           active_theme_id?: string | null
@@ -1540,12 +1549,15 @@ export type Database = {
           default_expiration_days?: number | null
           default_gallery_permission?: string | null
           default_watermark?: Json | null
+          default_welcome_message?: string | null
           favicon_url?: string | null
+          last_session_font?: string | null
           studio_logo_url?: string | null
           studio_name?: string | null
           theme_type?: string | null
           updated_at?: string | null
           user_id: string
+          welcome_message_enabled?: boolean | null
         }
         Update: {
           active_theme_id?: string | null
@@ -1554,12 +1566,15 @@ export type Database = {
           default_expiration_days?: number | null
           default_gallery_permission?: string | null
           default_watermark?: Json | null
+          default_welcome_message?: string | null
           favicon_url?: string | null
+          last_session_font?: string | null
           studio_logo_url?: string | null
           studio_name?: string | null
           theme_type?: string | null
           updated_at?: string | null
           user_id?: string
+          welcome_message_enabled?: boolean | null
         }
         Relationships: [
           {
@@ -2892,6 +2907,10 @@ export type Database = {
       calculate_manual_products_total: {
         Args: { produtos: Json }
         Returns: number
+      }
+      check_photo_credits: {
+        Args: { _photo_count: number; _user_id: string }
+        Returns: boolean
       }
       consume_photo_credits: {
         Args: { _gallery_id: string; _photo_count: number; _user_id: string }
