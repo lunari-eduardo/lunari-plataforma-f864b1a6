@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Plus, Edit, Trash2, ArrowUp, ArrowDown, Save, X, Zap, Lock } from 'lucide-react';
+import { Plus, Edit, Trash2, ArrowUp, ArrowDown, Save, X, Zap, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ConfigSectionHeader from './ConfigSectionHeader';
 import type { EtapaTrabalho } from '@/types/configuration';
@@ -72,7 +72,7 @@ export default function FluxoTrabalho({
   };
 
   const isSystemStatus = (etapa: EtapaTrabalho) => {
-    return hasGalleryAccess && etapa.is_system_status === true;
+    return etapa.is_system_status === true;
   };
 
   return (
@@ -88,7 +88,7 @@ export default function FluxoTrabalho({
           <div className="flex items-center gap-2 p-3 bg-primary/5 border border-primary/20 rounded-lg">
             <Zap className="h-4 w-4 text-primary flex-shrink-0" />
             <p className="text-sm text-muted-foreground">
-              As etapas <strong className="text-foreground">"Enviado para seleção"</strong> e <strong className="text-foreground">"Seleção finalizada"</strong> são 
+              As etapas <strong className="text-foreground">"Enviado para seleção"</strong>, <strong className="text-foreground">"Seleção finalizada"</strong> e <strong className="text-foreground">"Expirada"</strong> são 
               automáticas e fazem parte da integração com o Gallery.
             </p>
           </div>
@@ -215,17 +215,40 @@ export default function FluxoTrabalho({
                         </div>
                         <div className="flex justify-end gap-1 col-span-5 sm:col-span-4">
                           {isSystem ? (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="flex items-center text-muted-foreground text-xs px-2 gap-1">
-                                  <Lock className="h-3.5 w-3.5" />
-                                  <span className="hidden sm:inline">Protegido</span>
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Etapa controlada automaticamente pela integração Gallery</p>
-                              </TooltipContent>
-                            </Tooltip>
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => moverEtapa(etapa.id, 'cima')}
+                                disabled={index === 0}
+                              >
+                                <ArrowUp className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => moverEtapa(etapa.id, 'baixo')}
+                                disabled={index === etapasOrdenadas.length - 1}
+                              >
+                                <ArrowDown className="h-3.5 w-3.5" />
+                              </Button>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 text-muted-foreground"
+                                  >
+                                    <EyeOff className="h-3.5 w-3.5" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Ocultar do dropdown (em breve)</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </>
                           ) : (
                             <>
                               <Button

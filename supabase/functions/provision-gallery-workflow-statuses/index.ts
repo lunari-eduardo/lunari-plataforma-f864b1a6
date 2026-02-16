@@ -22,7 +22,8 @@ const corsHeaders = {
 
 const GALLERY_SYSTEM_STATUSES = [
   { nome: 'Enviado para seleção', cor: '#3B82F6' },
-  { nome: 'Seleção finalizada', cor: '#10B981' }
+  { nome: 'Seleção finalizada', cor: '#10B981' },
+  { nome: 'Expirada', cor: '#EF4444' }
 ];
 
 interface ProvisionRequest {
