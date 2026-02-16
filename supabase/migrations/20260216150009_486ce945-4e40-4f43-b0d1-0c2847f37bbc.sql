@@ -1,0 +1,1 @@
+DELETE FROM clientes_sessoes WHERE session_id LIKE 'proj_%' AND appointment_id IS NULL AND status = 'agendado' AND valor_total = 0;
