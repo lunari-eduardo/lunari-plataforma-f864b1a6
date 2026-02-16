@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useWorkflowStatus } from "@/hooks/useWorkflowStatus";
 import { getContrastColor } from "@/lib/colorUtils";
 
@@ -12,17 +13,11 @@ export function ColoredStatusBadge({
   className = '', 
   showBackground = false 
 }: ColoredStatusBadgeProps) {
-  const { getStatusColor } = useWorkflowStatus();
+  const { getStatusColor, workflowStatuses } = useWorkflowStatus();
 
-  if (!status || status === '') {
-    return (
-      <span className={`text-xs font-normal text-muted-foreground italic ${className}`}>
-        Sem status
-      </span>
-    );
-  }
-
-  const getStatusColorValue = (status: string) => {
+  // Recalcula quando workflowStatuses carregam (evita cor cinza no cold start)
+  const statusColor = useMemo(() => {
+    if (!status || status === '') return '#6B7280';
     switch (status.toLowerCase()) {
       case 'confirmado':
         return '#34C759';
@@ -34,9 +29,16 @@ export function ColoredStatusBadge({
       default:
         return getStatusColor(status);
     }
-  };
+  }, [status, workflowStatuses, getStatusColor]);
 
-  const statusColor = getStatusColorValue(status);
+  if (!status || status === '') {
+    return (
+      <span className={`text-xs font-normal text-muted-foreground italic ${className}`}>
+        Sem status
+      </span>
+    );
+  }
+
   const textColor = showBackground ? getContrastColor(statusColor) : statusColor;
   const displayText = status === 'A Confirmar' ? 'Pendente' : status;
 

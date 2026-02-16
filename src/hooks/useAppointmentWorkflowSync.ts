@@ -289,28 +289,8 @@ export const useAppointmentWorkflowSync = () => {
     };
   }, []);
 
-  // Migrate existing localStorage data on first run
-  useEffect(() => {
-    const migrationKey = 'workflow_migration_completed';
-    const hasRunMigration = localStorage.getItem(migrationKey);
-    
-    if (!hasRunMigration) {
-      const runMigration = async () => {
-        try {
-          console.log('🔄 Starting workflow migration from localStorage to Supabase...');
-          const result = await WorkflowSupabaseService.migrateLocalStorageData();
-          console.log('✅ Migration completed:', result);
-          
-          localStorage.setItem(migrationKey, 'true');
-        } catch (error) {
-          console.error('❌ Migration failed:', error);
-        }
-      };
-
-      // Run migration after a small delay to ensure user is authenticated
-      setTimeout(runMigration, 2000);
-    }
-  }, []);
+  // Migração localStorage → Supabase removida permanentemente
+  // O sistema é 100% Supabase, migração legada causava duplicações
 
   return {
     // Return sync utilities if needed

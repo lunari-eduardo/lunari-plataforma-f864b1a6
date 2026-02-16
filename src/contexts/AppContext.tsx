@@ -267,17 +267,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   // NOVA ARQUITETURA: Estado baseado em Projetos
-  const [projetos, setProjetos] = useState<Projeto[]>(() => {
-    try {
-      // Executar migração na primeira inicialização
-      ProjetoService.migrarDadosExistentes();
-      ProjetoService.deduplicarProjetos();
-      return ProjetoService.carregarProjetos();
-    } catch (error) {
-      console.error('❌ Erro ao carregar projetos:', error);
-      return [];
-    }
-  });
+  // Migração legada removida - dados são gerenciados pelo Supabase
+  const [projetos, setProjetos] = useState<Projeto[]>([]);
 
   // COMPATIBILIDADE: WorkflowItems derivados dos Projetos
   const workflowItems: WorkflowItem[] = projetos.map(projeto => ({
