@@ -30,18 +30,19 @@ export function useProvisionGalleryStatuses() {
           .select('id, nome')
           .eq('user_id', user.id)
           .eq('is_system_status', true)
-          .limit(2);
+          .limit(3);
 
         if (fetchError) {
           console.error('❌ Erro ao verificar status de sistema:', fetchError);
           return;
         }
 
-        // Verificar se já tem os dois status necessários
+        // Verificar se já tem os três status necessários
         const hasEnviado = systemStatuses?.some(s => s.nome === 'Enviado para seleção');
         const hasSelecao = systemStatuses?.some(s => s.nome === 'Seleção finalizada');
+        const hasExpirada = systemStatuses?.some(s => s.nome === 'Expirada');
 
-        if (!hasEnviado || !hasSelecao) {
+        if (!hasEnviado || !hasSelecao || !hasExpirada) {
           console.log('🔧 Provisionando status de sistema Gallery...');
           
           const { error: provisionError } = await supabase.functions.invoke(
