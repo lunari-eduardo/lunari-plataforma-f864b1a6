@@ -1,189 +1,162 @@
 
 
-# Plano: Corrigir Duplicações de Sessões e Carregamento de Status
+# Plano: Corrigir Sincronização Gallery → Workflow e Etapas de Sistema
 
-## Problema 1: 95 Sessões Duplicadas
+## Problemas Identificados
 
-### Causa Raiz Identificada
+### 1. Trigger não sincroniza status corretamente
 
-As 95 sessões duplicadas foram criadas **hoje (2026-02-16)** entre 13:45 e 14:25 UTC. Todas possuem:
+O trigger `sync_gallery_status_to_session` possui dois bugs:
 
-| Característica | Valor |
+| Status real na galeria | O que o trigger mapeia | O que deveria mapear |
+|---|---|---|
+| `enviado` | Nada (cai no ELSE, mantém status atual) | "Enviado para seleção" |
+| `selecao_iniciada` | Nada (cai no ELSE) | "Enviado para seleção" |
+| `selecao_completa` | Nada (cai no ELSE) | "Seleção finalizada" |
+| `publicada` | "Enviado para seleção" | Esse status nem existe no sistema |
+| `em_selecao` | "Enviado para seleção" | Esse status nem existe no sistema |
+| `finalizada` | "Seleção finalizada" | Esse status nem existe no sistema |
+
+A migração `20260128` sobrescreveu a função correta (de `20260126`) com mapeamentos errados (`publicada`/`em_selecao`/`finalizada` em vez de `enviado`/`selecao_iniciada`/`selecao_completa`).
+
+Além disso, o trigger só dispara em `UPDATE`, mas galerias criadas via "criar galeria vinculada" podem ser inseridas já com status `enviado` -- nesse caso o trigger não dispara.
+
+### 2. Falta status "Expirada" como etapa de sistema
+
+O usuário quer que galerias expiradas mudem automaticamente o workflow para "Expirada".
+
+### 3. Etapas de sistema permitem editar e excluir
+
+Na screenshot, "Enviado para seleção" e "Seleção finalizada" mostram botões de editar e excluir. O `isSystemStatus()` só protege quando `hasGalleryAccess` é true, mas na imagem esses botões estão visíveis.
+
+---
+
+## Solução
+
+### Parte 1: Corrigir o trigger (migração SQL)
+
+Recriar a função `sync_gallery_status_to_session()` com o mapeamento correto dos status reais da tabela `galerias` e adicionar suporte a `INSERT` + `expirada`:
+
+```sql
+CREATE OR REPLACE FUNCTION sync_gallery_status_to_session()
+RETURNS TRIGGER AS $$
+DECLARE
+  session_record RECORD;
+  target_status TEXT;
+BEGIN
+  -- Buscar sessão vinculada
+  SELECT id, status INTO session_record
+  FROM clientes_sessoes
+  WHERE galeria_id = NEW.id LIMIT 1;
+  
+  IF session_record.id IS NULL AND NEW.session_id IS NOT NULL THEN
+    SELECT id, status INTO session_record
+    FROM clientes_sessoes
+    WHERE session_id = NEW.session_id LIMIT 1;
+  END IF;
+  
+  IF session_record.id IS NULL THEN RETURN NEW; END IF;
+  
+  -- Mapeamento CORRETO dos status reais da tabela galerias
+  CASE NEW.status
+    WHEN 'enviado' THEN target_status := 'Enviado para seleção';
+    WHEN 'selecao_iniciada' THEN target_status := 'Enviado para seleção';
+    WHEN 'selecao_completa' THEN target_status := 'Seleção finalizada';
+    WHEN 'expirada' THEN target_status := 'Expirada';
+    ELSE target_status := session_record.status;
+  END CASE;
+  
+  UPDATE clientes_sessoes
+  SET status = target_status,
+      status_galeria = NEW.status,
+      status_pagamento_fotos_extra = COALESCE(NEW.status_pagamento, 'sem_vendas'),
+      updated_at = NOW()
+  WHERE id = session_record.id;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Trigger para INSERT E UPDATE
+DROP TRIGGER IF EXISTS trigger_sync_gallery_status ON galerias;
+CREATE TRIGGER trigger_sync_gallery_status
+AFTER INSERT OR UPDATE OF status, status_pagamento ON galerias
+FOR EACH ROW
+EXECUTE FUNCTION sync_gallery_status_to_session();
+```
+
+### Parte 2: Adicionar "Expirada" como etapa de sistema
+
+Atualizar o Edge Function `provision-gallery-workflow-statuses` para incluir a etapa "Expirada":
+
+```typescript
+const GALLERY_SYSTEM_STATUSES = [
+  { nome: 'Enviado para seleção', cor: '#3B82F6' },
+  { nome: 'Seleção finalizada', cor: '#10B981' },
+  { nome: 'Expirada', cor: '#EF4444' }  // NOVO
+];
+```
+
+Atualizar também `useProvisionGalleryStatuses.ts` para verificar 3 status em vez de 2.
+
+### Parte 3: Proteger etapas de sistema no UI
+
+Modificar `FluxoTrabalho.tsx` para:
+- Remover a condição `hasGalleryAccess &&` do `isSystemStatus()` -- etapas com `is_system_status = true` devem ser sempre protegidas
+- Substituir o bloco "Protegido" por: botões de mover (cima/baixo) + botão de ocultar (eye icon) -- sem editar nem excluir
+- Manter os botões de mover para permitir reordenação
+
+### Parte 4: Sincronizar sessões existentes
+
+Na mesma migração SQL, corrigir sessões que já estão dessincronizadas:
+
+```sql
+-- Corrigir sessões com galeria enviada que não têm status correto
+UPDATE clientes_sessoes cs
+SET status = 'Enviado para seleção',
+    status_galeria = g.status,
+    updated_at = NOW()
+FROM galerias g
+WHERE (cs.galeria_id = g.id OR cs.session_id = g.session_id)
+  AND g.status IN ('enviado', 'selecao_iniciada')
+  AND cs.status NOT IN ('Enviado para seleção');
+```
+
+---
+
+## Arquivos a Modificar
+
+| Arquivo | Alteração |
 |---|---|
-| session_id | `proj_1771249265XXX_random` (prefixo `proj_`) |
-| appointment_id | NULL |
-| status | "agendado" |
-| pacote | "Básico" ou "Completo" |
-| valor_total | 0 |
-| valor_pago | 0 |
+| **Nova migração SQL** | Corrigir trigger + sincronizar dados existentes + provisionar "Expirada" |
+| `supabase/functions/provision-gallery-workflow-statuses/index.ts` | Adicionar "Expirada" na lista de status de sistema |
+| `src/hooks/useProvisionGalleryStatuses.ts` | Verificar 3 status em vez de 2 |
+| `src/components/configuracoes/FluxoTrabalho.tsx` | Proteger etapas de sistema sem depender de `hasGalleryAccess`, remover editar/excluir, manter mover + ocultar |
 
-**O que aconteceu:**
+---
 
-1. O `AppContext.tsx` (linha 270-280) executa `ProjetoService.migrarDadosExistentes()` e `deduplicarProjetos()` a cada inicialização
-2. Essa migração lê `localStorage.getItem('workflow_sessions')` e cria "Projetos" no localStorage com IDs `proj_TIMESTAMP_random`
-3. O `AppContext` gera `workflowItems` a partir desses projetos com `id: projeto.projectId` e `sessionId: projeto.projectId` (linha 284-285)
-4. O hook `useAppointmentWorkflowSync` (linha 292-312) executa `migrateLocalStorageData()` que lê `workflow_sessions` do localStorage e insere no Supabase
-5. A flag `workflow_migration_completed` foi perdida (possível limpeza de cache/cookies), fazendo a migração rodar novamente
-6. Como o localStorage já continha dados contaminados com IDs `proj_`, foram inseridas 95 sessões fantasmas no Supabase
-
-Fluxo do problema:
+## Fluxo Corrigido
 
 ```text
-workflow_sessions (localStorage)
-    |
-    v
-ProjetoService.migrarDadosExistentes() -- cria projetos com IDs proj_
-    |
-    v
-AppContext workflowItems -- sessionId = proj_XXX
-    |
-    v
-migrateLocalStorageData() -- insere no Supabase com session_id = proj_XXX
-    |
-    v
-95 sessões duplicadas no banco (appointment_id = NULL, status = agendado)
+Galeria criada (INSERT com status 'rascunho')
+  -> Trigger dispara, status = rascunho -> ELSE -> mantém status atual
+
+Galeria enviada (UPDATE status -> 'enviado')
+  -> Trigger dispara, 'enviado' -> 'Enviado para seleção'
+  -> clientes_sessoes.status = 'Enviado para seleção'
+
+Cliente inicia seleção (UPDATE status -> 'selecao_iniciada')
+  -> Trigger dispara, 'selecao_iniciada' -> 'Enviado para seleção'
+  -> Mantém status no workflow
+
+Galeria expirada (UPDATE status -> 'expirada')
+  -> Trigger dispara, 'expirada' -> 'Expirada'
+  -> clientes_sessoes.status = 'Expirada'
+
+Seleção completa (UPDATE status -> 'selecao_completa')
+  -> Trigger dispara, 'selecao_completa' -> 'Seleção finalizada'
+  -> clientes_sessoes.status = 'Seleção finalizada'
+
+Galeria excluída (DELETE ou status -> 'excluida')
+  -> Trigger dispara, 'excluida' -> ELSE -> mantém status atual
 ```
-
-### Correção Imediata (Banco)
-
-Deletar as 95 sessões fantasmas do banco. Elas são identificáveis com 100% de segurança por:
-- `session_id LIKE 'proj_%'`
-- `appointment_id IS NULL`
-- `status = 'agendado'`
-- `valor_total = 0`
-- Todas criadas em 2026-02-16
-
-```sql
-DELETE FROM clientes_sessoes 
-WHERE session_id LIKE 'proj_%' 
-  AND appointment_id IS NULL 
-  AND status = 'agendado' 
-  AND valor_total = 0;
-```
-
-### Correção no Código (Prevenção)
-
-**Arquivo: `src/hooks/useAppointmentWorkflowSync.ts`**
-
-Remover ou desativar permanentemente a migração de localStorage para Supabase. O sistema já é 100% Supabase, essa migração é um legado perigoso.
-
-```typescript
-// ANTES (linha 292-312):
-useEffect(() => {
-  const migrationKey = 'workflow_migration_completed';
-  const hasRunMigration = localStorage.getItem(migrationKey);
-  if (!hasRunMigration) {
-    // ... migrateLocalStorageData()
-  }
-}, []);
-
-// DEPOIS:
-// Removido completamente - migração legada não é mais necessária
-```
-
-**Arquivo: `src/contexts/AppContext.tsx`**
-
-Remover a execução automática de `ProjetoService.migrarDadosExistentes()` na inicialização do estado, que contamina o localStorage:
-
-```typescript
-// ANTES (linha 270-280):
-const [projetos, setProjetos] = useState<Projeto[]>(() => {
-  ProjetoService.migrarDadosExistentes();  // PERIGOSO
-  ProjetoService.deduplicarProjetos();     // PERIGOSO
-  return ProjetoService.carregarProjetos();
-});
-
-// DEPOIS:
-const [projetos, setProjetos] = useState<Projeto[]>(() => {
-  // Migração legada removida - dados são gerenciados pelo Supabase
-  return [];
-});
-```
-
----
-
-## Problema 2: Erros 406 no Console
-
-### Causa Raiz
-
-Os erros `406 (Not Acceptable)` vêm de queries ao Supabase (visível na URL `clientes_sessoes`) que retornam múltiplas linhas quando `.single()` é usado. Com as 95 duplicatas, muitas queries de busca por `cliente_id` + `data_sessao` retornam mais de uma linha, causando o erro 406.
-
-### Correção
-
-Ao deletar as 95 duplicatas, os erros 406 desaparecerão automaticamente. Adicionalmente, revisar queries que usam `.single()` e trocar por `.maybeSingle()` onde apropriado para evitar erros futuros.
-
----
-
-## Problema 3: Cor do Status Não Carrega no Dropdown
-
-### Causa Raiz
-
-O `ColoredStatusBadge` usa `useWorkflowStatus()` que depende de `useRealtimeConfiguration()` para buscar as `etapas` do Supabase. Quando os dados são carregados pela primeira vez (cold start ou meses antigos), as etapas ainda não foram carregadas pelo `ConfigurationProvider`, fazendo com que `getStatusColor()` retorne a cor default `#6B7280` (cinza).
-
-O componente `ColoredStatusBadge` não re-renderiza quando as etapas eventualmente carregam porque o `Select` do Radix já renderizou seu conteúdo interno.
-
-### Correção
-
-**Arquivo: `src/components/workflow/ColoredStatusBadge.tsx`**
-
-Adicionar verificação de loading e forçar re-render quando os dados de configuração ficarem disponíveis:
-
-```typescript
-export function ColoredStatusBadge({ status, className = '', showBackground = false }) {
-  const { getStatusColor, workflowStatuses } = useWorkflowStatus();
-  
-  // Força re-render quando workflowStatuses mudam (dados carregados)
-  const statusColor = useMemo(() => {
-    // ... lógica existente de getStatusColorValue
-  }, [status, workflowStatuses]); // Adicionar workflowStatuses como dependência
-  
-  // ... resto do componente
-}
-```
-
-**Arquivo: `src/hooks/useWorkflowStatus.ts`**
-
-Garantir que o `getStatusColor` é recalculado quando as etapas mudam (já usa `useMemo` com `workflowStatuses` como dependência, mas o `useMemo` retorna uma função, que mantém closure sobre dados antigos):
-
-```typescript
-// ANTES:
-const getStatusColor = useMemo(() => (statusName: string) => {
-  const status = workflowStatuses.find(s => s.nome === statusName);
-  return status?.cor || '#6B7280';
-}, [workflowStatuses]);
-
-// DEPOIS: useCallback para garantir nova referência quando dados mudam
-const getStatusColor = useCallback((statusName: string) => {
-  const status = workflowStatuses.find(s => s.nome === statusName);
-  return status?.cor || '#6B7280';
-}, [workflowStatuses]);
-```
-
----
-
-## Resumo das Alterações
-
-| Arquivo | Ação |
-|---|---|
-| **Banco de dados** | DELETE 95 sessões com `session_id LIKE 'proj_%'` |
-| `src/hooks/useAppointmentWorkflowSync.ts` | Remover bloco de migração localStorage (linhas 292-312) |
-| `src/contexts/AppContext.tsx` | Remover `ProjetoService.migrarDadosExistentes()` da inicialização |
-| `src/components/workflow/ColoredStatusBadge.tsx` | Adicionar `workflowStatuses` como dependência do useMemo |
-| `src/hooks/useWorkflowStatus.ts` | Trocar `useMemo` por `useCallback` no `getStatusColor` |
-
----
-
-## Verificação Pós-Correção
-
-1. Confirmar zero sessões com `proj_`:
-```sql
-SELECT COUNT(*) FROM clientes_sessoes WHERE session_id LIKE 'proj_%';
--- Esperado: 0
-```
-
-2. Confirmar que erros 406 pararam no console
-
-3. Verificar que cores do status carregam corretamente na primeira visita ao Workflow (sem reload)
-
-4. Navegar para meses antigos e confirmar que cores aparecem imediatamente
-
