@@ -1,4 +1,5 @@
-import { useMemo, useState, useRef, useCallback } from 'react';
+import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { startOfMonth, endOfMonth, eachDayOfInterval, format, isToday, isSameDay } from 'date-fns';
 import { UnifiedEvent } from '@/hooks/useUnifiedCalendar';
 import UnifiedEventCard from './UnifiedEventCard';
@@ -155,14 +156,33 @@ const DayCell = ({
 
   // Hover preview state (desktop only)
   const [showPreview, setShowPreview] = useState(false);
+  const [popoverPos, setPopoverPos] = useState<{ top: number; left: number } | null>(null);
+  const cellRef = useRef<HTMLDivElement>(null);
   const enterTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const calcPosition = useCallback(() => {
+    if (!cellRef.current) return null;
+    const rect = cellRef.current.getBoundingClientRect();
+    const popW = 270;
+    const popH = 280;
+    const left = (rect.right + popW + 8 > window.innerWidth)
+      ? rect.left - popW - 4
+      : rect.right + 4;
+    const top = (rect.top + popH > window.innerHeight)
+      ? Math.max(8, rect.bottom - popH)
+      : rect.top;
+    return { top, left };
+  }, []);
 
   const handleMouseEnter = useCallback(() => {
     if (isMobile) return;
     if (leaveTimer.current) clearTimeout(leaveTimer.current);
-    enterTimer.current = setTimeout(() => setShowPreview(true), 250);
-  }, [isMobile]);
+    enterTimer.current = setTimeout(() => {
+      setPopoverPos(calcPosition());
+      setShowPreview(true);
+    }, 250);
+  }, [isMobile, calcPosition]);
 
   const handleMouseLeave = useCallback(() => {
     if (isMobile) return;
@@ -186,6 +206,7 @@ const DayCell = ({
 
   return (
     <div 
+      ref={cellRef}
       onClick={() => onDayClick(day)} 
       className={`${cellClassName} relative`}
       style={cellStyle}
@@ -256,10 +277,11 @@ const DayCell = ({
         )}
       </div>
 
-      {/* Desktop hover preview popover */}
-      {!isMobile && showPreview && dayEvents.length > 0 && (
+      {/* Desktop hover preview popover via portal */}
+      {!isMobile && showPreview && dayEvents.length > 0 && popoverPos && createPortal(
         <div 
-          className="absolute z-50 top-0 left-full ml-1"
+          className="fixed z-[9999]"
+          style={{ top: popoverPos.top, left: popoverPos.left }}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
         >
@@ -269,7 +291,8 @@ const DayCell = ({
             onEventClick={onEventClick}
             onViewDay={onDayClick}
           />
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
