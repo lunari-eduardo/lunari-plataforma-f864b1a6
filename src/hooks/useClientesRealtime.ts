@@ -24,13 +24,14 @@ export function useClientesRealtime() {
   useEffect(() => {
     const loadAllData = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) return;
+        const userId = session.user.id;
 
         const [clientesData, familiaData, documentosData] = await Promise.all([
-          supabase.from('clientes').select('*').eq('user_id', user.id),
-          supabase.from('clientes_familia').select('*').eq('user_id', user.id),
-          supabase.from('clientes_documentos').select('*').eq('user_id', user.id)
+          supabase.from('clientes').select('*').eq('user_id', userId),
+          supabase.from('clientes_familia').select('*').eq('user_id', userId),
+          supabase.from('clientes_documentos').select('*').eq('user_id', userId)
         ]);
 
         if (clientesData.error) throw clientesData.error;
@@ -56,107 +57,105 @@ export function useClientesRealtime() {
   // ============= REAL-TIME SUBSCRIPTIONS =============
   
   useEffect(() => {
+    let clientesChannel: any = null;
+    let familiaChannel: any = null;
+    let documentosChannel: any = null;
+
     const setupRealtime = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+      const userId = session.user.id;
 
-    // Clientes subscription
-    const clientesChannel = supabase
-      .channel('clientes_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'clientes',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          console.log('🔄 Cliente change:', payload);
-          
-          if (payload.eventType === 'INSERT') {
-            setClientes(prev => [...prev, payload.new as ClienteSupabase]);
-          } else if (payload.eventType === 'UPDATE') {
-            setClientes(prev => prev.map(c => 
-              c.id === payload.new.id ? payload.new as ClienteSupabase : c
-            ));
-          } else if (payload.eventType === 'DELETE') {
-            setClientes(prev => prev.filter(c => c.id !== payload.old.id));
+      clientesChannel = supabase
+        .channel(`clientes_changes_${userId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'clientes',
+            filter: `user_id=eq.${userId}`,
+          },
+          (payload) => {
+            console.log('🔄 Cliente change:', payload.eventType);
+            if (payload.eventType === 'INSERT') {
+              setClientes(prev => [...prev, payload.new as ClienteSupabase]);
+            } else if (payload.eventType === 'UPDATE') {
+              setClientes(prev => prev.map(c => 
+                c.id === payload.new.id ? payload.new as ClienteSupabase : c
+              ));
+            } else if (payload.eventType === 'DELETE') {
+              setClientes(prev => prev.filter(c => c.id !== payload.old.id));
+            }
           }
-        }
-      )
-      .subscribe();
+        )
+        .subscribe();
 
-    // Família subscription
-    const familiaChannel = supabase
-      .channel('familia_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'clientes_familia',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          console.log('🔄 Família change:', payload);
-          
-          if (payload.eventType === 'INSERT') {
-            setFamilia(prev => [...prev, payload.new as ClienteFamilia]);
-          } else if (payload.eventType === 'UPDATE') {
-            setFamilia(prev => prev.map(f => 
-              f.id === payload.new.id ? payload.new as ClienteFamilia : f
-            ));
-          } else if (payload.eventType === 'DELETE') {
-            setFamilia(prev => prev.filter(f => f.id !== payload.old.id));
+      familiaChannel = supabase
+        .channel(`familia_changes_${userId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'clientes_familia',
+            filter: `user_id=eq.${userId}`,
+          },
+          (payload) => {
+            if (payload.eventType === 'INSERT') {
+              setFamilia(prev => [...prev, payload.new as ClienteFamilia]);
+            } else if (payload.eventType === 'UPDATE') {
+              setFamilia(prev => prev.map(f => 
+                f.id === payload.new.id ? payload.new as ClienteFamilia : f
+              ));
+            } else if (payload.eventType === 'DELETE') {
+              setFamilia(prev => prev.filter(f => f.id !== payload.old.id));
+            }
           }
-        }
-      )
-      .subscribe();
+        )
+        .subscribe();
 
-    // Documentos subscription
-    const documentosChannel = supabase
-      .channel('documentos_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'clientes_documentos',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          console.log('🔄 Documento change:', payload);
-          
-          if (payload.eventType === 'INSERT') {
-            setDocumentos(prev => [...prev, payload.new as ClienteDocumento]);
-          } else if (payload.eventType === 'UPDATE') {
-            setDocumentos(prev => prev.map(d => 
-              d.id === payload.new.id ? payload.new as ClienteDocumento : d
-            ));
-          } else if (payload.eventType === 'DELETE') {
-            setDocumentos(prev => prev.filter(d => d.id !== payload.old.id));
+      documentosChannel = supabase
+        .channel(`documentos_changes_${userId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'clientes_documentos',
+            filter: `user_id=eq.${userId}`,
+          },
+          (payload) => {
+            if (payload.eventType === 'INSERT') {
+              setDocumentos(prev => [...prev, payload.new as ClienteDocumento]);
+            } else if (payload.eventType === 'UPDATE') {
+              setDocumentos(prev => prev.map(d => 
+                d.id === payload.new.id ? payload.new as ClienteDocumento : d
+              ));
+            } else if (payload.eventType === 'DELETE') {
+              setDocumentos(prev => prev.filter(d => d.id !== payload.old.id));
+            }
           }
-        }
-      )
-      .subscribe();
-
-      return () => {
-        supabase.removeChannel(clientesChannel);
-        supabase.removeChannel(familiaChannel);
-        supabase.removeChannel(documentosChannel);
-      };
+        )
+        .subscribe();
     };
 
     setupRealtime();
+
+    return () => {
+      if (clientesChannel) supabase.removeChannel(clientesChannel);
+      if (familiaChannel) supabase.removeChannel(familiaChannel);
+      if (documentosChannel) supabase.removeChannel(documentosChannel);
+    };
   }, []);
 
   // ============= CLIENTE OPERATIONS =============
   
   const adicionarCliente = useCallback(async (cliente: Omit<ClienteSupabase, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) throw new Error('User not authenticated');
+      const user = session.user;
 
       const { data, error } = await supabase
         .from('clientes')
@@ -216,8 +215,9 @@ export function useClientesRealtime() {
   
   const adicionarFamilia = useCallback(async (clienteId: string, membro: Omit<ClienteFamilia, 'id' | 'cliente_id' | 'user_id' | 'created_at'>) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) throw new Error('User not authenticated');
+      const user = session.user;
 
       const { data, error } = await supabase
         .from('clientes_familia')
@@ -282,8 +282,9 @@ export function useClientesRealtime() {
     pagamentos: number;
   }> => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Usuário não autenticado');
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) throw new Error('Usuário não autenticado');
+      const user = session.user;
 
       // Verificar sessões
       const { count: sessoesCount, error: sessoesError } = await supabase
@@ -325,8 +326,9 @@ export function useClientesRealtime() {
     filhos: Array<{ id: string; nome?: string; dataNascimento?: string }>
   ) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) throw new Error('User not authenticated');
+      const user = session.user;
 
       // Buscar família atual do cliente
       const familiaAtual = familia.filter(f => f.cliente_id === clienteId);
@@ -477,8 +479,9 @@ export function useClientesRealtime() {
   
   const migrarLocalStorageClientes = useCallback(async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) throw new Error('User not authenticated');
+      const user = session.user;
 
       // Get existing clients from localStorage (if any)
       const localClientes = JSON.parse(localStorage.getItem('clientes') || '[]');

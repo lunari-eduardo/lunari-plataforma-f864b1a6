@@ -61,15 +61,20 @@ export const useWorkflowRealtime = () => {
       setLoading(true);
       console.log('🔄 Loading workflow sessions from Supabase...');
       
-      const { data: user } = await supabase.auth.getUser();
+      const { data: { session: authSession } } = await supabase.auth.getSession();
       
-      if (!user?.user) {
+      if (!authSession?.user) {
         console.error('❌ User not authenticated');
         setError('User not authenticated');
         return;
       }
 
-      console.log('👤 User authenticated:', user.user.id);
+      const userId = authSession.user.id;
+
+      // ✅ OPTIMIZED: Filtrar por data (últimos 12 meses) para evitar carregar todo histórico
+      const twelveMonthsAgo = new Date();
+      twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+      const dateFilter = twelveMonthsAgo.toISOString().split('T')[0];
 
       const { data, error: fetchError } = await supabase
         .from('clientes_sessoes')
@@ -82,8 +87,9 @@ export const useWorkflowRealtime = () => {
             whatsapp
           )
         `)
-        .eq('user_id', user.user.id)
-        .neq('status', 'historico') // Excluir sessões históricas do workflow
+        .eq('user_id', userId)
+        .neq('status', 'historico')
+        .gte('data_sessao', dateFilter)
         .order('data_sessao', { ascending: true })
         .order('hora_sessao', { ascending: true });
 
@@ -92,11 +98,9 @@ export const useWorkflowRealtime = () => {
         throw fetchError;
       }
 
-      console.log('✅ Successfully loaded sessions:', data?.length || 0, 'sessions found');
-      console.log('📊 Sessions data:', data);
+      console.log('✅ Loaded sessions:', data?.length || 0);
 
-      // ✅ FASE 1: BATCH QUERY - Eliminar N+1 query
-      // Buscar TODAS as transações de uma vez em vez de uma query por sessão
+      // ✅ BATCH QUERY para transações
       const sessionIds = (data || []).map(s => s.session_id);
       
       const { data: allTransacoes } = sessionIds.length > 0 
@@ -104,40 +108,33 @@ export const useWorkflowRealtime = () => {
             .from('clientes_transacoes')
             .select('*')
             .in('session_id', sessionIds)
-            .eq('user_id', user.user.id)
+            .eq('user_id', userId)
             .in('tipo', ['pagamento', 'ajuste'])
             .order('data_transacao', { ascending: false })
         : { data: [] };
 
-      console.log(`✅ BATCH: Loaded ${allTransacoes?.length || 0} transactions for ${sessionIds.length} sessions (1 query instead of ${sessionIds.length})`);
-
-      // Agrupar transações por session_id em memória (O(n) em vez de O(n²))
+      // Agrupar transações por session_id em memória
       const transacoesPorSessao = (allTransacoes || []).reduce((acc, t) => {
         if (!acc[t.session_id]) acc[t.session_id] = [];
         acc[t.session_id].push(t);
         return acc;
       }, {} as Record<string, typeof allTransacoes>);
 
-      // Mapear sessões com pagamentos (sem queries adicionais)
+      // Mapear sessões com pagamentos
       const sessionsWithPayments = (data || []).map(session => {
         const transacoesData = transacoesPorSessao[session.session_id] || [];
         
-        // Convert to payment format (same as CRM)
         const pagamentos = transacoesData.map(t => {
           const match = t.descricao?.match(/\[ID:([^\]]+)\]/);
           const paymentId = match ? match[1] : t.id;
-          
           const isPaid = t.tipo === 'pagamento';
           const isPending = t.tipo === 'ajuste';
-          
           const parcelaMatch = t.descricao?.match(/Parcela (\d+)\/(\d+)/);
           const numeroParcela = parcelaMatch ? parseInt(parcelaMatch[1]) : undefined;
           const totalParcelas = parcelaMatch ? parseInt(parcelaMatch[2]) : undefined;
           
           let tipo: 'pago' | 'agendado' | 'parcelado' = 'pago';
-          if (isPending) {
-            tipo = totalParcelas ? 'parcelado' : 'agendado';
-          }
+          if (isPending) tipo = totalParcelas ? 'parcelado' : 'agendado';
           
           let statusPagamento: 'pago' | 'pendente' | 'atrasado' = 'pago';
           if (isPending) {
@@ -162,38 +159,37 @@ export const useWorkflowRealtime = () => {
           };
         });
         
-        return {
-          ...session,
-          pagamentos // Attach payments to session
-        };
+        return { ...session, pagamentos };
       });
 
-      // FASE 1: Validar integridade dos dados congelados
-      const { pricingFreezingService } = await import('@/services/PricingFreezingService');
-
-      for (const session of sessionsWithPayments) {
-        const regrasCongeladas = session.regras_congeladas as any;
-        if (!regrasCongeladas?.pacote) {
-          console.warn('⚠️ Sessão sem dados congelados, recongelando:', session.id);
-          
-          const novasRegrasCongeladas = await pricingFreezingService.congelarDadosCompletos(
-            session.pacote,
-            session.categoria
-          );
-          
-          await supabase
-            .from('clientes_sessoes')
-            .update({ regras_congeladas: novasRegrasCongeladas as any })
-            .eq('id', session.id)
-            .eq('user_id', user.user.id);
-          
-          session.regras_congeladas = novasRegrasCongeladas as any;
-        }
-      }
-
-      console.log('💰 Loaded payments for sessions');
+      // ✅ MOVED TO BACKGROUND: Re-freezing não bloqueia mais o carregamento
       setSessions(sessionsWithPayments);
       setError(null);
+
+      // Re-freeze em background (não bloqueia UI)
+      setTimeout(async () => {
+        try {
+          const { pricingFreezingService } = await import('@/services/PricingFreezingService');
+          for (const session of sessionsWithPayments) {
+            const regrasCongeladas = session.regras_congeladas as any;
+            if (!regrasCongeladas?.pacote) {
+              console.warn('⚠️ Background re-freezing session:', session.id);
+              const novasRegras = await pricingFreezingService.congelarDadosCompletos(
+                session.pacote,
+                session.categoria
+              );
+              await supabase
+                .from('clientes_sessoes')
+                .update({ regras_congeladas: novasRegras as any })
+                .eq('id', session.id)
+                .eq('user_id', userId);
+            }
+          }
+        } catch (err) {
+          console.error('❌ Background re-freezing failed (non-fatal):', err);
+        }
+      }, 2000);
+
     } catch (err) {
       console.error('Error loading workflow sessions:', err);
       setError(err instanceof Error ? err.message : 'Failed to load sessions');
@@ -210,8 +206,9 @@ export const useWorkflowRealtime = () => {
   // Create new session with frozen pricing rules
   const createSession = useCallback(async (sessionData: Omit<WorkflowSession, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
     try {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user?.user) throw new Error('User not authenticated');
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      if (!authSession?.user) throw new Error('User not authenticated');
+      const user = { user: authSession.user };
 
       // Import pricing freezing service
       const { pricingFreezingService } = await import('@/services/PricingFreezingService');
@@ -267,8 +264,9 @@ export const useWorkflowRealtime = () => {
   // Update session with field mapping and sanitization
   const updateSession = useCallback(async (id: string, updates: any, silent: boolean = false) => {
     try {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user?.user) throw new Error('User not authenticated');
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      if (!authSession?.user) throw new Error('User not authenticated');
+      const user = { user: authSession.user };
 
       // Find current session to perform diff check
       const currentSession = sessions.find(s => s.id === id);
@@ -786,8 +784,9 @@ export const useWorkflowRealtime = () => {
   // Delete session with flexible options
   const deleteSession = useCallback(async (id: string, includePayments: boolean = false) => {
     try {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user?.user) throw new Error('User not authenticated');
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      if (!authSession?.user) throw new Error('User not authenticated');
+      const user = { user: authSession.user };
 
       // Find session data for session_id
       const session = sessions.find(s => s.id === id);
@@ -856,7 +855,8 @@ export const useWorkflowRealtime = () => {
     let channel: any = null;
     
     const setupRealtimeChannel = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      const user = authSession?.user;
       if (!user?.id) {
         console.warn('⚠️ [WorkflowRealtime] Sem user_id para filtrar real-time');
         return;

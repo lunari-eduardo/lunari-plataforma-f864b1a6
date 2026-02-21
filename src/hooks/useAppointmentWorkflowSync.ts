@@ -21,11 +21,12 @@ export const useAppointmentWorkflowSync = () => {
       console.log('🔍 [AppointmentSync] Checking for confirmed appointments without sessions...');
 
       // Get current user
-      const { data: user } = await supabase.auth.getUser();
-      if (!user?.user) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
         console.log('❌ [AppointmentSync] User not authenticated, skipping sync');
         return;
       }
+      const user = { user: session.user };
 
       // Buscar agendamentos confirmados que não possuem sessão no workflow
       const { data: appointments, error: appointmentsError } = await supabase
@@ -42,16 +43,17 @@ export const useAppointmentWorkflowSync = () => {
       // Filter to only appointments that don't have corresponding sessions
       const appointmentsNeedingSync = [];
       if (appointments && appointments.length > 0) {
-        for (const appointment of appointments) {
-          // Check if this appointment already has a session
-          const { data: existingSession } = await supabase
-            .from('clientes_sessoes')
-            .select('id')
-            .eq('user_id', user.user.id)
-            .or(`appointment_id.eq.${appointment.id},session_id.eq.${appointment.session_id}`)
-            .maybeSingle();
+        // ✅ OPTIMIZED: Batch query instead of N+1
+        const appointmentIds = appointments.map(a => a.id);
+        const { data: existingSessions } = await supabase
+          .from('clientes_sessoes')
+          .select('appointment_id')
+          .eq('user_id', user.user.id)
+          .in('appointment_id', appointmentIds);
 
-          if (!existingSession) {
+        const existingSet = new Set(existingSessions?.map(s => s.appointment_id) || []);
+        for (const appointment of appointments) {
+          if (!existingSet.has(appointment.id)) {
             appointmentsNeedingSync.push(appointment);
           }
         }
