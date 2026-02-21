@@ -94,6 +94,12 @@ export default function Agenda() {
     navigateToDate(selectedDate);
   }, [setView, navigateToDate]);
 
+  // Handle month click in annual view
+  const handleMonthClick = useCallback((selectedDate: Date) => {
+    setView('month');
+    navigateToDate(selectedDate);
+  }, [setView, navigateToDate]);
+
   // Handle slot click (empty time slot) - directly open appointment form
   const handleCreateSlot = useCallback((slot: { date: Date; time?: string }) => {
     openAppointmentDialog(slot);
@@ -203,6 +209,7 @@ export default function Agenda() {
             availability={availability}
             onDayClick={handleDayClick}
             onEventClick={handleEventClick}
+            onMonthClick={handleMonthClick}
           />
         );
       case 'month':

@@ -13,6 +13,7 @@ interface AnnualViewProps {
   availability?: AvailabilitySlot[];
   onDayClick: (date: Date) => void;
   onEventClick?: (event: UnifiedEvent) => void;
+  onMonthClick?: (date: Date) => void;
 }
 
 // Helper: key for a date (yyyy-MM-dd)
@@ -22,7 +23,7 @@ const monthNames = Array.from({ length: 12 }, (_, i) =>
   format(new Date(2020, i, 1), "MMMM", { locale: ptBR })
 );
 
-export default function AnnualView({ date, unifiedEvents, availability = [], onDayClick }: AnnualViewProps) {
+export default function AnnualView({ date, unifiedEvents, availability = [], onDayClick, onMonthClick }: AnnualViewProps) {
   const year = date.getFullYear();
 
   // Build event counts per date and per month
@@ -75,9 +76,16 @@ export default function AnnualView({ date, unifiedEvents, availability = [], onD
           return (
             <Card key={monthIndex} className="p-1.5 bg-lunar-surface border-lunar-border">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium capitalize text-lunar-text">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onMonthClick?.(new Date(year, monthIndex, 1));
+                  }}
+                  className="text-sm font-medium capitalize text-lunar-text hover:text-primary hover:underline underline-offset-2 transition-colors cursor-pointer"
+                >
                   {monthNames[monthIndex]}
-                </h3>
+                </button>
                 <span className="text-[11px] text-lunar-textSecondary">
                   {totalMonthEvents} eventos
                 </span>

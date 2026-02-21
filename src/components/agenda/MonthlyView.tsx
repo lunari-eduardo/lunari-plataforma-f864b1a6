@@ -1,7 +1,8 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useRef, useCallback } from 'react';
 import { startOfMonth, endOfMonth, eachDayOfInterval, format, isToday, isSameDay } from 'date-fns';
 import { UnifiedEvent } from '@/hooks/useUnifiedCalendar';
 import UnifiedEventCard from './UnifiedEventCard';
+import DayPreviewPopover from './DayPreviewPopover';
 import { useAvailability } from '@/hooks/useAvailability';
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 interface MonthlyViewProps {
@@ -152,10 +153,27 @@ const DayCell = ({
 }) => {
   const { sessionCount, availCount, dayKey, fullDaySlot } = useDayMetrics(day, unifiedEvents, availability);
 
+  // Hover preview state (desktop only)
+  const [showPreview, setShowPreview] = useState(false);
+  const enterTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleMouseEnter = useCallback(() => {
+    if (isMobile) return;
+    if (leaveTimer.current) clearTimeout(leaveTimer.current);
+    enterTimer.current = setTimeout(() => setShowPreview(true), 250);
+  }, [isMobile]);
+
+  const handleMouseLeave = useCallback(() => {
+    if (isMobile) return;
+    if (enterTimer.current) clearTimeout(enterTimer.current);
+    leaveTimer.current = setTimeout(() => setShowPreview(false), 150);
+  }, [isMobile]);
+
   // Estilos dinâmicos para dia todo
   const cellStyle = fullDaySlot ? {
     backgroundColor: fullDaySlot.color 
-      ? `${fullDaySlot.color}15`  // Cor esmaecida (15% opacidade)
+      ? `${fullDaySlot.color}15`
       : 'hsl(var(--muted))',
     borderColor: fullDaySlot.color || 'hsl(var(--border))'
   } : {};
@@ -169,8 +187,10 @@ const DayCell = ({
   return (
     <div 
       onClick={() => onDayClick(day)} 
-      className={cellClassName}
+      className={`${cellClassName} relative`}
       style={cellStyle}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       <div className="flex justify-between items-center mb-1 md:mb-2">
         <span className={`
@@ -235,6 +255,22 @@ const DayCell = ({
           )
         )}
       </div>
+
+      {/* Desktop hover preview popover */}
+      {!isMobile && showPreview && dayEvents.length > 0 && (
+        <div 
+          className="absolute z-50 top-0 left-full ml-1"
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+        >
+          <DayPreviewPopover
+            day={day}
+            events={dayEvents}
+            onEventClick={onEventClick}
+            onViewDay={onDayClick}
+          />
+        </div>
+      )}
     </div>
   );
 };
