@@ -18,12 +18,13 @@ export function useWorkflowCacheInit() {
     let isInitialized = false;
 
     const initCache = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user;
       
       if (user && !isInitialized) {
         console.log('🔄 Initializing WorkflowCacheManager for user:', user.id);
         
-        // ✅ NOVO: Limpar cache antigo corrompido (uma vez)
+        // ✅ Limpar cache antigo corrompido (uma vez)
         const cacheVersion = localStorage.getItem('workflow_cache_version');
         if (cacheVersion !== '2.0') {
           console.log('🗑️ Clearing old corrupted cache...');
@@ -32,7 +33,7 @@ export function useWorkflowCacheInit() {
           localStorage.setItem('workflow_cache_version', '2.0');
         }
         
-        // 1. Configurar userId (carrega LocalStorage automaticamente)
+        // 1. Configurar userId
         workflowCacheManager.setUserId(user.id);
         
         // 2. Executar preload em background (NÃO BLOQUEAR)
@@ -48,7 +49,7 @@ export function useWorkflowCacheInit() {
         setTimeout(async () => {
           try {
             console.log('🔄 [WorkflowCacheInit] Syncing existing appointments...');
-            await syncExistingAppointments();
+            await syncExistingAppointments(user.id);
             console.log('✅ [WorkflowCacheInit] Appointments sync completed');
             
             // Reparar divergências retroativas (uma única vez por mount)
@@ -58,39 +59,38 @@ export function useWorkflowCacheInit() {
           } catch (error) {
             console.error('❌ [WorkflowCacheInit] Error syncing/repairing:', error);
           }
-        }, 3000); // Executar em background sem bloquear
+        }, 3000);
         
         isInitialized = true;
       }
     };
 
-    // FASE 5: Função de sincronização de appointments (extraída do useAppointmentWorkflowSync)
-    const syncExistingAppointments = async () => {
+    // ✅ OPTIMIZED: Batch query instead of N+1
+    const syncExistingAppointments = async (userId: string) => {
       try {
-        const { data: user } = await supabase.auth.getUser();
-        if (!user?.user) return;
-
+        // 1. Buscar todos os appointments confirmados
         const { data: appointments } = await supabase
           .from('appointments')
           .select('*')
-          .eq('user_id', user.user.id)
+          .eq('user_id', userId)
           .eq('status', 'confirmado');
 
         if (!appointments?.length) return;
 
-        const appointmentsNeedingSync = [];
-        for (const appointment of appointments) {
-          const { data: existingSession } = await supabase
-            .from('clientes_sessoes')
-            .select('id')
-            .eq('user_id', user.user.id)
-            .or(`appointment_id.eq.${appointment.id},session_id.eq.${appointment.session_id}`)
-            .maybeSingle();
+        // 2. Buscar TODAS as sessões existentes em 1 query (batch)
+        const appointmentIds = appointments.map(a => a.id);
+        const { data: existingSessions } = await supabase
+          .from('clientes_sessoes')
+          .select('appointment_id')
+          .eq('user_id', userId)
+          .in('appointment_id', appointmentIds);
 
-          if (!existingSession) {
-            appointmentsNeedingSync.push(appointment);
-          }
-        }
+        const existingSet = new Set(existingSessions?.map(s => s.appointment_id) || []);
+        const appointmentsNeedingSync = appointments.filter(a => !existingSet.has(a.id));
+
+        if (appointmentsNeedingSync.length === 0) return;
+
+        console.log(`📋 [WorkflowCacheInit] ${appointmentsNeedingSync.length} appointments need sync`);
 
         for (const appointment of appointmentsNeedingSync) {
           try {

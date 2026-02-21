@@ -102,7 +102,7 @@ export function useClientMetricsRealtime(clienteId: string) {
 
     // Subscribe to appointments changes
     const appointmentsChannel = supabase
-      .channel('client-appointments-metrics')
+      .channel(`client-appointments-metrics-${clienteId}`)
       .on(
         'postgres_changes',
         {
@@ -111,16 +111,12 @@ export function useClientMetricsRealtime(clienteId: string) {
           table: 'appointments',
           filter: `cliente_id=eq.${clienteId}`,
         },
-        () => {
-          console.log('🔄 Recalculating metrics due to appointments change');
-          calculateMetrics();
-        }
+        () => calculateMetrics()
       )
       .subscribe();
 
-    // Subscribe to sessions changes
     const sessionsChannel = supabase
-      .channel('client-sessions-metrics')
+      .channel(`client-sessions-metrics-${clienteId}`)
       .on(
         'postgres_changes',
         {
@@ -129,16 +125,12 @@ export function useClientMetricsRealtime(clienteId: string) {
           table: 'clientes_sessoes',
           filter: `cliente_id=eq.${clienteId}`,
         },
-        () => {
-          console.log('🔄 Recalculating metrics due to sessions change');
-          calculateMetrics();
-        }
+        () => calculateMetrics()
       )
       .subscribe();
 
-    // Subscribe to transactions changes
     const transactionsChannel = supabase
-      .channel('client-transactions-metrics')
+      .channel(`client-transactions-metrics-${clienteId}`)
       .on(
         'postgres_changes',
         {
@@ -147,10 +139,7 @@ export function useClientMetricsRealtime(clienteId: string) {
           table: 'clientes_transacoes',
           filter: `cliente_id=eq.${clienteId}`,
         },
-        () => {
-          console.log('🔄 Recalculating metrics due to transactions change');
-          calculateMetrics();
-        }
+        () => calculateMetrics()
       )
       .subscribe();
 
