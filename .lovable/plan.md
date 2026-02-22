@@ -1,53 +1,58 @@
 
+# Plano: Menu de Opcoes (tres pontinhos) nos Horarios Vazios da Agenda Diaria
 
-# Corrigir Preview Flutuante Cortado no Calendario Mensal
+## Visao Geral
 
-## Problema
+Adicionar um botao discreto "..." (MoreVertical) em cada horario vazio na DailyView. Ao clicar, abre um dropdown com 3 opcoes:
 
-O popover de preview esta posicionado com `position: absolute` dentro da celula do dia, que por sua vez esta dentro de um container com `overflow-auto`. Isso causa:
-- Popover cortado quando a celula esta perto das bordas (direita, inferior)
-- Barras de rolagem horizontais e verticais aparecem para acomodar o popover que "vaza"
+1. **Disponivel** - Abre o AvailabilityConfigModal pre-configurado para aquele horario (funcionalidade existente)
+2. **Bloquear** - Marca o horario com fundo avermelhado e badge "Bloqueado". Clicar no slot bloqueado pergunta se quer desbloquear (em vez de abrir modal de agendamento)
+3. **Excluir** - Remove o horario da lista do dia (mesmo que seja padrao)
 
-## Solucao
+## Como Funciona o Bloqueio
 
-Renderizar o popover usando **React Portal** (`createPortal` para `document.body`) com posicionamento calculado dinamicamente baseado no viewport, similar ao que frameworks como Radix/Floating UI fazem.
+O bloqueio sera implementado reutilizando o sistema de **availability slots** ja existente, criando um slot com um `typeId` especial de tipo "bloqueado". Isso garante persistencia no Supabase sem criar tabelas novas.
 
-### Logica de posicionamento inteligente
+- Ao bloquear: cria um `AvailabilitySlot` com label "Bloqueado" e cor vermelha
+- Ao clicar num slot bloqueado: exibe AlertDialog perguntando "Deseja liberar este horario?" em vez de abrir o modal de agendamento
+- A deteccao de bloqueio e feita verificando `slot.label === 'Bloqueado'` no availability
 
-1. Usar `ref` na celula do dia para obter `getBoundingClientRect()`
-2. Calcular se ha espaco suficiente a direita (padrao) -- senao, posicionar a esquerda
-3. Calcular se ha espaco suficiente abaixo (padrao) -- senao, alinhar pela parte inferior da celula
-4. Popover fica em `position: fixed` no body, fora de qualquer container com overflow
+## Alteracoes
 
-```text
-Celula no meio:          Celula na borda direita:
-+------+                          +------+
-| Dia  |--[Preview]      [Preview]--| Dia  |
-+------+                          +------+
+### 1. `src/components/agenda/DailyView.tsx` (principal)
 
-Celula no canto inferior direito:
-                [Preview]--+------+
-                           | Dia  |
-                           +------+
-```
+- Importar `MoreVertical` do lucide-react e `DropdownMenu` do radix
+- Importar `AlertDialog` para confirmacao de desbloqueio
+- Adicionar estado para controlar o slot bloqueado selecionado (`unlockConfirmTime`)
+- No trecho onde renderiza slots vazios (sem eventos):
+  - Adicionar botao "..." que abre DropdownMenu com 3 opcoes
+  - Detectar se o horario esta bloqueado (availability com label "Bloqueado")
+  - Se bloqueado: mostrar fundo avermelhado + badge "Bloqueado" e interceptar o clique para perguntar se quer desbloquear
+  - Se nao bloqueado: manter comportamento atual (clique abre modal de agendamento)
+- Funcao `handleBlock(time)`: cria availability slot com label "Bloqueado" e cor vermelha
+- Funcao `handleUnblock(time)`: remove o availability slot de bloqueio
+- Funcao `handleRemoveTimeSlot(time)`: remove o horario da lista usando `saveTimeSlots` do hook (filtra o horario e salva o array sem ele)
 
-### Alteracoes
+### 2. `src/hooks/useCustomTimeSlots.ts` (adicionar removeTimeSlot)
 
-**Arquivo: `src/components/agenda/MonthlyView.tsx`**
-- Adicionar `ref` ao div da celula do dia
-- Substituir o bloco do popover absoluto por um portal com posicionamento calculado
-- Usar `useEffect` ou calculo inline para determinar posicao (top/left) baseado no `getBoundingClientRect` da celula e dimensoes do viewport
+- Adicionar funcao `removeTimeSlot(time: string)` que filtra o horario do array e salva via `saveTimeSlots`
+- Retornar `removeTimeSlot` no objeto de retorno do hook
 
-**Arquivo: `src/components/agenda/DayPreviewPopover.tsx`**
-- Sem alteracoes no componente visual -- apenas o container que o envolve muda
+### Nenhuma tabela nova necessaria
 
-### Detalhes tecnicos
+O bloqueio usa a tabela `availability_slots` existente. A exclusao usa a tabela `custom_time_slots` existente.
 
-O calculo de posicao no `DayCell`:
-- Obter rect da celula via `cellRef.current.getBoundingClientRect()`
-- Se `rect.right + 270 > window.innerWidth` -> posicionar a esquerda (`left = rect.left - 270`)
-- Senao -> posicionar a direita (`left = rect.right + 4`)
-- Se `rect.top + popoverHeight > window.innerHeight` -> alinhar pelo bottom (`top = rect.bottom - popoverHeight`)
-- Senao -> alinhar pelo top (`top = rect.top`)
-- Usar `position: fixed` com z-index alto
+## Comportamento Visual
 
+| Estado do slot | Fundo | Conteudo | Clique |
+|---|---|---|---|
+| Vazio normal | branco | "Clique para criar agendamento" + botao "..." | Abre modal de agendamento |
+| Disponivel | cor do tipo | Badge "Disponivel" + botao remover + "..." | Abre modal de agendamento |
+| Bloqueado | vermelho claro | Badge "Bloqueado" + "..." | Pergunta se quer desbloquear |
+| Com evento | azul | Card do evento | Abre detalhes do evento |
+
+## Compatibilidade
+
+- Desktop: dropdown abre normalmente ao clicar no "..."
+- Mobile: DropdownMenu do Radix ja funciona com touch nativamente
+- O botao "..." fica discreto (opacidade baixa) e aparece mais visivel no hover/focus
