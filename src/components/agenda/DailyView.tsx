@@ -50,6 +50,7 @@ export default function DailyView({
   
   const {
     availability,
+    availabilityTypes,
     addAvailabilitySlots,
     deleteAvailabilitySlot
   } = useAvailability();
@@ -112,6 +113,25 @@ export default function DailyView({
     if (matches.length > 0) {
       toast.success('Disponibilidade removida');
     }
+  };
+
+  const handleMarkAvailable = async (time: string) => {
+    // Remove existing availability for this time first
+    const existing = availability.filter(s => s.date === dateKey && s.time === time && !s.isFullDay);
+    existing.forEach(s => deleteAvailabilitySlot(s.id));
+
+    const tipo = availabilityTypes[0];
+    const label = tipo?.name || 'Disponível';
+    const color = tipo?.color || '#10b981';
+
+    await addAvailabilitySlots([{
+      date: dateKey,
+      time,
+      duration: 60,
+      label,
+      color,
+    }]);
+    toast.success('Horário marcado como disponível');
   };
 
   const handleBlockSlot = async (time: string) => {
@@ -395,9 +415,7 @@ export default function DailyView({
                     <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
                       <ConflictIndicator date={date} time={time} />
                       <TimeSlotOptionsMenu
-                        onAvailable={() => {
-                          if (onOpenAvailability) onOpenAvailability(date, time);
-                        }}
+                        onAvailable={() => handleMarkAvailable(time)}
                         onBlock={() => handleBlockSlot(time)}
                         onRemove={() => handleRemoveTimeSlot(time)}
                       />
