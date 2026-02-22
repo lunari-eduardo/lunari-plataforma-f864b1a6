@@ -228,7 +228,7 @@ export default function Agenda() {
         );
       case 'day':
         return (
-          <DailyView {...commonProps} />
+          <DailyView {...commonProps} onOpenAvailability={openAvailabilityModal} />
         );
       default:
         return null;
