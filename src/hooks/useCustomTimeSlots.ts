@@ -120,6 +120,31 @@ export const useCustomTimeSlots = (date: Date) => {
     }
   }, [date]);
 
+  /**
+   * Remover um horário específico
+   */
+  const removeTimeSlot = useCallback(async (time: string) => {
+    const updatedSlots = timeSlots.filter(t => t !== time);
+    
+    if (updatedSlots.length === 0) {
+      // Se removeu todos, deletar registro customizado
+      try {
+        await CustomTimeSlotsService.deleteTimeSlotsForDate(date);
+        setTimeSlots(DEFAULT_TIME_SLOTS);
+        setHasCustomSlots(false);
+        toast.success('Horário removido');
+      } catch (error) {
+        console.error('Erro ao remover horário:', error);
+        toast.error('Erro ao remover horário');
+      }
+      return true;
+    }
+    
+    await saveTimeSlots(updatedSlots);
+    toast.success('Horário removido');
+    return true;
+  }, [timeSlots, saveTimeSlots, date]);
+
   return {
     timeSlots,
     isLoading,
@@ -127,6 +152,7 @@ export const useCustomTimeSlots = (date: Date) => {
     saveTimeSlots,
     addTimeSlot,
     editTimeSlot,
+    removeTimeSlot,
     resetToDefault,
     refresh: loadTimeSlots
   };
