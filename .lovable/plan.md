@@ -1,108 +1,90 @@
 
+# Analise e Correcao: Pagamento de Fotos Extras nao Contabilizado no valor_pago
 
-# Refatoracao Completa -- Modal "Configurar Disponibilidade"
+## Diagnostico Completo
 
-## Resumo
-
-Reescrever o `AvailabilityConfigModal` com uma interface limpa, sequencial e intuitiva. Remover complexidade desnecessaria (gerenciador de tipos, dropdowns, campos separados de data) e substituir por um fluxo guiado em 3 secoes claras.
-
-## Nova Estrutura do Modal
+### Linha do Tempo do Problema
 
 ```text
-+-------------------------------------------+
-|  Configurar disponibilidade           [X]  |
-+-------------------------------------------+
-|                                           |
-|  Secao 1 -- Acao                          |
-|  [ Liberar horarios | Bloquear horarios ] |
-|                                           |
-|  Secao 2 -- Periodo                       |
-|  +-------Calendar Range--------+          |
-|  |  << Fevereiro 2026 >>       |          |
-|  |  ...dias com range...       |          |
-|  +-----------------------------+          |
-|                                           |
-|  Aplicar para:                            |
-|  ( ) Todos os dias do periodo             |
-|  ( ) Dias especificos da semana           |
-|    [Dom][Seg][Ter][Qua][Qui][Sex][Sab]    |
-|                                           |
-|  Secao 3 -- Aplicacao                     |
-|                                           |
-|  Se BLOQUEAR:                             |
-|  ( ) Dia inteiro                          |
-|  ( ) Horarios especificos                 |
-|    [08:00]-[12:00] (X)                    |
-|    + Adicionar horario                    |
-|                                           |
-|  Se LIBERAR:                              |
-|  ( ) Criar novos horarios                 |
-|  ( ) Substituir horarios existentes       |
-|    [HH:MM] (X)                            |
-|    + Adicionar horario                    |
-|                                           |
-+-------------------------------------------+
-|  Remover deste periodo    Cancelar  Salvar |
-+-------------------------------------------+
+01:26:27  Gallery cria cobranca (R$25, InfinitePay, status: pendente)
+01:28:32  Gallery detecta pagamento e atualiza cobranca para "pago"
+           -> galerias.status_pagamento = "pago"
+           -> trigger sync_gallery_status_to_session executa
+           -> clientes_sessoes.status_pagamento_fotos_extra = "pago"
+           -> Badge "Pago" aparece no card da sessao
+01:28:48  Webhook InfinitePay chega (16 segundos depois)
+           -> Encontra cobranca ja com status "pago"
+           -> Retorna "already_processed" SEM criar transacao
+           -> clientes_transacoes NAO recebe o registro de R$25
+           -> valor_pago permanece em R$130 (apenas pagamento manual)
+           -> Saldo pendente: R$25
 ```
 
-## Alteracoes
+### Causa Raiz
 
-### Arquivo: `src/components/agenda/AvailabilityConfigModal.tsx` (reescrita completa)
+O `infinitepay-webhook` (linhas 185-198) tem um **early return** quando encontra a cobranca ja marcada como "pago". Ele simplesmente retorna sem verificar se a transacao financeira (`clientes_transacoes`) foi criada.
 
-**Remover:**
-- Botao "Gerenciar tipos" e todo o Dialog secundario de tipos
-- Dropdown Select de tipo de disponibilidade
-- Campos separados de "Data inicial" e "Data final" com Popovers
-- Textos explicativos longos
-- Switch "Substituir existentes" no formato atual
-- Toda logica de gerenciamento de tipos (handleAddType, handleDeleteType, handleStartEdit, handleSaveEdit, etc.)
+O projeto Gallery atualiza a cobranca para "pago" ANTES do webhook chegar (via polling ou Realtime). Quando o webhook finalmente chega, ele ve "ja pago" e pula a criacao da transacao. Resultado: o badge visual mostra "Pago", mas o `valor_pago` da sessao nunca e atualizado porque nao existe transacao no banco.
 
-**Adicionar:**
-- **Secao 1 - Acao**: Botao segmentado horizontal (toggle group) com duas opcoes: "Liberar horarios" e "Bloquear horarios". Sem dropdown.
-- **Secao 2 - Periodo**: Calendario unico com `mode="range"` do react-day-picker. Primeiro clique = inicio, segundo clique = fim, intervalo destacado. Abaixo: radio para "Todos os dias" ou "Dias especificos" com checkboxes compactos dos dias da semana.
-- **Secao 3 - Aplicacao**: Conteudo condicional baseado na acao:
-  - Se BLOQUEAR: Radio "Dia inteiro" / "Horarios especificos". Se horarios especificos, mostrar campos de hora inicio-fim com botao adicionar.
-  - Se LIBERAR: Radio "Criar novos" / "Substituir existentes" com texto curto explicativo em opacidade menor. Campos de horario para adicionar.
-- **Rodape**: Link discreto vermelho "Remover deste periodo" a esquerda. "Cancelar" ghost + "Salvar" primario a direita.
+### O que funciona vs o que falhou
 
-**Logica de save:**
-- Manter `computeTargetDatesBetween` para calcular datas alvo
-- Se BLOQUEAR + dia inteiro: criar slot com `isFullDay: true`, label "Bloqueado", cor vermelha
-- Se BLOQUEAR + horarios especificos: criar slots com label "Bloqueado" para cada intervalo
-- Se LIBERAR + criar novos: adicionar slots sem remover existentes (pular conflitos com agendamentos)
-- Se LIBERAR + substituir: remover existentes antes de adicionar novos
-- Validar que nao ha agendamento confirmado antes de substituir
+| Componente | Status |
+|---|---|
+| Cobranca atualizada para "pago" | OK (Gallery fez) |
+| galerias.status_pagamento = "pago" | OK (Gallery fez) |
+| status_pagamento_fotos_extra = "pago" | OK (trigger sync) |
+| Badge "Pago" no card | OK (le status_pagamento_fotos_extra) |
+| Transacao em clientes_transacoes | FALHOU (webhook pulou) |
+| valor_pago recalculado | FALHOU (sem transacao, trigger nao dispara) |
+| status_financeiro correto | FALHOU (valor_pago incorreto) |
 
-**Estado simplificado:**
-- `action`: 'liberar' | 'bloquear'
-- `dateRange`: { from: Date, to: Date }
-- `weekdayMode`: 'all' | 'specific'
-- `selectedWeekdays`: number[]
-- `blockMode`: 'fullDay' | 'specific' (so quando action = bloquear)
-- `liberarMode`: 'create' | 'replace' (so quando action = liberar)
-- `timeSlots`: { start: string, end?: string }[]
-- `fullDayDescription`: string
+## Solucao
 
-### Arquivo: `src/components/ui/calendar.tsx`
+### Correcao 1: `infinitepay-webhook` — Garantir transacao mesmo quando "already paid"
 
-Nenhuma alteracao necessaria -- ja suporta `mode="range"` via react-day-picker.
+No trecho do "already paid" (linhas 185-198), em vez de retornar imediatamente, verificar se existe transacao vinculada e criar uma se estiver faltando.
 
-### Nenhuma alteracao em hooks ou tipos
+**Logica:**
+```text
+SE cobranca.status === "pago":
+  SE cobranca.session_id existe:
+    Buscar transacao em clientes_transacoes com descricao contendo "InfinitePay"
+      e session_id correspondente e valor = cobranca.valor
+    SE nao encontrou transacao:
+      Buscar sessao (por session_id texto ou UUID)
+      Criar transacao (mesmo padrao do fluxo normal)
+      Log: "Transaction missing, created retroactively"
+  Retornar "already_processed"
+```
 
-- `useAvailability` permanece igual
-- `AvailabilitySlot` e `AvailabilityType` permanecem iguais
-- Os tipos de disponibilidade continuam existindo no sistema (usados pelo handleMarkAvailable na DailyView), apenas o gerenciador e removido deste modal
+### Correcao 2: `mercadopago-webhook` — Mesma protecao
 
-## Diretrizes visuais
+O `mercadopago-webhook` tem a mesma vulnerabilidade (nao verificada neste caso, mas preventiva). Aplicar a mesma logica de verificacao de transacao existente quando o pagamento ja esta marcado como "pago".
 
-- Espacamento vertical generoso entre secoes (space-y-6)
-- Sem bordas internas pesadas nos blocos
-- Titulos de secao: text-sm font-medium text-foreground
-- Texto auxiliar: text-xs text-muted-foreground (opacidade natural)
-- Botao segmentado usa estilo toggle-group compacto
-- Calendario embutido diretamente (sem popover)
-- Animacao suave com transicoes CSS ao alternar opcoes
-- Modal max-w-[480px], responsivo para mobile
-- Fundo neutro, visual de ferramenta rapida (nao formulario administrativo)
+### Correcao 3: Reparar a sessao afetada agora
 
+Inserir a transacao faltante para a sessao `workflow-1770819329231-lt1vtcjy9n` via SQL, para corrigir o problema imediato. O trigger `recompute_session_paid` recalculara o `valor_pago` automaticamente.
+
+## Detalhes Tecnicos
+
+### Arquivo: `supabase/functions/infinitepay-webhook/index.ts`
+
+Substituir o bloco de early return (linhas 184-198) por uma verificacao que:
+1. Verifica se existe transacao para esta cobranca/sessao
+2. Se nao existir, busca a sessao e cria a transacao
+3. Retorna normalmente depois
+
+### Arquivo: `supabase/functions/mercadopago-webhook/index.ts`
+
+Nao tem o mesmo early return explicito, mas no trecho onde verifica duplicatas (linha com `ilike`), garantir que a logica de criacao de transacao e robusta contra race conditions similares.
+
+### Nenhuma alteracao em triggers ou tabelas
+
+Os triggers `recompute_session_paid` e `sync_gallery_status_to_session` estao corretos. O problema e exclusivamente na logica dos webhooks que pulam a criacao de transacao.
+
+## Impacto
+
+- Corrige 100% dos casos onde o Gallery (ou qualquer outro sistema) marca a cobranca como "pago" antes do webhook
+- Nao quebra nenhuma logica existente (a verificacao de duplicata por descricao ja existe no fluxo normal)
+- Protege contra webhooks duplicados (verifica se transacao ja existe antes de criar)
+- Aplica para ambos provedores (InfinitePay e Mercado Pago)
