@@ -21,12 +21,11 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
     console.log('✅ SupabaseAgendaAdapter initialized - Supabase integration active');
   }
 
-  // Appointments
+  // Appointments — loads ALL (fallback)
   async loadAppointments(): Promise<Appointment[]> {
-    const { data: user } = await supabase.auth.getUser();
-    if (!user?.user) throw new Error('User not authenticated');
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) throw new Error('User not authenticated');
 
-    // JOIN com clientes para obter nome atualizado
     const { data, error } = await supabase
       .from('appointments')
       .select(`
@@ -35,12 +34,40 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
           nome
         )
       `)
-      .eq('user_id', user.user.id)
+      .eq('user_id', session.user.id)
       .order('date', { ascending: false })
       .order('time', { ascending: true });
 
     if (error) throw error;
 
+    return this.mapAppointments(data);
+  }
+
+  // Smart loading: appointments by date range
+  async loadAppointmentsByRange(startDate: string, endDate: string): Promise<Appointment[]> {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) throw new Error('User not authenticated');
+
+    const { data, error } = await supabase
+      .from('appointments')
+      .select(`
+        *,
+        clientes (
+          nome
+        )
+      `)
+      .eq('user_id', session.user.id)
+      .gte('date', startDate)
+      .lte('date', endDate)
+      .order('date', { ascending: false })
+      .order('time', { ascending: true });
+
+    if (error) throw error;
+
+    return this.mapAppointments(data);
+  }
+
+  private mapAppointments(data: any[]): Appointment[] {
     return data.map(appointment => ({
       id: appointment.id,
       sessionId: appointment.session_id,
@@ -48,7 +75,6 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
       date: this.parseDateFromStorage(appointment.date),
       time: appointment.time,
       type: appointment.type,
-      // Priorizar nome do cliente (JOIN) sobre title estático
       client: (appointment.clientes as any)?.nome || appointment.title,
       status: appointment.status as any,
       description: appointment.description || '',
@@ -63,8 +89,8 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
   }
 
   async saveAppointment(appointment: Appointment): Promise<Appointment> {
-    const { data: user } = await supabase.auth.getUser();
-    if (!user?.user) throw new Error('User not authenticated');
+    const { data: { session: authSession } } = await supabase.auth.getSession();
+    if (!authSession?.user) throw new Error('User not authenticated');
 
     const sessionId = appointment.sessionId || generateUniversalSessionId('agenda');
 
@@ -85,12 +111,12 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
     const { data, error } = await supabase
       .from('appointments')
       .insert({
-        user_id: user.user.id,
+        user_id: authSession.user.id,
         session_id: sessionId,
         title: appointment.title,
         date: dateStr,
         time: appointment.time,
-        type: appointment.type,  // ✅ FASE 2: type = CATEGORIA (sempre)
+        type: appointment.type,
         status: appointment.status,
         description: appointment.description,
         package_id: appointment.packageId,
@@ -126,7 +152,7 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
           .from('appointments')
           .select('*')
           .eq('id', data.id)
-          .eq('user_id', user.user.id)
+          .eq('user_id', authSession.user.id)
           .single();
         
         if (fetchError) {
@@ -327,8 +353,8 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
   }
 
   async updateAppointment(id: string, updates: Partial<Appointment>): Promise<void> {
-    const { data: user } = await supabase.auth.getUser();
-    if (!user?.user) throw new Error('User not authenticated');
+    const { data: { session: authSess } } = await supabase.auth.getSession();
+    if (!authSess?.user) throw new Error('User not authenticated');
 
     const updateData: any = {};
     
@@ -362,7 +388,7 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
       .from('appointments')
       .update(updateData)
       .eq('id', id)
-      .eq('user_id', user.user.id);
+      .eq('user_id', authSess.user.id);
 
     if (error) throw error;
     
@@ -375,7 +401,7 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
           .from('appointments')
           .select('*')
           .eq('id', id)
-          .eq('user_id', user.user.id)
+          .eq('user_id', authSess.user.id)
           .single();
         
         if (appointmentData) {
@@ -453,8 +479,8 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
   }
 
   async deleteAppointment(id: string, preservePayments?: boolean): Promise<void> {
-    const { data: user } = await supabase.auth.getUser();
-    if (!user?.user) throw new Error('User not authenticated');
+    const { data: { session: authSess } } = await supabase.auth.getSession();
+    if (!authSess?.user) throw new Error('User not authenticated');
 
     // ✅ FASE 5: Log estruturado no início
     console.log('🗑️ [DELETE-START]', {
@@ -478,7 +504,7 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
         .from('appointments')
         .select('google_event_id, title')
         .eq('id', id)
-        .eq('user_id', user.user.id)
+        .eq('user_id', authSess.user.id)
         .maybeSingle();
       
       // Google Calendar sync - delete antes de remover do banco
@@ -519,7 +545,7 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
       .from('appointments')
       .select('*')
       .eq('id', id)
-      .eq('user_id', user.user.id)
+      .eq('user_id', authSess.user.id)
       .single();
 
     if (appointmentError || !appointment) {
@@ -542,7 +568,7 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
     const { data: sessionByAppointment } = await supabase
       .from('clientes_sessoes')
       .select('*')
-      .eq('user_id', user.user.id)
+      .eq('user_id', authSess.user.id)
       .eq('appointment_id', id)
       .maybeSingle();
     
@@ -555,7 +581,7 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
         .from('appointments')
         .select('id, title')
         .eq('session_id', appointment.session_id)
-        .eq('user_id', user.user.id)
+        .eq('user_id', authSess.user.id)
         .neq('id', id)
         .limit(5);
       
@@ -569,7 +595,7 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
         const { data: sessionBySessionId } = await supabase
           .from('clientes_sessoes')
           .select('*')
-          .eq('user_id', user.user.id)
+          .eq('user_id', authSess.user.id)
           .eq('session_id', appointment.session_id)
           .maybeSingle();
         
@@ -611,10 +637,10 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
             : `[${new Date().toLocaleDateString()}] Agendamento cancelado - preservado apenas valor pago de ${formatCurrency(valorPagoAtual)}`,
           
           updated_at: new Date().toISOString(),
-          updated_by: user.user.id
+          updated_by: authSess.user.id
         })
         .eq('id', workflowSession.id)
-        .eq('user_id', user.user.id)
+        .eq('user_id', authSess.user.id)
         .select();
 
       if (updateError) {
@@ -642,7 +668,7 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
       .from('appointments')
       .delete()
       .eq('id', id)
-      .eq('user_id', user.user.id);
+      .eq('user_id', authSess.user.id);
 
     if (error) throw error;
 
@@ -659,8 +685,8 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
   // Availability - FASE 1: Migração para Supabase
   async loadAvailabilitySlots(): Promise<AvailabilitySlot[]> {
     try {
-      const user = await supabase.auth.getUser();
-      if (!user.data.user) {
+      const { data: { session: authSess } } = await supabase.auth.getSession();
+      if (!authSess?.user) {
         console.warn('⚠️ Usuário não autenticado');
         return [];
       }
@@ -668,7 +694,7 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
       const { data, error } = await supabase
         .from('availability_slots')
         .select('*')
-        .eq('user_id', user.data.user.id)
+        .eq('user_id', authSess.user.id)
         .order('date', { ascending: true })
         .order('start_time', { ascending: true });
 
@@ -709,15 +735,15 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
 
   async saveAvailabilitySlots(slots: AvailabilitySlot[]): Promise<void> {
     try {
-      const user = await supabase.auth.getUser();
-      if (!user.data.user) {
+      const { data: { session: authSess } } = await supabase.auth.getSession();
+      if (!authSess?.user) {
         throw new Error('Usuário não autenticado');
       }
 
       // Converter formato da aplicação para formato Supabase
       const supabaseSlots = slots.map(slot => ({
         id: slot.id,
-        user_id: user.data.user.id,
+        user_id: authSess.user.id,
         date: slot.date,
         start_time: slot.time,
         end_time: this.calculateEndTime(slot.time, slot.duration),
@@ -747,8 +773,8 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
    */
   async addAvailabilitySlots(slots: Omit<AvailabilitySlot, 'id'>[]): Promise<void> {
     try {
-      const user = await supabase.auth.getUser();
-      if (!user.data.user) {
+      const { data: { session: authSess } } = await supabase.auth.getSession();
+      if (!authSess?.user) {
         throw new Error('Usuário não autenticado');
       }
 
@@ -756,7 +782,7 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
 
       // Converter formato da aplicação para formato Supabase
       const supabaseSlots = slots.map(slot => ({
-        user_id: user.data.user.id,
+        user_id: authSess.user.id,
         date: slot.date,
         start_time: slot.time,
         end_time: this.calculateEndTime(slot.time, slot.duration || 60),
@@ -787,8 +813,8 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
 
   async deleteAvailabilitySlot(id: string): Promise<void> {
     try {
-      const user = await supabase.auth.getUser();
-      if (!user.data.user) {
+      const { data: { session: authSess } } = await supabase.auth.getSession();
+      if (!authSess?.user) {
         throw new Error('Usuário não autenticado');
       }
 
@@ -796,7 +822,7 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
         .from('availability_slots')
         .delete()
         .eq('id', id)
-        .eq('user_id', user.data.user.id);
+        .eq('user_id', authSess.user.id);
 
       if (error) {
         console.error('❌ Erro ao deletar slot:', error);
@@ -812,8 +838,8 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
 
   async clearAvailabilityForDate(date: string): Promise<void> {
     try {
-      const user = await supabase.auth.getUser();
-      if (!user.data.user) {
+      const { data: { session: authSess } } = await supabase.auth.getSession();
+      if (!authSess?.user) {
         throw new Error('Usuário não autenticado');
       }
 
@@ -821,7 +847,7 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
         .from('availability_slots')
         .delete()
         .eq('date', date)
-        .eq('user_id', user.data.user.id)
+        .eq('user_id', authSess.user.id)
         .select();
 
       if (error) {

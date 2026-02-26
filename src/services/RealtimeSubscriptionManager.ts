@@ -94,21 +94,21 @@ class RealtimeSubscriptionManager {
         return '';
       }
 
-      // Get authenticated user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      // Get authenticated user from local session (no HTTP request)
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
         if (CIRCUIT_BREAKER_DEBUG) console.log(`🔄 User not authenticated, skipping realtime for ${tableName}`);
         return '';
       }
 
-      this.userId = user.id;
+      this.userId = session.user.id;
 
       // Get or create subscription
       let subscription = this.subscriptions.get(tableName);
 
       if (!subscription) {
         if (CIRCUIT_BREAKER_DEBUG) console.log(`📡 Creating new subscription for ${tableName}`);
-        subscription = await this.createSubscription(tableName, user.id);
+        subscription = await this.createSubscription(tableName, session.user.id);
         this.subscriptions.set(tableName, subscription);
       } else {
         if (CIRCUIT_BREAKER_DEBUG) console.log(`♻️ Reusing existing subscription for ${tableName}`);

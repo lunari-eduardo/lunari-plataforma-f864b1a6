@@ -9,6 +9,7 @@ import { AgendaSettings } from '@/types/agenda-supabase';
 export abstract class AgendaStorageAdapter {
   // Appointments
   abstract loadAppointments(): Promise<Appointment[]>;
+  abstract loadAppointmentsByRange(startDate: string, endDate: string): Promise<Appointment[]>;
   abstract saveAppointment(appointment: Appointment): Promise<Appointment>;
   abstract updateAppointment(id: string, updates: Partial<Appointment>): Promise<void>;
   abstract deleteAppointment(id: string, preservePayments?: boolean): Promise<void>;

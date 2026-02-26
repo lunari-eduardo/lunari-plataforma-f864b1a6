@@ -1231,6 +1231,7 @@ export type Database = {
           is_selected: boolean | null
           mime_type: string | null
           order_index: number | null
+          original_file_size: number | null
           original_filename: string
           original_path: string | null
           preview_path: string | null
@@ -1256,6 +1257,7 @@ export type Database = {
           is_selected?: boolean | null
           mime_type?: string | null
           order_index?: number | null
+          original_file_size?: number | null
           original_filename: string
           original_path?: string | null
           preview_path?: string | null
@@ -1281,6 +1283,7 @@ export type Database = {
           is_selected?: boolean | null
           mime_type?: string | null
           order_index?: number | null
+          original_file_size?: number | null
           original_filename?: string
           original_path?: string | null
           preview_path?: string | null
@@ -1886,15 +1889,19 @@ export type Database = {
       }
       photographer_accounts: {
         Row: {
+          account_over_limit: boolean | null
           account_status: Database["public"]["Enums"]["account_status"]
           account_type: Database["public"]["Enums"]["account_type"]
           asaas_customer_id: string | null
           created_at: string
           credits_consumed_total: number | null
           credits_purchased_total: number | null
+          deletion_scheduled_at: string | null
+          free_transfer_bytes: number
           galleries_published_total: number
           gallery_credits: number
           id: string
+          over_limit_since: string | null
           photo_credits: number
           updated_at: string
           user_id: string
@@ -1904,15 +1911,19 @@ export type Database = {
           watermark_scale: number | null
         }
         Insert: {
+          account_over_limit?: boolean | null
           account_status?: Database["public"]["Enums"]["account_status"]
           account_type?: Database["public"]["Enums"]["account_type"]
           asaas_customer_id?: string | null
           created_at?: string
           credits_consumed_total?: number | null
           credits_purchased_total?: number | null
+          deletion_scheduled_at?: string | null
+          free_transfer_bytes?: number
           galleries_published_total?: number
           gallery_credits?: number
           id?: string
+          over_limit_since?: string | null
           photo_credits?: number
           updated_at?: string
           user_id: string
@@ -1922,15 +1933,19 @@ export type Database = {
           watermark_scale?: number | null
         }
         Update: {
+          account_over_limit?: boolean | null
           account_status?: Database["public"]["Enums"]["account_status"]
           account_type?: Database["public"]["Enums"]["account_type"]
           asaas_customer_id?: string | null
           created_at?: string
           credits_consumed_total?: number | null
           credits_purchased_total?: number | null
+          deletion_scheduled_at?: string | null
+          free_transfer_bytes?: number
           galleries_published_total?: number
           gallery_credits?: number
           id?: string
+          over_limit_since?: string | null
           photo_credits?: number
           updated_at?: string
           user_id?: string
@@ -2391,6 +2406,9 @@ export type Database = {
           id: string
           metadata: Json | null
           next_due_date: string | null
+          pending_downgrade_cycle: string | null
+          pending_downgrade_plan: string | null
+          plan_id: string | null
           plan_type: string
           status: string
           updated_at: string
@@ -2405,6 +2423,9 @@ export type Database = {
           id?: string
           metadata?: Json | null
           next_due_date?: string | null
+          pending_downgrade_cycle?: string | null
+          pending_downgrade_plan?: string | null
+          plan_id?: string | null
           plan_type: string
           status?: string
           updated_at?: string
@@ -2419,13 +2440,24 @@ export type Database = {
           id?: string
           metadata?: Json | null
           next_due_date?: string | null
+          pending_downgrade_cycle?: string | null
+          pending_downgrade_plan?: string | null
+          plan_id?: string | null
           plan_type?: string
           status?: string
           updated_at?: string
           user_id?: string
           value_cents?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_asaas_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "unified_plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       system_cache: {
         Row: {
@@ -2687,6 +2719,66 @@ export type Database = {
           type?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      unified_plans: {
+        Row: {
+          code: string
+          created_at: string | null
+          description: string | null
+          features: Json | null
+          id: string
+          includes_select: boolean | null
+          includes_studio: boolean | null
+          includes_transfer: boolean | null
+          is_active: boolean | null
+          monthly_price_cents: number
+          name: string
+          product_family: string
+          select_credits_monthly: number | null
+          sort_order: number | null
+          transfer_storage_bytes: number | null
+          updated_at: string | null
+          yearly_price_cents: number
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          description?: string | null
+          features?: Json | null
+          id?: string
+          includes_select?: boolean | null
+          includes_studio?: boolean | null
+          includes_transfer?: boolean | null
+          is_active?: boolean | null
+          monthly_price_cents?: number
+          name: string
+          product_family: string
+          select_credits_monthly?: number | null
+          sort_order?: number | null
+          transfer_storage_bytes?: number | null
+          updated_at?: string | null
+          yearly_price_cents?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          description?: string | null
+          features?: Json | null
+          id?: string
+          includes_select?: boolean | null
+          includes_studio?: boolean | null
+          includes_transfer?: boolean | null
+          is_active?: boolean | null
+          monthly_price_cents?: number
+          name?: string
+          product_family?: string
+          select_credits_monthly?: number | null
+          sort_order?: number | null
+          transfer_storage_bytes?: number | null
+          updated_at?: string | null
+          yearly_price_cents?: number
         }
         Relationships: []
       }
@@ -2988,6 +3080,10 @@ export type Database = {
           has_gestao_integration: boolean
           is_active: boolean
         }[]
+      }
+      get_transfer_storage_bytes: {
+        Args: { _user_id: string }
+        Returns: number
       }
       has_active_subscription: { Args: { _user_id: string }; Returns: boolean }
       has_role: {

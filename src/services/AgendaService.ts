@@ -16,6 +16,10 @@ export class AgendaService {
     return this.adapter.loadAppointments();
   }
 
+  async loadAppointmentsByRange(startDate: string, endDate: string): Promise<Appointment[]> {
+    return this.adapter.loadAppointmentsByRange(startDate, endDate);
+  }
+
   async addAppointment(appointmentData: Omit<Appointment, 'id'>): Promise<Appointment> {
     // ✅ CORREÇÃO TIMEZONE: Se date for string YYYY-MM-DD, usar safeParseInputDate
     let parsedDate: Date;

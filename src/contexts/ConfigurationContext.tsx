@@ -2,14 +2,12 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { configurationService } from '@/services/ConfigurationService';
 import { useSupabaseRealtime } from '@/hooks/useSupabaseRealtime';
 import { useOptimisticConfiguration } from '@/hooks/useOptimisticConfiguration';
+import { useAuth } from '@/contexts/AuthContext';
+import { realtimeSubscriptionManager } from '@/services/RealtimeSubscriptionManager';
 import { toast } from 'sonner';
 import type { Categoria, Pacote, Produto, EtapaTrabalho } from '@/types/configuration';
 
 const CONFIGURATION_DEBUG = false;
-
-// Singleton guard to prevent multiple initializations
-let isInitialized = false;
-let activeInstances = 0;
 
 interface ConfigurationContextType {
   // State
@@ -55,23 +53,8 @@ export const useConfigurationContext = () => {
 };
 
 export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Singleton guard
-  useEffect(() => {
-    activeInstances++;
-    if (activeInstances > 1) {
-      console.warn(`⚠️ Multiple ConfigurationProvider instances detected! Active: ${activeInstances}`);
-    }
-    if (CONFIGURATION_DEBUG) {
-      console.log(`🔧 [ConfigurationProvider] Mounted (instance #${activeInstances})`);
-    }
-    
-    return () => {
-      activeInstances--;
-      if (CONFIGURATION_DEBUG) {
-        console.log(`🔧 [ConfigurationProvider] Unmounted (remaining: ${activeInstances})`);
-      }
-    };
-  }, []);
+  const { user } = useAuth();
+  const previousUserIdRef = useRef<string | null>(null);
 
   // Optimistic state management - array destructuring [state, operations]
   const [categoriasState, categoriasOps] = useOptimisticConfiguration<Categoria>([]);
@@ -297,19 +280,32 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
   useSupabaseRealtime('produtos', produtosCallbacks, true);
   useSupabaseRealtime('etapas_trabalho', etapasCallbacks, true);
 
-  // ==================== INITIAL DATA LOAD ====================
+  // ==================== INITIAL DATA LOAD (reacts to auth) ====================
   
   useEffect(() => {
-    if (isInitialized) {
-      if (CONFIGURATION_DEBUG) console.log('⏭️ [ConfigurationProvider] Already initialized, skipping');
+    const currentUserId = user?.id || null;
+    const previousUserId = previousUserIdRef.current;
+    
+    // Se user não mudou, não recarregar
+    if (currentUserId === previousUserId) return;
+    
+    previousUserIdRef.current = currentUserId;
+    
+    // Logout: limpar estado e realtime
+    if (!currentUserId) {
+      console.log('🔧 [ConfigurationProvider] User logged out — clearing state and realtime');
+      categoriasOps.set([]);
+      pacotesOps.set([]);
+      produtosOps.set([]);
+      etapasOps.set([]);
+      realtimeSubscriptionManager.cleanupAll();
       return;
     }
     
-    isInitialized = true;
-    
+    // Login/re-login: recarregar dados
     const loadInitialData = async () => {
       try {
-        if (CONFIGURATION_DEBUG) console.log('📥 [ConfigurationProvider] Loading initial data...');
+        console.log('📥 [ConfigurationProvider] Loading data for user:', currentUserId);
         
         await configurationService.initialize();
         
@@ -325,21 +321,19 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
         produtosOps.set(prods);
         etapasOps.set(steps);
         
-        if (CONFIGURATION_DEBUG) {
-          console.log('✅ [ConfigurationProvider] Initial data loaded:', {
-            categorias: cats.length,
-            pacotes: pacs.length,
-            produtos: prods.length,
-            etapas: steps.length
-          });
-        }
+        console.log('✅ [ConfigurationProvider] Data loaded:', {
+          categorias: cats.length,
+          pacotes: pacs.length,
+          produtos: prods.length,
+          etapas: steps.length
+        });
       } catch (error) {
         console.error('❌ [ConfigurationProvider] Error loading initial data:', error);
       }
     };
 
     loadInitialData();
-  }, []);
+  }, [user?.id]);
 
   // ==================== OPERATIONS WITH OWN-UPDATE FLAG ====================
   

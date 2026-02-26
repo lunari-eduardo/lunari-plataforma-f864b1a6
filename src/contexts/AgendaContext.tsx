@@ -6,13 +6,14 @@ import { Appointment } from '@/hooks/useAgenda';
 import { AvailabilitySlot, AvailabilityType } from '@/types/availability';
 import { AgendaSettings } from '@/types/agenda-supabase';
 import { useAppContext } from './AppContext';
+import { useAuth } from './AuthContext';
 import { configurationService } from '@/services/ConfigurationService';
 import { congelarRegrasPrecoFotoExtra } from '@/utils/precificacaoUtils';
 import { toast } from 'sonner';
 import { ProjetoService } from '@/services/ProjetoService';
 import { AvailabilityService } from '@/services/AvailabilityService';
 import { supabase } from '@/integrations/supabase/client';
-import { addDays, format } from 'date-fns';
+import { addDays, format, subMonths, addMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { CustomTimeSlotsService } from '@/services/CustomTimeSlotsService';
 
 interface AgendaContextType {
@@ -21,6 +22,7 @@ interface AgendaContextType {
   addAppointment: (appointmentData: Omit<Appointment, 'id'>) => Promise<Appointment>;
   updateAppointment: (id: string, updates: Partial<Appointment>) => Promise<void>;
   deleteAppointment: (id: string, preservePayments?: boolean) => Promise<void>;
+  loadMonthData: (year: number, month: number) => Promise<void>;
   
   // Availability
   availability: AvailabilitySlot[];
@@ -55,6 +57,11 @@ interface AgendaProviderProps {
 export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
   // Get dependencies from AppContext for integration
   const appContext = useAppContext();
+  const { user } = useAuth();
+  const previousUserIdRef = useRef<string | null>(null);
+  
+  // Track which months have been loaded
+  const loadedMonthsRef = useRef<Set<string>>(new Set());
   
   // CORREÇÃO: Memoizar serviços para evitar recriação em cada render
   const agendaService = useMemo(() => {
@@ -98,11 +105,17 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
     autoConfirmAppointments: false
   });
 
-  // Load initial data
+  // Load initial data — smart loading: current month ± 1
   const loadData = useCallback(async () => {
     try {
+      const now = new Date();
+      const rangeStart = format(startOfMonth(subMonths(now, 1)), 'yyyy-MM-dd');
+      const rangeEnd = format(endOfMonth(addMonths(now, 1)), 'yyyy-MM-dd');
+      
+      console.log(`📅 [Agenda] Smart loading: ${rangeStart} → ${rangeEnd}`);
+      
       const [appointmentsData, availabilityData, typesData, settingsData] = await Promise.all([
-        agendaService.loadAppointments(),
+        agendaService.loadAppointmentsByRange(rangeStart, rangeEnd),
         agendaService.loadAvailabilitySlots(),
         agendaService.loadAvailabilityTypes(),
         agendaService.loadSettings()
@@ -112,6 +125,13 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
       setAvailability(availabilityData);
       setAvailabilityTypes(typesData);
       setSettings(settingsData);
+      
+      // Mark loaded months
+      loadedMonthsRef.current.clear();
+      for (let m = -1; m <= 1; m++) {
+        const d = addMonths(now, m);
+        loadedMonthsRef.current.add(`${d.getFullYear()}-${d.getMonth()}`);
+      }
 
       // Migrar horários personalizados do localStorage (uma vez)
       const hasMigrated = localStorage.getItem('custom_slots_migrated');
@@ -124,19 +144,61 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
     }
   }, [agendaService]);
 
+  // On-demand month loading
+  const loadMonthData = useCallback(async (year: number, month: number) => {
+    const key = `${year}-${month}`;
+    if (loadedMonthsRef.current.has(key)) return;
+    
+    console.log(`📅 [Agenda] On-demand loading: ${year}-${month + 1}`);
+    
+    const monthDate = new Date(year, month, 1);
+    const rangeStart = format(startOfMonth(monthDate), 'yyyy-MM-dd');
+    const rangeEnd = format(endOfMonth(monthDate), 'yyyy-MM-dd');
+    
+    try {
+      const newAppointments = await agendaService.loadAppointmentsByRange(rangeStart, rangeEnd);
+      
+      setAppointments(prev => {
+        // Merge: add new appointments that don't already exist
+        const existingIds = new Set(prev.map(a => a.id));
+        const uniqueNew = newAppointments.filter(a => !existingIds.has(a.id));
+        return [...prev, ...uniqueNew];
+      });
+      
+      loadedMonthsRef.current.add(key);
+    } catch (error) {
+      console.error(`❌ Erro ao carregar mês ${year}-${month + 1}:`, error);
+    }
+  }, [agendaService]);
+
   // ✅ FASE 1: Flag para ignorar real-time durante operações manuais
   const isManualOperationRef = useRef(false);
   
-  // Real-time subscriptions with proper cleanup
+  // React to auth changes + setup realtime
   useEffect(() => {
+    const currentUserId = user?.id || null;
+    const previousUserId = previousUserIdRef.current;
+    
+    // Se user não mudou, não recarregar
+    if (currentUserId === previousUserId) return;
+    
+    previousUserIdRef.current = currentUserId;
+    
+    // Logout: limpar estado
+    if (!currentUserId) {
+      console.log('📅 [Agenda] User logged out — clearing state');
+      setAppointments([]);
+      setAvailability([]);
+      setAvailabilityTypes([]);
+      loadedMonthsRef.current.clear();
+      return;
+    }
+    
+    // Login/re-login: recarregar dados e reconectar realtime
     let cleanupRealtime: (() => void) | undefined;
     let isMounted = true;
 
-    const setupRealtime = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user || !isMounted) return;
-
-      // IDs únicos para evitar conflitos de canal
+    const setupRealtime = () => {
       const channelId = Date.now();
 
       const availabilityChannel = supabase
@@ -145,10 +207,9 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
           event: '*',
           schema: 'public',
           table: 'availability_slots',
-          filter: `user_id=eq.${user.id}`
+          filter: `user_id=eq.${currentUserId}`
         }, (payload) => {
           console.log('🔄 [Agenda] Mudança em availability_slots:', payload.eventType);
-          
           agendaService.loadAvailabilitySlots().then(slots => {
             if (isMounted) setAvailability(slots);
           });
@@ -157,24 +218,24 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
           console.log(`📡 [Agenda] availability_slots subscription: ${status}`);
         });
 
-      // ✅ FASE 1: Real-time para appointments com proteção contra operações manuais
       const appointmentsChannel = supabase
         .channel(`appointments_realtime_${channelId}`)
         .on('postgres_changes', {
           event: '*',
           schema: 'public',
           table: 'appointments',
-          filter: `user_id=eq.${user.id}`
+          filter: `user_id=eq.${currentUserId}`
         }, (payload) => {
-          // ✅ FASE 1: Ignorar se operação manual em andamento
           if (isManualOperationRef.current) {
             console.log('🔇 [Agenda] Real-time ignorado - operação manual em andamento');
             return;
           }
-          
           console.log('🔄 [Agenda] Mudança em appointments:', payload.eventType);
-          
-          agendaService.loadAppointments().then(apps => {
+          // Reload current loaded range
+          const now = new Date();
+          const rangeStart = format(startOfMonth(subMonths(now, 1)), 'yyyy-MM-dd');
+          const rangeEnd = format(endOfMonth(addMonths(now, 1)), 'yyyy-MM-dd');
+          agendaService.loadAppointmentsByRange(rangeStart, rangeEnd).then(apps => {
             if (isMounted) setAppointments(apps);
           });
         })
@@ -196,7 +257,7 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
       isMounted = false;
       if (cleanupRealtime) cleanupRealtime();
     };
-  }, [agendaService, loadData]);
+  }, [user?.id, agendaService, loadData]);
 
   // Reconexão automática quando app volta do background (PWA)
   useEffect(() => {
@@ -512,6 +573,7 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
     addAppointment,
     updateAppointment,
     deleteAppointment,
+    loadMonthData,
     
     // Availability
     availability,
