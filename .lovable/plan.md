@@ -1,82 +1,79 @@
 
 
-# Refatorar pagina de planos com design do Gallery + upgrade/downgrade inteligente
+# Plano: Expandir Painel Admin com Asaas, Creditos e Storage
 
-## Contexto
-A pagina atual `EscolherPlano.tsx` tem um design simples com cards e formulario de pagamento inline. O Gallery tem um design muito mais sofisticado com hero section, prorata calculado, downgrade agendado, e pagina de pagamento separada (`CreditsPayment`). Precisamos replicar esse design e logica no Gestao, adaptado para planos Studio e Combos.
+## Estado Atual
 
-## Arquivos a criar/modificar
+O painel admin (`AdminUsuarios.tsx`) tem 3 tabs funcionais:
+- **Usuarios**: lista `profiles` + `subscriptions` (legado Stripe) + VIP/admin badges. Acoes: VIP e Galery (via tabela `subscriptions` legada)
+- **Estrategia**: analytics com filtros e KPIs
+- **Emails Autorizados**: CRUD com plan_codes antigos (`pro_galery_monthly`, `pro_monthly`, `starter_monthly`)
 
-### 1. Criar `src/lib/planConfig.ts` -- Mapa centralizado de planos
-Adaptar `transferPlans.ts` do Gallery para o contexto Studio:
-- `ALL_PLAN_PRICES` (studio_starter, studio_pro, combo_pro_select2k, combo_completo)
-- `PLAN_FAMILIES`, `PLAN_INCLUDES`, `PLAN_DISPLAY_NAMES`
-- `STUDIO_PLAN_ORDER` array para validar upgrade vs downgrade
-- Helper `getPlanDisplayName()`, `isPlanUpgrade()`, `isPlanDowngrade()`
+RPCs ja existentes: `admin_grant_credits`, `get_transfer_storage_bytes`
+RLS: `photographer_accounts` tem policy admin, `subscriptions_asaas` NAO tem
 
-### 2. Criar `src/hooks/useAsaasSubscription.ts` -- Hook de assinaturas Asaas
-Copiar e adaptar do Gallery:
-- Query `subscriptions_asaas` filtrando por `user_id` e status ACTIVE/PENDING/OVERDUE
-- Mutations: `createCustomer`, `createSubscription`, `createPayment`, `upgradeSubscription`, `downgradeSubscription`, `cancelSubscription`, `reactivateSubscription`, `cancelDowngrade`
-- Helpers: `studioSub`, `transferSub` por familia
-- Usar `useAuth()` do projeto (nao `useAuthContext`)
+## O que falta implementar
 
-### 3. Reescrever `src/pages/EscolherPlano.tsx` -- Design identico ao Gallery
-Seguir estrutura do `CreditsCheckout.tsx` do Gallery:
-- **Hero section** com gradient, Badge "GESTAO", titulo e subtitulo
-- **Banner de plano atual** quando ha assinatura ativa (mostra prorata e dias restantes)
-- **BillingToggle** mensal/anual com badge "-15%"
-- **Plan cards** (Starter + Pro) em grid 2 colunas com:
-  - Badge "Mais Popular" no Pro
-  - Badge "Plano atual" no plano ativo
-  - Preco com calculo de prorata para upgrades
-  - Botao contextual: "Plano atual" / "Fazer upgrade" / "Fazer downgrade" / "Selecionar"
-- **Secao Combos** abaixo dos planos Studio (combo_pro_select2k e combo_completo)
-- **Downgrade Dialog** com checkbox de confirmacao
-- Ao clicar em plano, navegar para `/escolher-plano/pagamento` com state
+### 1. Migration SQL -- RLS + plan_code update
+- Adicionar policy SELECT admin em `subscriptions_asaas`: `has_role(auth.uid(), 'admin')`
+- Adicionar policy UPDATE admin em `subscriptions_asaas` para cancelar/reativar
 
-### 4. Criar `src/pages/EscolherPlanoPagamento.tsx` -- Pagina de pagamento separada
-Adaptar `CreditsPayment.tsx` do Gallery:
-- Layout: header com voltar + grid 2 colunas (form + resumo)
-- **OrderSummary** sticky com detalhes do pedido e prorata
-- **CardCheckoutForm** reutilizavel com:
-  - Campos cartao (nome, numero, MM, AAAA, CVV)
-  - Campos titular (nome, CPF/CNPJ, CEP, telefone, email)
-  - Formatacao automatica (CPF/CNPJ, telefone, CEP, cartao)
-- **Installment selector** para planos anuais (1-12x)
-- Fluxo: createCustomer -> createSubscription (mensal) / createPayment (anual) / upgradeSubscription (upgrade)
-- Redirect para `/app` apos sucesso
+### 2. Tab Usuarios -- Expandir com dados Asaas
+- Substituir leitura de `subscriptions` (legado) por `subscriptions_asaas`
+- Adicionar colunas: **Assinatura Asaas** (plan_type + status), **Creditos Select** (photo_credits), **Storage** (free_transfer_bytes)
+- Buscar `photographer_accounts` para cada usuario (photo_credits, free_transfer_bytes, gallery_credits)
+- Recalcular metricas usando `subscriptions_asaas` (ACTIVE = ativo, nao mais `subscription_status`)
 
-### 5. Atualizar `src/pages/MinhaAssinatura.tsx` -- Design do Gallery
-Adaptar `SubscriptionManagement.tsx` do Gallery:
-- Card detalhado com: nome do plano, status badge, valor, proxima cobranca, data de criacao
-- Notice de cancelamento com botao "Desfazer cancelamento"
-- Notice de downgrade agendado com botao "Cancelar downgrade"
-- Acoes: Upgrade/Downgrade, Cancelar assinatura (com AlertDialog)
-- Usar `useAsaasSubscription` hook
+### 3. Modal "Gerenciar Creditos" (novo)
+- Ao clicar em acao do usuario, abre modal com:
+  - Saldo atual de `photo_credits` e `gallery_credits`
+  - Input para quantidade a adicionar
+  - Input para motivo
+  - Chama RPC `admin_grant_credits(_target_user_id, _amount, _reason)`
 
-### 6. Atualizar `src/App.tsx` -- Adicionar rota de pagamento
-- Adicionar rota `/escolher-plano/pagamento` -> `EscolherPlanoPagamento`
-- Manter rota `/escolher-plano` existente
-- Adicionar rota na lista de exempt routes do `ProtectedRoute`
+### 4. Modal "Ajustar Storage" (novo)
+- Exibe `free_transfer_bytes` atual (formatado em GB)
+- Input para novo valor em GB
+- Atualiza `photographer_accounts.free_transfer_bytes` diretamente
 
-### 7. Atualizar `src/components/auth/ProtectedRoute.tsx`
-- Adicionar `/escolher-plano/pagamento` na lista `SUBSCRIPTION_EXEMPT_ROUTES`
+### 5. Modal "Ver Assinaturas Asaas" (novo)
+- Lista todas as `subscriptions_asaas` do usuario selecionado
+- Mostra: plan_type, status, billing_cycle, value_cents, next_due_date, pending_downgrade
+- Acoes: Cancelar (chama edge function `asaas-cancel-subscription`), Reativar
 
-## Regras de negocio implementadas
+### 6. Tab Assinaturas (nova tab)
+- Listar todas as `subscriptions_asaas` com status ACTIVE/PENDING/OVERDUE
+- KPIs: Total assinantes, MRR (soma value_cents dos ACTIVE), distribuicao por plano
+- Filtros: plan_type, status, billing_cycle
+- Tabela com: usuario (email), plano, status, valor, ciclo, proxima cobranca, downgrades agendados
 
-**Upgrade** (plano mais caro):
-- Calculo prorata: `credito = precoAtual * (diasRestantes / diasTotalCiclo)`
-- `cobranca = max(0, precoNovo - credito)`
-- Efeito imediato, mesmo ciclo de cobranca mantido
-- Mensal->Anual: credito do mensal como desconto, reinicia ciclo
+### 7. Atualizar Emails Autorizados -- plan_codes novos
+- Substituir `PLAN_OPTIONS` antigos por novos codigos Asaas:
+  - `combo_completo` (Combo Completo -- Studio + Select + Transfer)
+  - `combo_pro_select2k` (Studio Pro + Select 2k)
+  - `studio_pro` (Studio Pro)
+  - `studio_starter` (Starter)
+- Manter logica de `get_access_state` que ja mapeia `plan_code` de `allowed_emails`
 
-**Downgrade** (plano mais barato):
-- NAO aplica imediatamente -- agendado para proxima renovacao
-- Salva `pending_downgrade_plan` via edge function
-- Usuario mantem acesso ao plano atual ate vencimento
-- Dialog de confirmacao com checkbox
+### 8. Remover acoes legadas
+- Remover acao "Galery" que manipula tabela `subscriptions` legada
+- Substituir por acoes baseadas em `subscriptions_asaas` e `allowed_emails`
 
-**Anual->Mensal**:
-- So permitido no fim do ciclo anual (tratado como downgrade agendado)
+## Arquivos a modificar/criar
+
+| Arquivo | Acao |
+|---------|------|
+| Migration SQL | RLS admin para subscriptions_asaas |
+| `src/pages/AdminUsuarios.tsx` | Refatorar para ler subscriptions_asaas, adicionar tab Assinaturas, modais de creditos/storage/assinaturas |
+| `src/components/admin/AllowedEmailsManager.tsx` | Atualizar PLAN_OPTIONS para codigos Asaas |
+| `src/components/admin/AdminSubscriptionsTab.tsx` | Novo componente: tab de assinaturas |
+| `src/components/admin/AdminUserActions.tsx` | Novo componente: modais de creditos, storage e assinaturas |
+
+## Ordem de implementacao
+
+1. Migration SQL (RLS)
+2. Atualizar AllowedEmailsManager com novos plan_codes
+3. Criar AdminSubscriptionsTab
+4. Criar AdminUserActions (modais)
+5. Refatorar AdminUsuarios para integrar tudo
 
