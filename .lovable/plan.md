@@ -1,70 +1,41 @@
 
 
-# Fix: Trial de 30 dias para novos usuarios do Lunari Studio
+# Fix: New users blocked from onboarding by "Acesso Restrito"
 
-## Diagnostico
+## Root Cause
 
-**Causa raiz**: O trigger `handle_new_user_profile` (compartilhado com Gallery) foi atualizado pelo projeto Gallery e **removeu a criacao do trial**. O codigo atual diz "Studio trial is handled by Lunari Studio project separately" mas nunca foi implementado. Resultado: novos usuarios caem direto em "Acesso Restrito" (`no_subscription`).
+In `ProtectedRoute.tsx`, the subscription check (step 6, line 83) runs BEFORE the onboarding check (step 7, line 117). For new users:
 
-**Estado atual do trigger** (verificado via `pg_proc`):
-- Cria `profiles` -- OK
-- Cria `photographer_accounts` com 500 credits + 0.5GB -- OK
-- **NAO cria trial** -- PROBLEMA
-- Tabela `subscriptions` esta completamente vazia (0 registros, 21 usuarios)
+1. User signs up, confirms email, logs in
+2. `get_access_state()` returns `no_subscription` (no trial, no sub, no allowed_email)
+3. ProtectedRoute shows "Acesso Restrito" wall at step 6
+4. User never reaches step 7 (onboarding redirect)
+5. Trial never starts because it's triggered at end of onboarding
+6. **Deadlock**: can't get trial without onboarding, can't reach onboarding without trial
 
-**Separacao Gallery vs Studio**: O trigger roda no INSERT de `auth.users` (compartilhado). Nao ha como saber se o signup veio do Gallery ou Studio no trigger. Solucao: iniciar o trial no onboarding do Studio (que so existe aqui).
+The 409 Conflict errors are from `InitialDataService` trying to seed default data (categorias, pacotes, etc.) — a secondary issue from ConfigurationService initializing during this blocked state.
 
-## Implementacao
+## Fix
 
-### 1. Migration SQL -- Adicionar coluna + RPC + atualizar get_access_state
+### 1. Reorder ProtectedRoute logic
 
-**Adicionar colunas em `profiles`:**
-- `studio_trial_started_at TIMESTAMPTZ DEFAULT NULL`
-- `studio_trial_ends_at TIMESTAMPTZ DEFAULT NULL`
+Move the onboarding check (step 7) BEFORE the subscription check (step 6). When user has `no_subscription` but hasn't completed onboarding → redirect to `/onboarding` instead of showing "Acesso Restrito".
 
-**Criar RPC `start_studio_trial()`:**
-- Verifica se `studio_trial_ends_at` ja esta preenchido (idempotente)
-- Verifica se usuario ja tem assinatura ativa em `subscriptions_asaas`
-- Verifica se email esta em `allowed_emails`
-- Se nenhuma condicao acima: seta `studio_trial_started_at = now()`, `studio_trial_ends_at = now() + 30 days`
-- Retorna JSON com resultado
+**File**: `src/components/auth/ProtectedRoute.tsx`
 
-**Atualizar `get_access_state()`:**
-- Apos checar Asaas (step 4), antes de retornar `no_subscription`:
-- Ler `studio_trial_started_at` e `studio_trial_ends_at` do `profiles`
-- Se `studio_trial_ends_at > now()`: retornar `status: 'ok'`, `isTrial: true`, `planCode: 'combo_completo'`, `hasGaleryAccess: true`, `daysRemaining` calculado
-- Se `studio_trial_ends_at <= now()` (expirado): retornar `status: 'trial_expired'`
-- Remover a checagem da tabela `subscriptions` legada (step 5) -- nao mais necessaria
+Change the order so that after checking trial_expired (step 5), we check:
+- If `no_subscription` AND user needs onboarding → redirect to `/onboarding`
+- If `no_subscription` AND onboarding complete → show "Acesso Restrito"
 
-**Backfill usuarios existentes:**
-- Para usuarios que ja completaram onboarding (`is_onboarding_complete = true`) e nao tem assinatura Asaas nem estao em `allowed_emails`: iniciar trial retroativamente baseado no `created_at` do profile
+This way new users flow through onboarding → trial starts → access granted.
 
-### 2. Atualizar `src/pages/Onboarding.tsx` -- Iniciar trial ao completar onboarding
+### 2. No SQL changes needed
 
-Na funcao `handleComplete`, apos salvar o profile com sucesso:
-- Chamar `supabase.rpc('start_studio_trial')`
-- Nao bloquear navegacao se falhar (trial pode ser iniciado em background)
+The `start_studio_trial()` RPC and `get_access_state()` are already correct. The issue is purely in the frontend routing logic.
 
-### 3. Atualizar `src/integrations/supabase/types.ts`
+## Files to modify
 
-- Adicionar `studio_trial_started_at` e `studio_trial_ends_at` nas tipagens de `profiles`
-- Adicionar `start_studio_trial` na lista de Functions
-
-## Regras de negocio garantidas
-
-| Regra | Como |
-|-------|------|
-| 30 dias gratis no Studio com acesso total | `planCode: 'combo_completo'` durante trial |
-| Limites de creditos/storage mantidos | photographer_accounts ja tem 500 credits + 0.5GB (trigger existente) |
-| Gallery signup NAO inicia trial Studio | Trial so e iniciado via RPC chamado no onboarding do Studio |
-| Gallery ativada para trial | `hasGaleryAccess: true` durante trial |
-| Trial nao sobrepoe assinatura paga | RPC verifica `subscriptions_asaas` antes de criar trial |
-
-## Arquivos
-
-| Arquivo | Acao |
-|---------|------|
-| Nova migration SQL | Coluna profiles, RPC start_studio_trial, get_access_state atualizado, backfill |
-| `src/pages/Onboarding.tsx` | Chamar `start_studio_trial` apos completar onboarding |
-| `src/integrations/supabase/types.ts` | Adicionar tipagens novas |
+| File | Change |
+|------|--------|
+| `src/components/auth/ProtectedRoute.tsx` | Move onboarding check before subscription wall; redirect new users to `/onboarding` when `no_subscription` and onboarding incomplete |
 
