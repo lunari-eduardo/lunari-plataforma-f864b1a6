@@ -83,8 +83,22 @@ const PLAN_OPTIONS = [
   }
 ];
 
+// Map legacy plan codes to new ones for display
+function normalizePlanCode(code: string | null): string {
+  if (!code) return 'combo_completo';
+  const legacyMap: Record<string, string> = {
+    'pro_galery_monthly': 'combo_completo',
+    'pro_galery_yearly': 'combo_completo',
+    'pro_monthly': 'studio_pro',
+    'pro_yearly': 'studio_pro',
+    'starter_monthly': 'studio_starter',
+    'starter_yearly': 'studio_starter',
+  };
+  return legacyMap[code] || code;
+}
+
 function PlanBadge({ planCode }: { planCode: string | null }) {
-  const plan = planCode || 'combo_completo';
+  const plan = normalizePlanCode(planCode);
   
   if (plan === 'combo_completo') {
     return (
@@ -219,12 +233,25 @@ export default function AllowedEmailsManager() {
     try {
       setSubmitting(true);
       
-      const { error } = await supabase
-        .from('allowed_emails')
-        .update({ plan_code: selectedPlan })
-        .eq('email', editingEmail);
+      // Use delete+insert to avoid citext casting issues with .update().eq()
+      const existing = emails.find(e => e.email === editingEmail);
+      if (!existing) throw new Error('Email not found');
 
-      if (error) throw error;
+      const { error: delError } = await supabase
+        .from('allowed_emails')
+        .delete()
+        .eq('email', editingEmail);
+      if (delError) throw delError;
+
+      const { error: insError } = await supabase
+        .from('allowed_emails')
+        .insert({
+          email: editingEmail,
+          plan_code: selectedPlan,
+          note: existing.note,
+          created_by: existing.created_by,
+        });
+      if (insError) throw insError;
 
       // Se novo plano inclui Gallery, provisionar status de sistema
       if (selectedPlan.startsWith('combo')) {
