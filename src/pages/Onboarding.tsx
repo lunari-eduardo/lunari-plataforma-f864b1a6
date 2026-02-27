@@ -11,6 +11,7 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 import { toast } from 'sonner';
 import { StepIndicator } from '@/components/auth/StepIndicator';
 import { useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import authBackground from '@/assets/auth-background.jpg';
 import lunariLogo from '@/assets/lunari-logo.png';
 
@@ -97,6 +98,12 @@ export default function Onboarding() {
         cidade_uf: formData.cidade.uf,
         cidade: `${formData.cidade.nome} - ${formData.cidade.uf}`, // Legacy
         is_onboarding_complete: true
+      });
+
+      // Start 30-day trial (non-blocking)
+      supabase.rpc('start_studio_trial').then(({ data, error }) => {
+        if (error) console.error('Trial start error:', error);
+        else console.log('Trial result:', data);
       });
 
       // Aguardar cache ser atualizado antes de navegar
