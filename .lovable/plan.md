@@ -1,43 +1,70 @@
 
 
-# Fix Admin Panel: RLS, Allowed Emails, and Users Tab
+# Fix: Trial de 30 dias para novos usuarios do Lunari Studio
 
-## Root Cause Analysis
+## Diagnostico
 
-### Bug 1: Users tab only shows admin user
-The `profiles` table RLS only has `auth.uid() = user_id` policies. Admin can only see their own profile. Same issue with `subscriptions` (legacy trial table). Since profiles returns only 1 row, the entire user list shows just the admin.
+**Causa raiz**: O trigger `handle_new_user_profile` (compartilhado com Gallery) foi atualizado pelo projeto Gallery e **removeu a criacao do trial**. O codigo atual diz "Studio trial is handled by Lunari Studio project separately" mas nunca foi implementado. Resultado: novos usuarios caem direto em "Acesso Restrito" (`no_subscription`).
 
-### Bug 2: Credits and storage show 0
-`photographer_accounts` has admin RLS policy (works), but since profiles only returns the admin's row, the join only maps to the admin account which may have 0 credits.
+**Estado atual do trigger** (verificado via `pg_proc`):
+- Cria `profiles` -- OK
+- Cria `photographer_accounts` com 500 credits + 0.5GB -- OK
+- **NAO cria trial** -- PROBLEMA
+- Tabela `subscriptions` esta completamente vazia (0 registros, 21 usuarios)
 
-### Bug 3: All allowed_emails show as "Starter"
-Old entries in `allowed_emails` have `plan_code = 'pro_galery_monthly'` (the column default). The `PlanBadge` component maps any code not matching `combo_completo`, `combo_pro_select2k`, `studio_pro` to the Starter fallback.
+**Separacao Gallery vs Studio**: O trigger roda no INSERT de `auth.users` (compartilhado). Nao ha como saber se o signup veio do Gallery ou Studio no trigger. Solucao: iniciar o trial no onboarding do Studio (que so existe aqui).
 
-### Bug 4: PATCH 400 error when changing plan
-The `allowed_emails` table uses `email` as a `citext` (USER-DEFINED) column which is the primary key. The Supabase JS client `.update().eq('email', value)` may fail with citext. Need to use a different filter approach or cast.
+## Implementacao
 
-## Implementation Steps
+### 1. Migration SQL -- Adicionar coluna + RPC + atualizar get_access_state
 
-### 1. SQL Migration -- Add admin RLS policies
-Add SELECT policies for admin role on:
-- `profiles`: `has_role(auth.uid(), 'admin')` for SELECT
-- `subscriptions`: `has_role(auth.uid(), 'admin')` for SELECT
-- Update `allowed_emails` default from `'pro_galery_monthly'` to `'studio_starter'`
-- Update existing rows: `SET plan_code = 'studio_starter' WHERE plan_code = 'pro_galery_monthly'`
+**Adicionar colunas em `profiles`:**
+- `studio_trial_started_at TIMESTAMPTZ DEFAULT NULL`
+- `studio_trial_ends_at TIMESTAMPTZ DEFAULT NULL`
 
-### 2. Fix AllowedEmailsManager -- PATCH error
-Replace `.update().eq('email', editingEmail)` with a delete+insert approach or use `.filter('email', 'eq', editingEmail)` with explicit casting. Alternatively, use RPC function for the update to avoid citext REST API issues.
+**Criar RPC `start_studio_trial()`:**
+- Verifica se `studio_trial_ends_at` ja esta preenchido (idempotente)
+- Verifica se usuario ja tem assinatura ativa em `subscriptions_asaas`
+- Verifica se email esta em `allowed_emails`
+- Se nenhuma condicao acima: seta `studio_trial_started_at = now()`, `studio_trial_ends_at = now() + 30 days`
+- Retorna JSON com resultado
 
-### 3. Fix PlanBadge -- Handle legacy plan_codes
-Add mapping for `pro_galery_monthly` and other legacy codes in PlanBadge so they display correctly until migrated.
+**Atualizar `get_access_state()`:**
+- Apos checar Asaas (step 4), antes de retornar `no_subscription`:
+- Ler `studio_trial_started_at` e `studio_trial_ends_at` do `profiles`
+- Se `studio_trial_ends_at > now()`: retornar `status: 'ok'`, `isTrial: true`, `planCode: 'combo_completo'`, `hasGaleryAccess: true`, `daysRemaining` calculado
+- Se `studio_trial_ends_at <= now()` (expirado): retornar `status: 'trial_expired'`
+- Remover a checagem da tabela `subscriptions` legada (step 5) -- nao mais necessaria
 
-### 4. Fix AdminUsuarios -- Ensure all data loads
-After RLS fix, the parallel fetches will return all users. No code changes needed beyond the RLS migration.
+**Backfill usuarios existentes:**
+- Para usuarios que ja completaram onboarding (`is_onboarding_complete = true`) e nao tem assinatura Asaas nem estao em `allowed_emails`: iniciar trial retroativamente baseado no `created_at` do profile
 
-## Files to modify
+### 2. Atualizar `src/pages/Onboarding.tsx` -- Iniciar trial ao completar onboarding
 
-| File | Action |
-|------|--------|
-| New SQL migration | Admin SELECT on profiles + subscriptions; update allowed_emails default and data |
-| `src/components/admin/AllowedEmailsManager.tsx` | Fix update method for citext email; handle legacy plan_code in PlanBadge |
+Na funcao `handleComplete`, apos salvar o profile com sucesso:
+- Chamar `supabase.rpc('start_studio_trial')`
+- Nao bloquear navegacao se falhar (trial pode ser iniciado em background)
+
+### 3. Atualizar `src/integrations/supabase/types.ts`
+
+- Adicionar `studio_trial_started_at` e `studio_trial_ends_at` nas tipagens de `profiles`
+- Adicionar `start_studio_trial` na lista de Functions
+
+## Regras de negocio garantidas
+
+| Regra | Como |
+|-------|------|
+| 30 dias gratis no Studio com acesso total | `planCode: 'combo_completo'` durante trial |
+| Limites de creditos/storage mantidos | photographer_accounts ja tem 500 credits + 0.5GB (trigger existente) |
+| Gallery signup NAO inicia trial Studio | Trial so e iniciado via RPC chamado no onboarding do Studio |
+| Gallery ativada para trial | `hasGaleryAccess: true` durante trial |
+| Trial nao sobrepoe assinatura paga | RPC verifica `subscriptions_asaas` antes de criar trial |
+
+## Arquivos
+
+| Arquivo | Acao |
+|---------|------|
+| Nova migration SQL | Coluna profiles, RPC start_studio_trial, get_access_state atualizado, backfill |
+| `src/pages/Onboarding.tsx` | Chamar `start_studio_trial` apos completar onboarding |
+| `src/integrations/supabase/types.ts` | Adicionar tipagens novas |
 
