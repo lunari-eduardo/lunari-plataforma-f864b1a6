@@ -1,41 +1,46 @@
 
 
-# Fix: New users blocked from onboarding by "Acesso Restrito"
+# Fix Admin Panel: RLS, Email Display, and Credits/Storage Management
 
-## Root Cause
+## Issues
 
-In `ProtectedRoute.tsx`, the subscription check (step 6, line 83) runs BEFORE the onboarding check (step 7, line 117). For new users:
+1. **Users tab shows only admin**: `profiles` table has no admin SELECT policy -- confirmed via `pg_policies` query showing only `auth.uid() = user_id` for SELECT
+2. **Subscriptions tab shows "N/A" for emails**: Same cause -- `AdminSubscriptionsTab` fetches profiles to resolve emails but RLS blocks it
+3. **Admin user has no action buttons**: Code at line 390 has `{!user.is_admin && (...)}` guard
+4. **AllowedEmailsManager has no credits/storage management**: Only plan_code can be changed
 
-1. User signs up, confirms email, logs in
-2. `get_access_state()` returns `no_subscription` (no trial, no sub, no allowed_email)
-3. ProtectedRoute shows "Acesso Restrito" wall at step 6
-4. User never reaches step 7 (onboarding redirect)
-5. Trial never starts because it's triggered at end of onboarding
-6. **Deadlock**: can't get trial without onboarding, can't reach onboarding without trial
+## Implementation
 
-The 409 Conflict errors are from `InitialDataService` trying to seed default data (categorias, pacotes, etc.) — a secondary issue from ConfigurationService initializing during this blocked state.
+### Step 1: SQL Migration -- Add admin SELECT on profiles
 
-## Fix
+```sql
+CREATE POLICY "Admins can select all profiles"
+  ON public.profiles FOR SELECT
+  TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'));
+```
 
-### 1. Reorder ProtectedRoute logic
+This single policy fixes issues 1 and 2. The `photographer_accounts` table already has an admin policy (`Admins can manage all accounts` for ALL).
 
-Move the onboarding check (step 7) BEFORE the subscription check (step 6). When user has `no_subscription` but hasn't completed onboarding → redirect to `/onboarding` instead of showing "Acesso Restrito".
+### Step 2: Fix AdminUsuarios -- Show actions for admin user
 
-**File**: `src/components/auth/ProtectedRoute.tsx`
+Remove the `!user.is_admin` guard on line 390 so the admin can manage their own credits/storage too.
 
-Change the order so that after checking trial_expired (step 5), we check:
-- If `no_subscription` AND user needs onboarding → redirect to `/onboarding`
-- If `no_subscription` AND onboarding complete → show "Acesso Restrito"
+### Step 3: Add credits/storage actions to AllowedEmailsManager
 
-This way new users flow through onboarding → trial starts → access granted.
+Add dropdown menu items:
+- "Gerenciar Creditos" -- looks up user_id via email from profiles, opens CreditsModal
+- "Ajustar Storage" -- same lookup, opens StorageModal
 
-### 2. No SQL changes needed
+Import and reuse `CreditsModal` and `StorageModal` from `AdminUserActions.tsx`. These already update `photographer_accounts.photo_credits` and `photographer_accounts.free_transfer_bytes` respectively.
 
-The `start_studio_trial()` RPC and `get_access_state()` are already correct. The issue is purely in the frontend routing logic.
+The `admin_grant_credits` RPC (used by CreditsModal) correctly updates `photographer_accounts.photo_credits` and records in `credit_ledger` + `admin_credit_grants`.
 
 ## Files to modify
 
 | File | Change |
 |------|--------|
-| `src/components/auth/ProtectedRoute.tsx` | Move onboarding check before subscription wall; redirect new users to `/onboarding` when `no_subscription` and onboarding incomplete |
+| New SQL migration | Add admin SELECT policy on `profiles` |
+| `src/pages/AdminUsuarios.tsx` | Remove `!user.is_admin` guard on actions dropdown |
+| `src/components/admin/AllowedEmailsManager.tsx` | Add credits/storage menu items using existing modals from AdminUserActions |
 
