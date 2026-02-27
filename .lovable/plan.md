@@ -1,46 +1,48 @@
 
 
-# Fix Admin Panel: RLS, Email Display, and Credits/Storage Management
+# Fix: Checkout UX Issues (3 items)
 
-## Issues
+## Issue 1: Remove address fields from checkout
 
-1. **Users tab shows only admin**: `profiles` table has no admin SELECT policy -- confirmed via `pg_policies` query showing only `auth.uid() = user_id` for SELECT
-2. **Subscriptions tab shows "N/A" for emails**: Same cause -- `AdminSubscriptionsTab` fetches profiles to resolve emails but RLS blocks it
-3. **Admin user has no action buttons**: Code at line 390 has `{!user.is_admin && (...)}` guard
-4. **AllowedEmailsManager has no credits/storage management**: Only plan_code can be changed
+**File**: `src/pages/EscolherPlanoPagamento.tsx`
 
-## Implementation
+Remove the CEP and "Nº endereço" fields (lines 462-471), remove `postalCode` and `addressNumber` state variables, remove CEP validation from `validatePersonalData`, and hardcode `postalCode: "00000000"` and `addressNumber: "S/N"` in the `holderPayload` (lines 222-223) since Asaas requires these fields but we don't need to collect them from the user.
 
-### Step 1: SQL Migration -- Add admin SELECT on profiles
+Also remove from `CardData` interface (lines 286-287).
 
-```sql
-CREATE POLICY "Admins can select all profiles"
-  ON public.profiles FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
+## Issue 2: Autofilled inputs appear gray
+
+**File**: `src/components/ui/input.tsx`
+
+Add CSS to override browser autofill styling. Add these classes to the input:
+```
+autofill:bg-lunar-surface autofill:text-lunar-text
+[-webkit-autofill]:bg-lunar-surface [-webkit-autofill]:text-lunar-text
+```
+And add a `<style>` or use Tailwind's `autofill:` variant with `shadow-[inset_0_0_0px_1000px]` trick to force background color on autofill.
+
+## Issue 3: After upgrade, hide cancelled old subscription
+
+**File**: `src/hooks/useAsaasSubscription.ts`
+
+In the query function, after fetching active subscriptions, modify the fallback logic for CANCELLED subs (around line 125-131). Currently it adds cancelled subs if no active sub has the same `plan_type`. After an upgrade, the old plan has a different plan_type so it passes the filter.
+
+Fix: If any ACTIVE subscription exists, skip the cancelled fallback entirely. The cancelled sub from a replaced plan should not show. Only show cancelled subs when there are zero active/pending/overdue subscriptions (meaning user explicitly cancelled, not upgraded).
+
+```typescript
+// Only show cancelled subs if user has NO active subscriptions at all
+if (results.length === 0 && cancelledSubs) {
+  results.push(...(cancelledSubs as unknown as AsaasSubscription[]));
+}
 ```
 
-This single policy fixes issues 1 and 2. The `photographer_accounts` table already has an admin policy (`Admins can manage all accounts` for ALL).
-
-### Step 2: Fix AdminUsuarios -- Show actions for admin user
-
-Remove the `!user.is_admin` guard on line 390 so the admin can manage their own credits/storage too.
-
-### Step 3: Add credits/storage actions to AllowedEmailsManager
-
-Add dropdown menu items:
-- "Gerenciar Creditos" -- looks up user_id via email from profiles, opens CreditsModal
-- "Ajustar Storage" -- same lookup, opens StorageModal
-
-Import and reuse `CreditsModal` and `StorageModal` from `AdminUserActions.tsx`. These already update `photographer_accounts.photo_credits` and `photographer_accounts.free_transfer_bytes` respectively.
-
-The `admin_grant_credits` RPC (used by CreditsModal) correctly updates `photographer_accounts.photo_credits` and records in `credit_ledger` + `admin_credit_grants`.
+This way: upgrade → old sub cancelled → new sub ACTIVE → only new sub shows. Manual cancel → no active subs → cancelled sub shows with "active until" notice.
 
 ## Files to modify
 
 | File | Change |
 |------|--------|
-| New SQL migration | Add admin SELECT policy on `profiles` |
-| `src/pages/AdminUsuarios.tsx` | Remove `!user.is_admin` guard on actions dropdown |
-| `src/components/admin/AllowedEmailsManager.tsx` | Add credits/storage menu items using existing modals from AdminUserActions |
+| `src/pages/EscolherPlanoPagamento.tsx` | Remove CEP/address fields, hardcode in payload |
+| `src/components/ui/input.tsx` | Fix autofill styling |
+| `src/hooks/useAsaasSubscription.ts` | Only show cancelled subs when no active subs exist |
 
