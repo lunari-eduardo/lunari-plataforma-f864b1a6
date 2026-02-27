@@ -15,6 +15,7 @@ interface ProtectedRouteProps {
 // Routes that are allowed even without an active subscription
 const SUBSCRIPTION_EXEMPT_ROUTES = [
   '/escolher-plano',
+  '/escolher-plano/pagamento',
   '/minha-assinatura',
   '/minha-conta', // Needed for post-checkout sync
   '/onboarding', // Allow new users to complete onboarding
