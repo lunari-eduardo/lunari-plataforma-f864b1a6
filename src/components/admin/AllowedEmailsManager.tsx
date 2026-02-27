@@ -36,9 +36,10 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { Mail, Plus, Trash2, Loader2, UserPlus, Crown, User, MoreVertical, Edit, Image } from 'lucide-react';
+import { Mail, Plus, Trash2, Loader2, UserPlus, Crown, User, MoreVertical, Edit, Image, Coins, HardDrive } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { CreditsModal, StorageModal } from '@/components/admin/AdminUserActions';
 
 interface AllowedEmail {
   email: string;
@@ -146,6 +147,12 @@ export default function AllowedEmailsManager() {
   const [selectedPlan, setSelectedPlan] = useState('combo_completo');
   const [submitting, setSubmitting] = useState(false);
   const [deleteEmail, setDeleteEmail] = useState<string | null>(null);
+
+  // Credits/Storage modals
+  const [creditsModalOpen, setCreditsModalOpen] = useState(false);
+  const [storageModalOpen, setStorageModalOpen] = useState(false);
+  const [actionUser, setActionUser] = useState<{ id: string; email: string; nome: string | null } | null>(null);
+  const [lookingUpUser, setLookingUpUser] = useState(false);
 
   useEffect(() => {
     loadEmails();
@@ -300,6 +307,30 @@ export default function AllowedEmailsManager() {
     setEditPlanModalOpen(true);
   };
 
+  const openActionModal = async (email: string, modal: 'credits' | 'storage') => {
+    setLookingUpUser(true);
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('user_id, email, nome')
+        .eq('email', email)
+        .single();
+      
+      if (!profile) {
+        toast.error('Usuário ainda não se cadastrou no sistema');
+        return;
+      }
+      
+      setActionUser({ id: profile.user_id, email: profile.email || email, nome: profile.nome });
+      if (modal === 'credits') setCreditsModalOpen(true);
+      else setStorageModalOpen(true);
+    } catch {
+      toast.error('Usuário não encontrado. Ele precisa se cadastrar primeiro.');
+    } finally {
+      setLookingUpUser(false);
+    }
+  };
+
   return (
     <Card className="bg-card/50 border-border/50">
       <CardHeader className="pb-3">
@@ -364,6 +395,14 @@ export default function AllowedEmailsManager() {
                         <DropdownMenuItem onClick={() => openEditPlanModal(item.email, item.plan_code)}>
                           <Edit className="h-4 w-4 mr-2" />
                           Alterar Plano
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => openActionModal(item.email, 'credits')} disabled={lookingUpUser}>
+                          <Coins className="h-4 w-4 mr-2" />
+                          Gerenciar Créditos
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => openActionModal(item.email, 'storage')} disabled={lookingUpUser}>
+                          <HardDrive className="h-4 w-4 mr-2" />
+                          Ajustar Storage
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem 
@@ -536,6 +575,9 @@ export default function AllowedEmailsManager() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Credits & Storage Modals */}
+      <CreditsModal open={creditsModalOpen} onOpenChange={setCreditsModalOpen} user={actionUser} onSuccess={loadEmails} />
+      <StorageModal open={storageModalOpen} onOpenChange={setStorageModalOpen} user={actionUser} onSuccess={loadEmails} />
     </Card>
   );
 }

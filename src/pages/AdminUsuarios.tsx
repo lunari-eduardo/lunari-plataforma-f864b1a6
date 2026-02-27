@@ -387,7 +387,6 @@ export default function AdminUsuarios() {
                           {formatBytes(user.free_transfer_bytes)}
                         </TableCell>
                         <TableCell className="text-right">
-                          {!user.is_admin && (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="sm"><MoreVertical className="h-4 w-4" /></Button>
@@ -414,7 +413,6 @@ export default function AdminUsuarios() {
                                 )}
                               </DropdownMenuContent>
                             </DropdownMenu>
-                          )}
                         </TableCell>
                       </TableRow>
                     ))
