@@ -26,6 +26,7 @@ import Onboarding from "./pages/Onboarding";
 import NotFound from "./pages/NotFound";
 import EscolherPlano from "./pages/EscolherPlano";
 import MinhaAssinatura from "./pages/MinhaAssinatura";
+import EscolherPlanoPagamento from "./pages/EscolherPlanoPagamento";
 import ResetPassword from "./pages/ResetPassword";
 import AdminUsuarios from "./pages/AdminUsuarios";
 import Conteudos from "./pages/Conteudos";
@@ -134,6 +135,11 @@ function App() {
                     <Route path="/minha-assinatura" element={
                       <ProtectedRoute>
                         <MinhaAssinatura />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/escolher-plano/pagamento" element={
+                      <ProtectedRoute>
+                        <EscolherPlanoPagamento />
                       </ProtectedRoute>
                     } />
                     
