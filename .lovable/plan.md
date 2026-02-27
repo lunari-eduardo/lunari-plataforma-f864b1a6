@@ -1,33 +1,33 @@
 
 
-# ✅ CONCLUÍDO: Deslogamento, Agenda Vazia e Status Cinza
+# Migração Stripe → Asaas (Concluída)
 
-## Correções Implementadas
+## Implementado
 
-### 1. ConfigurationContext — reagir a auth ✅
-- Removido `isInitialized` singleton e `activeInstances` module-level
-- Adicionado `useAuth()` e `user?.id` como dependência do useEffect de carga
-- Logout limpa estado (categorias, pacotes, produtos, etapas) e chama `realtimeSubscriptionManager.cleanupAll()`
-- Re-login recarrega todos os dados automaticamente
+### Edge Functions Asaas (7 funções)
+- `asaas-create-customer` — Cria customer no Asaas, salva em photographer_accounts
+- `asaas-create-subscription` — Planos Studio mensais (starter/pro/combos)
+- `asaas-create-payment` — Planos anuais (pagamento avulso parcelado)
+- `asaas-upgrade-subscription` — Prorata combinado, cancela antigas, cria nova
+- `asaas-downgrade-subscription` — Agenda downgrade para próxima renovação
+- `asaas-cancel-subscription` — Cancel + reactivate
+- `asaas-webhook` — Processa eventos, aplica downgrades pendentes
 
-### 2. AgendaContext — reagir a auth ✅
-- Importado `useAuth` e adicionado `user?.id` como dependência
-- Logout limpa appointments, availability e loaded months
-- Re-login recarrega dados e recria canais realtime com novo user ID
-- Removido `getUser()` HTTP do setup de realtime
+### Banco de Dados
+- `get_access_state()` atualizada: lê de `subscriptions_asaas` com fallback para trial em `subscriptions`
+- Prioridade: Admin > Authorized > VIP > Asaas Active > Trial > No Sub
+- `unified_plans` já populada com studio_starter, studio_pro, combos
 
-### 3. Smart loading de agendamentos (mês ± 1) ✅
-- `SupabaseAgendaAdapter.loadAppointmentsByRange(startDate, endDate)` com filtro `.gte/.lte`
-- `AgendaStorageAdapter` e `AgendaService` propagam o novo método
-- Carga inicial: mês anterior + atual + próximo (3 meses)
-- `loadMonthData(year, month)` exposto no contexto para carregamento on-demand
-- Tracking de meses já carregados via `loadedMonthsRef`
+### Frontend
+- `EscolherPlano.tsx` — Checkout transparente com formulário de cartão inline
+- `MinhaAssinatura.tsx` — Gerenciamento via Asaas (cancelar/reativar)
+- `LandingPricing.tsx` — Preços atualizados (Starter R$14,90 / Pro R$35,90)
+- `useAccessControl.ts` — Suporte a planCode com combo/studio patterns
 
-### 4. getUser() → getSession() ✅
-- Todos os hot paths em `SupabaseAgendaAdapter` (load, save, update, delete, availability)
-- `RealtimeSubscriptionManager.subscribe()` usa `getSession()` local
-- Elimina requests HTTP redundantes em cada operação
+### Removido
+- Edge Functions Stripe (stripe-create-checkout, stripe-webhook, stripe-manage-subscription)
+- Sync com Stripe em MinhaConta.tsx
 
-### 5. Realtime cleanup no logout ✅
-- `ConfigurationContext` chama `realtimeSubscriptionManager.cleanupAll()` no logout
-- `AgendaContext` remove canais via `supabase.removeChannel()` no cleanup
+### Secrets configurados
+- ASAAS_API_KEY
+- ASAAS_ENV

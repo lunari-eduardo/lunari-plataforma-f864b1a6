@@ -236,7 +236,8 @@ export const useAccessControl = () => {
     (accessState.isAdmin || 
      accessState.isVip || 
      accessState.isAuthorized ||
-     accessState.planCode?.startsWith('pro') ||
+     accessState.planCode?.includes('pro') ||
+     accessState.planCode?.includes('combo') ||
      accessState.isTrial);
 
   // Helper para verificar se usuário tem acesso à Galeria
@@ -244,7 +245,8 @@ export const useAccessControl = () => {
     (accessState.hasGaleryAccess === true ||
      accessState.isAdmin ||
      accessState.isVip ||
-     accessState.planCode?.startsWith('pro_galery'));
+     accessState.planCode?.includes('combo') ||
+     accessState.planCode?.includes('galery'));
 
   return { accessState, loading, hasPro, hasGaleryAccess, refetchAccess };
 };

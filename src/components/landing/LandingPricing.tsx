@@ -5,15 +5,15 @@ import { useNavigate } from "react-router-dom";
 
 const plans = [{
   name: "Starter",
-  monthlyPrice: "19,90",
-  annualPrice: "209,90",
+  monthlyPrice: "14,90",
+  annualPrice: "151,98",
   description: "Ideal para começar",
   features: ["Agenda completa", "CRM de clientes", "Workflow de produção", "Tutoriais", "Suporte por WhatsApp"],
   popular: false
 }, {
   name: "Pro",
-  monthlyPrice: "37,90",
-  annualPrice: "389,90",
+  monthlyPrice: "35,90",
+  annualPrice: "366,18",
   description: "Funcionalidades completas",
   features: ["Tudo do Starter", "Gestão de Leads", "Gestão de tarefas", "Financeiro completo", "Precificação e metas", "Análise de vendas detalhada", "Feed Preview", "Exportação de relatórios", "Notificações avançadas"],
   popular: true
@@ -34,14 +34,13 @@ export default function LandingPricing() {
             Planos
           </h2>
           
-          {/* Monthly/Annual Toggle */}
           <div className="inline-flex bg-white rounded-full p-1 shadow-lg mb-6">
             <button onClick={() => setIsAnnual(false)} className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${!isAnnual ? "bg-landing-brand text-white" : "text-landing-text/70 hover:text-landing-text"}`}>
               Mensal
             </button>
             <button onClick={() => setIsAnnual(true)} className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${isAnnual ? "bg-landing-brand text-white" : "text-landing-text/70 hover:text-landing-text"}`}>
               Anual
-              <span className="ml-1 text-xs opacity-75">(~8% off)</span>
+              <span className="ml-1 text-xs opacity-75">(~15% off)</span>
             </button>
           </div>
           
@@ -50,7 +49,6 @@ export default function LandingPricing() {
           </p>
         </div>
 
-        {/* Pricing Cards */}
         <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-8">
           {plans.map((plan, index) => <div key={index} className={`relative bg-white rounded-2xl p-8 shadow-lg border transition-all hover:shadow-xl flex flex-col ${plan.popular ? "border-landing-brand/30 ring-2 ring-landing-brand/20" : "border-gray-200"}`}>
               {plan.popular && <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">

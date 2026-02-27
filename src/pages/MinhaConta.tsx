@@ -35,86 +35,15 @@ export default function MinhaConta() {
   // Validação em tempo real
   const validation = useFormValidation(formData);
 
-  // Sync with Stripe with retry logic
-  const syncWithStripe = useCallback(async (retryCount = 0): Promise<boolean> => {
-    try {
-      setSyncMessage(retryCount > 0 
-        ? `Tentativa ${retryCount + 1}/${MAX_RETRIES + 1}...` 
-        : 'Ativando sua assinatura...');
-      
-      const { data, error } = await supabase.functions.invoke('sync-user-subscription');
-      
-      if (error) {
-        console.error(`Sync error (attempt ${retryCount + 1}):`, error);
-        
-        // Retry with exponential backoff
-        if (retryCount < MAX_RETRIES) {
-          const delay = INITIAL_RETRY_DELAY * Math.pow(2, retryCount);
-          setSyncMessage(`Aguarde, tentando novamente em ${delay / 1000}s...`);
-          await new Promise(r => setTimeout(r, delay));
-          return syncWithStripe(retryCount + 1);
-        }
-        
-        toast.error('Erro ao sincronizar assinatura. Por favor, acesse "Minha Assinatura" para verificar.');
-        return false;
-      }
-      
-      if (data?.synced) {
-        toast.success('Assinatura ativada com sucesso!');
-        return true;
-      } else if (data?.message) {
-        // Handle specific messages from sync function
-        toast.info(data.message);
-        return true;
-      } else {
-        toast.success('Pagamento processado! Verificando ativação...');
-        return true;
-      }
-    } catch (err) {
-      console.error(`Sync exception (attempt ${retryCount + 1}):`, err);
-      
-      if (retryCount < MAX_RETRIES) {
-        const delay = INITIAL_RETRY_DELAY * Math.pow(2, retryCount);
-        await new Promise(r => setTimeout(r, delay));
-        return syncWithStripe(retryCount + 1);
-      }
-      
-      toast.error('Erro na sincronização. Verifique sua assinatura.');
-      return false;
-    }
-  }, []);
-
-  // Auto-sync com Stripe quando retornar do checkout
+  // Legacy checkout redirect cleanup (no longer uses Stripe)
   useEffect(() => {
     const checkoutStatus = searchParams.get('checkout');
-    
-    // Prevent duplicate sync attempts
     if (checkoutStatus === 'success' && !syncAttemptedRef.current) {
       syncAttemptedRef.current = true;
-      
-      // Limpar parâmetro da URL immediately
       setSearchParams({}, { replace: true });
-      
-      // Start sync process
-      const runSync = async () => {
-        setIsSyncing(true);
-        
-        try {
-          const success = await syncWithStripe();
-          
-          // Always redirect to subscription page after sync
-          setTimeout(() => {
-            // Force a full page reload to refresh access state
-            window.location.href = '/minha-assinatura';
-          }, 1500);
-        } finally {
-          setIsSyncing(false);
-        }
-      };
-      
-      runSync();
+      window.location.href = '/minha-assinatura';
     }
-  }, [searchParams, setSearchParams, syncWithStripe]);
+  }, [searchParams, setSearchParams]);
   
   // Sincronizar formData quando profile carrega
   useEffect(() => {

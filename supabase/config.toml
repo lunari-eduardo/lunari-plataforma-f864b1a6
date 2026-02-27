@@ -1,12 +1,24 @@
 project_id = "tlnjspsywycbudhewsfv"
 
-[functions.stripe-create-checkout]
+[functions.asaas-create-customer]
 verify_jwt = false
 
-[functions.stripe-webhook]
+[functions.asaas-create-subscription]
 verify_jwt = false
 
-[functions.stripe-manage-subscription]
+[functions.asaas-create-payment]
+verify_jwt = false
+
+[functions.asaas-upgrade-subscription]
+verify_jwt = false
+
+[functions.asaas-downgrade-subscription]
+verify_jwt = false
+
+[functions.asaas-cancel-subscription]
+verify_jwt = false
+
+[functions.asaas-webhook]
 verify_jwt = false
 
 [functions.populate-municipios-ibge]
