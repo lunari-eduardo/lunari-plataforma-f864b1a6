@@ -259,7 +259,7 @@ export default function EscolherPlano() {
       {/* Back */}
       <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="container max-w-6xl py-3 flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="gap-1.5">
+          <Button variant="ghost" size="sm" onClick={() => navigate("/minha-assinatura")} className="gap-1.5">
             <ArrowLeft className="h-4 w-4" />
             Voltar
           </Button>
