@@ -22,6 +22,7 @@ interface SubscriptionPayment {
   isUpgrade?: boolean;
   prorataValueCents?: number;
   currentSubscriptionId?: string;
+  subscriptionIdsToCancel?: string[];
   currentPlanName?: string;
 }
 
@@ -224,11 +225,12 @@ function SubscriptionForm({ pkg, formattedPrice }: { pkg: SubscriptionPayment; f
             phone: cardData.phone.replace(/\D/g, ""),
           };
 
-          if (isUpgrade && pkg.currentSubscriptionId) {
+          if (isUpgrade && (pkg.currentSubscriptionId || pkg.subscriptionIdsToCancel?.length)) {
             await upgradeSubscription({
-              currentSubscriptionId: pkg.currentSubscriptionId,
+              currentSubscriptionId: pkg.currentSubscriptionId || pkg.subscriptionIdsToCancel?.[0] || "",
               newPlanType: pkg.planType,
               billingCycle: pkg.billingCycle,
+              subscriptionIdsToCancel: pkg.subscriptionIdsToCancel,
               creditCard: cardPayload,
               creditCardHolderInfo: holderPayload,
               remoteIp,

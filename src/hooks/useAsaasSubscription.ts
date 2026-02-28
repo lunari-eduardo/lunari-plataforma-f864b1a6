@@ -80,6 +80,7 @@ interface UpgradeSubscriptionParams {
   currentSubscriptionId: string;
   newPlanType: string;
   billingCycle: 'MONTHLY' | 'YEARLY';
+  subscriptionIdsToCancel?: string[];
   creditCard: {
     holderName: string;
     number: string;
@@ -180,7 +181,11 @@ export function useAsaasSubscription() {
 
   const upgradeSubscriptionMutation = useMutation({
     mutationFn: async (params: UpgradeSubscriptionParams) => {
-      const { data, error } = await supabase.functions.invoke('asaas-upgrade-subscription', { body: params });
+      const body: Record<string, unknown> = { ...params };
+      if (params.subscriptionIdsToCancel?.length) {
+        body.subscriptionIdsToCancel = params.subscriptionIdsToCancel;
+      }
+      const { data, error } = await supabase.functions.invoke('asaas-upgrade-subscription', { body });
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
       return data as { newSubscriptionId: string; status: string; prorataValueCents: number };

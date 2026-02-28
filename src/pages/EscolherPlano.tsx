@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAsaasSubscription } from "@/hooks/useAsaasSubscription";
+import { useAsaasSubscription, AsaasSubscription } from "@/hooks/useAsaasSubscription";
 import { useAccessControl } from "@/hooks/useAccessControl";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -20,7 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 import {
   ALL_PLAN_PRICES, getPlanDisplayName, isPlanUpgrade, isPlanDowngrade, formatPrice, PLAN_ORDER,
-  isStudioFamilyPlan, PLAN_FAMILIES,
+  isStudioFamilyPlan, PLAN_FAMILIES, PLAN_INCLUDES,
 } from "@/lib/planConfig";
 import { differenceInDays } from "date-fns";
 
@@ -92,7 +92,7 @@ const COMBO_PLANS = [
 export default function EscolherPlano() {
   const navigate = useNavigate();
   const { accessState } = useAccessControl();
-  const { subscription: activeSub, downgradeSubscription, isDowngrading } = useAsaasSubscription();
+  const { subscription: activeSub, subscriptions: allSubscriptions, downgradeSubscription, isDowngrading } = useAsaasSubscription();
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("monthly");
 
   // Current plan detection — only consider Studio/Combo plans for upgrade mode
@@ -106,6 +106,9 @@ export default function EscolherPlano() {
   // Non-studio subscriptions (Gallery Transfer etc.) — show as subtle info
   const galleryOnlySub = activeSub && !isStudioFamilyPlan(activeSub.plan_type) ? activeSub : null;
 
+  // All active subs for cross-product overlap detection
+  const activeSubs = allSubscriptions.filter(s => s.status === "ACTIVE" || s.status === "PENDING");
+
   const currentPlanPrices = ALL_PLAN_PRICES[currentPlanType];
   const currentPriceCents = currentPlanPrices
     ? (currentBillingCycle === "YEARLY" ? currentPlanPrices.yearly : currentPlanPrices.monthly)
@@ -113,6 +116,45 @@ export default function EscolherPlano() {
 
   const daysRemaining = nextDueDate ? Math.max(0, differenceInDays(new Date(nextDueDate), new Date())) : 0;
   const totalCycleDays = currentBillingCycle === "YEARLY" ? 365 : 30;
+
+  /** Find active subs whose capabilities overlap with the target plan */
+  function getOverlappingSubs(targetPlanType: string): AsaasSubscription[] {
+    const targetIncludes = PLAN_INCLUDES[targetPlanType];
+    if (!targetIncludes) return [];
+    return activeSubs.filter(sub => {
+      if (sub.plan_type === targetPlanType) return false; // same plan
+      const subIncludes = PLAN_INCLUDES[sub.plan_type];
+      if (!subIncludes) return false;
+      // overlap if target includes any capability the sub already provides
+      return (targetIncludes.studio && subIncludes.studio) ||
+             (targetIncludes.select && subIncludes.select) ||
+             (targetIncludes.transfer && subIncludes.transfer);
+    });
+  }
+
+  /** Calculate combined prorata credit from overlapping subs */
+  function getCrossProductProrata(targetPlanType: string, targetPriceCents: number) {
+    const overlapping = getOverlappingSubs(targetPlanType);
+    if (overlapping.length === 0) return null;
+    let totalCreditCents = 0;
+    const idsToCancel: string[] = [];
+    for (const sub of overlapping) {
+      const subPrices = ALL_PLAN_PRICES[sub.plan_type];
+      if (!subPrices) continue;
+      const subPriceCents = sub.billing_cycle === "YEARLY" ? subPrices.yearly : subPrices.monthly;
+      const subDaysRemaining = sub.next_due_date
+        ? Math.max(0, differenceInDays(new Date(sub.next_due_date), new Date()))
+        : 0;
+      const subTotalDays = sub.billing_cycle === "YEARLY" ? 365 : 30;
+      totalCreditCents += Math.round(subPriceCents * (subDaysRemaining / subTotalDays));
+      idsToCancel.push(sub.id);
+    }
+    return {
+      creditCents: totalCreditCents,
+      prorataValueCents: Math.max(0, targetPriceCents - totalCreditCents),
+      subscriptionIdsToCancel: idsToCancel,
+    };
+  }
 
   // Downgrade dialog
   const [downgradeDialog, setDowngradeDialog] = useState<{
@@ -140,12 +182,25 @@ export default function EscolherPlano() {
     const selectedCycle = billingPeriod === "monthly" ? "MONTHLY" : "YEARLY";
 
     if (isUpgradeMode && currentSubscriptionId && isPlanUpgrade(currentPlanType, planType)) {
+      // Same-family upgrade (studio → studio, combo → combo)
       const newPlanPrices = ALL_PLAN_PRICES[planType];
       const newPriceCents = selectedCycle === "YEARLY"
         ? (newPlanPrices?.yearly || priceCents)
         : (newPlanPrices?.monthly || priceCents);
       const creditCents = Math.round(currentPriceCents * (daysRemaining / totalCycleDays));
       const prorataValueCents = Math.max(0, newPriceCents - creditCents);
+
+      // Also check for additional cross-product overlaps (e.g., user has studio + transfer, upgrading to combo)
+      const crossProduct = getCrossProductProrata(planType, newPriceCents);
+      const allIdsToCancel = [currentSubscriptionId];
+      let combinedCredit = creditCents;
+      if (crossProduct) {
+        // Add credits from other overlapping subs (excluding the studio sub already counted)
+        const extraIds = crossProduct.subscriptionIdsToCancel.filter(id => id !== currentSubscriptionId);
+        allIdsToCancel.push(...extraIds);
+        combinedCredit += crossProduct.creditCents - (crossProduct.subscriptionIdsToCancel.includes(currentSubscriptionId) ? creditCents : 0);
+      }
+      const finalProrata = Math.max(0, newPriceCents - combinedCredit);
 
       navigate("/escolher-plano/pagamento", {
         state: {
@@ -155,21 +210,47 @@ export default function EscolherPlano() {
           billingCycle: selectedCycle,
           priceCents: newPriceCents,
           isUpgrade: true,
-          prorataValueCents,
+          prorataValueCents: finalProrata,
           currentSubscriptionId,
+          subscriptionIdsToCancel: allIdsToCancel,
           currentPlanName: getPlanDisplayName(currentPlanType),
         },
       });
     } else {
-      navigate("/escolher-plano/pagamento", {
-        state: {
-          type: "subscription",
-          planType,
-          planName,
-          billingCycle: selectedCycle,
-          priceCents,
-        },
-      });
+      // Check for cross-product upgrade (e.g., user has transfer_5gb, selecting combo)
+      const crossProduct = getCrossProductProrata(planType, priceCents);
+      if (crossProduct && crossProduct.subscriptionIdsToCancel.length > 0) {
+        const currentSubNames = crossProduct.subscriptionIdsToCancel
+          .map(id => activeSubs.find(s => s.id === id))
+          .filter(Boolean)
+          .map(s => getPlanDisplayName(s!.plan_type))
+          .join(", ");
+
+        navigate("/escolher-plano/pagamento", {
+          state: {
+            type: "subscription",
+            planType,
+            planName,
+            billingCycle: selectedCycle,
+            priceCents,
+            isUpgrade: true,
+            prorataValueCents: crossProduct.prorataValueCents,
+            subscriptionIdsToCancel: crossProduct.subscriptionIdsToCancel,
+            currentSubscriptionId: crossProduct.subscriptionIdsToCancel[0],
+            currentPlanName: currentSubNames,
+          },
+        });
+      } else {
+        navigate("/escolher-plano/pagamento", {
+          state: {
+            type: "subscription",
+            planType,
+            planName,
+            billingCycle: selectedCycle,
+            priceCents,
+          },
+        });
+      }
     }
   };
 
@@ -256,6 +337,12 @@ export default function EscolherPlano() {
             if (isUpgrade) {
               const creditCents = Math.round(currentPriceCents * (daysRemaining / totalCycleDays));
               prorataValue = Math.max(0, price - creditCents);
+            } else if (!isCurrentPlan) {
+              // Cross-product prorata (e.g., user has transfer, selecting studio that overlaps via combo)
+              const crossProduct = getCrossProductProrata(plan.code, price);
+              if (crossProduct && crossProduct.subscriptionIdsToCancel.length > 0) {
+                prorataValue = crossProduct.prorataValueCents;
+              }
             }
 
             return (
@@ -371,6 +458,11 @@ export default function EscolherPlano() {
             if (isUpgradeFlag) {
               const creditCents = Math.round(currentPriceCents * (daysRemaining / totalCycleDays));
               prorataValue = Math.max(0, price - creditCents);
+            } else if (!isCurrentPlan) {
+              const crossProduct = getCrossProductProrata(plan.code, price);
+              if (crossProduct && crossProduct.subscriptionIdsToCancel.length > 0) {
+                prorataValue = crossProduct.prorataValueCents;
+              }
             }
 
             return (
