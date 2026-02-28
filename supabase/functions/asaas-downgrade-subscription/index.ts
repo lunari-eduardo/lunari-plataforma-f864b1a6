@@ -6,12 +6,17 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const PLAN_ORDER = [
-  "studio_starter",
-  "studio_pro",
-  "combo_pro_select2k",
-  "combo_completo",
-];
+/** Plan prices in cents for downgrade validation — ALL plan families. */
+const ALL_PLAN_PRICES: Record<string, { monthly: number; yearly: number }> = {
+  studio_starter: { monthly: 1490, yearly: 15198 },
+  studio_pro: { monthly: 3590, yearly: 36618 },
+  transfer_5gb: { monthly: 1290, yearly: 12384 },
+  transfer_20gb: { monthly: 2490, yearly: 23904 },
+  transfer_50gb: { monthly: 3490, yearly: 33504 },
+  transfer_100gb: { monthly: 5990, yearly: 57504 },
+  combo_pro_select2k: { monthly: 4490, yearly: 45259 },
+  combo_completo: { monthly: 6490, yearly: 66198 },
+};
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -45,12 +50,13 @@ Deno.serve(async (req) => {
 
     if (!subscriptionId || !newPlanType) {
       return new Response(
-        JSON.stringify({ error: "Missing required fields" }),
+        JSON.stringify({ error: "Missing required fields: subscriptionId, newPlanType" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    if (!PLAN_ORDER.includes(newPlanType)) {
+    // Validate plan exists
+    if (!ALL_PLAN_PRICES[newPlanType]) {
       return new Response(
         JSON.stringify({ error: "Invalid plan type" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -62,6 +68,7 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    // Fetch current subscription
     const { data: currentSub, error: subError } = await adminClient
       .from("subscriptions_asaas")
       .select("*")
@@ -77,16 +84,28 @@ Deno.serve(async (req) => {
       );
     }
 
-    const currentIdx = PLAN_ORDER.indexOf(currentSub.plan_type);
-    const newIdx = PLAN_ORDER.indexOf(newPlanType);
+    // Validate it's actually a downgrade (new plan is cheaper)
+    const currentPrices = ALL_PLAN_PRICES[currentSub.plan_type];
+    const newPrices = ALL_PLAN_PRICES[newPlanType];
 
-    if (currentIdx < 0 || newIdx < 0 || newIdx >= currentIdx) {
+    if (!currentPrices || !newPrices) {
       return new Response(
-        JSON.stringify({ error: "New plan must be lower than current plan" }),
+        JSON.stringify({ error: "Cannot determine pricing for plan comparison" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
+    const currentMonthly = currentPrices.monthly;
+    const newMonthly = newPrices.monthly;
+
+    if (newMonthly >= currentMonthly) {
+      return new Response(
+        JSON.stringify({ error: "New plan must be cheaper than current plan for downgrade" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Save pending downgrade
     const { error: updateError } = await adminClient
       .from("subscriptions_asaas")
       .update({
@@ -96,17 +115,21 @@ Deno.serve(async (req) => {
       .eq("id", subscriptionId);
 
     if (updateError) {
+      console.error("Error scheduling downgrade:", updateError);
       return new Response(
         JSON.stringify({ error: "Failed to schedule downgrade" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
+    console.log(`Downgrade scheduled: ${currentSub.plan_type} → ${newPlanType} for subscription ${subscriptionId}`);
+
     return new Response(
       JSON.stringify({
         success: true,
         currentPlan: currentSub.plan_type,
         scheduledPlan: newPlanType,
+        scheduledCycle: newBillingCycle || currentSub.billing_cycle,
         message: "Downgrade agendado para o próximo ciclo de cobrança.",
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }

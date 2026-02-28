@@ -10,11 +10,22 @@ const ASAAS_BASE_URL = Deno.env.get("ASAAS_ENV") === "production"
   ? "https://api.asaas.com"
   : "https://api-sandbox.asaas.com";
 
+// Plan pricing in cents — ALL plan families (unified)
 const PLANS: Record<string, { monthlyPrice: number; yearlyPrice: number; name: string }> = {
   studio_starter: { monthlyPrice: 1490, yearlyPrice: 15198, name: "Lunari Starter" },
   studio_pro: { monthlyPrice: 3590, yearlyPrice: 36618, name: "Lunari Pro" },
+  transfer_5gb: { monthlyPrice: 1290, yearlyPrice: 12384, name: "Transfer 5GB" },
+  transfer_20gb: { monthlyPrice: 2490, yearlyPrice: 23904, name: "Transfer 20GB" },
+  transfer_50gb: { monthlyPrice: 3490, yearlyPrice: 33504, name: "Transfer 50GB" },
+  transfer_100gb: { monthlyPrice: 5990, yearlyPrice: 57504, name: "Transfer 100GB" },
   combo_pro_select2k: { monthlyPrice: 4490, yearlyPrice: 45259, name: "Studio Pro + Select 2k" },
   combo_completo: { monthlyPrice: 6490, yearlyPrice: 66198, name: "Combo Completo" },
+};
+
+// Plans that grant subscription credits per cycle
+const PLAN_SUBSCRIPTION_CREDITS: Record<string, number> = {
+  combo_pro_select2k: 2000,
+  combo_completo: 2000,
 };
 
 function getNextBusinessDay(): string {
@@ -57,6 +68,7 @@ Deno.serve(async (req) => {
     const userId = user.id;
     const { planType, billingCycle, creditCard, creditCardHolderInfo, remoteIp } = await req.json();
 
+    // Validate plan
     const plan = PLANS[planType];
     if (!plan) {
       return new Response(
@@ -72,6 +84,7 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Validate credit card data
     if (!creditCard?.number || !creditCard?.holderName || !creditCard?.expiryMonth || !creditCard?.expiryYear || !creditCard?.ccv) {
       return new Response(
         JSON.stringify({ error: "Dados do cartão incompletos" }),
@@ -99,6 +112,7 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    // Get customer ID
     const { data: account } = await adminClient
       .from("photographer_accounts")
       .select("asaas_customer_id")
@@ -131,6 +145,7 @@ Deno.serve(async (req) => {
     const valueCents = billingCycle === "YEARLY" ? plan.yearlyPrice : plan.monthlyPrice;
     const valueReais = valueCents / 100;
 
+    // Create subscription with credit card (transparent checkout)
     const subscriptionPayload: Record<string, unknown> = {
       customer: account.asaas_customer_id,
       billingType: "CREDIT_CARD",
@@ -156,11 +171,12 @@ Deno.serve(async (req) => {
       },
     };
 
+    // Add remoteIp if provided (required by Asaas for transparent checkout)
     if (remoteIp) {
       subscriptionPayload.remoteIp = remoteIp;
     }
 
-    console.log("Creating subscription for plan:", planType);
+    console.log("Creating subscription with transparent checkout for plan:", planType);
 
     const asaasResponse = await fetch(`${ASAAS_BASE_URL}/v3/subscriptions`, {
       method: "POST",
@@ -176,13 +192,14 @@ Deno.serve(async (req) => {
     if (!asaasResponse.ok) {
       console.error("Asaas subscription error:", asaasData);
       const errorMsg =
-        asaasData.errors?.[0]?.description || "Falha ao processar pagamento";
+        asaasData.errors?.[0]?.description || "Falha ao processar pagamento com cartão";
       return new Response(JSON.stringify({ error: errorMsg }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
+    // Extract creditCardToken for future renewals (never store raw card data)
     const creditCardToken = asaasData.creditCard?.creditCardToken || null;
 
     // Remove trial subscription if exists
@@ -192,6 +209,7 @@ Deno.serve(async (req) => {
       .eq("user_id", userId)
       .eq("status", "trialing");
 
+    // Save subscription locally
     const { data: subscription, error: insertError } = await adminClient
       .from("subscriptions_asaas")
       .insert({
@@ -216,7 +234,21 @@ Deno.serve(async (req) => {
       console.error("Insert error:", insertError);
     }
 
-    console.log("Subscription created:", asaasData.id, "status:", asaasData.status);
+    // Grant subscription credits if plan includes them (combos)
+    const subCredits = PLAN_SUBSCRIPTION_CREDITS[planType];
+    if (subCredits && subCredits > 0) {
+      const { error: creditError } = await adminClient.rpc("renew_subscription_credits", {
+        _user_id: userId,
+        _amount: subCredits,
+      });
+      if (creditError) {
+        console.error("Failed to grant subscription credits:", creditError);
+      } else {
+        console.log(`Granted ${subCredits} subscription credits for plan ${planType}`);
+      }
+    }
+
+    console.log("Subscription created successfully:", asaasData.id, "status:", asaasData.status);
 
     return new Response(
       JSON.stringify({

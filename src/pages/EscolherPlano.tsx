@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAsaasSubscription } from "@/hooks/useAsaasSubscription";
 import { useAccessControl } from "@/hooks/useAccessControl";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -14,11 +15,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  ArrowLeft, Check, Star, ArrowUp, ArrowDown, AlertTriangle, Loader2, Info,
+  ArrowLeft, Check, Star, ArrowUp, ArrowDown, AlertTriangle, Loader2, Info, Package,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   ALL_PLAN_PRICES, getPlanDisplayName, isPlanUpgrade, isPlanDowngrade, formatPrice, PLAN_ORDER,
+  isStudioFamilyPlan, PLAN_FAMILIES,
 } from "@/lib/planConfig";
 import { differenceInDays } from "date-fns";
 
@@ -93,12 +95,16 @@ export default function EscolherPlano() {
   const { subscription: activeSub, downgradeSubscription, isDowngrading } = useAsaasSubscription();
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("monthly");
 
-  // Current plan detection
-  const currentPlanType = activeSub?.plan_type || "";
-  const currentBillingCycle = activeSub?.billing_cycle || "MONTHLY";
-  const nextDueDate = activeSub?.next_due_date || "";
-  const currentSubscriptionId = activeSub?.id || "";
-  const isUpgradeMode = !!activeSub && activeSub.status === "ACTIVE";
+  // Current plan detection — only consider Studio/Combo plans for upgrade mode
+  const studioSub = activeSub && isStudioFamilyPlan(activeSub.plan_type) ? activeSub : null;
+  const currentPlanType = studioSub?.plan_type || "";
+  const currentBillingCycle = studioSub?.billing_cycle || "MONTHLY";
+  const nextDueDate = studioSub?.next_due_date || "";
+  const currentSubscriptionId = studioSub?.id || "";
+  const isUpgradeMode = !!studioSub && studioSub.status === "ACTIVE";
+
+  // Non-studio subscriptions (Gallery Transfer etc.) — show as subtle info
+  const galleryOnlySub = activeSub && !isStudioFamilyPlan(activeSub.plan_type) ? activeSub : null;
 
   const currentPlanPrices = ALL_PLAN_PRICES[currentPlanType];
   const currentPriceCents = currentPlanPrices
@@ -183,9 +189,21 @@ export default function EscolherPlano() {
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-primary/8 via-primary/3 to-transparent" />
         <div className="relative container max-w-6xl pt-10 pb-24 md:pb-28 text-center space-y-4">
-          <Badge variant="secondary" className="text-xs tracking-wider uppercase">
-            Gestão
-          </Badge>
+          {galleryOnlySub && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/50 rounded-full px-3 py-1">
+                    <Package className="h-3 w-3" />
+                    {getPlanDisplayName(galleryOnlySub.plan_type)}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Plano ativo no Lunari Gallery</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
           <h1 className="text-2xl md:text-4xl font-bold tracking-tight text-foreground max-w-2xl mx-auto text-balance">
             Escolha o plano ideal para seu estúdio
           </h1>
