@@ -7,7 +7,8 @@ export const EXTERNAL_URLS = {
     // Novo domínio principal
     BASE: 'https://gallery.lunarihub.com',
     // Subdomínios dinâmicos: *.gallery.lunarihub.com
-    NEW: '/gallery/new'
+    NEW: '/gallery/new',
+    DELIVER_NEW: '/deliver/new'
   },
   // Domínios antigos (para referência durante transição)
   LEGACY: {

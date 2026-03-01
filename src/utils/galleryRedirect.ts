@@ -70,3 +70,32 @@ export function buildGalleryNewUrl(params: GalleryRedirectParams): string {
   
   return `${EXTERNAL_URLS.GALLERY.BASE}${EXTERNAL_URLS.GALLERY.NEW}?${searchParams.toString()}`;
 }
+
+/**
+ * Constrói a URL para criação de galeria de entrega (deliver/transfer)
+ * Parâmetros simplificados comparados à galeria de seleção
+ */
+export interface GalleryDeliverParams {
+  sessionId: string;
+  sessionUuid?: string;
+  clienteId?: string;
+  clienteNome: string;
+}
+
+export function buildGalleryDeliverUrl(params: GalleryDeliverParams): string {
+  const searchParams = new URLSearchParams();
+  
+  searchParams.set('session_id', params.sessionId);
+  
+  if (params.sessionUuid) {
+    searchParams.set('session_uuid', params.sessionUuid);
+  }
+  
+  if (params.clienteId) {
+    searchParams.set('cliente_id', params.clienteId);
+  }
+  
+  searchParams.set('cliente_nome', params.clienteNome);
+  
+  return `${EXTERNAL_URLS.GALLERY.BASE}${EXTERNAL_URLS.GALLERY.DELIVER_NEW}?${searchParams.toString()}`;
+}

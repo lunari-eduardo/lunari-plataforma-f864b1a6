@@ -2,17 +2,18 @@ import React, { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { WorkflowPaymentsModal } from "./WorkflowPaymentsModal";
 import { WorkflowPackageCombobox } from "./WorkflowPackageCombobox";
 import { ColoredStatusBadge } from "./ColoredStatusBadge";
 import { GerenciarProdutosModal } from "./GerenciarProdutosModal";
 import { FotosExtrasPaymentBadge } from "./FotosExtrasPaymentBadge";
-import { GaleriaStatusBadge } from "@/components/galeria/GaleriaStatusBadge";
-import { CreditCard, Plus, Package, ExternalLink, Image } from "lucide-react";
+import { CreditCard, Plus, Package, ExternalLink, Eye, Image as ImageIcon } from "lucide-react";
 import { EXTERNAL_URLS } from "@/config/externalUrls";
-import { buildGalleryNewUrl } from "@/utils/galleryRedirect";
+import { buildGalleryNewUrl, buildGalleryDeliverUrl } from "@/utils/galleryRedirect";
 import { useAccessControl } from "@/hooks/useAccessControl";
+import { useSessionGalerias } from "@/hooks/useSessionGalerias";
 import type { SessionData } from "@/types/workflow";
 import { useAppContext } from "@/contexts/AppContext";
 
@@ -34,6 +35,8 @@ export function WorkflowCardExpanded({
   onStatusChange,
 }: WorkflowCardExpandedProps) {
   const { addPayment } = useAppContext();
+  const { hasGaleryAccess, accessState } = useAccessControl();
+  const { galerias, hasGalerias } = useSessionGalerias(session.sessionId || session.id);
   const [workflowPaymentsOpen, setWorkflowPaymentsOpen] = useState(false);
   const [paymentInput, setPaymentInput] = useState('');
   const [produtosModalOpen, setProdutosModalOpen] = useState(false);
@@ -153,7 +156,7 @@ export function WorkflowCardExpanded({
   }, [descriptionValue, session.descricao, session.id, onFieldUpdate]);
 
   return (
-    <div className="bg-gradient-to-br from-transparent via-orange-50/10 to-amber-50/10 dark:from-transparent dark:via-gray-800/30 dark:to-gray-900/30 px-4 py-5 md:px-6">
+    <div className="bg-gradient-to-br from-transparent via-gray-50/10 to-stone-50/10 dark:from-transparent dark:via-[#1f1f1f]/30 dark:to-[#1a1a1a]/30 px-4 py-5 md:px-6">
       {/* MOBILE: Seção de Edição Rápida (visível apenas em mobile) */}
       <div className="md:hidden space-y-4 pb-4 border-b border-border/20 mb-4">
         <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
@@ -334,52 +337,86 @@ export function WorkflowCardExpanded({
         {/* BLOCO 3 - Galeria & Ações */}
         <div className="space-y-4 flex flex-col items-center justify-center py-4">
           {/* Seção Galeria */}
-          <div className="flex flex-col items-center gap-2 w-full">
+          <div className="flex flex-col items-center gap-3 w-full">
             <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
               Galeria
             </h4>
-            {session.galeriaId ? (
-              <div className="flex flex-col items-center gap-2">
-                <GaleriaStatusBadge
-                  status={session.galeriaStatus || 'rascunho'}
-                  statusPagamento={session.galeriaStatusPagamento}
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => window.open(`${EXTERNAL_URLS.GALLERY.BASE}/gallery/${session.galeriaId}`, '_blank', 'noopener,noreferrer')}
-                  className="gap-2"
-                >
-                  <ExternalLink className="h-3.5 w-3.5" />
-                  Abrir Galeria
-                </Button>
-              </div>
-            ) : (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  const url = buildGalleryNewUrl({
-                    sessionId: session.sessionId || session.id,
-                    sessionUuid: session.id,
-                    clienteId: session.clienteId,
-                    clienteNome: session.nome,
-                    clienteEmail: session.email || '',
-                    clienteTelefone: session.whatsapp || '',
-                    pacoteNome: session.regras_congeladas?.pacote?.nome || session.pacote,
-                    pacoteCategoria: session.regras_congeladas?.pacote?.categoria || session.categoria,
-                    fotosIncluidas: session.regras_congeladas?.pacote?.fotosIncluidas,
-                    modeloCobranca: session.regras_congeladas?.precificacaoFotoExtra?.modelo,
-                    precoExtra: session.regras_congeladas?.pacote?.valorFotoExtra,
-                  });
-                  window.open(url, '_blank', 'noopener,noreferrer');
-                }}
-                className="gap-2 text-muted-foreground"
-              >
-                <Image className="h-3.5 w-3.5" />
-                Criar Galeria
-              </Button>
-            )}
+            
+            <div className="flex items-center gap-2">
+              {/* Criar Galeria */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-1.5">
+                    <Plus className="h-3.5 w-3.5" />
+                    Criar Galeria
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-52 p-1" align="center" side="top">
+                  <button
+                    onClick={() => {
+                      const url = buildGalleryNewUrl({
+                        sessionId: session.sessionId || session.id,
+                        sessionUuid: session.id,
+                        clienteId: session.clienteId,
+                        clienteNome: session.nome,
+                        clienteEmail: session.email || '',
+                        clienteTelefone: session.whatsapp || '',
+                        pacoteNome: session.regras_congeladas?.pacote?.nome || session.pacote,
+                        pacoteCategoria: session.regras_congeladas?.pacote?.categoria || session.categoria,
+                        fotosIncluidas: session.regras_congeladas?.pacote?.fotosIncluidas,
+                        modeloCobranca: session.regras_congeladas?.precificacaoFotoExtra?.modelo,
+                        precoExtra: session.regras_congeladas?.pacote?.valorFotoExtra,
+                        tipoAssinatura: accessState.planCode
+                      });
+                      window.open(url, '_blank', 'noopener,noreferrer');
+                    }}
+                    className="w-full text-left px-3 py-2 text-xs rounded hover:bg-muted transition-colors flex items-center gap-2"
+                  >
+                    <ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                    Galeria de Seleção
+                  </button>
+                  <button
+                    onClick={() => {
+                      const url = buildGalleryDeliverUrl({
+                        sessionId: session.sessionId || session.id,
+                        sessionUuid: session.id,
+                        clienteId: session.clienteId,
+                        clienteNome: session.nome,
+                      });
+                      window.open(url, '_blank', 'noopener,noreferrer');
+                    }}
+                    className="w-full text-left px-3 py-2 text-xs rounded hover:bg-muted transition-colors flex items-center gap-2"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+                    Galeria de Entrega
+                  </button>
+                </PopoverContent>
+              </Popover>
+
+              {/* Ver Galerias */}
+              {hasGalerias && (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="ghost" size="sm" className="gap-1.5">
+                      <Eye className="h-3.5 w-3.5" />
+                      Ver
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-56 p-1" align="center" side="top">
+                    {galerias.map((g) => (
+                      <button
+                        key={g.id}
+                        onClick={() => window.open(`${EXTERNAL_URLS.GALLERY.BASE}/gallery/${g.id}`, '_blank', 'noopener,noreferrer')}
+                        className="w-full text-left px-3 py-2 text-xs rounded hover:bg-muted transition-colors flex items-center justify-between gap-2"
+                      >
+                        <span className="font-medium">{g.tipo === 'entrega' || g.tipo === 'transfer' ? 'Entrega' : 'Seleção'}</span>
+                        <span className="text-[10px] text-muted-foreground capitalize">{g.status.replace('_', ' ')}</span>
+                      </button>
+                    ))}
+                  </PopoverContent>
+                </Popover>
+              )}
+            </div>
           </div>
 
           {/* Divisor */}

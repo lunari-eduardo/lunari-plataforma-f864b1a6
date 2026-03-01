@@ -50,15 +50,15 @@ export function WorkflowCardList({
   return (
     <div 
       ref={containerRef}
-      className="h-full w-full overflow-auto p-4 md:p-6 bg-gradient-to-b from-orange-50/40 via-stone-50 to-orange-50/20 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950"
+      className="h-full w-full overflow-auto p-4 md:p-6 bg-gradient-to-b from-gray-50/60 via-white to-gray-50/40 dark:from-[#111] dark:via-[#141414] dark:to-[#111]"
       style={{ 
         height: 'calc(100vh - 280px)'
       }}
     >
-      <div className="flex flex-col gap-3 md:gap-4">
+      <div className="flex flex-col gap-3 md:gap-4 overflow-x-auto md:overflow-x-visible">
         {sessions.map(session => (
+          <div key={session.id} className="min-w-[360px] md:min-w-0 flex-shrink-0 md:flex-shrink">
           <WorkflowCard
-            key={session.id}
             session={session}
             isExpanded={expandedCardId === session.id}
             onToggleExpand={() => handleToggleExpand(session.id)}
@@ -69,6 +69,7 @@ export function WorkflowCardList({
             onFieldUpdate={onFieldUpdate}
             onDeleteSession={onDeleteSession}
           />
+          </div>
         ))}
         
         {sessions.length === 0 && (

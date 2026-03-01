@@ -31,29 +31,24 @@ export function WorkflowCard({
     <div
       data-card-id={session.id}
       className={cn(
-        // Base styles - premium rounded
+        // Base styles
         "rounded-2xl transition-all duration-200 ease-in-out",
-        // Gradient background - light mode
-        "bg-gradient-to-br from-white via-orange-50/30 to-amber-50/20",
-        // Gradient background - dark mode  
-        "dark:from-gray-900 dark:via-gray-800/80 dark:to-gray-900",
-        // Left accent border
-        "border-l-[3px] border-l-primary/40",
-        // Sombra premium
-        "shadow-[0_2px_12px_rgba(0,0,0,0.06)] dark:shadow-[0_2px_12px_rgba(0,0,0,0.25)]",
+        // Gradient background - light mode (neutral white/gray)
+        "bg-gradient-to-br from-white via-gray-50/50 to-stone-50/30",
+        // Gradient background - dark mode (warm grays, no blue)
+        "dark:from-[#1a1a1a] dark:via-[#1f1f1f] dark:to-[#1a1a1a]",
+        // Minimal base shadow
+        "shadow-[0_1px_4px_rgba(0,0,0,0.04)] dark:shadow-[0_1px_4px_rgba(0,0,0,0.2)]",
         // Width: 70% no desktop, 100% no mobile
         "w-full lg:w-[70%]",
-        // Alinhado à esquerda
         "ml-0",
-        // Hover state
-        "hover:shadow-[0_6px_20px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_6px_20px_rgba(0,0,0,0.35)]",
-        "hover:border-l-primary/60",
-        // Expanded state - stronger gradient
+        // Hover state - adds shadow
+        "hover:shadow-[0_6px_20px_rgba(0,0,0,0.08)] dark:hover:shadow-[0_6px_20px_rgba(0,0,0,0.4)]",
+        // Expanded state
         isExpanded && [
-          "shadow-[0_8px_24px_rgba(0,0,0,0.1)] dark:shadow-[0_8px_24px_rgba(0,0,0,0.4)]",
-          "border-l-primary/80",
-          "from-white via-orange-50/50 to-amber-50/30",
-          "dark:from-gray-900 dark:via-gray-800 dark:to-gray-850"
+          "shadow-[0_8px_24px_rgba(0,0,0,0.1)] dark:shadow-[0_8px_24px_rgba(0,0,0,0.45)]",
+          "from-white via-gray-50/70 to-stone-50/40",
+          "dark:from-[#1c1c1c] dark:via-[#222] dark:to-[#1c1c1c]"
         ]
       )}
     >

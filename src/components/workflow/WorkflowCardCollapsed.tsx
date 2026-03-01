@@ -1,20 +1,22 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { WorkflowPackageCombobox } from "./WorkflowPackageCombobox";
 import { ColoredStatusBadge } from "./ColoredStatusBadge";
 import { GerenciarProdutosModal } from "./GerenciarProdutosModal";
 import { WorkflowPaymentsModal } from "./WorkflowPaymentsModal";
 import { GalleryUpgradeModal } from "./GalleryUpgradeModal";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MessageCircle, ChevronDown, ChevronUp, Package, Plus, CreditCard, Image, ExternalLink } from "lucide-react";
-import { GaleriaStatusBadge } from "@/components/galeria/GaleriaStatusBadge";
+import { MessageCircle, ChevronDown, ChevronUp, Package, Plus, CreditCard, Eye, Image as ImageIcon, ExternalLink } from "lucide-react";
 import { EXTERNAL_URLS } from "@/config/externalUrls";
 import { Link } from "react-router-dom";
 import { formatToDayMonth } from "@/utils/dateUtils";
 import { useAppContext } from "@/contexts/AppContext";
 import { useAccessControl } from "@/hooks/useAccessControl";
 import { buildGalleryNewUrl } from "@/utils/galleryRedirect";
+import { buildGalleryDeliverUrl } from "@/utils/galleryRedirect";
+import { useSessionGalerias } from "@/hooks/useSessionGalerias";
 import debounce from 'lodash.debounce';
 import type { SessionData } from "@/types/workflow";
 
@@ -109,6 +111,7 @@ export function WorkflowCardCollapsed({
 }: WorkflowCardCollapsedProps) {
   const { addPayment } = useAppContext();
   const { hasGaleryAccess, accessState } = useAccessControl();
+  const { galerias, hasGalerias } = useSessionGalerias(session.sessionId || session.id);
   
   const [paymentInput, setPaymentInput] = useState('');
   const [modalAberto, setModalAberto] = useState(false);
@@ -195,21 +198,15 @@ export function WorkflowCardCollapsed({
   // Obter nome do pacote das regras congeladas ou do pacote atual
   const displayPackageName = session.regras_congeladas?.pacote?.nome || session.pacote || '';
 
-  // Handler para botão Gallery
-  const handleGalleryClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    
+  // Handler para criar galeria de seleção
+  const handleCreateSelecao = useCallback(() => {
     if (!hasGaleryAccess) {
       setGalleryModalOpen(true);
       return;
     }
-    
-    // Construir URL com dados da sessão
-    // sessionId: formato texto (workflow-*) para busca principal
-    // sessionUuid: UUID para busca alternativa
     const url = buildGalleryNewUrl({
-      sessionId: session.sessionId || session.id,  // Preferir formato texto
-      sessionUuid: session.id,                      // UUID como backup
+      sessionId: session.sessionId || session.id,
+      sessionUuid: session.id,
       clienteId: session.clienteId,
       clienteNome: session.nome,
       clienteEmail: session.email || '',
@@ -221,10 +218,90 @@ export function WorkflowCardCollapsed({
       precoExtra: session.regras_congeladas?.pacote?.valorFotoExtra,
       tipoAssinatura: accessState.planCode
     });
-    
-    // Abrir em nova aba
     window.open(url, '_blank', 'noopener,noreferrer');
   }, [session, hasGaleryAccess, accessState.planCode]);
+
+  // Handler para criar galeria de entrega
+  const handleCreateEntrega = useCallback(() => {
+    if (!hasGaleryAccess) {
+      setGalleryModalOpen(true);
+      return;
+    }
+    const url = buildGalleryDeliverUrl({
+      sessionId: session.sessionId || session.id,
+      sessionUuid: session.id,
+      clienteId: session.clienteId,
+      clienteNome: session.nome,
+    });
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }, [session, hasGaleryAccess]);
+
+  // Helper para label de tipo de galeria
+  const getGaleriaTipoLabel = (tipo: string) => {
+    if (tipo === 'entrega' || tipo === 'transfer') return 'Entrega';
+    return 'Seleção';
+  };
+
+  // Componente reutilizável para botões de galeria
+  const GalleryButtons = ({ compact = false }: { compact?: boolean }) => (
+    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            size={compact ? "sm" : "default"}
+            className={compact ? "h-6 px-2 text-[10px] gap-1" : "h-7 px-2.5 text-xs gap-1"}
+          >
+            <Plus className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
+            Criar
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-48 p-1" align="end" side="bottom">
+          <button
+            onClick={handleCreateSelecao}
+            className="w-full text-left px-3 py-2 text-xs rounded hover:bg-muted transition-colors flex items-center gap-2"
+          >
+            <ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />
+            Galeria de Seleção
+          </button>
+          <button
+            onClick={handleCreateEntrega}
+            className="w-full text-left px-3 py-2 text-xs rounded hover:bg-muted transition-colors flex items-center gap-2"
+          >
+            <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+            Galeria de Entrega
+          </button>
+        </PopoverContent>
+      </Popover>
+
+      {hasGalerias && (
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="ghost"
+              size={compact ? "sm" : "default"}
+              className={compact ? "h-6 px-1.5 text-[10px] gap-0.5" : "h-7 px-2 text-xs gap-1"}
+            >
+              <Eye className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
+              Ver
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-52 p-1" align="end" side="bottom">
+            {galerias.map((g) => (
+              <button
+                key={g.id}
+                onClick={() => window.open(`${EXTERNAL_URLS.GALLERY.BASE}/gallery/${g.id}`, '_blank', 'noopener,noreferrer')}
+                className="w-full text-left px-3 py-2 text-xs rounded hover:bg-muted transition-colors flex items-center justify-between gap-2"
+              >
+                <span className="font-medium">{getGaleriaTipoLabel(g.tipo)}</span>
+                <span className="text-[10px] text-muted-foreground capitalize">{g.status.replace('_', ' ')}</span>
+              </button>
+            ))}
+          </PopoverContent>
+        </Popover>
+      )}
+    </div>
+  );
 
   return (
     <div className="px-4 py-3 md:px-6 md:py-4 cursor-pointer" onClick={onToggleExpand}>
@@ -363,31 +440,9 @@ export function WorkflowCardCollapsed({
           </span>
         </div>
 
-        {/* Zona 10: Gallery Status / Criar */}
-        <div className="flex items-center justify-center pt-1" onClick={(e) => e.stopPropagation()}>
-          {session.galeriaId ? (
-            <button
-              onClick={() => window.open(`${EXTERNAL_URLS.GALLERY.BASE}/gallery/${session.galeriaId}`, '_blank', 'noopener,noreferrer')}
-              className="cursor-pointer hover:opacity-80 transition-opacity"
-              title="Abrir Galeria"
-            >
-              <GaleriaStatusBadge
-                status={session.galeriaStatus || 'rascunho'}
-                statusPagamento={session.galeriaStatusPagamento}
-                compact
-              />
-            </button>
-          ) : (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleGalleryClick}
-              className="h-7 w-7 text-muted-foreground hover:text-primary hover:bg-primary/10"
-              title="Criar Galeria"
-            >
-              <Image className="h-4 w-4" />
-            </Button>
-          )}
+        {/* Zona 10: Gallery Criar + Ver */}
+        <div className="flex items-center justify-center pt-1">
+          <GalleryButtons />
         </div>
       </div>
 
@@ -518,31 +573,9 @@ export function WorkflowCardCollapsed({
           </span>
         </div>
 
-        {/* Zona 10: Gallery Status / Criar */}
-        <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
-          {session.galeriaId ? (
-            <button
-              onClick={() => window.open(`${EXTERNAL_URLS.GALLERY.BASE}/gallery/${session.galeriaId}`, '_blank', 'noopener,noreferrer')}
-              className="cursor-pointer hover:opacity-80 transition-opacity"
-              title="Abrir Galeria"
-            >
-              <GaleriaStatusBadge
-                status={session.galeriaStatus || 'rascunho'}
-                statusPagamento={session.galeriaStatusPagamento}
-                compact
-              />
-            </button>
-          ) : (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleGalleryClick}
-              className="h-6 w-6 text-muted-foreground hover:text-primary hover:bg-primary/10"
-              title="Criar Galeria"
-            >
-              <Image className="h-3.5 w-3.5" />
-            </Button>
-          )}
+        {/* Zona 10: Gallery Criar + Ver */}
+        <div className="flex items-center justify-center">
+          <GalleryButtons compact />
         </div>
       </div>
 
@@ -596,32 +629,8 @@ export function WorkflowCardCollapsed({
           {formatCurrency(pendente)}
         </span>
 
-        {/* Gallery Status / Criar (Mobile) */}
-        <div onClick={(e) => e.stopPropagation()}>
-          {session.galeriaId ? (
-            <button
-              onClick={() => window.open(`${EXTERNAL_URLS.GALLERY.BASE}/gallery/${session.galeriaId}`, '_blank', 'noopener,noreferrer')}
-              className="cursor-pointer hover:opacity-80 transition-opacity"
-              title="Abrir Galeria"
-            >
-              <GaleriaStatusBadge
-                status={session.galeriaStatus || 'rascunho'}
-                statusPagamento={session.galeriaStatusPagamento}
-                compact
-              />
-            </button>
-          ) : (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleGalleryClick}
-              className="h-7 w-7 text-muted-foreground hover:text-primary hover:bg-primary/10"
-              title="Criar Galeria"
-            >
-              <Image className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
+        {/* Gallery Criar + Ver (Mobile) */}
+        <GalleryButtons compact />
       </div>
 
       {/* Modal de Gerenciamento de Produtos */}
