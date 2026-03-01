@@ -50,9 +50,8 @@ export function WorkflowCardList({
   return (
     <div 
       ref={containerRef}
-      className="h-full w-full overflow-auto p-4 md:p-6"
+      className="h-full w-full overflow-auto p-4 md:p-6 bg-gradient-to-b from-orange-50/40 via-stone-50 to-orange-50/20 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950"
       style={{ 
-        backgroundColor: '#f3efec',
         height: 'calc(100vh - 280px)'
       }}
     >

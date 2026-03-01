@@ -31,20 +31,30 @@ export function WorkflowCard({
     <div
       data-card-id={session.id}
       className={cn(
-        // Base styles - mais arredondado e premium
+        // Base styles - premium rounded
         "rounded-2xl transition-all duration-200 ease-in-out",
-        // Background sólido - suporte dark mode
-        "bg-card",
-        // Sombra mais presente
-        "shadow-[0_2px_8px_rgba(0,0,0,0.06)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.2)]",
+        // Gradient background - light mode
+        "bg-gradient-to-br from-white via-orange-50/30 to-amber-50/20",
+        // Gradient background - dark mode  
+        "dark:from-gray-900 dark:via-gray-800/80 dark:to-gray-900",
+        // Left accent border
+        "border-l-[3px] border-l-primary/40",
+        // Sombra premium
+        "shadow-[0_2px_12px_rgba(0,0,0,0.06)] dark:shadow-[0_2px_12px_rgba(0,0,0,0.25)]",
         // Width: 70% no desktop, 100% no mobile
         "w-full lg:w-[70%]",
         // Alinhado à esquerda
         "ml-0",
-        // Hover state - sombra mais forte
-        "hover:shadow-[0_4px_12px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_4px_12px_rgba(0,0,0,0.3)]",
-        // Expanded state - destaque premium
-        isExpanded && "shadow-[0_6px_16px_rgba(0,0,0,0.1)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.3)] ring-1 ring-primary/5"
+        // Hover state
+        "hover:shadow-[0_6px_20px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_6px_20px_rgba(0,0,0,0.35)]",
+        "hover:border-l-primary/60",
+        // Expanded state - stronger gradient
+        isExpanded && [
+          "shadow-[0_8px_24px_rgba(0,0,0,0.1)] dark:shadow-[0_8px_24px_rgba(0,0,0,0.4)]",
+          "border-l-primary/80",
+          "from-white via-orange-50/50 to-amber-50/30",
+          "dark:from-gray-900 dark:via-gray-800 dark:to-gray-850"
+        ]
       )}
     >
       {/* Collapsed row - sempre visível (clicável para expandir) */}
