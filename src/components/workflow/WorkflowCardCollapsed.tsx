@@ -441,7 +441,8 @@ export function WorkflowCardCollapsed({
         </div>
 
         {/* Zona 10: Gallery Criar + Ver */}
-        <div className="flex items-center justify-center pt-1">
+        <div className="flex flex-col gap-0.5">
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Galerias</span>
           <GalleryButtons />
         </div>
       </div>
