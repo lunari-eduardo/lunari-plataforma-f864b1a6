@@ -307,7 +307,7 @@ export function WorkflowCardCollapsed({
     <div className="px-4 py-3 md:px-6 md:py-4 cursor-pointer" onClick={onToggleExpand}>
       {/* Grid DESKTOP (≥1024px) - Layout completo */}
       <div 
-        className="hidden lg:grid grid-cols-[40px_50px_180px_1fr_140px_130px_90px_90px_100px_auto] gap-3 items-start"
+        className="hidden lg:grid grid-cols-[36px_50px_180px_1fr_150px_140px_90px_80px_90px_auto] gap-3 items-start"
       >
         
         {/* Zona 1: Expand */}
@@ -407,35 +407,39 @@ export function WorkflowCardCollapsed({
         </div>
 
         {/* Zona 7: Fotos Extras */}
-        <div className="flex flex-col items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
-          <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Fotos extras</span>
-          <ExtraPhotoQtyInput
-            sessionId={session.id}
-            initialValue={session.qtdFotosExtra || 0}
-            onUpdate={onFieldUpdate}
-          />
+        <div className="flex flex-col gap-0.5" onClick={(e) => e.stopPropagation()}>
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wide text-center">Fotos extras</span>
+          <div className="flex justify-center">
+            <ExtraPhotoQtyInput
+              sessionId={session.id}
+              initialValue={session.qtdFotosExtra || 0}
+              onUpdate={onFieldUpdate}
+            />
+          </div>
         </div>
 
         {/* Zona 8: Produtos */}
-        <div className="flex flex-col items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
-          <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Produtos</span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setModalAberto(true)}
-            className="h-7 px-3 text-xs border rounded-md bg-background hover:bg-muted"
-          >
-            <Package className={`h-3.5 w-3.5 mr-1 ${hasProdutos ? 'text-blue-600' : 'text-muted-foreground'}`} />
-            {hasProdutos ? session.produtosList.length : 0}
-            {todosCompletos && <span className="ml-1 w-2 h-2 bg-green-500 rounded-full" />}
-            {parcialmenteCompletos && <span className="ml-1 w-2 h-2 bg-yellow-500 rounded-full" />}
-          </Button>
+        <div className="flex flex-col gap-0.5" onClick={(e) => e.stopPropagation()}>
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wide text-center">Produtos</span>
+          <div className="flex justify-center">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setModalAberto(true)}
+              className="h-7 px-3 text-xs border rounded-md bg-background hover:bg-muted"
+            >
+              <Package className={`h-3.5 w-3.5 mr-1 ${hasProdutos ? 'text-blue-600' : 'text-muted-foreground'}`} />
+              {hasProdutos ? session.produtosList.length : 0}
+              {todosCompletos && <span className="ml-1 w-2 h-2 bg-green-500 rounded-full" />}
+              {parcialmenteCompletos && <span className="ml-1 w-2 h-2 bg-yellow-500 rounded-full" />}
+            </Button>
+          </div>
         </div>
 
         {/* Zona 9: PENDENTE */}
-        <div className="flex flex-col items-end">
-          <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Pendente</span>
-          <span className={`text-sm font-bold ${pendente > 0 ? 'text-destructive' : 'text-green-600'}`}>
+        <div className="flex flex-col gap-0.5">
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wide text-right">Pendente</span>
+          <span className={`text-sm font-bold text-right ${pendente > 0 ? 'text-destructive' : 'text-green-600'}`}>
             {formatCurrency(pendente)}
           </span>
         </div>
