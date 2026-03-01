@@ -1,78 +1,62 @@
 
 
-# Workflow Cards: Click Area, Visual Upgrade, and Gallery Integration
+# Workflow Cards: Gallery UX, Visual Fixes, Mobile Layout
 
-## 3 Problems Identified
+## Summary of Changes
 
-1. **Click-to-expand only works on specific zones** — Interactive elements (inputs, dropdowns, links, buttons) have `e.stopPropagation()`, which is correct, but the remaining clickable area feels unpredictable. The outer `<div>` wrapping the entire collapsed row receives the click, but users expect the whole card to expand.
+### 1. Gallery Button UX Redesign
 
-2. **Visual design is flat** — Cards use plain `bg-card` with subtle shadows. The user wants gradient backgrounds inspired by the settings page (image 2), compatible with dark mode.
+**Current:** Single icon that creates selection gallery, or shows status badge if gallery exists.
 
-3. **Gallery access is a small icon button** that only creates new galleries — no way to see gallery status or open existing galleries from the workflow.
+**New:** Two-button system:
+- **"Criar Galeria" button** (always visible, text label) — on click, shows a small popover/dropdown with two options:
+  - "Galeria de Seleção" → redirects to `gallery.lunarihub.com/gallery/new?session_id=...` (existing flow)
+  - "Galeria de Entrega" → redirects to `gallery.lunarihub.com/deliver/new?session_id=...` (new)
+- **"Ver" button with Eye icon** (only visible when at least one gallery exists) — on click, shows a dropdown listing existing galleries for this session (fetched from `galerias` table by `session_id`), each showing type (Seleção/Entrega) and clicking opens the gallery in a new tab.
 
----
+**Data:** Query `galerias` by `session_id` to find all linked galleries (both `tipo: 'selecao'` and `tipo: 'entrega'`). The `galeriaId` field currently stores only one; we need to fetch dynamically.
 
-## Plan
+**Files:**
+- `src/config/externalUrls.ts` — add `DELIVER_NEW: '/deliver/new'`
+- `src/utils/galleryRedirect.ts` — add `buildGalleryDeliverUrl()` function (simpler params: session_id, session_uuid, cliente_id, cliente_nome)
+- `src/components/workflow/WorkflowCardCollapsed.tsx` — replace Zona 10 (desktop/tablet/mobile) with new "Criar Galeria" + "Ver" buttons using Popover components
+- `src/components/workflow/WorkflowCardExpanded.tsx` — replace Block 3 gallery section with same pattern (larger buttons)
+- `src/hooks/useSessionGalerias.ts` — new hook to fetch all galleries for a session from `galerias` table
 
-### Task 1: Fix click-to-expand area
+### 2. Visual/Style Fixes
 
-**File: `WorkflowCardCollapsed.tsx`**
+**Remove left border accent:**
+- `src/components/workflow/WorkflowCard.tsx` — remove `border-l-[3px] border-l-primary/40` and related hover/expanded border classes
 
-The current approach already has `onClick={onToggleExpand}` on the grid container and `e.stopPropagation()` on interactive zones. The issue is that the outer `<div className="px-4 py-3">` wrapping all 3 layouts (desktop/tablet/mobile) does NOT have the click handler — clicks on padding areas don't trigger expand.
+**Fix gradient colors (no blue in dark mode):**
+- `src/components/workflow/WorkflowCard.tsx` — change dark mode gradient to warm grays: `dark:from-[#1a1a1a] dark:via-[#1f1f1f] dark:to-[#1a1a1a]`
+- `src/components/workflow/WorkflowCardList.tsx` — change container dark background to pure dark: `dark:from-[#111] dark:via-[#141414] dark:to-[#111]`
 
-**Fix:** Move the `onClick={onToggleExpand}` and `cursor-pointer` to the outer wrapper `<div>` (line 228) instead of having it on each individual grid. This makes the entire card surface clickable, including padding areas. Keep `e.stopPropagation()` on interactive elements.
+**White/gray gradient for light mode:**
+- Light mode card: `bg-gradient-to-br from-white via-gray-50/50 to-stone-50/30` (neutral, no orange)
+- Light mode container: `bg-gradient-to-b from-gray-50/60 via-white to-gray-50/40`
 
-### Task 2: Modern gradient design with dark mode
+**Fix inverted hover effect:**
+- Card currently has expanded-state shadows applied on base, making hover look like it loses effect. Fix by ensuring base shadow is minimal and hover adds shadow.
 
-**File: `WorkflowCard.tsx`**
+### 3. Mobile Card Layout Fix
 
-Replace the flat `bg-card` with a subtle warm gradient background:
-- Light mode: `bg-gradient-to-br from-white via-orange-50/30 to-amber-50/20` with a soft left border accent
-- Dark mode: `bg-gradient-to-br dark:from-gray-900 dark:via-gray-800/80 dark:to-gray-900` 
-- Expanded state: slightly different gradient to visually distinguish
-- Add a thin left border with brand color gradient (`border-l-3 border-gradient`)
+**Problem:** Cards wrap/collapse on mobile, becoming unreadable (image 5).
 
-**File: `WorkflowCardList.tsx`**
+**Fix in `WorkflowCardList.tsx`:**
+- Mobile cards get a fixed minimum width (`min-w-[360px]`)
+- Container allows horizontal scroll on mobile: `overflow-x-auto`
+- Cards never shrink: `flex-shrink-0`
 
-Update the container background:
-- Light: subtle warm gradient `bg-gradient-to-b from-orange-50/40 via-stone-50 to-orange-50/20`
-- Dark: `dark:from-gray-950 dark:via-gray-900 dark:to-gray-950`
-
-**File: `WorkflowCardExpanded.tsx`**
-
-Update `bg-muted/5` to use a translucent gradient that blends with the card gradient.
-
-### Task 3: Smart Gallery integration in workflow cards
-
-**File: `WorkflowCardCollapsed.tsx`**
-
-Replace the current simple `Image` icon button (Zona 10) with a smart gallery indicator:
-
-- **No gallery exists** (`!galeriaId`): Show "Criar Galeria" button (current behavior, keep redirect to Gallery app)
-- **Gallery exists** (`galeriaId` is set): Show a compact gallery status badge using `galeriaStatus` data already available in `SessionData`. The badge shows the current gallery state (rascunho, enviado para seleção, seleção finalizada, etc.) with appropriate colors. Clicking it opens the Gallery in a new tab using the existing gallery URL pattern.
-
-The data (`galeriaId`, `galeriaStatus`, `galeriaStatusPagamento`) is already being loaded in `useWorkflowPackageData.ts` and mapped to `SessionData`. We just need to use it in the UI.
-
-**Implementation details:**
-- When `galeriaId` exists: render a small colored badge/chip showing gallery status + open link
-- Badge colors: rascunho=gray, publicada/em_selecao=amber, finalizada=green  
-- Click opens `gallery.lunarihub.com/gallery/{galeriaId}` in new tab
-- Payment status indicator (small dot: green=pago, orange=pendente) alongside the gallery badge
-
-**File: `WorkflowCardExpanded.tsx`**
-
-Add a "Galeria" section in the expanded view (Block 3 area) that shows:
-- Gallery status badge (larger)
-- Payment status
-- "Abrir Galeria" button that opens in new tab
-- If no gallery: "Criar Galeria" button
-
-## Files to Modify
+### Files to Modify
 
 | File | Change |
 |------|--------|
-| `src/components/workflow/WorkflowCardCollapsed.tsx` | Move click handler to outer div; replace gallery icon with smart status indicator |
-| `src/components/workflow/WorkflowCard.tsx` | Add gradient backgrounds with dark mode support |
-| `src/components/workflow/WorkflowCardList.tsx` | Update container background gradient |
-| `src/components/workflow/WorkflowCardExpanded.tsx` | Add gallery section in Block 3; update background to match gradient theme |
+| `src/config/externalUrls.ts` | Add `DELIVER_NEW` path |
+| `src/utils/galleryRedirect.ts` | Add `buildGalleryDeliverUrl()` |
+| `src/hooks/useSessionGalerias.ts` | **New file** — hook to fetch galleries by session_id |
+| `src/components/workflow/WorkflowCardCollapsed.tsx` | Replace gallery zone with "Criar Galeria" + "Ver" popover system |
+| `src/components/workflow/WorkflowCardExpanded.tsx` | Replace Block 3 gallery section with same pattern |
+| `src/components/workflow/WorkflowCard.tsx` | Remove left border; fix gradients for light/dark; fix hover |
+| `src/components/workflow/WorkflowCardList.tsx` | Fix container gradients; add mobile horizontal scroll with fixed card width |
 
