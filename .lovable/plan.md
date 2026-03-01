@@ -1,62 +1,54 @@
 
 
-# Workflow Cards: Gallery UX, Visual Fixes, Mobile Layout
+# Fix: Workflow Cards - Visual, Hover, Sizing, and Layout
 
-## Summary of Changes
+## Problems Identified
 
-### 1. Gallery Button UX Redesign
+1. **No gradient visible** — `bg-gradient-to-br` with `dark:from-[#1a1a1a]` doesn't work because Tailwind gradient `from-`/`via-`/`to-` utilities in dark mode need the gradient direction repeated or the gradient base class applied in both modes. The card and container backgrounds appear flat.
 
-**Current:** Single icon that creates selection gallery, or shows status badge if gallery exists.
+2. **Hover inverted** — The hover shadow (`0_6px_20px`) is WEAKER than the expanded state shadow (`0_8px_24px`). On non-expanded cards, base shadow is so subtle hover barely adds anything. Fix: increase hover shadow significantly, and for expanded cards, ensure hover adds even more depth.
 
-**New:** Two-button system:
-- **"Criar Galeria" button** (always visible, text label) — on click, shows a small popover/dropdown with two options:
-  - "Galeria de Seleção" → redirects to `gallery.lunarihub.com/gallery/new?session_id=...` (existing flow)
-  - "Galeria de Entrega" → redirects to `gallery.lunarihub.com/deliver/new?session_id=...` (new)
-- **"Ver" button with Eye icon** (only visible when at least one gallery exists) — on click, shows a dropdown listing existing galleries for this session (fetched from `galerias` table by `session_id`), each showing type (Seleção/Entrega) and clicking opens the gallery in a new tab.
+3. **No left border** — Already removed per plan. Good.
 
-**Data:** Query `galerias` by `session_id` to find all linked galleries (both `tipo: 'selecao'` and `tipo: 'entrega'`). The `galeriaId` field currently stores only one; we need to fetch dynamically.
+4. **Cards resize on mobile** — `min-w-[360px] md:min-w-0` means on desktop cards lose their min-width. The card itself has `w-full lg:w-[70%]` which makes it shrink. Cards need a FIXED width that never changes, with horizontal scrolling in the container.
 
-**Files:**
-- `src/config/externalUrls.ts` — add `DELIVER_NEW: '/deliver/new'`
-- `src/utils/galleryRedirect.ts` — add `buildGalleryDeliverUrl()` function (simpler params: session_id, session_uuid, cliente_id, cliente_nome)
-- `src/components/workflow/WorkflowCardCollapsed.tsx` — replace Zona 10 (desktop/tablet/mobile) with new "Criar Galeria" + "Ver" buttons using Popover components
-- `src/components/workflow/WorkflowCardExpanded.tsx` — replace Block 3 gallery section with same pattern (larger buttons)
-- `src/hooks/useSessionGalerias.ts` — new hook to fetch all galleries for a session from `galerias` table
+5. **Content overflowing** — The desktop grid template `grid-cols-[40px_50px_180px_1fr_140px_130px_90px_90px_100px_36px]` doesn't account for the new "Criar + Ver" gallery buttons which need more space than `36px`.
 
-### 2. Visual/Style Fixes
+## Plan
 
-**Remove left border accent:**
-- `src/components/workflow/WorkflowCard.tsx` — remove `border-l-[3px] border-l-primary/40` and related hover/expanded border classes
+### File: `src/components/workflow/WorkflowCard.tsx`
 
-**Fix gradient colors (no blue in dark mode):**
-- `src/components/workflow/WorkflowCard.tsx` — change dark mode gradient to warm grays: `dark:from-[#1a1a1a] dark:via-[#1f1f1f] dark:to-[#1a1a1a]`
-- `src/components/workflow/WorkflowCardList.tsx` — change container dark background to pure dark: `dark:from-[#111] dark:via-[#141414] dark:to-[#111]`
+**Fix gradient + hover + sizing:**
+- Remove `w-full lg:w-[70%]` and `ml-0` — card should NOT set its own width (parent controls it)
+- Fix gradient: use a single `style` prop for the gradient background that works in both light/dark, OR use proper Tailwind classes with `dark:bg-gradient-to-br` pattern
+- Actually the issue is simpler: Tailwind gradient classes work fine, but `bg-gradient-to-br` must be present and the `from-`/`via-`/`to-` must be on the same element. Check if `dark:from-*` works with the base `bg-gradient-to-br`. It should — the direction class isn't mode-specific. The real problem might be that `bg-card` or other background utilities are overriding the gradient. Let me verify there's no conflicting `bg-` class.
+- Looking at the code: no `bg-card` present, just `bg-gradient-to-br from-white via-gray-50/50 to-stone-50/30` which should work. The dark mode uses `dark:from-[#1a1a1a]` etc. This SHOULD work in Tailwind. The issue might be that `from-white` in light mode looks identical to white background — no visible gradient. Need more contrast: `from-white via-gray-100/60 to-gray-50/80`.
+- **Hover fix**: Base shadow stays minimal. Hover gets a strong lift: `hover:shadow-[0_8px_28px_rgba(0,0,0,0.12)]`. Expanded state uses `shadow-[0_4px_16px_rgba(0,0,0,0.08)]` (LESS than hover, so hovering expanded card still adds depth).
+- Add `border border-gray-200/60 dark:border-gray-700/40` for visual card separation.
 
-**White/gray gradient for light mode:**
-- Light mode card: `bg-gradient-to-br from-white via-gray-50/50 to-stone-50/30` (neutral, no orange)
-- Light mode container: `bg-gradient-to-b from-gray-50/60 via-white to-gray-50/40`
+### File: `src/components/workflow/WorkflowCardList.tsx`
 
-**Fix inverted hover effect:**
-- Card currently has expanded-state shadows applied on base, making hover look like it loses effect. Fix by ensuring base shadow is minimal and hover adds shadow.
+**Fix container gradient + fixed card width + horizontal scroll:**
+- Container: stronger gradient `from-gray-100/80 via-gray-50 to-gray-100/60` in light, `dark:from-[#0e0e0e] dark:via-[#131313] dark:to-[#0e0e0e]`
+- Inner flex: `overflow-x-auto` always (not just mobile)
+- Card wrapper: fixed `min-w-[1100px]` so card never shrinks, container scrolls horizontally
+- Remove `md:min-w-0` and `md:flex-shrink` — card is ALWAYS fixed width
 
-### 3. Mobile Card Layout Fix
+### File: `src/components/workflow/WorkflowCard.tsx` (sizing)
 
-**Problem:** Cards wrap/collapse on mobile, becoming unreadable (image 5).
+- Remove `w-full lg:w-[70%]` — let card fill its fixed-width parent
+- Just use `w-full`
 
-**Fix in `WorkflowCardList.tsx`:**
-- Mobile cards get a fixed minimum width (`min-w-[360px]`)
-- Container allows horizontal scroll on mobile: `overflow-x-auto`
-- Cards never shrink: `flex-shrink-0`
+### File: `src/components/workflow/WorkflowCardCollapsed.tsx`
 
-### Files to Modify
+- Widen desktop grid last column from `36px` to `auto` or `120px` to fit "Criar" + "Ver" buttons
+- Grid template: `grid-cols-[40px_50px_180px_1fr_140px_130px_90px_90px_100px_auto]`
+
+## Files to Modify
 
 | File | Change |
 |------|--------|
-| `src/config/externalUrls.ts` | Add `DELIVER_NEW` path |
-| `src/utils/galleryRedirect.ts` | Add `buildGalleryDeliverUrl()` |
-| `src/hooks/useSessionGalerias.ts` | **New file** — hook to fetch galleries by session_id |
-| `src/components/workflow/WorkflowCardCollapsed.tsx` | Replace gallery zone with "Criar Galeria" + "Ver" popover system |
-| `src/components/workflow/WorkflowCardExpanded.tsx` | Replace Block 3 gallery section with same pattern |
-| `src/components/workflow/WorkflowCard.tsx` | Remove left border; fix gradients for light/dark; fix hover |
-| `src/components/workflow/WorkflowCardList.tsx` | Fix container gradients; add mobile horizontal scroll with fixed card width |
+| `src/components/workflow/WorkflowCard.tsx` | Fix gradient contrast, add border, fix hover/expanded shadows, remove width constraints |
+| `src/components/workflow/WorkflowCardList.tsx` | Stronger gradient, fixed card min-width (1100px), always horizontal scroll |
+| `src/components/workflow/WorkflowCardCollapsed.tsx` | Widen last grid column for gallery buttons |
 
