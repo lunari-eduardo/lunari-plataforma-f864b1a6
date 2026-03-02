@@ -114,10 +114,11 @@ export default function EscolherPlano() {
     ? (currentBillingCycle === "YEARLY" ? currentPlanPrices.yearly : currentPlanPrices.monthly)
     : 0;
 
-  const daysRemaining = nextDueDate ? Math.max(0, differenceInDays(new Date(nextDueDate), new Date())) : 0;
-  const totalCycleDays = (nextDueDate && studioSub?.created_at)
-    ? Math.max(1, differenceInDays(new Date(nextDueDate), new Date(studioSub.created_at)))
-    : (currentBillingCycle === "YEARLY" ? 365 : 30);
+  const stdCycleDays = currentBillingCycle === "YEARLY" ? 365 : 30;
+  const totalCycleDays = stdCycleDays;
+  const daysRemaining = nextDueDate
+    ? Math.min(Math.max(0, differenceInDays(new Date(nextDueDate), new Date())), stdCycleDays)
+    : 0;
 
   /** Find active subs whose capabilities overlap with the target plan */
   function getOverlappingSubs(targetPlanType: string): AsaasSubscription[] {
@@ -147,10 +148,9 @@ export default function EscolherPlano() {
       const subDaysRemaining = sub.next_due_date
         ? Math.max(0, differenceInDays(new Date(sub.next_due_date), new Date()))
         : 0;
-      const subTotalDays = (sub.next_due_date && sub.created_at)
-        ? Math.max(1, differenceInDays(new Date(sub.next_due_date), new Date(sub.created_at)))
-        : (sub.billing_cycle === "YEARLY" ? 365 : 30);
-      const rawCredit = Math.round(subPriceCents * (subDaysRemaining / subTotalDays));
+      const subCycleDays = sub.billing_cycle === "YEARLY" ? 365 : 30;
+      const cappedSubDays = Math.min(subDaysRemaining, subCycleDays);
+      const rawCredit = Math.round(subPriceCents * (cappedSubDays / subCycleDays));
       totalCreditCents += Math.min(rawCredit, subPriceCents); // cap at plan price
       idsToCancel.push(sub.id);
     }

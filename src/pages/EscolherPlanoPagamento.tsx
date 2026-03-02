@@ -111,7 +111,7 @@ function OrderSummary({ pkg, formattedPrice }: { pkg: PaymentState; formattedPri
               <span className="text-foreground">{formattedPrice}/{pkg.billingCycle === "MONTHLY" ? "mês" : "ano"}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Diferença proporcional</span>
+              <span className="text-muted-foreground">Crédito de planos ativos</span>
               <span className="text-foreground">{prorataFormatted}</span>
             </div>
             <div className="flex justify-between font-semibold text-base">

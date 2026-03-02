@@ -203,7 +203,7 @@ Deno.serve(async (req) => {
 
     // Log webhook
     await adminClient.from("webhook_logs").insert({
-      provider: "asaas",
+      provedor: "asaas",
       event_type: event,
       payload: body,
       headers: Object.fromEntries(req.headers.entries()),
@@ -219,10 +219,10 @@ Deno.serve(async (req) => {
           .eq("asaas_subscription_id", payment.subscription)
           .single();
 
-        // Calculate next period end from payment date
-        const paymentDate = new Date(payment.dueDate || new Date());
+        // Calculate next period end from TODAY (not payment.dueDate which can be unreliable)
+        const today = new Date();
         const cycleDays = sub?.billing_cycle === "YEARLY" ? 365 : 30;
-        const nextPeriodEnd = new Date(paymentDate);
+        const nextPeriodEnd = new Date(today);
         nextPeriodEnd.setDate(nextPeriodEnd.getDate() + cycleDays);
 
         await adminClient
