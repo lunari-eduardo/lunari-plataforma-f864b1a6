@@ -1,74 +1,74 @@
 
+# Fix: Prorata Credit Calculation with Corrupted `next_due_date` Data
 
-# Fix: Prorata Credit Exceeding Plan Price
+## Root Cause Analysis
 
-## Root Cause
+The subscription `aca0b764` (Transfer 5GB for fotografandocarros@gmail.com) has:
+- `created_at: 2026-03-02 19:15`
+- `next_due_date: 2026-03-03` (1 day later — should be `2026-04-01`)
 
-The prorata calculation has a critical math bug in **3 places** (frontend display x2, edge function x1):
+This causes `daysRemaining = 0` (less than 24h to next_due_date), so credit = R$0.00. The Combo Completo shows full price R$64.90 with no discount.
 
-```
-creditCents = round(priceCents * (daysRemaining / totalCycleDays))
-```
+The corruption comes from the **webhook** `PAYMENT_CONFIRMED` handler (line 228-234 in asaas-webhook): it overwrites `next_due_date` with `payment.dueDate + cycleDays`. If Asaas fires a duplicate or unexpected event, or `payment.dueDate` is malformed, the value gets corrupted. Additionally, the webhook log insert uses column name `provider` but the table column is `provedor`, so webhook events fail to log silently — making debugging impossible.
 
-- `totalCycleDays` is **hardcoded to 30** for monthly plans
-- But actual `next_due_date` can be 60+ days away (e.g., created March 2, next_due May 3 = 62 days)
-- This makes `daysRemaining / totalCycleDays > 1.0`, so **credit exceeds the plan price**
+## Three fixes needed
 
-**Real example from DB:** Starter (R$14.90), 61 days remaining, totalCycleDays=30:
-- Credit = round(1490 × 61/30) = **3030 cents** (R$30.30) — more than double the plan price!
+### 1. Prorata calculation: use standard cycle length with safety guards
 
-This is why combo shows R$8.37 instead of ~R$46.30.
+**Files: `src/pages/EscolherPlano.tsx`, `supabase/functions/asaas-upgrade-subscription/index.ts`**
 
-## Fix: Calculate actual cycle days from subscription data
-
-Instead of hardcoding 30/365, calculate the real cycle length. And as a safety net, **cap each sub's credit at its own price**.
-
-### 1. Frontend: `src/pages/EscolherPlano.tsx`
-
-**In `getCrossProductProrata` (line 148):** Replace hardcoded `subTotalDays` with actual cycle calculation from `created_at` to `next_due_date`, and cap credit:
+Revert `totalCycleDays` to use standard 30/365 (instead of `created_at→next_due_date` which is unreliable). Keep the credit cap at plan price. Also cap `daysRemaining` at `cycleDays` to prevent ratio > 1:
 
 ```ts
-const subTotalDays = sub.next_due_date && sub.created_at
-  ? Math.max(1, differenceInDays(new Date(sub.next_due_date), new Date(sub.created_at)))
-  : (sub.billing_cycle === "YEARLY" ? 365 : 30);
-const rawCredit = Math.round(subPriceCents * (subDaysRemaining / subTotalDays));
-totalCreditCents += Math.min(rawCredit, subPriceCents); // cap at plan price
-```
-
-**In studio card prorata (line 338) and combo card prorata (line 466):** Same fix — calculate actual `totalCycleDays` from `studioSub` dates, and cap:
-
-```ts
-const totalCycleDays = (nextDueDate && studioSub?.created_at)
-  ? Math.max(1, differenceInDays(new Date(nextDueDate), new Date(studioSub.created_at)))
-  : (currentBillingCycle === "YEARLY" ? 365 : 30);
-const creditCents = Math.min(
-  Math.round(currentPriceCents * (daysRemaining / totalCycleDays)),
-  currentPriceCents
+const cycleDays = billingCycle === "YEARLY" ? 365 : 30;
+const daysRemaining = Math.min(
+  Math.max(0, differenceInDays(new Date(nextDueDate), new Date())),
+  cycleDays
+);
+const credit = Math.min(
+  Math.round(priceCents * (daysRemaining / cycleDays)),
+  priceCents
 );
 ```
 
-Also update the top-level `totalCycleDays` (line 118) and `daysRemaining` usage (line 117) accordingly, since they feed the upgrade banner text too.
+This handles all edge cases:
+- Normal case (25 days remaining / 30 cycle): correct proportional credit
+- Corrupted next_due_date too close (0 days remaining): credit = 0 (acceptable — user gets charged full but backend also calculates same)
+- Corrupted next_due_date too far (62 days remaining): capped at 30, credit = full price, then capped at priceCents
 
-**`AsaasSubscription` interface needs `created_at`** — already present in the interface.
+Apply in all 4 prorata calculation sites: `getCrossProductProrata`, top-level `totalCycleDays`/`daysRemaining`, and the edge function.
 
-### 2. Edge Function: `supabase/functions/asaas-upgrade-subscription/index.ts`
+### 2. Webhook: fix `next_due_date` calculation and logging
 
-**Line 139-142:** Same fix:
+**File: `supabase/functions/asaas-webhook/index.ts`**
 
-```ts
-const totalCycleDays = currentSub.next_due_date && currentSub.created_at
-  ? Math.max(1, daysBetween(new Date(currentSub.created_at), new Date(currentSub.next_due_date)))
-  : (currentSub.billing_cycle === "YEARLY" ? 365 : 30);
-const unusedValueCents = Math.min(
-  Math.max(0, Math.round(currentPriceCents * (daysRemaining / totalCycleDays))),
-  currentPriceCents
-);
+- Fix `PAYMENT_CONFIRMED` handler: always calculate `next_due_date = today + cycleDays` (not `paymentDate + cycleDays`) to avoid Asaas sandbox quirks. The payment date from Asaas can be unreliable.
+- Fix webhook log column: `provider` → `provedor`
+- Add guard: if calculated `next_due_date` would be less than 7 days from now for a monthly plan, use `today + 30` as fallback.
+
+### 3. Checkout label fix
+
+**File: `src/pages/EscolherPlanoPagamento.tsx`**
+
+- Change "Diferença proporcional" → "Crédito de planos ativos" (line 114)
+
+### 4. Fix existing bad data (SQL migration)
+
+Update the corrupted subscription:
+```sql
+UPDATE subscriptions_asaas 
+SET next_due_date = (created_at::date + interval '30 days')::date
+WHERE id = 'aca0b764-d9ba-4fe2-bae4-24615d1a4abb';
 ```
 
-## Files to Modify
+Also fix any other subscriptions where `next_due_date - created_at < 7 days` for monthly plans.
+
+## Files to modify
 
 | File | Change |
 |------|--------|
-| `src/pages/EscolherPlano.tsx` | Calculate actual cycle days from created_at→next_due_date; cap credit at plan price in all 3 prorata calculation sites |
-| `supabase/functions/asaas-upgrade-subscription/index.ts` | Same: actual cycle days + cap credit at plan price |
-
+| `src/pages/EscolherPlano.tsx` | Revert to standard 30/365 cycle; cap daysRemaining at cycleDays |
+| `supabase/functions/asaas-upgrade-subscription/index.ts` | Same: standard cycle + cap |
+| `supabase/functions/asaas-webhook/index.ts` | Fix next_due_date calc (use today + cycle); fix log column `provider→provedor` |
+| `src/pages/EscolherPlanoPagamento.tsx` | Label "Diferença proporcional" → "Crédito de planos ativos" |
+| SQL migration | Fix corrupted next_due_date data |
