@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   ArrowLeft, Loader2, CreditCard, CalendarDays, AlertTriangle,
-  ArrowRight, ArrowDown, X, RotateCcw, Sparkles, CheckCircle,
+  ArrowRight, ArrowDown, X, RotateCcw, Sparkles, CheckCircle, Clock,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -82,6 +82,40 @@ export default function MinhaAssinatura() {
               </p>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Trial card */}
+      {accessState.isTrial && (
+        <div className="rounded-xl border bg-card p-6 space-y-4">
+          <div className="flex items-start justify-between">
+            <div className="flex items-start gap-3">
+              <div className="rounded-lg bg-primary/10 p-2">
+                <Clock className="h-5 w-5 text-primary" />
+              </div>
+              <div className="space-y-1">
+                <p className="font-medium text-foreground">Teste Grátis — Lunari Studio</p>
+                <p className="text-sm text-muted-foreground">
+                  {accessState.daysRemaining && accessState.daysRemaining > 0
+                    ? `Restam ${accessState.daysRemaining} dias do seu período de teste.`
+                    : "Seu período de teste expirou."}
+                </p>
+                {accessState.trialEndsAt && (
+                  <p className="text-xs text-muted-foreground">
+                    {accessState.daysRemaining && accessState.daysRemaining > 0 ? "Expira em " : "Expirou em "}
+                    {format(new Date(accessState.trialEndsAt), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                  </p>
+                )}
+              </div>
+            </div>
+            <Badge variant={accessState.daysRemaining && accessState.daysRemaining > 0 ? "default" : "destructive"}>
+              {accessState.daysRemaining && accessState.daysRemaining > 0 ? "Teste Grátis" : "Expirado"}
+            </Badge>
+          </div>
+          <Button onClick={() => navigate("/escolher-plano")} size="sm" className="gap-1.5">
+            <ArrowRight className="h-3.5 w-3.5" />
+            Assinar um plano
+          </Button>
         </div>
       )}
 
