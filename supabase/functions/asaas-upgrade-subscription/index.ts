@@ -135,14 +135,12 @@ Deno.serve(async (req) => {
 
       const today = new Date();
       const nextDue = currentSub.next_due_date ? new Date(currentSub.next_due_date) : today;
-      const daysRemaining = daysBetween(today, nextDue);
-      const totalCycleDays = (currentSub.next_due_date && currentSub.created_at)
-        ? Math.max(1, daysBetween(new Date(currentSub.created_at), new Date(currentSub.next_due_date)))
-        : (currentSub.billing_cycle === "YEARLY" ? 365 : 30);
+      const cycleDays = currentSub.billing_cycle === "YEARLY" ? 365 : 30;
+      const daysRemaining = Math.min(daysBetween(today, nextDue), cycleDays);
 
-      // Prorata = unused portion of current plan (capped at plan price)
+      // Prorata = unused portion of current plan (capped at plan price and cycle)
       const unusedValueCents = Math.min(
-        Math.max(0, Math.round(currentPriceCents * (daysRemaining / totalCycleDays))),
+        Math.max(0, Math.round(currentPriceCents * (daysRemaining / cycleDays))),
         currentPriceCents
       );
       totalProrataValueCents += unusedValueCents;
