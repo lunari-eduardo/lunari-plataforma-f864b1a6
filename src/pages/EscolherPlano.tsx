@@ -336,7 +336,14 @@ export default function EscolherPlano() {
             let prorataValue: number | null = null;
             if (isUpgrade) {
               const creditCents = Math.round(currentPriceCents * (daysRemaining / totalCycleDays));
-              prorataValue = Math.max(0, price - creditCents);
+              const crossProduct = getCrossProductProrata(plan.code, price);
+              let combinedCredit = creditCents;
+              if (crossProduct) {
+                const extraCredit = crossProduct.creditCents - 
+                  (crossProduct.subscriptionIdsToCancel.includes(currentSubscriptionId) ? creditCents : 0);
+                combinedCredit += extraCredit;
+              }
+              prorataValue = Math.max(0, price - combinedCredit);
             } else if (!isCurrentPlan) {
               // Cross-product prorata (e.g., user has transfer, selecting studio that overlaps via combo)
               const crossProduct = getCrossProductProrata(plan.code, price);
@@ -457,7 +464,14 @@ export default function EscolherPlano() {
             let prorataValue: number | null = null;
             if (isUpgradeFlag) {
               const creditCents = Math.round(currentPriceCents * (daysRemaining / totalCycleDays));
-              prorataValue = Math.max(0, price - creditCents);
+              const crossProduct = getCrossProductProrata(plan.code, price);
+              let combinedCredit = creditCents;
+              if (crossProduct) {
+                const extraCredit = crossProduct.creditCents - 
+                  (crossProduct.subscriptionIdsToCancel.includes(currentSubscriptionId) ? creditCents : 0);
+                combinedCredit += extraCredit;
+              }
+              prorataValue = Math.max(0, price - combinedCredit);
             } else if (!isCurrentPlan) {
               const crossProduct = getCrossProductProrata(plan.code, price);
               if (crossProduct && crossProduct.subscriptionIdsToCancel.length > 0) {
