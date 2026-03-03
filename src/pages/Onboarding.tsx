@@ -100,17 +100,18 @@ export default function Onboarding() {
         is_onboarding_complete: true
       });
 
-      // Start 30-day trial (non-blocking)
-      supabase.rpc('start_studio_trial').then(({ data, error }) => {
-        if (error) console.error('Trial start error:', error);
-        else console.log('Trial result:', data);
-      });
+      // Start 30-day trial - MUST await before navigating
+      const { data: trialResult, error: trialError } = await supabase.rpc('start_studio_trial');
+      if (trialError) console.error('Trial start error:', trialError);
+      else console.log('Trial result:', trialResult);
 
       // Aguardar cache ser atualizado antes de navegar
       await queryClient.refetchQueries({ queryKey: ['profile', user.id] });
 
       toast.success('Bem-vindo(a)! 🎉');
-      navigate('/app');
+      
+      // Force full page reload to ensure access state is fresh
+      window.location.href = '/app';
     } catch (error) {
       console.error('Erro ao completar onboarding:', error);
       toast.error('Erro ao salvar informações');
