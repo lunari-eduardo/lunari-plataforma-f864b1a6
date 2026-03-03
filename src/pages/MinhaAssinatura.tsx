@@ -15,9 +15,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft, Loader2, CreditCard, CalendarDays, AlertTriangle,
-  ArrowRight, ArrowDown, X, RotateCcw, Sparkles, CheckCircle, Clock,
+  ArrowRight, ArrowDown, X, RotateCcw, Sparkles, CheckCircle, Clock, Package,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -65,7 +66,7 @@ export default function MinhaAssinatura() {
           Voltar
         </Button>
         <div className="h-4 w-px bg-border" />
-        <h1 className="text-lg font-semibold">Minha Assinatura</h1>
+        <h1 className="text-lg font-semibold">Gerenciar Assinaturas</h1>
       </div>
 
       {/* Special access notice */}
