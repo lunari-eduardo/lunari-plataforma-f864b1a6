@@ -10,18 +10,6 @@ const ASAAS_BASE_URL = Deno.env.get("ASAAS_ENV") === "production"
   ? "https://api.asaas.com"
   : "https://api-sandbox.asaas.com";
 
-// Plan pricing in cents (yearly only for subscription_yearly; monthly uses subscription)
-const PLANS: Record<string, { yearlyPrice: number; name: string }> = {
-  studio_starter: { yearlyPrice: 15198, name: "Lunari Starter" },
-  studio_pro: { yearlyPrice: 36618, name: "Lunari Pro" },
-  transfer_5gb: { yearlyPrice: 12384, name: "Transfer 5GB" },
-  transfer_20gb: { yearlyPrice: 23904, name: "Transfer 20GB" },
-  transfer_50gb: { yearlyPrice: 33504, name: "Transfer 50GB" },
-  transfer_100gb: { yearlyPrice: 57504, name: "Transfer 100GB" },
-  combo_pro_select2k: { yearlyPrice: 45259, name: "Studio Pro + Select 2k" },
-  combo_completo: { yearlyPrice: 66198, name: "Combo Completo" },
-};
-
 function generateRequestId(): string {
   return `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -72,7 +60,6 @@ Deno.serve(async (req) => {
 
     console.log(`[${requestId}] asaas-create-payment: productType=${productType}, planType=${planType}, userId=${userId}`);
 
-    // Validate productType
     if (!["select", "subscription_yearly"].includes(productType || "subscription_yearly")) {
       return new Response(
         JSON.stringify({ error: "Invalid productType", requestId }),
@@ -142,8 +129,15 @@ Deno.serve(async (req) => {
       description = `Compra de ${credits} créditos Gallery Select`;
       validatedInstallments = 1;
     } else {
-      const plan = PLANS[planType];
-      if (!plan) {
+      // Fetch plan from unified_plans (single source of truth)
+      const { data: plan, error: planError } = await adminClient
+        .from("unified_plans")
+        .select("code, name, yearly_price_cents, is_active")
+        .eq("code", planType)
+        .eq("is_active", true)
+        .single();
+
+      if (planError || !plan) {
         return new Response(
           JSON.stringify({ error: "Invalid plan type", requestId }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -165,7 +159,7 @@ Deno.serve(async (req) => {
         );
       }
 
-      valueReais = plan.yearlyPrice / 100;
+      valueReais = plan.yearly_price_cents / 100;
       description = `${plan.name} - Anual`;
       validatedInstallments = Math.min(12, Math.max(1, installmentCount || 1));
     }
@@ -249,13 +243,11 @@ Deno.serve(async (req) => {
       if (isCustomerError) {
         console.warn(`[${requestId}] Customer invalid, attempting auto-heal. Error: ${errorDesc}`);
 
-        // Clear old customer ID
         await adminClient
           .from("photographer_accounts")
           .update({ asaas_customer_id: null })
           .eq("user_id", userId);
 
-        // Recreate customer
         const createResponse = await fetch(`${ASAAS_BASE_URL}/v3/customers`, {
           method: "POST",
           headers: {
@@ -275,13 +267,11 @@ Deno.serve(async (req) => {
         if (createResponse.ok && createData.id) {
           console.log(`[${requestId}] Customer recreated: ${createData.id}`);
 
-          // Save new customer ID
           await adminClient
             .from("photographer_accounts")
             .update({ asaas_customer_id: createData.id })
             .eq("user_id", userId);
 
-          // Retry payment with new customer
           const retry = await attemptPayment(createData.id);
           asaasData = retry.asaasData;
           ok = retry.ok;
@@ -359,7 +349,6 @@ Deno.serve(async (req) => {
     }
 
     // Handle yearly subscription
-    // Remove trial subscription if exists
     await adminClient
       .from("subscriptions")
       .update({ status: "canceled" })

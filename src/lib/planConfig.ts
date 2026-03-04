@@ -1,4 +1,4 @@
-/** Plan prices in cents for prorata calculation — ALL plan families (unified). */
+/** @deprecated Fallback only — use useUnifiedPlans() hook for dynamic prices from DB. */
 export const ALL_PLAN_PRICES: Record<string, { monthly: number; yearly: number }> = {
   studio_starter: { monthly: 1490, yearly: 15198 },
   studio_pro: { monthly: 3590, yearly: 36618 },
@@ -10,7 +10,7 @@ export const ALL_PLAN_PRICES: Record<string, { monthly: number; yearly: number }
   combo_completo: { monthly: 6490, yearly: 66198 },
 };
 
-/** Display names for each plan. */
+/** Display names for each plan — fallback only, prefer DB name. */
 const PLAN_DISPLAY_NAMES: Record<string, string> = {
   studio_starter: 'Lunari Starter',
   studio_pro: 'Lunari Pro',

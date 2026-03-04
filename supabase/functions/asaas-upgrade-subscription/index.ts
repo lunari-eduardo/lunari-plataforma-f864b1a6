@@ -10,17 +10,6 @@ const ASAAS_BASE_URL = Deno.env.get("ASAAS_ENV") === "production"
   ? "https://api.asaas.com"
   : "https://api-sandbox.asaas.com";
 
-const PLANS: Record<string, { monthlyPrice: number; yearlyPrice: number; name: string }> = {
-  studio_starter: { monthlyPrice: 1490, yearlyPrice: 15198, name: "Lunari Starter" },
-  studio_pro: { monthlyPrice: 3590, yearlyPrice: 36618, name: "Lunari Pro" },
-  transfer_5gb: { monthlyPrice: 1290, yearlyPrice: 12384, name: "Transfer 5GB" },
-  transfer_20gb: { monthlyPrice: 2490, yearlyPrice: 23904, name: "Transfer 20GB" },
-  transfer_50gb: { monthlyPrice: 3490, yearlyPrice: 33504, name: "Transfer 50GB" },
-  transfer_100gb: { monthlyPrice: 5990, yearlyPrice: 57504, name: "Transfer 100GB" },
-  combo_pro_select2k: { monthlyPrice: 4490, yearlyPrice: 45259, name: "Studio Pro + Select 2k" },
-  combo_completo: { monthlyPrice: 6490, yearlyPrice: 66198, name: "Combo Completo" },
-};
-
 function daysBetween(a: Date, b: Date): number {
   const msPerDay = 86400000;
   return Math.max(0, Math.round((b.getTime() - a.getTime()) / msPerDay));
@@ -66,8 +55,8 @@ Deno.serve(async (req) => {
     const userId = user.id;
     const body = await req.json();
     const {
-      currentSubscriptionId, // single (backwards compat)
-      subscriptionIdsToCancel, // array (cross-product)
+      currentSubscriptionId,
+      subscriptionIdsToCancel,
       newPlanType,
       billingCycle,
       creditCard,
@@ -75,7 +64,6 @@ Deno.serve(async (req) => {
       remoteIp,
     } = body;
 
-    // Build list of subscription IDs to cancel
     const idsToCancel: string[] = subscriptionIdsToCancel
       ? subscriptionIdsToCancel
       : currentSubscriptionId
@@ -85,14 +73,6 @@ Deno.serve(async (req) => {
     if (idsToCancel.length === 0 || !newPlanType || !billingCycle) {
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const newPlan = PLANS[newPlanType];
-    if (!newPlan) {
-      return new Response(
-        JSON.stringify({ error: "Invalid plan type" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -109,6 +89,21 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
+
+    // Fetch new plan from unified_plans (single source of truth)
+    const { data: newPlan, error: planError } = await adminClient
+      .from("unified_plans")
+      .select("code, name, monthly_price_cents, yearly_price_cents, is_active")
+      .eq("code", newPlanType)
+      .eq("is_active", true)
+      .single();
+
+    if (planError || !newPlan) {
+      return new Response(
+        JSON.stringify({ error: "Invalid plan type" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // 1. Fetch all subscriptions to cancel and calculate combined prorata
     let totalProrataValueCents = 0;
@@ -128,29 +123,33 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      const currentPlan = PLANS[currentSub.plan_type];
+      // Fetch current plan price from DB
+      const { data: currentPlanData } = await adminClient
+        .from("unified_plans")
+        .select("monthly_price_cents, yearly_price_cents, name")
+        .eq("code", currentSub.plan_type)
+        .single();
+
       const currentPriceCents = currentSub.billing_cycle === "YEARLY"
-        ? (currentPlan?.yearlyPrice || currentSub.value_cents)
-        : (currentPlan?.monthlyPrice || currentSub.value_cents);
+        ? (currentPlanData?.yearly_price_cents || currentSub.value_cents)
+        : (currentPlanData?.monthly_price_cents || currentSub.value_cents);
 
       const today = new Date();
       const nextDue = currentSub.next_due_date ? new Date(currentSub.next_due_date) : today;
       const cycleDays = currentSub.billing_cycle === "YEARLY" ? 365 : 30;
       const daysRemaining = Math.min(daysBetween(today, nextDue), cycleDays);
 
-      // Prorata = unused portion of current plan (capped at plan price and cycle)
       const unusedValueCents = Math.min(
         Math.max(0, Math.round(currentPriceCents * (daysRemaining / cycleDays))),
         currentPriceCents
       );
       totalProrataValueCents += unusedValueCents;
 
-      // Track latest next_due_date for the new subscription
       if (!latestNextDueDate || (currentSub.next_due_date && currentSub.next_due_date > latestNextDueDate)) {
         latestNextDueDate = currentSub.next_due_date;
       }
 
-      cancelledNames.push(currentPlan?.name || currentSub.plan_type);
+      cancelledNames.push(currentPlanData?.name || currentSub.plan_type);
 
       // Cancel in Asaas
       if (currentSub.asaas_subscription_id) {
@@ -163,7 +162,6 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Mark as CANCELLED in DB
       await adminClient
         .from("subscriptions_asaas")
         .update({ status: "CANCELLED" })
@@ -172,8 +170,8 @@ Deno.serve(async (req) => {
       console.log(`Cancelled subscription ${subId} (${currentSub.plan_type}), unused value: ${unusedValueCents} cents`);
     }
 
-    // 2. Calculate net charge: new plan price - combined prorata credit
-    const newPriceCents = billingCycle === "YEARLY" ? newPlan.yearlyPrice : newPlan.monthlyPrice;
+    // 2. Calculate net charge
+    const newPriceCents = billingCycle === "YEARLY" ? newPlan.yearly_price_cents : newPlan.monthly_price_cents;
     const netChargeCents = Math.max(0, newPriceCents - totalProrataValueCents);
     const netChargeReais = netChargeCents / 100;
 

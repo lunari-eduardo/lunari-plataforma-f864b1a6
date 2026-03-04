@@ -6,18 +6,6 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-/** Plan prices in cents for downgrade validation — ALL plan families. */
-const ALL_PLAN_PRICES: Record<string, { monthly: number; yearly: number }> = {
-  studio_starter: { monthly: 1490, yearly: 15198 },
-  studio_pro: { monthly: 3590, yearly: 36618 },
-  transfer_5gb: { monthly: 1290, yearly: 12384 },
-  transfer_20gb: { monthly: 2490, yearly: 23904 },
-  transfer_50gb: { monthly: 3490, yearly: 33504 },
-  transfer_100gb: { monthly: 5990, yearly: 57504 },
-  combo_pro_select2k: { monthly: 4490, yearly: 45259 },
-  combo_completo: { monthly: 6490, yearly: 66198 },
-};
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -55,18 +43,25 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Validate plan exists
-    if (!ALL_PLAN_PRICES[newPlanType]) {
+    const adminClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    // Fetch plan from unified_plans (single source of truth)
+    const { data: newPlan, error: planError } = await adminClient
+      .from("unified_plans")
+      .select("code, name, monthly_price_cents, yearly_price_cents, is_active")
+      .eq("code", newPlanType)
+      .eq("is_active", true)
+      .single();
+
+    if (planError || !newPlan) {
       return new Response(
         JSON.stringify({ error: "Invalid plan type" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    const adminClient = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
 
     // Fetch current subscription
     const { data: currentSub, error: subError } = await adminClient
@@ -84,19 +79,16 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Validate it's actually a downgrade (new plan is cheaper)
-    const currentPrices = ALL_PLAN_PRICES[currentSub.plan_type];
-    const newPrices = ALL_PLAN_PRICES[newPlanType];
+    // Fetch current plan pricing from DB
+    const { data: currentPlan } = await adminClient
+      .from("unified_plans")
+      .select("monthly_price_cents")
+      .eq("code", currentSub.plan_type)
+      .eq("is_active", true)
+      .single();
 
-    if (!currentPrices || !newPrices) {
-      return new Response(
-        JSON.stringify({ error: "Cannot determine pricing for plan comparison" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const currentMonthly = currentPrices.monthly;
-    const newMonthly = newPrices.monthly;
+    const currentMonthly = currentPlan?.monthly_price_cents ?? 0;
+    const newMonthly = newPlan.monthly_price_cents;
 
     if (newMonthly >= currentMonthly) {
       return new Response(

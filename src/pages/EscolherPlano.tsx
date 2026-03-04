@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAsaasSubscription, AsaasSubscription } from "@/hooks/useAsaasSubscription";
 import { useAccessControl } from "@/hooks/useAccessControl";
+import { useUnifiedPlans } from "@/hooks/useUnifiedPlans";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
@@ -19,7 +20,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
-  ALL_PLAN_PRICES, getPlanDisplayName, isPlanUpgrade, isPlanDowngrade, formatPrice, PLAN_ORDER,
+  getPlanDisplayName, isPlanUpgrade, isPlanDowngrade, formatPrice, PLAN_ORDER,
   isStudioFamilyPlan, PLAN_FAMILIES, PLAN_INCLUDES,
 } from "@/lib/planConfig";
 import { differenceInDays } from "date-fns";
@@ -93,6 +94,8 @@ export default function EscolherPlano() {
   const navigate = useNavigate();
   const { accessState } = useAccessControl();
   const { subscription: activeSub, subscriptions: allSubscriptions, downgradeSubscription, isDowngrading } = useAsaasSubscription();
+  const { getAllPlanPrices, isLoading: plansLoading } = useUnifiedPlans();
+  const ALL_PLAN_PRICES = getAllPlanPrices();
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("monthly");
 
   // Current plan detection — only consider Studio/Combo plans for upgrade mode

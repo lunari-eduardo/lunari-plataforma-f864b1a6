@@ -1,4 +1,4 @@
-// Unified edge function — shared between Gestão & Gallery. Keep PLANS map in sync.
+// Unified edge function — reads plan pricing from unified_plans table (single source of truth).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -10,24 +10,6 @@ const corsHeaders = {
 const ASAAS_BASE_URL = Deno.env.get("ASAAS_ENV") === "production"
   ? "https://api.asaas.com"
   : "https://api-sandbox.asaas.com";
-
-// Plan pricing in cents — ALL plan families (unified)
-const PLANS: Record<string, { monthlyPrice: number; yearlyPrice: number; name: string }> = {
-  studio_starter: { monthlyPrice: 1490, yearlyPrice: 15198, name: "Lunari Starter" },
-  studio_pro: { monthlyPrice: 3590, yearlyPrice: 36618, name: "Lunari Pro" },
-  transfer_5gb: { monthlyPrice: 1290, yearlyPrice: 12384, name: "Transfer 5GB" },
-  transfer_20gb: { monthlyPrice: 2490, yearlyPrice: 23904, name: "Transfer 20GB" },
-  transfer_50gb: { monthlyPrice: 3490, yearlyPrice: 33504, name: "Transfer 50GB" },
-  transfer_100gb: { monthlyPrice: 5990, yearlyPrice: 57504, name: "Transfer 100GB" },
-  combo_pro_select2k: { monthlyPrice: 4490, yearlyPrice: 45259, name: "Studio Pro + Select 2k" },
-  combo_completo: { monthlyPrice: 6490, yearlyPrice: 66198, name: "Combo Completo" },
-};
-
-// Plans that grant subscription credits per cycle
-const PLAN_SUBSCRIPTION_CREDITS: Record<string, number> = {
-  combo_pro_select2k: 2000,
-  combo_completo: 2000,
-};
 
 function getNextBusinessDay(): string {
   const date = new Date();
@@ -69,15 +51,6 @@ Deno.serve(async (req) => {
     const userId = user.id;
     const { planType, billingCycle, creditCard, creditCardHolderInfo, remoteIp } = await req.json();
 
-    // Validate plan
-    const plan = PLANS[planType];
-    if (!plan) {
-      return new Response(
-        JSON.stringify({ error: "Invalid plan type" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     if (!["MONTHLY", "YEARLY"].includes(billingCycle)) {
       return new Response(
         JSON.stringify({ error: "Invalid billing cycle" }),
@@ -113,6 +86,21 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    // Fetch plan from unified_plans (single source of truth)
+    const { data: plan, error: planError } = await adminClient
+      .from("unified_plans")
+      .select("code, name, monthly_price_cents, yearly_price_cents, is_active, select_credits_monthly")
+      .eq("code", planType)
+      .eq("is_active", true)
+      .single();
+
+    if (planError || !plan) {
+      return new Response(
+        JSON.stringify({ error: "Invalid plan type" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Get customer ID
     const { data: account } = await adminClient
       .from("photographer_accounts")
@@ -143,7 +131,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const valueCents = billingCycle === "YEARLY" ? plan.yearlyPrice : plan.monthlyPrice;
+    const valueCents = billingCycle === "YEARLY" ? plan.yearly_price_cents : plan.monthly_price_cents;
     const valueReais = valueCents / 100;
 
     // Create subscription with credit card (transparent checkout)
@@ -244,8 +232,8 @@ Deno.serve(async (req) => {
     }
 
     // Grant subscription credits if plan includes them (combos)
-    const subCredits = PLAN_SUBSCRIPTION_CREDITS[planType];
-    if (subCredits && subCredits > 0) {
+    const subCredits = plan.select_credits_monthly || 0;
+    if (subCredits > 0) {
       const { error: creditError } = await adminClient.rpc("renew_subscription_credits", {
         _user_id: userId,
         _amount: subCredits,

@@ -4,8 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { Save, AlertTriangle, Package, HardDrive, Layers } from 'lucide-react';
-import { ALL_PLAN_PRICES } from '@/lib/planConfig';
+import { Save, Package, HardDrive, Layers, Info } from 'lucide-react';
 
 interface UnifiedPlan {
   id: string;
@@ -108,13 +107,7 @@ export default function AdminPlanos() {
     }
   };
 
-  const checkHardcodedDiff = (plan: UnifiedPlan): boolean => {
-    const hardcoded = ALL_PLAN_PRICES[plan.code];
-    if (!hardcoded) return false;
-    const monthly = getFieldValue(plan, 'monthly_price_cents') as number;
-    const yearly = getFieldValue(plan, 'yearly_price_cents') as number;
-    return hardcoded.monthly !== monthly || hardcoded.yearly !== yearly;
-  };
+  // No longer needed — unified_plans IS the source of truth now
 
   const grouped = plans.reduce<Record<string, UnifiedPlan[]>>((acc, plan) => {
     const family = plan.product_family || 'other';
@@ -152,12 +145,11 @@ export default function AdminPlanos() {
         </Button>
       </div>
 
-      {/* Warning banner */}
-      <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-        <AlertTriangle size={16} className="text-amber-500 mt-0.5 flex-shrink-0" />
+      {/* Info banner */}
+      <div className="flex items-start gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20">
+        <Info size={16} className="text-primary mt-0.5 flex-shrink-0" />
         <div className="text-xs text-muted-foreground">
-          <strong className="text-amber-500">Atenção:</strong> Alterações nos preços aqui atualizam a tabela <code>unified_plans</code>.
-          Até que os frontends e Edge Functions leiam do banco, os valores hardcoded ainda prevalecerão no checkout.
+          Alterações nos preços aqui serão aplicadas <strong className="text-foreground">imediatamente</strong> no checkout e nas cobranças — sem necessidade de deploy.
         </div>
       </div>
 
@@ -192,12 +184,10 @@ export default function AdminPlanos() {
                         <th className="text-right px-3 py-2 font-medium">Créditos</th>
                       )}
                       <th className="text-center px-3 py-2 font-medium">Ativo</th>
-                      <th className="text-center px-3 py-2 font-medium">Sync</th>
                     </tr>
                   </thead>
                   <tbody>
                     {familyPlans.map(plan => {
-                      const hasDiff = checkHardcodedDiff(plan);
                       return (
                         <tr key={plan.id} className="border-t border-border/50 hover:bg-muted/30">
                           <td className="px-3 py-2">
@@ -248,13 +238,6 @@ export default function AdminPlanos() {
                               checked={getFieldValue(plan, 'is_active') as boolean}
                               onCheckedChange={v => updateField(plan.id, 'is_active', v)}
                             />
-                          </td>
-                          <td className="px-3 py-2 text-center">
-                            {hasDiff ? (
-                              <span className="text-amber-500" title="Valor no banco difere do hardcoded no código">⚠️</span>
-                            ) : (
-                              <span className="text-green-500" title="Sincronizado">✓</span>
-                            )}
                           </td>
                         </tr>
                       );
