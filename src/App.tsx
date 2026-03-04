@@ -29,6 +29,7 @@ import MinhaAssinatura from "./pages/MinhaAssinatura";
 import EscolherPlanoPagamento from "./pages/EscolherPlanoPagamento";
 import ResetPassword from "./pages/ResetPassword";
 import AdminUsuarios from "./pages/AdminUsuarios";
+import AdminPlanos from "./pages/AdminPlanos";
 import Conteudos from "./pages/Conteudos";
 import ConteudoDetalhe from "./pages/ConteudoDetalhe";
 import SitemapProxy from "./pages/SitemapProxy";
@@ -214,6 +215,11 @@ function App() {
                       <Route path="admin/conteudos/editar/:id" element={
                         <AdminRoute>
                           <AdminConteudoEditar />
+                        </AdminRoute>
+                      } />
+                      <Route path="admin/planos" element={
+                        <AdminRoute>
+                          <AdminPlanos />
                         </AdminRoute>
                       } />
                       <Route path="*" element={<NotFound />} />

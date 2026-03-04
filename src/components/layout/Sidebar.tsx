@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { CalendarClock, UserCheck, Settings, Filter, Wallet, Menu, X, User, Tag, GitBranch, ChevronRight, ChevronLeft, PieChart, LayoutGrid, CheckSquare, FlaskConical, CreditCard, Shield, Crown, FileText, Plug } from 'lucide-react';
+import { CalendarClock, UserCheck, Settings, Filter, Wallet, Menu, X, User, Tag, GitBranch, ChevronRight, ChevronLeft, PieChart, LayoutGrid, CheckSquare, FlaskConical, CreditCard, Shield, Crown, FileText, Plug, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -124,6 +124,13 @@ export default function Sidebar() {
             >
               <FileText className="mr-2 h-3 w-3" />
               <span>Conteúdos</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              className="text-xs text-lunar-text hover:bg-lunar-surface/50 rounded cursor-pointer"
+              onClick={() => navigate('/app/admin/planos')}
+            >
+              <Package className="mr-2 h-3 w-3" />
+              <span>Produtos & Planos</span>
             </DropdownMenuItem>
           </>
         )}
