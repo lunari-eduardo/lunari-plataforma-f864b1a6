@@ -20,6 +20,56 @@ function getNextBusinessDay(): string {
   return date.toISOString().split("T")[0];
 }
 
+// ─── Coupon validation helper ───
+async function validateAndApplyCoupon(
+  adminClient: any,
+  couponCode: string | undefined,
+  planCode: string,
+  productFamily: string,
+  originalCents: number
+): Promise<{ finalCents: number; couponId: string | null; discountCents: number }> {
+  if (!couponCode) return { finalCents: originalCents, couponId: null, discountCents: 0 };
+
+  const { data: coupon, error } = await adminClient
+    .from("coupons")
+    .select("*")
+    .eq("code", couponCode.trim().toUpperCase())
+    .eq("is_active", true)
+    .single();
+
+  if (error || !coupon) {
+    console.log("Coupon not found or inactive:", couponCode);
+    return { finalCents: originalCents, couponId: null, discountCents: 0 };
+  }
+
+  const now = new Date();
+  if (coupon.valid_from && new Date(coupon.valid_from) > now) {
+    return { finalCents: originalCents, couponId: null, discountCents: 0 };
+  }
+  if (coupon.valid_until && new Date(coupon.valid_until) < now) {
+    return { finalCents: originalCents, couponId: null, discountCents: 0 };
+  }
+  if (coupon.max_uses !== null && coupon.current_uses >= coupon.max_uses) {
+    return { finalCents: originalCents, couponId: null, discountCents: 0 };
+  }
+  if (coupon.applies_to !== "all" && coupon.applies_to !== productFamily) {
+    return { finalCents: originalCents, couponId: null, discountCents: 0 };
+  }
+  if (coupon.plan_codes && coupon.plan_codes.length > 0 && !coupon.plan_codes.includes(planCode)) {
+    return { finalCents: originalCents, couponId: null, discountCents: 0 };
+  }
+
+  let discountCents = 0;
+  if (coupon.discount_type === "percentage") {
+    discountCents = Math.round(originalCents * (coupon.discount_value / 100));
+  } else {
+    discountCents = Math.min(coupon.discount_value, originalCents);
+  }
+
+  const finalCents = Math.max(0, originalCents - discountCents);
+  return { finalCents, couponId: coupon.id, discountCents };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -49,7 +99,7 @@ Deno.serve(async (req) => {
     }
 
     const userId = user.id;
-    const { planType, billingCycle, creditCard, creditCardHolderInfo, remoteIp } = await req.json();
+    const { planType, billingCycle, creditCard, creditCardHolderInfo, remoteIp, couponCode } = await req.json();
 
     if (!["MONTHLY", "YEARLY"].includes(billingCycle)) {
       return new Response(
@@ -89,7 +139,7 @@ Deno.serve(async (req) => {
     // Fetch plan from unified_plans (single source of truth)
     const { data: plan, error: planError } = await adminClient
       .from("unified_plans")
-      .select("code, name, monthly_price_cents, yearly_price_cents, is_active, select_credits_monthly")
+      .select("code, name, monthly_price_cents, yearly_price_cents, is_active, select_credits_monthly, product_family")
       .eq("code", planType)
       .eq("is_active", true)
       .single();
@@ -131,8 +181,18 @@ Deno.serve(async (req) => {
       );
     }
 
-    const valueCents = billingCycle === "YEARLY" ? plan.yearly_price_cents : plan.monthly_price_cents;
-    const valueReais = valueCents / 100;
+    const originalCents = billingCycle === "YEARLY" ? plan.yearly_price_cents : plan.monthly_price_cents;
+
+    // Validate and apply coupon
+    const { finalCents, couponId, discountCents } = await validateAndApplyCoupon(
+      adminClient, couponCode, planType, plan.product_family, originalCents
+    );
+
+    const valueReais = finalCents / 100;
+
+    if (couponId) {
+      console.log(`Coupon applied: ${couponCode} — discount ${discountCents} cents, final ${finalCents} cents`);
+    }
 
     // Create subscription with credit card (transparent checkout)
     const subscriptionPayload: Record<string, unknown> = {
@@ -141,7 +201,7 @@ Deno.serve(async (req) => {
       cycle: billingCycle,
       value: valueReais,
       nextDueDate: getNextBusinessDay(),
-      description: `${plan.name} - ${billingCycle === "YEARLY" ? "Anual" : "Mensal"}`,
+      description: `${plan.name} - ${billingCycle === "YEARLY" ? "Anual" : "Mensal"}${couponId ? ` (cupom: ${couponCode})` : ""}`,
       externalReference: userId,
       creditCard: {
         holderName: creditCard.holderName,
@@ -208,7 +268,7 @@ Deno.serve(async (req) => {
         plan_type: planType,
         billing_cycle: billingCycle,
         status: asaasData.status || "ACTIVE",
-        value_cents: valueCents,
+        value_cents: finalCents,
         next_due_date: (() => {
           const periodEnd = new Date();
           if (billingCycle === "YEARLY") {
@@ -222,6 +282,10 @@ Deno.serve(async (req) => {
           creditCardToken,
           creditCardBrand: asaasData.creditCard?.creditCardBrand || null,
           creditCardNumber: asaasData.creditCard?.creditCardNumber || null,
+          couponCode: couponCode || null,
+          couponId: couponId || null,
+          discountCents: discountCents || 0,
+          originalValueCents: originalCents,
         },
       })
       .select()
@@ -229,6 +293,21 @@ Deno.serve(async (req) => {
 
     if (insertError) {
       console.error("Insert error:", insertError);
+    }
+
+    // Increment coupon usage
+    if (couponId) {
+      const { data: couponData } = await adminClient
+        .from("coupons")
+        .select("current_uses")
+        .eq("id", couponId)
+        .single();
+      if (couponData) {
+        await adminClient
+          .from("coupons")
+          .update({ current_uses: couponData.current_uses + 1, updated_at: new Date().toISOString() })
+          .eq("id", couponId);
+      }
     }
 
     // Grant subscription credits if plan includes them (combos)
@@ -252,6 +331,8 @@ Deno.serve(async (req) => {
         subscriptionId: asaasData.id,
         status: asaasData.status,
         localId: subscription?.id,
+        discountApplied: discountCents > 0,
+        discountCents,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
