@@ -6,72 +6,83 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    font-size: 90%;
+  }
+
   :root {
-    --lunar-bg: 60 4% 97%;        /* #f8f8f7 */
-    --lunar-surface: 0 0% 99%;    /* #fdfdfd */
-    --lunar-text: 0 0% 23%;
-    --lunar-textSecondary: 0 0% 49%;
-    --lunar-border: 60 3% 94%;    /* #efefee */
-    --lunar-accent: 15 54% 28%;
-    --lunar-accentHover: 15 54% 24%;
-    --lunar-error: 12 74% 61%;
+    --lunar-bg: 0 0% 100%;            /* #FFFFFF */
+    --lunar-surface: 0 0% 100%;       /* #FFFFFF */
+    --lunar-text: 25 20% 15%;         /* #302720 warm brown */
+    --lunar-textSecondary: 25 10% 45%; /* #7A7068 warm gray */
+    --lunar-border: 220 10% 90%;      /* #E3E5E8 cool gray */
+    --lunar-accent: 18 55% 55%;       /* #C47A50 terracotta */
+    --lunar-accentHover: 18 55% 48%;
+    --lunar-error: 0 72% 51%;         /* #E02424 */
     --lunar-success: 150 53% 55%;
     --lunar-warning: 42 35% 62%;
 
     /* Landing page colors */
-    --landing-bg: 34 24% 95%;     /* #f6eee6 - areia/bege */
-    --landing-text: 0 0% 12%;     /* #1f1f1f - cinza carvão */
-    --landing-accent: 15 54% 28%; /* #ac5e3a - cor da marca (brown system) */
-    --landing-brand: 17 48% 46%;  /* #ac5e3a - cor da marca */
+    --landing-bg: 34 24% 95%;
+    --landing-text: 0 0% 12%;
+    --landing-accent: 18 55% 55%;
+    --landing-brand: 18 55% 55%;
 
     /* Brand colors */
     --brand: 27 96% 61%;
     --brand-foreground: 31 97% 72%;
 
     /* Task priorities (HSL) */
-    --task-priority-high: 0 100% 67%;    /* #ff5757 */
-    --task-priority-medium: 48 100% 75%; /* #ffe67f */
+    --task-priority-high: 0 100% 67%;
+    --task-priority-medium: 48 100% 75%;
     
-    /* Availability (blue to replace lilac) */
+    /* Availability */
     --availability: 210 60% 70%;
     
     /* Brand gradient */
     --brand-gradient-start: 210 90% 60%;
     --brand-gradient-end: 224 76% 52%;
     
-    /* Shadcn compatible variables for light mode */
-    --background: 60 4% 97%;       /* #f8f8f7 */
-    --foreground: 0 0% 23%;
-    --muted: 60 4% 97%;            /* #f8f8f7 */
-    --muted-foreground: 0 0% 49%;
-    --popover: 0 0% 99%;           /* #fdfdfd */
-    --popover-foreground: 0 0% 23%;
-    --card: 0 0% 99%;              /* #fdfdfd */
-    --card-foreground: 0 0% 23%;
-    --border: 60 3% 94%;           /* #efefee */
-    --input: 0 0% 100%;
-    --primary: 15 54% 28%;
+    /* Shadcn compatible variables — Gallery palette */
+    --background: 0 0% 100%;          /* #FFFFFF */
+    --foreground: 25 20% 15%;         /* #302720 warm brown */
+    --muted: 220 10% 95%;             /* #F1F2F3 cool gray */
+    --muted-foreground: 25 10% 45%;   /* #7A7068 warm gray */
+    --popover: 0 0% 100%;
+    --popover-foreground: 25 20% 15%;
+    --card: 0 0% 100%;
+    --card-foreground: 25 20% 15%;
+    --border: 220 10% 90%;            /* #E3E5E8 cool gray */
+    --input: 220 10% 90%;
+    --primary: 18 55% 55%;            /* #C47A50 terracotta */
+    --primary-hover: 18 55% 48%;
     --primary-foreground: 0 0% 100%;
     --lunar-accent-foreground: 0 0% 100%;
-    --secondary: 60 4% 97%;        /* #f8f8f7 */
-    --secondary-foreground: 0 0% 23%;
-    --accent: 60 4% 97%;           /* #f8f8f7 */
-    --accent-foreground: 0 0% 23%;
-    --destructive: 12 74% 61%;
+    --secondary: 220 10% 50%;         /* #737D88 gray */
+    --secondary-foreground: 0 0% 100%;
+    --accent: 25 60% 95%;             /* #FDF3EB warm bg */
+    --accent-foreground: 25 50% 35%;  /* #8B5E2B */
+    --destructive: 0 72% 51%;         /* #E02424 */
     --destructive-foreground: 0 0% 100%;
-    --ring: 15 54% 28%;
+    --ring: 18 55% 55%;
 
-    /* Paleta fixa baseada no tema marrom */
-    --chart-primary: 15 54% 28%;       /* Marrom principal */
-    --chart-secondary: 16 48% 35%;     /* Marrom médio */
-    --chart-tertiary: 15 37% 20%;      /* Marrom escuro */
-    --chart-quaternary: 17 43% 39%;    /* Marrom claro */
-    --chart-quinary: 16 47% 38%;       /* Marrom médio escuro */
-    --chart-senary: 18 48% 41%;        /* Marrom claro médio */
-    --chart-revenue: 15 54% 28%;       /* Receitas - cor principal */
-    --chart-expense: 15 37% 20%;       /* Despesas - tom mais escuro */
-    --chart-profit: 15 54% 28%;        /* Lucro - cor principal */
-    --chart-neutral: 19 23% 74%;       /* Neutro - tom claro */
+    /* Shadow system */
+    --shadow-sm: 0 1px 2px hsl(25 20% 15% / 0.03);
+    --shadow-md: 0 3px 8px hsl(25 20% 15% / 0.04);
+    --shadow-lg: 0 6px 16px hsl(25 20% 15% / 0.06);
+    --shadow-glow: 0 0 30px hsl(18 55% 55% / 0.15);
+
+    /* Paleta fixa baseada no tema terracotta */
+    --chart-primary: 18 55% 55%;
+    --chart-secondary: 16 48% 35%;
+    --chart-tertiary: 15 37% 20%;
+    --chart-quaternary: 17 43% 39%;
+    --chart-quinary: 16 47% 38%;
+    --chart-senary: 18 48% 41%;
+    --chart-revenue: 18 55% 55%;
+    --chart-expense: 15 37% 20%;
+    --chart-profit: 18 55% 55%;
+    --chart-neutral: 19 23% 74%;
 }
 }
 
@@ -124,14 +135,14 @@
   }
 
   .dark {
-    --lunar-bg: 0 0% 9%;
-    --lunar-surface: 0 0% 13%;
+    --lunar-bg: 0 0% 7%;
+    --lunar-surface: 0 0% 11%;
     --lunar-text: 0 0% 96%;
-    --lunar-textSecondary: 0 0% 70%;
-    --lunar-border: 0 0% 25%;
+    --lunar-textSecondary: 0 0% 65%;
+    --lunar-border: 0 0% 20%;
     --lunar-accent: var(--primary);
     --lunar-accentHover: var(--primary);
-    --lunar-error: 12 74% 55%;
+    --lunar-error: 0 72% 55%;
     --lunar-success: 150 53% 55%;
     --lunar-warning: 42 35% 62%;
 
@@ -140,50 +151,50 @@
     --brand-foreground: 27 96% 61%;
 
     /* Shadcn-compatible variables for dark mode */
-    --background: 0 0% 9%;
+    --background: 0 0% 7%;
     --foreground: 0 0% 96%;
-    --muted: 0 0% 13%;
-    --muted-foreground: 0 0% 70%;
-    --popover: 0 0% 13%;
+    --muted: 0 0% 11%;
+    --muted-foreground: 0 0% 65%;
+    --popover: 0 0% 11%;
     --popover-foreground: 0 0% 96%;
-    --card: 0 0% 13%;
+    --card: 0 0% 11%;
     --card-foreground: 0 0% 96%;
-    --border: 0 0% 25%;
-    --input: 0 0% 13%;
+    --border: 0 0% 20%;
+    --input: 0 0% 15%;
     --primary: var(--lunar-accent);
+    --primary-hover: 18 55% 48%;
     --primary-foreground: 0 0% 100%;
     --lunar-accent-foreground: 0 0% 100%;
-    --secondary: 0 0% 13%;
+    --secondary: 0 0% 18%;
     --secondary-foreground: 0 0% 96%;
-    --accent: 0 0% 13%;
+    --accent: 0 0% 14%;
     --accent-foreground: 0 0% 96%;
-    --destructive: 12 74% 45%;
+    --destructive: 0 72% 45%;
     --destructive-foreground: 0 0% 100%;
     --ring: var(--lunar-accent);
 
-    /* Sombras modernas e temáticas */
-    --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.04);
-    --shadow-card-hover: 0 4px 16px rgba(0, 0, 0, 0.08);
-    --shadow-popover: 0 8px 32px rgba(0, 0, 0, 0.12);
-    --shadow-brand: 0 4px 20px hsl(var(--lunar-accent) / 0.15);
-    --shadow-brand-hover: 0 8px 32px hsl(var(--lunar-accent) / 0.25);
-    
+    /* Shadow system (dark) */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 3px 8px rgba(0, 0, 0, 0.15);
+    --shadow-lg: 0 6px 16px rgba(0, 0, 0, 0.2);
+    --shadow-glow: 0 0 30px hsl(18 55% 55% / 0.1);
+
     /* Gradientes modernos */
     --gradient-brand: linear-gradient(135deg, hsl(var(--lunar-accent)), hsl(var(--lunar-accent) / 0.8));
     --gradient-card: linear-gradient(135deg, hsl(var(--lunar-surface)), hsl(var(--lunar-bg)));
     --gradient-subtle: linear-gradient(180deg, hsl(var(--lunar-surface) / 0.5), transparent);
 
-    /* Paleta fixa para modo escuro - tons mais claros */
-    --chart-primary: 15 45% 50%;       /* Marrom claro para contraste */
-    --chart-secondary: 16 40% 55%;     /* Marrom médio claro */
-    --chart-tertiary: 15 30% 45%;      /* Marrom médio */
-    --chart-quaternary: 17 35% 60%;    /* Marrom bem claro */
-    --chart-quinary: 16 38% 58%;       /* Marrom claro */
-    --chart-senary: 18 40% 62%;        /* Marrom muito claro */
-    --chart-revenue: 15 45% 50%;       /* Receitas */
-    --chart-expense: 15 30% 45%;       /* Despesas */
-    --chart-profit: 15 45% 50%;        /* Lucro */
-    --chart-neutral: 19 15% 80%;       /* Neutro */
+    /* Paleta fixa para modo escuro */
+    --chart-primary: 18 45% 50%;
+    --chart-secondary: 16 40% 55%;
+    --chart-tertiary: 15 30% 45%;
+    --chart-quaternary: 17 35% 60%;
+    --chart-quinary: 16 38% 58%;
+    --chart-senary: 18 40% 62%;
+    --chart-revenue: 18 45% 50%;
+    --chart-expense: 15 30% 45%;
+    --chart-profit: 18 45% 50%;
+    --chart-neutral: 19 15% 80%;
   }
 }
 
@@ -225,9 +236,24 @@
 @layer components {
   /* Lunar Card */
   .card-lunar {
-    @apply bg-lunar-surface rounded-md p-3 shadow-lunar-sm border border-lunar-border/50;
-    background: linear-gradient(135deg, hsl(var(--lunar-surface)) 0%, hsl(var(--lunar-surface)) 100%);
-    transition: all 0.15s ease-out;
+    @apply bg-lunar-surface rounded-xl p-4 border border-lunar-border/50;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.2s ease-out;
+  }
+
+  /* Gallery-style card with gradient */
+  .lunari-card {
+    @apply border border-border/50 rounded-xl;
+    background: linear-gradient(180deg, #FFFFFF 0%, #F7F8F9 100%);
+    box-shadow: var(--shadow-sm);
+    transition: all 0.2s ease-out;
+  }
+  .lunari-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+  .dark .lunari-card {
+    background: linear-gradient(180deg, hsl(var(--card)) 0%, hsl(var(--lunar-bg)) 100%);
   }
   
   /* Brand utilities */
@@ -242,9 +268,9 @@
 
   /* Lunar Button */
   .btn-lunar {
-    @apply bg-lunar-accent rounded-md px-3 py-1.5 text-xs font-medium transition-all duration-150 ease-out;
+    @apply bg-lunar-accent rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 ease-out;
     color: hsl(var(--lunar-accent-foreground));
-    box-shadow: 0 1px 3px rgba(203, 169, 119, 0.2);
+    box-shadow: var(--shadow-sm);
   }
 
   .btn-lunar:hover {
@@ -257,7 +283,7 @@
 
   /* Lunar Input */
   .input-lunar {
-    @apply bg-lunar-surface text-lunar-text rounded-md px-3 py-1.5 text-xs w-full transition-all duration-150;
+    @apply bg-background text-lunar-text rounded-lg px-4 py-2.5 text-sm w-full border border-input transition-all duration-200;
   }
 
   /* Dropdown com fundo sólido garantido */

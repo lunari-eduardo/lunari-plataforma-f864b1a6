@@ -195,16 +195,19 @@ export default {
 				md: '8px',
 				sm: '6px'
 			},
-			boxShadow: {
-				// Sistema de sombras consistente
-				'card-subtle': '0 2px 6px rgba(0, 0, 0, 0.08)',
-				'card-elevated': '0 8px 24px rgba(0, 0, 0, 0.15)',
-				'theme-subtle': '0 2px 6px hsl(var(--lunar-accent) / 0.12)',
-				'theme': '0 8px 24px hsl(var(--lunar-accent) / 0.20)',
+		boxShadow: {
+				'sm': 'var(--shadow-sm)',
+				'md': 'var(--shadow-md)',
+				'lg': 'var(--shadow-lg)',
+				'glow': 'var(--shadow-glow)',
+				'card-subtle': '0 1px 2px hsl(25 20% 15% / 0.03)',
+				'card-elevated': '0 6px 16px hsl(25 20% 15% / 0.06)',
+				'theme-subtle': '0 1px 2px hsl(25 20% 15% / 0.03)',
+				'theme': '0 3px 8px hsl(25 20% 15% / 0.04)',
 			},
 			backgroundImage: {
 				'brand-gradient': 'linear-gradient(135deg, hsl(var(--lunar-accent)), hsl(var(--lunar-accent) / 0.8))',
-				'card-gradient': 'linear-gradient(135deg, hsl(var(--lunar-surface)), hsl(var(--lunar-bg)))',
+				'card-gradient': 'linear-gradient(180deg, #FFFFFF 0%, #F7F8F9 100%)',
 				'subtle-gradient': 'linear-gradient(180deg, hsl(var(--lunar-surface) / 0.5), transparent)',
 			},
 			keyframes: {
@@ -269,7 +272,7 @@ export default {
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out',
 				'fade-in': 'fade-in 0.2s ease-out',
-				'scale-in': 'scale-in 0.15s ease-out',
+				'scale-in': 'scale-in 0.2s ease-out',
 				appear: 'appear 0.5s ease-out forwards',
 				'appear-zoom': 'appear-zoom 0.5s ease-out forwards'
 			}

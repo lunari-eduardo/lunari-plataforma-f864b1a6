@@ -9,7 +9,7 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
       <input
         type={type}
         className={cn(
-          "flex h-7 w-full rounded-md bg-lunar-surface px-3 py-1 text-xs text-lunar-text shadow-sm border border-transparent transition-all duration-150 file:border-0 file:bg-transparent file:text-xs file:font-medium file:text-lunar-text placeholder:text-lunar-textSecondary placeholder:opacity-50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-lunar-accent focus-visible:border-lunar-accent disabled:cursor-not-allowed disabled:opacity-50 [&:-webkit-autofill]:shadow-[inset_0_0_0px_1000px_hsl(var(--lunar-surface))] [&:-webkit-autofill]:[-webkit-text-fill-color:hsl(var(--lunar-text))] [&:-webkit-autofill:hover]:shadow-[inset_0_0_0px_1000px_hsl(var(--lunar-surface))] [&:-webkit-autofill:focus]:shadow-[inset_0_0_0px_1000px_hsl(var(--lunar-surface))]",
+          "flex h-10 w-full rounded-lg bg-background border border-input px-4 py-2.5 text-sm text-foreground transition-all duration-200 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/20 focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50 [&:-webkit-autofill]:shadow-[inset_0_0_0px_1000px_hsl(var(--background))] [&:-webkit-autofill]:[-webkit-text-fill-color:hsl(var(--foreground))] [&:-webkit-autofill:hover]:shadow-[inset_0_0_0px_1000px_hsl(var(--background))] [&:-webkit-autofill:focus]:shadow-[inset_0_0_0px_1000px_hsl(var(--background))]",
           className
         )}
         ref={ref}

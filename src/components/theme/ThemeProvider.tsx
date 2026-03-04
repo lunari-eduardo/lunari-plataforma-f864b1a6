@@ -70,7 +70,7 @@ function toHslStr(hsl: { h: number; s: number; l: number }) {
   return `${hsl.h} ${hsl.s}% ${hsl.l}%`
 }
 
-const FIXED_COLOR = '#ac5e3a';
+const FIXED_COLOR = '#C47A50';
 
 export default function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
@@ -96,7 +96,7 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
 
     // Paleta de cores personalizada (10 cores específicas para gráficos)
     const chartPalette = [
-      '#ac5e39', // Principal (cor exata)
+      '#C47A50', // Principal (terracotta)
       '#804022', // Escura complementar
       '#6a361d', // Mais escura
       '#7a4d30', // Tom médio-escuro
