@@ -304,10 +304,10 @@ export function WorkflowCardCollapsed({
   );
 
   return (
-    <div className="px-4 py-3 md:px-6 md:py-4 cursor-pointer" onClick={onToggleExpand}>
+    <div className="px-4 py-3 md:px-6 md:py-4 cursor-pointer min-h-[56px]" onClick={onToggleExpand}>
       {/* Grid DESKTOP (≥1024px) - Layout completo */}
       <div 
-        className="hidden lg:grid grid-cols-[36px_50px_180px_1fr_150px_140px_90px_80px_90px_auto] gap-3 items-start"
+        className="hidden lg:grid grid-cols-[36px_50px_180px_200px_150px_140px_90px_80px_90px_auto] gap-3 items-start"
       >
         
         {/* Zona 1: Expand */}
@@ -351,14 +351,14 @@ export function WorkflowCardCollapsed({
         </div>
 
         {/* Zona 4: Descrição - editável inline */}
-        <div className="flex flex-col gap-0.5" onClick={(e) => e.stopPropagation()}>
+        <div className="flex flex-col gap-0.5 max-w-[200px]" onClick={(e) => e.stopPropagation()}>
           <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Descrição</span>
           <Input
             value={descriptionValue}
             onChange={(e) => setDescriptionValue(e.target.value)}
             onBlur={handleDescriptionBlur}
             placeholder="Descrição..."
-            className="h-7 text-xs border border-border/50 rounded bg-background/50 focus:bg-background"
+            className="h-7 text-[11px] border border-border/50 rounded bg-background/50 focus:bg-background truncate"
           />
         </div>
 
@@ -453,7 +453,7 @@ export function WorkflowCardCollapsed({
 
       {/* Grid TABLET (768-1023px) - Layout compacto mas completo */}
       <div 
-        className="hidden md:grid lg:hidden grid-cols-[36px_44px_140px_1fr_100px_90px_50px_60px_80px_32px] gap-2 items-start"
+        className="hidden md:grid lg:hidden grid-cols-[36px_44px_140px_160px_100px_90px_50px_60px_80px_32px] gap-2 items-start"
       >
         
         {/* Zona 1: Expand */}
@@ -495,13 +495,13 @@ export function WorkflowCardCollapsed({
         </div>
 
         {/* Zona 4: Descrição */}
-        <div className="flex flex-col gap-0.5" onClick={(e) => e.stopPropagation()}>
+        <div className="flex flex-col gap-0.5 max-w-[160px]" onClick={(e) => e.stopPropagation()}>
           <Input
             value={descriptionValue}
             onChange={(e) => setDescriptionValue(e.target.value)}
             onBlur={handleDescriptionBlur}
             placeholder="Descrição..."
-            className="h-6 text-[11px] border border-border/50 rounded bg-background/50 focus:bg-background"
+            className="h-6 text-[10px] border border-border/50 rounded bg-background/50 focus:bg-background truncate"
           />
         </div>
 

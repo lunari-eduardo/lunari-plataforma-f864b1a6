@@ -812,49 +812,51 @@ export default function Workflow() {
   return (
     <div className="space-y-4">
       {/* Métricas compactas + Toggle */}
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        {showMetrics ? (
-          <>
-            <div className="flex items-center gap-4 sm:gap-6 flex-wrap">
-              <div className="flex flex-col">
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Receita</span>
-                <span className="text-sm font-bold text-green-400">{formatCurrency(financials.paidMonth)}</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Previsto</span>
-                <span className="text-sm font-bold text-blue-400">{formatCurrency(financials.totalMonth)}</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wide">A Receber</span>
-                <span className="text-sm font-bold text-orange-400">{formatCurrency(financials.remainingMonth)}</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Sessões</span>
-                <span className="text-sm font-bold">{filteredSessions.length}</span>
-              </div>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowMetrics(false)}
-              className="h-7 w-7 shrink-0"
-              title="Ocultar métricas"
-            >
-              <EyeOff className="h-4 w-4" />
-            </Button>
-          </>
-        ) : (
+      {showMetrics ? (
+        <div className="flex items-center gap-4 sm:gap-5 flex-wrap bg-muted/50 rounded-lg px-4 py-2.5">
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
+            <span className="text-[11px] text-muted-foreground">Receita</span>
+            <span className="text-sm font-bold text-green-500">{formatCurrency(financials.paidMonth)}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
+            <span className="text-[11px] text-muted-foreground">Previsto</span>
+            <span className="text-sm font-bold text-blue-500">{formatCurrency(financials.totalMonth)}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-orange-500 shrink-0" />
+            <span className="text-[11px] text-muted-foreground">A Receber</span>
+            <span className="text-sm font-bold text-orange-500">{formatCurrency(financials.remainingMonth)}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-violet-500 shrink-0" />
+            <span className="text-[11px] text-muted-foreground">Sessões</span>
+            <span className="text-sm font-bold">{filteredSessions.length}</span>
+          </div>
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setShowMetrics(true)}
-            className="h-7 w-7"
-            title="Mostrar métricas"
+            onClick={() => setShowMetrics(false)}
+            className="h-7 w-7 shrink-0 ml-auto"
+            title="Ocultar métricas"
           >
-            <Eye className="h-4 w-4" />
+            <EyeOff className="h-4 w-4 text-muted-foreground" />
           </Button>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div className="flex items-center">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowMetrics(true)}
+            className="h-7 px-2 text-xs text-muted-foreground gap-1.5"
+          >
+            <Eye className="h-3.5 w-3.5" />
+            Mostrar métricas
+          </Button>
+        </div>
+      )}
 
       {/* Seletor de mês centralizado */}
       <div className="flex items-center justify-center gap-2">
