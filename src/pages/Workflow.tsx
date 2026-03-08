@@ -4,7 +4,7 @@ import { WorkflowTable } from "@/components/workflow/WorkflowTable";
 import { QuickSessionAdd } from "@/components/workflow/QuickSessionAdd";
 import { ColumnSettings } from "@/components/workflow/ColumnSettings";
 import { WorkflowFilters } from "@/components/workflow/WorkflowFilters";
-import { ChevronLeft, ChevronRight, Eye, EyeOff, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, EyeOff, Search, PanelRightOpen } from "lucide-react";
 import { WorkflowTasksPanel } from "@/components/workflow/WorkflowTasksPanel";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
