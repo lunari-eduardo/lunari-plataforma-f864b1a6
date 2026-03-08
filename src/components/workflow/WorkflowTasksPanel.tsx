@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Plus, CheckCircle2, Circle, CalendarDays, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, CalendarDays, ChevronDown, ChevronUp, PanelRightClose } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
