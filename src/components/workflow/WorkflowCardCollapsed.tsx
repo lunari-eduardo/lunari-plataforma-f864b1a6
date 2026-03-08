@@ -307,7 +307,7 @@ export function WorkflowCardCollapsed({
     <div className="px-4 py-3 md:px-6 md:py-4 cursor-pointer min-h-[56px]" onClick={onToggleExpand}>
       {/* Grid DESKTOP (≥1024px) - Layout completo */}
       <div 
-        className="hidden lg:grid grid-cols-[36px_50px_180px_200px_150px_140px_90px_80px_90px_auto] gap-3 items-start"
+        className="hidden lg:grid grid-cols-[32px_46px_160px_160px_130px_120px_70px_70px_80px_auto] gap-3 items-start"
       >
         
         {/* Zona 1: Expand */}
