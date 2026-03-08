@@ -89,9 +89,22 @@ export function WorkflowTasksPanel({ currentMonth, onCollapse }: WorkflowTasksPa
             Tarefas de {monthLabel}
           </h3>
         </div>
-        <span className="text-xs text-muted-foreground tabular-nums">
-          {pendingTasks.length} pendente{pendingTasks.length !== 1 ? "s" : ""}
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-muted-foreground tabular-nums">
+            {pendingTasks.length} pendente{pendingTasks.length !== 1 ? "s" : ""}
+          </span>
+          {onCollapse && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="hidden lg:inline-flex h-7 w-7 text-muted-foreground hover:text-foreground"
+              onClick={onCollapse}
+              title="Fechar painel de tarefas"
+            >
+              <PanelRightClose className="h-3.5 w-3.5" />
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Task list */}

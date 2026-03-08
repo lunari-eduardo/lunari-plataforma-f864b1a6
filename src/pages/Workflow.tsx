@@ -1013,10 +1013,24 @@ export default function Workflow() {
       </div>
       </div>
 
-      {/* Tasks panel (~30%) */}
-      <div className="w-full lg:w-[320px] xl:w-[350px] shrink-0 lg:sticky lg:top-0 lg:h-[calc(100vh-100px)] lg:self-start">
-        <WorkflowTasksPanel currentMonth={currentMonth} />
-      </div>
+      {/* Tasks panel (~30%) - colapsável */}
+      {isTasksPanelOpen ? (
+        <div className="w-full lg:w-[320px] xl:w-[350px] shrink-0 lg:sticky lg:top-0 lg:h-[calc(100vh-100px)] lg:self-start transition-all duration-200">
+          <WorkflowTasksPanel currentMonth={currentMonth} onCollapse={() => setIsTasksPanelOpen(false)} />
+        </div>
+      ) : (
+        <div className="hidden lg:flex shrink-0 lg:sticky lg:top-0 lg:h-[calc(100vh-100px)] lg:self-start">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-10 w-10 rounded-xl border border-border/60 bg-card/60 backdrop-blur-xl"
+            onClick={() => setIsTasksPanelOpen(true)}
+            title="Abrir painel de tarefas"
+          >
+            <PanelRightOpen className="h-4 w-4 text-muted-foreground" />
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
