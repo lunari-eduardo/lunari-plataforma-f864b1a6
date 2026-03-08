@@ -817,7 +817,7 @@ export default function Workflow() {
   return (
     <div className="flex flex-col gap-4">
       {/* Main content - full width */}
-      <div className="flex-1 min-w-0 space-y-4 lg:pr-12">
+      <div className={`flex-1 min-w-0 space-y-4 transition-all duration-300 ${showTasksPanel ? 'lg:pr-[340px]' : 'lg:pr-12'}`}>
       {/* Métricas compactas + Toggle */}
       {showMetrics ? (
         <div className="flex items-center gap-4 sm:gap-5 flex-wrap bg-muted/50 rounded-lg px-4 py-2.5">
