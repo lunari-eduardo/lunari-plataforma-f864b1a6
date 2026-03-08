@@ -91,19 +91,6 @@ export default function Index() {
         <DailyHero />
       </section>
 
-      {/* Indicadores principais - KPIs do Supabase */}
-      <section aria-label="Indicadores principais" className="animate-fade-in">
-        <KPIGroupCard
-          receitaMes={receitaMes}
-          metaMes={metaMes}
-          progressoMeta={progressoMeta}
-          topCategoria={topCategoria}
-          novosClientes60d={novosClientes60d}
-          valorPrevisto={valorPrevisto}
-          isLoading={metricsLoading}
-        />
-      </section>
-
       {/* Próximos Agendamentos + Lembretes de Produção */}
       <section className="grid gap-6 grid-cols-1 lg:grid-cols-5 animate-fade-in">
         <div className="lg:col-span-3">
@@ -155,6 +142,19 @@ export default function Index() {
       <section className="grid gap-6 animate-fade-in auto-rows-auto lg:auto-rows-fr grid-cols-1 lg:grid-cols-2">
         <div className="h-full"><FinancialRemindersCard /></div>
         <div className="h-full"><HighPriorityDueSoonCard /></div>
+      </section>
+
+      {/* Indicadores principais - KPIs do Supabase */}
+      <section aria-label="Indicadores principais" className="animate-fade-in">
+        <KPIGroupCard
+          receitaMes={receitaMes}
+          metaMes={metaMes}
+          progressoMeta={progressoMeta}
+          topCategoria={topCategoria}
+          novosClientes60d={novosClientes60d}
+          valorPrevisto={valorPrevisto}
+          isLoading={metricsLoading}
+        />
       </section>
     </main>
   );
