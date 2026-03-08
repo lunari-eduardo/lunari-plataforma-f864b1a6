@@ -9,7 +9,7 @@ import { endOfMonth, parseISO, isWithinInterval, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   DndContext,
-  closestCenter,
+  rectIntersection,
   PointerSensor,
   useSensor,
   useSensors,
