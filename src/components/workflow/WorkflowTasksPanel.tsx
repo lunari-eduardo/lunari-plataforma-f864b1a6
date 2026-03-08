@@ -253,7 +253,7 @@ function TaskRowContent({
     >
       {/* Drag handle */}
       {dragHandleProps && !isDone ? (
-        <button {...dragHandleProps} className="mt-0.5 opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity cursor-grab active:cursor-grabbing touch-none" tabIndex={-1}>
+        <button {...dragHandleProps} className="mt-0.5 opacity-30 group-hover:opacity-60 hover:!opacity-100 transition-opacity cursor-grab active:cursor-grabbing touch-none" tabIndex={-1}>
           <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
         </button>
       ) : (
