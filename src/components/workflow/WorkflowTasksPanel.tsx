@@ -139,7 +139,7 @@ export function WorkflowTasksPanel({ currentMonth, onCollapse }: WorkflowTasksPa
           {/* Pending tasks with DnD */}
           <DndContext
             sensors={sensors}
-            collisionDetection={closestCenter}
+            collisionDetection={rectIntersection}
             modifiers={[restrictToVerticalAxis]}
             onDragStart={(e) => setActiveId(e.active.id as string)}
             onDragEnd={handleDragEnd}
