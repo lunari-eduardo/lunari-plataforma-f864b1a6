@@ -14,7 +14,7 @@ interface WorkflowTasksPanelProps {
   onCollapse?: () => void;
 }
 
-export function WorkflowTasksPanel({ currentMonth }: WorkflowTasksPanelProps) {
+export function WorkflowTasksPanel({ currentMonth, onCollapse }: WorkflowTasksPanelProps) {
   const { tasks, updateTask, addTask, loading } = useSupabaseTasks();
   const [showCompleted, setShowCompleted] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
