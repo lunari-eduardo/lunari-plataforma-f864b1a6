@@ -2,7 +2,6 @@ import React, { useMemo, useState, useEffect } from "react";
 import { Plus, CalendarDays, ChevronDown, ChevronUp, PanelRightClose, Trash2, GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useSupabaseTasks } from "@/hooks/useSupabaseTasks";
 import { cn } from "@/lib/utils";
 import { endOfMonth, parseISO, isWithinInterval, format } from "date-fns";
