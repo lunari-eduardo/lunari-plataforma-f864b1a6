@@ -11,6 +11,7 @@ import type { Task } from "@/types/tasks";
 
 interface WorkflowTasksPanelProps {
   currentMonth: { month: number; year: number };
+  onCollapse?: () => void;
 }
 
 export function WorkflowTasksPanel({ currentMonth }: WorkflowTasksPanelProps) {
