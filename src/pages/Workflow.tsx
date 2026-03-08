@@ -815,9 +815,9 @@ export default function Workflow() {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
-      {/* Main content - cards area (~70%) */}
-      <div className="flex-1 min-w-0 max-w-[1300px] space-y-4">
+    <div className="flex flex-col gap-4">
+      {/* Main content - full width */}
+      <div className="flex-1 min-w-0 space-y-4 lg:pr-12">
       {/* Métricas compactas + Toggle */}
       {showMetrics ? (
         <div className="flex items-center gap-4 sm:gap-5 flex-wrap bg-muted/50 rounded-lg px-4 py-2.5">
@@ -1015,24 +1015,45 @@ export default function Workflow() {
       </div>
       </div>
 
-      {/* Tasks panel (~30%) - colapsável */}
-      {isTasksPanelOpen ? (
-        <div className="w-full lg:w-[320px] xl:w-[350px] shrink-0 lg:sticky lg:top-0 lg:h-[calc(100vh-100px)] lg:self-start transition-all duration-200">
-          <WorkflowTasksPanel currentMonth={currentMonth} onCollapse={() => setIsTasksPanelOpen(false)} />
-        </div>
-      ) : (
-        <div className="hidden lg:flex shrink-0 lg:sticky lg:top-0 lg:h-[calc(100vh-100px)] lg:self-start">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-10 w-10 rounded-xl border border-border/60 bg-card/60 backdrop-blur-xl"
+      {/* Fixed Tasks Panel - right edge */}
+      <div className="hidden lg:block fixed right-0 top-[60px] bottom-0 z-30">
+        {isTasksPanelOpen ? (
+          <div className="h-full w-[320px] transition-transform duration-200 ease-out animate-in slide-in-from-right">
+            <WorkflowTasksPanel currentMonth={currentMonth} onCollapse={() => setIsTasksPanelOpen(false)} />
+          </div>
+        ) : (
+          <button
             onClick={() => setIsTasksPanelOpen(true)}
+            className="h-full w-10 flex flex-col items-center justify-center gap-3 border-l border-border/60 bg-card/60 backdrop-blur-xl backdrop-saturate-[1.8] hover:bg-card/80 transition-colors cursor-pointer"
             title="Abrir painel de tarefas"
           >
             <PanelRightOpen className="h-4 w-4 text-muted-foreground" />
+            <span className="text-[10px] font-medium text-muted-foreground [writing-mode:vertical-lr] rotate-180 tracking-wider">
+              TAREFAS
+            </span>
+          </button>
+        )}
+      </div>
+
+      {/* Mobile Tasks Panel - stacked below */}
+      <div className="lg:hidden">
+        {isTasksPanelOpen && (
+          <div className="w-full">
+            <WorkflowTasksPanel currentMonth={currentMonth} onCollapse={() => setIsTasksPanelOpen(false)} />
+          </div>
+        )}
+        {!isTasksPanelOpen && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-center text-xs text-muted-foreground gap-1.5"
+            onClick={() => setIsTasksPanelOpen(true)}
+          >
+            <PanelRightOpen className="h-3.5 w-3.5" />
+            Abrir tarefas
           </Button>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
