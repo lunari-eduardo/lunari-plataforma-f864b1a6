@@ -813,7 +813,9 @@ export default function Workflow() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
+      {/* Main content - cards area (~70%) */}
+      <div className="flex-1 min-w-0 max-w-[1300px] space-y-4">
       {/* Métricas compactas + Toggle */}
       {showMetrics ? (
         <div className="flex items-center gap-4 sm:gap-5 flex-wrap bg-muted/50 rounded-lg px-4 py-2.5">
