@@ -1011,6 +1011,12 @@ export default function Workflow() {
           />
         )}
       </div>
+
+      {/* Tasks panel (~30%) */}
+      <div className="w-full lg:w-[320px] xl:w-[350px] shrink-0 lg:sticky lg:top-0 lg:h-[calc(100vh-100px)] lg:self-start">
+        <WorkflowTasksPanel currentMonth={currentMonth} />
+      </div>
+    </div>
     </div>
   );
 }
