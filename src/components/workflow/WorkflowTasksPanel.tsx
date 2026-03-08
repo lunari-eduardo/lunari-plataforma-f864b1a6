@@ -32,13 +32,25 @@ export function WorkflowTasksPanel({ currentMonth, onCollapse }: WorkflowTasksPa
 
   const monthTasks = useMemo(() => {
     return tasks.filter((t) => {
-      if (!t.dueDate) return false;
-      try {
-        const d = parseISO(t.dueDate);
-        return isWithinInterval(d, { start: monthStart, end: monthEnd });
-      } catch {
-        return false;
+      // Tasks with dueDate in current month
+      if (t.dueDate) {
+        try {
+          const d = parseISO(t.dueDate);
+          return isWithinInterval(d, { start: monthStart, end: monthEnd });
+        } catch {
+          return false;
+        }
       }
+      // Tasks without dueDate: show if created in current month
+      if (t.createdAt) {
+        try {
+          const d = parseISO(t.createdAt);
+          return isWithinInterval(d, { start: monthStart, end: monthEnd });
+        } catch {
+          return false;
+        }
+      }
+      return false;
     });
   }, [tasks, monthStart, monthEnd]);
 
@@ -65,7 +77,6 @@ export function WorkflowTasksPanel({ currentMonth, onCollapse }: WorkflowTasksPa
       priority: "medium",
       source: "manual",
       type: "simple",
-      dueDate: format(monthStart, "yyyy-MM-dd"),
     });
     setNewTaskTitle("");
     setIsAdding(false);
