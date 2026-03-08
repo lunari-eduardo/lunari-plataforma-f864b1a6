@@ -55,7 +55,8 @@ export default function Sidebar() {
   const navItems = [{
     to: "/app",
     icon: <LayoutGrid size={14} />,
-    label: "Início"
+    label: "Início",
+    end: true
   }, {
     to: "/app/agenda",
     icon: <CalendarClock size={14} />,
