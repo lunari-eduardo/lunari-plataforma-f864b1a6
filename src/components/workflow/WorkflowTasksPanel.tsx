@@ -9,7 +9,7 @@ import { endOfMonth, parseISO, isWithinInterval, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   DndContext,
-  closestCenter,
+  rectIntersection,
   PointerSensor,
   useSensor,
   useSensors,
@@ -139,7 +139,7 @@ export function WorkflowTasksPanel({ currentMonth, onCollapse }: WorkflowTasksPa
           {/* Pending tasks with DnD */}
           <DndContext
             sensors={sensors}
-            collisionDetection={closestCenter}
+            collisionDetection={rectIntersection}
             modifiers={[restrictToVerticalAxis]}
             onDragStart={(e) => setActiveId(e.active.id as string)}
             onDragEnd={handleDragEnd}
@@ -214,8 +214,8 @@ function SortableTaskRow({ task, onToggle, onDelete, isDragging }: { task: Task;
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: task.id });
 
   const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
+    transform: isDragging ? CSS.Transform.toString(transform) : undefined,
+    transition: isDragging ? transition : undefined,
     opacity: isDragging ? 0.4 : 1,
   };
 
