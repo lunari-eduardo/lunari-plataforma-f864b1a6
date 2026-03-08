@@ -5,6 +5,7 @@ import { QuickSessionAdd } from "@/components/workflow/QuickSessionAdd";
 import { ColumnSettings } from "@/components/workflow/ColumnSettings";
 import { WorkflowFilters } from "@/components/workflow/WorkflowFilters";
 import { ChevronLeft, ChevronRight, Eye, EyeOff, Search } from "lucide-react";
+import { WorkflowTasksPanel } from "@/components/workflow/WorkflowTasksPanel";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useWorkflowStatus } from "@/hooks/useWorkflowStatus";
@@ -812,7 +813,9 @@ export default function Workflow() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
+      {/* Main content - cards area (~70%) */}
+      <div className="flex-1 min-w-0 max-w-[1300px] space-y-4">
       {/* Métricas compactas + Toggle */}
       {showMetrics ? (
         <div className="flex items-center gap-4 sm:gap-5 flex-wrap bg-muted/50 rounded-lg px-4 py-2.5">
@@ -1007,6 +1010,12 @@ export default function Workflow() {
             onSort={handleSort}
           />
         )}
+      </div>
+      </div>
+
+      {/* Tasks panel (~30%) */}
+      <div className="w-full lg:w-[320px] xl:w-[350px] shrink-0 lg:sticky lg:top-0 lg:h-[calc(100vh-100px)] lg:self-start">
+        <WorkflowTasksPanel currentMonth={currentMonth} />
       </div>
     </div>
   );
