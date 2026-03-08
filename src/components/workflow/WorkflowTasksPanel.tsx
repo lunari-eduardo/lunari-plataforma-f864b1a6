@@ -77,7 +77,6 @@ export function WorkflowTasksPanel({ currentMonth, onCollapse }: WorkflowTasksPa
       priority: "medium",
       source: "manual",
       type: "simple",
-      dueDate: format(monthStart, "yyyy-MM-dd"),
     });
     setNewTaskTitle("");
     setIsAdding(false);
