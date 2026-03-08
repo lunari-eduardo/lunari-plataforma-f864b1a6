@@ -48,6 +48,8 @@ export default function Workflow() {
     }
   );
   
+  const [isTasksPanelOpen, setIsTasksPanelOpen] = usePersistedState('workflow_tasks_panel_open', true);
+
   // ⚡ NOVO: Usar Context Provider com cache IndexedDB
   const {
     getSessionsForMonthSync,
