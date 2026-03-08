@@ -57,7 +57,7 @@ export function WorkflowCardList({
     >
       <div className="flex flex-col gap-3 md:gap-4 overflow-x-auto">
         {sessions.map(session => (
-          <div key={session.id} className="w-full lg:min-w-0 min-w-[1100px] flex-shrink-0">
+          <div key={session.id} className="w-full lg:min-w-0 min-w-[900px] flex-shrink-0">
           <WorkflowCard
             session={session}
             isExpanded={expandedCardId === session.id}
