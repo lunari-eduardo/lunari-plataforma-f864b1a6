@@ -18,6 +18,7 @@ interface NavItemProps {
   iconOnly?: boolean;
   isPro?: boolean;
   showProBadge?: boolean;
+  end?: boolean;
 }
 
 const NavItem = ({
