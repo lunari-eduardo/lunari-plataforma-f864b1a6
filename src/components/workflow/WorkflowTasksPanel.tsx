@@ -2,7 +2,6 @@ import React, { useMemo, useState, useEffect } from "react";
 import { Plus, CalendarDays, ChevronDown, ChevronUp, PanelRightClose, Trash2, GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useSupabaseTasks } from "@/hooks/useSupabaseTasks";
 import { cn } from "@/lib/utils";
 import { endOfMonth, parseISO, isWithinInterval, format } from "date-fns";
@@ -127,7 +126,7 @@ export function WorkflowTasksPanel({ currentMonth, onCollapse }: WorkflowTasksPa
       </div>
 
       {/* Task list */}
-      <ScrollArea className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 overflow-y-auto">
         <div className="p-3 space-y-1">
           {loading && monthTasks.length === 0 && (
             <p className="text-xs text-muted-foreground text-center py-6">Carregando tarefas...</p>
@@ -181,7 +180,7 @@ export function WorkflowTasksPanel({ currentMonth, onCollapse }: WorkflowTasksPa
             </>
           )}
         </div>
-      </ScrollArea>
+      </div>
 
       {/* Add task */}
       <div className="border-t border-border/40 p-3">
@@ -253,7 +252,7 @@ function TaskRowContent({
     >
       {/* Drag handle */}
       {dragHandleProps && !isDone ? (
-        <button {...dragHandleProps} className="mt-0.5 opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity cursor-grab active:cursor-grabbing touch-none" tabIndex={-1}>
+        <button {...dragHandleProps} className="mt-0.5 opacity-30 group-hover:opacity-60 hover:!opacity-100 transition-opacity cursor-grab active:cursor-grabbing touch-none" tabIndex={-1}>
           <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
         </button>
       ) : (
