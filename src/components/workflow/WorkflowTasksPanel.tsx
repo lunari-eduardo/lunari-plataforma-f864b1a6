@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Plus, CheckCircle2, Circle, CalendarDays, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, CalendarDays, ChevronDown, ChevronUp, PanelRightClose } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -11,9 +11,10 @@ import type { Task } from "@/types/tasks";
 
 interface WorkflowTasksPanelProps {
   currentMonth: { month: number; year: number };
+  onCollapse?: () => void;
 }
 
-export function WorkflowTasksPanel({ currentMonth }: WorkflowTasksPanelProps) {
+export function WorkflowTasksPanel({ currentMonth, onCollapse }: WorkflowTasksPanelProps) {
   const { tasks, updateTask, addTask, loading } = useSupabaseTasks();
   const [showCompleted, setShowCompleted] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
@@ -88,9 +89,22 @@ export function WorkflowTasksPanel({ currentMonth }: WorkflowTasksPanelProps) {
             Tarefas de {monthLabel}
           </h3>
         </div>
-        <span className="text-xs text-muted-foreground tabular-nums">
-          {pendingTasks.length} pendente{pendingTasks.length !== 1 ? "s" : ""}
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-muted-foreground tabular-nums">
+            {pendingTasks.length} pendente{pendingTasks.length !== 1 ? "s" : ""}
+          </span>
+          {onCollapse && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="hidden lg:inline-flex h-7 w-7 text-muted-foreground hover:text-foreground"
+              onClick={onCollapse}
+              title="Fechar painel de tarefas"
+            >
+              <PanelRightClose className="h-3.5 w-3.5" />
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Task list */}
