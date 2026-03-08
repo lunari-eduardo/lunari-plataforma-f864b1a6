@@ -27,9 +27,10 @@ const NavItem = ({
   label,
   iconOnly = false,
   isPro = false,
-  showProBadge = false
+  showProBadge = false,
+  end = false
 }: NavItemProps) => {
-  return <NavLink to={to} className={({
+  return <NavLink to={to} end={end} className={({
     isActive
   }) => cn("nav-item-lunar mb-1 flex items-center transition-all duration-200", iconOnly ? "w-12 h-12 rounded-lg justify-center" : "gap-3 px-3 py-2 justify-start", isActive && "active bg-lunar-surface text-lunar-accent")} title={iconOnly ? label : undefined}>
       <span className="text-sm flex-shrink-0 relative">
