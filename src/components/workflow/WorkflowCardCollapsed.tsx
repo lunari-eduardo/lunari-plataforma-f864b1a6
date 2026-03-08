@@ -351,7 +351,7 @@ export function WorkflowCardCollapsed({
         </div>
 
         {/* Zona 4: Descrição - editável inline */}
-        <div className="flex flex-col gap-0.5 max-w-[200px]" onClick={(e) => e.stopPropagation()}>
+        <div className="flex flex-col gap-0.5 max-w-[160px]" onClick={(e) => e.stopPropagation()}>
           <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Descrição</span>
           <Input
             value={descriptionValue}
