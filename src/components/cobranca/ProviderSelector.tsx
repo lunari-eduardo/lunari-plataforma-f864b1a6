@@ -5,6 +5,7 @@ import { Loader2, AlertCircle } from 'lucide-react';
 import pixLogo from '@/assets/pix-logo.png';
 import infinitepayLogo from '@/assets/infinitepay-logo.png';
 import mercadopagoLogo from '@/assets/mercadopago-logo.png';
+import asaasLogo from '@/assets/asaas-logo.png';
 
 interface ProviderSelectorProps {
   selectedProvider: SelectedProvider | null;
