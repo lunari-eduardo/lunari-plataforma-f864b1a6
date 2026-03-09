@@ -36,6 +36,7 @@ import SitemapProxy from "./pages/SitemapProxy";
 import AdminConteudos from "./pages/AdminConteudos";
 import AdminConteudoNovo from "./pages/AdminConteudoNovo";
 import AdminConteudoEditar from "./pages/AdminConteudoEditar";
+import FormularioPublico from "./pages/FormularioPublico";
 import { AppProvider } from "./contexts/AppContext";
 import { AgendaProvider } from "./contexts/AgendaContext";
 import { AuthProvider } from "./contexts/AuthContext";
