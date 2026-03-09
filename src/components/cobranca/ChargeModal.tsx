@@ -13,6 +13,7 @@ import { useCobranca } from '@/hooks/useCobranca';
 import { Cobranca } from '@/types/cobranca';
 import { ChargeLinkSection } from './ChargeLinkSection';
 import { PixManualSection } from './PixManualSection';
+import { AsaasCheckoutSection, AsaasCheckoutSettings } from './AsaasCheckoutSection';
 import { ChargeHistory } from './ChargeHistory';
 import { ProviderSelector } from './ProviderSelector';
 import { SelectedProvider } from './ProviderRow';
