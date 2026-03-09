@@ -45,6 +45,7 @@ export function ChargeModal({
   const [activeTab, setActiveTab] = useState<'cobrar' | 'historico'>('cobrar');
   const [checkingStatus, setCheckingStatus] = useState(false);
   const [currentChargeId, setCurrentChargeId] = useState<string | null>(null);
+  const [asaasSettings, setAsaasSettings] = useState<AsaasCheckoutSettings | null>(null);
   
   // Current charge state (after generation)
   const [currentCharge, setCurrentCharge] = useState<{
