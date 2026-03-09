@@ -22,7 +22,8 @@ export default function Layout() {
       <Sidebar />
       
       <div className="flex-1 flex flex-col overflow-hidden relative">
-        {/* Background for internal pages (not dashboard) */}
+        {/* Backgrounds */}
+        {isDashboard && <DashboardBackground />}
         {!isDashboard && <InternalBackground />}
 
         <TrialBanner />

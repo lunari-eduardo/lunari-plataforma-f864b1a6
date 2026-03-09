@@ -83,7 +83,6 @@ export default function Index() {
 
   return (
     <>
-      <DashboardBackground />
       <main className="space-y-6 relative z-10">
         <InstallPWAButton />
         
