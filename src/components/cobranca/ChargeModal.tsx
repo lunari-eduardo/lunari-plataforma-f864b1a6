@@ -333,20 +333,13 @@ export function ChargeModal({
                   />
                 )}
 
-                {showAsaasSection && (
+                {showAsaasSection && asaasSettings && (
                   <AsaasCheckoutSection
                     valor={valor}
                     clienteId={clienteId}
                     sessionId={sessionId}
                     descricao={descricao || undefined}
-                    settings={{
-                      habilitarPix: true,
-                      habilitarCartao: true,
-                      habilitarBoleto: false,
-                      maxParcelas: 12,
-                      absorverTaxa: false,
-                      incluirTaxaAntecipacao: true,
-                    }}
+                    settings={asaasSettings}
                     clienteWhatsapp={clienteWhatsapp}
                     onPaymentCreated={(result) => {
                       setCurrentCharge({
