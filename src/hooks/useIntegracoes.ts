@@ -155,6 +155,22 @@ export function useIntegracoes(): UseIntegracoesReturn {
       }
     : null;
 
+  // ================== ASAAS ==================
+  const asaasIntegration = integracoes.find(i => i.provedor === 'asaas');
+  const asaasStatus: 'conectado' | 'desconectado' =
+    asaasIntegration?.status === 'ativo' ? 'conectado' : 'desconectado';
+  const asaasSettings: AsaasSettings | null = asaasIntegration?.status === 'ativo'
+    ? {
+        environment: (asaasIntegration.dados_extras?.environment as 'sandbox' | 'production') || 'sandbox',
+        habilitarPix: (asaasIntegration.dados_extras?.habilitarPix as boolean) !== false,
+        habilitarCartao: (asaasIntegration.dados_extras?.habilitarCartao as boolean) !== false,
+        habilitarBoleto: (asaasIntegration.dados_extras?.habilitarBoleto as boolean) === true,
+        maxParcelas: (asaasIntegration.dados_extras?.maxParcelas as number) || 12,
+        absorverTaxa: (asaasIntegration.dados_extras?.absorverTaxa as boolean) === true,
+        incluirTaxaAntecipacao: (asaasIntegration.dados_extras?.incluirTaxaAntecipacao as boolean) !== false,
+      }
+    : null;
+
   // ================== PROVEDOR PADRÃO ==================
   const defaultIntegration = integracoes.find(i => 
     i.status === 'ativo' && 
@@ -168,14 +184,17 @@ export function useIntegracoes(): UseIntegracoesReturn {
       ? 'mercadopago' 
       : infinitePayStatus === 'conectado' 
         ? 'infinitepay'
-        : pixManualStatus === 'conectado'
-          ? 'pix_manual'
-          : null;
+        : asaasStatus === 'conectado'
+          ? 'asaas'
+          : pixManualStatus === 'conectado'
+            ? 'pix_manual'
+            : null;
 
   // Determine active payment provider (primeiro ativo)
   const provedorAtivo: ProvedorPagamentoAtivo = 
     mercadoPagoStatus === 'conectado' ? 'mercadopago' :
     infinitePayStatus === 'conectado' ? 'infinitepay' :
+    asaasStatus === 'conectado' ? 'asaas' :
     pixManualStatus === 'conectado' ? 'pix_manual' : null;
 
   // ================== ACTIONS ==================
