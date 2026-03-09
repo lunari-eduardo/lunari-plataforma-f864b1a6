@@ -5,6 +5,7 @@ import { Loader2, AlertCircle } from 'lucide-react';
 import pixLogo from '@/assets/pix-logo.png';
 import infinitepayLogo from '@/assets/infinitepay-logo.png';
 import mercadopagoLogo from '@/assets/mercadopago-logo.png';
+import asaasLogo from '@/assets/asaas-logo.png';
 
 interface ProviderSelectorProps {
   selectedProvider: SelectedProvider | null;
@@ -96,6 +97,26 @@ export function ProviderSelector({ selectedProvider, onSelect }: ProviderSelecto
           logo: pixLogo,
           isDefault,
           provedor: 'pix_manual',
+        });
+      }
+
+      // Check for Asaas
+      const asaas = integrationData.find(i => i.provedor === 'asaas');
+      if (asaas) {
+        const settings = asaas.dados_extras || {};
+        const isDefault = settings.is_default === true;
+        const methods: string[] = [];
+        if (settings.habilitarPix !== false) methods.push('Pix');
+        if (settings.habilitarCartao !== false) methods.push('Cartão');
+        if (settings.habilitarBoleto === true) methods.push('Boleto');
+
+        available.push({
+          id: 'asaas',
+          name: 'Asaas',
+          description: methods.join(' + ') || 'Checkout transparente',
+          logo: asaasLogo,
+          isDefault,
+          provedor: 'asaas',
         });
       }
 

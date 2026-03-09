@@ -1,191 +1,80 @@
 
 
-# Integração Asaas como Método de Cobrança de Clientes
+# Diagnóstico: Pagamento de R$115 Reaparecendo como Pendente
 
-## Visão Geral
+## Causa Raiz Identificada
 
-Adicionar o Asaas como novo provedor de pagamento para cobranças de clientes, com checkout transparente (PIX + Cartão de Crédito + Boleto), reutilizando a lógica existente no Gallery e mantendo compatibilidade com os provedores já configurados (Mercado Pago, InfinitePay, PIX Manual).
+O problema está na **cadeia de callbacks `onPaymentUpdate`** no Workflow. Quando o pagamento rápido de R$130 é adicionado:
 
-## Arquitetura
+1. **`addPayment` no AppContext** (linha 810) insere a transação de R$130 no Supabase via `PaymentSupabaseService.saveSinglePaymentTracked`
+2. O trigger `recompute_session_paid` recalcula `valor_pago` = 130 + 115 = **R$ 245,00** ✅
+3. O evento `payment-created` é disparado
+4. **`WorkflowCacheContext`** (linha 531) recebe o evento, aguarda 350ms, e faz re-fetch da sessão do Supabase com `valor_pago = 245` ✅
 
-```text
-┌─────────────────────────────────────────────────────────────┐
-│                    ChargeModal.tsx                          │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │  ProviderSelector (adicionar Asaas)                 │    │
-│  └─────────────────────────────────────────────────────┘    │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │  AsaasCheckoutSection (novo componente)             │    │
-│  │  - Tabs PIX / Cartão / Boleto                       │    │
-│  │  - Checkout transparente                            │    │
-│  └─────────────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────────────┘
-          │
-          ▼
-┌─────────────────────────────────────────────────────────────┐
-│     gestao-asaas-create-payment (Edge Function nova)        │
-│  - Usa access_token do fotógrafo (JWT auth)                 │
-│  - Cria cliente Asaas se não existir                        │
-│  - Gera cobrança PIX / Cartão / Boleto                      │
-│  - Salva em cobrancas com provedor='asaas'                  │
-└─────────────────────────────────────────────────────────────┘
-```
+**Até aqui tudo correto.** O problema acontece quando o usuário **abre o modal de pagamentos** (ou o CRM):
 
-## Implementação
+5. O `SessionPaymentsManager` monta e chama `useSessionPayments(sessionData.id, initialPayments)`
+6. `useSessionPayments` faz fetch das transações do Supabase (encontra 2: R$130 manual + R$115 InfinitePay)
+7. O `useEffect` na **linha 111-114** do `SessionPaymentsManager` dispara `onPaymentUpdate(sessionId, totalPago, legacyPayments)` toda vez que `payments` muda
+8. No Workflow, o callback `onPaymentUpdate` chama `onFieldUpdate(sessionId, 'valorPago', ...)` — mas o campo `'valorPago'` é **ignorado** pelo `updateSession` (linha 531 do useWorkflowRealtime: `case 'valorPago': break`)
 
-### 1. Assets e Tipos
+**O campo `valorPago` nunca chega ao banco.** Isso significa que o valor exibido na UI depende inteiramente do cache local, e qualquer re-render pode resetar para o valor antigo.
 
-**Logo Asaas** — Copiar logo do Gallery ou adicionar `src/assets/asaas-logo.png`
+Além disso, o **`onFieldUpdate` com `'pagamentos'`** também é ignorado pelo banco (linha 533). Ou seja, toda a sincronização via `onPaymentUpdate` → `onFieldUpdate` é efetivamente um **no-op** que só afeta estado local temporário.
 
-**Tipos** — Atualizar `src/types/cobranca.ts`:
-- Adicionar `'asaas'` ao tipo `ProvedorPagamento`
-- Adicionar campos `asaas_payment_id`, `asaas_customer_id` (ou reutilizar campos MP existentes)
+### O verdadeiro bug
 
-### 2. Configuração do Provedor
+O `valor_pago` no banco **está correto** (R$ 245). O problema é que a UI do Workflow card lê de `session.valorPago` (formato string `"R$ 130,00"`) que vem do **cache local/localStorage** e não é atualizado corretamente após o re-fetch. O campo `pendente` no card é calculado como `total - valorPago`, e se `valorPago` estiver desatualizado, mostra R$ 115 pendente.
 
-**PagamentosTab / Integrações** — Adicionar card Asaas com:
-- Campo API Key (oculto com toggle)
-- Ambiente (Sandbox/Produção)
-- Métodos habilitados (PIX, Cartão, Boleto)
-- Máximo de parcelas
-- Absorver taxa
-- Incluir taxa de antecipação
-- Buscar taxas reais da API Asaas
+A inconsistência visual é causada por **dois sistemas de dados concorrendo**: o Supabase (correto) e o localStorage/cache (desatualizado).
 
-**useIntegracoes.ts** — Adicionar:
-- `asaasStatus`, `asaasSettings`
-- `saveAsaas()`, `updateAsaasSettings()`, `disconnectAsaas()`
+## Sobre os itens marcados pelo usuário nas imagens
 
-### 3. ProviderSelector
+- **"Corrigir Valores do Histórico"**: botão de migração de dados antigos — pode ser removido ou escondido (já não é necessário rotineiramente)
+- **"Nenhuma sessão precisou ser corrigida"**: toast do botão acima — confirma que os dados do banco estão corretos
+- **Ícone vermelho com X**: esses itens de UI obsoletos devem ser limpos
 
-Adicionar opção Asaas:
-```typescript
-// Check for Asaas
-const asaas = integrationData.find(i => i.provedor === 'asaas');
-if (asaas) {
-  const settings = asaas.dados_extras || {};
-  const methods: string[] = [];
-  if (settings.habilitarPix) methods.push('Pix');
-  if (settings.habilitarCartao) methods.push('Cartão');
-  if (settings.habilitarBoleto) methods.push('Boleto');
-  
-  available.push({
-    id: 'asaas',
-    name: 'Asaas',
-    description: methods.join(' + ') || 'Checkout transparente',
-    logo: asaasLogo,
-    isDefault: settings.is_default === true,
-    provedor: 'asaas',
-  });
-}
-```
+## Correções Propostas
 
-### 4. AsaasCheckoutSection (novo componente)
+### 1. Eliminar `onPaymentUpdate` → `onFieldUpdate` como mecanismo de sync (raiz do bug)
 
-Componente inline no ChargeModal para checkout transparente Asaas:
-- **Tabs**: PIX | Cartão | Boleto (baseado em métodos habilitados)
-- **PIX**: Gera QR code e copia-e-cola
-- **Cartão**: Formulário com máscara (nome, CPF, número, validade, CVV, email, telefone, CEP)
-- **Boleto**: Gera URL para download
+O `valor_pago` já é mantido pelo trigger do banco. O frontend **não deve tentar setá-lo manualmente**. A UI do Workflow deve ler `valor_pago` diretamente do Supabase (já faz via WorkflowCacheContext).
 
-Reutilizar lógica do `AsaasCheckout.tsx` do Gallery (máscaras, validações, cálculo de taxas).
+**Arquivo**: `src/components/workflow/WorkflowCardCollapsed.tsx` e `WorkflowCardExpanded.tsx`
+- Remover o callback `onPaymentUpdate` que tenta setar `valorPago` via `onFieldUpdate`
+- Substituir por: apenas disparar um evento `payment-created` para forçar re-fetch do cache
 
-### 5. Edge Function: gestao-asaas-create-payment
+### 2. Forçar re-fetch após fechar modal de pagamentos
 
-Nova função isolada para o Gestão (não compartilhada com Gallery):
+**Arquivo**: `src/components/workflow/WorkflowCardCollapsed.tsx` e `WorkflowCardExpanded.tsx`
+- No `onClose` do `WorkflowPaymentsModal`, disparar `window.dispatchEvent(new CustomEvent('payment-created', { detail: { sessionId } }))` para forçar o `WorkflowCacheContext` a buscar dados frescos do banco
 
-```typescript
-// Flow:
-// 1. Extrai userId do JWT
-// 2. Busca integração Asaas do usuário
-// 3. Busca/cria cliente Asaas
-// 4. Calcula taxas se cliente paga
-// 5. Cria cobrança na API Asaas
-// 6. Para PIX: busca QR code
-// 7. Salva em cobrancas com provedor='asaas'
-// 8. Retorna dados para o frontend
-```
+### 3. Corrigir cálculo de `pendente` no card
 
-### 6. useCobranca.ts
+**Arquivo**: `src/components/workflow/WorkflowCardCollapsed.tsx`
+- O cálculo de `pendente` deve usar `valor_pago` do banco (campo numérico) em vez de parsear a string `session.valorPago`
 
-Adicionar rota para Asaas:
-```typescript
-if (provedor === 'asaas') {
-  response = await supabase.functions.invoke('gestao-asaas-create-payment', {
-    body: {
-      clienteId: request.clienteId,
-      sessionId: request.sessionId,
-      valor: request.valor,
-      descricao: request.descricao,
-      billingType, // PIX, CREDIT_CARD, BOLETO
-      creditCard, // para cartão
-      creditCardHolderInfo,
-      installmentCount,
-    },
-  });
-}
-```
+### 4. Limpar UI obsoleta no CRM
 
-### 7. ChargeModal.tsx
+**Arquivo**: `src/components/crm/WorkflowHistoryTable.tsx`
+- Remover ou esconder o botão "Corrigir Valores do Histórico" (já fez seu trabalho, não é necessário no dia a dia)
 
-Adicionar condição para exibir `AsaasCheckoutSection`:
-```typescript
-const showAsaasSection = selectedProvider === 'asaas';
+### 5. Remover escrita de `valorPago` no localStorage do AppContext
 
-{showAsaasSection && (
-  <AsaasCheckoutSection
-    valor={valor}
-    settings={asaasSettings}
-    onPaymentCreated={(result) => {
-      setCurrentCharge({
-        pixCopiaCola: result.pixCopiaECola,
-        qrCodeBase64: result.pixQrCode,
-        paymentLink: result.boletoUrl,
-        status: result.paid ? 'pago' : 'pendente',
-      });
-      setCurrentChargeId(result.cobrancaId);
-    }}
-    loading={creatingCharge}
-  />
-)}
-```
+**Arquivo**: `src/contexts/AppContext.tsx` (linhas 862-912)
+- O bloco que atualiza `localStorage` com `valorPago` é redundante e causa dessincronização. Remover essa lógica — o Supabase é a fonte da verdade.
 
-## Arquivos a Criar/Modificar
+## Resumo de Arquivos
 
-**Criar:**
-- `src/assets/asaas-logo.png` — Logo do Asaas
-- `src/components/cobranca/AsaasCheckoutSection.tsx` — Checkout transparente inline
-- `src/components/integracoes/AsaasCard.tsx` — Card de configuração
-- `supabase/functions/gestao-asaas-create-payment/index.ts` — Edge Function
-- `supabase/functions/asaas-fetch-fees/index.ts` — Buscar taxas (se não existir no projeto)
+| Arquivo | Ação |
+|---------|------|
+| `src/components/workflow/WorkflowCardCollapsed.tsx` | Simplificar `onPaymentUpdate`, forçar re-fetch no close |
+| `src/components/workflow/WorkflowCardExpanded.tsx` | Mesma correção |
+| `src/contexts/AppContext.tsx` | Remover bloco localStorage de `addPayment` |
+| `src/components/crm/WorkflowHistoryTable.tsx` | Esconder botão "Corrigir Valores" |
+| `src/components/payments/SessionPaymentsManager.tsx` | Revisar useEffect de sync para não causar loops |
 
-**Modificar:**
-- `src/types/cobranca.ts` — Adicionar 'asaas' ao ProvedorPagamento
-- `src/hooks/useIntegracoes.ts` — Adicionar gestão Asaas
-- `src/hooks/useCobranca.ts` — Adicionar rota asaas
-- `src/components/integracoes/PagamentosTab.tsx` — Incluir AsaasCard
-- `src/components/cobranca/ProviderSelector.tsx` — Adicionar opção Asaas
-- `src/components/cobranca/ChargeModal.tsx` — Renderizar AsaasCheckoutSection
+## Sobre Escalabilidade
 
-## Detalhes Técnicos
-
-**Cálculo de Taxas:**
-Reutilizar lógica do Gallery (`calcularAntecipacao`) para calcular taxas de processamento e antecipação quando cliente paga.
-
-**Webhook:**
-O webhook `asaas-webhook` existente já processa pagamentos e atualiza `cobrancas` — verificar se suporta `provedor='asaas'` para cobranças manuais (não apenas assinaturas).
-
-**Configurações em `dados_extras`:**
-```json
-{
-  "environment": "sandbox" | "production",
-  "habilitarPix": true,
-  "habilitarCartao": true,
-  "habilitarBoleto": false,
-  "maxParcelas": 12,
-  "absorverTaxa": false,
-  "incluirTaxaAntecipacao": true,
-  "is_default": false
-}
-```
+A arquitetura atual (trigger SQL como fonte da verdade para `valor_pago`) é **correta e escalável**. O problema não é o banco — é o frontend tentando manter um estado paralelo via localStorage/callbacks que conflita com o dado real. A correção acima elimina essa duplicidade.
 

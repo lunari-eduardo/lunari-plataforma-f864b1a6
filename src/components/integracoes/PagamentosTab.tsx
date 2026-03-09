@@ -4,6 +4,7 @@ import { MercadoPagoCard, MercadoPagoCardRef } from './MercadoPagoCard';
 import { MercadoPagoSettingsModal, MercadoPagoSettings } from './MercadoPagoSettingsModal';
 import { InfinitePayCardNew, InfinitePayCardNewRef } from './InfinitePayCardNew';
 import { PixManualCard, PixManualCardRef, PixManualData } from './PixManualCard';
+import { AsaasCard, AsaasCardRef, AsaasSettings } from './AsaasCard';
 import { ProvedorPagamento } from './ActiveMethodRow';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -39,6 +40,13 @@ interface PagamentosTabProps {
   onSavePixManual: (data: PixManualData) => Promise<void>;
   onDisconnectPixManual: () => Promise<void>;
   
+  // Asaas
+  asaasStatus: 'conectado' | 'desconectado';
+  asaasSettings?: AsaasSettings | null;
+  onSaveAsaas: (apiKey: string, settings: AsaasSettings) => Promise<void>;
+  onUpdateAsaasSettings?: (settings: AsaasSettings) => Promise<void>;
+  onDisconnectAsaas: () => Promise<void>;
+  
   // Padrão
   provedorPadrao: ProvedorPagamento | null;
   onSetProvedorPadrao: (provedor: ProvedorPagamento) => Promise<void>;
@@ -63,6 +71,11 @@ export function PagamentosTab({
   pixManualData,
   onSavePixManual,
   onDisconnectPixManual,
+  asaasStatus,
+  asaasSettings,
+  onSaveAsaas,
+  onUpdateAsaasSettings,
+  onDisconnectAsaas,
   provedorPadrao,
   onSetProvedorPadrao,
   loading,
@@ -71,7 +84,7 @@ export function PagamentosTab({
   const mercadoPagoRef = useRef<MercadoPagoCardRef>(null);
   const infinitePayRef = useRef<InfinitePayCardNewRef>(null);
   const pixManualRef = useRef<PixManualCardRef>(null);
-  
+  const asaasRef = useRef<AsaasCardRef>(null);
   const [disconnectDialog, setDisconnectDialog] = useState<{
     open: boolean;
     provedor: ProvedorPagamento | null;
@@ -110,10 +123,17 @@ export function PagamentosTab({
     });
   }
 
+  if (asaasStatus === 'conectado') {
+    activeMethods.push({
+      provedor: 'asaas',
+      info: asaasSettings?.environment === 'production' ? 'Produção' : 'Sandbox',
+      isPadrao: provedorPadrao === 'asaas',
+    });
+  }
+
   const handleEdit = useCallback((provedor: ProvedorPagamento) => {
     switch (provedor) {
       case 'mercadopago':
-        // Open settings modal instead of just scrolling
         setMpSettingsOpen(true);
         break;
       case 'infinitepay':
@@ -123,6 +143,10 @@ export function PagamentosTab({
       case 'pix_manual':
         pixManualRef.current?.scrollIntoView();
         pixManualRef.current?.setEditMode(true);
+        break;
+      case 'asaas':
+        asaasRef.current?.scrollIntoView();
+        asaasRef.current?.setEditMode(true);
         break;
     }
   }, []);
@@ -145,15 +169,19 @@ export function PagamentosTab({
       case 'pix_manual':
         await onDisconnectPixManual();
         break;
+      case 'asaas':
+        await onDisconnectAsaas();
+        break;
     }
 
     setDisconnectDialog({ open: false, provedor: null });
-  }, [disconnectDialog, onDisconnectMercadoPago, onDisconnectInfinitePay, onDisconnectPixManual]);
+  }, [disconnectDialog, onDisconnectMercadoPago, onDisconnectInfinitePay, onDisconnectPixManual, onDisconnectAsaas]);
 
   const provedorNames: Record<ProvedorPagamento, string> = {
     mercadopago: 'Mercado Pago',
     infinitepay: 'InfinitePay',
     pix_manual: 'PIX Manual',
+    asaas: 'Asaas',
   };
 
   return (

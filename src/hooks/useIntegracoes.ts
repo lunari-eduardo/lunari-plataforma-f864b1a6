@@ -17,8 +17,18 @@ interface Integracao {
   is_default?: boolean;
 }
 
-export type ProvedorPagamento = 'mercadopago' | 'infinitepay' | 'pix_manual';
+export type ProvedorPagamento = 'mercadopago' | 'infinitepay' | 'pix_manual' | 'asaas';
 export type ProvedorPagamentoAtivo = ProvedorPagamento | null;
+
+export interface AsaasSettings {
+  environment: 'sandbox' | 'production';
+  habilitarPix: boolean;
+  habilitarCartao: boolean;
+  habilitarBoleto: boolean;
+  maxParcelas: number;
+  absorverTaxa: boolean;
+  incluirTaxaAntecipacao: boolean;
+}
 
 export interface MercadoPagoSettings {
   habilitarPix: boolean;
@@ -52,6 +62,13 @@ interface UseIntegracoesReturn {
   pixManualData: PixManualData | null;
   savePixManual: (data: PixManualData) => Promise<void>;
   disconnectPixManual: () => Promise<void>;
+  
+  // Asaas
+  asaasStatus: 'conectado' | 'desconectado';
+  asaasSettings: AsaasSettings | null;
+  saveAsaas: (apiKey: string, settings: AsaasSettings) => Promise<void>;
+  updateAsaasSettings: (settings: AsaasSettings) => Promise<void>;
+  disconnectAsaas: () => Promise<void>;
   
   // Padrão e geral
   provedorAtivo: ProvedorPagamentoAtivo;
@@ -138,6 +155,22 @@ export function useIntegracoes(): UseIntegracoesReturn {
       }
     : null;
 
+  // ================== ASAAS ==================
+  const asaasIntegration = integracoes.find(i => i.provedor === 'asaas');
+  const asaasStatus: 'conectado' | 'desconectado' =
+    asaasIntegration?.status === 'ativo' ? 'conectado' : 'desconectado';
+  const asaasSettings: AsaasSettings | null = asaasIntegration?.status === 'ativo'
+    ? {
+        environment: (asaasIntegration.dados_extras?.environment as 'sandbox' | 'production') || 'sandbox',
+        habilitarPix: (asaasIntegration.dados_extras?.habilitarPix as boolean) !== false,
+        habilitarCartao: (asaasIntegration.dados_extras?.habilitarCartao as boolean) !== false,
+        habilitarBoleto: (asaasIntegration.dados_extras?.habilitarBoleto as boolean) === true,
+        maxParcelas: (asaasIntegration.dados_extras?.maxParcelas as number) || 12,
+        absorverTaxa: (asaasIntegration.dados_extras?.absorverTaxa as boolean) === true,
+        incluirTaxaAntecipacao: (asaasIntegration.dados_extras?.incluirTaxaAntecipacao as boolean) !== false,
+      }
+    : null;
+
   // ================== PROVEDOR PADRÃO ==================
   const defaultIntegration = integracoes.find(i => 
     i.status === 'ativo' && 
@@ -151,14 +184,17 @@ export function useIntegracoes(): UseIntegracoesReturn {
       ? 'mercadopago' 
       : infinitePayStatus === 'conectado' 
         ? 'infinitepay'
-        : pixManualStatus === 'conectado'
-          ? 'pix_manual'
-          : null;
+        : asaasStatus === 'conectado'
+          ? 'asaas'
+          : pixManualStatus === 'conectado'
+            ? 'pix_manual'
+            : null;
 
   // Determine active payment provider (primeiro ativo)
   const provedorAtivo: ProvedorPagamentoAtivo = 
     mercadoPagoStatus === 'conectado' ? 'mercadopago' :
     infinitePayStatus === 'conectado' ? 'infinitepay' :
+    asaasStatus === 'conectado' ? 'asaas' :
     pixManualStatus === 'conectado' ? 'pix_manual' : null;
 
   // ================== ACTIONS ==================
@@ -171,7 +207,7 @@ export function useIntegracoes(): UseIntegracoesReturn {
 
     try {
       // Remove is_default de todos
-      const paymentProviders = ['mercadopago', 'infinitepay', 'pix_manual'];
+      const paymentProviders = ['mercadopago', 'infinitepay', 'pix_manual', 'asaas'];
       
       for (const p of paymentProviders) {
         const integration = integracoes.find(i => i.provedor === p);
@@ -189,7 +225,7 @@ export function useIntegracoes(): UseIntegracoesReturn {
         }
       }
 
-      toast.success(`${provedor === 'mercadopago' ? 'Mercado Pago' : provedor === 'infinitepay' ? 'InfinitePay' : 'PIX Manual'} definido como padrão`);
+      toast.success(`${provedor === 'mercadopago' ? 'Mercado Pago' : provedor === 'infinitepay' ? 'InfinitePay' : provedor === 'asaas' ? 'Asaas' : 'PIX Manual'} definido como padrão`);
       await fetchIntegracoes();
     } catch (error) {
       console.error('[useIntegracoes] Set default error:', error);
@@ -487,6 +523,70 @@ export function useIntegracoes(): UseIntegracoesReturn {
     }
   }, [user, fetchIntegracoes]);
 
+  // ================== ASAAS ACTIONS ==================
+
+  const saveAsaas = useCallback(async (apiKey: string, asaasSettingsParam: AsaasSettings) => {
+    if (!user) { toast.error('Você precisa estar logado'); return; }
+    try {
+      const { error } = await supabase
+        .from('usuarios_integracoes')
+        .upsert({
+          user_id: user.id,
+          provedor: 'asaas',
+          status: 'ativo',
+          access_token: apiKey,
+          dados_extras: { ...asaasSettingsParam },
+          conectado_em: new Date().toISOString(),
+        }, { onConflict: 'user_id,provedor' });
+      if (error) throw error;
+      toast.success('Asaas conectado com sucesso!');
+      await fetchIntegracoes();
+    } catch (error) {
+      console.error('[useIntegracoes] Save Asaas error:', error);
+      toast.error('Erro ao salvar configuração Asaas');
+    }
+  }, [user, fetchIntegracoes]);
+
+  const updateAsaasSettings = useCallback(async (newSettings: AsaasSettings) => {
+    if (!user) { toast.error('Você precisa estar logado'); return; }
+    try {
+      const { data: existing, error: fetchError } = await supabase
+        .from('usuarios_integracoes')
+        .select('id, dados_extras')
+        .eq('user_id', user.id)
+        .eq('provedor', 'asaas')
+        .single();
+      if (fetchError || !existing) throw new Error('Integração Asaas não encontrada');
+      const { error } = await supabase
+        .from('usuarios_integracoes')
+        .update({ dados_extras: { ...(existing.dados_extras as Record<string, unknown>), ...newSettings } })
+        .eq('id', existing.id);
+      if (error) throw error;
+      toast.success('Configurações do Asaas atualizadas');
+      await fetchIntegracoes();
+    } catch (error) {
+      console.error('[useIntegracoes] Update Asaas settings error:', error);
+      toast.error('Erro ao atualizar configurações');
+    }
+  }, [user, fetchIntegracoes]);
+
+  const disconnectAsaas = useCallback(async () => {
+    if (!user) { toast.error('Você precisa estar logado'); return; }
+    try {
+      const { error } = await supabase
+        .from('usuarios_integracoes')
+        .update({ status: 'inativo' })
+        .eq('user_id', user.id)
+        .eq('provedor', 'asaas');
+      if (error) throw error;
+      toast.success('Asaas desconectado');
+      await fetchIntegracoes();
+    } catch (error) {
+      console.error('[useIntegracoes] Disconnect Asaas error:', error);
+      toast.error('Erro ao desconectar Asaas');
+    }
+  }, [user, fetchIntegracoes]);
+
   return {
     integracoes,
     loading,
@@ -513,6 +613,13 @@ export function useIntegracoes(): UseIntegracoesReturn {
     pixManualData,
     savePixManual,
     disconnectPixManual,
+    
+    // Asaas
+    asaasStatus,
+    asaasSettings,
+    saveAsaas,
+    updateAsaasSettings,
+    disconnectAsaas,
     
     // Padrão e geral
     provedorAtivo,

@@ -4,8 +4,9 @@ import { Pencil, Power, Star } from 'lucide-react';
 import pixLogo from '@/assets/pix-logo.png';
 import infinitepayLogo from '@/assets/infinitepay-logo.png';
 import mercadopagoLogo from '@/assets/mercadopago-logo.png';
+import asaasLogo from '@/assets/asaas-logo.png';
 
-export type ProvedorPagamento = 'mercadopago' | 'infinitepay' | 'pix_manual';
+export type ProvedorPagamento = 'mercadopago' | 'infinitepay' | 'pix_manual' | 'asaas';
 
 interface ActiveMethodRowProps {
   provedor: ProvedorPagamento;
@@ -21,6 +22,7 @@ const provedorConfig: Record<ProvedorPagamento, { nome: string; logo: string }> 
   mercadopago: { nome: 'Mercado Pago', logo: mercadopagoLogo },
   infinitepay: { nome: 'InfinitePay', logo: infinitepayLogo },
   pix_manual: { nome: 'PIX Manual', logo: pixLogo },
+  asaas: { nome: 'Asaas', logo: asaasLogo },
 };
 
 export function ActiveMethodRow({
