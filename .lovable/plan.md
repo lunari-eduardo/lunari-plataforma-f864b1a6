@@ -1,66 +1,80 @@
 
 
-# Correção definitiva do Drag-and-Drop nos Checklists
+# Diagnóstico: Pagamento de R$115 Reaparecendo como Pendente
 
-## Causa raiz (mesmo bug nos dois painéis)
+## Causa Raiz Identificada
 
-O `useSortable` fornece `transform` e `transition` para **todos** os itens da lista — não só o que está sendo arrastado. Esses valores fazem os outros itens "abrirem espaço" visualmente. O código atual aplica essas propriedades **apenas quando `isDragging` é true**, o que significa que:
+O problema está na **cadeia de callbacks `onPaymentUpdate`** no Workflow. Quando o pagamento rápido de R$130 é adicionado:
 
-1. O item arrastado não se move visualmente (o DragOverlay cuida dele, mas o placeholder fica parado)
-2. Os outros itens **nunca recebem transform**, então não se deslocam — o arraste parece não funcionar
+1. **`addPayment` no AppContext** (linha 810) insere a transação de R$130 no Supabase via `PaymentSupabaseService.saveSinglePaymentTracked`
+2. O trigger `recompute_session_paid` recalcula `valor_pago` = 130 + 115 = **R$ 245,00** ✅
+3. O evento `payment-created` é disparado
+4. **`WorkflowCacheContext`** (linha 531) recebe o evento, aguarda 350ms, e faz re-fetch da sessão do Supabase com `valor_pago = 245` ✅
 
-```text
-ERRADO (código atual):
-  transform: isDragging ? CSS.Transform.toString(transform) : undefined
-  transition: isDragging ? transition : undefined
+**Até aqui tudo correto.** O problema acontece quando o usuário **abre o modal de pagamentos** (ou o CRM):
 
-CORRETO:
-  transform: CSS.Transform.toString(transform)
-  transition
-  opacity: isDragging ? 0.3 : 1
-```
+5. O `SessionPaymentsManager` monta e chama `useSessionPayments(sessionData.id, initialPayments)`
+6. `useSessionPayments` faz fetch das transações do Supabase (encontra 2: R$130 manual + R$115 InfinitePay)
+7. O `useEffect` na **linha 111-114** do `SessionPaymentsManager` dispara `onPaymentUpdate(sessionId, totalPago, legacyPayments)` toda vez que `payments` muda
+8. No Workflow, o callback `onPaymentUpdate` chama `onFieldUpdate(sessionId, 'valorPago', ...)` — mas o campo `'valorPago'` é **ignorado** pelo `updateSession` (linha 531 do useWorkflowRealtime: `case 'valorPago': break`)
 
-## Problema adicional no ChecklistPanel (página Tarefas)
+**O campo `valorPago` nunca chega ao banco.** Isso significa que o valor exibido na UI depende inteiramente do cache local, e qualquer re-render pode resetar para o valor antigo.
 
-O `DndContext` está **dentro de uma tag `<ul>`**, gerando HTML inválido (DndContext renderiza `<div>` dentro de `<ul>`). Isso pode causar comportamento imprevisível no DOM.
+Além disso, o **`onFieldUpdate` com `'pagamentos'`** também é ignorado pelo banco (linha 533). Ou seja, toda a sincronização via `onPaymentUpdate` → `onFieldUpdate` é efetivamente um **no-op** que só afeta estado local temporário.
 
-Além disso, na página de Tarefas, o ChecklistPanel fica **aninhado dentro do DndContext do Kanban**. Contextos aninhados do dnd-kit podem interferir entre si se não forem isolados.
+### O verdadeiro bug
 
-## Plano de correção
+O `valor_pago` no banco **está correto** (R$ 245). O problema é que a UI do Workflow card lê de `session.valorPago` (formato string `"R$ 130,00"`) que vem do **cache local/localStorage** e não é atualizado corretamente após o re-fetch. O campo `pendente` no card é calculado como `total - valorPago`, e se `valorPago` estiver desatualizado, mostra R$ 115 pendente.
 
-### 1. `src/components/tarefas/ChecklistPanel.tsx`
+A inconsistência visual é causada por **dois sistemas de dados concorrendo**: o Supabase (correto) e o localStorage/cache (desatualizado).
 
-- **Corrigir estilo do `SortableChecklistItem`**: aplicar `transform` e `transition` incondicionalmente
-- **Corrigir estrutura HTML**: mover `DndContext` para fora do `<ul>`, usar `<div>` como container
-- O grip handle já existe, apenas garantir visibilidade (mudar `opacity-0` para `opacity-30`)
+## Sobre os itens marcados pelo usuário nas imagens
 
-### 2. `src/components/workflow/WorkflowTasksPanel.tsx`
+- **"Corrigir Valores do Histórico"**: botão de migração de dados antigos — pode ser removido ou escondido (já não é necessário rotineiramente)
+- **"Nenhuma sessão precisou ser corrigida"**: toast do botão acima — confirma que os dados do banco estão corretos
+- **Ícone vermelho com X**: esses itens de UI obsoletos devem ser limpos
 
-- **Corrigir estilo do `SortableTaskRow`**: mesmo fix — aplicar `transform` e `transition` incondicionalmente
+## Correções Propostas
 
-### Alterações específicas
+### 1. Eliminar `onPaymentUpdate` → `onFieldUpdate` como mecanismo de sync (raiz do bug)
 
-**ChecklistPanel.tsx — SortableChecklistItem (linha ~197):**
-```tsx
-const style = {
-  transform: CSS.Transform.toString(transform),
-  transition,
-  opacity: isDragging ? 0.3 : 1,
-};
-```
+O `valor_pago` já é mantido pelo trigger do banco. O frontend **não deve tentar setá-lo manualmente**. A UI do Workflow deve ler `valor_pago` diretamente do Supabase (já faz via WorkflowCacheContext).
 
-**ChecklistPanel.tsx — estrutura (linhas ~131-177):**
-Substituir `<ul>` por `<div>`, mover `DndContext` para envolver o container corretamente.
+**Arquivo**: `src/components/workflow/WorkflowCardCollapsed.tsx` e `WorkflowCardExpanded.tsx`
+- Remover o callback `onPaymentUpdate` que tenta setar `valorPago` via `onFieldUpdate`
+- Substituir por: apenas disparar um evento `payment-created` para forçar re-fetch do cache
 
-**WorkflowTasksPanel.tsx — SortableTaskRow (linha ~215):**
-```tsx
-const style = {
-  transform: CSS.Transform.toString(transform),
-  transition,
-  opacity: isDragging ? 0.3 : 1,
-};
-```
+### 2. Forçar re-fetch após fechar modal de pagamentos
 
-**ChecklistPanel.tsx — grip handle (linha ~241):**
-Mudar `opacity-0` para `opacity-30` para consistência com o workflow.
+**Arquivo**: `src/components/workflow/WorkflowCardCollapsed.tsx` e `WorkflowCardExpanded.tsx`
+- No `onClose` do `WorkflowPaymentsModal`, disparar `window.dispatchEvent(new CustomEvent('payment-created', { detail: { sessionId } }))` para forçar o `WorkflowCacheContext` a buscar dados frescos do banco
+
+### 3. Corrigir cálculo de `pendente` no card
+
+**Arquivo**: `src/components/workflow/WorkflowCardCollapsed.tsx`
+- O cálculo de `pendente` deve usar `valor_pago` do banco (campo numérico) em vez de parsear a string `session.valorPago`
+
+### 4. Limpar UI obsoleta no CRM
+
+**Arquivo**: `src/components/crm/WorkflowHistoryTable.tsx`
+- Remover ou esconder o botão "Corrigir Valores do Histórico" (já fez seu trabalho, não é necessário no dia a dia)
+
+### 5. Remover escrita de `valorPago` no localStorage do AppContext
+
+**Arquivo**: `src/contexts/AppContext.tsx` (linhas 862-912)
+- O bloco que atualiza `localStorage` com `valorPago` é redundante e causa dessincronização. Remover essa lógica — o Supabase é a fonte da verdade.
+
+## Resumo de Arquivos
+
+| Arquivo | Ação |
+|---------|------|
+| `src/components/workflow/WorkflowCardCollapsed.tsx` | Simplificar `onPaymentUpdate`, forçar re-fetch no close |
+| `src/components/workflow/WorkflowCardExpanded.tsx` | Mesma correção |
+| `src/contexts/AppContext.tsx` | Remover bloco localStorage de `addPayment` |
+| `src/components/crm/WorkflowHistoryTable.tsx` | Esconder botão "Corrigir Valores" |
+| `src/components/payments/SessionPaymentsManager.tsx` | Revisar useEffect de sync para não causar loops |
+
+## Sobre Escalabilidade
+
+A arquitetura atual (trigger SQL como fonte da verdade para `valor_pago`) é **correta e escalável**. O problema não é o banco — é o frontend tentando manter um estado paralelo via localStorage/callbacks que conflita com o dado real. A correção acima elimina essa duplicidade.
 

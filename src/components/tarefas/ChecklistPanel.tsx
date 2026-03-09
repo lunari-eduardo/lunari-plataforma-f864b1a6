@@ -128,7 +128,7 @@ export default function ChecklistPanel({
           <Button size="icon" className="h-8 w-8" onClick={handleAdd}>+</Button>
         </div>
 
-        <ul className="space-y-1">
+        <div className="space-y-1">
           {/* Unchecked items with DnD */}
           <DndContext
             sensors={sensors}
@@ -172,9 +172,9 @@ export default function ChecklistPanel({
           ))}
 
           {filtered.length === 0 && (
-            <li className="py-4 text-center text-2xs text-lunar-textSecondary">Nenhum item</li>
+            <div className="py-4 text-center text-2xs text-lunar-textSecondary">Nenhum item</div>
           )}
-        </ul>
+        </div>
       </Card>
     </section>
   );
@@ -195,9 +195,9 @@ function SortableChecklistItem({
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: item.id });
 
   const style = {
-    transform: isDragging ? CSS.Transform.toString(transform) : undefined,
-    transition: isDragging ? transition : undefined,
-    opacity: isDragging ? 0.4 : 1,
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.3 : 1,
   };
 
   return (
@@ -238,7 +238,7 @@ function ChecklistItemContent({
       {dragHandleProps && !item.checked ? (
         <button
           {...dragHandleProps}
-          className="mt-0.5 opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity cursor-grab active:cursor-grabbing touch-none"
+          className="mt-0.5 opacity-30 group-hover:opacity-60 hover:!opacity-100 transition-opacity cursor-grab active:cursor-grabbing touch-none"
           tabIndex={-1}
         >
           <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
