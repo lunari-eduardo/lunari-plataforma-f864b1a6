@@ -523,6 +523,70 @@ export function useIntegracoes(): UseIntegracoesReturn {
     }
   }, [user, fetchIntegracoes]);
 
+  // ================== ASAAS ACTIONS ==================
+
+  const saveAsaas = useCallback(async (apiKey: string, asaasSettingsParam: AsaasSettings) => {
+    if (!user) { toast.error('Você precisa estar logado'); return; }
+    try {
+      const { error } = await supabase
+        .from('usuarios_integracoes')
+        .upsert({
+          user_id: user.id,
+          provedor: 'asaas',
+          status: 'ativo',
+          access_token: apiKey,
+          dados_extras: { ...asaasSettingsParam },
+          conectado_em: new Date().toISOString(),
+        }, { onConflict: 'user_id,provedor' });
+      if (error) throw error;
+      toast.success('Asaas conectado com sucesso!');
+      await fetchIntegracoes();
+    } catch (error) {
+      console.error('[useIntegracoes] Save Asaas error:', error);
+      toast.error('Erro ao salvar configuração Asaas');
+    }
+  }, [user, fetchIntegracoes]);
+
+  const updateAsaasSettings = useCallback(async (newSettings: AsaasSettings) => {
+    if (!user) { toast.error('Você precisa estar logado'); return; }
+    try {
+      const { data: existing, error: fetchError } = await supabase
+        .from('usuarios_integracoes')
+        .select('id, dados_extras')
+        .eq('user_id', user.id)
+        .eq('provedor', 'asaas')
+        .single();
+      if (fetchError || !existing) throw new Error('Integração Asaas não encontrada');
+      const { error } = await supabase
+        .from('usuarios_integracoes')
+        .update({ dados_extras: { ...(existing.dados_extras as Record<string, unknown>), ...newSettings } })
+        .eq('id', existing.id);
+      if (error) throw error;
+      toast.success('Configurações do Asaas atualizadas');
+      await fetchIntegracoes();
+    } catch (error) {
+      console.error('[useIntegracoes] Update Asaas settings error:', error);
+      toast.error('Erro ao atualizar configurações');
+    }
+  }, [user, fetchIntegracoes]);
+
+  const disconnectAsaas = useCallback(async () => {
+    if (!user) { toast.error('Você precisa estar logado'); return; }
+    try {
+      const { error } = await supabase
+        .from('usuarios_integracoes')
+        .update({ status: 'inativo' })
+        .eq('user_id', user.id)
+        .eq('provedor', 'asaas');
+      if (error) throw error;
+      toast.success('Asaas desconectado');
+      await fetchIntegracoes();
+    } catch (error) {
+      console.error('[useIntegracoes] Disconnect Asaas error:', error);
+      toast.error('Erro ao desconectar Asaas');
+    }
+  }, [user, fetchIntegracoes]);
+
   return {
     integracoes,
     loading,
@@ -549,6 +613,13 @@ export function useIntegracoes(): UseIntegracoesReturn {
     pixManualData,
     savePixManual,
     disconnectPixManual,
+    
+    // Asaas
+    asaasStatus,
+    asaasSettings,
+    saveAsaas,
+    updateAsaasSettings,
+    disconnectAsaas,
     
     // Padrão e geral
     provedorAtivo,
