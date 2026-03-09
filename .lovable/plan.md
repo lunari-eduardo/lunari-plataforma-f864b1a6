@@ -1,71 +1,80 @@
 
 
-# Fix Visual: Alinhar com Gallery + Corrigir Bugs
+# Diagnóstico: Pagamento de R$115 Reaparecendo como Pendente
 
-## Problemas Identificados
+## Causa Raiz Identificada
 
-Comparei o código atual com o projeto [Lunari Gallery](/projects/8f0538c4-45b7-450e-b9bb-169d0dcc657e) e identifiquei as diferenças que causam os bugs visuais:
+O problema está na **cadeia de callbacks `onPaymentUpdate`** no Workflow. Quando o pagamento rápido de R$130 é adicionado:
 
-### 1. Card.tsx usa `.glass` class errada
-- **Gallery**: `"rounded-lg border bg-card text-card-foreground shadow-sm backdrop-blur-xl"` — usa `bg-card` normal
-- **Atual**: `"glass text-card-foreground"` — a classe `.glass` força `background: hsl(var(--glass-bg)) !important` que sobrescreve tudo e causa transparência excessiva em TODOS os cards do sistema
+1. **`addPayment` no AppContext** (linha 810) insere a transação de R$130 no Supabase via `PaymentSupabaseService.saveSinglePaymentTracked`
+2. O trigger `recompute_session_paid` recalcula `valor_pago` = 130 + 115 = **R$ 245,00** ✅
+3. O evento `payment-created` é disparado
+4. **`WorkflowCacheContext`** (linha 531) recebe o evento, aguarda 350ms, e faz re-fetch da sessão do Supabase com `valor_pago = 245` ✅
 
-### 2. DashboardBackground — Aurora com gradientes errados
-- **Gallery**: Usa `linear-gradient` múltiplos com `inset-[-20%]` e classe CSS `aurora-animate`
-- **Atual**: Usa `radial-gradient` com `inset-0` e animação inline — resultado visual diferente
+**Até aqui tudo correto.** O problema acontece quando o usuário **abre o modal de pagamentos** (ou o CRM):
 
-### 3. DashboardThreeCanvas — Rotação diferente
-- **Gallery**: Usa `useFrame((_, delta)` com rotação baseada em delta (frame-rate independent) e configs de eixo/direção separadas
-- **Atual**: Usa `clock.getElapsedTime()` com rotação em todos os eixos simultaneamente — movimento diferente e potencialmente mais pesado
+5. O `SessionPaymentsManager` monta e chama `useSessionPayments(sessionData.id, initialPayments)`
+6. `useSessionPayments` faz fetch das transações do Supabase (encontra 2: R$130 manual + R$115 InfinitePay)
+7. O `useEffect` na **linha 111-114** do `SessionPaymentsManager` dispara `onPaymentUpdate(sessionId, totalPago, legacyPayments)` toda vez que `payments` muda
+8. No Workflow, o callback `onPaymentUpdate` chama `onFieldUpdate(sessionId, 'valorPago', ...)` — mas o campo `'valorPago'` é **ignorado** pelo `updateSession` (linha 531 do useWorkflowRealtime: `case 'valorPago': break`)
 
-### 4. Classe CSS `aurora-animate` ausente
-- **Gallery**: Define `.aurora-animate { animation: aurora 20s ease infinite; }` no CSS
-- **Atual**: Usa `style={{ animation: 'aurora 20s ease-in-out infinite' }}` inline — funciona mas é inconsistente
+**O campo `valorPago` nunca chega ao banco.** Isso significa que o valor exibido na UI depende inteiramente do cache local, e qualquer re-render pode resetar para o valor antigo.
 
-### 5. DashboardBackground lazy-load pode estar falhando
-- **Gallery**: Tudo num único arquivo `Home.tsx`, sem lazy load — funciona direto
-- **Atual**: Usa `lazy(() => import('./DashboardThreeCanvas'))` — pode causar flash ou falha silenciosa
+Além disso, o **`onFieldUpdate` com `'pagamentos'`** também é ignorado pelo banco (linha 533). Ou seja, toda a sincronização via `onPaymentUpdate` → `onFieldUpdate` é efetivamente um **no-op** que só afeta estado local temporário.
 
-## Plano de Correção
+### O verdadeiro bug
 
-### 1. `src/components/ui/card.tsx`
-Alinhar com Gallery — remover `.glass`, usar `bg-card backdrop-blur-xl`:
-```tsx
-"rounded-lg border bg-card text-card-foreground shadow-sm backdrop-blur-xl"
-```
+O `valor_pago` no banco **está correto** (R$ 245). O problema é que a UI do Workflow card lê de `session.valorPago` (formato string `"R$ 130,00"`) que vem do **cache local/localStorage** e não é atualizado corretamente após o re-fetch. O campo `pendente` no card é calculado como `total - valorPago`, e se `valorPago` estiver desatualizado, mostra R$ 115 pendente.
 
-### 2. `src/components/backgrounds/DashboardBackground.tsx`
-Reescrever para coincidir com Gallery:
-- Mover a cena 3D para dentro do mesmo arquivo (sem lazy load)
-- Aurora: trocar radial-gradient por linear-gradient com `inset-[-20%]` e classe `aurora-animate`
-- Detectar dark mode via MutationObserver no `document.documentElement` (como Gallery faz)
+A inconsistência visual é causada por **dois sistemas de dados concorrendo**: o Supabase (correto) e o localStorage/cache (desatualizado).
 
-### 3. `src/components/backgrounds/DashboardThreeCanvas.tsx`
-Remover arquivo separado. A lógica 3D vai direto no `DashboardBackground.tsx`, replicando exatamente:
-- `RING_CONFIGS` com `axis`, `period`, `direction` separados
-- `TorusRing` com rotação delta-based por eixo
-- `OrbitingSphere` como filho dos rings (não posição absoluta)
-- `OrbitalScene` como grupo wrapper
+## Sobre os itens marcados pelo usuário nas imagens
 
-### 4. `src/index.css`
-Adicionar classes CSS que faltam:
-```css
-.aurora-animate {
-  animation: aurora 20s ease infinite;
-}
-```
-As keyframes `aurora`, `eclipse-float`, `eclipse-float-reverse` já estão no arquivo — apenas a classe utilitária `.aurora-animate` falta.
+- **"Corrigir Valores do Histórico"**: botão de migração de dados antigos — pode ser removido ou escondido (já não é necessário rotineiramente)
+- **"Nenhuma sessão precisou ser corrigida"**: toast do botão acima — confirma que os dados do banco estão corretos
+- **Ícone vermelho com X**: esses itens de UI obsoletos devem ser limpos
 
-### 5. Manter `InternalBackground.tsx` e `Layout.tsx` como estão
-Estes estão corretos e alinhados com a especificação.
+## Correções Propostas
 
-## Arquivos
+### 1. Eliminar `onPaymentUpdate` → `onFieldUpdate` como mecanismo de sync (raiz do bug)
 
-**Modificar:**
-- `src/components/ui/card.tsx` — Trocar `.glass` por classes do Gallery
-- `src/components/backgrounds/DashboardBackground.tsx` — Reescrever com 3D inline, aurora linear-gradient, MutationObserver
-- `src/index.css` — Adicionar `.aurora-animate`
+O `valor_pago` já é mantido pelo trigger do banco. O frontend **não deve tentar setá-lo manualmente**. A UI do Workflow deve ler `valor_pago` diretamente do Supabase (já faz via WorkflowCacheContext).
 
-**Remover:**
-- `src/components/backgrounds/DashboardThreeCanvas.tsx` — Mover lógica para DashboardBackground
+**Arquivo**: `src/components/workflow/WorkflowCardCollapsed.tsx` e `WorkflowCardExpanded.tsx`
+- Remover o callback `onPaymentUpdate` que tenta setar `valorPago` via `onFieldUpdate`
+- Substituir por: apenas disparar um evento `payment-created` para forçar re-fetch do cache
+
+### 2. Forçar re-fetch após fechar modal de pagamentos
+
+**Arquivo**: `src/components/workflow/WorkflowCardCollapsed.tsx` e `WorkflowCardExpanded.tsx`
+- No `onClose` do `WorkflowPaymentsModal`, disparar `window.dispatchEvent(new CustomEvent('payment-created', { detail: { sessionId } }))` para forçar o `WorkflowCacheContext` a buscar dados frescos do banco
+
+### 3. Corrigir cálculo de `pendente` no card
+
+**Arquivo**: `src/components/workflow/WorkflowCardCollapsed.tsx`
+- O cálculo de `pendente` deve usar `valor_pago` do banco (campo numérico) em vez de parsear a string `session.valorPago`
+
+### 4. Limpar UI obsoleta no CRM
+
+**Arquivo**: `src/components/crm/WorkflowHistoryTable.tsx`
+- Remover ou esconder o botão "Corrigir Valores do Histórico" (já fez seu trabalho, não é necessário no dia a dia)
+
+### 5. Remover escrita de `valorPago` no localStorage do AppContext
+
+**Arquivo**: `src/contexts/AppContext.tsx` (linhas 862-912)
+- O bloco que atualiza `localStorage` com `valorPago` é redundante e causa dessincronização. Remover essa lógica — o Supabase é a fonte da verdade.
+
+## Resumo de Arquivos
+
+| Arquivo | Ação |
+|---------|------|
+| `src/components/workflow/WorkflowCardCollapsed.tsx` | Simplificar `onPaymentUpdate`, forçar re-fetch no close |
+| `src/components/workflow/WorkflowCardExpanded.tsx` | Mesma correção |
+| `src/contexts/AppContext.tsx` | Remover bloco localStorage de `addPayment` |
+| `src/components/crm/WorkflowHistoryTable.tsx` | Esconder botão "Corrigir Valores" |
+| `src/components/payments/SessionPaymentsManager.tsx` | Revisar useEffect de sync para não causar loops |
+
+## Sobre Escalabilidade
+
+A arquitetura atual (trigger SQL como fonte da verdade para `valor_pago`) é **correta e escalável**. O problema não é o banco — é o frontend tentando manter um estado paralelo via localStorage/callbacks que conflita com o dado real. A correção acima elimina essa duplicidade.
 
