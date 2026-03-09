@@ -212,7 +212,7 @@ function SortableChecklistItem({
         onDelete={onDelete}
         dragHandleProps={{ ...attributes, ...listeners }}
       />
-    </li>
+    </div>
   );
 }
 
