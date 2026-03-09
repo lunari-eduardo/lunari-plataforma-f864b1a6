@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
-import { Package, Box, Workflow, Shapes, DollarSign } from 'lucide-react';
+import { Package, Box, Workflow, Shapes, DollarSign, ClipboardList } from 'lucide-react';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { TableSyncStatus } from '@/components/ui/sync-indicator';
 import { useRealtimeConfiguration } from '@/hooks/useRealtimeConfiguration';
