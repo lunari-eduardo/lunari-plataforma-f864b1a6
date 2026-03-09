@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -149,6 +150,8 @@ export default function ChecklistPanel({
                 />
               ))}
             </SortableContext>
+          </DndContext>
+          {createPortal(
             <DragOverlay dropAnimation={null}>
               {activeTask ? (
                 <ChecklistItemContent
@@ -158,8 +161,9 @@ export default function ChecklistPanel({
                   isOverlay
                 />
               ) : null}
-            </DragOverlay>
-          </DndContext>
+            </DragOverlay>,
+            document.body
+          )}
 
           {/* Checked items (no DnD) */}
           {checked.map(item => (
