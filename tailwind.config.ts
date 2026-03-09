@@ -35,17 +35,14 @@ export default {
 				'1.25': '0.3125rem',
 				'2.25': '0.5625rem',
 			},
-			// Configuração editorial para tipografia do blog
 			typography: {
 				DEFAULT: {
 					css: {
-						// Espaçamento generoso para parágrafos
 						p: {
 							marginTop: '1.5em',
 							marginBottom: '1.5em',
 							lineHeight: '1.8',
 						},
-						// Hierarquia clara para títulos
 						h2: {
 							marginTop: '2.5em',
 							marginBottom: '1em',
@@ -56,7 +53,6 @@ export default {
 							marginBottom: '0.75em',
 							fontWeight: '600',
 						},
-						// Respiro visual generoso para imagens
 						figure: {
 							marginTop: '2.5em',
 							marginBottom: '2.5em',
@@ -66,18 +62,15 @@ export default {
 							textAlign: 'center',
 							fontStyle: 'italic',
 						},
-						// Imagens com espaçamento adequado
 						img: {
 							marginTop: '0',
 							marginBottom: '0',
 						},
-						// Blockquotes elegantes
 						blockquote: {
 							paddingLeft: '1.5em',
 							borderLeftWidth: '4px',
 							fontStyle: 'italic',
 						},
-						// Listas com espaçamento
 						ul: {
 							marginTop: '1.25em',
 							marginBottom: '1.25em',
@@ -94,66 +87,75 @@ export default {
 				},
 			},
 			colors: {
-				// Using HSL variables for proper theme switching
 				background: 'hsl(var(--background))',
 				foreground: 'hsl(var(--foreground))',
 				
-        // Cores lunares específicas
-        lunar: {
-          bg: 'hsl(var(--lunar-bg) / <alpha-value>)',
-          surface: 'hsl(var(--lunar-surface) / <alpha-value>)',
-          text: 'hsl(var(--lunar-text) / <alpha-value>)',
-          textSecondary: 'hsl(var(--lunar-textSecondary) / <alpha-value>)',
-          border: 'hsl(var(--lunar-border) / <alpha-value>)',
-          accent: 'hsl(var(--lunar-accent) / <alpha-value>)',
-          accentHover: 'hsl(var(--lunar-accentHover) / <alpha-value>)',
-          error: 'hsl(var(--lunar-error) / <alpha-value>)',
-          success: 'hsl(var(--lunar-success) / <alpha-value>)',
-          warning: 'hsl(var(--lunar-warning) / <alpha-value>)',
-        },
+				lunar: {
+					bg: 'hsl(var(--lunar-bg) / <alpha-value>)',
+					surface: 'hsl(var(--lunar-surface) / <alpha-value>)',
+					text: 'hsl(var(--lunar-text) / <alpha-value>)',
+					textSecondary: 'hsl(var(--lunar-textSecondary) / <alpha-value>)',
+					border: 'hsl(var(--lunar-border) / <alpha-value>)',
+					accent: 'hsl(var(--lunar-accent) / <alpha-value>)',
+					accentHover: 'hsl(var(--lunar-accentHover) / <alpha-value>)',
+					error: 'hsl(var(--lunar-error) / <alpha-value>)',
+					success: 'hsl(var(--lunar-success) / <alpha-value>)',
+					warning: 'hsl(var(--lunar-warning) / <alpha-value>)',
+				},
 
-        // Landing page colors
-        landing: {
-          bg: 'hsl(var(--landing-bg) / <alpha-value>)',
-          text: 'hsl(var(--landing-text) / <alpha-value>)',
-          accent: 'hsl(var(--landing-accent) / <alpha-value>)',
-          brand: 'hsl(var(--landing-brand) / <alpha-value>)',
-        },
+				landing: {
+					bg: 'hsl(var(--landing-bg) / <alpha-value>)',
+					text: 'hsl(var(--landing-text) / <alpha-value>)',
+					accent: 'hsl(var(--landing-accent) / <alpha-value>)',
+					brand: 'hsl(var(--landing-brand) / <alpha-value>)',
+				},
 
-        // Brand colors for components
-        brand: 'hsl(var(--brand) / <alpha-value>)',
-        'brand-foreground': 'hsl(var(--brand-foreground) / <alpha-value>)',
+				brand: 'hsl(var(--brand) / <alpha-value>)',
+				'brand-foreground': 'hsl(var(--brand-foreground) / <alpha-value>)',
 
-        // Cores específicas para tarefas (prioridades)
-        tasks: {
-          priority: {
-            high: 'hsl(var(--task-priority-high) / <alpha-value>)',
-            medium: 'hsl(var(--task-priority-medium) / <alpha-value>)',
-          },
-        },
+				tasks: {
+					priority: {
+						high: 'hsl(var(--task-priority-high) / <alpha-value>)',
+						medium: 'hsl(var(--task-priority-medium) / <alpha-value>)',
+					},
+				},
 
-        // Paleta monocromática elegante baseada no tema lunar
-        chart: {
-          primary: 'hsl(var(--chart-primary))',
-          secondary: 'hsl(var(--chart-secondary))',
-          tertiary: 'hsl(var(--chart-tertiary))',
-          quaternary: 'hsl(var(--chart-quaternary))',
-          quinary: 'hsl(var(--chart-quinary))',
-          senary: 'hsl(var(--chart-senary))',
-          revenue: 'hsl(var(--chart-revenue))',
-          expense: 'hsl(var(--chart-expense))',
-          profit: 'hsl(var(--chart-profit))',
-          neutral: 'hsl(var(--chart-neutral))',
-        },
-        
-        availability: 'hsl(var(--availability) / <alpha-value>)',
-        
-        border: 'hsl(var(--border) / <alpha-value>)',
+				terra: {
+					50: 'hsl(var(--terra-50))',
+					100: 'hsl(var(--terra-100))',
+					200: 'hsl(var(--terra-200))',
+					300: 'hsl(var(--terra-300))',
+					400: 'hsl(var(--terra-400))',
+					500: 'hsl(var(--terra-500))',
+					600: 'hsl(var(--terra-600))',
+					700: 'hsl(var(--terra-700))',
+					800: 'hsl(var(--terra-800))',
+					900: 'hsl(var(--terra-900))',
+				},
+
+				chart: {
+					primary: 'hsl(var(--chart-primary))',
+					secondary: 'hsl(var(--chart-secondary))',
+					tertiary: 'hsl(var(--chart-tertiary))',
+					quaternary: 'hsl(var(--chart-quaternary))',
+					quinary: 'hsl(var(--chart-quinary))',
+					senary: 'hsl(var(--chart-senary))',
+					revenue: 'hsl(var(--chart-revenue))',
+					expense: 'hsl(var(--chart-expense))',
+					profit: 'hsl(var(--chart-profit))',
+					neutral: 'hsl(var(--chart-neutral))',
+				},
+				
+				availability: 'hsl(var(--availability) / <alpha-value>)',
+				
+				border: 'hsl(var(--border) / <alpha-value>)',
 				input: 'hsl(var(--input))',
 				ring: 'hsl(var(--ring))',
 				primary: {
 					DEFAULT: 'hsl(var(--primary))',
-					foreground: 'hsl(var(--primary-foreground))'
+					foreground: 'hsl(var(--primary-foreground))',
+					hover: 'hsl(var(--primary-hover))',
+					glow: 'hsl(var(--primary-glow))',
 				},
 				secondary: {
 					DEFAULT: 'hsl(var(--secondary))',
@@ -200,6 +202,8 @@ export default {
 				'md': 'var(--shadow-md)',
 				'lg': 'var(--shadow-lg)',
 				'glow': 'var(--shadow-glow)',
+				'glass': 'var(--glass-shadow)',
+				'glass-hover': 'var(--glass-hover-shadow)',
 				'card-subtle': '0 1px 2px hsl(25 20% 15% / 0.03)',
 				'card-elevated': '0 6px 16px hsl(25 20% 15% / 0.06)',
 				'theme-subtle': '0 1px 2px hsl(25 20% 15% / 0.03)',
@@ -212,61 +216,42 @@ export default {
 			},
 			keyframes: {
 				'accordion-down': {
-					from: {
-						height: '0'
-					},
-					to: {
-						height: 'var(--radix-accordion-content-height)'
-					}
+					from: { height: '0' },
+					to: { height: 'var(--radix-accordion-content-height)' }
 				},
 				'accordion-up': {
-					from: {
-						height: 'var(--radix-accordion-content-height)'
-					},
-					to: {
-						height: '0'
-					}
+					from: { height: 'var(--radix-accordion-content-height)' },
+					to: { height: '0' }
 				},
 				'fade-in': {
-					'0%': {
-						opacity: '0',
-						transform: 'translateY(4px)'
-					},
-					'100%': {
-						opacity: '1',
-						transform: 'translateY(0)'
-					}
+					'0%': { opacity: '0', transform: 'translateY(4px)' },
+					'100%': { opacity: '1', transform: 'translateY(0)' }
 				},
 				'scale-in': {
-					'0%': {
-						transform: 'scale(0.98)',
-						opacity: '0'
-					},
-					'100%': {
-						transform: 'scale(1)',
-						opacity: '1'
-					}
+					'0%': { transform: 'scale(0.98)', opacity: '0' },
+					'100%': { transform: 'scale(1)', opacity: '1' }
 				},
 				appear: {
-					'0%': { 
-						opacity: '0', 
-						transform: 'translateY(10px)' 
-					},
-					'100%': { 
-						opacity: '1', 
-						transform: 'translateY(0)' 
-					}
+					'0%': { opacity: '0', transform: 'translateY(10px)' },
+					'100%': { opacity: '1', transform: 'translateY(0)' }
 				},
 				'appear-zoom': {
-					'0%': { 
-						opacity: '0', 
-						transform: 'scale(0.95)' 
-					},
-					'100%': { 
-						opacity: '1', 
-						transform: 'scale(1)' 
-					}
-				}
+					'0%': { opacity: '0', transform: 'scale(0.95)' },
+					'100%': { opacity: '1', transform: 'scale(1)' }
+				},
+				'eclipse-float': {
+					'0%, 100%': { transform: 'translateY(0)' },
+					'50%': { transform: 'translateY(-30px)' },
+				},
+				'eclipse-float-reverse': {
+					'0%, 100%': { transform: 'translateY(0)' },
+					'50%': { transform: 'translateY(30px)' },
+				},
+				'aurora': {
+					'0%, 100%': { transform: 'translate(0, 0) rotate(0deg)' },
+					'33%': { transform: 'translate(2%, -3%) rotate(2deg)' },
+					'66%': { transform: 'translate(-2%, 2%) rotate(-1deg)' },
+				},
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
@@ -274,7 +259,10 @@ export default {
 				'fade-in': 'fade-in 0.2s ease-out',
 				'scale-in': 'scale-in 0.2s ease-out',
 				appear: 'appear 0.5s ease-out forwards',
-				'appear-zoom': 'appear-zoom 0.5s ease-out forwards'
+				'appear-zoom': 'appear-zoom 0.5s ease-out forwards',
+				'eclipse-float': 'eclipse-float 25s ease-in-out infinite',
+				'eclipse-float-reverse': 'eclipse-float-reverse 35s ease-in-out infinite',
+				'aurora': 'aurora 20s ease-in-out infinite',
 			}
 		}
 	},

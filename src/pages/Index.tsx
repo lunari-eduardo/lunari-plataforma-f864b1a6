@@ -12,6 +12,7 @@ import { useAgenda } from "@/hooks/useAgenda";
 import { useProductionReminders } from "@/hooks/useProductionReminders";
 import { useDashboardMetrics } from "@/hooks/useDashboardMetrics";
 import { KPIGroupCard } from "@/components/dashboard/KPIGroupCard";
+import DashboardBackground from "@/components/backgrounds/DashboardBackground";
 
 export default function Index() {
   // SEO basics
@@ -38,7 +39,6 @@ export default function Index() {
   const { appointments } = useAgenda();
   const lembretesProducao = useProductionReminders();
   
-  // Métricas do dashboard via Supabase
   const {
     receitaMes,
     valorPrevisto,
@@ -49,7 +49,6 @@ export default function Index() {
     isLoading: metricsLoading
   } = useDashboardMetrics();
 
-  // Próximos agendamentos confirmados (top 3)
   const proximosAgendamentos = useMemo(() => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -84,78 +83,81 @@ export default function Index() {
   }, [appointments]);
 
   return (
-    <main className="space-y-6">
-      <InstallPWAButton />
-      
-      <section aria-label="Resumo do dia" className="animate-fade-in">
-        <DailyHero />
-      </section>
+    <>
+      <DashboardBackground />
+      <main className="space-y-6 relative z-10">
+        <InstallPWAButton />
+        
+        <section aria-label="Resumo do dia" className="animate-fade-in">
+          <DailyHero />
+        </section>
 
-      {/* Próximos Agendamentos + Lembretes de Produção */}
-      <section className="grid gap-6 grid-cols-1 lg:grid-cols-5 animate-fade-in">
-        <div className="lg:col-span-3">
-          <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300 h-full">
-            <CardHeader className="pb-3 flex flex-row items-center justify-between py-[6px]">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-brand-gradient">
-                  <Calendar className="h-5 w-5 text-white" />
+        {/* Próximos Agendamentos + Lembretes de Produção */}
+        <section className="grid gap-6 grid-cols-1 lg:grid-cols-5 animate-fade-in">
+          <div className="lg:col-span-3">
+            <Card className="rounded-2xl h-full">
+              <CardHeader className="pb-3 flex flex-row items-center justify-between py-[6px]">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-brand-gradient">
+                    <Calendar className="h-5 w-5 text-white" />
+                  </div>
+                  <CardTitle className="font-semibold text-base">Próximos Agendamentos</CardTitle>
                 </div>
-                <CardTitle className="font-semibold text-base">Próximos Agendamentos</CardTitle>
-              </div>
-              <Link to="/app/agenda">
-                <Button variant="ghost" size="sm">Ver todos</Button>
-              </Link>
-            </CardHeader>
-            <CardContent>
-              {proximosAgendamentos.length === 0 ? (
-                <div className="flex items-center justify-center py-[7px]">
-                  <p className="text-lunar-textSecondary text-xs">Nenhum agendamento confirmado</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {proximosAgendamentos.map(ev => (
-                    <div key={ev.id} className="border-b pb-3 last:border-b-0 last:pb-0">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <p className="font-medium text-xs">{ev.cliente}</p>
-                          <p className="text-lunar-textSecondary mt-0.5 text-2xs">{ev.tipo}</p>
-                        </div>
-                        <div className="text-right text-2xs text-lunar-textSecondary">
-                          <div>{ev.data.toLocaleDateString("pt-BR")}</div>
-                          <div className="mt-0.5">{ev.hora}</div>
+                <Link to="/app/agenda">
+                  <Button variant="ghost" size="sm">Ver todos</Button>
+                </Link>
+              </CardHeader>
+              <CardContent>
+                {proximosAgendamentos.length === 0 ? (
+                  <div className="flex items-center justify-center py-[7px]">
+                    <p className="text-muted-foreground text-xs">Nenhum agendamento confirmado</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {proximosAgendamentos.map(ev => (
+                      <div key={ev.id} className="border-b pb-3 last:border-b-0 last:pb-0">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="font-medium text-xs">{ev.cliente}</p>
+                            <p className="text-muted-foreground mt-0.5 text-2xs">{ev.tipo}</p>
+                          </div>
+                          <div className="text-right text-2xs text-muted-foreground">
+                            <div>{ev.data.toLocaleDateString("pt-BR")}</div>
+                            <div className="mt-0.5">{ev.hora}</div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-        
-        <div className="lg:col-span-2">
-          <ProductionRemindersCard lembretes={lembretesProducao} />
-        </div>
-      </section>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+          
+          <div className="lg:col-span-2">
+            <ProductionRemindersCard lembretes={lembretesProducao} />
+          </div>
+        </section>
 
-      {/* Critical Cards */}
-      <section className="grid gap-6 animate-fade-in auto-rows-auto lg:auto-rows-fr grid-cols-1 lg:grid-cols-2">
-        <div className="h-full"><FinancialRemindersCard /></div>
-        <div className="h-full"><HighPriorityDueSoonCard /></div>
-      </section>
+        {/* Critical Cards */}
+        <section className="grid gap-6 animate-fade-in auto-rows-auto lg:auto-rows-fr grid-cols-1 lg:grid-cols-2">
+          <div className="h-full"><FinancialRemindersCard /></div>
+          <div className="h-full"><HighPriorityDueSoonCard /></div>
+        </section>
 
-      {/* Indicadores principais - KPIs do Supabase */}
-      <section aria-label="Indicadores principais" className="animate-fade-in">
-        <KPIGroupCard
-          receitaMes={receitaMes}
-          metaMes={metaMes}
-          progressoMeta={progressoMeta}
-          topCategoria={topCategoria}
-          novosClientes60d={novosClientes60d}
-          valorPrevisto={valorPrevisto}
-          isLoading={metricsLoading}
-        />
-      </section>
-    </main>
+        {/* Indicadores principais */}
+        <section aria-label="Indicadores principais" className="animate-fade-in">
+          <KPIGroupCard
+            receitaMes={receitaMes}
+            metaMes={metaMes}
+            progressoMeta={progressoMeta}
+            topCategoria={topCategoria}
+            novosClientes60d={novosClientes60d}
+            valorPrevisto={valorPrevisto}
+            isLoading={metricsLoading}
+          />
+        </section>
+      </main>
+    </>
   );
 }
