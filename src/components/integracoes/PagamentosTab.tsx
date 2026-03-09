@@ -4,6 +4,7 @@ import { MercadoPagoCard, MercadoPagoCardRef } from './MercadoPagoCard';
 import { MercadoPagoSettingsModal, MercadoPagoSettings } from './MercadoPagoSettingsModal';
 import { InfinitePayCardNew, InfinitePayCardNewRef } from './InfinitePayCardNew';
 import { PixManualCard, PixManualCardRef, PixManualData } from './PixManualCard';
+import { AsaasCard, AsaasCardRef, AsaasSettings } from './AsaasCard';
 import { ProvedorPagamento } from './ActiveMethodRow';
 import { Separator } from '@/components/ui/separator';
 import {
