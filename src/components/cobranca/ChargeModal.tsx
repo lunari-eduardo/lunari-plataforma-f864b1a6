@@ -83,6 +83,33 @@ export function ChargeModal({
     }
   }, [isOpen, valorSugerido]);
 
+  // Fetch Asaas settings when provider is selected
+  useEffect(() => {
+    if (selectedProvider !== 'asaas') return;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from('usuarios_integracoes')
+        .select('dados_extras')
+        .eq('user_id', user.id)
+        .eq('provedor', 'asaas')
+        .eq('status', 'ativo')
+        .single();
+      if (data?.dados_extras) {
+        const d = data.dados_extras as Record<string, unknown>;
+        setAsaasSettings({
+          habilitarPix: d.habilitarPix !== false,
+          habilitarCartao: d.habilitarCartao !== false,
+          habilitarBoleto: d.habilitarBoleto === true,
+          maxParcelas: (d.maxParcelas as number) || 12,
+          absorverTaxa: d.absorverTaxa === true,
+          incluirTaxaAntecipacao: d.incluirTaxaAntecipacao !== false,
+        });
+      }
+    })();
+  }, [selectedProvider]);
+
   // Update valor when type changes
   useEffect(() => {
     if (valorType === 'total') {
