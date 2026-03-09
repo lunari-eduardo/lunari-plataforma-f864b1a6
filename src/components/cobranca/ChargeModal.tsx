@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,7 @@ import { useCobranca } from '@/hooks/useCobranca';
 import { Cobranca } from '@/types/cobranca';
 import { ChargeLinkSection } from './ChargeLinkSection';
 import { PixManualSection } from './PixManualSection';
+import { AsaasCheckoutSection, AsaasCheckoutSettings } from './AsaasCheckoutSection';
 import { ChargeHistory } from './ChargeHistory';
 import { ProviderSelector } from './ProviderSelector';
 import { SelectedProvider } from './ProviderRow';
@@ -43,6 +45,7 @@ export function ChargeModal({
   const [activeTab, setActiveTab] = useState<'cobrar' | 'historico'>('cobrar');
   const [checkingStatus, setCheckingStatus] = useState(false);
   const [currentChargeId, setCurrentChargeId] = useState<string | null>(null);
+  const [asaasSettings, setAsaasSettings] = useState<AsaasCheckoutSettings | null>(null);
   
   // Current charge state (after generation)
   const [currentCharge, setCurrentCharge] = useState<{
@@ -79,6 +82,33 @@ export function ChargeModal({
       setActiveTab('cobrar');
     }
   }, [isOpen, valorSugerido]);
+
+  // Fetch Asaas settings when provider is selected
+  useEffect(() => {
+    if (selectedProvider !== 'asaas') return;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from('usuarios_integracoes')
+        .select('dados_extras')
+        .eq('user_id', user.id)
+        .eq('provedor', 'asaas')
+        .eq('status', 'ativo')
+        .single();
+      if (data?.dados_extras) {
+        const d = data.dados_extras as Record<string, unknown>;
+        setAsaasSettings({
+          habilitarPix: d.habilitarPix !== false,
+          habilitarCartao: d.habilitarCartao !== false,
+          habilitarBoleto: d.habilitarBoleto === true,
+          maxParcelas: (d.maxParcelas as number) || 12,
+          absorverTaxa: d.absorverTaxa === true,
+          incluirTaxaAntecipacao: d.incluirTaxaAntecipacao !== false,
+        });
+      }
+    })();
+  }, [selectedProvider]);
 
   // Update valor when type changes
   useEffect(() => {
@@ -188,6 +218,7 @@ export function ChargeModal({
   // Show different sections based on provider
   const showLinkSection = selectedProvider === 'mercadopago_link' || selectedProvider === 'infinitepay';
   const showPixManualSection = selectedProvider === 'pix_manual';
+  const showAsaasSection = selectedProvider === 'asaas';
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -299,6 +330,27 @@ export function ChargeModal({
                     onGenerate={handleGenerateCharge}
                     onCheckStatus={currentChargeId ? handleCheckStatus : undefined}
                     clienteWhatsapp={clienteWhatsapp}
+                  />
+                )}
+
+                {showAsaasSection && asaasSettings && (
+                  <AsaasCheckoutSection
+                    valor={valor}
+                    clienteId={clienteId}
+                    sessionId={sessionId}
+                    descricao={descricao || undefined}
+                    settings={asaasSettings}
+                    clienteWhatsapp={clienteWhatsapp}
+                    onPaymentCreated={(result) => {
+                      setCurrentCharge({
+                        pixCopiaCola: result.pixCopiaECola,
+                        qrCodeBase64: result.pixQrCode,
+                        paymentLink: result.boletoUrl,
+                        status: result.paid ? 'pago' : 'pendente',
+                      });
+                      setCurrentChargeId(result.cobrancaId);
+                    }}
+                    loading={creatingCharge}
                   />
                 )}
 

@@ -23,6 +23,8 @@ export function IntegracoesTab() {
     infinitePayHandle,
     pixManualStatus,
     pixManualData,
+    asaasStatus,
+    asaasSettings,
     provedorPadrao,
     connectMercadoPago,
     disconnectMercadoPago,
@@ -32,6 +34,9 @@ export function IntegracoesTab() {
     disconnectInfinitePay,
     savePixManual,
     disconnectPixManual,
+    saveAsaas,
+    updateAsaasSettings,
+    disconnectAsaas,
     setProvedorPadrao,
   } = useIntegracoes();
 
@@ -155,6 +160,11 @@ export function IntegracoesTab() {
             pixManualData={pixManualData}
             onSavePixManual={savePixManual}
             onDisconnectPixManual={disconnectPixManual}
+            asaasStatus={asaasStatus}
+            asaasSettings={asaasSettings}
+            onSaveAsaas={saveAsaas}
+            onUpdateAsaasSettings={updateAsaasSettings}
+            onDisconnectAsaas={disconnectAsaas}
             provedorPadrao={provedorPadrao}
             onSetProvedorPadrao={setProvedorPadrao}
             loading={loading}

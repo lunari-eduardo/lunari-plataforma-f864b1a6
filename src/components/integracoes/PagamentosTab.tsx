@@ -230,6 +230,16 @@ export function PagamentosTab({
           onDisconnect={onDisconnectPixManual}
           loading={loading}
         />
+
+        <AsaasCard
+          ref={asaasRef}
+          status={asaasStatus}
+          settings={asaasSettings}
+          onSave={onSaveAsaas}
+          onUpdateSettings={onUpdateAsaasSettings}
+          onDisconnect={onDisconnectAsaas}
+          loading={loading}
+        />
       </div>
 
       {/* Instructions */}
@@ -238,11 +248,13 @@ export function PagamentosTab({
         <ul className="text-xs text-muted-foreground space-y-1">
           <li>• <strong>Mercado Pago:</strong> PIX e cartão com confirmação automática</li>
           <li>• <strong>InfinitePay:</strong> Checkout com confirmação automática</li>
+          <li>• <strong>Asaas:</strong> PIX, cartão e boleto com checkout transparente</li>
           <li>• <strong>PIX Manual:</strong> Você confirma os pagamentos manualmente</li>
           <li>• Defina um método padrão para novas cobranças</li>
           <li>• Os pagamentos vão direto para sua conta - o Lunari não processa valores</li>
         </ul>
       </div>
+
 
       {/* Disconnect Confirmation Dialog */}
       <AlertDialog
