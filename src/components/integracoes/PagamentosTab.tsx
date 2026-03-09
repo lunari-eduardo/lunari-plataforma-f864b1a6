@@ -123,10 +123,17 @@ export function PagamentosTab({
     });
   }
 
+  if (asaasStatus === 'conectado') {
+    activeMethods.push({
+      provedor: 'asaas',
+      info: asaasSettings?.environment === 'production' ? 'Produção' : 'Sandbox',
+      isPadrao: provedorPadrao === 'asaas',
+    });
+  }
+
   const handleEdit = useCallback((provedor: ProvedorPagamento) => {
     switch (provedor) {
       case 'mercadopago':
-        // Open settings modal instead of just scrolling
         setMpSettingsOpen(true);
         break;
       case 'infinitepay':
@@ -136,6 +143,10 @@ export function PagamentosTab({
       case 'pix_manual':
         pixManualRef.current?.scrollIntoView();
         pixManualRef.current?.setEditMode(true);
+        break;
+      case 'asaas':
+        asaasRef.current?.scrollIntoView();
+        asaasRef.current?.setEditMode(true);
         break;
     }
   }, []);
