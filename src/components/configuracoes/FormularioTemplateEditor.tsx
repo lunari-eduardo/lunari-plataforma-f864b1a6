@@ -44,12 +44,13 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useFormularioTemplates } from '@/hooks/useFormularioTemplates';
+import { useRealtimeConfiguration } from '@/hooks/useRealtimeConfiguration';
 import {
   FormularioTemplate,
   FormularioCampo,
   FormularioCampoTipo,
   CAMPO_TIPO_LABELS,
-  CATEGORIA_LABELS,
+  CAMPOS_SEM_PLACEHOLDER,
 } from '@/types/formulario';
 
 interface FormularioTemplateEditorProps {
@@ -75,9 +76,10 @@ export default function FormularioTemplateEditor({
   template,
 }: FormularioTemplateEditorProps) {
   const { createTemplate, updateTemplate, isCreating, isUpdating } = useFormularioTemplates();
+  const { categorias, isLoadingCategorias } = useRealtimeConfiguration();
   
   const [nome, setNome] = useState('');
-  const [categoria, setCategoria] = useState<FormularioTemplate['categoria']>('geral');
+  const [categoria, setCategoria] = useState('');
   const [descricao, setDescricao] = useState('');
   const [tempoEstimado, setTempoEstimado] = useState(3);
   const [campos, setCampos] = useState<FormularioCampo[]>([]);
@@ -100,7 +102,7 @@ export default function FormularioTemplateEditor({
         setCampos(template.campos);
       } else {
         setNome('');
-        setCategoria('geral');
+        setCategoria('');
         setDescricao('');
         setTempoEstimado(3);
         setCampos([]);
@@ -115,7 +117,6 @@ export default function FormularioTemplateEditor({
         const oldIndex = items.findIndex((i) => i.id === active.id);
         const newIndex = items.findIndex((i) => i.id === over.id);
         const newItems = arrayMove(items, oldIndex, newIndex);
-        // Update ordem field
         return newItems.map((item, idx) => ({ ...item, ordem: idx + 1 }));
       });
     }
@@ -131,7 +132,7 @@ export default function FormularioTemplateEditor({
       obrigatorio: false,
       opcoes: tipo === 'selecao_unica' || tipo === 'multipla_escolha' ? [''] : undefined,
     };
-    setCampos([...campos, newCampo]);
+    setCampos(prev => [...prev, newCampo]);
   };
 
   const updateCampo = (id: string, updates: Partial<FormularioCampo>) => {
@@ -147,7 +148,7 @@ export default function FormularioTemplateEditor({
     
     const data = {
       nome: nome.trim(),
-      categoria,
+      categoria: categoria || 'geral',
       descricao: descricao.trim() || undefined,
       tempo_estimado: tempoEstimado,
       campos,
@@ -166,7 +167,7 @@ export default function FormularioTemplateEditor({
   const isValid = nome.trim().length > 0;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange} modal={true}>
       <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>
@@ -189,18 +190,29 @@ export default function FormularioTemplateEditor({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="categoria">Categoria</Label>
-                <Select value={categoria} onValueChange={(v) => setCategoria(v as any)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(CATEGORIA_LABELS).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>
-                        {label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {isLoadingCategorias ? (
+                  <div className="h-10 bg-muted animate-pulse rounded-md" />
+                ) : (
+                  <Select value={categoria} onValueChange={setCategoria}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione uma categoria" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="geral">Geral</SelectItem>
+                      {categorias.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.nome}>
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="w-3 h-3 rounded-full shrink-0"
+                              style={{ backgroundColor: cat.cor }}
+                            />
+                            {cat.nome}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             </div>
 
@@ -232,7 +244,7 @@ export default function FormularioTemplateEditor({
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Label>Campos do formulário</Label>
-                <DropdownMenu>
+                <DropdownMenu modal={false}>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" className="gap-2">
                       <Plus className="h-4 w-4" />
@@ -240,7 +252,7 @@ export default function FormularioTemplateEditor({
                       <ChevronDown className="h-3 w-3" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
+                  <DropdownMenuContent align="end" className="z-[9999]">
                     {CAMPO_TIPOS.map((tipo) => (
                       <DropdownMenuItem key={tipo} onClick={() => addCampo(tipo)}>
                         {CAMPO_TIPO_LABELS[tipo]}
@@ -316,6 +328,8 @@ function SortableCampoItem({ campo, onUpdate, onRemove }: SortableCampoItemProps
     opacity: isDragging ? 0.5 : 1,
   };
 
+  const showPlaceholder = !CAMPOS_SEM_PLACEHOLDER.includes(campo.tipo);
+
   const handleOpcoesChange = (value: string, index: number) => {
     const newOpcoes = [...(campo.opcoes || [])];
     newOpcoes[index] = value;
@@ -373,7 +387,7 @@ function SortableCampoItem({ campo, onUpdate, onRemove }: SortableCampoItemProps
             </Button>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className={showPlaceholder ? "grid gap-3 sm:grid-cols-2" : ""}>
             <div className="space-y-1.5">
               <Label className="text-xs">Pergunta</Label>
               <Input
@@ -382,14 +396,16 @@ function SortableCampoItem({ campo, onUpdate, onRemove }: SortableCampoItemProps
                 placeholder="Ex: Qual seu nome?"
               />
             </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Placeholder</Label>
-              <Input
-                value={campo.placeholder || ''}
-                onChange={(e) => onUpdate({ placeholder: e.target.value })}
-                placeholder="Ex: Digite seu nome"
-              />
-            </div>
+            {showPlaceholder && (
+              <div className="space-y-1.5">
+                <Label className="text-xs">Placeholder</Label>
+                <Input
+                  value={campo.placeholder || ''}
+                  onChange={(e) => onUpdate({ placeholder: e.target.value })}
+                  placeholder="Ex: Digite seu nome"
+                />
+              </div>
+            )}
           </div>
 
           <div className="space-y-1.5">

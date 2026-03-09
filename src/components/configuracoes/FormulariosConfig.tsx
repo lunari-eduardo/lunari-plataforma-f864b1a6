@@ -212,7 +212,7 @@ function TemplateCard({ template, isSystem, onEdit, onDuplicate, onDelete }: Tem
             variant={isSystem ? 'default' : 'outline'} 
             className="ml-2 shrink-0 text-xs"
           >
-            {CATEGORIA_LABELS[template.categoria]}
+            {template.categoria}
           </Badge>
         </div>
       </CardHeader>

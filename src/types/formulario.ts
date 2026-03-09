@@ -25,7 +25,7 @@ export interface FormularioTemplate {
   id: string;
   user_id: string | null;
   nome: string;
-  categoria: 'gestante' | 'newborn' | 'familia' | 'casamento' | 'geral';
+  categoria: string;
   descricao: string | null;
   campos: FormularioCampo[];
   is_system: boolean;
@@ -57,7 +57,6 @@ export interface Formulario {
   expires_at: string | null;
   created_at: string;
   updated_at: string;
-  // Joins
   cliente?: {
     id: string;
     nome: string;
@@ -89,7 +88,7 @@ export interface FormularioCreateInput {
 
 export interface FormularioTemplateCreateInput {
   nome: string;
-  categoria: FormularioTemplate['categoria'];
+  categoria: string;
   descricao?: string;
   campos: FormularioCampo[];
   tempo_estimado?: number;
@@ -107,13 +106,13 @@ export const CAMPO_TIPO_LABELS: Record<FormularioCampoTipo, string> = {
   selecao_cores: 'Seleção de cores',
 };
 
-export const CATEGORIA_LABELS: Record<FormularioTemplate['categoria'], string> = {
-  gestante: 'Gestante',
-  newborn: 'Newborn',
-  familia: 'Família',
-  casamento: 'Casamento/Evento',
-  geral: 'Geral',
-};
+// Tipos de campo que NÃO precisam de placeholder
+export const CAMPOS_SEM_PLACEHOLDER: FormularioCampoTipo[] = [
+  'data',
+  'upload_imagem',
+  'upload_referencia',
+  'selecao_cores',
+];
 
 export const STATUS_ENVIO_LABELS: Record<FormularioStatusEnvio, string> = {
   nao_enviado: 'Não enviado',
