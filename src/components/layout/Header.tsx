@@ -81,7 +81,7 @@ export default function Header() {
         <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40" />
       )}
 
-      <header className="h-12 flex items-center justify-between px-4 bg-background/80 backdrop-blur-sm border-b border-border/50 relative z-50">
+      <header className="h-12 flex items-center justify-between px-4 backdrop-blur-xl bg-white/40 dark:bg-background/60 border-b border-border/30 relative z-50">
         <div>
           <h1 className="text-sm font-semibold text-foreground">{currentTitle}</h1>
         </div>
@@ -120,7 +120,7 @@ export default function Header() {
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 bg-popover shadow-lg border border-border/50">
+            <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuLabel className="text-xs text-foreground">
                 {currentProfile.nome || currentProfile.empresa || 'Minha Conta'}
               </DropdownMenuLabel>

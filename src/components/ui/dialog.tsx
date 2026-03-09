@@ -40,7 +40,6 @@ const DialogContent = React.forwardRef<React.ElementRef<typeof DialogPrimitive.C
 }, ref) => {
   const [hasOpenDropdown, setHasOpenDropdown] = React.useState(false);
 
-  // Auto-cleanup when dialog state changes
   React.useEffect(() => {
     return () => {
       setHasOpenDropdown(false);
@@ -48,13 +47,11 @@ const DialogContent = React.forwardRef<React.ElementRef<typeof DialogPrimitive.C
   }, []);
 
   const handleInteractOutside = React.useCallback((event: any) => {
-    // Don't close modal if there's an open dropdown inside it
     if (hasOpenDropdown) {
       event.preventDefault();
       return;
     }
 
-    // Use composedPath to detect clicks in Portals (works across shadow DOM boundaries)
     const path = (event.nativeEvent?.composedPath?.() || event.composedPath?.() || []) as Element[];
     const isInsidePopover = path.some((el: Element) => {
       if (el instanceof HTMLElement) {
@@ -74,19 +71,17 @@ const DialogContent = React.forwardRef<React.ElementRef<typeof DialogPrimitive.C
       return;
     }
 
-    // Longer delay to ensure selection events complete
     setTimeout(() => {
       props.onInteractOutside?.(event);
     }, 200);
   }, [hasOpenDropdown, props]);
 
-  // Provide context for tracking dropdown state
   const contextValue = React.useMemo(() => ({
     setHasOpenDropdown
   }), []);
   return <DialogPortal>
       <DialogOverlay hasOpenDropdown={hasOpenDropdown} />
-      <DialogPrimitive.Content ref={ref} className={cn("fixed left-1/2 top-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 border bg-background p-6 shadow-lg sm:rounded-lg outline-none focus:outline-none max-h-[85vh] overflow-auto scrollbar-elegant data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0", className)} onInteractOutside={handleInteractOutside} {...props}>
+      <DialogPrimitive.Content ref={ref} className={cn("fixed left-1/2 top-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 border border-border/50 p-6 shadow-lg backdrop-blur-xl bg-popover sm:rounded-lg outline-none focus:outline-none max-h-[85vh] overflow-auto scrollbar-elegant data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0", className)} onInteractOutside={handleInteractOutside} {...props}>
         <DialogDropdownContext.Provider value={contextValue}>
           {children}
         </DialogDropdownContext.Provider>

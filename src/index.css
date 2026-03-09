@@ -11,14 +11,14 @@
   }
 
   :root {
-    --lunar-bg: 0 0% 100%;            /* #FFFFFF */
-    --lunar-surface: 0 0% 100%;       /* #FFFFFF */
-    --lunar-text: 25 20% 15%;         /* #302720 warm brown */
-    --lunar-textSecondary: 25 10% 45%; /* #7A7068 warm gray */
-    --lunar-border: 220 10% 90%;      /* #E3E5E8 cool gray */
-    --lunar-accent: 18 55% 55%;       /* #C47A50 terracotta */
+    --lunar-bg: 0 0% 100%;
+    --lunar-surface: 0 0% 100%;
+    --lunar-text: 25 20% 15%;
+    --lunar-textSecondary: 25 10% 45%;
+    --lunar-border: 220 10% 90%;
+    --lunar-accent: 18 55% 55%;
     --lunar-accentHover: 18 55% 48%;
-    --lunar-error: 0 72% 51%;         /* #E02424 */
+    --lunar-error: 0 72% 51%;
     --lunar-success: 150 53% 55%;
     --lunar-warning: 42 35% 62%;
 
@@ -43,34 +43,58 @@
     --brand-gradient-start: 210 90% 60%;
     --brand-gradient-end: 224 76% 52%;
     
-    /* Shadcn compatible variables — Gallery palette */
-    --background: 0 0% 100%;          /* #FFFFFF */
-    --foreground: 25 20% 15%;         /* #302720 warm brown */
-    --muted: 220 10% 95%;             /* #F1F2F3 cool gray */
-    --muted-foreground: 25 10% 45%;   /* #7A7068 warm gray */
-    --popover: 0 0% 100%;
-    --popover-foreground: 25 20% 15%;
-    --card: 0 0% 100%;
-    --card-foreground: 25 20% 15%;
-    --border: 220 10% 90%;            /* #E3E5E8 cool gray */
-    --input: 220 10% 90%;
-    --primary: 18 55% 55%;            /* #C47A50 terracotta */
-    --primary-hover: 18 55% 48%;
-    --primary-foreground: 0 0% 100%;
+    /* Shadcn compatible — Premium Glassmorphism palette */
+    --background: 30 40% 96%;
+    --foreground: 20 20% 12%;
+    --muted: 30 15% 90%;
+    --muted-foreground: 20 10% 45%;
+    --popover: 30 30% 98% / 0.42;
+    --popover-foreground: 20 20% 12%;
+    --card: 30 30% 98% / 0.38;
+    --card-foreground: 20 20% 12%;
+    --border: 30 30% 80%;
+    --input: 30 30% 80%;
+    --primary: 19 49% 45%;
+    --primary-hover: 24 35% 59%;
+    --primary-glow: 19 49% 60%;
+    --primary-foreground: 30 30% 98%;
     --lunar-accent-foreground: 0 0% 100%;
-    --secondary: 220 10% 50%;         /* #737D88 gray */
-    --secondary-foreground: 0 0% 100%;
-    --accent: 25 60% 95%;             /* #FDF3EB warm bg */
-    --accent-foreground: 25 50% 35%;  /* #8B5E2B */
-    --destructive: 0 72% 51%;         /* #E02424 */
+    --secondary: 30 20% 92%;
+    --secondary-foreground: 20 15% 25%;
+    --accent: 19 49% 45%;
+    --accent-foreground: 30 30% 98%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --ring: 18 55% 55%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 20 20% 12%;
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --ring: 19 49% 45%;
+    --radius: 0.625rem;
+
+    /* Escala terra-cota */
+    --terra-50: 30 40% 95%;
+    --terra-100: 28 38% 88%;
+    --terra-200: 26 35% 78%;
+    --terra-300: 24 35% 68%;
+    --terra-400: 24 35% 59%;
+    --terra-500: 19 49% 45%;
+    --terra-600: 16 55% 40%;
+    --terra-700: 14 52% 33%;
+    --terra-800: 12 50% 26%;
+    --terra-900: 10 45% 20%;
+
+    /* Glass tokens */
+    --glass-bg: 0 0% 100% / 0.55;
+    --glass-border: 0 0% 100% / 0.60;
+    --glass-shadow: 0 8px 25px rgba(0,0,0,0.06), 0 2px 6px rgba(0,0,0,0.04);
+    --glass-hover-shadow: 0 8px 32px rgba(194, 149, 106, 0.15);
 
     /* Shadow system */
-    --shadow-sm: 0 1px 2px hsl(25 20% 15% / 0.03);
-    --shadow-md: 0 3px 8px hsl(25 20% 15% / 0.04);
-    --shadow-lg: 0 6px 16px hsl(25 20% 15% / 0.06);
-    --shadow-glow: 0 0 30px hsl(18 55% 55% / 0.15);
+    --shadow-sm: 0 1px 2px hsl(20 20% 12% / 0.03);
+    --shadow-md: 0 3px 8px hsl(20 20% 12% / 0.04);
+    --shadow-lg: 0 6px 16px hsl(20 20% 12% / 0.06);
+    --shadow-glow: 0 0 30px hsl(19 49% 45% / 0.15);
 
     /* Paleta fixa baseada no tema terracotta */
     --chart-primary: 18 55% 55%;
@@ -83,7 +107,7 @@
     --chart-expense: 15 37% 20%;
     --chart-profit: 18 55% 55%;
     --chart-neutral: 19 23% 74%;
-}
+  }
 }
 
 @layer base {
@@ -135,11 +159,11 @@
   }
 
   .dark {
-    --lunar-bg: 0 0% 7%;
-    --lunar-surface: 0 0% 11%;
-    --lunar-text: 0 0% 96%;
-    --lunar-textSecondary: 0 0% 65%;
-    --lunar-border: 0 0% 20%;
+    --lunar-bg: 20 15% 6%;
+    --lunar-surface: 20 12% 10%;
+    --lunar-text: 30 15% 95%;
+    --lunar-textSecondary: 30 10% 55%;
+    --lunar-border: 20 15% 20%;
     --lunar-accent: var(--primary);
     --lunar-accentHover: var(--primary);
     --lunar-error: 0 72% 55%;
@@ -150,34 +174,41 @@
     --brand: 31 97% 72%;
     --brand-foreground: 27 96% 61%;
 
-    /* Shadcn-compatible variables for dark mode */
-    --background: 0 0% 7%;
-    --foreground: 0 0% 96%;
-    --muted: 0 0% 11%;
-    --muted-foreground: 0 0% 65%;
-    --popover: 0 0% 11%;
-    --popover-foreground: 0 0% 96%;
-    --card: 0 0% 11%;
-    --card-foreground: 0 0% 96%;
-    --border: 0 0% 20%;
-    --input: 0 0% 15%;
-    --primary: var(--lunar-accent);
-    --primary-hover: 18 55% 48%;
-    --primary-foreground: 0 0% 100%;
+    /* Shadcn-compatible variables for dark mode — Premium Glassmorphism */
+    --background: 20 15% 6%;
+    --foreground: 30 15% 95%;
+    --muted: 20 10% 15%;
+    --muted-foreground: 30 10% 55%;
+    --popover: 20 12% 10%;
+    --popover-foreground: 30 15% 95%;
+    --card: 20 12% 10% / 0.4;
+    --card-foreground: 30 15% 95%;
+    --border: 20 15% 20%;
+    --input: 20 15% 20%;
+    --primary: 19 49% 45%;
+    --primary-hover: 24 35% 59%;
+    --primary-glow: 19 49% 35%;
+    --primary-foreground: 30 30% 98%;
     --lunar-accent-foreground: 0 0% 100%;
-    --secondary: 0 0% 18%;
-    --secondary-foreground: 0 0% 96%;
-    --accent: 0 0% 14%;
-    --accent-foreground: 0 0% 96%;
+    --secondary: 20 10% 15%;
+    --secondary-foreground: 30 15% 95%;
+    --accent: 20 10% 14%;
+    --accent-foreground: 30 15% 95%;
     --destructive: 0 72% 45%;
     --destructive-foreground: 0 0% 100%;
-    --ring: var(--lunar-accent);
+    --ring: 19 49% 45%;
+
+    /* Glass tokens dark */
+    --glass-bg: 0 0% 100% / 0.03;
+    --glass-border: 0 0% 100% / 0.05;
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    --glass-hover-shadow: 0 8px 32px rgba(194, 149, 106, 0.08);
 
     /* Shadow system (dark) */
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.1);
     --shadow-md: 0 3px 8px rgba(0, 0, 0, 0.15);
     --shadow-lg: 0 6px 16px rgba(0, 0, 0, 0.2);
-    --shadow-glow: 0 0 30px hsl(18 55% 55% / 0.1);
+    --shadow-glow: 0 0 30px hsl(19 49% 45% / 0.1);
 
     /* Gradientes modernos */
     --gradient-brand: linear-gradient(135deg, hsl(var(--lunar-accent)), hsl(var(--lunar-accent) / 0.8));
@@ -204,15 +235,17 @@
   }
 
   body {
-    @apply bg-lunar-bg text-lunar-text font-sans antialiased text-sm;
+    @apply font-sans antialiased text-sm;
     font-family: 'Inter', sans-serif;
     font-weight: 400;
-    background: linear-gradient(180deg, hsl(var(--lunar-bg)) 0%, hsl(var(--lunar-surface)) 100%);
+    color: hsl(var(--foreground));
+    background: hsl(var(--background));
     min-height: 100vh;
   }
   
   h1, h2, h3, h4, h5, h6 {
-    @apply font-medium text-lunar-text;
+    @apply font-medium;
+    color: hsl(var(--foreground));
   }
   
   h1 { @apply text-base font-semibold; }
@@ -227,16 +260,49 @@
     .mobile-zoom {
       transform: scale(0.75);
       transform-origin: top left;
-      width: 133.33%; /* Compensate for 0.75 scale */
+      width: 133.33%;
       height: 133.33%;
     }
+  }
+
+  /* Global scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(24 35% 59% / 0.3);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(24 35% 59% / 0.5);
   }
 }
 
 @layer components {
+  /* Glass utility */
+  .glass {
+    @apply backdrop-blur-xl rounded-2xl border transition-all duration-300;
+    background: hsl(var(--glass-bg)) !important;
+    border-color: hsl(var(--glass-border));
+    box-shadow: var(--glass-shadow);
+  }
+
+  :root:not(.dark) .glass {
+    background: linear-gradient(180deg, hsl(0 0% 100% / 0.75), hsl(0 0% 100% / 0.45)) !important;
+  }
+
+  .glass:hover {
+    box-shadow: var(--glass-hover-shadow);
+  }
+
   /* Lunar Card */
   .card-lunar {
-    @apply bg-lunar-surface rounded-xl p-4 border border-lunar-border/50;
+    @apply rounded-xl p-4 border border-border/50;
+    background: hsl(var(--glass-bg));
+    backdrop-filter: blur(16px);
     box-shadow: var(--shadow-sm);
     transition: all 0.2s ease-out;
   }
@@ -244,16 +310,17 @@
   /* Gallery-style card with gradient */
   .lunari-card {
     @apply border border-border/50 rounded-xl;
-    background: linear-gradient(180deg, #FFFFFF 0%, #F7F8F9 100%);
+    background: hsl(var(--glass-bg));
+    backdrop-filter: blur(16px);
     box-shadow: var(--shadow-sm);
     transition: all 0.2s ease-out;
   }
   .lunari-card:hover {
     transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--glass-hover-shadow);
   }
   .dark .lunari-card {
-    background: linear-gradient(180deg, hsl(var(--card)) 0%, hsl(var(--lunar-bg)) 100%);
+    background: hsl(var(--glass-bg));
   }
   
   /* Brand utilities */
@@ -264,26 +331,28 @@
     box-shadow: 0 8px 24px -12px hsl(var(--brand-gradient-end) / 0.35);
   }
 
-  /* Hover effects removed globally - card-lunar */
-
   /* Lunar Button */
   .btn-lunar {
-    @apply bg-lunar-accent rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 ease-out;
-    color: hsl(var(--lunar-accent-foreground));
+    @apply rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 ease-out;
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
     box-shadow: var(--shadow-sm);
   }
 
   .btn-lunar:hover {
-    @apply bg-lunar-accentHover shadow-lunar-hover transform translate-y-[-1px];
+    background: hsl(var(--primary-hover));
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
   }
 
   .btn-lunar:active {
-    @apply transform translate-y-0;
+    transform: translateY(0);
   }
 
   /* Lunar Input */
   .input-lunar {
-    @apply bg-background text-lunar-text rounded-lg px-4 py-2.5 text-sm w-full border border-input transition-all duration-200;
+    @apply bg-background rounded-lg px-4 py-2.5 text-sm w-full border border-input transition-all duration-200;
+    color: hsl(var(--foreground));
   }
 
   /* Dropdown com fundo sólido garantido */
@@ -293,17 +362,14 @@
     -webkit-backdrop-filter: blur(0px);
   }
 
-  /* Garantir opacidade em itens sempre */
   .dropdown-solid-item {
     background-color: hsl(var(--popover)) !important;
   }
 
-  /* Garantir opacidade em itens hover */
   .dropdown-solid-item:hover {
     background-color: hsl(var(--accent)) !important;
   }
 
-  /* Garantir opacidade em headers de categoria */
   .dropdown-solid-header {
     background-color: hsl(var(--muted)) !important;
     border: 1px solid transparent;
@@ -311,43 +377,48 @@
   }
 
   .input-lunar:focus {
-    @apply ring-1 ring-lunar-accent border-lunar-accent;
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(203, 169, 119, 0.1);
+    @apply ring-1 border-primary;
+    ring-color: hsl(var(--primary));
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05), 0 0 0 1px hsl(var(--primary) / 0.1);
   }
 
   .input-lunar::placeholder {
-    @apply text-lunar-textSecondary opacity-50;
+    color: hsl(var(--muted-foreground));
+    opacity: 0.5;
   }
 
   /* Lunar Navigation */
   .nav-item-lunar {
-    @apply flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-all duration-150 text-lunar-text;
+    @apply flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-all duration-150;
+    color: hsl(var(--foreground));
     background: transparent;
   }
 
-  /* Hover effects removed globally - nav-item-lunar */
-
   .nav-item-lunar.active {
-    @apply text-lunar-accent bg-lunar-surface;
-    box-shadow: inset 0 1px 2px rgba(203, 169, 119, 0.1);
+    color: hsl(var(--primary));
+    background: hsl(var(--glass-bg));
+    box-shadow: inset 0 1px 2px hsl(var(--primary) / 0.1);
   }
 
   /* Lunar Table */
   .table-lunar {
-    @apply bg-lunar-surface rounded-md overflow-hidden shadow-lunar-sm border border-lunar-border/50;
+    @apply rounded-md overflow-hidden border border-border/50;
+    background: hsl(var(--glass-bg));
+    backdrop-filter: blur(16px);
+    box-shadow: var(--shadow-sm);
   }
 
   .table-lunar th {
-    @apply bg-lunar-bg text-lunar-text font-medium py-2 px-3 text-xs;
-    background: linear-gradient(180deg, hsl(var(--lunar-bg)) 0%, hsl(var(--lunar-surface)) 100%);
-    border-bottom: 1px solid rgba(225, 223, 218, 0.5);
+    @apply font-medium py-2 px-3 text-xs;
+    color: hsl(var(--foreground));
+    background: hsl(var(--background) / 0.5);
+    border-bottom: 1px solid hsl(var(--border) / 0.5);
   }
 
   .table-lunar td {
-    @apply py-2 px-3 text-xs text-lunar-text;
+    @apply py-2 px-3 text-xs;
+    color: hsl(var(--foreground));
   }
-
-  /* Hover effects removed globally - table row highlight */
 
   /* Utilidades de espaçamento compacto */
   .space-compact > * + * {
@@ -373,11 +444,9 @@
   }
 
   /* Scrollbars Elegantes Padronizadas */
-  
-  /* Scrollbar Principal - Elegante e Minimalista */
   .scrollbar-elegant {
     scrollbar-width: thin;
-    scrollbar-color: hsl(var(--lunar-accent) / 0.12) transparent;
+    scrollbar-color: hsl(24 35% 59% / 0.3) transparent;
   }
 
   .scrollbar-elegant::-webkit-scrollbar {
@@ -391,19 +460,19 @@
   }
 
   .scrollbar-elegant::-webkit-scrollbar-thumb {
-    background: hsl(var(--lunar-accent) / 0.15);
+    background: hsl(24 35% 59% / 0.3);
     border-radius: 2px;
     transition: all 0.2s ease;
   }
 
   .scrollbar-elegant::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--lunar-accent) / 0.3);
+    background: hsl(24 35% 59% / 0.5);
   }
 
-  /* Scrollbar Minimal - Super Sutil */
+  /* Scrollbar Minimal */
   .scrollbar-minimal {
     scrollbar-width: thin;
-    scrollbar-color: hsl(var(--lunar-accent) / 0.08) transparent;
+    scrollbar-color: hsl(24 35% 59% / 0.15) transparent;
   }
 
   .scrollbar-minimal::-webkit-scrollbar {
@@ -416,19 +485,19 @@
   }
 
   .scrollbar-minimal::-webkit-scrollbar-thumb {
-    background: hsl(var(--lunar-accent) / 0.1);
+    background: hsl(24 35% 59% / 0.15);
     border-radius: 1px;
     transition: all 0.2s ease;
   }
 
   .scrollbar-minimal::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--lunar-accent) / 0.2);
+    background: hsl(24 35% 59% / 0.3);
   }
 
-  /* Scrollbar Kanban - Para Drag & Drop */
+  /* Scrollbar Kanban */
   .scrollbar-kanban {
     scrollbar-width: thin;
-    scrollbar-color: hsl(var(--lunar-accent) / 0.1) transparent;
+    scrollbar-color: hsl(24 35% 59% / 0.2) transparent;
   }
 
   .scrollbar-kanban::-webkit-scrollbar {
@@ -437,26 +506,26 @@
   }
 
   .scrollbar-kanban::-webkit-scrollbar-track {
-    background: hsl(var(--lunar-surface) / 0.2);
+    background: transparent;
     border-radius: 3px;
     margin: 2px;
   }
 
   .scrollbar-kanban::-webkit-scrollbar-thumb {
-    background: hsl(var(--lunar-accent) / 0.2);
+    background: hsl(24 35% 59% / 0.2);
     border-radius: 3px;
     transition: all 0.2s ease;
   }
 
   .scrollbar-kanban::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--lunar-accent) / 0.35);
+    background: hsl(24 35% 59% / 0.4);
   }
 
   .scrollbar-kanban::-webkit-scrollbar-corner {
     background: transparent;
   }
 
-  /* Scrollbar None - Para ocultar completamente */
+  /* Scrollbar None */
   .scrollbar-none {
     scrollbar-width: none;
     -ms-overflow-style: none;
@@ -466,10 +535,10 @@
     display: none;
   }
 
-  /* Compatibilidade com classes antigas */
+  /* Compat */
   .scrollbar-lunar {
     scrollbar-width: thin;
-    scrollbar-color: hsl(var(--lunar-accent) / 0.12) transparent;
+    scrollbar-color: hsl(24 35% 59% / 0.2) transparent;
   }
 
   .scrollbar-lunar::-webkit-scrollbar {
@@ -483,13 +552,13 @@
   }
 
   .scrollbar-lunar::-webkit-scrollbar-thumb {
-    background: hsl(var(--lunar-accent) / 0.15);
+    background: hsl(24 35% 59% / 0.2);
     border-radius: 2px;
     transition: all 0.2s ease;
   }
 
   .scrollbar-lunar::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--lunar-accent) / 0.3);
+    background: hsl(24 35% 59% / 0.4);
   }
 
   /* Animações suaves */
@@ -499,10 +568,14 @@
 
   /* Toast lunar */
   .toast-lunar {
-    @apply bg-lunar-surface border-lunar-border text-lunar-text shadow-lunar-md;
+    @apply border text-foreground;
+    background: hsl(var(--glass-bg));
+    backdrop-filter: blur(16px);
+    border-color: hsl(var(--border));
+    box-shadow: var(--shadow-md);
   }
 
-  /* Estilo para input de data - ícone visível em ambos os temas */
+  /* Estilo para input de data */
   input[type="date"] {
     color-scheme: light dark;
   }
@@ -516,18 +589,6 @@
   .dark input[type="date"]::-webkit-calendar-picker-indicator {
     filter: invert(0.8);
   }
-
-  /* Global: neutralize heavy hover visuals without affecting layout transforms (EXCEPT for dashboard cards) */
-  *:not(.dashboard-card):not(.dashboard-card *):not(.dashboard-card-inner):not(.dashboard-card-inner *):not(.dashboard-badge):not(.dashboard-badge *):hover {
-    box-shadow: none !important;
-    filter: none !important;
-    text-decoration: none !important;
-  }
-  *:not(.dashboard-card):not(.dashboard-card *):not(.dashboard-card-inner):not(.dashboard-card-inner *):not(.dashboard-badge):not(.dashboard-badge *):hover::before,
-  *:not(.dashboard-card):not(.dashboard-card *):not(.dashboard-card-inner):not(.dashboard-card-inner *):not(.dashboard-badge):not(.dashboard-badge *):hover::after {
-    opacity: inherit !important;
-  }
-  /* page-tarefas legacy rules removed — now using .page-tarefas-modern */
 
   /* Custom scrollbar styles for kanban view */
   .overflow-x-auto::-webkit-scrollbar {
@@ -563,4 +624,11 @@
   .delay-1000 {
     animation-delay: 1000ms;
   }
+}
+
+/* Aurora animation */
+@keyframes aurora {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  33% { transform: translate(2%, -3%) rotate(2deg); }
+  66% { transform: translate(-2%, 2%) rotate(-1deg); }
 }
