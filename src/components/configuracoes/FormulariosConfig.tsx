@@ -17,7 +17,7 @@ import {
 import ConfigSectionHeader from './ConfigSectionHeader';
 import FormularioTemplateEditor from './FormularioTemplateEditor';
 import { useFormularioTemplates } from '@/hooks/useFormularioTemplates';
-import { FormularioTemplate, CATEGORIA_LABELS } from '@/types/formulario';
+import { FormularioTemplate } from '@/types/formulario';
 
 export default function FormulariosConfig() {
   const {
@@ -212,7 +212,7 @@ function TemplateCard({ template, isSystem, onEdit, onDuplicate, onDelete }: Tem
             variant={isSystem ? 'default' : 'outline'} 
             className="ml-2 shrink-0 text-xs"
           >
-            {CATEGORIA_LABELS[template.categoria]}
+            {template.categoria}
           </Badge>
         </div>
       </CardHeader>
