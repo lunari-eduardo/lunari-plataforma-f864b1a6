@@ -253,7 +253,7 @@ export function PagamentosTab({
           <li>• Defina um método padrão para novas cobranças</li>
           <li>• Os pagamentos vão direto para sua conta - o Lunari não processa valores</li>
         </ul>
-
+      </div>
 
 
       {/* Disconnect Confirmation Dialog */}
