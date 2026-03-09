@@ -304,6 +304,34 @@ export function ChargeModal({
                   />
                 )}
 
+                {showAsaasSection && (
+                  <AsaasCheckoutSection
+                    valor={valor}
+                    clienteId={clienteId}
+                    sessionId={sessionId}
+                    descricao={descricao || undefined}
+                    settings={{
+                      habilitarPix: true,
+                      habilitarCartao: true,
+                      habilitarBoleto: false,
+                      maxParcelas: 12,
+                      absorverTaxa: false,
+                      incluirTaxaAntecipacao: true,
+                    }}
+                    clienteWhatsapp={clienteWhatsapp}
+                    onPaymentCreated={(result) => {
+                      setCurrentCharge({
+                        pixCopiaCola: result.pixCopiaECola,
+                        qrCodeBase64: result.pixQrCode,
+                        paymentLink: result.boletoUrl,
+                        status: result.paid ? 'pago' : 'pendente',
+                      });
+                      setCurrentChargeId(result.cobrancaId);
+                    }}
+                    loading={creatingCharge}
+                  />
+                )}
+
                 {!selectedProvider && (
                   <div className="flex items-center justify-center h-[200px] text-muted-foreground text-sm">
                     Selecione um meio de cobrança acima
