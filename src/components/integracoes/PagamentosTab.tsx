@@ -175,7 +175,7 @@ export function PagamentosTab({
     }
 
     setDisconnectDialog({ open: false, provedor: null });
-  }, [disconnectDialog, onDisconnectMercadoPago, onDisconnectInfinitePay, onDisconnectPixManual]);
+  }, [disconnectDialog, onDisconnectMercadoPago, onDisconnectInfinitePay, onDisconnectPixManual, onDisconnectAsaas]);
 
   const provedorNames: Record<ProvedorPagamento, string> = {
     mercadopago: 'Mercado Pago',
