@@ -155,6 +155,11 @@ export function IntegracoesTab() {
             pixManualData={pixManualData}
             onSavePixManual={savePixManual}
             onDisconnectPixManual={disconnectPixManual}
+            asaasStatus={asaasStatus}
+            asaasSettings={asaasSettings}
+            onSaveAsaas={saveAsaas}
+            onUpdateAsaasSettings={updateAsaasSettings}
+            onDisconnectAsaas={disconnectAsaas}
             provedorPadrao={provedorPadrao}
             onSetProvedorPadrao={setProvedorPadrao}
             loading={loading}
