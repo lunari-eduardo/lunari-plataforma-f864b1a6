@@ -169,6 +169,9 @@ export function PagamentosTab({
       case 'pix_manual':
         await onDisconnectPixManual();
         break;
+      case 'asaas':
+        await onDisconnectAsaas();
+        break;
     }
 
     setDisconnectDialog({ open: false, provedor: null });
