@@ -40,6 +40,13 @@ interface PagamentosTabProps {
   onSavePixManual: (data: PixManualData) => Promise<void>;
   onDisconnectPixManual: () => Promise<void>;
   
+  // Asaas
+  asaasStatus: 'conectado' | 'desconectado';
+  asaasSettings?: AsaasSettings | null;
+  onSaveAsaas: (apiKey: string, settings: AsaasSettings) => Promise<void>;
+  onUpdateAsaasSettings?: (settings: AsaasSettings) => Promise<void>;
+  onDisconnectAsaas: () => Promise<void>;
+  
   // Padrão
   provedorPadrao: ProvedorPagamento | null;
   onSetProvedorPadrao: (provedor: ProvedorPagamento) => Promise<void>;
