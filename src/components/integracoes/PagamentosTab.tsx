@@ -84,7 +84,7 @@ export function PagamentosTab({
   const mercadoPagoRef = useRef<MercadoPagoCardRef>(null);
   const infinitePayRef = useRef<InfinitePayCardNewRef>(null);
   const pixManualRef = useRef<PixManualCardRef>(null);
-  
+  const asaasRef = useRef<AsaasCardRef>(null);
   const [disconnectDialog, setDisconnectDialog] = useState<{
     open: boolean;
     provedor: ProvedorPagamento | null;
