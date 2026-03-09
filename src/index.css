@@ -632,3 +632,13 @@
   33% { transform: translate(2%, -3%) rotate(2deg); }
   66% { transform: translate(-2%, 2%) rotate(-1deg); }
 }
+
+.aurora-animate {
+  animation: aurora 20s ease infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aurora-animate {
+    animation: none !important;
+  }
+}
