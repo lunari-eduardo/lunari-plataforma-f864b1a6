@@ -225,7 +225,7 @@ export function useIntegracoes(): UseIntegracoesReturn {
         }
       }
 
-      toast.success(`${provedor === 'mercadopago' ? 'Mercado Pago' : provedor === 'infinitepay' ? 'InfinitePay' : 'PIX Manual'} definido como padrão`);
+      toast.success(`${provedor === 'mercadopago' ? 'Mercado Pago' : provedor === 'infinitepay' ? 'InfinitePay' : provedor === 'asaas' ? 'Asaas' : 'PIX Manual'} definido como padrão`);
       await fetchIntegracoes();
     } catch (error) {
       console.error('[useIntegracoes] Set default error:', error);

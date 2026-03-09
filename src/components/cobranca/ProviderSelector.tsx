@@ -100,6 +100,26 @@ export function ProviderSelector({ selectedProvider, onSelect }: ProviderSelecto
         });
       }
 
+      // Check for Asaas
+      const asaas = integrationData.find(i => i.provedor === 'asaas');
+      if (asaas) {
+        const settings = asaas.dados_extras || {};
+        const isDefault = settings.is_default === true;
+        const methods: string[] = [];
+        if (settings.habilitarPix !== false) methods.push('Pix');
+        if (settings.habilitarCartao !== false) methods.push('Cartão');
+        if (settings.habilitarBoleto === true) methods.push('Boleto');
+
+        available.push({
+          id: 'asaas',
+          name: 'Asaas',
+          description: methods.join(' + ') || 'Checkout transparente',
+          logo: asaasLogo,
+          isDefault,
+          provedor: 'asaas',
+        });
+      }
+
       setProviders(available);
 
       // Auto-select default provider if nothing selected
