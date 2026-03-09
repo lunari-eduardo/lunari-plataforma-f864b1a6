@@ -205,7 +205,7 @@ function SortableChecklistItem({
   };
 
   return (
-    <li ref={setNodeRef} style={style}>
+    <div ref={setNodeRef} style={style}>
       <ChecklistItemContent
         item={item}
         onToggle={onToggle}
