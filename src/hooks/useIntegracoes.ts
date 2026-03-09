@@ -63,6 +63,13 @@ interface UseIntegracoesReturn {
   savePixManual: (data: PixManualData) => Promise<void>;
   disconnectPixManual: () => Promise<void>;
   
+  // Asaas
+  asaasStatus: 'conectado' | 'desconectado';
+  asaasSettings: AsaasSettings | null;
+  saveAsaas: (apiKey: string, settings: AsaasSettings) => Promise<void>;
+  updateAsaasSettings: (settings: AsaasSettings) => Promise<void>;
+  disconnectAsaas: () => Promise<void>;
+  
   // Padrão e geral
   provedorAtivo: ProvedorPagamentoAtivo;
   provedorPadrao: ProvedorPagamento | null;
