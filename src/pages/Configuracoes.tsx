@@ -12,6 +12,7 @@ import Pacotes from '@/components/configuracoes/Pacotes';
 import Produtos from '@/components/configuracoes/Produtos';
 import FluxoTrabalho from '@/components/configuracoes/FluxoTrabalho';
 import PrecificacaoFotos from '@/components/configuracoes/PrecificacaoFotos';
+import FormulariosConfig from '@/components/configuracoes/FormulariosConfig';
 
 export default function Configuracoes() {
   const configuration = useRealtimeConfiguration();
