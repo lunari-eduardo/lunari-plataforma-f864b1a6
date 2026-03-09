@@ -17,8 +17,18 @@ interface Integracao {
   is_default?: boolean;
 }
 
-export type ProvedorPagamento = 'mercadopago' | 'infinitepay' | 'pix_manual';
+export type ProvedorPagamento = 'mercadopago' | 'infinitepay' | 'pix_manual' | 'asaas';
 export type ProvedorPagamentoAtivo = ProvedorPagamento | null;
+
+export interface AsaasSettings {
+  environment: 'sandbox' | 'production';
+  habilitarPix: boolean;
+  habilitarCartao: boolean;
+  habilitarBoleto: boolean;
+  maxParcelas: number;
+  absorverTaxa: boolean;
+  incluirTaxaAntecipacao: boolean;
+}
 
 export interface MercadoPagoSettings {
   habilitarPix: boolean;
