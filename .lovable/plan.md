@@ -1,80 +1,62 @@
 
 
-# Diagnóstico: Pagamento de R$115 Reaparecendo como Pendente
+# Correção do Editor de Templates de Formulários
 
-## Causa Raiz Identificada
+## Problemas Identificados
 
-O problema está na **cadeia de callbacks `onPaymentUpdate`** no Workflow. Quando o pagamento rápido de R$130 é adicionado:
+1. **Categorias hardcoded** — O select de categoria usa `CATEGORIA_LABELS` fixo. Deve usar as categorias salvas pelo usuário na tabela `categorias`.
+2. **Campo "Data" mostra placeholder desnecessário** — Campos do tipo `data` não precisam de input de placeholder (é um date picker).
+3. **Dropdown "Adicionar campo" não funciona** — O `DropdownMenu` dentro de `Dialog > ScrollArea` tem problema de portal/z-index. Precisa de ajuste.
+4. **Templates do sistema com dados incompletos** — Os exemplos do Casamento não incluem endereço da cerimônia/festa conforme solicitado.
 
-1. **`addPayment` no AppContext** (linha 810) insere a transação de R$130 no Supabase via `PaymentSupabaseService.saveSinglePaymentTracked`
-2. O trigger `recompute_session_paid` recalcula `valor_pago` = 130 + 115 = **R$ 245,00** ✅
-3. O evento `payment-created` é disparado
-4. **`WorkflowCacheContext`** (linha 531) recebe o evento, aguarda 350ms, e faz re-fetch da sessão do Supabase com `valor_pago = 245` ✅
+## Alterações
 
-**Até aqui tudo correto.** O problema acontece quando o usuário **abre o modal de pagamentos** (ou o CRM):
+### 1. `FormularioTemplateEditor.tsx` — Categorias dinâmicas + fixes
 
-5. O `SessionPaymentsManager` monta e chama `useSessionPayments(sessionData.id, initialPayments)`
-6. `useSessionPayments` faz fetch das transações do Supabase (encontra 2: R$130 manual + R$115 InfinitePay)
-7. O `useEffect` na **linha 111-114** do `SessionPaymentsManager` dispara `onPaymentUpdate(sessionId, totalPago, legacyPayments)` toda vez que `payments` muda
-8. No Workflow, o callback `onPaymentUpdate` chama `onFieldUpdate(sessionId, 'valorPago', ...)` — mas o campo `'valorPago'` é **ignorado** pelo `updateSession` (linha 531 do useWorkflowRealtime: `case 'valorPago': break`)
+- Importar `useRealtimeConfiguration` para obter categorias do usuário
+- Substituir o `Select` de categorias hardcoded por categorias dinâmicas da tabela `categorias`
+- Mudar o tipo de `categoria` no template de enum fixo para `string` (nome da categoria do usuário)
+- Para campos tipo `data`, `upload_imagem`, `upload_referencia`, `selecao_cores`: ocultar o input de placeholder (não faz sentido)
+- Corrigir o `DropdownMenu` adicionando `modal={false}` no Dialog para permitir interação com menus dentro dele, ou usar `portal` adequado
 
-**O campo `valorPago` nunca chega ao banco.** Isso significa que o valor exibido na UI depende inteiramente do cache local, e qualquer re-render pode resetar para o valor antigo.
+### 2. `src/types/formulario.ts` — Flexibilizar categoria
 
-Além disso, o **`onFieldUpdate` com `'pagamentos'`** também é ignorado pelo banco (linha 533). Ou seja, toda a sincronização via `onPaymentUpdate` → `onFieldUpdate` é efetivamente um **no-op** que só afeta estado local temporário.
+- Mudar tipo `categoria` de union literal para `string` (aceitar qualquer nome de categoria do usuário)
+- Remover `CATEGORIA_LABELS` hardcoded (será dinâmico)
 
-### O verdadeiro bug
+### 3. Migration SQL — Atualizar templates de seed
 
-O `valor_pago` no banco **está correto** (R$ 245). O problema é que a UI do Workflow card lê de `session.valorPago` (formato string `"R$ 130,00"`) que vem do **cache local/localStorage** e não é atualizado corretamente após o re-fetch. O campo `pendente` no card é calculado como `total - valorPago`, e se `valorPago` estiver desatualizado, mostra R$ 115 pendente.
+Atualizar o template de Casamento para incluir os campos solicitados:
+- Endereço da cerimônia
+- Endereço da festa
 
-A inconsistência visual é causada por **dois sistemas de dados concorrendo**: o Supabase (correto) e o localStorage/cache (desatualizado).
+E ajustar templates Gestante e Newborn conforme exemplos fornecidos.
 
-## Sobre os itens marcados pelo usuário nas imagens
+### 4. `FormulariosConfig.tsx` — Ajustar exibição de categoria
 
-- **"Corrigir Valores do Histórico"**: botão de migração de dados antigos — pode ser removido ou escondido (já não é necessário rotineiramente)
-- **"Nenhuma sessão precisou ser corrigida"**: toast do botão acima — confirma que os dados do banco estão corretos
-- **Ícone vermelho com X**: esses itens de UI obsoletos devem ser limpos
+- Usar o nome da categoria direto (string) em vez de `CATEGORIA_LABELS[...]`
 
-## Correções Propostas
+## Detalhes Técnicos
 
-### 1. Eliminar `onPaymentUpdate` → `onFieldUpdate` como mecanismo de sync (raiz do bug)
+**Categorias dinâmicas:**
+```tsx
+const { categorias } = useRealtimeConfiguration();
+// No Select:
+{categorias.map((cat) => (
+  <SelectItem key={cat.id} value={cat.nome}>{cat.nome}</SelectItem>
+))}
+```
 
-O `valor_pago` já é mantido pelo trigger do banco. O frontend **não deve tentar setá-lo manualmente**. A UI do Workflow deve ler `valor_pago` diretamente do Supabase (já faz via WorkflowCacheContext).
+**Ocultar placeholder para tipos especiais:**
+```tsx
+{!['data', 'upload_imagem', 'upload_referencia', 'selecao_cores'].includes(campo.tipo) && (
+  <div className="space-y-1.5">
+    <Label>Placeholder</Label>
+    <Input ... />
+  </div>
+)}
+```
 
-**Arquivo**: `src/components/workflow/WorkflowCardCollapsed.tsx` e `WorkflowCardExpanded.tsx`
-- Remover o callback `onPaymentUpdate` que tenta setar `valorPago` via `onFieldUpdate`
-- Substituir por: apenas disparar um evento `payment-created` para forçar re-fetch do cache
-
-### 2. Forçar re-fetch após fechar modal de pagamentos
-
-**Arquivo**: `src/components/workflow/WorkflowCardCollapsed.tsx` e `WorkflowCardExpanded.tsx`
-- No `onClose` do `WorkflowPaymentsModal`, disparar `window.dispatchEvent(new CustomEvent('payment-created', { detail: { sessionId } }))` para forçar o `WorkflowCacheContext` a buscar dados frescos do banco
-
-### 3. Corrigir cálculo de `pendente` no card
-
-**Arquivo**: `src/components/workflow/WorkflowCardCollapsed.tsx`
-- O cálculo de `pendente` deve usar `valor_pago` do banco (campo numérico) em vez de parsear a string `session.valorPago`
-
-### 4. Limpar UI obsoleta no CRM
-
-**Arquivo**: `src/components/crm/WorkflowHistoryTable.tsx`
-- Remover ou esconder o botão "Corrigir Valores do Histórico" (já fez seu trabalho, não é necessário no dia a dia)
-
-### 5. Remover escrita de `valorPago` no localStorage do AppContext
-
-**Arquivo**: `src/contexts/AppContext.tsx` (linhas 862-912)
-- O bloco que atualiza `localStorage` com `valorPago` é redundante e causa dessincronização. Remover essa lógica — o Supabase é a fonte da verdade.
-
-## Resumo de Arquivos
-
-| Arquivo | Ação |
-|---------|------|
-| `src/components/workflow/WorkflowCardCollapsed.tsx` | Simplificar `onPaymentUpdate`, forçar re-fetch no close |
-| `src/components/workflow/WorkflowCardExpanded.tsx` | Mesma correção |
-| `src/contexts/AppContext.tsx` | Remover bloco localStorage de `addPayment` |
-| `src/components/crm/WorkflowHistoryTable.tsx` | Esconder botão "Corrigir Valores" |
-| `src/components/payments/SessionPaymentsManager.tsx` | Revisar useEffect de sync para não causar loops |
-
-## Sobre Escalabilidade
-
-A arquitetura atual (trigger SQL como fonte da verdade para `valor_pago`) é **correta e escalável**. O problema não é o banco — é o frontend tentando manter um estado paralelo via localStorage/callbacks que conflita com o dado real. A correção acima elimina essa duplicidade.
+**Fix do Dropdown dentro do Dialog:**
+Adicionar `modal={false}` no `DropdownMenu` para evitar conflito de foco com o Dialog.
 
