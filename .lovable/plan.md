@@ -1,80 +1,93 @@
 
 
-# Diagnóstico: Pagamento de R$115 Reaparecendo como Pendente
+# Redesign Visual Premium Glassmorphism + Fundo 3D Orbital
 
-## Causa Raiz Identificada
+## Escopo
 
-O problema está na **cadeia de callbacks `onPaymentUpdate`** no Workflow. Quando o pagamento rápido de R$130 é adicionado:
+Implementar a identidade visual "Premium Glassmorphism" com fundo 3D orbital no dashboard e fundos animados nas páginas internas, conforme especificação completa do usuário.
 
-1. **`addPayment` no AppContext** (linha 810) insere a transação de R$130 no Supabase via `PaymentSupabaseService.saveSinglePaymentTracked`
-2. O trigger `recompute_session_paid` recalcula `valor_pago` = 130 + 115 = **R$ 245,00** ✅
-3. O evento `payment-created` é disparado
-4. **`WorkflowCacheContext`** (linha 531) recebe o evento, aguarda 350ms, e faz re-fetch da sessão do Supabase com `valor_pago = 245` ✅
+## Ordem de Implementação
 
-**Até aqui tudo correto.** O problema acontece quando o usuário **abre o modal de pagamentos** (ou o CRM):
+### 1. CSS Variables + Classe .glass + Scrollbar (`src/index.css`)
 
-5. O `SessionPaymentsManager` monta e chama `useSessionPayments(sessionData.id, initialPayments)`
-6. `useSessionPayments` faz fetch das transações do Supabase (encontra 2: R$130 manual + R$115 InfinitePay)
-7. O `useEffect` na **linha 111-114** do `SessionPaymentsManager` dispara `onPaymentUpdate(sessionId, totalPago, legacyPayments)` toda vez que `payments` muda
-8. No Workflow, o callback `onPaymentUpdate` chama `onFieldUpdate(sessionId, 'valorPago', ...)` — mas o campo `'valorPago'` é **ignorado** pelo `updateSession` (linha 531 do useWorkflowRealtime: `case 'valorPago': break`)
+Atualizar `:root` e `.dark` com todas as novas variables (terra-50 a terra-900, glass tokens, primary-hover, primary-glow, warning, success). Adicionar classe `.glass` no `@layer components`. Atualizar scrollbar global. Remover a regra global de `box-shadow: none !important` no hover (linhas 520-529) que conflita com glass hover.
 
-**O campo `valorPago` nunca chega ao banco.** Isso significa que o valor exibido na UI depende inteiramente do cache local, e qualquer re-render pode resetar para o valor antigo.
+### 2. Tailwind Config (`tailwind.config.ts`)
 
-Além disso, o **`onFieldUpdate` com `'pagamentos'`** também é ignorado pelo banco (linha 533). Ou seja, toda a sincronização via `onPaymentUpdate` → `onFieldUpdate` é efetivamente um **no-op** que só afeta estado local temporário.
+Adicionar:
+- `terra` color scale (50-900)
+- `primary.hover`, `primary.glow`
+- `boxShadow`: glass, glass-hover
+- Keyframes: `eclipse-float`, `eclipse-float-reverse`, `aurora`
+- Animations correspondentes
 
-### O verdadeiro bug
+### 3. Componentes UI — Glassmorphism
 
-O `valor_pago` no banco **está correto** (R$ 245). O problema é que a UI do Workflow card lê de `session.valorPago` (formato string `"R$ 130,00"`) que vem do **cache local/localStorage** e não é atualizado corretamente após o re-fetch. O campo `pendente` no card é calculado como `total - valorPago`, e se `valorPago` estiver desatualizado, mostra R$ 115 pendente.
+**Card.tsx**: Aplicar classe `glass` como base, remover `bg-card` e `border-border/50` hardcoded.
 
-A inconsistência visual é causada por **dois sistemas de dados concorrendo**: o Supabase (correto) e o localStorage/cache (desatualizado).
+**Dialog.tsx (DialogContent)**: Adicionar `backdrop-blur-xl bg-popover border-border/50`.
 
-## Sobre os itens marcados pelo usuário nas imagens
+**Dropdown.tsx (DropdownMenuContent + SubContent)**: Adicionar `backdrop-blur-xl`.
 
-- **"Corrigir Valores do Histórico"**: botão de migração de dados antigos — pode ser removido ou escondido (já não é necessário rotineiramente)
-- **"Nenhuma sessão precisou ser corrigida"**: toast do botão acima — confirma que os dados do banco estão corretos
-- **Ícone vermelho com X**: esses itens de UI obsoletos devem ser limpos
+**Popover.tsx (PopoverContent)**: Adicionar `backdrop-blur-xl`.
 
-## Correções Propostas
+**Sheet.tsx (SheetContent)**: Adicionar `backdrop-blur-xl bg-background/80`.
 
-### 1. Eliminar `onPaymentUpdate` → `onFieldUpdate` como mecanismo de sync (raiz do bug)
+### 4. DashboardBackground — Fundo 3D Orbital
 
-O `valor_pago` já é mantido pelo trigger do banco. O frontend **não deve tentar setá-lo manualmente**. A UI do Workflow deve ler `valor_pago` diretamente do Supabase (já faz via WorkflowCacheContext).
+Instalar `@react-three/fiber@^8.18.0`, `three@^0.160.0`, `@types/three@^0.160.0`.
 
-**Arquivo**: `src/components/workflow/WorkflowCardCollapsed.tsx` e `WorkflowCardExpanded.tsx`
-- Remover o callback `onPaymentUpdate` que tenta setar `valorPago` via `onFieldUpdate`
-- Substituir por: apenas disparar um evento `payment-created` para forçar re-fetch do cache
+Criar `src/components/backgrounds/DashboardBackground.tsx`:
+- Base gradient (white light / dark gradient)
+- Canvas Three.js com 4 anéis toroidais (copper #F28C52, rotações lentas) + 2 esferas orbitantes
+- Aurora gradient overlay com animação suave
+- SVG noise overlay (feTurbulence, 2% opacidade)
+- Respeitar `prefers-reduced-motion`
 
-### 2. Forçar re-fetch após fechar modal de pagamentos
+### 5. InternalBackground — Fundo para páginas internas
 
-**Arquivo**: `src/components/workflow/WorkflowCardCollapsed.tsx` e `WorkflowCardExpanded.tsx`
-- No `onClose` do `WorkflowPaymentsModal`, disparar `window.dispatchEvent(new CustomEvent('payment-created', { detail: { sessionId } }))` para forçar o `WorkflowCacheContext` a buscar dados frescos do banco
+Criar `src/components/backgrounds/InternalBackground.tsx`:
+- 2 blobs radiais terra-cota animados (eclipse-float)
+- 2 glows externos maiores com blur intenso
+- SVG noise overlay (4.5% opacidade)
+- Opacity reduzida no dark mode (25%)
 
-### 3. Corrigir cálculo de `pendente` no card
+### 6. Layout Integration
 
-**Arquivo**: `src/components/workflow/WorkflowCardCollapsed.tsx`
-- O cálculo de `pendente` deve usar `valor_pago` do banco (campo numérico) em vez de parsear a string `session.valorPago`
+**Layout.tsx**: Renderizar `<InternalBackground />` como fundo padrão.
 
-### 4. Limpar UI obsoleta no CRM
+**Header.tsx**: Atualizar para `backdrop-blur-xl bg-white/40 dark:bg-background/60 border-border/30`.
 
-**Arquivo**: `src/components/crm/WorkflowHistoryTable.tsx`
-- Remover ou esconder o botão "Corrigir Valores do Histórico" (já fez seu trabalho, não é necessário no dia a dia)
+**Index.tsx (Dashboard)**: Renderizar `<DashboardBackground />` como fundo dentro da página.
 
-### 5. Remover escrita de `valorPago` no localStorage do AppContext
+**Layout.tsx**: Condicionar `InternalBackground` para não aparecer no dashboard (o dashboard tem seu próprio fundo).
 
-**Arquivo**: `src/contexts/AppContext.tsx` (linhas 862-912)
-- O bloco que atualiza `localStorage` com `valorPago` é redundante e causa dessincronização. Remover essa lógica — o Supabase é a fonte da verdade.
+### 7. Body base
 
-## Resumo de Arquivos
+Atualizar `body` no CSS para fundo transparente (a profundidade vem dos componentes de fundo).
 
-| Arquivo | Ação |
-|---------|------|
-| `src/components/workflow/WorkflowCardCollapsed.tsx` | Simplificar `onPaymentUpdate`, forçar re-fetch no close |
-| `src/components/workflow/WorkflowCardExpanded.tsx` | Mesma correção |
-| `src/contexts/AppContext.tsx` | Remover bloco localStorage de `addPayment` |
-| `src/components/crm/WorkflowHistoryTable.tsx` | Esconder botão "Corrigir Valores" |
-| `src/components/payments/SessionPaymentsManager.tsx` | Revisar useEffect de sync para não causar loops |
+## Arquivos a Criar
 
-## Sobre Escalabilidade
+- `src/components/backgrounds/DashboardBackground.tsx`
+- `src/components/backgrounds/InternalBackground.tsx`
 
-A arquitetura atual (trigger SQL como fonte da verdade para `valor_pago`) é **correta e escalável**. O problema não é o banco — é o frontend tentando manter um estado paralelo via localStorage/callbacks que conflita com o dado real. A correção acima elimina essa duplicidade.
+## Arquivos a Modificar
+
+- `src/index.css` — Variables, .glass, scrollbar, body
+- `tailwind.config.ts` — Terra scale, shadows, keyframes
+- `src/components/ui/card.tsx` — Glass base
+- `src/components/ui/dialog.tsx` — Backdrop blur
+- `src/components/ui/dropdown-menu.tsx` — Backdrop blur
+- `src/components/ui/popover.tsx` — Backdrop blur
+- `src/components/ui/sheet.tsx` — Backdrop blur
+- `src/components/layout/Layout.tsx` — InternalBackground condicional
+- `src/components/layout/Header.tsx` — Glass header
+- `src/pages/Index.tsx` — DashboardBackground
+
+## Notas Técnicas
+
+- A regra global `box-shadow: none !important` (linhas 520-529 do index.css) será removida pois impede o glass hover de funcionar
+- Three.js renderiza em canvas com `alpha: true` para transparência
+- Anéis usam `MeshBasicMaterial` com `transparent: true` para performance
+- `prefers-reduced-motion` desativa Canvas 3D e animações de blob
 
