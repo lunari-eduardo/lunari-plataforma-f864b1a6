@@ -128,7 +128,7 @@ export default function ChecklistPanel({
           <Button size="icon" className="h-8 w-8" onClick={handleAdd}>+</Button>
         </div>
 
-        <ul className="space-y-1">
+        <div className="space-y-1">
           {/* Unchecked items with DnD */}
           <DndContext
             sensors={sensors}
@@ -172,9 +172,9 @@ export default function ChecklistPanel({
           ))}
 
           {filtered.length === 0 && (
-            <li className="py-4 text-center text-2xs text-lunar-textSecondary">Nenhum item</li>
+            <div className="py-4 text-center text-2xs text-lunar-textSecondary">Nenhum item</div>
           )}
-        </ul>
+        </div>
       </Card>
     </section>
   );
