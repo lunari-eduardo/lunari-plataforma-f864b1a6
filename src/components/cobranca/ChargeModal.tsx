@@ -189,6 +189,7 @@ export function ChargeModal({
   // Show different sections based on provider
   const showLinkSection = selectedProvider === 'mercadopago_link' || selectedProvider === 'infinitepay';
   const showPixManualSection = selectedProvider === 'pix_manual';
+  const showAsaasSection = selectedProvider === 'asaas';
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
