@@ -154,6 +154,7 @@ export function PagamentosTab({
     mercadopago: 'Mercado Pago',
     infinitepay: 'InfinitePay',
     pix_manual: 'PIX Manual',
+    asaas: 'Asaas',
   };
 
   return (
