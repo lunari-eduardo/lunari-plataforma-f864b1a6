@@ -150,6 +150,8 @@ export default function ChecklistPanel({
                 />
               ))}
             </SortableContext>
+          </DndContext>
+          {createPortal(
             <DragOverlay dropAnimation={null}>
               {activeTask ? (
                 <ChecklistItemContent
@@ -159,8 +161,9 @@ export default function ChecklistPanel({
                   isOverlay
                 />
               ) : null}
-            </DragOverlay>
-          </DndContext>
+            </DragOverlay>,
+            document.body
+          )}
 
           {/* Checked items (no DnD) */}
           {checked.map(item => (

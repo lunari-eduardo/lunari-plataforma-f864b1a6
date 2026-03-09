@@ -156,12 +156,15 @@ export function WorkflowTasksPanel({ currentMonth, onCollapse }: WorkflowTasksPa
                 />
               ))}
             </SortableContext>
+          </DndContext>
+          {createPortal(
             <DragOverlay dropAnimation={null}>
               {activeTask ? (
                 <TaskRowContent task={activeTask} onToggle={() => {}} onDelete={() => {}} isOverlay />
               ) : null}
-            </DragOverlay>
-          </DndContext>
+            </DragOverlay>,
+            document.body
+          )}
 
           {/* Completed section */}
           {completedTasks.length > 0 && (
