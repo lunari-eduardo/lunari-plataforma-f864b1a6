@@ -63,6 +63,10 @@ export default function Configuracoes() {
                   <Workflow className="h-4 w-4" />
                   <span className="hidden sm:inline">Etapas</span>
                 </TabsTrigger>
+                <TabsTrigger value="formularios" className="flex items-center gap-2">
+                  <ClipboardList className="h-4 w-4" />
+                  <span className="hidden sm:inline">Formulários</span>
+                </TabsTrigger>
               </TabsList>
               
               <TabsContent value="categorias">
