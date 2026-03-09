@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
-import { Package, Box, Workflow, Shapes, DollarSign } from 'lucide-react';
+import { Package, Box, Workflow, Shapes, DollarSign, ClipboardList } from 'lucide-react';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { TableSyncStatus } from '@/components/ui/sync-indicator';
 import { useRealtimeConfiguration } from '@/hooks/useRealtimeConfiguration';
@@ -12,6 +12,7 @@ import Pacotes from '@/components/configuracoes/Pacotes';
 import Produtos from '@/components/configuracoes/Produtos';
 import FluxoTrabalho from '@/components/configuracoes/FluxoTrabalho';
 import PrecificacaoFotos from '@/components/configuracoes/PrecificacaoFotos';
+import FormulariosConfig from '@/components/configuracoes/FormulariosConfig';
 
 export default function Configuracoes() {
   const configuration = useRealtimeConfiguration();
@@ -62,6 +63,10 @@ export default function Configuracoes() {
                   <Workflow className="h-4 w-4" />
                   <span className="hidden sm:inline">Etapas</span>
                 </TabsTrigger>
+                <TabsTrigger value="formularios" className="flex items-center gap-2">
+                  <ClipboardList className="h-4 w-4" />
+                  <span className="hidden sm:inline">Formulários</span>
+                </TabsTrigger>
               </TabsList>
               
               <TabsContent value="categorias">
@@ -104,6 +109,10 @@ export default function Configuracoes() {
                   onMove={configuration.moverEtapa}
                   hasGalleryAccess={hasGaleryAccess}
                 />
+              </TabsContent>
+              
+              <TabsContent value="formularios">
+                <FormulariosConfig />
               </TabsContent>
             </Tabs>
           </CardContent>

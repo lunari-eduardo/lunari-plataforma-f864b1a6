@@ -1,173 +1,80 @@
 
 
-# Sistema de Formulários Inteligentes — Implementação Refinada
+# Diagnóstico: Pagamento de R$115 Reaparecendo como Pendente
 
-## Resumo das Mudanças Incorporadas
+## Causa Raiz Identificada
 
-Todas as sugestões foram incorporadas ao plano:
+O problema está na **cadeia de callbacks `onPaymentUpdate`** no Workflow. Quando o pagamento rápido de R$130 é adicionado:
 
-1. ✅ Aba em Configurações (não página na sidebar)
-2. ✅ `status_envio` para tracking com cliente
-3. ✅ Snapshot de campos (independente do template)
-4. ✅ Campo `ordem` no JSON de campos
-5. ✅ `titulo_cliente` separado do título interno
-6. ✅ Página pública: tempo estimado, progresso, mensagem final
-7. ✅ Tipo `upload_referencia` para referências visuais
-8. ✅ Lista com sessão vinculada e data
-9. ✅ Fluxo de criação melhorado
+1. **`addPayment` no AppContext** (linha 810) insere a transação de R$130 no Supabase via `PaymentSupabaseService.saveSinglePaymentTracked`
+2. O trigger `recompute_session_paid` recalcula `valor_pago` = 130 + 115 = **R$ 245,00** ✅
+3. O evento `payment-created` é disparado
+4. **`WorkflowCacheContext`** (linha 531) recebe o evento, aguarda 350ms, e faz re-fetch da sessão do Supabase com `valor_pago = 245` ✅
 
----
+**Até aqui tudo correto.** O problema acontece quando o usuário **abre o modal de pagamentos** (ou o CRM):
 
-## Arquitetura de Dados (Supabase)
+5. O `SessionPaymentsManager` monta e chama `useSessionPayments(sessionData.id, initialPayments)`
+6. `useSessionPayments` faz fetch das transações do Supabase (encontra 2: R$130 manual + R$115 InfinitePay)
+7. O `useEffect` na **linha 111-114** do `SessionPaymentsManager` dispara `onPaymentUpdate(sessionId, totalPago, legacyPayments)` toda vez que `payments` muda
+8. No Workflow, o callback `onPaymentUpdate` chama `onFieldUpdate(sessionId, 'valorPago', ...)` — mas o campo `'valorPago'` é **ignorado** pelo `updateSession` (linha 531 do useWorkflowRealtime: `case 'valorPago': break`)
 
-### Tabela `formulario_templates`
-```sql
-id UUID PRIMARY KEY
-user_id UUID (null = template do sistema)
-nome TEXT
-categoria TEXT (gestante, newborn, familia, casamento)
-descricao TEXT
-campos JSONB
-is_system BOOLEAN
-tempo_estimado INTEGER (minutos)
-created_at, updated_at
-```
+**O campo `valorPago` nunca chega ao banco.** Isso significa que o valor exibido na UI depende inteiramente do cache local, e qualquer re-render pode resetar para o valor antigo.
 
-### Tabela `formularios`
-```sql
-id UUID PRIMARY KEY
-user_id UUID NOT NULL
-template_id UUID (referência ao template usado, apenas histórico)
-titulo TEXT (interno: "Briefing Gestante Ana")
-titulo_cliente TEXT (para cliente: "Questionário pré-ensaio")
-descricao TEXT
-campos JSONB (snapshot independente)
-mensagem_conclusao TEXT
-tempo_estimado INTEGER (minutos)
+Além disso, o **`onFieldUpdate` com `'pagamentos'`** também é ignorado pelo banco (linha 533). Ou seja, toda a sincronização via `onPaymentUpdate` → `onFieldUpdate` é efetivamente um **no-op** que só afeta estado local temporário.
 
--- Vínculos
-cliente_id UUID
-session_id TEXT (appointment_id ou session_id)
+### O verdadeiro bug
 
--- Status
-status TEXT DEFAULT 'rascunho' (rascunho | publicado | arquivado)
-status_envio TEXT DEFAULT 'nao_enviado' (nao_enviado | enviado | respondido | expirado)
-enviado_em TIMESTAMPTZ
-respondido_em TIMESTAMPTZ
+O `valor_pago` no banco **está correto** (R$ 245). O problema é que a UI do Workflow card lê de `session.valorPago` (formato string `"R$ 130,00"`) que vem do **cache local/localStorage** e não é atualizado corretamente após o re-fetch. O campo `pendente` no card é calculado como `total - valorPago`, e se `valorPago` estiver desatualizado, mostra R$ 115 pendente.
 
--- Acesso público
-public_token TEXT UNIQUE
-expires_at TIMESTAMPTZ
+A inconsistência visual é causada por **dois sistemas de dados concorrendo**: o Supabase (correto) e o localStorage/cache (desatualizado).
 
-created_at, updated_at
-```
+## Sobre os itens marcados pelo usuário nas imagens
 
-### Tabela `formulario_respostas`
-```sql
-id UUID PRIMARY KEY
-formulario_id UUID NOT NULL
-user_id UUID (fotógrafo dono)
-respondente_nome TEXT
-respondente_email TEXT
-respostas JSONB
-submitted_at TIMESTAMPTZ
-created_at
-```
+- **"Corrigir Valores do Histórico"**: botão de migração de dados antigos — pode ser removido ou escondido (já não é necessário rotineiramente)
+- **"Nenhuma sessão precisou ser corrigida"**: toast do botão acima — confirma que os dados do banco estão corretos
+- **Ícone vermelho com X**: esses itens de UI obsoletos devem ser limpos
 
-### Estrutura do Campo (JSONB)
-```json
-{
-  "id": "uuid",
-  "tipo": "texto_curto | texto_longo | multipla_escolha | selecao_unica | data | upload_imagem | upload_referencia | selecao_cores",
-  "label": "Nome do bebê",
-  "placeholder": "Ex: Sofia",
-  "ordem": 1,
-  "obrigatorio": true,
-  "opcoes": ["Opção 1", "Opção 2"],
-  "descricao": "Texto de ajuda opcional"
-}
-```
+## Correções Propostas
 
-### Bucket Storage
-`formulario-uploads` — público para INSERT, fotos de referência
+### 1. Eliminar `onPaymentUpdate` → `onFieldUpdate` como mecanismo de sync (raiz do bug)
 
----
+O `valor_pago` já é mantido pelo trigger do banco. O frontend **não deve tentar setá-lo manualmente**. A UI do Workflow deve ler `valor_pago` diretamente do Supabase (já faz via WorkflowCacheContext).
 
-## Estrutura de Arquivos
+**Arquivo**: `src/components/workflow/WorkflowCardCollapsed.tsx` e `WorkflowCardExpanded.tsx`
+- Remover o callback `onPaymentUpdate` que tenta setar `valorPago` via `onFieldUpdate`
+- Substituir por: apenas disparar um evento `payment-created` para forçar re-fetch do cache
 
-```
-src/types/formulario.ts                          — Tipos TypeScript
-src/hooks/useFormularioTemplates.ts              — CRUD templates
-src/hooks/useFormularios.ts                      — CRUD formulários
-src/components/configuracoes/
-  FormulariosConfig.tsx                          — Aba principal (lista + CRUD templates)
-  FormularioTemplateEditor.tsx                   — Editor de template com drag-and-drop
-  FormularioFieldEditor.tsx                      — Editor de campo individual
-src/pages/FormularioPublico.tsx                  — Página pública (cliente preenche)
-```
+### 2. Forçar re-fetch após fechar modal de pagamentos
 
----
+**Arquivo**: `src/components/workflow/WorkflowCardCollapsed.tsx` e `WorkflowCardExpanded.tsx`
+- No `onClose` do `WorkflowPaymentsModal`, disparar `window.dispatchEvent(new CustomEvent('payment-created', { detail: { sessionId } }))` para forçar o `WorkflowCacheContext` a buscar dados frescos do banco
 
-## Componentes da Aba Configurações
+### 3. Corrigir cálculo de `pendente` no card
 
-### `FormulariosConfig.tsx`
-- Lista de templates do sistema (read-only) e customizados
-- Criar novo template
-- Duplicar template existente
-- Editar/excluir templates customizados
+**Arquivo**: `src/components/workflow/WorkflowCardCollapsed.tsx`
+- O cálculo de `pendente` deve usar `valor_pago` do banco (campo numérico) em vez de parsear a string `session.valorPago`
 
-### `FormularioTemplateEditor.tsx`
-- Nome, categoria, descrição, tempo estimado
-- Lista de campos com drag-and-drop (dnd-kit)
-- Adicionar campos por tipo
-- Preview lado a lado (desktop)
+### 4. Limpar UI obsoleta no CRM
 
----
+**Arquivo**: `src/components/crm/WorkflowHistoryTable.tsx`
+- Remover ou esconder o botão "Corrigir Valores do Histórico" (já fez seu trabalho, não é necessário no dia a dia)
 
-## Página Pública `/formulario/:token`
+### 5. Remover escrita de `valorPago` no localStorage do AppContext
 
-Layout mobile-first:
-1. **Header**: Logo do estúdio + título do formulário
-2. **Info**: "Leva cerca de X minutos"
-3. **Progresso**: "Pergunta 3 de 7" + barra visual
-4. **Campos**: Um por vez ou scroll suave
-5. **Envio**: Botão destacado
-6. **Conclusão**: Mensagem personalizada + check animado
+**Arquivo**: `src/contexts/AppContext.tsx` (linhas 862-912)
+- O bloco que atualiza `localStorage` com `valorPago` é redundante e causa dessincronização. Remover essa lógica — o Supabase é a fonte da verdade.
 
----
+## Resumo de Arquivos
 
-## Templates Pré-carregados (seed)
+| Arquivo | Ação |
+|---------|------|
+| `src/components/workflow/WorkflowCardCollapsed.tsx` | Simplificar `onPaymentUpdate`, forçar re-fetch no close |
+| `src/components/workflow/WorkflowCardExpanded.tsx` | Mesma correção |
+| `src/contexts/AppContext.tsx` | Remover bloco localStorage de `addPayment` |
+| `src/components/crm/WorkflowHistoryTable.tsx` | Esconder botão "Corrigir Valores" |
+| `src/components/payments/SessionPaymentsManager.tsx` | Revisar useEffect de sync para não causar loops |
 
-4 templates com `is_system = true`:
-- **Ensaio Gestante** (7 campos, ~3 min)
-- **Newborn** (7 campos, ~2 min)
-- **Ensaio Família** (6 campos, ~2 min)
-- **Casamento/Evento** (6 campos, ~4 min)
+## Sobre Escalabilidade
 
-Cada um inclui pelo menos 1 campo `upload_referencia` para fotos de inspiração.
-
----
-
-## Alterações em Configuracoes.tsx
-
-- Adicionar aba "Formulários" com ícone `ClipboardList`
-- Posicionar após "Etapas" na TabsList
-- Carregar componente `FormulariosConfig`
-
----
-
-## Escopo da Implementação
-
-**Fase 1** (esta implementação):
-- Migration: 3 tabelas + RLS + bucket + seed templates
-- Tipos TypeScript
-- Hooks de CRUD
-- Aba FormulariosConfig em Configurações
-- Editor de templates com todos os 8 tipos de campo
-- Página pública com UX completa
-
-**Fase 2** (futura):
-- Modal de agendamento: vincular formulário à sessão
-- Envio de link por WhatsApp/email
-- Visualização de respostas no workflow
+A arquitetura atual (trigger SQL como fonte da verdade para `valor_pago`) é **correta e escalável**. O problema não é o banco — é o frontend tentando manter um estado paralelo via localStorage/callbacks que conflita com o dado real. A correção acima elimina essa duplicidade.
 
