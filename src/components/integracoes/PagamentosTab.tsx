@@ -230,6 +230,16 @@ export function PagamentosTab({
           onDisconnect={onDisconnectPixManual}
           loading={loading}
         />
+
+        <AsaasCard
+          ref={asaasRef}
+          status={asaasStatus}
+          settings={asaasSettings}
+          onSave={onSaveAsaas}
+          onUpdateSettings={onUpdateAsaasSettings}
+          onDisconnect={onDisconnectAsaas}
+          loading={loading}
+        />
       </div>
 
       {/* Instructions */}
