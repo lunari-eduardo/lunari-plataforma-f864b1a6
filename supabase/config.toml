@@ -83,3 +83,6 @@ verify_jwt = false
 
 [functions.mercadopago-get-app-id]
 verify_jwt = false
+
+[functions.gestao-asaas-create-payment]
+verify_jwt = false
