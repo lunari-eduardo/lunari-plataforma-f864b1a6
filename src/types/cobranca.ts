@@ -1,6 +1,6 @@
 export type TipoCobranca = 'pix' | 'link';
 export type StatusCobranca = 'pendente' | 'pago' | 'cancelado' | 'expirado';
-export type ProvedorPagamento = 'mercadopago' | 'infinitepay' | 'pix_manual';
+export type ProvedorPagamento = 'mercadopago' | 'infinitepay' | 'pix_manual' | 'asaas';
 
 export interface Cobranca {
   id: string;
