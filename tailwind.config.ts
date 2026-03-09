@@ -211,7 +211,7 @@ export default {
 			},
 			backgroundImage: {
 				'brand-gradient': 'linear-gradient(135deg, hsl(var(--lunar-accent)), hsl(var(--lunar-accent) / 0.8))',
-				'card-gradient': 'linear-gradient(180deg, #FFFFFF 0%, #F7F8F9 100%)',
+				'card-gradient': 'linear-gradient(180deg, hsl(var(--card)), hsl(var(--muted)))',
 				'subtle-gradient': 'linear-gradient(180deg, hsl(var(--lunar-surface) / 0.5), transparent)',
 			},
 			keyframes: {
