@@ -124,6 +124,9 @@ function App() {
                         <Route path="/conteudos" element={<Conteudos />} />
                         <Route path="/conteudos/:slug" element={<ConteudoDetalhe />} />
                         <Route path="/sitemap.xml" element={<SitemapProxy />} />
+                        
+                        {/* Rota pública para formulários de clientes */}
+                        <Route path="/formulario/:token" element={<FormularioPublico />} />
 
                         {/* Redirect antigo /landing para / */}
                         <Route path="/landing" element={<Navigate to="/" replace />} />

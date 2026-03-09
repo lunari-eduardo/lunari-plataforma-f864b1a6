@@ -110,6 +110,10 @@ export default function Configuracoes() {
                   hasGalleryAccess={hasGaleryAccess}
                 />
               </TabsContent>
+              
+              <TabsContent value="formularios">
+                <FormulariosConfig />
+              </TabsContent>
             </Tabs>
           </CardContent>
         </Card>
