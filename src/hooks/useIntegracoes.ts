@@ -207,7 +207,7 @@ export function useIntegracoes(): UseIntegracoesReturn {
 
     try {
       // Remove is_default de todos
-      const paymentProviders = ['mercadopago', 'infinitepay', 'pix_manual'];
+      const paymentProviders = ['mercadopago', 'infinitepay', 'pix_manual', 'asaas'];
       
       for (const p of paymentProviders) {
         const integration = integracoes.find(i => i.provedor === p);
