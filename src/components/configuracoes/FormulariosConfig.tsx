@@ -17,7 +17,7 @@ import {
 import ConfigSectionHeader from './ConfigSectionHeader';
 import FormularioTemplateEditor from './FormularioTemplateEditor';
 import { useFormularioTemplates } from '@/hooks/useFormularioTemplates';
-import { FormularioTemplate, CATEGORIA_LABELS } from '@/types/formulario';
+import { FormularioTemplate } from '@/types/formulario';
 
 export default function FormulariosConfig() {
   const {
