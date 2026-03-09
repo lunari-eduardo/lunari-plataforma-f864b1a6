@@ -355,25 +355,41 @@
     color: hsl(var(--foreground));
   }
 
-  /* Dropdown com fundo sólido garantido */
+  /* Dropdown com fundo sólido garantido (cores fixas sem alpha) */
   .dropdown-solid {
-    background-color: hsl(var(--popover)) !important;
+    background-color: hsl(30 30% 98%) !important;
     backdrop-filter: blur(0px);
     -webkit-backdrop-filter: blur(0px);
   }
 
   .dropdown-solid-item {
-    background-color: hsl(var(--popover)) !important;
+    background-color: hsl(30 30% 98%) !important;
   }
 
   .dropdown-solid-item:hover {
-    background-color: hsl(var(--accent)) !important;
+    background-color: hsl(30 15% 90%) !important;
   }
 
   .dropdown-solid-header {
-    background-color: hsl(var(--muted)) !important;
+    background-color: hsl(30 15% 90%) !important;
     border: 1px solid transparent;
     box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+  }
+
+  .dark .dropdown-solid {
+    background-color: hsl(20 12% 10%) !important;
+  }
+
+  .dark .dropdown-solid-item {
+    background-color: hsl(20 12% 10%) !important;
+  }
+
+  .dark .dropdown-solid-item:hover {
+    background-color: hsl(20 10% 15%) !important;
+  }
+
+  .dark .dropdown-solid-header {
+    background-color: hsl(20 10% 15%) !important;
   }
 
   .input-lunar:focus {
