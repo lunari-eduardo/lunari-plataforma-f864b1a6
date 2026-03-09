@@ -7,6 +7,7 @@ import { useEquipmentSync } from '@/hooks/useEquipmentSync';
 import { TrialBanner } from '@/components/subscription/TrialBanner';
 import { cn } from '@/lib/utils';
 import InternalBackground from '@/components/backgrounds/InternalBackground';
+import DashboardBackground from '@/components/backgrounds/DashboardBackground';
 
 export default function Layout() {
   const isMobile = useIsMobile();
@@ -21,7 +22,8 @@ export default function Layout() {
       <Sidebar />
       
       <div className="flex-1 flex flex-col overflow-hidden relative">
-        {/* Background for internal pages (not dashboard) */}
+        {/* Backgrounds */}
+        {isDashboard && <DashboardBackground />}
         {!isDashboard && <InternalBackground />}
 
         <TrialBanner />

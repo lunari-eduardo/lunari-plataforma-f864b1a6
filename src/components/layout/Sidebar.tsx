@@ -166,7 +166,7 @@ export default function Sidebar() {
   }
 
   // Desktop sidebar
-  return <div className={cn("flex flex-col h-screen p-2 bg-background border-r border-border/50 transition-all duration-300", isDesktopExpanded ? "w-48" : "w-16")}>
+  return <div className={cn("flex flex-col h-screen p-2 bg-background border-r border-border/50 transition-all duration-300 relative z-20", isDesktopExpanded ? "w-48" : "w-16")}>
       <div className="flex-1 pt-4">
         <div className="space-y-2">
           {navItems.map(item => <NavItem key={item.to} {...item} iconOnly={!isDesktopExpanded} showProBadge={isStarterPlan} />)}

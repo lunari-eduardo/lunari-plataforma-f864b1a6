@@ -48,9 +48,9 @@
     --foreground: 20 20% 12%;
     --muted: 30 15% 90%;
     --muted-foreground: 20 10% 45%;
-    --popover: 30 30% 98% / 0.42;
+    --popover: 30 30% 98% / 0.7;
     --popover-foreground: 20 20% 12%;
-    --card: 30 30% 98% / 0.38;
+    --card: 30 30% 98% / 0.65;
     --card-foreground: 20 20% 12%;
     --border: 30 30% 80%;
     --input: 30 30% 80%;
@@ -181,7 +181,7 @@
     --muted-foreground: 30 10% 55%;
     --popover: 20 12% 10%;
     --popover-foreground: 30 15% 95%;
-    --card: 20 12% 10% / 0.4;
+    --card: 20 12% 10% / 0.72;
     --card-foreground: 30 15% 95%;
     --border: 20 15% 20%;
     --input: 20 15% 20%;

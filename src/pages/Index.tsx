@@ -12,7 +12,6 @@ import { useAgenda } from "@/hooks/useAgenda";
 import { useProductionReminders } from "@/hooks/useProductionReminders";
 import { useDashboardMetrics } from "@/hooks/useDashboardMetrics";
 import { KPIGroupCard } from "@/components/dashboard/KPIGroupCard";
-import DashboardBackground from "@/components/backgrounds/DashboardBackground";
 
 export default function Index() {
   // SEO basics
@@ -84,7 +83,6 @@ export default function Index() {
 
   return (
     <>
-      <DashboardBackground />
       <main className="space-y-6 relative z-10">
         <InstallPWAButton />
         
