@@ -7,6 +7,7 @@ import { useEquipmentSync } from '@/hooks/useEquipmentSync';
 import { TrialBanner } from '@/components/subscription/TrialBanner';
 import { cn } from '@/lib/utils';
 import InternalBackground from '@/components/backgrounds/InternalBackground';
+import DashboardBackground from '@/components/backgrounds/DashboardBackground';
 
 export default function Layout() {
   const isMobile = useIsMobile();
