@@ -21,6 +21,7 @@ import Integracoes from "./pages/Integracoes";
 import Tarefas from "./pages/Tarefas";
 import FeedTest from "./pages/FeedTest";
 import LandingPage from "./pages/LandingPage";
+import PublicCheckout from "./pages/PublicCheckout";
 import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
 import NotFound from "./pages/NotFound";
