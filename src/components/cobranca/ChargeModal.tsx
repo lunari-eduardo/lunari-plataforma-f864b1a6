@@ -417,30 +417,23 @@ export function ChargeModal({
                     <AsaasChargeOptions
                       valor={valor}
                       onSelectPix={handleAsaasGeneratePix}
-                      onSelectLink={handleAsaasSelectCheckout}
+                      onSelectLink={handleAsaasGenerateLink}
                       pixLoading={asaasPixLoading}
+                      linkLoading={asaasLinkLoading}
                       hasPix={asaasSettings.habilitarPix}
                     />
                   )}
 
-                  {showAsaasSection && asaasMode === 'checkout' && asaasSettings && (
-                    <AsaasCheckoutSection
+                  {showAsaasSection && asaasMode === 'link' && (
+                    <ChargeLinkSection
                       valor={valor}
-                      clienteId={clienteId}
-                      sessionId={sessionId}
-                      descricao={descricao || undefined}
-                      settings={asaasSettings}
+                      paymentLink={currentCharge?.paymentLink}
+                      status={currentCharge?.status}
+                      loading={asaasLinkLoading}
+                      checkingStatus={checkingStatus}
+                      onGenerate={handleAsaasGenerateLink}
+                      onCheckStatus={currentChargeId ? handleCheckStatus : undefined}
                       clienteWhatsapp={clienteWhatsapp}
-                      onPaymentCreated={(result) => {
-                        setCurrentCharge({
-                          pixCopiaCola: result.pixCopiaECola,
-                          qrCodeBase64: result.pixQrCode,
-                          paymentLink: result.boletoUrl,
-                          status: result.paid ? 'pago' : 'pendente',
-                        });
-                        setCurrentChargeId(result.cobrancaId);
-                      }}
-                      loading={creatingCharge}
                     />
                   )}
 
