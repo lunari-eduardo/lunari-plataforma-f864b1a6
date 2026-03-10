@@ -128,6 +128,7 @@ function App() {
                         
                         {/* Rota pública para formulários de clientes */}
                         <Route path="/formulario/:token" element={<FormularioPublico />} />
+                        <Route path="/checkout/:cobrancaId" element={<PublicCheckout />} />
 
                         {/* Redirect antigo /landing para / */}
                         <Route path="/landing" element={<Navigate to="/" replace />} />
