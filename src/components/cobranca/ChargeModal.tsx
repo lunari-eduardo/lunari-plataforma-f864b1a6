@@ -221,8 +221,38 @@ export function ChargeModal({
     }
   };
 
-  const handleAsaasSelectCheckout = () => {
-    setAsaasMode('checkout');
+  const handleAsaasGenerateLink = async () => {
+    setAsaasLinkLoading(true);
+    try {
+      const response = await supabase.functions.invoke('gestao-asaas-create-payment', {
+        body: {
+          clienteId,
+          sessionId,
+          valor,
+          descricao: descricao || undefined,
+          billingType: 'UNDEFINED',
+        },
+      });
+
+      if (response.error) throw new Error(response.error.message);
+      if (!response.data?.success) throw new Error(response.data?.error || 'Erro ao gerar link');
+
+      const invoiceUrl = response.data.invoiceUrl;
+      if (!invoiceUrl) throw new Error('Link de pagamento não retornado pelo Asaas');
+
+      setCurrentCharge({
+        paymentLink: invoiceUrl,
+        checkoutUrl: invoiceUrl,
+        status: 'pendente',
+      });
+      setCurrentChargeId(response.data.cobrancaId);
+      setAsaasMode('link');
+    } catch (err) {
+      const { toast } = await import('sonner');
+      toast.error(err instanceof Error ? err.message : 'Erro ao gerar link');
+    } finally {
+      setAsaasLinkLoading(false);
+    }
   };
 
   const handleCheckStatus = async () => {
