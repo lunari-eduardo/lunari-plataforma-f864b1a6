@@ -46,10 +46,11 @@ export function ChargeModal({
   const [activeTab, setActiveTab] = useState<'cobrar' | 'historico'>('cobrar');
   const [checkingStatus, setCheckingStatus] = useState(false);
   const [currentChargeId, setCurrentChargeId] = useState<string | null>(null);
-  const [asaasSettings, setAsaasSettings] = useState<AsaasCheckoutSettings | null>(null);
+  const [asaasSettings, setAsaasSettings] = useState<{ habilitarPix: boolean; habilitarCartao: boolean; habilitarBoleto: boolean; maxParcelas: number; absorverTaxa: boolean; incluirTaxaAntecipacao: boolean } | null>(null);
 
   // Asaas sub-flow state
-  const [asaasMode, setAsaasMode] = useState<'options' | 'pix' | 'checkout' | null>(null);
+  const [asaasMode, setAsaasMode] = useState<'options' | 'pix' | 'link' | null>(null);
+  const [asaasLinkLoading, setAsaasLinkLoading] = useState(false);
   const [asaasPixLoading, setAsaasPixLoading] = useState(false);
   const [asaasPixQrCode, setAsaasPixQrCode] = useState<string | null>(null);
   const [asaasPixCopiaECola, setAsaasPixCopiaECola] = useState<string | null>(null);
