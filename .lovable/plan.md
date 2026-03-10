@@ -1,80 +1,88 @@
 
 
-# Diagnóstico: Pagamento de R$115 Reaparecendo como Pendente
+# Checkout Transparente Asaas — Página Pública Interna
 
-## Causa Raiz Identificada
+## Problema
 
-O problema está na **cadeia de callbacks `onPaymentUpdate`** no Workflow. Quando o pagamento rápido de R$130 é adicionado:
+O botão "Gerar Link de Checkout" está gerando um link externo do Asaas (`sandbox.asaas.com/i/...`) em vez de criar um checkout transparente dentro do sistema Lunari, como já é feito no projeto Gallery.
 
-1. **`addPayment` no AppContext** (linha 810) insere a transação de R$130 no Supabase via `PaymentSupabaseService.saveSinglePaymentTracked`
-2. O trigger `recompute_session_paid` recalcula `valor_pago` = 130 + 115 = **R$ 245,00** ✅
-3. O evento `payment-created` é disparado
-4. **`WorkflowCacheContext`** (linha 531) recebe o evento, aguarda 350ms, e faz re-fetch da sessão do Supabase com `valor_pago = 245` ✅
+O Gallery já possui um componente `AsaasCheckout` completo (606 linhas) que processa PIX e Cartão de Crédito diretamente via API, com cálculo de taxas, antecipação e polling de status — tudo sem sair do sistema.
 
-**Até aqui tudo correto.** O problema acontece quando o usuário **abre o modal de pagamentos** (ou o CRM):
+## Solução
 
-5. O `SessionPaymentsManager` monta e chama `useSessionPayments(sessionData.id, initialPayments)`
-6. `useSessionPayments` faz fetch das transações do Supabase (encontra 2: R$130 manual + R$115 InfinitePay)
-7. O `useEffect` na **linha 111-114** do `SessionPaymentsManager` dispara `onPaymentUpdate(sessionId, totalPago, legacyPayments)` toda vez que `payments` muda
-8. No Workflow, o callback `onPaymentUpdate` chama `onFieldUpdate(sessionId, 'valorPago', ...)` — mas o campo `'valorPago'` é **ignorado** pelo `updateSession` (linha 531 do useWorkflowRealtime: `case 'valorPago': break`)
+Criar uma rota pública `/checkout/:cobrancaId` que renderiza uma página de checkout transparente branded (com logo do fotógrafo), reutilizando a lógica já existente no `AsaasCheckoutSection` deste projeto. O "Gerar Link" criará a cobrança no banco (status `pendente`, sem chamar Asaas ainda) e gerará a URL interna. O pagamento real acontece quando o cliente abre a página e escolhe PIX ou Cartão.
 
-**O campo `valorPago` nunca chega ao banco.** Isso significa que o valor exibido na UI depende inteiramente do cache local, e qualquer re-render pode resetar para o valor antigo.
+## Fluxo Corrigido
 
-Além disso, o **`onFieldUpdate` com `'pagamentos'`** também é ignorado pelo banco (linha 533). Ou seja, toda a sincronização via `onPaymentUpdate` → `onFieldUpdate` é efetivamente um **no-op** que só afeta estado local temporário.
+```text
+ChargeModal → Asaas → "Gerar Link de Checkout"
+  1. Cria registro na tabela cobrancas (status: pendente, sem payment no Asaas ainda)
+  2. Gera URL: https://app.lunarihub.com/checkout/{cobrancaId}
+  3. Mostra link com botões "Copiar" e "Enviar WhatsApp"
 
-### O verdadeiro bug
+Cliente abre o link:
+  /checkout/:cobrancaId (rota pública, sem auth)
+  1. Busca dados da cobrança via Edge Function pública
+  2. Busca logo/nome do fotógrafo via profiles
+  3. Renderiza checkout transparente (PIX + Cartão)
+  4. Ao pagar, chama gestao-asaas-create-payment com dados do cartão/PIX
+  5. Polling de status para PIX / confirmação instantânea para cartão
+```
 
-O `valor_pago` no banco **está correto** (R$ 245). O problema é que a UI do Workflow card lê de `session.valorPago` (formato string `"R$ 130,00"`) que vem do **cache local/localStorage** e não é atualizado corretamente após o re-fetch. O campo `pendente` no card é calculado como `total - valorPago`, e se `valorPago` estiver desatualizado, mostra R$ 115 pendente.
+## Arquivos
 
-A inconsistência visual é causada por **dois sistemas de dados concorrendo**: o Supabase (correto) e o localStorage/cache (desatualizado).
+### 1. `src/pages/PublicCheckout.tsx` — CRIAR
+Página pública de checkout transparente. Sem autenticação necessária.
+- Busca dados da cobrança e do fotógrafo via nova Edge Function `checkout-get-data`
+- Renderiza logo do fotógrafo, valor, descrição
+- Tabs PIX / Cartão com formulário inline (adaptado do `AsaasCheckoutSection` existente)
+- Cálculo de taxas e parcelas igual ao Gallery (`asaas-fetch-fees` + `calcularAntecipacao`)
+- Polling de status PIX, confirmação instantânea de cartão
+- Tela de sucesso após pagamento confirmado
 
-## Sobre os itens marcados pelo usuário nas imagens
+### 2. `src/App.tsx` — MODIFICAR
+Adicionar rota pública:
+```tsx
+<Route path="/checkout/:cobrancaId" element={<PublicCheckout />} />
+```
 
-- **"Corrigir Valores do Histórico"**: botão de migração de dados antigos — pode ser removido ou escondido (já não é necessário rotineiramente)
-- **"Nenhuma sessão precisou ser corrigida"**: toast do botão acima — confirma que os dados do banco estão corretos
-- **Ícone vermelho com X**: esses itens de UI obsoletos devem ser limpos
+### 3. `supabase/functions/checkout-get-data/index.ts` — CRIAR
+Edge Function pública (verify_jwt = false) que retorna os dados necessários para o checkout:
+- Busca cobrança por ID (valida que existe e está pendente)
+- Busca perfil do fotógrafo (nome, logo)
+- Busca configurações Asaas do fotógrafo (métodos habilitados, maxParcelas, absorverTaxa)
+- Busca taxas da API Asaas (`/v3/myAccount/fees`) — mesma lógica do `asaas-fetch-fees` do Gallery
+- Retorna tudo em uma única chamada (evita múltiplas requisições do frontend)
 
-## Correções Propostas
+### 4. `supabase/functions/checkout-process-payment/index.ts` — CRIAR
+Edge Function pública (verify_jwt = false) que processa o pagamento:
+- Recebe `cobrancaId` + dados de pagamento (billingType, creditCard, etc.)
+- Valida que a cobrança existe e está pendente
+- Busca integração Asaas do fotógrafo (dono da cobrança)
+- Cria/busca customer no Asaas
+- Calcula taxas server-side (mesma lógica do `gestao-asaas-create-payment`)
+- Cria payment na API Asaas
+- Atualiza cobrança no banco (status, mp_payment_id, qr_code, etc.)
+- Retorna resultado (QR code para PIX, status para cartão)
 
-### 1. Eliminar `onPaymentUpdate` → `onFieldUpdate` como mecanismo de sync (raiz do bug)
+### 5. `src/components/cobranca/ChargeModal.tsx` — MODIFICAR
+O `handleAsaasGenerateLink` deixa de chamar `gestao-asaas-create-payment` com `billingType: UNDEFINED`. Em vez disso:
+1. Insere cobrança no banco diretamente (via Supabase client, sem Asaas)
+2. Gera URL interna: `${window.location.origin}/checkout/${cobrancaId}`
+3. Seta `currentCharge.paymentLink` com essa URL
+4. Transiciona para `ChargeLinkSection` (já existente)
 
-O `valor_pago` já é mantido pelo trigger do banco. O frontend **não deve tentar setá-lo manualmente**. A UI do Workflow deve ler `valor_pago` diretamente do Supabase (já faz via WorkflowCacheContext).
+### 6. `supabase/config.toml` — MODIFICAR
+Adicionar as duas novas funções com `verify_jwt = false`.
 
-**Arquivo**: `src/components/workflow/WorkflowCardCollapsed.tsx` e `WorkflowCardExpanded.tsx`
-- Remover o callback `onPaymentUpdate` que tenta setar `valorPago` via `onFieldUpdate`
-- Substituir por: apenas disparar um evento `payment-created` para forçar re-fetch do cache
+## Segurança
 
-### 2. Forçar re-fetch após fechar modal de pagamentos
+- `checkout-get-data`: Somente leitura, retorna apenas dados públicos (nome, logo, valor). Não expõe API keys.
+- `checkout-process-payment`: Valida cobrança existe e está pendente antes de processar. Usa Service Role internamente para acessar integração do fotógrafo. Dados sensíveis (API key Asaas) nunca chegam ao frontend.
+- A cobrança só pode ser paga uma vez (validação de status `pendente`).
 
-**Arquivo**: `src/components/workflow/WorkflowCardCollapsed.tsx` e `WorkflowCardExpanded.tsx`
-- No `onClose` do `WorkflowPaymentsModal`, disparar `window.dispatchEvent(new CustomEvent('payment-created', { detail: { sessionId } }))` para forçar o `WorkflowCacheContext` a buscar dados frescos do banco
-
-### 3. Corrigir cálculo de `pendente` no card
-
-**Arquivo**: `src/components/workflow/WorkflowCardCollapsed.tsx`
-- O cálculo de `pendente` deve usar `valor_pago` do banco (campo numérico) em vez de parsear a string `session.valorPago`
-
-### 4. Limpar UI obsoleta no CRM
-
-**Arquivo**: `src/components/crm/WorkflowHistoryTable.tsx`
-- Remover ou esconder o botão "Corrigir Valores do Histórico" (já fez seu trabalho, não é necessário no dia a dia)
-
-### 5. Remover escrita de `valorPago` no localStorage do AppContext
-
-**Arquivo**: `src/contexts/AppContext.tsx` (linhas 862-912)
-- O bloco que atualiza `localStorage` com `valorPago` é redundante e causa dessincronização. Remover essa lógica — o Supabase é a fonte da verdade.
-
-## Resumo de Arquivos
-
-| Arquivo | Ação |
-|---------|------|
-| `src/components/workflow/WorkflowCardCollapsed.tsx` | Simplificar `onPaymentUpdate`, forçar re-fetch no close |
-| `src/components/workflow/WorkflowCardExpanded.tsx` | Mesma correção |
-| `src/contexts/AppContext.tsx` | Remover bloco localStorage de `addPayment` |
-| `src/components/crm/WorkflowHistoryTable.tsx` | Esconder botão "Corrigir Valores" |
-| `src/components/payments/SessionPaymentsManager.tsx` | Revisar useEffect de sync para não causar loops |
-
-## Sobre Escalabilidade
-
-A arquitetura atual (trigger SQL como fonte da verdade para `valor_pago`) é **correta e escalável**. O problema não é o banco — é o frontend tentando manter um estado paralelo via localStorage/callbacks que conflita com o dado real. A correção acima elimina essa duplicidade.
+## Componentes reutilizados
+- `calcularAntecipacao` de `src/lib/anticipationUtils.ts` (já existe)
+- Lógica de masks e validação do `AsaasCheckoutSection` (copiar para `PublicCheckout`)
+- `ChargeLinkSection` para exibir o link gerado (já existe)
 
