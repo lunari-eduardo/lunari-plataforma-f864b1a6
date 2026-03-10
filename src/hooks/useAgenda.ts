@@ -167,6 +167,7 @@ export const useAgenda = () => {
     addAppointment: appointmentsHook.addAppointment,
     updateAppointment: appointmentsHook.updateAppointment,
     deleteAppointment: appointmentsHook.deleteAppointment,
+    loadMonthData: appointmentsHook.loadMonthData,
     getConfirmedSessionsForWorkflow,
   };
 };

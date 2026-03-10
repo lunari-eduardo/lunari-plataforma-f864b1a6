@@ -20,6 +20,9 @@ export const useAppointments = () => {
     // Integration function (preserves workflow integration)
     getConfirmedSessionsForWorkflow: context.getConfirmedSessionsForWorkflow,
     
+    // On-demand month loading
+    loadMonthData: context.loadMonthData,
+    
     // Utility functions
     getAppointmentsForDate: (date: Date) => {
       const targetDate = date.toDateString();
