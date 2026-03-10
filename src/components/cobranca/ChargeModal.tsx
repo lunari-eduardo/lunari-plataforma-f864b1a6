@@ -224,28 +224,37 @@ export function ChargeModal({
   const handleAsaasGenerateLink = async () => {
     setAsaasLinkLoading(true);
     try {
-      const response = await supabase.functions.invoke('gestao-asaas-create-payment', {
-        body: {
-          clienteId,
-          sessionId,
+      // Get current user
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) throw new Error('Não autenticado');
+
+      // Create cobrança record locally (no Asaas call yet — payment happens on checkout page)
+      const { data: cobranca, error: insertError } = await supabase
+        .from('cobrancas')
+        .insert({
+          user_id: session.user.id,
+          cliente_id: clienteId,
+          session_id: sessionId || null,
           valor,
-          descricao: descricao || undefined,
-          billingType: 'UNDEFINED',
-        },
-      });
+          descricao: descricao || 'Cobrança Asaas',
+          tipo_cobranca: 'link',
+          provedor: 'asaas',
+          status: 'pendente',
+        })
+        .select('id')
+        .single();
 
-      if (response.error) throw new Error(response.error.message);
-      if (!response.data?.success) throw new Error(response.data?.error || 'Erro ao gerar link');
+      if (insertError || !cobranca) throw new Error('Erro ao criar cobrança');
 
-      const invoiceUrl = response.data.invoiceUrl;
-      if (!invoiceUrl) throw new Error('Link de pagamento não retornado pelo Asaas');
+      // Generate internal checkout URL
+      const checkoutUrl = `${window.location.origin}/checkout/${cobranca.id}`;
 
       setCurrentCharge({
-        paymentLink: invoiceUrl,
-        checkoutUrl: invoiceUrl,
+        paymentLink: checkoutUrl,
+        checkoutUrl: checkoutUrl,
         status: 'pendente',
       });
-      setCurrentChargeId(response.data.cobrancaId);
+      setCurrentChargeId(cobranca.id);
       setAsaasMode('link');
     } catch (err) {
       const { toast } = await import('sonner');

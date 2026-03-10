@@ -86,3 +86,9 @@ verify_jwt = false
 
 [functions.gestao-asaas-create-payment]
 verify_jwt = false
+
+[functions.checkout-get-data]
+verify_jwt = false
+
+[functions.checkout-process-payment]
+verify_jwt = false
