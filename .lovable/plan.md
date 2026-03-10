@@ -1,36 +1,30 @@
 
 
-# Checkout Transparente Asaas — Implementado ✅
+# Fix: Agendamentos não carregam ao navegar para meses fora da janela inicial
 
-## Arquitetura
+## Causa Raiz
 
-```text
-ChargeModal → Asaas → "Gerar Link de Checkout"
-  1. Cria registro na tabela cobrancas (status: pendente, sem chamada ao Asaas)
-  2. Gera URL interna: {origin}/checkout/{cobrancaId}
-  3. Mostra link com botões "Copiar" e "Enviar WhatsApp"
+A função `loadMonthData` existe no `AgendaContext` mas **nunca é chamada** por nenhum componente. O carregamento inicial busca apenas o mês atual ±1 (fev-abr para março). Ao navegar para maio, janeiro, etc., nenhuma requisição é feita.
 
-Cliente abre o link → /checkout/:cobrancaId (rota pública)
-  1. checkout-get-data busca: cobrança, perfil do fotógrafo, settings Asaas, taxas reais
-  2. Renderiza checkout transparente branded (PIX + Cartão)
-  3. checkout-process-payment processa pagamento server-side via Asaas API
-  4. Polling automático para PIX / confirmação instantânea para Cartão
-```
+## Solução
 
-## Arquivos Criados/Modificados
+Adicionar um `useEffect` na página `Agenda.tsx` que observa mudanças na `date` de navegação e chama `loadMonthData` automaticamente para o mês visível. Isso garante que ao navegar para qualquer mês, os dados são carregados sob demanda (com cache para não recarregar meses já buscados).
 
-| Arquivo | Ação |
-|---------|------|
-| `src/pages/PublicCheckout.tsx` | ✅ Criado — Checkout transparente público |
-| `supabase/functions/checkout-get-data/index.ts` | ✅ Criado — Busca dados da cobrança + taxas |
-| `supabase/functions/checkout-process-payment/index.ts` | ✅ Criado — Processa pagamento (PIX/Cartão) |
-| `src/components/cobranca/ChargeModal.tsx` | ✅ Modificado — Gera link interno |
-| `src/App.tsx` | ✅ Modificado — Rota /checkout/:cobrancaId |
-| `supabase/config.toml` | ✅ Modificado — Novas funções registradas |
+## Alterações
 
-## Segurança
+### `src/pages/Agenda.tsx`
+- Importar `loadMonthData` do hook `useAgenda` (via `useAppointments` ou diretamente do contexto)
+- Adicionar `useEffect` que reage a `date` e `view`:
+  - Extrai `year` e `month` da data atual
+  - Chama `loadMonthData(year, month)`
+  - Para view `week`, carrega também o mês adjacente (semana pode cruzar meses)
+  - Para view `year`, carrega os 12 meses do ano visível
 
-- Edge Functions públicas (verify_jwt=false) mas validam status da cobrança
-- API key do Asaas nunca exposta ao frontend
-- Cobrança só pode ser paga uma vez (validação de status 'pendente')
-- Service Role usado internamente para acessar dados do fotógrafo
+### `src/hooks/useAppointments.ts`
+- Expor `loadMonthData` do contexto neste hook para que fique acessível via `useAgenda()`
+
+### `src/hooks/useAgenda.ts`
+- Propagar `loadMonthData` do `useAppointments`
+
+Nenhuma lógica nova — apenas conectar a função existente ao ciclo de navegação.
+
