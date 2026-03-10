@@ -172,8 +172,8 @@ export function ChargeLinkSection({
             Gerar Link
           </Button>
 
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
-            <p className="text-sm text-blue-700">
+          <div className="bg-muted/50 border rounded-lg p-3 text-center">
+            <p className="text-sm text-muted-foreground">
               Aceita cartão à vista ou parcelado
             </p>
           </div>

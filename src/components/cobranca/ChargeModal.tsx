@@ -457,8 +457,8 @@ export function ChargeModal({
 
           {/* Footer */}
           <div className="p-4 pt-2 border-t flex justify-end gap-2">
-            {showAsaasSection && asaasMode === 'checkout' && (
-              <Button variant="ghost" onClick={() => setAsaasMode('options')}>
+            {showAsaasSection && asaasMode === 'link' && (
+              <Button variant="ghost" onClick={() => { setAsaasMode('options'); setCurrentCharge(null); }}>
                 Voltar
               </Button>
             )}
