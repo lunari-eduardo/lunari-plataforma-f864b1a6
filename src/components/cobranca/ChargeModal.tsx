@@ -15,6 +15,8 @@ import { Cobranca } from '@/types/cobranca';
 import { ChargeLinkSection } from './ChargeLinkSection';
 import { PixManualSection } from './PixManualSection';
 import { AsaasCheckoutSection, AsaasCheckoutSettings } from './AsaasCheckoutSection';
+import { AsaasChargeOptions } from './AsaasChargeOptions';
+import { AsaasPixModal } from './AsaasPixModal';
 import { ChargeHistory } from './ChargeHistory';
 import { ProviderSelector } from './ProviderSelector';
 import { SelectedProvider } from './ProviderRow';
@@ -46,6 +48,13 @@ export function ChargeModal({
   const [checkingStatus, setCheckingStatus] = useState(false);
   const [currentChargeId, setCurrentChargeId] = useState<string | null>(null);
   const [asaasSettings, setAsaasSettings] = useState<AsaasCheckoutSettings | null>(null);
+
+  // Asaas sub-flow state
+  const [asaasMode, setAsaasMode] = useState<'options' | 'pix' | 'checkout' | null>(null);
+  const [asaasPixLoading, setAsaasPixLoading] = useState(false);
+  const [asaasPixQrCode, setAsaasPixQrCode] = useState<string | null>(null);
+  const [asaasPixCopiaECola, setAsaasPixCopiaECola] = useState<string | null>(null);
+  const [asaasPixModalOpen, setAsaasPixModalOpen] = useState(false);
   
   // Current charge state (after generation)
   const [currentCharge, setCurrentCharge] = useState<{
@@ -75,17 +84,25 @@ export function ChargeModal({
       setValor(valorSugerido);
       setValorType('total');
       setDescricao('');
-      setSelectedProvider(null); // Will be auto-selected by ProviderSelector
+      setSelectedProvider(null);
       setCurrentCharge(null);
       setCurrentChargeId(null);
       setCheckingStatus(false);
       setActiveTab('cobrar');
+      setAsaasMode(null);
+      setAsaasPixQrCode(null);
+      setAsaasPixCopiaECola(null);
+      setAsaasPixModalOpen(false);
     }
   }, [isOpen, valorSugerido]);
 
   // Fetch Asaas settings when provider is selected
   useEffect(() => {
-    if (selectedProvider !== 'asaas') return;
+    if (selectedProvider !== 'asaas') {
+      setAsaasMode(null);
+      return;
+    }
+    setAsaasMode('options');
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -126,7 +143,6 @@ export function ChargeModal({
   const handleGenerateCharge = async () => {
     if (!selectedProvider) return;
 
-    // PIX Manual flow - local generation, no Edge Function
     if (selectedProvider === 'pix_manual') {
       const result = await createPixManualCharge({
         clienteId,
@@ -150,7 +166,6 @@ export function ChargeModal({
       return;
     }
 
-    // Edge Function flow for MP and InfinitePay
     const provedor = selectedProvider === 'infinitepay' ? 'infinitepay' : 'mercadopago';
 
     const result = await createLinkCharge({
@@ -177,6 +192,39 @@ export function ChargeModal({
     }
   };
 
+  const handleAsaasGeneratePix = async () => {
+    setAsaasPixLoading(true);
+    try {
+      const response = await supabase.functions.invoke('gestao-asaas-create-payment', {
+        body: {
+          clienteId,
+          sessionId,
+          valor,
+          descricao: descricao || undefined,
+          billingType: 'PIX',
+        },
+      });
+
+      if (response.error) throw new Error(response.error.message);
+      if (!response.data?.success) throw new Error(response.data?.error || 'Erro ao gerar PIX');
+
+      const qrCode = response.data.pixQrCode ? `data:image/png;base64,${response.data.pixQrCode}` : null;
+      setAsaasPixQrCode(qrCode);
+      setAsaasPixCopiaECola(response.data.pixCopiaECola || null);
+      setAsaasPixModalOpen(true);
+      setCurrentChargeId(response.data.cobrancaId);
+    } catch (err) {
+      const { toast } = await import('sonner');
+      toast.error(err instanceof Error ? err.message : 'Erro ao gerar PIX');
+    } finally {
+      setAsaasPixLoading(false);
+    }
+  };
+
+  const handleAsaasSelectCheckout = () => {
+    setAsaasMode('checkout');
+  };
+
   const handleCheckStatus = async () => {
     if (!currentChargeId) return;
     
@@ -192,7 +240,6 @@ export function ChargeModal({
   };
 
   const handleViewCharge = (cobranca: Cobranca) => {
-    // Determine provider from cobranca
     if (cobranca.provedor === 'infinitepay') {
       setSelectedProvider('infinitepay');
     } else if (cobranca.provedor === 'mercadopago') {
@@ -215,170 +262,199 @@ export function ChargeModal({
     setActiveTab('cobrar');
   };
 
-  // Show different sections based on provider
   const showLinkSection = selectedProvider === 'mercadopago_link' || selectedProvider === 'infinitepay';
   const showPixManualSection = selectedProvider === 'pix_manual';
   const showAsaasSection = selectedProvider === 'asaas';
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg max-h-[90vh] p-0 overflow-hidden z-[60] shadow-2xl border-2 border-border">
-        <DialogHeader className="p-4 pb-2">
-          <DialogTitle className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5 text-primary" />
-            Cobrar cliente
-          </DialogTitle>
-          <p className="text-sm text-muted-foreground">{clienteNome}</p>
-        </DialogHeader>
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent
+          className="max-w-lg max-h-[90vh] p-0 overflow-hidden z-[60] shadow-2xl border-2 border-border"
+          overlayClassName="backdrop-blur-sm bg-black/60 z-[59]"
+        >
+          <DialogHeader className="p-4 pb-2">
+            <DialogTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-primary" />
+              Cobrar cliente
+            </DialogTitle>
+            <p className="text-sm text-muted-foreground">{clienteNome}</p>
+          </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'cobrar' | 'historico')}>
-          <TabsList className="w-full grid grid-cols-2 mx-4 mb-2" style={{ width: 'calc(100% - 32px)' }}>
-            <TabsTrigger value="cobrar" className="gap-2">
-              <CreditCard className="h-4 w-4" />
-              Nova Cobrança
-            </TabsTrigger>
-            <TabsTrigger value="historico" className="gap-2">
-              <History className="h-4 w-4" />
-              Histórico ({cobrancas.length})
-            </TabsTrigger>
-          </TabsList>
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'cobrar' | 'historico')}>
+            <TabsList className="w-full grid grid-cols-2 mx-4 mb-2" style={{ width: 'calc(100% - 32px)' }}>
+              <TabsTrigger value="cobrar" className="gap-2">
+                <CreditCard className="h-4 w-4" />
+                Nova Cobrança
+              </TabsTrigger>
+              <TabsTrigger value="historico" className="gap-2">
+                <History className="h-4 w-4" />
+                Histórico ({cobrancas.length})
+              </TabsTrigger>
+            </TabsList>
 
-          <ScrollArea className="max-h-[calc(90vh-140px)]">
-            <TabsContent value="cobrar" className="p-4 pt-2 space-y-4 m-0">
-              {/* Valor da cobrança */}
-              <div className="space-y-3">
-                <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                  Valor da cobrança
-                </Label>
-                
-                <div className="flex items-center gap-3">
-                  <div className="relative flex-1">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-                      R$
-                    </span>
-                    <Input
-                      type="number"
-                      value={valor}
-                      onChange={(e) => setValor(parseFloat(e.target.value) || 0)}
-                      className="pl-10 h-10 text-lg font-semibold"
-                      disabled={valorType === 'total'}
-                    />
-                  </div>
+            <ScrollArea className="max-h-[calc(90vh-140px)]">
+              <TabsContent value="cobrar" className="p-4 pt-2 space-y-4 m-0">
+                {/* Valor da cobrança */}
+                <div className="space-y-3">
+                  <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                    Valor da cobrança
+                  </Label>
                   
-                  <RadioGroup
-                    value={valorType}
-                    onValueChange={(v) => setValorType(v as 'total' | 'parcial')}
-                    className="flex gap-3"
-                  >
-                    <div className="flex items-center space-x-1">
-                      <RadioGroupItem value="total" id="total" />
-                      <Label htmlFor="total" className="text-sm cursor-pointer">Total</Label>
+                  <div className="flex items-center gap-3">
+                    <div className="relative flex-1">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                        R$
+                      </span>
+                      <Input
+                        type="number"
+                        value={valor}
+                        onChange={(e) => setValor(parseFloat(e.target.value) || 0)}
+                        className="pl-10 h-10 text-lg font-semibold"
+                        disabled={valorType === 'total'}
+                      />
                     </div>
-                    <div className="flex items-center space-x-1">
-                      <RadioGroupItem value="parcial" id="parcial" />
-                      <Label htmlFor="parcial" className="text-sm cursor-pointer">Parcial</Label>
-                    </div>
-                  </RadioGroup>
+                    
+                    <RadioGroup
+                      value={valorType}
+                      onValueChange={(v) => setValorType(v as 'total' | 'parcial')}
+                      className="flex gap-3"
+                    >
+                      <div className="flex items-center space-x-1">
+                        <RadioGroupItem value="total" id="total" />
+                        <Label htmlFor="total" className="text-sm cursor-pointer">Total</Label>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <RadioGroupItem value="parcial" id="parcial" />
+                        <Label htmlFor="parcial" className="text-sm cursor-pointer">Parcial</Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+
+                  <Textarea
+                    placeholder="Descrição da cobrança (opcional)"
+                    value={descricao}
+                    onChange={(e) => setDescricao(e.target.value)}
+                    className="resize-none h-16 text-sm"
+                  />
                 </div>
 
-                <Textarea
-                  placeholder="Descrição da cobrança (opcional)"
-                  value={descricao}
-                  onChange={(e) => setDescricao(e.target.value)}
-                  className="resize-none h-16 text-sm"
+                <Separator />
+
+                {/* Provider Selection */}
+                <div className="space-y-3">
+                  <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                    Meio de cobrança
+                  </Label>
+                  
+                  <ProviderSelector
+                    selectedProvider={selectedProvider}
+                    onSelect={handleProviderSelect}
+                  />
+                </div>
+
+                <Separator />
+
+                {/* Charge Generation Section */}
+                <div className="min-h-[120px]">
+                  {showPixManualSection && (
+                    <PixManualSection
+                      valor={valor}
+                      pixPayload={currentCharge?.pixPayload}
+                      status={currentCharge?.status}
+                      loading={creatingCharge}
+                      clienteWhatsapp={clienteWhatsapp}
+                      chargeId={currentChargeId || undefined}
+                      onGenerate={handleGenerateCharge}
+                      onConfirmPayment={confirmPixManualPayment}
+                    />
+                  )}
+
+                  {showLinkSection && (
+                    <ChargeLinkSection
+                      valor={valor}
+                      paymentLink={currentCharge?.paymentLink}
+                      status={currentCharge?.status}
+                      loading={creatingCharge}
+                      checkingStatus={checkingStatus}
+                      onGenerate={handleGenerateCharge}
+                      onCheckStatus={currentChargeId ? handleCheckStatus : undefined}
+                      clienteWhatsapp={clienteWhatsapp}
+                    />
+                  )}
+
+                  {showAsaasSection && asaasMode === 'options' && asaasSettings && (
+                    <AsaasChargeOptions
+                      valor={valor}
+                      onSelectPix={handleAsaasGeneratePix}
+                      onSelectLink={handleAsaasSelectCheckout}
+                      pixLoading={asaasPixLoading}
+                      hasPix={asaasSettings.habilitarPix}
+                    />
+                  )}
+
+                  {showAsaasSection && asaasMode === 'checkout' && asaasSettings && (
+                    <AsaasCheckoutSection
+                      valor={valor}
+                      clienteId={clienteId}
+                      sessionId={sessionId}
+                      descricao={descricao || undefined}
+                      settings={asaasSettings}
+                      clienteWhatsapp={clienteWhatsapp}
+                      onPaymentCreated={(result) => {
+                        setCurrentCharge({
+                          pixCopiaCola: result.pixCopiaECola,
+                          qrCodeBase64: result.pixQrCode,
+                          paymentLink: result.boletoUrl,
+                          status: result.paid ? 'pago' : 'pendente',
+                        });
+                        setCurrentChargeId(result.cobrancaId);
+                      }}
+                      loading={creatingCharge}
+                    />
+                  )}
+
+                  {!selectedProvider && (
+                    <div className="flex items-center justify-center h-[120px] text-muted-foreground text-sm">
+                      Selecione um meio de cobrança acima
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="historico" className="p-4 pt-2 m-0">
+                <ChargeHistory
+                  cobrancas={cobrancas}
+                  onCancel={cancelCharge}
+                  onView={handleViewCharge}
                 />
-              </div>
+              </TabsContent>
+            </ScrollArea>
+          </Tabs>
 
-              <Separator />
+          {/* Footer */}
+          <div className="p-4 pt-2 border-t flex justify-end gap-2">
+            {showAsaasSection && asaasMode === 'checkout' && (
+              <Button variant="ghost" onClick={() => setAsaasMode('options')}>
+                Voltar
+              </Button>
+            )}
+            <Button variant="ghost" onClick={onClose}>
+              Fechar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
-              {/* Provider Selection */}
-              <div className="space-y-3">
-                <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                  Meio de cobrança
-                </Label>
-                
-                <ProviderSelector
-                  selectedProvider={selectedProvider}
-                  onSelect={handleProviderSelect}
-                />
-              </div>
-
-              <Separator />
-
-              {/* Charge Generation Section */}
-              <div className="min-h-[200px]">
-                {showPixManualSection && (
-                  <PixManualSection
-                    valor={valor}
-                    pixPayload={currentCharge?.pixPayload}
-                    status={currentCharge?.status}
-                    loading={creatingCharge}
-                    clienteWhatsapp={clienteWhatsapp}
-                    chargeId={currentChargeId || undefined}
-                    onGenerate={handleGenerateCharge}
-                    onConfirmPayment={confirmPixManualPayment}
-                  />
-                )}
-
-                {showLinkSection && (
-                  <ChargeLinkSection
-                    valor={valor}
-                    paymentLink={currentCharge?.paymentLink}
-                    status={currentCharge?.status}
-                    loading={creatingCharge}
-                    checkingStatus={checkingStatus}
-                    onGenerate={handleGenerateCharge}
-                    onCheckStatus={currentChargeId ? handleCheckStatus : undefined}
-                    clienteWhatsapp={clienteWhatsapp}
-                  />
-                )}
-
-                {showAsaasSection && asaasSettings && (
-                  <AsaasCheckoutSection
-                    valor={valor}
-                    clienteId={clienteId}
-                    sessionId={sessionId}
-                    descricao={descricao || undefined}
-                    settings={asaasSettings}
-                    clienteWhatsapp={clienteWhatsapp}
-                    onPaymentCreated={(result) => {
-                      setCurrentCharge({
-                        pixCopiaCola: result.pixCopiaECola,
-                        qrCodeBase64: result.pixQrCode,
-                        paymentLink: result.boletoUrl,
-                        status: result.paid ? 'pago' : 'pendente',
-                      });
-                      setCurrentChargeId(result.cobrancaId);
-                    }}
-                    loading={creatingCharge}
-                  />
-                )}
-
-                {!selectedProvider && (
-                  <div className="flex items-center justify-center h-[200px] text-muted-foreground text-sm">
-                    Selecione um meio de cobrança acima
-                  </div>
-                )}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="historico" className="p-4 pt-2 m-0">
-              <ChargeHistory
-                cobrancas={cobrancas}
-                onCancel={cancelCharge}
-                onView={handleViewCharge}
-              />
-            </TabsContent>
-          </ScrollArea>
-        </Tabs>
-
-        {/* Footer */}
-        <div className="p-4 pt-2 border-t flex justify-end gap-2">
-          <Button variant="ghost" onClick={onClose}>
-            Fechar
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+      {/* Asaas PIX Modal (separate dialog on top) */}
+      <AsaasPixModal
+        isOpen={asaasPixModalOpen}
+        onClose={() => setAsaasPixModalOpen(false)}
+        valor={valor}
+        pixQrCode={asaasPixQrCode}
+        pixCopiaECola={asaasPixCopiaECola}
+        clienteWhatsapp={clienteWhatsapp}
+      />
+    </>
   );
 }
