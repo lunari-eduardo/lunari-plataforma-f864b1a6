@@ -14,7 +14,6 @@ import { useCobranca } from '@/hooks/useCobranca';
 import { Cobranca } from '@/types/cobranca';
 import { ChargeLinkSection } from './ChargeLinkSection';
 import { PixManualSection } from './PixManualSection';
-import { AsaasCheckoutSection, AsaasCheckoutSettings } from './AsaasCheckoutSection';
 import { AsaasChargeOptions } from './AsaasChargeOptions';
 import { AsaasPixModal } from './AsaasPixModal';
 import { ChargeHistory } from './ChargeHistory';
