@@ -380,28 +380,9 @@ Deno.serve(async (req) => {
       console.error('Error saving cobrança:', cobrancaError);
     }
 
-    // 8. If payment confirmed immediately (credit card), create transaction
-    if (isConfirmed && sessionId) {
-      const { data: sessao } = await supabase
-        .from('clientes_sessoes')
-        .select('cliente_id')
-        .eq('session_id', sessionId)
-        .maybeSingle();
-
-      if (sessao) {
-        await supabase.from('clientes_transacoes').insert({
-          user_id: userId,
-          cliente_id: sessao.cliente_id,
-          session_id: sessionId,
-          valor: valor,
-          tipo: 'pagamento',
-          data_transacao: new Date().toISOString().split('T')[0],
-          descricao: `Pagamento Asaas - Cartão ${body.installmentCount || 1}x`,
-        });
-
-        console.log(`✅ Transaction created for session ${sessionId}`);
-      }
-    }
+    // 8. Transaction creation is handled EXCLUSIVELY by the database trigger
+    // `ensure_transaction_on_cobranca_paid` when cobrancas.status changes to 'pago'.
+    // Do NOT insert into clientes_transacoes here to avoid duplicates.
 
     return new Response(
       JSON.stringify({

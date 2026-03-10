@@ -160,72 +160,9 @@ serve(async (req) => {
 
       console.log(`[check-payment-status] Cobranca ${cobranca.id} updated to 'pago'`);
 
-      // Se tem sessão vinculada, criar transação
-      if (cobranca.session_id) {
-        // Buscar sessão para obter cliente_id e session_id texto
-        let session = null;
-
-        // Primeiro tentar por session_id texto
-        const { data: byText } = await supabase
-          .from("clientes_sessoes")
-          .select("session_id, cliente_id")
-          .eq("session_id", cobranca.session_id)
-          .maybeSingle();
-
-        if (byText) {
-          session = byText;
-        } else {
-          // Fallback por UUID
-          const { data: byUuid } = await supabase
-            .from("clientes_sessoes")
-            .select("session_id, cliente_id")
-            .eq("id", cobranca.session_id)
-            .maybeSingle();
-
-          if (byUuid) {
-            session = byUuid;
-          }
-        }
-
-        if (session) {
-          const { error: txError } = await supabase
-            .from("clientes_transacoes")
-            .insert({
-              user_id: cobranca.user_id,
-              cliente_id: session.cliente_id || cobranca.cliente_id,
-              session_id: session.session_id, // Usar session_id TEXTO
-              valor: cobranca.valor,
-              tipo: "pagamento",
-              data_transacao: now.split("T")[0],
-              descricao: `Pagamento verificado manualmente - ${cobranca.descricao || "Link"}`,
-            });
-
-          if (txError) {
-            console.error("[check-payment-status] Error creating transaction:", txError);
-          } else {
-            console.log(`[check-payment-status] Transaction created for session ${session.session_id}`);
-          }
-        } else {
-          console.warn(`[check-payment-status] Session not found for: ${cobranca.session_id}`);
-          
-          // Fallback: criar transação sem session_id
-          const { error: txError } = await supabase
-            .from("clientes_transacoes")
-            .insert({
-              user_id: cobranca.user_id,
-              cliente_id: cobranca.cliente_id,
-              session_id: null,
-              valor: cobranca.valor,
-              tipo: "pagamento",
-              data_transacao: now.split("T")[0],
-              descricao: `Pagamento verificado manualmente - ${cobranca.descricao || "Link"}`,
-            });
-
-          if (txError) {
-            console.error("[check-payment-status] Error creating fallback transaction:", txError);
-          }
-        }
-      }
+      // Transaction creation is handled EXCLUSIVELY by the database trigger
+      // `ensure_transaction_on_cobranca_paid` when cobrancas.status changes to 'pago'.
+      // Do NOT insert into clientes_transacoes here to avoid duplicates.
 
       return new Response(
         JSON.stringify({ 
