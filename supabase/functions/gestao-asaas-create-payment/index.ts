@@ -333,8 +333,15 @@ Deno.serve(async (req) => {
       boletoUrl = paymentData.bankSlipUrl || null;
     }
 
-    // 7. Save cobrança
-    const tipoCobranca = billingType === 'CREDIT_CARD' ? 'link' : billingType === 'PIX' ? 'pix' : 'link';
+    // 7. Get invoice URL for UNDEFINED billing type (checkout link)
+    let invoiceUrl: string | null = null;
+    if (billingType === 'UNDEFINED') {
+      invoiceUrl = paymentData.invoiceUrl || `${asaasBaseUrl.replace('api', 'www').replace('/v3', '')}/i/${paymentData.id}`;
+      console.log(`🔗 Invoice URL: ${invoiceUrl}`);
+    }
+
+    // 8. Save cobrança
+    const tipoCobranca = billingType === 'UNDEFINED' ? 'link' : billingType === 'CREDIT_CARD' ? 'link' : billingType === 'PIX' ? 'pix' : 'link';
     const isConfirmed = paymentData.status === 'CONFIRMED' || paymentData.status === 'RECEIVED';
 
     const cobrancaData: Record<string, unknown> = {
