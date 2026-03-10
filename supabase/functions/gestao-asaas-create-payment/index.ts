@@ -366,6 +366,10 @@ Deno.serve(async (req) => {
       cobrancaData.ip_checkout_url = boletoUrl;
     }
 
+    if (billingType === 'UNDEFINED' && invoiceUrl) {
+      cobrancaData.mp_payment_link = invoiceUrl;
+    }
+
     const { data: cobranca, error: cobrancaError } = await supabase
       .from('cobrancas')
       .insert(cobrancaData)
