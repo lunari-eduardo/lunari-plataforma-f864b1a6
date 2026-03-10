@@ -10,7 +10,7 @@ interface RequestBody {
   sessionId?: string;
   valor: number;
   descricao?: string;
-  billingType?: 'PIX' | 'CREDIT_CARD' | 'BOLETO';
+  billingType?: 'PIX' | 'CREDIT_CARD' | 'BOLETO' | 'UNDEFINED';
   creditCard?: {
     holderName: string;
     number: string;
