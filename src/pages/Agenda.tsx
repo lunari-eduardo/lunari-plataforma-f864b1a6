@@ -32,6 +32,26 @@ export default function Agenda() {
   const { tasks, addTask } = useSupabaseTasks();
   const { isMobile, isTablet, classes } = useResponsiveLayout();
   
+  // Auto-load month data when navigating
+  useEffect(() => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    
+    if (view === 'year') {
+      // Load all 12 months for the visible year
+      for (let m = 0; m < 12; m++) {
+        loadMonthData(year, m);
+      }
+    } else if (view === 'week') {
+      // Week may cross month boundary
+      loadMonthData(year, month);
+      if (date.getDate() > 24) loadMonthData(month === 11 ? year + 1 : year, (month + 1) % 12);
+      if (date.getDate() < 7) loadMonthData(month === 0 ? year - 1 : year, month === 0 ? 11 : month - 1);
+    } else {
+      loadMonthData(year, month);
+    }
+  }, [date, view, loadMonthData]);
+
   // Task modal state
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   
