@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { format } from 'date-fns';
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
@@ -25,7 +25,7 @@ import { Orcamento } from '@/types/orcamento';
 
 export default function Agenda() {
   const { unifiedEvents } = useUnifiedCalendar();
-  const { addAppointment, updateAppointment, deleteAppointment } = useAgenda();
+  const { addAppointment, updateAppointment, deleteAppointment, loadMonthData } = useAgenda();
   const { availability } = useAvailability();
   const { isFromBudget, getBudgetId } = useIntegration();
   const { orcamentos } = useOrcamentos();
@@ -45,6 +45,24 @@ export default function Agenda() {
     navigateToday,
     navigateToDate
   } = useAgendaNavigation();
+
+  // Auto-load month data when navigating
+  useEffect(() => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    
+    if (view === 'year') {
+      for (let m = 0; m < 12; m++) {
+        loadMonthData(year, m);
+      }
+    } else if (view === 'week') {
+      loadMonthData(year, month);
+      if (date.getDate() > 24) loadMonthData(month === 11 ? year + 1 : year, (month + 1) % 12);
+      if (date.getDate() < 7) loadMonthData(month === 0 ? year - 1 : year, month === 0 ? 11 : month - 1);
+    } else {
+      loadMonthData(year, month);
+    }
+  }, [date, view, loadMonthData]);
   
   // Modal management hook
   const {
