@@ -25,7 +25,7 @@ import { Orcamento } from '@/types/orcamento';
 
 export default function Agenda() {
   const { unifiedEvents } = useUnifiedCalendar();
-  const { addAppointment, updateAppointment, deleteAppointment } = useAgenda();
+  const { addAppointment, updateAppointment, deleteAppointment, loadMonthData } = useAgenda();
   const { availability } = useAvailability();
   const { isFromBudget, getBudgetId } = useIntegration();
   const { orcamentos } = useOrcamentos();
