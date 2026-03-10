@@ -85,7 +85,7 @@ export function ChargeLinkSection({
           >
             {copied ? (
               <>
-                <Check className="h-4 w-4 text-green-600" />
+                <Check className="h-4 w-4 text-emerald-500" />
                 Copiado!
               </>
             ) : (
@@ -125,7 +125,7 @@ export function ChargeLinkSection({
           <Button
             type="button"
             onClick={handleSendWhatsapp}
-            className="w-full gap-2 bg-green-600 hover:bg-green-700"
+            className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
           >
             <Send className="h-4 w-4" />
             Enviar via WhatsApp
@@ -133,8 +133,8 @@ export function ChargeLinkSection({
         )}
 
         {/* Info */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
-          <p className="text-sm text-blue-700">
+        <div className="bg-muted/50 border rounded-lg p-3 text-center">
+          <p className="text-sm text-muted-foreground">
             O cliente pode pagar com cartão à vista ou parcelado
           </p>
         </div>
@@ -172,8 +172,8 @@ export function ChargeLinkSection({
             Gerar Link
           </Button>
 
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
-            <p className="text-sm text-blue-700">
+          <div className="bg-muted/50 border rounded-lg p-3 text-center">
+            <p className="text-sm text-muted-foreground">
               Aceita cartão à vista ou parcelado
             </p>
           </div>

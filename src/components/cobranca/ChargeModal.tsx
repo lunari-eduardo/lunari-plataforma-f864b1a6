@@ -14,7 +14,6 @@ import { useCobranca } from '@/hooks/useCobranca';
 import { Cobranca } from '@/types/cobranca';
 import { ChargeLinkSection } from './ChargeLinkSection';
 import { PixManualSection } from './PixManualSection';
-import { AsaasCheckoutSection, AsaasCheckoutSettings } from './AsaasCheckoutSection';
 import { AsaasChargeOptions } from './AsaasChargeOptions';
 import { AsaasPixModal } from './AsaasPixModal';
 import { ChargeHistory } from './ChargeHistory';
@@ -47,10 +46,11 @@ export function ChargeModal({
   const [activeTab, setActiveTab] = useState<'cobrar' | 'historico'>('cobrar');
   const [checkingStatus, setCheckingStatus] = useState(false);
   const [currentChargeId, setCurrentChargeId] = useState<string | null>(null);
-  const [asaasSettings, setAsaasSettings] = useState<AsaasCheckoutSettings | null>(null);
+  const [asaasSettings, setAsaasSettings] = useState<{ habilitarPix: boolean; habilitarCartao: boolean; habilitarBoleto: boolean; maxParcelas: number; absorverTaxa: boolean; incluirTaxaAntecipacao: boolean } | null>(null);
 
   // Asaas sub-flow state
-  const [asaasMode, setAsaasMode] = useState<'options' | 'pix' | 'checkout' | null>(null);
+  const [asaasMode, setAsaasMode] = useState<'options' | 'pix' | 'link' | null>(null);
+  const [asaasLinkLoading, setAsaasLinkLoading] = useState(false);
   const [asaasPixLoading, setAsaasPixLoading] = useState(false);
   const [asaasPixQrCode, setAsaasPixQrCode] = useState<string | null>(null);
   const [asaasPixCopiaECola, setAsaasPixCopiaECola] = useState<string | null>(null);
@@ -221,8 +221,38 @@ export function ChargeModal({
     }
   };
 
-  const handleAsaasSelectCheckout = () => {
-    setAsaasMode('checkout');
+  const handleAsaasGenerateLink = async () => {
+    setAsaasLinkLoading(true);
+    try {
+      const response = await supabase.functions.invoke('gestao-asaas-create-payment', {
+        body: {
+          clienteId,
+          sessionId,
+          valor,
+          descricao: descricao || undefined,
+          billingType: 'UNDEFINED',
+        },
+      });
+
+      if (response.error) throw new Error(response.error.message);
+      if (!response.data?.success) throw new Error(response.data?.error || 'Erro ao gerar link');
+
+      const invoiceUrl = response.data.invoiceUrl;
+      if (!invoiceUrl) throw new Error('Link de pagamento não retornado pelo Asaas');
+
+      setCurrentCharge({
+        paymentLink: invoiceUrl,
+        checkoutUrl: invoiceUrl,
+        status: 'pendente',
+      });
+      setCurrentChargeId(response.data.cobrancaId);
+      setAsaasMode('link');
+    } catch (err) {
+      const { toast } = await import('sonner');
+      toast.error(err instanceof Error ? err.message : 'Erro ao gerar link');
+    } finally {
+      setAsaasLinkLoading(false);
+    }
   };
 
   const handleCheckStatus = async () => {
@@ -387,30 +417,23 @@ export function ChargeModal({
                     <AsaasChargeOptions
                       valor={valor}
                       onSelectPix={handleAsaasGeneratePix}
-                      onSelectLink={handleAsaasSelectCheckout}
+                      onSelectLink={handleAsaasGenerateLink}
                       pixLoading={asaasPixLoading}
+                      linkLoading={asaasLinkLoading}
                       hasPix={asaasSettings.habilitarPix}
                     />
                   )}
 
-                  {showAsaasSection && asaasMode === 'checkout' && asaasSettings && (
-                    <AsaasCheckoutSection
+                  {showAsaasSection && asaasMode === 'link' && (
+                    <ChargeLinkSection
                       valor={valor}
-                      clienteId={clienteId}
-                      sessionId={sessionId}
-                      descricao={descricao || undefined}
-                      settings={asaasSettings}
+                      paymentLink={currentCharge?.paymentLink}
+                      status={currentCharge?.status}
+                      loading={asaasLinkLoading}
+                      checkingStatus={checkingStatus}
+                      onGenerate={handleAsaasGenerateLink}
+                      onCheckStatus={currentChargeId ? handleCheckStatus : undefined}
                       clienteWhatsapp={clienteWhatsapp}
-                      onPaymentCreated={(result) => {
-                        setCurrentCharge({
-                          pixCopiaCola: result.pixCopiaECola,
-                          qrCodeBase64: result.pixQrCode,
-                          paymentLink: result.boletoUrl,
-                          status: result.paid ? 'pago' : 'pendente',
-                        });
-                        setCurrentChargeId(result.cobrancaId);
-                      }}
-                      loading={creatingCharge}
                     />
                   )}
 
@@ -434,8 +457,8 @@ export function ChargeModal({
 
           {/* Footer */}
           <div className="p-4 pt-2 border-t flex justify-end gap-2">
-            {showAsaasSection && asaasMode === 'checkout' && (
-              <Button variant="ghost" onClick={() => setAsaasMode('options')}>
+            {showAsaasSection && asaasMode === 'link' && (
+              <Button variant="ghost" onClick={() => { setAsaasMode('options'); setCurrentCharge(null); }}>
                 Voltar
               </Button>
             )}

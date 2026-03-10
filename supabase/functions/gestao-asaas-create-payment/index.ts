@@ -10,7 +10,7 @@ interface RequestBody {
   sessionId?: string;
   valor: number;
   descricao?: string;
-  billingType?: 'PIX' | 'CREDIT_CARD' | 'BOLETO';
+  billingType?: 'PIX' | 'CREDIT_CARD' | 'BOLETO' | 'UNDEFINED';
   creditCard?: {
     holderName: string;
     number: string;
@@ -333,8 +333,15 @@ Deno.serve(async (req) => {
       boletoUrl = paymentData.bankSlipUrl || null;
     }
 
-    // 7. Save cobrança
-    const tipoCobranca = billingType === 'CREDIT_CARD' ? 'link' : billingType === 'PIX' ? 'pix' : 'link';
+    // 7. Get invoice URL for UNDEFINED billing type (checkout link)
+    let invoiceUrl: string | null = null;
+    if (billingType === 'UNDEFINED') {
+      invoiceUrl = paymentData.invoiceUrl || `${asaasBaseUrl.replace('api', 'www').replace('/v3', '')}/i/${paymentData.id}`;
+      console.log(`🔗 Invoice URL: ${invoiceUrl}`);
+    }
+
+    // 8. Save cobrança
+    const tipoCobranca = billingType === 'UNDEFINED' ? 'link' : billingType === 'CREDIT_CARD' ? 'link' : billingType === 'PIX' ? 'pix' : 'link';
     const isConfirmed = paymentData.status === 'CONFIRMED' || paymentData.status === 'RECEIVED';
 
     const cobrancaData: Record<string, unknown> = {
@@ -357,6 +364,10 @@ Deno.serve(async (req) => {
 
     if (billingType === 'BOLETO' && boletoUrl) {
       cobrancaData.ip_checkout_url = boletoUrl;
+    }
+
+    if (billingType === 'UNDEFINED' && invoiceUrl) {
+      cobrancaData.mp_payment_link = invoiceUrl;
     }
 
     const { data: cobranca, error: cobrancaError } = await supabase
@@ -402,6 +413,7 @@ Deno.serve(async (req) => {
         pixQrCode: pixData?.encodedImage,
         pixCopiaECola: pixData?.payload,
         boletoUrl,
+        invoiceUrl,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
