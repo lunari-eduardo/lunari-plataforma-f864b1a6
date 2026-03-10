@@ -413,6 +413,7 @@ Deno.serve(async (req) => {
         pixQrCode: pixData?.encodedImage,
         pixCopiaECola: pixData?.payload,
         boletoUrl,
+        invoiceUrl,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
