@@ -213,7 +213,7 @@ export default function WeeklyView({
                   <div 
                     key={`${dayIndex}-${time}`} 
                     onClick={() => !event && onCreateSlot({ date: day, time })} 
-                    className={`relative cursor-pointer bg-card hover:bg-muted ${classes.weeklyTimeSlot}`}
+                    className={`relative cursor-pointer bg-white/40 hover:bg-white/60 dark:bg-white/[0.05] dark:hover:bg-white/[0.08] ${classes.weeklyTimeSlot}`}
                   >
                     {event ? <div onClick={e => e.stopPropagation()}>
                           <UnifiedEventCard event={event} onClick={onEventClick} variant="weekly" />

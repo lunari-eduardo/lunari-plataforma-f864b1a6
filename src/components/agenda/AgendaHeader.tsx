@@ -141,7 +141,7 @@ export default function AgendaHeader({
         
         {/* View Toggle and Manage Button */}
         <div className="flex items-center gap-2 w-full">
-          <div className="flex bg-lunar-surface border border-lunar-border rounded-lg p-1 flex-1">
+          <div className="flex bg-white/40 dark:bg-white/[0.06] border border-white/30 dark:border-white/10 rounded-lg p-1 flex-1">
             {viewButtons.map(({ key, label }) => (
               <ViewToggleButton key={key} viewKey={key} label={label} />
             ))}

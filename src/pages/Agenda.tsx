@@ -255,7 +255,7 @@ export default function Agenda() {
 
   return (
     <div className={`w-full max-w-7xl mx-auto ${classes.container} pb-20 md:pb-4`}>
-      <Card className={`${classes.card} bg-lunar-bg mx-0`}>
+      <Card className={`${classes.card} bg-white/30 backdrop-blur-xl dark:bg-white/[0.04] border-white/50 dark:border-white/10 mx-0`}>
         <AgendaHeader
           view={view}
           date={date}

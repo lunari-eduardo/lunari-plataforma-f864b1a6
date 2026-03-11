@@ -339,7 +339,7 @@ export default function DailyView({
                     onCreateSlot({ date, time });
                   }
                 }} 
-                className={`flex-1 p-2 min-h-[50px] cursor-pointer ${blocked ? 'bg-destructive/5' : 'bg-lunar-surface'}`}
+                className={`flex-1 p-2 min-h-[50px] cursor-pointer ${blocked ? 'bg-destructive/5' : 'bg-white/40 dark:bg-white/[0.05]'}`}
               >
                 {events.length > 0 ? (
                   <div className="space-y-2">

@@ -201,7 +201,7 @@ const DayCell = ({
   const cellClassName = `${classes.calendarCell} cursor-pointer transition-colors ${
     fullDaySlot 
       ? 'border-2' 
-      : 'bg-lunar-surface hover:bg-lunar-surface/80 border border-lunar-border/20 hover:border-lunar-border/40'
+      : 'bg-white/40 dark:bg-white/[0.05] hover:bg-white/60 dark:hover:bg-white/[0.08] border border-white/20 dark:border-white/10 hover:border-white/40 dark:hover:border-white/20'
   }`;
 
   return (
