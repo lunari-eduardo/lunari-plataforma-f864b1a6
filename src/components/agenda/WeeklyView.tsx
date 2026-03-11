@@ -155,9 +155,9 @@ export default function WeeklyView({
             <Share2 className="h-4 w-4" />
           </Button>
         </div>
-        <div className="grid grid-cols-8 gap-px bg-border">
+        <div className="grid grid-cols-8 gap-px bg-white/20 dark:bg-white/[0.03]">
           {/* First cell empty - for time labels */}
-          <div className="bg-muted"></div>
+          <div className="bg-white/30 dark:bg-white/[0.04]"></div>
           
           {/* Day headers */}
           {weekDays.map((day, index) => {
