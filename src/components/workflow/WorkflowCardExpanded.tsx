@@ -233,7 +233,7 @@ export function WorkflowCardExpanded({
               onClick={() => setProdutosModalOpen(true)}
               className="h-8 text-xs border rounded bg-background hover:bg-muted justify-start"
             >
-              <Package className={`h-3.5 w-3.5 mr-1.5 ${hasProdutos ? 'text-blue-600' : 'text-muted-foreground'}`} />
+              <Package className={`h-3.5 w-3.5 mr-1.5 ${hasProdutos ? 'text-primary' : 'text-muted-foreground'}`} />
               Gerenciar ({hasProdutos ? session.produtosList.length : 0})
             </Button>
           </div>
