@@ -304,7 +304,7 @@ export default function AvailabilityConfigModal({
                 className={cn(
                   'rounded-md px-3 py-2 text-sm font-medium transition-all',
                   action === 'bloquear'
-                    ? 'bg-background text-foreground shadow-sm'
+                    ? 'bg-white/70 dark:bg-white/[0.1] text-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground'
                 )}
               >

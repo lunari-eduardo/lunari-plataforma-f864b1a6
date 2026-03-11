@@ -73,7 +73,7 @@ export default function DayPreviewPopover({ day, events, onEventClick, onViewDay
       </div>
 
       {/* Footer */}
-      <div className="border-t border-border/50">
+      <div className="border-t border-white/30 dark:border-white/10">
         <button
           type="button"
           onClick={(e) => {

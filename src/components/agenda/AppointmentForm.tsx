@@ -558,7 +558,7 @@ export default function AppointmentForm({
             </div>
             
             {formData.packageId && getIncludedProducts().length > 0 && (
-              <div className="p-3 bg-muted border border-border rounded-lg">
+              <div className="p-3 bg-white/30 dark:bg-white/[0.05] border border-white/25 dark:border-white/10 rounded-lg">
                 <h4 className="text-sm font-medium text-foreground mb-2">📦 Produtos Incluídos</h4>
                 <div className="space-y-1">
                   {getIncludedProducts().map((produto, index) => (

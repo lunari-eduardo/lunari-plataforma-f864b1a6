@@ -123,7 +123,7 @@ export default function AgendaModals({
       {/* Budget Edit Modal - Disabled */}
       {selectedBudget && (
         <Dialog open={isBudgetModalOpen} onOpenChange={setIsBudgetModalOpen}>
-          <DialogContent className="sm:max-w-[500px] bg-background border-border">
+          <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>Orçamento - Sistema Desabilitado</DialogTitle>
             </DialogHeader>
