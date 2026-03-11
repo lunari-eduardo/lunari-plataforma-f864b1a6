@@ -155,9 +155,9 @@ export default function WeeklyView({
             <Share2 className="h-4 w-4" />
           </Button>
         </div>
-        <div className="grid grid-cols-8 gap-px bg-border">
+        <div className="grid grid-cols-8 gap-px bg-white/20 dark:bg-white/[0.03]">
           {/* First cell empty - for time labels */}
-          <div className="bg-muted"></div>
+          <div className="bg-white/30 dark:bg-white/[0.04]"></div>
           
           {/* Day headers */}
           {weekDays.map((day, index) => {
@@ -170,7 +170,7 @@ export default function WeeklyView({
                 className={cn(
                   "text-center cursor-pointer hover:opacity-80 transition-all",
                   isTablet ? 'p-1' : 'p-1 md:p-2',
-                  fullDaySlot ? "border-b-2" : "bg-muted"
+                  fullDaySlot ? "border-b-2" : "bg-white/50 dark:bg-white/[0.06]"
                 )}
                 style={fullDaySlot ? {
                   backgroundColor: `${fullDaySlot.color || 'hsl(var(--lunar-accent))'}15`,
@@ -213,7 +213,7 @@ export default function WeeklyView({
                   <div 
                     key={`${dayIndex}-${time}`} 
                     onClick={() => !event && onCreateSlot({ date: day, time })} 
-                    className={`relative cursor-pointer bg-card hover:bg-muted ${classes.weeklyTimeSlot}`}
+                    className={`relative cursor-pointer bg-white/40 hover:bg-white/60 dark:bg-white/[0.05] dark:hover:bg-white/[0.08] ${classes.weeklyTimeSlot}`}
                   >
                     {event ? <div onClick={e => e.stopPropagation()}>
                           <UnifiedEventCard event={event} onClick={onEventClick} variant="weekly" />

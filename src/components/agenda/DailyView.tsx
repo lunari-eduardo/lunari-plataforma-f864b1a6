@@ -203,7 +203,7 @@ export default function DailyView({
     }
   };
   return (
-    <div className="bg-lunar-bg pb-16 md:pb-4">
+    <div className="pb-16 md:pb-4">
       {/* Header com botão de adicionar horário */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
@@ -299,7 +299,7 @@ export default function DailyView({
               className={`flex border rounded-md overflow-hidden py-0 my-[2px] mx-0 px-0 ${blocked ? 'border-destructive/30' : 'border-border'}`}
               style={slotBgStyle}
             >
-              <div className="p-3 w-16 flex-shrink-0 text-right text-sm text-muted-foreground relative bg-muted">
+              <div className="p-3 w-16 flex-shrink-0 text-right text-sm text-muted-foreground relative bg-white/30 dark:bg-white/[0.04]">
                 {isEditing ? (
                   <div 
                     onClick={(e) => e.stopPropagation()}
@@ -339,7 +339,7 @@ export default function DailyView({
                     onCreateSlot({ date, time });
                   }
                 }} 
-                className={`flex-1 p-2 min-h-[50px] cursor-pointer ${blocked ? 'bg-destructive/5' : 'bg-lunar-surface'}`}
+                className={`flex-1 p-2 min-h-[50px] cursor-pointer ${blocked ? 'bg-destructive/5' : 'bg-white/40 dark:bg-white/[0.05]'}`}
               >
                 {events.length > 0 ? (
                   <div className="space-y-2">

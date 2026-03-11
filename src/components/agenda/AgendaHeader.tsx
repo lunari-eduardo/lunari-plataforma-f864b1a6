@@ -55,7 +55,7 @@ export default function AgendaHeader({
       <Button
         variant="outline"
         onClick={onNavigateToday}
-        className={`${classes.buttonHeight} ${classes.buttonPadding} ${classes.subtitle} bg-lunar-surface hover:bg-lunar-border border-lunar-border`}
+        className={`${classes.buttonHeight} ${classes.buttonPadding} ${classes.subtitle} bg-white/40 dark:bg-white/[0.06] hover:bg-white/60 dark:hover:bg-white/[0.1] border-white/30 dark:border-white/10`}
       >
         Hoje
       </Button>
@@ -66,7 +66,7 @@ export default function AgendaHeader({
           size="icon"
           onClick={onNavigatePrevious}
           aria-label="Período anterior"
-          className={`bg-lunar-surface hover:bg-lunar-border border-lunar-border ${classes.iconButton}`}
+          className={`bg-white/40 dark:bg-white/[0.06] hover:bg-white/60 dark:hover:bg-white/[0.1] border-white/30 dark:border-white/10 ${classes.iconButton}`}
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
@@ -80,7 +80,7 @@ export default function AgendaHeader({
           size="icon"
           onClick={onNavigateNext}
           aria-label="Próximo período"
-          className={`bg-lunar-surface hover:bg-lunar-border border-lunar-border ${classes.iconButton}`}
+          className={`bg-white/40 dark:bg-white/[0.06] hover:bg-white/60 dark:hover:bg-white/[0.1] border-white/30 dark:border-white/10 ${classes.iconButton}`}
         >
           <ChevronRight className="h-4 w-4" />
         </Button>
@@ -89,7 +89,7 @@ export default function AgendaHeader({
   );
 
   const ViewToggleGroup = () => (
-    <div className="bg-lunar-surface border border-lunar-border rounded-lg p-1 py-0">
+    <div className="bg-white/40 dark:bg-white/[0.06] border border-white/30 dark:border-white/10 rounded-lg p-1 py-0">
       {viewButtons.map(({ key, label }) => (
         <ViewToggleButton key={key} viewKey={key} label={label} />
       ))}
@@ -114,7 +114,7 @@ export default function AgendaHeader({
     <Button
       variant="outline"
       onClick={handleManageClick}
-      className={`bg-lunar-surface hover:bg-lunar-border border-lunar-border ${
+      className={`bg-white/40 dark:bg-white/[0.06] hover:bg-white/60 dark:hover:bg-white/[0.1] border-white/30 dark:border-white/10 ${
         isMobile 
           ? `${classes.iconButton}` 
           : isTablet 
@@ -141,7 +141,7 @@ export default function AgendaHeader({
         
         {/* View Toggle and Manage Button */}
         <div className="flex items-center gap-2 w-full">
-          <div className="flex bg-lunar-surface border border-lunar-border rounded-lg p-1 flex-1">
+          <div className="flex bg-white/40 dark:bg-white/[0.06] border border-white/30 dark:border-white/10 rounded-lg p-1 flex-1">
             {viewButtons.map(({ key, label }) => (
               <ViewToggleButton key={key} viewKey={key} label={label} />
             ))}
