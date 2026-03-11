@@ -74,7 +74,7 @@ export default function AnnualView({ date, unifiedEvents, availability = [], onD
           const totalMonthEvents = eventsPerMonth[monthIndex] || 0;
 
           return (
-            <Card key={monthIndex} className="p-1.5 bg-lunar-surface border-lunar-border">
+            <Card key={monthIndex} className="p-1.5 bg-white/30 backdrop-blur-sm dark:bg-white/[0.04] border border-white/30 dark:border-white/10">
               <div className="flex items-center justify-between mb-2">
                 <button
                   type="button"
