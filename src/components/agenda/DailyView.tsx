@@ -299,7 +299,7 @@ export default function DailyView({
               className={`flex border rounded-md overflow-hidden py-0 my-[2px] mx-0 px-0 ${blocked ? 'border-destructive/30' : 'border-border'}`}
               style={slotBgStyle}
             >
-              <div className="p-3 w-16 flex-shrink-0 text-right text-sm text-muted-foreground relative bg-muted">
+              <div className="p-3 w-16 flex-shrink-0 text-right text-sm text-muted-foreground relative bg-white/30 dark:bg-white/[0.04]">
                 {isEditing ? (
                   <div 
                     onClick={(e) => e.stopPropagation()}
