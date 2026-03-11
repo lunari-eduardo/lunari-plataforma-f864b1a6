@@ -3323,6 +3323,16 @@ export type Database = {
         Args: { _amount: number; _reason?: string; _target_user_id: string }
         Returns: string
       }
+      atomic_update_session_extras: {
+        Args: {
+          p_extras_increment: number
+          p_session_id: string
+          p_status_galeria?: string
+          p_valor_increment: number
+          p_valor_unitario: number
+        }
+        Returns: Json
+      }
       calculate_manual_products_total: {
         Args: { produtos: Json }
         Returns: number
@@ -3347,6 +3357,14 @@ export type Database = {
       expire_subscription_credits: {
         Args: { _user_id: string }
         Returns: undefined
+      }
+      finalize_gallery_payment: {
+        Args: {
+          p_cobranca_id: string
+          p_paid_at?: string
+          p_receipt_url?: string
+        }
+        Returns: Json
       }
       fix_all_valor_pago: { Args: never; Returns: number }
       generate_public_token: { Args: never; Returns: string }
@@ -3400,6 +3418,10 @@ export type Database = {
         Returns: undefined
       }
       start_studio_trial: { Args: never; Returns: Json }
+      try_lock_gallery_selection: {
+        Args: { p_gallery_id: string }
+        Returns: Json
+      }
     }
     Enums: {
       account_status: "active" | "suspended" | "canceled"
