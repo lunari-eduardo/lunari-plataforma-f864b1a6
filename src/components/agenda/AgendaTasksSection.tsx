@@ -126,7 +126,7 @@ export default function AgendaTasksSection({
   }
 
   return (
-    <div className="mt-6 p-4 bg-lunar-surface/30 border border-lunar-border/20 rounded-lg">
+    <div className="mt-6 p-4 bg-white/30 dark:bg-white/[0.04] border border-white/25 dark:border-white/10 backdrop-blur-sm rounded-lg">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-medium text-lunar-text">
