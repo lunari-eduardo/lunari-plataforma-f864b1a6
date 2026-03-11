@@ -1,56 +1,36 @@
 
 
-# Padronização Final Glassmorphic da Agenda
+# Checkout Transparente Asaas — Implementado ✅
 
-## Problemas Identificados
+## Arquitetura
 
-### 1. DayPreviewPopover (popover flutuante) - Fundo `bg-popover` sólido
-Linha 28: `bg-popover` + `border-border` = fundo sólido bege/branco. O usuário quer que este tenha fundo com degradê (não transparente).
+```text
+ChargeModal → Asaas → "Gerar Link de Checkout"
+  1. Cria registro na tabela cobrancas (status: pendente, sem chamada ao Asaas)
+  2. Gera URL interna: {origin}/checkout/{cobrancaId}
+  3. Mostra link com botões "Copiar" e "Enviar WhatsApp"
 
-### 2. AgendaModals - Modais com `bg-background` sólido
-4 instâncias em `AgendaModals.tsx` usando `bg-background border-border` — ignora a padronização de modais com `bg-gray-50/90 backdrop-blur-2xl`.
+Cliente abre o link → /checkout/:cobrancaId (rota pública)
+  1. checkout-get-data busca: cobrança, perfil do fotógrafo, settings Asaas, taxas reais
+  2. Renderiza checkout transparente branded (PIX + Cartão)
+  3. checkout-process-payment processa pagamento server-side via Asaas API
+  4. Polling automático para PIX / confirmação instantânea para Cartão
+```
 
-### 3. AgendaTasksSection - Fundo sólido
-Linha 129: `bg-lunar-surface/30 border border-lunar-border/20` — `lunar-surface` é `0 0% 100%` (branco puro), mesmo com `/30` fica opaco demais.
+## Arquivos Criados/Modificados
 
-### 4. AppointmentForm - `bg-muted` sólido em painéis internos
-Linhas 434, 561: `bg-muted border border-border` — sólido cinza.
+| Arquivo | Ação |
+|---------|------|
+| `src/pages/PublicCheckout.tsx` | ✅ Criado — Checkout transparente público |
+| `supabase/functions/checkout-get-data/index.ts` | ✅ Criado — Busca dados da cobrança + taxas |
+| `supabase/functions/checkout-process-payment/index.ts` | ✅ Criado — Processa pagamento (PIX/Cartão) |
+| `src/components/cobranca/ChargeModal.tsx` | ✅ Modificado — Gera link interno |
+| `src/App.tsx` | ✅ Modificado — Rota /checkout/:cobrancaId |
+| `supabase/config.toml` | ✅ Modificado — Novas funções registradas |
 
-### 5. AvailabilityConfigModal - `bg-muted` e `bg-background` nos toggles
-Linhas 288, 295, 307: segmented buttons com fundo sólido.
+## Segurança
 
-### 6. ShareAvailabilityModal - `bg-muted` no preview
-Linha 258: `bg-muted` sólido.
-
-### 7. Popover global - `bg-popover` + `border` sólido
-Já tem `backdrop-blur-xl`, mas `bg-popover` no light mode é `30 30% 98% / 0.7` (bege translúcido). Precisa ser cinza neutro.
-
-## Alterações
-
-### 1. `src/components/agenda/DayPreviewPopover.tsx`
-- Linha 28: `border border-border bg-popover` → `border border-white/30 dark:border-white/10 bg-gradient-to-b from-gray-50/95 to-white/90 dark:from-neutral-900/95 dark:to-neutral-950/90 backdrop-blur-xl`
-- Linha 30: `border-b border-border/50` → `border-b border-white/30 dark:border-white/10`
-- Linha 76: `border-t border-border/50` → `border-t border-white/30 dark:border-white/10`
-
-### 2. `src/components/agenda/AgendaModals.tsx`
-- Linhas 76, 95, 109, 126: `bg-background border-border` → remover (deixar o Dialog base aplicar seu estilo glass padrão `bg-gray-50/90`)
-
-### 3. `src/components/agenda/AgendaTasksSection.tsx`
-- Linha 129: `bg-lunar-surface/30 border border-lunar-border/20` → `bg-white/30 dark:bg-white/[0.04] border border-white/25 dark:border-white/10 backdrop-blur-sm`
-- Linhas 159, 184: `bg-lunar-background/40 hover:bg-lunar-background/70` → `bg-white/30 hover:bg-white/50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08]`
-
-### 4. `src/components/agenda/AppointmentForm.tsx`
-- Linhas 434, 561: `bg-muted border border-border` → `bg-white/30 dark:bg-white/[0.05] border border-white/25 dark:border-white/10`
-
-### 5. `src/components/agenda/AvailabilityConfigModal.tsx`
-- Linha 288: `bg-muted` → `bg-white/30 dark:bg-white/[0.05]`
-- Linhas 295, 307: `bg-background` → `bg-white/70 dark:bg-white/[0.1]`
-
-### 6. `src/components/agenda/ShareAvailabilityModal.tsx`
-- Linha 258: `bg-muted` → `bg-white/30 dark:bg-white/[0.05] border border-white/25 dark:border-white/10`
-
-### 7. `src/components/ui/popover.tsx`
-- Linha 25: `border bg-popover` → `border border-white/30 dark:border-white/10 bg-gray-50/90 dark:bg-neutral-950/85`
-
-8 arquivos, apenas classes CSS. Zero lógica alterada.
-
+- Edge Functions públicas (verify_jwt=false) mas validam status da cobrança
+- API key do Asaas nunca exposta ao frontend
+- Cobrança só pode ser paga uma vez (validação de status 'pendente')
+- Service Role usado internamente para acessar dados do fotógrafo

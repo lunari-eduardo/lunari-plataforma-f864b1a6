@@ -73,7 +73,7 @@ export default function AgendaModals({
     <>
       {/* Appointment Form Modal */}
       <Dialog open={isAppointmentDialogOpen} onOpenChange={setIsAppointmentDialogOpen}>
-        <DialogContent className="sm:max-w-[500px] bg-background border-border">
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle className="text-lg font-semibold text-foreground">
               {editingAppointment ? 'Editar Agendamento' : 'Novo Agendamento'}
@@ -92,7 +92,7 @@ export default function AgendaModals({
 
       {/* Appointment Details Modal */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <DialogContent className="sm:max-w-[500px] bg-background border-border">
+        <DialogContent className="sm:max-w-[500px]">
           {viewingAppointment && (
             <AppointmentDetails
               appointment={viewingAppointment}
@@ -106,7 +106,7 @@ export default function AgendaModals({
 
       {/* Budget Appointment Details Modal */}
       <Dialog open={isBudgetAppointmentModalOpen} onOpenChange={setIsBudgetAppointmentModalOpen}>
-        <DialogContent className="sm:max-w-[600px] bg-background border-border">
+        <DialogContent className="sm:max-w-[600px]">
           {selectedBudgetAppointment && (
             <BudgetAppointmentDetails
               appointment={selectedBudgetAppointment.appointment}
@@ -123,7 +123,7 @@ export default function AgendaModals({
       {/* Budget Edit Modal - Disabled */}
       {selectedBudget && (
         <Dialog open={isBudgetModalOpen} onOpenChange={setIsBudgetModalOpen}>
-          <DialogContent className="sm:max-w-[500px] bg-background border-border">
+          <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>Orçamento - Sistema Desabilitado</DialogTitle>
             </DialogHeader>

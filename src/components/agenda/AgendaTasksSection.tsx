@@ -126,7 +126,7 @@ export default function AgendaTasksSection({
   }
 
   return (
-    <div className="mt-6 p-4 bg-lunar-surface/30 border border-lunar-border/20 rounded-lg">
+    <div className="mt-6 p-4 bg-white/30 dark:bg-white/[0.04] border border-white/25 dark:border-white/10 backdrop-blur-sm rounded-lg">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-medium text-lunar-text">
@@ -156,7 +156,7 @@ export default function AgendaTasksSection({
               {monthlyTasksSummary.map(({ day, count }) => (
                 <li 
                   key={day}
-                  className="flex items-center gap-2 py-2 px-3 rounded-md bg-lunar-background/40 hover:bg-lunar-background/70 cursor-pointer transition-colors group"
+                  className="flex items-center gap-2 py-2 px-3 rounded-md bg-white/30 hover:bg-white/50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] cursor-pointer transition-colors group"
                   onClick={() => handleDayItemClick(day)}
                 >
                   <Calendar className="h-3.5 w-3.5 text-lunar-accent" />
@@ -181,7 +181,7 @@ export default function AgendaTasksSection({
               {visibleTasks.map(task => (
                 <li 
                   key={task.id}
-                  className="flex items-center justify-between gap-2 py-2 px-3 rounded-md bg-lunar-background/40 hover:bg-lunar-background/70 cursor-pointer transition-colors group"
+                  className="flex items-center justify-between gap-2 py-2 px-3 rounded-md bg-white/30 hover:bg-white/50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] cursor-pointer transition-colors group"
                   onClick={() => handleTaskClick(task.id)}
                 >
                   <div className="flex items-center gap-2 min-w-0">
