@@ -163,6 +163,13 @@ export function SessionPaymentsManager({
     if (origem === 'infinitepay' || observacoes?.toLowerCase().includes('infinitepay')) {
       return 'InfinitePay';
     }
+    // Detectar Asaas
+    if (origem === 'asaas' || observacoes?.toLowerCase().includes('asaas')) {
+      if (observacoes?.toLowerCase().includes('pix')) {
+        return 'Pix Asaas';
+      }
+      return 'Link Asaas';
+    }
     // Detectar Mercado Pago pela origem ou observações
     if (origem === 'mercadopago' || observacoes?.toLowerCase().includes('mercado pago')) {
       if (observacoes?.toLowerCase().includes('pix')) {
