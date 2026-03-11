@@ -114,7 +114,7 @@ export default function AgendaHeader({
     <Button
       variant="outline"
       onClick={handleManageClick}
-      className={`bg-lunar-surface hover:bg-lunar-border border-lunar-border ${
+      className={`bg-white/40 dark:bg-white/[0.06] hover:bg-white/60 dark:hover:bg-white/[0.1] border-white/30 dark:border-white/10 ${
         isMobile 
           ? `${classes.iconButton}` 
           : isTablet 
