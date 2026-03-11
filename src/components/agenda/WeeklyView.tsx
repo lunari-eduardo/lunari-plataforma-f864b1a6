@@ -170,7 +170,7 @@ export default function WeeklyView({
                 className={cn(
                   "text-center cursor-pointer hover:opacity-80 transition-all",
                   isTablet ? 'p-1' : 'p-1 md:p-2',
-                  fullDaySlot ? "border-b-2" : "bg-muted"
+                  fullDaySlot ? "border-b-2" : "bg-white/50 dark:bg-white/[0.06]"
                 )}
                 style={fullDaySlot ? {
                   backgroundColor: `${fullDaySlot.color || 'hsl(var(--lunar-accent))'}15`,
