@@ -74,7 +74,7 @@ export default function AnnualView({ date, unifiedEvents, availability = [], onD
           const totalMonthEvents = eventsPerMonth[monthIndex] || 0;
 
           return (
-            <Card key={monthIndex} className="p-1.5 bg-lunar-surface border-lunar-border">
+            <Card key={monthIndex} className="p-1.5 bg-white/30 backdrop-blur-sm dark:bg-white/[0.04] border border-white/30 dark:border-white/10">
               <div className="flex items-center justify-between mb-2">
                 <button
                   type="button"
@@ -117,8 +117,8 @@ export default function AnnualView({ date, unifiedEvents, availability = [], onD
                       onClick={() => onDayClick(current)}
                       className={cn(
                         "h-7 w-7 rounded-md flex flex-col items-center justify-center text-2xs leading-none",
-                        "bg-lunar-bg text-lunar-text",
-                        fullDaySlot ? "border-2" : "border border-lunar-border"
+                        "bg-white/30 dark:bg-white/[0.03] text-lunar-text",
+                        fullDaySlot ? "border-2" : "border border-white/20 dark:border-white/10"
                       )}
                       style={fullDaySlot ? {
                         borderColor: fullDaySlot.color || 'hsl(var(--lunar-accent))',

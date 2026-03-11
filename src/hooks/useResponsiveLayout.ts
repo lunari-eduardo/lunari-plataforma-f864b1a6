@@ -37,7 +37,7 @@ export const useResponsiveLayout = () => {
     // Specific calendar classes
     calendarCell: isMobile ? 'min-h-[80px] p-1' : isTablet ? 'min-h-[100px] p-2' : 'min-h-[120px] p-2',
     weeklyTimeSlot: isMobile ? 'h-10 p-0.5' : isTablet ? 'h-10 p-0.5' : 'h-12 md:h-16 p-0.5 md:p-1',
-    timeLabel: isMobile ? 'text-[10px] px-2' : isTablet ? 'text-[10px] px-2' : 'text-xs px-3 md:px-4'
+    timeLabel: isMobile ? 'text-[10px] px-2 bg-white/30 dark:bg-white/[0.04]' : isTablet ? 'text-[10px] px-2 bg-white/30 dark:bg-white/[0.04]' : 'text-xs px-3 md:px-4 bg-white/30 dark:bg-white/[0.04]'
   });
 
   return {
