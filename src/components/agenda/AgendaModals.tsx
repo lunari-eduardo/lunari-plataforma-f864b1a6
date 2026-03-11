@@ -92,7 +92,7 @@ export default function AgendaModals({
 
       {/* Appointment Details Modal */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <DialogContent className="sm:max-w-[500px] bg-background border-border">
+        <DialogContent className="sm:max-w-[500px]">
           {viewingAppointment && (
             <AppointmentDetails
               appointment={viewingAppointment}
