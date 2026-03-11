@@ -25,7 +25,7 @@ export default function DayPreviewPopover({ day, events, onEventClick, onViewDay
   const capitalizedLabel = dayLabel.charAt(0).toUpperCase() + dayLabel.slice(1);
 
   return (
-    <div className="w-64 rounded-xl border border-border bg-popover text-popover-foreground shadow-xl animate-in fade-in-0 zoom-in-95 duration-150">
+    <div className="w-64 rounded-xl border border-white/30 dark:border-white/10 bg-gradient-to-b from-gray-50/95 to-white/90 dark:from-neutral-900/95 dark:to-neutral-950/90 backdrop-blur-xl text-popover-foreground shadow-xl animate-in fade-in-0 zoom-in-95 duration-150">
       {/* Header */}
       <div className="px-3 py-2.5 border-b border-border/50">
         <p className="text-xs font-semibold text-foreground">{capitalizedLabel}</p>
