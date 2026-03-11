@@ -203,7 +203,7 @@ export default function DailyView({
     }
   };
   return (
-    <div className="bg-lunar-bg pb-16 md:pb-4">
+    <div className="pb-16 md:pb-4">
       {/* Header com botão de adicionar horário */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
