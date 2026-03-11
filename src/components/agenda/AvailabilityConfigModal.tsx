@@ -285,7 +285,7 @@ export default function AvailabilityConfigModal({
           {/* === Seção 1: Ação === */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">O que deseja fazer?</Label>
-            <div className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1">
+            <div className="grid grid-cols-2 gap-1 rounded-lg bg-white/30 dark:bg-white/[0.05] p-1">
               <button
                 type="button"
                 onClick={() => setAction('liberar')}
