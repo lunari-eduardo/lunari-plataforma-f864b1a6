@@ -296,7 +296,7 @@ export default function DailyView({
           return (
             <div 
               key={`${time}-${index}`} 
-              className={`flex border rounded-md overflow-hidden py-0 my-[2px] mx-0 px-0 ${blocked ? 'border-destructive/30' : 'border-border'}`}
+              className={`flex border rounded-md overflow-hidden py-0 my-[2px] mx-0 px-0 backdrop-blur-sm ${blocked ? 'border-destructive/30' : 'border-white/25 dark:border-white/10'}`}
               style={slotBgStyle}
             >
               <div className="p-3 w-16 flex-shrink-0 text-right text-sm text-muted-foreground relative bg-white/30 dark:bg-white/[0.04]">

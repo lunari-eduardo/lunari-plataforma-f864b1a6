@@ -117,8 +117,8 @@ export default function AnnualView({ date, unifiedEvents, availability = [], onD
                       onClick={() => onDayClick(current)}
                       className={cn(
                         "h-7 w-7 rounded-md flex flex-col items-center justify-center text-2xs leading-none",
-                        "bg-lunar-bg text-lunar-text",
-                        fullDaySlot ? "border-2" : "border border-lunar-border"
+                        "bg-white/30 dark:bg-white/[0.03] text-lunar-text",
+                        fullDaySlot ? "border-2" : "border border-white/20 dark:border-white/10"
                       )}
                       style={fullDaySlot ? {
                         borderColor: fullDaySlot.color || 'hsl(var(--lunar-accent))',
