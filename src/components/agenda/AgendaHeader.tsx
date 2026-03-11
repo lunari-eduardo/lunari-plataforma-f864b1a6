@@ -66,7 +66,7 @@ export default function AgendaHeader({
           size="icon"
           onClick={onNavigatePrevious}
           aria-label="Período anterior"
-          className={`bg-lunar-surface hover:bg-lunar-border border-lunar-border ${classes.iconButton}`}
+          className={`bg-white/40 dark:bg-white/[0.06] hover:bg-white/60 dark:hover:bg-white/[0.1] border-white/30 dark:border-white/10 ${classes.iconButton}`}
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
@@ -80,7 +80,7 @@ export default function AgendaHeader({
           size="icon"
           onClick={onNavigateNext}
           aria-label="Próximo período"
-          className={`bg-lunar-surface hover:bg-lunar-border border-lunar-border ${classes.iconButton}`}
+          className={`bg-white/40 dark:bg-white/[0.06] hover:bg-white/60 dark:hover:bg-white/[0.1] border-white/30 dark:border-white/10 ${classes.iconButton}`}
         >
           <ChevronRight className="h-4 w-4" />
         </Button>
