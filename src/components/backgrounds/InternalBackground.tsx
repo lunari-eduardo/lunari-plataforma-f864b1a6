@@ -38,7 +38,7 @@ export default function InternalBackground() {
             right: '-10%',
             width: 'min(60vw, 1000px)',
             height: 'min(60vw, 1000px)',
-            background: 'radial-gradient(circle, rgba(172, 94, 58, 0.08) 0%, transparent 70%)',
+            background: 'radial-gradient(circle, rgba(172, 94, 58, 0.05) 0%, transparent 70%)',
             filter: 'blur(45px)',
             borderRadius: '50%',
           }}
