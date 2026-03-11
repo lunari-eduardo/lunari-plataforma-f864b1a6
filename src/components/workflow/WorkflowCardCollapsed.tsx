@@ -566,7 +566,7 @@ export function WorkflowCardCollapsed({
             onClick={() => setModalAberto(true)}
             className="h-6 px-2 text-[10px] border rounded bg-background hover:bg-muted"
           >
-            <Package className={`h-3 w-3 mr-0.5 ${hasProdutos ? 'text-blue-600' : 'text-muted-foreground'}`} />
+            <Package className={`h-3 w-3 mr-0.5 ${hasProdutos ? 'text-primary' : 'text-muted-foreground'}`} />
             {hasProdutos ? session.produtosList.length : 0}
           </Button>
         </div>
