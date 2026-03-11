@@ -83,7 +83,7 @@ export default function MonthlyView({
         {weekDays.map((day) => (
           <div 
             key={day} 
-            className="h-8 md:h-10 p-1 md:p-2 text-center text-xs font-medium text-muted-foreground bg-lunar-surface border border-lunar-border/20"
+            className="h-8 md:h-10 p-1 md:p-2 text-center text-xs font-medium text-muted-foreground bg-white/50 dark:bg-white/[0.06] border border-white/20 dark:border-white/10"
           >
             {day}
           </div>
