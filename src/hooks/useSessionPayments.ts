@@ -214,14 +214,17 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
               }
             }
 
-            // Detectar origem MP pela descrição
+            // Detectar origem por descrição
             const isMercadoPago = t.descricao?.toLowerCase().includes('mp #') || 
                                    t.descricao?.toLowerCase().includes('mercado pago');
+            const isAsaas = t.descricao?.toLowerCase().includes('asaas');
+            const isInfinitePay = t.descricao?.toLowerCase().includes('infinitepay');
+            const isGateway = isMercadoPago || isAsaas || isInfinitePay;
             
             // Permitir edição/exclusão para:
             // - Pagamentos pendentes (sempre)
-            // - Pagamentos pagos manuais que NÃO são de integração MP
-            const canEdit = isPending || (!isMercadoPago && isPaid);
+            // - Pagamentos pagos manuais que NÃO são de integração
+            const canEdit = isPending || (!isGateway && isPaid);
             
             allPayments.push({
               id: paymentId,
