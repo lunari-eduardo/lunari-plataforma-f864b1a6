@@ -1,7 +1,7 @@
 export default function InternalBackground() {
   return (
     <div className="fixed inset-0 pointer-events-none z-0" aria-hidden="true">
-      <div className="w-full h-full opacity-100 dark:opacity-25">
+      <div className="w-full h-full opacity-90 dark:opacity-25">
         {/* Main blob - right */}
         <div
           className="absolute animate-eclipse-float"
