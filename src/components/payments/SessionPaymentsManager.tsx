@@ -130,6 +130,10 @@ export function SessionPaymentsManager({
     if (origem === 'infinitepay' || observacoes?.toLowerCase().includes('infinitepay')) {
       return <Link2 className="h-3 w-3 text-green-600" />;
     }
+    // Detectar Asaas
+    if (origem === 'asaas' || observacoes?.toLowerCase().includes('asaas')) {
+      return <CreditCard className="h-3 w-3 text-blue-600" />;
+    }
     // Detectar Mercado Pago pela origem ou observações
     if (origem === 'mercadopago' || observacoes?.toLowerCase().includes('mercado pago')) {
       if (observacoes?.toLowerCase().includes('pix')) {
