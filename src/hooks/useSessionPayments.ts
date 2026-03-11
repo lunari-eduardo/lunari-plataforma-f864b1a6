@@ -236,7 +236,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
               statusPagamento,
               numeroParcela,
               totalParcelas,
-              origem: isMercadoPago ? 'mercadopago' : 'supabase',
+              origem: isMercadoPago ? 'mercadopago' : isAsaas ? 'asaas' : isInfinitePay ? 'infinitepay' : 'supabase',
               editavel: canEdit,
               observacoes: t.descricao?.replace(/\s*\[ID:[^\]]+\]/, '') || ''
             });
