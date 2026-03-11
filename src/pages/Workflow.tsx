@@ -820,7 +820,7 @@ export default function Workflow() {
       <div className={`flex-1 min-w-0 space-y-4 transition-all duration-300 ${isTasksPanelOpen ? 'lg:pr-[340px]' : 'lg:pr-12'}`}>
       {/* Métricas compactas + Toggle */}
       {showMetrics ? (
-        <div className="flex items-center gap-4 sm:gap-5 flex-wrap bg-muted/50 rounded-lg px-4 py-2.5">
+        <div className="flex items-center gap-4 sm:gap-5 flex-wrap bg-white/30 backdrop-blur-lg dark:bg-white/[0.04] border border-white/50 dark:border-white/10 rounded-lg px-4 py-2.5">
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
             <span className="text-[11px] text-muted-foreground">Receita</span>
@@ -926,9 +926,9 @@ export default function Workflow() {
       )}
 
       {/* Workflow Table */}
-      <div className="border rounded-lg">
+      <div className="rounded-lg bg-white/30 backdrop-blur-xl dark:bg-white/[0.04] border border-white/50 dark:border-white/10">
         {/* Quick Add Session - Always visible */}
-        <div className="p-4 border-b">
+        <div className="p-4 border-b border-white/40 dark:border-white/10">
           <QuickSessionAdd onSubmit={handleQuickSessionAdd} currentMonth={currentMonth} />
         </div>
 

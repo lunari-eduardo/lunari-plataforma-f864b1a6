@@ -331,7 +331,7 @@ export function WorkflowCardCollapsed({
           {session.clienteId ? (
             <Link 
               to={`/app/clientes/${session.clienteId}`} 
-              className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline break-words leading-tight"
+              className="text-sm font-medium text-primary hover:text-primary/80 hover:underline break-words leading-tight"
             >
               {session.nome}
             </Link>
@@ -428,7 +428,7 @@ export function WorkflowCardCollapsed({
               onClick={() => setModalAberto(true)}
               className="h-7 px-3 text-xs border rounded-md bg-background hover:bg-muted"
             >
-              <Package className={`h-3.5 w-3.5 mr-1 ${hasProdutos ? 'text-blue-600' : 'text-muted-foreground'}`} />
+              <Package className={`h-3.5 w-3.5 mr-1 ${hasProdutos ? 'text-primary' : 'text-muted-foreground'}`} />
               {hasProdutos ? session.produtosList.length : 0}
               {todosCompletos && <span className="ml-1 w-2 h-2 bg-green-500 rounded-full" />}
               {parcialmenteCompletos && <span className="ml-1 w-2 h-2 bg-yellow-500 rounded-full" />}
@@ -475,7 +475,7 @@ export function WorkflowCardCollapsed({
           {session.clienteId ? (
             <Link 
               to={`/app/clientes/${session.clienteId}`} 
-              className="text-[11px] font-medium text-blue-600 hover:text-blue-800 hover:underline break-words leading-tight"
+              className="text-[11px] font-medium text-primary hover:text-primary/80 hover:underline break-words leading-tight"
             >
               {session.nome}
             </Link>
@@ -566,7 +566,7 @@ export function WorkflowCardCollapsed({
             onClick={() => setModalAberto(true)}
             className="h-6 px-2 text-[10px] border rounded bg-background hover:bg-muted"
           >
-            <Package className={`h-3 w-3 mr-0.5 ${hasProdutos ? 'text-blue-600' : 'text-muted-foreground'}`} />
+            <Package className={`h-3 w-3 mr-0.5 ${hasProdutos ? 'text-primary' : 'text-muted-foreground'}`} />
             {hasProdutos ? session.produtosList.length : 0}
           </Button>
         </div>
@@ -607,7 +607,7 @@ export function WorkflowCardCollapsed({
           {session.clienteId ? (
             <Link 
               to={`/app/clientes/${session.clienteId}`} 
-              className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline break-words leading-tight"
+              className="text-sm font-medium text-primary hover:text-primary/80 hover:underline break-words leading-tight"
             >
               {session.nome}
             </Link>
