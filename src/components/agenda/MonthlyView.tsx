@@ -78,7 +78,7 @@ export default function MonthlyView({
   };
   return (
     <div className="w-full h-full overflow-auto">
-      <div className="grid grid-cols-7 gap-px rounded-lg p-1 bg-lunar-border/30">
+      <div className="grid grid-cols-7 gap-px rounded-lg p-1 bg-white/10 dark:bg-white/[0.02]">
         {/* Weekday headers */}
         {weekDays.map((day) => (
           <div 
