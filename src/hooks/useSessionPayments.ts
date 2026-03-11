@@ -214,14 +214,17 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
               }
             }
 
-            // Detectar origem MP pela descrição
+            // Detectar origem por descrição
             const isMercadoPago = t.descricao?.toLowerCase().includes('mp #') || 
                                    t.descricao?.toLowerCase().includes('mercado pago');
+            const isAsaas = t.descricao?.toLowerCase().includes('asaas');
+            const isInfinitePay = t.descricao?.toLowerCase().includes('infinitepay');
+            const isGateway = isMercadoPago || isAsaas || isInfinitePay;
             
             // Permitir edição/exclusão para:
             // - Pagamentos pendentes (sempre)
-            // - Pagamentos pagos manuais que NÃO são de integração MP
-            const canEdit = isPending || (!isMercadoPago && isPaid);
+            // - Pagamentos pagos manuais que NÃO são de integração
+            const canEdit = isPending || (!isGateway && isPaid);
             
             allPayments.push({
               id: paymentId,
@@ -233,7 +236,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
               statusPagamento,
               numeroParcela,
               totalParcelas,
-              origem: isMercadoPago ? 'mercadopago' : 'supabase',
+              origem: isMercadoPago ? 'mercadopago' : isAsaas ? 'asaas' : isInfinitePay ? 'infinitepay' : 'supabase',
               editavel: canEdit,
               observacoes: t.descricao?.replace(/\s*\[ID:[^\]]+\]/, '') || ''
             });
@@ -248,19 +251,21 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
 
           for (const c of cobrancasPagas) {
             // Gerar ID único baseado no provedor
-            const paymentId = c.provedor === 'infinitepay' 
-              ? `ip-${c.ip_transaction_nsu || c.id}`
-              : `mp-${c.mp_payment_id || c.id}`;
+            let paymentId: string;
+            if (c.provedor === 'infinitepay') {
+              paymentId = `ip-${c.ip_transaction_nsu || c.id}`;
+            } else if (c.provedor === 'asaas') {
+              paymentId = `asaas-${c.id}`;
+            } else {
+              paymentId = `mp-${c.mp_payment_id || c.id}`;
+            }
             
             if (addedIds.has(paymentId)) continue;
             
-            // Verificar se já existe uma transação correspondente
-            const hasMatchingTransaction = transacoes?.some(t => {
-              if (c.provedor === 'infinitepay') {
-                return t.descricao?.includes('InfinitePay');
-              }
-              return t.descricao?.includes(`MP #${c.mp_payment_id}`);
-            });
+            // Verificar se já existe uma transação correspondente (by cobranca ID)
+            const hasMatchingTransaction = transacoes?.some(t => 
+              t.descricao?.includes(`cobranca ${c.id}`)
+            );
             
             // Se já tem transação, pular (não duplicar no histórico)
             if (hasMatchingTransaction) continue;
@@ -268,9 +273,18 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
             addedIds.add(paymentId);
 
             // Determinar label do provedor
-            const provedorLabel = c.provedor === 'infinitepay' 
-              ? 'InfinitePay' 
-              : `${c.tipo_cobranca === 'pix' ? 'Pix' : 'Link'} Mercado Pago`;
+            let provedorLabel: string;
+            let origem: 'mercadopago' | 'infinitepay' | 'asaas';
+            if (c.provedor === 'infinitepay') {
+              provedorLabel = 'InfinitePay';
+              origem = 'infinitepay';
+            } else if (c.provedor === 'asaas') {
+              provedorLabel = `${c.tipo_cobranca === 'pix' ? 'Pix' : 'Link'} Asaas`;
+              origem = 'asaas';
+            } else {
+              provedorLabel = `${c.tipo_cobranca === 'pix' ? 'Pix' : 'Link'} Mercado Pago`;
+              origem = 'mercadopago';
+            }
 
             allPayments.push({
               id: paymentId,
@@ -278,7 +292,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
               data: c.data_pagamento ? c.data_pagamento.split('T')[0] : '',
               tipo: 'pago',
               statusPagamento: 'pago',
-              origem: c.provedor === 'infinitepay' ? 'infinitepay' : 'mercadopago',
+              origem,
               editavel: false,
               observacoes: `${provedorLabel}${c.descricao ? ` - ${c.descricao}` : ''}`
             });
