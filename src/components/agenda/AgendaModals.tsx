@@ -106,7 +106,7 @@ export default function AgendaModals({
 
       {/* Budget Appointment Details Modal */}
       <Dialog open={isBudgetAppointmentModalOpen} onOpenChange={setIsBudgetAppointmentModalOpen}>
-        <DialogContent className="sm:max-w-[600px] bg-background border-border">
+        <DialogContent className="sm:max-w-[600px]">
           {selectedBudgetAppointment && (
             <BudgetAppointmentDetails
               appointment={selectedBudgetAppointment.appointment}
