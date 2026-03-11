@@ -93,7 +93,7 @@ export default function MonthlyView({
         {emptyDaysBefore.map((_, index) => (
           <div 
             key={`empty-${index}`} 
-            className={classes.calendarCell + " bg-lunar-bg border border-lunar-border/20"}
+            className={classes.calendarCell + " bg-white/20 dark:bg-white/[0.02] border border-white/20 dark:border-white/10"}
           />
         ))}
         
