@@ -89,7 +89,7 @@ export default function AgendaHeader({
   );
 
   const ViewToggleGroup = () => (
-    <div className="bg-lunar-surface border border-lunar-border rounded-lg p-1 py-0">
+    <div className="bg-white/40 dark:bg-white/[0.06] border border-white/30 dark:border-white/10 rounded-lg p-1 py-0">
       {viewButtons.map(({ key, label }) => (
         <ViewToggleButton key={key} viewKey={key} label={label} />
       ))}
