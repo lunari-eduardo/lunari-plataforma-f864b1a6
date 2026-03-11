@@ -431,7 +431,7 @@ export default function AppointmentForm({
   return (
     <div className="space-y-5">
       {isFromBudgetAppointment && (
-        <div className="p-4 bg-muted border border-border rounded-lg">
+        <div className="p-4 bg-white/30 dark:bg-white/[0.05] border border-white/25 dark:border-white/10 rounded-lg">
           <p className="text-sm font-medium text-foreground mb-1">📋 Agendamento de Orçamento</p>
           <p className="text-xs text-muted-foreground">
             Este agendamento foi criado automaticamente a partir de um orçamento fechado. 
