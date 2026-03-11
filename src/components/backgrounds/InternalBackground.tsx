@@ -10,7 +10,7 @@ export default function InternalBackground() {
             right: '-5%',
             width: 'min(50vw, 800px)',
             height: 'min(50vw, 800px)',
-            background: 'radial-gradient(circle, rgba(172, 94, 58, 0.35) 0%, transparent 75%)',
+            background: 'radial-gradient(circle, rgba(172, 94, 58, 0.22) 0%, transparent 75%)',
             filter: 'blur(22px)',
             borderRadius: '50%',
           }}
@@ -24,7 +24,7 @@ export default function InternalBackground() {
             left: '-5%',
             width: 'min(35vw, 550px)',
             height: 'min(35vw, 550px)',
-            background: 'radial-gradient(circle, rgba(172, 94, 58, 0.35) 0%, transparent 75%)',
+            background: 'radial-gradient(circle, rgba(172, 94, 58, 0.22) 0%, transparent 75%)',
             filter: 'blur(20px)',
             borderRadius: '50%',
           }}
