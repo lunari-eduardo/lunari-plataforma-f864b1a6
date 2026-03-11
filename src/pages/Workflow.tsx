@@ -928,7 +928,7 @@ export default function Workflow() {
       {/* Workflow Table */}
       <div className="rounded-lg bg-white/30 backdrop-blur-xl dark:bg-white/[0.04] border border-white/50 dark:border-white/10">
         {/* Quick Add Session - Always visible */}
-        <div className="p-4 border-b">
+        <div className="p-4 border-b border-white/40 dark:border-white/10">
           <QuickSessionAdd onSubmit={handleQuickSessionAdd} currentMonth={currentMonth} />
         </div>
 

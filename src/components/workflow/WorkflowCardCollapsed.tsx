@@ -607,7 +607,7 @@ export function WorkflowCardCollapsed({
           {session.clienteId ? (
             <Link 
               to={`/app/clientes/${session.clienteId}`} 
-              className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline break-words leading-tight"
+              className="text-sm font-medium text-primary hover:text-primary/80 hover:underline break-words leading-tight"
             >
               {session.nome}
             </Link>

@@ -269,7 +269,7 @@ export function WorkflowCardExpanded({
             
             <div className="flex justify-between items-center">
               <span className="text-xs text-muted-foreground">Valor base:</span>
-              <span className="text-sm font-medium text-blue-600">{valorPacoteDisplay}</span>
+              <span className="text-sm font-medium text-primary">{valorPacoteDisplay}</span>
             </div>
             
             <div className="flex justify-between items-center gap-2">

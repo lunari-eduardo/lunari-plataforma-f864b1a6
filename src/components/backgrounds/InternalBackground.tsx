@@ -52,7 +52,7 @@ export default function InternalBackground() {
             left: '-10%',
             width: 'min(45vw, 700px)',
             height: 'min(45vw, 700px)',
-            background: 'radial-gradient(circle, rgba(172, 94, 58, 0.05) 0%, transparent 70%)',
+            background: 'radial-gradient(circle, rgba(172, 94, 58, 0.03) 0%, transparent 70%)',
             filter: 'blur(40px)',
             borderRadius: '50%',
           }}
