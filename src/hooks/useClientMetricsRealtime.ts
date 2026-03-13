@@ -94,6 +94,7 @@ export function useClientMetricsRealtime(clienteId: string) {
       setError(err instanceof Error ? err.message : 'Erro desconhecido');
     } finally {
       setLoading(false);
+      isInitialLoadRef.current = false;
     }
   }, [clienteId]);
 

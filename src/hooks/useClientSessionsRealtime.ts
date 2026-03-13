@@ -308,7 +308,7 @@ export function useClientSessionsRealtime(clienteId: string) {
     refetchTimerRef.current = setTimeout(() => {
       console.log('🔄 [Debounced] Recarregando sessões do cliente...');
       loadSessions();
-    }, 150); // 150ms debounce
+    }, 500); // 500ms debounce to handle cascaded operations
   }, [loadSessions]);
 
   // Configurar realtime subscriptions

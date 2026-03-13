@@ -417,7 +417,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
     .reduce((acc, p) => acc + p.valor, 0);
 
   // Adicionar novo pagamento
-  const addPayment = useCallback((payment: Omit<SessionPaymentExtended, 'id'>) => {
+  const addPayment = useCallback(async (payment: Omit<SessionPaymentExtended, 'id'>) => {
     const newPayment: SessionPaymentExtended = {
       ...payment,
       id: `pay-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
@@ -425,14 +425,20 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
     
     setPayments(prev => {
       const updated = [...prev, newPayment];
-      // Save to localStorage
       savePaymentsToStorage(sessionId, updated);
-      // Save to Supabase only if paid
-      if (newPayment.statusPagamento === 'pago' && newPayment.data) {
-        saveSinglePaymentToSupabase(sessionId, newPayment.id, newPayment);
-      }
       return updated;
     });
+
+    // Save to Supabase with error feedback
+    if (newPayment.statusPagamento === 'pago' && newPayment.data) {
+      try {
+        await saveSinglePaymentToSupabase(sessionId, newPayment.id, newPayment);
+      } catch (error) {
+        console.error('❌ Erro ao salvar pagamento no Supabase:', error);
+        const { toast } = await import('sonner');
+        toast.error('Erro ao salvar pagamento. Tente novamente.');
+      }
+    }
     
     return newPayment;
   }, [sessionId]);
