@@ -168,6 +168,56 @@ export type Database = {
           },
         ]
       }
+      audit_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          actor_type: string
+          created_at: string
+          gallery_id: string | null
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          resource_id: string | null
+          resource_type: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          actor_type?: string
+          created_at?: string
+          gallery_id?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          resource_id?: string | null
+          resource_type?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          actor_type?: string
+          created_at?: string
+          gallery_id?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          resource_id?: string | null
+          resource_type?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_log_gallery_id_fkey"
+            columns: ["gallery_id"]
+            isOneToOne: false
+            referencedRelation: "galerias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       availability_slots: {
         Row: {
           color: string | null
@@ -2174,6 +2224,7 @@ export type Database = {
           id: string
           over_limit_since: string | null
           photo_credits: number
+          storage_bonus_bytes: number | null
           updated_at: string
           user_id: string
           watermark_mode: string | null
@@ -2197,6 +2248,7 @@ export type Database = {
           id?: string
           over_limit_since?: string | null
           photo_credits?: number
+          storage_bonus_bytes?: number | null
           updated_at?: string
           user_id: string
           watermark_mode?: string | null
@@ -2220,6 +2272,7 @@ export type Database = {
           id?: string
           over_limit_since?: string | null
           photo_credits?: number
+          storage_bonus_bytes?: number | null
           updated_at?: string
           user_id?: string
           watermark_mode?: string | null
@@ -2568,6 +2621,8 @@ export type Database = {
           logo_url: string | null
           nicho: string | null
           nome: string | null
+          referral_code: string | null
+          referred_by: string | null
           site_redes_sociais: string[] | null
           studio_trial_ends_at: string | null
           studio_trial_started_at: string | null
@@ -2592,6 +2647,8 @@ export type Database = {
           logo_url?: string | null
           nicho?: string | null
           nome?: string | null
+          referral_code?: string | null
+          referred_by?: string | null
           site_redes_sociais?: string[] | null
           studio_trial_ends_at?: string | null
           studio_trial_started_at?: string | null
@@ -2616,6 +2673,8 @@ export type Database = {
           logo_url?: string | null
           nicho?: string | null
           nome?: string | null
+          referral_code?: string | null
+          referred_by?: string | null
           site_redes_sociais?: string[] | null
           studio_trial_ends_at?: string | null
           studio_trial_started_at?: string | null
@@ -2623,6 +2682,42 @@ export type Database = {
           telefones?: string[] | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      referrals: {
+        Row: {
+          created_at: string | null
+          id: string
+          referral_code: string
+          referred_user_id: string
+          referrer_user_id: string
+          select_bonus_granted: boolean | null
+          transfer_bonus_active: boolean | null
+          transfer_bonus_bytes: number | null
+          transfer_plan_storage_bytes: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          referral_code: string
+          referred_user_id: string
+          referrer_user_id: string
+          select_bonus_granted?: boolean | null
+          transfer_bonus_active?: boolean | null
+          transfer_bonus_bytes?: number | null
+          transfer_plan_storage_bytes?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          referral_code?: string
+          referred_user_id?: string
+          referrer_user_id?: string
+          select_bonus_granted?: boolean | null
+          transfer_bonus_active?: boolean | null
+          transfer_bonus_bytes?: number | null
+          transfer_plan_storage_bytes?: number | null
         }
         Relationships: []
       }
@@ -3306,6 +3401,10 @@ export type Database = {
       }
     }
     Functions: {
+      activate_referral_transfer_bonus: {
+        Args: { _plan_storage_bytes: number; _referred_user_id: string }
+        Returns: boolean
+      }
       add_gallery_credits: {
         Args: { _amount: number; _user_id: string }
         Returns: number
@@ -3349,11 +3448,16 @@ export type Database = {
         Args: { p_appointment_id: string }
         Returns: Json
       }
+      deactivate_referral_transfer_bonus: {
+        Args: { _referred_user_id: string }
+        Returns: boolean
+      }
       deduct_gallery_credit: { Args: { _user_id: string }; Returns: boolean }
       delete_appointment_cascade: {
         Args: { p_appointment_id: string; p_keep_payments?: boolean }
         Returns: Json
       }
+      ensure_referral_code: { Args: never; Returns: string }
       expire_subscription_credits: {
         Args: { _user_id: string }
         Returns: undefined
@@ -3386,6 +3490,10 @@ export type Database = {
         Args: { _user_id: string }
         Returns: number
       }
+      grant_referral_select_bonus: {
+        Args: { _referred_user_id: string }
+        Returns: boolean
+      }
       has_active_subscription: { Args: { _user_id: string }; Returns: boolean }
       has_role: {
         Args: {
@@ -3408,11 +3516,16 @@ export type Database = {
         }
         Returns: string
       }
+      recalculate_referral_transfer_bonus: {
+        Args: { _new_plan_storage_bytes: number; _referred_user_id: string }
+        Returns: boolean
+      }
       recompute_session_paid: {
         Args: { p_session_id: string }
         Returns: undefined
       }
       refund_photo_credit: { Args: { _user_id: string }; Returns: undefined }
+      register_referral: { Args: { _referral_code: string }; Returns: boolean }
       renew_subscription_credits: {
         Args: { _amount: number; _user_id: string }
         Returns: undefined
