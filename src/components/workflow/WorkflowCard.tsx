@@ -51,7 +51,7 @@ export function WorkflowCard({
         isExpanded && [
           "bg-white/50 shadow-[0_4px_16px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.8)]",
           "dark:bg-white/[0.06] dark:shadow-[0_4px_16px_rgba(0,0,0,0.4)]",
-          "hover:bg-white/65 hover:shadow-[0_10px_32px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.9)] hover:-translate-y-px",
+          "hover:bg-white/65 hover:shadow-[0_10px_32px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.9)]",
           "dark:hover:bg-white/[0.1] dark:hover:shadow-[0_10px_32px_rgba(0,0,0,0.55)]"
         ]
       )}
