@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface ClientMetrics {
@@ -22,12 +22,15 @@ export function useClientMetricsRealtime(clienteId: string) {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const isInitialLoadRef = useRef(true);
 
   const calculateMetrics = useCallback(async () => {
     if (!clienteId) return;
 
     try {
-      setLoading(true);
+      if (isInitialLoadRef.current) {
+        setLoading(true);
+      }
       setError(null);
 
       // Get appointments count
@@ -91,6 +94,7 @@ export function useClientMetricsRealtime(clienteId: string) {
       setError(err instanceof Error ? err.message : 'Erro desconhecido');
     } finally {
       setLoading(false);
+      isInitialLoadRef.current = false;
     }
   }, [clienteId]);
 

@@ -33,6 +33,7 @@ export function useClientSessionsRealtime(clienteId: string) {
   
   // FASE 5: Debounce timer para refetch
   const refetchTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isInitialLoadRef = useRef(true);
 
   const loadSessions = useCallback(async () => {
     if (!clienteId) {
@@ -42,7 +43,10 @@ export function useClientSessionsRealtime(clienteId: string) {
     }
 
     try {
-      setLoading(true);
+      // Only show spinner on initial load, not on realtime refetches
+      if (isInitialLoadRef.current) {
+        setLoading(true);
+      }
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
@@ -291,6 +295,7 @@ export function useClientSessionsRealtime(clienteId: string) {
       toast.error('Erro ao carregar histórico de sessões');
     } finally {
       setLoading(false);
+      isInitialLoadRef.current = false;
     }
   }, [clienteId]);
 
@@ -303,7 +308,7 @@ export function useClientSessionsRealtime(clienteId: string) {
     refetchTimerRef.current = setTimeout(() => {
       console.log('🔄 [Debounced] Recarregando sessões do cliente...');
       loadSessions();
-    }, 150); // 150ms debounce
+    }, 500); // 500ms debounce to handle cascaded operations
   }, [loadSessions]);
 
   // Configurar realtime subscriptions
