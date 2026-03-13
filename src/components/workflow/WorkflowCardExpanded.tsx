@@ -9,11 +9,10 @@ import { WorkflowPackageCombobox } from "./WorkflowPackageCombobox";
 import { ColoredStatusBadge } from "./ColoredStatusBadge";
 import { GerenciarProdutosModal } from "./GerenciarProdutosModal";
 import { FotosExtrasPaymentBadge } from "./FotosExtrasPaymentBadge";
-import { CreditCard, Plus, Package, ExternalLink, Eye, Image as ImageIcon } from "lucide-react";
-import { EXTERNAL_URLS } from "@/config/externalUrls";
-import { buildGalleryNewUrl, buildGalleryDeliverUrl } from "@/utils/galleryRedirect";
-import { useAccessControl } from "@/hooks/useAccessControl";
-import { useSessionGalerias } from "@/hooks/useSessionGalerias";
+import { ChargeModal } from "@/components/cobranca/ChargeModal";
+import { PaymentConfigModalExpanded } from "@/components/crm/PaymentConfigModalExpanded";
+import { useSessionPayments } from "@/hooks/useSessionPayments";
+import { CreditCard, Plus, Package, Send } from "lucide-react";
 import type { SessionData } from "@/types/workflow";
 import { useAppContext } from "@/contexts/AppContext";
 
@@ -34,10 +33,10 @@ export function WorkflowCardExpanded({
   onFieldUpdate,
   onStatusChange,
 }: WorkflowCardExpandedProps) {
-  const { addPayment } = useAppContext();
-  const { hasGaleryAccess, accessState } = useAccessControl();
-  const { galerias, hasGalerias } = useSessionGalerias(session.sessionId || session.id);
+  const { addPayment: addPaymentContext } = useAppContext();
   const [workflowPaymentsOpen, setWorkflowPaymentsOpen] = useState(false);
+  const [showChargeModal, setShowChargeModal] = useState(false);
+  const [showAddPaymentModal, setShowAddPaymentModal] = useState(false);
   const [paymentInput, setPaymentInput] = useState('');
   const [produtosModalOpen, setProdutosModalOpen] = useState(false);
   const [descriptionValue, setDescriptionValue] = useState(session.descricao || '');
@@ -46,6 +45,15 @@ export function WorkflowCardExpanded({
   const [descontoValue, setDescontoValue] = useState(session.desconto || '');
   const [adicionalValue, setAdicionalValue] = useState(session.valorAdicional || '');
   const [obsValue, setObsValue] = useState(session.observacoes || '');
+
+  // Hook de pagamentos para os modais
+  const {
+    payments: sessionPayments,
+    totalPago: hookTotalPago,
+    addPayment: hookAddPayment,
+    createInstallments,
+    schedulePayment,
+  } = useSessionPayments(session.id, session.pagamentos || []);
 
   // Sync quando session muda
   useEffect(() => {
@@ -111,13 +119,13 @@ export function WorkflowCardExpanded({
     if (paymentInput && !isNaN(parseFloat(paymentInput))) {
       const paymentValue = parseFloat(paymentInput);
       try {
-        await addPayment(session.id, paymentValue);
+        await addPaymentContext(session.id, paymentValue);
         setPaymentInput('');
       } catch (error) {
         console.error('❌ Erro ao adicionar pagamento:', error);
       }
     }
-  }, [paymentInput, addPayment, session.id]);
+  }, [paymentInput, addPaymentContext, session.id]);
 
   const handlePaymentKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
@@ -154,6 +162,11 @@ export function WorkflowCardExpanded({
       onFieldUpdate(session.id, 'descricao', descriptionValue);
     }
   }, [descriptionValue, session.descricao, session.id, onFieldUpdate]);
+
+  // Handler para selecionar todo texto ao focar nos inputs de valor
+  const handleValueFocus = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
+    e.target.select();
+  }, []);
 
   return (
     <div className="bg-gradient-to-br from-transparent via-gray-50/10 to-stone-50/10 dark:from-transparent dark:via-[#1f1f1f]/30 dark:to-[#1a1a1a]/30 px-4 py-5 md:px-6">
@@ -247,7 +260,7 @@ export function WorkflowCardExpanded({
             onChange={(e) => setDescriptionValue(e.target.value)}
             onBlur={handleDescriptionBlur}
             placeholder="Descrição da sessão..."
-            className="h-8 text-xs border border-border/50 rounded bg-background/50 focus:bg-background"
+            className="h-8 text-xs border border-border/50 rounded bg-background/50"
           />
         </div>
       </div>
@@ -278,8 +291,9 @@ export function WorkflowCardExpanded({
                 value={descontoValue}
                 onChange={(e) => setDescontoValue(e.target.value)}
                 onBlur={handleDescontoBlur}
+                onFocus={handleValueFocus}
                 placeholder="R$ 0,00"
-                className="h-7 text-xs text-right w-24 border border-border/50 dark:border-border rounded bg-background/50 dark:bg-background/80 focus:bg-background"
+                className="h-7 text-xs text-right w-24 border border-border/50 dark:border-border rounded bg-background/50 dark:bg-background/80"
               />
             </div>
             
@@ -316,8 +330,9 @@ export function WorkflowCardExpanded({
                 value={adicionalValue}
                 onChange={(e) => setAdicionalValue(e.target.value)}
                 onBlur={handleAdicionalBlur}
+                onFocus={handleValueFocus}
                 placeholder="R$ 0,00"
-                className="h-7 text-xs text-right w-24 border border-border/50 dark:border-border rounded bg-background/50 dark:bg-background/80 focus:bg-background"
+                className="h-7 text-xs text-right w-24 border border-border/50 dark:border-border rounded bg-background/50 dark:bg-background/80"
               />
             </div>
             
@@ -328,110 +343,54 @@ export function WorkflowCardExpanded({
                 onChange={(e) => setObsValue(e.target.value)}
                 onBlur={handleObsBlur}
                 placeholder="Observações..."
-                className="text-xs min-h-[60px] border border-border/50 dark:border-border rounded bg-background/50 dark:bg-background/80 focus:bg-background resize-none"
+                className="text-xs min-h-[60px] border border-border/50 dark:border-border rounded bg-background/50 dark:bg-background/80 resize-none"
               />
             </div>
           </div>
         </div>
 
-        {/* BLOCO 3 - Galeria & Ações */}
-        <div className="space-y-4 flex flex-col items-center justify-center py-4">
-          {/* Seção Galeria */}
-          <div className="flex flex-col items-center gap-3 w-full">
-            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-              Galeria
-            </h4>
-            
-            <div className="flex items-center gap-2">
-              {/* Criar Galeria */}
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-1.5">
-                    <Plus className="h-3.5 w-3.5" />
-                    Criar Galeria
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-52 p-1" align="center" side="top">
-                  <button
-                    onClick={() => {
-                      const url = buildGalleryNewUrl({
-                        sessionId: session.sessionId || session.id,
-                        sessionUuid: session.id,
-                        clienteId: session.clienteId,
-                        clienteNome: session.nome,
-                        clienteEmail: session.email || '',
-                        clienteTelefone: session.whatsapp || '',
-                        pacoteNome: session.regras_congeladas?.pacote?.nome || session.pacote,
-                        pacoteCategoria: session.regras_congeladas?.pacote?.categoria || session.categoria,
-                        fotosIncluidas: session.regras_congeladas?.pacote?.fotosIncluidas,
-                        modeloCobranca: session.regras_congeladas?.precificacaoFotoExtra?.modelo,
-                        precoExtra: session.regras_congeladas?.pacote?.valorFotoExtra,
-                        tipoAssinatura: accessState.planCode
-                      });
-                      window.open(url, '_blank', 'noopener,noreferrer');
-                    }}
-                    className="w-full text-left px-3 py-2 text-xs rounded hover:bg-muted transition-colors flex items-center gap-2"
-                  >
-                    <ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />
-                    Galeria de Seleção
-                  </button>
-                  <button
-                    onClick={() => {
-                      const url = buildGalleryDeliverUrl({
-                        sessionId: session.sessionId || session.id,
-                        sessionUuid: session.id,
-                        clienteId: session.clienteId,
-                        clienteNome: session.nome,
-                      });
-                      window.open(url, '_blank', 'noopener,noreferrer');
-                    }}
-                    className="w-full text-left px-3 py-2 text-xs rounded hover:bg-muted transition-colors flex items-center gap-2"
-                  >
-                    <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
-                    Galeria de Entrega
-                  </button>
-                </PopoverContent>
-              </Popover>
+        {/* BLOCO 3 - Ações de Pagamento */}
+        <div className="space-y-3 flex flex-col items-center justify-center py-4">
+          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+            Ações de Pagamento
+          </h4>
+          
+          <div className="flex flex-col items-center gap-2 w-full max-w-[200px]">
+            {/* Cobrar */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowChargeModal(true)}
+              className="gap-2 w-full border-primary text-primary hover:bg-primary/10"
+            >
+              <Send className="h-3.5 w-3.5" />
+              Cobrar
+            </Button>
 
-              {/* Ver Galerias */}
-              {hasGalerias && (
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="ghost" size="sm" className="gap-1.5">
-                      <Eye className="h-3.5 w-3.5" />
-                      Ver
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-56 p-1" align="center" side="top">
-                    {galerias.map((g) => (
-                      <button
-                        key={g.id}
-                        onClick={() => window.open(`${EXTERNAL_URLS.GALLERY.BASE}/gallery/${g.id}`, '_blank', 'noopener,noreferrer')}
-                        className="w-full text-left px-3 py-2 text-xs rounded hover:bg-muted transition-colors flex items-center justify-between gap-2"
-                      >
-                        <span className="font-medium">{g.tipo === 'entrega' || g.tipo === 'transfer' ? 'Entrega' : 'Seleção'}</span>
-                        <span className="text-[10px] text-muted-foreground capitalize">{g.status.replace('_', ' ')}</span>
-                      </button>
-                    ))}
-                  </PopoverContent>
-                </Popover>
-              )}
-            </div>
+            {/* Agendar pagamento manual */}
+            <Button
+              size="sm"
+              onClick={() => setShowAddPaymentModal(true)}
+              className="gap-2 w-full"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Agendar pagamento manual
+            </Button>
+
+            {/* Divisor */}
+            <div className="w-full border-t border-border/20 my-1" />
+
+            {/* Pagamentos (modal completo) */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setWorkflowPaymentsOpen(true)}
+              className="gap-2 w-full"
+            >
+              <CreditCard className="h-4 w-4" />
+              Pagamentos
+            </Button>
           </div>
-
-          {/* Divisor */}
-          <div className="w-full border-t border-border/20" />
-
-          {/* Pagamentos */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setWorkflowPaymentsOpen(true)}
-            className="gap-2"
-          >
-            <CreditCard className="h-4 w-4" />
-            Gerenciar pagamentos
-          </Button>
         </div>
       </div>
 
@@ -491,18 +450,41 @@ export function WorkflowCardExpanded({
           isOpen={workflowPaymentsOpen}
           onClose={() => {
             setWorkflowPaymentsOpen(false);
-            // Force re-fetch from Supabase to get fresh valor_pago
             window.dispatchEvent(new CustomEvent('payment-created', {
               detail: { sessionId: session.sessionId || session.id }
             }));
           }}
           sessionData={session}
           valorTotalCalculado={total}
-          onPaymentUpdate={() => {
-            // No-op: valor_pago is managed by DB trigger. Re-fetch happens via event.
-          }}
+          onPaymentUpdate={() => {}}
         />
       )}
+
+      {/* Charge Modal */}
+      <ChargeModal
+        isOpen={showChargeModal}
+        onClose={() => setShowChargeModal(false)}
+        clienteId={session.clienteId || ''}
+        clienteNome={session.nome || 'Cliente'}
+        clienteWhatsapp={session.whatsapp}
+        sessionId={session.sessionId || session.id}
+        valorSugerido={pendente}
+      />
+
+      {/* Payment Config Modal (Agendar pagamento manual) */}
+      <PaymentConfigModalExpanded
+        isOpen={showAddPaymentModal}
+        onClose={() => setShowAddPaymentModal(false)}
+        sessionId={session.id}
+        clienteId={session.clienteId}
+        valorTotal={total}
+        valorJaPago={valorPago}
+        valorRestante={pendente}
+        clienteNome={session.nome}
+        onAddPayment={hookAddPayment}
+        onCreateInstallments={createInstallments}
+        onSchedulePayment={schedulePayment}
+      />
 
       {/* Modal de Gerenciamento de Produtos (Mobile) */}
       {produtosModalOpen && (
