@@ -33,6 +33,7 @@ export function useClientSessionsRealtime(clienteId: string) {
   
   // FASE 5: Debounce timer para refetch
   const refetchTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isInitialLoadRef = useRef(true);
 
   const loadSessions = useCallback(async () => {
     if (!clienteId) {
