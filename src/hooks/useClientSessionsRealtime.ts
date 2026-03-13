@@ -295,6 +295,7 @@ export function useClientSessionsRealtime(clienteId: string) {
       toast.error('Erro ao carregar histórico de sessões');
     } finally {
       setLoading(false);
+      isInitialLoadRef.current = false;
     }
   }, [clienteId]);
 
