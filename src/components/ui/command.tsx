@@ -4,10 +4,14 @@ import { Command as CommandPrimitive } from "cmdk";
 import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+const normalizeStr = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+const accentInsensitiveFilter = (value: string, search: string) => normalizeStr(value).includes(normalizeStr(search)) ? 1 : 0;
+
 const Command = React.forwardRef<React.ElementRef<typeof CommandPrimitive>, React.ComponentPropsWithoutRef<typeof CommandPrimitive>>(({
   className,
+  filter,
   ...props
-}, ref) => <CommandPrimitive ref={ref} className={cn("flex h-full w-full flex-col overflow-hidden rounded-md dropdown-solid text-popover-foreground", className)} {...props} />);
+}, ref) => <CommandPrimitive ref={ref} filter={filter ?? accentInsensitiveFilter} className={cn("flex h-full w-full flex-col overflow-hidden rounded-md dropdown-solid text-popover-foreground", className)} {...props} />);
 Command.displayName = CommandPrimitive.displayName;
 interface CommandDialogProps extends DialogProps {}
 const CommandDialog = ({
