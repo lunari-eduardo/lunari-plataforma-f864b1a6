@@ -43,7 +43,10 @@ export function useClientSessionsRealtime(clienteId: string) {
     }
 
     try {
-      setLoading(true);
+      // Only show spinner on initial load, not on realtime refetches
+      if (isInitialLoadRef.current) {
+        setLoading(true);
+      }
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
