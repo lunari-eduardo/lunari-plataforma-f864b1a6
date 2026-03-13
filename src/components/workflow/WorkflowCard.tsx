@@ -42,17 +42,15 @@ export function WorkflowCard({
         // Minimal base shadow + inner glow
         "shadow-[0_1px_3px_rgba(0,0,0,0.04),inset_0_1px_0_rgba(255,255,255,0.7)]",
         "dark:shadow-[0_1px_3px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.05)]",
-        // Hover — elevated glass
+        // Hover — subtle gray only, no movement
         !isExpanded && [
-          "hover:bg-white/60 hover:border-white/70 hover:shadow-[0_8px_28px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.8)] hover:-translate-y-px",
-          "dark:hover:bg-white/[0.08] dark:hover:border-white/20 dark:hover:shadow-[0_8px_28px_rgba(0,0,0,0.5)]"
+          "hover:bg-black/[0.02] dark:hover:bg-white/[0.03]"
         ],
-        // Expanded — moderate glass elevation
+        // Expanded — moderate glass elevation, subtle hover
         isExpanded && [
           "bg-white/50 shadow-[0_4px_16px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.8)]",
           "dark:bg-white/[0.06] dark:shadow-[0_4px_16px_rgba(0,0,0,0.4)]",
-          "hover:bg-white/65 hover:shadow-[0_10px_32px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.9)]",
-          "dark:hover:bg-white/[0.1] dark:hover:shadow-[0_10px_32px_rgba(0,0,0,0.55)]"
+          "hover:bg-black/[0.02] dark:hover:bg-white/[0.03]"
         ]
       )}
     >
