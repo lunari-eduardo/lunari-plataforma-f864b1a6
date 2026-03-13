@@ -28,7 +28,9 @@ export function useClientMetricsRealtime(clienteId: string) {
     if (!clienteId) return;
 
     try {
-      setLoading(true);
+      if (isInitialLoadRef.current) {
+        setLoading(true);
+      }
       setError(null);
 
       // Get appointments count
