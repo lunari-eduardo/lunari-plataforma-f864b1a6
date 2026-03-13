@@ -90,7 +90,7 @@ export function ProductCombobox({
               <CommandItem
                 value="__none__"
                 onSelect={handleSelectNone}
-                className="text-xs hover:bg-neumorphic-base hover:shadow-neumorphic-inset rounded cursor-pointer border-b border-gray-200"
+                className="text-xs hover:bg-accent/10 rounded cursor-pointer border-b border-border"
               >
                 <Check
                   className={cn(
