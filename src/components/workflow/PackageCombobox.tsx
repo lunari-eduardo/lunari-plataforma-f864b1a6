@@ -54,7 +54,7 @@ export function PackageCombobox({
             <CommandEmpty className="text-xs py-2 text-neumorphic-textLight">
               Nenhum pacote encontrado.
             </CommandEmpty>
-            <CommandGroup className="bg-neutral-50">
+            <CommandGroup>
               {pacotes.map(pkg => {
                 const categoriaNome = getCategoriaName(pkg.categoria_id);
                 const valorBase = pkg.valor_base || 0;
