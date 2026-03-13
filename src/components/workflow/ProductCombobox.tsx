@@ -105,7 +105,7 @@ export function ProductCombobox({
                   key={product.id}
                   value={product.nome}
                   onSelect={() => handleSelectProduct(product)}
-                  className="text-xs hover:bg-neumorphic-base hover:shadow-neumorphic-inset rounded cursor-pointer"
+                  className="text-xs hover:bg-accent/10 rounded cursor-pointer"
                 >
                   <Check
                     className={cn(

@@ -66,7 +66,7 @@ export function CategoryCombobox({
                     }
                     setOpen(false);
                   }} 
-                  className="text-xs hover:bg-neumorphic-base hover:shadow-neumorphic-inset rounded cursor-pointer"
+                  className="text-xs hover:bg-accent/10 rounded cursor-pointer"
                 >
                   <Check className={cn("mr-2 h-3 w-3", value === categoria.nome ? "opacity-100" : "opacity-0")} />
                   <span className="font-medium">{categoria.nome}</span>
