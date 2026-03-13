@@ -1,36 +1,45 @@
 
 
-# Checkout Transparente Asaas — Implementado ✅
+# Correção de Dropdowns no Workflow: Fundo Escuro, Foco Intenso e Busca sem Acentos
 
-## Arquitetura
+## Problemas Identificados
+
+1. **Input preto no dropdown**: O `CommandInput` wrapper em `command.tsx` usa `bg-background`. Porém, o `Command` raiz aplica a classe `dropdown-solid` que força `hsl(30 30% 98%) !important` — funcionando. O problema real é que os 4 comboboxes do workflow usam `bg-neumorphic-base` que **não existe** como classe CSS (zero matches). O `Command` e `PopoverContent` ficam sem fundo definido, herdando preto ou transparente. Em light mode, a ausência de fundo faz o input parecer escuro contra o overlay.
+
+2. **Foco laranja intenso**: `data-[selected='true']:bg-accent` no `CommandItem` usa `--accent: 19 49% 45%` (terra-cotta 100% opaco). Precisa reduzir para ~20% de opacidade.
+
+3. **Busca sem suporte a acentos**: O `cmdk` usa comparação exata por padrão. "pasc" não encontra "Páscoa". Precisa de uma função `filter` customizada que normalize diacríticos.
+
+## Plano de Alterações
+
+### 1. `src/components/ui/command.tsx` — Foco suave + filtro sem acentos
+
+- **CommandItem** (linha 53): Trocar `data-[selected='true']:bg-accent` por `data-[selected='true']:bg-accent/20` para reduzir opacidade do highlight de foco
+- **Command** (linha 10): Adicionar prop `filter` padrão que normaliza diacríticos usando `String.normalize('NFD').replace(/[\u0300-\u036f]/g, '')`
+- **CommandInput** wrapper (linha 28): Trocar `bg-background` por `bg-transparent` para herdar do container pai
+
+### 2. 4 Comboboxes do Workflow — Remover `bg-neumorphic-base` inexistente
+
+Nos 4 arquivos, substituir `bg-neumorphic-base` por `dropdown-solid` (que já existe e funciona no CSS):
+
+- `src/components/workflow/PackageCombobox.tsx` — linhas 50-51
+- `src/components/workflow/WorkflowPackageCombobox.tsx` — linhas 113-114
+- `src/components/workflow/ProductCombobox.tsx` — linhas 79-80
+- `src/components/workflow/CategoryCombobox.tsx` — linhas 51-52
+
+Também trocar `bg-neutral-50` nos `CommandGroup` e `hover:bg-neumorphic-base` nos items por classes compatíveis.
+
+### Resumo
 
 ```text
-ChargeModal → Asaas → "Gerar Link de Checkout"
-  1. Cria registro na tabela cobrancas (status: pendente, sem chamada ao Asaas)
-  2. Gera URL interna: {origin}/checkout/{cobrancaId}
-  3. Mostra link com botões "Copiar" e "Enviar WhatsApp"
-
-Cliente abre o link → /checkout/:cobrancaId (rota pública)
-  1. checkout-get-data busca: cobrança, perfil do fotógrafo, settings Asaas, taxas reais
-  2. Renderiza checkout transparente branded (PIX + Cartão)
-  3. checkout-process-payment processa pagamento server-side via Asaas API
-  4. Polling automático para PIX / confirmação instantânea para Cartão
+Arquivo                          Mudança
+───────────────────────────────  ─────────────────────────────────
+command.tsx                      bg-accent → bg-accent/20, filtro NFD, bg-transparent no input
+PackageCombobox.tsx              bg-neumorphic-base → dropdown-solid
+WorkflowPackageCombobox.tsx      bg-neumorphic-base → dropdown-solid
+ProductCombobox.tsx              bg-neumorphic-base → dropdown-solid
+CategoryCombobox.tsx             bg-neumorphic-base → dropdown-solid
 ```
 
-## Arquivos Criados/Modificados
+6 arquivos, apenas CSS e uma função de filtro. Zero lógica de negócio alterada.
 
-| Arquivo | Ação |
-|---------|------|
-| `src/pages/PublicCheckout.tsx` | ✅ Criado — Checkout transparente público |
-| `supabase/functions/checkout-get-data/index.ts` | ✅ Criado — Busca dados da cobrança + taxas |
-| `supabase/functions/checkout-process-payment/index.ts` | ✅ Criado — Processa pagamento (PIX/Cartão) |
-| `src/components/cobranca/ChargeModal.tsx` | ✅ Modificado — Gera link interno |
-| `src/App.tsx` | ✅ Modificado — Rota /checkout/:cobrancaId |
-| `supabase/config.toml` | ✅ Modificado — Novas funções registradas |
-
-## Segurança
-
-- Edge Functions públicas (verify_jwt=false) mas validam status da cobrança
-- API key do Asaas nunca exposta ao frontend
-- Cobrança só pode ser paga uma vez (validação de status 'pendente')
-- Service Role usado internamente para acessar dados do fotógrafo
