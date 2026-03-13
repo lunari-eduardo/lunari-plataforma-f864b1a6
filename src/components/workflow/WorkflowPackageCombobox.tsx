@@ -122,7 +122,7 @@ const WorkflowPackageComboboxComponent = ({
               <CommandItem 
                 value="nenhum-pacote"
                 onSelect={handleClearPackage}
-                className="text-xs hover:bg-neumorphic-base hover:shadow-neumorphic-inset rounded cursor-pointer"
+                className="text-xs hover:bg-accent/10 rounded cursor-pointer"
               >
                 <Check className={cn("mr-2 h-3 w-3", !value ? "opacity-100" : "opacity-0")} />
                 <span className="font-medium">Nenhum pacote</span>
