@@ -86,7 +86,7 @@ export function ProductCombobox({
             <CommandEmpty className="text-xs py-2 text-neumorphic-textLight">
               Nenhum produto encontrado.
             </CommandEmpty>
-            <CommandGroup className="bg-neutral-50">
+            <CommandGroup>
               <CommandItem
                 value="__none__"
                 onSelect={handleSelectNone}
