@@ -55,7 +55,7 @@ export function CategoryCombobox({
             <CommandEmpty className="text-xs py-2 text-neumorphic-textLight">
               Nenhuma categoria encontrada.
             </CommandEmpty>
-            <CommandGroup className="bg-neutral-50">
+            <CommandGroup>
               {categoryOptions.map(categoria => (
                 <CommandItem 
                   key={categoria.id} 
