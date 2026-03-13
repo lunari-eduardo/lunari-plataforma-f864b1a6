@@ -4,10 +4,14 @@ import { Command as CommandPrimitive } from "cmdk";
 import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+const normalizeStr = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+const accentInsensitiveFilter = (value: string, search: string) => normalizeStr(value).includes(normalizeStr(search)) ? 1 : 0;
+
 const Command = React.forwardRef<React.ElementRef<typeof CommandPrimitive>, React.ComponentPropsWithoutRef<typeof CommandPrimitive>>(({
   className,
+  filter,
   ...props
-}, ref) => <CommandPrimitive ref={ref} className={cn("flex h-full w-full flex-col overflow-hidden rounded-md dropdown-solid text-popover-foreground", className)} {...props} />);
+}, ref) => <CommandPrimitive ref={ref} filter={filter ?? accentInsensitiveFilter} className={cn("flex h-full w-full flex-col overflow-hidden rounded-md dropdown-solid text-popover-foreground", className)} {...props} />);
 Command.displayName = CommandPrimitive.displayName;
 interface CommandDialogProps extends DialogProps {}
 const CommandDialog = ({
@@ -25,7 +29,7 @@ const CommandDialog = ({
 const CommandInput = React.forwardRef<React.ElementRef<typeof CommandPrimitive.Input>, React.ComponentPropsWithoutRef<typeof CommandPrimitive.Input>>(({
   className,
   ...props
-}, ref) => <div cmdk-input-wrapper="" className="flex items-center border-b px-3 bg-background">
+}, ref) => <div cmdk-input-wrapper="" className="flex items-center border-b px-3 bg-transparent">
     <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
     <CommandPrimitive.Input ref={ref} className={cn("flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 text-foreground", className)} {...props} />
   </div>);
@@ -50,7 +54,7 @@ CommandSeparator.displayName = CommandPrimitive.Separator.displayName;
 const CommandItem = React.forwardRef<React.ElementRef<typeof CommandPrimitive.Item>, React.ComponentPropsWithoutRef<typeof CommandPrimitive.Item>>(({
   className,
   ...props
-}, ref) => <CommandPrimitive.Item ref={ref} className={cn("relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none data-[disabled=true]:pointer-events-none data-[selected='true']:bg-accent data-[selected=true]:text-accent-foreground data-[disabled=true]:opacity-50", className)} {...props} />);
+}, ref) => <CommandPrimitive.Item ref={ref} className={cn("relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none data-[disabled=true]:pointer-events-none data-[selected='true']:bg-accent/20 data-[selected=true]:text-accent-foreground data-[disabled=true]:opacity-50", className)} {...props} />);
 CommandItem.displayName = CommandPrimitive.Item.displayName;
 const CommandShortcut = ({
   className,

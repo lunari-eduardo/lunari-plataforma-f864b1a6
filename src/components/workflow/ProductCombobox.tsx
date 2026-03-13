@@ -76,8 +76,8 @@ export function ProductCombobox({
           <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[250px] p-0 shadow-neumorphic border-0 bg-neumorphic-base z-[9999]">
-        <Command className="bg-neumorphic-base">
+      <PopoverContent className="w-[250px] p-0 shadow-neumorphic border-0 dropdown-solid z-[9999]">
+        <Command className="dropdown-solid">
           <CommandInput 
             placeholder="Buscar produto..." 
             className="h-8 text-xs border-0 bg-transparent focus:ring-0" 
@@ -86,11 +86,11 @@ export function ProductCombobox({
             <CommandEmpty className="text-xs py-2 text-neumorphic-textLight">
               Nenhum produto encontrado.
             </CommandEmpty>
-            <CommandGroup className="bg-neutral-50">
+            <CommandGroup>
               <CommandItem
                 value="__none__"
                 onSelect={handleSelectNone}
-                className="text-xs hover:bg-neumorphic-base hover:shadow-neumorphic-inset rounded cursor-pointer border-b border-gray-200"
+                className="text-xs hover:bg-accent/10 rounded cursor-pointer border-b border-border"
               >
                 <Check
                   className={cn(
@@ -105,7 +105,7 @@ export function ProductCombobox({
                   key={product.id}
                   value={product.nome}
                   onSelect={() => handleSelectProduct(product)}
-                  className="text-xs hover:bg-neumorphic-base hover:shadow-neumorphic-inset rounded cursor-pointer"
+                  className="text-xs hover:bg-accent/10 rounded cursor-pointer"
                 >
                   <Check
                     className={cn(

@@ -47,14 +47,14 @@ export function PackageCombobox({
           <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[200px] p-0 shadow-neumorphic border-0 bg-neumorphic-base z-[9999]">
-        <Command className="bg-neumorphic-base">
+      <PopoverContent className="w-[200px] p-0 shadow-neumorphic border-0 dropdown-solid z-[9999]">
+        <Command className="dropdown-solid">
           <CommandInput placeholder="Buscar pacote..." className="h-8 text-xs border-0 bg-transparent focus:ring-0" />
           <CommandList>
             <CommandEmpty className="text-xs py-2 text-neumorphic-textLight">
               Nenhum pacote encontrado.
             </CommandEmpty>
-            <CommandGroup className="bg-neutral-50">
+            <CommandGroup>
               {pacotes.map(pkg => {
                 const categoriaNome = getCategoriaName(pkg.categoria_id);
                 const valorBase = pkg.valor_base || 0;
@@ -75,7 +75,7 @@ export function PackageCombobox({
                       }
                       setOpen(false);
                     }} 
-                    className="text-xs hover:bg-neumorphic-base hover:shadow-neumorphic-inset rounded cursor-pointer"
+                    className="text-xs hover:bg-accent/10 rounded cursor-pointer"
                   >
                     <Check className={cn("mr-2 h-3 w-3", value === pkg.nome ? "opacity-100" : "opacity-0")} />
                     <div className="flex flex-col">

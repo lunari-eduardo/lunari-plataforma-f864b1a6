@@ -110,9 +110,9 @@ const WorkflowPackageComboboxComponent = ({
           <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[200px] p-0 shadow-neumorphic border-0 bg-neumorphic-base z-[9999]">
-        <Command className="bg-neumorphic-base">
-          <CommandInput placeholder="Buscar pacote..." className="h-8 text-xs border-0 bg-neumorphic-base focus:ring-0" />
+      <PopoverContent className="w-[200px] p-0 shadow-neumorphic border-0 dropdown-solid z-[9999]">
+        <Command className="dropdown-solid">
+          <CommandInput placeholder="Buscar pacote..." className="h-8 text-xs border-0 bg-transparent focus:ring-0" />
           <CommandList>
             <CommandEmpty className="text-xs py-2 text-muted-foreground">
               {isLoadingPacotes ? 'Carregando pacotes...' : 'Nenhum pacote encontrado.'}
@@ -122,7 +122,7 @@ const WorkflowPackageComboboxComponent = ({
               <CommandItem 
                 value="nenhum-pacote"
                 onSelect={handleClearPackage}
-                className="text-xs hover:bg-neumorphic-base hover:shadow-neumorphic-inset rounded cursor-pointer"
+                className="text-xs hover:bg-accent/10 rounded cursor-pointer"
               >
                 <Check className={cn("mr-2 h-3 w-3", !value ? "opacity-100" : "opacity-0")} />
                 <span className="font-medium">Nenhum pacote</span>
@@ -145,7 +145,7 @@ const WorkflowPackageComboboxComponent = ({
                     }
                     setOpen(false);
                   }}
-                  className="text-xs hover:bg-neumorphic-base hover:shadow-neumorphic-inset rounded cursor-pointer"
+                  className="text-xs hover:bg-accent/10 rounded cursor-pointer"
                 >
                   <Check className={cn("mr-2 h-3 w-3", (pkg.id === value || pkg.nome === value || String(pkg.id) === String(value)) ? "opacity-100" : "opacity-0")} />
                   <div className="flex flex-col">
