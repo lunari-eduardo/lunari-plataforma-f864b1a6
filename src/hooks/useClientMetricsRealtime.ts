@@ -22,6 +22,7 @@ export function useClientMetricsRealtime(clienteId: string) {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const isInitialLoadRef = useRef(true);
 
   const calculateMetrics = useCallback(async () => {
     if (!clienteId) return;
