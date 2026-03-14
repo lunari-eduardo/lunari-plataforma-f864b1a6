@@ -132,7 +132,7 @@ export default function AdminConteudoEditar() {
       
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/admin/conteudos')}>
+          <Button variant="ghost" size="icon" onClick={() => navigate('/app/admin/conteudos')}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
