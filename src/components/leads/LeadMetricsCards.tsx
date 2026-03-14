@@ -65,7 +65,7 @@ export default function LeadMetricsCards({
 
   if (!hasData) {
     return <Card className={cn(
-      "bg-lunar-surface border-lunar-border/60", 
+      "bg-white/40 dark:bg-white/[0.05] backdrop-blur-sm border-white/30 dark:border-white/[0.08]", 
       isMobile ? "p-3" : "p-4",
       className
     )}>
