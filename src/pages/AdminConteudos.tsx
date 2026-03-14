@@ -47,11 +47,14 @@ export default function AdminConteudos() {
   const [searchTerm, setSearchTerm] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'published'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'blog' | 'help'>('all');
 
   const filteredPosts = posts?.filter(post => {
     const matchesSearch = post.title.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || post.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const postType = (post as any).type || 'blog';
+    const matchesType = typeFilter === 'all' || postType === typeFilter;
+    return matchesSearch && matchesStatus && matchesType;
   });
 
   const handleDelete = () => {
