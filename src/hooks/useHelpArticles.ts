@@ -62,12 +62,12 @@ export function useHelpArticleByRoute(route: string) {
   return useQuery({
     queryKey: ['help_articles', 'route', route],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase
         .from('blog_posts')
-        .select('id, slug, title')
-        .eq('type' as any, 'help')
+        .select('id, slug, title') as any)
+        .eq('type', 'help')
         .eq('status', 'published')
-        .eq('route_reference' as any, route)
+        .eq('route_reference', route)
         .maybeSingle();
 
       if (error) throw error;
