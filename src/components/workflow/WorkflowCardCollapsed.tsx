@@ -358,7 +358,12 @@ export function WorkflowCardCollapsed({
             onChange={(e) => setDescriptionValue(e.target.value)}
             onBlur={handleDescriptionBlur}
             placeholder="Descrição..."
-            className="h-7 text-[11px] border border-border/50 rounded bg-background/50 focus:bg-background truncate"
+            className={cn(
+              "text-[11px] border border-border/40 rounded-md bg-transparent focus:bg-white/60 dark:focus:bg-white/10 transition-colors",
+              isExpanded
+                ? "min-h-[28px] h-auto whitespace-normal break-words py-1 px-2"
+                : "h-7 truncate"
+            )}
           />
         </div>
 
