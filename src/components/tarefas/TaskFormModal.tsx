@@ -239,7 +239,7 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
                     <SelectValue placeholder="Selecione prioridade" />
                   </div>
                 </SelectTrigger>
-                <SelectContent className="bg-lunar-surface border-lunar-border">
+                <SelectContent className="bg-white dark:bg-neutral-950 border-border/30">
                   <SelectItem value="low">
                     <div className="flex items-center gap-2">
                       <div className="w-3 h-3 rounded-full bg-green-500" />
