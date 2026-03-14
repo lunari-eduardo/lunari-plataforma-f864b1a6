@@ -411,7 +411,7 @@ export default function LeadsKanban({
               )}
             </ul>
           </div>
-        </Card>
+        </div>
       </section>
     );
   };
