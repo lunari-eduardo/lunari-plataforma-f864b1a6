@@ -332,7 +332,7 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
                   <ChevronDown className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="z-[10000] bg-lunar-surface border-lunar-border w-[var(--radix-select-trigger-width,16rem)] min-w-[12rem]">
+              <DropdownMenuContent className="z-[10000] bg-white dark:bg-neutral-950 border-border/30 w-[var(--radix-select-trigger-width,16rem)] min-w-[12rem]">
                 {tagDefs.length ? (
                   tagDefs.map((tag) => (
                     <DropdownMenuCheckboxItem
