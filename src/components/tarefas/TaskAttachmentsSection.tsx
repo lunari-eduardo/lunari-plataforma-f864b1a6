@@ -85,7 +85,7 @@ export default function TaskAttachmentsSection({ task, onUpdateTask }: TaskAttac
                 Texto
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-lunar-surface border-lunar-border">
+            <DialogContent className="bg-white dark:bg-neutral-950 border-border/30">
               <DialogHeader>
                 <DialogTitle className="text-lunar-text">Adicionar Texto</DialogTitle>
               </DialogHeader>
