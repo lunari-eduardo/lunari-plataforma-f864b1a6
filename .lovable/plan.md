@@ -1,41 +1,42 @@
 
 
-# Sistema de Ajuda e Tutoriais do Lunari — Implementado ✅
+# Fix Categorias: Remove Color, Compact List, Fix Save
 
-## Arquitetura
+## Problems Identified
 
-```text
-blog_posts (tabela existente + novas colunas)
-  + type: 'blog' | 'help'
-  + route_reference: '/app/workflow', '/app/agenda', etc.
-  + display_order: ordenação dos artigos de ajuda
+1. **Save not persisting**: The `handleBlur` triggers `handleSave()`, but when the input blurs (e.g., clicking elsewhere), the realtime subscription receives the update and overwrites local state via `useEffect` sync — this can race with the save. Also, the `handleBlur` check for `relatedTarget` may fail in some cases, causing premature saves or cancellations.
 
-Admin → Cria artigo tipo "Ajuda" → Seleciona rota de referência
-Usuário → Vê botão "?" flutuante → Clica → Abre artigo de ajuda da página
-```
+2. **Color picker not wanted**: User wants to remove the color input from both the add form and the list rows.
 
-## Arquivos Criados/Modificados
+3. **List too spread out**: `py-3` + color input + gap makes rows tall. Need tighter spacing.
 
-| Arquivo | Ação |
-|---------|------|
-| Supabase migration | ✅ ADD colunas type, route_reference, display_order |
-| `src/hooks/useHelpArticles.ts` | ✅ Criado — queries de ajuda |
-| `src/components/help/HelpFloatingButton.tsx` | ✅ Criado — botão flutuante contextual |
-| `src/pages/CentroAjuda.tsx` | ✅ Criado — listagem de artigos `/app/ajuda` |
-| `src/pages/ArtigoAjuda.tsx` | ✅ Criado — visualização de artigo `/app/ajuda/:slug` |
-| `src/components/blog/blocks/VideoBlock.tsx` | ✅ Criado — bloco de vídeo/YouTube/GIF |
-| `src/components/blog/BlockEditor.tsx` | ✅ Modificado — novo tipo `video` |
-| `src/pages/AdminConteudoNovo.tsx` | ✅ Modificado — seletor tipo + rota |
-| `src/pages/AdminConteudoEditar.tsx` | ✅ Modificado — seletor tipo + rota |
-| `src/pages/AdminConteudos.tsx` | ✅ Modificado — filtro blog/ajuda |
-| `src/components/layout/Layout.tsx` | ✅ Modificado — HelpFloatingButton |
-| `src/App.tsx` | ✅ Modificado — rotas /app/ajuda |
+## Changes
 
-## Funcionalidades
+### `src/components/configuracoes/Categorias.tsx` — Full rewrite of the component
 
-- **Botão flutuante**: Translúcido (opacity 30%), canto inferior direito, detecta rota atual e leva ao artigo correspondente
-- **Centro de Ajuda**: `/app/ajuda` com cards de todos os artigos publicados
-- **Artigo de Ajuda**: `/app/ajuda/:slug` com sidebar de navegação, tipografia Inter
-- **Bloco de Vídeo**: Suporta YouTube, Vimeo, MP4, WebM, GIF no BlockEditor
-- **Admin**: Seletor de tipo (Blog/Ajuda), dropdown de rotas do sistema, ordem de exibição
-- **Filtros admin**: Filtro por tipo (Blog/Ajuda) e status na lista de conteúdos
+**Add form**:
+- Remove color input entirely
+- Assign a default color programmatically (cycle through a preset palette based on index)
+- Single row: input + "Adicionar" button
+
+**List rows (InlineEditCategoriaRow)**:
+- Remove color `<Input type="color">` — show only a small `w-3 h-3` colored dot (read-only)
+- Reduce padding: `py-2 px-3` instead of `py-3 px-4`
+- Fix inline editing: click name → shows input inline, Enter saves, Escape cancels, blur saves
+- Fix the blur/save race: use a `savingRef` to prevent double-saves, and ensure `handleBlur` doesn't fire when clicking the delete button
+- Fix hover: `hover:bg-accent/50` → `hover:bg-black/[0.04] dark:hover:bg-white/[0.08]` (neutral)
+- Remove the `useEffect` that syncs props back during edit — it's the main cause of edits being overwritten
+
+**Save logic fix**:
+- The `useEffect` at line 220-225 resets `editNome`/`editCor` whenever `categoria.nome` changes AND `!isEditing`. But when `handleSave` sets `isEditing=false` and then the realtime update arrives, `isEditing` is already false and the effect runs — this is fine. The real issue: `handleBlur` fires when clicking the delete button or elsewhere, but `relatedTarget` may be null in some browsers. Fix by using a `mousedown` guard ref.
+
+### `src/hooks/useCategorias.ts` — No changes needed (not used by the component directly)
+
+## Technical Details
+
+- Default color palette: `['#7950F2', '#228BE6', '#12B886', '#E64980', '#FD7E14', '#868E96', '#40C057', '#BE4BDB']`
+- Color assigned as `palette[categorias.length % palette.length]` on add
+- Existing categories keep their stored colors (dot still shows them)
+
+1 file changed.
+
