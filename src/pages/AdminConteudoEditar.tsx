@@ -117,7 +117,7 @@ export default function AdminConteudoEditar() {
     return (
       <div className="text-center py-12">
         <p className="text-muted-foreground">Artigo não encontrado.</p>
-        <Button variant="link" onClick={() => navigate('/admin/conteudos')}>
+        <Button variant="link" onClick={() => navigate('/app/admin/conteudos')}>
           Voltar para lista
         </Button>
       </div>
