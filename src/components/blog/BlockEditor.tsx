@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus, GripVertical, Trash2, Type, Heading1, Heading2, Heading3, Image, List, Quote } from 'lucide-react';
+import { Plus, GripVertical, Trash2, Type, Heading1, Heading2, Heading3, Image, List, Quote, Video } from 'lucide-react';
 import { TextBlock } from './blocks/TextBlock';
 import { HeadingBlock } from './blocks/HeadingBlock';
 import { ImageBlock } from './blocks/ImageBlock';
