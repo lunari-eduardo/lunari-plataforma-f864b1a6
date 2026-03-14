@@ -13,7 +13,7 @@ import { SortableBlock, useDragHandle } from './blocks/SortableBlock';
 
 export interface ContentBlock {
   id: string;
-  type: 'paragraph' | 'h1' | 'h2' | 'h3' | 'image' | 'list' | 'quote';
+  type: 'paragraph' | 'h1' | 'h2' | 'h3' | 'image' | 'list' | 'quote' | 'video';
   content: string;
   imageUrl?: string;
   imageCaption?: string;
