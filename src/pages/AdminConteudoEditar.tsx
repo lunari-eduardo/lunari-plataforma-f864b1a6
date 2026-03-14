@@ -101,7 +101,7 @@ export default function AdminConteudoEditar() {
   const handleDelete = () => {
     if (!id) return;
     deletePost.mutate(id, {
-      onSuccess: () => navigate('/admin/conteudos'),
+      onSuccess: () => navigate('/app/admin/conteudos'),
     });
   };
 
@@ -117,7 +117,7 @@ export default function AdminConteudoEditar() {
     return (
       <div className="text-center py-12">
         <p className="text-muted-foreground">Artigo não encontrado.</p>
-        <Button variant="link" onClick={() => navigate('/admin/conteudos')}>
+        <Button variant="link" onClick={() => navigate('/app/admin/conteudos')}>
           Voltar para lista
         </Button>
       </div>
@@ -132,7 +132,7 @@ export default function AdminConteudoEditar() {
       
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/admin/conteudos')}>
+          <Button variant="ghost" size="icon" onClick={() => navigate('/app/admin/conteudos')}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
