@@ -275,7 +275,7 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
                 <SelectTrigger className="bg-lunar-background border-lunar-border">
                   <SelectValue placeholder="Selecione status" />
                 </SelectTrigger>
-                <SelectContent className="bg-lunar-surface border-lunar-border">
+                <SelectContent className="bg-white dark:bg-neutral-950 border-border/30">
                   <SelectItem value="todo">A Fazer</SelectItem>
                   <SelectItem value="doing">Em Andamento</SelectItem>
                   <SelectItem value="waiting">Aguardando</SelectItem>
