@@ -365,16 +365,18 @@ export default function LeadsKanban({
           </Badge>
         </header>
 
-        <Card
+        <div
           ref={setNodeRef}
           className={cn(
-            "flex-1 border-lunar-border/60 transition-colors overflow-hidden flex flex-col",
+            "flex-1 overflow-hidden flex flex-col rounded-2xl transition-all",
+            "bg-white/25 dark:bg-white/[0.04] backdrop-blur-xl border border-white/35 dark:border-white/[0.08]",
+            "shadow-[0_4px_30px_-4px_rgba(0,0,0,0.05)] dark:shadow-[0_4px_30px_-4px_rgba(0,0,0,0.3)]",
             isMobile ? "p-1" : "p-2",
-            isOver ? "ring-2 ring-lunar-accent/60" : "",
+            isOver && "ring-2 shadow-[0_0_40px_-4px_rgba(0,0,0,0.1)]",
           )}
           style={{
-            backgroundColor: `${statusColor}08`,
-            borderColor: `${statusColor}40`,
+            borderTop: `3px solid ${statusColor}99`,
+            ...(isOver ? { boxShadow: `0 0 0 2px ${statusColor}70, 0 0 40px -4px ${statusColor}30` } : {}),
           }}
         >
           <div className="flex-1 overflow-y-auto scrollbar-kanban">
