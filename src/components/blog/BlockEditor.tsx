@@ -19,6 +19,7 @@ export interface ContentBlock {
   imageCaption?: string;
   imageAlt?: string;
   listType?: 'ul' | 'ol';
+  videoUrl?: string;
 }
 
 interface BlockEditorProps {
