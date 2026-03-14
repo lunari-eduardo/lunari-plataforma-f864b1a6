@@ -295,7 +295,12 @@
   }
 
   .glass:hover {
+    background: hsl(0 0% 100% / 0.70) !important;
     box-shadow: var(--glass-hover-shadow);
+  }
+
+  .dark .glass:hover {
+    background: hsl(0 0% 100% / 0.06) !important;
   }
 
   /* Lunar Card */
