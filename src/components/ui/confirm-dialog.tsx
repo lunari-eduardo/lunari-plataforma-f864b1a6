@@ -32,7 +32,7 @@ export function ConfirmDialog({ state, onConfirm, onCancel, onClose }: ConfirmDi
 
   return (
     <AlertDialog open={state.isOpen} onOpenChange={(open) => !open && onClose()}>
-      <AlertDialogContent className="sm:max-w-[425px] bg-lunar-surface border border-lunar-border">
+      <AlertDialogContent className="sm:max-w-[425px] bg-white dark:bg-neutral-950 border border-border/30">
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2 text-lunar-text">
             {getIcon()}
