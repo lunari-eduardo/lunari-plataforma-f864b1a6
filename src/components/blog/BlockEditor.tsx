@@ -120,6 +120,18 @@ const blocksToHtml = (blocks: ContentBlock[]): string => {
           <img src="${block.imageUrl}" alt="${block.imageAlt || ''}" />
           ${block.imageCaption ? `<figcaption>${block.imageCaption}</figcaption>` : ''}
         </figure>`;
+      case 'video':
+        if (!block.videoUrl) return '';
+        // Check if YouTube/Vimeo
+        const ytMatch = block.videoUrl.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+        if (ytMatch) {
+          return `<iframe src="https://www.youtube.com/embed/${ytMatch[1]}" width="100%" style="aspect-ratio:16/9" frameborder="0" allowfullscreen></iframe>`;
+        }
+        const vimeoMatch = block.videoUrl.match(/vimeo\.com\/(\d+)/);
+        if (vimeoMatch) {
+          return `<iframe src="https://player.vimeo.com/video/${vimeoMatch[1]}" width="100%" style="aspect-ratio:16/9" frameborder="0" allowfullscreen></iframe>`;
+        }
+        return `<video src="${block.videoUrl}" controls style="width:100%"></video>`;
       default:
         return `<p>${block.content}</p>`;
     }
